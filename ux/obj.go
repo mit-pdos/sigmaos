@@ -69,7 +69,7 @@ func (o *Obj) String() string {
 
 func makeObj(path np.Path) (*Obj, *np.Err) {
 	if st, err := ustat(path); err != nil {
-		return nil, err
+		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
 		return &Obj{path, st.Qid.Path, st.Mode}, nil
 	}

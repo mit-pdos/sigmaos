@@ -108,7 +108,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
-		UxTo9PError(error)
+		return nil, UxTo9PError(error)
 	}
 	f, err := makePipe(ctx, append(d.pathName, name))
 	if err != nil {
@@ -118,18 +118,13 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 }
 
 func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	p := d.pathName.Append(name).String()
-	log.Printf("mkSys %s\n", p)
-	error := syscall.Symlink("xxxyyxxx", p)
-	if error != nil {
-		log.Printf("symlink %s err %v\n", p, error)
-		UxTo9PError(error)
-	}
-	f, err := makeFile(append(d.pathName, name))
+	p := d.pathName.Append(name)
+	log.Printf("mkSym %s\n", p)
+	s, err := makeSymlink(p, true)
 	if err != nil {
 		return nil, err
 	}
-	return f, nil
+	return s, nil
 }
 
 // XXX how to delete ephemeral files after crash
@@ -160,7 +155,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsO
 			}
 			return append(objs, d1), d1, nil, nil
 		} else if st.Mode.IsSymlink() {
-			p, err := makeFile(append(d.pathName, p[0]))
+			p, err := makeSymlink(append(d.pathName, p[0]), false)
 			if err != nil {
 				return objs, p, d.pathName, err
 			}

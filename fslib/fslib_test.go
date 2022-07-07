@@ -991,6 +991,16 @@ func TestSymlinkPath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func target(t *testing.T, ts *test.Tstate, path string) []byte {
+	target := fslib.MakeTarget(fslib.Named())
+	if path != np.NAMED {
+		srv, left, err := ts.AbsPathServer(path)
+		assert.Nil(t, err)
+		target = fslib.MakeTargetTree(srv.Base(), left)
+	}
+	return target
+}
+
 func TestSymlinkRemote(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
@@ -998,15 +1008,7 @@ func TestSymlinkRemote(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	target := fslib.MakeTarget(fslib.Named())
-	if path != np.NAMED {
-		srv, left, err := ts.AbsPathServer(path)
-		assert.Nil(t, err)
-		target = fslib.MakeTargetTree(srv.Base(), left)
-		// xxx need to add fslibtest
-	}
-
-	err = ts.Symlink(target, path+"namedself", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"namedself", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(path + "namedself/")
@@ -1023,7 +1025,7 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"d/namedself0", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"d/namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget(np.Path{":2222"}), path+"d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
@@ -1042,7 +1044,7 @@ func TestUnionDir(t *testing.T) {
 func TestUnionRoot(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget(np.Path{"xxx"}), path+"namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
@@ -1057,13 +1059,13 @@ func TestUnionRoot(t *testing.T) {
 func TestUnionSymlinkRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	dn := path + "/d/"
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"d/namedself1", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(path + "~any/d/namedself1/")
@@ -1081,7 +1083,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	b := []byte("hello")
@@ -1116,7 +1118,7 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}

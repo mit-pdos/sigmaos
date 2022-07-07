@@ -69,7 +69,7 @@ func (sess *Session) CloseConn() {
 
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
-// the new reply channel.  // XXX close connection?
+// the new reply channel.
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
@@ -91,10 +91,14 @@ func (sess *Session) SendConn(fc *np.Fcall) {
 
 	sess.Lock()
 	if sess.conn != nil {
+		// Must get replies channel under lock. This ensures that the connection's
+		// WaitGroup is added to before the connection is closed, and ensures the
+		// replies channel isn't closed from under our feet.
 		replies = sess.conn.GetReplyC()
 	}
 	sess.Unlock()
 
+	// If there was a connection associated with this session...
 	if replies != nil {
 		replies <- fc
 	}
@@ -106,8 +110,8 @@ func (sess *Session) IsClosed() bool {
 	return sess.closed
 }
 
-// Change conn This may occur if, for example, a client starts talking to a new
-// replica or a client reconnects quickly.
+// Change conn associated with this session. This may occur if, for example, a
+// client starts talking to a new replica or a client reconnects quickly.
 func (sess *Session) SetConn(conn np.Conn) *np.Err {
 	sess.Lock()
 	defer sess.Unlock()
@@ -126,7 +130,8 @@ func (sess *Session) UnsetConn(conn np.Conn) {
 	sess.unsetConnL(conn)
 }
 
-// Disassociate a connection with this session, and safely close the connection.
+// Disassociate a connection with this session, and safely close the
+// connection.
 func (sess *Session) unsetConnL(conn np.Conn) {
 	if sess.conn == conn {
 		db.DPrintf("SESSION", "%v close connection", sess.Sid)

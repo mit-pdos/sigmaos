@@ -40,21 +40,27 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		0,
 	}
-	c.wg.Add(2)
 	go c.writer()
 	go c.reader()
 	return c
 }
 
 func (c *SrvConn) Close() {
-	db.DPrintf("NETSRV", "%v Close conn\n", c.sessid)
+	db.DPrintf("NETSRV", "%v Prepare to close conn and replies %p", c.sessid, c.replies)
 
 	c.Lock()
 	defer c.Unlock()
 
+	// Close may be called twice, e.g. if the connection breaks as the session is
+	// closing.
+	if c.closed {
+		return
+	}
+
 	c.closed = true
 	go func() {
 		c.wg.Wait()
+		db.DPrintf("NETSRV", "%v Close replies chan %p", c.sessid, c.replies)
 		close(c.replies)
 	}()
 }
@@ -64,6 +70,14 @@ func (c *SrvConn) IsClosed() bool {
 	defer c.Unlock()
 
 	return c.closed
+}
+
+// For testing purposes.
+func (c *SrvConn) CloseConnTest() {
+	c.Lock()
+	defer c.Unlock()
+
+	c.conn.Close()
 }
 
 func (c *SrvConn) Src() string {
@@ -76,17 +90,12 @@ func (c *SrvConn) Dst() string {
 
 // Get the reply channel in order to send an fcall. Adds to the wg.
 func (c *SrvConn) GetReplyC() chan *np.Fcall {
+	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
 }
 
-func (c *SrvConn) Send(fc *np.Fcall) {
-	defer c.wg.Done()
-	c.replies <- fc
-}
-
 func (c *SrvConn) reader() {
-	defer c.sesssrv.Unregister(c.sessid, c)
 	db.DPrintf("NETSRV", "%v (%v) Reader conn from %v\n", c.sessid, c.Dst(), c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
@@ -109,11 +118,15 @@ func (c *SrvConn) reader() {
 			c.sessid = fcall.Session
 			if err := c.sesssrv.Register(fcall.Session, c); err != nil {
 				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
-				db.DPrintf(db.ALWAYS, "Sess %v closed\n", c.sessid)
+				c.wg.Add(1)
 				fc := np.MakeFcallReply(fcall, err.Rerror())
 				c.replies <- fc
 				close(c.replies)
 				return
+			} else {
+				// If we successfully registered, we'll have to unregister once the
+				// connection breaks.
+				defer c.sesssrv.Unregister(c.sessid, c)
 			}
 		} else if c.sessid != fcall.Session {
 			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
@@ -130,6 +143,7 @@ func (c *SrvConn) writer() {
 			db.DPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
 			return
 		}
+		c.wg.Done()
 		db.DPrintf("NETSRV", "rep %v\n", fcall)
 		var writableFcall np.WritableFcall
 		if c.wireCompat {

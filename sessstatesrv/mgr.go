@@ -26,6 +26,7 @@ func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
 func (sm *SessionMgr) TimeoutSession() {
 	sess := sm.st.LastSession()
 	if sess != nil {
+		db.DPrintf("SESSION", "Test TimeoutSession %v", sess.Sid)
 		sess.timeout()
 	}
 }

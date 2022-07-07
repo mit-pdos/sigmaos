@@ -6,6 +6,7 @@ type Isrvconn interface {
 type Conn interface {
 	IsClosed() bool
 	Close()
+	CloseConnTest()
 	GetReplyC() chan *Fcall
 }
 

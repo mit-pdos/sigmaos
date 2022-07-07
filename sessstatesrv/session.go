@@ -64,7 +64,7 @@ func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
-	sess.conn.Close()
+	sess.conn.CloseConnTest()
 }
 
 // Server may call Close() several times because client may reconnect
@@ -73,6 +73,7 @@ func (sess *Session) CloseConn() {
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
+	db.DPrintf("SESSION", "Close session %v\n", sess.Sid)
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
@@ -86,11 +87,16 @@ func (sess *Session) Close() {
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
 func (sess *Session) SendConn(fc *np.Fcall) {
+	var replies chan *np.Fcall = nil
+
 	sess.Lock()
-	conn := sess.conn
+	if sess.conn != nil {
+		replies = sess.conn.GetReplyC()
+	}
 	sess.Unlock()
-	if conn != nil {
-		conn.GetReplyC() <- fc
+
+	if replies != nil {
+		replies <- fc
 	}
 }
 
@@ -124,7 +130,7 @@ func (sess *Session) UnsetConn(conn np.Conn) {
 func (sess *Session) unsetConnL(conn np.Conn) {
 	if sess.conn == conn {
 		db.DPrintf("SESSION", "%v close connection", sess.Sid)
-		sess.conn.Close()
+		sess.conn = nil
 	}
 	conn.Close()
 }
@@ -159,6 +165,10 @@ func (sess *Session) isConnected() bool {
 func (sess *Session) timedOut() (bool, time.Time) {
 	sess.Lock()
 	defer sess.Unlock()
+	// For testing purposes.
+	if sess.timedout {
+		return true, sess.lastHeartbeat
+	}
 	// If in the middle of a running op, or this fssrv hasn't begun processing
 	// ops yet, refresh the heartbeat so we don't immediately time-out when the
 	// op finishes.

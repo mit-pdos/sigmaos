@@ -139,6 +139,7 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
+	db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
 	p, err := pd.readRunqProc(procPath)
 	// Proc may have been stolen
 	if err != nil {

@@ -155,6 +155,7 @@ func (pd *Procd) procClaimRateLimitCheck() bool {
 	if pd.netProcsClaimed < maxOversub {
 		return true
 	}
+	db.DPrintf("PROCD", "Failed proc claim rate limit check: %v > %v", pd.netProcsClaimed, maxOversub)
 	return false
 }
 
@@ -203,7 +204,9 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 
 	pd.freeCoresL(p)
 	if p.attr.Type != proc.T_LC {
-		pd.netProcsClaimed--
+		if pd.netProcsClaimed > 0 {
+			pd.netProcsClaimed--
+		}
 	}
 }
 

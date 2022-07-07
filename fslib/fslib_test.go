@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/awriter"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -626,6 +627,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
+	db.DPrintf("TEST", "Disconnect fsl")
 	err = fsl1.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 
@@ -1124,7 +1126,7 @@ func TestSetFileSymlink(t *testing.T) {
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
-	assert.Nil(ts.T, err, "SetFile")
+	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(path+"/"+np.STATSD, &st)

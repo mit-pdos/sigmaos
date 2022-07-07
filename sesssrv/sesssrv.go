@@ -1,7 +1,6 @@
 package sesssrv
 
 import (
-	"log"
 	"reflect"
 	"runtime/debug"
 
@@ -90,7 +89,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 
 		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
 		ssrv.replSrv.Start()
-		log.Printf("Starting repl server: %v", config)
+		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
 	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
 	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
@@ -114,7 +113,7 @@ func (ssrv *SessSrv) Root() fs.Dir {
 }
 
 func (ssrv *SessSrv) Snapshot() []byte {
-	log.Printf("Snapshot %v", proc.GetPid())
+	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
 	if !ssrv.replicated {
 		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
@@ -134,7 +133,11 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
+	db.DPrintf(db.ALWAYS, "One")
+	db.DPrintf("TEST", "One")
 	ssrv.sm.Stop()
+	db.DPrintf(db.ALWAYS, "Two")
+	db.DPrintf("TEST", "Two")
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
@@ -159,10 +162,10 @@ func (ssrv *SessSrv) Serve() {
 		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error Started: %v", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 		}
 		if err := ssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
-			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 		}
 	} else {
 		<-ssrv.ch
@@ -179,7 +182,6 @@ func (ssrv *SessSrv) Done() {
 		if !ssrv.done {
 			ssrv.done = true
 			ssrv.ch <- true
-
 		}
 	}
 	ssrv.stats.Done()
@@ -210,19 +212,36 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
+func (ssrv *SessSrv) Register(sid np.Tsession, conn np.Conn) *np.Err {
 	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(sid)
 	return sess.SetConn(conn)
 }
 
+// Disassociate a connection with a session, and let it close gracefully.
+func (ssrv *SessSrv) Unregister(sid np.Tsession, conn np.Conn) {
+	// If this connection hasn't been associated with a session yet, return.
+	if sid == np.NoSession {
+		return
+	}
+	sess := ssrv.st.Alloc(sid)
+	sess.UnsetConn(conn)
+}
+
 func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	sess, ok := ssrv.st.Lookup(fc.Session)
-	if !ok {
+	// Server-generated heartbeats will have session number 0. Pass them through.
+	if !ok && fc.Session != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", fc.Session, fc)
 	}
 	if !ssrv.replicated {
-		sess.GetThread().Process(fc)
+		// If the fcall is a server-generated heartbeat, don't worry about
+		// processing it sequentially on the session's thread.
+		if fc.Session == 0 {
+			ssrv.srvfcall(fc)
+		} else {
+			sess.GetThread().Process(fc)
+		}
 	} else {
 		ssrv.replSrv.Process(fc)
 	}
@@ -231,19 +250,26 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstatesrv.Session) {
 	fcall := np.MakeFcallReply(request, reply)
 
-	db.DPrintf("SESSSRV", "sendReply req %v rep %v", request, fcall)
-
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, fcall)
 
+	db.DPrintf("SESSSRV", "sendReply req %v rep %v ok %v", request, fcall, ok)
+
 	// If a client sent the request (seqno != 0) (as opposed to an
-	// internally-generated detach), send reply.
+	// internally-generated detach or heartbeat), send reply.
 	if request.Seqno != 0 && ok {
 		sess.SendConn(fcall)
 	}
 }
 
 func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
+	// If this was a server-generated heartbeat message, heartbeat all of the
+	// contained sessions, and then return immediately (no further processing is
+	// necessary).
+	if fc.Session == 0 {
+		ssrv.st.ProcessHeartbeats(fc.Msg.(np.Theartbeat))
+		return
+	}
 	// If this is a replicated op received through raft (not
 	// directly from a client), the first time Alloc is called
 	// will be in this function, so the conn will be set to

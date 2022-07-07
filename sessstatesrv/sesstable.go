@@ -42,6 +42,10 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	st.Lock()
 	defer st.Unlock()
 
+	return st.allocL(sid)
+}
+
+func (st *SessionTable) allocL(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
@@ -49,6 +53,20 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess
+}
+
+func (st *SessionTable) ProcessHeartbeats(hbs np.Theartbeat) {
+	st.Lock()
+	defer st.Unlock()
+
+	for _, sid := range hbs.Sids {
+		sess := st.allocL(sid)
+		sess.Lock()
+		if !sess.closed {
+			sess.heartbeatL(hbs)
+		}
+		sess.Unlock()
+	}
 }
 
 func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {

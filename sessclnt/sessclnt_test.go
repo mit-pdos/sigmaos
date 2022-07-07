@@ -2,6 +2,7 @@ package sessclnt_test
 
 import (
 	"bufio"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/awriter"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -158,8 +160,8 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
-		go func() {
-			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+		go func(i int) {
+			fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), fslib.Named())
 			for true {
 				_, err := fsl.Stat(DIRGRP0)
 				if err != nil {
@@ -167,12 +169,14 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 					break
 				}
 			}
+			db.DPrintf("TEST", "Client %v done", i)
 			fsl.Exit()
-		}()
+		}(i)
 
 		err := <-ch
 		assert.NotNil(ts.T, err, "stat")
 	}
+	db.DPrintf("TEST", "Stopping group")
 	grp.Stop()
 	ts.Shutdown()
 }

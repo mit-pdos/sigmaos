@@ -57,19 +57,23 @@ func main() {
 		}
 		err := BurstProc(M, func(ch chan error) {
 			a := proc.MakeProc(os.Args[2], os.Args[3:])
+			db.DPrintf("TEST1", "Spawning %v", a.Pid.String())
 			if err := pclnt.Spawn(a); err != nil {
 				ch <- err
 				return
 			}
+			db.DPrintf("TEST1", "WaitStarting %v", a.Pid.String())
 			if err := pclnt.WaitStart(a.Pid); err != nil {
 				ch <- err
 				return
 			}
+			db.DPrintf("TEST1", "WaitExiting %v", a.Pid.String())
 			status, err := pclnt.WaitExit(a.Pid)
 			if err != nil {
 				ch <- err
 				return
 			}
+			db.DPrintf("TEST1", "Done %v", a.Pid.String())
 			if !status.IsStatusOK() {
 				ch <- fmt.Errorf("status error %v", status.Error())
 				return

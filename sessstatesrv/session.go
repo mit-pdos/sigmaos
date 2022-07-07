@@ -25,7 +25,7 @@ import (
 type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
-	conn          *np.Conn
+	conn          np.Conn
 	rt            *replies.ReplyTable
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
@@ -51,7 +51,7 @@ func (sess *Session) GetReplyTable() *replies.ReplyTable {
 	return sess.rt
 }
 
-func (sess *Session) GetConn() *np.Conn {
+func (sess *Session) GetConn() np.Conn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -64,21 +64,20 @@ func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
-	sess.conn.Conn.Close()
+	sess.conn.CloseConnTest()
 }
 
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
-// the new reply channel.  // XXX close connection?
+// the new reply channel.
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
+	db.DPrintf("SESSION", "Close session %v\n", sess.Sid)
 	sess.closed = true
-	// Close the replies channel so that writer in srvconn exits
+	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
-		db.DPrintf("SESSION", "%v close replies\n", sess.Sid)
-		close(sess.conn.Replies)
-		sess.conn = nil
+		sess.unsetConnL(sess.conn)
 	}
 	// Empty & permanently close the replies table.
 	sess.rt.Close(sess.Sid)
@@ -88,11 +87,20 @@ func (sess *Session) Close() {
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
 func (sess *Session) SendConn(fc *np.Fcall) {
+	var replies chan *np.Fcall = nil
+
 	sess.Lock()
-	conn := sess.conn
+	if sess.conn != nil {
+		// Must get replies channel under lock. This ensures that the connection's
+		// WaitGroup is added to before the connection is closed, and ensures the
+		// replies channel isn't closed from under our feet.
+		replies = sess.conn.GetReplyC()
+	}
 	sess.Unlock()
-	if conn != nil {
-		conn.Replies <- fc
+
+	// If there was a connection associated with this session...
+	if replies != nil {
+		replies <- fc
 	}
 }
 
@@ -102,10 +110,9 @@ func (sess *Session) IsClosed() bool {
 	return sess.closed
 }
 
-// Change conn if the new conn is non-nil. This may occur if, for
-// example, a client starts talking to a new replica or a client
-// reconnects quickly.
-func (sess *Session) SetConn(conn *np.Conn) *np.Err {
+// Change conn associated with this session. This may occur if, for example, a
+// client starts talking to a new replica or a client reconnects quickly.
+func (sess *Session) SetConn(conn np.Conn) *np.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
@@ -116,9 +123,25 @@ func (sess *Session) SetConn(conn *np.Conn) *np.Err {
 	return nil
 }
 
-func (sess *Session) heartbeat(msg np.Tmsg) {
+func (sess *Session) UnsetConn(conn np.Conn) {
 	sess.Lock()
 	defer sess.Unlock()
+
+	sess.unsetConnL(conn)
+}
+
+// Disassociate a connection with this session, and safely close the
+// connection.
+func (sess *Session) unsetConnL(conn np.Conn) {
+	if sess.conn == conn {
+		db.DPrintf("SESSION", "%v close connection", sess.Sid)
+		sess.conn = nil
+	}
+	conn.Close()
+}
+
+// Caller holds lock.
+func (sess *Session) heartbeatL(msg np.Tmsg) {
 	db.DPrintf("SESSION", "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
 		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
@@ -134,9 +157,23 @@ func (sess *Session) timeout() {
 	sess.timedout = true
 }
 
+func (sess *Session) isConnected() bool {
+	sess.Lock()
+	defer sess.Unlock()
+
+	if sess.closed || sess.conn == nil || sess.conn.IsClosed() {
+		return false
+	}
+	return true
+}
+
 func (sess *Session) timedOut() (bool, time.Time) {
 	sess.Lock()
 	defer sess.Unlock()
+	// For testing purposes.
+	if sess.timedout {
+		return true, sess.lastHeartbeat
+	}
 	// If in the middle of a running op, or this fssrv hasn't begun processing
 	// ops yet, refresh the heartbeat so we don't immediately time-out when the
 	// op finishes.

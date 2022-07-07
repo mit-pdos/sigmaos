@@ -299,7 +299,7 @@ func (pathc *PathClnt) SetDirWatch(fid np.Tfid, path string, w Watch) error {
 }
 
 func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
-	db.DPrintf("PATHCLNT", "SetRemoveWatch %v\n", path)
+	db.DPrintf("PATHCLNT", "SetRemoveWatch %v", path)
 	p := np.Split(path)
 	fid, err := pathc.WalkPath(p, np.EndSlash(path), nil)
 	if err != nil {

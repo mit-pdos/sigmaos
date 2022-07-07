@@ -413,35 +413,35 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 }
 
 // Return path to the root directory for last server on path
-func (pathc *PathClnt) PathServer(path string) (string, error) {
+func (pathc *PathClnt) PathServer(path string) (string, np.Path, error) {
 	if _, err := pathc.Stat(path + "/"); err != nil {
 		db.DPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)
-		return "", err
+		return "", nil, err
 	}
 	p := np.Split(path)
 	_, left, err := pathc.mnt.resolve(p)
 	if err != nil {
 		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", path, err)
-		return "", err
+		return "", nil, err
 	}
 	p = p[0 : len(p)-len(left)]
-	return p.String(), nil
+	return p.String(), left, nil
 }
 
 // Return path to server, replacing ~ip with the IP address of the mounted server
-func (pathc *PathClnt) AbsPathServer(path string) (string, error) {
-	srv, err := pathc.PathServer(path)
+func (pathc *PathClnt) AbsPathServer(path string) (np.Path, np.Path, error) {
+	srv, left, err := pathc.PathServer(path)
 	if err != nil {
-		return "", err
+		return nil, nil, err
 	}
 	p := np.Split(srv)
 	if np.IsUnionElem(p.Base()) {
 		st, err := pathc.Stat(srv)
 		if err != nil {
-			return "", err
+			return np.Path{}, left, err
 		}
 		p[len(p)-1] = st.Name
-		return p.String(), nil
+		return p, left, nil
 	}
-	return srv, nil
+	return p, left, nil
 }

@@ -59,6 +59,7 @@ func SplitTarget(target string) (string, np.Path) {
 	var server string
 	var rest np.Path
 
+	db.DPrintf("WALK", "split %v\n", target)
 	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
 		parts := strings.SplitN(target, ":", 5)
 		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]

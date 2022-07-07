@@ -83,7 +83,7 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	srv, err := ts.PathServer(path)
+	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
 	err = ts.Disconnect(srv)
@@ -623,7 +623,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	srv, err := ts.PathServer(path)
+	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
 	err = fsl1.Disconnect(srv)
@@ -914,7 +914,7 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		srv, err := ts.PathServer(path)
+		srv, _, err := ts.PathServer(path)
 		assert.Nil(t, err)
 		err = fsl.Disconnect(srv)
 		assert.Nil(ts.T, err, "Disconnect")
@@ -945,7 +945,7 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	srv, err := ts.PathServer(path)
+	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 	err = fsl1.Disconnect(srv)
 	assert.Nil(ts.T, err, "Disconnect")
@@ -996,7 +996,15 @@ func TestSymlinkRemote(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself", 0777|np.DMTMP)
+	target := fslib.MakeTarget(fslib.Named())
+	if path != np.NAMED {
+		srv, left, err := ts.AbsPathServer(path)
+		assert.Nil(t, err)
+		target = fslib.MakeTargetTree(srv.Base(), left)
+		// xxx need to add fslibtest
+	}
+
+	err = ts.Symlink(target, path+"namedself", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(path + "namedself/")

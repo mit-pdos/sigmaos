@@ -72,7 +72,7 @@ func (fc *FenceClnt) registerFence(path string, fence np.Tfence) error {
 }
 
 func (fc *FenceClnt) GetFences(p string) ([]*np.Stat, error) {
-	srv, err := fc.PathServer(p)
+	srv, _, err := fc.PathServer(p)
 	if err != nil {
 		db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", p, err)
 		return nil, err
@@ -97,7 +97,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 		return err
 	}
 	for _, d := range dirs {
-		srv, err := fc.PathServer(d)
+		srv, _, err := fc.PathServer(d)
 		if err != nil {
 			db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
 			return err

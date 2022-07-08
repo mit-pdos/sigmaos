@@ -64,8 +64,6 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, program, cfg.NamedAddrs)
 
-	linuxsched.ScanTopology()
-
 	ts.t = t
 	ts.coreGroupsPerMachine = int(1.0 / np.Conf.Machine.CORE_GROUP_FRACTION)
 

@@ -6,14 +6,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fidclnt"
 	"ulambda/fslibsrv"
-	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/repldummy"
 )
 
 func main() {
-	linuxsched.ScanTopology()
 	name := np.MEMFS + "/" + proc.GetPid().String()
 	if len(os.Args) > 1 {
 		ip, err := fidclnt.LocalIP()

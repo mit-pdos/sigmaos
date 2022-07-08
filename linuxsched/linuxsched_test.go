@@ -11,7 +11,6 @@ import (
 
 func TestBasic(t *testing.T) {
 	pid := os.Getpid()
-	linuxsched.ScanTopology()
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(pid)
 	assert.Nil(t, err, "SchedGetAffinity")
@@ -22,5 +21,4 @@ func TestBasic(t *testing.T) {
 		}
 	}
 	assert.True(t, core, "Ncore")
-
 }

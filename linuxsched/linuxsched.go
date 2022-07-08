@@ -15,7 +15,10 @@ import (
 )
 
 func init() {
-	ScanTopology()
+	if _, err := ScanTopology(); err != nil {
+		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
+		os.Exit(1)
+	}
 }
 
 var ErrInvalid = errors.New("invalid")

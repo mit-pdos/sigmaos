@@ -77,7 +77,6 @@ func MakeTstatePath(t *testing.T, named, path string) *Tstate {
 }
 
 func MakeTstateClnt(t *testing.T, named string) *Tstate {
-	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
@@ -86,7 +85,6 @@ func MakeTstateClnt(t *testing.T, named string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
@@ -95,7 +93,6 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t

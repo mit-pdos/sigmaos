@@ -247,7 +247,6 @@ func (p *Perf) monitorCPUUtil(sampleHz int) {
 
 // Only count cycles on cores we can run on
 func GetActiveCores() map[string]bool {
-	linuxsched.ScanTopology()
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(os.Getpid())
 	if err != nil {

@@ -417,8 +417,6 @@ func TestEvict(t *testing.T) {
 func TestReserveCores(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	start := time.Now()
 	pid := proc.Tpid("sleeper-aaaaaaa")
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -451,8 +449,6 @@ func TestWorkStealing(t *testing.T) {
 
 	ts.BootProcd()
 
-	linuxsched.ScanTopology()
-
 	start := time.Now()
 	pid := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -481,7 +477,6 @@ func TestWorkStealing(t *testing.T) {
 func TestEvictN(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
 	N := int(linuxsched.NCores)
 
 	pids := []proc.Tpid{}
@@ -508,8 +503,6 @@ func getNChildren(ts *test.Tstate) int {
 
 func TestBurstSpawn(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	linuxsched.ScanTopology()
 
 	// Number of spinners to burst-spawn
 	N := linuxsched.NCores * 3
@@ -602,8 +595,6 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 func TestProcdResize1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	// Run a proc that claims all cores.
 	pid := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -660,8 +651,6 @@ func TestProcdResizeN(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	N := 5
-
-	linuxsched.ScanTopology()
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
@@ -720,8 +709,6 @@ func TestProcdResizeN(t *testing.T) {
 func TestProcdResizeEvict(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	// Run a proc that claims all cores save one.
 	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores)-1)
 	err := ts.WaitStart(pid)
@@ -769,8 +756,6 @@ func TestProcdResizeEvict(t *testing.T) {
 
 func TestProcdResizeAccurateStats(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	linuxsched.ScanTopology()
 
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}
@@ -866,8 +851,6 @@ func anyCoresOccupied(coresMaps []map[string]bool) bool {
 
 func TestProcdResizeCoreRepinning(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	linuxsched.ScanTopology()
 
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}

@@ -104,11 +104,14 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 }
 
 func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
-	_, lo, fws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
+	_, lo, ws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
 	if err != nil {
+		if ws != nil {
+			ps.wt.Release(ws)
+		}
 		return nil, err
 	}
-	defer ps.wt.Release(fws)
+	defer ps.wt.Release(ws)
 	if lo.Perm().IsSymlink() && resolve {
 		return nil, np.MkErr(np.TErrNotDir, names[len(names)-1])
 	}
@@ -127,8 +130,11 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 
-	os, lo, fws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
+	os, lo, ws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
+		if ws != nil {
+			ps.wt.Release(ws)
+		}
 		return err.Rerror()
 	}
 
@@ -145,8 +151,8 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 	ps.vt.Insert(qid.Path)
-	if fws != nil {
-		ps.wt.Release(fws)
+	if ws != nil {
+		ps.wt.Release(ws)
 	}
 	return nil
 }

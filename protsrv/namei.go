@@ -8,16 +8,14 @@ import (
 	"ulambda/watch"
 )
 
-// Returns locked lo (via fws), if successfull
+// If an lo is returned, namei will return a locked watch for it
 func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	dws := ps.wt.WatchLookupL(src)
-
 	d := o.(fs.Dir)
 	e, err := d.Lookup(ctx, target[0])
 	if err != nil {
 		db.DPrintf("PROTSRV", "%v: dir %v: file not found %v", ctx.Uname(), d, target[0])
-		ps.wt.Release(dws)
-		return os, d, nil, target, err
+		return os, d, dws, target, err
 	}
 	os = append(os, e)
 	if len(target) == 1 { // done?
@@ -33,8 +31,7 @@ func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.F
 		return ps.namei(ctx, e, src.Append(target[0]), target[1:], os)
 	default:
 		db.DPrintf("PROTSRV", "%v: error not dir namei %T %v %v %v %v", ctx.Uname(), e, target, d, os, target[1:])
-		ps.wt.Release(dws)
-		return os, e, nil, target, np.MkErr(np.TErrNotDir, target[0])
+		return os, e, dws, target, np.MkErr(np.TErrNotDir, target[0])
 	}
 }
 

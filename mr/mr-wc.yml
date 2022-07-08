@@ -3,4 +3,3 @@ nreduce: 2
 binsz: 262144
 input: "name/s3/~ip/9ps3/gutenberg/"
 linesz: 65536
-ncore: 0

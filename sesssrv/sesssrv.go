@@ -133,11 +133,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
-	db.DPrintf(db.ALWAYS, "One")
-	db.DPrintf("TEST", "One")
 	ssrv.sm.Stop()
-	db.DPrintf(db.ALWAYS, "Two")
-	db.DPrintf("TEST", "Two")
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 

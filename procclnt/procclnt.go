@@ -54,7 +54,28 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 	return proc.RunKernelProc(p, namedAddr)
 }
 
+// Burst-spawn a set of procs across available procds. Return a slice of procs
+// which were unable to be successfully spawned.
+func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) error {
+	procds, _, err := clnt.ReadDir(np.PROCDREL)
+	if err != nil {
+		return err
+	}
+	for i := range ps {
+		clnt.spawn(procds[i%len(procds)].Name, ps[i])
+	}
+	return nil
+}
+
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
+	return clnt.spawn("~ip", p)
+}
+
+func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
+	if p.Ncore > 0 && p.Type != proc.T_LC {
+		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
+		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
+	}
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
@@ -76,7 +97,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v\n", err)
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
-		fn := path.Join(np.PROCDREL+"/~ip", np.PROCD_SPAWN_FILE)
+		fn := path.Join(np.PROCDREL, procdIp, np.PROCD_SPAWN_FILE)
 		_, err = clnt.SetFile(fn, b, np.OWRITE, 0)
 		if err != nil {
 			db.DPrintf("PROCCLNT_ERR", "SetFile %v err %v", fn, err)

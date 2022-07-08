@@ -131,49 +131,25 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	return st, nil
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("FSS3", "%v: namei %v\n", d, p)
+func (d *Dir) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
 	if err := d.fill(); err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	e, ok := d.dents.Lookup(p[0])
+	e, ok := d.dents.Lookup(name)
 	if !ok {
-		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
-		return os, d, p, np.MkErr(np.TErrNotfound, p[0])
+		db.DPrintf("FSS3", "%v: Lookup %v not found\n", ctx, name)
+		return nil, np.MkErr(np.TErrNotfound, name)
 	}
-	if len(p) == 1 {
-		perm := e.(np.Tperm)
-		var o fs.FsObj
-		if perm.IsDir() {
-			o = makeDir(d.bucket, d.key.Copy().Append(p[0]), perm)
-		} else {
-			o = makeObj(d.bucket, d.key.Copy().Append(p[0]), perm)
-		}
-		os = append(os, o)
-		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, os, o)
-		return os, o, nil, nil
+	db.DPrintf("FSS3", "%v: Lookup %v o %v\n", ctx, name, e)
+	perm := e.(np.Tperm)
+	var o fs.FsObj
+	if perm.IsDir() {
+		o = makeDir(d.bucket, d.key.Copy().Append(name), perm)
 	} else {
-		d := makeDir(d.bucket, d.key.Copy().Append(p[0]), e.(np.Tperm))
-		os = append(os, d)
-		return d.namei(ctx, p[1:], os)
+		o = makeObj(d.bucket, d.key.Copy().Append(name), perm)
 	}
-}
-
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("FSS3", "%v: Lookup %v '%v'", ctx, d, p)
-	if len(p) == 0 {
-		return nil, nil, nil, nil
-	}
-	if !d.Perm().IsDir() {
-		return nil, nil, nil, np.MkErr(np.TErrNotDir, d)
-	}
-	os, o, err := nameiObj(ctx, d.bucket, p)
-	if err == nil {
-		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, os, o)
-		return os, o, nil, nil
-	}
-	// maybe p names a directory
-	return d.namei(ctx, p, nil)
+	db.DPrintf("FSS3", "%v: Lookup return %v %v\n", ctx, name, o)
+	return o, nil
 }
 
 func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {

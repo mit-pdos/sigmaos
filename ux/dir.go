@@ -141,61 +141,39 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	st, err := ustat(d.pathName.Append(p[0]))
+func (d *Dir) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
+	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, name)
+	st, err := ustat(d.pathName.Append(name))
 	if err != nil {
-		return objs, d, d.pathName, err
+		db.DPrintf("UXD", "%v: Lookup %v %v err %v\n", ctx, d, name, err)
+		return nil, err
 	}
-	db.DPrintf("UXD", "%v: namei %v %v st %v\n", ctx, d, p, st)
-	if len(p) == 1 {
-		if st.Mode.IsDir() {
-			d1, err := makeDir(append(d.pathName, p[0]))
-			if err != nil {
-				return objs, d1, d.pathName, err
-			}
-			return append(objs, d1), d1, nil, nil
-		} else if st.Mode.IsSymlink() {
-			p, err := makeSymlink(append(d.pathName, p[0]), false)
-			if err != nil {
-				return objs, p, d.pathName, err
-			}
-			return append(objs, p), p, nil, nil
-		} else if st.Mode.IsPipe() {
-			p, err := makePipe(ctx, append(d.pathName, p[0]))
-			if err != nil {
-				return objs, p, d.pathName, err
-			}
-			return append(objs, p), p, nil, nil
-		} else {
-			f, err := makeFile(append(d.pathName, p[0]))
-			if err != nil {
-				return objs, f, d.pathName, err
-			}
-			return append(objs, f), f, nil, nil
-		}
-	} else {
-		d1, err := makeDir(append(d.pathName, p[0]))
+	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
+	if st.Mode.IsDir() {
+		d1, err := makeDir(append(d.pathName, name))
 		if err != nil {
-			return objs, d, d.pathName, err
+			return nil, err
 		}
-		objs = append(objs, d1)
-		return d1.namei(ctx, p[1:], objs)
+		return d1, nil
+	} else if st.Mode.IsSymlink() {
+		s, err := makeSymlink(append(d.pathName, name), false)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+	} else if st.Mode.IsPipe() {
+		p, err := makePipe(ctx, append(d.pathName, name))
+		if err != nil {
+			return nil, err
+		}
+		return p, nil
+	} else {
+		f, err := makeFile(append(d.pathName, name))
+		if err != nil {
+			return nil, err
+		}
+		return f, nil
 	}
-}
-
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	if len(p) == 0 {
-		return nil, nil, nil, nil
-	}
-	st, err := ustat(d.pathName)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if !st.Mode.IsDir() {
-		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.pathName)
-	}
-	return d.namei(ctx, p, nil)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {

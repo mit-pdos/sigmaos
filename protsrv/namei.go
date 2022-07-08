@@ -8,6 +8,7 @@ import (
 	"ulambda/watch"
 )
 
+// Returns locked lo (via fws), if successfull
 func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	dws := ps.wt.WatchLookupL(src)
 

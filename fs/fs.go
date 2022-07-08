@@ -18,7 +18,7 @@ type CtxI interface {
 
 type Dir interface {
 	FsObj
-	Lookup(CtxI, np.Path) ([]FsObj, FsObj, np.Path, *np.Err)
+	Lookup(CtxI, string) (FsObj, *np.Err)
 	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
 	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
@@ -39,6 +39,7 @@ type FsObj interface {
 	Open(CtxI, np.Tmode) (FsObj, *np.Err)
 	Close(CtxI, np.Tmode) *np.Err // for pipes
 	Stat(CtxI) (*np.Stat, *np.Err)
+	String() string
 }
 
 func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {

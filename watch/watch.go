@@ -3,7 +3,7 @@ package watch
 import (
 	"sync"
 
-	//	"github.com/sasha-s/go-deadlock"
+	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -32,8 +32,8 @@ import (
 //
 
 type Watch struct {
-	sync.Mutex
-	//deadlock.Mutex
+	//sync.Mutex
+	deadlock.Mutex
 	sc   *sesscond.SessCond
 	path string // the key in WatchTable
 	nref int    // updated under table lock

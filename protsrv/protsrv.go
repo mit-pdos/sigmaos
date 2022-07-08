@@ -63,10 +63,11 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
-		_, lo, rest, err := root.Lookup(ctx, path)
+		_, lo, fws, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()
 		}
+		ps.wt.Release(fws)
 		tree = lo
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
@@ -102,45 +103,16 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	o := f.Pobj().Obj()
-	if !o.Perm().IsDir() {
-		return nil, nil, nil, np.MkErr(np.TErrNotDir, f.Pobj().Path().Base())
-	}
-	d := o.(fs.Dir)
-	return d.Lookup(ctx, names)
-}
-
 func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
-	_, lo, _, err := ps.lookupObj(ctx, f, names)
+	_, lo, fws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
 	if err != nil {
 		return nil, err
 	}
+	defer ps.wt.Release(fws)
 	if lo.Perm().IsSymlink() && resolve {
 		return nil, np.MkErr(np.TErrNotDir, names[len(names)-1])
 	}
 	return lo, nil
-}
-
-func (ps *ProtSrv) tryLookupObjAndLock(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *watch.Watch, bool, *np.Err) {
-	// Try and lock the path.
-	path := append(f.Pobj().Path(), names...)
-	fws := ps.wt.WatchLookupL(path)
-	// Look up the object for this path.
-	os, lo, rest, err := ps.lookupObj(f.Pobj().Ctx(), f, names)
-	if err != nil && !np.IsMaybeSpecialElem(err) {
-		ps.wt.Release(fws)
-		return nil, nil, nil, nil, false, err
-	}
-	// If this path could only be partially resolved, release the locked watchers
-	// And indicate that we need to retry.
-	if len(rest) > 1 {
-		ps.wt.Release(fws)
-		n := len(names) - len(rest) + 1
-		prefix := names[:n]
-		return nil, nil, prefix, nil, false, nil
-	}
-	return os, lo, names, fws, true, nil
 }
 
 func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
@@ -151,39 +123,15 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 
-	var os []fs.FsObj
-	var lo fs.FsObj
-	var names np.Path
-	var fws *watch.Watch
-	var ok bool
+	// returns locked lo (via fws), if successfull
+	os, lo, fws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
+	if err != nil && !np.IsMaybeSpecialElem(err) {
+		return err.Rerror()
+	}
 
-	// Retry a few times.
-	for i := 0; i < 1000; i++ {
-		// The first time we try to look up the fid, and every other time after
-		// that, we retry looking up the whole path.
-		if i%2 == 0 {
-			// First, try to walk the whole path.
-			names = args.Wnames
-		}
-		os, lo, names, fws, ok, err = ps.tryLookupObjAndLock(f.Pobj().Ctx(), f, names)
-		// If the walk was unsuccessful, and no name along the path was potentially
-		// a symlink, return an error. The lock will already have been released.
-		if err != nil {
-			return err.Rerror()
-		}
-		// If we successfully walked some portion of the path, allocate an Fid and
-		// let the client decide what to do with rest
-		if ok {
-			break
-		}
-	}
-	// Ensure we were able to resolve at least part of the path.
-	if fws == nil {
-		db.DFatalf("Unable to perform server-side symlink walk after 1000 retries.")
-	}
-	// Make sure to eventually release the lock.
-	defer ps.wt.Release(fws)
-	path := append(f.Pobj().Path(), names...)
+	// let the client decide what to do with rest
+	n := len(args.Wnames) - len(rest)
+	p := append(f.Pobj().Path(), args.Wnames[:n]...)
 	rets.Qids = ps.makeQids(os)
 	qid := ps.mkQid(f.Pobj().Obj().Perm(), f.Pobj().Obj().Path())
 	if len(os) == 0 { // cloning f into args.NewFid in ft
@@ -191,9 +139,12 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
-	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), path, lo, qid, os)
-	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(path, lo, f.Pobj().Ctx()), 0, qid))
+	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
+	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 	ps.vt.Insert(qid.Path)
+	if fws != nil {
+		ps.wt.Release(fws)
+	}
 	return nil
 }
 

@@ -14,6 +14,7 @@ require (
 	github.com/klauspost/readahead v1.4.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/montanaflynn/stats v0.6.6
+	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4

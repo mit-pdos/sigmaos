@@ -65,40 +65,16 @@ func (dir *DirOverlay) ls() []*np.Stat {
 	return entries
 }
 
-// path is in overlay mounts
-func (dir *DirOverlay) lookup(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	i := dir.lookupMount(path[0])
-	os := []fs.FsObj{i}
-	db.DPrintf("OVERLAYDIR", "lookup %v in mount %v %v\n", path[1:], path[0], i)
-	if len(path) == 1 {
-		return os, i, nil, nil
+func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
+	if i := dir.lookupMount(name); i != nil {
+		return i, nil
 	} else {
-		switch d := i.(type) {
-		case fs.Dir:
-			qs, lo, p, err := d.Lookup(ctx, path[1:])
-			db.DPrintf("OVERLAYDIR", "lookup %v in %v res %v %v %v err %v\n", path[1:], i, qs, lo, p, err)
-			if lo == nil {
-				lo = i
-			}
-			return append(os, qs...), lo, p, err
-		default:
-			return os, i, path[1:], np.MkErr(np.TErrNotDir, path[0])
+		db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", name)
+		o, err := dir.underlay.Lookup(ctx, name)
+		if o == dir.underlay {
+			o = dir
 		}
-	}
-}
-
-func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	if len(path) >= 1 && dir.lookupMount(path[0]) != nil {
-		// lookup up in overlay
-		return dir.lookup(ctx, path)
-	} else {
-		db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", path)
-		// lookup up in underlay
-		os, lo, p, err := dir.underlay.Lookup(ctx, path)
-		if lo == dir.underlay {
-			lo = dir
-		}
-		return os, lo, p, err
+		return o, err
 	}
 }
 

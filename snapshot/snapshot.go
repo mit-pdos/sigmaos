@@ -86,10 +86,10 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesss
 	// Restore the fs tree
 	dirover := s.RestoreFsTree(s.DirOverlay).(*overlay.DirOverlay) //overlay.Restore(s.RestoreFsTree, s.DirOverlay)
 	// Get the ffs & stats
-	_, ffs, _, _ := dirover.Lookup(nil, np.Split(np.FENCEDIR))
-	_, stat, _, _ := dirover.Lookup(nil, np.Split(np.STATSD))
+	ffs, _ := dirover.Lookup(nil, np.FENCEDIR)
+	stat, _ := dirover.Lookup(nil, np.STATSD)
 	// Fix up the sesssrv pointer in snapshotdev
-	_, dev, _, _ := dirover.Lookup(nil, np.Split(np.SNAPDEV))
+	dev, _ := dirover.Lookup(nil, np.SNAPDEV)
 	dev.(*Dev).srv = sesssrv
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)

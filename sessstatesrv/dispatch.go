@@ -8,8 +8,6 @@ import (
 )
 
 func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
-	s.SetRunning(true)
-	defer s.SetRunning(false)
 	// If another replica detached a session, and the client sent their request
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.

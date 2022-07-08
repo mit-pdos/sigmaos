@@ -61,8 +61,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 func (sc *SessCond) Wait(sessid np.Tsession) *np.Err {
 	c := sc.alloc(sessid)
 
-	sess, _ := sc.sct.St.Lookup(sessid)
-	c.threadmgr.Sleep(c.c, sess.SetRunning)
+	c.threadmgr.Sleep(c.c)
 
 	sc.removeWakingCond(sessid, c)
 

@@ -125,9 +125,8 @@ func (c *SrvConn) reader() {
 				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				c.wg.Add(1)
 				fc := np.MakeFcallReply(fcall, err.Rerror())
-				c.replies <- fc
+				c.GetReplyC() <- fc
 				close(c.replies)
 				return
 			} else {

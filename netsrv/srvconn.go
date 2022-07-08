@@ -10,10 +10,6 @@ import (
 	"ulambda/npcodec"
 )
 
-const (
-	Msglen = 64 * 1024
-)
-
 type SrvConn struct {
 	*sync.Mutex
 	wg         *sync.WaitGroup
@@ -34,8 +30,8 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		conn,
 		false,
 		srv.wireCompat,
-		bufio.NewReaderSize(conn, Msglen),
-		bufio.NewWriterSize(conn, Msglen),
+		bufio.NewReaderSize(conn, np.Conf.Conn.MSG_LEN),
+		bufio.NewWriterSize(conn, np.Conf.Conn.MSG_LEN),
 		make(chan *np.Fcall),
 		srv.sesssrv,
 		0,

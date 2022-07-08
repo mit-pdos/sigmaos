@@ -115,6 +115,10 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve
 	return lo, nil
 }
 
+// Requests that combine walk, open, and do operation in a single RPC,
+// which also avoids clunking. They may fail because args.Wnames may
+// contains a special path element; in that, case the client must walk
+// args.Wnames.
 func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
@@ -517,13 +521,6 @@ func (ps *ProtSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	}
 	return nil
 }
-
-//
-// Requests that combine walk, open, and do operation in a single RPC,
-// which also avoids clunking. They may fail because args.Wnames may
-// contains a special path element; in that, case the client must walk
-// args.Wnames.
-//
 
 func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *np.Err) {
 	f, err := ps.ft.Lookup(fid)

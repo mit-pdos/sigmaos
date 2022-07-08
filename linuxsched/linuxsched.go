@@ -14,6 +14,10 @@ import (
 	"unsafe"
 )
 
+func init() {
+	ScanTopology()
+}
+
 var ErrInvalid = errors.New("invalid")
 
 // MaxCores is the maximum number of cores supported.

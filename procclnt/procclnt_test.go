@@ -52,6 +52,19 @@ func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpi
 	return pid
 }
 
+func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
+	ps := make([]*proc.Proc, 0, N)
+	for i := uint(0); i < N; i++ {
+		p := proc.MakeProc("user/spinner", []string{"name/"})
+		p.Ncore = 1
+		p.Type = proc.T_LC
+		ps = append(ps, p)
+	}
+	failed := ts.SpawnBurst(ps)
+	assert.Equal(t, 0, len(failed), "Failed spawning some procs")
+	return ps
+}
+
 func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
 }
@@ -491,6 +504,41 @@ func getNChildren(ts *test.Tstate) int {
 	c, err := ts.GetChildren()
 	assert.Nil(ts.T, err, "getnchildren")
 	return len(c)
+}
+
+func TestBurstSpawn(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	linuxsched.ScanTopology()
+
+	// Number of spinners to burst-spawn
+	N := linuxsched.NCores * 3
+
+	// Start a couple new procds.
+	err := ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 1")
+	err = ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 2")
+
+	ps := burstSpawnSpinner(t, ts, N)
+
+	for _, p := range ps {
+		err := ts.WaitStart(p.Pid)
+		assert.Nil(t, err, "WaitStart: %v", err)
+	}
+
+	for _, p := range ps {
+		err := ts.Evict(p.Pid)
+		assert.Nil(t, err, "Evict: %v", err)
+	}
+
+	for _, p := range ps {
+		status, err := ts.WaitExit(p.Pid)
+		assert.Nil(t, err, "WaitExit: %v", err)
+		assert.True(t, status.IsStatusEvicted(), "Wrong status: %v", status)
+	}
+
+	ts.Shutdown()
 }
 
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {

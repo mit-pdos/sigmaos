@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -24,9 +25,11 @@ const (
 type ProcClnt struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	pid      proc.Tpid
-	isExited proc.Tpid
-	procdir  string
+	pid             proc.Tpid
+	isExited        proc.Tpid
+	procdir         string
+	procds          []string
+	lastProcdUpdate time.Time
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -56,15 +59,18 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 
 // Burst-spawn a set of procs across available procds. Return a slice of procs
 // which were unable to be successfully spawned.
-func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) error {
-	procds, _, err := clnt.ReadDir(np.PROCDREL)
-	if err != nil {
-		return err
-	}
+func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) []*proc.Proc {
+	failed := []*proc.Proc{}
 	for i := range ps {
-		clnt.spawn(procds[i%len(procds)].Name, ps[i])
+		// Update the list of active procds.
+		clnt.updateProcds()
+		err := clnt.spawn(clnt.procds[i%len(clnt.procds)], ps[i])
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
+			failed = append(failed, ps[i])
+		}
 	}
-	return nil
+	return failed
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
@@ -112,6 +118,28 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 	}
 
 	return nil
+}
+
+// Update the list of active procds.
+func (clnt *ProcClnt) updateProcds() {
+	// If we updated the list of active procds recently, return immediately. The
+	// list will change at most as quickly as the realm resizes.
+	if time.Since(clnt.lastProcdUpdate) < np.Conf.Realm.RESIZE_INTERVAL {
+		return
+	}
+	clnt.lastProcdUpdate = time.Now()
+	// Read the procd union dir.
+	procds, _, err := clnt.ReadDir(np.PROCDREL)
+	if err != nil {
+		db.DFatalf("Error ReadDir procd: %v", err)
+	}
+	// Alloc enough space for the list of procds, excluding the ws queue.
+	clnt.procds = make([]string, 0, len(procds)-1)
+	for _, procd := range procds {
+		if procd.Name != path.Base(path.Dir(np.PROCD_WS)) {
+			clnt.procds = append(clnt.procds, procd.Name)
+		}
+	}
 }
 
 // ========== WAIT ==========

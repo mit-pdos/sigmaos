@@ -176,6 +176,9 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			// We claimed a proc successfully, so stop.
 			if newProc != nil {
 				p = newProc
+				// Delete the work stealing symlink if this proc was ever offered for
+				// work-stealing.
+				pd.tryDeleteWSSymlink(st)
 				return true, nil
 			}
 			// Couldn't claim a proc, so keep looking.

@@ -10,7 +10,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/linuxsched"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )

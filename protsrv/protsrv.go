@@ -65,6 +65,9 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	if args.Aname != "" {
 		_, lo, fws, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
 		if len(rest) > 0 || err != nil {
+			if fws != nil {
+				ps.wt.Release(fws)
+			}
 			return err.Rerror()
 		}
 		ps.wt.Release(fws)
@@ -140,7 +143,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 	// let the client decide what to do with rest
 	n := len(args.Wnames) - len(rest)
-	p := append(f.Pobj().Path(), args.Wnames[:n]...)
+	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
 	rets.Qids = ps.makeQids(os)
 	qid := ps.mkQid(f.Pobj().Obj().Perm(), f.Pobj().Obj().Path())
 	if len(os) == 0 { // cloning f into args.NewFid in ft
@@ -150,6 +153,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	}
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+
 	ps.vt.Insert(qid.Path)
 	if ws != nil {
 		ps.wt.Release(ws)
@@ -213,8 +217,6 @@ func (ps *ProtSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	if !np.VEq(f.Qid().Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
-	// time.Sleep(1000 * time.Nanosecond)
-
 	err = ws.Watch(ps.sid)
 	if err != nil {
 		return err.Rerror()

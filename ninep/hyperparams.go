@@ -15,6 +15,9 @@ var local = `
 conn:
   msg_len: 65536
 
+perf:
+  cpu_util_sample_hz: 50
+
 session:
   heartbeat_interval: 50ms
   timeout: 200ms
@@ -45,6 +48,9 @@ var aws = `
 conn:
   msg_len: 65536
 
+perf:
+  cpu_util_sample_hz: 50
+
 session:
   heartbeat_interval: 1000ms
   timeout: 40000ms
@@ -74,6 +80,10 @@ type Config struct {
 	Conn struct {
 		// SigmaP connection message length.
 		MSG_LEN int `yaml:"msg_len"`
+	}
+	Perf struct {
+		// SigmaP connection message length.
+		CPU_UTIL_SAMPLE_HZ int `yaml:"cpu_util_sample_hz"`
 	}
 	Session struct {
 		// Client heartbeat frequency.

@@ -7,7 +7,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
-	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/resource"
 )
@@ -141,7 +140,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 // procs per core per claim interval, where a claim interval is the length two
 // CPU util samples.
 func (pd *Procd) procClaimRateLimitCheck() bool {
-	timeBetweenUtilSamples := (1000 / perf.CPU_SAMPLE_HZ) * time.Millisecond
+	timeBetweenUtilSamples := time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond
 	// Check if we have moved onto the next interval (interval is currently 2 *
 	// utilization sample rate).
 	if time.Since(pd.procClaimTime) > 10*timeBetweenUtilSamples {

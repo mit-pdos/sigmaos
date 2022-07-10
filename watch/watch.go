@@ -81,7 +81,7 @@ func (wt *WatchTable) allocWatch(path np.Path) *Watch {
 
 	ws, ok := wt.watches[p]
 	if !ok {
-		// log.Printf("allocWatch: mkWatch %v\n", path)
+		db.DPrintf("WATCH", "allocWatch '%v'\n", path)
 		ws = mkWatch(wt.sct, p)
 		wt.watches[p] = ws
 	}
@@ -95,6 +95,7 @@ func (wt *WatchTable) allocWatch(path np.Path) *Watch {
 func (wt *WatchTable) WatchLookupL(path np.Path) *Watch {
 	ws := wt.allocWatch(path)
 	ws.Lock()
+	db.DPrintf("WATCH", "Lock %v\n", path)
 	return ws
 }
 
@@ -108,7 +109,7 @@ func (wt *WatchTable) release(ws *Watch) bool {
 	ws1, ok := wt.watches[ws.path]
 	if !ok {
 		// Another thread already deleted the entry
-		db.DFatalf("release %v\n", ws)
+		db.DFatalf("release '%v'\n", ws)
 		return del
 	}
 
@@ -127,6 +128,7 @@ func (wt *WatchTable) release(ws *Watch) bool {
 // WatchLookupL().  If no thread is using the watch anymore, free the
 // sess cond associated with the watch.
 func (wt *WatchTable) Release(ws *Watch) {
+	db.DPrintf("WATCH", "Release '%v'\n", ws.path)
 	ws.Unlock()
 	del := wt.release(ws)
 	if del {

@@ -42,7 +42,7 @@ func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *np.Err)
 	}
 	db.DPrintf("WALK", "unionScan: target: %v\n", target)
 	if pathc.unionMatch(q, target) {
-		fid2, _, err := pathc.FidClnt.Walk(fid1, []string{name})
+		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			return np.NoFid, err
 		}

@@ -561,7 +561,7 @@ type Tattach struct {
 }
 
 func (m Tattach) String() string {
-	return fmt.Sprintf("{%v a %v u %v a %v}", m.Fid, m.Afid, m.Uname, m.Aname)
+	return fmt.Sprintf("{%v a %v u %v a '%v'}", m.Fid, m.Afid, m.Uname, m.Aname)
 }
 
 type Rattach struct {

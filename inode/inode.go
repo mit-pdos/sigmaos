@@ -36,7 +36,7 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 }
 
 func (inode *Inode) String() string {
-	str := fmt.Sprintf("{ino %p %v}", inode, inode.perm)
+	str := fmt.Sprintf("{ino %p %v %v}", inode, inode.inum, inode.perm)
 	return str
 }
 

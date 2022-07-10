@@ -35,8 +35,10 @@ func MkRefTable() *RefTable {
 
 func (rf *RefTable) Lookup(p np.Tpath) (interface{}, bool) {
 	if e, ok := rf.paths[p]; ok {
+		db.DPrintf("REFMAP", "lookup %v %v\n", p, e)
 		return e.e, true
 	}
+	db.DPrintf("REFMAP", "lookup %v no entry\n", p)
 	return nil, false
 }
 

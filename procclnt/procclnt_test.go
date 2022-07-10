@@ -52,6 +52,19 @@ func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpi
 	return pid
 }
 
+func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
+	ps := make([]*proc.Proc, 0, N)
+	for i := uint(0); i < N; i++ {
+		p := proc.MakeProc("user/spinner", []string{"name/"})
+		p.Ncore = 1
+		p.Type = proc.T_LC
+		ps = append(ps, p)
+	}
+	failed := ts.SpawnBurst(ps)
+	assert.Equal(t, 0, len(failed), "Failed spawning some procs")
+	return ps
+}
+
 func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
 }
@@ -404,8 +417,6 @@ func TestEvict(t *testing.T) {
 func TestReserveCores(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	start := time.Now()
 	pid := proc.Tpid("sleeper-aaaaaaa")
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -438,8 +449,6 @@ func TestWorkStealing(t *testing.T) {
 
 	ts.BootProcd()
 
-	linuxsched.ScanTopology()
-
 	start := time.Now()
 	pid := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -462,13 +471,17 @@ func TestWorkStealing(t *testing.T) {
 
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized: took too long (%v msec)", end.Sub(start).Milliseconds())
 
+	// Check that work-stealing symlinks were cleaned up.
+	sts, _, err := ts.ReadDir(np.PROCD_WS)
+	assert.Nil(t, err, "Readdir %v", err)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+
 	ts.Shutdown()
 }
 
 func TestEvictN(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
 	N := int(linuxsched.NCores)
 
 	pids := []proc.Tpid{}
@@ -491,6 +504,39 @@ func getNChildren(ts *test.Tstate) int {
 	c, err := ts.GetChildren()
 	assert.Nil(ts.T, err, "getnchildren")
 	return len(c)
+}
+
+func TestBurstSpawn(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	// Number of spinners to burst-spawn
+	N := linuxsched.NCores * 3
+
+	// Start a couple new procds.
+	err := ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 1")
+	err = ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 2")
+
+	ps := burstSpawnSpinner(t, ts, N)
+
+	for _, p := range ps {
+		err := ts.WaitStart(p.Pid)
+		assert.Nil(t, err, "WaitStart: %v", err)
+	}
+
+	for _, p := range ps {
+		err := ts.Evict(p.Pid)
+		assert.Nil(t, err, "Evict: %v", err)
+	}
+
+	for _, p := range ps {
+		status, err := ts.WaitExit(p.Pid)
+		assert.Nil(t, err, "WaitExit: %v", err)
+		assert.True(t, status.IsStatusEvicted(), "Wrong status: %v", status)
+	}
+
+	ts.Shutdown()
 }
 
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
@@ -554,8 +600,6 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 func TestProcdResize1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	// Run a proc that claims all cores.
 	pid := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -612,8 +656,6 @@ func TestProcdResizeN(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	N := 5
-
-	linuxsched.ScanTopology()
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
@@ -672,8 +714,6 @@ func TestProcdResizeN(t *testing.T) {
 func TestProcdResizeEvict(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	linuxsched.ScanTopology()
-
 	// Run a proc that claims all cores save one.
 	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores)-1)
 	err := ts.WaitStart(pid)
@@ -721,8 +761,6 @@ func TestProcdResizeEvict(t *testing.T) {
 
 func TestProcdResizeAccurateStats(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	linuxsched.ScanTopology()
 
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}
@@ -818,8 +856,6 @@ func anyCoresOccupied(coresMaps []map[string]bool) bool {
 
 func TestProcdResizeCoreRepinning(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	linuxsched.ScanTopology()
 
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}

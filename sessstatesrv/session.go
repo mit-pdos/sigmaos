@@ -31,7 +31,6 @@ type Session struct {
 	lastHeartbeat time.Time
 	Sid           np.Tsession
 	began         bool // true if the fssrv has already begun processing ops
-	running       bool // true if the session is currently running an operation.
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
 }
@@ -174,25 +173,5 @@ func (sess *Session) timedOut() (bool, time.Time) {
 	if sess.timedout {
 		return true, sess.lastHeartbeat
 	}
-	// If in the middle of a running op, or this fssrv hasn't begun processing
-	// ops yet, refresh the heartbeat so we don't immediately time-out when the
-	// op finishes.
-	if sess.running || !sess.began {
-		sess.lastHeartbeat = time.Now()
-		return false, sess.lastHeartbeat
-	}
 	return sess.timedout || time.Since(sess.lastHeartbeat) > np.Conf.Session.TIMEOUT, sess.lastHeartbeat
-}
-
-func (sess *Session) SetRunning(r bool) {
-	sess.Lock()
-	defer sess.Unlock()
-	sess.running = r
-	// If this server is replicated, it may take a couple of seconds for the
-	// replication library to start up & begin processing ops. Noting when
-	// processing has started for a session helps us avoid timing-out sessions
-	// until they have begun processing ops.
-	sess.began = true
-	// Make sure to refresh timer.
-	sess.lastHeartbeat = time.Now()
 }

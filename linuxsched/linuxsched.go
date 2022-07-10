@@ -14,6 +14,13 @@ import (
 	"unsafe"
 )
 
+func init() {
+	if _, err := ScanTopology(); err != nil {
+		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
+		os.Exit(1)
+	}
+}
+
 var ErrInvalid = errors.New("invalid")
 
 // MaxCores is the maximum number of cores supported.

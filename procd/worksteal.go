@@ -83,6 +83,14 @@ func (pd *Procd) offerStealableProcs() {
 	}
 }
 
+func (pd *Procd) tryDeleteWSSymlink(st *np.Stat) {
+	// If proc was offered up for work stealing...
+	if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
+		link := path.Join(np.PROCD_WS, st.Name) + "-SYMLINK"
+		pd.Remove(link)
+	}
+}
+
 func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, error) {
 	b, err := pd.GetFile(procPath)
 	if err != nil {

@@ -76,7 +76,7 @@ func (t *ThreadMgr) Process(fc *np.Fcall) {
 }
 
 // Notify the ThreadMgr that a goroutine/operation would like to go to sleep.
-func (t *ThreadMgr) Sleep(c *sync.Cond, setRunning func(bool)) {
+func (t *ThreadMgr) Sleep(c *sync.Cond) {
 
 	// Acquire the *t.Mutex to ensure that the ThreadMgr.run thread won't miss the
 	// sleep signal.
@@ -89,14 +89,8 @@ func (t *ThreadMgr) Sleep(c *sync.Cond, setRunning func(bool)) {
 	// Sleep/wake races here are avoided by SessCond locking above us.
 	t.Unlock()
 
-	// Note that the session is no longer running
-	setRunning(false)
-
 	// Sleep on this condition variable.
 	c.Wait()
-
-	// Note that the session is running
-	setRunning(true)
 }
 
 // Called when an operation is going to be woken up. The caller may be a

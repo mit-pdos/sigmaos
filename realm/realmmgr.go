@@ -62,8 +62,6 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
 
-	linuxsched.ScanTopology()
-
 	return m
 }
 

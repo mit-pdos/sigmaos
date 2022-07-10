@@ -2,6 +2,7 @@ package benchmarks
 
 import (
 	"log"
+	"path"
 	"strconv"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 const (
@@ -18,6 +20,8 @@ const (
 type BurstBenchmark struct {
 	namedAddr []string
 	resDir    string
+	id        string
+	dir       string
 	*fslib.FsLib
 	*procclnt.ProcClnt
 }
@@ -26,6 +30,8 @@ func MakeBurstBenchmark(fsl *fslib.FsLib, namedAddr []string, resDir string) *Bu
 	b := &BurstBenchmark{}
 	b.namedAddr = namedAddr
 	b.resDir = resDir
+	b.id = rand.String(16)
+	b.dir = path.Join(BURST_BENCH_DIR, b.id)
 	b.FsLib = fsl
 	b.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), b.FsLib, "burstbenchmark", namedAddr)
 	return b
@@ -40,6 +46,7 @@ func (b *BurstBenchmark) Run() map[string]*RawResults {
 
 func (b *BurstBenchmark) setup() {
 	b.MkDir(BURST_BENCH_DIR, 0777)
+	b.MkDir(b.dir, 0777)
 }
 
 func (b *BurstBenchmark) teardown(ps []*proc.Proc) {
@@ -64,8 +71,8 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 
 	ps := []*proc.Proc{}
 	for i := 0; i < N; i++ {
-		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
-		p := proc.MakeProcPid(pid, "user/spinner", []string{BURST_BENCH_DIR})
+		pid := proc.Tpid(b.id + "-" + strconv.Itoa(i+pidOffset))
+		p := proc.MakeProcPid(pid, "user/spinner", []string{b.dir})
 		p.Ncore = 1
 		// Make procs LC to ensure we respect Ncore
 		p.Type = proc.T_LC
@@ -79,11 +86,9 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	start := time.Now()
 
 	// Spawn a bunch of procs.
-	for i := 0; i < N; i++ {
-		db.DPrintf("BENCH", "Spawn %v", i)
-		if err := b.Spawn(ps[i]); err != nil {
-			db.DFatalf("Error Spawn: %v", err)
-		}
+	failed := b.SpawnBurst(ps)
+	if len(failed) > 0 {
+		db.DFatalf("Error Spawn: %v", failed)
 	}
 	db.DPrintf(db.ALWAYS, "Done spawning")
 

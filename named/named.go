@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslibsrv"
 	"ulambda/kernel"
-	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
@@ -23,7 +22,6 @@ import (
 
 func Run(args []string) {
 	perf.Hz()
-	linuxsched.ScanTopology()
 	p := perf.MakePerf("NAMED")
 	defer p.Done()
 

@@ -127,7 +127,6 @@ func (m *Machined) initFS() {
 }
 
 func (m *Machined) postCores() {
-	linuxsched.ScanTopology()
 	coreGroupSize := uint(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
 	for i := uint(0); i < linuxsched.NCores; i += coreGroupSize {
 		iv := np.MkInterval(np.Toffset(i), np.Toffset(i+coreGroupSize))

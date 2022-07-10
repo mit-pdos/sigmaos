@@ -16,11 +16,6 @@ import (
 // TCP connection which sends and receiveds RPCs to/from a single server.
 //
 
-// XXX duplicate
-const (
-	Msglen = 64 * 1024
-)
-
 type NetClnt struct {
 	mu     sync.Mutex
 	sconn  sessconnclnt.Conn
@@ -84,8 +79,8 @@ func (nc *NetClnt) connect(addrs []string) *np.Err {
 		}
 		nc.conn = c
 		nc.addr = addr
-		nc.br = bufio.NewReaderSize(c, Msglen)
-		nc.bw = bufio.NewWriterSize(c, Msglen)
+		nc.br = bufio.NewReaderSize(c, np.Conf.Conn.MSG_LEN)
+		nc.bw = bufio.NewWriterSize(c, np.Conf.Conn.MSG_LEN)
 		db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
 		return nil
 	}

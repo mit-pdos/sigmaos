@@ -10,7 +10,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/linuxsched"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -117,8 +116,6 @@ func (r *Rival) spawnSpinner(pid proc.Tpid) {
 }
 
 func (r *Rival) Work() {
-	// For current benchmarking setup, restrict to core 0
-	linuxsched.ScanTopology()
 	//	m := linuxsched.CreateCPUMaskOfOne(0)
 	//	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 	start := time.Now()

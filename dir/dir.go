@@ -84,12 +84,9 @@ func (dir *DirImpl) lookup(name string) (fs.Inode, *np.Err) {
 }
 
 func (dir *DirImpl) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
-	v, ok := dir.dents.Lookup(name)
-	if ok {
-		return v.(fs.Inode), nil
-	} else {
-		return nil, np.MkErr(np.TErrNotfound, name)
-	}
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+	return dir.lookup(name)
 }
 
 func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

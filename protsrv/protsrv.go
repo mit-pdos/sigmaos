@@ -70,13 +70,17 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 			}
 			return err.Rerror()
 		}
+		// insert before releasing
+		ps.vt.Insert(lo.Path())
 		ps.wt.Release(fws)
 		tree = lo
 		qid = ps.mkQid(lo.Perm(), lo.Path())
+	} else {
+		// root is already in the version table; this updates
+		// just the refcnt.
+		ps.vt.Insert(root.Path())
 	}
 	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(path, tree, ctx), 0, qid))
-	ps.vt.Insert(tree.Path())
-
 	rets.Qid = qid
 	return nil
 }

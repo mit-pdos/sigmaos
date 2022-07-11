@@ -17,9 +17,12 @@ func (pd *Procd) workStealingMonitor() {
 	for !pd.readDone() {
 		// Wait for a bit.
 		<-ticker.C
+		pd.netProcsClaimed++
 		var nStealable int
 		// Wait untile there is a proc to steal.
 		sts, err := pd.ReadDirWatch(np.PROCD_WS, func(sts []*np.Stat) bool {
+			// Any procs are local?
+			anyLocal := false
 			nStealable = len(sts)
 			// Discount procs already on this procd
 			for _, st := range sts {
@@ -27,8 +30,15 @@ func (pd *Procd) workStealingMonitor() {
 				// so, discount it from the count of stealable procs.
 				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
 				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
-					// nStealable--
+					nStealable--
 				}
+			}
+			// If any procs are local (possibly BE procs which weren't spawned before
+			// due to rate-limiting), try to spawn one of them, so that we don't
+			// deadlock with all the workers sleeping & BE procs waiting to be
+			// spawned.
+			if anyLocal {
+				nStealable++
 			}
 			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
 			return nStealable == 0

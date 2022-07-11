@@ -166,14 +166,18 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		if pd.coresAvail >= p.Ncore {
 			return true
 		}
+		db.DPrintf("PROCD", "Don't have enough LC cores (%v) for %v", pd.coresAvail, p)
 	} else {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization. If utilization is below a certain threshold, take the proc.
-		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && pd.procClaimRateLimitCheck() {
+		util := pd.GetStats().GetUtil()
+		rlc := pd.procClaimRateLimitCheck()
+		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
 			pd.netProcsClaimed++
 			db.DPrintf(db.ALWAYS, "Util: %v", pd.GetStats().GetUtil())
 			return true
 		}
+		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 	}
 	return false
 }

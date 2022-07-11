@@ -64,15 +64,12 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
 		_, lo, fws, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
+		defer ps.wt.Release(fws)
 		if len(rest) > 0 || err != nil {
-			if fws != nil {
-				ps.wt.Release(fws)
-			}
 			return err.Rerror()
 		}
 		// insert before releasing
 		ps.vt.Insert(lo.Path())
-		ps.wt.Release(fws)
 		tree = lo
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	} else {
@@ -112,13 +109,10 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 
 func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
 	_, lo, ws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
+	ps.wt.Release(ws)
 	if err != nil {
-		if ws != nil {
-			ps.wt.Release(ws)
-		}
 		return nil, err
 	}
-	defer ps.wt.Release(ws)
 	if lo.Perm().IsSymlink() && resolve {
 		return nil, np.MkErr(np.TErrNotDir, names[len(names)-1])
 	}
@@ -138,10 +132,8 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 
 	os, lo, ws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
+	defer ps.wt.Release(ws)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
-		if ws != nil {
-			ps.wt.Release(ws)
-		}
 		return err.Rerror()
 	}
 
@@ -154,9 +146,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
 	ps.vt.Insert(qid.Path)
-	if ws != nil {
-		ps.wt.Release(ws)
-	}
+
 	return nil
 }
 

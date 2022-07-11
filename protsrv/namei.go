@@ -34,16 +34,18 @@ func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.F
 	}
 }
 
-// If an lo is returned, lookupObj/namei will return a locked watch for it
+// LookupObj/namei will return an lo and a locked watch for it, even
+// in error cases because the caller create a new fid anyway.
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target np.Path) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
+	o := po.Obj()
 	if len(target) == 0 {
 		ws := ps.wt.WatchLookupL(po.Path())
-		return nil, po.Obj(), ws, nil, nil
+		return nil, o, ws, nil, nil
 	}
-	o := po.Obj()
 	src := po.Path().Copy()
 	if !o.Perm().IsDir() {
-		return nil, nil, nil, nil, np.MkErr(np.TErrNotDir, src.Base())
+		ws := ps.wt.WatchLookupL(po.Path())
+		return nil, o, ws, nil, np.MkErr(np.TErrNotDir, src.Base())
 	}
 	return ps.namei(ctx, o, src, target, nil)
 }

@@ -145,16 +145,11 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		return err.Rerror()
 	}
 
-	// let the client decide what to do with rest
+	// let the client decide what to do with rest (when there is a rest)
 	n := len(args.Wnames) - len(rest)
 	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
 	rets.Qids = ps.makeQids(os)
-	qid := ps.mkQid(f.Pobj().Obj().Perm(), f.Pobj().Obj().Path())
-	if len(os) == 0 { // cloning f into args.NewFid in ft
-		lo = f.Pobj().Obj()
-	} else {
-		qid = ps.mkQid(lo.Perm(), lo.Path())
-	}
+	qid := ps.mkQid(lo.Perm(), lo.Path())
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 

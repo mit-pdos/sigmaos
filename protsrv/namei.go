@@ -8,12 +8,11 @@ import (
 	"ulambda/watch"
 )
 
-// If an lo is returned, namei will return a locked watch for it
 func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	dws := ps.wt.WatchLookupL(src)
 	d := o.(fs.Dir)
 	e, err := d.Lookup(ctx, target[0])
-	if err != nil {
+	if err != nil { // an error or perhaps a ~
 		db.DPrintf("PROTSRV", "%v: dir %v: file not found %v", ctx.Uname(), d, target[0])
 		return os, d, dws, target, err
 	}
@@ -29,15 +28,17 @@ func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.F
 	case fs.Dir:
 		ps.wt.Release(dws) // for "."
 		return ps.namei(ctx, e, src.Append(target[0]), target[1:], os)
-	default:
+	default: // an error or perhaps a symlink
 		db.DPrintf("PROTSRV", "%v: error not dir namei %T %v %v %v %v", ctx.Uname(), e, target, d, os, target[1:])
 		return os, e, dws, target, np.MkErr(np.TErrNotDir, target[0])
 	}
 }
 
+// If an lo is returned, lookupObj/namei will return a locked watch for it
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target np.Path) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	if len(target) == 0 {
-		return nil, nil, nil, nil, nil
+		ws := ps.wt.WatchLookupL(po.Path())
+		return nil, po.Obj(), ws, nil, nil
 	}
 	o := po.Obj()
 	src := po.Path().Copy()

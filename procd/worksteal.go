@@ -30,6 +30,7 @@ func (pd *Procd) workStealingMonitor() {
 				// so, discount it from the count of stealable procs.
 				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
 				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
+					anyLocal = true
 					nStealable--
 				}
 			}

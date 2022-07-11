@@ -27,7 +27,7 @@ func (pd *Procd) workStealingMonitor() {
 				// so, discount it from the count of stealable procs.
 				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
 				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
-					nStealable--
+					// nStealable--
 				}
 			}
 			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)

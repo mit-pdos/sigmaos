@@ -173,7 +173,6 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		util := pd.GetStats().GetUtil()
 		rlc := pd.procClaimRateLimitCheck(p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-			pd.netProcsClaimed++
 			db.DPrintf(db.ALWAYS, "Util: %v", pd.GetStats().GetUtil())
 			return true
 		}
@@ -186,6 +185,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 func (pd *Procd) allocCoresL(p *LinuxProc, n proc.Tcore) {
 	p.coresAlloced = n
 	pd.coresAvail -= n
+	pd.netProcsClaimed++
 	pd.sanityCheckCoreCountsL()
 }
 

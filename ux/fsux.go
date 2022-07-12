@@ -54,25 +54,25 @@ func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Co
 	return fsux
 }
 
-func ErrnoToNp(errno syscall.Errno, err error) *np.Err {
+func ErrnoToNp(errno syscall.Errno, err error, name string) *np.Err {
 	switch errno {
 	case syscall.ENOENT:
-		return np.MkErr(np.TErrNotfound, err)
+		return np.MkErr(np.TErrNotfound, name)
 	case syscall.EEXIST:
-		return np.MkErr(np.TErrExists, err)
+		return np.MkErr(np.TErrExists, name)
 	default:
 		return np.MkErrError(err)
 	}
 }
 
-func UxTo9PError(err error) *np.Err {
+func UxTo9PError(err error, name string) *np.Err {
 	switch e := err.(type) {
 	case *os.LinkError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err)
+		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
 	case *os.PathError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err)
+		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
 	case syscall.Errno:
-		return ErrnoToNp(e, err)
+		return ErrnoToNp(e, err, name)
 	default:
 		return np.MkErrError(err)
 	}

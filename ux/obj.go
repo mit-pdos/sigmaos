@@ -44,7 +44,7 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
 		db.DPrintf("UXD", "ustat %v err %v\n", path, error)
-		return nil, UxTo9PError(error)
+		return nil, UxTo9PError(error, path.Base())
 	}
 	st := &np.Stat{}
 	st.Name = path.Base()

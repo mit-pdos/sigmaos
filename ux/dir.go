@@ -36,7 +36,7 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 func (d *Dir) uxReadDir() *np.Err {
 	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
-		return UxTo9PError(err)
+		return UxTo9PError(err, d.pathName.Base())
 	}
 	for _, e := range dirents {
 		if st, err := ustat(d.pathName.Copy().Append(e.Name())); err != nil {
@@ -81,7 +81,7 @@ func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, 
 	p := d.pathName.Append(name).String()
 	error := os.Mkdir(p, os.FileMode(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error)
+		return nil, UxTo9PError(error, name)
 	}
 	d1, err := makeDir(append(d.pathName, name))
 	if err != nil {
@@ -94,7 +94,7 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	p := d.pathName.Append(name).String()
 	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error)
+		return nil, UxTo9PError(error, name)
 	}
 	f, err := makeFile(append(d.pathName, name))
 	if err != nil {
@@ -108,7 +108,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error)
+		return nil, UxTo9PError(error, name)
 	}
 	f, err := makePipe(ctx, append(d.pathName, name))
 	if err != nil {
@@ -186,7 +186,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return UxTo9PError(err)
+		return UxTo9PError(err, to)
 	}
 	return nil
 }
@@ -200,7 +200,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	}
 	error := os.Remove(p.String())
 	if error != nil {
-		return UxTo9PError(error)
+		return UxTo9PError(error, name)
 	}
 	if o.Perm().IsPipe() {
 		pipe := fsux.ot.AllocRef(o.path, nil)
@@ -217,7 +217,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {
-		return UxTo9PError(error)
+		return UxTo9PError(error, to)
 	}
 	// XXX unlink on pipe, if pipe
 	return nil

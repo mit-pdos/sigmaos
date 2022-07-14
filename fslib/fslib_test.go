@@ -1070,7 +1070,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	sts, err := ts.GetDir(path + "~any/d/namedself1/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "d", "namedself0"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself0"}), "root wrong")
 
 	sts, err = ts.GetDir(path + "~any/d/namedself1/d/")
 	assert.Equal(t, nil, err)
@@ -1097,7 +1097,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	sts, err := ts.GetDir(path + "~any/namedself0/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "f", "g"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{"f", "g"}), "root wrong")
 
 	d, err := ts.GetFile(path + "~any/namedself0/f")
 	assert.Nil(ts.T, err, "GetFile")
@@ -1185,6 +1185,10 @@ func TestFslibExit(t *testing.T) {
 	// close
 	err = ts.Exit()
 	assert.Nil(t, err)
+
+	_, err = ts.Stat(path + "/.")
+	assert.NotNil(t, err)
+	assert.True(t, np.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }

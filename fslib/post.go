@@ -19,7 +19,7 @@ func MakeTarget(srvaddrs []string) []byte {
 
 func MakeTargetTree(srvaddr string, tree np.Path) []byte {
 	target := []string{srvaddr, "pubkey", tree.String()}
-	return []byte(strings.Join(target, ":") + "\n")
+	return []byte(strings.Join(target, ":"))
 }
 
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {

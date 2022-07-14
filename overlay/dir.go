@@ -65,16 +65,31 @@ func (dir *DirOverlay) ls() []*np.Stat {
 	return entries
 }
 
+// lookup in overlay
 func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, nil
+	}
+	return nil, np.MkErr(np.TErrNotfound, name)
+	// else {
+	// 	db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", name)
+	// 	o, err := dir.underlay.Lookup(ctx, name)
+	// 	if o == dir.underlay {
+	// 		o = dir
+	// 	}
+	// 	return o, err
+	// }
+}
+
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+	if i := dir.lookupMount(path[0]); i != nil {
+		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
-		db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", name)
-		o, err := dir.underlay.Lookup(ctx, name)
+		os, o, rest, err := dir.underlay.LookupPath(ctx, path)
 		if o == dir.underlay {
 			o = dir
 		}
-		return o, err
+		return os, o, rest, err
 	}
 }
 

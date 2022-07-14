@@ -83,10 +83,14 @@ func (dir *DirImpl) lookup(name string) (fs.Inode, *np.Err) {
 	}
 }
 
-func (dir *DirImpl) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
+func (dir *DirImpl) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return dir.lookup(name)
+	o, err := dir.lookup(path[0])
+	if err != nil {
+		return nil, nil, path, err
+	}
+	return []fs.FsObj{o}, o, path[1:], nil
 }
 
 func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

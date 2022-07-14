@@ -141,39 +141,38 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+	name := path[0]
 	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, name)
 	st, err := ustat(d.pathName.Append(name))
 	if err != nil {
 		db.DPrintf("UXD", "%v: Lookup %v %v err %v\n", ctx, d, name, err)
-		return nil, err
+		return nil, nil, path, err
 	}
 	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
+	var o fs.FsObj
 	if st.Mode.IsDir() {
-		d1, err := makeDir(append(d.pathName, name))
+		o, err = makeDir(append(d.pathName, name))
 		if err != nil {
-			return nil, err
+			return nil, nil, path, err
 		}
-		return d1, nil
 	} else if st.Mode.IsSymlink() {
-		s, err := makeSymlink(append(d.pathName, name), false)
+		o, err = makeSymlink(append(d.pathName, name), false)
 		if err != nil {
-			return nil, err
+			return nil, nil, path, err
 		}
-		return s, nil
 	} else if st.Mode.IsPipe() {
-		p, err := makePipe(ctx, append(d.pathName, name))
+		o, err = makePipe(ctx, append(d.pathName, name))
 		if err != nil {
-			return nil, err
+			return nil, nil, path, err
 		}
-		return p, nil
 	} else {
-		f, err := makeFile(append(d.pathName, name))
+		o, err = makeFile(append(d.pathName, name))
 		if err != nil {
-			return nil, err
+			return nil, nil, path, err
 		}
-		return f, nil
 	}
+	return []fs.FsObj{o}, o, path[1:], nil
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {

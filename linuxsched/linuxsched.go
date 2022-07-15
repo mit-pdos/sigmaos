@@ -394,6 +394,18 @@ func scanCore(core int, ti *TopologyInfo) error {
 	return nil
 }
 
+func coreIsOnline(cpu string) (bool, error) {
+	// cpu0 is always online.
+	if cpu == "cpu0" {
+		return true, nil
+	}
+	if i, err := fsReadInt(path.Join("/sys/devices/system/cpu", cpu, "online")); err != nil {
+		return false, err
+	} else {
+		return i == 1, nil
+	}
+}
+
 // ScanTopology reports the topology of the machine (packages, threads, etc.)
 func ScanTopology() (*TopologyInfo, error) {
 	// read the number of online cores
@@ -423,9 +435,15 @@ func ScanTopology() (*TopologyInfo, error) {
 		if err != nil {
 			continue
 		}
-		err = scanCore(v, ti)
+		online, err := coreIsOnline(s)
 		if err != nil {
 			return nil, err
+		}
+		if online {
+			err = scanCore(v, ti)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

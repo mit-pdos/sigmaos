@@ -2,6 +2,7 @@ package electclnt_test
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -80,26 +81,26 @@ func TestLeaderConcur(t *testing.T) {
 func TestLeaderInTurn(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	N := 20
-	sum := 0
-	current := 0
-	done := make(chan int)
+	N := uint64(20)
+	sum := uint64(0)
+	current := uint64(0)
+	done := make(chan uint64)
 
 	leader := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
 
-	for i := 0; i < N; i++ {
-		go func(i int) {
+	for i := uint64(0); i < N; i++ {
+		go func(i uint64) {
 			me := false
 			for !me {
 				err := leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeadership")
-				if current == i {
+				if atomic.LoadUint64(&current) == i {
 					me = true
 				}
 				err = leader.ReleaseLeadership()
 				assert.Nil(ts.T, err, "ReleaseLeadership")
 				if me {
-					current += 1
+					atomic.AddUint64(&current, 1)
 					done <- i
 				}
 			}
@@ -107,7 +108,7 @@ func TestLeaderInTurn(t *testing.T) {
 		sum += i
 	}
 
-	for i := 0; i < N; i++ {
+	for i := uint64(0); i < N; i++ {
 		next := <-done
 		assert.Equal(ts.T, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}

@@ -27,6 +27,9 @@ func MkIntervals() *Intervals {
 }
 
 func (ivs *Intervals) First() *np.Tinterval {
+	ivs.Lock()
+	defer ivs.Unlock()
+
 	if len(ivs.ivs) == 0 {
 		return nil
 	}

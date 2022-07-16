@@ -55,21 +55,17 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 
 	pd.makeFs()
 
-	pd.initCores(grantedCoresIv)
-
-	// Must set core affinity before starting CPU Util measurements
-	pd.setCoreAffinityL()
-
-	pd.perf = perf.MakePerf("PROCD")
-	defer pd.perf.Done()
+	pd.addr = pd.MyAddr()
+	pd.MemFs.GetStats().MonitorCPUUtil()
 
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 	pd.stealChan = make(chan bool)
 
-	pd.addr = pd.MyAddr()
+	pd.initCores(grantedCoresIv)
 
-	pd.MemFs.GetStats().MonitorCPUUtil()
+	pd.perf = perf.MakePerf("PROCD")
+	defer pd.perf.Done()
 
 	// Make namespace isolation dir.
 	os.MkdirAll(namespace.NAMESPACE_DIR, 0777)

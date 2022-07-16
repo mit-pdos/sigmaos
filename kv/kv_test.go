@@ -20,7 +20,7 @@ import (
 
 const (
 	NBALANCER = 3
-	NCLERK    = 10
+	NCLERK    = 4
 
 	CRASHBALANCER = 1000
 	CRASHMOVER    = "200"
@@ -180,7 +180,7 @@ func TestGetPutSet(t *testing.T) {
 }
 
 func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
-	const TIME = 100 // 500
+	const TIME = 100
 
 	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 

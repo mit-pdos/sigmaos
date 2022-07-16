@@ -97,9 +97,15 @@ func (sm *SessionMgr) runDetaches() {
 }
 
 func (sm *SessionMgr) Done() bool {
+	sm.st.Lock()
+	defer sm.st.Unlock()
+
 	return sm.done
 }
 
 func (sm *SessionMgr) Stop() {
+	sm.st.Lock()
+	defer sm.st.Unlock()
+
 	sm.done = true
 }

@@ -17,72 +17,72 @@ do
   # test some support package
   #
 
-  go test $1 ulambda/npcodec
-  go test $1 ulambda/linuxsched
-  go test $1 ulambda/perf
+  go test $@ ulambda/npcodec
+  go test $@ ulambda/linuxsched
+  go test $@ ulambda/perf
   
   #
   # tests without servers
   #
-  go test $1 ulambda/ninep
-  go test $1 ulambda/memfs
-  go test $1 ulambda/pathclnt
+  go test $@ ulambda/ninep
+  go test $@ ulambda/memfs
+  go test $@ ulambda/pathclnt
   
   #
   # test with just named
   #
-  go test $1 ulambda/reader --version=$VERSION
-  go test $1 ulambda/writer --version=$VERSION
-  go test $1 ulambda/stats --version=$VERSION
-  go test $1 ulambda/fslib --version=$VERSION
-  go test $1 ulambda/semclnt --version=$VERSION
-  go test $1 ulambda/electclnt --version=$VERSION
+  go test $@ ulambda/reader --version=$VERSION
+  go test $@ ulambda/writer --version=$VERSION
+  go test $@ ulambda/stats --version=$VERSION
+  go test $@ ulambda/fslib --version=$VERSION
+  go test $@ ulambda/semclnt --version=$VERSION
+  go test $@ ulambda/electclnt --version=$VERSION
   
   #
   # test proxy
   #
   
-  go test $1 ulambda/proxy --version=$VERSION
+  go test $@ ulambda/proxy --version=$VERSION
   
   #
   # tests kernel (with 1 "fake" realm)
   #
   
-  go test $1 ulambda/procclnt --version=$VERSION
+  go test $@ ulambda/procclnt --version=$VERSION
 
-  go test $1 ulambda/ux --version=$VERSION
+  go test $@ ulambda/ux --version=$VERSION
   go test -v ulambda/fslib --version=$VERSION -path "name/ux/~ip/fslibtest/" -run ReadPerf
   
-  go test $1 ulambda/s3 --version=$VERSION
+  go test $@ ulambda/s3 --version=$VERSION
   go test -v ulambda/fslib --version=$VERSION -path "name/s3/~ip/9ps3/fslibtest/" -run ReadPerf
   
-  go test $1 ulambda/kernel --version=$VERSION
-  go test $1 ulambda/leaderclnt --version=$VERSION
-  go test $1 ulambda/leadertest --version=$VERSION
-  go test $1 ulambda/snapshot --version=$VERSION
+  go test $@ ulambda/kernel --version=$VERSION
+  go test $@ ulambda/leaderclnt --version=$VERSION
+  go test $@ ulambda/leadertest --version=$VERSION
+  go test $@ ulambda/snapshot --version=$VERSION
   
-  go test $1 ulambda/group --version=$VERSION
-  go test $1 ulambda/sessclnt --version=$VERSION
+  go test $@ ulambda/group --version=$VERSION
+  go test $@ ulambda/sessclnt --version=$VERSION
   
   # dbd_test and wwwd_test requires mariadb running
-  pgrep mariadb >/dev/null && go test $1 ulambda/dbd
-  pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+  pgrep mariadb >/dev/null && go test $@ ulambda/dbd
+  pgrep mariadb >/dev/null && go test $@ ulambda/cmd/user/wwwd
   
   
-  go test $1 ulambda/mr --version=$VERSION
-  go test $1 ulambda/kv --version=$VERSION
+  go test $@ ulambda/mr --version=$VERSION
+  go test $@ ulambda/kv --version=$VERSION
   
   # XXX broken
-  # go test $1 ulambda/cmd/user/test2pc
-  # go test $1 ulambda/cmd/user/test2pc2
+  # go test $@ ulambda/cmd/user/test2pc
+  # go test $@ ulambda/cmd/user/test2pc2
   
   #
   # test with realms
   #
   
-  go test $1 ulambda/realm --version=$VERSION
+  go test $@ ulambda/realm --version=$VERSION
   
   # run without realm?
   # XXX needs fixing
-  # go test $1 -timeout=45m ulambda/replica
+  # go test $@ -timeout=45m ulambda/replica
 done 

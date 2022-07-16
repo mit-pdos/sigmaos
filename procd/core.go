@@ -173,7 +173,6 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		util := pd.GetStats().GetUtil()
 		rlc := pd.procClaimRateLimitCheck(p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-			db.DPrintf(db.ALWAYS, "Util: %v", pd.GetStats().GetUtil())
 			return true
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)

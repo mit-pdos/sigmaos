@@ -4,20 +4,32 @@ import (
 	"fmt"
 	"sync"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/refmap"
 )
 
-//  XXX use Tpath instead of Path
+type version struct {
+	V np.TQversion
+}
+
+func mkVersion() *version {
+	v := &version{}
+	v.V = 0
+	return v
+}
+
+func (v *version) String() string {
+	return fmt.Sprintf("v %d", v.V)
+}
 
 type VersionTable struct {
 	sync.Mutex
-	paths map[np.Tpath]*Version
+	*refmap.RefTable
 }
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.paths = make(map[np.Tpath]*Version)
+	vt.RefTable = refmap.MkRefTable()
 	return vt
 }
 
@@ -25,64 +37,32 @@ func (vt *VersionTable) GetVersion(path np.Tpath) np.TQversion {
 	vt.Lock()
 	defer vt.Unlock()
 
-	if v, ok := vt.paths[path]; ok {
-		return v.V
+	if e, ok := vt.Lookup(path); ok {
+		return e.(*version).V
 	}
 	return 0
 }
 
-func (vt *VersionTable) Add(path np.Tpath) *Version {
+func (vt *VersionTable) Insert(path np.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
-
-	v, ok := vt.paths[path]
-	if ok {
-		v.n += 1
-		db.DPrintf("VT", "insert %v %v\n", path, v)
-		return v
-	}
-	v = mkVersion()
-	db.DPrintf("VT", "new insert %v %v\n", path, v)
-	vt.paths[path] = v
-	return v
+	vt.RefTable.Insert(path, mkVersion())
 }
 
 func (vt *VersionTable) Delete(p np.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 
-	v, ok := vt.paths[p]
-	if !ok {
-		db.DFatalf("delete %v\n", p)
-	}
-	v.n -= 1
-	if v.n <= 0 {
-		db.DPrintf("VT", "delete %v\n", p)
-		delete(vt.paths, p)
-	}
+	vt.RefTable.Delete(p)
 }
 
 func (vt *VersionTable) IncVersion(path np.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 
-	if v, ok := vt.paths[path]; ok {
+	if e, ok := vt.RefTable.Lookup(path); ok {
+		v := e.(*version)
 		v.V += 1
+		return
 	}
-}
-
-type Version struct {
-	sync.Mutex
-	n int
-	V np.TQversion
-}
-
-func mkVersion() *Version {
-	v := &Version{}
-	v.n = 1
-	return v
-}
-
-func (v *Version) String() string {
-	return fmt.Sprintf("n %d v %d", v.n, v.V)
 }

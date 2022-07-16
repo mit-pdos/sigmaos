@@ -17,6 +17,11 @@ func MakeTarget(srvaddrs []string) []byte {
 	return []byte(strings.Join(targets, "\n"))
 }
 
+func MakeTargetTree(srvaddr string, tree np.Path) []byte {
+	target := []string{srvaddr, "pubkey", tree.String()}
+	return []byte(strings.Join(target, ":"))
+}
+
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	err := fsl.Symlink(MakeTarget([]string{srvaddr}), srvname, 0777|np.DMTMP)
 	return err

@@ -11,8 +11,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/memfs"
 	np "ulambda/ninep"
+	"ulambda/pipe"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
@@ -132,7 +132,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	}
 	defer www.Close(fd)
 	for {
-		b, err := www.Read(fd, memfs.PIPESZ)
+		b, err := www.Read(fd, pipe.PIPESZ)
 		if err != nil || len(b) == 0 {
 			break
 		}

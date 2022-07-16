@@ -16,11 +16,15 @@ import (
 	// "ulambda/seccomp"
 )
 
+var fsux *FsUx
+
 type FsUx struct {
 	*sesssrv.SessSrv
 	*fslib.FsLib
-	mu    sync.Mutex
 	mount string
+
+	sync.Mutex
+	ot *ObjTable
 }
 
 func RunFsUx(mount string) {
@@ -28,14 +32,15 @@ func RunFsUx(mount string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", np.UX, err)
 	}
-	fsux := MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
+	fsux = MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
 	fsux.Done()
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
-	fsux := &FsUx{}
+	fsux = &FsUx{}
+	fsux.ot = MkObjTable()
 	root, err := makeDir([]string{mount})
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
@@ -49,23 +54,25 @@ func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Co
 	return fsux
 }
 
-func ErrnoToNp(errno syscall.Errno, err error) *np.Err {
+func ErrnoToNp(errno syscall.Errno, err error, name string) *np.Err {
 	switch errno {
 	case syscall.ENOENT:
-		return np.MkErr(np.TErrNotfound, err)
+		return np.MkErr(np.TErrNotfound, name)
 	case syscall.EEXIST:
-		return np.MkErr(np.TErrExists, err)
+		return np.MkErr(np.TErrExists, name)
 	default:
 		return np.MkErrError(err)
 	}
 }
 
-func UxTo9PError(err error) *np.Err {
+func UxTo9PError(err error, name string) *np.Err {
 	switch e := err.(type) {
 	case *os.LinkError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err)
+		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
 	case *os.PathError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err)
+		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
+	case syscall.Errno:
+		return ErrnoToNp(e, err, name)
 	default:
 		return np.MkErrError(err)
 	}

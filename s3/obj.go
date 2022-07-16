@@ -3,6 +3,7 @@ package fss3
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"strconv"
 
@@ -13,6 +14,12 @@ import (
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
+
+func mkTpath(key np.Path) np.Tpath {
+	h := fnv.New64a()
+	h.Write([]byte(key.String()))
+	return np.Tpath(h.Sum64())
+}
 
 type Obj struct {
 	bucket string

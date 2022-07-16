@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	"strconv"
 	"sync"
 	"testing"
 
@@ -33,33 +32,24 @@ func (ts *TestState) initfs() {
 	assert.Nil(ts.t, err, "Create done")
 	_, err = ts.rooti.Create(ts.ctx, "todo", np.DMDIR|07000, 0)
 	assert.Nil(ts.t, err, "Create todo")
-	_, lo, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
+	_, _, _, err = ts.rooti.LookupPath(ts.ctx, np.Path{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
-	for i := 0; i < N; i++ {
-		_, err = lo.(fs.Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
-		assert.Nil(ts.t, err, "Create job")
-		_, _, _, err = ts.rooti.Lookup(ts.ctx, []string{"todo", "job" + strconv.Itoa(i)})
-		assert.Nil(ts.t, err, "Walk job")
-
-	}
 }
 
 func (ts *TestState) testRename(t int) {
-	qids, lo, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
+	_, lo, _, err := ts.rooti.LookupPath(ts.ctx, np.Path{"todo"})
 	assert.Nil(ts.t, err, "Lookup todo")
-	assert.Equal(ts.t, 1, len(qids), "Walked too few inodes")
 	d1 := lo.(fs.Dir)
 
-	qids, lo, _, err = ts.rooti.Lookup(ts.ctx, []string{"done"})
+	_, lo, _, err = ts.rooti.LookupPath(ts.ctx, np.Path{"done"})
 	assert.Nil(ts.t, err, "Lookup done")
-	assert.Equal(ts.t, 1, len(qids), "Walked too few inodes")
 	d2 := lo.(fs.Dir)
 
 	sts, err := d1.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
-		qids, _, _, err := d1.Lookup(ts.ctx, []string{st.Name})
-		if len(qids) == 0 {
+		_, _, _, err := d1.LookupPath(ts.ctx, np.Path{st.Name})
+		if err != nil {
 			continue
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)

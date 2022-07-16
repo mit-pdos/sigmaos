@@ -63,16 +63,21 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
-		_, lo, rest, err := root.Lookup(ctx, path)
+		_, lo, fws, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
+		defer ps.wt.Release(fws)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()
 		}
+		// insert before releasing
+		ps.vt.Insert(lo.Path())
 		tree = lo
 		qid = ps.mkQid(lo.Perm(), lo.Path())
+	} else {
+		// root is already in the version table; this updates
+		// just the refcnt.
+		ps.vt.Insert(root.Path())
 	}
 	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(path, tree, ctx), 0, qid))
-	ps.vt.Add(tree.Path())
-
 	rets.Qid = qid
 	return nil
 }
@@ -102,17 +107,9 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	o := f.Pobj().Obj()
-	if !o.Perm().IsDir() {
-		return nil, nil, nil, np.MkErr(np.TErrNotDir, f.Pobj().Path().Base())
-	}
-	d := o.(fs.Dir)
-	return d.Lookup(ctx, names)
-}
-
 func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
-	_, lo, _, err := ps.lookupObj(ctx, f, names)
+	_, lo, ws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
+	ps.wt.Release(ws)
 	if err != nil {
 		return nil, err
 	}
@@ -122,27 +119,10 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve
 	return lo, nil
 }
 
-func (ps *ProtSrv) tryLookupObjAndLock(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *watch.Watch, bool, *np.Err) {
-	// Try and lock the path.
-	path := append(f.Pobj().Path(), names...)
-	fws := ps.wt.WatchLookupL(path)
-	// Look up the object for this path.
-	os, lo, rest, err := ps.lookupObj(f.Pobj().Ctx(), f, names)
-	if err != nil && !np.IsMaybeSpecialElem(err) {
-		ps.wt.Release(fws)
-		return nil, nil, nil, nil, false, err
-	}
-	// If this path could only be partially resolved, release the locked watchers
-	// And indicate that we need to retry.
-	if len(rest) > 1 {
-		ps.wt.Release(fws)
-		n := len(names) - len(rest) + 1
-		prefix := names[:n]
-		return nil, nil, prefix, nil, false, nil
-	}
-	return os, lo, names, fws, true, nil
-}
-
+// Requests that combine walk, open, and do operation in a single RPC,
+// which also avoids clunking. They may fail because args.Wnames may
+// contains a special path element; in that, case the client must walk
+// args.Wnames.
 func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
@@ -151,49 +131,22 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 
-	var os []fs.FsObj
-	var lo fs.FsObj
-	var names np.Path
-	var fws *watch.Watch
-	var ok bool
+	os, lo, ws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
+	defer ps.wt.Release(ws)
+	if err != nil && !np.IsMaybeSpecialElem(err) {
+		return err.Rerror()
+	}
 
-	// Retry a few times.
-	for i := 0; i < 1000; i++ {
-		// The first time we try to look up the fid, and every other time after
-		// that, we retry looking up the whole path.
-		if i%2 == 0 {
-			// First, try to walk the whole path.
-			names = args.Wnames
-		}
-		os, lo, names, fws, ok, err = ps.tryLookupObjAndLock(f.Pobj().Ctx(), f, names)
-		// If the walk was unsuccessful, and no name along the path was potentially
-		// a symlink, return an error. The lock will already have been released.
-		if err != nil {
-			return err.Rerror()
-		}
-		// If we successfully walked some portion of the path, allocate an Fid and
-		// let the client decide what to do with rest
-		if ok {
-			break
-		}
-	}
-	// Ensure we were able to resolve at least part of the path.
-	if fws == nil {
-		db.DFatalf("Unable to perform server-side symlink walk after 1000 retries.")
-	}
-	// Make sure to eventually release the lock.
-	defer ps.wt.Release(fws)
-	path := append(f.Pobj().Path(), names...)
+	// let the client decide what to do with rest (when there is a rest)
+	n := len(args.Wnames) - len(rest)
+	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
 	rets.Qids = ps.makeQids(os)
-	qid := ps.mkQid(f.Pobj().Obj().Perm(), f.Pobj().Obj().Path())
-	if len(os) == 0 { // cloning f into args.NewFid in ft
-		lo = f.Pobj().Obj()
-	} else {
-		qid = ps.mkQid(lo.Perm(), lo.Path())
-	}
-	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), path, lo, qid, os)
-	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(path, lo, f.Pobj().Ctx()), 0, qid))
-	ps.vt.Add(qid.Path)
+	qid := ps.mkQid(lo.Perm(), lo.Path())
+	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
+	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+
+	ps.vt.Insert(qid.Path)
+
 	return nil
 }
 
@@ -253,8 +206,6 @@ func (ps *ProtSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	if !np.VEq(f.Qid().Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
-	// time.Sleep(1000 * time.Nanosecond)
-
 	err = ws.Watch(ps.sid)
 	if err != nil {
 		return err.Rerror()
@@ -331,7 +282,7 @@ func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	ps.vt.Add(o1.Path())
+	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
 	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), names[0], o1, args.Perm.IsEphemeral(), qid)
@@ -365,7 +316,7 @@ func (ps *ProtSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV", "%v: ReadV f %v args %v v %d\n", f.Pobj().Ctx().Uname(), f, args, v)
+	db.DPrintf("PROTSRV0", "%v: ReadV f %v args %v v %d\n", f.Pobj().Ctx().Uname(), f, args, v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
@@ -396,7 +347,7 @@ func (ps *ProtSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV", "%v: WriteV %v args %v path %d v %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
+	db.DPrintf("PROTSRV0", "%v: WriteV %v args %v path %d v %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
@@ -568,13 +519,6 @@ func (ps *ProtSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return nil
 }
 
-//
-// Requests that combine walk, open, and do operation in a single RPC,
-// which also avoids clunking. They may fail because args.Wnames may
-// contains a special path element; in that, case the client must walk
-// args.Wnames.
-//
-
 func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *np.Err) {
 	f, err := ps.ft.Lookup(fid)
 	if err != nil {
@@ -591,15 +535,15 @@ func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.F
 	return f, fname, lo, nil
 }
 
-func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.File, *np.Err) {
+func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.FsObj, fs.File, *np.Err) {
 	f, fname, lo, err := ps.lookupWalk(fid, wnames, resolve)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	ps.stats.IncPath(fname)
 	no, err := lo.Open(f.Pobj().Ctx(), mode)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if no != nil {
 		lo = no
@@ -607,9 +551,9 @@ func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mod
 	i, err := fs.Obj2File(lo, fname)
 	if err != nil {
 		lo.Close(f.Pobj().Ctx(), mode)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	return f, fname, i, nil
+	return f, fname, lo, i, nil
 }
 
 func (ps *ProtSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
@@ -625,7 +569,7 @@ func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -634,7 +578,7 @@ func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	if err := f.Pobj().Obj().Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	return nil
@@ -644,7 +588,7 @@ func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -665,7 +609,7 @@ func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 
-	if err := f.Pobj().Obj().Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	rets.Count = n

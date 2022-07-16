@@ -29,6 +29,6 @@ done
 files=$(aws s3 ls --recursive s3://9ps3/fslibtest $PROFILE | awk '{print $NF}')
 
 for f in $files; do
-    aws s3 rm s3://9ps3/$f &
+    aws s3 rm s3://9ps3/$f 
 done
 wait

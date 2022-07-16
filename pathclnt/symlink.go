@@ -16,12 +16,12 @@ func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Pat
 	}
 	var path np.Path
 	if IsRemoteTarget(target) {
-		trest, err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
+		err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
 			db.DPrintf("WALK", "automount %v %v err %v\n", resolved, target, err)
 			return left, err
 		}
-		path = append(resolved, append(trest, left...)...)
+		path = append(resolved, left...)
 	} else {
 		path = append(np.Split(target), left...)
 	}
@@ -59,6 +59,7 @@ func SplitTarget(target string) (string, np.Path) {
 	var server string
 	var rest np.Path
 
+	db.DPrintf("WALK", "split %v\n", target)
 	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
 		parts := strings.SplitN(target, ":", 5)
 		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
@@ -88,27 +89,25 @@ func SplitTargetReplicated(target string) (np.Path, np.Path) {
 	return servers, rest
 }
 
-func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.Path, *np.Err) {
-	db.DPrintf("PATHCLNT", "automount %v to %v\n", target, path)
-	var rest np.Path
+func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) *np.Err {
+	db.DPrintf("PATHCLNT0", "automount %v to %v\n", target, path)
 	var fid np.Tfid
 	var err *np.Err
 	if IsReplicated(target) {
 		addrs, r := SplitTargetReplicated(target)
-		rest = r
-		fid, err = pathc.Attach(uname, addrs, path.String(), "")
+		fid, err = pathc.Attach(uname, addrs, path.String(), r.String())
 	} else {
 		addr, r := SplitTarget(target)
-		rest = r
-		fid, err = pathc.Attach(uname, []string{addr}, path.String(), "")
+		db.DPrintf("PATHCLNT0", "Split target: %v", r)
+		fid, err = pathc.Attach(uname, []string{addr}, path.String(), r.String())
 	}
 	if err != nil {
 		db.DPrintf("PATHCLNT", "Attach error: %v", err)
-		return nil, err
+		return err
 	}
 	err = pathc.mount(fid, path.String())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return rest, nil
+	return nil
 }

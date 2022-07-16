@@ -44,7 +44,7 @@ func TestInitFs(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRemoveSimple(t *testing.T) {
+func TestRemoveBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
 	fn := path + "f"
@@ -84,7 +84,7 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	srv, err := ts.PathServer(path)
+	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
 	err = ts.Disconnect(srv)
@@ -158,7 +158,7 @@ func TestReadOff(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRename(t *testing.T) {
+func TestRenameBasic(t *testing.T) {
 	d1 := path + "/d1/"
 	d2 := path + "/d2/"
 	ts := test.MakeTstatePath(t, namedaddr, path)
@@ -268,7 +268,7 @@ func TestCopy(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestDirSimple(t *testing.T) {
+func TestDirBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dn := path + "d/"
 	err := ts.MkDir(dn, 0777)
@@ -624,7 +624,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	srv, err := ts.PathServer(path)
+	srv, _, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
 	db.DPrintf("TEST", "Disconnect fsl")
@@ -810,7 +810,7 @@ func TestConcurRename(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestPipeSimple(t *testing.T) {
+func TestPipeBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
 	pipe := path + "pipe"
@@ -837,6 +837,8 @@ func TestPipeSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "Close")
 
 	<-ch
+
+	ts.Remove(pipe)
 
 	ts.Shutdown()
 }
@@ -873,6 +875,8 @@ func TestPipeClose(t *testing.T) {
 	assert.Nil(ts.T, err, "Close")
 
 	<-ch
+
+	ts.Remove(pipe)
 
 	ts.Shutdown()
 }
@@ -912,7 +916,9 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		err = fsl.Disconnect(path)
+		srv, _, err := ts.PathServer(path)
+		assert.Nil(t, err)
+		err = fsl.Disconnect(srv)
 		assert.Nil(ts.T, err, "Disconnect")
 
 	}()
@@ -920,6 +926,8 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.T, err, "read")
+
+	ts.Remove(pipe)
 	ts.Shutdown()
 }
 
@@ -939,7 +947,9 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	err = fsl1.Disconnect(path)
+	srv, _, err := ts.PathServer(path)
+	assert.Nil(t, err)
+	err = fsl1.Disconnect(srv)
 	assert.Nil(ts.T, err, "Disconnect")
 
 	time.Sleep(2 * np.Conf.Session.TIMEOUT)
@@ -960,6 +970,7 @@ func TestPipeCrash1(t *testing.T) {
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.T, err, "read")
 
+	ts.Remove(pipe)
 	ts.Shutdown()
 }
 
@@ -980,6 +991,16 @@ func TestSymlinkPath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func target(t *testing.T, ts *test.Tstate, path string) []byte {
+	target := fslib.MakeTarget(fslib.Named())
+	if path != np.NAMED {
+		srv, left, err := ts.AbsPathServer(path)
+		assert.Nil(t, err)
+		target = fslib.MakeTargetTree(srv.Base(), left)
+	}
+	return target
+}
+
 func TestSymlinkRemote(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
@@ -987,7 +1008,7 @@ func TestSymlinkRemote(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"namedself", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(path + "namedself/")
@@ -1004,7 +1025,7 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"d/namedself0", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"d/namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget(np.Path{":2222"}), path+"d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
@@ -1023,7 +1044,7 @@ func TestUnionDir(t *testing.T) {
 func TestUnionRoot(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget(np.Path{"xxx"}), path+"namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
@@ -1038,18 +1059,18 @@ func TestUnionRoot(t *testing.T) {
 func TestUnionSymlinkRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	dn := path + "/d/"
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"d/namedself1", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), path+"d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(path + "~any/d/namedself1/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "d", "namedself0"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself0"}), "root wrong")
 
 	sts, err = ts.GetDir(path + "~any/d/namedself1/d/")
 	assert.Equal(t, nil, err)
@@ -1062,7 +1083,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
-	err := ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	b := []byte("hello")
@@ -1076,7 +1097,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	sts, err := ts.GetDir(path + "~any/namedself0/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "f", "g"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{"f", "g"}), "root wrong")
 
 	d, err := ts.GetFile(path + "~any/namedself0/f")
 	assert.Nil(ts.T, err, "GetFile")
@@ -1097,7 +1118,7 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	ts.Symlink(fslib.MakeTarget(fslib.Named()), path+"namedself0", 0777|np.DMTMP)
+	ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}
@@ -1164,6 +1185,10 @@ func TestFslibExit(t *testing.T) {
 	// close
 	err = ts.Exit()
 	assert.Nil(t, err)
+
+	_, err = ts.Stat(path + "/.")
+	assert.NotNil(t, err)
+	assert.True(t, np.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }

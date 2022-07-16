@@ -5,19 +5,20 @@ import (
 	"runtime/debug"
 
 	db "ulambda/debug"
+	"ulambda/file"
 	"ulambda/fs"
 	"ulambda/inode"
 )
 
 type FileSnapshot struct {
 	InodeSnap []byte
-	Data      []byte
+	FileSnap  []byte
 }
 
 func makeFileSnapshot(f *File) []byte {
 	fs := &FileSnapshot{}
 	fs.InodeSnap = f.Inode.Snapshot(nil)
-	fs.Data = f.data
+	fs.FileSnap = f.File.Snapshot()
 	return encode(fs)
 }
 
@@ -29,31 +30,7 @@ func restoreFile(fn fs.RestoreF, b []byte) fs.Inode {
 	}
 	f := &File{}
 	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
-	f.data = fs.Data
-	return f
-}
-
-type SymlinkSnapshot struct {
-	InodeSnap []byte
-	Target    []byte
-}
-
-func makeSymlinkSnapshot(s *Symlink) []byte {
-	fs := &SymlinkSnapshot{}
-	fs.InodeSnap = s.Inode.Snapshot(nil)
-	fs.Target = s.target
-	return encode(fs)
-}
-
-func restoreSymlink(fn fs.RestoreF, b []byte) fs.Inode {
-	fs := &SymlinkSnapshot{}
-	err := json.Unmarshal(b, fs)
-	if err != nil {
-		db.DFatalf("error unmarshal file in restoreSymlink: %v", err)
-	}
-	f := &Symlink{}
-	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
-	f.target = fs.Target
+	f.File = file.RestoreFile(fs.FileSnap)
 	return f
 }
 

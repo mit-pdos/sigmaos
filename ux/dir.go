@@ -3,7 +3,9 @@ package fsux
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
+	"syscall"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -34,10 +36,10 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 func (d *Dir) uxReadDir() *np.Err {
 	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
-		return UxTo9PError(err)
+		return UxTo9PError(err, d.pathName.Base())
 	}
 	for _, e := range dirents {
-		if st, err := ustat(d.path.Copy().Append(e.Name())); err != nil {
+		if st, err := ustat(d.pathName.Copy().Append(e.Name())); err != nil {
 			// another proc may have removed the file
 			continue
 		} else {
@@ -70,81 +72,107 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 }
 
 func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
+	d.sd = sorteddir.MkSortedDir()
 	return nil
+}
+
+// XXX O_CREATE/O_EXCL
+func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, *np.Err) {
+	p := d.pathName.Append(name).String()
+	error := os.Mkdir(p, os.FileMode(perm&0777))
+	if error != nil {
+		return nil, UxTo9PError(error, name)
+	}
+	d1, err := makeDir(append(d.pathName, name))
+	if err != nil {
+		return nil, err
+	}
+	return d1, nil
+}
+
+func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	p := d.pathName.Append(name).String()
+	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
+	if error != nil {
+		return nil, UxTo9PError(error, name)
+	}
+	f, err := makeFile(append(d.pathName, name))
+	if err != nil {
+		return nil, err
+	}
+	f.fd = fd
+	return f, nil
+}
+
+func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	p := d.pathName.Append(name).String()
+	error := syscall.Mkfifo(p, uint32(perm&0777))
+	if error != nil {
+		return nil, UxTo9PError(error, name)
+	}
+	f, err := makePipe(ctx, append(d.pathName, name))
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	p := d.pathName.Append(name)
+	log.Printf("mkSym %s\n", p)
+	s, err := makeSymlink(p, true)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	p := d.path.Append(name).String()
-	db.DPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
+	db.DPrintf("UXD", "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
-		// XXX O_CREATE/O_EXCL
-		error := os.Mkdir(p, os.FileMode(perm&0777))
-		if error != nil {
-			return nil, UxTo9PError(error)
-		}
-		d1, err := makeDir(append(d.path, name))
-		if err != nil {
-			return nil, err
-		}
-		return d1, nil
+		return d.mkDir(ctx, name, perm, m)
+	} else if perm.IsPipe() {
+		return d.mkPipe(ctx, name, perm, m)
+	} else if perm.IsSymlink() {
+		return d.mkSym(ctx, name, perm, m)
 	} else {
-		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
-		if error != nil {
-			return nil, UxTo9PError(error)
-		}
-		f, err := makeFile(append(d.path, name))
-		if err != nil {
-			return nil, err
-		}
-		f.file = file
-		return f, nil
+		return d.mkFile(ctx, name, perm, m)
 	}
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
-	fi, error := os.Stat(d.path.Append(p[0]).String())
-	if error != nil {
-		return objs, d, d.path, np.MkErr(np.TErrNotfound, p[0])
+func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+	name := path[0]
+	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, name)
+	st, err := ustat(d.pathName.Append(name))
+	if err != nil {
+		db.DPrintf("UXD", "%v: Lookup %v %v err %v\n", ctx, d, name, err)
+		return nil, nil, path, err
 	}
-	if len(p) == 1 {
-		if fi.IsDir() {
-			d1, err := makeDir(append(d.path, p[0]))
-			if err != nil {
-				return objs, d1, d.path, err
-			}
-			return append(objs, d1), d1, nil, nil
-		} else {
-			f, err := makeFile(append(d.path, p[0]))
-			if err != nil {
-				return objs, f, d.path, err
-			}
-			return append(objs, f), f, nil, nil
+	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
+	var o fs.FsObj
+	if st.Mode.IsDir() {
+		o, err = makeDir(append(d.pathName, name))
+		if err != nil {
+			return nil, nil, path, err
+		}
+	} else if st.Mode.IsSymlink() {
+		o, err = makeSymlink(append(d.pathName, name), false)
+		if err != nil {
+			return nil, nil, path, err
+		}
+	} else if st.Mode.IsPipe() {
+		o, err = makePipe(ctx, append(d.pathName, name))
+		if err != nil {
+			return nil, nil, path, err
 		}
 	} else {
-		d1, err := makeDir(append(d.path, p[0]))
+		o, err = makeFile(append(d.pathName, name))
 		if err != nil {
-			return objs, d, d.path, err
+			return nil, nil, path, err
 		}
-		objs = append(objs, d1)
-		return d1.namei(ctx, p[1:], objs)
 	}
-}
-
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	if len(p) == 0 {
-		return nil, nil, nil, nil
-	}
-	fi, error := os.Stat(d.path.String())
-	if error != nil {
-		return nil, nil, nil, UxTo9PError(error)
-	}
-	if !fi.IsDir() {
-		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.path)
-	}
-	return d.namei(ctx, p, nil)
+	return []fs.FsObj{o}, o, path[1:], nil
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
@@ -157,17 +185,27 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return UxTo9PError(err)
+		return UxTo9PError(err, to)
 	}
 	return nil
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
-	p := d.path.Copy().Append(name)
+	p := d.pathName.Copy().Append(name)
+	o, err := makeObj(p)
+	if err != nil {
+		return err
+	}
 	error := os.Remove(p.String())
 	if error != nil {
-		return UxTo9PError(error)
+		return UxTo9PError(error, name)
+	}
+	if o.Perm().IsPipe() {
+		pipe := fsux.ot.AllocRef(o.path, nil)
+		if pipe != nil {
+			pipe.(*Pipe).Unlink()
+		}
 	}
 	return nil
 }
@@ -178,7 +216,8 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {
-		return UxTo9PError(error)
+		return UxTo9PError(error, to)
 	}
+	// XXX unlink on pipe, if pipe
 	return nil
 }

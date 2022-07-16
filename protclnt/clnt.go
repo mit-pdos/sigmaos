@@ -1,6 +1,8 @@
 package protclnt
 
 import (
+	"sync/atomic"
+
 	np "ulambda/ninep"
 	"ulambda/rand"
 	"ulambda/sessclnt"
@@ -21,7 +23,7 @@ func MakeClnt() *Clnt {
 }
 
 func (clnt *Clnt) ReadSeqNo() np.Tseqno {
-	return clnt.seqno
+	return np.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
 func (clnt *Clnt) CallServer(addrs []string, args np.Tmsg, fence np.Tfence) (np.Tmsg, *np.Err) {

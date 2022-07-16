@@ -72,7 +72,6 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.stats = stats.MkStatsDev(ssrv.root)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
 	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt)
-	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
@@ -94,6 +93,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
 	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
+	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)

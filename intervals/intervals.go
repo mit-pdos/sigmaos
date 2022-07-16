@@ -33,7 +33,7 @@ func (ivs *Intervals) First() *np.Tinterval {
 	if len(ivs.ivs) == 0 {
 		return nil
 	}
-	return ivs.ivs[0]
+	return np.MkInterval(ivs.ivs[0].Start, ivs.ivs[0].End)
 }
 
 func (ivs *Intervals) Len() int {

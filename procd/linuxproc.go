@@ -80,7 +80,11 @@ func (p *LinuxProc) run() error {
 		return err
 	}
 
+	// Take this lock to ensure we don't race with a thread rebalancing cores.
+	p.pd.mu.Lock()
 	p.SysPid = cmd.Process.Pid
+	p.pd.mu.Unlock()
+
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
 	p.setCpuAffinity()

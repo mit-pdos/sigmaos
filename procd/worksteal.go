@@ -17,7 +17,6 @@ func (pd *Procd) workStealingMonitor() {
 	for !pd.readDone() {
 		// Wait for a bit.
 		<-ticker.C
-		pd.netProcsClaimed++
 		var nStealable int
 		// Wait untile there is a proc to steal.
 		sts, err := pd.ReadDirWatch(np.PROCD_WS, func(sts []*np.Stat) bool {

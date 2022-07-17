@@ -185,32 +185,23 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
+func (c *Coord) makeTask(bin string, args []string) *proc.Proc {
 	p := proc.MakeProc(bin, args)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
-	db.DPrintf("MR", "spawn task %v %v\n", p.Pid, args)
-	err := c.Spawn(p)
-	if err != nil {
-		return nil, err
-	}
-	status, err := c.WaitExit(p.Pid)
-	if err != nil {
-		return nil, err
-	}
-	return status, nil
+	return p
 }
 
-func (c *Coord) mapper(task string) (*proc.Status, error) {
+func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.task(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz})
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz})
 }
 
-func (c *Coord) reducer(task string) (*proc.Status, error) {
+func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
-	return c.task(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
@@ -264,9 +255,10 @@ func (c *Coord) doneTasks(dir string) int {
 	return len(sts)
 }
 
-func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*proc.Status, error)) {
-	start := time.Now()
-	status, err := f(t)
+func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *proc.Proc, t string) {
+	// Wait for the task to exit.
+	status, err := c.WaitExit(p.Pid)
+	// Record end time.
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
 		// mark task as done
@@ -293,6 +285,24 @@ func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*
 	}
 }
 
+func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func(string) *proc.Proc) {
+	tasks := make([]*proc.Proc, len(taskNames))
+	// Make task proc structures.
+	for i, tn := range taskNames {
+		tasks[i] = f(tn)
+		db.DPrintf("MR", "prep to burst-spawn task %v %v\n", tasks[i].Pid, tasks[i].Args)
+	}
+	start := time.Now()
+	// Burst-spawn procs.
+	failed, errs := c.SpawnBurst(tasks)
+	if len(failed) > 0 {
+		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
+	}
+	for i := range tasks {
+		go c.waitForTask(start, ch, dir, tasks[i], taskNames[i])
+	}
+}
+
 func mkStringSlice(data []interface{}) []string {
 	s := make([]string, 0, len(data))
 	for _, o := range data {
@@ -301,8 +311,8 @@ func mkStringSlice(data []interface{}) []string {
 	return s
 }
 
-func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) (*proc.Status, error)) int {
-	n := 0
+func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Proc) int {
+	taskNames := []string{}
 	for {
 		t, err := c.getTask(dir)
 		if err != nil {
@@ -311,10 +321,10 @@ func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) (*proc.St
 		if t == "" {
 			break
 		}
-		n += 1
-		go c.runTask(ch, dir, t, f)
+		taskNames = append(taskNames, t)
 	}
-	return n
+	go c.runTasks(ch, dir, taskNames, f)
+	return len(taskNames)
 }
 
 // A reducer failed because it couldn't read its input file; we must
@@ -377,8 +387,8 @@ func (c *Coord) recover(dir string) {
 func (c *Coord) Round() {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		m += c.startTasks(ch, MapTask(c.job), c.mapper)
-		m += c.startTasks(ch, ReduceTask(c.job), c.reducer)
+		m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+		m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
 		if m <= 0 {
 			break
 		}

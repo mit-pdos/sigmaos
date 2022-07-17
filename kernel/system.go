@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ const (
 )
 
 type System struct {
+	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	realmId     string
@@ -92,6 +94,9 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) 
 
 // Boot a "kernel" without named
 func (s *System) Boot() error {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.BootFsUxd(); err != nil {
 		return err
 	}
@@ -108,6 +113,9 @@ func (s *System) Boot() error {
 }
 
 func (s *System) BootSubsystem(binpath string, args []string, list *[]*Subsystem) error {
+	s.Lock()
+	defer s.Unlock()
+
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, binpath, args)
 	ss := makeSubsystem(s.ProcClnt, p)
@@ -132,6 +140,9 @@ func (s *System) BootDbd() error {
 }
 
 func (s *System) GetProcdIp() string {
+	s.Lock()
+	defer s.Unlock()
+
 	if len(s.procd) != 1 {
 		db.DFatalf("Error unexpexted num procds: %v", s.procd)
 	}
@@ -139,6 +150,9 @@ func (s *System) GetProcdIp() string {
 }
 
 func (s *System) KillOne(srv string) error {
+	s.Lock()
+	defer s.Unlock()
+
 	var err error
 	var ss *Subsystem
 	switch srv {

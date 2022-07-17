@@ -113,13 +113,13 @@ func (s *System) Boot() error {
 }
 
 func (s *System) BootSubsystem(binpath string, args []string, list *[]*Subsystem) error {
-	s.Lock()
-	defer s.Unlock()
-
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, binpath, args)
 	ss := makeSubsystem(s.ProcClnt, p)
+	// Lock appending to list
+	s.Lock()
 	*list = append(*list, ss)
+	s.Unlock()
 	return ss.Run(s.namedAddr)
 }
 

@@ -60,8 +60,8 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 		p.Type = proc.T_LC
 		ps = append(ps, p)
 	}
-	failed := ts.SpawnBurst(ps)
-	assert.Equal(t, 0, len(failed), "Failed spawning some procs")
+	failed, errs := ts.SpawnBurst(ps)
+	assert.Equal(t, 0, len(failed), "Failed spawning some procs: %v", errs)
 	return ps
 }
 

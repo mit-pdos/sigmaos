@@ -59,8 +59,9 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 
 // Burst-spawn a set of procs across available procds. Return a slice of procs
 // which were unable to be successfully spawned.
-func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) []*proc.Proc {
+func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
+	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
@@ -68,9 +69,10 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) []*proc.Proc {
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
+			errs = append(errs, err)
 		}
 	}
-	return failed
+	return failed, errs
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {

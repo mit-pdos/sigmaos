@@ -86,9 +86,9 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	start := time.Now()
 
 	// Spawn a bunch of procs.
-	failed := b.SpawnBurst(ps)
+	failed, errs := b.SpawnBurst(ps)
 	if len(failed) > 0 {
-		db.DFatalf("Error Spawn: %v", failed)
+		db.DFatalf("Error Spawn: %v, errors: %v", failed, errs)
 	}
 	db.DPrintf(db.ALWAYS, "Done spawning")
 

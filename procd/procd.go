@@ -58,7 +58,6 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.addr = pd.MyAddr()
 	pd.MemFs.GetStats().MonitorCPUUtil()
 
-	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 	pd.stealChan = make(chan bool)
 

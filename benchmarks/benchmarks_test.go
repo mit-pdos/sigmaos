@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	SPIN_DIR = "name/spinners"
-	MAT_SIZE = 2000
-	N_TRIALS = 500
+	SPIN_DIR       = "name/spinners"
+	MAT_SIZE       = 2000
+	N_TRIALS       = 100
+	CONTENDERS_DEN = 0.5
 )
 
 func makeNProcs(n int, prog string, args []string, nproc proc.Tcore) []*proc.Proc {
@@ -50,6 +51,7 @@ func spawnAndWait(ts *test.Tstate, ps []*proc.Proc, rs *benchmarks.RawResults) {
 		}
 
 		elapsed := status.Data().(float64)
+		db.DPrintf("TEST2", "Latency: %vus", elapsed)
 		throughput := float64(1.0) / elapsed
 		rs.Data[i].Set(throughput, elapsed, 0)
 	}
@@ -75,31 +77,34 @@ func TestMatMulBaseline(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Length of time required to do a simple matrix multiplication when its
-// priority is lowered.
-func TestMatMulBaselineNiced(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 0)
-
-	spawnAndWait(ts, ps, rs)
-
-	mean := rs.Mean().Latency
-	std := rs.StandardDeviation().Latency
-	// Round to 2 decimal points.
-	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-
-	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
-
-	ts.Shutdown()
-}
+// Doesn't change much unless there is contention in the system, so this
+// baseline isn't very interesting.
+//
+//// Length of time required to do a simple matrix multiplication when its
+//// priority is lowered.
+//func TestMatMulBaselineNiced(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//
+//	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 0)
+//
+//	spawnAndWait(ts, ps, rs)
+//
+//	mean := rs.Mean().Latency
+//	std := rs.StandardDeviation().Latency
+//	// Round to 2 decimal points.
+//	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
+//
+//	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
+//
+//	ts.Shutdown()
+//}
 
 func TestMatMulWithSpinners(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	nContenders := int(linuxsched.NCores)
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
 
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 
@@ -147,7 +152,7 @@ func TestMatMulWithSpinners(t *testing.T) {
 func TestMatMulWithSpinnersNiced(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	nContenders := int(linuxsched.NCores)
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
 
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 

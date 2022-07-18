@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	DEF_PROC_PRIORITY = 5
-	LC_PROC_PRIORITY  = 2
-	BE_PROC_PRIORITY  = 5
+	DEF_PROC_PRIORITY = 20
+	LC_PROC_PRIORITY  = 0
+	BE_PROC_PRIORITY  = 20
 )
 
 type LinuxProc struct {
@@ -113,14 +113,18 @@ func (p *LinuxProc) setCpuAffinityL() {
 }
 
 func (p *LinuxProc) setPriority() {
+	var err error
 	switch p.attr.Type {
 	case proc.T_DEF:
-		linuxsched.SchedSetPriority(p.SysPid, DEF_PROC_PRIORITY)
+		err = linuxsched.SchedSetPriority(p.SysPid, DEF_PROC_PRIORITY)
 	case proc.T_LC:
-		linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
+		err = linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
 	case proc.T_BE:
-		linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
+		err = linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
 	default:
 		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
+	}
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Couldn't set priority for %v err %v", p.attr, err)
 	}
 }

@@ -53,6 +53,7 @@ func MakeMachined(args []string) *Machined {
 
 // Remove old files from previous runs.
 func (m *Machined) cleanLinuxFS() {
+	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	sts, err := os.ReadDir(namespace.NAMESPACE_DIR)
 	if err != nil {
 		db.DFatalf("Error ReadDir: %v", err)

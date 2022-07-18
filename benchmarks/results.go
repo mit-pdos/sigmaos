@@ -22,7 +22,7 @@ func MakeResult() *Result {
 	return r
 }
 
-func (r *Result) set(throughput, latency float64, nRPC np.Tseqno) {
+func (r *Result) Set(throughput, latency float64, nRPC np.Tseqno) {
 	r.Throughput = throughput
 	r.Latency = latency
 	r.NRPC = nRPC
@@ -69,6 +69,40 @@ func (r *RawResults) Mean() *Result {
 	n, err := stats.Mean(nRPC)
 	if err != nil {
 		db.DFatalf("Error Mean in RawResults.Mean: %v", err)
+	}
+	res.NRPC = np.Tseqno(n)
+
+	return res
+}
+
+func (r *RawResults) StandardDeviation() *Result {
+	tpt := make([]float64, len(r.Data))
+	lat := make([]float64, len(r.Data))
+	nRPC := make([]float64, len(r.Data))
+
+	for i := range r.Data {
+		tpt[i] = r.Data[i].Throughput
+		lat[i] = r.Data[i].Latency
+		nRPC[i] = float64(r.Data[i].NRPC)
+	}
+
+	res := MakeResult()
+
+	t, err := stats.StandardDeviation(tpt)
+	if err != nil {
+		db.DFatalf("Error StandardDeviation in RawResults.StandardDeviation: %v", err)
+	}
+	res.Throughput = t
+
+	l, err := stats.StandardDeviation(lat)
+	if err != nil {
+		db.DFatalf("Error StandardDeviation in RawResults.StandardDeviation: %v", err)
+	}
+	res.Latency = l
+
+	n, err := stats.StandardDeviation(nRPC)
+	if err != nil {
+		db.DFatalf("Error StandardDeviation in RawResults.StandardDeviation: %v", err)
 	}
 	res.NRPC = np.Tseqno(n)
 

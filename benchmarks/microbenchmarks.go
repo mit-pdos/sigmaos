@@ -119,7 +119,7 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("PutFileBenchmark Done")
@@ -149,7 +149,7 @@ func (m *Microbenchmarks) SetFileBenchmark(nTrials int, size int) *RawResults {
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("SetFileBenchmark Done")
@@ -177,7 +177,7 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("GetFileBenchmark Done")
@@ -210,7 +210,7 @@ func (m *Microbenchmarks) SemInitBenchmark(nTrials int) *RawResults {
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("SemInitBenchmark Done")
@@ -243,7 +243,7 @@ func (m *Microbenchmarks) SemUpBenchmark(nTrials int) *RawResults {
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("SemUpBenchmark Done")
@@ -276,7 +276,7 @@ func (m *Microbenchmarks) SemDownBenchmark(nTrials int) *RawResults {
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("SemDownBenchmark Done")
@@ -309,7 +309,7 @@ func (m *Microbenchmarks) ProcSpawnWaitExitBenchmark(nTrials int, pidOffset int)
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcSpawnWaitExitBenchmark Done")
@@ -343,7 +343,7 @@ func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcSpawnClientBenchmark Done")
@@ -378,7 +378,7 @@ func (m *Microbenchmarks) ProcInternalNoExitedBenchmark(nTrials int, pidOffset i
 			nRPC = np.Tseqno(res["NRPC"].(float64))
 		}
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcInternalNoExitedBenchmark Done")
@@ -414,7 +414,7 @@ func (m *Microbenchmarks) ProcWaitExitedBenchmark(nTrials int, pidOffset int) *R
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcWaitExitedBenchmark Done")
@@ -453,7 +453,7 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcPprofBenchmark Done")

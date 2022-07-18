@@ -108,7 +108,7 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	// Calculate throughput, latency, etc.
 	elapsed := float64(end.Sub(start).Microseconds())
 	throughput := float64(N) / elapsed
-	rs.Data[0].set(throughput, elapsed/float64(N), nRPC)
+	rs.Data[0].Set(throughput, elapsed/float64(N), nRPC)
 
 	log.Printf("BurstBenchmark(%v) Done in %vms", N, elapsed/1000.0)
 

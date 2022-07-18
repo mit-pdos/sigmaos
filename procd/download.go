@@ -64,7 +64,7 @@ func (pd *Procd) downloadProcBin(program string) {
 	db.DPrintf("PROCD", "Need to download %v", program)
 
 	// May need to retry if ux crashes.
-	RETRIES := 1000
+	RETRIES := 10
 	for i := 0; i < RETRIES && !pd.done; i++ {
 		// Return if successful. Else, retry
 		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {

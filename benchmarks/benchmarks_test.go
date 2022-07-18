@@ -18,17 +18,21 @@ const (
 	SPIN_DIR       = "name/spinners"
 	MAT_SIZE       = 2000
 	N_TRIALS       = 100
-	CONTENDERS_DEN = 0.5
+	CONTENDERS_DEN = 1.0 //40.0 / 39.0
 )
 
-func makeNProcs(n int, prog string, args []string, nproc proc.Tcore) []*proc.Proc {
+var MATMUL_NPROCS = linuxsched.NCores
+var CONTENDERS_NPROCS = 1
+
+func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) []*proc.Proc {
 	ps := []*proc.Proc{}
 	for i := 0; i < n; i++ {
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProc(prog, args)
-		if nproc > 0 {
+		p.Env = append(p.Env, env...)
+		if ncore > 0 {
 			p.Type = proc.T_LC
-			p.Ncore = nproc
+			p.Ncore = ncore
 		} else {
 			p.Type = proc.T_BE
 		}
@@ -63,7 +67,7 @@ func TestMatMulBaseline(t *testing.T) {
 
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 1)
+	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
 
 	spawnAndWait(ts, ps, rs)
 
@@ -101,6 +105,54 @@ func TestMatMulBaseline(t *testing.T) {
 //	ts.Shutdown()
 //}
 
+//func TestMatMulWithSleepers(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
+//
+//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//
+//	err := ts.MkDir(SPIN_DIR, 0777)
+//	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
+//
+//	// Make some spinning procs to take up nContenders cores.
+//	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR},  []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
+//
+//	// Burst spawn the spinners.
+//	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
+//	_, errs := ts.SpawnBurst(psSpin)
+//	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+//
+//	for _, p := range psSpin {
+//		err := ts.WaitStart(p.Pid)
+//		assert.Nil(ts.T, err, "WaitStart: %v", err)
+//	}
+//
+//	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
+//
+//	// Make the LC proc.
+//	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+//
+//	// Spawn the LC procs
+//	spawnAndWait(ts, ps, rs)
+//
+//	mean := rs.Mean().Latency
+//	std := rs.StandardDeviation().Latency
+//	// Round to 2 decimal points.
+//	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
+//
+//	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
+//
+//	for _, p := range psSpin {
+//		err := ts.Evict(p.Pid)
+//		assert.Nil(ts.T, err, "Evict: %v", err)
+//		status, err := ts.WaitExit(p.Pid)
+//		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
+//	}
+//
+//	ts.Shutdown()
+//}
+
 func TestMatMulWithSpinners(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -112,7 +164,7 @@ func TestMatMulWithSpinners(t *testing.T) {
 	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
 
 	// Make some spinning procs to take up nContenders cores.
-	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, 0)
+	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
 
 	// Burst spawn the spinners.
 	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
@@ -127,7 +179,7 @@ func TestMatMulWithSpinners(t *testing.T) {
 	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
 
 	// Make the LC proc.
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 1)
+	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
 
 	// Spawn the LC procs
 	spawnAndWait(ts, ps, rs)
@@ -149,6 +201,10 @@ func TestMatMulWithSpinners(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Invert the nice relationship. Make spinners high-priority, and make matul
+// low priority. This is intended to verify that changing priorities does
+// actually affect application throughput for procs which have their priority
+// lowered, and by how much.
 func TestMatMulWithSpinnersNiced(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -160,7 +216,7 @@ func TestMatMulWithSpinnersNiced(t *testing.T) {
 	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
 
 	// Make some spinning procs to take up nContenders cores. (AS LC)
-	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, 1)
+	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
 
 	// Burst spawn the spinners.
 	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
@@ -175,7 +231,7 @@ func TestMatMulWithSpinnersNiced(t *testing.T) {
 	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
 
 	// Make the matmul procs.
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 0)
+	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
 
 	// Spawn the matmul procs
 	spawnAndWait(ts, ps, rs)

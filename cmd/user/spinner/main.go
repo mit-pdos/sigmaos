@@ -39,7 +39,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.outdir = args[0]
 
-	db.DPrintf("SCHEDL", "MakeSpinner: %v\n", args)
+	db.DPrintf("SPINNER", "MakeSpinner: %v\n", args)
 
 	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
 		db.DFatalf("MakeFile error: %v", err)

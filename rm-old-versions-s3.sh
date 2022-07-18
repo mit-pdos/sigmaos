@@ -44,7 +44,7 @@ oldbins=$(aws s3 ls --recursive s3://$REALM/bin/user $PROFILE | awk '{print $NF}
 
 for bin in $oldbins; do
   if ! [[ $bin == *$VERSION* ]]; then
-    aws s3 rm s3://$REALM/$bin &
+    aws s3 rm s3://$REALM/$bin
   fi
 done
 wait

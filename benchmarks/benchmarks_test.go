@@ -3,6 +3,8 @@ package benchmarks_test
 import (
 	"fmt"
 	"math"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,11 +88,19 @@ func printResults(rs *benchmarks.RawResults) {
 	std := rs.StandardDeviation().Latency
 	// Round to 2 decimal points.
 	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
+	// Get info for the caller.
+	pc, _, _, ok := runtime.Caller(1)
+	if !ok {
+		db.DFatalf("Couldn't get caller name")
+	}
+	fnDetails := runtime.FuncForPC(pc)
+	n := fnDetails.Name()
+	fnName := n[strings.Index(n, ".")+1:]
+	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
 }
 
 // Length of time required to do a simple matrix multiplication.
-func TestMicroBenchmarkMatMulBaseline(t *testing.T) {
+func TestMicroNiceMatMulBaseline(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
@@ -101,7 +111,7 @@ func TestMicroBenchmarkMatMulBaseline(t *testing.T) {
 
 // Start a bunch of spinning procs to contend with one matmul task, and then
 // see how long the matmul task took.
-func TestMicroBenchmarkMatMulWithSpinners(t *testing.T) {
+func TestMicroNiceMatMulWithSpinners(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 	err := ts.MkDir(SPIN_DIR, 0777)
@@ -124,7 +134,7 @@ func TestMicroBenchmarkMatMulWithSpinners(t *testing.T) {
 // low priority. This is intended to verify that changing priorities does
 // actually affect application throughput for procs which have their priority
 // lowered, and by how much.
-func TestMicroBenchmarkMatMulWithSpinnersLCNiced(t *testing.T) {
+func TestMicroNiceMatMulWithSpinnersLCNiced(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 	err := ts.MkDir(SPIN_DIR, 0777)

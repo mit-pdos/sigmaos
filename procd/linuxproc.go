@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	DEF_PROC_PRIORITY = 19
-	LC_PROC_PRIORITY  = 0
-	BE_PROC_PRIORITY  = 19
+	LC_PROC_PRIORITY = 0
+	BE_PROC_PRIORITY = 19
 )
 
 type LinuxProc struct {

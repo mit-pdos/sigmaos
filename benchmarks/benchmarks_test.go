@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"fmt"
 	"math"
+	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -14,6 +15,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/linuxsched"
 	"ulambda/proc"
+	"ulambda/rand"
+	"ulambda/semclnt"
 	"ulambda/test"
 )
 
@@ -41,9 +44,21 @@ const (
 
 type testOp func(*test.Tstate, interface{})
 
-func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) ([]*proc.Proc, []interface{}) {
+func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{}) {
+	ss := make([]*semclnt.SemClnt, 0, n)
 	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		spath := path.Join(OUT_DIR, rand.String(16))
+		s := semclnt.MakeSemClnt(ts.FsLib, spath)
+		ss = append(ss, s)
+		is = append(is, s)
+	}
+	return ss, is
+}
+
+func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) ([]*proc.Proc, []interface{}) {
 	ps := make([]*proc.Proc, 0, n)
+	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProc(prog, args)
@@ -80,9 +95,27 @@ func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 	}
 }
 
+func initSemaphore(ts *test.Tstate, i interface{}) {
+	s := i.(*semclnt.SemClnt)
+	err := s.Init(0)
+	assert.Nil(ts.T, err, "Sem init: %v", err)
+}
+
+func upSemaphore(ts *test.Tstate, i interface{}) {
+	s := i.(*semclnt.SemClnt)
+	err := s.Up()
+	assert.Nil(ts.T, err, "Sem up: %v", err)
+}
+
+func downSemaphore(ts *test.Tstate, i interface{}) {
+	s := i.(*semclnt.SemClnt)
+	err := s.Down()
+	assert.Nil(ts.T, err, "Sem down: %v", err)
+}
+
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, x interface{}) {
-	p := x.(*proc.Proc)
+func runProc(ts *test.Tstate, i interface{}) {
+	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf("TEST1", "Spawned %v", p)
 	status, err2 := ts.WaitExit(p.Pid)
@@ -200,8 +233,41 @@ func TestMicroInitSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
 	makeOutDir(ts)
-	_, ps := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
-	runOps(ts, ps, runProc, rs)
+	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	runOps(ts, is, initSemaphore, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Test how long it takes to up a semaphore.
+func TestMicroUpSemaphore(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	makeOutDir(ts)
+	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	// Init semaphores first.
+	for _, i := range is {
+		initSemaphore(ts, i)
+	}
+	runOps(ts, is, upSemaphore, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Test how long it takes to down a semaphore.
+func TestMicroDownSemaphore(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	makeOutDir(ts)
+	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	// Init semaphores first.
+	for _, i := range is {
+		initSemaphore(ts, i)
+		upSemaphore(ts, i)
+	}
+	runOps(ts, is, downSemaphore, rs)
 	printResults(rs)
 	rmOutDir(ts)
 	ts.Shutdown()

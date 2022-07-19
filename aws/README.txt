@@ -37,12 +37,17 @@ $ ./login.sh --vpc vpc-061a1808693a1626a
 this starts an ssh tunnel to the VPC. you only have to this once
 (e.g., you can run ./start.sh again without having to login)
 
-$ ./mount.sh mounts the VPC under /mnt/9p
+Set the NAMED environment variable, using the machine's full internal ip as so:
 
+$ export NAMED="10.x.x.x:1111"
+
+To mount the VPC under /mnt/9p:
+$ ./mount.sh 
+
+To list the ulamba top-level directory on the VPC:
 $ ls /mnt/9p/
 
-list the ulamba top-level directory on the VPC
-
+To unmount the VPC:
 $ sudo umount /mnt/9p
 
 After umount you can run ./start.sh and ./mount.sh again to use the

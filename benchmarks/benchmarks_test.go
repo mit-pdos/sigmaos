@@ -38,11 +38,12 @@ var CONTENDERS_NPROCS = 1
 // ========== Micro parameters ==========
 
 const (
-	N_TRIALS_MICRO = 1000
-	SLEEP_MICRO    = "5000us"
+	N_TRIALS_MICRO         = 1000
+	N_SPINNERS_BURST_MICRO = 10 // XXX make dynamic?
+	SLEEP_MICRO            = "5000us"
 )
 
-type testOp func(*test.Tstate, interface{})
+type testOp func(*test.Tstate, time.Time, interface{}) time.Duration
 
 func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{}) {
 	ss := make([]*semclnt.SemClnt, 0, n)
@@ -75,10 +76,7 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 	return ps, is
 }
 
-func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
-	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
-	_, errs := ts.SpawnBurst(ps)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.WaitStart(p.Pid)
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
@@ -95,26 +93,29 @@ func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 	}
 }
 
-func initSemaphore(ts *test.Tstate, i interface{}) {
+func initSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
 	assert.Nil(ts.T, err, "Sem init: %v", err)
+	return time.Since(start)
 }
 
-func upSemaphore(ts *test.Tstate, i interface{}) {
+func upSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
 	assert.Nil(ts.T, err, "Sem up: %v", err)
+	return time.Since(start)
 }
 
-func downSemaphore(ts *test.Tstate, i interface{}) {
+func downSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
 	assert.Nil(ts.T, err, "Sem down: %v", err)
+	return time.Since(start)
 }
 
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, i interface{}) {
+func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf("TEST1", "Spawned %v", p)
@@ -123,16 +124,24 @@ func runProc(ts *test.Tstate, i interface{}) {
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
 	assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+	return time.Since(start)
+}
+
+func spawnBurstProcs(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	ps := i.([]*proc.Proc)
+	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
+	_, errs := ts.SpawnBurst(ps)
+	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	return time.Since(start)
 }
 
 func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.RawResults) {
 	for i := 0; i < len(is); i++ {
 		// Pefrormance vars
 		nRPC := ts.ReadSeqNo()
-		start := time.Now()
 
 		// Ops we are benchmarking
-		op(ts, is[i])
+		elapsed := op(ts, time.Now(), is[i])
 
 		// Optional counter
 		if i%100 == 0 {
@@ -140,11 +149,11 @@ func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.RawResu
 		}
 
 		// Performance bookeeping
-		elapsed := float64(time.Since(start).Microseconds())
+		usecs := float64(elapsed.Microseconds())
 		nRPC = ts.ReadSeqNo() - nRPC
-		db.DPrintf("TEST2", "Latency: %vus", elapsed)
-		throughput := float64(1.0) / elapsed
-		rs.Data[i].Set(throughput, elapsed, nRPC)
+		db.DPrintf("TEST2", "Latency: %vus", usecs)
+		throughput := float64(1.0) / usecs
+		rs.Data[i].Set(throughput, usecs, nRPC)
 	}
 }
 
@@ -194,7 +203,9 @@ func TestNiceMatMulWithSpinners(t *testing.T) {
 	// Make some spinning procs to take up nContenders cores.
 	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
 	// Burst-spawn BE procs
-	spawnBurstProcs(ts, psSpin)
+	spawnBurstProcs(ts, time.Now(), psSpin)
+	// Wait for the procs to start
+	waitStartProcs(ts, psSpin)
 	// Make the LC proc.
 	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
 	// Spawn the LC procs
@@ -217,7 +228,9 @@ func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
 	// Make some spinning procs to take up nContenders cores. (AS LC)
 	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
 	// Burst-spawn spinning procs
-	spawnBurstProcs(ts, psSpin)
+	spawnBurstProcs(ts, time.Now(), psSpin)
+	// Wait for the procs to start
+	waitStartProcs(ts, psSpin)
 	// Make the matmul procs.
 	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
 	// Spawn the matmul procs
@@ -248,7 +261,7 @@ func TestMicroUpSemaphore(t *testing.T) {
 	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, i)
+		initSemaphore(ts, time.Now(), i)
 	}
 	runOps(ts, is, upSemaphore, rs)
 	printResults(rs)
@@ -264,8 +277,8 @@ func TestMicroDownSemaphore(t *testing.T) {
 	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, i)
-		upSemaphore(ts, i)
+		initSemaphore(ts, time.Now(), i)
+		upSemaphore(ts, time.Now(), i)
 	}
 	runOps(ts, is, downSemaphore, rs)
 	printResults(rs)
@@ -280,6 +293,25 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	makeOutDir(ts)
 	_, ps := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
 	runOps(ts, ps, runProc, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Burst a bunch of spinning procs, and see how long it takes for all of them
+// to start.
+//
+// XXX Maybe we should do a version with procs that don't spin & consume so
+// much CPU?
+//
+// XXX A bit wonky, since we'll want to dealloc all the machines from the
+// realms between runs.
+func TestMicroSpawnBurstSpinners(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(1)
+	makeOutDir(ts)
+	ps, _ := makeNProcs(N_SPINNERS_BURST_MICRO, "user/spinner", []string{OUT_DIR}, []string{}, 1)
+	runOps(ts, []interface{}{ps}, spawnBurstProcs, rs)
 	printResults(rs)
 	rmOutDir(ts)
 	ts.Shutdown()

@@ -14,13 +14,16 @@ import (
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/realm"
 )
 
 var version string
+var realmid string // Use this realm to run tests instead of starting a new one. This is used for multi-machine tests.
 
 // Read & set the proc version.
 func init() {
 	flag.StringVar(&version, "version", "none", "version")
+	flag.StringVar(&realmid, "realm", "", "realm id")
 }
 
 type Tstate struct {
@@ -59,44 +62,47 @@ func (ts *Tstate) startReplicas() {
 	}
 }
 
-func MakeTstatePath(t *testing.T, named, path string) *Tstate {
+func makeTstate(t *testing.T) *Tstate {
 	setVersion()
-	if named == "" && path == np.NAMED {
+	ts := &Tstate{}
+	ts.T = t
+	return ts
+}
+
+func MakeTstatePath(t *testing.T, path string) *Tstate {
+	if path == np.NAMED {
 		return MakeTstate(t)
 	} else {
-		var ts *Tstate
-		if named == "" {
-			ts = MakeTstateAll(t)
-		} else {
-			ts = MakeTstateClnt(t, named)
-		}
+		ts := MakeTstateAll(t)
 		ts.RmDir(path)
 		ts.MkDir(path, 0777)
 		return ts
 	}
 }
 
-func MakeTstateClnt(t *testing.T, named string) *Tstate {
-	setVersion()
-	ts := &Tstate{}
-	ts.T = t
-	ts.System = kernel.MakeSystem("test", np.TEST_RID, []string{named}, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
+func makeTstateClnt(t *testing.T, namedaddr []string) *Tstate {
+	ts := makeTstate(t)
+	ts.System = kernel.MakeSystem("test", np.TEST_RID, namedaddr, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	return ts
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	setVersion()
-	ts := &Tstate{}
-	ts.T = t
+	ts := makeTstate(t)
 	ts.makeSystem(kernel.MakeSystemNamed)
 	return ts
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	setVersion()
-	ts := &Tstate{}
-	ts.T = t
-	ts.makeSystem(kernel.MakeSystemAll)
+	ts := makeTstate(t)
+	// If no realm is running (single-machine)
+	if realmid == "" {
+		ts.makeSystem(kernel.MakeSystemAll)
+	} else {
+		// A realm/set of machines are already running
+		// XXX make fslib exit?
+		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
+		makeTstateClnt(t, rconfig.NamedAddrs)
+	}
 	return ts
 }
 

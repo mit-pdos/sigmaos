@@ -21,13 +21,11 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	rd "ulambda/rand"
-	"ulambda/realm"
 	"ulambda/test"
 )
 
@@ -43,12 +41,10 @@ const (
 	CRASHSRV   = 1000000
 )
 
-var realmaddr string // Use this realm to run MR (instead of starting a new one)
-var app string       // yaml app file
+var app string // yaml app file
 var job *mr.Job
 
 func init() {
-	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 }
 
@@ -113,12 +109,7 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	if realmaddr == "" {
-		ts.Tstate = test.MakeTstateAll(t)
-	} else {
-		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmaddr)
-		ts.Tstate = test.MakeTstateClnt(t, rconfig.NamedAddrs[0])
-	}
+	ts.Tstate = test.MakeTstateAll(t)
 	job = readConfig()
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
@@ -254,9 +245,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.stats()
 
-	if realmaddr == "" {
-		ts.Shutdown()
-	}
+	ts.Shutdown()
 }
 
 func TestMRJOB(t *testing.T) {

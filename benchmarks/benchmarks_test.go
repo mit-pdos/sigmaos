@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -16,18 +17,33 @@ import (
 	"ulambda/test"
 )
 
+// ========== Common parameters ==========
 const (
-	SPIN_DIR        = "name/spinners"
+	OUT_DIR = "name/out_dir"
+)
+
+// ========== Nice parameters ==========
+const (
 	MAT_SIZE        = 2000
-	N_TRIALS        = 10
+	N_TRIALS_NICE   = 10
 	CONTENDERS_FRAC = 1.0
 )
 
 var MATMUL_NPROCS = linuxsched.NCores
 var CONTENDERS_NPROCS = 1
 
-func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) []*proc.Proc {
-	ps := []*proc.Proc{}
+// ========== Micro parameters ==========
+
+const (
+	N_TRIALS_MICRO = 1000
+	SLEEP_MICRO    = "5000us"
+)
+
+type testOp func(*test.Tstate, interface{})
+
+func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) ([]*proc.Proc, []interface{}) {
+	is := make([]interface{}, 0, n)
+	ps := make([]*proc.Proc, 0, n)
 	for i := 0; i < n; i++ {
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProc(prog, args)
@@ -39,8 +55,9 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 			p.Type = proc.T_BE
 		}
 		ps = append(ps, p)
+		is = append(is, p)
 	}
-	return ps
+	return ps, is
 }
 
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -54,6 +71,18 @@ func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
 }
 
+// TODO for matmul, possibly only benchmark internal time
+func runProc(ts *test.Tstate, x interface{}) {
+	p := x.(*proc.Proc)
+	err1 := ts.Spawn(p)
+	db.DPrintf("TEST1", "Spawned %v", p)
+	status, err2 := ts.WaitExit(p.Pid)
+	assert.Nil(ts.T, err1, "Failed to Spawn %v", err1)
+	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
+	// Correctness checks
+	assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+}
+
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.Evict(p.Pid)
@@ -63,23 +92,26 @@ func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 	}
 }
 
-func runProcs(ts *test.Tstate, ps []*proc.Proc, rs *benchmarks.RawResults) {
-	for i := 0; i < len(ps); i++ {
-		err := ts.Spawn(ps[i])
-		db.DPrintf("TEST1", "Spawned %v", ps[i])
-		assert.Nil(ts.T, err, "Failed to Spawn %v", err)
-		status, err := ts.WaitExit(ps[i].Pid)
-		assert.Nil(ts.T, err, "Failed to WaitExit %v", err)
-		assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.RawResults) {
+	for i := 0; i < len(is); i++ {
+		// Pefrormance vars
+		nRPC := ts.ReadSeqNo()
+		start := time.Now()
 
+		// Ops we are benchmarking
+		op(ts, is[i])
+
+		// Optional counter
 		if i%100 == 0 {
 			db.DPrintf("TEST", "i = %v", i)
 		}
 
-		elapsed := status.Data().(float64)
+		// Performance bookeeping
+		elapsed := float64(time.Since(start).Microseconds())
+		nRPC = ts.ReadSeqNo() - nRPC
 		db.DPrintf("TEST2", "Latency: %vus", elapsed)
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].Set(throughput, elapsed, 0)
+		rs.Data[i].Set(throughput, elapsed, nRPC)
 	}
 }
 
@@ -96,37 +128,47 @@ func printResults(rs *benchmarks.RawResults) {
 	fnDetails := runtime.FuncForPC(pc)
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
-	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
+	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (usec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
+}
+
+func makeOutDir(ts *test.Tstate) {
+	err := ts.MkDir(OUT_DIR, 0777)
+	assert.Nil(ts.T, err, "Couldn't make out dir: %v", err)
+}
+
+func rmOutDir(ts *test.Tstate) {
+	err := ts.RmDir(OUT_DIR)
+	assert.Nil(ts.T, err, "Couldn't rm out dir: %v", err)
 }
 
 // Length of time required to do a simple matrix multiplication.
-func TestMicroNiceMatMulBaseline(t *testing.T) {
+func TestNiceMatMulBaseline(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-	runProcs(ts, ps, rs)
+	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
+	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+	runOps(ts, is, runProc, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
 
 // Start a bunch of spinning procs to contend with one matmul task, and then
 // see how long the matmul task took.
-func TestMicroNiceMatMulWithSpinners(t *testing.T) {
+func TestNiceMatMulWithSpinners(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	err := ts.MkDir(SPIN_DIR, 0777)
-	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
+	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
+	makeOutDir(ts)
 	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 	// Make some spinning procs to take up nContenders cores.
-	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
+	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
 	// Burst-spawn BE procs
 	spawnBurstProcs(ts, psSpin)
 	// Make the LC proc.
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
 	// Spawn the LC procs
-	runProcs(ts, ps, rs)
+	runOps(ts, is, runProc, rs)
 	printResults(rs)
 	evictProcs(ts, psSpin)
+	rmOutDir(ts)
 	ts.Shutdown()
 }
 
@@ -134,21 +176,45 @@ func TestMicroNiceMatMulWithSpinners(t *testing.T) {
 // low priority. This is intended to verify that changing priorities does
 // actually affect application throughput for procs which have their priority
 // lowered, and by how much.
-func TestMicroNiceMatMulWithSpinnersLCNiced(t *testing.T) {
+func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	err := ts.MkDir(SPIN_DIR, 0777)
-	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
+	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
+	makeOutDir(ts)
 	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 	// Make some spinning procs to take up nContenders cores. (AS LC)
-	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
+	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
 	// Burst-spawn spinning procs
 	spawnBurstProcs(ts, psSpin)
 	// Make the matmul procs.
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
+	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
 	// Spawn the matmul procs
-	runProcs(ts, ps, rs)
+	runOps(ts, is, runProc, rs)
 	printResults(rs)
 	evictProcs(ts, psSpin)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Test how long it takes to init a semaphore.
+func TestMicroInitSemaphore(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	makeOutDir(ts)
+	_, is := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
+	runOps(ts, is, runProc, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
+func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	makeOutDir(ts)
+	_, is := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
+	runOps(ts, is, runProc, rs)
+	printResults(rs)
+	rmOutDir(ts)
 	ts.Shutdown()
 }

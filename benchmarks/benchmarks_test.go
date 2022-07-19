@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	SPIN_DIR       = "name/spinners"
-	MAT_SIZE       = 2000
-	N_TRIALS       = 100
-	CONTENDERS_DEN = 1.0 //40.0 / 39.0
+	SPIN_DIR        = "name/spinners"
+	MAT_SIZE        = 2000
+	N_TRIALS        = 10
+	CONTENDERS_FRAC = 1.0
 )
 
 var MATMUL_NPROCS = linuxsched.NCores
@@ -41,7 +41,27 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 	return ps
 }
 
-func spawnAndWait(ts *test.Tstate, ps []*proc.Proc, rs *benchmarks.RawResults) {
+func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
+	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
+	_, errs := ts.SpawnBurst(ps)
+	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	for _, p := range ps {
+		err := ts.WaitStart(p.Pid)
+		assert.Nil(ts.T, err, "WaitStart: %v", err)
+	}
+	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
+}
+
+func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		err := ts.Evict(p.Pid)
+		assert.Nil(ts.T, err, "Evict: %v", err)
+		status, err := ts.WaitExit(p.Pid)
+		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
+	}
+}
+
+func runProcs(ts *test.Tstate, ps []*proc.Proc, rs *benchmarks.RawResults) {
 	for i := 0; i < len(ps); i++ {
 		err := ts.Spawn(ps[i])
 		db.DPrintf("TEST1", "Spawned %v", ps[i])
@@ -61,143 +81,42 @@ func spawnAndWait(ts *test.Tstate, ps []*proc.Proc, rs *benchmarks.RawResults) {
 	}
 }
 
-// Length of time required to do a simple matrix multiplication.
-func TestMatMulBaseline(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-
-	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-
-	spawnAndWait(ts, ps, rs)
-
+func printResults(rs *benchmarks.RawResults) {
 	mean := rs.Mean().Latency
 	std := rs.StandardDeviation().Latency
 	// Round to 2 decimal points.
 	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-
 	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
+}
 
+// Length of time required to do a simple matrix multiplication.
+func TestMicroBenchmarkMatMulBaseline(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
+	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+	runProcs(ts, ps, rs)
+	printResults(rs)
 	ts.Shutdown()
 }
 
-// Doesn't change much unless there is contention in the system, so this
-// baseline isn't very interesting.
-//
-//// Length of time required to do a simple matrix multiplication when its
-//// priority is lowered.
-//func TestMatMulBaselineNiced(t *testing.T) {
-//	ts := test.MakeTstateAll(t)
-//
-//	rs := benchmarks.MakeRawResults(N_TRIALS)
-//
-//	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, 0)
-//
-//	spawnAndWait(ts, ps, rs)
-//
-//	mean := rs.Mean().Latency
-//	std := rs.StandardDeviation().Latency
-//	// Round to 2 decimal points.
-//	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-//
-//	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
-//
-//	ts.Shutdown()
-//}
-
-//func TestMatMulWithSleepers(t *testing.T) {
-//	ts := test.MakeTstateAll(t)
-//
-//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
-//
-//	rs := benchmarks.MakeRawResults(N_TRIALS)
-//
-//	err := ts.MkDir(SPIN_DIR, 0777)
-//	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
-//
-//	// Make some spinning procs to take up nContenders cores.
-//	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR},  []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
-//
-//	// Burst spawn the spinners.
-//	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
-//	_, errs := ts.SpawnBurst(psSpin)
-//	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-//
-//	for _, p := range psSpin {
-//		err := ts.WaitStart(p.Pid)
-//		assert.Nil(ts.T, err, "WaitStart: %v", err)
-//	}
-//
-//	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
-//
-//	// Make the LC proc.
-//	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-//
-//	// Spawn the LC procs
-//	spawnAndWait(ts, ps, rs)
-//
-//	mean := rs.Mean().Latency
-//	std := rs.StandardDeviation().Latency
-//	// Round to 2 decimal points.
-//	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-//
-//	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
-//
-//	for _, p := range psSpin {
-//		err := ts.Evict(p.Pid)
-//		assert.Nil(ts.T, err, "Evict: %v", err)
-//		status, err := ts.WaitExit(p.Pid)
-//		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
-//	}
-//
-//	ts.Shutdown()
-//}
-
-func TestMatMulWithSpinners(t *testing.T) {
+// Start a bunch of spinning procs to contend with one matmul task, and then
+// see how long the matmul task took.
+func TestMicroBenchmarkMatMulWithSpinners(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
-
 	rs := benchmarks.MakeRawResults(N_TRIALS)
-
 	err := ts.MkDir(SPIN_DIR, 0777)
 	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
-
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 	// Make some spinning procs to take up nContenders cores.
 	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
-
-	// Burst spawn the spinners.
-	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
-	_, errs := ts.SpawnBurst(psSpin)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-
-	for _, p := range psSpin {
-		err := ts.WaitStart(p.Pid)
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
-	}
-
-	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
-
+	// Burst-spawn BE procs
+	spawnBurstProcs(ts, psSpin)
 	// Make the LC proc.
 	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-
 	// Spawn the LC procs
-	spawnAndWait(ts, ps, rs)
-
-	mean := rs.Mean().Latency
-	std := rs.StandardDeviation().Latency
-	// Round to 2 decimal points.
-	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-
-	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
-
-	for _, p := range psSpin {
-		err := ts.Evict(p.Pid)
-		assert.Nil(ts.T, err, "Evict: %v", err)
-		status, err := ts.WaitExit(p.Pid)
-		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
-	}
-
+	runProcs(ts, ps, rs)
+	printResults(rs)
+	evictProcs(ts, psSpin)
 	ts.Shutdown()
 }
 
@@ -205,50 +124,21 @@ func TestMatMulWithSpinners(t *testing.T) {
 // low priority. This is intended to verify that changing priorities does
 // actually affect application throughput for procs which have their priority
 // lowered, and by how much.
-func TestMatMulWithSpinnersNiced(t *testing.T) {
+func TestMicroBenchmarkMatMulWithSpinnersLCNiced(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_DEN)
-
 	rs := benchmarks.MakeRawResults(N_TRIALS)
-
 	err := ts.MkDir(SPIN_DIR, 0777)
 	assert.Nil(ts.T, err, "Couldn't make spinners dir: %v", err)
-
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 	// Make some spinning procs to take up nContenders cores. (AS LC)
 	psSpin := makeNProcs(nContenders, "user/spinner", []string{SPIN_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
-
-	// Burst spawn the spinners.
-	db.DPrintf("TEST", "Spawning %v spinning BE procs", nContenders)
-	_, errs := ts.SpawnBurst(psSpin)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-
-	for _, p := range psSpin {
-		err := ts.WaitStart(p.Pid)
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
-	}
-
-	db.DPrintf("TEST", "Spawning %v BE procs have all started", nContenders)
-
+	// Burst-spawn spinning procs
+	spawnBurstProcs(ts, psSpin)
 	// Make the matmul procs.
 	ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
-
 	// Spawn the matmul procs
-	spawnAndWait(ts, ps, rs)
-
-	mean := rs.Mean().Latency
-	std := rs.StandardDeviation().Latency
-	// Round to 2 decimal points.
-	ratio := math.Round((std/mean*100.0)*100.0) / 100.0
-
-	db.DPrintf(db.ALWAYS, "\n\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (sec)\nStd is %v%% of the mean\n=====\n\n", mean, std, ratio)
-
-	for _, p := range psSpin {
-		err := ts.Evict(p.Pid)
-		assert.Nil(ts.T, err, "Evict: %v", err)
-		status, err := ts.WaitExit(p.Pid)
-		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
-	}
-
+	runProcs(ts, ps, rs)
+	printResults(rs)
+	evictProcs(ts, psSpin)
 	ts.Shutdown()
 }

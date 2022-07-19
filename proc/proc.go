@@ -15,9 +15,8 @@ type Ttype uint32
 type Tcore uint32
 
 const (
-	T_DEF Ttype = 0
-	T_LC  Ttype = 1
-	T_BE  Ttype = 2
+	T_BE Ttype = 0
+	T_LC Ttype = 1
 )
 
 const (
@@ -57,7 +56,7 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p.Program = program
 	p.LinuxRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid.String())
 	p.Args = args
-	p.Type = T_DEF
+	p.Type = T_BE
 	p.Ncore = C_DEF
 	p.setProcDir("")
 	// If this isn't a user proc, version it.

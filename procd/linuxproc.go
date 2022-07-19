@@ -115,12 +115,10 @@ func (p *LinuxProc) setCpuAffinityL() {
 func (p *LinuxProc) setPriority() {
 	var err error
 	switch p.attr.Type {
-	case proc.T_DEF:
-		err = linuxsched.SchedSetPriority(p.SysPid, DEF_PROC_PRIORITY)
-	case proc.T_LC:
-		err = linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
 	case proc.T_BE:
 		err = linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
+	case proc.T_LC:
+		err = linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
 	default:
 		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
 	}

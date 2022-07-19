@@ -45,23 +45,15 @@ const (
 
 var realmaddr string // Use this realm to run MR (instead of starting a new one)
 var app string       // yaml app file
-var job *Job
-
-type Job struct {
-	App     string `yalm:"app"`
-	Nreduce int    `yalm:"nreduce"`
-	Binsz   int    `yalm:"binsz"`
-	Input   string `yalm:"input"`
-	Linesz  int    `yalm:"linesz"`
-}
+var job *mr.Job
 
 func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 }
 
-func readConfig() *Job {
-	job := &Job{}
+func readConfig() *mr.Job {
+	job := &mr.Job{}
 	file, err := os.Open(app)
 	if err != nil {
 		log.Fatalf("ReadConfig err %v\n", err)
@@ -165,37 +157,9 @@ func (ts *Tstate) compare() {
 	assert.Equal(ts.T, b1, b2, "Output files have different contents")
 }
 
-// Put names of input files in name/mr/m
-func (ts *Tstate) prepareJob() int {
-	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
-	assert.Nil(ts.T, err)
-	assert.NotEqual(ts.T, 0, len(bins))
-	for i, b := range bins {
-		n := mr.MapTask(ts.job) + "/" + mr.BinName(i)
-		_, err = ts.PutFile(n, 0777, np.OWRITE, []byte{})
-		assert.Nil(ts.T, err, nil)
-		for _, s := range b {
-			err := ts.AppendFileJson(n, s)
-			assert.Nil(ts.T, err, nil)
-		}
-	}
-	return len(bins)
-}
-
 func (ts *Tstate) checkJob() {
-	file, err := os.OpenFile(OUTPUT, os.O_WRONLY|os.O_CREATE, 0644)
-	assert.Nil(ts.T, err, "Open output file: %v", err)
-	defer file.Close()
-
-	// XXX run as a proc?
-	for i := 0; i < ts.nreducetask; i++ {
-		r := strconv.Itoa(i)
-		data, err := ts.GetFile(mr.ReduceOut(ts.job) + r)
-		assert.Nil(ts.T, err, "GetFile %v err %v", r, err)
-		_, err = file.Write(data)
-		assert.Nil(ts.T, err, "Write err %v", err)
-	}
-
+	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
+	assert.Nil(ts.T, err, "Merge output files: %v", err)
 	if app == "wc" {
 		ts.compare()
 	}
@@ -262,7 +226,9 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	ts := makeTstate(t)
 
-	nmap := ts.prepareJob()
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
+	assert.Nil(ts.T, err)
+	assert.NotEqual(ts.T, 0, nmap)
 
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "user/mr-coord", []string{ts.job, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, mr.NCOORD, crashcoord, 0, 0)
 

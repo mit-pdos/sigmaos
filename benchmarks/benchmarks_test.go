@@ -71,6 +71,15 @@ func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
 }
 
+func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		err := ts.Evict(p.Pid)
+		assert.Nil(ts.T, err, "Evict: %v", err)
+		status, err := ts.WaitExit(p.Pid)
+		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
+	}
+}
+
 // TODO for matmul, possibly only benchmark internal time
 func runProc(ts *test.Tstate, x interface{}) {
 	p := x.(*proc.Proc)
@@ -81,15 +90,6 @@ func runProc(ts *test.Tstate, x interface{}) {
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
 	assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
-}
-
-func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
-	for _, p := range ps {
-		err := ts.Evict(p.Pid)
-		assert.Nil(ts.T, err, "Evict: %v", err)
-		status, err := ts.WaitExit(p.Pid)
-		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
-	}
 }
 
 func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.RawResults) {
@@ -145,8 +145,8 @@ func rmOutDir(ts *test.Tstate) {
 func TestNiceMatMulBaseline(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
-	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-	runOps(ts, is, runProc, rs)
+	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -163,9 +163,9 @@ func TestNiceMatMulWithSpinners(t *testing.T) {
 	// Burst-spawn BE procs
 	spawnBurstProcs(ts, psSpin)
 	// Make the LC proc.
-	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
+	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
 	// Spawn the LC procs
-	runOps(ts, is, runProc, rs)
+	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	evictProcs(ts, psSpin)
 	rmOutDir(ts)
@@ -186,9 +186,9 @@ func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
 	// Burst-spawn spinning procs
 	spawnBurstProcs(ts, psSpin)
 	// Make the matmul procs.
-	_, is := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
+	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
 	// Spawn the matmul procs
-	runOps(ts, is, runProc, rs)
+	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	evictProcs(ts, psSpin)
 	rmOutDir(ts)
@@ -200,8 +200,8 @@ func TestMicroInitSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
 	makeOutDir(ts)
-	_, is := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
-	runOps(ts, is, runProc, rs)
+	_, ps := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
+	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
@@ -212,8 +212,8 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
 	makeOutDir(ts)
-	_, is := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
-	runOps(ts, is, runProc, rs)
+	_, ps := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
+	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	rmOutDir(ts)
 	ts.Shutdown()

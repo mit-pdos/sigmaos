@@ -29,4 +29,8 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-find /mnt/9p/realm-nameds/$REALM/procd/*/running/ -type f -print | xargs -I {} jq -rc '.Program|.Args' {}
+for f in /mnt/9p/realm-nameds/$REALM/procd/*:*
+do
+  echo "===" $f
+  find "$f/running/" -type f -print | xargs -I {} jq -rc '.Program,.Args' {}
+done

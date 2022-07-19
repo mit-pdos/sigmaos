@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
+	"path"
 	"time"
 
 	"ulambda/benchmarks"
@@ -17,7 +17,7 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length out <native>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length outdir <native>\n", os.Args[0])
 		os.Exit(1)
 	}
 	l, err := MakeSleeper(os.Args[1:])
@@ -33,7 +33,7 @@ type Sleeper struct {
 	*procclnt.ProcClnt
 	native      bool
 	sleepLength time.Duration
-	output      string
+	outdir      string
 	startSeqno  np.Tseqno
 	time.Time
 }
@@ -47,7 +47,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.startSeqno = s.ReadSeqNo()
-	s.output = args[1]
+	s.outdir = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {
 		db.DFatalf("Error parsing duration: %v", err)
@@ -79,10 +79,11 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 
 func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
-	if s.output != "" {
-		_, err := s.PutFile(s.output, 0777, np.OWRITE, []byte("hello"))
+	if s.outdir != "" {
+		fpath := path.Join(s.outdir, proc.GetPid().String()+"_out")
+		_, err := s.PutFile(fpath, 0777, np.OWRITE, []byte("hello"))
 		if err != nil {
-			log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
+			db.DPrintf(db.ALWAYS, "Error: Makefile %v in Sleeper.Work: %v\n", fpath, err)
 		}
 	}
 	latency := time.Since(s.Time)

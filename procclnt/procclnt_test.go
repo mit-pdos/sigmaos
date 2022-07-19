@@ -76,7 +76,7 @@ func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 }
 
 func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
-	a := proc.MakeProcPid(pid, "user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid.String()})
+	a := proc.MakeProcPid(pid, "user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
 	a.Type = proc.T_LC
 	a.Ncore = ncore
 	if ncore > 0 {
@@ -88,7 +88,7 @@ func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.
 }
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {
-	p := proc.MakeProc("user/spawner", []string{"false", childPid.String(), "user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid.String()})
+	p := proc.MakeProc("user/spawner", []string{"false", childPid.String(), "user/sleeper", fmt.Sprintf("%dms", msecs), "name/"})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.Pid
@@ -96,7 +96,7 @@ func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) 
 
 func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
 	res := true
-	b, err := ts.GetFile("name/out_" + pid.String())
+	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	res = assert.Nil(t, err, "GetFile") && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
 
@@ -104,7 +104,7 @@ func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
 }
 
 func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
-	b, err := ts.GetFile("name/out_" + pid.String())
+	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
@@ -297,7 +297,7 @@ func TestEarlyExit1(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// Child should have exited
-	b, err := ts.GetFile("name/out_" + pid1.String())
+	b, err := ts.GetFile("name/" + pid1.String() + "_out")
 	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, string(b), "hello", "Output")
 
@@ -329,7 +329,7 @@ func TestEarlyExitN(t *testing.T) {
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 			// Child should have exited
-			b, err := ts.GetFile("name/out_" + pid1.String())
+			b, err := ts.GetFile("name/" + pid1.String() + "_out")
 			assert.Nil(t, err, "GetFile")
 			assert.Equal(t, string(b), "hello", "Output")
 

@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--realm REALM] [--profile PROFILE]" 1>&2
+  echo "Usage: $0 [--realm REALM] [--profile PROFILE] [--parallel]" 1>&2
 }
 
 REALM="test-realm"
 PROFILE=""
+PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
     shift
     PROFILE="--profile $1"
     shift
+    ;;
+  --parallel)
+    shift
+    PARALLEL="--parallel"
     ;;
   -help)
     usage
@@ -44,7 +49,11 @@ oldbins=$(aws s3 ls --recursive s3://$REALM/bin/user $PROFILE | awk '{print $NF}
 
 for bin in $oldbins; do
   if ! [[ $bin == *$VERSION* ]]; then
-    aws s3 rm s3://$REALM/$bin
+    if [ -z "$PARALLEL" ]; then
+      aws s3 rm s3://$REALM/$bin
+    else
+      aws s3 rm s3://$REALM/$bin &
+    fi
   fi
 done
 wait

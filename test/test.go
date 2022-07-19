@@ -93,15 +93,16 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	ts := makeTstate(t)
+	var ts *Tstate
 	// If no realm is running (single-machine)
 	if realmid == "" {
+		ts = makeTstate(t)
 		ts.makeSystem(kernel.MakeSystemAll)
 	} else {
 		// A realm/set of machines are already running
 		// XXX make fslib exit?
 		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
-		makeTstateClnt(t, rconfig.NamedAddrs)
+		ts = makeTstateClnt(t, rconfig.NamedAddrs)
 	}
 	return ts
 }

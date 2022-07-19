@@ -6,5 +6,8 @@ then
       exit 1
 fi
 
-
-find /mnt/9p/realm-nameds/$1/procd/*/running/ -type f -print | xargs -I {} jq -rc '.Program|.Args' {}
+for f in /mnt/9p/realm-nameds/$1/procd/*:*
+do
+        echo "===" $f
+        find "$f/running/" -type f -print | xargs -I {} jq -rc '.Program,.Args' {}
+done

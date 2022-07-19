@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -63,6 +64,32 @@ type Job struct {
 	Binsz   int    `yalm:"binsz"`
 	Input   string `yalm:"input"`
 	Linesz  int    `yalm:"linesz"`
+}
+
+func InitCoordFS(fsl *fslib.FsLib, job string, nreducetask int) {
+	fsl.MkDir(MRDIRTOP, 0777)
+	for _, n := range []string{JobDir(job), MapTask(job), ReduceTask(job), ReduceIn(job), MapTask(job) + TIP, ReduceTask(job) + TIP, MapTask(job) + DONE, ReduceTask(job) + DONE, MapTask(job) + NEXT, ReduceTask(job) + NEXT} {
+		if err := fsl.MkDir(n, 0777); err != nil {
+			db.DFatalf("Mkdir %v err %v\n", n, err)
+		}
+	}
+
+	// Make task and input directories for reduce tasks
+	for r := 0; r < nreducetask; r++ {
+		n := ReduceTask(job) + "/" + strconv.Itoa(r)
+		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
+			db.DFatalf("Putfile %v err %v\n", n, err)
+		}
+		n = ReduceIn(job) + "/" + strconv.Itoa(r)
+		if err := fsl.MkDir(n, 0777); err != nil {
+			db.DFatalf("Mkdir %v err %v\n", n, err)
+		}
+	}
+
+	// Create empty stats file
+	if _, err := fsl.PutFile(MRstats(job), 0777, np.OWRITE, []byte{}); err != nil {
+		db.DFatalf("Putfile %v err %v\n", MRstats(job), err)
+	}
 }
 
 // Put names of input files in name/mr/m

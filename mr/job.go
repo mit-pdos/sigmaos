@@ -1,12 +1,61 @@
 package mr
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
+
+func JobDir(job string) string {
+	return MRDIRTOP + "/" + job
+}
+
+func MRstats(job string) string {
+	return JobDir(job) + "/stats.txt"
+}
+
+func MapTask(job string) string {
+	return JobDir(job) + "/m"
+}
+
+func ReduceTask(job string) string {
+	return JobDir(job) + "/r"
+}
+
+func ReduceIn(job string) string {
+	return JobDir(job) + "-rin/"
+}
+
+func ReduceOut(job string) string {
+	return JobDir(job) + "/mr-out-"
+}
+
+func BinName(i int) string {
+	return fmt.Sprintf("bin%04d", i)
+}
+
+func LocalOut(job string) string {
+	return MLOCALDIR + "/" + job + "/"
+}
+
+func Moutdir(job, name string) string {
+	return LocalOut(job) + "m-" + name
+}
+
+func mshardfile(job, name string, r int) string {
+	return Moutdir(job, name) + "/r-" + strconv.Itoa(r)
+}
+
+func shardtarget(job, server, name string, r int) string {
+	return np.UX + "/" + server + MR + job + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
+}
+
+func symname(job, r, name string) string {
+	return ReduceIn(job) + "/" + r + "/m-" + name
+}
 
 type Job struct {
 	App     string `yalm:"app"`

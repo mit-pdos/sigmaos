@@ -170,6 +170,7 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 	rs := benchmarks.MakeRawResults(1)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
+	// We need to get this in order to find out how many spinners to start.
 	setNCoresSigmaRealm(ts)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
@@ -182,8 +183,6 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 func TestRealmRunMRWC(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
-	// Find the total number of cores available for spinners across all machines.
-	setNCoresSigmaRealm(ts)
 	_, apps := makeNMRJobs(N_MR_JOBS_REALM, "mr-wc.yml")
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)

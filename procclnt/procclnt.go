@@ -59,7 +59,8 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 }
 
 // Burst-spawn a set of procs across available procds. Return a slice of procs
-// which were unable to be successfully spawned.
+// which were unable to be successfully spawned, as well as corresponding
+// errors.
 func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
 	errs := []error{}

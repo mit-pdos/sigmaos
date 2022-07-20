@@ -91,7 +91,7 @@ func (ts *Tstate) Shutdown() {
 	for _, r := range ts.replicas {
 		r.Shutdown()
 	}
-	N := 30 // Crashing procds in mr test leave several fids open; maybe too many?
+	N := 100 // Crashing procds in mr test leave several fids open; maybe too many?
 	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, ts.PathClnt.FidClnt)
 	db.DPrintf("TEST", "Done shutting down")
 }

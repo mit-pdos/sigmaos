@@ -13,6 +13,11 @@ type ProcdClnt struct {
 	*fslib.FsLib
 }
 
+// -1 for ws directory
+func nprocd(sts []*np.Stat) int {
+	return len(sts) - 1
+}
+
 func MakeProcdClnt(fsl *fslib.FsLib) *ProcdClnt {
 	return &ProcdClnt{fsl}
 }
@@ -39,7 +44,7 @@ func (pdc *ProcdClnt) Nprocd() (int, []int, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	r := len(sts) - 1 // -1 for ws directory
+	r := nprocd(sts)
 	nprocs := make([]int, 0, r)
 	for _, st := range sts {
 		if st.Name == "ws" {
@@ -52,4 +57,14 @@ func (pdc *ProcdClnt) Nprocd() (int, []int, error) {
 		nprocs = append(nprocs, nproc)
 	}
 	return r, nprocs, err
+}
+
+func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
+	sts, err := pdc.ReadDirWatch(np.PROCD, func(sts []*np.Stat) bool {
+		return nprocd(sts) == n
+	})
+	if err != nil {
+		return 0, err
+	}
+	return nprocd(sts), nil
 }

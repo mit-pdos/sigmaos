@@ -53,3 +53,13 @@ func (pdc *ProcdClnt) Nprocd() (int, []int, error) {
 	}
 	return r, nprocs, err
 }
+
+func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
+	sts, err := pdc.ReadDirWatch(np.PROCD, func(sts []*np.Stat) bool {
+		return len(sts) == n
+	})
+	if err != nil {
+		return 0, err
+	}
+	return len(sts), nil
+}

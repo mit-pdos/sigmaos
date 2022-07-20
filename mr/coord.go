@@ -330,15 +330,17 @@ func (c *Coord) Round() {
 	}
 }
 
-func (c *Coord) monitor(ch chan struct{}) {
+func (c *Coord) monitorProcds() {
 	pdc := procdclnt.MakeProcdClnt(c.FsLib)
+	n := 0
 	for true {
-		n, nprocs, err := pdc.Nprocd()
+		m, err := pdc.WaitProcdChange(n)
 		if err != nil {
-			db.DFatalf("Nprocd err %v\n", err)
+			db.DFatalf("WaitProcdChange err %v\n", err)
 		}
-		db.DPrintf(db.ALWAYS, "nprocd = %d nproc %d\n", n, nprocs)
-		time.Sleep(10 * time.Second)
+
+		db.DPrintf(db.ALWAYS, "nprocd = %d\n", m-1)
+		n = m
 	}
 }
 
@@ -350,8 +352,7 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	ch := make(chan struct{})
-	go c.monitor(ch)
+	go c.monitorProcds()
 
 	c.recover(MapTask(c.job))
 	c.recover(ReduceTask(c.job))

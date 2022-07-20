@@ -10,6 +10,11 @@ import (
 	"ulambda/test"
 )
 
+type MRJobInstance struct {
+	app     string
+	jobname string
+}
+
 func MakeMRJob(ts *test.Tstate, app, jobname string) *groupmgr.GroupMgr {
 	job := mr.ReadJobConfig(path.Join("..", "mr", app))
 	mr.InitCoordFS(ts.FsLib, jobname, job.Nreduce)

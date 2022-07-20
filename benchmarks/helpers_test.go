@@ -117,12 +117,13 @@ func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{})
 
 // ========== MR Helpers ========
 
-func makeNMRJobs(n int, app string) ([]string, []interface{}) {
-	ss := make([]string, 0, n)
+func makeNMRJobs(n int, app string) ([]*MRJobInstance, []interface{}) {
+	ss := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ss = append(ss, app)
-		is = append(is, app)
+		i := &MRJobInstance{app, app + "-mr-" + rand.String(16)}
+		ss = append(ss, i)
+		is = append(is, i)
 	}
 	return ss, is
 }

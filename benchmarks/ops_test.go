@@ -7,7 +7,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/proc"
-	"ulambda/rand"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
@@ -61,9 +60,8 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 
 // XXX Should get job name in a tuple.
 func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
-	app := i.(string)
-	jobname := app + "-" + rand.String(8)
-	cm := MakeMRJob(ts, app, jobname)
+	ji := i.(*MRJobInstance)
+	cm := MakeMRJob(ts, ji.app, ji.jobname)
 	cm.Wait()
 	return time.Since(start)
 }

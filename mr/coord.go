@@ -13,6 +13,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/procdclnt"
 )
 
 const (
@@ -329,6 +330,18 @@ func (c *Coord) Round() {
 	}
 }
 
+func (c *Coord) monitor(ch chan struct{}) {
+	pdc := procdclnt.MakeProcdClnt(c.FsLib)
+	for true {
+		n, nprocs, err := pdc.Nprocd()
+		if err != nil {
+			db.DFatalf("Nprocd err %v\n", err)
+		}
+		db.DPrintf(db.ALWAYS, "nprocd = %d nproc %d\n", n, nprocs)
+		time.Sleep(10 * time.Second)
+	}
+}
+
 func (c *Coord) Work() {
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
@@ -336,6 +349,9 @@ func (c *Coord) Work() {
 	c.electclnt.AcquireLeadership(nil)
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
+
+	ch := make(chan struct{})
+	go c.monitor(ch)
 
 	c.recover(MapTask(c.job))
 	c.recover(ReduceTask(c.job))

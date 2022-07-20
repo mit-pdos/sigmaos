@@ -34,7 +34,8 @@ const (
 
 // ========== Realm parameters ==========
 const (
-	N_TRIALS_REALM = 1000
+	N_TRIALS_REALM  = 1000
+	N_MR_JOBS_REALM = 1
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
@@ -175,5 +176,16 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 	printResults(rs)
 	evictProcs(ts, ps)
 	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+func TestRealmRunMRWC(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(1)
+	// Find the total number of cores available for spinners across all machines.
+	setNCoresSigmaRealm(ts)
+	_, apps := makeNMRJobs(N_MR_JOBS_REALM, "mr-wc.yml")
+	runOps(ts, apps, runMR, rs)
+	printResults(rs)
 	ts.Shutdown()
 }

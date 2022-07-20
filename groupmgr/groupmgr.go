@@ -58,8 +58,8 @@ func (m *member) spawn() error {
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
 	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
-	if err := m.Spawn(p); err != nil {
-		return err
+	if _, errs := m.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
+		return errs[0]
 	}
 	if err := m.WaitStart(p.Pid); err != nil {
 		return err

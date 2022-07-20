@@ -162,6 +162,24 @@ func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
 	return err
 }
 
+// Retry a balancer op until success, or an unexpected error is returned.
+func BalancerOpRetry(fsl *fslib.FsLib, opcode, mfs string) error {
+	for true {
+		err := BalancerOp(fsl, opcode, mfs)
+		if err == nil {
+			return nil
+		}
+		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
+			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
+			time.Sleep(100 * time.Millisecond)
+		} else {
+			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
+			return err
+		}
+	}
+	return nil
+}
+
 type Ctl struct {
 	fs.Inode
 	bl *Balancer

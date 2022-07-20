@@ -13,7 +13,6 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/kv"
-	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/test"
 )
@@ -142,20 +141,7 @@ func (ts *Tstate) startClerk() proc.Tpid {
 }
 
 func (ts *Tstate) balancerOp(opcode, mfs string) error {
-	for true {
-		err := kv.BalancerOp(ts.FsLib, opcode, mfs)
-		if err == nil {
-			return nil
-		}
-		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
-			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
-			time.Sleep(100 * time.Millisecond)
-		} else {
-			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
-			return err
-		}
-	}
-	return nil
+	return kv.BalancerOpRetry(ts.FsLib, opcode, mfs)
 }
 
 func TestGetPutSet(t *testing.T) {

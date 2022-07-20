@@ -32,10 +32,16 @@ const (
 	SLEEP_MICRO    = "5000us"
 )
 
+// ========== App parameters ==========
+const (
+	N_MR_JOBS_APP   = 1
+	N_KV_JOBS_APP   = 1
+	N_KV_CLERKS_APP = 10
+)
+
 // ========== Realm parameters ==========
 const (
-	N_TRIALS_REALM  = 1000
-	N_MR_JOBS_REALM = 1
+	N_TRIALS_REALM = 1000
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
@@ -155,6 +161,24 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestAppRunMRWC(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
+	_, apps := makeNMRJobs(N_MR_JOBS_APP, "mr-wc.yml")
+	runOps(ts, apps, runMR, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
+func TestAppRunKV(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	_, apps := makeNKVJobs(N_KV_JOBS_APP, N_KV_CLERKS_APP)
+	runOps(ts, apps, runKV, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
 //
@@ -177,14 +201,5 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 	printResults(rs)
 	evictProcs(ts, ps)
 	rmOutDir(ts)
-	ts.Shutdown()
-}
-
-func TestRealmRunMRWC(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(1)
-	_, apps := makeNMRJobs(N_MR_JOBS_REALM, "mr-wc.yml")
-	runOps(ts, apps, runMR, rs)
-	printResults(rs)
 	ts.Shutdown()
 }

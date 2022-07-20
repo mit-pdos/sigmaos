@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
+	"ulambda/kv"
 	"ulambda/proc"
 	"ulambda/semclnt"
 	"ulambda/test"
@@ -63,5 +64,28 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*MRJobInstance)
 	cm := MakeMRJob(ts, ji.app, ji.jobname)
 	cm.Wait()
+	return time.Since(start)
+}
+
+func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	nclerk := i.(int)
+	// Start some balancers
+	ji := MakeKVJob(ts, "manual")
+	db.DPrintf("TEST", "Made KV job")
+	// XXX should probably parametrize how many kv groups to add.
+	// Add more kvd groups.
+	for i := 0; i < kv.NKV; i++ {
+		ji.AddKVDGroup()
+	}
+	db.DPrintf("TEST", "Added KV groups")
+	for i := 0; i < nclerk; i++ {
+		ji.StartClerk()
+	}
+	db.DPrintf("TEST", "Started KV clerks")
+	// XXX Should probalby parametrize how long to sleep.
+	time.Sleep(5000 * time.Millisecond)
+	db.DPrintf("TEST", "Done sleeping")
+	ji.Stop()
+	db.DPrintf("TEST", "Stopped KV")
 	return time.Since(start)
 }

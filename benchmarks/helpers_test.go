@@ -118,12 +118,24 @@ func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{})
 // ========== MR Helpers ========
 
 func makeNMRJobs(n int, app string) ([]*MRJobInstance, []interface{}) {
-	ss := make([]*MRJobInstance, 0, n)
+	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := &MRJobInstance{app, app + "-mr-" + rand.String(16)}
-		ss = append(ss, i)
+		ms = append(ms, i)
 		is = append(is, i)
 	}
-	return ss, is
+	return ms, is
+}
+
+// ========== KV Helpers ========
+
+func makeNKVJobs(n int, nclerk int) ([]int, []interface{}) {
+	ks := make([]int, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		ks = append(ks, nclerk)
+		is = append(is, nclerk)
+	}
+	return ks, is
 }

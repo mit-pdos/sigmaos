@@ -9,7 +9,9 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/groupmgr"
 	np "ulambda/ninep"
+	"ulambda/procclnt"
 )
 
 func JobDir(job string) string {
@@ -82,9 +84,9 @@ func ReadJobConfig(app string) *Job {
 	return job
 }
 
-func InitCoordFS(fsl *fslib.FsLib, job string, nreducetask int) {
+func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	fsl.MkDir(MRDIRTOP, 0777)
-	for _, n := range []string{JobDir(job), MapTask(job), ReduceTask(job), ReduceIn(job), MapTask(job) + TIP, ReduceTask(job) + TIP, MapTask(job) + DONE, ReduceTask(job) + DONE, MapTask(job) + NEXT, ReduceTask(job) + NEXT} {
+	for _, n := range []string{JobDir(jobname), MapTask(jobname), ReduceTask(jobname), ReduceIn(jobname), MapTask(jobname) + TIP, ReduceTask(jobname) + TIP, MapTask(jobname) + DONE, ReduceTask(jobname) + DONE, MapTask(jobname) + NEXT, ReduceTask(jobname) + NEXT} {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
@@ -92,19 +94,19 @@ func InitCoordFS(fsl *fslib.FsLib, job string, nreducetask int) {
 
 	// Make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
-		n := ReduceTask(job) + "/" + strconv.Itoa(r)
+		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
 		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
 			db.DFatalf("Putfile %v err %v\n", n, err)
 		}
-		n = ReduceIn(job) + "/" + strconv.Itoa(r)
+		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
 
 	// Create empty stats file
-	if _, err := fsl.PutFile(MRstats(job), 0777, np.OWRITE, []byte{}); err != nil {
-		db.DFatalf("Putfile %v err %v\n", MRstats(job), err)
+	if _, err := fsl.PutFile(MRstats(jobname), 0777, np.OWRITE, []byte{}); err != nil {
+		db.DFatalf("Putfile %v err %v\n", MRstats(jobname), err)
 	}
 }
 
@@ -126,6 +128,10 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 		}
 	}
 	return len(bins), nil
+}
+
+func StartMRJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{jobname, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, ncoord, crashcoord, 0, 0)
 }
 
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {

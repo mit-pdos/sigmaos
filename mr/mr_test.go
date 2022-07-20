@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -104,7 +102,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(np.UXROOT, "mr"))
 
-	mr.InitCoordFS(ts.System.FsLib, ts.job, ts.nreducetask)
+	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 
 	os.Remove(OUTPUT)
 
@@ -205,7 +203,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "user/mr-coord", []string{ts.job, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := mr.StartMRJob(ts.FsLib, ts.ProcClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

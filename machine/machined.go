@@ -20,6 +20,7 @@ import (
 const (
 	MACHINES  = "name/machines/"
 	CORES     = "cores"
+	CONFIG    = "config"
 	ALL_CORES = "all-cores"
 	NODEDS    = "nodeds"
 )
@@ -29,6 +30,7 @@ type Machined struct {
 	sync.Mutex
 	path   string
 	nodeds map[proc.Tpid]*exec.Cmd
+	*Config
 	*procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -37,6 +39,7 @@ type Machined struct {
 func MakeMachined(args []string) *Machined {
 	m := &Machined{}
 	m.nodeds = map[proc.Tpid]*exec.Cmd{}
+	m.Config = makeMachineConfig()
 	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
 	mfs, err := fslibsrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
@@ -138,7 +141,15 @@ func (m *Machined) postCores() {
 	}
 }
 
+func (m *Machined) postConfig() {
+	// Post config in local fs.
+	if err := m.PutFileJson(path.Join(MACHINES, m.MyAddr(), CONFIG), 0777, m.Config); err != nil {
+		db.DFatalf("Error PutFile: %v", err)
+	}
+}
+
 func (m *Machined) Work() {
+	m.postConfig()
 	m.postCores()
 	done := make(chan bool)
 	<-done

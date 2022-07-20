@@ -28,10 +28,61 @@ func init() {
 
 type Tstate struct {
 	sync.Mutex
-	wg sync.WaitGroup
-	T  *testing.T
+	realmid string
+	wg      sync.WaitGroup
+	T       *testing.T
 	*kernel.System
 	replicas []*kernel.System
+}
+
+func makeTstate(t *testing.T, realmid string) *Tstate {
+	setVersion()
+	ts := &Tstate{}
+	ts.T = t
+	ts.realmid = realmid
+	return ts
+}
+
+func MakeTstatePath(t *testing.T, path string) *Tstate {
+	if path == np.NAMED {
+		return MakeTstate(t)
+	} else {
+		ts := MakeTstateAll(t)
+		ts.RmDir(path)
+		ts.MkDir(path, 0777)
+		return ts
+	}
+}
+
+func MakeTstate(t *testing.T) *Tstate {
+	ts := makeTstate(t, "")
+	ts.makeSystem(kernel.MakeSystemNamed)
+	return ts
+}
+
+// A realm/set of machines are already running
+func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
+	ts := makeTstate(t, realmid)
+	// XXX make fslib exit?
+	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
+	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
+	return ts
+}
+
+func MakeTstateAll(t *testing.T) *Tstate {
+	var ts *Tstate
+	// If no realm is running (single-machine)
+	if realmid == "" {
+		ts = makeTstate(t, realmid)
+		ts.makeSystem(kernel.MakeSystemAll)
+	} else {
+		ts = MakeTstateRealm(t, realmid)
+	}
+	return ts
+}
+
+func (ts *Tstate) RunningInRealm() bool {
+	return ts.realmid != ""
 }
 
 func (ts *Tstate) Shutdown() {
@@ -60,51 +111,6 @@ func (ts *Tstate) startReplicas() {
 		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
 		go ts.addNamedReplica(i + 1)
 	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	setVersion()
-	ts := &Tstate{}
-	ts.T = t
-	return ts
-}
-
-func MakeTstatePath(t *testing.T, path string) *Tstate {
-	if path == np.NAMED {
-		return MakeTstate(t)
-	} else {
-		ts := MakeTstateAll(t)
-		ts.RmDir(path)
-		ts.MkDir(path, 0777)
-		return ts
-	}
-}
-
-func makeTstateClnt(t *testing.T, namedaddr []string) *Tstate {
-	ts := makeTstate(t)
-	ts.System = kernel.MakeSystem("test", np.TEST_RID, namedaddr, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
-	return ts
-}
-
-func MakeTstate(t *testing.T) *Tstate {
-	ts := makeTstate(t)
-	ts.makeSystem(kernel.MakeSystemNamed)
-	return ts
-}
-
-func MakeTstateAll(t *testing.T) *Tstate {
-	var ts *Tstate
-	// If no realm is running (single-machine)
-	if realmid == "" {
-		ts = makeTstate(t)
-		ts.makeSystem(kernel.MakeSystemAll)
-	} else {
-		// A realm/set of machines are already running
-		// XXX make fslib exit?
-		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
-		ts = makeTstateClnt(t, rconfig.NamedAddrs)
-	}
-	return ts
 }
 
 func (ts *Tstate) makeSystem(mkSys func(string, string, int, *np.Tinterval) *kernel.System) {

@@ -339,7 +339,7 @@ func (c *Coord) monitorProcds() {
 			db.DFatalf("WaitProcdChange err %v\n", err)
 		}
 
-		db.DPrintf(db.ALWAYS, "nprocd = %d\n", m-1)
+		db.DPrintf(db.ALWAYS, "nprocd = %d\n", m)
 		n = m
 	}
 }

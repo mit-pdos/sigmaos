@@ -122,7 +122,7 @@ func (mo *Monitor) done() {
 
 // XXX Use load too?
 func (mo *Monitor) doMonitor(conf *Config) {
-	kvs := makeKvs(conf.Shards)
+	kvs := MakeKvs(conf.Shards)
 	db.DPrintf(db.ALWAYS, "Monitor config %v\n", kvs)
 
 	util := float64(0)
@@ -130,7 +130,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	lowkv := ""
 	var lowload stats.Tload
 	n := 0
-	for gn, _ := range kvs.set {
+	for gn, _ := range kvs.Set {
 		kvgrp := group.GrpDir(gn) + np.STATSD
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvgrp, &sti)
@@ -151,7 +151,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	if util >= MAXLOAD {
 		mo.grow()
 	}
-	if util < MINLOAD && len(kvs.set) > 1 {
+	if util < MINLOAD && len(kvs.Set) > 1 {
 		mo.shrink(lowkv)
 	}
 }

@@ -40,6 +40,7 @@ import (
 const (
 	NKV           = 10
 	NSHARD        = 10 * NKV
+	NBALANCER     = 3
 	KVDIR         = "name/kv/"
 	KVCONF        = "config"
 	KVCONFIG      = KVDIR + KVCONF // file with current config

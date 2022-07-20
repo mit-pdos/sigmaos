@@ -124,7 +124,7 @@ func (kc *KvClerk) switchConfig() error {
 			return err
 		}
 		db.DPrintf("KVCLERK", "Conf %v\n", kc.conf)
-		kvset := makeKvs(kc.conf.Shards)
+		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {

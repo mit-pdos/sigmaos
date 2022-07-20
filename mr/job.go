@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"gopkg.in/yaml.v3"
+
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -64,6 +66,20 @@ type Job struct {
 	Binsz   int    `yalm:"binsz"`
 	Input   string `yalm:"input"`
 	Linesz  int    `yalm:"linesz"`
+}
+
+func ReadJobConfig(app string) *Job {
+	job := &Job{}
+	file, err := os.Open(app)
+	if err != nil {
+		db.DFatalf("ReadConfig err %v\n", err)
+	}
+	defer file.Close()
+	d := yaml.NewDecoder(file)
+	if err := d.Decode(&job); err != nil {
+		db.DFatalf("Yalm decode %s err %v\n", app, err)
+	}
+	return job
 }
 
 func InitCoordFS(fsl *fslib.FsLib, job string, nreducetask int) {

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -16,11 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
@@ -48,20 +46,6 @@ func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 }
 
-func readConfig() *mr.Job {
-	job := &mr.Job{}
-	file, err := os.Open(app)
-	if err != nil {
-		log.Fatalf("ReadConfig err %v\n", err)
-	}
-	defer file.Close()
-	d := yaml.NewDecoder(file)
-	if err := d.Decode(&job); err != nil {
-		log.Fatalf("Yalm decode %s err %v\n", app, err)
-	}
-	return job
-}
-
 func TestHash(t *testing.T) {
 	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
 	assert.Equal(t, 0, mr.Khash("Abbots")%8)
@@ -71,7 +55,7 @@ func TestHash(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	job = readConfig()
+	job = mr.ReadJobConfig(app)
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
 	assert.Nil(t, err)
 	sum := np.Tlength(0)
@@ -82,14 +66,14 @@ func TestSplits(t *testing.T) {
 		}
 		sum += n
 	}
-	log.Printf("len %d %v sum %v\n", len(bins), bins, humanize.Bytes(uint64(sum)))
+	db.DPrintf(db.ALWAYS, "len %d %v sum %v\n", len(bins), bins, humanize.Bytes(uint64(sum)))
 	assert.NotEqual(t, 0, len(bins))
 	ts.Shutdown()
 }
 
 func TestSeqMRGrep(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	job = readConfig()
+	job = mr.ReadJobConfig(app)
 
 	p := proc.MakeProc("user/seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
@@ -110,7 +94,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	job = readConfig()
+	job = mr.ReadJobConfig(app)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -133,14 +117,14 @@ func (ts *Tstate) compare() {
 	cmd.Stdout = &out1
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("cmd err %v\n", err)
+		db.DPrintf(db.ALWAYS, "cmd err %v\n", err)
 	}
 	cmd = exec.Command("sort", OUTPUT)
 	var out2 bytes.Buffer
 	cmd.Stdout = &out2
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("cmd err %v\n", err)
+		db.DPrintf(db.ALWAYS, "cmd err %v\n", err)
 	}
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
@@ -193,7 +177,7 @@ func (ts *Tstate) stats() {
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
-	log.Printf("Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)
+	db.DPrintf(db.ALWAYS, "Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)
 	// Make sure not too many crashes happen at once by taking a lock (we always
 	// want >= 1 server to be up).
 	l.Lock()
@@ -207,7 +191,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	default:
 		assert.False(ts.T, true, "%v: Unrecognized service type", proc.GetProgram())
 	}
-	log.Printf("Kill one %v", srv)
+	db.DPrintf(db.ALWAYS, "Kill one %v", srv)
 	err := ts.KillOne(srv)
 	assert.Nil(ts.T, err, "Kill procd %v", err)
 	l.Unlock()

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/kv"
@@ -79,8 +78,6 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.gmbal = kv.StartBalancers(ts.FsLib, ts.ProcClnt, kv.NBALANCER, crashbal, crashhelper, auto)
-	//	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, kv.NBALANCER, "user/balancer", []string{crashhelper, auto}, kv.NBALANCER, crashbal, 0, 0)
-
 	clrk := ts.setup(repl, ncrash)
 	return ts, clrk
 }
@@ -89,17 +86,13 @@ func (ts *Tstate) setup(repl, ncrash int) *kv.KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
 	grp := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl, ncrash)
-	err := ts.balancerOp("add", gn)
+	err := kv.BalancerOpRetry(ts.FsLib, "add", gn)
 	assert.Nil(ts.T, err, "BalancerOp")
 	ts.mfsgrps = append(ts.mfsgrps, grp)
 
 	// Create keys
-	clrk, err := kv.MakeClerk("kv_test", fslib.Named())
-	assert.Nil(ts.T, err, "MakeClerk")
-	for i := uint64(0); i < kv.NKEYS; i++ {
-		err := clrk.Put(kv.MkKey(i), []byte{})
-		assert.Nil(ts.T, err, "Put")
-	}
+	clrk, err := kv.InitKeys(ts.FsLib, ts.ProcClnt)
+	assert.Nil(ts.T, err, "InitKeys: %v", err)
 	return clrk
 }
 
@@ -107,12 +100,6 @@ func (ts *Tstate) done() {
 	ts.gmbal.Stop()
 	ts.stopMemfsgrps()
 	ts.Shutdown()
-}
-
-func (ts *Tstate) stopFS(fs proc.Tpid) {
-	err := ts.Evict(fs)
-	assert.Nil(ts.T, err, "stopFS")
-	ts.WaitExit(fs)
 }
 
 func (ts *Tstate) stopMemfsgrps() {
@@ -124,24 +111,10 @@ func (ts *Tstate) stopMemfsgrps() {
 func (ts *Tstate) stopClerks() {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
-		err := ts.Evict(ck)
-		assert.Nil(ts.T, err, "stopClerks")
-		status, err := ts.WaitExit(ck)
-		assert.Nil(ts.T, err, "WaitExit")
+		status, err := kv.StopClerk(ts.ProcClnt, ck)
+		assert.Nil(ts.T, err, "StopClerk: %v", err)
 		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
 	}
-}
-
-func (ts *Tstate) startClerk() proc.Tpid {
-	p := proc.MakeProc("user/kv-clerk", []string{""})
-	ts.Spawn(p)
-	err := ts.WaitStart(p.Pid)
-	assert.Nil(ts.T, err, "WaitStart")
-	return p.Pid
-}
-
-func (ts *Tstate) balancerOp(opcode, mfs string) error {
-	return kv.BalancerOpRetry(ts.FsLib, opcode, mfs)
 }
 
 func TestGetPutSet(t *testing.T) {
@@ -171,7 +144,8 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
-		pid := ts.startClerk()
+		pid, err := kv.StartClerk(ts.ProcClnt)
+		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
 
@@ -181,7 +155,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		grp := group.GRP + strconv.Itoa(s+1)
 		gm := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, grp, repl, ncrash)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
-		err := ts.balancerOp("add", grp)
+		err := kv.BalancerOpRetry(ts.FsLib, "add", grp)
 		assert.Nil(ts.T, err, "BalancerOp")
 		// do some puts/gets
 		time.Sleep(TIME * time.Millisecond)
@@ -191,7 +165,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	for s := 0; s < kv.NKV; s++ {
 		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
-		err := ts.balancerOp("del", grp)
+		err := kv.BalancerOpRetry(ts.FsLib, "del", grp)
 		assert.Nil(ts.T, err, "BalancerOp")
 		ts.mfsgrps[len(ts.mfsgrps)-1].Stop()
 		ts.mfsgrps = ts.mfsgrps[0 : len(ts.mfsgrps)-1]
@@ -281,7 +255,8 @@ func TestAuto(t *testing.T) {
 	ts, _ := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < nclerk; i++ {
-		pid := ts.startClerk()
+		pid, err := kv.StartClerk(ts.ProcClnt)
+		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
 

@@ -30,6 +30,7 @@ type ProcClnt struct {
 	procdir         string
 	procds          []string
 	lastProcdUpdate time.Time
+	burstOffset     int
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -65,13 +66,16 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
-		err := clnt.spawn(clnt.procds[i%len(clnt.procds)], ps[i])
+		err := clnt.spawn(clnt.procds[(i+clnt.burstOffset)%len(clnt.procds)], ps[i])
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
 			errs = append(errs, err)
 		}
 	}
+	// Make sure we continue rotating across invocations as well as within an
+	// invocation.
+	clnt.burstOffset += len(ps)
 	return failed, errs
 }
 

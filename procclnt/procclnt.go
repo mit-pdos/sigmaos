@@ -23,7 +23,7 @@ const (
 )
 
 type ProcClnt struct {
-	mu sync.Mutex
+	sync.Mutex
 	*fslib.FsLib
 	pid             proc.Tpid
 	isExited        proc.Tpid
@@ -61,22 +61,22 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 // Burst-spawn a set of procs across available procds. Return a slice of procs
 // which were unable to be successfully spawned, as well as corresponding
 // errors.
+//
+// Use of burstOffset makes sure we continue rotating across invocations as
+// well as within an invocation.
 func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
-		err := clnt.spawn(clnt.procds[(i+clnt.burstOffset)%len(clnt.procds)], ps[i])
+		err := clnt.spawn(clnt.nextProcd(), ps[i])
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
 			errs = append(errs, err)
 		}
 	}
-	// Make sure we continue rotating across invocations as well as within an
-	// invocation.
-	clnt.burstOffset += len(ps)
 	return failed, errs
 }
 
@@ -129,6 +129,9 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 
 // Update the list of active procds.
 func (clnt *ProcClnt) updateProcds() {
+	clnt.Lock()
+	defer clnt.Unlock()
+
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
 	if time.Since(clnt.lastProcdUpdate) < np.Conf.Realm.RESIZE_INTERVAL {
@@ -140,6 +143,7 @@ func (clnt *ProcClnt) updateProcds() {
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Got procds %v", procds)
 	// Alloc enough space for the list of procds, excluding the ws queue.
 	clnt.procds = make([]string, 0, len(procds)-1)
 	for _, procd := range procds {
@@ -147,6 +151,15 @@ func (clnt *ProcClnt) updateProcds() {
 			clnt.procds = append(clnt.procds, procd.Name)
 		}
 	}
+}
+
+// Get the next procd to burst on.
+func (clnt *ProcClnt) nextProcd() string {
+	clnt.Lock()
+	defer clnt.Unlock()
+
+	clnt.burstOffset++
+	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
 }
 
 // ========== WAIT ==========
@@ -355,14 +368,14 @@ func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
 }
 
 func (clnt *ProcClnt) hasExited() proc.Tpid {
-	clnt.mu.Lock()
-	defer clnt.mu.Unlock()
+	clnt.Lock()
+	defer clnt.Unlock()
 	return clnt.isExited
 }
 
 func (clnt *ProcClnt) setExited(pid proc.Tpid) proc.Tpid {
-	clnt.mu.Lock()
-	defer clnt.mu.Unlock()
+	clnt.Lock()
+	defer clnt.Unlock()
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r

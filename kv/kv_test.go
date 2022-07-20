@@ -1,7 +1,6 @@
 package kv_test
 
 import (
-	"log"
 	"regexp"
 	"strconv"
 	"testing"
@@ -43,14 +42,14 @@ func TestBalance(t *testing.T) {
 		shards := kv.AddKv(conf, strconv.Itoa(k))
 		conf.Shards = shards
 		kvs := kv.MakeKvs(conf.Shards)
-		//log.Printf("balance %v %v\n", shards, kvs)
+		//db.DPrintf(db.ALWAYS, "balance %v %v\n", shards, kvs)
 		checkKvs(t, kvs, kv.NSHARD/(k+1))
 	}
 	for k := kv.NKV - 1; k > 0; k-- {
 		shards := kv.DelKv(conf, strconv.Itoa(k))
 		conf.Shards = shards
 		kvs := kv.MakeKvs(conf.Shards)
-		//log.Printf("balance %v %v\n", shards, kvs)
+		//db.DPrintf(db.ALWAYS, "balance %v %v\n", shards, kvs)
 		checkKvs(t, kvs, kv.NSHARD/k)
 	}
 }
@@ -124,7 +123,7 @@ func (ts *Tstate) stopMemfsgrps() {
 }
 
 func (ts *Tstate) stopClerks() {
-	log.Printf("clerks to evict %v\n", len(ts.clrks))
+	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
 		err := ts.Evict(ck)
 		assert.Nil(ts.T, err, "stopClerks")
@@ -149,10 +148,10 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 			return nil
 		}
 		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
-			// log.Printf("balancer op wait err %v\n", err)
+			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
-			log.Printf("balancer op err %v\n", err)
+			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
 			return err
 		}
 	}
@@ -302,7 +301,7 @@ func TestAuto(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	log.Printf("Wait for clerks\n")
+	db.DPrintf(db.ALWAYS, "Wait for clerks\n")
 
 	ts.stopClerks()
 

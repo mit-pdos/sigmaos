@@ -29,7 +29,7 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		db.DPrintf(db.ALWAYS, "proc %v\n", p.Program)
+		db.DPrintf(db.ALWAYS, "%s: %v\n", procdir, p.Program)
 	}
 	return len(sts), err
 }

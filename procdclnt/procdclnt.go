@@ -2,6 +2,7 @@ package procdclnt
 
 import (
 	"encoding/json"
+	"fmt"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -11,6 +12,12 @@ import (
 
 type ProcdClnt struct {
 	*fslib.FsLib
+}
+
+type Tload [2]int
+
+func (t Tload) String() string {
+	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
 // -1 for ws directory
@@ -34,18 +41,18 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		db.DPrintf(db.ALWAYS, "%s: %v\n", procdir, p.Program)
+		db.DPrintf("PROCDCLNT", "%s: %v\n", procdir, p.Program)
 	}
 	return len(sts), err
 }
 
-func (pdc *ProcdClnt) Nprocd() (int, []int, error) {
+func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 	sts, err := pdc.GetDir(np.PROCD)
 	if err != nil {
 		return 0, nil, err
 	}
 	r := nprocd(sts)
-	nprocs := make([]int, 0, r)
+	nprocs := make([]Tload, 0, r)
 	for _, st := range sts {
 		if st.Name == "ws" {
 			continue
@@ -54,7 +61,11 @@ func (pdc *ProcdClnt) Nprocd() (int, []int, error) {
 		if err != nil {
 			return r, nil, err
 		}
-		nprocs = append(nprocs, nproc)
+		mproc, err := pdc.Nprocs(np.PROCD + "/" + st.Name + "/runq-be")
+		if err != nil {
+			return r, nil, err
+		}
+		nprocs = append(nprocs, Tload{nproc, mproc})
 	}
 	return r, nprocs, err
 }

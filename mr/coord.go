@@ -349,11 +349,11 @@ func (c *Coord) monitorProcds() {
 func (c *Coord) monitorProcs() {
 	pdc := procdclnt.MakeProcdClnt(c.FsLib)
 	for atomic.LoadInt32(&c.done) == 0 {
-		n, nprocs, err := pdc.Nprocd()
+		n, load, err := pdc.Nprocd()
 		if err != nil && atomic.LoadInt32(&c.done) == 0 {
 			db.DFatalf("Nprocd err %v\n", err)
 		}
-		db.DPrintf(db.ALWAYS, "nprocd = %d nproc %d\n", n, nprocs)
+		db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
 		time.Sleep(10 * time.Second)
 	}
 }

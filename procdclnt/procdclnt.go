@@ -31,6 +31,9 @@ func MakeProcdClnt(fsl *fslib.FsLib) *ProcdClnt {
 
 func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 	sts, err := pdc.GetDir(procdir)
+	if err != nil {
+		return 0, nil
+	}
 	for _, st := range sts {
 		b, err := pdc.GetFile(procdir + "/" + st.Name)
 		if err != nil { // the proc may not exist anymore
@@ -43,7 +46,7 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 		}
 		db.DPrintf("PROCDCLNT", "%s: %v\n", procdir, p.Program)
 	}
-	return len(sts), err
+	return len(sts), nil
 }
 
 func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {

@@ -101,6 +101,9 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPID, p.Pid.String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
 	p.AppendEnv(SIGMANEWROOT, p.LinuxRoot)
+	// Pass through debug/performance vars.
+	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
+	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 }
 
 // Finalize env details which can only be set once a physical machine has been
@@ -112,9 +115,6 @@ func (p *Proc) FinalizeEnv(procdIp string) {
 	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
-	// Pass through debug/performance vars.
-	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
-	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 }
 
 func (p *Proc) GetEnv() []string {

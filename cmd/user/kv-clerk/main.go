@@ -9,6 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kv"
+	"ulambda/perf"
 	"ulambda/proc"
 )
 
@@ -38,11 +39,15 @@ func waitEvict(kc *kv.KvClerk) {
 }
 
 func run(kc *kv.KvClerk) {
+	// Record performance.
+	p := perf.MakePerf("KVCLERK")
+	defer p.Done()
+
 	ntest := uint64(0)
 	var err error
 	go waitEvict(kc)
 	for atomic.LoadInt32(&done) == 0 {
-		err = test(kc, ntest)
+		err = test(kc, ntest, p)
 		if err != nil {
 			break
 		}
@@ -64,7 +69,7 @@ type Value struct {
 	N   uint64
 }
 
-func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
+func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	n := uint64(0)
 	rdr, err := kc.GetReader(key)
 	if err != nil {
@@ -73,6 +78,8 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
 	rdr.Unfence()
 	defer rdr.Close()
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Value) }, func(a interface{}) error {
+		// Record op for throughput calculation.
+		p.TptTick(1.0)
 		val := a.(*Value)
 		if val.Pid != proc.GetPid() {
 			return nil
@@ -95,14 +102,16 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
 	return nil
 }
 
-func test(kc *kv.KvClerk, ntest uint64) error {
+func test(kc *kv.KvClerk, ntest uint64, p *perf.Perf) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i)
 		v := Value{proc.GetPid(), key, ntest}
 		if err := kc.AppendJson(key, v); err != nil {
 			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 		}
-		if err := check(kc, key, ntest); err != nil {
+		// Record op for throughput calculation.
+		p.TptTick(1.0)
+		if err := check(kc, key, ntest, p); err != nil {
 			log.Printf("check failed %v\n", err)
 			return err
 		}

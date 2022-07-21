@@ -223,6 +223,7 @@ func TestRealmBalance(t *testing.T) {
 	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
 	rs2 := benchmarks.MakeRawResults(1)
 	// Find the total number of cores available for spinners across all machines.
+	ts := MakeTstateAll(t)
 	setNCoresSigmaRealm(ts)
 	// Prep MR job
 	_, mrapps := makeNMRJobs(1, BALANCE_MR_APP_REALM)

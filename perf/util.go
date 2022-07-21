@@ -44,6 +44,7 @@ const (
 	OUTPUT_PATH = np.UXROOT + "perf-output/"
 	PPROF       = "_PPROF"
 	CPU         = "_CPU"
+	TPT         = "_TPT"
 )
 
 var labels map[string]bool
@@ -59,14 +60,14 @@ type Perf struct {
 	name           string
 	done           uint32
 	util           bool
+	pprof          bool
 	utilChan       chan bool
 	utilFile       *os.File
 	cpuCyclesBusy  []float64
 	cpuCyclesTotal []float64
 	cpuUtilPct     []float64
-	pprof          bool
-	pprofFile      *os.File
 	cores          map[string]bool
+	pprofFile      *os.File
 	sigc           chan os.Signal
 }
 
@@ -110,9 +111,9 @@ func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
 	}
 	p.utilFile = f
 	// TODO: pre-allocate a large number of entries
-	p.cpuCyclesBusy = make([]float64, np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
-	p.cpuCyclesTotal = make([]float64, np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
-	p.cpuUtilPct = make([]float64, np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
+	p.cpuCyclesBusy = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
+	p.cpuCyclesTotal = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
+	p.cpuUtilPct = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
 	p.cores = GetActiveCores()
 
 	p.mu.Unlock()
@@ -223,15 +224,9 @@ func (p *Perf) monitorCPUUtil(sampleHz int) {
 		totalDelta := float64(total1 - total0)
 		util := 100.0 * (totalDelta - idleDelta) / totalDelta
 		// Record number of cycles busy, utilized, and total
-		if idx < 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ {
-			p.cpuCyclesBusy[idx] = totalDelta - idleDelta
-			p.cpuCyclesTotal[idx] = totalDelta
-			p.cpuUtilPct[idx] = util
-		} else {
-			p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
-			p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
-			p.cpuUtilPct = append(p.cpuUtilPct, util)
-		}
+		p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
+		p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
+		p.cpuUtilPct = append(p.cpuUtilPct, util)
 		idx += 1
 		idle0 = idle1
 		total0 = total1

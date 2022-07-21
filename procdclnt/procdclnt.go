@@ -33,8 +33,8 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 	sts, err := pdc.GetDir(procdir)
 	for _, st := range sts {
 		b, err := pdc.GetFile(procdir + "/" + st.Name)
-		if err != nil {
-			return 0, err
+		if err != nil { // the proc may not exist anymore
+			continue
 		}
 		p := proc.MakeEmptyProc()
 		err = json.Unmarshal(b, p)

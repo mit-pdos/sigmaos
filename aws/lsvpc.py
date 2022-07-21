@@ -5,7 +5,7 @@ import boto3
 
 parser=argparse.ArgumentParser(description='ls vpc on AWS.')
 parser.add_argument('vpc-id', help='VPC')
-parser.add_argument('--privaddr', dest='privaddr', action='store_true')
+parser.add_argument('--privaddr', dest='privaddr', action='store_true', help='Private IP Address')
 args = vars(parser.parse_args())
 
 def ls_nets(vpc):

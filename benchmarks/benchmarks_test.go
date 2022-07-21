@@ -35,13 +35,18 @@ const (
 
 // ========== App parameters ==========
 const (
+	MR_APP        = "mr-wc.yml"
 	N_MR_JOBS_APP = 1
 	N_KV_JOBS_APP = 1
 )
 
 // ========== Realm parameters ==========
 const (
-	N_TRIALS_REALM = 1000
+	N_TRIALS_REALM  = 1000
+	BALANCE_REALM_1 = "arielck"
+	BALANCE_REALM_2 = "arielck"
+	//	BALANCE_MR_APP_REALM = "mr-grep-wiki2G.yml"
+	BALANCE_MR_APP_REALM = "mr-wc.yml"
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
@@ -164,7 +169,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 func TestAppRunMRWC(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
-	_, apps := makeNMRJobs(N_MR_JOBS_APP, "mr-wc.yml")
+	_, apps := makeNMRJobs(N_MR_JOBS_APP, MR_APP)
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)
 	ts.Shutdown()
@@ -205,4 +210,40 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 	evictProcs(ts, ps)
 	rmOutDir(ts)
 	ts.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with a kv
+// job. In phases, ramp the kv job's CPU utilization up and down, and watch the
+// realm-level software balance resource requests across realms.
+func TestRealmBalance(t *testing.T) {
+	done := make(chan bool)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, BALANCE_REALM_1)
+	rs1 := benchmarks.MakeRawResults(1)
+	// Structure for realm
+	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
+	rs2 := benchmarks.MakeRawResults(1)
+	// Prep MR job
+	_, mrapps := makeNMRJobs(1, BALANCE_MR_APP_REALM)
+	// Prep KV job
+	nclerks := []int{0, int(linuxsched.NCores) / 2, int(linuxsched.NCores), int(linuxsched.NCores) / 2, 0}
+	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
+	_, jobs := makeNKVJobs(ts2, 1, kv.NKV, nclerks, phases)
+	// Run MR job
+	go func() {
+		runOps(ts1, mrapps, runMR, rs1)
+		done <- true
+	}()
+	// Run KV job
+	go func() {
+		runOps(ts2, jobs, runKV, rs2)
+		done <- true
+	}()
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	printResults(rs1)
+	printResults(rs2)
+	ts1.Shutdown()
+	ts2.Shutdown()
 }

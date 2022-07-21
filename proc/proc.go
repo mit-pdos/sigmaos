@@ -112,6 +112,9 @@ func (p *Proc) FinalizeEnv(procdIp string) {
 	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
+	// Pass through debug/performance vars.
+	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
+	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 }
 
 func (p *Proc) GetEnv() []string {

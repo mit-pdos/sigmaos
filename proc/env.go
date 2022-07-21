@@ -20,8 +20,8 @@ const (
 	SIGMACRASH          = "SIGMACRASH"
 	SIGMAPARTITION      = "SIGMAPARTITION"
 	SIGMANETFAIL        = "SIGMANETFAIL"
-	SIGMAPPROF          = "SIGMAPPROF"
-	SIGMACPUPERF        = "SIGMACPUPERF"
+	SIGMAPERF           = "SIGMAPERF"
+	SIGMADEBUG          = "SIGMADEBUG"
 )
 
 func GenPid() Tpid {
@@ -87,6 +87,14 @@ func GetNewRoot() string {
 
 func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
+}
+
+func GetSigmaPerf() string {
+	return os.Getenv(SIGMAPERF)
+}
+
+func GetSigmaDebug() string {
+	return os.Getenv(SIGMADEBUG)
 }
 
 func GetLabels(envvar string) map[string]bool {

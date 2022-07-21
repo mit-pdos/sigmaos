@@ -1,13 +1,13 @@
 package procdclnt
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 
-	db "ulambda/debug"
+	//db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
+	//"ulambda/proc"
 )
 
 type ProcdClnt struct {
@@ -34,18 +34,18 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 	if err != nil {
 		return 0, nil
 	}
-	for _, st := range sts {
-		b, err := pdc.GetFile(procdir + "/" + st.Name)
-		if err != nil { // the proc may not exist anymore
-			continue
-		}
-		p := proc.MakeEmptyProc()
-		err = json.Unmarshal(b, p)
-		if err != nil {
-			return 0, err
-		}
-		db.DPrintf("PROCDCLNT", "%s: %v\n", procdir, p.Program)
-	}
+	// for _, st := range sts {
+	// 	b, err := pdc.GetFile(procdir + "/" + st.Name)
+	// 	if err != nil { // the proc may not exist anymore
+	// 		continue
+	// 	}
+	// 	p := proc.MakeEmptyProc()
+	// 	err = json.Unmarshal(b, p)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	db.DPrintf("PROCDCLNT", "%s: %v\n", procdir, p.Program)
+	// }
 	return len(sts), nil
 }
 

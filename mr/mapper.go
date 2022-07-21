@@ -43,15 +43,17 @@ type Mapper struct {
 	bin         string
 	wrts        []*wrt
 	rand        string
+	perf        *perf.Perf
 }
 
-func makeMapper(mapf MapT, args []string) (*Mapper, error) {
+func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if len(args) != 4 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = args[0]
+	m.perf = p
 
 	n, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -206,6 +208,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
 			return 0, err
 		}
+		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {
 			break
 		}
@@ -260,7 +263,7 @@ func RunMapper(mapf MapT, args []string) {
 	p := perf.MakePerf("MR-MAPPER")
 	defer p.Done()
 
-	m, err := makeMapper(mapf, args)
+	m, err := makeMapper(mapf, args, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

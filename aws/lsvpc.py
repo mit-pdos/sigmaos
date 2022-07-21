@@ -5,6 +5,7 @@ import boto3
 
 parser=argparse.ArgumentParser(description='ls vpc on AWS.')
 parser.add_argument('vpc-id', help='VPC')
+parser.add_argument('--privaddr', dest='privaddr', action='store_true')
 args = vars(parser.parse_args())
 
 def ls_nets(vpc):
@@ -36,14 +37,17 @@ def ls_instances(vpc):
     for r in response['Reservations']:
         for i in r['Instances']:
             if 'Tags' in i:
-                vms.append((i['InstanceId'], i['PublicDnsName'], i['Tags']))
+                vms.append((i['InstanceId'], i['PublicDnsName'], i['PrivateIpAddress'], i['Tags']))
             else:
-                vms.append((i['InstanceId'], i['PublicDnsName'], []))
+                vms.append((i['InstanceId'], i['PublicDnsName'], i['PrivateIpAddress'], []))
     if vms == []:
         print("There is no instance in this VPC")
     else:
         for vm in vms:
-            print("VMInstance", name(vm[2]), ":", vm[0], vm[1])
+            if args['privaddr']:
+                print("VMInstance", name(vm[3]), ":", vm[0], vm[1], vm[2])
+            else:
+                print("VMInstance", name(vm[3]), ":", vm[0], vm[1])
 
 def main():
    vpc_id = args['vpc-id']

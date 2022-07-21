@@ -42,11 +42,10 @@ const (
 
 // ========== Realm parameters ==========
 const (
-	N_TRIALS_REALM  = 1000
-	BALANCE_REALM_1 = "arielck"
-	BALANCE_REALM_2 = "arielck"
-	//	BALANCE_MR_APP_REALM = "mr-grep-wiki2G.yml"
-	BALANCE_MR_APP_REALM = "mr-wc.yml"
+	N_TRIALS_REALM       = 1000
+	BALANCE_REALM_1      = "arielck"
+	BALANCE_REALM_2      = "arielck"
+	BALANCE_MR_APP_REALM = "mr-grep-wiki2G.yml"
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0

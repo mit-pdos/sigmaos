@@ -177,8 +177,8 @@ func TestAppRunMRWC(t *testing.T) {
 func TestAppRunKV(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	// XXX Set these parameters dynamically.
-	nclerks := []int{0, int(linuxsched.NCores) / 4, int(linuxsched.NCores) / 2, int(linuxsched.NCores) / 4, 0}
+	setNCoresSigmaRealm(ts)
+	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
 	_, jobs := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
 	runOps(ts, jobs, runKV, rs)
@@ -222,10 +222,12 @@ func TestRealmBalance(t *testing.T) {
 	// Structure for realm
 	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
 	rs2 := benchmarks.MakeRawResults(1)
+	// Find the total number of cores available for spinners across all machines.
+	setNCoresSigmaRealm(ts)
 	// Prep MR job
 	_, mrapps := makeNMRJobs(1, BALANCE_MR_APP_REALM)
 	// Prep KV job
-	nclerks := []int{0, int(linuxsched.NCores) / 2, int(linuxsched.NCores), int(linuxsched.NCores) / 2, 0}
+	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
 	_, jobs := makeNKVJobs(ts2, 1, kv.NKV, nclerks, phases)
 	// Run MR job

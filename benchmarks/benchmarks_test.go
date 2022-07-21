@@ -44,7 +44,7 @@ const (
 const (
 	N_TRIALS_REALM       = 1000
 	BALANCE_REALM_1      = "arielck"
-	BALANCE_REALM_2      = "arielck"
+	BALANCE_REALM_2      = "test-realm"
 	BALANCE_MR_APP_REALM = "mr-grep-wiki2G.yml"
 )
 

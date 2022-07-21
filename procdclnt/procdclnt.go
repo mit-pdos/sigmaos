@@ -34,7 +34,7 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		db.DPrintf(db.ALWAYS, "%s: %v\n", procdir, p.Program)
+		db.DPrintf("PROCDCLNT", "%s: %v\n", procdir, p.Program)
 	}
 	return len(sts), err
 }

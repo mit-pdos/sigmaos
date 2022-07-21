@@ -178,7 +178,7 @@ func TestAppRunKV(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	// XXX Set these parameters dynamically.
-	nclerks := []int{0, int(linuxsched.NCores) / 2, int(linuxsched.NCores), int(linuxsched.NCores) / 2, 0}
+	nclerks := []int{0, int(linuxsched.NCores) / 4, int(linuxsched.NCores) / 2, int(linuxsched.NCores) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
 	_, jobs := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
 	runOps(ts, jobs, runKV, rs)

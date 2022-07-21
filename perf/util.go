@@ -120,16 +120,16 @@ func (p *Perf) TptTick(tpt float64) {
 		return
 	}
 
-	// Increment the current tpt slot.
-	p.tpts[len(p.tpts)-1] += tpt
-
 	// If it has been long enough since we started incrementing this slot, seal
-	// it and move on. In this way, we always expect
+	// it and move to the next slot. In this way, we always expect
 	// len(p.times) == len(p.tpts) - 1
 	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) {
 		p.tpts = append(p.tpts, 0.0)
 		p.times = append(p.times, time.Now())
 	}
+
+	// Increment the current tpt slot.
+	p.tpts[len(p.tpts)-1] += tpt
 }
 
 func (p *Perf) Done() {

@@ -25,8 +25,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
+	// Record performance.
+	p := perf.MakePerf("KVCLERK")
+	defer p.Done()
 	clk.Started()
-	run(clk)
+	run(clk, p)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -38,11 +41,7 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk) {
-	// Record performance.
-	p := perf.MakePerf("KVCLERK")
-	defer p.Done()
-
+func run(kc *kv.KvClerk, p *perf.Perf) {
 	ntest := uint64(0)
 	var err error
 	go waitEvict(kc)

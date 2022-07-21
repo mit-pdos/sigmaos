@@ -34,9 +34,10 @@ type Reducer struct {
 	tmp      string
 	bwrt     *bufio.Writer
 	wrt      *writer.Writer
+	perf     *perf.Perf
 }
 
-func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
+func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
@@ -47,6 +48,7 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+	r.perf = p
 
 	m, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -190,13 +192,16 @@ func (r *Reducer) doReduce() *proc.Status {
 		for j < len(kvs) && kvs[j].K == kvs[i].K {
 			j++
 		}
+		bytesProcessed := 0
 		values := []string{}
 		for k := i; k < j; k++ {
 			values = append(values, kvs[k].V)
+			bytesProcessed += len(kvs[k].K) + len(kvs[k].V)
 		}
 		if err := r.reducef(kvs[i].K, values, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
 		}
+		r.perf.TptTick(float64(bytesProcessed))
 		i = j
 	}
 
@@ -218,7 +223,7 @@ func RunReducer(reducef ReduceT, args []string) {
 	p := perf.MakePerf("MR-REDUCER")
 	defer p.Done()
 
-	r, err := makeReducer(reducef, args)
+	r, err := makeReducer(reducef, args, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

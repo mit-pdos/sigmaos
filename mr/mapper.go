@@ -172,6 +172,7 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.K) % m.nreducetask
+	m.perf.TptTick(float64(len(kv.K) + len(kv.V)))
 	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
 		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	}
@@ -208,7 +209,6 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
 			return 0, err
 		}
-		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {
 			break
 		}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"ulambda/crash"
@@ -70,6 +71,7 @@ type Coord struct {
 	mapperbin   string
 	reducerbin  string
 	electclnt   *electclnt.ElectClnt
+	done        int32
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -333,9 +335,9 @@ func (c *Coord) Round() {
 func (c *Coord) monitorProcds() {
 	pdc := procdclnt.MakeProcdClnt(c.FsLib)
 	n := 0
-	for true {
+	for atomic.LoadInt32(&c.done) == 0 {
 		m, err := pdc.WaitProcdChange(n)
-		if err != nil {
+		if err != nil && atomic.LoadInt32(&c.done) == 0 {
 			db.DFatalf("WaitProcdChange err %v\n", err)
 		}
 
@@ -374,6 +376,8 @@ func (c *Coord) Work() {
 	}
 
 	db.DPrintf(db.ALWAYS, "job done\n")
+
+	atomic.StoreInt32(&c.done, 1)
 
 	c.Exited(proc.MakeStatus(proc.StatusOK))
 }

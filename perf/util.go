@@ -53,6 +53,7 @@ func init() {
 	labels = proc.GetLabels("SIGMAPERF")
 }
 
+// XXX make into multiple structs
 // Tracks performance statistics for any cores on which the current process is
 // able to run.
 type Perf struct {
@@ -61,6 +62,7 @@ type Perf struct {
 	done           uint32
 	util           bool
 	pprof          bool
+	tpt            bool
 	utilChan       chan bool
 	utilFile       *os.File
 	cpuCyclesBusy  []float64
@@ -68,6 +70,9 @@ type Perf struct {
 	cpuUtilPct     []float64
 	cores          map[string]bool
 	pprofFile      *os.File
+	tpts           []float64
+	times          []time.Time
+	tptFile        *os.File
 	sigc           chan os.Signal
 }
 
@@ -92,47 +97,38 @@ func MakePerf(name string) *Perf {
 	}
 	// Set up pprof caputre
 	if ok := labels[name+PPROF]; ok {
-		p.setupPprof(path.Join(OUTPUT_PATH, proc.GetPid().String()+"-pprof.out"))
+		p.setupPprof(path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-pprof.out"))
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
-		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetPid().String()+"-cpu.out"))
+		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-cpu.out"))
+	}
+	// Set up throughput caputre
+	if ok := labels[name+TPT]; ok {
+		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-tpt.out"))
 	}
 	return p
 }
 
-func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
-	p.mu.Lock()
-
-	p.util = true
-	f, err := os.Create(fpath)
-	if err != nil {
-		db.DFatalf("Create util file %v failed %v", fpath, err)
-	}
-	p.utilFile = f
-	// TODO: pre-allocate a large number of entries
-	p.cpuCyclesBusy = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
-	p.cpuCyclesTotal = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
-	p.cpuUtilPct = make([]float64, 0, 40*np.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
-	p.cores = GetActiveCores()
-
-	p.mu.Unlock()
-
-	go p.monitorCPUUtil(sampleHz)
-}
-
-func (p *Perf) setupPprof(fpath string) {
+// Register that an event has happened with a given instantaneous throughput.
+func (p *Perf) TptTick(tpt float64) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	f, err := os.Create(fpath)
-	if err != nil {
-		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
+	// If we aren't recording throughput, return.
+	if !p.tpt {
+		return
 	}
-	p.pprof = true
-	p.pprofFile = f
-	if err := pprof.StartCPUProfile(f); err != nil {
-		db.DFatalf("Couldn't start CPU profile: %v", err)
+
+	// Increment the current tpt slot.
+	p.tpts[len(p.tpts)-1] += tpt
+
+	// If it has been long enough since we started incrementing this slot, seal
+	// it and move on. In this way, we always expect
+	// len(p.times) == len(p.tpts) - 1
+	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) {
+		p.tpts = append(p.tpts, 0.0)
+		p.times = append(p.times, time.Now())
 	}
 }
 
@@ -143,6 +139,7 @@ func (p *Perf) Done() {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
 		p.teardownUtil()
+		p.teardownTpt()
 	}
 }
 
@@ -209,6 +206,22 @@ func UtilFromCPUTimeSample(utime0, stime0, utime1, stime1 uint64, secs float64) 
 	return util
 }
 
+// Only count cycles on cores we can run on
+func GetActiveCores() map[string]bool {
+	// Get the cores we can run on
+	m, err := linuxsched.SchedGetAffinity(os.Getpid())
+	if err != nil {
+		db.DFatalf("Error getting affinity mask: %v", err)
+	}
+	cores := map[string]bool{}
+	for i := uint(0); i < linuxsched.NCores; i++ {
+		if m.Test(i) {
+			cores["cpu"+strconv.Itoa(int(i))] = true
+		}
+	}
+	return cores
+}
+
 func (p *Perf) monitorCPUUtil(sampleHz int) {
 	sleepMsecs := 1000 / sampleHz
 	var idle0 uint64
@@ -238,22 +251,59 @@ func (p *Perf) monitorCPUUtil(sampleHz int) {
 	p.utilChan <- true
 }
 
-// Only count cycles on cores we can run on
-func GetActiveCores() map[string]bool {
-	// Get the cores we can run on
-	m, err := linuxsched.SchedGetAffinity(os.Getpid())
+func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
+	p.mu.Lock()
+
+	p.util = true
+	f, err := os.Create(fpath)
 	if err != nil {
-		db.DFatalf("Error getting affinity mask: %v", err)
+		db.DFatalf("Create util file %v failed %v", fpath, err)
 	}
-	cores := map[string]bool{}
-	for i := uint(0); i < linuxsched.NCores; i++ {
-		if m.Test(i) {
-			cores["cpu"+strconv.Itoa(int(i))] = true
-		}
-	}
-	return cores
+	p.utilFile = f
+	// TODO: pre-allocate a large number of entries
+	p.cpuCyclesBusy = make([]float64, 0, 40*sampleHz)
+	p.cpuCyclesTotal = make([]float64, 0, 40*sampleHz)
+	p.cpuUtilPct = make([]float64, 0, 40*sampleHz)
+	p.cores = GetActiveCores()
+
+	p.mu.Unlock()
+
+	go p.monitorCPUUtil(sampleHz)
 }
 
+// XXX Performance impact?
+func (p *Perf) setupTpt(sampleHz int, fpath string) {
+	p.mu.Lock()
+
+	p.tpt = true
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Create tpt file %v failed %v", fpath, err)
+	}
+	p.tptFile = f
+	// TODO: pre-allocate a large number of entries
+	p.times = make([]time.Time, 1, 40*sampleHz)
+	p.tpts = make([]float64, 2, 40*sampleHz)
+
+	p.mu.Unlock()
+}
+
+func (p *Perf) setupPprof(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
+	}
+	p.pprof = true
+	p.pprofFile = f
+	if err := pprof.StartCPUProfile(f); err != nil {
+		db.DFatalf("Couldn't start CPU profile: %v", err)
+	}
+}
+
+// Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
 		// Avoid double-closing
@@ -263,6 +313,7 @@ func (p *Perf) teardownPprof() {
 	}
 }
 
+// Caller holds lock.
 func (p *Perf) teardownUtil() {
 	if p.util {
 		<-p.utilChan
@@ -270,6 +321,19 @@ func (p *Perf) teardownUtil() {
 		p.util = false
 		for i := 0; i < len(p.cpuCyclesBusy); i++ {
 			if _, err := p.utilFile.WriteString(fmt.Sprintf("%f,%f,%f\n", p.cpuUtilPct[i], p.cpuCyclesBusy[i], p.cpuCyclesTotal[i])); err != nil {
+				db.DFatalf("Error writing to util file: %v", err)
+			}
+		}
+	}
+}
+
+// Caller holds lock.
+func (p *Perf) teardownTpt() {
+	if p.tpt {
+		p.tpt = false
+		// Ignore first entry.
+		for i := 1; i < len(p.times); i++ {
+			if _, err := p.utilFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
 				db.DFatalf("Error writing to util file: %v", err)
 			}
 		}

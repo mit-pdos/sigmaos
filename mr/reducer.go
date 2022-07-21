@@ -16,6 +16,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
@@ -214,6 +215,9 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
+	p := perf.MakePerf("MR-REDUCER")
+	defer p.Done()
+
 	r, err := makeReducer(reducef, args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)

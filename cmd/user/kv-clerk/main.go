@@ -25,9 +25,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
+
 	// Record performance.
 	p := perf.MakePerf("KVCLERK")
 	defer p.Done()
+
 	clk.Started()
 	run(clk, p)
 }

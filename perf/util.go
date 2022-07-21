@@ -97,15 +97,15 @@ func MakePerf(name string) *Perf {
 	}
 	// Set up pprof caputre
 	if ok := labels[name+PPROF]; ok {
-		p.setupPprof(path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-pprof.out"))
+		p.setupPprof(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof.out"))
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
-		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-cpu.out"))
+		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-cpu.out"))
 	}
 	// Set up throughput caputre
 	if ok := labels[name+TPT]; ok {
-		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetName()+"-"+proc.GetPid().String()+"-tpt.out"))
+		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-tpt.out"))
 	}
 	return p
 }
@@ -333,8 +333,8 @@ func (p *Perf) teardownTpt() {
 		p.tpt = false
 		// Ignore first entry.
 		for i := 1; i < len(p.times); i++ {
-			if _, err := p.utilFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
-				db.DFatalf("Error writing to util file: %v", err)
+			if _, err := p.tptFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
+				db.DFatalf("Error writing to tpt file: %v", err)
 			}
 		}
 	}

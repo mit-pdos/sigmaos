@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -130,12 +131,24 @@ func makeNMRJobs(n int, app string) ([]*MRJobInstance, []interface{}) {
 
 // ========== KV Helpers ========
 
-func makeNKVJobs(n int, nclerk int) ([]int, []interface{}) {
-	ks := make([]int, 0, n)
+func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
+	ds := make([]time.Duration, 0, len(ss))
+	for _, s := range ss {
+		d, err := time.ParseDuration(s)
+		assert.Nil(ts.T, err, "Error parse duration: %v", err)
+		ds = append(ds, d)
+	}
+	return ds
+}
+
+func makeNKVJobs(ts *test.Tstate, n, nkvd int, nclerks []int, phases []time.Duration) ([]*KVJobInstance, []interface{}) {
+	assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
+	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ks = append(ks, nclerk)
-		is = append(is, nclerk)
+		ji := MakeKVJobInstance(ts, nkvd, nclerks, phases)
+		js = append(js, ji)
+		is = append(is, ji)
 	}
-	return ks, is
+	return js, is
 }

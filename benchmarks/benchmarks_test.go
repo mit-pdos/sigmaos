@@ -7,6 +7,7 @@ import (
 
 	//	db "ulambda/debug"
 	"ulambda/benchmarks"
+	"ulambda/kv"
 	"ulambda/linuxsched"
 	"ulambda/test"
 )
@@ -34,9 +35,8 @@ const (
 
 // ========== App parameters ==========
 const (
-	N_MR_JOBS_APP   = 1
-	N_KV_JOBS_APP   = 1
-	N_KV_CLERKS_APP = 10
+	N_MR_JOBS_APP = 1
+	N_KV_JOBS_APP = 1
 )
 
 // ========== Realm parameters ==========
@@ -173,8 +173,11 @@ func TestAppRunMRWC(t *testing.T) {
 func TestAppRunKV(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	_, apps := makeNKVJobs(N_KV_JOBS_APP, N_KV_CLERKS_APP)
-	runOps(ts, apps, runKV, rs)
+	// XXX Set these parameters dynamically.
+	nclerks := []int{0, int(linuxsched.NCores) / 2, int(linuxsched.NCores), int(linuxsched.NCores) / 2, 0}
+	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
+	_, jobs := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
+	runOps(ts, jobs, runKV, rs)
 	printResults(rs)
 	ts.Shutdown()
 }

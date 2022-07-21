@@ -15,7 +15,7 @@ type MRJobInstance struct {
 	jobname string
 }
 
-func MakeMRJob(ts *test.Tstate, app, jobname string) *groupmgr.GroupMgr {
+func StartMRJob(ts *test.Tstate, app, jobname string) *groupmgr.GroupMgr {
 	job := mr.ReadJobConfig(path.Join("..", "mr", app))
 	mr.InitCoordFS(ts.FsLib, jobname, job.Nreduce)
 	nmap, err := mr.PrepareJob(ts.FsLib, jobname, job)

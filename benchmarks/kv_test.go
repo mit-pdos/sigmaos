@@ -2,9 +2,11 @@ package benchmarks_test
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/kv"
@@ -13,29 +15,65 @@ import (
 )
 
 type KVJobInstance struct {
-	balgm  *groupmgr.GroupMgr
-	kvdgms []*groupmgr.GroupMgr
-	cpids  []proc.Tpid
+	nkvd    int             // Number of kvd groups to run the test with.
+	phase   int             // Current phase of execution
+	nclerks []int           // Number of clerks in each phase of the test.
+	phases  []time.Duration // Duration of each phase of the test.
+	balgm   *groupmgr.GroupMgr
+	kvdgms  []*groupmgr.GroupMgr
+	cpids   []proc.Tpid
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration) *KVJobInstance {
 	ji := &KVJobInstance{}
+	ji.nkvd = nkvd
+	ji.phases = phases
+	ji.nclerks = nclerks
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
 	ji.Tstate = ts
 	return ji
 }
 
-func MakeKVJob(ts *test.Tstate, auto string) *KVJobInstance {
-	ji := MakeKVJobInstance(ts)
-	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, "0", auto)
+func (ji *KVJobInstance) StartKVJob() {
+	// XXX auto or manual?
+	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, "0", "manual")
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
-	_, err := kv.InitKeys(ji.FsLib, ts.ProcClnt)
-	assert.Nil(ts.T, err, "InitKeys: %v", err)
-	return ji
+	_, err := kv.InitKeys(ji.FsLib, ji.ProcClnt)
+	assert.Nil(ji.T, err, "InitKeys: %v", err)
+}
+
+// Returns true if there are no more phases left to execute.
+func (ji *KVJobInstance) IsDone() bool {
+	return ji.phase >= len(ji.phases)
+}
+
+// Perform the next phase of the job.
+func (ji *KVJobInstance) NextPhase() {
+	assert.False(ji.T, ji.IsDone(), "Tried to advance to another phase when already done.")
+	// Find out how far off we are from the desired number of clerks in this
+	// phase.
+	diff := len(ji.cpids) - ji.nclerks[ji.phase]
+	db.DPrintf("TEST", "Phase %v: diff %v", ji.phase, diff)
+	// While we have too many...
+	for ; diff > 0; diff-- {
+		ji.StopClerk()
+	}
+	// While we have too few...
+	for ; diff < 0; diff++ {
+		ji.StartClerk()
+	}
+	// Make sure we got the number of clerks right.
+	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get righ num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
+	// Sleep for the duration of this phase.
+	db.DPrintf("TEST", "Phase %v: sleep", ji.phase)
+	time.Sleep(ji.phases[ji.phase])
+	db.DPrintf("TEST", "Phase %v: done", ji.phase)
+	// Move to the  next phase
+	ji.phase++
 }
 
 func (ji *KVJobInstance) AddKVDGroup() {

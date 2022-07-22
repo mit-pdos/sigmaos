@@ -1,17 +1,23 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM" 1>&2
+  echo "Usage: $0 [-n N] --vpc VPC --realm REALM" 1>&2
 }
 
 VPC=""
 REALM=""
+N_VM=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --vpc)
     shift
     VPC=$1
+    shift
+    ;;
+  -n)
+    shift
+    N_VM=$1
     shift
     ;;
   --realm)
@@ -37,6 +43,11 @@ if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
+
+vma=($vms)
+if ! [ -z "$N_VM" ]; then
+  vms=${vma[@]:0:$N_VM}
+fi
 
 for vm in $vms; do
   echo "INSTALL: $vm"

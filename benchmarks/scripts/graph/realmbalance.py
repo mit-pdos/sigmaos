@@ -52,7 +52,6 @@ def bucketize(tpts, time_range):
   return buckets
 
 def add_tpts_to_graph(tpts, label):
-  print(tpts)
   x = np.array(sorted(list(tpts.keys())))
   y = np.array([ tpts[x1] for x1 in x ])
   n = max(y)

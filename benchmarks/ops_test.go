@@ -61,8 +61,11 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 // XXX Should get job name in a tuple.
 func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*MRJobInstance)
-	cm := StartMRJob(ts, ji.app, ji.jobname)
-	cm.Wait()
+	ji.PrepareMRJob()
+	ji.ready <- true
+	<-ji.ready
+	ji.StartMRJob()
+	ji.Wait()
 	return time.Since(start)
 }
 
@@ -75,6 +78,10 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	for i := 0; i < ji.nkvd; i++ {
 		ji.AddKVDGroup()
 	}
+	// Note that we are prepared to run the job.
+	ji.ready <- true
+	// Wait for an ack.
+	<-ji.ready
 	db.DPrintf("TEST", "Added KV groups")
 	// Run through the job phases.
 	for !ji.IsDone() {

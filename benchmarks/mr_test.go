@@ -11,15 +11,37 @@ import (
 )
 
 type MRJobInstance struct {
+	*test.Tstate
+	ready   chan bool
 	app     string
 	jobname string
+	nmap    int
+	job     *mr.Job
+	cm      *groupmgr.GroupMgr
 }
 
-func StartMRJob(ts *test.Tstate, app, jobname string) *groupmgr.GroupMgr {
-	job := mr.ReadJobConfig(path.Join("..", "mr", app))
-	mr.InitCoordFS(ts.FsLib, jobname, job.Nreduce)
-	nmap, err := mr.PrepareJob(ts.FsLib, jobname, job)
-	assert.Nil(ts.T, err, "Error PrepareJob: %v", err)
-	assert.NotEqual(ts.T, 0, nmap, "Error PrepareJob nmap 0")
-	return mr.StartMRJob(ts.FsLib, ts.ProcClnt, jobname, job, mr.NCOORD, nmap, 0, 0)
+func MakeMRJobInstance(ts *test.Tstate, app, jobname string) *MRJobInstance {
+	ji := &MRJobInstance{}
+	ji.Tstate = ts
+	ji.ready = make(chan bool)
+	ji.app = app
+	ji.jobname = jobname
+	return ji
+}
+
+func (ji *MRJobInstance) PrepareMRJob() {
+	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
+	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
+	ji.nmap = nmap
+	assert.Nil(ji.T, err, "Error PrepareJob: %v", err)
+	assert.NotEqual(ji.T, 0, nmap, "Error PrepareJob nmap 0")
+}
+
+func (ji *MRJobInstance) StartMRJob() {
+	ji.cm = mr.StartMRJob(ji.FsLib, ji.ProcClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
+}
+
+func (ji *MRJobInstance) Wait() {
+	ji.cm.Wait()
 }

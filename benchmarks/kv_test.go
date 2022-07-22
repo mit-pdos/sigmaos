@@ -19,6 +19,7 @@ type KVJobInstance struct {
 	phase   int             // Current phase of execution
 	nclerks []int           // Number of clerks in each phase of the test.
 	phases  []time.Duration // Duration of each phase of the test.
+	ready   chan bool
 	balgm   *groupmgr.GroupMgr
 	kvdgms  []*groupmgr.GroupMgr
 	cpids   []proc.Tpid
@@ -28,8 +29,9 @@ type KVJobInstance struct {
 func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
-	ji.phases = phases
 	ji.nclerks = nclerks
+	ji.phases = phases
+	ji.ready = make(chan bool)
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
 	ji.Tstate = ts

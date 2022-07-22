@@ -35,7 +35,7 @@ const (
 
 // ========== App parameters ==========
 const (
-	MR_APP        = "mr-wc.yml"
+	MR_APP        = "mr-grep-wiki2G.yml"
 	N_MR_JOBS_APP = 1
 	N_KV_JOBS_APP = 1
 )
@@ -168,7 +168,16 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 func TestAppRunMRWC(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
-	_, apps := makeNMRJobs(N_MR_JOBS_APP, MR_APP)
+	jobs, apps := makeNMRJobs(ts, N_MR_JOBS_APP, MR_APP)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)
 	ts.Shutdown()
@@ -180,8 +189,17 @@ func TestAppRunKV(t *testing.T) {
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	_, jobs := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
-	runOps(ts, jobs, runKV, rs)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runKV, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -226,21 +244,26 @@ func TestRealmBalance(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	setNCoresSigmaRealm(ts)
 	// Prep MR job
-	_, mrapps := makeNMRJobs(1, BALANCE_MR_APP_REALM)
+	mrjobs, mrapps := makeNMRJobs(ts1, 1, BALANCE_MR_APP_REALM)
 	// Prep KV job
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	_, jobs := makeNKVJobs(ts2, 1, kv.NKV, nclerks, phases)
+	kvjobs, ji := makeNKVJobs(ts2, 1, kv.NKV, nclerks, phases)
+	// Run KV job
+	go func() {
+		runOps(ts2, ji, runKV, rs2)
+		done <- true
+	}()
+	<-kvjobs[0].ready
+	kvjobs[0].ready <- true
 	// Run MR job
 	go func() {
 		runOps(ts1, mrapps, runMR, rs1)
 		done <- true
 	}()
-	// Run KV job
-	go func() {
-		runOps(ts2, jobs, runKV, rs2)
-		done <- true
-	}()
+	<-mrjobs[0].ready
+	mrjobs[0].ready <- true
+
 	// Wait for both jobs to finish.
 	<-done
 	<-done

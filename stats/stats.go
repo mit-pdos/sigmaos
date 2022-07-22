@@ -165,26 +165,26 @@ const (
 )
 
 // XXX nthread includes 2 threads per conn
-func (st *Stats) load(ticks uint64) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	j := SEC / st.hz
-	ncpu := runtime.GOMAXPROCS(0)
-
-	util := 100.0 * float64(ticks) / float64(MS/j)
-	util = util / float64(ncpu)
-
-	nthread := float64(runtime.NumGoroutine())
-
-	st.sti.Load[0] *= EXP_0
-	st.sti.Load[0] += (1 - EXP_0) * nthread
-	st.sti.Load[1] *= EXP_1
-	st.sti.Load[1] += (1 - EXP_1) * nthread
-	st.sti.Load[2] *= EXP_2
-	st.sti.Load[2] += (1 - EXP_2) * nthread
-
-	st.sti.Util = util
-}
+//func (st *Stats) load(ticks uint64) {
+//	st.mu.Lock()
+//	defer st.mu.Unlock()
+//	j := SEC / st.hz
+//	ncpu := runtime.GOMAXPROCS(0)
+//
+//	util := 100.0 * float64(ticks) / float64(MS/j)
+//	util = util / float64(ncpu)
+//
+//	nthread := float64(runtime.NumGoroutine())
+//
+//	st.sti.Load[0] *= EXP_0
+//	st.sti.Load[0] += (1 - EXP_0) * nthread
+//	st.sti.Load[1] *= EXP_1
+//	st.sti.Load[1] += (1 - EXP_1) * nthread
+//	st.sti.Load[2] *= EXP_2
+//	st.sti.Load[2] += (1 - EXP_2) * nthread
+//
+//	st.sti.Util = util
+//}
 
 // Caller holds lock
 func (st *Stats) loadCPUUtilL(idle, total uint64) {

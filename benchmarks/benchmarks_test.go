@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	//	db "ulambda/debug"
 	"ulambda/benchmarks"
-	"ulambda/kv"
 	"ulambda/linuxsched"
 	"ulambda/test"
 )
@@ -189,7 +190,7 @@ func TestAppRunKV(t *testing.T) {
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, kv.NKV, nclerks, phases)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -237,7 +238,7 @@ func TestRealmBalance(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeTstateRealm(t, BALANCE_REALM_1)
 	rs1 := benchmarks.MakeRawResults(1)
-	// Structure for realm
+	// Structure for kv
 	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
 	rs2 := benchmarks.MakeRawResults(1)
 	// Find the total number of cores available for spinners across all machines.
@@ -245,10 +246,12 @@ func TestRealmBalance(t *testing.T) {
 	setNCoresSigmaRealm(ts)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, BALANCE_MR_APP_REALM)
+	// Need at least one kv realm group.
+	assert.True(ts2.T, TOTAL_N_CORES_SIGMA_REALM >= 6, "Too few cores to run benchmark: %v < %v", TOTAL_N_CORES_SIGMA_REALM, 6)
 	// Prep KV job
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, kv.NKV, nclerks, phases)
+	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

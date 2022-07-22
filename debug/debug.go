@@ -21,7 +21,7 @@ var labels map[string]bool
 func init() {
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	labels = proc.GetLabels("SIGMADEBUG")
+	labels = proc.GetLabels(proc.SIGMADEBUG)
 }
 
 func DPrintf(label string, format string, v ...interface{}) {

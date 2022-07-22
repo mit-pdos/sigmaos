@@ -50,7 +50,7 @@ const (
 var labels map[string]bool
 
 func init() {
-	labels = proc.GetLabels("SIGMAPERF")
+	labels = proc.GetLabels(proc.SIGMAPERF)
 }
 
 // XXX make into multiple structs

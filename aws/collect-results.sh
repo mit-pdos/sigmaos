@@ -39,4 +39,5 @@ mkdir ../benchmarks/results/$RUN_NUM
 for vm in $vms; do
   echo "scp: $vm"
   scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
+  scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
 done

@@ -538,6 +538,7 @@ func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.F
 func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.FsObj, fs.File, *np.Err) {
 	f, fname, lo, err := ps.lookupWalk(fid, wnames, resolve)
 	if err != nil {
+		ps.stats.IncPath(fname.Append("FAILED"))
 		return nil, nil, nil, nil, err
 	}
 	ps.stats.IncPath(fname)

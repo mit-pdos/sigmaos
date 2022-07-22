@@ -137,15 +137,17 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 // passes and proc can be claimed.
 //
 // We claim a maximum of BE_PROC_OVERSUBSCRIPTION_RATE
-// procs per core per claim interval, where a claim interval is the length two
-// CPU util samples.
-func (pd *Procd) procClaimRateLimitCheck(p *proc.Proc) bool {
+// procs per underutilized core core per claim interval, where a claim interval
+// is the length of ten CPU util samples.
+func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 	timeBetweenUtilSamples := time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond
-	// Check if we have moved onto the next interval (interval is currently 2 *
+	// Check if we have moved onto the next interval (interval is currently 10 *
 	// utilization sample rate).
 	if time.Since(pd.procClaimTime) > 10*timeBetweenUtilSamples {
 		pd.procClaimTime = time.Now()
-		pd.netProcsClaimed = 0
+		// pd.netProcsClaimed = 0
+		// We try to estimate the amount of "room" available for claiming new procs.
+		pd.netProcsClaimed = proc.Tcore(float64(pd.coresOwned * util))
 	}
 	// If we have claimed < BE_PROC_OVERSUBSCRIPTION_RATE
 	// procs per core during the last claim interval, the rate limit check
@@ -171,8 +173,9 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization. If utilization is below a certain threshold, take the proc.
 		util := pd.GetStats().GetUtil()
-		rlc := pd.procClaimRateLimitCheck(p)
+		rlc := pd.procClaimRateLimitCheck(util, p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
+			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 			return true
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)

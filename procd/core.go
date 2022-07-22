@@ -147,7 +147,7 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 		pd.procClaimTime = time.Now()
 		// pd.netProcsClaimed = 0
 		// We try to estimate the amount of "room" available for claiming new procs.
-		pd.netProcsClaimed = proc.Tcore(float64(pd.coresOwned * util))
+		pd.netProcsClaimed = proc.Tcore(float64(pd.coresOwned) * util)
 	}
 	// If we have claimed < BE_PROC_OVERSUBSCRIPTION_RATE
 	// procs per core during the last claim interval, the rate limit check

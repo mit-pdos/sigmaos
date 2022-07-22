@@ -271,7 +271,6 @@ func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
 	go p.monitorCPUUtil(sampleHz)
 }
 
-// XXX Performance impact?
 func (p *Perf) setupTpt(sampleHz int, fpath string) {
 	p.mu.Lock()
 
@@ -281,7 +280,7 @@ func (p *Perf) setupTpt(sampleHz int, fpath string) {
 		db.DFatalf("Create tpt file %v failed %v", fpath, err)
 	}
 	p.tptFile = f
-	// TODO: pre-allocate a large number of entries
+	// Pre-allocate a large number of entries (40 secs worth)
 	p.times = make([]time.Time, 1, 40*sampleHz)
 	p.tpts = make([]float64, 2, 40*sampleHz)
 

@@ -53,17 +53,19 @@ def bucketize(tpts, time_range):
 
 def add_tpts_to_graph(tpts, label):
   print(tpts)
-  x = sorted(list(tpts.keys()))
+  x = np.array(sorted(list(tpts.keys())))
   y = np.array([ tpts[x1] for x1 in x ])
   n = max(y)
   y = y / n
+  # Convert X indices to seconds.
+  x = x / 1000.0
   # normalize by max
   plt.plot(x, y, label=label)
 
 def make_graph(mr_buckets, kv_buckets, out):
   add_tpts_to_graph(mr_buckets, "MR Throughput")
   add_tpts_to_graph(kv_buckets, "KV Throughput")
-  plt.xlabel("Time (msec)")
+  plt.xlabel("Time (sec)")
   plt.ylabel("Normalized Throughput")
   plt.title("Throughput over time")
   plt.legend()

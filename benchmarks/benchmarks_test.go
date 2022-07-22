@@ -254,16 +254,21 @@ func TestRealmBalance(t *testing.T) {
 		runOps(ts2, ji, runKV, rs2)
 		done <- true
 	}()
+	// Wait for KV jobs to set up.
 	<-kvjobs[0].ready
-	kvjobs[0].ready <- true
 	// Run MR job
 	go func() {
 		runOps(ts1, mrapps, runMR, rs1)
 		done <- true
 	}()
+	// Wait for MR jobs to set up.
 	<-mrjobs[0].ready
+	// Kick off MR jobs.
 	mrjobs[0].ready <- true
-
+	// Sleep for a bit
+	time.Sleep(5 * time.Second)
+	// Kick off KV jobs
+	kvjobs[0].ready <- true
 	// Wait for both jobs to finish.
 	<-done
 	<-done

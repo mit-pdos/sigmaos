@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [-n N] --vpc VPC --realm REALM" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM [--n N] " 1>&2
 }
 
 N_VM=""
@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
     REALM=$1
     shift
     ;;
-  -n)
+  --n)
     shift
     N_VM=$1
     shift
@@ -61,6 +61,7 @@ for vm in $vms; do
   export NAMED="${NAMED}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
+    export SIGMAPERF=NAMED_PPROF
     (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)
   else
     echo "JOIN ${NAMED}"

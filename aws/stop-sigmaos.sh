@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [-n N] --vpc VPC" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N]" 1>&2
 }
 
 VPC=""
@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     VPC=$1
     shift
     ;;
-  -n)
+  --n)
     shift
     N_VM=$1
     shift

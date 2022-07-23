@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procdclnt"
 	rd "ulambda/rand"
 	"ulambda/test"
 )
@@ -196,8 +198,23 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	crashchan <- true
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
+func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
+
+	done := int32(0)
+	if monitor {
+		go func() {
+			pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+			for atomic.LoadInt32(&done) == 0 {
+				n, load, err := pdc.Nprocd()
+				if err != nil && atomic.LoadInt32(&done) == 0 {
+					db.DFatalf("Nprocd err %v\n", err)
+				}
+				db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
+				time.Sleep(10 * time.Second)
+			}
+		}()
+	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
 	assert.Nil(ts.T, err)
@@ -227,55 +244,59 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.stats()
 
+	if monitor {
+		atomic.StoreInt32(&done, 1)
+	}
+
 	ts.Shutdown()
 }
 
 func TestMRJOB(t *testing.T) {
-	runN(t, 0, 0, 0, 0)
+	runN(t, 0, 0, 0, 0, true)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, 0, 0)
+	runN(t, CRASHTASK, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, 0, 0)
+	runN(t, 0, CRASHCOORD, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, 0, 0)
+	runN(t, CRASHTASK, CRASHCOORD, 0, 0, false)
 }
 
 func TestCrashProcd1(t *testing.T) {
-	runN(t, 0, 0, 1, 0)
+	runN(t, 0, 0, 1, 0, false)
 }
 
 func TestCrashProcd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N, 0)
+	runN(t, 0, 0, N, 0, false)
 }
 
 func TestCrashProcdN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, 0)
+	runN(t, 0, 0, N, 0, false)
 }
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, 0, 0, 0, N)
+	runN(t, 0, 0, 0, N, false)
 }
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, N)
+	runN(t, 0, 0, 0, N, false)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, N)
+	runN(t, 0, 0, 0, N, false)
 }
 
 func TestCrashProcdUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, N)
+	runN(t, 0, 0, N, N, false)
 }

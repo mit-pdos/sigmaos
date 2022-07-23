@@ -265,7 +265,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
 	if fc.Session == 0 {
-		ssrv.st.ProcessHeartbeats(fc.Msg.(np.Theartbeat))
+		ssrv.st.ProcessHeartbeats(fc.Msg.(*np.Theartbeat))
 		return
 	}
 	// If this is a replicated op received through raft (not

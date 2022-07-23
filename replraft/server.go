@@ -34,7 +34,7 @@ func (srv *RaftReplServer) Start() {
 
 func (srv *RaftReplServer) Process(fc *np.Fcall) {
 	if fc.GetType() == np.TTdetach {
-		msg := fc.Msg.(np.Tdetach)
+		msg := fc.Msg.(*np.Tdetach)
 		msg.PropId = uint32(srv.node.id)
 		fc.Msg = msg
 	}

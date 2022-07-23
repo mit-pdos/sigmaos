@@ -74,11 +74,11 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 	var data []byte
 	switch fcall.GetType() {
 	case np.TTwrite:
-		msg := fcall.GetMsg().(np.Twrite)
+		msg := fcall.GetMsg().(*np.Twrite)
 		data = msg.Data
 		dataBuf = true
 	case np.TTwriteV:
-		msg := fcall.GetMsg().(np.TwriteV)
+		msg := fcall.GetMsg().(*np.TwriteV)
 		data = msg.Data
 		dataBuf = true
 	case np.TRread:
@@ -90,11 +90,11 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 		data = msg.Data
 		dataBuf = true
 	case np.TTsetfile:
-		msg := fcall.GetMsg().(np.Tsetfile)
+		msg := fcall.GetMsg().(*np.Tsetfile)
 		data = msg.Data
 		dataBuf = true
 	case np.TTputfile:
-		msg := fcall.GetMsg().(np.Tputfile)
+		msg := fcall.GetMsg().(*np.Tputfile)
 		data = msg.Data
 		dataBuf = true
 	default:

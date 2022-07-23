@@ -55,7 +55,7 @@ func (st *SessionTable) allocL(sid np.Tsession) *Session {
 	return sess
 }
 
-func (st *SessionTable) ProcessHeartbeats(hbs np.Theartbeat) {
+func (st *SessionTable) ProcessHeartbeats(hbs *np.Theartbeat) {
 	st.Lock()
 	defer st.Unlock()
 

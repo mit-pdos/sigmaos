@@ -111,7 +111,7 @@ func (c *SrvConn) reader() {
 			fcall, err = npcodec.UnmarshalFcall(frame)
 		}
 		if err != nil {
-			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: ", c.sessid, c.Src(), err)
+			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return
 		}
 		db.DPrintf("NETSRV", "srv req %v\n", fcall)

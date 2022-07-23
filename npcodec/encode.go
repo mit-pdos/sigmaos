@@ -370,14 +370,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-
-			// allocate msg
-			rv := reflect.New(reflect.TypeOf(msg))
-			if err := d.decode(rv.Interface()); err != nil {
+			if err := d.decode(); err != nil {
 				return err
 			}
-
-			v.Msg = rv.Elem().Interface().(np.Tmsg)
+			v.Msg = msg
 		case *np.Fcall:
 			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Received, &v.Fence); err != nil {
 				return err

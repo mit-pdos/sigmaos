@@ -46,17 +46,17 @@ func (ps *ProtSrv) mkQid(perm np.Tperm, path np.Tpath) np.Tqid {
 	return np.MakeQidPerm(perm, ps.vt.GetVersion(path), path)
 }
 
-func (ps *ProtSrv) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
+func (ps *ProtSrv) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (ps *ProtSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
+func (ps *ProtSrv) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
 	return np.MkErr(np.TErrNotSupported, "Auth").Rerror()
 }
 
-func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
+func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("PROTSRV", "Attach %v\n", args)
 	path := np.Split(args.Aname)
 	root, ctx := ps.ssrv.AttachTree(args.Uname, args.Aname, ps.sid)
@@ -123,7 +123,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve
 // which also avoids clunking. They may fail because args.Wnames may
 // contains a special path element; in that, case the client must walk
 // args.Wnames.
-func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -150,7 +150,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (ps *ProtSrv) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -165,7 +165,7 @@ func (ps *ProtSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
+func (ps *ProtSrv) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -187,7 +187,7 @@ func (ps *ProtSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
+func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -263,7 +263,7 @@ func (ps *ProtSrv) ReleaseWatches(dws, fws *watch.Watch) {
 	ps.wt.Release(fws)
 }
 
-func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -293,11 +293,11 @@ func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
+func (ps *ProtSrv) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
+func (ps *ProtSrv) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -310,7 +310,7 @@ func (ps *ProtSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
+func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -328,7 +328,7 @@ func (ps *ProtSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (ps *ProtSrv) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -341,7 +341,7 @@ func (ps *ProtSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
+func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -398,7 +398,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 
 // Remove for backwards compatability; SigmaOS uses RemoveFile (see
 // below) instead of Remove, but proxy will use it.
-func (ps *ProtSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+func (ps *ProtSrv) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -407,7 +407,7 @@ func (ps *ProtSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return ps.removeObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path())
 }
 
-func (ps *ProtSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
+func (ps *ProtSrv) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -426,7 +426,7 @@ func (ps *ProtSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 // Rename: within the same directory (Wstat) and rename across directories
 //
 
-func (ps *ProtSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (ps *ProtSrv) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -469,7 +469,7 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	}
 }
 
-func (ps *ProtSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (ps *ProtSrv) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	oldf, err := ps.ft.Lookup(args.OldFid)
 	if err != nil {
 		return err.Rerror()
@@ -557,7 +557,7 @@ func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mod
 	return f, fname, lo, i, nil
 }
 
-func (ps *ProtSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+func (ps *ProtSrv) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	f, fname, lo, err := ps.lookupWalk(args.Fid, args.Wnames, args.Resolve)
 	if err != nil {
 		return err.Rerror()
@@ -566,7 +566,7 @@ func (ps *ProtSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror 
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
 }
 
-func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
@@ -585,7 +585,7 @@ func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
@@ -617,7 +617,7 @@ func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
+func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}

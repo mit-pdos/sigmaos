@@ -90,17 +90,17 @@ func makeNpConn(named []string) *NpConn {
 	return npc
 }
 
-func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
+func (npc *NpConn) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
+func (npc *NpConn) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
 	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
+func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	u, error := user.Current()
 	if error != nil {
 		return &np.Rerror{error.Error()}
@@ -128,7 +128,7 @@ func (npc *NpConn) Detach(rets *np.Rdetach) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -145,7 +145,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -160,11 +160,11 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -182,7 +182,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -196,11 +196,11 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
+func (npc *NpConn) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -215,7 +215,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -230,7 +230,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -244,11 +244,11 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
+func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -263,7 +263,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
@@ -277,27 +277,27 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (npc *NpConn) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
-func (npc *NpConn) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
-func (npc *NpConn) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (npc *NpConn) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 

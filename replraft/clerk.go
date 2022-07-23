@@ -101,7 +101,7 @@ func (c *Clerk) apply(fc *np.Fcall, leader uint64) {
 	}
 	// For now, every node can cause a detach to happen
 	if fc.GetType() == np.TTdetach {
-		msg := fc.Msg.(np.Tdetach)
+		msg := fc.Msg.(*np.Tdetach)
 		msg.LeadId = uint32(leader)
 		fc.Msg = msg
 	}

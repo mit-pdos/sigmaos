@@ -51,6 +51,10 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
+		case *[]byte:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case []byte:
 			// XXX Bail out early to serialize separately
 			if e.bailOut {
@@ -382,15 +386,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-
-			// allocate msg
-			rv := reflect.New(reflect.TypeOf(msg))
-			if err := d.decode(rv.Interface()); err != nil {
+			if err := d.decode(msg); err != nil {
 				return err
 			}
-
-			v.Msg = rv.Elem().Interface().(np.Tmsg)
-
+			v.Msg = msg
 		case np.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {

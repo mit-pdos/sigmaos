@@ -2,10 +2,7 @@ package mr_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
-	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -140,38 +137,6 @@ func (ts *Tstate) checkJob() {
 	}
 }
 
-func (ts *Tstate) stats() {
-	rdr, err := ts.OpenReader(mr.MRstats(ts.job))
-	assert.Nil(ts.T, err)
-	dec := json.NewDecoder(rdr)
-	fmt.Println("=== STATS:")
-	totIn := np.Tlength(0)
-	totOut := np.Tlength(0)
-	totWTmp := np.Tlength(0)
-	totRTmp := np.Tlength(0)
-	for {
-		var r mr.Result
-		if err := dec.Decode(&r); err == io.EOF {
-			break
-		}
-		assert.Nil(ts.T, err)
-		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
-		if r.IsM {
-			totIn += r.In
-			totWTmp += r.Out
-		} else {
-			totOut += r.Out
-			totRTmp += r.In
-		}
-	}
-	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
-		humanize.Bytes(uint64(totIn)), totIn,
-		humanize.Bytes(uint64(totOut)),
-		humanize.Bytes(uint64(totWTmp)),
-		humanize.Bytes(uint64(totRTmp)),
-	)
-}
-
 // Sleep for a random time, then crash a server.  Crash a server of a
 // certain type, then crash a server of that type.
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
@@ -242,7 +207,8 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	ts.checkJob()
 
-	ts.stats()
+	err = mr.PrintMRStats(ts.FsLib, ts.job)
+	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	if monitor {
 		atomic.StoreInt32(&done, 1)

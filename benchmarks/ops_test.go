@@ -66,6 +66,8 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	<-ji.ready
 	ji.StartMRJob()
 	ji.Wait()
+	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
+	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 	return time.Since(start)
 }
 

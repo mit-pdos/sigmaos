@@ -1,17 +1,22 @@
 package mr
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/dustin/go-humanize"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
+	"ulambda/test"
 )
 
 func JobDir(job string) string {
@@ -153,5 +158,39 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 			return err
 		}
 	}
+	return nil
+}
+
+func PrintMRStats(fsl *fslib.FsLib, job string) error {
+	rdr, err := fsl.OpenReader(MRstats(job))
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(rdr)
+	fmt.Println("=== STATS:")
+	totIn := np.Tlength(0)
+	totOut := np.Tlength(0)
+	totWTmp := np.Tlength(0)
+	totRTmp := np.Tlength(0)
+	for {
+		var r Result
+		if err := dec.Decode(&r); err == io.EOF {
+			break
+		}
+		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		if r.IsM {
+			totIn += r.In
+			totWTmp += r.Out
+		} else {
+			totOut += r.Out
+			totRTmp += r.In
+		}
+	}
+	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
+		humanize.Bytes(uint64(totIn)), totIn,
+		humanize.Bytes(uint64(totOut)),
+		humanize.Bytes(uint64(totWTmp)),
+		humanize.Bytes(uint64(totRTmp)),
+	)
 	return nil
 }

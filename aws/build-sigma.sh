@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM [--force-build]" 1>&2
 }
 
 VPC=""
 REALM=""
+FORCE=""
 while [[ $# -gt 0 ]]; do
   case $1 in
   --vpc)
@@ -17,6 +18,10 @@ while [[ $# -gt 0 ]]; do
     shift
     REALM=$1
     shift
+    ;;
+  --force-build)
+    shift
+    FORCE="--force-build"
     ;;
   -help)
     usage
@@ -45,7 +50,7 @@ ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
 ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
 (cd ulambda; ./stop.sh)
 # Make sure we build the first time sigmaos is installed.
-if [ -f ~/.nobuild ]; then
+if [ -f ~/.nobuild ] || ! [ -z "$FORCE" ]; then
   echo "" > /tmp/git.out
 fi
 ENDSSH

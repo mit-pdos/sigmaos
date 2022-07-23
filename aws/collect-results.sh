@@ -1,10 +1,11 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC" 1>&2
+  echo "Usage: $0 --vpc VPC [--parallel]" 1>&2
 }
 
 VPC=""
+PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -12,6 +13,10 @@ while [[ $# -gt 0 ]]; do
     shift
     VPC=$1
     shift
+    ;;
+  --parallel)
+    shift
+    PARALLEL="--parallel"
     ;;
   -help)
     usage
@@ -38,6 +43,12 @@ mkdir ../benchmarks/results/$RUN_NUM
 
 for vm in $vms; do
   echo "scp: $vm"
-  scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
-  scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
+  if [ -z "$PARALLEL" ]; then
+    scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
+    scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
+  else
+    scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM &
+    scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out &
+  fi
 done
+wait

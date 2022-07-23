@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--n N]" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N] [--parallel]" 1>&2
 }
 
 VPC=""
 N_VM=""
+PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
     shift
     N_VM=$1
     shift
+    ;;
+  --parallel)
+    shift
+    PARALLEL="--parallel"
     ;;
   -help)
     usage
@@ -49,8 +54,16 @@ fi
 for vm in $vms
 do
     echo "stop: $vm"
+  if [ -z "$PARALLEL" ]; then
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    (cd ulambda; ./stop.sh)
-    rm -rf $UXROOT
+      (cd ulambda; ./stop.sh)
+      rm -rf $UXROOT
 ENDSSH
+  else
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash & <<ENDSSH
+      (cd ulambda; ./stop.sh)
+      rm -rf $UXROOT
+ENDSSH
+  fi
 done
+wait

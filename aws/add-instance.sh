@@ -44,6 +44,3 @@ fi
 vm=`./lsvpc.py $VPC | grep -w $NAME | cut -d " " -f 5`
 echo "SETUP $vm"
 ./setup-instance.sh --vpc $VPC --vm $vm
-
-
-

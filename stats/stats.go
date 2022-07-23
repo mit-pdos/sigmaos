@@ -3,10 +3,12 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -141,6 +143,28 @@ func (st *Stats) GetUtil() float64 {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	return st.sti.Util
+}
+
+func (st *Stats) GetLoad() Tload {
+	b, err := ioutil.ReadFile("/proc/loadavg")
+	if err != nil {
+		db.DFatalf("Couldn't read load file: %v", err)
+	}
+	loadstr := strings.Split(string(b), " ")
+	load := Tload{}
+	load[0], err = strconv.ParseFloat(loadstr[0], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	load[1], err = strconv.ParseFloat(loadstr[1], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	load[2], err = strconv.ParseFloat(loadstr[2], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	return load
 }
 
 func (st *Stats) StatInfo() *StatInfo {

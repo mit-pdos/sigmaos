@@ -174,9 +174,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization. If utilization is below a certain threshold, take the proc.
 		util := pd.GetStats().GetUtil()
+		load := pd.GetStats().GetLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
+			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v load %v rate-limit check %v proc %v", util, load, rlc, p)
 			return true
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)

@@ -125,11 +125,14 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
+		case *[]np.Tsession:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case []np.Tsession:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
-
 			for _, m := range v {
 				if err := e.encode(m); err != nil {
 					return err
@@ -370,7 +373,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			if err := d.decode(); err != nil {
+			if err := d.decode(msg); err != nil {
 				return err
 			}
 			v.Msg = msg

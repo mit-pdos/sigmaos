@@ -110,7 +110,7 @@ func (c *SessClnt) Detach() *np.Err {
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
 	}
-	rmsg, ok := rep.(np.Rerror)
+	rmsg, ok := rep.(*np.Rerror)
 	if ok {
 		err := np.String2Err(rmsg.Ename)
 		return err
@@ -125,7 +125,7 @@ func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
 	if msg.Type() == np.TRdetach {
 		return true
 	}
-	rerr, ok := msg.(np.Rerror)
+	rerr, ok := msg.(*np.Rerror)
 	if ok {
 		err := np.String2Err(rerr.Ename)
 		if np.IsErrSessClosed(err) {

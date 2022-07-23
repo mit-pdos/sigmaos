@@ -114,6 +114,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		reply.Sids = req.Sids
 		return *reply, false, nil
 	default:
+		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
 		return nil, false, np.MkErr(np.TErrUnknownMsg, msg).Rerror()
 	}
 }

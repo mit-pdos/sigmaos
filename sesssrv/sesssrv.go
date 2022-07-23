@@ -333,7 +333,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.Fcall) {
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
 
 	if rerror != nil {
-		reply = *rerror
+		reply = rerror
 	}
 
 	ssrv.sendReply(fc, reply, sess)

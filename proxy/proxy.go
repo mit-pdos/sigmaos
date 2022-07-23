@@ -35,7 +35,7 @@ func (npd *Npd) serve(fc *np.Fcall) {
 	sess, _ := npd.st.Lookup(fc.Session)
 	reply, _, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
-		reply = *rerror
+		reply = rerror
 	}
 	fcall := np.MakeFcall(reply, 0, nil, nil, np.NoFence)
 	fcall.Tag = t

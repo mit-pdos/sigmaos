@@ -46,13 +46,13 @@ ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.
 (cd ulambda; ./stop.sh)
 # Make sure we build the first time sigmaos is installed.
 if [ -f ~/.nobuild ]; then
-  echo "+++" > /tmp/git.out
+  echo "" > /tmp/git.out
 fi
 ENDSSH
 
 echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-grep "+++" /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1;)  
+! grep "Already up to date." /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1;)  
 (cd ulambda; ./upload.sh --realm $REALM;)
 # NOte that we have completed the build on this machine at least once.
 if [ -f ~/.nobuild ]; then

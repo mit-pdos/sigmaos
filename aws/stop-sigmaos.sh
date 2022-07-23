@@ -60,10 +60,13 @@ do
       rm -rf $UXROOT
 ENDSSH
   else
-    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash & <<ENDSSH
-      (cd ulambda; ./stop.sh)
-      rm -rf $UXROOT
+    (
+      ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+        touch ~/abcd
+        (cd ulambda; ./stop.sh)
+        rm -rf $UXROOT
 ENDSSH
+    ) &
   fi
 done
 wait

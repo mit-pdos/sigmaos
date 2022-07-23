@@ -47,8 +47,10 @@ for vm in $vms; do
     scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
     scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
   else
-    scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM &
-    scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out &
+    (
+      scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
+      scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
+    ) &
   fi
 done
 wait

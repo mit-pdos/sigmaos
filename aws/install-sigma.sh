@@ -62,10 +62,12 @@ for vm in $vms; do
     (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
 ENDSSH
   else
-  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash & <<ENDSSH
-    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
-    (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
+  (
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
+      (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
 ENDSSH
+  ) &
   fi
 done
 wait

@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -167,6 +166,17 @@ func (st *Stats) GetLoad() Tload {
 	return load
 }
 
+func (st *Stats) GetCustomLoad() Tload {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	load := Tload{}
+	load[0] = st.sti.Load[0]
+	load[1] = st.sti.Load[1]
+	load[2] = st.sti.Load[2]
+	return load
+}
+
 func (st *Stats) StatInfo() *StatInfo {
 	return st.sti
 }
@@ -214,14 +224,12 @@ const (
 func (st *Stats) loadCPUUtilL(idle, total uint64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
-	nthread := float64(runtime.NumGoroutine())
-
 	st.sti.Load[0] *= EXP_0
-	st.sti.Load[0] += (1 - EXP_0) * nthread
+	st.sti.Load[0] += (1 - EXP_0) * util
 	st.sti.Load[1] *= EXP_1
-	st.sti.Load[1] += (1 - EXP_1) * nthread
+	st.sti.Load[1] += (1 - EXP_1) * util
 	st.sti.Load[2] *= EXP_2
-	st.sti.Load[2] += (1 - EXP_2) * nthread
+	st.sti.Load[2] += (1 - EXP_2) * util
 
 	st.sti.Util = util
 }

@@ -179,7 +179,7 @@ func (pd *Procd) overloaded(util float64, cload stats.Tload) bool {
 		return true
 	}
 	// If there is a sudden drop in CPU utilization...
-	if util-cload[0] > 20.0 {
+	if cload[0]-util > 20.0 {
 		return true
 	}
 	return false

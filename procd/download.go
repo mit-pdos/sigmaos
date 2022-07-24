@@ -8,6 +8,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -67,11 +68,19 @@ func (pd *Procd) downloadProcBin(program string) {
 
 	db.DPrintf("PROCD", "Need to download %v", program)
 
+	// Find the number of instances of this proc which have been claimed, and are
+	// waiting to be downloaded.
+	procCopies := proc.Tcore(0)
+	for _, p := range pd.runningProcs {
+		if p.attr.Program == program {
+			procCopies++
+		}
+	}
 	// Note that a proc is downloading, so we don't pull procs too aggressively.
 	// It's utilization won't have been measured yet.
-	pd.procsDownloading++
+	pd.procsDownloading += procCopies
 	defer func() {
-		pd.procsDownloading--
+		pd.procsDownloading -= procCopies
 	}()
 
 	// May need to retry if ux crashes.

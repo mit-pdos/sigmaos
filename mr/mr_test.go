@@ -176,7 +176,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 					db.DFatalf("Nprocd err %v\n", err)
 				}
 				db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
-				time.Sleep(10 * time.Second)
+				for i := 0; i < 10 && atomic.LoadInt32(&done) == 0; i++ {
+					time.Sleep(1 * time.Second)
+				}
 			}
 		}()
 	}

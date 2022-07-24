@@ -146,9 +146,14 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 	// utilization sample rate).
 	if time.Since(pd.procClaimTime) > 10*timeBetweenUtilSamples {
 		pd.procClaimTime = time.Now()
-		// pd.netProcsClaimed = 0
 		// We try to estimate the amount of "room" available for claiming new procs.
 		pd.netProcsClaimed = proc.Tcore(math.Round(float64(pd.coresOwned) * util / 100.0))
+		// If a proc is downloading, it's utilization won't have been measured yet.
+		// Adding this to the number of procs claimed is perhaps a little too
+		// conservative (we may double-count if the proc which is downloading was
+		// also claimed in this epoch), but this should only happen the first time
+		// a proc is downloaded, which should not be often.
+		pd.netProcsClaimed += pd.procsDownloading
 	}
 	// If we have claimed < BE_PROC_OVERSUBSCRIPTION_RATE
 	// procs per core during the last claim interval, the rate limit check

@@ -30,7 +30,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 		// If someone else completed the download before us, remove the temp file.
 		pd.Remove(tmppath)
 	}
-	db.DPrintf(db.ALWAYS, "Took %vms to download proc %v", time.Since(start), s3BinPath)
+	db.DPrintf(db.ALWAYS, "Took %v to download proc %v", time.Since(start), s3BinPath)
 	return nil
 }
 
@@ -66,6 +66,13 @@ func (pd *Procd) downloadProcBin(program string) {
 	}
 
 	db.DPrintf("PROCD", "Need to download %v", program)
+
+	// Note that a proc is downloading, so we don't pull procs too aggressively.
+	// It's utilization won't have been measured yet.
+	pd.procsDownloading++
+	defer func() {
+		pd.procsDownloading--
+	}()
 
 	// May need to retry if ux crashes.
 	RETRIES := 10

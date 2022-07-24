@@ -4,6 +4,8 @@ import (
 	"path"
 	"strings"
 
+	"time"
+
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/rand"
@@ -11,6 +13,7 @@ import (
 
 // Try to download a proc bin from s3.
 func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
+	start := time.Now()
 	// Copy the binary from s3 to a temporary file.
 	tmppath := path.Join(uxBinPath + "-tmp-" + rand.String(16))
 	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
@@ -27,6 +30,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 		// If someone else completed the download before us, remove the temp file.
 		pd.Remove(tmppath)
 	}
+	db.DPrintf(db.ALWAYS, "Took %vms to download proc %v", time.Since(start), s3BinPath)
 	return nil
 }
 

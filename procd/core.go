@@ -47,6 +47,7 @@ func (pd *Procd) initCores(grantedCoresIv string) {
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 	cores := parseCoreInterval(msg.Name)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_AVAILABLE)
+	db.DPrintf(db.ALWAYS, "Added cores to procd")
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
 		for i := 0; i < msg.Amount; i++ {

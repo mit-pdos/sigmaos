@@ -169,20 +169,21 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 }
 
 func (pd *Procd) overloaded(util float64, cload stats.Tload) bool {
-	// If utilization is growing very quickly, we may be overloaded.
-	if cload[0]-cload[1] >= 10.0 && cload[1]-cload[2] >= 10.0 {
-		return true
-	}
-	t := np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD
-	// If we have a history of high utilization...
-	if cload[0] >= t && cload[1] >= t {
-		return true
-	}
-	// If there is a sudden drop in CPU utilization...
-	if cload[0]-util > 20.0 {
-		return true
-	}
 	return false
+	//	// If utilization is growing very quickly, we may be overloaded.
+	//	if cload[0]-cload[1] >= 10.0 && cload[1]-cload[2] >= 10.0 {
+	//		return true
+	//	}
+	//	t := np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD
+	//	// If we have a history of high utilization...
+	//	if cload[0] >= t && cload[1] >= t {
+	//		return true
+	//	}
+	//	// If there is a sudden drop in CPU utilization...
+	//	if cload[0]-util > 20.0 {
+	//		return true
+	//	}
+	//	return false
 	/*  && !(cload[0] >= 95.0 && cload[1] >= 95.0 && cload[2] >= 95.0) && !(util-cload[0] >= 20.0) && */
 }
 

@@ -207,7 +207,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 			for _, p := range pd.runningProcs {
 				progs = append(progs, p.attr.Program)
 			}
-			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v, running %v", util, load, cload, rlc, p.Program, progs)
+			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v, running %v len %v", util, load, cload, rlc, p.Program, progs, len(progs))
 			return true
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)

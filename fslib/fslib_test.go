@@ -1342,8 +1342,30 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func lookuper(t *testing.T, nclerk int, n int, dir string) {
+	ch := make(chan bool)
+	for c := 0; c < nclerk; c++ {
+		go func() {
+			cn := strconv.Itoa(c)
+			fsl := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
+			measuredir("lookup dir entry", func() int {
+				for i := 0; i < n; i++ {
+					_, err := fsl.Stat(dir + "/f" + strconv.Itoa(i))
+					assert.Nil(t, err)
+				}
+				return n
+			})
+			ch <- true
+		}()
+	}
+	for c := 0; c < nclerk; c++ {
+		<-ch
+	}
+}
+
 func TestDirReadPerf(t *testing.T) {
 	const N = 1000
+	const NCLERK = 5
 	ts := test.MakeTstatePath(t, path)
 	dir := path + "d"
 	n := mkDir(t, ts.FsLib, dir, N)
@@ -1356,13 +1378,8 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	measuredir("lookup dir entry", func() int {
-		for i := 0; i < N; i++ {
-			_, err := ts.Stat(dir + "/f" + strconv.Itoa(i))
-			assert.Nil(t, err)
-		}
-		return N
-	})
+	lookuper(t, 1, N, dir)
+	lookuper(t, NCLERK, N, dir)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
 	ts.Shutdown()

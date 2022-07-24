@@ -181,7 +181,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 			return true
 		} else {
-			db.DPrintf(db.ALWAYS, "Couldn't claim BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
+			//			db.DPrintf(db.ALWAYS, "Couldn't claim BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 	}

@@ -203,7 +203,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		load := pd.GetStats().GetLoad()
 		cload := pd.GetStats().GetCustomLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)
-		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && load[0] <= 4.0 && !pd.overloaded(util, cload) && rlc {
+		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && load[0] <= 5.0 && !pd.overloaded(util, cload) && rlc {
 			progs := make([]string, 0, len(pd.runningProcs))
 			for _, p := range pd.runningProcs {
 				progs = append(progs, p.attr.Program)

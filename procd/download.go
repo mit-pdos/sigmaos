@@ -31,7 +31,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 		// If someone else completed the download before us, remove the temp file.
 		pd.Remove(tmppath)
 	}
-	db.DPrintf(db.ALWAYS, "Took %v to download proc %v", time.Since(start), s3BinPath)
+	db.DPrintf("PROCD", "Took %v to download proc %v", time.Since(start), s3BinPath)
 	return nil
 }
 

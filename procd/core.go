@@ -168,7 +168,7 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 	return false
 }
 
-func (pd *Procd) overloaded(util float64, load stats.Tload) bool {
+func (pd *Procd) overloaded(util float64, cload stats.Tload) bool {
 	// If utilization is growing very quickly, we may be overloaded.
 	if !(cload[0]-cload[1] >= 10.0 && cload[1]-cload[2] >= 10.0) {
 		return true

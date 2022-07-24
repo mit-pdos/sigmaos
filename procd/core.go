@@ -10,6 +10,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/resource"
+	"ulambda/stats"
 )
 
 type Tcorestatus uint8
@@ -167,6 +168,24 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 	return false
 }
 
+func (pd *Procd) overloaded(util float64, load stats.Tload) bool {
+	// If utilization is growing very quickly, we may be overloaded.
+	if !(cload[0]-cload[1] >= 10.0 && cload[1]-cload[2] >= 10.0) {
+		return true
+	}
+	t := np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD
+	// If we have a history of high utilization...
+	if cload[0] >= t && cload[1] >= t && cload[2] >= t {
+		return true
+	}
+	// If there is a sudden drop in CPU utilization...
+	if util-cload[0] > 20.0 {
+		return true
+	}
+	return false
+	/*  && !(cload[0] >= 95.0 && cload[1] >= 95.0 && cload[2] >= 95.0) && !(util-cload[0] >= 20.0) && */
+}
+
 // Check if this procd has enough cores to run proc p. Caller holds lock.
 func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	// If this is an LC proc, check that we have enough cores.
@@ -183,7 +202,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		load := pd.GetStats().GetLoad()
 		cload := pd.GetStats().GetCustomLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)
-		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && /* !(cload[0]-cload[1] >= 10.0 && cload[1]-cload[2] >= 10.0) && !(cload[0] >= 95.0 && cload[1] >= 95.0 && cload[2] >= 95.0) && !(util-cload[0] >= 20.0) && */ rlc {
+		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && !pd.overloaded(util, cload) && rlc {
 			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 			return true
 		}

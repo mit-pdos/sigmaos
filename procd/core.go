@@ -178,8 +178,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		cload := pd.GetStats().GetCustomLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && load[0] < float64(linuxsched.NCores) && float64(linuxsched.NCores)-math.Round(cload[0]*float64(linuxsched.NCores)) >= 1.0 && rlc {
-			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p)
+			db.DPrintf(db.ALWAYS, "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 			return true
+		} else {
+			db.DPrintf(db.ALWAYS, "Couldn't claim BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 	}

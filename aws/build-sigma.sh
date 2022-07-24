@@ -55,9 +55,9 @@ if [ -f ~/.nobuild ] || ! [ -z "$FORCE" ]; then
 fi
 ENDSSH
 
-echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-! grep "Already up to date." /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1;)  
+! grep "Already up to date." /tmp/git.out && echo "COMPILE: $MAIN" && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1;)  
+echo "UPLOAD: $MAIN"
 (cd ulambda; ./upload.sh --realm $REALM;)
 # NOte that we have completed the build on this machine at least once.
 if [ -f ~/.nobuild ]; then

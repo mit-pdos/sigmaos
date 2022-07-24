@@ -215,7 +215,7 @@ func (s *System) Shutdown() {
 	}
 	if s.named != nil {
 		// kill it so that test terminates
-		s.named.cmd.Process.Kill()
+		syscall.Kill(s.named.cmd.Process.Pid, syscall.SIGTERM)
 		s.named.cmd.Wait()
 	}
 }

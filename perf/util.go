@@ -85,7 +85,7 @@ func MakePerf(name string) *Perf {
 	go func() {
 		<-sigc
 		p.Done()
-		os.Exit(0)
+		os.Exit(143)
 	}()
 	// Make sure the PID is set (used to name the output files).
 	if proc.GetPid().String() == "" {

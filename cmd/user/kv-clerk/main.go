@@ -11,17 +11,19 @@ import (
 	"ulambda/kv"
 	"ulambda/perf"
 	"ulambda/proc"
+	"ulambda/semclnt"
 )
 
 var done = int32(0)
 
 func main() {
 	if len(os.Args) < 1 {
-		db.DFatalf("Usage: %v [duration]", os.Args[0])
+		db.DFatalf("Usage: %v [duration] [sempath] ", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
 	var dur time.Duration
+	var sempath string
 	if len(os.Args) > 1 {
 		timed = true
 		var err error
@@ -29,6 +31,7 @@ func main() {
 		if err != nil {
 			db.DFatalf("Bad nput %v", err)
 		}
+		sempath = os.Args[2]
 	}
 	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), fslib.Named())
 	if err != nil {
@@ -40,8 +43,7 @@ func main() {
 	defer p.Done()
 
 	clk.Started()
-	db.DPrintf(db.ALWAYS, "KV clerk Started")
-	run(clk, p, timed, dur)
+	run(clk, p, timed, dur, sempath)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -53,12 +55,15 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration) {
+func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
 	if timed {
+		sclnt := semclnt.MakeSemClnt(kc.FsLib, sempath)
+		sclnt.Down()
 		// Run for duration dur, then mark as done.
+		db.DPrintf(db.ALWAYS, "KV clerk Started")
 		go func() {
 			time.Sleep(dur)
 			atomic.StoreInt32(&done, 1)

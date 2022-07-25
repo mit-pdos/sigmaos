@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"path"
 	"strconv"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"ulambda/groupmgr"
 	"ulambda/kv"
 	"ulambda/proc"
+	"ulambda/rand"
+	"ulambda/semclnt"
 	"ulambda/test"
 )
 
@@ -24,6 +27,8 @@ type KVJobInstance struct {
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
+	sem      *semclnt.SemClnt
+	sempath  string
 	balgm    *groupmgr.GroupMgr
 	kvdgms   []*groupmgr.GroupMgr
 	cpids    []proc.Tpid
@@ -40,6 +45,12 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, ph
 	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
+	if len(phases) == 0 {
+		ji.sempath = path.Join("name", "kvclerk-sem-"+rand.String(16))
+		ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
+		err := ji.sem.Init(0)
+		assert.Nil(ts.T, err, "Sem init: %v", err)
+	}
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
 	ji.Tstate = ts
@@ -76,6 +87,8 @@ func (ji *KVJobInstance) NextPhase() {
 	for ; diff < 0; diff++ {
 		ji.StartClerk()
 	}
+	// All clerks have started and can start doing ops.
+	ji.AllClerksStarted()
 	// Make sure we got the number of clerks right.
 	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get righ num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
 	// Sleep for the duration of this phase.
@@ -90,6 +103,13 @@ func (ji *KVJobInstance) NextPhase() {
 	db.DPrintf("TEST", "Phase %v: done", ji.phase)
 	// Move to the  next phase
 	ji.phase++
+}
+
+func (ji *KVJobInstance) AllClerksStarted() {
+	if len(ji.phases) > 0 {
+		return
+	}
+	ji.sem.Up()
 }
 
 // If running with bounded clerks, wait for clerks to run.
@@ -133,7 +153,7 @@ func (ji *KVJobInstance) StartClerk() {
 	if len(ji.phases) > 0 {
 		args = nil
 	} else {
-		args = append(args, ji.ckdur)
+		args = append(args, ji.ckdur, ji.sempath)
 	}
 	pid, err := kv.StartClerk(ji.ProcClnt, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)

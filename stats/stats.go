@@ -238,8 +238,16 @@ func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) (
 func (st *Stats) IncPath(path np.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-
 	p := path.String()
+	if _, ok := st.sti.Paths[p]; !ok {
+		st.sti.Paths[p] = 0
+	}
+	st.sti.Paths[p] += 1
+}
+
+func (st *Stats) IncPathString(p string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	if _, ok := st.sti.Paths[p]; !ok {
 		st.sti.Paths[p] = 0
 	}

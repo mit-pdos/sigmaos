@@ -13,8 +13,8 @@ import (
 
 //
 // There is one protsrv per session, but they share the watch table,
-// and stats across sessions.  Each session has its own fid table,
-// ephemeral table, and lease table.
+// version table, and stats across sessions.  Each session has its own
+// fid table, ephemeral table, and lease table.
 //
 
 type ProtSrv struct {

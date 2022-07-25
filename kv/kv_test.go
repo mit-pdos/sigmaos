@@ -113,7 +113,7 @@ func (ts *Tstate) stopClerks() {
 	for _, ck := range ts.clrks {
 		status, err := kv.StopClerk(ts.ProcClnt, ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
-		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
+		assert.True(ts.T, status.IsStatusEvicted(), "Exit status: %v", status)
 	}
 }
 

@@ -1208,14 +1208,17 @@ func measure(msg string, f func() np.Tlength) {
 	}
 }
 
-func measuredir(msg string, f func() int) {
-	for i := 0; i < NRUNS; i++ {
+func measuredir(msg string, nruns int, f func() int) {
+	tot := float64(0)
+	n := 0
+	for i := 0; i < nruns; i++ {
 		start := time.Now()
-		n := f()
+		n += f()
 		ms := time.Since(start).Milliseconds()
-		s := float64(ms) / 1000
-		log.Printf("%v: %d entries took %vms (%.1f file/s)", msg, n, ms, float64(n)/s)
+		tot += float64(ms)
 	}
+	s := tot / 1000
+	log.Printf("%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
 }
 
 type Thow uint8
@@ -1333,7 +1336,7 @@ func TestDirCreatePerf(t *testing.T) {
 	const N = 1000
 	ts := test.MakeTstatePath(t, path)
 	dir := path + "d"
-	measuredir("create dir", func() int {
+	measuredir("create dir", 1, func() int {
 		n := mkDir(t, ts.FsLib, dir, N)
 		return n
 	})
@@ -1342,18 +1345,19 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(t *testing.T, nclerk int, n int, dir string) {
+func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
+	const NITER = 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
 		go func() {
 			cn := strconv.Itoa(c)
 			fsl := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
-			measuredir("lookup dir entry", func() int {
-				for i := 0; i < n; i++ {
-					_, err := fsl.Stat(dir + "/f" + strconv.Itoa(i))
+			measuredir("lookup dir entry", NITER, func() int {
+				for f := 0; f < nfile; f++ {
+					_, err := fsl.Stat(dir + "/f" + strconv.Itoa(f))
 					assert.Nil(t, err)
 				}
-				return n
+				return nfile
 			})
 			ch <- true
 		}()
@@ -1364,22 +1368,23 @@ func lookuper(t *testing.T, nclerk int, n int, dir string) {
 }
 
 func TestDirReadPerf(t *testing.T) {
-	const N = 1000
-	const NCLERK = 5
+	const N = 10000
+	const NFILE = 10
+	const NCLERK = 1
 	ts := test.MakeTstatePath(t, path)
 	dir := path + "d"
-	n := mkDir(t, ts.FsLib, dir, N)
-	assert.Equal(t, N, n)
-	measuredir("read dir", func() int {
-		n := 0
-		ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-			n += 1
-			return false, nil
-		})
-		return n
-	})
-	lookuper(t, 1, N, dir)
-	lookuper(t, NCLERK, N, dir)
+	n := mkDir(t, ts.FsLib, dir, NFILE)
+	assert.Equal(t, NFILE, n)
+	// measuredir("read dir", 1, func() int {
+	// 	n := 0
+	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+	// 		n += 1
+	// 		return false, nil
+	// 	})
+	// 	return n
+	// })
+	// lookuper(t, 1, N, dir)
+	lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
 	ts.Shutdown()
@@ -1391,7 +1396,7 @@ func TestRmDirPerf(t *testing.T) {
 	dir := path + "d"
 	n := mkDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
-	measuredir("rm dir", func() int {
+	measuredir("rm dir", 1, func() int {
 		err := ts.RmDir(dir)
 		assert.Nil(t, err)
 		return N

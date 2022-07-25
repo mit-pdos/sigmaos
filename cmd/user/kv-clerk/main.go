@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -56,6 +57,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget int) {
 	ntest := uint64(0)
 	var err error
 	go waitEvict(kc)
+	start := time.Now()
 	// Run until we've done nputget puts & gets (if this is a bounded clerk) or
 	// we are not done (otherwise).
 	for i := 0; (putget && i/kv.NKEYS < nputget) || atomic.LoadInt32(&done) == 0; i++ {
@@ -73,7 +75,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget int) {
 	} else {
 		if putget {
 			// If this was a bounded clerk, we should return status ok.
-			status = proc.MakeStatus(proc.StatusOK)
+			status = proc.MakeStatusInfo(proc.StatusOK, "e2e time", time.Since(start))
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
 			status = proc.MakeStatus(proc.StatusEvicted)
@@ -127,7 +129,7 @@ func test(kc *kv.KvClerk, ntest uint64, p *perf.Perf, putget bool) error {
 		v := Value{proc.GetPid(), key, ntest}
 		if putget {
 			// If doing puts & gets (bounded clerk)
-			if err := kc.Put(key, []byte(proc.GetPid().String())); err != nil {
+			if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

@@ -1,16 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	db "ulambda/debug"
 	"ulambda/kv"
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <crashhelper> [auto]\n", os.Args[0])
-		os.Exit(1)
+	if len(os.Args) < 4 {
+		db.DFatalf("Usage: %v <crashhelper> <kvdncore> [auto]\n", os.Args[0])
 	}
-	kv.RunBalancer(os.Args[1], os.Args[2])
+	kv.RunBalancer(os.Args[1], os.Args[2], os.Args[3])
 }

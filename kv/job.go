@@ -1,14 +1,21 @@
 package kv
 
 import (
+	"strconv"
+
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
-func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, nbal, crashbal int, crashhelper, auto string) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{crashhelper, auto}, nbal, crashbal, 0, 0)
+func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
+	kvdnc := strconv.Itoa(int(kvdncore))
+	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{crashhelper, kvdnc, auto}, 0, nbal, crashbal, 0, 0)
+}
+
+func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, ncore, ncrash, CRASHKVD, 0, 0)
 }
 
 func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {

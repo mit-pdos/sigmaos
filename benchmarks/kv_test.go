@@ -20,6 +20,7 @@ type KVJobInstance struct {
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
 	ckputget string          // Number of puts & gets each clerk will do.
+	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
 	balgm    *groupmgr.GroupMgr
@@ -28,12 +29,13 @@ type KVJobInstance struct {
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int, ckncore proc.Tcore) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int, kvdncore, ckncore proc.Tcore) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
 	ji.nclerks = nclerks
 	ji.phases = phases
 	ji.ckputget = strconv.Itoa(ckputget)
+	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
 	ji.kvdgms = []*groupmgr.GroupMgr{}
@@ -44,7 +46,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.D
 
 func (ji *KVJobInstance) StartKVJob() {
 	// XXX auto or manual?
-	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, "0", "manual")
+	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, ji.kvdncore, "0", "manual")
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
@@ -102,7 +104,7 @@ func (ji *KVJobInstance) AddKVDGroup() {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
 	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, kv.KVD_REPL_LEVEL, 0))
+	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, ji.kvdncore, kv.KVD_REPL_LEVEL, 0))
 	// Get balancer to add the group
 	err := kv.BalancerOpRetry(ji.FsLib, "add", grp)
 	assert.Nil(ji.T, err, "BalancerOp add: %v", err)

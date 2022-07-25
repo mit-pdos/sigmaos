@@ -114,13 +114,16 @@ func (ji *KVJobInstance) AllClerksStarted() {
 
 // If running with bounded clerks, wait for clerks to run.
 func (ji *KVJobInstance) WaitForClerks() {
+	aggTpt := float64(0)
 	for _, cpid := range ji.cpids {
 		status, err := ji.WaitExit(cpid)
 		assert.Nil(ji.T, err, "StopClerk: %v", err)
 		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
 		tpt := status.Data().(float64)
+		aggTpt += tpt
 		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
 	}
+	db.DPrintf(db.ALWAYS, "Aggregate throughput (ops/sec): %v", aggTpt)
 	ji.cpids = ji.cpids[:0]
 }
 

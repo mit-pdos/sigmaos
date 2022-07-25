@@ -66,7 +66,8 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
-		_, lo, lk, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
+		dlk := ps.plt.Acquire(np.Path{})
+		_, lo, lk, rest, err := ps.namei(ctx, root, dlk, np.Path{}, path, nil)
 		defer ps.plt.Release(lk)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()
@@ -364,7 +365,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 	flk := ps.plt.Acquire(path)
 	defer ps.plt.ReleaseLocks(dlk, flk)
 
-	ps.stats.IncPath(path)
+	ps.stats.IncPathString(flk.Path())
 
 	db.DPrintf("PROTSRV", "%v: removeObj %v in %v", ctx.Uname(), name, o)
 

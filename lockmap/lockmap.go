@@ -49,20 +49,28 @@ func MkPathLockTable() *PathLockTable {
 	return plt
 }
 
-func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
-	plt.Lock()
-	defer plt.Unlock()
-
-	p := path.String()
-
-	lk, ok := plt.locks[p]
+// Caller must hold plt lock
+func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
+	lk, ok := plt.locks[pn]
 	if !ok {
-		db.DPrintf("LOCKMAP", "allocLock '%v'\n", path)
-		lk = mkLock(p)
-		plt.locks[p] = lk
+		db.DPrintf("LOCKMAP", "allocLock '%s'\n", pn)
+		lk = mkLock(pn)
+		plt.locks[pn] = lk
 	}
 	lk.nref++ // ensure ws won't be deleted from table
 	return lk
+}
+
+func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
+	plt.Lock()
+	defer plt.Unlock()
+	return plt.allocLockStringL(path.String())
+}
+
+func (plt *PathLockTable) allocLockString(pn string) *PathLock {
+	plt.Lock()
+	defer plt.Unlock()
+	return plt.allocLockStringL(pn)
 }
 
 // XXX Normalize paths (e.g., delete extra /) so that matches
@@ -70,7 +78,7 @@ func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
 func (plt *PathLockTable) Acquire(path np.Path) *PathLock {
 	lk := plt.allocLock(path)
 	lk.Lock()
-	db.DPrintf("LOCKMAP", "Lock '%v'\n", path)
+	db.DPrintf("LOCKMAP", "Lock '%s'\n", lk.path)
 	return lk
 }
 
@@ -102,9 +110,20 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 // Release watch for path. Caller should have watch locked through
 // Acquire().
 func (plt *PathLockTable) Release(lk *PathLock) {
-	db.DPrintf("LOCKMAP", "Release '%v'\n", lk.path)
+	db.DPrintf("LOCKMAP", "Release '%s'\n", lk.path)
 	lk.Unlock()
 	plt.release(lk)
+}
+
+// Caller must have dlk locked
+func (plt *PathLockTable) HandOverLock(dlk *PathLock, name string) *PathLock {
+	flk := plt.allocLockString(dlk.path + "/" + name)
+
+	db.DPrintf("LOCKMAP", "HandoverLock '%s' %s\n", dlk.path, name)
+
+	flk.Lock()
+	plt.Release(dlk)
+	return flk
 }
 
 func (plt *PathLockTable) AcquireLocks(dir np.Path, file string) (*PathLock, *PathLock) {

@@ -165,7 +165,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	if monitor {
 		pdc.MonitorProcds()
 		defer pdc.Done()

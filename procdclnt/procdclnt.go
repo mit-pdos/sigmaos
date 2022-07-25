@@ -14,7 +14,8 @@ import (
 )
 
 type ProcdClnt struct {
-	done int32
+	done    int32
+	realmid string
 	*fslib.FsLib
 }
 
@@ -29,8 +30,8 @@ func nprocd(sts []*np.Stat) int {
 	return len(sts) - 1
 }
 
-func MakeProcdClnt(fsl *fslib.FsLib) *ProcdClnt {
-	return &ProcdClnt{0, fsl}
+func MakeProcdClnt(fsl *fslib.FsLib, realmid string) *ProcdClnt {
+	return &ProcdClnt{0, realmid, fsl}
 }
 
 func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
@@ -92,13 +93,17 @@ func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
 }
 
 func (pdc *ProcdClnt) MonitorProcds() {
+	var realmstr string
+	if pdc.realmid != "" {
+		realmstr = "[" + pdc.realmid + "] "
+	}
 	go func() {
 		for atomic.LoadInt32(&pdc.done) == 0 {
 			n, load, err := pdc.Nprocd()
 			if err != nil && atomic.LoadInt32(&pdc.done) == 0 {
 				db.DFatalf("Nprocd err %v\n", err)
 			}
-			db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
+			db.DPrintf(db.ALWAYS, "%vnprocd = %d %v\n", realmstr, n, load)
 			// Sleep for 10 seconds, but do so in an interruptible way.
 			for i := 0; i < 10 && atomic.LoadInt32(&pdc.done) == 0; i++ {
 				time.Sleep(1 * time.Second)

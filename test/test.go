@@ -85,6 +85,10 @@ func (ts *Tstate) RunningInRealm() bool {
 	return ts.realmid != ""
 }
 
+func (ts *Tstate) RealmId() string {
+	return ts.realmid
+}
+
 func (ts *Tstate) Shutdown() {
 	db.DPrintf("TEST", "Shutting down")
 	ts.System.Shutdown()

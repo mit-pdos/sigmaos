@@ -333,7 +333,7 @@ func (c *Coord) Round() {
 }
 
 func (c *Coord) monitorProcds() {
-	pdc := procdclnt.MakeProcdClnt(c.FsLib)
+	pdc := procdclnt.MakeProcdClnt(c.FsLib, "")
 	n := 0
 	for atomic.LoadInt32(&c.done) == 0 {
 		m, err := pdc.WaitProcdChange(n)

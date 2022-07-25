@@ -67,7 +67,7 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	ji.StartMRJob()
@@ -79,7 +79,7 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 
 func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*KVJobInstance)
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	// Start some balancers

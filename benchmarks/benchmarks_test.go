@@ -40,8 +40,8 @@ const (
 	MR_APP               = "mr-grep-wiki2G.yml"
 	N_MR_JOBS_APP        = 1
 	N_KV_JOBS_APP        = 1
-	KV_CLERK_NCLERKS_APP = 1
-	KV_CLERK_NPUTGET_APP = 10000
+	KV_CLERK_NCLERKS_APP = 2
+	KV_CLERK_NPUTGET_APP = 100000
 	KV_CLERK_NCORE_APP   = 1
 	KV_KVD_NCORE_APP     = 2
 )

@@ -387,7 +387,7 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 	}
 
 	// If there are a lot of procs waiting to be run/stolen...
-	if m.getRealmQueueLen() > int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
+	if m.getRealmQueueLen() >= int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
 		return true
 	}
 

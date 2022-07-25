@@ -16,10 +16,11 @@ import (
 
 type KVJobInstance struct {
 	nkvd     int             // Number of kvd groups to run the test with.
+	kvdrepl  int             // kvd replication level
 	phase    int             // Current phase of execution
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
-	ckputget int             // Number of puts & gets each clerk will do.
+	ckdur    string          // Duration for which the clerk will do puts & gets.
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
@@ -29,12 +30,13 @@ type KVJobInstance struct {
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int, kvdncore, ckncore proc.Tcore) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
+	ji.kvdrepl = kvdrepl
 	ji.nclerks = nclerks
 	ji.phases = phases
-	ji.ckputget = ckputget
+	ji.ckdur = ckdur
 	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
@@ -96,12 +98,8 @@ func (ji *KVJobInstance) WaitForClerks() {
 		status, err := ji.WaitExit(cpid)
 		assert.Nil(ji.T, err, "StopClerk: %v", err)
 		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
-		d := time.Duration(status.Data().(float64)) // * time.Microsecond
-		// ckputget puts & ckputget gets
-		nops := 2 * ji.ckputget
-		tpt := float64(nops) / d.Seconds()
+		tpt := status.Data().(float64)
 		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
-		db.DPrintf(db.ALWAYS, "Time: %v", d)
 	}
 	ji.cpids = ji.cpids[:0]
 }
@@ -110,7 +108,7 @@ func (ji *KVJobInstance) AddKVDGroup() {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
 	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, ji.kvdncore, kv.KVD_REPL_LEVEL, 0))
+	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, ji.kvdncore, ji.kvdrepl, 0))
 	// Get balancer to add the group
 	err := kv.BalancerOpRetry(ji.FsLib, "add", grp)
 	assert.Nil(ji.T, err, "BalancerOp add: %v", err)
@@ -135,7 +133,7 @@ func (ji *KVJobInstance) StartClerk() {
 	if len(ji.phases) > 0 {
 		args = nil
 	} else {
-		args = append(args, strconv.Itoa(ji.ckputget))
+		args = append(args, ji.ckdur)
 	}
 	pid, err := kv.StartClerk(ji.ProcClnt, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)

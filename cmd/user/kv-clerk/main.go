@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -18,15 +17,15 @@ var done = int32(0)
 
 func main() {
 	if len(os.Args) < 1 {
-		db.DFatalf("%v too few args", os.Args[0])
+		db.DFatalf("Usage: %v [duration]", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
-	var putget bool
-	var nputget uint64
+	var timed bool
+	var dur time.Duration
 	if len(os.Args) > 1 {
-		putget = true
+		timed = true
 		var err error
-		nputget, err = strconv.ParseUint(os.Args[1], 10, 64)
+		dur, err = time.ParseDuration(os.Args[1])
 		if err != nil {
 			db.DFatalf("Bad nput %v", err)
 		}
@@ -42,7 +41,7 @@ func main() {
 
 	clk.Started()
 	db.DPrintf(db.ALWAYS, "KV clerk Started")
-	run(clk, p, putget, nputget)
+	run(clk, p, timed, dur)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -54,16 +53,24 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget uint64) {
+func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration) {
 	ntest := uint64(0)
+	nops := uint64(0)
 	var err error
-	go waitEvict(kc)
+	if timed {
+		// Run for duration dur, then mark as done.
+		go func() {
+			time.Sleep(dur)
+			atomic.StoreInt32(&done, 1)
+		}()
+	} else {
+		go waitEvict(kc)
+	}
 	start := time.Now()
-	// Run until we've done nputget puts & gets (if this is a bounded clerk) or
-	// we are done (otherwise).
-	for (putget && ntest*kv.NKEYS < nputget) || (!putget && atomic.LoadInt32(&done) == 0) {
-		// this does NKEYS puts & gets, or appends & checks.
-		err = test(kc, ntest, p, putget)
+	for atomic.LoadInt32(&done) == 0 {
+		// this does NKEYS puts & gets, or appends & checks, depending on whether
+		// this is a time-bound clerk or an unbounded clerk.
+		err = test(kc, ntest, &nops, p, timed)
 		if err != nil {
 			break
 		}
@@ -74,9 +81,10 @@ func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget uint64) {
 	if err != nil {
 		status = proc.MakeStatusErr(err.Error(), nil)
 	} else {
-		if putget {
+		if timed {
 			// If this was a bounded clerk, we should return status ok.
-			status = proc.MakeStatusInfo(proc.StatusOK, "e2e time", time.Since(start))
+			d := time.Since(start)
+			status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
 			status = proc.MakeStatus(proc.StatusEvicted)
@@ -125,22 +133,24 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	return nil
 }
 
-func test(kc *kv.KvClerk, ntest uint64, p *perf.Perf, putget bool) error {
+func test(kc *kv.KvClerk, ntest uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i)
 		v := Value{proc.GetPid(), key, ntest}
-		if putget {
-			// If doing puts & gets (bounded clerk)
+		if setget {
+			// If doing sets & gets (bounded clerk)
 			if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
+			*nops++
 			if _, err := kc.Get(key, 0); err != nil {
 				return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
+			*nops++
 		} else {
 			// If doing appends (unbounded clerk)
 			if err := kc.AppendJson(key, v); err != nil {
@@ -148,6 +158,7 @@ func test(kc *kv.KvClerk, ntest uint64, p *perf.Perf, putget bool) error {
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
+			*nops++
 			if err := check(kc, key, ntest, p); err != nil {
 				db.DPrintf(db.ALWAYS, "check failed %v\n", err)
 				return err

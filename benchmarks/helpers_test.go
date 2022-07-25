@@ -136,7 +136,7 @@ func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
 	return ds
 }
 
-func makeNKVJobs(ts *test.Tstate, n, nkvd int, nclerks []int, phases []time.Duration, ckputget int, kvdncore, ckncore proc.Tcore) ([]*KVJobInstance, []interface{}) {
+func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore) ([]*KVJobInstance, []interface{}) {
 	// If we're running with unbounded clerks...
 	if len(phases) > 0 {
 		assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
@@ -144,7 +144,7 @@ func makeNKVJobs(ts *test.Tstate, n, nkvd int, nclerks []int, phases []time.Dura
 	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ji := MakeKVJobInstance(ts, nkvd, nclerks, phases, ckputget, kvdncore, ckncore)
+		ji := MakeKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdncore, ckncore)
 		js = append(js, ji)
 		is = append(is, ji)
 	}

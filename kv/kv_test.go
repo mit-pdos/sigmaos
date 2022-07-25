@@ -144,7 +144,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt)
+		pid, err := kv.StartClerk(ts.ProcClnt, nil)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}

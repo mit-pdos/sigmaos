@@ -3,6 +3,7 @@ package procdclnt
 import (
 	//"encoding/json"
 	"fmt"
+	"path"
 	"sync/atomic"
 	"time"
 
@@ -63,11 +64,11 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		if st.Name == "ws" {
 			continue
 		}
-		nproc, err := pdc.Nprocs(np.PROCD + "/" + st.Name + "/running")
+		nproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNNING))
 		if err != nil {
 			return r, nil, err
 		}
-		mproc, err := pdc.Nprocs(np.PROCD + "/" + st.Name + "/runq-be")
+		mproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNQ_BE))
 		if err != nil {
 			return r, nil, err
 		}

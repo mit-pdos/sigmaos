@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procdclnt"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
@@ -65,6 +66,10 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji.PrepareMRJob()
 	ji.ready <- true
 	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+	pdc.MonitorProcds()
+	defer pdc.Done()
 	ji.StartMRJob()
 	ji.Wait()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)

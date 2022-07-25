@@ -22,11 +22,11 @@ func main() {
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var putget bool
-	var nputget int
+	var nputget uint64
 	if len(os.Args) > 1 {
 		putget = true
 		var err error
-		nputget, err = strconv.Atoi(os.Args[1])
+		nputget, err = strconv.ParseUint(os.Args[1], 10, 64)
 		if err != nil {
 			db.DFatalf("Bad nput %v", err)
 		}
@@ -53,14 +53,14 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget int) {
+func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget uint64) {
 	ntest := uint64(0)
 	var err error
 	go waitEvict(kc)
 	start := time.Now()
 	// Run until we've done nputget puts & gets (if this is a bounded clerk) or
 	// we are done (otherwise).
-	for i := 0; (putget && i/kv.NKEYS < nputget) || (!putget && atomic.LoadInt32(&done) == 0); i++ {
+	for (putget && ntest*kv.NKEYS < nputget) || (!putget && atomic.LoadInt32(&done) == 0) {
 		// this does NKEYS puts & gets, or appends & checks.
 		err = test(kc, ntest, p, putget)
 		if err != nil {

@@ -89,7 +89,6 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
 	}
-	//	time.Sleep(10 * time.Second)
 	// Note that we are prepared to run the job.
 	ji.ready <- true
 	// Wait for an ack.

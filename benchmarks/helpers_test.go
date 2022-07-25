@@ -136,12 +136,12 @@ func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
 	return ds
 }
 
-func makeNKVJobs(ts *test.Tstate, n, nkvd int, nclerks []int, phases []time.Duration) ([]*KVJobInstance, []interface{}) {
+func makeNKVJobs(ts *test.Tstate, n, nkvd int, nclerks []int, phases []time.Duration, ckputget int) ([]*KVJobInstance, []interface{}) {
 	assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
 	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ji := MakeKVJobInstance(ts, nkvd, nclerks, phases)
+		ji := MakeKVJobInstance(ts, nkvd, nclerks, phases, ckputget)
 		js = append(js, ji)
 		is = append(is, ji)
 	}

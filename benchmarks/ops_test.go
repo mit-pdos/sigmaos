@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
+	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/semclnt"
 	"ulambda/test"

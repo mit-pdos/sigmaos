@@ -15,22 +15,24 @@ import (
 )
 
 type KVJobInstance struct {
-	nkvd    int             // Number of kvd groups to run the test with.
-	phase   int             // Current phase of execution
-	nclerks []int           // Number of clerks in each phase of the test.
-	phases  []time.Duration // Duration of each phase of the test.
-	ready   chan bool
-	balgm   *groupmgr.GroupMgr
-	kvdgms  []*groupmgr.GroupMgr
-	cpids   []proc.Tpid
+	nkvd     int             // Number of kvd groups to run the test with.
+	phase    int             // Current phase of execution
+	nclerks  []int           // Number of clerks in each phase of the test.
+	phases   []time.Duration // Duration of each phase of the test.
+	ckputget string          // Number of puts & gets each clerk will do.
+	ready    chan bool
+	balgm    *groupmgr.GroupMgr
+	kvdgms   []*groupmgr.GroupMgr
+	cpids    []proc.Tpid
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
 	ji.nclerks = nclerks
 	ji.phases = phases
+	ji.ckputget = strconv.Itoa(ckputget)
 	ji.ready = make(chan bool)
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
@@ -50,7 +52,7 @@ func (ji *KVJobInstance) StartKVJob() {
 
 // Returns true if there are no more phases left to execute.
 func (ji *KVJobInstance) IsDone() bool {
-	return ji.phase >= len(ji.phases)
+	return ji.phase >= len(ji.nclerks)
 }
 
 // Perform the next phase of the job.
@@ -72,10 +74,26 @@ func (ji *KVJobInstance) NextPhase() {
 	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get righ num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
 	// Sleep for the duration of this phase.
 	db.DPrintf("TEST", "Phase %v: sleep", ji.phase)
-	time.Sleep(ji.phases[ji.phase])
+	// If running with unbounded clerks, sleep for a bit.
+	if len(ji.phases) > 0 {
+		time.Sleep(ji.phases[ji.phase])
+	} else {
+		// Otherwise, wait for bounded clerks to finish.
+		ji.WaitForClerks()
+	}
 	db.DPrintf("TEST", "Phase %v: done", ji.phase)
 	// Move to the  next phase
 	ji.phase++
+}
+
+// If running with bounded clerks, wait for clerks to run.
+func (ji *KVJobInstance) WaitForClerks() {
+	for _, cpid := range ji.cpids {
+		status, err := ji.WaitExit(cpid)
+		assert.Nil(ji.T, err, "StopClerk: %v", err)
+		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
+	}
+	ji.cpids = ji.cpids[:0]
 }
 
 func (ji *KVJobInstance) AddKVDGroup() {
@@ -103,7 +121,13 @@ func (ji *KVJobInstance) RemoveKVDGroup() {
 }
 
 func (ji *KVJobInstance) StartClerk() {
-	pid, err := kv.StartClerk(ji.ProcClnt)
+	var args []string
+	if len(ji.phases) > 0 {
+		args = nil
+	} else {
+		args = append(args, ji.ckputget)
+	}
+	pid, err := kv.StartClerk(ji.ProcClnt, args)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
 	ji.cpids = append(ji.cpids, pid)
 }
@@ -114,7 +138,7 @@ func (ji *KVJobInstance) StopClerk() {
 	cpid, ji.cpids = ji.cpids[0], ji.cpids[1:]
 	status, err := kv.StopClerk(ji.ProcClnt, cpid)
 	assert.Nil(ji.T, err, "StopClerk: %v", err)
-	assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
+	assert.True(ji.T, status.IsStatusEvicted(), "Exit status: %v", status)
 }
 
 func (ji *KVJobInstance) Stop() {

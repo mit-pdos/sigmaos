@@ -80,9 +80,7 @@ func setVersion() {
 func (ts *Tstate) spawnSpinner() proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
-	a.Ncore = proc.Tcore(1)
-	// Make procs LC to ensure we respect Ncore
-	a.Type = proc.T_LC
+	a.SetNcore(1)
 	err := ts.Spawn(a)
 	if err != nil {
 		db.DFatalf("Error Spawn in RealmBalanceBenchmark.spawnSpinner: %v", err)

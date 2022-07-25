@@ -42,11 +42,7 @@ func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
 func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
-	a.Ncore = ncore
-	if ncore > 0 {
-		// Make procs LC to ensure we respect Ncore
-		a.Type = proc.T_LC
-	}
+	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return pid
@@ -56,8 +52,7 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
 		p := proc.MakeProc("user/spinner", []string{"name/"})
-		p.Ncore = 1
-		p.Type = proc.T_LC
+		p.SetNcore(1)
 		ps = append(ps, p)
 	}
 	failed, errs := ts.SpawnBurst(ps)
@@ -77,12 +72,7 @@ func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 
 func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
 	a := proc.MakeProcPid(pid, "user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
-	a.Type = proc.T_LC
-	a.Ncore = ncore
-	if ncore > 0 {
-		// Make procs LC to ensure we respect Ncore
-		a.Type = proc.T_LC
-	}
+	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }

@@ -81,6 +81,15 @@ func (p *Proc) SetParentDir(parentdir string) {
 	}
 }
 
+// Set the number of cores on this proc. If > 0, then this proc is LC. For now,
+// LC procs necessarily must specify LC > 1.
+func (p *Proc) SetNcore(ncore Tcore) {
+	if ncore > Tcore(0) {
+		p.Type = T_LC
+		p.Ncore = ncore
+	}
+}
+
 func (p *Proc) setProcDir(procdIp string) {
 	if p.IsPrivilegedProc() {
 		p.ProcDir = path.Join(KPIDS, p.Pid.String())

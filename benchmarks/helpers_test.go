@@ -30,12 +30,7 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProc(prog, args)
 		p.Env = append(p.Env, env...)
-		if ncore > 0 {
-			p.Type = proc.T_LC
-			p.Ncore = ncore
-		} else {
-			p.Type = proc.T_BE
-		}
+		p.SetNcore(ncore)
 		ps = append(ps, p)
 		is = append(is, p)
 	}

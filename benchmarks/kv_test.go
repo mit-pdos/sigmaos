@@ -101,6 +101,7 @@ func (ji *KVJobInstance) WaitForClerks() {
 		nops := 2 * ji.ckputget
 		tpt := float64(nops) / d.Seconds()
 		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
+		db.DPrintf(db.ALWAYS, "Time: %v", d)
 	}
 	ji.cpids = ji.cpids[:0]
 }

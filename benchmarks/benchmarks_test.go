@@ -37,9 +37,13 @@ const (
 
 // ========== App parameters ==========
 const (
-	MR_APP        = "mr-grep-wiki2G.yml"
-	N_MR_JOBS_APP = 1
-	N_KV_JOBS_APP = 1
+	MR_APP               = "mr-grep-wiki2G.yml"
+	N_MR_JOBS_APP        = 1
+	N_KV_JOBS_APP        = 1
+	KV_CLERK_NCLERKS_APP = 1
+	KV_CLERK_NPUTGET_APP = 10000
+	KV_CLERK_NCORE_APP   = 1
+	KV_KVD_NCORE_APP     = 2
 )
 
 // ========== Realm parameters ==========
@@ -210,8 +214,8 @@ func TestAppRunKVPerKVDThroughput(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)
-	nclerks := []int{1}
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, nclerks, nil, 100, proc.Tcore(1), proc.Tcore(1))
+	nclerks := []int{KV_CLERK_NCLERKS_APP}
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, nclerks, nil, KV_CLERK_NPUTGET_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

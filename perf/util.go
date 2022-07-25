@@ -47,6 +47,12 @@ const (
 	TPT         = "_TPT"
 )
 
+type Tload [3]float64
+
+func (t Tload) String() string {
+	return fmt.Sprintf("[%.1f %.1f %.1f]", t[0], t[1], t[2])
+}
+
 var labels map[string]bool
 
 func init() {
@@ -189,6 +195,28 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 		}
 	}
 	return
+}
+
+func GetLinuxLoad() Tload {
+	b, err := ioutil.ReadFile("/proc/loadavg")
+	if err != nil {
+		db.DFatalf("Couldn't read load file: %v", err)
+	}
+	loadstr := strings.Split(string(b), " ")
+	load := Tload{}
+	load[0], err = strconv.ParseFloat(loadstr[0], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	load[1], err = strconv.ParseFloat(loadstr[1], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	load[2], err = strconv.ParseFloat(loadstr[2], 64)
+	if err != nil {
+		db.DFatalf("Couldn't parse float: %v", err)
+	}
+	return load
 }
 
 func UtilFromCPUTimeSample(utime0, stime0, utime1, stime1 uint64, secs float64) float64 {

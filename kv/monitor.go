@@ -9,6 +9,7 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/procclnt"
 	"ulambda/stats"
 )
@@ -128,7 +129,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	util := float64(0)
 	low := float64(100.0)
 	lowkv := ""
-	var lowload stats.Tload
+	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
 		kvgrp := group.GrpDir(gn) + np.STATSD

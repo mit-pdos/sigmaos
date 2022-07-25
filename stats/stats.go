@@ -3,11 +3,9 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -28,11 +26,6 @@ const STATS = true
 
 type Tcounter uint64
 type TCycles uint64
-type Tload [3]float64
-
-func (t Tload) String() string {
-	return fmt.Sprintf("[%.1f %.1f %.1f]", t[0], t[1], t[2])
-}
 
 func (c *Tcounter) Inc() {
 	if STATS {
@@ -65,7 +58,7 @@ type StatInfo struct {
 
 	Paths map[string]int
 
-	Load Tload
+	Load perf.Tload
 	Util float64
 }
 
@@ -144,33 +137,11 @@ func (st *Stats) GetUtil() float64 {
 	return st.sti.Util
 }
 
-func (st *Stats) GetLoad() Tload {
-	b, err := ioutil.ReadFile("/proc/loadavg")
-	if err != nil {
-		db.DFatalf("Couldn't read load file: %v", err)
-	}
-	loadstr := strings.Split(string(b), " ")
-	load := Tload{}
-	load[0], err = strconv.ParseFloat(loadstr[0], 64)
-	if err != nil {
-		db.DFatalf("Couldn't parse float: %v", err)
-	}
-	load[1], err = strconv.ParseFloat(loadstr[1], 64)
-	if err != nil {
-		db.DFatalf("Couldn't parse float: %v", err)
-	}
-	load[2], err = strconv.ParseFloat(loadstr[2], 64)
-	if err != nil {
-		db.DFatalf("Couldn't parse float: %v", err)
-	}
-	return load
-}
-
-func (st *Stats) GetCustomLoad() Tload {
+func (st *Stats) GetLoad() perf.Tload {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
-	load := Tload{}
+	load := perf.Tload{}
 	load[0] = st.sti.Load[0]
 	load[1] = st.sti.Load[1]
 	load[2] = st.sti.Load[2]
@@ -197,28 +168,6 @@ const (
 	MS    = 100    // 100 ms
 	SEC   = 1000   // 1s
 )
-
-// XXX nthread includes 2 threads per conn
-//func (st *Stats) load(ticks uint64) {
-//	st.mu.Lock()
-//	defer st.mu.Unlock()
-//	j := SEC / st.hz
-//	ncpu := runtime.GOMAXPROCS(0)
-//
-//	util := 100.0 * float64(ticks) / float64(MS/j)
-//	util = util / float64(ncpu)
-//
-//	nthread := float64(runtime.NumGoroutine())
-//
-//	st.sti.Load[0] *= EXP_0
-//	st.sti.Load[0] += (1 - EXP_0) * nthread
-//	st.sti.Load[1] *= EXP_1
-//	st.sti.Load[1] += (1 - EXP_1) * nthread
-//	st.sti.Load[2] *= EXP_2
-//	st.sti.Load[2] += (1 - EXP_2) * nthread
-//
-//	st.sti.Util = util
-//}
 
 // Caller holds lock
 func (st *Stats) loadCPUUtilL(idle, total uint64) {

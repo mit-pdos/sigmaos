@@ -63,7 +63,6 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 		sclnt := semclnt.MakeSemClnt(kc.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
-		db.DPrintf(db.ALWAYS, "KV clerk Started")
 		go func() {
 			time.Sleep(dur)
 			atomic.StoreInt32(&done, 1)
@@ -81,7 +80,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 		}
 		ntest += 1
 	}
-	db.DPrintf(db.ALWAYS, "%v: done ntest %v err %v\n", proc.GetName(), ntest, err)
+	db.DPrintf(db.ALWAYS, "%v: done ntest %v elapsed %v err %v\n", proc.GetName(), ntest, time.Since(start), err)
 	var status *proc.Status
 	if err != nil {
 		status = proc.MakeStatusErr(err.Error(), nil)
@@ -96,7 +95,6 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 		}
 	}
 	kc.Exited(status)
-	db.DPrintf(db.ALWAYS, "KV clerk Exited")
 }
 
 type Value struct {

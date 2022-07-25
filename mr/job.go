@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync/atomic"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -16,6 +18,7 @@ import (
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
+	"ulambda/procdclnt"
 	"ulambda/test"
 )
 
@@ -159,6 +162,22 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 		}
 	}
 	return nil
+}
+
+func MonitorProcds(fsl *fslib.FsLib, done *int32) {
+	go func() {
+		pdc := procdclnt.MakeProcdClnt(fsl)
+		for atomic.LoadInt32(done) == 0 {
+			n, load, err := pdc.Nprocd()
+			if err != nil && atomic.LoadInt32(done) == 0 {
+				db.DFatalf("Nprocd err %v\n", err)
+			}
+			db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
+			for i := 0; i < 10 && atomic.LoadInt32(done) == 0; i++ {
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}()
 }
 
 func PrintMRStats(fsl *fslib.FsLib, job string) error {

@@ -19,7 +19,6 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procdclnt"
 	rd "ulambda/rand"
 	"ulambda/test"
 )
@@ -168,19 +167,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	done := int32(0)
 	if monitor {
-		go func() {
-			pdc := procdclnt.MakeProcdClnt(ts.FsLib)
-			for atomic.LoadInt32(&done) == 0 {
-				n, load, err := pdc.Nprocd()
-				if err != nil && atomic.LoadInt32(&done) == 0 {
-					db.DFatalf("Nprocd err %v\n", err)
-				}
-				db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
-				for i := 0; i < 10 && atomic.LoadInt32(&done) == 0; i++ {
-					time.Sleep(1 * time.Second)
-				}
-			}
-		}()
+		mr.MonitorProcds(ts.FsLib, &done)
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
@@ -212,9 +199,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
-	if monitor {
-		atomic.StoreInt32(&done, 1)
-	}
+	atomic.StoreInt32(&done, 1)
 
 	ts.Shutdown()
 }

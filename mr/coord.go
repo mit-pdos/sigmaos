@@ -346,18 +346,6 @@ func (c *Coord) monitorProcds() {
 	}
 }
 
-func (c *Coord) monitorProcs() {
-	pdc := procdclnt.MakeProcdClnt(c.FsLib)
-	for atomic.LoadInt32(&c.done) == 0 {
-		n, load, err := pdc.Nprocd()
-		if err != nil && atomic.LoadInt32(&c.done) == 0 {
-			db.DFatalf("Nprocd err %v\n", err)
-		}
-		db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
-		time.Sleep(10 * time.Second)
-	}
-}
-
 func (c *Coord) Work() {
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
@@ -367,7 +355,6 @@ func (c *Coord) Work() {
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
 	go c.monitorProcds()
-	go c.monitorProcs()
 
 	c.recover(MapTask(c.job))
 	c.recover(ReduceTask(c.job))

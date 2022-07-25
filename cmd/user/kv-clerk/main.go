@@ -41,6 +41,7 @@ func main() {
 	defer p.Done()
 
 	clk.Started()
+	db.DPrintf(db.ALWAYS, "KV clerk Started")
 	run(clk, p, putget, nputget)
 }
 
@@ -82,6 +83,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, putget bool, nputget uint64) {
 		}
 	}
 	kc.Exited(status)
+	db.DPrintf(db.ALWAYS, "KV clerk Exited")
 }
 
 type Value struct {

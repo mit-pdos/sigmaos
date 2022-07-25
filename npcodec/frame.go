@@ -82,11 +82,11 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 		data = msg.Data
 		dataBuf = true
 	case np.TRread:
-		msg := fcall.GetMsg().(np.Rread)
+		msg := fcall.GetMsg().(*np.Rread)
 		data = msg.Data
 		dataBuf = true
 	case np.TRgetfile:
-		msg := fcall.GetMsg().(np.Rgetfile)
+		msg := fcall.GetMsg().(*np.Rgetfile)
 		data = msg.Data
 		dataBuf = true
 	case np.TTsetfile:

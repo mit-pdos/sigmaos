@@ -19,7 +19,7 @@ type KVJobInstance struct {
 	phase    int             // Current phase of execution
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
-	ckputget string          // Number of puts & gets each clerk will do.
+	ckputget int             // Number of puts & gets each clerk will do.
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
@@ -34,7 +34,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.D
 	ji.nkvd = nkvd
 	ji.nclerks = nclerks
 	ji.phases = phases
-	ji.ckputget = strconv.Itoa(ckputget)
+	ji.ckputget = ckputget
 	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
@@ -96,6 +96,11 @@ func (ji *KVJobInstance) WaitForClerks() {
 		status, err := ji.WaitExit(cpid)
 		assert.Nil(ji.T, err, "StopClerk: %v", err)
 		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
+		d := time.Duration(status.Data().(float64)) // * time.Microsecond
+		// ckputget puts & ckputget gets
+		nops := 2 * ji.ckputget
+		tpt := float64(nops) / d.Seconds()
+		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
 	}
 	ji.cpids = ji.cpids[:0]
 }
@@ -129,7 +134,7 @@ func (ji *KVJobInstance) StartClerk() {
 	if len(ji.phases) > 0 {
 		args = nil
 	} else {
-		args = append(args, ji.ckputget)
+		args = append(args, strconv.Itoa(ji.ckputget))
 	}
 	pid, err := kv.StartClerk(ji.ProcClnt, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)

@@ -10,6 +10,7 @@ import (
 	//	db "ulambda/debug"
 	"ulambda/benchmarks"
 	"ulambda/linuxsched"
+	"ulambda/proc"
 	"ulambda/test"
 )
 
@@ -191,6 +192,26 @@ func TestAppRunKV(t *testing.T) {
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
 	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0, 0, 0)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runKV, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
+func TestAppRunKVPerKVDThroughput(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	setNCoresSigmaRealm(ts)
+	nclerks := []int{1}
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, nclerks, nil, 100, proc.Tcore(1), proc.Tcore(1))
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

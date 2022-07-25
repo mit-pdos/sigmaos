@@ -86,7 +86,7 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji.StartKVJob()
 	db.DPrintf("TEST", "Made KV job")
 	// Add more kvd groups.
-	for i := 0; i < ji.nkvd; i++ {
+	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
 	}
 	time.Sleep(10 * time.Second)

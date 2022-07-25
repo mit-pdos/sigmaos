@@ -138,6 +138,19 @@ func (p *Perf) TptTick(tpt float64) {
 	p.tpts[len(p.tpts)-1] += tpt
 }
 
+func (p *Perf) SumTicks() float64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.tpt {
+		return 0.0
+	}
+	sum := float64(0)
+	for _, tpt := range p.tpts {
+		sum += tpt
+	}
+	return sum
+}
+
 func (p *Perf) Done() {
 	p.mu.Lock()
 	defer p.mu.Unlock()

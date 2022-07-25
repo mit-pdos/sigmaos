@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"path"
 	"strconv"
 	"time"
 
@@ -11,29 +12,45 @@ import (
 	"ulambda/groupmgr"
 	"ulambda/kv"
 	"ulambda/proc"
+	"ulambda/rand"
+	"ulambda/semclnt"
 	"ulambda/test"
 )
 
 type KVJobInstance struct {
 	nkvd     int             // Number of kvd groups to run the test with.
+	kvdrepl  int             // kvd replication level
 	phase    int             // Current phase of execution
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
-	ckputget string          // Number of puts & gets each clerk will do.
+	ckdur    string          // Duration for which the clerk will do puts & gets.
+	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
+	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
+	sem      *semclnt.SemClnt
+	sempath  string
 	balgm    *groupmgr.GroupMgr
 	kvdgms   []*groupmgr.GroupMgr
 	cpids    []proc.Tpid
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
+	ji.kvdrepl = kvdrepl
 	ji.nclerks = nclerks
 	ji.phases = phases
-	ji.ckputget = strconv.Itoa(ckputget)
+	ji.ckdur = ckdur
+	ji.kvdncore = kvdncore
+	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
+	if len(phases) == 0 {
+		ji.sempath = path.Join("name", "kvclerk-sem-"+rand.String(16))
+		ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
+		err := ji.sem.Init(0)
+		assert.Nil(ts.T, err, "Sem init: %v", err)
+	}
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
 	ji.Tstate = ts
@@ -42,7 +59,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.D
 
 func (ji *KVJobInstance) StartKVJob() {
 	// XXX auto or manual?
-	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, "0", "manual")
+	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, kv.NBALANCER, 0, ji.kvdncore, "0", "manual")
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
@@ -70,6 +87,8 @@ func (ji *KVJobInstance) NextPhase() {
 	for ; diff < 0; diff++ {
 		ji.StartClerk()
 	}
+	// All clerks have started and can start doing ops.
+	ji.AllClerksStarted()
 	// Make sure we got the number of clerks right.
 	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get righ num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
 	// Sleep for the duration of this phase.
@@ -86,13 +105,25 @@ func (ji *KVJobInstance) NextPhase() {
 	ji.phase++
 }
 
+func (ji *KVJobInstance) AllClerksStarted() {
+	if len(ji.phases) > 0 {
+		return
+	}
+	ji.sem.Up()
+}
+
 // If running with bounded clerks, wait for clerks to run.
 func (ji *KVJobInstance) WaitForClerks() {
+	aggTpt := float64(0)
 	for _, cpid := range ji.cpids {
 		status, err := ji.WaitExit(cpid)
 		assert.Nil(ji.T, err, "StopClerk: %v", err)
 		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
+		tpt := status.Data().(float64)
+		aggTpt += tpt
+		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
 	}
+	db.DPrintf(db.ALWAYS, "Aggregate throughput (ops/sec): %v", aggTpt)
 	ji.cpids = ji.cpids[:0]
 }
 
@@ -100,7 +131,7 @@ func (ji *KVJobInstance) AddKVDGroup() {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
 	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, kv.KVD_REPL_LEVEL, 0))
+	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, ji.kvdncore, ji.kvdrepl, 0))
 	// Get balancer to add the group
 	err := kv.BalancerOpRetry(ji.FsLib, "add", grp)
 	assert.Nil(ji.T, err, "BalancerOp add: %v", err)
@@ -125,9 +156,9 @@ func (ji *KVJobInstance) StartClerk() {
 	if len(ji.phases) > 0 {
 		args = nil
 	} else {
-		args = append(args, ji.ckputget)
+		args = append(args, ji.ckdur, ji.sempath)
 	}
-	pid, err := kv.StartClerk(ji.ProcClnt, args)
+	pid, err := kv.StartClerk(ji.ProcClnt, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
 	ji.cpids = append(ji.cpids, pid)
 }

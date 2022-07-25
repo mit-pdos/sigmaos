@@ -3,14 +3,19 @@ package procdclnt
 import (
 	//"encoding/json"
 	"fmt"
+	"path"
+	"sync/atomic"
+	"time"
 
-	//db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	//"ulambda/proc"
 )
 
 type ProcdClnt struct {
+	done    int32
+	realmid string
 	*fslib.FsLib
 }
 
@@ -25,8 +30,8 @@ func nprocd(sts []*np.Stat) int {
 	return len(sts) - 1
 }
 
-func MakeProcdClnt(fsl *fslib.FsLib) *ProcdClnt {
-	return &ProcdClnt{fsl}
+func MakeProcdClnt(fsl *fslib.FsLib, realmid string) *ProcdClnt {
+	return &ProcdClnt{0, realmid, fsl}
 }
 
 func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
@@ -60,15 +65,19 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		if st.Name == "ws" {
 			continue
 		}
-		nproc, err := pdc.Nprocs(np.PROCD + "/" + st.Name + "/running")
+		nproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNNING))
 		if err != nil {
 			return r, nil, err
 		}
-		mproc, err := pdc.Nprocs(np.PROCD + "/" + st.Name + "/runq-be")
+		beproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNQ_BE))
 		if err != nil {
 			return r, nil, err
 		}
-		nprocs = append(nprocs, Tload{nproc, mproc})
+		lcproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNQ_LC))
+		if err != nil {
+			return r, nil, err
+		}
+		nprocs = append(nprocs, Tload{nproc, beproc + lcproc})
 	}
 	return r, nprocs, err
 }
@@ -81,4 +90,28 @@ func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
 		return 0, err
 	}
 	return nprocd(sts), nil
+}
+
+func (pdc *ProcdClnt) MonitorProcds() {
+	var realmstr string
+	if pdc.realmid != "" {
+		realmstr = "[" + pdc.realmid + "] "
+	}
+	go func() {
+		for atomic.LoadInt32(&pdc.done) == 0 {
+			n, load, err := pdc.Nprocd()
+			if err != nil && atomic.LoadInt32(&pdc.done) == 0 {
+				db.DFatalf("Nprocd err %v\n", err)
+			}
+			db.DPrintf(db.ALWAYS, "%vnprocd = %d %v\n", realmstr, n, load)
+			// Sleep for 10 seconds, but do so in an interruptible way.
+			for i := 0; i < 10 && atomic.LoadInt32(&pdc.done) == 0; i++ {
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}()
+}
+
+func (pdc *ProcdClnt) Done() {
+	atomic.StoreInt32(&pdc.done, 1)
 }

@@ -7,9 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	//	db "ulambda/debug"
 	"ulambda/benchmarks"
+	db "ulambda/debug"
 	"ulambda/linuxsched"
+	"ulambda/proc"
 	"ulambda/test"
 )
 
@@ -36,9 +37,13 @@ const (
 
 // ========== App parameters ==========
 const (
-	MR_APP        = "mr-grep-wiki2G.yml"
-	N_MR_JOBS_APP = 1
-	N_KV_JOBS_APP = 1
+	MR_APP                = "mr-grep-wiki2G.yml"
+	N_MR_JOBS_APP         = 1
+	N_KV_JOBS_APP         = 1
+	KV_CLERK_NCLERKS_APP  = 1
+	KV_CLERK_DURATION_APP = "90s"
+	KV_CLERK_NCORE_APP    = 1
+	KV_KVD_NCORE_APP      = 2
 )
 
 // ========== Realm parameters ==========
@@ -184,13 +189,34 @@ func TestAppRunMRWC(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunKV(t *testing.T) {
+func TestAppRunKVRepl(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, 3, nclerks, phases, "", 0, 0)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runKV, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
+func TestAppRunKVPerKVDThroughput(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	setNCoresSigmaRealm(ts)
+	nclerks := []int{KV_CLERK_NCLERKS_APP}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -251,7 +277,7 @@ func TestRealmBalance(t *testing.T) {
 	// Prep KV job
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0)
+	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, 0, nclerks, phases, "", 0, 0)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"sync/atomic"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -18,7 +16,6 @@ import (
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
-	"ulambda/procdclnt"
 	"ulambda/test"
 )
 
@@ -139,7 +136,7 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 }
 
 func StartMRJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{jobname, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, ncoord, crashcoord, 0, 0)
+	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{jobname, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, 0, ncoord, crashcoord, 0, 0)
 }
 
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
@@ -162,22 +159,6 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 		}
 	}
 	return nil
-}
-
-func MonitorProcds(fsl *fslib.FsLib, done *int32) {
-	go func() {
-		pdc := procdclnt.MakeProcdClnt(fsl)
-		for atomic.LoadInt32(done) == 0 {
-			n, load, err := pdc.Nprocd()
-			if err != nil && atomic.LoadInt32(done) == 0 {
-				db.DFatalf("Nprocd err %v\n", err)
-			}
-			db.DPrintf(db.ALWAYS, "nprocd = %d %v\n", n, load)
-			for i := 0; i < 10 && atomic.LoadInt32(done) == 0; i++ {
-				time.Sleep(1 * time.Second)
-			}
-		}
-	}()
 }
 
 func PrintMRStats(fsl *fslib.FsLib, job string) error {

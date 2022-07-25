@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procdclnt"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
@@ -65,6 +66,10 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji.PrepareMRJob()
 	ji.ready <- true
 	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc.MonitorProcds()
+	defer pdc.Done()
 	ji.StartMRJob()
 	ji.Wait()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
@@ -74,11 +79,14 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 
 func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*KVJobInstance)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc.MonitorProcds()
+	defer pdc.Done()
 	// Start some balancers
 	ji.StartKVJob()
 	db.DPrintf("TEST", "Made KV job")
 	// Add more kvd groups.
-	for i := 0; i < ji.nkvd; i++ {
+	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
 	}
 	// Note that we are prepared to run the job.
@@ -86,6 +94,7 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	// Wait for an ack.
 	<-ji.ready
 	db.DPrintf("TEST", "Added KV groups")
+	db.DPrintf("TEST", "Running clerks")
 	// Run through the job phases.
 	for !ji.IsDone() {
 		ji.NextPhase()

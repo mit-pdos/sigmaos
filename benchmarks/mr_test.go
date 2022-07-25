@@ -2,7 +2,6 @@ package benchmarks_test
 
 import (
 	"path"
-	"sync/atomic"
 
 	"github.com/stretchr/testify/assert"
 
@@ -41,11 +40,9 @@ func (ji *MRJobInstance) PrepareMRJob() {
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	mr.MonitorProcds(ji.FsLib, &ji.done)
 	ji.cm = mr.StartMRJob(ji.FsLib, ji.ProcClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
 }
 
 func (ji *MRJobInstance) Wait() {
 	ji.cm.Wait()
-	atomic.StoreInt32(&ji.done, 1)
 }

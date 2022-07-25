@@ -17,6 +17,7 @@ package kv
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +56,7 @@ type Balancer struct {
 	conf       *Config
 	lc         *leaderclnt.LeaderClnt
 	mo         *Monitor
+	kvdncore   proc.Tcore
 	ch         chan bool
 	crash      int64
 	crashChild string
@@ -79,7 +81,7 @@ func shardPath(kvd string, shard Tshard) string {
 	return group.GRPDIR + "/" + kvd + "/shard" + shard.String()
 }
 
-func RunBalancer(crashChild string, auto string) {
+func RunBalancer(crashChild, kvdncore string, auto string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -89,6 +91,13 @@ func RunBalancer(crashChild string, auto string) {
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashChild = crashChild
+	var kvdnc int
+	var err error
+	kvdnc, err = strconv.Atoi(kvdncore)
+	if err != nil {
+		db.DFatalf("Bad kvdncore: %v", err)
+	}
+	bl.kvdncore = proc.Tcore(kvdnc)
 
 	// may fail if already exist
 	bl.MkDir(KVDIR, 07)
@@ -137,7 +146,7 @@ func RunBalancer(crashChild string, auto string) {
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
+			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt, bl.kvdncore)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}

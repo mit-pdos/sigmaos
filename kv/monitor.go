@@ -10,6 +10,7 @@ import (
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/perf"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
 )
@@ -64,16 +65,18 @@ type Monitor struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 
-	mu    sync.Mutex
-	group int
-	gm    *grpMap
+	mu       sync.Mutex
+	group    int
+	kvdncore proc.Tcore
+	gm       *grpMap
 }
 
-func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
+func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt, kvdncore proc.Tcore) *Monitor {
 	mo := &Monitor{}
 	mo.FsLib = fslib
 	mo.ProcClnt = pclnt
 	mo.group = 1
+	mo.kvdncore = kvdncore
 	mo.gm = mkGrpMap()
 	return mo
 }
@@ -86,14 +89,10 @@ func (mo *Monitor) nextGroup() string {
 	return group.GRP + gn
 }
 
-func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, ncrash, CRASHKVD, 0, 0)
-}
-
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf("KVMON", "Add group %v\n", gn)
-	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, KVD_NO_REPL, 0)
+	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, "add", gn)
 	if err != nil {
 		grp.Stop()

@@ -18,6 +18,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/repl"
@@ -299,6 +300,10 @@ func RunMember(grp string) {
 
 	// Release leadership.
 	g.ReleaseLeadership()
+
+	// Record performance.
+	p := perf.MakePerf("GROUP")
+	defer p.Done()
 
 	mfs.Serve()
 	mfs.Done()

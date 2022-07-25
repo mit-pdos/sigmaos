@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procdclnt"
 	rd "ulambda/rand"
 	"ulambda/test"
 )
@@ -165,9 +165,10 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	done := int32(0)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	if monitor {
-		mr.MonitorProcds(ts.FsLib, &done)
+		pdc.MonitorProcds()
+		defer pdc.Done()
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
@@ -198,8 +199,6 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
-
-	atomic.StoreInt32(&done, 1)
 
 	ts.Shutdown()
 }

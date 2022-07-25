@@ -27,7 +27,7 @@ func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
 }
 
 func StartClerk(pclnt *procclnt.ProcClnt) (proc.Tpid, error) {
-	p := proc.MakeProc("user/kv-clerk", []string{""})
+	p := proc.MakeProc("user/kv-clerk", []string{})
 	// SpawnBurst to spread clerks across procds.
 	_, errs := pclnt.SpawnBurst([]*proc.Proc{p})
 	if len(errs) > 0 {

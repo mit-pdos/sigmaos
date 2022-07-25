@@ -40,7 +40,7 @@ const (
 	MR_APP               = "mr-grep-wiki2G.yml"
 	N_MR_JOBS_APP        = 1
 	N_KV_JOBS_APP        = 1
-	KV_CLERK_NCLERKS_APP = 2
+	KV_CLERK_NCLERKS_APP = 8
 	KV_CLERK_NPUTGET_APP = 75_000
 	KV_CLERK_NCORE_APP   = 1
 	KV_KVD_NCORE_APP     = 2
@@ -215,6 +215,7 @@ func TestAppRunKVPerKVDThroughput(t *testing.T) {
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{KV_CLERK_NCLERKS_APP}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
 	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, nclerks, nil, KV_CLERK_NPUTGET_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
 	// XXX Clean this up/hide this somehow.
 	go func() {

@@ -20,6 +20,7 @@ func (ps *ProtSrv) releasePws(pws *watch.Watch) {
 func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	dws := ps.wt.WatchLookupL(src)
 	dst := src.AppendPath(target)
+	ps.stats.IncPath(dst)
 	var pws *watch.Watch
 	if len(target) > 1 {
 		// lock parent directory
@@ -56,11 +57,13 @@ func (ps *ProtSrv) namei(ctx fs.CtxI, o fs.FsObj, src, target np.Path, os []fs.F
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target np.Path) ([]fs.FsObj, fs.FsObj, *watch.Watch, np.Path, *np.Err) {
 	o := po.Obj()
 	if len(target) == 0 {
+		ps.stats.IncPath(po.Path())
 		ws := ps.wt.WatchLookupL(po.Path())
 		return nil, o, ws, nil, nil
 	}
 	src := po.Path().Copy()
 	if !o.Perm().IsDir() {
+		ps.stats.IncPath(po.Path())
 		ws := ps.wt.WatchLookupL(po.Path())
 		return nil, o, ws, nil, np.MkErr(np.TErrNotDir, src.Base())
 	}

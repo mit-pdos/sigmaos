@@ -6,6 +6,7 @@ import (
 	// "github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
+	"ulambda/lockmap"
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
@@ -32,35 +33,34 @@ import (
 //
 
 type Watch struct {
-	sync.Mutex
-	//deadlock.Mutex
+	pl   *lockmap.PathLock
 	sc   *sesscond.SessCond
-	path string // the key in WatchTable
-	nref int    // updated under table lock
+	nref int
 }
 
-func mkWatch(sct *sesscond.SessCondTable, path string) *Watch {
+func mkWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
 	w := &Watch{}
-	w.path = path
-	w.sc = sct.MakeSessCond(&w.Mutex)
+	w.pl = pl
+	w.sc = sct.MakeSessCond(pl)
 	return w
 }
 
-// Caller should hold ws lock on return caller has ws lock again
+// Caller should hold path lock. On return caller has path lock again
 func (ws *Watch) Watch(sessid np.Tsession) *np.Err {
+	db.DPrintf("WATCH", "Watch '%s'\n", ws.pl.Path())
 	err := ws.sc.Wait(sessid)
 	if err != nil {
-		db.DPrintf("WATCH_ERR", "Watch done waiting '%v' err %v\n", ws.path, err)
+		db.DPrintf("WATCH_ERR", "Watch done waiting '%v' err %v\n", ws.pl.Path(), err)
 	}
 	return err
 }
 
-func (ws *Watch) WakeupWatchL() {
+func (ws *Watch) Wakeup() {
 	ws.sc.Broadcast()
 }
 
 type WatchTable struct {
-	//	deadlock.Mutex
+	//      deadlock.Mutex
 	sync.Mutex
 	watches map[string]*Watch
 	sct     *sesscond.SessCondTable
@@ -73,65 +73,81 @@ func MkWatchTable(sct *sesscond.SessCondTable) *WatchTable {
 	return wt
 }
 
-func (wt *WatchTable) allocWatch(path np.Path) *Watch {
-	p := path.String()
-
+// Alloc watch, if doesn't exist allocate one.  Caller must have pl
+// locked.
+func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
 	wt.Lock()
 	defer wt.Unlock()
 
+	p := pl.Path()
+
+	db.DPrintf("WATCH", "allocWatch %s\n", p)
+
 	ws, ok := wt.watches[p]
 	if !ok {
-		db.DPrintf("WATCH", "allocWatch '%v'\n", path)
-		ws = mkWatch(wt.sct, p)
+		db.DPrintf("WATCH", "mkWatch '%s'\n", p)
+		ws = mkWatch(wt.sct, pl)
 		wt.watches[p] = ws
 	}
 	ws.nref++ // ensure ws won't be deleted from table
 	return ws
 }
 
-// Returns locked Watch
-// XXX Normalize paths (e.g., delete extra /) so that matches
-// work for equivalent paths
-func (wt *WatchTable) WatchLookupL(path np.Path) *Watch {
-	ws := wt.allocWatch(path)
-	ws.Lock()
-	db.DPrintf("WATCH", "Lock %v\n", path)
-	return ws
-}
-
-func (wt *WatchTable) release(ws *Watch) bool {
+func (wt *WatchTable) free(ws *Watch) bool {
 	wt.Lock()
 	defer wt.Unlock()
 
 	del := false
 	ws.nref--
 
-	ws1, ok := wt.watches[ws.path]
+	ws1, ok := wt.watches[ws.pl.Path()]
 	if !ok {
 		// Another thread already deleted the entry
-		db.DFatalf("release '%v'\n", ws)
+		db.DFatalf("free '%v'\n", ws)
 		return del
 	}
 
 	if ws != ws1 {
-		db.DFatalf("Release\n")
+		db.DFatalf("free\n")
 	}
 
 	if ws.nref == 0 {
-		delete(wt.watches, ws.path)
+		delete(wt.watches, ws.pl.Path())
 		del = true
 	}
 	return del
 }
 
-// Release watch for path. Caller should have watch locked through
-// WatchLookupL().  If no thread is using the watch anymore, free the
-// sess cond associated with the watch.
-func (wt *WatchTable) Release(ws *Watch) {
-	db.DPrintf("WATCH", "Release '%v'\n", ws.path)
-	ws.Unlock()
-	del := wt.release(ws)
+// Free watch for path. Caller should hold path lock. If no thread is
+// using the watch anymore, free the sess cond associated with the
+// watch.
+func (wt *WatchTable) FreeWatch(ws *Watch) {
+	db.DPrintf("WATCH", "FreeWatch '%s'\n", ws.pl.Path())
+	del := wt.free(ws)
 	if del {
 		wt.sct.FreeSessCond(ws.sc)
 	}
+}
+
+// Caller should have pl locked
+func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, sid np.Tsession) *np.Err {
+	ws := wt.allocWatch(pl)
+	err := ws.Watch(sid)
+	wt.FreeWatch(ws)
+	return err
+}
+
+// Caller should have pl locked
+func (wt *WatchTable) WakeupWatch(pl *lockmap.PathLock) {
+	wt.Lock()
+	defer wt.Unlock()
+
+	p := pl.Path()
+
+	db.DPrintf("WATCH", "WakeupWatch '%s'\n", p)
+	ws, ok := wt.watches[p]
+	if !ok {
+		return
+	}
+	ws.Wakeup()
 }

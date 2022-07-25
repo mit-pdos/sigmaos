@@ -4,6 +4,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fid"
 	"ulambda/fs"
+	"ulambda/lockmap"
 	np "ulambda/ninep"
 	"ulambda/sesssrv"
 	"ulambda/stats"
@@ -19,8 +20,9 @@ import (
 
 type ProtSrv struct {
 	ssrv  *sesssrv.SessSrv
-	wt    *watch.WatchTable     // shared across sessions
-	vt    *version.VersionTable // shared across sessions
+	plt   *lockmap.PathLockTable // shared across sessions
+	wt    *watch.WatchTable      // shared across sessions
+	vt    *version.VersionTable  // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
 	stats *stats.Stats
@@ -34,6 +36,7 @@ func MakeProtServer(s np.SessServer, sid np.Tsession) np.Protsrv {
 
 	ps.ft = makeFidTable()
 	ps.et = makeEphemeralTable()
+	ps.plt = srv.GetPathLockTable()
 	ps.wt = srv.GetWatchTable()
 	ps.vt = srv.GetVersionTable()
 	ps.stats = srv.GetStats()
@@ -63,8 +66,8 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
-		_, lo, fws, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
-		defer ps.wt.Release(fws)
+		_, lo, lk, rest, err := ps.namei(ctx, root, np.Path{}, path, nil)
+		defer ps.plt.Release(lk)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()
 		}
@@ -108,8 +111,8 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 }
 
 func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
-	_, lo, ws, _, err := ps.lookupObj(ctx, f.Pobj(), names)
-	ps.wt.Release(ws)
+	_, lo, lk, _, err := ps.lookupObj(ctx, f.Pobj(), names)
+	ps.plt.Release(lk)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +134,8 @@ func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 
-	os, lo, ws, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
-	defer ps.wt.Release(ws)
+	os, lo, lk, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
+	defer ps.plt.Release(lk)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
 		return err.Rerror()
 	}
@@ -197,16 +200,16 @@ func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 
 	db.DPrintf("PROTSRV", "%v: Watch %v v %v %v\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), f.Qid(), args)
 
-	// get lock on watch entry for p, so that remove cannot remove
-	// file before watch is set.
-	ws := ps.wt.WatchLookupL(p)
-	defer ps.wt.Release(ws)
+	// get path lock on for p, so that remove cannot remove file
+	// before watch is set.
+	pl := ps.plt.Acquire(p)
+	defer ps.plt.Release(pl)
 
 	v := ps.vt.GetVersion(ino)
 	if !np.VEq(f.Qid().Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
-	err = ws.Watch(ps.sid)
+	err = ps.wt.WaitWatch(pl, ps.sid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -225,42 +228,32 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, ep
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Err) {
+func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn np.Path, perm np.Tperm, mode np.Tmode) (fs.FsObj, *lockmap.PathLock, *np.Err) {
+	name := fn.Base()
 	if name == "." {
-		return nil, np.MkErr(np.TErrInval, name)
+		return nil, nil, np.MkErr(np.TErrInval, name)
 	}
 	for {
+		flk := ps.plt.Acquire(fn)
 		o1, err := d.Create(ctx, name, perm, mode)
 		db.DPrintf("PROTSRV", "%v: Create %v %v %v ephemeral %v %v\n", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid)
 		if err == nil {
-			fws.WakeupWatchL()
-			dws.WakeupWatchL()
-			return o1, nil
+			ps.wt.WakeupWatch(dlk)
+			return o1, flk, nil
 		} else {
+			ps.plt.Release(flk)
 			if mode&np.OWATCH == np.OWATCH && err.Code() == np.TErrExists {
-				fws.Unlock()
-				err := dws.Watch(ps.sid)
-				fws.Lock() // not necessary if fail, but nicer with defer
+				err := ps.wt.WaitWatch(dlk, ps.sid)
+				db.DPrintf("PROTSRV", "%v: Create: Wait %v %v sid %v err %v\n", ctx.Uname(), name, o1, ps.sid, err)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				// try again; we will hold lock on watchers
 			} else {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
-}
-
-func (ps *ProtSrv) AcquireWatches(dir np.Path, file string) (*watch.Watch, *watch.Watch) {
-	dws := ps.wt.WatchLookupL(dir)
-	fws := ps.wt.WatchLookupL(append(dir, file))
-	return dws, fws
-}
-
-func (ps *ProtSrv) ReleaseWatches(dws, fws *watch.Watch) {
-	ps.wt.Release(dws)
-	ps.wt.Release(fws)
 }
 
 func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
@@ -270,22 +263,23 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	}
 	db.DPrintf("PROTSRV", "%v: Create f %v\n", f.Pobj().Ctx().Uname(), f)
 	o := f.Pobj().Obj()
-	names := np.Path{args.Name}
+	fn := f.Pobj().Path().Append(args.Name)
 	if !o.Perm().IsDir() {
 		return np.MkErr(np.TErrNotDir, f.Pobj().Path()).Rerror()
 	}
 	d := o.(fs.Dir)
-	dws, fws := ps.AcquireWatches(f.Pobj().Path(), names[0])
-	defer ps.ReleaseWatches(dws, fws)
+	dlk := ps.plt.Acquire(f.Pobj().Path())
+	defer ps.plt.Release(dlk)
 
-	o1, err := ps.createObj(f.Pobj().Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
+	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Perm, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
+	defer ps.plt.Release(flk)
 	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
-	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), names[0], o1, args.Perm.IsEphemeral(), qid)
+	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.Perm.IsEphemeral(), qid)
 	ps.ft.Add(args.Fid, nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Mode)
@@ -365,12 +359,10 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 		return np.MkErr(np.TErrInval, name).Rerror()
 	}
 
-	// lock watch entry to make WatchV and Remove interact
-	// correctly
-	dws := ps.wt.WatchLookupL(path.Dir())
-	fws := ps.wt.WatchLookupL(path)
-	defer ps.wt.Release(dws)
-	defer ps.wt.Release(fws)
+	// lock path to make WatchV and Remove interact correctly
+	dlk := ps.plt.Acquire(path.Dir())
+	flk := ps.plt.Acquire(path)
+	defer ps.plt.ReleaseLocks(dlk, flk)
 
 	ps.stats.IncPath(path)
 
@@ -387,8 +379,8 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 	ps.vt.IncVersion(o.Path())
 	ps.vt.IncVersion(o.Parent().Path())
 
-	fws.WakeupWatchL()
-	dws.WakeupWatchL()
+	ps.wt.WakeupWatch(flk)
+	ps.wt.WakeupWatch(dlk)
 
 	if ephemeral {
 		ps.et.Del(o)
@@ -438,19 +430,19 @@ func (ps *ProtSrv) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 
 		dst := f.Pobj().Path().Dir().Copy().AppendPath(np.Split(args.Stat.Name))
 
-		dws, sws := ps.AcquireWatches(f.Pobj().Path().Dir(), f.Pobj().Path().Base())
-		defer ps.ReleaseWatches(dws, sws)
-		tws := ps.wt.WatchLookupL(dst)
-		defer ps.wt.Release(tws)
+		dlk, slk := ps.plt.AcquireLocks(f.Pobj().Path().Dir(), f.Pobj().Path().Base())
+		defer ps.plt.ReleaseLocks(dlk, slk)
+		tlk := ps.plt.Acquire(dst)
+		defer ps.plt.Release(tlk)
 
 		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Path().Base(), args.Stat.Name)
 		if err != nil {
 			return err.Rerror()
 		}
 		ps.vt.IncVersion(f.Pobj().Obj().Path())
-		tws.WakeupWatchL() // trigger create watch
-		sws.WakeupWatchL() // trigger remove watch
-		dws.WakeupWatchL() // trigger dir watch
+		ps.wt.WakeupWatch(tlk) // trigger create watch
+		ps.wt.WakeupWatch(slk) // trigger remove watch
+		ps.wt.WakeupWatch(dlk) // trigger dir watch
 		f.Pobj().SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -491,16 +483,16 @@ func (ps *ProtSrv) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 			return np.MkErr(np.TErrInval, newf.Pobj().Path()).Rerror()
 		}
 
-		var d1ws, d2ws, srcws, dstws *watch.Watch
+		var d1lk, d2lk, srclk, dstlk *lockmap.PathLock
 		if srcfirst := lockOrder(oo, no); srcfirst {
-			d1ws, srcws = ps.AcquireWatches(oldf.Pobj().Path(), args.OldName)
-			d2ws, dstws = ps.AcquireWatches(newf.Pobj().Path(), args.NewName)
+			d1lk, srclk = ps.plt.AcquireLocks(oldf.Pobj().Path(), args.OldName)
+			d2lk, dstlk = ps.plt.AcquireLocks(newf.Pobj().Path(), args.NewName)
 		} else {
-			d2ws, dstws = ps.AcquireWatches(newf.Pobj().Path(), args.NewName)
-			d1ws, srcws = ps.AcquireWatches(oldf.Pobj().Path(), args.OldName)
+			d2lk, dstlk = ps.plt.AcquireLocks(newf.Pobj().Path(), args.NewName)
+			d1lk, srclk = ps.plt.AcquireLocks(oldf.Pobj().Path(), args.OldName)
 		}
-		defer ps.ReleaseWatches(d1ws, srcws)
-		defer ps.ReleaseWatches(d2ws, dstws)
+		defer ps.plt.ReleaseLocks(d1lk, srclk)
+		defer ps.plt.ReleaseLocks(d2lk, dstlk)
 
 		err := d1.Renameat(oldf.Pobj().Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
@@ -509,10 +501,10 @@ func (ps *ProtSrv) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 		ps.vt.IncVersion(newf.Pobj().Obj().Path())
 		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
 
-		dstws.WakeupWatchL() // trigger create watch
-		srcws.WakeupWatchL() // trigger remove watch
-		d1ws.WakeupWatchL()  // trigger one dir watch
-		d2ws.WakeupWatchL()  // trigger the other dir watch
+		ps.wt.WakeupWatch(dstlk) // trigger create watch
+		ps.wt.WakeupWatch(srclk) // trigger remove watch
+		ps.wt.WakeupWatch(d1lk)  // trigger one dir watch
+		ps.wt.WakeupWatch(d2lk)  // trigger the other dir watch
 	default:
 		return np.MkErr(np.TErrNotDir, oldf.Pobj().Path()).Rerror()
 	}
@@ -625,26 +617,25 @@ func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	fname := append(f.Pobj().Path(), args.Wnames...)
+	fn := append(f.Pobj().Path(), args.Wnames...)
 
 	db.DPrintf("PROTSRV", "%v: PutFile o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, dname)
 
 	if !lo.Perm().IsDir() {
 		return np.MkErr(np.TErrNotDir, dname).Rerror()
 	}
-	name := args.Wnames[len(args.Wnames)-1]
-	dws, fws := ps.AcquireWatches(dname, name)
-	defer ps.ReleaseWatches(dws, fws)
+	dlk := ps.plt.Acquire(dname)
+	defer ps.plt.Release(dlk)
 
-	// AcquireWatches() ensures that Create and Write execute atomically
-
-	lo, err = ps.createObj(f.Pobj().Ctx(), lo.(fs.Dir), dws, fws, name, args.Perm, args.Mode)
+	// flk also ensures that two Puts execute atomically
+	lo, flk, err := ps.createObj(f.Pobj().Ctx(), lo.(fs.Dir), dlk, fn, args.Perm, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
+	defer ps.plt.Release(flk)
 	qid := ps.mkQid(lo.Perm(), lo.Path())
-	f = ps.makeFid(f.Pobj().Ctx(), dname, name, lo, args.Perm.IsEphemeral(), qid)
-	i, err := fs.Obj2File(lo, fname)
+	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Perm.IsEphemeral(), qid)
+	i, err := fs.Obj2File(lo, fn)
 	if err != nil {
 		return err.Rerror()
 	}

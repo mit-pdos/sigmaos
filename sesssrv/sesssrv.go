@@ -11,6 +11,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/lockmap"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
 	"ulambda/overlay"
@@ -46,6 +47,7 @@ type SessSrv struct {
 	sm         *sessstatesrv.SessionMgr
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
+	plt        *lockmap.PathLockTable
 	wt         *watch.WatchTable
 	vt         *version.VersionTable
 	ffs        fs.Dir
@@ -73,6 +75,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
 	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
+	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
 	ssrv.vt.Insert(ssrv.root.Path())
@@ -108,6 +111,10 @@ func (ssrv *SessSrv) SetFsl(fsl *fslib.FsLib) {
 
 func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
 	return ssrv.sct
+}
+
+func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
+	return ssrv.plt
 }
 
 func (ssrv *SessSrv) Root() fs.Dir {

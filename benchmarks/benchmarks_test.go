@@ -190,7 +190,7 @@ func TestAppRunKV(t *testing.T) {
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0, 0)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -251,7 +251,7 @@ func TestRealmBalance(t *testing.T) {
 	// Prep KV job
 	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
 	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0)
+	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, nclerks, phases, 0, 0)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

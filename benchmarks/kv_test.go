@@ -20,6 +20,7 @@ type KVJobInstance struct {
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
 	ckputget string          // Number of puts & gets each clerk will do.
+	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	ready    chan bool
 	balgm    *groupmgr.GroupMgr
 	kvdgms   []*groupmgr.GroupMgr
@@ -27,12 +28,13 @@ type KVJobInstance struct {
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, nclerks []int, phases []time.Duration, ckputget int, ckncore proc.Tcore) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
 	ji.nclerks = nclerks
 	ji.phases = phases
 	ji.ckputget = strconv.Itoa(ckputget)
+	ji.ckncore = ckncore
 	ji.ready = make(chan bool)
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
@@ -127,7 +129,7 @@ func (ji *KVJobInstance) StartClerk() {
 	} else {
 		args = append(args, ji.ckputget)
 	}
-	pid, err := kv.StartClerk(ji.ProcClnt, args)
+	pid, err := kv.StartClerk(ji.ProcClnt, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
 	ji.cpids = append(ji.cpids, pid)
 }

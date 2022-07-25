@@ -79,6 +79,9 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 
 func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*KVJobInstance)
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib)
+	pdc.MonitorProcds()
+	defer pdc.Done()
 	// Start some balancers
 	ji.StartKVJob()
 	db.DPrintf("TEST", "Made KV job")

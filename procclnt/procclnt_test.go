@@ -385,8 +385,10 @@ func TestConcurrentProcs(t *testing.T) {
 }
 
 func evict(ts *test.Tstate, pid proc.Tpid) {
+	err := ts.WaitStart(pid)
+	assert.Nil(ts.T, err, "Wait start err %v", err)
 	time.Sleep(SLEEP_MSECS * time.Millisecond)
-	err := ts.Evict(pid)
+	err = ts.Evict(pid)
 	assert.Nil(ts.T, err, "evict")
 }
 

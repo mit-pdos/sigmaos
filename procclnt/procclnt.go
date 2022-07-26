@@ -143,6 +143,7 @@ func (clnt *ProcClnt) updateProcds() {
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Got procds %v", procds)
 	// Alloc enough space for the list of procds, excluding the ws queue.
 	clnt.procds = make([]string, 0, len(procds)-1)
 	for _, procd := range procds {
@@ -156,6 +157,10 @@ func (clnt *ProcClnt) updateProcds() {
 func (clnt *ProcClnt) nextProcd() string {
 	clnt.Lock()
 	defer clnt.Unlock()
+
+	if len(clnt.procds) == 0 {
+		db.DFatalf("Error: no procds to spawn on")
+	}
 
 	clnt.burstOffset++
 	return clnt.procds[clnt.burstOffset%len(clnt.procds)]

@@ -564,7 +564,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)

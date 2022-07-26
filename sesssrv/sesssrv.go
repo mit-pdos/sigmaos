@@ -321,7 +321,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.Fcall) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, fc.Fence); err != nil {
-		reply := *err.Rerror()
+		reply := err.Rerror()
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {

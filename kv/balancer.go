@@ -267,7 +267,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
-		dst := kvShardPath(kvd, Tshard(s))
+		dst := kvShardPath(bl.job, kvd, Tshard(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.MkDir(dst, 0777); err != nil {
@@ -330,8 +330,8 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
 			shard := Tshard(i)
-			s := kvShardPath(kvd, shard)
-			d := kvShardPath(nextShards[i], shard)
+			s := kvShardPath(bl.job, kvd, shard)
+			d := kvShardPath(bl.job, nextShards[i], shard)
 			moves = append(moves, &Move{s, d})
 		}
 	}

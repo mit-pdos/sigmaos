@@ -94,7 +94,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf("KVMON", "Add group %v\n", gn)
-	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, mo.kvdncore, KVD_NO_REPL, 0)
+	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
 		grp.Stop()
@@ -133,7 +133,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
-		kvgrp := group.GrpDir(gn) + np.STATSD
+		kvgrp := group.GrpPath(JobDir(mo.job), gn) + np.STATSD
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvgrp, &sti)
 		if err != nil {

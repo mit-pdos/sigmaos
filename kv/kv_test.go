@@ -88,7 +88,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 func (ts *Tstate) setup(repl, ncrash int) *kv.KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
-	grp := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, gn, 0, repl, ncrash)
+	grp := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, ts.job, gn, 0, repl, ncrash)
 	err := kv.BalancerOpRetry(ts.FsLib, ts.job, "add", gn)
 	assert.Nil(ts.T, err, "BalancerOp")
 	ts.mfsgrps = append(ts.mfsgrps, grp)
@@ -156,7 +156,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	for s := 0; s < kv.NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
-		gm := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, grp, 0, repl, ncrash)
+		gm := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, ts.job, grp, 0, repl, ncrash)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
 		err := kv.BalancerOpRetry(ts.FsLib, ts.job, "add", grp)
 		assert.Nil(ts.T, err, "BalancerOp")

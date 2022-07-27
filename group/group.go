@@ -7,6 +7,7 @@ package group
 import (
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"sync"
 
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	GRPDIR       = "name/group/"
+	_GRPDIR      = "group"
 	GRP          = "grp-"
 	GRPRAFTCONF  = "-raft-conf"
 	TMP          = ".tmp"
@@ -37,38 +38,43 @@ const (
 	CTL          = "ctl"
 )
 
-func GrpDir(grp string) string {
-	return GRPDIR + grp + "/"
+func JobDir(jobdir string) string {
+	return path.Join(jobdir, _GRPDIR)
 }
 
-func GrpSym(grp string) string {
-	return GRPDIR + grp
+func GrpPath(jobdir string, grp string) string {
+	return path.Join(JobDir(jobdir), grp)
 }
 
-func grpConfPath(grp string) string {
-	return GRPDIR + grp + GRPCONF
+func GrpSym(jobdir, grp string) string {
+	return GrpPath(jobdir, grp)
 }
 
-func grpTmpConfPath(grp string) string {
-	return GRPDIR + grp + GRPCONF + TMP
+func grpConfPath(jobdir, grp string) string {
+	return path.Join(GrpPath(jobdir, grp), GRPCONF)
 }
 
-func grpElectPath(grp string) string {
-	return GRPDIR + grp + GRPELECT
+func grpTmpConfPath(jobdir, grp string) string {
+	return grpConfPath(jobdir, grp) + TMP
 }
 
-func grpConfNxt(grp string) string {
-	return GRPDIR + grp + GRPCONFNXT
+func grpElectPath(jobdir, grp string) string {
+	return GrpPath(jobdir, grp) + GRPELECT
 }
 
-func grpConfNxtBk(grp string) string {
-	return GRPDIR + grp + GRPCONFNXTBK
+func grpConfNxt(jobdir, grp string) string {
+	return GrpPath(jobdir, grp) + GRPCONFNXT
+}
+
+func grpConfNxtBk(jobdir, grp string) string {
+	return GrpPath(jobdir, grp) + GRPCONFNXTBK
 }
 
 type Group struct {
 	sync.Mutex
-	grp string
-	ip  string
+	jobdir string
+	grp    string
+	ip     string
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
@@ -106,7 +112,7 @@ func (g *Group) ReleaseLeadership() {
 
 func (g *Group) waitForClusterConfig() {
 	cfg := &GroupConfig{}
-	if err := g.GetFileJsonWatch(grpConfPath(g.grp), cfg); err != nil {
+	if err := g.GetFileJsonWatch(grpConfPath(g.jobdir, g.grp), cfg); err != nil {
 		db.DFatalf("Error wait for cluster config: %v", err)
 	}
 }
@@ -114,14 +120,15 @@ func (g *Group) waitForClusterConfig() {
 // Find out if the initial cluster has started by looking for the group config.
 func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
-	if _, err := g.Stat(grpConfPath(g.grp)); np.IsErrNotfound(err) {
-		db.DPrintf("GROUP", "found conf path %v", grpConfPath(g.grp))
+	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); np.IsErrNotfound(err) {
+		db.DPrintf("GROUP", "found conf path %v", grpConfPath(g.jobdir, g.grp))
 		return false
 	} else {
-		db.DPrintf("GROUP", "didn't find conf path %v: %v", grpConfPath(g.grp), err)
+		db.DPrintf("GROUP", "didn't find conf path %v: %v", grpConfPath(g.jobdir, g.grp), err)
 		// We don't expect any other errors
 		if err != nil {
 			db.DFatalf("Unexpected cluster config error: %v", err)
+
 		}
 	}
 	// Config found.
@@ -129,11 +136,11 @@ func (g *Group) clusterStarted() bool {
 }
 
 func (g *Group) registerInTmpConfig() (int, *GroupConfig, *replraft.RaftConfig) {
-	return g.registerInConfig(grpTmpConfPath(g.grp), true)
+	return g.registerInConfig(grpTmpConfPath(g.jobdir, g.grp), true)
 }
 
 func (g *Group) registerInClusterConfig() (int, *GroupConfig, *replraft.RaftConfig) {
-	return g.registerInConfig(grpConfPath(g.grp), false)
+	return g.registerInConfig(grpConfPath(g.jobdir, g.grp), false)
 }
 
 // Register self as new replica in a config file.
@@ -182,7 +189,7 @@ func (g *Group) writeSymlink(sigmaAddrs []string) {
 		}
 	}
 
-	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs)); err != nil {
+	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.jobdir, g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs)); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -203,23 +210,25 @@ func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	return err
 }
 
-func RunMember(grp string) {
+func RunMember(jobdir, grp string) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
 	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
-	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(grp), 0777)
+	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		db.DFatalf("group ip %v\n", err)
 	}
 	g.ip = ip
+	g.jobdir = jobdir
 
 	crash.Crasher(g.FsLib)
 
 	// XXX need this?
-	g.MkDir(GRPDIR, 0777)
+	g.MkDir(_GRPDIR, 0777)
+	g.MkDir(JobDir(jobdir), 0777)
 
 	var nReplicas int
 	nReplicas, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
@@ -256,7 +265,7 @@ func RunMember(grp string) {
 				g.AcquireLeadership()
 				// Get the updated cluster config.
 				var err error
-				if clusterCfg, err = g.readGroupConfig(grpConfPath(grp)); err != nil {
+				if clusterCfg, err = g.readGroupConfig(grpConfPath(g.jobdir, grp)); err != nil {
 					db.DFatalf("Error read group config: %v", err)
 				}
 				raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
@@ -288,7 +297,7 @@ func RunMember(grp string) {
 		clusterCfg.SigmaAddrs[id-1] = mfs.MyAddr()
 		db.DPrintf("GROUP", "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
 
-		if err := g.writeGroupConfig(grpConfPath(grp), clusterCfg); err != nil {
+		if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
 			db.DFatalf("Write final group config: %v", err)
 		}
 		sigmaAddrs = clusterCfg.SigmaAddrs

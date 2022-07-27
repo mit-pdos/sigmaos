@@ -51,8 +51,8 @@ func key2shard(key Tkey) Tshard {
 	return shard
 }
 
-func keyPath(kvd string, shard Tshard, k Tkey) string {
-	d := kvShardPath(kvd, shard)
+func keyPath(job, kvd string, shard Tshard, k Tkey) string {
+	d := kvShardPath(job, kvd, shard)
 	return d + "/" + k.String()
 }
 
@@ -98,21 +98,21 @@ func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk
 func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	mnts := kc.Mounts()
 	for _, mnt := range mnts {
-		if strings.HasPrefix(mnt, group.GRPDIR) {
-			kvd := strings.TrimPrefix(mnt, group.GRPDIR)
+		if strings.HasPrefix(mnt, group.JobDir(JobDir(kc.job))) {
+			kvd := strings.TrimPrefix(mnt, group.JobDir(JobDir(kc.job))+"/")
 			if !kvs.present(kvd) {
 				db.DPrintf("KVCLERK0", "Detach kv %v\n", kvd)
-				kc.Detach(group.GRPDIR + "/" + kvd)
+				kc.Detach(group.GrpPath(JobDir(kc.job), kvd))
 			}
 		}
 	}
 }
 
-func paths(kvset *KvSet) []string {
+func paths(job string, kvset *KvSet) []string {
 	kvs := kvset.mkKvs()
 	dirs := make([]string, 0, len(kvs)+1)
 	for _, kvd := range kvs {
-		dirs = append(dirs, group.GRPDIR+"/"+kvd)
+		dirs = append(dirs, group.GrpPath(JobDir(job), kvd))
 	}
 	return dirs
 }
@@ -127,7 +127,7 @@ func (kc *KvClerk) switchConfig() error {
 		}
 		db.DPrintf("KVCLERK", "Conf %v\n", kc.conf)
 		kvset := MakeKvs(kc.conf.Shards)
-		dirs := paths(kvset)
+		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {
 				db.DPrintf("KVCLERK_ERR", "version mismatch; retry\n")
@@ -168,7 +168,7 @@ func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
 		db.DPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
-		fn := keyPath(kc.conf.Shards[s], s, o.k)
+		fn := keyPath(kc.job, kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
 			return

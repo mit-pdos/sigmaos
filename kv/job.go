@@ -38,8 +38,8 @@ func KVBalancerCtl(job string) string {
 }
 
 // TODO make grpdir a subdir of this job.
-func kvShardPath(kvd string, shard Tshard) string {
-	return group.GRPDIR + "/" + kvd + "/shard" + shard.String()
+func kvShardPath(job, kvd string, shard Tshard) string {
+	return path.Join(group.GrpPath(JobDir(job), kvd), "shard"+shard.String())
 }
 
 func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
@@ -47,8 +47,8 @@ func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, 
 	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{jobname, crashhelper, kvdnc, auto}, 0, nbal, crashbal, 0, 0)
 }
 
-func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, ncore, ncrash, CRASHKVD, 0, 0)
+func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{JobDir(job), grp}, ncore, ncrash, CRASHKVD, 0, 0)
 }
 
 func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {

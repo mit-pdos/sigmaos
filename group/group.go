@@ -51,7 +51,7 @@ func GrpSym(jobdir, grp string) string {
 }
 
 func grpConfPath(jobdir, grp string) string {
-	return path.Join(GrpPath(jobdir, grp), GRPCONF)
+	return GrpPath(jobdir, grp) + GRPCONF
 }
 
 func grpTmpConfPath(jobdir, grp string) string {

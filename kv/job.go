@@ -11,20 +11,30 @@ import (
 	"ulambda/procclnt"
 )
 
+const (
+	NKV           = 10
+	NSHARD        = 10 * NKV
+	NBALANCER     = 3
+	KVDIR         = "name/kv/"
+	KVCONF        = "config"
+	KVBALANCER    = "balancer"
+	KVBALANCERCTL = "ctl"
+)
+
 func JobDir(job string) string {
-	return path.Join(_KVDIR, job)
+	return path.Join(KVDIR, job)
 }
 
 func KVConfig(job string) string {
-	return path.Join(JobDir(job), _KVCONF)
+	return path.Join(JobDir(job), KVCONF)
 }
 
 func KVBalancer(job string) string {
-	return path.Join(JobDir(job), _KVBALANCER)
+	return path.Join(JobDir(job), KVBALANCER)
 }
 
 func KVBalancerCtl(job string) string {
-	return path.Join(KVBalancer(job), _KVBALANCERCTL)
+	return path.Join(KVBalancer(job), KVBALANCERCTL)
 }
 
 // TODO make grpdir a subdir of this job.

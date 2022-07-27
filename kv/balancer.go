@@ -37,16 +37,6 @@ import (
 	"ulambda/procclnt"
 )
 
-const (
-	NKV            = 10
-	NSHARD         = 10 * NKV
-	NBALANCER      = 3
-	_KVDIR         = "name/kv/"
-	_KVCONF        = "config"
-	_KVBALANCER    = "balancer"
-	_KVBALANCERCTL = "ctl"
-)
-
 type Balancer struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -96,7 +86,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.kvdncore = proc.Tcore(kvdnc)
 
 	// may fail if already exist
-	bl.MkDir(_KVDIR, 07)
+	bl.MkDir(KVDIR, 07)
 	bl.MkDir(JobDir(bl.job), 0777)
 
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), np.DMSYMLINK|077)

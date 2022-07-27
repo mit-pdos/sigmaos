@@ -503,7 +503,7 @@ func fields9p(v interface{}) ([]interface{}, *np.Err) {
 		return nil, np.MkErr(np.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
-	var elements []interface{}
+	elements := make([]interface{}, 0, rv.NumField())
 	for i := 0; i < rv.NumField(); i++ {
 		f := rv.Field(i)
 

@@ -69,11 +69,12 @@ for k in `ls cmd`; do
       echo "go vet cmd/$k/$f/main.go"
       go vet cmd/$k/$f/main.go
     else 
-      echo "go build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+      build="go build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+      echo $build
       if [ -z "$PARALLEL" ]; then
-        go build -ldflags="$LDF" $RACE -o bin/$k/$f cmd/$k/$f/main.go
+        eval "$build"
       else
-        go build -ldflags="$LDF" $RACE -o bin/$k/$f cmd/$k/$f/main.go &
+        eval "$build" &
       fi
     fi
   done

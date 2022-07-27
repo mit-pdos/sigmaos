@@ -49,10 +49,11 @@ oldbins=$(aws s3 ls --recursive s3://$REALM/bin/user $PROFILE | awk '{print $NF}
 
 for bin in $oldbins; do
   if ! [[ $bin == *$VERSION* ]]; then
+    cmd="aws s3 rm s3://$REALM/$bin"
     if [ -z "$PARALLEL" ]; then
-      aws s3 rm s3://$REALM/$bin
+      eval "$cmd"
     else
-      aws s3 rm s3://$REALM/$bin &
+      eval "$cmd" &
     fi
   fi
 done

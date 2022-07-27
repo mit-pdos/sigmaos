@@ -250,7 +250,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			// binary package uses reflection, which imposes an extremely high
 			// overhead that scaled with the size of the byte array. It's also much
 			// more powerful than we need, since we're just serializing an array of
-			// bytes, after al.
+			// bytes, after all.
 			if _, err := d.rd.Read(*v); err != nil && !(err == io.EOF && l == 0) {
 				return err
 			}

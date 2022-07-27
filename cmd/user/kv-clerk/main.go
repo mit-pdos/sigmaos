@@ -17,23 +17,23 @@ import (
 var done = int32(0)
 
 func main() {
-	if len(os.Args) < 1 {
+	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v [duration] [sempath] ", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
 	var dur time.Duration
 	var sempath string
-	if len(os.Args) > 1 {
+	if len(os.Args) > 2 {
 		timed = true
 		var err error
-		dur, err = time.ParseDuration(os.Args[1])
+		dur, err = time.ParseDuration(os.Args[2])
 		if err != nil {
 			db.DFatalf("Bad nput %v", err)
 		}
-		sempath = os.Args[2]
+		sempath = os.Args[3]
 	}
-	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), fslib.Named())
+	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), os.Args[1], fslib.Named())
 	if err != nil {
 		db.DFatalf("%v err %v", os.Args[0], err)
 	}

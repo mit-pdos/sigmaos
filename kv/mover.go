@@ -21,22 +21,23 @@ type Mover struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	fclnt    *fenceclnt.FenceClnt
+	job      string
 	epochstr string
 }
 
-func JoinEpoch(fsl *fslib.FsLib, label, epochstr string, dirs []string) error {
+func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
 	epoch, err := np.String2Epoch(epochstr)
 	if err != nil {
 		return err
 	}
-	fclnt := fenceclnt.MakeLeaderFenceClnt(fsl, KVBALANCER)
+	fclnt := fenceclnt.MakeLeaderFenceClnt(fsl, KVBalancer(job))
 	if err := fclnt.FenceAtEpoch(epoch, dirs); err != nil {
-		return fmt.Errorf("FenceAtEpoch %v err %v", KVCONFIG, err)
+		return fmt.Errorf("FenceAtEpoch %v err %v", KVConfig(job), err)
 	}
 	// reads are fenced
 	config := Config{}
-	if err := fsl.GetFileJson(KVCONFIG, &config); err != nil {
-		return fmt.Errorf("GetFileJson %v err %v", KVCONFIG, err)
+	if err := fsl.GetFileJson(KVConfig(job), &config); err != nil {
+		return fmt.Errorf("GetFileJson %v err %v", KVConfig(job), err)
 	}
 	if config.Epoch != epoch {
 		return fmt.Errorf("Newer config %v", config.Epoch)
@@ -44,18 +45,19 @@ func JoinEpoch(fsl *fslib.FsLib, label, epochstr string, dirs []string) error {
 	return nil
 }
 
-func MakeMover(epochstr, src, dst string) (*Mover, error) {
+func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	mv := &Mover{}
 	mv.epochstr = epochstr
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid().String())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
+	mv.job = job
 
 	if err := mv.Started(); err != nil {
 		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)
 	}
 	crash.Crasher(mv.FsLib)
 
-	if err := JoinEpoch(mv.FsLib, "KVMV", epochstr, []string{KVDIR, path.Dir(src), path.Dir(dst)}); err != nil {
+	if err := JoinEpoch(mv.FsLib, mv.job, "KVMV", epochstr, []string{JobDir(mv.job), path.Dir(src), path.Dir(dst)}); err != nil {
 		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}

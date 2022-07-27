@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		db.DFatalf("Usage: %v <crashhelper> <kvdncore> [auto]\n", os.Args[0])
+	if len(os.Args) < 5 {
+		db.DFatalf("Usage: %v <jobname> <crashhelper> <kvdncore> <auto>", os.Args[0])
 	}
-	kv.RunBalancer(os.Args[1], os.Args[2], os.Args[3])
+	kv.RunBalancer(os.Args[1], os.Args[2], os.Args[3], os.Args[4])
 }

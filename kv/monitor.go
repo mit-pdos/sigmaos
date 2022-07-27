@@ -66,16 +66,18 @@ type Monitor struct {
 	*procclnt.ProcClnt
 
 	mu       sync.Mutex
+	job      string
 	group    int
 	kvdncore proc.Tcore
 	gm       *grpMap
 }
 
-func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt, kvdncore proc.Tcore) *Monitor {
+func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, kvdncore proc.Tcore) *Monitor {
 	mo := &Monitor{}
 	mo.FsLib = fslib
 	mo.ProcClnt = pclnt
 	mo.group = 1
+	mo.job = job
 	mo.kvdncore = kvdncore
 	mo.gm = mkGrpMap()
 	return mo
@@ -93,7 +95,7 @@ func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf("KVMON", "Add group %v\n", gn)
 	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, mo.kvdncore, KVD_NO_REPL, 0)
-	err := BalancerOp(mo.FsLib, "add", gn)
+	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
 		grp.Stop()
 	}
@@ -106,7 +108,7 @@ func (mo *Monitor) shrink(gn string) {
 	if !ok {
 		db.DFatalf("rmgrp %v failed\n", gn)
 	}
-	err := BalancerOp(mo.FsLib, "del", gn)
+	err := BalancerOp(mo.FsLib, mo.job, "del", gn)
 	if err != nil {
 		db.DPrintf("KVMON", "Del group %v failed\n", gn)
 	}

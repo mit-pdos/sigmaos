@@ -30,7 +30,6 @@ import (
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/group"
 	"ulambda/inode"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -39,14 +38,13 @@ import (
 )
 
 const (
-	NKV           = 10
-	NSHARD        = 10 * NKV
-	NBALANCER     = 3
-	KVDIR         = "name/kv/"
-	KVCONF        = "config"
-	KVCONFIG      = KVDIR + KVCONF // file with current config
-	KVBALANCER    = KVDIR + "balancer"
-	KVBALANCERCTL = KVDIR + "balancer/ctl"
+	NKV            = 10
+	NSHARD         = 10 * NKV
+	NBALANCER      = 3
+	_KVDIR         = "name/kv/"
+	_KVCONF        = "config"
+	_KVBALANCER    = "balancer"
+	_KVBALANCERCTL = "ctl"
 )
 
 type Balancer struct {
@@ -56,6 +54,7 @@ type Balancer struct {
 	conf       *Config
 	lc         *leaderclnt.LeaderClnt
 	mo         *Monitor
+	job        string
 	kvdncore   proc.Tcore
 	ch         chan bool
 	crash      int64
@@ -77,11 +76,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func shardPath(kvd string, shard Tshard) string {
-	return group.GRPDIR + "/" + kvd + "/shard" + shard.String()
-}
-
-func RunBalancer(crashChild, kvdncore string, auto string) {
+func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -89,6 +84,7 @@ func RunBalancer(crashChild, kvdncore string, auto string) {
 
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid().String())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
+	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashChild = crashChild
 	var kvdnc int
@@ -100,9 +96,10 @@ func RunBalancer(crashChild, kvdncore string, auto string) {
 	bl.kvdncore = proc.Tcore(kvdnc)
 
 	// may fail if already exist
-	bl.MkDir(KVDIR, 07)
+	bl.MkDir(_KVDIR, 07)
+	bl.MkDir(JobDir(bl.job), 0777)
 
-	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK|077)
+	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), np.DMSYMLINK|077)
 
 	// start server but don't publish its existence
 	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
@@ -146,7 +143,7 @@ func RunBalancer(crashChild, kvdncore string, auto string) {
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt, bl.kvdncore)
+			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt, bl.job, bl.kvdncore)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}
@@ -165,16 +162,16 @@ func RunBalancer(crashChild, kvdncore string, auto string) {
 	mfs.Done()
 }
 
-func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
+func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {
 	s := opcode + " " + mfs
-	_, err := fsl.SetFile(KVBALANCERCTL, []byte(s), np.OWRITE, 0)
+	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), np.OWRITE, 0)
 	return err
 }
 
 // Retry a balancer op until success, or an unexpected error is returned.
-func BalancerOpRetry(fsl *fslib.FsLib, opcode, mfs string) error {
+func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, mfs string) error {
 	for true {
-		err := BalancerOp(fsl, opcode, mfs)
+		err := BalancerOp(fsl, job, opcode, mfs)
 		if err == nil {
 			return nil
 		}
@@ -236,7 +233,7 @@ func (bl *Balancer) monitor() {
 func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)
-		_, err := readConfig(bl.FsLib, KVCONFIG)
+		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if err != nil {
 			if np.IsErrUnreachable(err) {
 				db.DFatalf("disconnected\n")
@@ -247,9 +244,9 @@ func (bl *Balancer) monitorMyself() {
 
 // Post config atomically
 func (bl *Balancer) PostConfig() {
-	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
+	err := atomic.PutFileJsonAtomic(bl.FsLib, KVConfig(bl.job), 0777, *bl.conf)
 	if err != nil {
-		db.DFatalf("%v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
+		db.DFatalf("%v: MakeFile %v err %v\n", proc.GetName(), KVConfig(bl.job), err)
 	}
 }
 
@@ -265,7 +262,7 @@ func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 }
 
 func (bl *Balancer) recover(epoch np.Tepoch) {
-	conf, err := readConfig(bl.FsLib, KVCONFIG)
+	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
 		bl.restore(conf, epoch)
 	} else {
@@ -280,7 +277,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
-		dst := shardPath(kvd, Tshard(s))
+		dst := kvShardPath(kvd, Tshard(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.MkDir(dst, 0777); err != nil {
@@ -343,8 +340,8 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
 			shard := Tshard(i)
-			s := shardPath(kvd, shard)
-			d := shardPath(nextShards[i], shard)
+			s := kvShardPath(kvd, shard)
+			d := kvShardPath(nextShards[i], shard)
 			moves = append(moves, &Move{s, d})
 		}
 	}
@@ -353,7 +350,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst},
+		bl.runProcRetry([]string{"user/kv-mover", bl.job, bl.conf.Epoch.String(), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
 				db.DPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()

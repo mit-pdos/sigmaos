@@ -1,26 +1,49 @@
 package kv
 
 import (
+	"path"
 	"strconv"
 
 	"ulambda/fslib"
+	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
-func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
+func JobDir(job string) string {
+	return path.Join(_KVDIR, job)
+}
+
+func KVConfig(job string) string {
+	return path.Join(JobDir(job), _KVCONF)
+}
+
+func KVBalancer(job string) string {
+	return path.Join(JobDir(job), _KVBALANCER)
+}
+
+func KVBalancerCtl(job string) string {
+	return path.Join(KVBalancer(job), _KVBALANCERCTL)
+}
+
+// TODO make grpdir a subdir of this job.
+func kvShardPath(kvd string, shard Tshard) string {
+	return group.GRPDIR + "/" + kvd + "/shard" + shard.String()
+}
+
+func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdncore))
-	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{crashhelper, kvdnc, auto}, 0, nbal, crashbal, 0, 0)
+	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{jobname, crashhelper, kvdnc, auto}, 0, nbal, crashbal, 0, 0)
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
 	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, ncore, ncrash, CRASHKVD, 0, 0)
 }
 
-func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
+func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
 	// Create keys
-	clrk, err := MakeClerkFsl(fsl, pclnt)
+	clrk, err := MakeClerkFsl(fsl, pclnt, job)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +56,8 @@ func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
 	return clrk, nil
 }
 
-func StartClerk(pclnt *procclnt.ProcClnt, args []string, ncore proc.Tcore) (proc.Tpid, error) {
+func StartClerk(pclnt *procclnt.ProcClnt, job string, args []string, ncore proc.Tcore) (proc.Tpid, error) {
+	args = append([]string{job}, args...)
 	p := proc.MakeProc("user/kv-clerk", args)
 	p.SetNcore(ncore)
 	// SpawnBurst to spread clerks across procds.

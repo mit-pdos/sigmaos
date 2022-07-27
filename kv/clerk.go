@@ -52,7 +52,7 @@ func key2shard(key Tkey) Tshard {
 }
 
 func keyPath(kvd string, shard Tshard, k Tkey) string {
-	d := shardPath(kvd, shard)
+	d := kvShardPath(kvd, shard)
 	return d + "/" + k.String()
 }
 
@@ -68,24 +68,26 @@ type KvClerk struct {
 	*procclnt.ProcClnt
 	fclnt *fenceclnt.FenceClnt
 	conf  *Config
+	job   string
 }
 
-func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
-	return makeClerk(fsl, pclnt)
+func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
+	return makeClerk(fsl, pclnt, job)
 }
 
-func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
+func MakeClerk(name, job string, namedAddr []string) (*KvClerk, error) {
 	fsl := fslib.MakeFsLibAddr(name, namedAddr)
 	pclnt := procclnt.MakeProcClnt(fsl)
-	return makeClerk(fsl, pclnt)
+	return makeClerk(fsl, pclnt, job)
 }
 
-func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
+func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
 	kc := &KvClerk{}
 	kc.FsLib = fsl
 	kc.ProcClnt = pclnt
 	kc.conf = &Config{}
-	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
+	kc.job = job
+	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
 	if err := kc.switchConfig(); err != nil {
 		return nil, err
 	}
@@ -118,9 +120,9 @@ func paths(kvset *KvSet) []string {
 // Read config, and retry if we have a stale group fence
 func (kc *KvClerk) switchConfig() error {
 	for {
-		err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
+		err := kc.GetFileJsonWatch(KVConfig(kc.job), kc.conf)
 		if err != nil {
-			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
+			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVConfig(kc.job), err)
 			return err
 		}
 		db.DPrintf("KVCLERK", "Conf %v\n", kc.conf)

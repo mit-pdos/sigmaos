@@ -136,7 +136,7 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 }
 
 func StartMRJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{jobname, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, 0, ncoord, crashcoord, 0, 0)
+	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, jobname, 0, ncoord, crashcoord, 0, 0)
 }
 
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {

@@ -44,11 +44,11 @@ func kvShardPath(job, kvd string, shard Tshard) string {
 
 func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdncore))
-	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{jobname, crashhelper, kvdnc, auto}, 0, nbal, crashbal, 0, 0)
+	return groupmgr.Start(fsl, pclnt, nbal, "user/balancer", []string{crashhelper, kvdnc, auto}, jobname, 0, nbal, crashbal, 0, 0)
 }
 
-func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{JobDir(job), grp}, ncore, ncrash, CRASHKVD, 0, 0)
+func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
 }
 
 func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {

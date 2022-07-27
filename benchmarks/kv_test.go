@@ -138,7 +138,7 @@ func (ji *KVJobInstance) AddKVDGroup() {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
 	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, grp, ji.kvdncore, ji.kvdrepl, 0))
+	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, ji.job, grp, ji.kvdncore, ji.kvdrepl, 0))
 	// Get balancer to add the group
 	err := kv.BalancerOpRetry(ji.FsLib, ji.job, "add", grp)
 	assert.Nil(ji.T, err, "BalancerOp add: %v", err)

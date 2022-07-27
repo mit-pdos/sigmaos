@@ -19,6 +19,7 @@ const (
 	GRP_PATH  = "name/group/grp-0"
 	N_REPL    = 3
 	N_KEYS    = 10000
+	JOBDIR    = "name/"
 )
 
 type Tstate struct {
@@ -29,7 +30,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, nrepl, "user/kvd", []string{group.GRP + "0"}, 0, ncrash, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, nrepl, "user/kvd", []string{group.GRP + "0"}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
 	return ts
 }
 

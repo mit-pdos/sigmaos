@@ -53,19 +53,17 @@ fi
 
 for vm in $vms
 do
-    echo "stop: $vm"
-  if [ -z "$PARALLEL" ]; then
-    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-      (cd ulambda; ./stop.sh)
-      rm -rf $UXROOT
-ENDSSH
-  else
-    (
+  echo "stop: $vm"
+  stop="
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-        touch ~/abcd
         (cd ulambda; ./stop.sh)
         rm -rf $UXROOT
-ENDSSH
+ENDSSH"
+  if [ -z "$PARALLEL" ]; then
+    eval "$stop"
+  else
+    (
+      eval "$stop"
     ) &
   fi
 done

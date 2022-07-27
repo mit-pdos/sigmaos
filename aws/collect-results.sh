@@ -36,6 +36,8 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
+vma=($vms)
+MAIN="${vma[0]}"
 
 RUN_NUM=$(date +%s)
 
@@ -43,13 +45,22 @@ mkdir ../benchmarks/results/$RUN_NUM
 
 for vm in $vms; do
   echo "scp: $vm"
+  if [ $vm == $MAIN ]; then
+    outfile="/tmp/start.out"
+  else
+    outfile="/tmp/machined.out"
+  fi
+  # scp machined.out files.
+  cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile /tmp/$vm.out"
+  # scp performance files.
+  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM"
   if [ -z "$PARALLEL" ]; then
-    scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
-    scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
+    eval "$cmd1"
+    eval "$cmd2"
   else
     (
-      scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM
-      scp -i key-$VPC.pem ubuntu@$vm:/tmp/machined.out /tmp/$vm.out
+      eval "$cmd1"
+      eval "$cmd2"
     ) &
   fi
 done

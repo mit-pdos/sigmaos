@@ -56,17 +56,16 @@ fi
 
 for vm in $vms; do
   echo "INSTALL: $vm"
-  if [ -z "$PARALLEL" ]; then
-  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
-    (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
-ENDSSH
-  else
-  (
+  install="
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
       ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
       (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
-ENDSSH
+ENDSSH"
+  if [ -z "$PARALLEL" ]; then
+    eval "$install"
+  else
+  (
+    eval "$install"
   ) &
   fi
 done

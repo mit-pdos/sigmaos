@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"time"
 
 	db "ulambda/debug"
@@ -11,6 +12,7 @@ import (
 	"ulambda/linuxsched"
 	"ulambda/namespace"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 )
 
@@ -22,6 +24,7 @@ const (
 type LinuxProc struct {
 	fs.Inode
 	SysPid       int
+	syspidstr    string
 	Env          []string
 	coresAlloced proc.Tcore
 	attr         *proc.Proc
@@ -82,6 +85,9 @@ func (p *LinuxProc) run() error {
 	// Take this lock to ensure we don't race with a thread rebalancing cores.
 	p.pd.mu.Lock()
 	p.SysPid = cmd.Process.Pid
+	p.syspidstr = strconv.Itoa(p.SysPid)
+	p.UtilInfo.t0 = time.Now()
+	p.UtilInfo.utime0, p.UtilInfo.stime0 = perf.GetCPUTimePid(p.syspidstr)
 	p.pd.mu.Unlock()
 
 	// XXX May want to start the process with a certain affinity (using taskset)
@@ -101,6 +107,17 @@ func (p *LinuxProc) setCpuAffinity() {
 	defer p.pd.mu.Unlock()
 
 	p.setCpuAffinityL()
+}
+
+// Caller holds lock.
+func (p *LinuxProc) getUtilL() float64 {
+	t1 := time.Now()
+	utime1, stime1 := perf.GetCPUTimePid(p.syspidstr)
+	util := perf.UtilFromCPUTimeSample(p.UtilInfo.utime0, p.UtilInfo.stime0, utime1, stime1, t1.Sub(p.UtilInfo.t0).Seconds())
+	p.UtilInfo.utime0 = utime1
+	p.UtilInfo.stime0 = stime1
+	p.UtilInfo.t0 = t1
+	return util
 }
 
 // Set the Cpu affinity of this proc according to its procd's cpu mask.

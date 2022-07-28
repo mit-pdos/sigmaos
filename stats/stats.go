@@ -204,13 +204,15 @@ func (st *Stats) monitorCPUUtil(ufn UtilFn) {
 	for atomic.LoadUint32(&st.done) != 1 {
 		time.Sleep(time.Duration(MS) * time.Millisecond)
 
-		// Lock in case the set of cores we're monitoring changes.
-		st.mu.Lock()
-		idle1, total1 = perf.GetCPUSample(st.cores)
+		// Can't call into ufn while the st lock is held, in order to ensure lock
+		// ordering and avoid deadlock.
 		var customUtil float64
 		if ufn != nil {
 			customUtil = ufn()
 		}
+		// Lock in case the set of cores we're monitoring changes.
+		st.mu.Lock()
+		idle1, total1 = perf.GetCPUSample(st.cores)
 		st.loadCPUUtilL(idle1-idle0, total1-total0, customUtil)
 		st.mu.Unlock()
 

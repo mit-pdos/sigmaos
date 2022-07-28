@@ -77,7 +77,17 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 }
 
 func (pd *Procd) getLCProcUtil() float64 {
-	return 0.0
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	var total float64 = 0.0
+	for _, p := range pd.runningProcs {
+		// If proc has not been initialized, or it isn't LC, move on
+		if p.SysPid != 0 || p.attr.Type != proc.T_LC {
+			continue
+		}
+		total += p.getUtilL()
+	}
+	return total
 }
 
 // Caller holds lock.

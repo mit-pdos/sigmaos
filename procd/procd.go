@@ -57,7 +57,6 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.makeFs()
 
 	pd.addr = pd.MyAddr()
-	pd.MemFs.GetStats().MonitorCPUUtil()
 
 	pd.spawnChan = make(chan bool)
 	pd.stealChan = make(chan bool)
@@ -72,8 +71,13 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 
 	// Make a directory in which to put stealable procs.
 	pd.MkDir(np.PROCD_WS, 0777)
+	pd.MemFs.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
 	pd.Work()
+}
+
+func (pd *Procd) getLCProcUtil() float64 {
+	return 0.0
 }
 
 // Caller holds lock.

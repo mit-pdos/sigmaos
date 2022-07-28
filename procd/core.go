@@ -179,7 +179,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	} else {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization. If utilization is below a certain threshold, take the proc.
-		util := pd.GetStats().GetUtil()
+		util, _ := pd.GetStats().GetUtil()
 		load := perf.GetLinuxLoad()
 		cload := pd.GetStats().GetLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)

@@ -22,10 +22,10 @@ import (
 
 const STATS = true
 
-// const TIMING = false
-
 type Tcounter uint64
 type TCycles uint64
+
+type UtilFn func() float64
 
 func (c *Tcounter) Inc() {
 	if STATS {
@@ -58,8 +58,9 @@ type StatInfo struct {
 
 	Paths map[string]int
 
-	Load perf.Tload
-	Util float64
+	Load       perf.Tload
+	Util       float64
+	CustomUtil float64
 }
 
 func MkStatInfo() *StatInfo {
@@ -131,10 +132,10 @@ func MkStatsDev(parent fs.Dir) *Stats {
 	return st
 }
 
-func (st *Stats) GetUtil() float64 {
+func (st *Stats) GetUtil() (float64, float64) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	return st.sti.Util
+	return st.sti.Util, 0.0
 }
 
 func (st *Stats) GetLoad() perf.Tload {
@@ -152,12 +153,12 @@ func (st *Stats) StatInfo() *StatInfo {
 	return st.sti
 }
 
-func (st *Stats) MonitorCPUUtil() {
+func (st *Stats) MonitorCPUUtil(ufn UtilFn) {
 	st.hz = perf.Hz()
 	// Don't duplicate work
 	if !st.monitoringCPU {
 		st.monitoringCPU = true
-		go st.monitorCPUUtil()
+		go st.monitorCPUUtil(ufn)
 	}
 }
 
@@ -170,7 +171,7 @@ const (
 )
 
 // Caller holds lock
-func (st *Stats) loadCPUUtilL(idle, total uint64) {
+func (st *Stats) loadCPUUtilL(idle, total uint64, customUtil float64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
 	st.sti.Load[0] *= EXP_0
@@ -181,6 +182,7 @@ func (st *Stats) loadCPUUtilL(idle, total uint64) {
 	st.sti.Load[2] += (1 - EXP_2) * util
 
 	st.sti.Util = util
+	st.sti.CustomUtil = customUtil
 }
 
 // Update the set of cores we scan to determine CPU utilization.
@@ -191,28 +193,29 @@ func (st *Stats) UpdateCores() {
 	st.cores = perf.GetActiveCores()
 }
 
-func (st *Stats) monitorCPUUtil() {
+func (st *Stats) monitorCPUUtil(ufn UtilFn) {
 	total0 := uint64(0)
 	total1 := uint64(0)
 	idle0 := uint64(0)
 	idle1 := uint64(0)
-	period1 := 10 // 1000/MS;
 
 	st.UpdateCores()
 
 	for atomic.LoadUint32(&st.done) != 1 {
-		for i := 0; i < period1; i++ {
-			time.Sleep(time.Duration(MS) * time.Millisecond)
+		time.Sleep(time.Duration(MS) * time.Millisecond)
 
-			// Lock in case the set of cores we're monitoring changes.
-			st.mu.Lock()
-			idle1, total1 = perf.GetCPUSample(st.cores)
-			st.loadCPUUtilL(idle1-idle0, total1-total0)
-			st.mu.Unlock()
-
-			total0 = total1
-			idle0 = idle1
+		// Lock in case the set of cores we're monitoring changes.
+		st.mu.Lock()
+		idle1, total1 = perf.GetCPUSample(st.cores)
+		var customUtil float64
+		if ufn != nil {
+			customUtil = ufn()
 		}
+		st.loadCPUUtilL(idle1-idle0, total1-total0, customUtil)
+		st.mu.Unlock()
+
+		total0 = total1
+		idle0 = idle1
 	}
 }
 

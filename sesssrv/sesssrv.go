@@ -101,7 +101,6 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl
-	ssrv.stats.MonitorCPUUtil()
 	return ssrv
 }
 
@@ -140,7 +139,6 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
 	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
-	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)

@@ -12,7 +12,6 @@ import (
 	"ulambda/electclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/kernel"
 	"ulambda/linuxsched"
 	"ulambda/machine"
 	np "ulambda/ninep"
@@ -280,33 +279,26 @@ func (m *RealmResourceMgr) getRealmConfig() (*RealmConfig, error) {
 }
 
 // Get all a realm's procd's stats
-func (m *RealmResourceMgr) getRealmProcdStats(nameds []string) map[string]*stats.StatInfo {
-	// XXX For now we assume all the nameds are up
+func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) map[string]*stats.StatInfo {
 	stat := make(map[string]*stats.StatInfo)
-	if len(nameds) == 0 {
-		return stat
-	}
-	m.ProcessDir(np.KPIDS, func(st *np.Stat) (bool, error) {
-		// If this is a procd...
-		if strings.HasPrefix(st.Name, np.PROCDREL) {
-			si := kernel.GetSubsystemInfo(m.FsLib, np.KPIDS, st.Name)
-			s := &stats.StatInfo{}
-			err := m.GetFileJson(path.Join(np.PROCD, si.Ip, np.STATSD), s)
-			if err != nil {
-				db.DPrintf("REALMMGR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
-				return false, nil
-			}
-			stat[si.NodedId] = s
+	for _, nodedId := range nodeds {
+		ndCfg := MakeNodedConfig()
+		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+		s := &stats.StatInfo{}
+		err := m.GetFileJson(path.Join(np.PROCD, ndCfg.ProcdIp, np.STATSD), s)
+		if err != nil {
+			db.DPrintf("REALMMGR_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+			continue
 		}
-		return false, nil
-	})
+		stat[nodedId] = s
+	}
 	return stat
 }
 
 func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (float64, map[string]float64) {
 	// Get stats
 	utilMap := make(map[string]float64)
-	procdStats := m.getRealmProcdStats(cfg.NamedAddrs)
+	procdStats := m.getRealmProcdStats(cfg.NodedsActive)
 	avgUtil := 0.0
 	for nodedId, stat := range procdStats {
 		avgUtil += stat.Util
@@ -330,12 +322,13 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 		db.DFatalf("Error getRealmConfig: %v", err)
 	}
 
+	if len(realmCfg.NamedAddrs) == 0 {
+		return "", false
+	}
+
 	_, procdUtils := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "searching for least utilized node in realm %v, procd utils: %v", m.realmId, procdUtils)
 
-	if len(procdUtils) == 0 {
-		return "", false
-	}
 	// Find least utilized procd
 	min := 100.0
 	minNodedId := ""

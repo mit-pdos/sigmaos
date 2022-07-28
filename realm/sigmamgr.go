@@ -16,6 +16,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/resource"
+	"ulambda/stats"
 )
 
 const (
@@ -162,6 +163,42 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 	return false
 }
 
+// Ascertain whether or not a noded is overprovisioned.
+//
+// TODO: make it possible to evict BE-based nodeds.
+func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) bool {
+	var overprovisioned bool
+	ndCfg := MakeNodedConfig()
+	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	// Currently, we don't fully evict nodeds.
+	if len(ndCfg.Cores) <= 1 {
+		return false
+	}
+	db.DPrintf("SIGMAMGR", "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
+	s := &stats.StatInfo{}
+	err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
+	// Only overprovisioned if hasn't shut down/crashed.
+	if err != nil {
+		db.DPrintf("SIGMAMGR_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+		db.DPrintf(db.ALWAYS, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+	} else {
+		// If LC utilization is significantly < number of cores allocated, then
+		// this procd is overprovisioned.
+		totalCores := 0.0
+		for _, cores := range ndCfg.Cores {
+			totalCores += float64(cores.Size())
+		}
+		nLCCoresUsed := s.CustomUtil / 100.0
+		coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
+		// If we have >= 1 core group to spare, we are overprovisioned
+		if totalCores-coresToRevoke > nLCCoresUsed {
+			db.DPrintf("SIGMAMGR", "Machine is overprovisioned: %v - %v < %v", totalCores, coresToRevoke, nLCCoresUsed)
+			overprovisioned = true
+		}
+	}
+	return overprovisioned
+}
+
 // Find an over-provisioned realm (a realm with resources to spare). Returns
 // true if an overprovisioned realm was found, false otherwise.
 func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
@@ -193,10 +230,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		// See if any nodeds have cores to spare.
 		nodedOverprovisioned := false
 		for _, nd := range rCfg.NodedsAssigned {
-			ndCfg := MakeNodedConfig()
-			m.ReadConfig(path.Join(NODED_CONFIG, nd), ndCfg)
-			// TODO: make it possible to evict LC-based nodeds.
-			if len(ndCfg.Cores) > 1 {
+			if m.nodedOverprovisioned(realmId, nd) {
 				nodedOverprovisioned = true
 				break
 			}

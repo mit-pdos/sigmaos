@@ -289,7 +289,7 @@ func (m *RealmResourceMgr) getRealmProcdStats(nameds []string) map[string]*stats
 	m.ProcessDir(np.KPIDS, func(st *np.Stat) (bool, error) {
 		// If this is a procd...
 		if strings.HasPrefix(st.Name, np.PROCDREL) {
-			si := kernel.GetSubsystemInfo(m.FsLib, proc.Tpid(st.Name))
+			si := kernel.GetSubsystemInfo(m.FsLib, np.KPIDS, st.Name)
 			s := &stats.StatInfo{}
 			err := m.GetFileJson(path.Join(np.PROCD, si.Ip, np.STATSD), s)
 			if err != nil {

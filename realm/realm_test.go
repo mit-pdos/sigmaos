@@ -77,10 +77,10 @@ func setVersion() {
 	proc.Version = version
 }
 
-func (ts *Tstate) spawnSpinner() proc.Tpid {
+func (ts *Tstate) spawnSpinner(ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
-	a.SetNcore(1)
+	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	if err != nil {
 		db.DFatalf("Error Spawn in RealmBalanceBenchmark.spawnSpinner: %v", err)
@@ -124,7 +124,7 @@ func TestRealmGrow(t *testing.T) {
 	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
 	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
-		pids = append(pids, ts.spawnSpinner())
+		pids = append(pids, ts.spawnSpinner(0))
 	}
 
 	db.DPrintf("TEST", "Sleeping for a bit")
@@ -132,7 +132,7 @@ func TestRealmGrow(t *testing.T) {
 
 	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
 	for i := 0; i < N; i++ {
-		pids = append(pids, ts.spawnSpinner())
+		pids = append(pids, ts.spawnSpinner(0))
 	}
 
 	db.DPrintf("TEST", "Sleeping again")
@@ -156,7 +156,7 @@ func TestRealmShrink(t *testing.T) {
 	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
 	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
-		pids = append(pids, ts.spawnSpinner())
+		pids = append(pids, ts.spawnSpinner(0))
 	}
 
 	db.DPrintf("TEST", "Sleeping for a bit")
@@ -164,7 +164,7 @@ func TestRealmShrink(t *testing.T) {
 
 	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
 	for i := 0; i < N; i++ {
-		pids = append(pids, ts.spawnSpinner())
+		pids = append(pids, ts.spawnSpinner(0))
 	}
 
 	db.DPrintf("TEST", "Sleeping again")
@@ -186,7 +186,7 @@ func TestRealmShrink(t *testing.T) {
 
 	db.DPrintf("TEST", "Starting %v more spinning lambdas", N/2)
 	for i := 0; i < int(N); i++ {
-		pids = append(pids, ts.spawnSpinner())
+		pids = append(pids, ts.spawnSpinner(0))
 	}
 
 	db.DPrintf("TEST", "Sleeping yet again")

@@ -14,6 +14,7 @@ type NodedConfig struct {
 	Id        string
 	MachineId string
 	RealmId   string
+	ProcdIp   string
 	Cores     []*np.Tinterval
 }
 

@@ -164,8 +164,6 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 
 // Find an over-provisioned realm (a realm with resources to spare). Returns
 // true if an overprovisioned realm was found, false otherwise.
-//
-// TODO: determine overprovisioned status by resource utilization.
 func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
 	opRealmId := ""
 	ok := false
@@ -175,7 +173,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
 		realmId := st.Name
 
-		// Avoid thrashing.
+		// Don't steal a noded from the requesting realm.
 		if realmId == ignoreRealm {
 			return false, nil
 		}
@@ -197,13 +195,14 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		for _, nd := range rCfg.NodedsAssigned {
 			ndCfg := MakeNodedConfig()
 			m.ReadConfig(path.Join(NODED_CONFIG, nd), ndCfg)
+			// TODO: make it possible to evict LC-based nodeds.
 			if len(ndCfg.Cores) > 1 {
 				nodedOverprovisioned = true
 				break
 			}
 		}
 		// If there are more than the minimum number of required Nodeds available...
-		if len(rCfg.NodedsAssigned) > nReplicas() || nodedOverprovisioned {
+		if len(rCfg.NodedsAssigned) > nReplicas() && nodedOverprovisioned {
 			opRealmId = realmId
 			ok = true
 			return true, nil

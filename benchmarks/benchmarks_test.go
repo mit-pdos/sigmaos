@@ -48,10 +48,15 @@ const (
 
 // ========== Realm parameters ==========
 const (
-	N_TRIALS_REALM       = 1000
-	BALANCE_REALM_1      = "arielck"
-	BALANCE_REALM_2      = "test-realm"
-	BALANCE_MR_APP_REALM = "mr-grep-wiki2G.yml"
+	N_TRIALS_REALM          = 1000
+	BALANCE_REALM_1         = "arielck"
+	BALANCE_REALM_2         = "test-realm"
+	BALANCE_MR_APP_REALM    = "mr-grep-wiki.yml"
+	KV_CLERK_NCLERKS_REALM  = 8
+	KV_CLERK_DURATION_REALM = "90s"
+	KV_CLERK_NCORE_REALM    = 1
+	KV_KVD_NKVD_REALM       = 1
+	KV_KVD_NCORE_REALM      = 2
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
@@ -275,9 +280,10 @@ func TestRealmBalance(t *testing.T) {
 	// Need at least one kv realm group.
 	assert.True(ts2.T, TOTAL_N_CORES_SIGMA_REALM >= 6, "Too few cores to run benchmark: %v < %v", TOTAL_N_CORES_SIGMA_REALM, 6)
 	// Prep KV job
-	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
-	phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, 0, nclerks, phases, "", 0, 0)
+	nclerks := []int{KV_CLERK_NCLERKS_REALM}
+	// TODO move phases to new clerk type.
+	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
+	kvjobs, ji := makeNKVJobs(ts2, 1, KV_KVD_NKVD_REALM, 0, nclerks, nil, KV_CLERK_DURATION_REALM, proc.Tcore(KV_KVD_NCORE_REALM), proc.Tcore(KV_CLERK_NCORE_REALM))
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

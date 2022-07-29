@@ -144,7 +144,12 @@ func Mbyte(sz np.Tlength) float64 {
 	return float64(sz) / float64(MBYTE)
 }
 
-func Tput(sz np.Tlength, ms int64) string {
+func TputStr(sz np.Tlength, ms int64) string {
 	s := float64(ms) / 1000
 	return fmt.Sprintf("%.2fMB/s", Mbyte(sz)/s)
+}
+
+func Tput(sz np.Tlength, ms int64) float64 {
+	t := float64(ms) / 1000
+	return Mbyte(sz) / t
 }

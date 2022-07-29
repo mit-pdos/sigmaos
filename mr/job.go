@@ -192,7 +192,7 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 		return test.Tput(results[i].In, results[i].Ms) > test.Tput(results[j].In, results[j].Ms)
 	})
 	for _, r := range results {
-		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.TputStr(r.In, r.Ms))
 	}
 	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,

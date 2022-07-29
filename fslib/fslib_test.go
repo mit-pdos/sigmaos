@@ -1224,7 +1224,7 @@ func measure(msg string, f func() np.Tlength) {
 		start := time.Now()
 		sz := f()
 		ms := time.Since(start).Milliseconds()
-		log.Printf("%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.Tput(sz, ms))
+		log.Printf("%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
 	}
 }
 

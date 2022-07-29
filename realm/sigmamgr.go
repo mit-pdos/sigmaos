@@ -19,8 +19,6 @@ import (
 	"ulambda/stats"
 )
 
-const ()
-
 type SigmaResourceMgr struct {
 	sync.Mutex
 	freeCoreGroups int64

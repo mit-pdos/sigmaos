@@ -35,7 +35,7 @@ func (ot *ObjTable) GetRef(path np.Tpath) fs.FsObj {
 func (ot *ObjTable) AllocRef(path np.Tpath, o fs.FsObj) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
-	e, _ := ot.RefTable.Insert(path, o)
+	e, _ := ot.RefTable.Insert(path, func() fs.FsObj { return o })
 	return e.(fs.FsObj)
 }
 

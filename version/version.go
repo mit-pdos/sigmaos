@@ -46,7 +46,7 @@ func (vt *VersionTable) GetVersion(path np.Tpath) np.TQversion {
 func (vt *VersionTable) Insert(path np.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Insert(path, mkVersion())
+	vt.RefTable.Insert(path, mkVersion)
 }
 
 func (vt *VersionTable) Delete(p np.Tpath) {

@@ -7,7 +7,10 @@ import (
 )
 
 //
-// Map of ref-counted references of type K
+// Map of ref-counted references of type K to objects of type T.  For
+// example, lockmap uses this to have one lock (T) per pathname (K),
+// and delete that lock when the last thread is done with the lock.
+// The caller is responsible for concurrency control.
 //
 
 type entry[T any] struct {
@@ -46,13 +49,13 @@ func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
 	return r, false
 }
 
-func (rf *RefTable[K, T]) Insert(k K, i T) (T, bool) {
+func (rf *RefTable[K, T]) Insert(k K, mkT func() T) (T, bool) {
 	if e, ok := rf.refs[k]; ok {
 		e.n += 1
 		db.DPrintf("REFMAP", "insert %v %v\n", k, e)
 		return e.e, true
 	}
-	e := mkEntry(i)
+	e := mkEntry(mkT())
 	db.DPrintf("REFMAP", "new insert %v %v\n", k, e)
 	rf.refs[k] = e
 	return e.e, false

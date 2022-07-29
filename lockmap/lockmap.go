@@ -51,7 +51,7 @@ func MkPathLockTable() *PathLockTable {
 
 // Caller must hold plt lock
 func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
-	lk, _ := plt.Insert(pn, mkLock(pn))
+	lk, _ := plt.Insert(pn, func() *PathLock { return mkLock(pn) })
 	return lk
 }
 
@@ -82,7 +82,7 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 	return plt.Delete(lk.path)
 }
 
-// Release watch for path. Caller should have watch locked through
+// Release lock for path. Caller should have watch locked through
 // Acquire().
 func (plt *PathLockTable) Release(lk *PathLock) {
 	db.DPrintf("LOCKMAP", "Release '%s'\n", lk.path)

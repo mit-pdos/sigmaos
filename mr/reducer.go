@@ -220,7 +220,7 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p := perf.MakePerf("MR-REDUCER")
+	p := perf.MakePerf("MRREDUCER")
 	defer p.Done()
 
 	r, err := makeReducer(reducef, args, p)

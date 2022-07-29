@@ -260,7 +260,7 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p := perf.MakePerf("MR-MAPPER")
+	p := perf.MakePerf("MRMAPPER")
 	defer p.Done()
 
 	m, err := makeMapper(mapf, args, p)

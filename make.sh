@@ -69,7 +69,9 @@ for k in `ls cmd`; do
       echo "go vet cmd/$k/$f/main.go"
       go vet cmd/$k/$f/main.go
     else 
-      build="go build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+      GO="go"
+#      GO="~/go-custom/bin/go"
+      build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
       echo $build
       if [ -z "$PARALLEL" ]; then
         eval "$build"
@@ -81,24 +83,3 @@ for k in `ls cmd`; do
 done
 
 wait
-
-#LDF="-X 'ulambda/ninep.Target=$TARGET' -X 'ulambda/ninep.Version=$VERSION'"
-#
-#for k in `ls cmd`; do
-#  echo "Building $k components"
-#  for f in `ls cmd/$k`;  do
-#    if [ $CMD == "vet" ]; then
-#      echo "go vet cmd/$k/$f/main.go"
-#      go vet cmd/$k/$f/main.go
-#    else 
-#      echo "go build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
-#      if [ -z "$PARALLEL" ]; then
-#        go build -ldflags="$LDF" $RACE -o bin/$k/$f cmd/$k/$f/main.go
-#      else
-#        go build -ldflags="$LDF" $RACE -o bin/$k/$f cmd/$k/$f/main.go &
-#      fi
-#    fi
-#  done
-#done
-#
-#w

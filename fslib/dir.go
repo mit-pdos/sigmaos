@@ -130,9 +130,6 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 		return err
 	}
 	for _, st := range sts {
-		if st.Name == "." || st.Name == ".." {
-			continue
-		}
 		if st.Mode.IsDir() {
 			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
 				return err

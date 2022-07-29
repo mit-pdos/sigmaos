@@ -64,7 +64,7 @@ func (m *SigmaResourceMgr) initFS() {
 		machine.MACHINES,
 		REALM_NAMEDS,
 		REALM_FENCES,
-		_REALM_MGRS,
+		REALM_MGRS,
 	}
 	for _, d := range dirs {
 		if err := m.MkDir(d, 0777); err != nil {

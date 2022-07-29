@@ -26,10 +26,6 @@ import (
  * - Ask for more Nodeds from SigmaMgr when load increases.
  */
 
-const (
-	NODEDS = "nodeds"
-)
-
 type RealmResourceMgr struct {
 	realmId string
 	// ===== Relative to the sigma named =====
@@ -97,7 +93,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		for _, nodedId := range realmCfg.NodedsAssigned {
 			// Otherwise, take some cores away.
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, machine.ALL_CORES, 0)
-			resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
+			resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 			db.DPrintf("REALMMGR", "Deallocating noded %v from realm %v", nodedId, m.realmId)
 		}
 	case resource.Tcore:
@@ -126,7 +122,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		// Otherwise, take some cores away.
 		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -154,7 +150,7 @@ func (m *RealmResourceMgr) growRealm() {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 	}
 }
 

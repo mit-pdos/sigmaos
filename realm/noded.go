@@ -188,7 +188,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NodedsActive = append(cfg.NodedsActive, nd.id)
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), path.Join(realmMgrPath(cfg.Rid), NODEDS, nd.id), 0777); err != nil {
+	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }
@@ -249,7 +249,7 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 
 	// Remove the symlink to this noded from the realmmgr dir.
-	nd.Remove(path.Join(realmMgrPath(cfg.Rid), NODEDS, nd.id))
+	nd.Remove(nodedPath(cfg.Rid, nd.id))
 
 	for _, c := range nd.cfg.Cores {
 		machine.PostCores(nd.FsLib, nd.machineId, c)

@@ -136,6 +136,26 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRmDirWithSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+
+	d1 := path + "/d1/"
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := d1 + "/f"
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 

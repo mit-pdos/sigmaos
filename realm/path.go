@@ -9,6 +9,7 @@ const (
 	NODED_CONFIG = "name/noded-config" // Store of noded configs
 	REALM_NAMEDS = "name/realm-nameds" // Symlinks to realms' nameds
 	REALM_FENCES = "name/realm-fences" // Fence around modifications to realm allocations.
+	_REALM_MGRS  = "name/realm-mgrs"   // Fence around modifications to realm allocations.
 )
 
 func RealmConfPath(realmId string) string {
@@ -25,4 +26,8 @@ func RealmPath(realmId string) string {
 
 func realmFencePath(realmId string) string {
 	return path.Join(REALM_FENCES, realmId)
+}
+
+func realmMgrPath(realmId string) string {
+	return path.Join(_REALM_MGRS, realmId)
 }

@@ -52,7 +52,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 
 	var err error
-	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)
+	m.memfs, err = fslibsrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
@@ -67,7 +67,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 func (m *RealmResourceMgr) initFS() {
 	dirs := []string{NODEDS}
 	for _, d := range dirs {
-		if err := m.sigmaFsl.MkDir(path.Join(REALM_MGRS, m.realmId, d), 0777); err != nil {
+		if err := m.sigmaFsl.MkDir(path.Join(realmMgrPath(m.realmId), d), 0777); err != nil {
 			db.DFatalf("Error Mkdir: %v", err)
 		}
 	}
@@ -97,7 +97,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		for _, nodedId := range realmCfg.NodedsAssigned {
 			// Otherwise, take some cores away.
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, machine.ALL_CORES, 0)
-			resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+			resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
 			db.DPrintf("REALMMGR", "Deallocating noded %v from realm %v", nodedId, m.realmId)
 		}
 	case resource.Tcore:
@@ -126,7 +126,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		// Otherwise, take some cores away.
 		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
 		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -154,7 +154,7 @@ func (m *RealmResourceMgr) growRealm() {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, path.Join(realmMgrPath(m.realmId), NODEDS, nodedId, np.RESOURCE_CTL), msg)
 	}
 }
 
@@ -199,7 +199,7 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 	for i := 0; i < nRetries; i++ {
 		// First, try to get cores on a machine already running a noded from this
 		// realm.
-		ok, err = m.sigmaFsl.ProcessDir(path.Join(REALM_MGRS, m.realmId, NODEDS), func(nd *np.Stat) (bool, error) {
+		ok, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
 			ndCfg := MakeNodedConfig()
 			m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
 			// Try to claim additional cores on the machine this noded lives on.

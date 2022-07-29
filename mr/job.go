@@ -194,3 +194,7 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 	)
 	return nil
 }
+
+func RemoveJob(fsl *fslib.FsLib, job string) error {
+	return fsl.RmDir(JobDir(job))
+}

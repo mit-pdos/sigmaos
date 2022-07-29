@@ -42,7 +42,7 @@ def fit_times_to_range(tpts, time_range):
 def find_bucket(time, step_size):
   return int(time - time % step_size)
 
-# Fit into 50ms buckets.
+# Fit into 100ms buckets.
 def bucketize(tpts, time_range):
   step_size = 100
   buckets = {}
@@ -63,12 +63,13 @@ def add_tpts_to_graph(tpts, label):
   # normalize by max
   plt.plot(x, y, label=label)
 
-def make_graph(mr_buckets, kv_buckets, out):
-  add_tpts_to_graph(mr_buckets, "MR Throughput")
-  add_tpts_to_graph(kv_buckets, "KV Throughput")
+def add_data_to_graph(buckets, label):
+  add_tpts_to_graph(buckets, label)
+
+def finalize_graph(out):
   plt.xlabel("Time (sec)")
   plt.ylabel("Normalized Throughput")
-  plt.title("Throughput over time")
+  plt.title("Normalized throughput over time")
   plt.legend()
   plt.savefig(out)
 
@@ -84,8 +85,12 @@ def graph_data(input_dir, out):
   kv_tpts = fit_times_to_range(kv_tpts, time_range)
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   mr_buckets = bucketize(mr_tpts, time_range)
+  if len(mr_tpts) > 0:
+    add_data_to_graph(mr_buckets, "MR Throughput")
   kv_buckets = bucketize(kv_tpts, time_range)
-  make_graph(mr_buckets, kv_buckets, out)
+  if len(kv_tpts) > 0:
+    add_data_to_graph(kv_buckets, "KV Throughput")
+  finalize_graph(out)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

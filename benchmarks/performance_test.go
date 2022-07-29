@@ -8,6 +8,8 @@ import (
 
 	"ulambda/benchmarks"
 	db "ulambda/debug"
+	"ulambda/perf"
+	"ulambda/procdclnt"
 	"ulambda/test"
 )
 
@@ -51,4 +53,23 @@ func printResults(rs *benchmarks.RawResults) {
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
 	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (usec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
+}
+
+// Monitor how many procds have been assigned to a realm.
+func monitorProcdsAssigned(ts *test.Tstate) *perf.Perf {
+	p := perf.MakePerf("TEST")
+	go func() {
+		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+		nprocd := 0
+		var err error
+		for {
+			nprocd, err = pdc.WaitProcdChange(nprocd)
+			p.TptTick(float64(nprocd))
+			if err != nil {
+				db.DPrintf(db.ALWAYS, "Error WaitProcdChange: %v", err)
+				return
+			}
+		}
+	}()
+	return p
 }

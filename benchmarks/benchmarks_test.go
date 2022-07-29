@@ -189,6 +189,8 @@ func TestAppRunMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorProcdsAssigned(ts)
+	defer p.Done()
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)
 	ts.Shutdown()
@@ -210,7 +212,9 @@ func TestAppRunKVRepl(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorProcdsAssigned(ts)
 	runOps(ts, ji, runKV, rs)
+	defer p.Done()
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -231,7 +235,9 @@ func TestAppRunKVUnreplOneClerk(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorProcdsAssigned(ts)
 	runOps(ts, ji, runKV, rs)
+	defer p.Done()
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -252,7 +258,9 @@ func TestAppRunKVUnreplNClerk(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorProcdsAssigned(ts)
 	runOps(ts, ji, runKV, rs)
+	defer p.Done()
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -275,7 +283,9 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 	// We need to get this in order to find out how many spinners to start.
 	setNCoresSigmaRealm(ts)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
+	p := monitorProcdsAssigned(ts)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
+	defer p.Done()
 	printResults(rs)
 	evictProcs(ts, ps)
 	rmOutDir(ts)

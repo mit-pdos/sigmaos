@@ -40,7 +40,7 @@ const (
 	MR_APP                = "mr-grep-wiki.yml"
 	N_MR_JOBS_APP         = 1
 	N_KV_JOBS_APP         = 1
-	KV_CLERK_NCLERKS_APP  = 1
+	KV_CLERK_NCLERKS_APP  = 16
 	KV_CLERK_DURATION_APP = "90s"
 	KV_CLERK_NCORE_APP    = 1
 	KV_KVD_NCORE_APP      = 2
@@ -215,7 +215,28 @@ func TestAppRunKVRepl(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunKVPerKVDThroughput(t *testing.T) {
+func TestAppRunKVUnreplOneClerk(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	setNCoresSigmaRealm(ts)
+	nclerks := []int{1}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", 1)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runKV, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
+func TestAppRunKVUnreplNClerk(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)

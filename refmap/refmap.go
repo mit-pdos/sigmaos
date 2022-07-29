@@ -4,64 +4,71 @@ import (
 	"fmt"
 
 	db "ulambda/debug"
-	np "ulambda/ninep"
 )
 
-type entry struct {
+//
+// Map of ref-counted references of type K
+//
+
+type entry[T any] struct {
 	n int
-	e interface{}
+	e T
 }
 
-func mkEntry(i interface{}) *entry {
-	e := &entry{}
+func mkEntry[T any](i T) *entry[T] {
+	e := &entry[T]{}
 	e.n = 1
 	e.e = i
 	return e
 }
 
-func (e *entry) String() string {
+func (e *entry[T]) String() string {
 	return fmt.Sprintf("{n %d %v}", e.n, e.e)
 }
 
-type RefTable struct {
-	paths map[np.Tpath]*entry
+type RefTable[K comparable, T any] struct {
+	refs map[K]*entry[T]
 }
 
-func MkRefTable() *RefTable {
-	rf := &RefTable{}
-	rf.paths = make(map[np.Tpath]*entry)
+func MkRefTable[K comparable, T any]() *RefTable[K, T] {
+	rf := &RefTable[K, T]{}
+	rf.refs = make(map[K]*entry[T])
 	return rf
 }
 
-func (rf *RefTable) Lookup(p np.Tpath) (interface{}, bool) {
-	if e, ok := rf.paths[p]; ok {
-		db.DPrintf("REFMAP", "lookup %v %v\n", p, e)
+func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
+	var r T
+	if e, ok := rf.refs[k]; ok {
+		db.DPrintf("REFMAP", "lookup %v %v\n", k, e)
 		return e.e, true
 	}
-	db.DPrintf("REFMAP", "lookup %v no entry\n", p)
-	return nil, false
+	db.DPrintf("REFMAP", "lookup %v no entry\n", k)
+	return r, false
 }
 
-func (rf *RefTable) Insert(p np.Tpath, i interface{}) (interface{}, bool) {
-	if e, ok := rf.paths[p]; ok {
+func (rf *RefTable[K, T]) Insert(k K, i T) (T, bool) {
+	if e, ok := rf.refs[k]; ok {
 		e.n += 1
-		db.DPrintf("REFMAP", "insert %v %v\n", p, e)
+		db.DPrintf("REFMAP", "insert %v %v\n", k, e)
 		return e.e, true
 	}
 	e := mkEntry(i)
-	db.DPrintf("REFMAP", "new insert %v %v\n", p, e)
-	rf.paths[p] = e
+	db.DPrintf("REFMAP", "new insert %v %v\n", k, e)
+	rf.refs[k] = e
 	return e.e, false
 }
 
-func (rf *RefTable) Delete(p np.Tpath) {
-	e, ok := rf.paths[p]
+func (rf *RefTable[K, T]) Delete(k K) bool {
+	del := false
+	e, ok := rf.refs[k]
 	if !ok {
-		db.DFatalf("delete %v\n", p)
+		db.DFatalf("delete %v\n", k)
 	}
 	e.n -= 1
 	if e.n <= 0 {
-		db.DPrintf("REFMAP", "delete %v\n", p)
-		delete(rf.paths, p)
+		db.DPrintf("REFMAP", "delete %v\n", k)
+		del = true
+		delete(rf.refs, k)
 	}
+	return del
 }

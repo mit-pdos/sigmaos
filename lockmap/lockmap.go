@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/refmap"
 )
 
 //
@@ -24,7 +25,6 @@ type PathLock struct {
 	sync.Mutex
 	//deadlock.Mutex
 	path string // the locked path
-	nref int    // updated under table lock
 }
 
 func mkLock(p string) *PathLock {
@@ -40,27 +40,23 @@ func (pl *PathLock) Path() string {
 type PathLockTable struct {
 	//	deadlock.Mutex
 	sync.Mutex
-	locks map[string]*PathLock
+	*refmap.RefTable[string, *PathLock]
 }
 
 func MkPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.locks = make(map[string]*PathLock)
+	plt.RefTable = refmap.MkRefTable[string, *PathLock]()
 	return plt
 }
 
 // Caller must hold plt lock
 func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
-	lk, ok := plt.locks[pn]
-	if !ok {
-		db.DPrintf("LOCKMAP", "allocLock '%s'\n", pn)
-		lk = mkLock(pn)
-		plt.locks[pn] = lk
-	}
-	lk.nref++ // ensure ws won't be deleted from table
+	lk, _ := plt.Insert(pn, mkLock(pn))
 	return lk
 }
 
+// XXX Normalize paths (e.g., delete extra /) so that matches
+// work for equivalent paths
 func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
@@ -73,8 +69,6 @@ func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 	return plt.allocLockStringL(pn)
 }
 
-// XXX Normalize paths (e.g., delete extra /) so that matches
-// work for equivalent paths
 func (plt *PathLockTable) Acquire(path np.Path) *PathLock {
 	lk := plt.allocLock(path)
 	lk.Lock()
@@ -85,26 +79,7 @@ func (plt *PathLockTable) Acquire(path np.Path) *PathLock {
 func (plt *PathLockTable) release(lk *PathLock) bool {
 	plt.Lock()
 	defer plt.Unlock()
-
-	del := false
-	lk.nref--
-
-	lk1, ok := plt.locks[lk.path]
-	if !ok {
-		// Another thread already deleted the entry
-		db.DFatalf("release '%v'\n", lk)
-		return del
-	}
-
-	if lk != lk1 {
-		db.DFatalf("Release\n")
-	}
-
-	if lk.nref == 0 {
-		delete(plt.locks, lk.path)
-		del = true
-	}
-	return del
+	return plt.Delete(lk.path)
 }
 
 // Release watch for path. Caller should have watch locked through

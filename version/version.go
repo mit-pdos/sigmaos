@@ -24,12 +24,12 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable
+	*refmap.RefTable[np.Tpath, *version]
 }
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable()
+	vt.RefTable = refmap.MkRefTable[np.Tpath, *version]()
 	return vt
 }
 
@@ -38,7 +38,7 @@ func (vt *VersionTable) GetVersion(path np.Tpath) np.TQversion {
 	defer vt.Unlock()
 
 	if e, ok := vt.Lookup(path); ok {
-		return e.(*version).V
+		return e.V
 	}
 	return 0
 }
@@ -61,7 +61,7 @@ func (vt *VersionTable) IncVersion(path np.Tpath) {
 	defer vt.Unlock()
 
 	if e, ok := vt.RefTable.Lookup(path); ok {
-		v := e.(*version)
+		v := e
 		v.V += 1
 		return
 	}

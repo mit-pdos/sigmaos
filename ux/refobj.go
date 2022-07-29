@@ -13,12 +13,12 @@ import (
 // references.
 type ObjTable struct {
 	sync.Mutex
-	*refmap.RefTable
+	*refmap.RefTable[np.Tpath, fs.FsObj]
 }
 
 func MkObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable()
+	ot.RefTable = refmap.MkRefTable[np.Tpath, fs.FsObj]()
 	return ot
 }
 

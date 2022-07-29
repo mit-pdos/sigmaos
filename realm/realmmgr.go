@@ -49,7 +49,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
-	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId), 0777)
+	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 
 	var err error
 	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)

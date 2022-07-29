@@ -136,7 +136,7 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 	procdIp := nd.s.GetProcdIp()
 	// Pass the resource message on to this noded's procd.
-	resource.SendMsg(nd.FsLib, path.Join(REALM_NAMEDS, nd.cfg.RealmId, np.PROCDREL, procdIp, np.RESOURCE_CTL), msg)
+	resource.SendMsg(nd.FsLib, path.Join(RealmPath(nd.cfg.RealmId), np.PROCDREL, procdIp, np.RESOURCE_CTL), msg)
 }
 
 // Update configuration.
@@ -145,7 +145,7 @@ func (r *Noded) getNextConfig() {
 		r.ReadConfig(r.cfgPath, r.cfg)
 		// Make sure we've been assigned to a realm
 		if r.cfg.RealmId != kernel.NO_REALM {
-			r.ec = electclnt.MakeElectClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777)
+			r.ec = electclnt.MakeElectClnt(r.FsLib, realmFencePath(r.cfg.RealmId), 0777)
 			break
 		}
 	}
@@ -269,7 +269,7 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		}
 
 		// Remove the realm's named directory
-		if err := r.Remove(path.Join(REALM_NAMEDS, realmCfg.Rid)); err != nil {
+		if err := r.Remove(RealmPath(realmCfg.Rid)); err != nil {
 			db.DPrintf("NODED_ERR", "Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 

@@ -20,9 +20,7 @@ import (
 )
 
 const (
-	REALM_NAMEDS = "name/realm-nameds" // Symlinks to realms' nameds
-	REALM_FENCES = "name/realm-fences" // Fence around modifications to realm allocations.
-	REALM_MGRS   = "name/realm-mgrs"   // Fence around modifications to realm allocations.
+	REALM_MGRS = "name/realm-mgrs" // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
@@ -178,7 +176,7 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	}
 	db.DPrintf("SIGMAMGR", "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
 	s := &stats.StatInfo{}
-	err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
+	err := m.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
 	if err != nil {
 		db.DPrintf("SIGMAMGR_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
@@ -254,7 +252,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	if _, ok := m.realmLocks[realmId]; ok {
 		db.DFatalf("tried to create realm twice %v", realmId)
 	}
-	m.realmLocks[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
+	m.realmLocks[realmId] = electclnt.MakeElectClnt(m.FsLib, realmFencePath(realmId), 0777)
 
 	lockRealm(m.realmLocks[realmId], realmId)
 

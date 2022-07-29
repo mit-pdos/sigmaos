@@ -121,6 +121,10 @@ func (p *Perf) TptTick(tpt float64) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	p.tptTickL(tpt)
+}
+
+func (p *Perf) tptTickL(tpt float64) {
 	// If we aren't recording throughput, return.
 	if !p.tpt {
 		return
@@ -322,8 +326,11 @@ func (p *Perf) setupTpt(sampleHz int, fpath string) {
 	}
 	p.tptFile = f
 	// Pre-allocate a large number of entries (40 secs worth)
-	p.times = make([]time.Time, 1, 40*sampleHz)
-	p.tpts = make([]float64, 2, 40*sampleHz)
+	p.times = make([]time.Time, 0, 40*sampleHz)
+	p.tpts = make([]float64, 0, 40*sampleHz)
+
+	p.times = append(p.times, time.Now())
+	p.tpts = append(p.tpts, 0.0)
 
 	p.mu.Unlock()
 }
@@ -372,7 +379,7 @@ func (p *Perf) teardownTpt() {
 	if p.tpt {
 		p.tpt = false
 		// Ignore first entry.
-		for i := 1; i < len(p.times); i++ {
+		for i := 0; i < len(p.times); i++ {
 			if _, err := p.tptFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
 				db.DFatalf("Error writing to tpt file: %v", err)
 			}

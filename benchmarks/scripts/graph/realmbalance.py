@@ -37,7 +37,7 @@ def extend_tpts_to_range(tpts, r):
     return
   assert(len(tpts) == 1)
   last_tick = tpts[0][len(tpts[0]) - 1]
-  if last_tick[0] < r[1]:
+  if last_tick[0] <= r[1]:
     tpts[0].append((r[1], last_tick[1]))
 
 def get_overall_time_range(ranges):
@@ -111,7 +111,6 @@ def graph_data(input_dir, out):
   if len(kv_tpts) > 0:
     add_data_to_graph(kv_buckets, "KV Throughput")
   if len(procd_tpts) > 0:
-    print(procd_tpts)
     add_data_to_graph(dict(procd_tpts[0]), "Procds Assigned")
   finalize_graph(out)
 

@@ -8,6 +8,7 @@ import (
 
 	"ulambda/benchmarks"
 	db "ulambda/debug"
+	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/procdclnt"
 	"ulambda/test"
@@ -60,15 +61,18 @@ func monitorProcdsAssigned(ts *test.Tstate) *perf.Perf {
 	p := perf.MakePerf("TEST")
 	go func() {
 		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-		nprocd := 0
+		nprocd := 1
+		p.TptTick(float64(nprocd))
 		var err error
 		for {
 			nprocd, err = pdc.WaitProcdChange(nprocd)
-			p.TptTick(float64(nprocd))
 			if err != nil {
 				db.DPrintf(db.ALWAYS, "Error WaitProcdChange: %v", err)
 				return
 			}
+			// Make sure changes don't get put in the same tpt bucket.
+			time.Sleep(time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
+			p.TptTick(float64(nprocd))
 		}
 	}()
 	return p

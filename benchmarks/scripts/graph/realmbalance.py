@@ -24,6 +24,8 @@ def get_time_range(tpts):
   start = sys.maxsize
   end = 0
   for tpt in tpts:
+    if len(tpt) == 0:
+      continue
     min_t = min([ t[0] for t in tpt ])
     max_t = max([ t[0] for t in tpt ])
     start = min(start, min_t)

@@ -37,7 +37,7 @@ const (
 
 // ========== App parameters ==========
 const (
-	MR_APP                = "mr-grep-wiki2G.yml"
+	MR_APP                = "mr-grep-wiki.yml"
 	N_MR_JOBS_APP         = 1
 	N_KV_JOBS_APP         = 1
 	KV_CLERK_NCLERKS_APP  = 1
@@ -176,7 +176,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunMRWC(t *testing.T) {
+func TestAppRunMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
 	jobs, apps := makeNMRJobs(ts, N_MR_JOBS_APP, MR_APP)

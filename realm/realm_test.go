@@ -2,7 +2,6 @@ package realm_test
 
 import (
 	"flag"
-	"path"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -98,7 +97,7 @@ func (ts *Tstate) checkNCoreGroups(min int, max int) {
 	nCoreGroups := 0
 	for _, nd := range cfg.NodedsActive {
 		ndCfg := realm.MakeNodedConfig()
-		ts.ReadConfig(path.Join(realm.NODED_CONFIG, nd), ndCfg)
+		ts.ReadConfig(realm.NodedConfPath(nd), ndCfg)
 		nCoreGroups += len(ndCfg.Cores)
 	}
 	db.DPrintf("TEST", "Done Checking num nodeds")

@@ -38,7 +38,7 @@ func MakeNoded(machineId string) *Noded {
 	nd := &Noded{}
 	nd.id = proc.GetPid().String()
 	nd.machineId = machineId
-	nd.cfgPath = path.Join(NODED_CONFIG, nd.id)
+	nd.cfgPath = NodedConfPath(nd.id)
 	nd.done = make(chan bool)
 	nd.FsLib = fslib.MakeFsLib(nd.id)
 	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
@@ -177,7 +177,7 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 		}
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
-		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
+		r.WriteConfig(RealmConfPath(realmCfg.Rid), realmCfg)
 		db.DPrintf("NODED", "Added named replica: %v", realmCfg)
 	}
 	return initDone
@@ -186,7 +186,7 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 // Register this noded as part of a realm.
 func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NodedsActive = append(cfg.NodedsActive, nd.id)
-	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
 	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.id), 0777); err != nil {
 		db.DFatalf("Error symlink: %v", err)
@@ -246,7 +246,7 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 
 	cfg.LastResize = time.Now()
 
-	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 
 	// Remove the symlink to this noded from the realmmgr dir.
 	nd.Remove(path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.id))
@@ -264,7 +264,7 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
-		if err := r.Remove(path.Join(REALM_CONFIG, realmCfg.Rid)); err != nil {
+		if err := r.Remove(RealmConfPath(realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}
 

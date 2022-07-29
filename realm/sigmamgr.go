@@ -20,8 +20,6 @@ import (
 )
 
 const (
-	REALM_CONFIG = "name/realm-config" // Store of realm configs
-	NODED_CONFIG = "name/noded-config" // Store of noded configs
 	REALM_NAMEDS = "name/realm-nameds" // Symlinks to realms' nameds
 	REALM_FENCES = "name/realm-fences" // Fence around modifications to realm allocations.
 	REALM_MGRS   = "name/realm-mgrs"   // Fence around modifications to realm allocations.
@@ -165,11 +163,15 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 
 // Ascertain whether or not a noded is overprovisioned.
 //
-// TODO: make it possible to evict BE-based nodeds.
+// XXX Eventually, we'll want to find overprovisioned realms according to
+// more nuanced metrics, e.g. how many Nodeds are running procs that hold
+// state, etc.
 func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) bool {
 	var overprovisioned bool
 	ndCfg := MakeNodedConfig()
-	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
+	// TODO: We may want to eventually fully evict nodeds if they only run BE
+	// procs.
 	// Currently, we don't fully evict nodeds.
 	if len(ndCfg.Cores) <= 1 {
 		return false
@@ -204,9 +206,6 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
 	opRealmId := ""
 	ok := false
-	// XXX Eventually, we'll want to find overprovisioned realms according to
-	// more nuanced metrics, e.g. how many Nodeds are running BE vs LC tasks, how
-	// many Nodeds are running procs that hold state, etc.
 	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
 		realmId := st.Name
 
@@ -225,7 +224,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		defer unlockRealm(lock, realmId)
 
 		rCfg := &RealmConfig{}
-		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+		m.ReadConfig(RealmConfPath(realmId), rCfg)
 
 		// See if any nodeds have cores to spare.
 		nodedOverprovisioned := false
@@ -263,7 +262,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	cfg.Rid = realmId
 
 	// Make the realm config file.
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
+	m.WriteConfig(RealmConfPath(realmId), cfg)
 
 	unlockRealm(m.realmLocks[realmId], realmId)
 
@@ -289,9 +288,9 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 
 	// Update the realm config to note that the realm is being shut down.
 	cfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
+	m.ReadConfig(RealmConfPath(realmId), cfg)
 	cfg.Shutdown = true
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
+	m.WriteConfig(RealmConfPath(realmId), cfg)
 
 	unlockRealm(m.realmLocks[realmId], realmId)
 	delete(m.realmLocks, realmId)

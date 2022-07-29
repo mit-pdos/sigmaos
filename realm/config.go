@@ -2,7 +2,6 @@ package realm
 
 import (
 	"fmt"
-	"path"
 	"time"
 
 	"ulambda/config"
@@ -46,6 +45,6 @@ func (rc *RealmConfig) String() string {
 func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
 	clnt := config.MakeConfigClnt(fsl)
 	cfg := &RealmConfig{}
-	clnt.ReadConfig(path.Join(REALM_CONFIG, rid), cfg)
+	clnt.ReadConfig(RealmConfPath(rid), cfg)
 	return cfg
 }

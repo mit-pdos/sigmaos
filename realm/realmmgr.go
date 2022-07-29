@@ -120,7 +120,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 
 		// Read this noded's config.
 		ndCfg := &NodedConfig{}
-		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 
 		cores := ndCfg.Cores[len(ndCfg.Cores)-1]
 		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
@@ -201,7 +201,7 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 		// realm.
 		ok, err = m.sigmaFsl.ProcessDir(path.Join(REALM_MGRS, m.realmId, NODEDS), func(nd *np.Stat) (bool, error) {
 			ndCfg := MakeNodedConfig()
-			m.ReadConfig(path.Join(NODED_CONFIG, nd.Name), ndCfg)
+			m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
 			// Try to claim additional cores on the machine this noded lives on.
 			if c, ok := m.tryClaimCores(ndCfg.MachineId); ok {
 				cores = c
@@ -250,31 +250,31 @@ func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
 	ndCfg := MakeNodedConfig()
-	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 	ndCfg.RealmId = realmId
 	ndCfg.Cores = append(ndCfg.Cores, cores)
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	m.WriteConfig(NodedConfPath(nodedId), ndCfg)
 
 	lockRealm(m.lock, realmId)
 	defer unlockRealm(m.lock, realmId)
 
 	// Update the realm's config
 	rCfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	m.ReadConfig(RealmConfPath(realmId), rCfg)
 	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
 	rCfg.LastResize = time.Now()
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	m.WriteConfig(RealmConfPath(realmId), rCfg)
 }
 
 // XXX Do I really need this?
 func (m *RealmResourceMgr) getRealmConfig() (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
 	// anymore. In this case, another noded is not needed.
-	if _, err := m.sigmaFsl.Stat(path.Join(REALM_CONFIG, m.realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
+	if _, err := m.sigmaFsl.Stat(RealmConfPath(m.realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
 		return nil, fmt.Errorf("Realm not found")
 	}
 	cfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), cfg)
+	m.ReadConfig(RealmConfPath(m.realmId), cfg)
 	return cfg, nil
 }
 
@@ -283,7 +283,7 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) map[string]*stats
 	stat := make(map[string]*stats.StatInfo)
 	for _, nodedId := range nodeds {
 		ndCfg := MakeNodedConfig()
-		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 		s := &stats.StatInfo{}
 		err := m.GetFileJson(path.Join(np.PROCD, ndCfg.ProcdIp, np.STATSD), s)
 		if err != nil {

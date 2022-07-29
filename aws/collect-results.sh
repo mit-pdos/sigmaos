@@ -41,7 +41,9 @@ MAIN="${vma[0]}"
 
 RUN_NUM=$(date +%s)
 
-mkdir ../benchmarks/results/$RUN_NUM
+PERF_DIR=../benchmarks/results/$RUN_NUM
+LOG_DIR=/tmp
+mkdir $PERF_DIR
 
 for vm in $vms; do
   echo "scp: $vm"
@@ -51,9 +53,9 @@ for vm in $vms; do
     outfile="/tmp/machined.out"
   fi
   # scp machined.out files.
-  cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile /tmp/$vm.out"
+  cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile $LOG_DIR/$vm.out"
   # scp performance files.
-  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* ../benchmarks/results/$RUN_NUM"
+  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* $PERF_DIR"
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
     eval "$cmd2"
@@ -65,3 +67,7 @@ for vm in $vms; do
   fi
 done
 wait
+
+echo -e "\n\n===================="
+echo "Perf results are in $PERF_DIR"
+echo "VM logs are in $LOG_DIR"

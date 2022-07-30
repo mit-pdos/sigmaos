@@ -38,6 +38,7 @@ type Procd struct {
 	cpuMask          linuxsched.CPUMask
 	coresOwned       proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
 	coresAvail       proc.Tcore // Current number of cores available to run procs on.
+	memAvail         proc.Tmem
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
@@ -53,6 +54,7 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.coresOwned = proc.Tcore(linuxsched.NCores)
+	pd.memAvail = getMemTotal()
 
 	pd.makeFs()
 
@@ -139,6 +141,7 @@ func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
 	// structures so that the proc's core allocations will be adjusted during the
 	// resize.
 	pd.allocCoresL(linuxProc, p.Ncore)
+	pd.allocMemL(p)
 	// Register running proc in in-memory structures.
 	pd.putProcL(linuxProc)
 	return linuxProc
@@ -157,7 +160,7 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 		return nil, err
 	}
 	// See if the proc fits on this procd.
-	if pd.hasEnoughCores(p) {
+	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) {
 		// Proc may have been stolen
 		if ok := pd.claimProc(procPath); !ok {
 			return nil, nil
@@ -234,6 +237,7 @@ func (pd *Procd) runProc(p *LinuxProc) {
 
 	// Free any dedicated cores.
 	pd.freeCores(p)
+	pd.freeMemL(p.attr)
 
 	// Deregister running procs
 	pd.deleteProc(p)

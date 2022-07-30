@@ -13,6 +13,7 @@ import (
 type Tpid string
 type Ttype uint32
 type Tcore uint32
+type Tmem uint32
 
 const (
 	T_BE Ttype = 0
@@ -37,6 +38,7 @@ type Proc struct {
 	Env          []string // Environment variables
 	Type         Ttype    // Type
 	Ncore        Tcore    // Number of cores requested
+	Mem          Tmem     // Amount of memory required in MB
 	sharedTarget string   // Target of shared state
 }
 
@@ -88,6 +90,11 @@ func (p *Proc) SetNcore(ncore Tcore) {
 		p.Type = T_LC
 		p.Ncore = ncore
 	}
+}
+
+// Set the amount of memory (in MB) required to run this proc.
+func (p *Proc) SetMem(mb Tmem) {
+	p.Mem = mb
 }
 
 func (p *Proc) setProcDir(procdIp string) {

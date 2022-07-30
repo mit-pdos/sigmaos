@@ -195,6 +195,6 @@ func (ji *KVJobInstance) Stop() {
 	// Remove the last kvd group after removing the balancer.
 	ji.kvdgms[0].Stop()
 	ji.kvdgms = nil
-	err := kv.RemoveJob(ji.FsLib, ji.job)
-	assert.Nil(ji.T, err, "Remove job: %v", err)
+	//	err := kv.RemoveJob(ji.FsLib, ji.job)
+	//	assert.Nil(ji.T, err, "Remove job: %v", err)
 }

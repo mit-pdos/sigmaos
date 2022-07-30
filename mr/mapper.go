@@ -205,8 +205,10 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	for scanner.Scan() {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
-		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
-			return 0, err
+		if len(l) > 0 {
+			if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
+				return 0, err
+			}
 		}
 		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {

@@ -114,9 +114,9 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) makeTask(bin string, args []string, ncore proc.Tcore) *proc.Proc {
+func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	p := proc.MakeProc(bin, args)
-	p.SetNcore(ncore)
+	p.SetMem(mb)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
@@ -131,7 +131,8 @@ func (c *Coord) mapperProc(task string) *proc.Proc {
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 2)
+	// TODO: set dynamically based on input file combined size.
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 500)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
@@ -314,16 +315,11 @@ func (c *Coord) recover(dir string) {
 }
 
 // XXX do something for stragglers?
-func (c *Coord) Round(task string) {
+func (c *Coord) Round() {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		if task == "map" {
-			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
-		} else if task == "reduce" {
-			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
-		} else {
-			db.DFatalf("Bad task type: %v", task)
-		}
+		m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+		m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
 		if m <= 0 {
 			break
 		}
@@ -368,11 +364,7 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round("map")
-		n := c.doneTasks(MapTask(c.job) + DONE)
-		if n == c.nmaptask {
-			c.Round("reduce")
-		}
+		c.Round()
 		if !c.doRestart() {
 			break
 		}

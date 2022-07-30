@@ -114,8 +114,9 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) makeTask(bin string, args []string) *proc.Proc {
+func (c *Coord) makeTask(bin string, args []string, ncore proc.Tcore) *proc.Proc {
 	p := proc.MakeProc(bin, args)
+	p.SetNcore(ncore)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
@@ -124,13 +125,13 @@ func (c *Coord) makeTask(bin string, args []string) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz})
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 0)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 2)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {

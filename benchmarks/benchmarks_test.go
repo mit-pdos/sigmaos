@@ -52,7 +52,7 @@ const (
 	BALANCE_REALM_1         = "arielck"
 	BALANCE_REALM_2         = "test-realm"
 	BALANCE_MR_APP_REALM    = "mr-grep-wiki.yml"
-	KV_CLERK_NCLERKS_REALM  = 8
+	KV_CLERK_NCLERKS_REALM  = 16
 	KV_CLERK_DURATION_REALM = "90s"
 	KV_CLERK_NCORE_REALM    = 1
 	KV_KVD_NKVD_REALM       = 1

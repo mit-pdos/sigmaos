@@ -313,11 +313,16 @@ func (c *Coord) recover(dir string) {
 }
 
 // XXX do something for stragglers?
-func (c *Coord) Round() {
+func (c *Coord) Round(task string) {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
-		m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		if task == "map" {
+			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+		} else if task == "reduce" {
+			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		} else {
+			db.DFatalf("Bad task type: %v", task)
+		}
 		if m <= 0 {
 			break
 		}
@@ -362,7 +367,11 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round()
+		c.Round("map")
+		n := c.doneTasks(MapTask(c.job) + DONE)
+		if n == c.nmaptask {
+			c.Round("reduce")
+		}
 		if !c.doRestart() {
 			break
 		}

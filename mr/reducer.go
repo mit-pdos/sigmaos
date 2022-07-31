@@ -78,7 +78,7 @@ type result struct {
 	n    np.Tlength
 }
 
-func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, bool) {
+func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
 	defer fsl.Exit()
@@ -88,7 +88,7 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, bool) {
 	rdr, err := fsl.OpenReader(sym)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
-		return 0, false
+		return 0, 0, false
 	}
 	defer rdr.Close()
 	start := time.Now()
@@ -112,24 +112,25 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, bool) {
 	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf("MR", "JsonReader %v err %v\n", sym, err)
-		return 0, false
+		return 0, 0, false
 	}
-	return rdr.Nbytes(), true
+	return rdr.Nbytes(), time.Since(start), true
 }
 
 type Tdata map[string][]string
 
-func (r *Reducer) readFiles(input string) (np.Tlength, Tdata, []string, error) {
+func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []string, error) {
 	data := make(map[string][]string, 0)
 	lostMaps := []string{}
 	files := make(map[string]bool)
 	nbytes := np.Tlength(0)
+	duration := time.Duration(0)
 	for len(files) < r.nmaptask {
 		sts, err := r.ReadDirWatch(input, func(sts []*np.Stat) bool {
 			return len(sts) == len(files)
 		})
 		if err != nil {
-			return 0, nil, nil, err
+			return 0, 0, nil, nil, err
 		}
 		n := 0
 		for _, st := range sts {
@@ -142,15 +143,16 @@ func (r *Reducer) readFiles(input string) (np.Tlength, Tdata, []string, error) {
 				// filter here.
 				files[st.Name] = true
 				n += 1
-				m, ok := r.readFile(st.Name, data)
+				m, d, ok := r.readFile(st.Name, data)
 				if !ok {
 					lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 				}
 				nbytes += m
+				duration += d
 			}
 		}
 	}
-	return nbytes, data, lostMaps, nil
+	return nbytes, duration, data, lostMaps, nil
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
@@ -161,8 +163,7 @@ func (r *Reducer) emit(kv *KeyValue) error {
 
 func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
-	start := time.Now()
-	nin, data, lostMaps, err := r.readFiles(r.input)
+	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
@@ -187,7 +188,7 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatusInfo(proc.StatusOK, r.input,
-		Result{false, r.input, nin, r.wrt.Nbytes(), time.Since(start).Milliseconds()})
+		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

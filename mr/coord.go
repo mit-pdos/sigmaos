@@ -315,17 +315,16 @@ func (c *Coord) recover(dir string) {
 }
 
 // XXX do something for stragglers?
-//func (c *Coord) Round(ttype string) {
-func (c *Coord) Round() {
+func (c *Coord) Round(ttype string) {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		//		if ttype == "map" {
-		m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
-		//		} else if ttype == "reduce" {
-		m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
-		//		} else {
-		//			db.DFatalf("Unknown ttype: %v", ttype)
-		//		}
+		if ttype == "map" {
+			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+		} else if ttype == "reduce" {
+			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		} else {
+			db.DFatalf("Unknown ttype: %v", ttype)
+		}
 		if m <= 0 {
 			break
 		}
@@ -370,12 +369,11 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round()
-		//		c.Round("map")
-		//		n := c.doneTasks(MapTask(c.job) + DONE)
-		//		if n == c.nmaptask {
-		//			c.Round("reduce")
-		//		}
+		c.Round("map")
+		n := c.doneTasks(MapTask(c.job) + DONE)
+		if n == c.nmaptask {
+			c.Round("reduce")
+		}
 		if !c.doRestart() {
 			break
 		}

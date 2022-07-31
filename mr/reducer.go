@@ -102,10 +102,10 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 		kv := a.(*KeyValue)
 		db.DPrintf("MR1", "reduce %v/%v: kv %v\n", r.input, file, kv)
 
-		if _, ok := data[kv.K]; !ok {
-			data[kv.K] = make([]string, 0)
+		if _, ok := data[kv.Key]; !ok {
+			data[kv.Key] = make([]string, 0)
 		}
-		data[kv.K] = append(data[kv.K], kv.V)
+		data[kv.Key] = append(data[kv.Key], kv.Value)
 
 		return nil
 	})
@@ -156,7 +156,7 @@ func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []s
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
-	b := fmt.Sprintf("%v %v\n", kv.K, kv.V)
+	b := fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
 	_, err := r.bwrt.Write([]byte(b))
 	return err
 }

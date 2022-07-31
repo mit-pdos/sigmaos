@@ -70,7 +70,7 @@ func Wc(fsl *fslib.FsLib, dir string) (int, error) {
 		n += m
 	}
 	for k, v := range data {
-		fmt.Printf("%s: %d\n", k, v)
+		fmt.Printf("%s %d\n", k, v)
 	}
 	return n, nil
 }

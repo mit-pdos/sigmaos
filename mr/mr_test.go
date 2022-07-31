@@ -145,7 +145,7 @@ func (ts *Tstate) compare() {
 func (ts *Tstate) checkJob() {
 	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
-	if app == "wc" {
+	if app == "mr-wc.yml" {
 		ts.compare()
 	}
 }

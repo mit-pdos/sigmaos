@@ -184,7 +184,16 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
 	}
 	defer rdr.Close()
-	rdr.Lseek(s.Offset)
+	if s.Offset != 0 {
+		// -1 to pick up last byte from prev split so that if
+		// s.Offset != 0 below works out correctly. if the
+		// last byte of previous split is a newline, this
+		// mapper should process the first line of the split.
+		// if not, this mapper should ignore the first line of
+		// the split because it has been processed as part of
+		// the previous split.
+		rdr.Lseek(s.Offset - 1)
+	}
 
 	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz)
 	if err != nil {
@@ -200,7 +209,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	if s.Offset != 0 {
 		scanner.Scan()
 		l := scanner.Text()
-		n += len(l) + 1 // 1 for newline
+		n += len(l) // +1 for newline, but -1 for extra byte we read
 	}
 	for scanner.Scan() {
 		l := scanner.Text()

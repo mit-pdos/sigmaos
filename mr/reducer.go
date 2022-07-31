@@ -185,7 +185,7 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
 	// Include time spent writing output.
-	dur += time.Since(start)
+	duration += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
+	// "sort"
 	"strconv"
 	"strings"
 	"time"
@@ -78,19 +78,17 @@ type result struct {
 	n    np.Tlength
 }
 
-func (r *Reducer) readFile(ch chan result, file string) {
+func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
 	defer fsl.Exit()
 
-	kvs := make([]*KeyValue, 0)
 	sym := r.input + "/" + file + "/"
 	db.DPrintf("MR", "readFile %v\n", sym)
 	rdr, err := fsl.OpenReader(sym)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
-		ch <- result{nil, file, false, 0}
-		return
+		return 0, false
 	}
 	defer rdr.Close()
 	start := time.Now()
@@ -102,22 +100,27 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	//}
 	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
-		db.DPrintf("REDUCE1", "reduce %v/%v: kv %v\n", r.input, file, kv)
-		kvs = append(kvs, kv)
+		db.DPrintf("MR1", "reduce %v/%v: kv %v\n", r.input, file, kv)
+
+		if _, ok := data[kv.K]; !ok {
+			data[kv.K] = make([]string, 0)
+		}
+		data[kv.K] = append(data[kv.K], kv.V)
+
 		return nil
 	})
+	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf("MR", "JsonReader %v err %v\n", sym, err)
-		ch <- result{nil, file, false, 0}
-	} else {
-		ch <- result{kvs, file, true, rdr.Nbytes()}
+		return 0, false
 	}
-	db.DPrintf("MR0", "Reduce readfile %v %v\n", sym, time.Since(start).Milliseconds())
-	return
+	return rdr.Nbytes(), true
 }
 
-func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, error) {
-	kvs := []*KeyValue{}
+type Tdata map[string][]string
+
+func (r *Reducer) readFiles(input string) (np.Tlength, Tdata, []string, error) {
+	data := make(map[string][]string, 0)
 	lostMaps := []string{}
 	files := make(map[string]bool)
 	nbytes := np.Tlength(0)
@@ -129,7 +132,6 @@ func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, er
 			return 0, nil, nil, err
 		}
 		n := 0
-		ch := make(chan result)
 		for _, st := range sts {
 			if _, ok := files[st.Name]; !ok {
 				// Make sure we read an input file
@@ -140,29 +142,15 @@ func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, er
 				// filter here.
 				files[st.Name] = true
 				n += 1
-				go r.readFile(ch, st.Name)
-			}
-		}
-		for i := 0; i < n; i++ {
-			res := <-ch
-			db.DPrintf("REDUCE", "Read %v %v ok %v\n", r.input, res.name, res.ok)
-			if !res.ok {
-				// If !ok, then readFile failed to
-				// read input shard, perhaps the
-				// server holding the mapper's output
-				// crashed, or is unreachable. Keep
-				// track that we need to restart that
-				// mappers, but keep going processing
-				// other shards to see if more mappers
-				// need to be restarted.
-				lostMaps = append(lostMaps, strings.TrimPrefix(res.name, "m-"))
-			} else {
-				nbytes += res.n
-				kvs = append(kvs, res.kvs...)
+				m, ok := r.readFile(st.Name, data)
+				if !ok {
+					lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
+				}
+				nbytes += m
 			}
 		}
 	}
-	return nbytes, kvs, lostMaps, nil
+	return nbytes, data, lostMaps, nil
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
@@ -174,7 +162,7 @@ func (r *Reducer) emit(kv *KeyValue) error {
 func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	start := time.Now()
-	nin, kvs, lostMaps, err := r.readFiles(r.input)
+	nin, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
@@ -182,27 +170,10 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
-	sstart := time.Now()
-	sort.Sort(ByKey(kvs))
-	db.DPrintf("MR0", "Reduce Sort %v\n", time.Since(sstart).Milliseconds())
-
-	i := 0
-	for i < len(kvs) {
-		j := i + 1
-		for j < len(kvs) && kvs[j].K == kvs[i].K {
-			j++
-		}
-		bytesProcessed := 0
-		values := []string{}
-		for k := i; k < j; k++ {
-			values = append(values, kvs[k].V)
-			bytesProcessed += len(kvs[k].K) + len(kvs[k].V)
-		}
-		if err := r.reducef(kvs[i].K, values, r.emit); err != nil {
+	for k, vs := range data {
+		if err := r.reducef(k, vs, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
 		}
-		r.perf.TptTick(float64(bytesProcessed))
-		i = j
 	}
 
 	if err := r.bwrt.Flush(); err != nil {

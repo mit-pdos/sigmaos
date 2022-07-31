@@ -31,6 +31,9 @@ echo -e UUID=$(sudo blkid /dev/sda4 | cut -d \" -f2)'\t/var/local\text4\tdefault
 # Set max journal size
 sudo journalctl --vacuum-size=100M
 
+sudo apt update
+sudo apt install libelf-dev
+
 cd /var/local/$USER
 mkdir kernel
 

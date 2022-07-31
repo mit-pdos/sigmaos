@@ -13,8 +13,6 @@ BLKDEV=/dev/sda4
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
 
-sudo mount $BLKDEV /var/local
-
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
@@ -98,7 +96,8 @@ then
   git-lfs \
   libseccomp-dev \
   awscli \
-  htop
+  htop \
+  jq
 
   # For hadoop
   yes | sudo apt install openjdk-8-jdk \
@@ -112,9 +111,9 @@ then
 fi
 
 if [ -d "ulambda" ]; then 
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh -norace -target aws)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./install.sh --from s3 --realm test-realm)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download;)'
 fi
 
 mkdir ~/.aws

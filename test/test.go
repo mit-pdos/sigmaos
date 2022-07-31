@@ -137,7 +137,7 @@ func setVersion() {
 
 const (
 	MBYTE = 1 << 20
-	BUFSZ = 4 * MBYTE
+	BUFSZ = 2 * MBYTE
 )
 
 func Mbyte(sz np.Tlength) float64 {

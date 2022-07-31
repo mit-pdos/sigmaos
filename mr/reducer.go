@@ -171,6 +171,7 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
+	start := time.Now()
 	for k, vs := range data {
 		if err := r.reducef(k, vs, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
@@ -183,6 +184,8 @@ func (r *Reducer) doReduce() *proc.Status {
 	if err := r.wrt.Close(); err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
+	// Include time spent writing output.
+	dur += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)

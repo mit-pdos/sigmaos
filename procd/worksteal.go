@@ -13,13 +13,20 @@ import (
 
 // Thread in charge of stealing procs.
 func (pd *Procd) workStealingMonitor() {
+	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+}
+
+// Monitor a Work-Stealing queue.
+func (pd *Procd) monitorWSQueue(wsQueue string) {
 	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 	for !pd.readDone() {
-		// Wait for a bit.
+		// Wait for a bit to avoid overwhelming named.
 		<-ticker.C
+
 		var nStealable int
 		// Wait untile there is a proc to steal.
-		sts, err := pd.ReadDirWatch(np.PROCD_WS, func(sts []*np.Stat) bool {
+		sts, err := pd.ReadDirWatch(wsQueue, func(sts []*np.Stat) bool {
 			// Any procs are local?
 			anyLocal := false
 			nStealable = len(sts)
@@ -27,7 +34,7 @@ func (pd *Procd) workStealingMonitor() {
 			for _, st := range sts {
 				// See if this proc was spawned on this procd or has been stolen. If
 				// so, discount it from the count of stealable procs.
-				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
+				b, err := pd.GetFile(path.Join(wsQueue, st.Name))
 				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
 					anyLocal = true
 					nStealable--
@@ -47,6 +54,7 @@ func (pd *Procd) workStealingMonitor() {
 		// unreachable err may occur if the other procd is shutting down.
 		if err != nil && (np.IsErrVersion(err) || np.IsErrUnreachable(err)) {
 			db.DPrintf("PROCD_ERR", "Error ReadDirWatch: %v %v", err, len(sts))
+			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
 		}
 		if err != nil {
@@ -77,7 +85,7 @@ func (pd *Procd) offerStealableProcs() {
 					db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.MyAddr(), st.Name)
 					// If proc has been haning in the runq for too long...
 					target := path.Join(runqPath, st.Name) + "/"
-					link := path.Join(np.PROCD_WS, st.Name) + "-SYMLINK"
+					link := path.Join(np.PROCD_WS, runq, st.Name)
 					if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !np.IsErrExists(err) {
 						db.DFatalf("Error Symlink: %v", err)
 						return false, err
@@ -93,11 +101,19 @@ func (pd *Procd) offerStealableProcs() {
 	}
 }
 
-func (pd *Procd) tryDeleteWSSymlink(st *np.Stat) {
-	// If proc was offered up for work stealing...
-	if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
-		link := path.Join(np.PROCD_WS, st.Name) + "-SYMLINK"
-		pd.Remove(link)
+// Delete the work-stealing symlink for a proc.
+func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, isRemote bool) {
+	// If this proc is remote, remove the symlink.
+	if isRemote {
+		// Remove the symlink (don't follow).
+		db.DPrintf(db.ALWAYS, "Removing ws claimed symlink %v", procPath[:len(procPath)-1])
+		pd.Remove(procPath[:len(procPath)-1])
+	} else {
+		// If proc was offered up for work stealing...
+		if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
+			link := path.Join(np.PROCD_WS, st.Name)
+			pd.Remove(link)
+		}
 	}
 }
 

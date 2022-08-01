@@ -307,8 +307,9 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (float64, map[string]f
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() int {
-	sts, _ := m.GetDir(np.PROCD_WS)
-	return len(sts)
+	sts1, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	sts2, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+	return len(sts1) + len(sts2)
 }
 
 func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {

@@ -167,13 +167,13 @@ func procdName(ts *test.Tstate, exclude map[string]bool) string {
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name1 := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true})
+	name1 := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS_AAA): true})
 
 	var err error
 	err = ts.BootProcd()
 	assert.Nil(t, err, "kernel/procd")
 
-	name := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true, name1: true})
+	name := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS_AAA): true, name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))

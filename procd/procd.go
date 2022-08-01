@@ -73,6 +73,8 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 
 	// Make a directory in which to put stealable procs.
 	pd.MkDir(np.PROCD_WS, 0777)
+	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), 0777)
+	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), 0777)
 	pd.MemFs.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
 	pd.Work()
@@ -176,22 +178,41 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 func (pd *Procd) getProc() (*LinuxProc, error) {
 	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
-	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
-	// Try local procd first.
-	for _, runq := range runqs {
-		runqPath := path.Join(np.PROCD, pd.MyAddr(), runq)
-		_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
-			newProc, err := pd.tryGetRunnableProc(path.Join(runqPath, st.Name))
+	localPath := path.Join(np.PROCD, pd.MyAddr())
+	// Claim order:
+	// 1. local LC queue
+	// 2. remote LC queue
+	// 3. local BE queue
+	// 4. remote BE queue
+	runqs := []string{
+		path.Join(localPath, np.PROCD_RUNQ_LC),
+		path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC),
+		path.Join(localPath, np.PROCD_RUNQ_BE),
+		path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE),
+	}
+	for i, runq := range runqs {
+		// Odd indices are remote queues.
+		isRemote := i%2 == 1
+		_, err := pd.ProcessDir(runq, func(st *np.Stat) (bool, error) {
+			procPath := path.Join(runq, st.Name)
+			// We need to add "/" to follow the symlink for remote queues.
+			if isRemote {
+				procPath += "/"
+			}
+			newProc, err := pd.tryGetRunnableProc(procPath)
 			if err != nil {
 				db.DPrintf("PROCD_ERR", "Error getting runnable proc: %v", err)
+				// Remove the symlink, as it must have already been claimed.
+				if isRemote {
+					pd.Remove(procPath)
+				}
 				return false, nil
 			}
 			// We claimed a proc successfully, so stop.
 			if newProc != nil {
 				p = newProc
-				// Delete the work stealing symlink if this proc was ever offered for
-				// work-stealing.
-				pd.tryDeleteWSSymlink(st)
+				// Delete the work stealing symlink for this proc.
+				pd.deleteWSSymlink(st, procPath, isRemote)
 				return true, nil
 			}
 			// Couldn't claim a proc, so keep looking.
@@ -204,28 +225,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			return p, nil
 		}
 	}
-	// Try to steal from other procds.
-	_, err := pd.ProcessDir(np.PROCD_WS, func(st *np.Stat) (bool, error) {
-		procPath := path.Join(np.PROCD_WS, st.Name)
-		newProc, err := pd.tryGetRunnableProc(procPath + "/")
-		if err != nil {
-			db.DPrintf("PROCD_ERR", "Error readRunqProc in Procd.getProc: %v", err)
-			// Remove the symlink, as it must have already been claimed.
-			pd.Remove(procPath)
-			return false, nil
-		}
-		if newProc != nil {
-			db.DPrintf("PROCD", "Stole proc: %v", newProc)
-			p = newProc
-			// Remove the ws symlink.
-			if err := pd.Remove(procPath); err != nil {
-				db.DPrintf("PROCD_ERR", "Error Remove symlink after claim: %v", err)
-			}
-			return true, nil
-		}
-		return false, nil
-	})
-	return p, err
+	return nil, nil
 }
 
 func (pd *Procd) runProc(p *LinuxProc) {

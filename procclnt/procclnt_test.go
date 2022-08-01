@@ -464,7 +464,11 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized: took too long (%v msec)", end.Sub(start).Milliseconds())
 
 	// Check that work-stealing symlinks were cleaned up.
-	sts, _, err := ts.ReadDir(np.PROCD_WS)
+	sts, _, err := ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	assert.Nil(t, err, "Readdir %v", err)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+
+	sts, _, err = ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 	assert.Nil(t, err, "Readdir %v", err)
 	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
 

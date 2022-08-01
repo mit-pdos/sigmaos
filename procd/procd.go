@@ -326,8 +326,8 @@ func (pd *Procd) Work() {
 		pd.Done()
 		pd.MemFs.Done()
 	}()
-	go pd.workStealingMonitor()
 	go pd.offerStealableProcs()
+	pd.startWorkStealingMonitors()
 	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
 	// procd is full
 	NWorkers := linuxsched.NCores + 1

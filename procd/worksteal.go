@@ -12,7 +12,7 @@ import (
 )
 
 // Thread in charge of stealing procs.
-func (pd *Procd) workStealingMonitor() {
+func (pd *Procd) startWorkStealingMonitors() {
 	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
 	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 }

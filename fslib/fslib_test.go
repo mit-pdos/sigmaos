@@ -136,6 +136,27 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRemoveSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+
+	d1 := path + "/d1/"
+	db.DPrintf(db.ALWAYS, "path %v", path)
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := d1 + "/f"
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestRmDirWithSymlink(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
@@ -1387,28 +1408,28 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
 	}
 }
 
-func TestDirReadPerf(t *testing.T) {
-	const N = 10000
-	const NFILE = 10
-	const NCLERK = 1
-	ts := test.MakeTstatePath(t, path)
-	dir := path + "d"
-	n := mkDir(t, ts.FsLib, dir, NFILE)
-	assert.Equal(t, NFILE, n)
-	// measuredir("read dir", 1, func() int {
-	// 	n := 0
-	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-	// 		n += 1
-	// 		return false, nil
-	// 	})
-	// 	return n
-	// })
-	// lookuper(t, 1, N, dir)
-	lookuper(t, NCLERK, N, dir, NFILE)
-	err := ts.RmDir(dir)
-	assert.Nil(t, err)
-	ts.Shutdown()
-}
+//func TestDirReadPerf(t *testing.T) {
+//	const N = 10000
+//	const NFILE = 10
+//	const NCLERK = 1
+//	ts := test.MakeTstatePath(t, path)
+//	dir := path + "d"
+//	n := mkDir(t, ts.FsLib, dir, NFILE)
+//	assert.Equal(t, NFILE, n)
+//	// measuredir("read dir", 1, func() int {
+//	// 	n := 0
+//	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+//	// 		n += 1
+//	// 		return false, nil
+//	// 	})
+//	// 	return n
+//	// })
+//	// lookuper(t, 1, N, dir)
+//	lookuper(t, NCLERK, N, dir, NFILE)
+//	err := ts.RmDir(dir)
+//	assert.Nil(t, err)
+//	ts.Shutdown()
+//}
 
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000

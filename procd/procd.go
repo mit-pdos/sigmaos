@@ -212,7 +212,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			if newProc != nil {
 				p = newProc
 				// Delete the work stealing symlink for this proc.
-				pd.deleteWSSymlink(st, procPath, isRemote)
+				pd.deleteWSSymlink(st, procPath, p, isRemote)
 				return true, nil
 			}
 			// Couldn't claim a proc, so keep looking.
@@ -225,7 +225,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			return p, nil
 		}
 	}
-	return nil, nil
+	return p, nil
 }
 
 func (pd *Procd) runProc(p *LinuxProc) {

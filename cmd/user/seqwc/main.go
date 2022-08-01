@@ -16,6 +16,7 @@ func main() {
 	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
 	p := perf.MakePerf("SEQWC")
+	defer p.Done()
 	err := pclnt.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
@@ -24,6 +25,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Wc: error %v\n", err)
 	}
-	p.Done()
 	pclnt.Exited(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

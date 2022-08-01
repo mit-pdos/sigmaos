@@ -37,9 +37,10 @@ const (
 
 // ========== App parameters ==========
 const (
-	MR_APP                = "mr-grep-wiki.yml"
+	MR_APP                = "mr-wc-wiki1.8G.yml"
 	N_MR_JOBS_APP         = 1
 	N_KV_JOBS_APP         = 1
+	KV_NKVD_APP           = 8
 	KV_CLERK_NCLERKS_APP  = 16
 	KV_CLERK_DURATION_APP = "90s"
 	KV_CLERK_NCORE_APP    = 1
@@ -219,7 +220,7 @@ func TestAppRunKVRepl(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunKVUnreplOneClerk(t *testing.T) {
+func TestAppRunKVUnreplOneKVDOneClerk(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)
@@ -242,13 +243,36 @@ func TestAppRunKVUnreplOneClerk(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunKVUnreplNClerk(t *testing.T) {
+func TestAppRunKVUnreplOneKVDNClerk(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{KV_CLERK_NCLERKS_APP}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
 	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	p := monitorProcdsAssigned(ts)
+	runOps(ts, ji, runKV, rs)
+	defer p.Done()
+	printResults(rs)
+	ts.Shutdown()
+}
+
+func TestAppRunKVUnreplNKVDNClerk(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	setNCoresSigmaRealm(ts)
+	nclerks := []int{KV_CLERK_NCLERKS_APP}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
+	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, KV_NKVD_APP, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

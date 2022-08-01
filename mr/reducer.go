@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klauspost/readahead"
+	//	"github.com/klauspost/readahead"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -93,12 +93,12 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 	defer rdr.Close()
 	start := time.Now()
 
-	//	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
-	ardr, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
+	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
+	//	ardr, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
 	if err != nil {
 		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	}
-	err = fslib.JsonReader(ardr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("MR1", "reduce %v/%v: kv %v\n", r.input, file, kv)
 

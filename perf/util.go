@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -43,6 +44,7 @@ func Hz() int {
 const (
 	OUTPUT_PATH = np.UXROOT + "perf-output/"
 	PPROF       = "_PPROF"
+	PPROF_MEM   = "_PPROF_MEM"
 	CPU         = "_CPU"
 	TPT         = "_TPT"
 )
@@ -68,6 +70,7 @@ type Perf struct {
 	done           uint32
 	util           bool
 	pprof          bool
+	pprofMem       bool
 	tpt            bool
 	utilChan       chan bool
 	utilFile       *os.File
@@ -76,6 +79,7 @@ type Perf struct {
 	cpuUtilPct     []float64
 	cores          map[string]bool
 	pprofFile      *os.File
+	pprofMemFile   *os.File
 	tpts           []float64
 	times          []time.Time
 	tptFile        *os.File
@@ -104,6 +108,10 @@ func MakePerf(name string) *Perf {
 	// Set up pprof caputre
 	if ok := labels[name+PPROF]; ok {
 		p.setupPprof(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof.out"))
+	}
+	// Set up pprof caputre
+	if ok := labels[name+PPROF_MEM]; ok {
+		p.setupPprofMem(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof-mem.out"))
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
@@ -161,6 +169,7 @@ func (p *Perf) Done() {
 	if p.done == 0 {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
+		p.teardownPprofMem()
 		p.teardownUtil()
 		p.teardownTpt()
 	}
@@ -350,6 +359,18 @@ func (p *Perf) setupPprof(fpath string) {
 	}
 }
 
+func (p *Perf) setupPprofMem(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprofMem profile file: %v, %v", fpath, err)
+	}
+	p.pprofMem = true
+	p.pprofMemFile = f
+}
+
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
@@ -357,6 +378,21 @@ func (p *Perf) teardownPprof() {
 		p.pprof = false
 		pprof.StopCPUProfile()
 		p.pprofFile.Close()
+	}
+}
+
+// Caller holds lock.
+func (p *Perf) teardownPprofMem() {
+	if p.pprofMem {
+		// Avoid double-closing
+		p.pprofMem = false
+		// get up-to-date statistics
+		runtime.GC()
+		// Write a heap profile
+		if err := pprof.WriteHeapProfile(p.pprofMemFile); err != nil {
+			db.DFatalf("could not write memory profile: ", err)
+		}
+		p.pprofMemFile.Close()
 	}
 }
 

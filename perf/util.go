@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"runtime"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -386,8 +385,8 @@ func (p *Perf) teardownPprofMem() {
 	if p.pprofMem {
 		// Avoid double-closing
 		p.pprofMem = false
-		// get up-to-date statistics
-		runtime.GC()
+		// Don't do GC before collecting the heap profile.
+		// runtime.GC() // get up-to-date statistics
 		// Write a heap profile
 		if err := pprof.WriteHeapProfile(p.pprofMemFile); err != nil {
 			db.DFatalf("could not write memory profile: ", err)

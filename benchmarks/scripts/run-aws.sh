@@ -179,4 +179,10 @@ realm_balance() {
   run_benchmark $perf_dir "$cmd"
 }
 
+# ========== Run benchmarks ==========
 mr_scalability
+mr_vs_corral
+mr_overlap
+kv_scalability
+realm_burst
+realm_balance

@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM [--force-build]" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM [--version VERSION] [--force-build]" 1>&2
 }
 
 VPC=""
 REALM=""
 FORCE=""
+VERSION=""
 while [[ $# -gt 0 ]]; do
   case $1 in
   --vpc)
@@ -17,6 +18,11 @@ while [[ $# -gt 0 ]]; do
   --realm)
     shift
     REALM=$1
+    shift
+    ;;
+  --version)
+    shift
+    VERSION=$1
     shift
     ;;
   --force-build)
@@ -56,7 +62,7 @@ fi
 ENDSSH
 
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-! grep "Already up to date." /tmp/git.out && echo "COMPILE: $MAIN" && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1;)  
+! grep "Already up to date." /tmp/git.out && echo "COMPILE: $MAIN" && (cd ulambda; ./make.sh --norace --target aws --version $VERSION > /tmp/make.out 2>&1;)  
 echo "UPLOAD: $MAIN"
 (cd ulambda; ./upload.sh --realm $REALM;)
 # NOte that we have completed the build on this machine at least once.

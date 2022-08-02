@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 	"time"
@@ -13,6 +14,29 @@ import (
 	"ulambda/proc"
 	"ulambda/test"
 )
+
+// Parameters
+var MR_APP string
+var NKVD int
+var NCLERK int
+var CLERK_DURATION string
+var CLERK_NCORE proc.Tcore
+var KVD_NCORE proc.Tcore
+var REALM2 string
+
+// Read & set the proc version.
+func init() {
+	var nc int
+	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
+	flag.IntVar(&NKVD, "nkvd", 1, "Number of kvds.")
+	flag.IntVar(&NCLERK, "nclerk", 1, "Number of clerks.")
+	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
+	flag.IntVar(&nc, "clerk_ncore", 1, "Clerk Ncore")
+	CLERK_NCORE = proc.Tcore(nc)
+	flag.IntVar(&nc, "kvd_ncore", 2, "KVD Ncore")
+	KVD_NCORE = proc.Tcore(nc)
+	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
+}
 
 // ========== Common parameters ==========
 const (
@@ -33,31 +57,6 @@ var CONTENDERS_NPROCS = 1
 const (
 	N_TRIALS_MICRO = 1000
 	SLEEP_MICRO    = "5000us"
-)
-
-// ========== App parameters ==========
-const (
-	MR_APP                = "mr-wc-wiki1.8G.yml"
-	N_MR_JOBS_APP         = 1
-	N_KV_JOBS_APP         = 1
-	KV_NKVD_APP           = 8
-	KV_CLERK_NCLERKS_APP  = 16
-	KV_CLERK_DURATION_APP = "90s"
-	KV_CLERK_NCORE_APP    = 1
-	KV_KVD_NCORE_APP      = 2
-)
-
-// ========== Realm parameters ==========
-const (
-	N_TRIALS_REALM          = 1000
-	BALANCE_REALM_1         = "arielck"
-	BALANCE_REALM_2         = "test-realm"
-	BALANCE_MR_APP_REALM    = "mr-grep-wiki.yml"
-	KV_CLERK_NCLERKS_REALM  = 16
-	KV_CLERK_DURATION_REALM = "90s"
-	KV_CLERK_NCORE_REALM    = 1
-	KV_KVD_NKVD_REALM       = 1
-	KV_KVD_NCORE_REALM      = 2
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
@@ -179,8 +178,8 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 
 func TestAppRunMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
-	jobs, apps := makeNMRJobs(ts, N_MR_JOBS_APP, MR_APP)
+	rs := benchmarks.MakeRawResults(1)
+	jobs, apps := makeNMRJobs(ts, 1, MR_APP)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -197,82 +196,37 @@ func TestAppRunMR(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunKVRepl(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	setNCoresSigmaRealm(ts)
-	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
-	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, 3, nclerks, phases, "", 0, 0)
-	// XXX Clean this up/hide this somehow.
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	p := monitorProcdsAssigned(ts)
-	runOps(ts, ji, runKV, rs)
-	defer p.Done()
-	printResults(rs)
-	ts.Shutdown()
-}
+// TODO: update
+//func TestAppRunKVRepl(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//	rs := benchmarks.MakeRawResults(1)
+//	setNCoresSigmaRealm(ts)
+//	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
+//	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
+//	jobs, ji := makeNKVJobs(ts, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, 3, nclerks, phases, "", 0, 0)
+//	// XXX Clean this up/hide this somehow.
+//	go func() {
+//		for _, j := range jobs {
+//			// Wait until ready
+//			<-j.ready
+//			// Ack to allow the job to proceed.
+//			j.ready <- true
+//		}
+//	}()
+//	p := monitorProcdsAssigned(ts)
+//	runOps(ts, ji, runKV, rs)
+//	defer p.Done()
+//	printResults(rs)
+//	ts.Shutdown()
+//}
 
-func TestAppRunKVUnreplOneKVDOneClerk(t *testing.T) {
+func TestAppRunKVUnrepl(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	rs := benchmarks.MakeRawResults(1)
 	setNCoresSigmaRealm(ts)
-	nclerks := []int{1}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", 1)
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
-	// XXX Clean this up/hide this somehow.
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	p := monitorProcdsAssigned(ts)
-	runOps(ts, ji, runKV, rs)
-	defer p.Done()
-	printResults(rs)
-	ts.Shutdown()
-}
-
-func TestAppRunKVUnreplOneKVDNClerk(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	setNCoresSigmaRealm(ts)
-	nclerks := []int{KV_CLERK_NCLERKS_APP}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
-	// XXX Clean this up/hide this somehow.
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	p := monitorProcdsAssigned(ts)
-	runOps(ts, ji, runKV, rs)
-	defer p.Done()
-	printResults(rs)
-	ts.Shutdown()
-}
-
-func TestAppRunKVUnreplNKVDNClerk(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	setNCoresSigmaRealm(ts)
-	nclerks := []int{KV_CLERK_NCLERKS_APP}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, KV_NKVD_APP, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
+	nclerks := []int{NCLERK}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
+	jobs, ji := makeNKVJobs(ts, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -321,24 +275,24 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 // realm-level software balance resource requests across realms.
 func TestRealmBalance(t *testing.T) {
 	done := make(chan bool)
-	// Structures for mr
-	ts1 := test.MakeTstateRealm(t, BALANCE_REALM_1)
-	rs1 := benchmarks.MakeRawResults(1)
-	// Structure for kv
-	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
-	rs2 := benchmarks.MakeRawResults(1)
 	// Find the total number of cores available for spinners across all machines.
 	ts := test.MakeTstateAll(t)
 	setNCoresSigmaRealm(ts)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	rs1 := benchmarks.MakeRawResults(1)
+	// Structure for kv
+	ts2 := test.MakeTstateRealm(t, REALM2)
+	rs2 := benchmarks.MakeRawResults(1)
 	// Prep MR job
-	mrjobs, mrapps := makeNMRJobs(ts1, 1, BALANCE_MR_APP_REALM)
+	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Need at least one kv realm group.
 	assert.True(ts2.T, TOTAL_N_CORES_SIGMA_REALM >= 6, "Too few cores to run benchmark: %v < %v", TOTAL_N_CORES_SIGMA_REALM, 6)
 	// Prep KV job
-	nclerks := []int{KV_CLERK_NCLERKS_REALM}
+	nclerks := []int{NCLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, KV_KVD_NKVD_REALM, 0, nclerks, nil, KV_CLERK_DURATION_REALM, proc.Tcore(KV_KVD_NCORE_REALM), proc.Tcore(KV_CLERK_NCORE_REALM))
+	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

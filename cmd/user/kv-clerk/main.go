@@ -146,7 +146,6 @@ func test(kc *kv.KvClerk, ntest uint64, keyOffset uint64, nops *uint64, p *perf.
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i + keyOffset)
 		v := Value{proc.GetPid(), key, ntest}
-		db.DPrintf(db.ALWAYS, "Put/get %v", key)
 		if setget {
 			// If doing sets & gets (bounded clerk)
 			if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {

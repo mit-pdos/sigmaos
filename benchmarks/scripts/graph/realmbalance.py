@@ -104,12 +104,12 @@ def graph_data(input_dir, out):
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  mr_buckets = bucketize(mr_tpts, time_range)
-  if len(mr_tpts) > 0:
-    add_data_to_graph(mr_buckets, "MR Throughput")
   kv_buckets = bucketize(kv_tpts, time_range)
   if len(kv_tpts) > 0:
     add_data_to_graph(kv_buckets, "KV Throughput")
+  mr_buckets = bucketize(mr_tpts, time_range)
+  if len(mr_tpts) > 0:
+    add_data_to_graph(mr_buckets, "MR Throughput")
   if len(procd_tpts) > 0:
     add_data_to_graph(dict(procd_tpts[0]), "Procds Assigned")
   finalize_graph(out)

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -18,20 +19,25 @@ var done = int32(0)
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v [duration] [sempath] ", os.Args[0])
+		db.DFatalf("Usage: %v [duration] [keyOffset] [sempath] ", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
 	var dur time.Duration
 	var sempath string
+	var keyOffset int
 	if len(os.Args) > 2 {
 		timed = true
 		var err error
 		dur, err = time.ParseDuration(os.Args[2])
 		if err != nil {
-			db.DFatalf("Bad nput %v", err)
+			db.DFatalf("Bad dur %v", err)
 		}
-		sempath = os.Args[3]
+		keyOffset, err = strconv.Atoi(os.Args[3])
+		if err != nil {
+			db.DFatalf("Bad offset %v", err)
+		}
+		sempath = os.Args[4]
 	}
 	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), os.Args[1], fslib.Named())
 	if err != nil {
@@ -43,7 +49,7 @@ func main() {
 	defer p.Done()
 
 	clk.Started()
-	run(clk, p, timed, dur, sempath)
+	run(clk, p, timed, dur, uint64(keyOffset), sempath)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -55,7 +61,7 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath string) {
+func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
@@ -74,7 +80,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 	for atomic.LoadInt32(&done) == 0 {
 		// this does NKEYS puts & gets, or appends & checks, depending on whether
 		// this is a time-bound clerk or an unbounded clerk.
-		err = test(kc, ntest, &nops, p, timed)
+		err = test(kc, ntest, keyOffset, &nops, p, timed)
 		if err != nil {
 			break
 		}
@@ -136,10 +142,11 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	return nil
 }
 
-func test(kc *kv.KvClerk, ntest uint64, nops *uint64, p *perf.Perf, setget bool) error {
+func test(kc *kv.KvClerk, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		key := kv.MkKey(i)
+		key := kv.MkKey(i + keyOffset)
 		v := Value{proc.GetPid(), key, ntest}
+		db.DPrintf(db.ALWAYS, "Put/get %v", key)
 		if setget {
 			// If doing sets & gets (bounded clerk)
 			if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {

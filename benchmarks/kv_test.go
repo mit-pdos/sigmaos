@@ -17,6 +17,10 @@ import (
 	"ulambda/test"
 )
 
+const (
+	KEYS_PER_CLERK = 100
+)
+
 type KVJobInstance struct {
 	nkvd     int             // Number of kvd groups to run the test with.
 	kvdrepl  int             // kvd replication level
@@ -27,6 +31,7 @@ type KVJobInstance struct {
 	ckdur    string          // Duration for which the clerk will do puts & gets.
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
+	nkeys    int
 	job      string
 	ready    chan bool
 	sem      *semclnt.SemClnt
@@ -62,6 +67,14 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, ph
 	}
 	ji.kvdgms = []*groupmgr.GroupMgr{}
 	ji.cpids = []proc.Tpid{}
+	// Find the maximum number of clerks ever set.
+	maxNclerks := 0
+	for _, nck := range nclerks {
+		if maxNclerks < nck {
+			maxNclerks = nck
+		}
+	}
+	ji.nkeys = maxNclerks * KEYS_PER_CLERK
 	return ji
 }
 
@@ -71,7 +84,7 @@ func (ji *KVJobInstance) StartKVJob() {
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
-	ck, err := kv.InitKeys(ji.FsLib, ji.ProcClnt, ji.job)
+	ck, err := kv.InitKeys(ji.FsLib, ji.ProcClnt, ji.job, ji.nkeys)
 	assert.Nil(ji.T, err, "InitKeys: %v", err)
 	ji.ck = ck
 }
@@ -161,11 +174,13 @@ func (ji *KVJobInstance) RemoveKVDGroup() {
 }
 
 func (ji *KVJobInstance) StartClerk() {
+	idx := len(ji.cpids)
 	var args []string
 	if len(ji.phases) > 0 {
 		args = nil
 	} else {
-		args = append(args, ji.ckdur, ji.sempath)
+		// Each clerk puts/sets kv.NKEYS, so offset their puts/sets by idx * kv.NKEYS
+		args = append(args, ji.ckdur, strconv.Itoa(idx*kv.NKEYS), ji.sempath)
 	}
 	pid, err := kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)

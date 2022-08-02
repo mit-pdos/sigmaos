@@ -94,7 +94,7 @@ func (ts *Tstate) setup(repl, ncrash int) *kv.KvClerk {
 	ts.mfsgrps = append(ts.mfsgrps, grp)
 
 	// Create keys
-	clrk, err := kv.InitKeys(ts.FsLib, ts.ProcClnt, ts.job)
+	clrk, err := kv.InitKeys(ts.FsLib, ts.ProcClnt, ts.job, kv.NKEYS)
 	assert.Nil(ts.T, err, "InitKeys: %v", err)
 	return clrk
 }

@@ -89,6 +89,8 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
 	}
+	cnts := ji.GetKeyCountsPerGroup()
+	db.DPrintf(db.ALWAYS, "Key counts per group: %v", cnts)
 	// Note that we are prepared to run the job.
 	ji.ready <- true
 	// Wait for an ack.

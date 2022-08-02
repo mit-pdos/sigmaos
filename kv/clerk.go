@@ -252,3 +252,20 @@ func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	kc.doop(op)
 	return op.err
 }
+
+// Count the number of keys stored at each group.
+func (kc *KvClerk) GetKeyCountsPerGroup(keys []Tkey) map[string]int {
+	if err := kc.switchConfig(); err != nil {
+		db.DFatalf("Error switching KV config: %v", err)
+	}
+	cnts := make(map[string]int)
+	for _, k := range keys {
+		s := key2shard(k)
+		grp := kc.conf.Shards[s]
+		if _, ok := cnts[grp]; !ok {
+			cnts[grp] = 0
+		}
+		cnts[grp]++
+	}
+	return cnts
+}

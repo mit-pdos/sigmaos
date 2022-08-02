@@ -23,6 +23,7 @@ type KVJobInstance struct {
 	phase    int             // Current phase of execution
 	nclerks  []int           // Number of clerks in each phase of the test.
 	phases   []time.Duration // Duration of each phase of the test.
+	ck       *kv.KvClerk     // A clerk which can be used for initialization.
 	ckdur    string          // Duration for which the clerk will do puts & gets.
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
@@ -70,8 +71,9 @@ func (ji *KVJobInstance) StartKVJob() {
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
-	_, err := kv.InitKeys(ji.FsLib, ji.ProcClnt, ji.job)
+	ck, err := kv.InitKeys(ji.FsLib, ji.ProcClnt, ji.job)
 	assert.Nil(ji.T, err, "InitKeys: %v", err)
+	ji.ck = ck
 }
 
 // Returns true if there are no more phases left to execute.
@@ -177,6 +179,14 @@ func (ji *KVJobInstance) StopClerk() {
 	status, err := kv.StopClerk(ji.ProcClnt, cpid)
 	assert.Nil(ji.T, err, "StopClerk: %v", err)
 	assert.True(ji.T, status.IsStatusEvicted(), "Exit status: %v", status)
+}
+
+func (ji *KVJobInstance) GetKeyCountsPerGroup() map[string]int {
+	keys := make([]kv.Tkey, 0, kv.NKEYS)
+	for i := uint64(0); i < kv.NKEYS; i++ {
+		keys = append(keys, kv.MkKey(i))
+	}
+	return ji.ck.GetKeyCountsPerGroup(keys)
 }
 
 func (ji *KVJobInstance) Stop() {

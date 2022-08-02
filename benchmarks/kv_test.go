@@ -197,8 +197,8 @@ func (ji *KVJobInstance) StopClerk() {
 }
 
 func (ji *KVJobInstance) GetKeyCountsPerGroup() map[string]int {
-	keys := make([]kv.Tkey, 0, kv.NKEYS)
-	for i := uint64(0); i < kv.NKEYS; i++ {
+	keys := make([]kv.Tkey, 0, ji.nkeys)
+	for i := uint64(0); i < uint64(ji.nkeys); i++ {
 		keys = append(keys, kv.MkKey(i))
 	}
 	return ji.ck.GetKeyCountsPerGroup(keys)

@@ -176,7 +176,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunMR(t *testing.T) {
+func TestAppMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	jobs, apps := makeNMRJobs(ts, 1, MR_APP)
@@ -196,37 +196,13 @@ func TestAppRunMR(t *testing.T) {
 	ts.Shutdown()
 }
 
-// TODO: update
-//func TestAppRunKVRepl(t *testing.T) {
-//	ts := test.MakeTstateAll(t)
-//	rs := benchmarks.MakeRawResults(1)
-//	setNCoresSigmaRealm(ts)
-//	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
-//	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-//	jobs, ji := makeNKVJobs(ts, 1, int(TOTAL_N_CORES_SIGMA_REALM)/6, 3, nclerks, phases, "", 0, 0)
-//	// XXX Clean this up/hide this somehow.
-//	go func() {
-//		for _, j := range jobs {
-//			// Wait until ready
-//			<-j.ready
-//			// Ack to allow the job to proceed.
-//			j.ready <- true
-//		}
-//	}()
-//	p := monitorProcdsAssigned(ts)
-//	runOps(ts, ji, runKV, rs)
-//	defer p.Done()
-//	printResults(rs)
-//	ts.Shutdown()
-//}
-
-func TestAppRunKVUnrepl(t *testing.T) {
+func runKVTest(t *testing.T, nReplicas int) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{NCLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
-	jobs, ji := makeNKVJobs(ts, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
+	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -243,17 +219,22 @@ func TestAppRunKVUnrepl(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestAppKVUnrepl(t *testing.T) {
+	runKVTest(t, 0)
+}
+
+func TestAppKVRepl(t *testing.T) {
+	runKVTest(t, 3)
+}
+
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
 //
 // XXX Maybe we should do a version with procs that don't spin & consume so
 // much CPU?
 //
-// XXX A bit wonky, since we'll want to dealloc all the machines from the
-// realms between runs.
-//
 // XXX We should probably try this one both warm and cold.
-func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
+func TestRealmBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	makeOutDir(ts)

@@ -46,7 +46,7 @@ vma=($vms)
 MAIN="${vma[0]}"
 
 LOG_DIR=/tmp
-mkdir $PERF_DIR
+mkdir -p $PERF_DIR
 
 for vm in $vms; do
   echo "scp: $vm"

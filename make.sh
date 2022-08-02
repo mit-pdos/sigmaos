@@ -7,7 +7,7 @@ usage() {
 RACE="-race"
 CMD="build"
 TARGET="local"
-VERSION=$(date +%s)
+VERSION=""
 PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -48,6 +48,11 @@ done
 if [ $# -gt 0 ]; then
     usage
     exit 1
+fi
+
+# If no explicit version is passed in, set the version.
+if [ -z "$VERSION" ]; then
+  VERSION=$(date +%s)
 fi
 
 DIR=$(dirname $0)

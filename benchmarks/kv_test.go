@@ -145,7 +145,7 @@ func (ji *KVJobInstance) WaitForClerks() {
 		aggTpt += tpt
 		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
 	}
-	db.DPrintf(db.ALWAYS, "Aggregate throughput (ops/sec): %v", aggTpt)
+	db.DPrintf(db.ALWAYS, "Aggregate throughput: %v (ops/sec)", aggTpt)
 	ji.cpids = ji.cpids[:0]
 }
 

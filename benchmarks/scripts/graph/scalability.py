@@ -11,17 +11,17 @@ import sys
 def get_x_axis(input_dir):
   return sorted([ int(x) for x in os.listdir(input_dir) ])
 
-def get_y_axis(input_dir, x_vals, units);
+def get_y_axis(input_dir, x_vals, units):
   y_vals = []
   for x in x_vals:
     with open(os.path.join(input_dir, str(x), "bench.out")) as f:
       b = f.read()
     lines = b.split("\n")
-    lines = [ l for l in lines if unit in l ]
+    lines = [ l for l in lines if units in l ]
     assert(len(lines) == 1)
     line = lines[0].split(" ")
     for i in range(len(line)):
-      if unit in line[i]:
+      if units in line[i]:
         y_vals.append(float(line[i - 1]))
         break
   assert(len(x_vals) == len(y_vals))

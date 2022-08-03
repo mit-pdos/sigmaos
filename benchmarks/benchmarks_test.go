@@ -267,8 +267,6 @@ func TestRealmBalance(t *testing.T) {
 	rs2 := benchmarks.MakeRawResults(1)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
-	// Need at least one kv realm group.
-	assert.True(ts2.T, TOTAL_N_CORES_SIGMA_REALM >= 6, "Too few cores to run benchmark: %v < %v", TOTAL_N_CORES_SIGMA_REALM, 6)
 	// Prep KV job
 	nclerks := []int{NCLERK}
 	// TODO move phases to new clerk type.

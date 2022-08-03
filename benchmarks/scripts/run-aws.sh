@@ -188,6 +188,7 @@ realm_burst() {
 }
 
 realm_balance() {
+  mrapp=mr-grep-wiki.yml
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
@@ -195,7 +196,7 @@ realm_balance() {
   cmd="
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBalance --nclerk 8 > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBalance --nclerk 8 --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $perf_dir "$cmd"
 }

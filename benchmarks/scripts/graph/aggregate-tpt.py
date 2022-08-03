@@ -82,8 +82,8 @@ def add_data_to_graph(buckets, label, color, linestyle):
 
 def finalize_graph(out):
   plt.xlabel("Time (sec)")
-  plt.ylabel("Normalized Throughput")
-  plt.title("Normalized throughput over time")
+  plt.ylabel("Normalized Aggregate Throughput")
+  plt.title("Normalized Aggregate Troughput Over Time")
   plt.legend()
   plt.savefig(out)
 

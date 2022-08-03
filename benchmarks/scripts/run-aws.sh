@@ -42,7 +42,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ -z "$REALM1" ] || [ -z "$REALM2" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$REALM1" ] || [ -z "$REALM2" ] || [ -z "$VERSION" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -52,6 +52,8 @@ DIR=$(realpath $(dirname $0)/../..)
 . $DIR/.env
 AWS_DIR=$DIR/aws
 OUT_DIR=$DIR/benchmarks/results/$VERSION
+GRAPH_SCRIPTS_DIR=$DIR/benchmarks/scripts/graph
+GRAPH_OUT_DIR=$DIR/benchmarks/results/graphs
 
 # cd to the ulambda root directory
 cd $DIR
@@ -122,7 +124,8 @@ run_kv() {
 
 mr_scalability() {
   mrapp=mr-grep-wiki.yml
-  for n_vm in 1 2 4 8 16 ; do
+#  for n_vm in 1 2 4 8 16 ; do
+  for n_vm in 8 16 ; do
     run=${FUNCNAME[0]}/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -167,6 +170,7 @@ kv_elasticity() {
 
 realm_burst() {
   run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   start_cluster 16
   cmd="
@@ -178,14 +182,104 @@ realm_burst() {
 
 realm_balance() {
   run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   start_cluster 16
   cmd="
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Balance > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBalance --nclerk 8 > /tmp/bench.out 2>&1
   "
   run_benchmark $perf_dir "$cmd"
+}
+
+# ========== Make Graphs ==========
+
+graph_mr_aggregate_tpt() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
+graph_mr_scalability() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Execution Time (sec)" --title "MR Execution Time Varying Number of VMs"
+}
+
+graph_mr_vs_corral() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  echo "TODO"
+  # TODO
+#  mrapp=mr-wc-wiki1.8G.yml
+#  run=${FUNCNAME[0]}
+#  echo "========== Running $run =========="
+#  perf_dir=$OUT_DIR/$run
+#  start_cluster 16
+#  run_mr $mrapp $perf_dir
+}
+
+graph_mr_overlap() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  echo "TODO"
+  # TODO
+#  mrapp=mr-wc-wiki4G.yml
+#  run=${FUNCNAME[0]}
+#  echo "========== Running $run =========="
+#  perf_dir=$OUT_DIR/$run
+#  start_cluster 16
+#  run_mr $mrapp $perf_dir
+}
+
+graph_kv_aggregate_tpt() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
+graph_kv_scalability() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Aggregate Throughput of 1 KV Server Varying Number of Clerks"
+}
+
+graph_kv_elasticity() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  echo "TODO"
+  # TODO
+}
+
+graph_realm_burst() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  echo "TODO"
+  # TODO
+#  run=${FUNCNAME[0]}
+#  perf_dir=$OUT_DIR/$run
+#  start_cluster 16
+#  cmd="
+#    go clean -testcache; \
+#    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
+#  "
+#  run_benchmark $perf_dir "$cmd"
+}
+
+graph_realm_balance() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
 # ========== Run benchmarks ==========
@@ -197,3 +291,16 @@ realm_burst
 realm_balance
 
 # ========== Produce graphs ==========
+#source ~/env/3.10/bin/activate
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
+#graph_mr_vs_corral
+#graph_mr_overlap
+#graph_kv_aggregate_tpt
+#graph_kv_scalability
+#graph_realm_burst
+#graph_realm_balance
+
+echo -e "\n\n\n\n===================="
+echo "Results in $OUT_DIR"
+echo "Graphs in $GRAPH_OUT_DIR"

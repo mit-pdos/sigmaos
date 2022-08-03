@@ -153,8 +153,10 @@ mr_overlap() {
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  start_cluster 16
-  run_mr $mrapp $perf_dir
+  # TODO
+  echo "TODO"
+#  start_cluster 16
+#  run_mr $mrapp $perf_dir
 }
 
 kv_scalability() {

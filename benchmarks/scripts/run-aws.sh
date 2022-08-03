@@ -84,6 +84,10 @@ run_benchmark() {
   fi
   perf_dir=$1
   cmd=$2
+  # Avoid doing duplicate work.
+  if [ -d $perf_dir ]; then
+    return 0
+  fi
   mkdir -p $perf_dir
   cd $AWS_DIR
   ./run-benchmark.sh --vpc $VPC --command "$cmd"

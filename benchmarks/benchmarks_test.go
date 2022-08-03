@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/linuxsched"

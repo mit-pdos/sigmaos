@@ -86,6 +86,7 @@ run_benchmark() {
   cmd=$2
   # Avoid doing duplicate work.
   if [ -d $perf_dir ]; then
+    echo "========== Already ran, skipping: $perf_dir =========="
     return 0
   fi
   mkdir -p $perf_dir

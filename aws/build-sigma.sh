@@ -64,7 +64,7 @@ ENDSSH
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
 ! grep "Already up to date." /tmp/git.out && echo "COMPILE: $MAIN" && (cd ulambda; ./make.sh --norace --target aws --version $VERSION > /tmp/make.out 2>&1;)  
 echo "UPLOAD: $MAIN"
-(cd ulambda; ./upload.sh --realm $REALM;)
+(cd ulambda; ./upload.sh --realm $REALM --version $VERSION;)
 # NOte that we have completed the build on this machine at least once.
 if [ -f ~/.nobuild ]; then
   rm ~/.nobuild

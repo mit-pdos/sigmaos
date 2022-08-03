@@ -70,22 +70,33 @@ def bucketize(tpts, time_range):
       buckets[find_bucket(t[0], step_size)] += t[1]
   return buckets
 
-def add_data_to_graph(buckets, label, color, linestyle):
+def add_data_to_graph(ax, buckets, label, color, linestyle, normalize=True):
   x = np.array(sorted(list(buckets.keys())))
   y = np.array([ buckets[x1] for x1 in x ])
-  n = max(y)
-  y = y / n
+  if normalize:
+    n = max(y)
+    y = y / n
   # Convert X indices to seconds.
   x = x / 1000.0
   # normalize by max
-  plt.plot(x, y, label=label, color=color, linestyle=linestyle)
+  return ax.plot(x, y, label=label, color=color, linestyle=linestyle)
 
-def finalize_graph(out):
-  plt.xlabel("Time (sec)")
-  plt.ylabel("Normalized Aggregate Throughput")
+def finalize_graph(fig, ax, plots, out):
   plt.title("Normalized Aggregate Troughput Over Time")
-  plt.legend()
-  plt.savefig(out)
+  lns = plots[0]
+  for p in plots[1:]:
+    lns += p
+  labels = [ l.get_label() for l in lns ]
+  ax.legend(lns, labels, loc=0)
+  fig.savefig(out)
+
+def setup_graph():
+  fig, ax = plt.subplots()
+  ax.set_xlabel("Time (sec)")
+  ax.set_ylabel("Normalized Aggregate Throughput")
+  ax2 = ax.twinx()
+  ax2.set_ylabel("Cores Assigned")
+  return fig, ax, ax2
 
 def graph_data(input_dir, out):
   procd_tpts = read_tpts(input_dir, "test")
@@ -103,14 +114,19 @@ def graph_data(input_dir, out):
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   kv_buckets = bucketize(kv_tpts, time_range)
+  fig, ax, ax2 = setup_graph()
+  plots = []
   if len(kv_tpts) > 0:
-    add_data_to_graph(kv_buckets, "KV Throughput", "blue", "-")
+    p = add_data_to_graph(ax, kv_buckets, "KV Throughput", "blue", "-", normalize=True)
+    plots.append(p)
   mr_buckets = bucketize(mr_tpts, time_range)
   if len(mr_tpts) > 0:
-    add_data_to_graph(mr_buckets, "MR Throughput", "orange", "-")
+    p = add_data_to_graph(ax, mr_buckets, "MR Throughput", "orange", "-", normalize=True)
+    plots.append(p)
   if len(procd_tpts) > 0:
-    add_data_to_graph(dict(procd_tpts[0]), "Procds Assigned", "green", "--")
-  finalize_graph(out)
+    p = add_data_to_graph(ax2, dict(procd_tpts[0]), "Cores Assigned", "green", "--", normalize=False)
+    plots.append(p)
+  finalize_graph(fig, ax, plots, out)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

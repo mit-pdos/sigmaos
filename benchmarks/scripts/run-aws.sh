@@ -255,7 +255,7 @@ graph_kv_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Aggregate Throughput of 1 KV Server Varying Number of Clerks"
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/kv_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Aggregate Throughput of 1 KV Server Varying Number of Clerks"
 }
 
 graph_kv_elasticity() {
@@ -290,22 +290,22 @@ graph_realm_balance() {
 }
 
 # ========== Run benchmarks ==========
-mr_scalability
-mr_vs_corral
-mr_overlap
-kv_scalability
-realm_burst
-realm_balance
+#mr_scalability
+#mr_vs_corral
+#mr_overlap
+#kv_scalability
+#realm_burst
+#realm_balance
 
 # ========== Produce graphs ==========
-#source ~/env/3.10/bin/activate
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#graph_mr_vs_corral
-#graph_mr_overlap
-#graph_kv_aggregate_tpt
-#graph_kv_scalability
-#graph_realm_burst
+source ~/env/3.10/bin/activate
+graph_mr_aggregate_tpt
+graph_mr_scalability
+graph_mr_vs_corral
+graph_mr_overlap
+graph_kv_aggregate_tpt
+graph_kv_scalability
+graph_realm_burst
 #graph_realm_balance
 
 echo -e "\n\n\n\n===================="

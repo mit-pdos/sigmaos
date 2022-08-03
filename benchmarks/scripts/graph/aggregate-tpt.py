@@ -60,6 +60,7 @@ def find_bucket(time, step_size):
 
 # Fit into 100ms buckets.
 def bucketize(tpts, time_range):
+  # TODO: bucket size?
   step_size = 100
   buckets = {}
   for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
@@ -69,18 +70,15 @@ def bucketize(tpts, time_range):
       buckets[find_bucket(t[0], step_size)] += t[1]
   return buckets
 
-def add_tpts_to_graph(tpts, label):
-  x = np.array(sorted(list(tpts.keys())))
-  y = np.array([ tpts[x1] for x1 in x ])
+def add_data_to_graph(buckets, label, color, linestyle):
+  x = np.array(sorted(list(buckets.keys())))
+  y = np.array([ buckets[x1] for x1 in x ])
   n = max(y)
   y = y / n
   # Convert X indices to seconds.
   x = x / 1000.0
   # normalize by max
-  plt.plot(x, y, label=label)
-
-def add_data_to_graph(buckets, label):
-  add_tpts_to_graph(buckets, label)
+  plt.plot(x, y, label=label, color=color, linestyle=linestyle)
 
 def finalize_graph(out):
   plt.xlabel("Time (sec)")
@@ -106,12 +104,12 @@ def graph_data(input_dir, out):
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   kv_buckets = bucketize(kv_tpts, time_range)
   if len(kv_tpts) > 0:
-    add_data_to_graph(kv_buckets, "KV Throughput")
+    add_data_to_graph(kv_buckets, "KV Throughput", "blue", "-")
   mr_buckets = bucketize(mr_tpts, time_range)
   if len(mr_tpts) > 0:
-    add_data_to_graph(mr_buckets, "MR Throughput")
+    add_data_to_graph(mr_buckets, "MR Throughput", "orange", "-")
   if len(procd_tpts) > 0:
-    add_data_to_graph(dict(procd_tpts[0]), "Procds Assigned")
+    add_data_to_graph(dict(procd_tpts[0]), "Procds Assigned", "green", "--")
   finalize_graph(out)
 
 if __name__ == "__main__":

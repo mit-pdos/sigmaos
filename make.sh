@@ -59,7 +59,7 @@ DIR=$(dirname $0)
 . $DIR/.env
 
 echo $VERSION > $VERSION_FILE
-echo "Version $VERSION_FILE"
+echo "Version $(cat $VERSION_FILE)"
 
 mkdir -p bin/kernel
 mkdir -p bin/user

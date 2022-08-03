@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm1 REALM1 --realm2 REALM2" 1>&2
+  echo "Usage: $0 --vpc VPC --realm1 REALM1 --realm2 REALM2 [--version VERSION]" 1>&2
 }
 
 VPC=""
 REALM1=""
 REALM2=""
+VERSION=$(date +%s)
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --vpc)
@@ -22,6 +23,11 @@ while [[ "$#" -gt 0 ]]; do
   --realm2)
     shift
     REALM2=$1
+    shift
+    ;;
+  --version)
+    shift
+    VERSION=$1
     shift
     ;;
   -help)
@@ -45,7 +51,6 @@ fi
 DIR=$(realpath $(dirname $0)/../..)
 . $DIR/.env
 AWS_DIR=$DIR/aws
-VERSION=$(date +%s)
 OUT_DIR=$DIR/benchmarks/results/$VERSION
 
 # cd to the ulambda root directory
@@ -186,3 +191,5 @@ mr_overlap
 kv_scalability
 realm_burst
 realm_balance
+
+# ========== Produce graphs ==========

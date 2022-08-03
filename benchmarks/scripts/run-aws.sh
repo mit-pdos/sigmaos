@@ -166,6 +166,8 @@ kv_elasticity() {
 }
 
 realm_burst() {
+  run=${FUNCNAME[0]}
+  perf_dir=$OUT_DIR/$run
   start_cluster 16
   cmd="
     go clean -testcache; \
@@ -175,6 +177,8 @@ realm_burst() {
 }
 
 realm_balance() {
+  run=${FUNCNAME[0]}
+  perf_dir=$OUT_DIR/$run
   start_cluster 16
   cmd="
     $PRIVILEGED_BIN/realm/create $REALM2; \

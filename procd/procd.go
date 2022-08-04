@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -284,8 +283,7 @@ func (pd *Procd) worker() {
 			pd.waitSpawnOrSteal()
 			continue
 		}
-		if error != nil && (errors.Is(error, io.EOF) ||
-			(np.IsErrUnreachable(error) && strings.Contains(np.ErrPath(error), "no mount"))) {
+		if error != nil && (errors.Is(error, io.EOF) || np.IsErrUnreachable(error)) {
 			continue
 		}
 		if error != nil {

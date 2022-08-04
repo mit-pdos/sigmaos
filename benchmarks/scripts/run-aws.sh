@@ -172,7 +172,7 @@ kv_scalability() {
 }
 
 kv_elasticity() {
-  auto="manual"
+  auto="auto"
   nkvd=1
   nclerk=16
   run=${FUNCNAME[0]}

@@ -49,8 +49,11 @@ def graph_data(input_dir, out, units, xlabel, ylabel, title, speedup):
   y = get_y_axis(input_dir, x, units)
   y, units = scale_y_axis(y, units)
   if speedup:
-    y = y / y[0]
-  add_data_to_graph(x, y, "sigmaOS", "orange", "-")
+    y = y[0] / y
+  color = "orange"
+  if "kv" in input_dir:
+    color = "blue"
+  add_data_to_graph(x, y, "sigmaOS", color, "-")
   finalize_graph(out, xlabel, ylabel, title)
 
 if __name__ == "__main__":
@@ -60,7 +63,7 @@ if __name__ == "__main__":
   parser.add_argument("--xlabel", type=str, required=True)
   parser.add_argument("--ylabel", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
-  parser.add_argument("--speedup", type=bool, action=store_true)
+  parser.add_argument("--speedup", default=False, action="store_true")
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()

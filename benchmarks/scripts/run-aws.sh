@@ -201,6 +201,7 @@ realm_balance() {
   perf_dir=$OUT_DIR/$run
   start_cluster 16
   cmd="
+    export SIGMADEBUG=\"TEST;\"; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk 8 --mrapp $mrapp > /tmp/bench.out 2>&1
@@ -221,7 +222,7 @@ graph_mr_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MapReduce Speedup" --speedup
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MapReduce End-to-end Speedup" --speedup
 }
 
 graph_mr_vs_corral() {
@@ -307,14 +308,14 @@ realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_aggregate_tpt
-graph_mr_scalability
-graph_mr_vs_corral
-graph_mr_overlap
-graph_kv_aggregate_tpt
-graph_kv_scalability
-graph_kv_elasticity
-graph_realm_burst
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
+#graph_mr_vs_corral
+#graph_mr_overlap
+#graph_kv_aggregate_tpt
+#graph_kv_scalability
+#graph_kv_elasticity
+#graph_realm_burst
 graph_realm_balance
 
 echo -e "\n\n\n\n===================="

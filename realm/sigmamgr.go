@@ -184,21 +184,22 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if totalCores-coresToRevoke <= nLCCoresUsed {
-		db.DPrintf("SIGMAMGR", "Machine is overprovisioned: %v - %v < %v", totalCores, coresToRevoke, nLCCoresUsed)
-		return false
-	}
-	runningProcs, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
-		return false
-	}
-	// If this is the last core group for this noded, and its utilization is over
-	// a certain threshold (and it is running procs), don't evict.
-	if len(ndCfg.Cores) == 1 && s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
+		db.DPrintf("SIGMAMGR", "Noded is using LC cores well, not overprovisioned: %v - %v > %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
+		runningProcs, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
+			return false
+		}
+		// If this is the last core group for this noded, and its utilization is over
+		// a certain threshold (and it is running procs), don't evict.
+		if s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
+			db.DPrintf("SIGMAMGR", "Can't evict noded, util: %v runningProcs: %v", s.Util, len(runningProcs))
+			return false
+		}
 		for _, st := range runningProcs {
 			b, err := m.GetFile(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name))
 			if err != nil {
@@ -206,6 +207,7 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 			}
 			// If this is a LC proc, return false.
 			if strings.Contains(string(b), "T_LC") {
+				db.DPrintf("SIGMAMGR", "Can't evict noded, running LC proc")
 				return false
 			}
 		}

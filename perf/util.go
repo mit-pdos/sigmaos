@@ -86,6 +86,12 @@ type Perf struct {
 }
 
 func MakePerf(name string) *Perf {
+	return MakePerfMulti(name, "")
+}
+
+// A slight hack for benchmarks which wish to have 2 perf structures (one for
+// each realm).
+func MakePerfMulti(name string, name2 string) *Perf {
 	p := &Perf{}
 	p.name = name
 	p.utilChan = make(chan bool, 1)
@@ -104,21 +110,25 @@ func MakePerf(name string) *Perf {
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
 		db.DFatalf("Error Mkdir: %v", err)
 	}
+	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
+	if name2 != "" {
+		basePath += "-" + name2
+	}
 	// Set up pprof caputre
 	if ok := labels[name+PPROF]; ok {
-		p.setupPprof(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof.out"))
+		p.setupPprof(basePath + "-pprof.out")
 	}
 	// Set up pprof caputre
 	if ok := labels[name+PPROF_MEM]; ok {
-		p.setupPprofMem(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof-mem.out"))
+		p.setupPprofMem(basePath + "-pprof-mem.out")
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
-		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-cpu.out"))
+		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
 	}
 	// Set up throughput caputre
 	if ok := labels[name+TPT]; ok {
-		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-tpt.out"))
+		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
 	return p
 }

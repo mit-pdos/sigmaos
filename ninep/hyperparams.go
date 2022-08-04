@@ -59,7 +59,7 @@ realm:
   scan_interval: 1000ms
   resize_interval: 1000ms
   grow_cpu_util_threshold: 50
-  shrink_cpu_util_threshold: 25
+  shrink_cpu_util_threshold: 10
 
 machine:
   core_group_fraction: 0.5

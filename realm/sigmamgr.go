@@ -2,6 +2,7 @@ package realm
 
 import (
 	"path"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -190,6 +191,24 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	// a certain threshold, don't evict.
 	if len(ndCfg.Cores) == 1 && s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD {
 		return false
+	}
+	// Don't evict this noded if it is running any LC procs.
+	if len(ndCfg.Cores) == 1 {
+		sts, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
+			return false
+		}
+		for _, st := range sts {
+			b, err := m.GetFile(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name))
+			if err != nil {
+				continue
+			}
+			// If this is a LC proc, return false.
+			if strings.Contains(string(b), "T_LC") {
+				return false
+			}
+		}
 	}
 	return true
 }

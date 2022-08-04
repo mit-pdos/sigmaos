@@ -90,6 +90,15 @@ func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
 		nd.cfg.Cores = append(nd.cfg.Cores, cores)
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
 
+		lockRealm(nd.ec, nd.cfg.RealmId)
+		defer unlockRealm(nd.ec, nd.cfg.RealmId)
+
+		// Update the realm's total core count. The Realmmgr holds the realm
+		// lock.
+		realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+		realmCfg.NCores += proc.Tcore(cores.Size())
+		nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
+
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -220,29 +229,29 @@ func (nd *Noded) boot(realmCfg *RealmConfig) {
 }
 
 // Join a realm
-func (r *Noded) joinRealm() {
-	lockRealm(r.ec, r.cfg.RealmId)
-	defer unlockRealm(r.ec, r.cfg.RealmId)
+func (nd *Noded) joinRealm() {
+	lockRealm(nd.ec, nd.cfg.RealmId)
+	defer unlockRealm(nd.ec, nd.cfg.RealmId)
 
 	// Try to initalize this realm if it hasn't been initialized already.
-	initDone := r.tryAddNamedReplicaL()
+	initDone := nd.tryAddNamedReplicaL()
 	// Get the realm config
-	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
+	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
 	// Register this noded
-	r.register(realmCfg)
+	nd.register(realmCfg)
 	// Boot this noded's system services
-	r.boot(realmCfg)
+	nd.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
+		rStartSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(np.BOOT, nd.cfg.RealmId))
 		rStartSem.Up()
 	}
-	db.DPrintf("NODED", "Noded %v joined Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("NODED", "Noded %v joined Realm %v", nd.id, nd.cfg.RealmId)
 }
 
-func (r *Noded) teardown() {
+func (nd *Noded) teardown() {
 	// Tear down realm resources
-	r.s.Shutdown()
+	nd.s.Shutdown()
 }
 
 func (nd *Noded) deregister(cfg *RealmConfig) {
@@ -273,25 +282,25 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 	}
 }
 
-func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
+func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 	// If this is the last noded, destroy the noded's named
 	if len(realmCfg.NodedsActive) == 0 {
 		db.DPrintf("NODED", "Destroy realm %v", realmCfg.Rid)
 
-		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
+		ShutdownNamedReplicas(nd.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
-		if err := r.Remove(RealmConfPath(realmCfg.Rid)); err != nil {
+		if err := nd.Remove(RealmConfPath(realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
-		if err := r.Remove(RealmPath(realmCfg.Rid)); err != nil {
+		if err := nd.Remove(RealmPath(realmCfg.Rid)); err != nil {
 			db.DPrintf("NODED_ERR", "Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed
-		rExitSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, realmCfg.Rid))
+		rExitSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(np.BOOT, realmCfg.Rid))
 		rExitSem.Up()
 	}
 }

@@ -20,7 +20,7 @@ perf:
 
 session:
   heartbeat_interval: 50ms
-  timeout: 200ms
+  timeout: 1000ms
 
 realm:
   scan_interval: 50ms 
@@ -59,7 +59,7 @@ realm:
   scan_interval: 1000ms
   resize_interval: 1000ms
   grow_cpu_util_threshold: 50
-  shrink_cpu_util_threshold: 25
+  shrink_cpu_util_threshold: 10
 
 machine:
   core_group_fraction: 0.5

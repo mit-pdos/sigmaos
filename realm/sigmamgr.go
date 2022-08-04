@@ -198,6 +198,7 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 			}
 			// If there are LC procs queued, don't shrink.
 			if len(queued) > 0 {
+				db.DPrintf(db.ALWAYS, "Had %v queued procs", len(queued))
 				return false
 			}
 		}

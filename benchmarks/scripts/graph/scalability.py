@@ -44,10 +44,12 @@ def finalize_graph(out, xlabel, ylabel, title):
   plt.legend()
   plt.savefig(out)
 
-def graph_data(input_dir, out, units, xlabel, ylabel, title):
+def graph_data(input_dir, out, units, xlabel, ylabel, title, speedup):
   x = get_x_axis(input_dir)
   y = get_y_axis(input_dir, x, units)
   y, units = scale_y_axis(y, units)
+  if speedup:
+    y = y / y[0]
   add_data_to_graph(x, y, "sigmaOS", "orange", "-")
   finalize_graph(out, xlabel, ylabel, title)
 
@@ -58,7 +60,8 @@ if __name__ == "__main__":
   parser.add_argument("--xlabel", type=str, required=True)
   parser.add_argument("--ylabel", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
+  parser.add_argument("--speedup", type=bool, action=store_true)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.out, args.units, args.xlabel, args.ylabel, args.title)
+  graph_data(args.measurement_dir, args.out, args.units, args.xlabel, args.ylabel, args.title, args.speedup)

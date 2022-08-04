@@ -214,7 +214,7 @@ graph_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "MapReduce Aggregate Throughput"
 }
 
 graph_mr_scalability() {
@@ -256,7 +256,7 @@ graph_kv_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing 1 KV Server"
 }
 
 graph_kv_scalability() {
@@ -270,7 +270,7 @@ graph_kv_elasticity() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing a Dynamically-Scaled Number of KV Servers"
 }
 
 graph_realm_burst() {
@@ -293,7 +293,7 @@ graph_realm_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --kv_realm $REALM2
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --kv_realm $REALM2 --title "Aggregate Throughput Balancing 2 Realms' Applications"
 }
 
 # ========== Run benchmarks ==========
@@ -301,9 +301,9 @@ graph_realm_balance() {
 #mr_vs_corral
 #mr_overlap
 #kv_scalability
-kv_elasticity
+#kv_elasticity
 #realm_burst
-#realm_balance
+realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

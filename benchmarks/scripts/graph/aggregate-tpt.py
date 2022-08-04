@@ -98,8 +98,8 @@ def add_data_to_graph(ax, x, y, label, color, linestyle, normalize=True):
   # normalize by max
   return ax.plot(x, y, label=label, color=color, linestyle=linestyle)
 
-def finalize_graph(fig, ax, plots, out):
-  plt.title("Normalized Aggregate Troughput Over Time")
+def finalize_graph(fig, ax, plots, title, out):
+  plt.title(title)
   lns = plots[0]
   for p in plots[1:]:
     lns += p
@@ -115,7 +115,7 @@ def setup_graph():
   ax2.set_ylabel("Cores Assigned")
   return fig, ax, ax2
 
-def graph_data(input_dir, out, kv_realm, mr_realm):
+def graph_data(input_dir, title, out, kv_realm, mr_realm):
   if kv_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -163,14 +163,15 @@ def graph_data(input_dir, out, kv_realm, mr_realm):
       x, y = buckets_to_lists(dict(procd_tpts[0]))
       p = add_data_to_graph(ax2, x, y, "Cores Assigned", "green", "--", normalize=False)
       plots.append(p)
-  finalize_graph(fig, ax, plots, out)
+  finalize_graph(fig, ax, plots, title, out)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
+  parser.add_argument("--title", type=str, required=True)
   parser.add_argument("--kv_realm", type=str, default=None)
   parser.add_argument("--mr_realm", type=str, default=None)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.out, args.kv_realm, args.mr_realm)
+  graph_data(args.measurement_dir, args.title, args.out, args.kv_realm, args.mr_realm)

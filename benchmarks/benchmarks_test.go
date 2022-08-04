@@ -272,6 +272,10 @@ func TestRealmBalance(t *testing.T) {
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
 	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO)
+	p1 := monitorCoresAssigned(ts1)
+	defer p1.Done()
+	p2 := monitorCoresAssigned(ts2)
+	defer p2.Done()
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

@@ -183,8 +183,10 @@ func (ji *KVJobInstance) StartClerk() {
 		// Each clerk puts/sets kv.NKEYS, so offset their puts/sets by idx * kv.NKEYS
 		args = append(args, ji.ckdur, strconv.Itoa(idx*kv.NKEYS), ji.sempath)
 	}
+	db.DPrintf("TEST", "Spawn clerk")
 	pid, err := kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
+	db.DPrintf("TEST", "Done spawning clerk %v", pid)
 	ji.cpids = append(ji.cpids, pid)
 }
 

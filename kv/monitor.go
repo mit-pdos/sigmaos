@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"path"
 	"strconv"
 	"sync"
 
@@ -133,7 +134,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
-		kvgrp := group.GrpPath(JobDir(mo.job), gn) + np.STATSD
+		kvgrp := path.Join(group.GrpPath(JobDir(mo.job), gn), np.STATSD)
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvgrp, &sti)
 		if err != nil {

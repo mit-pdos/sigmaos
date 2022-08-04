@@ -31,6 +31,7 @@ type KVJobInstance struct {
 	ckdur    string          // Duration for which the clerk will do puts & gets.
 	kvdncore proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore  proc.Tcore      // Number of exclusive cores allocated to each clerk.
+	auto     string
 	nkeys    int
 	job      string
 	ready    chan bool
@@ -42,7 +43,7 @@ type KVJobInstance struct {
 	*test.Tstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore) *KVJobInstance {
+func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
 	ji.kvdrepl = kvdrepl
@@ -52,6 +53,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, ph
 	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
 	ji.job = rand.String(16)
+	ji.auto = auto
 	ji.ready = make(chan bool)
 	ji.Tstate = ts
 	// May already exit
@@ -79,8 +81,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, ph
 }
 
 func (ji *KVJobInstance) StartKVJob() {
-	// XXX auto or manual?
-	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, ji.job, kv.NBALANCER, 0, ji.kvdncore, "0", "manual")
+	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, ji.job, kv.NBALANCER, 0, ji.kvdncore, "0", ji.auto)
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys

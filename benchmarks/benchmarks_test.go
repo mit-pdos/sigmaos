@@ -15,6 +15,7 @@ import (
 
 // Parameters
 var MR_APP string
+var KV_AUTO string
 var NKVD int
 var NCLERK int
 var CLERK_DURATION string
@@ -26,6 +27,7 @@ var REALM2 string
 func init() {
 	var nc int
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
+	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&NKVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&NCLERK, "nclerk", 1, "Number of clerks.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
@@ -200,7 +202,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{NCLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
-	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
+	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -269,7 +271,7 @@ func TestRealmBalance(t *testing.T) {
 	nclerks := []int{NCLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE)
+	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)

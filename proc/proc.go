@@ -24,6 +24,18 @@ const (
 	C_DEF Tcore = 0
 )
 
+func (t Ttype) String() string {
+	switch t {
+	case T_BE:
+		return "T_BE"
+	case T_LC:
+		return "T_LC"
+	default:
+		log.Fatalf("Unknown proc type: %v", t)
+	}
+	return ""
+}
+
 func (pid Tpid) String() string {
 	return string(pid)
 }

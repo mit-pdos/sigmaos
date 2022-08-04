@@ -129,8 +129,7 @@ run_kv() {
 
 mr_scalability() {
   mrapp=mr-grep-wiki.yml
-#  for n_vm in 1 2 4 8 16 ; do
-  for n_vm in 8 16 ; do
+  for n_vm in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -196,7 +195,7 @@ realm_balance() {
   cmd="
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBalance --nclerk 8 --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk 8 --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $perf_dir "$cmd"
 }
@@ -214,7 +213,7 @@ graph_mr_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Execution Time (sec)" --title "MR Execution Time Varying Number of VMs"
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MR Speedup Varying Number of VMs" --speedup
 }
 
 graph_mr_vs_corral() {
@@ -287,16 +286,16 @@ graph_realm_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --kv_realm $REALM2
 }
 
 # ========== Run benchmarks ==========
-#mr_scalability
-#mr_vs_corral
-#mr_overlap
-#kv_scalability
-#realm_burst
-#realm_balance
+mr_scalability
+mr_vs_corral
+mr_overlap
+kv_scalability
+realm_burst
+realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
@@ -307,7 +306,7 @@ graph_mr_overlap
 graph_kv_aggregate_tpt
 graph_kv_scalability
 graph_realm_burst
-#graph_realm_balance
+graph_realm_balance
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

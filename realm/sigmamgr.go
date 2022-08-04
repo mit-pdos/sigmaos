@@ -161,15 +161,8 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 // more nuanced metrics, e.g. how many Nodeds are running procs that hold
 // state, etc.
 func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) bool {
-	var overprovisioned bool
 	ndCfg := MakeNodedConfig()
 	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	// TODO: We may want to eventually fully evict nodeds if they only run BE
-	// procs.
-	// Currently, we don't fully evict nodeds.
-	if len(ndCfg.Cores) <= 1 {
-		return false
-	}
 	db.DPrintf("SIGMAMGR", "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
 	s := &stats.StatInfo{}
 	err := m.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
@@ -177,22 +170,28 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	if err != nil {
 		db.DPrintf("SIGMAMGR_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 		db.DPrintf(db.ALWAYS, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
-	} else {
-		// If LC utilization is significantly < number of cores allocated, then
-		// this procd is overprovisioned.
-		totalCores := 0.0
-		for _, cores := range ndCfg.Cores {
-			totalCores += float64(cores.Size())
-		}
-		nLCCoresUsed := s.CustomUtil / 100.0
-		coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
-		// If we have >= 1 core group to spare, we are overprovisioned
-		if totalCores-coresToRevoke > nLCCoresUsed {
-			db.DPrintf("SIGMAMGR", "Machine is overprovisioned: %v - %v < %v", totalCores, coresToRevoke, nLCCoresUsed)
-			overprovisioned = true
-		}
+		return false
 	}
-	return overprovisioned
+	// Count the total number of cores assigned to this noded.
+	totalCores := 0.0
+	for _, cores := range ndCfg.Cores {
+		totalCores += float64(cores.Size())
+	}
+	nLCCoresUsed := s.CustomUtil / 100.0
+	// Count how many cores we would revoke.
+	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
+	// If we don't have >= 1 core group to spare for LC procs, we aren't
+	// overprovisioned
+	if totalCores-coresToRevoke <= nLCCoresUsed {
+		db.DPrintf("SIGMAMGR", "Machine is overprovisioned: %v - %v < %v", totalCores, coresToRevoke, nLCCoresUsed)
+		return false
+	}
+	// If this is the last core group for this noded, and its utilization is over
+	// a certain threshold, don't evict.
+	if len(ndCfg.Cores) == 1 && s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD {
+		return false
+	}
+	return true
 }
 
 // Find an over-provisioned realm (a realm with resources to spare). Returns

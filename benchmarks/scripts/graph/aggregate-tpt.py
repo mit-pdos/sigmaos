@@ -35,10 +35,10 @@ def get_time_range(tpts):
 def extend_tpts_to_range(tpts, r):
   if len(tpts) == 0:
     return
-  assert(len(tpts) == 1)
-  last_tick = tpts[0][len(tpts[0]) - 1]
-  if last_tick[0] <= r[1]:
-    tpts[0].append((r[1], last_tick[1]))
+  for i in range(len(tpts)):
+    last_tick = tpts[i][len(tpts[i]) - 1]
+    if last_tick[i] <= r[1]:
+      tpts[i].append((r[1], last_tick[1]))
 
 def get_overall_time_range(ranges):
   start = sys.maxsize
@@ -121,6 +121,7 @@ def graph_data(input_dir, title, out, kv_realm, mr_realm):
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, kv_realm)
+    print(read_tpts(input_dir, mr_realm))
     procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
     assert(len(procd_tpts) == 2)
   procd_range = get_time_range(procd_tpts)

@@ -121,7 +121,6 @@ def graph_data(input_dir, title, out, kv_realm, mr_realm):
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, kv_realm)
-    print(read_tpts(input_dir, mr_realm))
     procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
     assert(len(procd_tpts) == 2)
   procd_range = get_time_range(procd_tpts)

@@ -197,7 +197,7 @@ realm_burst() {
 realm_balance() {
   mrapp=mr-grep-wiki.yml
   nclerk=8
-  clerd_dur="180s"
+  clerk_dur="180s"
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run

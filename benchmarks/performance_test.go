@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"ulambda/benchmarks"
+	"ulambda/config"
 	db "ulambda/debug"
+	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/perf"
-	"ulambda/procdclnt"
+	"ulambda/realm"
 	"ulambda/test"
 )
 
@@ -56,23 +58,29 @@ func printResults(rs *benchmarks.RawResults) {
 	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (usec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
 }
 
-// Monitor how many procds have been assigned to a realm.
-func monitorProcdsAssigned(ts *test.Tstate) *perf.Perf {
+// Monitor how many cores have been assigned to a realm.
+func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
 	p := perf.MakePerf("TEST")
 	go func() {
-		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-		nprocd := 1
-		p.TptTick(float64(nprocd))
-		var err error
+		cc := config.MakeConfigClnt(fslib.MakeFsLib("test"))
+		cfgPath := realm.RealmConfPath(ts.RealmId())
+		cfg := &realm.RealmConfig{}
+		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+			db.DFatalf("Read config err: %v", err)
+		}
+		p.TptTick(float64(cfg.NCores))
 		for {
-			nprocd, err = pdc.WaitProcdChange(nprocd)
-			if err != nil {
-				db.DPrintf(db.ALWAYS, "Error WaitProcdChange: %v", err)
+			if err := cc.WaitConfigChange(cfgPath); err != nil {
+				db.DPrintf(db.ALWAYS, "Error WaitConfigChange: %v", err)
 				return
 			}
 			// Make sure changes don't get put in the same tpt bucket.
 			time.Sleep(time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
-			p.TptTick(float64(nprocd))
+			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
+				return
+			}
+			p.TptTick(float64(cfg.NCores))
 		}
 	}()
 	return p

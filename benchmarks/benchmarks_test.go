@@ -187,7 +187,7 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	p := monitorProcdsAssigned(ts)
+	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)
@@ -210,7 +210,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	p := monitorProcdsAssigned(ts)
+	p := monitorCoresAssigned(ts)
 	runOps(ts, ji, runKV, rs)
 	defer p.Done()
 	printResults(rs)
@@ -240,7 +240,7 @@ func TestRealmBurst(t *testing.T) {
 	// We need to get this in order to find out how many spinners to start.
 	setNCoresSigmaRealm(ts)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
-	p := monitorProcdsAssigned(ts)
+	p := monitorCoresAssigned(ts)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	defer p.Done()
 	printResults(rs)

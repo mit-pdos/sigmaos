@@ -87,7 +87,7 @@ def finalize_graph(fig, ax, plots, out):
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  ax.legend(lns, labels, loc=0)
+  plt.legend(lns, labels)
   fig.savefig(out)
 
 def setup_graph():

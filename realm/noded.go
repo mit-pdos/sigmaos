@@ -122,8 +122,15 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 			}
 
 			// Update the core allocations for this noded.
-			nd.cfg.Cores = nd.cfg.Cores[:len(nd.cfg.Cores)-1]
+			var rmCores *np.Tinterval
+			nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
 			nd.WriteConfig(nd.cfgPath, nd.cfg)
+
+			// Update the realm's total core count. The Realmmgr holds the realm
+			// lock.
+			realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+			realmCfg.NCores -= proc.Tcore(rmCores.Size())
+			nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
 
 			machine.PostCores(nd.FsLib, nd.machineId, cores)
 		}
@@ -140,23 +147,31 @@ func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 }
 
 // Update configuration.
-func (r *Noded) getNextConfig() {
+func (nd *Noded) getNextConfig() {
 	for {
-		r.ReadConfig(r.cfgPath, r.cfg)
+		nd.ReadConfig(nd.cfgPath, nd.cfg)
 		// Make sure we've been assigned to a realm
-		if r.cfg.RealmId != kernel.NO_REALM {
-			r.ec = electclnt.MakeElectClnt(r.FsLib, realmFencePath(r.cfg.RealmId), 0777)
+		if nd.cfg.RealmId != kernel.NO_REALM {
+			nd.ec = electclnt.MakeElectClnt(nd.FsLib, realmFencePath(nd.cfg.RealmId), 0777)
 			break
 		}
 	}
 }
 
+func (nd *Noded) countNCores() proc.Tcore {
+	ncores := proc.Tcore(0)
+	for _, c := range nd.cfg.Cores {
+		ncores += proc.Tcore(c.Size())
+	}
+	return ncores
+}
+
 // If we need more named replicas, help initialize a realm by starting another
 // named replica for it. Return true when all named replicas have been
 // initialized.
-func (r *Noded) tryAddNamedReplicaL() bool {
+func (nd *Noded) tryAddNamedReplicaL() bool {
 	// Get config
-	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
+	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
 
 	initDone := false
 	// If this is the last required noded replica...
@@ -166,18 +181,18 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 
 	// If we need to add a named replica, do so
 	if len(realmCfg.NodedsActive) < nReplicas() {
-		namedAddrs := genNamedAddrs(1, r.localIP)
+		namedAddrs := genNamedAddrs(1, nd.localIP)
 
 		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
-		_, pid, err := kernel.BootNamed(r.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId)
+		_, pid, err := kernel.BootNamed(nd.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, nd.cfg.RealmId)
 		if err != nil {
 			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
-		r.WriteConfig(RealmConfPath(realmCfg.Rid), realmCfg)
+		nd.WriteConfig(RealmConfPath(realmCfg.Rid), realmCfg)
 		db.DPrintf("NODED", "Added named replica: %v", realmCfg)
 	}
 	return initDone
@@ -186,6 +201,7 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 // Register this noded as part of a realm.
 func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NodedsActive = append(cfg.NodedsActive, nd.id)
+	cfg.NCores += nd.countNCores()
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
 	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
@@ -244,6 +260,7 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 		}
 	}
 
+	cfg.NCores -= nd.countNCores()
 	cfg.LastResize = time.Now()
 
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)

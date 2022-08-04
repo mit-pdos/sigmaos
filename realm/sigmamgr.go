@@ -183,8 +183,8 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
-	if totalCores-coresToRevoke <= nLCCoresUsed {
-		db.DPrintf("SIGMAMGR", "Noded is using LC cores well, not overprovisioned: %v - %v > %v", totalCores, coresToRevoke, nLCCoresUsed)
+	if totalCores-coresToRevoke < nLCCoresUsed {
+		db.DPrintf("SIGMAMGR", "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
 	// Don't evict this noded if it is running any LC procs.

@@ -189,6 +189,18 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	}
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
+		qs := []string{np.PROCD_RUNQ_LC}
+		for _, q := range qs {
+			queued, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, q))
+			if err != nil {
+				db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
+				return false
+			}
+			// If there are LC procs queued, don't shrink.
+			if len(queued) > 0 {
+				return false
+			}
+		}
 		runningProcs, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)

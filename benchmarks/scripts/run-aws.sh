@@ -111,16 +111,17 @@ run_mr() {
 }
 
 run_kv() {
-  if [ $# -ne 3 ]; then
-    echo "run_kv args: nkvd nclerk perf_dir" 1>&2
+  if [ $# -ne 4 ]; then
+    echo "run_kv args: nkvd nclerk auto perf_dir" 1>&2
     exit 1
   fi
   nkvd=$1
   nclerk=$2
-  perf_dir=$3
+  auto=$3
+  perf_dir=$4
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk --kvauto $auto > /tmp/bench.out 2>&1
   "
   run_benchmark $perf_dir "$cmd"
 }
@@ -159,19 +160,26 @@ mr_overlap() {
 }
 
 kv_scalability() {
+  auto="manual"
   nkvd=1
   for nclerk in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/$nclerk
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
     start_cluster 16
-    run_kv $nkvd $nclerk $perf_dir
+    run_kv $nkvd $nclerk $auto $perf_dir
   done
 }
 
 kv_elasticity() {
-  # TODO
-  echo "TODO"
+  auto="manual"
+  nkvd=1
+  nclerk=16
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  start_cluster 16
+  run_kv $nkvd $nclerk $auto $perf_dir
 }
 
 realm_burst() {
@@ -213,7 +221,7 @@ graph_mr_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/mr_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MR Speedup Varying Number of VMs" --speedup
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MR Speedup Varying Number of VMs" --speedup
 }
 
 graph_mr_vs_corral() {
@@ -255,15 +263,14 @@ graph_kv_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/kv_scalability --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Aggregate Throughput of 1 KV Server Varying Number of Clerks"
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Aggregate Throughput of 1 KV Server Varying Number of Clerks"
 }
 
 graph_kv_elasticity() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  echo "TODO"
-  # TODO
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
 graph_realm_burst() {
@@ -290,12 +297,13 @@ graph_realm_balance() {
 }
 
 # ========== Run benchmarks ==========
-mr_scalability
-mr_vs_corral
-mr_overlap
-kv_scalability
-realm_burst
-realm_balance
+#mr_scalability
+#mr_vs_corral
+#mr_overlap
+#kv_scalability
+kv_elasticity
+#realm_burst
+#realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
@@ -305,6 +313,7 @@ graph_mr_vs_corral
 graph_mr_overlap
 graph_kv_aggregate_tpt
 graph_kv_scalability
+graph_kv_elasticity
 graph_realm_burst
 graph_realm_balance
 

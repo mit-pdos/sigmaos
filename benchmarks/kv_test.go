@@ -184,7 +184,14 @@ func (ji *KVJobInstance) StartClerk() {
 		args = append(args, ji.ckdur, strconv.Itoa(idx*kv.NKEYS), ji.sempath)
 	}
 	db.DPrintf("TEST", "Spawn clerk")
-	pid, err := kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
+	var pid proc.Tpid
+	var err error
+	for {
+		pid, err = kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
+		if err == nil {
+			break
+		}
+	}
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
 	db.DPrintf("TEST", "Done spawning clerk %v", pid)
 	ji.cpids = append(ji.cpids, pid)

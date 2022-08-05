@@ -188,7 +188,7 @@ func (p *Perf) Done() {
 func GetCPUTimePid(pid string) (utime, stime uint64) {
 	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
 	if err != nil {
-		db.DFatalf("Couldn't get CPU time: %v", err)
+		db.DPrintf(db.ALWAYS, "Couldn't get CPU time: %v", err)
 		return
 	}
 	fields := strings.Split(string(contents), " ")

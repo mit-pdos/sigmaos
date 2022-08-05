@@ -535,6 +535,21 @@ func TestBurstSpawn(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestSpawnProcdCrash(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	// Spawn a proc which can't possibly be run by any procd.
+	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores*2))
+
+	err := ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "KillOne: %v", err)
+
+	err, _ = ts.WaitExit(pid)
+	assert.NotNil(t, err, "WaitExit: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 

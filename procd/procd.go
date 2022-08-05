@@ -154,16 +154,18 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 	defer pd.mu.Unlock()
 
 	db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
-	p, err := pd.readRunqProc(procPath)
+	p, wr, err := pd.readRunqProc(procPath)
 	// Proc may have been stolen
 	if err != nil {
 		db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
 		return nil, err
 	}
+	// Make sure to clunk the fid.
+	defer wr.Close()
 	// See if the proc fits on this procd.
 	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) {
 		// Proc may have been stolen
-		if ok := pd.claimProc(procPath); !ok {
+		if ok := pd.claimProc(wr, p, procPath); !ok {
 			return nil, nil
 		}
 		linuxProc := pd.registerProcL(p)

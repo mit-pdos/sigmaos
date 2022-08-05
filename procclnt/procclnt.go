@@ -99,7 +99,7 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(p.Pid, childProcdir, p.GetShared()); err != nil {
+	if err := clnt.addChild(procdIp, p, childProcdir); err != nil {
 		return err
 	}
 
@@ -169,6 +169,24 @@ func (clnt *ProcClnt) nextProcd() string {
 
 func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
+	b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
+	if err != nil {
+		db.DPrintf("PROCCLNT_ERR", "Can't get procip file: %v", err)
+		return err
+	}
+	procfileLink := string(b)
+	// Kernel procs will have empty proc file links.
+	if procfileLink != "" {
+		done := make(chan bool)
+		err := clnt.SetRemoveWatch(procfileLink, func(string, error) {
+			done <- true
+		})
+		if err == nil {
+			<-done
+		} else {
+			db.DPrintf("PROCCLNT_ERR", "Error waitSTart SetRemoveWatch %v", err)
+		}
+	}
 	db.DPrintf("PROCCLNT", "WaitStart %v %v\n", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()

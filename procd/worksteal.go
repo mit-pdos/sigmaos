@@ -2,13 +2,17 @@ package procd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path"
 	"strings"
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/semclnt"
+	"ulambda/writer"
 )
 
 // Thread in charge of stealing procs.
@@ -122,25 +126,68 @@ func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, p *LinuxProc, isR
 	}
 }
 
-func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, error) {
-	b, err := pd.GetFile(procPath)
+func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, *writer.Writer, error) {
+	rdr, err := pd.OpenReader(procPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	b, err := rdr.GetData()
+	if err != nil {
+		return nil, nil, err
 	}
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		pd.perf.Done()
 		db.DFatalf("Error Unmarshal in Procd.readProc: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
-	return p, nil
+	if p.IsClaimed() {
+		// If it was already claimed, remove the proc so that the parent proc can
+		// make progress even if the claiming procd crashed.
+		db.DPrintf("PROCD", "Had already been claimed: %v", p)
+		pd.Remove(procPath)
+		return nil, nil, fmt.Errorf("Proc %v was already claimed", p.Pid)
+	}
+	// Make a writer associated with the same FID to ensure atomicity via
+	// versioned read-modify-write.
+	wr := pd.PathClnt.MakeWriter(rdr.Fid())
+	return p, wr, nil
 }
 
-func (pd *Procd) claimProc(procPath string) bool {
-	err := pd.Remove(procPath)
-	if err != nil {
+func (pd *Procd) claimProc(wr *writer.Writer, p *proc.Proc, procPath string) bool {
+	// Create an ephemeral semaphore for the parent proc to wait on. We do this
+	// optimistically, since it must already be there when we actually do the
+	// claiming.
+	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
+	err1 := semStart.Init(np.DMTMP)
+	// If someone beat us to the semaphore creation, we can't have possibly
+	// claimed the proc, so bail out.
+	if err1 != nil && np.IsErrExists(err1) {
 		return false
 	}
+	// Regardless of whether or not the claim succeeded, we remove the proc so
+	// that the parent proc can make progress even if the claiming procd crashed
+	// (the parent proc will have set a watch on this file).
+	//
+	// However, it is important that the Remove only happens if the semaphore
+	// creation succeeded. This gives the claiming procd time to do its versioned
+	// write to the proc file.
+	defer pd.Remove(procPath)
+	// Finalize this proc's env, which marks it as claimed.
+	p.FinalizeEnv(pd.addr)
+	err := fslib.WriteJsonRecord(wr, p)
+	// Claim failed.
+	if err != nil {
+		db.DPrintf("PROCD", "Failed to claim: %v", err)
+		// If we didn't successfully claim the proc, but we *did* successfully
+		// create the semaphore, then someone else must have created and then
+		// removed the original one already. Remove/clean up the semaphore.
+		if err1 == nil {
+			semStart.Up()
+		}
+		return false
+	}
+	db.DPrintf("PROCD", "Sem init done: %v", p)
 	return true
 }

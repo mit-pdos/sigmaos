@@ -544,6 +544,9 @@ func TestSpawnProcdCrash(t *testing.T) {
 	err := ts.KillOne(np.PROCD)
 	assert.Nil(t, err, "KillOne: %v", err)
 
+	err = ts.WaitStart(pid)
+	assert.NotNil(t, err, "WaitStart: %v", err)
+
 	err, _ = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
 

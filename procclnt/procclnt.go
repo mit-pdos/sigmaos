@@ -181,10 +181,13 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 		err := clnt.SetRemoveWatch(procfileLink, func(string, error) {
 			done <- true
 		})
-		if err == nil {
-			<-done
+		if err != nil {
+			db.DPrintf("PROCCLNT_ERR", "Error waitStart SetRemoveWatch %v", err)
+			if np.IsErrUnreachable(err) {
+				return err
+			}
 		} else {
-			db.DPrintf("PROCCLNT_ERR", "Error waitSTart SetRemoveWatch %v", err)
+			<-done
 		}
 	}
 	db.DPrintf("PROCCLNT", "WaitStart %v %v\n", pid, childDir)

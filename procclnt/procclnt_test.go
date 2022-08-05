@@ -547,7 +547,7 @@ func TestSpawnProcdCrash(t *testing.T) {
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
 
-	err, _ = ts.WaitExit(pid)
+	_, err = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
 
 	ts.Shutdown()

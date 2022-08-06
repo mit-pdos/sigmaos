@@ -124,6 +124,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
 		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
+		m.updateResizeTimeL(m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -152,6 +153,7 @@ func (m *RealmResourceMgr) growRealm() {
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
 		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 	}
+	m.updateResizeTime(m.realmId)
 }
 
 func (m *RealmResourceMgr) tryClaimCores(machineId string) (*np.Tinterval, bool) {
@@ -258,6 +260,20 @@ func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores 
 	rCfg := &RealmConfig{}
 	m.ReadConfig(RealmConfPath(realmId), rCfg)
 	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
+	m.WriteConfig(RealmConfPath(realmId), rCfg)
+}
+
+func (m *RealmResourceMgr) updateResizeTime(realmId string) {
+	lockRealm(m.lock, realmId)
+	defer unlockRealm(m.lock, realmId)
+
+	m.updateResizeTimeL(realmId)
+}
+
+func (m *RealmResourceMgr) updateResizeTimeL(realmId string) {
+	// Update the realm's config
+	rCfg := &RealmConfig{}
+	m.ReadConfig(RealmConfPath(realmId), rCfg)
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(RealmConfPath(realmId), rCfg)
 }

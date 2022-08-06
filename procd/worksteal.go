@@ -99,7 +99,7 @@ func (pd *Procd) offerStealableProcs() {
 			})
 			if err != nil {
 				pd.perf.Done()
-				db.DFatalf("Error ProcessDir: p %v err %v", runqPath, err)
+				db.DFatalf("Error ProcessDir: p %v err %v myIP %v", runqPath, err, pd.MyAddr())
 			}
 		}
 	}

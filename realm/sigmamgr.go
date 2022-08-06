@@ -218,6 +218,7 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 			if err != nil {
 				continue
 			}
+			db.DPrintf(db.ALWAYS, "String b %v", string(b))
 			// If this is a LC proc, return false.
 			if strings.Contains(string(b), "T_LC") {
 				db.DPrintf("SIGMAMGR", "Can't evict noded, running LC proc")

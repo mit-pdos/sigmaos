@@ -169,7 +169,6 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// Only overprovisioned if hasn't shut down/crashed.
 	if err != nil {
 		db.DPrintf(debug+"_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
-		db.DPrintf(db.ALWAYS, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 		return false
 	}
 	// Count the total number of cores assigned to this noded.
@@ -192,18 +191,18 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		for _, q := range qs {
 			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, q))
 			if err != nil {
-				db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
+				db.DPrintf(debug+"_ERR", "Couldn't get queue dir %v: %v", q, err)
 				return false
 			}
 			// If there are LC procs queued, don't shrink.
 			if len(queued) > 0 {
-				db.DPrintf(db.ALWAYS, "Had %v queued procs", len(queued))
+				db.DPrintf(debug, "Can't evict noded, had %v queued LC procs", len(queued))
 				return false
 			}
 		}
 		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
+			db.DPrintf(debug+"_ERR", "Couldn't get procs running dir: %v", err)
 			return false
 		}
 		// If this is the last core group for this noded, and its utilization is over

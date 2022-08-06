@@ -160,15 +160,15 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 // XXX Eventually, we'll want to find overprovisioned realms according to
 // more nuanced metrics, e.g. how many Nodeds are running procs that hold
 // state, etc.
-func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) bool {
+func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug string) bool {
 	ndCfg := MakeNodedConfig()
-	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	db.DPrintf("SIGMAMGR", "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
+	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
+	db.DPrintf(debug, "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
 	s := &stats.StatInfo{}
-	err := m.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
+	err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
 	if err != nil {
-		db.DPrintf("SIGMAMGR_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+		db.DPrintf(debug+"_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 		db.DPrintf(db.ALWAYS, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 		return false
 	}
@@ -183,14 +183,14 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if totalCores-coresToRevoke < nLCCoresUsed {
-		db.DPrintf("SIGMAMGR", "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
+		db.DPrintf(debug, "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
 		qs := []string{np.PROCD_RUNQ_LC}
 		for _, q := range qs {
-			queued, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, q))
+			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, q))
 			if err != nil {
 				db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
 				return false
@@ -201,7 +201,7 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 				return false
 			}
 		}
-		runningProcs, err := m.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
+		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Couldn't get procs running dir: %v", err)
 			return false
@@ -209,22 +209,22 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 		// If this is the last core group for this noded, and its utilization is over
 		// a certain threshold (and it is running procs), don't evict.
 		if s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
-			db.DPrintf("SIGMAMGR", "Can't evict noded, util: %v runningProcs: %v", s.Util, len(runningProcs))
+			db.DPrintf(debug, "Can't evict noded, util: %v runningProcs: %v", s.Util, len(runningProcs))
 			return false
 		}
 		for _, st := range runningProcs {
 			p := proc.MakeEmptyProc()
-			err := m.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name), p)
+			err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name), p)
 			if err != nil {
 				continue
 			}
 			// If this is a LC proc, return false.
 			if p.Type == proc.T_LC {
-				db.DPrintf("SIGMAMGR", "Can't evict noded, running LC proc")
+				db.DPrintf(debug, "Can't evict noded, running LC proc")
 				return false
 			}
 		}
-		db.DPrintf("SIGMAMGR", "Evicting noded %v realm %v", nodedId, realmId)
+		db.DPrintf(debug, "Evicting noded %v realm %v", nodedId, realmId)
 	}
 	return true
 }
@@ -255,15 +255,15 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		m.ReadConfig(RealmConfPath(realmId), rCfg)
 
 		// See if any nodeds have cores to spare.
-		nodedOverprovisioned := false
+		overprovisioned := false
 		for _, nd := range rCfg.NodedsAssigned {
-			if m.nodedOverprovisioned(realmId, nd) {
-				nodedOverprovisioned = true
+			if nodedOverprovisioned(m.FsLib, m.ConfigClnt, realmId, nd, "SIGMAMGR") {
+				overprovisioned = true
 				break
 			}
 		}
 		// If there are more than the minimum number of required Nodeds available...
-		if len(rCfg.NodedsAssigned) > nReplicas() && nodedOverprovisioned {
+		if len(rCfg.NodedsAssigned) > nReplicas() && overprovisioned {
 			opRealmId = realmId
 			ok = true
 			return true, nil

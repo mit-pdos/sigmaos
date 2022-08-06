@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -342,16 +343,21 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	_, procdUtils := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "searching for least utilized node in realm %v, procd utils: %v", m.realmId, procdUtils)
 
-	// Find least utilized procd
-	min := 100.0
-	minNodedId := ""
-	for nodedId, util := range procdUtils {
-		if min >= util {
-			min = util
-			minNodedId = nodedId
+	nodeds := make([]string, 0, len(procdUtils))
+	for nodedId, _ := range procdUtils {
+		nodeds = append(nodeds, nodedId)
+	}
+	// Sort nodeds in order of ascending utilization.
+	sort.Slice(nodeds, func(i, j int) bool {
+		return procdUtils[nodeds[i]] < procdUtils[nodeds[j]]
+	})
+	// Find a noded which can be shrunk.
+	for _, nodedId := range nodeds {
+		if nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR") {
+			return nodedId, true
 		}
 	}
-	return minNodedId, true
+	return "", false
 }
 
 func (m *RealmResourceMgr) realmShouldGrow() bool {

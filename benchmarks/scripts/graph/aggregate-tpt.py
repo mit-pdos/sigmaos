@@ -154,10 +154,10 @@ def graph_data(input_dir, title, out, kv_realm, mr_realm):
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "KV Realm Cores Assigned", "blue", "--", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "KV Realm Cores Assigned", "green", "--", normalize=False)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "orange", "--", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "green", "-", normalize=False)
       plots.append(p)
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))

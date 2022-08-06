@@ -207,7 +207,6 @@ realm_balance() {
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  start_cluster 16
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
@@ -267,7 +266,7 @@ graph_kv_elasticity() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing a Dynamically-Scaled Number of KV Servers"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Throughput of Dynamically-Scaled KV Service with 16 Clerks"
 }
 
 graph_realm_burst() {

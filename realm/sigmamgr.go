@@ -2,7 +2,6 @@ package realm
 
 import (
 	"path"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -214,17 +213,18 @@ func (m *SigmaResourceMgr) nodedOverprovisioned(realmId string, nodedId string) 
 			return false
 		}
 		for _, st := range runningProcs {
-			b, err := m.GetFile(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name))
+			p := proc.MakeEmptyProc()
+			err := m.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name), p)
 			if err != nil {
 				continue
 			}
-			db.DPrintf(db.ALWAYS, "String b %v", string(b))
 			// If this is a LC proc, return false.
-			if strings.Contains(string(b), "T_LC") {
+			if p.Type == proc.T_LC {
 				db.DPrintf("SIGMAMGR", "Can't evict noded, running LC proc")
 				return false
 			}
 		}
+		db.DPrintf("SIGMAMGR", "Evicting noded %v realm %v", nodedId, realmId)
 	}
 	return true
 }
@@ -303,6 +303,7 @@ func (m *SigmaResourceMgr) requestCores(realmId string) {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, "", 1)
 	resource.SendMsg(m.FsLib, path.Join(realmMgrPath(realmId), np.RESOURCE_CTL), msg)
+	db.DPrintf("SIGMAMGR", "Sigmamgr done requesting cores from %v", realmId)
 }
 
 // Destroy a realm.

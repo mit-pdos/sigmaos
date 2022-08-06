@@ -54,6 +54,7 @@ AWS_DIR=$DIR/aws
 OUT_DIR=$DIR/benchmarks/results/$VERSION
 GRAPH_SCRIPTS_DIR=$DIR/benchmarks/scripts/graph
 GRAPH_OUT_DIR=$DIR/benchmarks/results/graphs
+INIT_OUT=/tmp/init.out
 
 # cd to the ulambda root directory
 cd $DIR
@@ -68,27 +69,30 @@ start_cluster() {
   fi
   n_vm=$1
   cd $AWS_DIR
-  ./stop-sigmaos.sh --vpc $VPC --parallel
-  ./build-sigma.sh --vpc $VPC --realm $REALM1 --version $VERSION
-  ./build-sigma.sh --vpc $VPC --realm $REALM2 --version $VERSION
-  ./install-sigma.sh --vpc $VPC --realm $REALM1 --parallel
-  ./install-sigma.sh --vpc $VPC --realm $REALM2 --parallel
-  ./start-sigmaos.sh --vpc $VPC --realm $REALM1 --n $n_vm
+  echo "" > $INIT_OUT
+  ./stop-sigmaos.sh --vpc $VPC --parallel >> $INIT_OUT 2>&1
+  ./build-sigma.sh --vpc $VPC --realm $REALM1 --version $VERSION >> $INIT_OUT 2>&1
+  ./build-sigma.sh --vpc $VPC --realm $REALM2 --version $VERSION >> $INIT_OUT 2>&1
+  ./install-sigma.sh --vpc $VPC --realm $REALM1 --parallel >> $INIT_OUT 2>&1
+  ./install-sigma.sh --vpc $VPC --realm $REALM2 --parallel >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $VPC --realm $REALM1 --n $n_vm >> $INIT_OUT 2>&1
   cd $DIR
 }
 
 run_benchmark() {
-  if [ $# -ne 2 ]; then
-    echo "run_benchmark args: perfdir cmd" 1>&2
+  if [ $# -ne 3 ]; then
+    echo "run_benchmark args: n_vm perfdir cmd" 1>&2
     exit 1
   fi
-  perf_dir=$1
-  cmd=$2
+  n_vm=$1
+  perf_dir=$2
+  cmd=$3
   # Avoid doing duplicate work.
   if [ -d $perf_dir ]; then
     echo "========== Already ran, skipping: $perf_dir =========="
     return 0
   fi
+  start_cluster $n_vm
   mkdir -p $perf_dir
   cd $AWS_DIR
   ./run-benchmark.sh --vpc $VPC --command "$cmd"
@@ -97,33 +101,35 @@ run_benchmark() {
 }
 
 run_mr() {
-  if [ $# -ne 2 ]; then
-    echo "run_mr args: app perf_dir" 1>&2
+  if [ $# -ne 3 ]; then
+    echo "run_mr args: n_vm app perf_dir" 1>&2
     exit 1
   fi
-  mrapp=$1
-  perf_dir=$2
+  n_vm=$1
+  mrapp=$2
+  perf_dir=$3
   cmd="
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $perf_dir "$cmd"
+  run_benchmark $n_vm $perf_dir "$cmd"
 }
 
 run_kv() {
-  if [ $# -ne 4 ]; then
-    echo "run_kv args: nkvd nclerk auto perf_dir" 1>&2
+  if [ $# -ne 5 ]; then
+    echo "run_kv args: n_vm nkvd nclerk auto perf_dir" 1>&2
     exit 1
   fi
-  nkvd=$1
-  nclerk=$2
-  auto=$3
-  perf_dir=$4
+  n_vm=$1
+  nkvd=$2
+  nclerk=$3
+  auto=$4
+  perf_dir=$5
   cmd="
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk --kvauto $auto > /tmp/bench.out 2>&1
   "
-  run_benchmark $perf_dir "$cmd"
+  run_benchmark $n_vm $perf_dir "$cmd"
 }
 
 # ========== Top-level benchmarks ==========
@@ -134,40 +140,39 @@ mr_scalability() {
     run=${FUNCNAME[0]}/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    start_cluster $n_vm
-    run_mr $mrapp $perf_dir
+    run_mr $n_vm $mrapp $perf_dir
   done
 }
 
 mr_vs_corral() {
   mrapp=mr-wc-wiki1.8G.yml
+  n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  start_cluster 16
-  run_mr $mrapp $perf_dir
+  run_mr $n_vm $mrapp $perf_dir
 }
 
 mr_overlap() {
   mrapp=mr-wc-wiki4G.yml
+  n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   # TODO
   echo "TODO"
-#  start_cluster 16
-#  run_mr $mrapp $perf_dir
+#  run_mr $n_vm $mrapp $perf_dir
 }
 
 kv_scalability() {
   auto="manual"
   nkvd=1
+  n_vm=16
   for nclerk in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/$nclerk
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    start_cluster 16
-    run_kv $nkvd $nclerk $auto $perf_dir
+    run_kv $n_vm $nkvd $nclerk $auto $perf_dir
   done
 }
 
@@ -175,29 +180,30 @@ kv_elasticity() {
   auto="auto"
   nkvd=1
   nclerk=16
+  n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  start_cluster 16
-  run_kv $nkvd $nclerk $auto $perf_dir
+  run_kv $n_vm $nkvd $nclerk $auto $perf_dir
 }
 
 realm_burst() {
+  n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  start_cluster 16
   cmd="
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
   "
-  run_benchmark $perf_dir "$cmd"
+  run_benchmark $n_vm $perf_dir "$cmd"
 }
 
 realm_balance() {
   mrapp=mr-grep-wiki.yml
   nclerk=8
-  clerk_dur="180s"
+  clerk_dur="120s"
+  n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
@@ -208,7 +214,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk $nclerk --clerk_dur $clerk_dur --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $perf_dir "$cmd"
+  run_benchmark $n_vm $perf_dir "$cmd"
 }
 
 # ========== Make Graphs ==========
@@ -233,12 +239,6 @@ graph_mr_vs_corral() {
   echo "========== Graphing $graph =========="
   echo "TODO"
   # TODO
-#  mrapp=mr-wc-wiki1.8G.yml
-#  run=${FUNCNAME[0]}
-#  echo "========== Running $run =========="
-#  perf_dir=$OUT_DIR/$run
-#  start_cluster 16
-#  run_mr $mrapp $perf_dir
 }
 
 graph_mr_overlap() {
@@ -247,12 +247,6 @@ graph_mr_overlap() {
   echo "========== Graphing $graph =========="
   echo "TODO"
   # TODO
-#  mrapp=mr-wc-wiki4G.yml
-#  run=${FUNCNAME[0]}
-#  echo "========== Running $run =========="
-#  perf_dir=$OUT_DIR/$run
-#  start_cluster 16
-#  run_mr $mrapp $perf_dir
 }
 
 graph_kv_aggregate_tpt() {
@@ -282,14 +276,6 @@ graph_realm_burst() {
   echo "========== Graphing $graph =========="
   echo "TODO"
   # TODO
-#  run=${FUNCNAME[0]}
-#  perf_dir=$OUT_DIR/$run
-#  start_cluster 16
-#  cmd="
-#    go clean -testcache; \
-#    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
-#  "
-#  run_benchmark $perf_dir "$cmd"
 }
 
 graph_realm_balance() {
@@ -300,24 +286,24 @@ graph_realm_balance() {
 }
 
 # ========== Run benchmarks ==========
-#mr_scalability
-#mr_vs_corral
-#mr_overlap
-#kv_scalability
-#kv_elasticity
-#realm_burst
+mr_scalability
+mr_vs_corral
+mr_overlap
+kv_scalability
+kv_elasticity
+realm_burst
 realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#graph_mr_vs_corral
-#graph_mr_overlap
-#graph_kv_aggregate_tpt
-#graph_kv_scalability
-#graph_kv_elasticity
-#graph_realm_burst
+graph_mr_aggregate_tpt
+graph_mr_scalability
+graph_mr_vs_corral
+graph_mr_overlap
+graph_kv_aggregate_tpt
+graph_kv_scalability
+graph_kv_elasticity
+graph_realm_burst
 graph_realm_balance
 
 echo -e "\n\n\n\n===================="

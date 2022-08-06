@@ -96,7 +96,7 @@ run_benchmark() {
   mkdir -p $perf_dir
   cd $AWS_DIR
   ./run-benchmark.sh --vpc $VPC --command "$cmd"
-  ./collect-results.sh --vpc $VPC --perfdir $perf_dir --parallel
+  ./collect-results.sh --vpc $VPC --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
   cd $DIR
 }
 

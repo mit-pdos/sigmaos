@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.4
 	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/klauspost/readahead v1.4.0
 	github.com/mitchellh/mapstructure v1.1.2

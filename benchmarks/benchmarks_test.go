@@ -37,7 +37,7 @@ func init() {
 	flag.IntVar(&nc, "kvd_ncore", 2, "KVD Ncore")
 	KVD_NCORE = proc.Tcore(nc)
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
-	flag.StringVar(&REDIS_ADDR, "redisadd", "", "Redis server address")
+	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 }
 
 // ========== Common parameters ==========

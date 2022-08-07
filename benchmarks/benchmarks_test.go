@@ -22,6 +22,7 @@ var CLERK_DURATION string
 var CLERK_NCORE proc.Tcore
 var KVD_NCORE proc.Tcore
 var REALM2 string
+var REDIS_ADDR string
 
 // Read & set the proc version.
 func init() {
@@ -36,6 +37,7 @@ func init() {
 	flag.IntVar(&nc, "kvd_ncore", 2, "KVD Ncore")
 	KVD_NCORE = proc.Tcore(nc)
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
+	flag.StringVar(&REDIS_ADDR, "redisadd", "", "Redis server address")
 }
 
 // ========== Common parameters ==========
@@ -202,7 +204,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	setNCoresSigmaRealm(ts)
 	nclerks := []int{NCLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
-	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO)
+	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -271,7 +273,7 @@ func TestRealmBalance(t *testing.T) {
 	nclerks := []int{NCLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO)
+	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
 	p1 := monitorCoresAssigned(ts1)
 	defer p1.Done()
 	p2 := monitorCoresAssigned(ts2)

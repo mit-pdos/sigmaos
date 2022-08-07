@@ -146,12 +146,16 @@ mr_scalability() {
 }
 
 mr_vs_corral() {
-  mrapp=mr-wc-wiki1.8G.yml
   n_vm=16
-  run=${FUNCNAME[0]}
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_mr $n_vm $mrapp $perf_dir
+  app="mr-wc-wiki"
+  dataset_size="1G 1.8G 2G 4G"
+  for size in $dataset_size ; do
+    mrapp="$app$size.yml"
+    run=${FUNCNAME[0]}/$mrapp
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    run_mr $n_vm $mrapp $perf_dir
+  done
 }
 
 mr_overlap() {
@@ -166,6 +170,7 @@ mr_overlap() {
 }
 
 kv_scalability() {
+  # First, run against our KV.
   auto="manual"
   nkvd=1
   redisaddr=""
@@ -177,6 +182,7 @@ kv_scalability() {
     run_kv $n_vm $nkvd $nclerk $auto "$redisaddr" $perf_dir
   done
 
+  # Then, run against a redis instance started on the last VM.
   nkvd=0
   redisaddr="10.0.76.3:6379"
   n_vm=15
@@ -299,9 +305,9 @@ graph_realm_balance() {
 
 # ========== Run benchmarks ==========
 #mr_scalability
-#mr_vs_corral
+mr_vs_corral
 #mr_overlap
-kv_scalability
+#kv_scalability
 #kv_elasticity
 #realm_burst
 #realm_balance
@@ -313,7 +319,7 @@ source ~/env/3.10/bin/activate
 #graph_mr_vs_corral
 #graph_mr_overlap
 #graph_kv_aggregate_tpt
-graph_kv_scalability
+#graph_kv_scalability
 #graph_kv_elasticity
 #graph_realm_burst
 #graph_realm_balance

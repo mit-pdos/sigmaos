@@ -15,6 +15,7 @@ import (
 	"ulambda/kv"
 	"ulambda/perf"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/semclnt"
 )
 
@@ -43,25 +44,30 @@ func main() {
 		}
 		sempath = os.Args[4]
 	}
+	fsl := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
+	pclnt := procclnt.MakeProcClnt(fsl)
 	var rcli *redis.Client
+	var clk *kv.KvClerk
 	if len(os.Args) > 5 {
 		rcli = redis.NewClient(&redis.Options{
 			Addr:     os.Args[5],
 			Password: "",
 			DB:       0,
 		})
-	}
-	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), os.Args[1], fslib.Named())
-	if err != nil {
-		db.DFatalf("%v err %v", os.Args[0], err)
+	} else {
+		var err error
+		clk, err = kv.MakeClerkFsl(fsl, pclnt, os.Args[1])
+		if err != nil {
+			db.DFatalf("%v err %v", os.Args[0], err)
+		}
 	}
 
 	// Record performance.
 	p := perf.MakePerf("KVCLERK")
 	defer p.Done()
 
-	clk.Started()
-	run(clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
+	pclnt.Started()
+	run(pclnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -73,7 +79,7 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
+func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
@@ -112,7 +118,7 @@ func run(kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.
 			status = proc.MakeStatus(proc.StatusEvicted)
 		}
 	}
-	kc.Exited(status)
+	pclnt.Exited(status)
 }
 
 type Value struct {

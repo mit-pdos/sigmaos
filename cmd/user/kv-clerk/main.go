@@ -174,7 +174,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				p.TptTick(1.0)
 				*nops++
 				if _, err := rcli.Get(ctx, key.String()).Result(); err != nil {
-					db.DFatalf("Error redis cli set: %v", err)
+					db.DFatalf("Error redis cli get: %v", err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)

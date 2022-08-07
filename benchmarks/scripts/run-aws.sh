@@ -116,18 +116,19 @@ run_mr() {
 }
 
 run_kv() {
-  if [ $# -ne 5 ]; then
-    echo "run_kv args: n_vm nkvd nclerk auto perf_dir" 1>&2
+  if [ $# -ne 6 ]; then
+    echo "run_kv args: n_vm nkvd nclerk auto redisaddr perf_dir" 1>&2
     exit 1
   fi
   n_vm=$1
   nkvd=$2
   nclerk=$3
   auto=$4
-  perf_dir=$5
+  redisaddr=$5
+  perf_dir=$6
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk --kvauto $auto > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -137,7 +138,7 @@ run_kv() {
 mr_scalability() {
   mrapp=mr-grep-wiki.yml
   for n_vm in 1 2 4 8 16 ; do
-    run=${FUNCNAME[0]}/$n_vm
+    run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
     run_mr $n_vm $mrapp $perf_dir
@@ -167,12 +168,23 @@ mr_overlap() {
 kv_scalability() {
   auto="manual"
   nkvd=1
+  redisaddr=""
   n_vm=16
   for nclerk in 1 2 4 8 16 ; do
-    run=${FUNCNAME[0]}/$nclerk
+    run=${FUNCNAME[0]}/sigmaOS/$nclerk
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_kv $n_vm $nkvd $nclerk $auto $perf_dir
+    run_kv $n_vm $nkvd $nclerk $auto "$redisaddr" $perf_dir
+  done
+
+  nkvd=0
+  redisaddr="10.0.76.3:6379"
+  n_vm=15
+  for nclerk in 1 2 4 8 16 ; do
+    run=${FUNCNAME[0]}/redis/$nclerk
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    run_kv $n_vm $nkvd $nclerk $auto $redisaddr $perf_dir
   done
 }
 
@@ -180,11 +192,12 @@ kv_elasticity() {
   auto="auto"
   nkvd=1
   nclerk=16
+  redisaddr=""
   n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_kv $n_vm $nkvd $nclerk $auto $perf_dir
+  run_kv $n_vm $nkvd $nclerk $auto "$redisaddr" $perf_dir
 }
 
 realm_burst() {
@@ -285,25 +298,25 @@ graph_realm_balance() {
 }
 
 # ========== Run benchmarks ==========
-mr_scalability
-mr_vs_corral
-mr_overlap
+#mr_scalability
+#mr_vs_corral
+#mr_overlap
 kv_scalability
-kv_elasticity
-realm_burst
-realm_balance
+#kv_elasticity
+#realm_burst
+#realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_aggregate_tpt
-graph_mr_scalability
-graph_mr_vs_corral
-graph_mr_overlap
-graph_kv_aggregate_tpt
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
+#graph_mr_vs_corral
+#graph_mr_overlap
+#graph_kv_aggregate_tpt
 graph_kv_scalability
-graph_kv_elasticity
-graph_realm_burst
-graph_realm_balance
+#graph_kv_elasticity
+#graph_realm_burst
+#graph_realm_balance
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

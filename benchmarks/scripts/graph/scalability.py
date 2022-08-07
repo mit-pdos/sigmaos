@@ -8,23 +8,27 @@ import argparse
 import os
 import sys
 
-def get_x_axis(input_dir):
-  return sorted([ int(x) for x in os.listdir(input_dir) ])
+def get_x_axis(systems, input_dir):
+  return sorted([ int(x) for x in os.listdir(os.path.join(input_dir, systems[0])) ])
 
-def get_y_axis(input_dir, x_vals, units):
+def get_y_axes(systems, input_dir, x_vals, units):
   y_vals = []
-  for x in x_vals:
-    with open(os.path.join(input_dir, str(x), "bench.out")) as f:
-      b = f.read()
-    lines = b.split("\n")
-    lines = [ l for l in lines if units in l ]
-    assert(len(lines) == 1)
-    line = lines[0].split(" ")
-    for i in range(len(line)):
-      if units in line[i]:
-        y_vals.append(float(line[i - 1]))
-        break
-  assert(len(x_vals) == len(y_vals))
+  systems=os.listdir(input_dir)
+  for system in systems:
+    y = []
+    for x in x_vals:
+      with open(os.path.join(input_dir, system, str(x), "bench.out")) as f:
+        b = f.read()
+      lines = b.split("\n")
+      lines = [ l for l in lines if units in l ]
+      assert(len(lines) == 1)
+      line = lines[0].split(" ")
+      for i in range(len(line)):
+        if units in line[i]:
+          y.append(float(line[i - 1]))
+          break
+    assert(len(x_vals) == len(y))
+    y_vals.append(y)
   return y_vals
 
 def scale_y_axis(y, units):
@@ -45,15 +49,19 @@ def finalize_graph(out, xlabel, ylabel, title):
   plt.savefig(out)
 
 def graph_data(input_dir, out, units, xlabel, ylabel, title, speedup):
-  x = get_x_axis(input_dir)
-  y = get_y_axis(input_dir, x, units)
-  y, units = scale_y_axis(y, units)
-  if speedup:
-    y = y[0] / y
+  systems=os.listdir(input_dir)
+  x = get_x_axis(systems, input_dir)
+  y = get_y_axes(systems, input_dir, x, units)
+  for i in range(len(y)):
+    y[i], units = scale_y_axis(y[i], units)
+    if speedup:
+      y[i] = y[i][0] / y[i]
   color = "orange"
   if "kv" in input_dir:
     color = "blue"
-  add_data_to_graph(x, y, "sigmaOS", color, "-")
+  linestyles = ["-", "--"]
+  for i in range(len(systems)):
+    add_data_to_graph(x, y[i], systems[i], color, linestyles[i])
   finalize_graph(out, xlabel, ylabel, title)
 
 if __name__ == "__main__":

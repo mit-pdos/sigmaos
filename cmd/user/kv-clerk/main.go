@@ -84,7 +84,7 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 	nops := uint64(0)
 	var err error
 	if timed {
-		sclnt := semclnt.MakeSemClnt(kc.FsLib, sempath)
+		sclnt := semclnt.MakeSemClnt(pclnt.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
 		go func() {

@@ -131,7 +131,6 @@ func (kc *KvClerk) switchConfig() error {
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {
 				db.DPrintf("KVCLERK_ERR", "version mismatch; retry")
-				db.DPrintf(db.ALWAYS, "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
 			}

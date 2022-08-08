@@ -316,22 +316,22 @@ echo "Running benchmarks with version: $VERSION"
 #mr_scalability
 #mr_vs_corral
 #mr_overlap
-kv_scalability
+#kv_scalability
 #kv_elasticity
 #realm_burst
-#realm_balance
+realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#scrape_mr_vs_corral
-#graph_mr_overlap
+graph_mr_aggregate_tpt
+graph_mr_scalability
+scrape_mr_vs_corral
+graph_mr_overlap
 graph_kv_aggregate_tpt
-#graph_kv_scalability
-#graph_kv_elasticity
-#scrape_realm_burst
-#graph_realm_balance
+graph_kv_scalability
+graph_kv_elasticity
+scrape_realm_burst
+graph_realm_balance
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

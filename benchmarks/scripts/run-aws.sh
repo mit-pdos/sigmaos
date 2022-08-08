@@ -308,6 +308,10 @@ graph_realm_balance() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --kv_realm $REALM2 --title "Aggregate Throughput Balancing 2 Realms' Applications"
 }
 
+# ========== Preamble ==========
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "Running benchmarks with version: $VERSION"
+
 # ========== Run benchmarks ==========
 #mr_scalability
 #mr_vs_corral

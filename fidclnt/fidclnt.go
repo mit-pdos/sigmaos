@@ -258,7 +258,7 @@ func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
-		return 0, np.MkErr(np.TErrUnreachable, "getfile")
+		return 0, np.MkErr(np.TErrUnreachable, "putfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
 	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, f, data)

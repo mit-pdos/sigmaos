@@ -41,7 +41,7 @@ raft:
   tick_interval: 25ms
   elect_nticks: 4
   heartbeat_ticks: 1
- `
+`
 
 // AWS params
 var aws = `
@@ -74,7 +74,7 @@ raft:
   tick_interval: 500ms
   elect_nticks: 4 
   heartbeat_ticks: 1
- `
+`
 
 type Config struct {
 	Conn struct {

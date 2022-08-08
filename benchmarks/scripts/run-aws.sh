@@ -241,7 +241,7 @@ graph_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "MapReduce Aggregate Throughput"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "MapReduce Aggregate Throughput"
 }
 
 graph_mr_scalability() {
@@ -274,7 +274,7 @@ graph_kv_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing 1 KV Server"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing 1 KV Server"
 }
 
 graph_kv_scalability() {
@@ -311,7 +311,7 @@ graph_realm_balance() {
 #mr_scalability
 #mr_vs_corral
 #mr_overlap
-#kv_scalability
+kv_scalability
 #kv_elasticity
 #realm_burst
 #realm_balance
@@ -322,7 +322,7 @@ source ~/env/3.10/bin/activate
 #graph_mr_scalability
 #scrape_mr_vs_corral
 #graph_mr_overlap
-#graph_kv_aggregate_tpt
+graph_kv_aggregate_tpt
 #graph_kv_scalability
 #graph_kv_elasticity
 #scrape_realm_burst

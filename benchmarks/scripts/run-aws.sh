@@ -89,7 +89,8 @@ run_benchmark() {
   cmd=$3
   # Avoid doing duplicate work.
   if [ -d $perf_dir ]; then
-    echo "========== Already ran, skipping: $perf_dir =========="
+    benchname="${perf_dir#$OUT_DIR/}"
+    echo "========== Already ran, skipping: $benchname =========="
     return 0
   fi
   start_cluster $n_vm

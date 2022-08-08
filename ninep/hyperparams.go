@@ -53,7 +53,7 @@ perf:
 
 session:
   heartbeat_interval: 1000ms
-  timeout: 400000ms
+  timeout: 200000ms
 
 realm:
   scan_interval: 1000ms

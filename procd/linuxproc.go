@@ -37,6 +37,7 @@ type LinuxProc struct {
 }
 
 func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
+	a.FinalizeEnv(pd.addr)
 	p := &LinuxProc{}
 	p.pd = pd
 	p.attr = a

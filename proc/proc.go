@@ -145,10 +145,6 @@ func (p *Proc) FinalizeEnv(procdIp string) {
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
 }
 
-func (p *Proc) IsClaimed() bool {
-	return p.ProcDir != ""
-}
-
 func (p *Proc) GetEnv() []string {
 	env := []string{}
 	for _, envvar := range p.Env {

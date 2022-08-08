@@ -251,12 +251,15 @@ graph_mr_scalability() {
   $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MapReduce End-to-end Speedup" --speedup
 }
 
-graph_mr_vs_corral() {
+scrape_mr_vs_corral() {
   fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  echo "TODO"
-  # TODO
+  graph="${fname##scrape_}"
+  echo "========== Scraping $graph =========="
+  for dir in $OUT_DIR/$graph/* ; do
+    dataset=$(basename $dir)
+    res=$(grep "PASS:" $dir/bench.out)
+    echo -e "Dataset: $dataset\nResult: $res"
+  done
 }
 
 graph_mr_overlap() {
@@ -288,12 +291,13 @@ graph_kv_elasticity() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Throughput of a Dynamically-Scaled KV Service with 16 Clerks"
 }
 
-graph_realm_burst() {
+scrape_realm_burst() {
   fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  echo "TODO"
-  # TODO
+  graph="${fname##scrape_}"
+  echo "========== Scraping $graph =========="
+  dir=$OUT_DIR/$graph
+  res=$(grep "PASS:" $dir/bench.out)
+  echo -e "Result: $res"
 }
 
 graph_realm_balance() {
@@ -305,7 +309,7 @@ graph_realm_balance() {
 
 # ========== Run benchmarks ==========
 #mr_scalability
-mr_vs_corral
+#mr_vs_corral
 #mr_overlap
 #kv_scalability
 #kv_elasticity
@@ -316,12 +320,12 @@ mr_vs_corral
 source ~/env/3.10/bin/activate
 #graph_mr_aggregate_tpt
 #graph_mr_scalability
-#graph_mr_vs_corral
+#scrape_mr_vs_corral
 #graph_mr_overlap
 #graph_kv_aggregate_tpt
 #graph_kv_scalability
 #graph_kv_elasticity
-#graph_realm_burst
+#scrape_realm_burst
 #graph_realm_balance
 
 echo -e "\n\n\n\n===================="

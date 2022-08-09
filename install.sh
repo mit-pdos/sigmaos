@@ -3,11 +3,11 @@
 # Install the sigmaOS software, either from the local build or from s3.
 
 usage() {
-    echo "Usage: $0 [--from FROM] [--realm REALM] [--profile PROFILE]" 1>&2
+    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE]" 1>&2
 }
 
 FROM="local"
-REALM="test-realm"
+REALM=""
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -38,7 +38,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi

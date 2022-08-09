@@ -96,7 +96,7 @@ func (ts *Tstate) Shutdown() {
 		r.Shutdown()
 	}
 	N := 100 // Crashing procds in mr test leave several fids open; maybe too many?
-	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, ts.PathClnt.FidClnt)
+	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, "Too many FIDs open (%v): %v", ts.PathClnt.FidClnt.Len(), ts.PathClnt.FidClnt)
 	db.DPrintf("TEST", "Done shutting down")
 }
 

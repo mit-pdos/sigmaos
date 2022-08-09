@@ -18,7 +18,7 @@ import (
 //
 
 type Fence struct {
-	sync.Mutex
+	sync.RWMutex
 	fs.Inode
 	epoch np.Tepoch
 }
@@ -67,7 +67,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, np.OWRITE)
 	if err == nil {
 		f := i.(*Fence)
-		f.Lock()
+		f.RLock()
 		return f, nil
 	}
 	if err != nil && err.Code() != np.TErrExists {
@@ -75,20 +75,16 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 		return nil, err
 	}
 	f := i.(*Fence)
-	f.Lock()
+	f.RLock()
 	return f, err
 }
 
 // If new is NoFence, return. If no fence exists for new's fence id,
 // store it as the most recent fence.  If the fence exists but new is
 // newer, update the fence.  If new is stale, return error.  If fence
-// id exists, return the locked fence for the fencid so that no one
-// can update the fence until this fenced operation has completed.
-//
-// XXX use read/write mutex and downgrade from Lock to Rlock, since
-// epoch updates are less common than regular ops and we would like to
-// run ops in parallel.
-//
+// id exists, return the locked fence in read mode so that no one can
+// update the fence until this fenced operation has completed. Read
+// mode so that we can run operations in the same epoch in parallel.
 func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	if new.FenceId.Path == 0 {
 		return nil, nil
@@ -97,19 +93,32 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	if f == nil {
 		return nil, err
 	}
-	if err == nil {
-		db.DPrintf("FENCES", "New fence %v\n", new)
-		f.epoch = new.Epoch
-		return f, nil
-	}
 	if new.Epoch < f.epoch {
 		db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
-		f.Unlock()
+		f.RUnlock()
 		return nil, np.MkErr(np.TErrStale, new)
 	}
+	if new.Epoch == f.epoch {
+		return f, nil
+	}
+
+	// Caller has a newer epoch. Upgrade to write lock.
+	f.RUnlock()
+	f.Lock()
+
 	if new.Epoch > f.epoch {
 		db.DPrintf("FENCES", "New epoch %v\n", new)
 		f.epoch = new.Epoch
 	}
-	return f, nil
+
+	// Now f.epoch == to new.Epoch. If after down grading this is
+	// still true, then we are good to go. Otherwise, f.epoch must
+	// have increased, and we return TErrStale.
+	f.Unlock()
+	f.RLock()
+	if new.Epoch == f.epoch {
+		return f, nil
+	}
+	db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
+	return nil, np.MkErr(np.TErrStale, new)
 }

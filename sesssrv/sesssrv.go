@@ -326,7 +326,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.Fcall) {
 		if f == nil {
 			ssrv.serve(sess, fc)
 		} else {
-			defer f.Unlock()
+			defer f.RUnlock()
 			ssrv.serve(sess, fc)
 		}
 	}

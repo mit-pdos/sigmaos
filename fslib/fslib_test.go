@@ -1234,7 +1234,7 @@ func TestFslibExit(t *testing.T) {
 
 const (
 	KBYTE      = 1 << 10
-	NRUNS      = 1
+	NRUNS      = 100
 	SYNCFILESZ = 100 * KBYTE
 	FILESZ     = 20 * test.MBYTE
 	WRITESZ    = 4096
@@ -1321,7 +1321,7 @@ func TestWriteFilePerf(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p3 := perf.MakePerfMulti("TEST", "bufwriter")
+	p3 := perf.MakePerfMulti("TEST", "abufwriter")
 	defer p3.Done()
 	measure(p3, "abufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
@@ -1344,6 +1344,7 @@ func TestReadFilePerf(t *testing.T) {
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	err := ts.Remove(fn)
@@ -1357,9 +1358,10 @@ func TestReadFilePerf(t *testing.T) {
 		br := bufio.NewReaderSize(r, test.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
-	p3 := perf.MakePerfMulti("TEST", "bufreader")
+	p3 := perf.MakePerfMulti("TEST", "abufreader")
 	defer p3.Done()
 	measure(p3, "readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
@@ -1368,6 +1370,7 @@ func TestReadFilePerf(t *testing.T) {
 		assert.Nil(t, err)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	err = ts.Remove(fn)

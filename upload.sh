@@ -1,10 +1,10 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--realm REALM] [--profile PROFILE] [--version VERSION]" 1>&2
+  echo "Usage: $0 --realm REALM [--profile PROFILE] [--version VERSION]" 1>&2
 }
 
-REALM="test-realm"
+REALM=""
 PROFILE=""
 VERSION=""
 while [[ $# -gt 0 ]]; do
@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi

@@ -3,7 +3,6 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"log"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/stats"
 	"ulambda/test"
 )
@@ -88,7 +88,7 @@ func TestConnect(t *testing.T) {
 	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
-	log.Printf("disconnected\n")
+	db.DPrintf(db.ALWAYS, "disconnected")
 
 	_, err = ts.Write(fd, d)
 	assert.True(t, np.IsErrUnreachable(err))
@@ -429,7 +429,7 @@ func TestDirConcur(t *testing.T) {
 		assert.False(t, b)
 
 		if i < NFILE-N {
-			log.Printf("names %v\n", names)
+			db.DPrintf(db.ALWAYS, "names %v", names)
 		}
 
 		assert.True(t, i >= NFILE-N)
@@ -1113,7 +1113,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	sts, err = ts.GetDir(path + "~any/d/namedself1/d/")
 	assert.Equal(t, nil, err)
-	log.Printf("sts %v\n", sts)
+	db.DPrintf(db.ALWAYS, "sts %v", sts)
 	assert.True(t, fslib.Present(sts, np.Path{"namedself1"}), "d wrong")
 
 	ts.Shutdown()
@@ -1240,12 +1240,13 @@ const (
 	WRITESZ    = 4096
 )
 
-func measure(msg string, f func() np.Tlength) {
+func measure(p *perf.Perf, msg string, f func() np.Tlength) {
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
 		sz := f()
+		p.TptTick(float64(sz))
 		ms := time.Since(start).Milliseconds()
-		log.Printf("%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
+		db.DPrintf("TEST", "%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
 	}
 }
 
@@ -1259,7 +1260,7 @@ func measuredir(msg string, nruns int, f func() int) {
 		tot += float64(ms)
 	}
 	s := tot / 1000
-	log.Printf("%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
+	db.DPrintf("TEST", "%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
 }
 
 type Thow uint8
@@ -1304,19 +1305,25 @@ func TestWriteFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
 	buf := test.MkBuf(WRITESZ)
-	measure("writer", func() np.Tlength {
+	p1 := perf.MakePerfMulti("TEST", "writer")
+	defer p1.Done()
+	measure(p1, "writer", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("bufwriter", func() np.Tlength {
+	p2 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p2.Done()
+	measure(p2, "bufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("abufwriter", func() np.Tlength {
+	p3 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p3.Done()
+	measure(p3, "abufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
@@ -1330,7 +1337,9 @@ func TestReadFilePerf(t *testing.T) {
 	fn := path + "f"
 	buf := test.MkBuf(WRITESZ)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	measure("reader", func() np.Tlength {
+	p1 := perf.MakePerfMulti("TEST", "reader")
+	defer p1.Done()
+	measure(p1, "reader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
@@ -1339,8 +1348,10 @@ func TestReadFilePerf(t *testing.T) {
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
+	p2 := perf.MakePerfMulti("TEST", "bufreader")
+	defer p2.Done()
 	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-	measure("bufreader", func() np.Tlength {
+	measure(p2, "bufreader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br := bufio.NewReaderSize(r, test.BUFSZ)
@@ -1348,7 +1359,9 @@ func TestReadFilePerf(t *testing.T) {
 		assert.Nil(t, err)
 		return n
 	})
-	measure("readahead", func() np.Tlength {
+	p3 := perf.MakePerfMulti("TEST", "bufreader")
+	defer p3.Done()
+	measure(p3, "readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)

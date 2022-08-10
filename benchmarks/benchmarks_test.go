@@ -295,7 +295,7 @@ func TestRealmBalance(t *testing.T) {
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	// Sleep for a bit
-	time.Sleep(80 * time.Second)
+	time.Sleep(70 * time.Second)
 	// Kick off KV jobs
 	kvjobs[0].ready <- true
 	// Wait for both jobs to finish.

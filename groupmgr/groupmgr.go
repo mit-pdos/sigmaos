@@ -3,6 +3,7 @@ package groupmgr
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -61,6 +62,11 @@ func (m *member) spawn() error {
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
 	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
+	// If we are specifically setting kvd's ncore=1, then set GOMAXPROCS to 1
+	// (for use when comparing to redis).
+	if m.ncore == 1 && strings.Contains(m.bin, "kvd") {
+		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
+	}
 	if _, errs := m.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 		return errs[0]
 	}

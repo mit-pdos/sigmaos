@@ -117,19 +117,20 @@ run_mr() {
 }
 
 run_kv() {
-  if [ $# -ne 6 ]; then
-    echo "run_kv args: n_vm nkvd nclerk auto redisaddr perf_dir" 1>&2
+  if [ $# -ne 7 ]; then
+    echo "run_kv args: n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
     exit 1
   fi
   n_vm=$1
   nkvd=$2
-  nclerk=$3
-  auto=$4
-  redisaddr=$5
-  perf_dir=$6
+  nkvd_ncore=$3
+  nclerk=$4
+  auto=$5
+  redisaddr=$6
+  perf_dir=$7
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -174,13 +175,14 @@ kv_scalability() {
   # First, run against our KV.
   auto="manual"
   nkvd=1
+  kvd_ncore=1
   redisaddr=""
   n_vm=16
   for nclerk in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/sigmaOS/$nclerk
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_kv $n_vm $nkvd $nclerk $auto "$redisaddr" $perf_dir
+    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
   done
 
   # Then, run against a redis instance started on the last VM.
@@ -191,20 +193,21 @@ kv_scalability() {
     run=${FUNCNAME[0]}/redis/$nclerk
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_kv $n_vm $nkvd $nclerk $auto $redisaddr $perf_dir
+    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto $redisaddr $perf_dir
   done
 }
 
 kv_elasticity() {
   auto="auto"
   nkvd=1
+  kvd_ncore=2
   nclerk=16
   redisaddr=""
   n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_kv $n_vm $nkvd $nclerk $auto "$redisaddr" $perf_dir
+  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
 }
 
 realm_burst() {
@@ -249,7 +252,7 @@ graph_mr_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "MapReduce End-to-end Speedup" --speedup
+  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "usec" --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "Elastic MapReduce End-to-end Speedup" --speedup
 }
 
 scrape_mr_vs_corral() {
@@ -316,10 +319,10 @@ echo "Running benchmarks with version: $VERSION"
 #mr_scalability
 #mr_vs_corral
 #mr_overlap
-#kv_scalability
+kv_scalability
 #kv_elasticity
 #realm_burst
-realm_balance
+#realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

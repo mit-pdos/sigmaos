@@ -150,7 +150,7 @@ mr_scalability() {
 mr_vs_corral() {
   n_vm=16
   app="mr-wc-wiki"
-  dataset_size="1G 1.8G 2G 4G"
+  dataset_size="1G 1.8G 2G" # 4G"
   for size in $dataset_size ; do
     mrapp="$app$size.yml"
     run=${FUNCNAME[0]}/$mrapp

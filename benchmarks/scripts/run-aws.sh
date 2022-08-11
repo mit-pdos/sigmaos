@@ -312,14 +312,15 @@ graph_realm_balance() {
 }
 
 # ========== Preamble ==========
-echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #mr_scalability
-#mr_vs_corral
+mr_vs_corral
 #mr_overlap
-kv_scalability
+#kv_scalability
 #kv_elasticity
 #realm_burst
 #realm_balance

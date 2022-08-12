@@ -236,7 +236,7 @@ func (pd *Procd) runProc(p *LinuxProc) {
 
 	// Free any dedicated cores.
 	pd.freeCores(p)
-	pd.freeMemL(p.attr)
+	pd.freeMem(p.attr)
 
 	// Deregister running procs
 	pd.deleteProc(p)

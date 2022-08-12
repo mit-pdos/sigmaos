@@ -38,6 +38,9 @@ func (pd *Procd) allocMemL(p *proc.Proc) {
 	pd.memAvail -= p.Mem
 }
 
-func (pd *Procd) freeMemL(p *proc.Proc) {
+func (pd *Procd) freeMem(p *proc.Proc) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
 	pd.memAvail += p.Mem
 }

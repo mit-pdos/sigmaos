@@ -95,7 +95,8 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
 	bin := Bin{}
-	splitsz := maxbinsz >> 3
+	// Set split size to 10MB
+	splitsz := np.Tlength(10 * 1024 * 1024)
 
 	sts, err := fsl.GetDir(dir)
 	if err != nil {

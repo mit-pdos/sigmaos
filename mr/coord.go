@@ -125,7 +125,7 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 400)
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 600)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {

@@ -1314,6 +1314,8 @@ func TestWriteFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
 	p1 := perf.MakePerfMulti("TEST", "writer")
 	defer p1.Done()
 	measure(p1, "writer", func() np.Tlength {
@@ -1345,6 +1347,8 @@ func TestReadFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	p1 := perf.MakePerfMulti("TEST", "reader")
 	defer p1.Done()

@@ -1239,7 +1239,7 @@ func TestFslibExit(t *testing.T) {
 const (
 	KBYTE      = 1 << 10
 	NRUNS      = 100
-	SYNCFILESZ = 20 * test.MBYTE //100 * KBYTE
+	SYNCFILESZ = 100 * KBYTE
 	FILESZ     = 20 * test.MBYTE
 	WRITESZ    = 4096
 )

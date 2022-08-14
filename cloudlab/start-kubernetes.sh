@@ -43,7 +43,7 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH" > $DIR/log/$LEADER
  kubectl create serviceaccount --namespace kube-system tiller
  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
  kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
- kubectl create secret generic regcred --from-file=.dockerconfigjson=/users/arielck/.docker/config.json  --type=kubernetes.io/dockerconfigjson
+ sudo kubectl create secret generic regcred --from-file=.dockerconfigjson=/users/arielck/.docker/config.json  --type=kubernetes.io/dockerconfigjson
 ENDSSH
 
 echo "leader"

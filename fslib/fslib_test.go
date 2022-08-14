@@ -1282,7 +1282,7 @@ const (
 
 func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz np.Tlength) np.Tlength {
 	w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
-	assert.Nil(t, "Error Create writer: %v", err)
+	assert.Nil(t, err, "Error Create writer: %v", err)
 	switch how {
 	case HSYNC:
 		err = test.Writer(t, w, buf, sz)

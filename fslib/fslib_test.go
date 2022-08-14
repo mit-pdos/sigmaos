@@ -3,6 +3,7 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
+	gopath "path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -1303,7 +1304,7 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 
 func TestWriteFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
 	p1 := perf.MakePerfMulti("TEST", "writer")
 	defer p1.Done()
@@ -1334,7 +1335,7 @@ func TestWriteFilePerf(t *testing.T) {
 
 func TestReadFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	p1 := perf.MakePerfMulti("TEST", "reader")

@@ -1242,13 +1242,18 @@ const (
 )
 
 func measure(p *perf.Perf, msg string, f func() np.Tlength) {
+	totStart := time.Now()
+	tot := np.Tlength(0)
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
 		sz := f()
+		tot += sz
 		p.TptTick(float64(sz))
 		ms := time.Since(start).Milliseconds()
 		db.DPrintf("TEST", "%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
 	}
+	ms := time.Since(totStart).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Average %v: %s took %vms (%s)", msg, humanize.Bytes(uint64(tot)), ms, test.TputStr(tot, ms))
 }
 
 func measuredir(msg string, nruns int, f func() int) {

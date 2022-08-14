@@ -14,6 +14,7 @@ spec:
       containers:
       - name: spin-worker
         image: arielszekely/spin
+        imagePullPolicy: IfNotPresent
         resources:
           limits:
             cpu: 1000m

@@ -116,6 +116,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	p := proc.MakeProc(bin, args)
+	p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	p.SetMem(mb)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))

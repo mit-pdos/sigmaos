@@ -116,7 +116,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	p := proc.MakeProc(bin, args)
-	p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
+	if mb > 0 {
+		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
+	}
 	p.SetMem(mb)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
@@ -126,7 +128,7 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 600)
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 0)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {

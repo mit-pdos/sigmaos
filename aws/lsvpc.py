@@ -21,6 +21,9 @@ def ls_sg(vpc):
         if sg.group_name != 'default':
             print("Security group:", sg.id, sg.group_name)
 
+def cmp(vm):
+  return int(name(vm[3]).replace("sigma", ""))
+
 def name(tags):
     name = ""
     for d in tags:
@@ -43,6 +46,7 @@ def ls_instances(vpc):
     if vms == []:
         print("There is no instance in this VPC")
     else:
+        vms.sort(key=cmp)
         for vm in vms:
             if args['privaddr']:
                 print("VMInstance", name(vm[3]), ":", vm[0], vm[1], vm[2])

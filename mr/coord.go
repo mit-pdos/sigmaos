@@ -116,9 +116,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	p := proc.MakeProc(bin, args)
-	if mb > 0 {
-		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
-	}
+	//	if mb > 0 {
+	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
+	//	}
 	p.SetMem(mb)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
@@ -135,7 +135,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 900)
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 1200)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {

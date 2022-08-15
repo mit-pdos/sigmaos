@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"runtime"
+	//	"runtime"
 	//	"runtime/debug"
 
 	//	"github.com/klauspost/readahead"
@@ -150,7 +150,7 @@ func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []s
 				if !ok {
 					lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 				}
-				runtime.GC()
+				//				runtime.GC()
 				//				debug.FreeOSMemory()
 				nbytes += m
 				duration += d

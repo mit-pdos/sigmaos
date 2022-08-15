@@ -8,6 +8,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -125,5 +126,6 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	if binsz > 0 {
 		bins = append(bins, bin)
 	}
+	db.DPrintf(db.ALWAYS, "Bin sizes: %v", bins)
 	return bins, nil
 }

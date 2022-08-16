@@ -61,17 +61,15 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 }
 
 func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
-	c := make(chan bool)
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
+		// Spawn a lambda, which will Up this semaphore when it starts.
 		go func() {
 			spawnLambda(ts, sem.GetPath())
-			c <- true
 		}()
 	}
 	for _, sem := range sems {
-		<-c
-		_ = sem
+		// Wait for all the lambdas to start.
 		downSemaphore(ts, time.Now(), sem)
 	}
 	return time.Since(start)

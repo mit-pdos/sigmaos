@@ -1,14 +1,18 @@
 package benchmarks_test
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/linuxsched"
+	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/test"
 )
@@ -62,6 +66,26 @@ const (
 )
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
+
+func TestJsonEncodeTpt(t *testing.T) {
+	nruns := 20
+	N_KV := 1000000
+	kvs := make([]*mr.KeyValue, 0, N_KV)
+	for i := 0; i < N_KV; i++ {
+		kvs = append(kvs, &mr.KeyValue{"ABCDEF", "ABCDEF"})
+	}
+	start := time.Now()
+	n := 0
+	for i := 0; i < nruns; i++ {
+		for _, kv := range kvs {
+			b, err := json.Marshal(kv)
+			assert.Nil(t, err, "Marshal")
+			n += len(b)
+		}
+	}
+	mb := 1024.0 * 1024.0
+	db.DPrintf(db.ALWAYS, "Marshaling throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
+}
 
 // Length of time required to do a simple matrix multiplication.
 func TestNiceMatMulBaseline(t *testing.T) {

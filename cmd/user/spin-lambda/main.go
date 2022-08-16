@@ -13,16 +13,14 @@ import (
 func spin(args []string) error {
 	addr := args[0]
 	sempath := args[1]
-	log.Printf("Addr %v sem %v", addr, path.Base(sempath))
 	fsl := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), []string{addr})
 	sem := semclnt.MakeSemClnt(fsl, sempath)
 	err := sem.Up()
 	if err != nil {
 		return err
 	}
-	time.Sleep(4 * time.Second)
-	//	//	time.Sleep(4 * time.Minute)
-	//	log.Printf("Done sleep sem %v", path.Base(sempath))
+	log.Printf("Addr %v sem %v", addr, path.Base(sempath))
+	time.Sleep(2 * time.Minute)
 	return nil
 }
 

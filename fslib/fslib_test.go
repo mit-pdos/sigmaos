@@ -1343,6 +1343,72 @@ func TestWriteFilePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestWriteFilePerfMultiClient(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	N_CLI := 10
+	buf := test.MkBuf(WRITESZ)
+	done := make(chan bool)
+	fns := make([]string, 0, N_CLI)
+	fsls := make([]*fslib.FsLib, 0, N_CLI)
+	for i := 0; i < N_CLI; i++ {
+		fns = append(fns, gopath.Join(path, "f"+strconv.Itoa(i)))
+		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+	}
+	// Remove just in case it was left over from a previous run.
+	for _, fn := range fns {
+		ts.Remove(fn)
+	}
+	p1 := perf.MakePerfMulti("TEST", "writer")
+	defer p1.Done()
+	for i := range fns {
+		go func(i int) {
+			measure(p1, "writer", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HSYNC, buf, SYNCFILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- true
+		}(i)
+	}
+	for _ = range fns {
+		<-done
+	}
+	p2 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p2.Done()
+	for i := range fns {
+		go func(i int) {
+			measure(p2, "bufwriter", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HBUF, buf, FILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- true
+		}(i)
+	}
+	for _ = range fns {
+		<-done
+	}
+	p3 := perf.MakePerfMulti("TEST", "abufwriter")
+	defer p3.Done()
+	for i := range fns {
+		go func(i int) {
+			measure(p3, "abufwriter", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- true
+		}(i)
+	}
+	for _ = range fns {
+		<-done
+	}
+	ts.Shutdown()
+}
+
 func TestReadFilePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")

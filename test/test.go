@@ -32,7 +32,8 @@ type Tstate struct {
 	wg      sync.WaitGroup
 	T       *testing.T
 	*kernel.System
-	replicas []*kernel.System
+	replicas  []*kernel.System
+	namedAddr []string
 }
 
 func makeTstate(t *testing.T, realmid string) *Tstate {
@@ -40,6 +41,7 @@ func makeTstate(t *testing.T, realmid string) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
 	ts.realmid = realmid
+	ts.namedAddr = fslib.Named()
 	return ts
 }
 
@@ -65,6 +67,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	ts := makeTstate(t, realmid)
 	// XXX make fslib exit?
 	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
+	ts.namedAddr = rconfig.NamedAddrs
 	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	return ts
 }
@@ -87,6 +90,10 @@ func (ts *Tstate) RunningInRealm() bool {
 
 func (ts *Tstate) RealmId() string {
 	return ts.realmid
+}
+
+func (ts *Tstate) NamedAddr() []string {
+	return ts.namedAddr
 }
 
 func (ts *Tstate) Shutdown() {

@@ -203,8 +203,6 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		rdr.Lseek(s.Offset - 1)
 	}
 
-	t1 := time.Now()
-	totTime := 0.0
 	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz)
 	if err != nil {
 		db.DFatalf("readahead err %v\n", err)
@@ -224,20 +222,16 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	for scanner.Scan() {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
-		totTime += time.Since(t1).Seconds()
 		if len(l) > 0 {
 			if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
 				return 0, err
 			}
 		}
-		t1 = time.Now()
-
 		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {
 			break
 		}
 	}
-	db.DPrintf(db.ALWAYS, "Split s3 read tpt: %v MB/s", float64(n)/(1024.0*1024.0)/totTime)
 	if err := scanner.Err(); err != nil {
 		return np.Tlength(n), err
 	}

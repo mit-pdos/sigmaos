@@ -135,7 +135,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 900)
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 3500)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
@@ -375,12 +375,12 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round("all")
-		//		c.Round("map")
-		//		n := c.doneTasks(MapTask(c.job) + DONE)
-		//		if n == c.nmaptask {
-		//			c.Round("reduce")
-		//		}
+		//    c.Round("all")
+		c.Round("map")
+		n := c.doneTasks(MapTask(c.job) + DONE)
+		if n == c.nmaptask {
+			c.Round("reduce")
+		}
 		if !c.doRestart() {
 			break
 		}

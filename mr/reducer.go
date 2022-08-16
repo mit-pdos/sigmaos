@@ -135,8 +135,11 @@ func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []s
 		if err != nil {
 			return 0, 0, nil, nil, err
 		}
+		randOffset := int(rand.Uint64())
 		n := 0
-		for _, st := range sts {
+		for i := range sts {
+			// Random offset to stop reducers from all banging on the same ux.
+			st := sts[(i+randOffset)%len(sts)]
 			if _, ok := files[st.Name]; !ok {
 				// Make sure we read an input file
 				// only once.  Since mappers are

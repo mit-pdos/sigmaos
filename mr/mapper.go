@@ -171,23 +171,26 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	//	b, err := json.Marshal(kv)
-	//	if err != nil {
-	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	b, err := json.Marshal(kv)
+	if err != nil {
+		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	}
+	//	if _, err := m.wrts[r].bwrt.Write([]byte("{\"Key\":\"")); err != nil { // || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
 	//	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("{\"Key\":\"")); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Key)); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("\",\"Value\":\"")); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Value)); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("\"}")); err != nil { // || n != len(b) {
+	//	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Key)); err != nil { // || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	//	}
+	//	if _, err := m.wrts[r].bwrt.Write([]byte("\",\"Value\":\"")); err != nil { // || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	//	}
+	//	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Value)); err != nil { // || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	//	}
+	//	if _, err := m.wrts[r].bwrt.Write([]byte("\"}")); err != nil { // || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	//	}
+	if n, err := m.wrts[r].bwrt.Write(b); err != nil || n != len(b) {
 		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
 	}
 

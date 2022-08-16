@@ -114,8 +114,14 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
-	p := proc.MakeProc(bin, args)
+func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem, first bool) *proc.Proc {
+	var pid proc.Tpid
+	if first {
+		pid = proc.Tpid("a" + proc.GenPid().String())
+	} else {
+		pid = proc.Tpid("b" + proc.GenPid().String())
+	}
+	p := proc.MakeProcPid(pid, bin, args)
 	//	if mb > 0 {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
@@ -128,14 +134,14 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 1200)
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 1200, true)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 1900)
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 1900, false)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
@@ -375,12 +381,12 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		//    c.Round("all")
-		c.Round("map")
-		n := c.doneTasks(MapTask(c.job) + DONE)
-		if n == c.nmaptask {
-			c.Round("reduce")
-		}
+		c.Round("all")
+		//		c.Round("map")
+		//		n := c.doneTasks(MapTask(c.job) + DONE)
+		//		if n == c.nmaptask {
+		//			c.Round("reduce")
+		//		}
 		if !c.doRestart() {
 			break
 		}

@@ -118,7 +118,6 @@ func (m *Mapper) closewrts() (np.Tlength, error) {
 				return 0, fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
 			}
 			n += m.wrts[r].wrt.Nbytes()
-
 		}
 	}
 	return n, nil

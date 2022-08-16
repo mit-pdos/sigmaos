@@ -60,6 +60,23 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 	return time.Since(start)
 }
 
+func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	c := make(chan bool)
+	sems := i.([]*semclnt.SemClnt)
+	for _, sem := range sems {
+		go func() {
+			spawnLambda(ts, sem.GetPath())
+			c <- true
+		}()
+	}
+	for _, sem := range sems {
+		<-c
+		_ = sem
+		//		downSemaphore(ts, time.Now(), sem)
+	}
+	return time.Since(start)
+}
+
 // XXX Should get job name in a tuple.
 func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*MRJobInstance)

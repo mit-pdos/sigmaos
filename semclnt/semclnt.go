@@ -73,3 +73,7 @@ func (c *SemClnt) Up() error {
 	db.DPrintf("SEMCLNT", "Down %v\n", c.path)
 	return c.Remove(c.path)
 }
+
+func (c *SemClnt) GetPath() string {
+	return c.path
+}

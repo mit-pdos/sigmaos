@@ -148,9 +148,9 @@ mr_scalability() {
 }
 
 mr_vs_corral() {
-  n_vm=16
+  n_vm=8
   app="mr-wc-wiki"
-  dataset_size="1G 1.8G 2G" # 4G"
+  dataset_size="2G"  # "4G"   #"2G 4G"
   for size in $dataset_size ; do
     mrapp="$app$size.yml"
     run=${FUNCNAME[0]}/$mrapp
@@ -187,7 +187,7 @@ kv_scalability() {
 
   # Then, run against a redis instance started on the last VM.
   nkvd=0
-  redisaddr="10.0.76.3:6379"
+  redisaddr="10.0.134.192:6379"
   n_vm=15
   for nclerk in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/redis/$nclerk
@@ -327,15 +327,15 @@ mr_vs_corral
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_aggregate_tpt
-graph_mr_scalability
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
 scrape_mr_vs_corral
-graph_mr_overlap
-graph_kv_aggregate_tpt
-graph_kv_scalability
-graph_kv_elasticity
-scrape_realm_burst
-graph_realm_balance
+#graph_mr_overlap
+#graph_kv_aggregate_tpt
+#graph_kv_scalability
+#graph_kv_elasticity
+#scrape_realm_burst
+#graph_realm_balance
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

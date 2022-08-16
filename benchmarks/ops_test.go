@@ -72,7 +72,7 @@ func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) tim
 	for _, sem := range sems {
 		<-c
 		_ = sem
-		//		downSemaphore(ts, time.Now(), sem)
+		downSemaphore(ts, time.Now(), sem)
 	}
 	return time.Since(start)
 }

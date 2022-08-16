@@ -172,9 +172,17 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
+	b, err := json.Marshal(kv)
+	if err != nil {
 		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	}
+	if n, err := m.wrts[r].bwrt.Write(b); err != nil || n != len(b) {
+		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	}
+
+	//	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
+	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	//	}
 	return nil
 }
 

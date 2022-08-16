@@ -25,7 +25,7 @@ func spin(args []string) error {
 	//	if err != nil {
 	//		return err
 	//	}
-	//	time.Sleep(4 * time.Second)
+	time.Sleep(4 * time.Second)
 	//	//	time.Sleep(4 * time.Minute)
 	//	log.Printf("Done sleep sem %v", path.Base(sempath))
 	return nil

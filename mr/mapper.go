@@ -231,6 +231,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 }
 
 func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
+	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err

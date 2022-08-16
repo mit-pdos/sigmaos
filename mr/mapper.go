@@ -195,7 +195,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		rdr.Lseek(s.Offset - 1)
 	}
 
-	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz)
+	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz*2)
 	if err != nil {
 		db.DFatalf("readahead err %v\n", err)
 	}

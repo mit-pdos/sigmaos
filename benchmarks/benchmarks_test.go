@@ -91,7 +91,7 @@ func TestJsonEncodeTpt(t *testing.T) {
 
 func TestWCMapfTpt(t *testing.T) {
 	N_WORDS := 1024 * 1024 * 100
-	WORD_LEN := 3
+	WORD_LEN := 2
 	b := make([]byte, 0, N_WORDS*(WORD_LEN+1))
 	for i := 0; i < N_WORDS; i++ {
 		for j := 0; j < WORD_LEN; j++ {

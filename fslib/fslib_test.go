@@ -1244,7 +1244,7 @@ const (
 	WRITESZ    = 4096
 )
 
-func measure(p *perf.Perf, msg string, f func() np.Tlength) {
+func measure(p *perf.Perf, msg string, f func() np.Tlength) np.Tlength {
 	totStart := time.Now()
 	tot := np.Tlength(0)
 	for i := 0; i < NRUNS; i++ {
@@ -1257,6 +1257,7 @@ func measure(p *perf.Perf, msg string, f func() np.Tlength) {
 	}
 	ms := time.Since(totStart).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Average %v: %s took %vms (%s)", msg, humanize.Bytes(uint64(tot)), ms, test.TputStr(tot, ms))
+	return tot
 }
 
 func measuredir(msg string, nruns int, f func() int) {
@@ -1347,7 +1348,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)
-	done := make(chan bool)
+	done := make(chan np.Tlength)
 	fns := make([]string, 0, N_CLI)
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
@@ -1360,52 +1361,64 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	p1 := perf.MakePerfMulti("TEST", "writer")
 	defer p1.Done()
+	start := time.Now()
 	for i := range fns {
 		go func(i int) {
-			measure(p1, "writer", func() np.Tlength {
+			n := measure(p1, "writer", func() np.Tlength {
 				sz := mkFile(t, fsls[i], fns[i], HSYNC, buf, SYNCFILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
 			})
-			done <- true
+			done <- n
 		}(i)
 	}
+	n := np.Tlength(0)
 	for _ = range fns {
-		<-done
+		n += <-done
 	}
+	ms := time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	p2 := perf.MakePerfMulti("TEST", "bufwriter")
 	defer p2.Done()
+	start = time.Now()
 	for i := range fns {
 		go func(i int) {
-			measure(p2, "bufwriter", func() np.Tlength {
+			n := measure(p2, "bufwriter", func() np.Tlength {
 				sz := mkFile(t, fsls[i], fns[i], HBUF, buf, FILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
 			})
-			done <- true
+			done <- n
 		}(i)
 	}
+	n = 0
 	for _ = range fns {
-		<-done
+		n += <-done
 	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	p3 := perf.MakePerfMulti("TEST", "abufwriter")
 	defer p3.Done()
+	start = time.Now()
 	for i := range fns {
 		go func(i int) {
-			measure(p3, "abufwriter", func() np.Tlength {
+			n := measure(p3, "abufwriter", func() np.Tlength {
 				sz := mkFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
 			})
-			done <- true
+			done <- n
 		}(i)
 	}
+	n = 0
 	for _ = range fns {
-		<-done
+		n += <-done
 	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	ts.Shutdown()
 }
 

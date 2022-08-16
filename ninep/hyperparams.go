@@ -56,8 +56,8 @@ session:
   timeout: 40000ms
 
 realm:
-  scan_interval: 500ms
-  resize_interval: 500ms
+  scan_interval: 1000ms
+  resize_interval: 1000ms
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 10
 
@@ -65,7 +65,7 @@ machine:
   core_group_fraction: 0.5
 
 procd:
-  stealable_proc_timeout: 500ms
+  stealable_proc_timeout: 1000ms
   work_steal_scan_timeout: 1000ms
   be_proc_claim_cpu_threshold: 90.0
   be_proc_oversubscription_rate: 1.0

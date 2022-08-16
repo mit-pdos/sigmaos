@@ -136,6 +136,9 @@ func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []s
 			return 0, 0, nil, nil, err
 		}
 		randOffset := int(rand.Uint64())
+		if randOffset < 0 {
+			randOffset *= -1
+		}
 		n := 0
 		for i := range sts {
 			// Random offset to stop reducers from all banging on the same ux.

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/fslib"
 	"ulambda/test"
 )
 
@@ -19,7 +18,7 @@ func spawnLambda(ts *test.Tstate, semPath string) {
 	}))
 
 	client := lambda.New(sess, &aws.Config{Region: aws.String("us-east-1")})
-	request := []string{fslib.Named()[0], semPath}
+	request := []string{ts.NamedAddr()[0], semPath}
 
 	payload, err := json.Marshal(request)
 	if err != nil {

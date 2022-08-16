@@ -311,9 +311,9 @@ func TestLambdaBurst(t *testing.T) {
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
-	setNCoresSigmaRealm(ts)
-	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", TOTAL_N_CORES_SIGMA_REALM)
-	ss, is := makeNSemaphores(ts, TOTAL_N_CORES_SIGMA_REALM)
+	N_LAMBDAS := 640
+	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
+	ss, is := makeNSemaphores(ts, N_LAMBDAS)
 	// Init semaphores first.
 	for _, i := range is {
 		initSemaphore(ts, time.Now(), i)

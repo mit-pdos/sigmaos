@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/test"
+	"ulambda/wc"
 )
 
 // Parameters
@@ -68,11 +70,11 @@ const (
 var TOTAL_N_CORES_SIGMA_REALM = 0
 
 func TestJsonEncodeTpt(t *testing.T) {
-	nruns := 20
+	nruns := 50
 	N_KV := 1000000
 	kvs := make([]*mr.KeyValue, 0, N_KV)
 	for i := 0; i < N_KV; i++ {
-		kvs = append(kvs, &mr.KeyValue{"ABCDEF", "ABCDEF"})
+		kvs = append(kvs, &mr.KeyValue{"", ""})
 	}
 	start := time.Now()
 	n := 0
@@ -85,6 +87,31 @@ func TestJsonEncodeTpt(t *testing.T) {
 	}
 	mb := 1024.0 * 1024.0
 	db.DPrintf(db.ALWAYS, "Marshaling throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
+}
+
+func TestWCMapfTpt(t *testing.T) {
+	N_WORDS := 1024 * 1024 * 100
+	WORD_LEN := 3
+	b := make([]byte, 0, N_WORDS*(WORD_LEN+1))
+	for i := 0; i < N_WORDS; i++ {
+		for j := 0; j < WORD_LEN; j++ {
+			b = append(b, 'A')
+		}
+		b = append(b, ' ')
+	}
+	s := string(b)
+	db.DPrintf(db.ALWAYS, "Input length: %vMB", len(s)/(1024*1024))
+	n := 0
+	start := time.Now()
+	wc.Map("", strings.NewReader(s), func(kv *mr.KeyValue) error {
+		b, err := json.Marshal(kv)
+		assert.Nil(t, err, "Marshal")
+		n += len(b)
+		return nil
+	})
+	n += len(s)
+	mb := 1024.0 * 1024.0
+	db.DPrintf(db.ALWAYS, "WC Mapping throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
 }
 
 // Length of time required to do a simple matrix multiplication.

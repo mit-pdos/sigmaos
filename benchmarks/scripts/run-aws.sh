@@ -110,6 +110,7 @@ run_mr() {
   mrapp=$2
   perf_dir=$3
   cmd="
+    export SIGMAPERF=MRMAPPER_PPROF; \
     go clean -testcache; \
     go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
   "

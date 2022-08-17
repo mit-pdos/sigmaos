@@ -21,6 +21,7 @@ func spin(args []string) error {
 	}
 	log.Printf("Addr %v sem %v", addr, path.Base(sempath))
 	time.Sleep(2 * time.Minute)
+	log.Printf("Done sleep")
 	return nil
 }
 

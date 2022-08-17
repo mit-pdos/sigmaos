@@ -64,9 +64,9 @@ func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) tim
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
 		// Spawn a lambda, which will Up this semaphore when it starts.
-		go func() {
+		go func(sem *semclnt.SemClnt) {
 			spawnLambda(ts, sem.GetPath())
-		}()
+		}(sem)
 	}
 	for _, sem := range sems {
 		// Wait for all the lambdas to start.

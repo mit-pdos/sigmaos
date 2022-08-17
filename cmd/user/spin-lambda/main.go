@@ -20,7 +20,7 @@ func spin(args []string) error {
 		return err
 	}
 	log.Printf("Addr %v sem %v", addr, path.Base(sempath))
-	time.Sleep(2 * time.Minute)
+	time.Sleep(14 * time.Second)
 	log.Printf("Done sleep")
 	return nil
 }

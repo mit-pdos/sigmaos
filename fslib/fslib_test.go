@@ -1470,6 +1470,99 @@ func TestReadFilePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestReadFilePerfMultiClient(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	N_CLI := 10
+	buf := test.MkBuf(WRITESZ)
+	done := make(chan np.Tlength)
+	fns := make([]string, 0, N_CLI)
+	fsls := make([]*fslib.FsLib, 0, N_CLI)
+	for i := 0; i < N_CLI; i++ {
+		fns = append(fns, gopath.Join(path, "f"+strconv.Itoa(i)))
+		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+	}
+	// Remove just in case it was left over from a previous run.
+	for _, fn := range fns {
+		ts.Remove(fn)
+		mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	}
+	p1 := perf.MakePerfMulti("TEST", "writer")
+	defer p1.Done()
+	start := time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p1, "reader", func() np.Tlength {
+				r, err := ts.OpenReader(fns[i])
+				assert.Nil(t, err)
+				n, err := test.Reader(t, r, buf, SYNCFILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n := np.Tlength(0)
+	for _ = range fns {
+		n += <-done
+	}
+	ms := time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	for _, fn := range fns {
+		err := ts.Remove(fn)
+		assert.Nil(ts.T, err)
+		mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+	}
+	p2 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p2.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p2, "bufreader", func() np.Tlength {
+				r, err := ts.OpenReader(fns[i])
+				assert.Nil(t, err)
+				br := bufio.NewReaderSize(r, test.BUFSZ)
+				n, err := test.Reader(t, br, buf, FILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	p3 := perf.MakePerfMulti("TEST", "abufwriter")
+	defer p3.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p3, "readahead", func() np.Tlength {
+				r, err := ts.OpenReader(fns[i])
+				assert.Nil(t, err)
+				br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
+				assert.Nil(t, err)
+				n, err := test.Reader(t, br, buf, FILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	ts.Shutdown()
+}
+
 func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 	err := fsl.MkDir(dir, 0777)
 	assert.Equal(t, nil, err)

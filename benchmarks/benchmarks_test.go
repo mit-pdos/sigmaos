@@ -324,6 +324,25 @@ func TestLambdaBurst(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestLambdaInvokeWaitStart(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(640)
+	makeOutDir(ts)
+	// Find the total number of cores available for spinners across all machines.
+	// We need to get this in order to find out how many spinners to start.
+	N_LAMBDAS := 640
+	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
+	_, is := makeNSemaphores(ts, N_LAMBDAS)
+	// Init semaphores first.
+	for _, i := range is {
+		initSemaphore(ts, time.Now(), i)
+	}
+	runOps(ts, is, invokeWaitStartOneLambda, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
 // Start a realm with a long-running BE mr job. Then, start a realm with a kv
 // job. In phases, ramp the kv job's CPU utilization up and down, and watch the
 // realm-level software balance resource requests across realms.

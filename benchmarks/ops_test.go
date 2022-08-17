@@ -75,6 +75,15 @@ func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) tim
 	return time.Since(start)
 }
 
+func invokeWaitStartOneLambda(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	sem := i.(*semclnt.SemClnt)
+	go func(sem *semclnt.SemClnt) {
+		spawnLambda(ts, sem.GetPath())
+	}(sem)
+	downSemaphore(ts, time.Now(), sem)
+	return time.Since(start)
+}
+
 // XXX Should get job name in a tuple.
 func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji := i.(*MRJobInstance)

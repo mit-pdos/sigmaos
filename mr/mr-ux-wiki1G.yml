@@ -1,0 +1,5 @@
+app: "wc"
+nreduce: 15
+binsz: 134217728
+input: "name/ux/~ip/wiki-1G/"
+linesz: 2097152  # the longest line in wiki is just shorter than 2MB

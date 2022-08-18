@@ -2,15 +2,19 @@ package seqwc
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"strings"
+	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/klauspost/readahead"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/mr"
+	np "ulambda/ninep"
+	"ulambda/test"
 )
 
 type Tdata map[string]uint64
@@ -59,7 +63,10 @@ func Wc(fsl *fslib.FsLib, dir string) (int, error) {
 	}
 	data := make(Tdata)
 	n := 0
+	start := time.Now()
+	nbytes := np.Tlength(0)
 	for _, st := range sts {
+		nbytes += st.Length
 		r, err := fsl.OpenReader(dir + "/" + st.Name)
 		if err != nil {
 			return 0, err
@@ -69,8 +76,10 @@ func Wc(fsl *fslib.FsLib, dir string) (int, error) {
 		// log.Printf("%v: %d\n", st.Name, m)
 		n += m
 	}
-	for k, v := range data {
-		fmt.Printf("%s %d\n", k, v)
-	}
+	//for k, v := range data {
+	//	fmt.Printf("%s %d\n", k, v)
+	//}
+	ms := time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Wc %s took %vms (%s)", humanize.Bytes(uint64(nbytes)), ms, test.TputStr(nbytes, ms))
 	return n, nil
 }

@@ -73,9 +73,13 @@ func JsonReader(rdr io.Reader, mk func() interface{}, f func(i interface{}) erro
 
 func JsonBufReader(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
 	dec := json.NewDecoder(rdr)
+	return RecordReader(dec.Decode, mk, f)
+}
+
+func RecordReader(decodefn func(interface{}) error, mk func() interface{}, f func(i interface{}) error) error {
 	for {
 		v := mk()
-		if err := dec.Decode(&v); err == io.EOF {
+		if err := decodefn(&v); err == io.EOF {
 			break
 		} else if err != nil {
 			return err

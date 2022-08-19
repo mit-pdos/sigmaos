@@ -173,25 +173,12 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
+	return encodeKV(m.wrts[r].bwrt, kv.Key, kv.Value, r)
 	//	b, err := json.Marshal(kv)
 	//	if err != nil {
 	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	//	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("{\"Key\":\"")); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Key)); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("\",\"Value\":\"")); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte(kv.Value)); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
-	if _, err := m.wrts[r].bwrt.Write([]byte("\"}")); err != nil { // || n != len(b) {
-		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	}
+
 	//	if n, err := m.wrts[r].bwrt.Write(b); err != nil || n != len(b) {
 	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
 	//	}
@@ -199,7 +186,6 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	//	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
 	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	//	}
-	return nil
 }
 
 func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
@@ -309,7 +295,7 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
-	db.DPrintf(db.ALWAYS, "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	db.DPrintf("MRTPT", "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))

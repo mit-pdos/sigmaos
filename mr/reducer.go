@@ -101,7 +101,7 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 	if err != nil {
 		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	}
-	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+	err = fslib.RecordReader(func(v interface{}) error { return decodeKV(brdr, v) }, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("MR1", "reduce %v/%v: kv %v\n", r.input, file, kv)
 

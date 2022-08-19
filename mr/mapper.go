@@ -301,8 +301,7 @@ func RunMapper(mapf MapT, args []string) {
 
 	m, err := makeMapper(mapf, args, p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
-		os.Exit(1)
+		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 	if err = m.initMapper(); err != nil {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))

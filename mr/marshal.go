@@ -19,10 +19,10 @@ func encodeKV(wr io.Writer, key, value string, r int) error {
 	if err := binary.Write(wr, binary.LittleEndian, l1); err != nil {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if err := binary.Write(wr, binary.LittleEndian, []byte(key)); err != nil {
+	if err := binary.Write(wr, binary.LittleEndian, l2); err != nil {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if err := binary.Write(wr, binary.LittleEndian, l2); err != nil {
+	if err := binary.Write(wr, binary.LittleEndian, []byte(key)); err != nil {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	if err := binary.Write(wr, binary.LittleEndian, []byte(value)); err != nil {
@@ -37,6 +37,14 @@ func decodeKV(rd io.Reader, v interface{}) error {
 
 	var l1 int64
 	var l2 int64
+
+	if err := binary.Read(rd, binary.LittleEndian, &l1); err != nil {
+		return err
+	}
+
+	if err := binary.Read(rd, binary.LittleEndian, &l2); err != nil {
+		return err
+	}
 
 	b1 := make([]byte, l1)
 	b2 := make([]byte, l2)

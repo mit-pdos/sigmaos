@@ -2,8 +2,10 @@ package seqwc
 
 import (
 	"bufio"
+	// "encoding/json"
 	"io"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -19,6 +21,20 @@ import (
 
 type Tdata map[string]uint64
 
+func wcline1(n int, line string, data Tdata) int {
+	re := regexp.MustCompile("[^a-zA-Z0-9\\s]+")
+	sanitized := strings.ToLower(re.ReplaceAllString(line, " "))
+	cnt := 0
+	for _, w := range strings.Fields(sanitized) {
+		if _, ok := data[w]; !ok {
+			data[w] = uint64(0)
+		}
+		data[w] += 1
+		cnt++
+	}
+	return cnt
+}
+
 func wcline(n int, line string, data Tdata) int {
 	scanner := bufio.NewScanner(strings.NewReader(line))
 	scanner.Split(mr.ScanWords)
@@ -28,6 +44,11 @@ func wcline(n int, line string, data Tdata) int {
 		if _, ok := data[w]; !ok {
 			data[w] = uint64(0)
 		}
+		// kv := &mr.KeyValue{scanner.Text(), "1"}
+		// _, err := json.Marshal(kv)
+		// if err != nil {
+		// 	db.DFatalf("json")
+		// }
 		data[w] += 1
 		cnt++
 	}

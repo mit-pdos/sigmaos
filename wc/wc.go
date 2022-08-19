@@ -14,7 +14,7 @@ import (
 
 func Map(filename string, rdr io.Reader, emit mr.EmitT) error {
 	scanner := bufio.NewScanner(rdr)
-	scanner.Split(mr.ScanWords)
+	//	scanner.Split(mr.ScanWords)
 	for scanner.Scan() {
 		kv := &mr.KeyValue{scanner.Text(), "1"}
 		if err := emit(kv); err != nil {

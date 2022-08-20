@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	jsonFiller = "AAAAAAA"
+	jsonPadding = "AAAAA"
 )
 
 func encodeKV(wr io.Writer, key, value string, r int) error {
@@ -28,7 +28,7 @@ func encodeKV(wr io.Writer, key, value string, r int) error {
 	if n, err := wr.Write([]byte(value)); err != nil || n != len(value) {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if n, err := wr.Write([]byte(jsonFiller)); err != nil || n != len(jsonFiller) {
+	if n, err := wr.Write([]byte(jsonPadding)); err != nil || n != len(jsonPadding) {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	return nil
@@ -51,7 +51,7 @@ func decodeKV(rd io.Reader, v interface{}) error {
 
 	b1 := make([]byte, l1)
 	b2 := make([]byte, l2)
-	b3 := make([]byte, len(jsonFiller))
+	b3 := make([]byte, len(jsonPadding))
 
 	n, err := io.ReadFull(rd, b1)
 	if err != nil {
@@ -72,7 +72,7 @@ func decodeKV(rd io.Reader, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	if n != len(jsonFiller) {
+	if n != len(jsonPadding) {
 		return fmt.Errorf("bad string")
 	}
 	kv.Key = string(b1)

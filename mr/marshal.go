@@ -28,6 +28,9 @@ func encodeKV(wr io.Writer, key, value string, r int) error {
 	if err := binary.Write(wr, binary.LittleEndian, []byte(value)); err != nil {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
+	if err := binary.Write(wr, binary.LittleEndian, []byte(jsonFiller)); err != nil {
+		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+	}
 	return nil
 }
 
@@ -48,6 +51,7 @@ func decodeKV(rd io.Reader, v interface{}) error {
 
 	b1 := make([]byte, l1)
 	b2 := make([]byte, l2)
+	b3 := make([]byte, len(jsonFiller))
 
 	n, err := io.ReadFull(rd, b1)
 	if err != nil {
@@ -62,6 +66,13 @@ func decodeKV(rd io.Reader, v interface{}) error {
 		return err
 	}
 	if n != int(l2) {
+		return fmt.Errorf("bad string")
+	}
+	n, err = io.ReadFull(rd, b3)
+	if err != nil {
+		return err
+	}
+	if n != len(jsonFiller) {
 		return fmt.Errorf("bad string")
 	}
 	kv.Key = string(b1)

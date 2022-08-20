@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	jsonFiller = "AAAAAAAAAAAAA"
+	jsonFiller = "AAAAAAA"
 )
 
 func encodeKV(wr io.Writer, key, value string, r int) error {

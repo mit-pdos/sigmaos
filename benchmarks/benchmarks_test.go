@@ -311,7 +311,7 @@ func TestLambdaBurst(t *testing.T) {
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
-	N_LAMBDAS := 640
+	N_LAMBDAS := 720
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
 	ss, is := makeNSemaphores(ts, N_LAMBDAS)
 	// Init semaphores first.
@@ -326,7 +326,7 @@ func TestLambdaBurst(t *testing.T) {
 
 func TestLambdaInvokeWaitStart(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(640)
+	rs := benchmarks.MakeRawResults(720)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.

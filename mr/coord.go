@@ -351,7 +351,7 @@ func (c *Coord) Round(ttype string) {
 			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
 			if !mapsDone && m < c.nmaptask {
 				mapsDone = true
-				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", m-1, time.Since(start).Seconds())
+				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", time.Since(start).Seconds())
 			}
 		}
 	}

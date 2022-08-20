@@ -22,13 +22,13 @@ func encodeKV(wr io.Writer, key, value string, r int) error {
 	if err := binary.Write(wr, binary.LittleEndian, l2); err != nil {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if err := binary.Write(wr, binary.LittleEndian, []byte(key)); err != nil {
+	if n, err := wr.Write([]byte(key)); err != nil || n != len(key) {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if err := binary.Write(wr, binary.LittleEndian, []byte(value)); err != nil {
+	if n, err := wr.Write([]byte(value)); err != nil || n != len(value) {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	if err := binary.Write(wr, binary.LittleEndian, []byte(jsonFiller)); err != nil {
+	if n, err := wr.Write([]byte(jsonFiller)); err != nil || n != len(jsonFiller) {
 		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	return nil

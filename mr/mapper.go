@@ -172,8 +172,9 @@ func (m *Mapper) informReducer() error {
 }
 
 func (m *Mapper) emit(kv *KeyValue) error {
-	r := Khash(kv.Key) % m.nreducetask
-	return encodeKV(m.wrts[r].bwrt, kv.Key, kv.Value, r)
+	//	r := Khash(kv.Key) % m.nreducetask
+	return nil
+	//	return encodeKV(m.wrts[r].bwrt, kv.Key, kv.Value, r)
 	//	b, err := json.Marshal(kv)
 	//	if err != nil {
 	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)

@@ -12,10 +12,17 @@ import (
 	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/rand"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
+
+// XXX REMOVE AFTER DEADLINE PUSH
+type SBTuple struct {
+	*procclnt.ProcClnt
+	procs []*proc.Proc
+}
 
 //
 // A set of helper functions that we use across our benchmarks.
@@ -52,19 +59,46 @@ func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	}
 }
 
-func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
+// XXX REMOVE AFTER DEADLINE PUSH
+func spawnBurstProcs2(ts *test.Tstate, sbs []*SBTuple) {
+	db.DPrintf("TEST", "Burst-spawning %v procs", len(sbs))
 	c := make(chan bool)
-	for _, p := range ps {
-		go func(p *proc.Proc) {
-			err := ts.WaitStart(p.Pid)
-			assert.Nil(ts.T, err, "WaitStart: %v", err)
+	for _, sb := range sbs {
+		go func(sb *SBTuple) {
+			_, errs := sb.SpawnBurst(sb.procs)
+			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 			c <- true
-		}(p)
+		}(sb)
 	}
-	for _ = range ps {
+	for _ = range sbs {
 		<-c
 	}
+}
+
+func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		err := ts.WaitStart(p.Pid)
+		assert.Nil(ts.T, err, "WaitStart: %v", err)
+	}
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
+}
+
+// XXX REMOVE AFTER DEADLINE PUSH
+func waitStartProcs2(ts *test.Tstate, sbs []*SBTuple) {
+	c := make(chan bool)
+	for _, sb := range sbs {
+		go func(sb *SBTuple) {
+			for _, p := range sb.procs {
+				err := sb.WaitStart(p.Pid)
+				assert.Nil(ts.T, err, "WaitStart: %v", err)
+			}
+			c <- true
+		}(sb)
+	}
+	for _ = range sbs {
+		<-c
+	}
+	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(sbs))
 }
 
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {

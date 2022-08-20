@@ -54,9 +54,9 @@ func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 }
 
 func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
-	ps := i.([]*proc.Proc)
-	spawnBurstProcs(ts, ps)
-	waitStartProcs(ts, ps)
+	sbs := i.([]*SBTuple)
+	spawnBurstProcs2(ts, sbs)
+	waitStartProcs2(ts, sbs)
 	return time.Since(start)
 }
 

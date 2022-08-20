@@ -12,9 +12,11 @@ import (
 
 	"ulambda/benchmarks"
 	db "ulambda/debug"
+	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/test"
 	"ulambda/wc"
 )
@@ -282,11 +284,6 @@ func TestAppKVRepl(t *testing.T) {
 
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
-//
-// XXX Maybe we should do a version with procs that don't spin & consume so
-// much CPU?
-//
-// XXX We should probably try this one both warm and cold.
 func TestRealmBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
@@ -297,7 +294,13 @@ func TestRealmBurst(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", TOTAL_N_CORES_SIGMA_REALM)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
 	p := monitorCoresAssigned(ts)
-	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
+	sbs := []*SBTuple{}
+	for i := range ps {
+		fsl := fslib.MakeFsLibAddr("sbt", ts.NamedAddr())
+		pclnt := procclnt.MakeProcClntTmp(fsl, ts.NamedAddr())
+		sbs = append(sbs, &SBTuple{pclnt, []*proc.Proc{ps[i]}})
+	}
+	runOps(ts, []interface{}{sbs}, spawnBurstWaitStartProcs, rs)
 	defer p.Done()
 	printResults(rs)
 	evictProcs(ts, ps)

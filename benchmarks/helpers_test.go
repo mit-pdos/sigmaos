@@ -39,14 +39,30 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
-	_, errs := ts.SpawnBurst(ps)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	c := make(chan bool)
+	for i := range ps {
+		go func(i int) {
+			_, errs := ts.SpawnBurst([]*proc.Proc{ps[i]})
+			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+			c <- true
+		}(i)
+	}
+	for _ = range ps {
+		<-c
+	}
 }
 
 func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
+	c := make(chan bool)
 	for _, p := range ps {
-		err := ts.WaitStart(p.Pid)
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
+		go func(p *proc.Proc) {
+			err := ts.WaitStart(p.Pid)
+			assert.Nil(ts.T, err, "WaitStart: %v", err)
+			c <- true
+		}(p)
+	}
+	for _ = range ps {
+		<-c
 	}
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
 }

@@ -295,10 +295,10 @@ func TestRealmBurst(t *testing.T) {
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
 	p := monitorCoresAssigned(ts)
 	sbs := []*SBTuple{}
-	for i := range ps {
+	for i := 0; i < len(ps); i += 5 {
 		fsl := fslib.MakeFsLibAddr("sbt", ts.NamedAddr())
 		pclnt := procclnt.MakeProcClntTmp(fsl, ts.NamedAddr())
-		sbs = append(sbs, &SBTuple{pclnt, []*proc.Proc{ps[i]}})
+		sbs = append(sbs, &SBTuple{pclnt, ps[i : i+5]})
 	}
 	runOps(ts, []interface{}{sbs}, spawnBurstWaitStartProcs, rs)
 	defer p.Done()

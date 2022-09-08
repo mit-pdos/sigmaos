@@ -30,7 +30,15 @@ $ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
 will update the sigmaos software on each EC2 instances and restart
 sigmaos daemons.
 
-To login to the VPC:
+# run test on VPC
+
+$ ssh -i key-vpc-02f7e3816c4cc8e7f.pem ubuntu@ec2-52-54-107-185.compute-1.amazonaws.com
+
+$ cd ulambda
+
+$ go test -timeout 0 -v ulambda/mr --realm fkaashoek --version=$(cat VERSION.txt) -app mr-grep-wiki2G.yml -run MRJOB > /tmp/mr.out 2>&1  &
+
+# log into the VPC
 
 $ ./login.sh --vpc vpc-061a1808693a1626a
 

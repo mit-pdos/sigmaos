@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
-	"runtime/debug"
+	// "runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -286,7 +286,7 @@ func RunMapper(mapf MapT, args []string) {
 	p := perf.MakePerf("MRMAPPER")
 	defer p.Done()
 
-	debug.SetMemoryLimit(1769 * 1024 * 1024)
+	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	m, err := makeMapper(mapf, args, p)
 	if err != nil {

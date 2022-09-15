@@ -387,12 +387,15 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round("all")
-		//		c.Round("map")
-		//		n := c.doneTasks(MapTask(c.job) + DONE)
-		//		if n == c.nmaptask {
-		//			c.Round("reduce")
-		//		}
+		// c.Round("all")
+		start := time.Now()
+		c.Round("map")
+		n := c.doneTasks(MapTask(c.job) + DONE)
+		if n == c.nmaptask {
+			ms := time.Since(start).Milliseconds()
+			log.Printf("map has %v ms\n", ms)
+			c.Round("reduce")
+		}
 		if !c.doRestart() {
 			break
 		}

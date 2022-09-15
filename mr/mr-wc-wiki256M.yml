@@ -1,5 +1,5 @@
 app: "wc"
 nreduce: 1
-binsz:  134217728 # 268435456
+binsz:  140217728 # 134217728 # 268435456
 input: "name/s3/~ip/9ps3/wiki-256M/"
 linesz: 2097152  # the longest line in wiki is just shorter than 2MB

@@ -400,7 +400,7 @@ func (p *Perf) teardownPprofMem() {
 		// runtime.GC() // get up-to-date statistics
 		// Write a heap profile
 		if err := pprof.WriteHeapProfile(p.pprofMemFile); err != nil {
-			db.DFatalf("could not write memory profile: ", err)
+			db.DFatalf("could not write memory profile: %v", err)
 		}
 		p.pprofMemFile.Close()
 	}

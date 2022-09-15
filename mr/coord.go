@@ -3,6 +3,7 @@ package mr
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"sync/atomic"
 	"time"

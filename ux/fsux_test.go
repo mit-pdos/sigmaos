@@ -89,7 +89,7 @@ func mkfile(t *testing.T, name string) {
 	syscall.Close(fd)
 	ms := time.Since(start).Milliseconds()
 	sz := uint64(CNT * len(buf))
-	fmt.Printf("%s took %vms (%s)", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
+	fmt.Printf("%s took %vms (%s)\n", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
 	os.Remove(name)
 }
 

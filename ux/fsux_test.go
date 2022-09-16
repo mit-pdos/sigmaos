@@ -1,8 +1,12 @@
 package fsux
 
 import (
+	"fmt"
+	"syscall"
 	"testing"
+	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	np "ulambda/ninep"
@@ -65,4 +69,22 @@ func TestDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ts.Shutdown()
+}
+
+func TestFsPerf(t *testing.T) {
+	CNT := 500
+	N := 1 * test.MBYTE
+	buf := test.MkBuf(N)
+	start := time.Now()
+	fd, err := syscall.Open("xxx", syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0)
+	assert.Nil(t, err)
+	for i := 0; i < CNT; i++ {
+		n, err := syscall.Pwrite(fd, buf, int64(i*N))
+		assert.Nil(t, err)
+		assert.Equal(t, N, n)
+	}
+	syscall.Close(fd)
+	ms := time.Since(start).Milliseconds()
+	sz := uint64(CNT * len(buf))
+	fmt.Printf("%s took %vms (%s)", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
 }

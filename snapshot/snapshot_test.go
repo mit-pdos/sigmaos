@@ -142,8 +142,12 @@ func TestRestoreSimple(t *testing.T) {
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
+	db.DPrintf("TEST", "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid)
+	db.DPrintf("TEST", "Done take snapshot")
+	db.DPrintf("TEST", "About to restore snapshot")
 	restoreSnapshot(ts, fsl1, pid, b)
+	db.DPrintf("TEST", "Done restore snapshot")
 
 	ts.Shutdown()
 }
@@ -196,7 +200,9 @@ func TestRestoreStateSimple(t *testing.T) {
 	fsl1 := fslib.MakeFsLib("test-fsl1")
 
 	// Read the snapshot from replica a
+	db.DPrintf("TEST", "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid1)
+	db.DPrintf("TEST", "Done take snapshot")
 
 	// Kill the first replica (so future requests hit the second replica).
 	killMemfs(ts, pid1)

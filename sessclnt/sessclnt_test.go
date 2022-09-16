@@ -17,20 +17,20 @@ import (
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/rand"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
 
 const (
 	GRP0      = "GRP0"
-	DIRGRP0   = group.GRPDIR + GRP0 + "/"
 	CRASH     = 1000
 	PARTITION = 200
 	NETFAIL   = 200
 	NTRIALS   = "3001"
 	JOBDIR    = "name/"
 )
+
+var DIRGRP0 = group.GrpDir(JOBDIR, GRP0)
 
 func TestWaitClosed(t *testing.T) {
 	ts := test.MakeTstateAll(t)

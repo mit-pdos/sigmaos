@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"syscall"
 	"testing"
@@ -77,7 +78,7 @@ func mkfile(t *testing.T, name string) {
 	N := 1 * test.MBYTE
 	buf := test.MkBuf(N)
 	start := time.Now()
-	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0)
+	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0666)
 	assert.Nil(t, err)
 	for i := 0; i < CNT; i++ {
 		n, err := syscall.Pwrite(fd, buf, int64(i*N))
@@ -88,6 +89,7 @@ func mkfile(t *testing.T, name string) {
 	ms := time.Since(start).Milliseconds()
 	sz := uint64(CNT * len(buf))
 	fmt.Printf("%s took %vms (%s)", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
+	os.Remove(name)
 }
 
 func TestFsPerfSingle(t *testing.T) {

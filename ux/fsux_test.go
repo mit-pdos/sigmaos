@@ -85,6 +85,7 @@ func mkfile(t *testing.T, name string) {
 		assert.Nil(t, err)
 		assert.Equal(t, N, n)
 	}
+	syscall.Fsync(fd)
 	syscall.Close(fd)
 	ms := time.Since(start).Milliseconds()
 	sz := uint64(CNT * len(buf))

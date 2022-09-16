@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	// "sort"
 	"strconv"
@@ -14,7 +15,7 @@ import (
 	//	"runtime/debug"
 
 	"github.com/dustin/go-humanize"
-	//	"github.com/klauspost/readahead"
+	"github.com/klauspost/readahead"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -98,24 +99,29 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 	start := time.Now()
 
 	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
-	//	ardr, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
+	ardr, err := readahead.NewReaderSize(brdr, 4, test.BUFSZ)
 	if err != nil {
 		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	}
-	err = fslib.RecordReader(func(v interface{}) error { return decodeKV(brdr, v) }, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
-		kv := a.(*KeyValue)
-		db.DPrintf("MR1", "reduce %v/%v: kv %v\n", r.input, file, kv)
-
+	for {
+		var kv KeyValue
+		if r := decodeKV(ardr, &kv); r != nil {
+			if r == io.EOF {
+				break
+			}
+			if r != nil {
+				err = r
+				break
+			}
+		}
 		if _, ok := data[kv.Key]; !ok {
 			data[kv.Key] = make([]string, 0)
 		}
 		data[kv.Key] = append(data[kv.Key], kv.Value)
-
-		return nil
-	})
+	}
 	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
-		db.DPrintf("MR", "JsonReader %v err %v\n", sym, err)
+		db.DPrintf("MR", "decodeKV %v err %v\n", sym, err)
 		return 0, 0, false
 	}
 	return rdr.Nbytes(), time.Since(start), true

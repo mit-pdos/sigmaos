@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"fmt"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -71,12 +72,12 @@ func TestDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFsPerf(t *testing.T) {
+func mkfile(t *testing.T, name string) {
 	CNT := 500
 	N := 1 * test.MBYTE
 	buf := test.MkBuf(N)
 	start := time.Now()
-	fd, err := syscall.Open("xxx", syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0)
+	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0)
 	assert.Nil(t, err)
 	for i := 0; i < CNT; i++ {
 		n, err := syscall.Pwrite(fd, buf, int64(i*N))
@@ -87,4 +88,23 @@ func TestFsPerf(t *testing.T) {
 	ms := time.Since(start).Milliseconds()
 	sz := uint64(CNT * len(buf))
 	fmt.Printf("%s took %vms (%s)", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
+}
+
+func TestFsPerfSingle(t *testing.T) {
+	mkfile(t, "xxx")
+}
+
+func TestFsPerfMulti(t *testing.T) {
+
+	var done sync.WaitGroup
+	done.Add(2)
+	go func() {
+		mkfile(t, "xxx")
+		done.Done()
+	}()
+	go func() {
+		mkfile(t, "yyy")
+		done.Done()
+	}()
+	done.Wait()
 }

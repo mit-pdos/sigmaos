@@ -1422,7 +1422,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReadFilePerf(t *testing.T) {
+func TestReadFilePerfSingle(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)

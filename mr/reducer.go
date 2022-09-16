@@ -13,6 +13,7 @@ import (
 	//	"runtime"
 	//	"runtime/debug"
 
+	"github.com/dustin/go-humanize"
 	//	"github.com/klauspost/readahead"
 
 	"ulambda/crash"
@@ -181,6 +182,9 @@ func (r *Reducer) doReduce() *proc.Status {
 	if len(lostMaps) > 0 {
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
+
+	ms := duration.Milliseconds()
+	fmt.Printf("reduce readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
 	for k, vs := range data {

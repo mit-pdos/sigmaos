@@ -1311,7 +1311,7 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 	return sz
 }
 
-func TestWriteFilePerf(t *testing.T) {
+func TestWriteFilePerfSingle(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)

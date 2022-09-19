@@ -215,19 +215,19 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid np.Tsession, conn np.Conn) *np.Err {
+func (ssrv *SessSrv) Register(cid np.Tclient, sid np.Tsession, conn np.Conn) *np.Err {
 	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
-	sess := ssrv.st.Alloc(sid)
+	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(sid np.Tsession, conn np.Conn) {
+func (ssrv *SessSrv) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == np.NoSession {
 		return
 	}
-	sess := ssrv.st.Alloc(sid)
+	sess := ssrv.st.Alloc(cid, sid)
 	sess.UnsetConn(conn)
 }
 
@@ -278,7 +278,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// will be in this function, so the conn will be set to
 	// nil. If it came from the client, the conn will already be
 	// set.
-	sess := ssrv.st.Alloc(fc.Session)
+	sess := ssrv.st.Alloc(fc.Client, fc.Session)
 	// Reply cache needs to live under the replication layer in order to
 	// handle duplicate requests. These may occur if, for example:
 	//

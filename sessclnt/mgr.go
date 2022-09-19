@@ -11,17 +11,15 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	sid      np.Tsession
-	seqno    *np.Tseqno
+	cli      np.Tclient
 	sessions map[string]*SessClnt
 }
 
-func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
+func MakeMgr(cli np.Tclient) *Mgr {
 	sc := &Mgr{}
+	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
-	sc.sid = session
-	sc.seqno = seqno
-	db.DPrintf("SESSCLNT", "Session Mgr %v\n", sc.sid)
+	db.DPrintf("SESSCLNT", "Session Mgr for client %v", sc.cli)
 	return sc
 }
 
@@ -46,7 +44,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *np.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := makeSessClnt(sc.sid, sc.seqno, addrs)
+	sess, err := makeSessClnt(sc.cli, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -55,11 +53,11 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *np.Err) {
 }
 
 func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
-	db.DPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addr)
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
+	db.DPrintf("SESSCLNT", "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
 	if err != nil {
-		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addr)
+		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
 	msg, err := sess.RPC(req, f)
@@ -68,7 +66,7 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 
 // For testing
 func (sc *Mgr) Disconnect(addrs []string) *np.Err {
-	db.DPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
+	db.DPrintf("SESSCLNT", "Disconnect cli %v addr %v", sc.cli, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]
@@ -77,6 +75,7 @@ func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 		return np.MkErr(np.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
+	db.DPrintf("SESSCLNT", "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)
 	return nil
 }
 

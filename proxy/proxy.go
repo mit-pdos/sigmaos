@@ -37,24 +37,24 @@ func (npd *Npd) serve(fc *np.Fcall) {
 	if rerror != nil {
 		reply = rerror
 	}
-	fcall := np.MakeFcall(reply, 0, nil, nil, np.NoFence)
+	fcall := np.MakeFcall(reply, fc.Client, fc.Session, nil, nil, np.NoFence)
 	fcall.Tag = t
 	sess.SendConn(fcall)
 }
 
-func (npd *Npd) Register(sid np.Tsession, conn np.Conn) *np.Err {
-	sess := npd.st.Alloc(sid)
+func (npd *Npd) Register(cid np.Tclient, sid np.Tsession, conn np.Conn) *np.Err {
+	sess := npd.st.Alloc(cid, sid)
 	sess.SetConn(conn)
 	return nil
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (npd *Npd) Unregister(sid np.Tsession, conn np.Conn) {
+func (npd *Npd) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == np.NoSession {
 		return
 	}
-	sess := npd.st.Alloc(sid)
+	sess := npd.st.Alloc(cid, sid)
 	sess.UnsetConn(conn)
 }
 

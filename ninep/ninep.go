@@ -33,6 +33,7 @@ func (fid Tfid) String() string {
 // Augmentated types for sigmaOS
 //
 
+type Tclient uint64
 type Tsession uint64
 type Tseqno uint64
 
@@ -475,6 +476,7 @@ func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
 type Fcall struct {
 	Type     Tfcall
 	Tag      Ttag
+	Client   Tclient
 	Session  Tsession
 	Seqno    Tseqno
 	Received Tinterval
@@ -482,19 +484,19 @@ type Fcall struct {
 	Msg      Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence) *Fcall {
+func MakeFcall(msg Tmsg, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence) *Fcall {
 	if rcv == nil {
 		rcv = &Tinterval{}
 	}
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, *rcv, f, msg}
+		return &Fcall{msg.Type(), 0, cli, sess, 0, *rcv, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), *rcv, f, msg}
+		return &Fcall{msg.Type(), 0, cli, sess, seqno.Next(), *rcv, f, msg}
 	}
 }
 
 func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
-	fcall := MakeFcall(reply, req.Session, nil, nil, NoFence)
+	fcall := MakeFcall(reply, req.Client, req.Session, nil, nil, NoFence)
 	fcall.Seqno = req.Seqno
 	fcall.Received = req.Received
 	fcall.Tag = req.Tag

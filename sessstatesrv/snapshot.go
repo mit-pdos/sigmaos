@@ -39,6 +39,7 @@ func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtS
 
 type SessionSnapshot struct {
 	ProtsrvSnap []byte
+	ClientId    np.Tclient
 	closed      bool
 }
 
@@ -49,6 +50,7 @@ func MakeSessionSnapshot() *SessionSnapshot {
 func (sess *Session) Snapshot() []byte {
 	ss := MakeSessionSnapshot()
 	ss.ProtsrvSnap = sess.protsrv.Snapshot()
+	ss.ClientId = sess.ClientId
 	ss.closed = sess.closed
 	b, err := json.Marshal(ss)
 	if err != nil {
@@ -65,7 +67,7 @@ func RestoreSession(sid np.Tsession, sesssrv np.SessServer, rps np.RestoreProtSe
 	}
 	fos := rps(sesssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
-	sess := makeSession(fos, sid, tmt.AddThread())
+	sess := makeSession(fos, ss.ClientId, sid, tmt.AddThread())
 	sess.closed = ss.closed
 	return sess
 }

@@ -8,17 +8,26 @@ import (
 	"ulambda/sessclnt"
 )
 
+// Each proc has a unique client ID.
+var clid np.Tclient = 0
+
+func init() {
+	if clid == 0 {
+		clid = np.Tclient(rand.Uint64())
+	}
+}
+
 type Clnt struct {
-	session np.Tsession
-	seqno   np.Tseqno
-	sm      *sessclnt.Mgr
+	id    np.Tclient
+	seqno np.Tseqno
+	sm    *sessclnt.Mgr
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
-	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.sm = sessclnt.MakeMgr(clnt.session, &clnt.seqno)
+	clnt.id = clid
+	clnt.sm = sessclnt.MakeMgr(clnt.id)
 	return clnt
 }
 

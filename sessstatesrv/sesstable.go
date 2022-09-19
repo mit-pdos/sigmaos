@@ -38,18 +38,21 @@ func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid np.Tsession) *Session {
+func (st *SessionTable) Alloc(cid np.Tclient, sid np.Tsession) *Session {
 	st.Lock()
 	defer st.Unlock()
 
-	return st.allocL(sid)
+	return st.allocL(cid, sid)
 }
 
-func (st *SessionTable) allocL(sid np.Tsession) *Session {
+func (st *SessionTable) allocL(cid np.Tclient, sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
+		if sess.ClientId == 0 {
+			sess.ClientId = cid
+		}
 		return sess
 	}
-	sess := makeSession(st.mkps(st.sesssrv, sid), sid, st.tm.AddThread())
+	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread())
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess
@@ -60,7 +63,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *np.Theartbeat) {
 	defer st.Unlock()
 
 	for _, sid := range hbs.Sids {
-		sess := st.allocL(sid)
+		sess := st.allocL(0, sid)
 		sess.Lock()
 		if !sess.closed {
 			sess.heartbeatL(hbs)

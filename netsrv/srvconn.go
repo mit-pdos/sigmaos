@@ -20,6 +20,7 @@ type SrvConn struct {
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
 	sesssrv    np.SessServer
+	clid       np.Tclient
 	sessid     np.Tsession
 }
 
@@ -35,6 +36,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		make(chan *np.Fcall),
 		srv.sesssrv,
 		0,
+		0,
 	}
 	go c.writer()
 	go c.reader()
@@ -42,7 +44,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 }
 
 func (c *SrvConn) Close() {
-	db.DPrintf("NETSRV", "%v Prepare to close conn and replies %p", c.sessid, c.replies)
+	db.DPrintf("NETSRV", "Cli %v Sess %v Prepare to close conn and replies %p", c.clid, c.sessid, c.replies)
 
 	c.Lock()
 	defer c.Unlock()
@@ -58,7 +60,7 @@ func (c *SrvConn) Close() {
 	// will then exit and close the TCP connection.
 	go func() {
 		c.wg.Wait()
-		db.DPrintf("NETSRV", "%v Close replies chan %p", c.sessid, c.replies)
+		db.DPrintf("NETSRV", "Cli %v Sess %v Close replies chan %p", c.clid, c.sessid, c.replies)
 		close(c.replies)
 	}()
 }
@@ -97,7 +99,7 @@ func (c *SrvConn) GetReplyC() chan *np.Fcall {
 }
 
 func (c *SrvConn) reader() {
-	db.DPrintf("NETSRV", "%v (%v) Reader conn from %v\n", c.sessid, c.Dst(), c.Src())
+	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
@@ -117,8 +119,9 @@ func (c *SrvConn) reader() {
 		db.DPrintf("NETSRV", "srv req %v\n", fcall)
 		if c.sessid == 0 {
 			c.sessid = fcall.Session
-			if err := c.sesssrv.Register(fcall.Session, c); err != nil {
-				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
+			c.clid = fcall.Client
+			if err := c.sesssrv.Register(fcall.Client, fcall.Session, c); err != nil {
+				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
 				fc := np.MakeFcallReply(fcall, err.Rerror())
@@ -129,7 +132,7 @@ func (c *SrvConn) reader() {
 				// If we successfully registered, we'll have to unregister once the
 				// connection breaks. This function tells the underlying sesssrv that
 				// the connection has broken.
-				defer c.sesssrv.Unregister(c.sessid, c)
+				defer c.sesssrv.Unregister(c.clid, c.sessid, c)
 			}
 		} else if c.sessid != fcall.Session {
 			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)

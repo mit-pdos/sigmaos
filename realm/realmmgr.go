@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,10 +27,6 @@ import (
  * - Ask for more Nodeds from SigmaMgr when load increases.
  */
 
-const (
-	NODEDS = "nodeds"
-)
-
 type RealmResourceMgr struct {
 	realmId string
 	// ===== Relative to the sigma named =====
@@ -49,10 +46,10 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
-	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId), 0777)
+	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 
 	var err error
-	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)
+	m.memfs, err = fslibsrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
@@ -67,7 +64,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 func (m *RealmResourceMgr) initFS() {
 	dirs := []string{NODEDS}
 	for _, d := range dirs {
-		if err := m.sigmaFsl.MkDir(path.Join(REALM_MGRS, m.realmId, d), 0777); err != nil {
+		if err := m.sigmaFsl.MkDir(path.Join(realmMgrPath(m.realmId), d), 0777); err != nil {
 			db.DFatalf("Error Mkdir: %v", err)
 		}
 	}
@@ -97,7 +94,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		for _, nodedId := range realmCfg.NodedsAssigned {
 			// Otherwise, take some cores away.
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, machine.ALL_CORES, 0)
-			resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+			resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 			db.DPrintf("REALMMGR", "Deallocating noded %v from realm %v", nodedId, m.realmId)
 		}
 	case resource.Tcore:
@@ -120,14 +117,15 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 
 		// Read this noded's config.
 		ndCfg := &NodedConfig{}
-		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 
 		cores := ndCfg.Cores[len(ndCfg.Cores)-1]
 		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		// Otherwise, take some cores away.
 		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
+		m.updateResizeTimeL(m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -154,8 +152,9 @@ func (m *RealmResourceMgr) growRealm() {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 	}
+	m.updateResizeTime(m.realmId)
 }
 
 func (m *RealmResourceMgr) tryClaimCores(machineId string) (*np.Tinterval, bool) {
@@ -199,9 +198,9 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 	for i := 0; i < nRetries; i++ {
 		// First, try to get cores on a machine already running a noded from this
 		// realm.
-		ok, err = m.sigmaFsl.ProcessDir(path.Join(REALM_MGRS, m.realmId, NODEDS), func(nd *np.Stat) (bool, error) {
+		ok, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
 			ndCfg := MakeNodedConfig()
-			m.ReadConfig(path.Join(NODED_CONFIG, nd.Name), ndCfg)
+			m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
 			// Try to claim additional cores on the machine this noded lives on.
 			if c, ok := m.tryClaimCores(ndCfg.MachineId); ok {
 				cores = c
@@ -250,31 +249,45 @@ func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
 	ndCfg := MakeNodedConfig()
-	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 	ndCfg.RealmId = realmId
 	ndCfg.Cores = append(ndCfg.Cores, cores)
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+	m.WriteConfig(NodedConfPath(nodedId), ndCfg)
 
 	lockRealm(m.lock, realmId)
 	defer unlockRealm(m.lock, realmId)
 
 	// Update the realm's config
 	rCfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	m.ReadConfig(RealmConfPath(realmId), rCfg)
 	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
+	m.WriteConfig(RealmConfPath(realmId), rCfg)
+}
+
+func (m *RealmResourceMgr) updateResizeTime(realmId string) {
+	lockRealm(m.lock, realmId)
+	defer unlockRealm(m.lock, realmId)
+
+	m.updateResizeTimeL(realmId)
+}
+
+func (m *RealmResourceMgr) updateResizeTimeL(realmId string) {
+	// Update the realm's config
+	rCfg := &RealmConfig{}
+	m.ReadConfig(RealmConfPath(realmId), rCfg)
 	rCfg.LastResize = time.Now()
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	m.WriteConfig(RealmConfPath(realmId), rCfg)
 }
 
 // XXX Do I really need this?
 func (m *RealmResourceMgr) getRealmConfig() (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
 	// anymore. In this case, another noded is not needed.
-	if _, err := m.sigmaFsl.Stat(path.Join(REALM_CONFIG, m.realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
+	if _, err := m.sigmaFsl.Stat(RealmConfPath(m.realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
 		return nil, fmt.Errorf("Realm not found")
 	}
 	cfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), cfg)
+	m.ReadConfig(RealmConfPath(m.realmId), cfg)
 	return cfg, nil
 }
 
@@ -283,7 +296,7 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) map[string]*stats
 	stat := make(map[string]*stats.StatInfo)
 	for _, nodedId := range nodeds {
 		ndCfg := MakeNodedConfig()
-		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 		s := &stats.StatInfo{}
 		err := m.GetFileJson(path.Join(np.PROCD, ndCfg.ProcdIp, np.STATSD), s)
 		if err != nil {
@@ -311,8 +324,9 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (float64, map[string]f
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() int {
-	sts, _ := m.GetDir(np.PROCD_WS)
-	return len(sts)
+	sts1, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	sts2, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+	return len(sts1) + len(sts2)
 }
 
 func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
@@ -329,16 +343,21 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	_, procdUtils := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "searching for least utilized node in realm %v, procd utils: %v", m.realmId, procdUtils)
 
-	// Find least utilized procd
-	min := 100.0
-	minNodedId := ""
-	for nodedId, util := range procdUtils {
-		if min >= util {
-			min = util
-			minNodedId = nodedId
+	nodeds := make([]string, 0, len(procdUtils))
+	for nodedId, _ := range procdUtils {
+		nodeds = append(nodeds, nodedId)
+	}
+	// Sort nodeds in order of ascending utilization.
+	sort.Slice(nodeds, func(i, j int) bool {
+		return procdUtils[nodeds[i]] < procdUtils[nodeds[j]]
+	})
+	// Find a noded which can be shrunk.
+	for _, nodedId := range nodeds {
+		if nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR") {
+			return nodedId, true
 		}
 	}
-	return minNodedId, true
+	return "", false
 }
 
 func (m *RealmResourceMgr) realmShouldGrow() bool {
@@ -380,13 +399,14 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 	}
 
 	// If there are a lot of procs waiting to be run/stolen...
-	if m.getRealmQueueLen() >= int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
+	qlen := m.getRealmQueueLen()
+	if qlen >= int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
 		return true
 	}
 
 	avgUtil, _ := m.getRealmUtil(realmCfg)
 
-	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD && qlen >= 0 {
 		return true
 	}
 	return false

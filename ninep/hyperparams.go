@@ -20,7 +20,7 @@ perf:
 
 session:
   heartbeat_interval: 50ms
-  timeout: 200ms
+  timeout: 1000ms
 
 realm:
   scan_interval: 50ms 
@@ -41,7 +41,7 @@ raft:
   tick_interval: 25ms
   elect_nticks: 4
   heartbeat_ticks: 1
- `
+`
 
 // AWS params
 var aws = `
@@ -59,7 +59,7 @@ realm:
   scan_interval: 1000ms
   resize_interval: 1000ms
   grow_cpu_util_threshold: 50
-  shrink_cpu_util_threshold: 25
+  shrink_cpu_util_threshold: 10
 
 machine:
   core_group_fraction: 0.5
@@ -74,7 +74,7 @@ raft:
   tick_interval: 500ms
   elect_nticks: 4 
   heartbeat_ticks: 1
- `
+`
 
 type Config struct {
 	Conn struct {

@@ -7,8 +7,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: spin-worker
-  minReplicas: 1
-  maxReplicas: 300
+  minReplicas: 640
+  maxReplicas: 640
   metrics:
   - type: Resource
     resource:
@@ -21,5 +21,5 @@ spec:
       stabilizationWindowSeconds: 0
       policies:
       - type: Pods
-        value: 300
+        value: 640
         periodSeconds: 1

@@ -17,20 +17,20 @@ import (
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/rand"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
 
 const (
 	GRP0      = "GRP0"
-	DIRGRP0   = group.GRPDIR + GRP0 + "/"
 	CRASH     = 1000
 	PARTITION = 200
 	NETFAIL   = 200
 	NTRIALS   = "3001"
 	JOBDIR    = "name/"
 )
+
+var DIRGRP0 = group.GrpPath(JOBDIR, GRP0) + "/"
 
 func TestWaitClosed(t *testing.T) {
 	ts := test.MakeTstateAll(t)
@@ -56,6 +56,8 @@ func TestServerCrash(t *testing.T) {
 	sem := semclnt.MakeSemClnt(ts.FsLib, DIRGRP0+"sem")
 	err := sem.Init(0)
 	assert.Nil(t, err)
+
+	db.DPrintf("TEST", "Sem %v", DIRGRP0+"sem")
 
 	ch := make(chan error)
 	go func() {

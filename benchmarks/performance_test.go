@@ -7,7 +7,12 @@ import (
 	"time"
 
 	"ulambda/benchmarks"
+	"ulambda/config"
 	db "ulambda/debug"
+	"ulambda/fslib"
+	np "ulambda/ninep"
+	"ulambda/perf"
+	"ulambda/realm"
 	"ulambda/test"
 )
 
@@ -51,4 +56,32 @@ func printResults(rs *benchmarks.RawResults) {
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
 	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====\nLatency\n-----\nMean: %v (usec) Std: %v (usec)\nStd is %v%% of the mean\n=====\n\n", fnName, mean, std, ratio)
+}
+
+// Monitor how many cores have been assigned to a realm.
+func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
+	p := perf.MakePerfMulti("TEST", ts.RealmId())
+	go func() {
+		cc := config.MakeConfigClnt(fslib.MakeFsLib("test"))
+		cfgPath := realm.RealmConfPath(ts.RealmId())
+		cfg := &realm.RealmConfig{}
+		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+			db.DFatalf("Read config err: %v", err)
+		}
+		p.TptTick(float64(cfg.NCores))
+		for {
+			if err := cc.WaitConfigChange(cfgPath); err != nil {
+				db.DPrintf(db.ALWAYS, "Error WaitConfigChange: %v", err)
+				return
+			}
+			// Make sure changes don't get put in the same tpt bucket.
+			time.Sleep(time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
+			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
+				return
+			}
+			p.TptTick(float64(cfg.NCores))
+		}
+	}()
+	return p
 }

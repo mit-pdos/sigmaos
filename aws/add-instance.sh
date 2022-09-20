@@ -4,11 +4,12 @@
 # setup-instance.sh.
 
 usage() {
-  echo "Usage: $0 --vpc VPC --vm VM-name" 1>&2
+  echo "Usage: $0 --vpc VPC --vm VM-name [--type TYPE]" 1>&2
 }
 
 VPC=""
 NAME=""
+TYPE="t3.small"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -20,6 +21,11 @@ while [[ $# -gt 0 ]]; do
   --vm)
     shift
     NAME=$1
+    shift
+    ;;
+  --type)
+    shift
+    TYPE=$1
     shift
     ;;
   -help)
@@ -39,7 +45,7 @@ if [ -z "$VPC" ] || [ -z "$NAME" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-./mkvpc.py --vpc $VPC $NAME
+./mkvpc.py --vpc $VPC --instance_type $TYPE $NAME
 
 vm=`./lsvpc.py $VPC | grep -w $NAME | cut -d " " -f 5`
 echo "SETUP $vm"

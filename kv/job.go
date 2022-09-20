@@ -51,13 +51,13 @@ func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname, grp string, n
 	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
 }
 
-func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
+func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, nkeys int) (*KvClerk, error) {
 	// Create keys
 	clrk, err := MakeClerkFsl(fsl, pclnt, job)
 	if err != nil {
 		return nil, err
 	}
-	for i := uint64(0); i < NKEYS; i++ {
+	for i := uint64(0); i < uint64(nkeys); i++ {
 		err := clrk.Put(MkKey(i), []byte{})
 		if err != nil {
 			return clrk, err
@@ -86,4 +86,8 @@ func StopClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {
 	}
 	status, err := pclnt.WaitExit(pid)
 	return status, err
+}
+
+func RemoveJob(fsl *fslib.FsLib, job string) error {
+	return fsl.RmDir(JobDir(job))
 }

@@ -12,10 +12,17 @@ import (
 	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/rand"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
+
+// XXX REMOVE AFTER DEADLINE PUSH
+type SBTuple struct {
+	*procclnt.ProcClnt
+	procs []*proc.Proc
+}
 
 //
 // A set of helper functions that we use across our benchmarks.
@@ -39,8 +46,33 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
-	_, errs := ts.SpawnBurst(ps)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	c := make(chan bool)
+	for i := range ps {
+		go func(i int) {
+			_, errs := ts.SpawnBurst([]*proc.Proc{ps[i]})
+			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+			c <- true
+		}(i)
+	}
+	for _ = range ps {
+		<-c
+	}
+}
+
+// XXX REMOVE AFTER DEADLINE PUSH
+func spawnBurstProcs2(ts *test.Tstate, sbs []*SBTuple) {
+	db.DPrintf("TEST", "Burst-spawning %v procs", len(sbs))
+	c := make(chan bool)
+	for _, sb := range sbs {
+		go func(sb *SBTuple) {
+			_, errs := sb.SpawnBurst(sb.procs)
+			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+			c <- true
+		}(sb)
+	}
+	for _ = range sbs {
+		<-c
+	}
 }
 
 func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -49,6 +81,24 @@ func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 	}
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
+}
+
+// XXX REMOVE AFTER DEADLINE PUSH
+func waitStartProcs2(ts *test.Tstate, sbs []*SBTuple) {
+	c := make(chan bool)
+	for _, sb := range sbs {
+		go func(sb *SBTuple) {
+			for _, p := range sb.procs {
+				err := sb.WaitStart(p.Pid)
+				assert.Nil(ts.T, err, "WaitStart: %v", err)
+			}
+			c <- true
+		}(sb)
+	}
+	for _ = range sbs {
+		<-c
+	}
+	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(sbs))
 }
 
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -136,7 +186,7 @@ func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
 	return ds
 }
 
-func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore) ([]*KVJobInstance, []interface{}) {
+func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
 	// If we're running with unbounded clerks...
 	if len(phases) > 0 {
 		assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
@@ -144,7 +194,7 @@ func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []
 	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ji := MakeKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdncore, ckncore)
+		ji := MakeKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdncore, ckncore, auto, redisaddr)
 		js = append(js, ji)
 		is = append(is, ji)
 	}

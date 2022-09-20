@@ -464,7 +464,11 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized: took too long (%v msec)", end.Sub(start).Milliseconds())
 
 	// Check that work-stealing symlinks were cleaned up.
-	sts, _, err := ts.ReadDir(np.PROCD_WS)
+	sts, _, err := ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	assert.Nil(t, err, "Readdir %v", err)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+
+	sts, _, err = ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 	assert.Nil(t, err, "Readdir %v", err)
 	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
 
@@ -527,6 +531,24 @@ func TestBurstSpawn(t *testing.T) {
 		assert.Nil(t, err, "WaitExit: %v", err)
 		assert.True(t, status.IsStatusEvicted(), "Wrong status: %v", status)
 	}
+
+	ts.Shutdown()
+}
+
+func TestSpawnProcdCrash(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	// Spawn a proc which can't possibly be run by any procd.
+	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores*2))
+
+	err := ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "KillOne: %v", err)
+
+	err = ts.WaitStart(pid)
+	assert.NotNil(t, err, "WaitStart: %v", err)
+
+	_, err = ts.WaitExit(pid)
+	assert.NotNil(t, err, "WaitExit: %v", err)
 
 	ts.Shutdown()
 }

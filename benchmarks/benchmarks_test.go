@@ -1,7 +1,10 @@
 package benchmarks_test
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,10 +12,41 @@ import (
 
 	"ulambda/benchmarks"
 	db "ulambda/debug"
+	"ulambda/fslib"
 	"ulambda/linuxsched"
+	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/test"
+	"ulambda/wc"
 )
+
+// Parameters
+var MR_APP string
+var KV_AUTO string
+var NKVD int
+var NCLERK int
+var CLERK_DURATION string
+var CLERK_NCORE proc.Tcore
+var KVD_NCORE proc.Tcore
+var REALM2 string
+var REDIS_ADDR string
+
+// Read & set the proc version.
+func init() {
+	var nc int
+	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
+	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
+	flag.IntVar(&NKVD, "nkvd", 1, "Number of kvds.")
+	flag.IntVar(&NCLERK, "nclerk", 1, "Number of clerks.")
+	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
+	flag.IntVar(&nc, "clerk_ncore", 1, "Clerk Ncore")
+	CLERK_NCORE = proc.Tcore(nc)
+	flag.IntVar(&nc, "kvd_ncore", 2, "KVD Ncore")
+	KVD_NCORE = proc.Tcore(nc)
+	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
+	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
+}
 
 // ========== Common parameters ==========
 const (
@@ -35,31 +69,52 @@ const (
 	SLEEP_MICRO    = "5000us"
 )
 
-// ========== App parameters ==========
-const (
-	MR_APP                = "mr-grep-wiki2G.yml"
-	N_MR_JOBS_APP         = 1
-	N_KV_JOBS_APP         = 1
-	KV_CLERK_NCLERKS_APP  = 1
-	KV_CLERK_DURATION_APP = "90s"
-	KV_CLERK_NCORE_APP    = 1
-	KV_KVD_NCORE_APP      = 2
-)
-
-// ========== Realm parameters ==========
-const (
-	N_TRIALS_REALM          = 1000
-	BALANCE_REALM_1         = "arielck"
-	BALANCE_REALM_2         = "test-realm"
-	BALANCE_MR_APP_REALM    = "mr-grep-wiki.yml"
-	KV_CLERK_NCLERKS_REALM  = 8
-	KV_CLERK_DURATION_REALM = "90s"
-	KV_CLERK_NCORE_REALM    = 1
-	KV_KVD_NKVD_REALM       = 1
-	KV_KVD_NCORE_REALM      = 2
-)
-
 var TOTAL_N_CORES_SIGMA_REALM = 0
+
+func TestJsonEncodeTpt(t *testing.T) {
+	nruns := 50
+	N_KV := 1000000
+	kvs := make([]*mr.KeyValue, 0, N_KV)
+	for i := 0; i < N_KV; i++ {
+		kvs = append(kvs, &mr.KeyValue{"", ""})
+	}
+	start := time.Now()
+	n := 0
+	for i := 0; i < nruns; i++ {
+		for _, kv := range kvs {
+			b, err := json.Marshal(kv)
+			assert.Nil(t, err, "Marshal")
+			n += len(b)
+		}
+	}
+	mb := 1024.0 * 1024.0
+	db.DPrintf(db.ALWAYS, "Marshaling throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
+}
+
+func TestWCMapfTpt(t *testing.T) {
+	N_WORDS := 1024 * 1024 * 100
+	WORD_LEN := 2
+	b := make([]byte, 0, N_WORDS*(WORD_LEN+1))
+	for i := 0; i < N_WORDS; i++ {
+		for j := 0; j < WORD_LEN; j++ {
+			b = append(b, 'A')
+		}
+		b = append(b, ' ')
+	}
+	s := string(b)
+	db.DPrintf(db.ALWAYS, "Input length: %vMB", len(s)/(1024*1024))
+	n := 0
+	start := time.Now()
+	wc.Map("", strings.NewReader(s), func(kv *mr.KeyValue) error {
+		b, err := json.Marshal(kv)
+		assert.Nil(t, err, "Marshal")
+		n += len(b)
+		return nil
+	})
+	n += len(s)
+	mb := 1024.0 * 1024.0
+	db.DPrintf(db.ALWAYS, "WC Mapping throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
+}
 
 // Length of time required to do a simple matrix multiplication.
 func TestNiceMatMulBaseline(t *testing.T) {
@@ -176,10 +231,10 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAppRunMRWC(t *testing.T) {
+func TestAppMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_MR_JOBS_APP)
-	jobs, apps := makeNMRJobs(ts, N_MR_JOBS_APP, MR_APP)
+	rs := benchmarks.MakeRawResults(1)
+	jobs, apps := makeNMRJobs(ts, 1, MR_APP)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -189,18 +244,20 @@ func TestAppRunMRWC(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorCoresAssigned(ts)
+	defer p.Done()
 	runOps(ts, apps, runMR, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
 
-func TestAppRunKVRepl(t *testing.T) {
+func runKVTest(t *testing.T, nReplicas int) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
+	rs := benchmarks.MakeRawResults(1)
 	setNCoresSigmaRealm(ts)
-	nclerks := []int{0, int(TOTAL_N_CORES_SIGMA_REALM) / 4, int(TOTAL_N_CORES_SIGMA_REALM) / 2, int(TOTAL_N_CORES_SIGMA_REALM) / 4, 0}
-	phases := parseDurations(ts, []string{"5s", "5s", "5s", "5s", "5s"})
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, int(TOTAL_N_CORES_SIGMA_REALM)/6, 3, nclerks, phases, "", 0, 0)
+	nclerks := []int{NCLERK}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
+	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -210,53 +267,81 @@ func TestAppRunKVRepl(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	p := monitorCoresAssigned(ts)
 	runOps(ts, ji, runKV, rs)
+	defer p.Done()
 	printResults(rs)
 	ts.Shutdown()
 }
 
-func TestAppRunKVPerKVDThroughput(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_KV_JOBS_APP)
-	setNCoresSigmaRealm(ts)
-	nclerks := []int{KV_CLERK_NCLERKS_APP}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", KV_CLERK_NCLERKS_APP)
-	jobs, ji := makeNKVJobs(ts, N_KV_JOBS_APP, 1, 0, nclerks, nil, KV_CLERK_DURATION_APP, proc.Tcore(KV_KVD_NCORE_APP), proc.Tcore(KV_CLERK_NCORE_APP))
-	// XXX Clean this up/hide this somehow.
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	runOps(ts, ji, runKV, rs)
-	printResults(rs)
-	ts.Shutdown()
+func TestAppKVUnrepl(t *testing.T) {
+	runKVTest(t, 0)
+}
+
+func TestAppKVRepl(t *testing.T) {
+	runKVTest(t, 3)
 }
 
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
-//
-// XXX Maybe we should do a version with procs that don't spin & consume so
-// much CPU?
-//
-// XXX A bit wonky, since we'll want to dealloc all the machines from the
-// realms between runs.
-//
-// XXX We should probably try this one both warm and cold.
-func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
+func TestRealmBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
 	setNCoresSigmaRealm(ts)
+	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", TOTAL_N_CORES_SIGMA_REALM)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
-	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
+	p := monitorCoresAssigned(ts)
+	sbs := []*SBTuple{}
+	for i := 0; i < len(ps); i += 5 {
+		fsl := fslib.MakeFsLibAddr("sbt", ts.NamedAddr())
+		pclnt := procclnt.MakeProcClntTmp(fsl, ts.NamedAddr())
+		sbs = append(sbs, &SBTuple{pclnt, ps[i : i+5]})
+	}
+	runOps(ts, []interface{}{sbs}, spawnBurstWaitStartProcs, rs)
+	defer p.Done()
 	printResults(rs)
 	evictProcs(ts, ps)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+func TestLambdaBurst(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(1)
+	makeOutDir(ts)
+	// Find the total number of cores available for spinners across all machines.
+	// We need to get this in order to find out how many spinners to start.
+	N_LAMBDAS := 720
+	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
+	ss, is := makeNSemaphores(ts, N_LAMBDAS)
+	// Init semaphores first.
+	for _, i := range is {
+		initSemaphore(ts, time.Now(), i)
+	}
+	runOps(ts, []interface{}{ss}, invokeWaitStartLambdas, rs)
+	printResults(rs)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+func TestLambdaInvokeWaitStart(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(720)
+	makeOutDir(ts)
+	// Find the total number of cores available for spinners across all machines.
+	// We need to get this in order to find out how many spinners to start.
+	N_LAMBDAS := 640
+	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
+	_, is := makeNSemaphores(ts, N_LAMBDAS)
+	// Init semaphores first.
+	for _, i := range is {
+		initSemaphore(ts, time.Now(), i)
+	}
+	runOps(ts, is, invokeWaitStartOneLambda, rs)
+	printResults(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -266,24 +351,26 @@ func TestRealmSpawnBurstWaitStartSpinners(t *testing.T) {
 // realm-level software balance resource requests across realms.
 func TestRealmBalance(t *testing.T) {
 	done := make(chan bool)
-	// Structures for mr
-	ts1 := test.MakeTstateRealm(t, BALANCE_REALM_1)
-	rs1 := benchmarks.MakeRawResults(1)
-	// Structure for kv
-	ts2 := test.MakeTstateRealm(t, BALANCE_REALM_2)
-	rs2 := benchmarks.MakeRawResults(1)
 	// Find the total number of cores available for spinners across all machines.
 	ts := test.MakeTstateAll(t)
 	setNCoresSigmaRealm(ts)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	rs1 := benchmarks.MakeRawResults(1)
+	// Structure for kv
+	ts2 := test.MakeTstateRealm(t, REALM2)
+	rs2 := benchmarks.MakeRawResults(1)
 	// Prep MR job
-	mrjobs, mrapps := makeNMRJobs(ts1, 1, BALANCE_MR_APP_REALM)
-	// Need at least one kv realm group.
-	assert.True(ts2.T, TOTAL_N_CORES_SIGMA_REALM >= 6, "Too few cores to run benchmark: %v < %v", TOTAL_N_CORES_SIGMA_REALM, 6)
+	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep KV job
-	nclerks := []int{KV_CLERK_NCLERKS_REALM}
+	nclerks := []int{NCLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, KV_KVD_NKVD_REALM, 0, nclerks, nil, KV_CLERK_DURATION_REALM, proc.Tcore(KV_KVD_NCORE_REALM), proc.Tcore(KV_CLERK_NCORE_REALM))
+	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
+	p1 := monitorCoresAssigned(ts1)
+	defer p1.Done()
+	p2 := monitorCoresAssigned(ts2)
+	defer p2.Done()
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)
@@ -301,7 +388,7 @@ func TestRealmBalance(t *testing.T) {
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	// Sleep for a bit
-	time.Sleep(5 * time.Second)
+	time.Sleep(70 * time.Second)
 	// Kick off KV jobs
 	kvjobs[0].ready <- true
 	// Wait for both jobs to finish.

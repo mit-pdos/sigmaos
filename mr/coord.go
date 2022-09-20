@@ -3,6 +3,7 @@ package mr
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -114,8 +115,18 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) makeTask(bin string, args []string) *proc.Proc {
-	p := proc.MakeProc(bin, args)
+func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem, first bool) *proc.Proc {
+	var pid proc.Tpid
+	if first {
+		pid = proc.Tpid("a" + proc.GenPid().String())
+	} else {
+		pid = proc.Tpid("b" + proc.GenPid().String())
+	}
+	p := proc.MakeProcPid(pid, bin, args)
+	//	if mb > 0 {
+	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
+	//	}
+	p.SetMem(mb)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
@@ -124,13 +135,14 @@ func (c *Coord) makeTask(bin string, args []string) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz})
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 1900, true)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
+	// TODO: set dynamically based on input file combined size.
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 1900, false)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
@@ -313,11 +325,21 @@ func (c *Coord) recover(dir string) {
 }
 
 // XXX do something for stragglers?
-func (c *Coord) Round() {
+func (c *Coord) Round(ttype string) {
+	mapsDone := false
+	start := time.Now()
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
-		m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		if ttype == "map" {
+			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+		} else if ttype == "reduce" {
+			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		} else if ttype == "all" {
+			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+		} else {
+			db.DFatalf("Unknown ttype: %v", ttype)
+		}
 		if m <= 0 {
 			break
 		}
@@ -328,6 +350,10 @@ func (c *Coord) Round() {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
 			}
 			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
+			if !mapsDone && m < c.nmaptask {
+				mapsDone = true
+				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", time.Since(start).Seconds())
+			}
 		}
 	}
 }
@@ -362,7 +388,15 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		c.Round()
+		// c.Round("all")
+		start := time.Now()
+		c.Round("map")
+		n := c.doneTasks(MapTask(c.job) + DONE)
+		if n == c.nmaptask {
+			ms := time.Since(start).Milliseconds()
+			log.Printf("map phase took %v ms\n", ms)
+			c.Round("reduce")
+		}
 		if !c.doRestart() {
 			break
 		}

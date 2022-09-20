@@ -1,7 +1,6 @@
 package snapshot_test
 
 import (
-	"log"
 	"path"
 	"strconv"
 	"strings"
@@ -64,7 +63,7 @@ func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 		assert.Nil(ts.T, err, "Get addr")
 		addrs = append(addrs, addr)
 	}
-	log.Printf("Replica addrs: %v", addrs)
+	db.DPrintf(db.ALWAYS, "Replica addrs: %v", addrs)
 	err := ts.Symlink(fslib.MakeTarget(addrs), REPLICA_SYMLINK, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 }
@@ -83,7 +82,7 @@ func checkFiles(ts *test.Tstate, n int) {
 		b, err := ts.GetFile(path.Join(REPLICA_SYMLINK, i_str))
 		assert.Nil(ts.T, err, "Getfile:")
 		if err != nil {
-			log.Printf(err.Error())
+			db.DPrintf(db.ALWAYS, "File err %v", err.Error())
 		}
 		assert.Equal(ts.T, i_str, string(b), "File contents")
 	}
@@ -142,8 +141,12 @@ func TestRestoreSimple(t *testing.T) {
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
+	db.DPrintf("TEST", "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid)
+	db.DPrintf("TEST", "Done take snapshot")
+	db.DPrintf("TEST", "About to restore snapshot")
 	restoreSnapshot(ts, fsl1, pid, b)
+	db.DPrintf("TEST", "Done restore snapshot")
 
 	ts.Shutdown()
 }
@@ -194,9 +197,13 @@ func TestRestoreStateSimple(t *testing.T) {
 	checkFiles(ts, N_FILES)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
+	_, err = fsl1.Stat(path.Join(np.MEMFS, pid2.String(), np.SNAPDEV) + "/")
+	assert.Nil(ts.T, err, "Bad stat: %v", err)
 
 	// Read the snapshot from replica a
+	db.DPrintf("TEST", "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid1)
+	db.DPrintf("TEST", "Done take snapshot")
 
 	// Kill the first replica (so future requests hit the second replica).
 	killMemfs(ts, pid1)
@@ -247,6 +254,8 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
+	_, err = fsl1.Stat(path.Join(np.MEMFS, pid2.String(), np.SNAPDEV) + "/")
+	assert.Nil(ts.T, err, "Bad stat: %v", err)
 	// Read the snapshot from replica a
 	b := takeSnapshot(ts, fsl1, pid1)
 

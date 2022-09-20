@@ -43,6 +43,7 @@ func Hz() int {
 const (
 	OUTPUT_PATH = np.UXROOT + "perf-output/"
 	PPROF       = "_PPROF"
+	PPROF_MEM   = "_PPROF_MEM"
 	CPU         = "_CPU"
 	TPT         = "_TPT"
 )
@@ -68,6 +69,7 @@ type Perf struct {
 	done           uint32
 	util           bool
 	pprof          bool
+	pprofMem       bool
 	tpt            bool
 	utilChan       chan bool
 	utilFile       *os.File
@@ -76,6 +78,7 @@ type Perf struct {
 	cpuUtilPct     []float64
 	cores          map[string]bool
 	pprofFile      *os.File
+	pprofMemFile   *os.File
 	tpts           []float64
 	times          []time.Time
 	tptFile        *os.File
@@ -83,6 +86,12 @@ type Perf struct {
 }
 
 func MakePerf(name string) *Perf {
+	return MakePerfMulti(name, "")
+}
+
+// A slight hack for benchmarks which wish to have 2 perf structures (one for
+// each realm).
+func MakePerfMulti(name string, name2 string) *Perf {
 	p := &Perf{}
 	p.name = name
 	p.utilChan = make(chan bool, 1)
@@ -101,17 +110,25 @@ func MakePerf(name string) *Perf {
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
 		db.DFatalf("Error Mkdir: %v", err)
 	}
+	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
+	if name2 != "" {
+		basePath += "-" + name2
+	}
 	// Set up pprof caputre
 	if ok := labels[name+PPROF]; ok {
-		p.setupPprof(path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-pprof.out"))
+		p.setupPprof(basePath + "-pprof.out")
+	}
+	// Set up pprof caputre
+	if ok := labels[name+PPROF_MEM]; ok {
+		p.setupPprofMem(basePath + "-pprof-mem.out")
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
-		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-cpu.out"))
+		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
 	}
 	// Set up throughput caputre
 	if ok := labels[name+TPT]; ok {
-		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, path.Join(OUTPUT_PATH, path.Base(proc.GetName())+"-tpt.out"))
+		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
 	return p
 }
@@ -121,6 +138,10 @@ func (p *Perf) TptTick(tpt float64) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	p.tptTickL(tpt)
+}
+
+func (p *Perf) tptTickL(tpt float64) {
 	// If we aren't recording throughput, return.
 	if !p.tpt {
 		return
@@ -157,6 +178,7 @@ func (p *Perf) Done() {
 	if p.done == 0 {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
+		p.teardownPprofMem()
 		p.teardownUtil()
 		p.teardownTpt()
 	}
@@ -166,6 +188,7 @@ func (p *Perf) Done() {
 func GetCPUTimePid(pid string) (utime, stime uint64) {
 	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Couldn't get CPU time: %v", err)
 		return
 	}
 	fields := strings.Split(string(contents), " ")
@@ -322,8 +345,11 @@ func (p *Perf) setupTpt(sampleHz int, fpath string) {
 	}
 	p.tptFile = f
 	// Pre-allocate a large number of entries (40 secs worth)
-	p.times = make([]time.Time, 1, 40*sampleHz)
-	p.tpts = make([]float64, 2, 40*sampleHz)
+	p.times = make([]time.Time, 0, 40*sampleHz)
+	p.tpts = make([]float64, 0, 40*sampleHz)
+
+	p.times = append(p.times, time.Now())
+	p.tpts = append(p.tpts, 0.0)
 
 	p.mu.Unlock()
 }
@@ -343,6 +369,18 @@ func (p *Perf) setupPprof(fpath string) {
 	}
 }
 
+func (p *Perf) setupPprofMem(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprofMem profile file: %v, %v", fpath, err)
+	}
+	p.pprofMem = true
+	p.pprofMemFile = f
+}
+
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
@@ -350,6 +388,21 @@ func (p *Perf) teardownPprof() {
 		p.pprof = false
 		pprof.StopCPUProfile()
 		p.pprofFile.Close()
+	}
+}
+
+// Caller holds lock.
+func (p *Perf) teardownPprofMem() {
+	if p.pprofMem {
+		// Avoid double-closing
+		p.pprofMem = false
+		// Don't do GC before collecting the heap profile.
+		// runtime.GC() // get up-to-date statistics
+		// Write a heap profile
+		if err := pprof.WriteHeapProfile(p.pprofMemFile); err != nil {
+			db.DFatalf("could not write memory profile: %v", err)
+		}
+		p.pprofMemFile.Close()
 	}
 }
 
@@ -372,7 +425,7 @@ func (p *Perf) teardownTpt() {
 	if p.tpt {
 		p.tpt = false
 		// Ignore first entry.
-		for i := 1; i < len(p.times); i++ {
+		for i := 0; i < len(p.times); i++ {
 			if _, err := p.tptFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
 				db.DFatalf("Error writing to tpt file: %v", err)
 			}

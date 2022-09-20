@@ -12,15 +12,16 @@ func ScanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	for width := 0; start < len(data); start += width {
 		var r rune
 		r, width = utf8.DecodeRune(data[start:])
-		if unicode.IsLetter(r) || unicode.IsNumber(r) || r != '_' {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) { //|| r == '_' {
 			break
 		}
 	}
+
 	// Scan until non letter
 	for width, i := 0, start; i < len(data); i += width {
 		var r rune
 		r, width = utf8.DecodeRune(data[i:])
-		if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' {
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) { //&& r != '_' {
 			return i + width, data[start:i], nil
 		}
 	}

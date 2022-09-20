@@ -44,11 +44,11 @@ func (f *ReplyFuture) Complete(fc *np.Fcall) {
 }
 
 // Abort waiting for a reply.
-func (f *ReplyFuture) Abort(sid np.Tsession) {
+func (f *ReplyFuture) Abort(cli np.Tclient, sid np.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = np.MakeFcall(np.MkErr(np.TErrClosed, nil).Rerror(), sid, nil, nil, np.NoFence)
+		f.reply = np.MakeFcall(np.MkErr(np.TErrClosed, nil).Rerror(), cli, sid, nil, nil, np.NoFence)
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

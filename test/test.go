@@ -32,7 +32,8 @@ type Tstate struct {
 	wg      sync.WaitGroup
 	T       *testing.T
 	*kernel.System
-	replicas []*kernel.System
+	replicas  []*kernel.System
+	namedAddr []string
 }
 
 func makeTstate(t *testing.T, realmid string) *Tstate {
@@ -40,6 +41,7 @@ func makeTstate(t *testing.T, realmid string) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
 	ts.realmid = realmid
+	ts.namedAddr = fslib.Named()
 	return ts
 }
 
@@ -65,6 +67,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	ts := makeTstate(t, realmid)
 	// XXX make fslib exit?
 	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
+	ts.namedAddr = rconfig.NamedAddrs
 	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	return ts
 }
@@ -89,6 +92,10 @@ func (ts *Tstate) RealmId() string {
 	return ts.realmid
 }
 
+func (ts *Tstate) NamedAddr() []string {
+	return ts.namedAddr
+}
+
 func (ts *Tstate) Shutdown() {
 	db.DPrintf("TEST", "Shutting down")
 	ts.System.Shutdown()
@@ -96,7 +103,7 @@ func (ts *Tstate) Shutdown() {
 		r.Shutdown()
 	}
 	N := 100 // Crashing procds in mr test leave several fids open; maybe too many?
-	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, ts.PathClnt.FidClnt)
+	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, "Too many FIDs open (%v): %v", ts.PathClnt.FidClnt.Len(), ts.PathClnt.FidClnt)
 	db.DPrintf("TEST", "Done shutting down")
 }
 
@@ -137,14 +144,19 @@ func setVersion() {
 
 const (
 	MBYTE = 1 << 20
-	BUFSZ = 1 << 16
+	BUFSZ = 4 * MBYTE
 )
 
 func Mbyte(sz np.Tlength) float64 {
 	return float64(sz) / float64(MBYTE)
 }
 
-func Tput(sz np.Tlength, ms int64) string {
+func TputStr(sz np.Tlength, ms int64) string {
 	s := float64(ms) / 1000
 	return fmt.Sprintf("%.2fMB/s", Mbyte(sz)/s)
+}
+
+func Tput(sz np.Tlength, ms int64) float64 {
+	t := float64(ms) / 1000
+	return Mbyte(sz) / t
 }

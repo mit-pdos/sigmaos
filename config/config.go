@@ -1,12 +1,9 @@
 package config
 
 import (
-	"runtime/debug"
-
 	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
-	np "ulambda/ninep"
 )
 
 type ConfigClnt struct {
@@ -20,39 +17,39 @@ func MakeConfigClnt(fsl *fslib.FsLib) *ConfigClnt {
 }
 
 // Watch a config file
-func (clnt *ConfigClnt) WatchConfig(path string) chan bool {
+func (clnt *ConfigClnt) WaitConfigChange(path string) error {
 	done := make(chan bool)
 	err := clnt.SetRemoveWatch(path, func(path string, err error) {
-		if err != nil && np.IsErrUnreachable(err) {
-			db.DFatalf("Error Watch in ConfigClnt.WatchConfig: %v", err)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error in SetRemoveWatch: %v", err)
 		}
 		done <- true
 	})
-	if err != nil && np.IsErrUnreachable(err) {
-		debug.PrintStack()
-		db.DFatalf("Error SetRemoveWatch in ConfigClnt.WatchConfig: %v", err)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error SetRemoveWatch in ConfigClnt: %v", err)
+		return err
 	}
-	return done
+	<-done
+	return nil
 }
 
 // Read the config stored at path into cfg. Will block until the config file
 // becomes available.
-func (clnt *ConfigClnt) ReadConfig(path string, cfg interface{}) {
-	for {
-		err := clnt.GetFileJson(path, cfg)
-		if err == nil {
-			break
-		}
-		done := clnt.WatchConfig(path)
-		<-done
+func (clnt *ConfigClnt) ReadConfig(path string, cfg interface{}) error {
+	err := clnt.GetFileJsonWatch(path, cfg)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error GetFileJsonWatch in ConfigClnt: %v", err)
+		return err
 	}
+	return nil
 }
 
 // Write cfg into path
-func (clnt *ConfigClnt) WriteConfig(path string, cfg interface{}) {
+func (clnt *ConfigClnt) WriteConfig(path string, cfg interface{}) error {
 	// Make the realm config file.
 	if err := atomic.PutFileJsonAtomic(clnt.FsLib, path, 0777, cfg); err != nil {
-		debug.PrintStack()
-		db.DFatalf("Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
+		db.DPrintf(db.ALWAYS, "Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
+		return err
 	}
+	return nil
 }

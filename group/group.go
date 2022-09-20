@@ -314,6 +314,8 @@ func RunMember(jobdir, grp string) {
 	p := perf.MakePerf("GROUP")
 	defer p.Done()
 
+	mfs.GetStats().MonitorCPUUtil(nil)
+
 	mfs.Serve()
 	mfs.Done()
 }

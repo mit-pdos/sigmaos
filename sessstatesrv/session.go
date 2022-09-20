@@ -30,18 +30,20 @@ type Session struct {
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
 	Sid           np.Tsession
+	ClientId      np.Tclient
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
 }
 
-func makeSession(protsrv np.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv np.Protsrv, cid np.Tclient, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.rt = replies.MakeReplyTable()
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
+	sess.ClientId = cid
 	sess.lastHeartbeat = time.Now()
 	return sess
 }
@@ -79,7 +81,7 @@ func (sess *Session) Close() {
 		sess.unsetConnL(sess.conn)
 	}
 	// Empty & permanently close the replies table.
-	sess.rt.Close(sess.Sid)
+	sess.rt.Close(sess.ClientId, sess.Sid)
 }
 
 // The conn may be nil if this is a replicated op which came through

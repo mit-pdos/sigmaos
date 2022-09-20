@@ -119,16 +119,34 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(pid proc.Tpid, childProcdir, shared string) error {
+func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string) error {
 	// Directory which holds link to child procdir
-	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
+	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Spawn mkdir childs %v err %v\n", childDir, err)
-		return clnt.cleanupError(pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+		return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+	}
+	var q string
+	switch p.Type {
+	case proc.T_LC:
+		q = np.PROCD_RUNQ_LC
+	case proc.T_BE:
+		q = np.PROCD_RUNQ_BE
+	default:
+		db.DFatalf("Unknown proc type %v", p.Type)
+	}
+	var procfileLink string
+	if !p.IsPrivilegedProc() {
+		procfileLink = path.Join(np.PROCD, procdIp, q, p.Pid.String())
+	}
+	// Add a file telling WaitStart where to look for this child proc file in
+	// this procd's runq.
+	if _, err := clnt.PutFile(path.Join(childDir, proc.PROCFILE_LINK), 0777, np.OWRITE|np.OREAD, []byte(procfileLink)); err != nil {
+		db.DFatalf("Error PutFile addChild %v", err)
 	}
 	// Link in shared state from parent, if desired.
-	if len(shared) > 0 {
-		if err := clnt.Symlink([]byte(shared), path.Join(childDir, proc.SHARED), 0777); err != nil {
+	if len(p.GetShared()) > 0 {
+		if err := clnt.Symlink([]byte(p.GetShared()), path.Join(childDir, proc.SHARED), 0777); err != nil {
 			db.DPrintf("PROCCLNT_ERR", "Error addChild Symlink: %v", err)
 		}
 	}

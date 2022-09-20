@@ -4,13 +4,18 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
-	"sort"
+	// "sort"
 	"strconv"
 	"strings"
 	"time"
 
-	// "github.com/klauspost/readahead"
+	//	"runtime"
+	//	"runtime/debug"
+
+	"github.com/dustin/go-humanize"
+	"github.com/klauspost/readahead"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -78,59 +83,73 @@ type result struct {
 	n    np.Tlength
 }
 
-func (r *Reducer) readFile(ch chan result, file string) {
+func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
 	defer fsl.Exit()
 
-	kvs := make([]*KeyValue, 0)
 	sym := r.input + "/" + file + "/"
 	db.DPrintf("MR", "readFile %v\n", sym)
 	rdr, err := fsl.OpenReader(sym)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
-		ch <- result{nil, file, false, 0}
-		return
+		return 0, 0, false
 	}
 	defer rdr.Close()
 	start := time.Now()
 
 	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
-	//ardr, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
-	//if err != nil {
-	//	db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
-	//}
-	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
-		kv := a.(*KeyValue)
-		db.DPrintf("REDUCE1", "reduce %v/%v: kv %v\n", r.input, file, kv)
-		kvs = append(kvs, kv)
-		return nil
-	})
+	ardr, err := readahead.NewReaderSize(brdr, 4, test.BUFSZ)
 	if err != nil {
-		db.DPrintf("MR", "JsonReader %v err %v\n", sym, err)
-		ch <- result{nil, file, false, 0}
-	} else {
-		ch <- result{kvs, file, true, rdr.Nbytes()}
+		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	}
-	db.DPrintf("MR0", "Reduce readfile %v %v\n", sym, time.Since(start).Milliseconds())
-	return
+	for {
+		var kv KeyValue
+		if r := decodeKV(ardr, &kv); r != nil {
+			if r == io.EOF {
+				break
+			}
+			if r != nil {
+				err = r
+				break
+			}
+		}
+		if _, ok := data[kv.Key]; !ok {
+			data[kv.Key] = make([]string, 0)
+		}
+		data[kv.Key] = append(data[kv.Key], kv.Value)
+	}
+	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
+	if err != nil {
+		db.DPrintf("MR", "decodeKV %v err %v\n", sym, err)
+		return 0, 0, false
+	}
+	return rdr.Nbytes(), time.Since(start), true
 }
 
-func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, error) {
-	kvs := []*KeyValue{}
+type Tdata map[string][]string
+
+func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []string, error) {
+	data := make(map[string][]string, 0)
 	lostMaps := []string{}
 	files := make(map[string]bool)
 	nbytes := np.Tlength(0)
+	duration := time.Duration(0)
 	for len(files) < r.nmaptask {
 		sts, err := r.ReadDirWatch(input, func(sts []*np.Stat) bool {
 			return len(sts) == len(files)
 		})
 		if err != nil {
-			return 0, nil, nil, err
+			return 0, 0, nil, nil, err
+		}
+		randOffset := int(rand.Uint64())
+		if randOffset < 0 {
+			randOffset *= -1
 		}
 		n := 0
-		ch := make(chan result)
-		for _, st := range sts {
+		for i := range sts {
+			// Random offset to stop reducers from all banging on the same ux.
+			st := sts[(i+randOffset)%len(sts)]
 			if _, ok := files[st.Name]; !ok {
 				// Make sure we read an input file
 				// only once.  Since mappers are
@@ -140,41 +159,29 @@ func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, er
 				// filter here.
 				files[st.Name] = true
 				n += 1
-				go r.readFile(ch, st.Name)
-			}
-		}
-		for i := 0; i < n; i++ {
-			res := <-ch
-			db.DPrintf("REDUCE", "Read %v %v ok %v\n", r.input, res.name, res.ok)
-			if !res.ok {
-				// If !ok, then readFile failed to
-				// read input shard, perhaps the
-				// server holding the mapper's output
-				// crashed, or is unreachable. Keep
-				// track that we need to restart that
-				// mappers, but keep going processing
-				// other shards to see if more mappers
-				// need to be restarted.
-				lostMaps = append(lostMaps, strings.TrimPrefix(res.name, "m-"))
-			} else {
-				nbytes += res.n
-				kvs = append(kvs, res.kvs...)
+				m, d, ok := r.readFile(st.Name, data)
+				if !ok {
+					lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
+				}
+				//				runtime.GC()
+				//				debug.FreeOSMemory()
+				nbytes += m
+				duration += d
 			}
 		}
 	}
-	return nbytes, kvs, lostMaps, nil
+	return nbytes, duration, data, lostMaps, nil
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
-	b := fmt.Sprintf("%v %v\n", kv.K, kv.V)
+	b := fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
 	_, err := r.bwrt.Write([]byte(b))
 	return err
 }
 
 func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
-	start := time.Now()
-	nin, kvs, lostMaps, err := r.readFiles(r.input)
+	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
@@ -182,27 +189,14 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
-	sstart := time.Now()
-	sort.Sort(ByKey(kvs))
-	db.DPrintf("MR0", "Reduce Sort %v\n", time.Since(sstart).Milliseconds())
+	ms := duration.Milliseconds()
+	fmt.Printf("reduce readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
-	i := 0
-	for i < len(kvs) {
-		j := i + 1
-		for j < len(kvs) && kvs[j].K == kvs[i].K {
-			j++
-		}
-		bytesProcessed := 0
-		values := []string{}
-		for k := i; k < j; k++ {
-			values = append(values, kvs[k].V)
-			bytesProcessed += len(kvs[k].K) + len(kvs[k].V)
-		}
-		if err := r.reducef(kvs[i].K, values, r.emit); err != nil {
+	start := time.Now()
+	for k, vs := range data {
+		if err := r.reducef(k, vs, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
 		}
-		r.perf.TptTick(float64(bytesProcessed))
-		i = j
 	}
 
 	if err := r.bwrt.Flush(); err != nil {
@@ -211,16 +205,18 @@ func (r *Reducer) doReduce() *proc.Status {
 	if err := r.wrt.Close(); err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
+	// Include time spent writing output.
+	duration += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatusInfo(proc.StatusOK, r.input,
-		Result{false, r.input, nin, r.wrt.Nbytes(), time.Since(start).Milliseconds()})
+		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p := perf.MakePerf("MR-REDUCER")
+	p := perf.MakePerf("MRREDUCER")
 	defer p.Done()
 
 	r, err := makeReducer(reducef, args, p)

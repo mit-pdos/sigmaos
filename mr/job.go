@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -172,12 +173,13 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 	totOut := np.Tlength(0)
 	totWTmp := np.Tlength(0)
 	totRTmp := np.Tlength(0)
+	results := []*Result{}
 	for {
-		var r Result
-		if err := dec.Decode(&r); err == io.EOF {
+		r := &Result{}
+		if err := dec.Decode(r); err == io.EOF {
 			break
 		}
-		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		results = append(results, r)
 		if r.IsM {
 			totIn += r.In
 			totWTmp += r.Out
@@ -186,6 +188,12 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 			totRTmp += r.In
 		}
 	}
+	sort.Slice(results, func(i, j int) bool {
+		return test.Tput(results[i].In+results[i].Out, results[i].Ms) > test.Tput(results[j].In+results[j].Out, results[j].Ms)
+	})
+	for _, r := range results {
+		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.TputStr(r.In+r.Out, r.Ms))
+	}
 	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,
 		humanize.Bytes(uint64(totOut)),
@@ -193,4 +201,8 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 		humanize.Bytes(uint64(totRTmp)),
 	)
 	return nil
+}
+
+func RemoveJob(fsl *fslib.FsLib, job string) error {
+	return fsl.RmDir(JobDir(job))
 }

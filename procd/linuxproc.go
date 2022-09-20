@@ -18,7 +18,7 @@ import (
 
 const (
 	LC_PROC_PRIORITY = 0
-	BE_PROC_PRIORITY = 19
+	BE_PROC_PRIORITY = 0
 )
 
 type LinuxProc struct {
@@ -37,12 +37,11 @@ type LinuxProc struct {
 }
 
 func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
+	a.FinalizeEnv(pd.addr)
 	p := &LinuxProc{}
 	p.pd = pd
 	p.attr = a
 	db.DPrintf("PROCD", "Procd init: %v\n", p)
-	// Finalize the proc env with values related to this physical machine.
-	p.attr.FinalizeEnv(p.pd.addr)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	return p
 }

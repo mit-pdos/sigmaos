@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--realm REALM] [--profile PROFILE]" 1>&2
+  echo "Usage: $0 --realm REALM [--profile PROFILE] [--version VERSION]" 1>&2
 }
 
-REALM="test-realm"
+REALM=""
 PROFILE=""
+VERSION=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -17,6 +18,11 @@ while [[ $# -gt 0 ]]; do
   --profile)
     shift
     PROFILE="--profile $1"
+    shift
+    ;;
+  --version)
+    shift
+    VERSION=$1
     shift
     ;;
   -help)
@@ -31,7 +37,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -39,10 +45,13 @@ fi
 DIR=$(dirname $0)
 . $DIR/.env
 
+if [ -z "$VERSION" ]; then
+  VERSION=$(cat $VERSION_FILE)
+fi
+
 # Copy kernel & realm builds to S3
 aws s3 cp --recursive bin/realm s3://$REALM/bin/realm $PROFILE
 aws s3 cp --recursive bin/kernel s3://$REALM/bin/kernel $PROFILE
 
 # Copy versioned user procs to s3.
-VERSION=$(cat "${VERSION_FILE}")
 aws s3 cp --recursive bin/user s3://$REALM/bin/user/$VERSION $PROFILE

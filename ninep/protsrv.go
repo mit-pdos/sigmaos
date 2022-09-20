@@ -13,8 +13,8 @@ type Conn interface {
 type Fsrvfcall func(*Fcall)
 
 type SessServer interface {
-	Register(Tsession, Conn) *Err
-	Unregister(Tsession, Conn)
+	Register(Tclient, Tsession, Conn) *Err
+	Unregister(Tclient, Tsession, Conn)
 	SrvFcall(*Fcall)
 	Snapshot() []byte
 	Restore([]byte)

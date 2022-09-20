@@ -67,11 +67,25 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSeqMRGrep(t *testing.T) {
+func TestSeqGrep(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
 	p := proc.MakeProc("user/seqgrep", []string{job.Input})
+	err := ts.Spawn(p)
+	assert.Nil(t, err)
+	status, err := ts.WaitExit(p.Pid)
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK())
+	// assert.Equal(t, 795, n)
+	ts.Shutdown()
+}
+
+func TestSeqWc(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	job = mr.ReadJobConfig(app)
+
+	p := proc.MakeProc("user/seqwc", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.Pid)
@@ -131,7 +145,7 @@ func (ts *Tstate) compare() {
 func (ts *Tstate) checkJob() {
 	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
-	if app == "wc" {
+	if app == "mr-wc.yml" {
 		ts.compare()
 	}
 }

@@ -101,7 +101,7 @@ func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 		if strings.HasPrefix(mnt, group.JobDir(JobDir(kc.job))) {
 			kvd := strings.TrimPrefix(mnt, group.JobDir(JobDir(kc.job))+"/")
 			if !kvs.present(kvd) {
-				db.DPrintf("KVCLERK0", "Detach kv %v\n", kvd)
+				db.DPrintf("KVCLERK0", "Detach kv %v", kvd)
 				kc.Detach(group.GrpPath(JobDir(kc.job), kvd))
 			}
 		}
@@ -122,19 +122,19 @@ func (kc *KvClerk) switchConfig() error {
 	for {
 		err := kc.GetFileJsonWatch(KVConfig(kc.job), kc.conf)
 		if err != nil {
-			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVConfig(kc.job), err)
+			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v", KVConfig(kc.job), err)
 			return err
 		}
-		db.DPrintf("KVCLERK", "Conf %v\n", kc.conf)
+		db.DPrintf("KVCLERK", "Conf %v", kc.conf)
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {
-				db.DPrintf("KVCLERK_ERR", "version mismatch; retry\n")
+				db.DPrintf("KVCLERK_ERR", "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
 			}
-			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
+			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v", dirs, err)
 			return err
 		}
 
@@ -151,12 +151,12 @@ func (kc *KvClerk) fixRetry(err error) error {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
+		db.DPrintf("KVCLERK_ERR", "Wait for shard %v", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
 	if np.IsErrStale(err) {
-		db.DPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
+		db.DPrintf("KVCLERK_ERR", "fixRetry %v", err)
 		return kc.switchConfig()
 	}
 	return err
@@ -167,7 +167,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
-		db.DPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
+		db.DPrintf("KVCLERK", "o %v conf %v", o.kind, kc.conf)
 		fn := keyPath(kc.job, kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
@@ -210,7 +210,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
-	db.DPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
+	db.DPrintf("KVCLERK", "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k Tkey, off np.Toffset) ([]byte, error) {
@@ -251,4 +251,21 @@ func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
+}
+
+// Count the number of keys stored at each group.
+func (kc *KvClerk) GetKeyCountsPerGroup(keys []Tkey) map[string]int {
+	if err := kc.switchConfig(); err != nil {
+		db.DFatalf("Error switching KV config: %v", err)
+	}
+	cnts := make(map[string]int)
+	for _, k := range keys {
+		s := key2shard(k)
+		grp := kc.conf.Shards[s]
+		if _, ok := cnts[grp]; !ok {
+			cnts[grp] = 0
+		}
+		cnts[grp]++
+	}
+	return cnts
 }

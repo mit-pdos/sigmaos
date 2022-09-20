@@ -8,6 +8,7 @@ import (
 	"ulambda/intervals"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
+	"ulambda/rand"
 	"ulambda/sessstateclnt"
 )
 
@@ -16,8 +17,9 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	*sync.Cond
+	cli    np.Tclient
 	sid    np.Tsession
-	seqno  *np.Tseqno
+	seqno  np.Tseqno
 	closed bool
 	addrs  []string
 	nc     *netclnt.NetClnt
@@ -25,14 +27,16 @@ type SessClnt struct {
 	ivs    *intervals.Intervals
 }
 
-func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt, *np.Err) {
+func makeSessClnt(cli np.Tclient, addrs []string) (*SessClnt, *np.Err) {
 	c := &SessClnt{}
-	c.sid = sid
-	c.seqno = seqno
+	c.cli = cli
+	c.sid = np.Tsession(rand.Uint64())
+	c.seqno = 0
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
 	c.queue = sessstateclnt.MakeRequestQueue(addrs)
+	db.DPrintf("SESSCLNT", "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
 	nc, err := netclnt.MakeNetClnt(c, addrs)
 	if err != nil {
 		return nil, err
@@ -142,7 +146,7 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	if c.closed {
 		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, c.ivs.First(), f))
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

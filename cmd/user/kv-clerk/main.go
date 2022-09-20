@@ -1,49 +1,73 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kv"
 	"ulambda/perf"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/semclnt"
 )
 
 var done = int32(0)
+var ctx = context.Background()
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v [duration] [sempath] ", os.Args[0])
+		db.DFatalf("Usage: %v [duration] [keyOffset] [sempath] [redisaddr]", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
 	var dur time.Duration
+	var keyOffset int
 	var sempath string
 	if len(os.Args) > 2 {
 		timed = true
 		var err error
 		dur, err = time.ParseDuration(os.Args[2])
 		if err != nil {
-			db.DFatalf("Bad nput %v", err)
+			db.DFatalf("Bad dur %v", err)
 		}
-		sempath = os.Args[3]
+		keyOffset, err = strconv.Atoi(os.Args[3])
+		if err != nil {
+			db.DFatalf("Bad offset %v", err)
+		}
+		sempath = os.Args[4]
 	}
-	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), os.Args[1], fslib.Named())
-	if err != nil {
-		db.DFatalf("%v err %v", os.Args[0], err)
+	fsl := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
+	pclnt := procclnt.MakeProcClnt(fsl)
+	var rcli *redis.Client
+	var clk *kv.KvClerk
+	if len(os.Args) > 5 {
+		rcli = redis.NewClient(&redis.Options{
+			Addr:     os.Args[5],
+			Password: "",
+			DB:       0,
+		})
+	} else {
+		var err error
+		clk, err = kv.MakeClerkFsl(fsl, pclnt, os.Args[1])
+		if err != nil {
+			db.DFatalf("%v err %v", os.Args[0], err)
+		}
 	}
 
 	// Record performance.
 	p := perf.MakePerf("KVCLERK")
 	defer p.Done()
 
-	clk.Started()
-	run(clk, p, timed, dur, sempath)
+	pclnt.Started()
+	run(pclnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
 func waitEvict(kc *kv.KvClerk) {
@@ -55,12 +79,12 @@ func waitEvict(kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath string) {
+func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
 	if timed {
-		sclnt := semclnt.MakeSemClnt(kc.FsLib, sempath)
+		sclnt := semclnt.MakeSemClnt(pclnt.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
 		go func() {
@@ -74,7 +98,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 	for atomic.LoadInt32(&done) == 0 {
 		// this does NKEYS puts & gets, or appends & checks, depending on whether
 		// this is a time-bound clerk or an unbounded clerk.
-		err = test(kc, ntest, &nops, p, timed)
+		err = test(kc, rcli, ntest, keyOffset, &nops, p, timed)
 		if err != nil {
 			break
 		}
@@ -94,7 +118,7 @@ func run(kc *kv.KvClerk, p *perf.Perf, timed bool, dur time.Duration, sempath st
 			status = proc.MakeStatus(proc.StatusEvicted)
 		}
 	}
-	kc.Exited(status)
+	pclnt.Exited(status)
 }
 
 type Value struct {
@@ -136,24 +160,40 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	return nil
 }
 
-func test(kc *kv.KvClerk, ntest uint64, nops *uint64, p *perf.Perf, setget bool) error {
+func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		key := kv.MkKey(i)
+		key := kv.MkKey(i + keyOffset)
 		v := Value{proc.GetPid(), key, ntest}
 		if setget {
-			// If doing sets & gets (bounded clerk)
-			if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
-				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
+			// If running against redis.
+			if rcli != nil {
+				if err := rcli.Set(ctx, key.String(), proc.GetPid().String(), 0).Err(); err != nil {
+					db.DFatalf("Error redis cli set: %v", err)
+				}
+				// Record op for throughput calculation.
+				p.TptTick(1.0)
+				*nops++
+				if _, err := rcli.Get(ctx, key.String()).Result(); err != nil {
+					db.DFatalf("Error redis cli get: %v", err)
+				}
+				// Record op for throughput calculation.
+				p.TptTick(1.0)
+				*nops++
+			} else {
+				// If doing sets & gets (bounded clerk)
+				if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
+					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
+				}
+				// Record op for throughput calculation.
+				p.TptTick(1.0)
+				*nops++
+				if _, err := kc.Get(key, 0); err != nil {
+					return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
+				}
+				// Record op for throughput calculation.
+				p.TptTick(1.0)
+				*nops++
 			}
-			// Record op for throughput calculation.
-			p.TptTick(1.0)
-			*nops++
-			if _, err := kc.Get(key, 0); err != nil {
-				return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
-			}
-			// Record op for throughput calculation.
-			p.TptTick(1.0)
-			*nops++
 		} else {
 			// If doing appends (unbounded clerk)
 			if err := kc.AppendJson(key, v); err != nil {

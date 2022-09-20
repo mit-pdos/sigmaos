@@ -3,7 +3,7 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"log"
+	gopath "path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -20,6 +20,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/stats"
 	"ulambda/test"
 )
@@ -45,7 +46,7 @@ func TestInitFs(t *testing.T) {
 func TestRemoveBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -62,7 +63,7 @@ func TestRemoveBasic(t *testing.T) {
 func TestCreateTwice(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -75,7 +76,7 @@ func TestCreateTwice(t *testing.T) {
 func TestConnect(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	fd, err := ts.Create(fn, 0777, np.OWRITE)
 	assert.Equal(t, nil, err)
@@ -88,7 +89,7 @@ func TestConnect(t *testing.T) {
 	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
-	log.Printf("disconnected\n")
+	db.DPrintf(db.ALWAYS, "disconnected")
 
 	_, err = ts.Write(fd, d)
 	assert.True(t, np.IsErrUnreachable(err))
@@ -105,12 +106,12 @@ func TestConnect(t *testing.T) {
 func TestRemoveNonExistent(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.Remove(path + "this-file-does-not-exist")
+	err = ts.Remove(gopath.Join(path, "this-file-does-not-exist"))
 	assert.NotNil(t, err)
 
 	ts.Shutdown()
@@ -119,10 +120,10 @@ func TestRemoveNonExistent(t *testing.T) {
 func TestRemovePath(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	d1 := path + "/d1/"
+	d1 := gopath.Join(path, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
-	fn := d1 + "/f"
+	fn := gopath.Join(d1, "f")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -136,10 +137,51 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRemoveSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+
+	d1 := gopath.Join(path, "d1")
+	db.DPrintf(db.ALWAYS, "path %v", path)
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
+func TestRmDirWithSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+
+	d1 := gopath.Join(path, "d1")
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "/f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -157,16 +199,16 @@ func TestReadOff(t *testing.T) {
 }
 
 func TestRenameBasic(t *testing.T) {
-	d1 := path + "/d1/"
-	d2 := path + "/d2/"
+	d1 := gopath.Join(path, "d1")
+	d2 := gopath.Join(path, "d2")
 	ts := test.MakeTstatePath(t, path)
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := d1 + "f"
-	fn1 := d2 + "g"
+	fn := gopath.Join(d1, "f")
+	fn1 := gopath.Join(d2, "g")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -180,16 +222,16 @@ func TestRenameBasic(t *testing.T) {
 }
 
 func TestRenameAndRemove(t *testing.T) {
-	d1 := path + "/d1/"
-	d2 := path + "/d2/"
+	d1 := gopath.Join(path, "d1")
+	d2 := gopath.Join(path, "d2")
 	ts := test.MakeTstatePath(t, path)
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := d1 + "/f"
-	fn1 := d2 + "/g"
+	fn := gopath.Join(d1, "f")
+	fn1 := gopath.Join(d2, "g")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -210,8 +252,8 @@ func TestRenameAndRemove(t *testing.T) {
 }
 
 func TestNonEmpty(t *testing.T) {
-	d1 := path + "/d1/"
-	d2 := path + "/d2/"
+	d1 := gopath.Join(path, "d1")
+	d2 := gopath.Join(path, "d2")
 
 	ts := test.MakeTstatePath(t, path)
 	err := ts.MkDir(d1, 0777)
@@ -219,7 +261,7 @@ func TestNonEmpty(t *testing.T) {
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := d1 + "f"
+	fn := gopath.Join(d1, "f")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -236,7 +278,7 @@ func TestNonEmpty(t *testing.T) {
 func TestSetAppend(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	d := []byte("1234")
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -252,8 +294,8 @@ func TestSetAppend(t *testing.T) {
 func TestCopy(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	d := []byte("hello")
-	src := path + "f"
-	dst := path + "g"
+	src := gopath.Join(path, "f")
+	dst := gopath.Join(path, "g")
 	_, err := ts.PutFile(src, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
@@ -268,7 +310,7 @@ func TestCopy(t *testing.T) {
 
 func TestDirBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	dn := path + "d/"
+	dn := gopath.Join(path, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	b, err := ts.IsDir(dn)
@@ -276,7 +318,7 @@ func TestDirBasic(t *testing.T) {
 	assert.Equal(t, true, b)
 
 	d := []byte("hello")
-	_, err = ts.PutFile(dn+"/f", 0777, np.OWRITE, d)
+	_, err = ts.PutFile(gopath.Join(dn, "f"), 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.GetDir(dn)
@@ -293,25 +335,26 @@ func TestDirBasic(t *testing.T) {
 
 func TestDirDot(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	dn := path + "dir0/"
+	dn := gopath.Join(path, "dir0")
+	dot := dn + "/."
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
-	b, err := ts.IsDir(dn + "/.")
+	b, err := ts.IsDir(dot)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, b)
-	err = ts.RmDir(dn + "/.")
+	err = ts.RmDir(dot)
 	assert.NotNil(t, err)
 	err = ts.RmDir(dn)
-	_, err = ts.Stat(dn + "/.")
-	assert.NotEqual(t, nil, err)
+	_, err = ts.Stat(dot)
+	assert.NotNil(t, err)
 	_, err = ts.Stat(path + "/.")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err, "Couldn't stat %v", err)
 	ts.Shutdown()
 }
 
 func TestPageDir(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	dn := path + "/dir/"
+	dn := gopath.Join(path, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	ts.SetChunkSz(np.Tsize(512))
@@ -320,7 +363,7 @@ func TestPageDir(t *testing.T) {
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)
 		names = append(names, name)
-		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+		_, err := ts.PutFile(gopath.Join(dn, name), 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 	sort.SliceStable(names, func(i, j int) bool {
@@ -344,9 +387,9 @@ func dirwriter(t *testing.T, dn string, name string, ch chan bool) {
 		select {
 		case stop = <-ch:
 		default:
-			err := fsl.Remove(dn + name)
+			err := fsl.Remove(gopath.Join(dn, name))
 			assert.Nil(t, err)
-			_, err = fsl.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, np.OWRITE, []byte(name))
 			assert.Nil(t, err)
 		}
 	}
@@ -360,13 +403,13 @@ func TestDirConcur(t *testing.T) {
 		NSCAN = 100
 	)
 	ts := test.MakeTstatePath(t, path)
-	dn := path + "/dir/"
+	dn := gopath.Join(path, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
 	for i := 0; i < NFILE; i++ {
 		name := strconv.Itoa(i)
-		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+		_, err := ts.PutFile(gopath.Join(dn, name), 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 
@@ -388,7 +431,7 @@ func TestDirConcur(t *testing.T) {
 		assert.False(t, b)
 
 		if i < NFILE-N {
-			log.Printf("names %v\n", names)
+			db.DPrintf(db.ALWAYS, "names %v", names)
 		}
 
 		assert.True(t, i >= NFILE-N)
@@ -442,7 +485,7 @@ func TestCounter(t *testing.T) {
 	const N = 10
 
 	ts := test.MakeTstatePath(t, path)
-	cnt := path + "cnt"
+	cnt := gopath.Join(path, "cnt")
 	b := []byte(strconv.Itoa(0))
 	_, err := ts.PutFile(cnt, 0777|np.DMTMP, np.OWRITE, b)
 	assert.Equal(t, nil, err)
@@ -479,7 +522,7 @@ func TestCounter(t *testing.T) {
 func TestWatchCreate(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "w"
+	fn := gopath.Join(path, "w")
 	ch := make(chan bool)
 	fd, err := ts.OpenWatch(fn, np.OREAD, func(string, error) {
 		ch <- true
@@ -502,7 +545,7 @@ func TestWatchCreate(t *testing.T) {
 func TestWatchRemoveOne(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "w"
+	fn := gopath.Join(path, "w")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
@@ -527,7 +570,7 @@ func TestWatchRemoveOne(t *testing.T) {
 func TestWatchDir(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "/d1/"
+	fn := gopath.Join(path, "d1")
 	err := ts.MkDir(fn, 0777)
 	assert.Equal(t, nil, err)
 
@@ -543,7 +586,7 @@ func TestWatchDir(t *testing.T) {
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
 
-	_, err = ts.PutFile(fn+"/x", 0777, np.OWRITE, nil)
+	_, err = ts.PutFile(gopath.Join(fn, "x"), 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -555,7 +598,7 @@ func TestCreateExcl1(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	ch := make(chan int)
 
-	fn := path + "exclusive"
+	fn := gopath.Join(path, "exclusive")
 	_, err := ts.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
@@ -582,7 +625,7 @@ func TestCreateExclN(t *testing.T) {
 
 	ts := test.MakeTstatePath(t, path)
 	ch := make(chan int)
-	fn := path + "exclusive"
+	fn := gopath.Join(path, "exclusive")
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
@@ -606,7 +649,7 @@ func TestCreateExclN(t *testing.T) {
 func TestCreateExclAfterDisconnect(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "create-conn-close-test"
+	fn := gopath.Join(path, "create-conn-close-test")
 
 	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
 
@@ -644,11 +687,11 @@ func TestWatchRemoveConcur(t *testing.T) {
 	const N = 5_000
 
 	ts := test.MakeTstatePath(t, path)
-	dn := path + "d1/"
+	dn := gopath.Join(path, "d1")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := dn + "/w"
+	fn := gopath.Join(dn, "w")
 
 	ch := make(chan error)
 	done := make(chan bool)
@@ -694,7 +737,7 @@ func TestConcurFile(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			for j := 0; j < 1000; j++ {
-				fn := path + "f" + strconv.Itoa(i)
+				fn := gopath.Join(path, "f"+strconv.Itoa(i))
 				data := []byte(fn)
 				_, err := ts.PutFile(fn, 0777, np.OWRITE, data)
 				assert.Equal(t, nil, err)
@@ -734,7 +777,7 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 		sts, err := fsl.GetDir(TODO)
 		assert.Nil(ts.T, err, "GetDir")
 		for _, st := range sts {
-			err = fsl.Rename(TODO+"/"+st.Name, DONE+"/"+st.Name+"."+t)
+			err = fsl.Rename(gopath.Join(TODO, st.Name), gopath.Join(DONE, st.Name+"."+t))
 			if err == nil {
 				i = i + 1
 				ok = true
@@ -770,8 +813,8 @@ func TestConcurRename(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	cont := make(chan bool)
 	done := make(chan int)
-	TODO := path + "todo"
-	DONE := path + "done"
+	TODO := gopath.Join(path, "todo")
+	DONE := gopath.Join(path, "done")
 
 	initfs(ts, TODO, DONE)
 
@@ -793,7 +836,7 @@ func TestConcurRename(t *testing.T) {
 
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
-		_, err := ts.PutFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
+		_, err := ts.PutFile(gopath.Join(TODO, "job"+strconv.Itoa(i)), 07000, np.OWRITE, []byte{})
 		assert.Nil(ts.T, err, "Create job")
 	}
 
@@ -811,7 +854,7 @@ func TestConcurRename(t *testing.T) {
 func TestPipeBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	pipe := path + "pipe"
+	pipe := gopath.Join(path, "pipe")
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
@@ -844,7 +887,7 @@ func TestPipeBasic(t *testing.T) {
 func TestPipeClose(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	pipe := path + "pipe"
+	pipe := gopath.Join(path, "pipe")
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
@@ -881,7 +924,7 @@ func TestPipeClose(t *testing.T) {
 
 func TestPipeRemove(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	pipe := path + "pipe"
+	pipe := gopath.Join(path, "pipe")
 
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
@@ -904,7 +947,7 @@ func TestPipeRemove(t *testing.T) {
 
 func TestPipeCrash0(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	pipe := path + "pipe"
+	pipe := gopath.Join(path, "pipe")
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
@@ -931,7 +974,7 @@ func TestPipeCrash0(t *testing.T) {
 
 func TestPipeCrash1(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	pipe := path + "pipe"
+	pipe := gopath.Join(path, "pipe")
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
@@ -975,14 +1018,14 @@ func TestPipeCrash1(t *testing.T) {
 func TestSymlinkPath(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	dn := path + "d"
+	dn := gopath.Join(path, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink([]byte(path), path+"namedself", 0777|np.DMTMP)
+	err = ts.Symlink([]byte(path), gopath.Join(path, "namedself"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(path + "namedself/")
+	sts, err := ts.GetDir(gopath.Join(path, "namedself") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself"}), "dir")
 
@@ -1002,14 +1045,14 @@ func target(t *testing.T, ts *test.Tstate, path string) []byte {
 func TestSymlinkRemote(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	dn := path + "d"
+	dn := gopath.Join(path, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(target(t, ts, path), path+"namedself", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(path + "namedself/")
+	sts, err := ts.GetDir(gopath.Join(path, "namedself") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself"}), "dir")
 
@@ -1019,20 +1062,20 @@ func TestSymlinkRemote(t *testing.T) {
 func TestUnionDir(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	dn := path + "d"
+	dn := gopath.Join(path, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(target(t, ts, path), path+"d/namedself0", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), gopath.Join(path, "d/namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(np.Path{":2222"}), path+"d/namedself1", 0777|np.DMTMP)
+	err = ts.Symlink(fslib.MakeTarget(np.Path{":2222"}), gopath.Join(path, "d/namedself1"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(path + "/d/~any/")
+	sts, err := ts.GetDir(gopath.Join(path, "d/~any") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"d"}), "dir")
 
-	sts, err = ts.GetDir(path + "d/~any/d/")
+	sts, err = ts.GetDir(gopath.Join(path, "d/~any/d") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"namedself0", "namedself1"}), "dir")
 
@@ -1042,12 +1085,12 @@ func TestUnionDir(t *testing.T) {
 func TestUnionRoot(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(np.Path{"xxx"}), path+"namedself1", 0777|np.DMTMP)
+	err = ts.Symlink(fslib.MakeTarget(np.Path{"xxx"}), gopath.Join(path, "namedself1"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(path + "~any/")
+	sts, err := ts.GetDir(gopath.Join(path, "~any") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"namedself0", "namedself1"}), "dir")
 
@@ -1057,22 +1100,22 @@ func TestUnionRoot(t *testing.T) {
 func TestUnionSymlinkRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	dn := path + "/d/"
+	dn := gopath.Join(path, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-	err = ts.Symlink(target(t, ts, path), path+"d/namedself1", 0777|np.DMTMP)
+	err = ts.Symlink(target(t, ts, path), gopath.Join(path, "d/namedself1"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(path + "~any/d/namedself1/")
+	sts, err := ts.GetDir(gopath.Join(path, "~any/d/namedself1") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself0"}), "root wrong")
 
-	sts, err = ts.GetDir(path + "~any/d/namedself1/d/")
+	sts, err = ts.GetDir(gopath.Join(path, "~any/d/namedself1/d") + "/")
 	assert.Equal(t, nil, err)
-	log.Printf("sts %v\n", sts)
+	db.DPrintf(db.ALWAYS, "sts %v", sts)
 	assert.True(t, fslib.Present(sts, np.Path{"namedself1"}), "d wrong")
 
 	ts.Shutdown()
@@ -1081,27 +1124,27 @@ func TestUnionSymlinkRead(t *testing.T) {
 func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	err := ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
+	err := ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	b := []byte("hello")
-	fn := path + "~any/namedself0/f"
+	fn := gopath.Join(path, "~any/namedself0/f")
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	fn1 := path + "~any/namedself0/g"
+	fn1 := gopath.Join(path, "~any/namedself0/g")
 	_, err = ts.PutFile(fn1, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.GetDir(path + "~any/namedself0/")
+	sts, err := ts.GetDir(gopath.Join(path, "~any/namedself0") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, np.Path{"f", "g"}), "root wrong")
 
-	d, err := ts.GetFile(path + "~any/namedself0/f")
+	d, err := ts.GetFile(gopath.Join(path, "~any/namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
-	d, err = ts.GetFile(path + "~any/namedself0/g")
+	d, err = ts.GetFile(gopath.Join(path, "~any/namedself0/g"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
@@ -1111,35 +1154,35 @@ func TestUnionSymlinkPut(t *testing.T) {
 func TestSetFileSymlink(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	ts.Symlink(target(t, ts, path), path+"namedself0", 0777|np.DMTMP)
+	ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}
-	err = ts.GetFileJson("name/"+np.STATSD, &st)
+	err = ts.GetFileJson(gopath.Join("name", np.STATSD), &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
 
 	d = []byte("byebye")
-	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
+	n, err := ts.SetFile(gopath.Join(path, "namedself0/f"), d, np.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
-	err = ts.GetFileJson(path+"/"+np.STATSD, &st)
+	err = ts.GetFileJson(gopath.Join(path, np.STATSD), &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.NotEqual(ts.T, nwalk, st.Nwalk, "setfile")
 	nwalk = st.Nwalk
 
-	b, err := ts.GetFile(path + "namedself0/f")
+	b, err := ts.GetFile(gopath.Join(path, "namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	err = ts.GetFileJson(path+"/"+np.STATSD, &st)
+	err = ts.GetFileJson(gopath.Join(path, np.STATSD), &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
@@ -1150,7 +1193,7 @@ func TestSetFileSymlink(t *testing.T) {
 func TestOpenRemoveRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -1176,15 +1219,17 @@ func TestOpenRemoveRead(t *testing.T) {
 func TestFslibExit(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
+	dot := path + "/."
+
 	// connect
-	_, err := ts.Stat(path + "/.")
+	_, err := ts.Stat(dot)
 	assert.Nil(t, err)
 
 	// close
 	err = ts.Exit()
 	assert.Nil(t, err)
 
-	_, err = ts.Stat(path + "/.")
+	_, err = ts.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, np.IsErrUnreachable(err))
 
@@ -1193,19 +1238,26 @@ func TestFslibExit(t *testing.T) {
 
 const (
 	KBYTE      = 1 << 10
-	NRUNS      = 1
+	NRUNS      = 100
 	SYNCFILESZ = 100 * KBYTE
 	FILESZ     = 20 * test.MBYTE
 	WRITESZ    = 4096
 )
 
-func measure(msg string, f func() np.Tlength) {
+func measure(p *perf.Perf, msg string, f func() np.Tlength) np.Tlength {
+	totStart := time.Now()
+	tot := np.Tlength(0)
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
 		sz := f()
+		tot += sz
+		p.TptTick(float64(sz))
 		ms := time.Since(start).Milliseconds()
-		log.Printf("%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.Tput(sz, ms))
+		db.DPrintf("TEST", "%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
 	}
+	ms := time.Since(totStart).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Average %v: %s took %vms (%s)", msg, humanize.Bytes(uint64(tot)), ms, test.TputStr(tot, ms))
+	return tot
 }
 
 func measuredir(msg string, nruns int, f func() int) {
@@ -1218,7 +1270,7 @@ func measuredir(msg string, nruns int, f func() int) {
 		tot += float64(ms)
 	}
 	s := tot / 1000
-	log.Printf("%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
+	db.DPrintf("TEST", "%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
 }
 
 type Thow uint8
@@ -1231,7 +1283,7 @@ const (
 
 func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz np.Tlength) np.Tlength {
 	w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Error Create writer: %v", err)
 	switch how {
 	case HSYNC:
 		err = test.Writer(t, w, buf, sz)
@@ -1259,23 +1311,31 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 	return sz
 }
 
-func TestWriteFilePerf(t *testing.T) {
+func TestWriteFilePerfSingle(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	fn := path + "f"
+	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
-	measure("writer", func() np.Tlength {
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
+	p1 := perf.MakePerfMulti("TEST", "writer")
+	defer p1.Done()
+	measure(p1, "writer", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("bufwriter", func() np.Tlength {
+	p2 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p2.Done()
+	measure(p2, "bufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("abufwriter", func() np.Tlength {
+	p3 := perf.MakePerfMulti("TEST", "abufwriter")
+	defer p3.Done()
+	measure(p3, "abufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
@@ -1284,40 +1344,222 @@ func TestWriteFilePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReadFilePerf(t *testing.T) {
+func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
-	fn := path + "f"
+	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)
+	done := make(chan np.Tlength)
+	fns := make([]string, 0, N_CLI)
+	fsls := make([]*fslib.FsLib, 0, N_CLI)
+	for i := 0; i < N_CLI; i++ {
+		fns = append(fns, gopath.Join(path, "f"+strconv.Itoa(i)))
+		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+	}
+	// Remove just in case it was left over from a previous run.
+	for _, fn := range fns {
+		ts.Remove(fn)
+	}
+	p1 := perf.MakePerfMulti("TEST", "writer")
+	defer p1.Done()
+	start := time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p1, "writer", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HSYNC, buf, SYNCFILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- n
+		}(i)
+	}
+	n := np.Tlength(0)
+	for _ = range fns {
+		n += <-done
+	}
+	ms := time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	p2 := perf.MakePerfMulti("TEST", "bufwriter")
+	defer p2.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p2, "bufwriter", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HBUF, buf, FILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	p3 := perf.MakePerfMulti("TEST", "abufwriter")
+	defer p3.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p3, "abufwriter", func() np.Tlength {
+				sz := mkFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
+				err := ts.Remove(fns[i])
+				assert.Nil(t, err, "Remove err %v", err)
+				return sz
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	ts.Shutdown()
+}
+
+func TestReadFilePerfSingle(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	fn := gopath.Join(path, "f")
+	buf := test.MkBuf(WRITESZ)
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	measure("reader", func() np.Tlength {
+	p1 := perf.MakePerfMulti("TEST", "reader")
+	defer p1.Done()
+	measure(p1, "reader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
+	p2 := perf.MakePerfMulti("TEST", "bufreader")
+	defer p2.Done()
 	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-	measure("bufreader", func() np.Tlength {
+	measure(p2, "bufreader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br := bufio.NewReaderSize(r, test.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
-	measure("readahead", func() np.Tlength {
+	p3 := perf.MakePerfMulti("TEST", "abufreader")
+	defer p3.Done()
+	measure(p3, "readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func TestReadFilePerfMultiClient(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	N_CLI := 10
+	buf := test.MkBuf(WRITESZ)
+	done := make(chan np.Tlength)
+	fns := make([]string, 0, N_CLI)
+	fsls := make([]*fslib.FsLib, 0, N_CLI)
+	for i := 0; i < N_CLI; i++ {
+		fns = append(fns, gopath.Join(path, "f"+strconv.Itoa(i)))
+		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+	}
+	// Remove just in case it was left over from a previous run.
+	for _, fn := range fns {
+		ts.Remove(fn)
+		mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	}
+	p1 := perf.MakePerfMulti("TEST", "reader")
+	defer p1.Done()
+	start := time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p1, "reader", func() np.Tlength {
+				r, err := fsls[i].OpenReader(fns[i])
+				assert.Nil(t, err)
+				n, err := test.Reader(t, r, buf, SYNCFILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n := np.Tlength(0)
+	for _ = range fns {
+		n += <-done
+	}
+	ms := time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt reader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	for _, fn := range fns {
+		err := ts.Remove(fn)
+		assert.Nil(ts.T, err)
+		mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+	}
+	p2 := perf.MakePerfMulti("TEST", "bufreader")
+	defer p2.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p2, "bufreader", func() np.Tlength {
+				r, err := fsls[i].OpenReader(fns[i])
+				assert.Nil(t, err)
+				br := bufio.NewReaderSize(r, test.BUFSZ)
+				n, err := test.Reader(t, br, buf, FILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	p3 := perf.MakePerfMulti("TEST", "abufreader")
+	defer p3.Done()
+	start = time.Now()
+	for i := range fns {
+		go func(i int) {
+			n := measure(p3, "readahead", func() np.Tlength {
+				r, err := fsls[i].OpenReader(fns[i])
+				assert.Nil(t, err)
+				br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
+				assert.Nil(t, err)
+				n, err := test.Reader(t, br, buf, FILESZ)
+				assert.Nil(t, err)
+				r.Close()
+				return n
+			})
+			done <- n
+		}(i)
+	}
+	n = 0
+	for _ = range fns {
+		n += <-done
+	}
+	ms = time.Since(start).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	ts.Shutdown()
 }
 
@@ -1326,7 +1568,7 @@ func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
 		b := []byte("hello")
-		_, err := fsl.PutFile(dir+"/f"+strconv.Itoa(i), 0777, np.OWRITE, b)
+		_, err := fsl.PutFile(gopath.Join(dir, "f"+strconv.Itoa(i)), 0777, np.OWRITE, b)
 		assert.Nil(t, err)
 	}
 	return n
@@ -1335,7 +1577,7 @@ func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 func TestDirCreatePerf(t *testing.T) {
 	const N = 1000
 	ts := test.MakeTstatePath(t, path)
-	dir := path + "d"
+	dir := gopath.Join(path, "d")
 	measuredir("create dir", 1, func() int {
 		n := mkDir(t, ts.FsLib, dir, N)
 		return n
@@ -1354,7 +1596,7 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
 			fsl := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
-					_, err := fsl.Stat(dir + "/f" + strconv.Itoa(f))
+					_, err := fsl.Stat(gopath.Join(dir, "f"+strconv.Itoa(f)))
 					assert.Nil(t, err)
 				}
 				return nfile
@@ -1367,33 +1609,33 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
 	}
 }
 
-func TestDirReadPerf(t *testing.T) {
-	const N = 10000
-	const NFILE = 10
-	const NCLERK = 1
-	ts := test.MakeTstatePath(t, path)
-	dir := path + "d"
-	n := mkDir(t, ts.FsLib, dir, NFILE)
-	assert.Equal(t, NFILE, n)
-	// measuredir("read dir", 1, func() int {
-	// 	n := 0
-	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-	// 		n += 1
-	// 		return false, nil
-	// 	})
-	// 	return n
-	// })
-	// lookuper(t, 1, N, dir)
-	lookuper(t, NCLERK, N, dir, NFILE)
-	err := ts.RmDir(dir)
-	assert.Nil(t, err)
-	ts.Shutdown()
-}
+//func TestDirReadPerf(t *testing.T) {
+//	const N = 10000
+//	const NFILE = 10
+//	const NCLERK = 1
+//	ts := test.MakeTstatePath(t, path)
+//	dir := path + "d"
+//	n := mkDir(t, ts.FsLib, dir, NFILE)
+//	assert.Equal(t, NFILE, n)
+//	// measuredir("read dir", 1, func() int {
+//	// 	n := 0
+//	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+//	// 		n += 1
+//	// 		return false, nil
+//	// 	})
+//	// 	return n
+//	// })
+//	// lookuper(t, 1, N, dir)
+//	lookuper(t, NCLERK, N, dir, NFILE)
+//	err := ts.RmDir(dir)
+//	assert.Nil(t, err)
+//	ts.Shutdown()
+//}
 
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000
 	ts := test.MakeTstatePath(t, path)
-	dir := path + "d"
+	dir := gopath.Join(path, "d")
 	n := mkDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
 	measuredir("rm dir", 1, func() int {

@@ -7,11 +7,14 @@ import (
 	"io"
 	"os"
 	"path"
+	// "runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/klauspost/readahead"
+
+	"github.com/dustin/go-humanize"
 
 	"ulambda/awriter"
 	"ulambda/crash"
@@ -118,7 +121,6 @@ func (m *Mapper) closewrts() (np.Tlength, error) {
 				return 0, fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
 			}
 			n += m.wrts[r].wrt.Nbytes()
-
 		}
 	}
 	return n, nil
@@ -171,11 +173,20 @@ func (m *Mapper) informReducer() error {
 }
 
 func (m *Mapper) emit(kv *KeyValue) error {
-	r := Khash(kv.K) % m.nreducetask
-	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
-		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
-	}
-	return nil
+	r := Khash(kv.Key) % m.nreducetask
+	return encodeKV(m.wrts[r].bwrt, kv.Key, kv.Value, r)
+	//	b, err := json.Marshal(kv)
+	//	if err != nil {
+	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	//	}
+
+	//	if n, err := m.wrts[r].bwrt.Write(b); err != nil || n != len(b) {
+	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
+	//	}
+
+	//	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
+	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	//	}
 }
 
 func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
@@ -184,7 +195,16 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
 	}
 	defer rdr.Close()
-	rdr.Lseek(s.Offset)
+	if s.Offset != 0 {
+		// -1 to pick up last byte from prev split so that if
+		// s.Offset != 0 below works out correctly. if the
+		// last byte of previous split is a newline, this
+		// mapper should process the first line of the split.
+		// if not, this mapper should ignore the first line of
+		// the split because it has been processed as part of
+		// the previous split.
+		rdr.Lseek(s.Offset - 1)
+	}
 
 	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz)
 	if err != nil {
@@ -200,13 +220,15 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	if s.Offset != 0 {
 		scanner.Scan()
 		l := scanner.Text()
-		n += len(l) + 1 // 1 for newline
+		n += len(l) // +1 for newline, but -1 for extra byte we read
 	}
 	for scanner.Scan() {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
-		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
-			return 0, err
+		if len(l) > 0 {
+			if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
+				return 0, err
+			}
 		}
 		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {
@@ -220,6 +242,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 }
 
 func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
+	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err
@@ -260,13 +283,14 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p := perf.MakePerf("MR-MAPPER")
+	p := perf.MakePerf("MRMAPPER")
 	defer p.Done()
+
+	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	m, err := makeMapper(mapf, args, p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
-		os.Exit(1)
+		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 	if err = m.initMapper(); err != nil {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))
@@ -274,6 +298,7 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
+	db.DPrintf("MRTPT", "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))

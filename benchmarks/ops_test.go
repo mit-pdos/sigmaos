@@ -54,9 +54,33 @@ func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 }
 
 func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
-	ps := i.([]*proc.Proc)
-	spawnBurstProcs(ts, ps)
-	waitStartProcs(ts, ps)
+	sbs := i.([]*SBTuple)
+	spawnBurstProcs2(ts, sbs)
+	waitStartProcs2(ts, sbs)
+	return time.Since(start)
+}
+
+func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	sems := i.([]*semclnt.SemClnt)
+	for _, sem := range sems {
+		// Spawn a lambda, which will Up this semaphore when it starts.
+		go func(sem *semclnt.SemClnt) {
+			spawnLambda(ts, sem.GetPath())
+		}(sem)
+	}
+	for _, sem := range sems {
+		// Wait for all the lambdas to start.
+		downSemaphore(ts, time.Now(), sem)
+	}
+	return time.Since(start)
+}
+
+func invokeWaitStartOneLambda(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	sem := i.(*semclnt.SemClnt)
+	go func(sem *semclnt.SemClnt) {
+		spawnLambda(ts, sem.GetPath())
+	}(sem)
+	downSemaphore(ts, time.Now(), sem)
 	return time.Since(start)
 }
 
@@ -88,6 +112,11 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	// Add more kvd groups.
 	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
+	}
+	// If not running against redis.
+	if !ji.redis {
+		cnts := ji.GetKeyCountsPerGroup()
+		db.DPrintf(db.ALWAYS, "Key counts per group: %v", cnts)
 	}
 	// Note that we are prepared to run the job.
 	ji.ready <- true

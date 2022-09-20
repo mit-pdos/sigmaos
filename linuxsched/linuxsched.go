@@ -305,16 +305,16 @@ func fsReadContiguousBitlist(path string) (int, error) {
 	// convert to range and validate
 	line = strings.TrimSuffix(line, "\n")
 	groups := strings.Split(line, "-")
-	if len(groups) != 2 {
-		return 0, ErrInvalid
+	if len(groups) == 2 {
+		start, err1 := strconv.Atoi(groups[0])
+		end, err2 := strconv.Atoi(groups[1])
+		if err1 != nil || err2 != nil || start != 0 {
+			return 0, ErrInvalid
+		}
+		return end + 1, nil
 	}
-	start, err1 := strconv.Atoi(groups[0])
-	end, err2 := strconv.Atoi(groups[1])
-	if err1 != nil || err2 != nil || start != 0 {
-		return 0, ErrInvalid
-	}
-
-	return end + 1, nil
+	_, err = strconv.Atoi(line)
+	return 1, err
 }
 
 func irqSetAffinity(irq int, mask *CPUMask) error {

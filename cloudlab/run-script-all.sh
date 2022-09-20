@@ -2,12 +2,12 @@
 
 if [ "$#" -lt 1 ]
 then
-  echo "Usage: $0 script_path [-parallel]"
+  echo "Usage: $0 script_path [--parallel]"
   exit 1
 fi
 
 PARALLEL=0
-if [ $# -gt 1 ] && [ $2 == "-parallel" ]
+if [ $# -gt 1 ] && [ $2 == "--parallel" ]
 then
   PARALLEL=1
 fi

@@ -8,14 +8,15 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
 // Map and reduce functions produce and consume KeyValue pairs
 type KeyValue struct {
-	K string
-	V string
+	Key   string
+	Value string
 }
 
 type EmitT func(*KeyValue) error
@@ -36,7 +37,7 @@ type ByKey []*KeyValue
 // for sorting by key.
 func (a ByKey) Len() int           { return len(a) }
 func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByKey) Less(i, j int) bool { return a[i].K < a[j].K }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 // Use Khash(key) % NReduce to choose the reduce task number for each
 // KeyValue emitted by Map.
@@ -95,7 +96,9 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
 	bin := Bin{}
-	splitsz := maxbinsz >> 3
+	// Set split size to 10MB
+	splitsz := np.Tlength(10 * 1024 * 1024)
+	// splitsz := maxbinsz >> 3 //np.Tlength(10 * 1024 * 1024)
 
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
@@ -124,5 +127,6 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	if binsz > 0 {
 		bins = append(bins, bin)
 	}
+	db.DPrintf(db.ALWAYS, "Bin sizes: %v", bins)
 	return bins, nil
 }

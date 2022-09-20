@@ -13,8 +13,6 @@ BLKDEV=/dev/sda4
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
 
-sudo mount $BLKDEV /var/local
-
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
@@ -98,23 +96,24 @@ then
   git-lfs \
   libseccomp-dev \
   awscli \
-  htop
+  htop \
+  jq
 
   # For hadoop
   yes | sudo apt install openjdk-8-jdk \
   openjdk-8-jre-headless
 
-  wget 'https://golang.org/dl/go1.16.4.linux-amd64.tar.gz'
-  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
+  wget 'https://golang.org/dl/go1.18.1.linux-amd64.tar.gz'
+  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.18.1.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
 fi
 
 if [ -d "ulambda" ]; then 
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh -norace -target aws)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh --norace --version CLOUDLAB --parallel; ./upload.sh --realm arielck --version CLOUDLAB; ./install.sh --from s3 --realm arielck)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download;)'
 fi
 
 mkdir ~/.aws

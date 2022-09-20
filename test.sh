@@ -5,7 +5,7 @@ DIR=$(dirname $0)
 
 VERSION=$(cat "${VERSION_FILE}")
 
-./install.sh # --from s3 --realm test-realm
+./install.sh --realm test-realm # --from s3
 
 for ND in :1111 :1111,:1112,:1113
 do

@@ -34,10 +34,7 @@ func encodeKV(wr io.Writer, key, value string, r int) error {
 	return nil
 }
 
-func decodeKV(rd io.Reader, v interface{}) error {
-	v2 := v.(*interface{})
-	kv := (*v2).(*KeyValue)
-
+func decodeKV(rd io.Reader, kv *KeyValue) error {
 	var l1 int64
 	var l2 int64
 

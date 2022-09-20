@@ -394,7 +394,7 @@ func (c *Coord) Work() {
 		n := c.doneTasks(MapTask(c.job) + DONE)
 		if n == c.nmaptask {
 			ms := time.Since(start).Milliseconds()
-			log.Printf("map has %v ms\n", ms)
+			log.Printf("map phase took %v ms\n", ms)
 			c.Round("reduce")
 		}
 		if !c.doRestart() {

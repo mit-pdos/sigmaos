@@ -1311,7 +1311,7 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 	return sz
 }
 
-func TestWriteFilePerf(t *testing.T) {
+func TestWriteFilePerfSingle(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
@@ -1422,7 +1422,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReadFilePerf(t *testing.T) {
+func TestReadFilePerfSingle(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := gopath.Join(path, "f")
 	buf := test.MkBuf(WRITESZ)
@@ -1492,7 +1492,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := range fns {
 		go func(i int) {
 			n := measure(p1, "reader", func() np.Tlength {
-				r, err := ts.OpenReader(fns[i])
+				r, err := fsls[i].OpenReader(fns[i])
 				assert.Nil(t, err)
 				n, err := test.Reader(t, r, buf, SYNCFILESZ)
 				assert.Nil(t, err)
@@ -1519,7 +1519,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := range fns {
 		go func(i int) {
 			n := measure(p2, "bufreader", func() np.Tlength {
-				r, err := ts.OpenReader(fns[i])
+				r, err := fsls[i].OpenReader(fns[i])
 				assert.Nil(t, err)
 				br := bufio.NewReaderSize(r, test.BUFSZ)
 				n, err := test.Reader(t, br, buf, FILESZ)
@@ -1542,7 +1542,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := range fns {
 		go func(i int) {
 			n := measure(p3, "readahead", func() np.Tlength {
-				r, err := ts.OpenReader(fns[i])
+				r, err := fsls[i].OpenReader(fns[i])
 				assert.Nil(t, err)
 				br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
 				assert.Nil(t, err)

@@ -254,6 +254,8 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
+	_, err = fsl1.Stat(path.Join(np.MEMFS, pid2.String(), np.SNAPDEV) + "/")
+	assert.Nil(ts.T, err, "Bad stat: %v", err)
 	// Read the snapshot from replica a
 	b := takeSnapshot(ts, fsl1, pid1)
 

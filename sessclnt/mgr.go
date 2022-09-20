@@ -55,11 +55,11 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *np.Err) {
 func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
-	db.DPrintf("SESSCLNT", "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
+	db.DPrintf("SESSCLNT", "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
 	msg, err := sess.RPC(req, f)
 	return msg, err
 }

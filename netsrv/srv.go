@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 type NetServer struct {

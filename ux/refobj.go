@@ -3,9 +3,9 @@ package fsux
 import (
 	"sync"
 
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/refmap"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/refmap"
 )
 
 // Objects for which a client has an fid. Several clients may have an

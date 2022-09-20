@@ -3,9 +3,9 @@ package ctx
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 type CtxSnapshot struct {

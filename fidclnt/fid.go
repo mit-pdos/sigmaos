@@ -5,9 +5,9 @@ import (
 	"runtime/debug"
 	"sync"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 type FidMap struct {

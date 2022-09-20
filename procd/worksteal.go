@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/semclnt"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/semclnt"
 )
 
 // Thread in charge of stealing procs.

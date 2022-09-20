@@ -3,8 +3,8 @@ package protsrv
 import (
 	"sync"
 
-	"ulambda/fid"
-	"ulambda/fs"
+	"sigmaos/fid"
+	"sigmaos/fs"
 )
 
 type ephemeralTable struct {

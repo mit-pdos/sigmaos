@@ -1,7 +1,7 @@
 package resource
 
 import (
-	db "ulambda/debug"
+	db "sigmaos/debug"
 )
 
 type Tmsg uint32

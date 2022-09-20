@@ -9,12 +9,12 @@ import (
 
 	"github.com/thanhpk/randstr"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/twopc"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/twopc"
 )
 
 func main() {

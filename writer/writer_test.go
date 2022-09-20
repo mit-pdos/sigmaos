@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "ulambda/ninep"
-	"ulambda/test"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 func TestWriter1(t *testing.T) {

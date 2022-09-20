@@ -1,7 +1,7 @@
 package netclnt
 
 import (
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 type Reply struct {

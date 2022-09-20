@@ -4,9 +4,9 @@ import (
 	"sort"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/netclnt"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/netclnt"
+	np "sigmaos/ninep"
 )
 
 // A Request Queue which guarantees:

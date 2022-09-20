@@ -4,8 +4,8 @@ import (
 	"sync"
 	//"time"
 
-	"ulambda/fs"
-	np "ulambda/ninep"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type File struct {

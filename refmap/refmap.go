@@ -3,7 +3,7 @@ package refmap
 import (
 	"fmt"
 
-	db "ulambda/debug"
+	db "sigmaos/debug"
 )
 
 //

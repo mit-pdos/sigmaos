@@ -5,8 +5,8 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	np "ulambda/ninep"
-	"ulambda/threadmgr"
+	np "sigmaos/ninep"
+	"sigmaos/threadmgr"
 )
 
 type RaftReplServer struct {

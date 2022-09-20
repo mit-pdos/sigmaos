@@ -8,12 +8,12 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
-	"ulambda/inode"
-	"ulambda/memfs"
-	np "ulambda/ninep"
+	"sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	"sigmaos/memfs"
+	np "sigmaos/ninep"
 )
 
 type Clone struct {

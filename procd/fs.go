@@ -6,16 +6,16 @@ import (
 	"log"
 	"path"
 
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/resource"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/resource"
 )
 
 type ProcdFs struct {

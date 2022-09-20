@@ -5,10 +5,10 @@ import (
 
 	// "github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
-	"ulambda/lockmap"
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	db "sigmaos/debug"
+	"sigmaos/lockmap"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 //

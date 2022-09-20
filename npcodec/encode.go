@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs

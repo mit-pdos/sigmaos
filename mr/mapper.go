@@ -16,17 +16,17 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"ulambda/awriter"
-	"ulambda/crash"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/rand"
-	"ulambda/test"
-	"ulambda/writer"
+	"sigmaos/awriter"
+	"sigmaos/crash"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/rand"
+	"sigmaos/test"
+	"sigmaos/writer"
 )
 
 type wrt struct {

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"syscall"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/kernel"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/kernel"
+	"sigmaos/proc"
 )
 
 type TestEnv struct {

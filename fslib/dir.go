@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/reader"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/reader"
 )
 
 func (fl *FsLib) MkDir(path string, perm np.Tperm) error {

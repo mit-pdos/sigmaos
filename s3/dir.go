@@ -9,11 +9,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/sorteddir"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/sorteddir"
 )
 
 const DOT = "_._"

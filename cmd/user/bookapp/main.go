@@ -10,12 +10,12 @@ import (
 	"path"
 	"strings"
 
-	// db "ulambda/debug"
-	"ulambda/dbd"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	// db "sigmaos/debug"
+	"sigmaos/dbd"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 //

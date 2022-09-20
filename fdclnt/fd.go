@@ -3,7 +3,7 @@ package fdclnt
 import (
 	"sync"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 const (

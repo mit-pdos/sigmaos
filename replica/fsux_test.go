@@ -3,9 +3,9 @@ package replica
 import (
 	"testing"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/realm"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/realm"
 )
 
 func makeFsUxTstate(t *testing.T) *Tstate {

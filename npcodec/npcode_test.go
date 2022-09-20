@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 func TestPutfile(t *testing.T) {

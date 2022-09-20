@@ -15,14 +15,14 @@ import (
 	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/awriter"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/named"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/stats"
-	"ulambda/test"
+	"sigmaos/awriter"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/named"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/stats"
+	"sigmaos/test"
 )
 
 var path string

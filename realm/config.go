@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"ulambda/config"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	"sigmaos/config"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 type NodedConfig struct {

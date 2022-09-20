@@ -3,8 +3,8 @@ package kv
 import (
 	"fmt"
 
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 type Move struct {

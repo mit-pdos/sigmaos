@@ -3,8 +3,8 @@ package pathclnt
 import (
 	"strings"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *np.Err) {

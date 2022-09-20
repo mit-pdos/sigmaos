@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	"ulambda/delay"
-	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/delay"
+	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 func RunProc(epochstr, dir string) {

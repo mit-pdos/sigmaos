@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"ulambda/rand"
+	"sigmaos/rand"
 )
 
 // Environment variables which every proc expects to have.

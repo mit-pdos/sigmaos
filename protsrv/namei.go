@@ -1,11 +1,11 @@
 package protsrv
 
 import (
-	db "ulambda/debug"
-	"ulambda/fid"
-	"ulambda/fs"
-	"ulambda/lockmap"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fid"
+	"sigmaos/fs"
+	"sigmaos/lockmap"
+	np "sigmaos/ninep"
 )
 
 func (ps *ProtSrv) releaseLk(pl *lockmap.PathLock) {

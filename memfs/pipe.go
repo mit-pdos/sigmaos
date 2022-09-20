@@ -1,10 +1,10 @@
 package memfs
 
 import (
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/pipe"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/pipe"
 )
 
 type Pipe struct {

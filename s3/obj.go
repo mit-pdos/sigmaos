@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 func mkTpath(key np.Path) np.Tpath {

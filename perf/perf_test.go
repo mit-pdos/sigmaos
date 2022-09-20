@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/perf"
+	db "sigmaos/debug"
+	"sigmaos/perf"
 )
 
 func TestGetSamples(t *testing.T) {

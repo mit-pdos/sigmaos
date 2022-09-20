@@ -4,7 +4,7 @@ import (
 	"path"
 	"strings"
 
-	"ulambda/proc"
+	"sigmaos/proc"
 )
 
 // PID constants

@@ -9,7 +9,7 @@ import (
 	"io"
 	"strconv"
 
-	"ulambda/mr"
+	"sigmaos/mr"
 )
 
 var words = []string{"JavaScript", "Java", "PHP", "Python", "C#", "C++",

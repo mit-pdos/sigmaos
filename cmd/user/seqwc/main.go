@@ -4,12 +4,12 @@ import (
 	"os"
 	"strconv"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/seqwc"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/seqwc"
 )
 
 func main() {

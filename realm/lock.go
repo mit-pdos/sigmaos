@@ -3,8 +3,8 @@ package realm
 import (
 	"runtime/debug"
 
-	db "ulambda/debug"
-	"ulambda/electclnt"
+	db "sigmaos/debug"
+	"sigmaos/electclnt"
 )
 
 func lockRealm(ec *electclnt.ElectClnt, realmId string) {

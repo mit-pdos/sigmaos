@@ -6,10 +6,10 @@ import (
 
 	"time"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/rand"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/rand"
 )
 
 // Try to download a proc bin from s3.

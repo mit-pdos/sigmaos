@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	"ulambda/group"
-	np "ulambda/ninep"
-	"ulambda/procclnt"
-	"ulambda/reader"
+	db "sigmaos/debug"
+	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	"sigmaos/group"
+	np "sigmaos/ninep"
+	"sigmaos/procclnt"
+	"sigmaos/reader"
 )
 
 //

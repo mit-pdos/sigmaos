@@ -7,10 +7,10 @@ import (
 	"os"
 	"syscall"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/sorteddir"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/sorteddir"
 )
 
 type Dir struct {

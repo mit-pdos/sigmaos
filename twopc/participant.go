@@ -5,14 +5,14 @@ import (
 	"os"
 	"sync"
 
-	"ulambda/atomic"
-	db "ulambda/debug"
-	//	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/pathclnt"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/atomic"
+	db "sigmaos/debug"
+	//	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/pathclnt"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 type Participant struct {

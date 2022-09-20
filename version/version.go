@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	np "ulambda/ninep"
-	"ulambda/refmap"
+	np "sigmaos/ninep"
+	"sigmaos/refmap"
 )
 
 type version struct {

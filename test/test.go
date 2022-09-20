@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/kernel"
-	"ulambda/linuxsched"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/realm"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/kernel"
+	"sigmaos/linuxsched"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/realm"
 )
 
 var version string

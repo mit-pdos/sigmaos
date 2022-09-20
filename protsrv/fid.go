@@ -3,8 +3,8 @@ package protsrv
 import (
 	"sync"
 
-	"ulambda/fid"
-	np "ulambda/ninep"
+	"sigmaos/fid"
+	np "sigmaos/ninep"
 )
 
 type fidTable struct {

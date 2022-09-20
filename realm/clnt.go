@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"path"
 
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/resource"
-	"ulambda/semclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/resource"
+	"sigmaos/semclnt"
 )
 
 const (

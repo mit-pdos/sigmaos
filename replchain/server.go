@@ -8,15 +8,15 @@ import (
 	"strings"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fid"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/protclnt"
-	"ulambda/protsrv"
-	"ulambda/repl"
+	db "sigmaos/debug"
+	"sigmaos/fid"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/protclnt"
+	"sigmaos/protsrv"
+	"sigmaos/repl"
 )
 
 const (

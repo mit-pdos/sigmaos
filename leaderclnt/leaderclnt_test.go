@@ -8,11 +8,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/crash"
-	"ulambda/fslib"
-	"ulambda/leaderclnt"
-	np "ulambda/ninep"
-	"ulambda/test"
+	"sigmaos/crash"
+	"sigmaos/fslib"
+	"sigmaos/leaderclnt"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 const (

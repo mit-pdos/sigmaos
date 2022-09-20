@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/group"
-	"ulambda/groupmgr"
-	"ulambda/kv"
-	"ulambda/proc"
-	"ulambda/rand"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/group"
+	"sigmaos/groupmgr"
+	"sigmaos/kv"
+	"sigmaos/proc"
+	"sigmaos/rand"
+	"sigmaos/test"
 )
 
 const (

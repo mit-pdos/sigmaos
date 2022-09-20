@@ -5,12 +5,12 @@ import (
 	"runtime/debug"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/linuxsched"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/resource"
+	db "sigmaos/debug"
+	"sigmaos/linuxsched"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/resource"
 )
 
 type Tcorestatus uint8

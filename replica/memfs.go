@@ -1,9 +1,9 @@
 package replica
 
 import (
-	db "ulambda/debug"
-	"ulambda/fslibsrv"
-	"ulambda/repl"
+	db "sigmaos/debug"
+	"sigmaos/fslibsrv"
+	"sigmaos/repl"
 )
 
 func RunMemfsdReplica(name string, config repl.Config) {

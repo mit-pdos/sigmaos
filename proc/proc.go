@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
-	"ulambda/namespace"
-	np "ulambda/ninep"
+	"sigmaos/namespace"
+	np "sigmaos/ninep"
 )
 
 type Tpid string

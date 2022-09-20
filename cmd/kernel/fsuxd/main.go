@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	db "ulambda/debug"
-	"ulambda/ux"
+	db "sigmaos/debug"
+	"sigmaos/ux"
 )
 
 func main() {

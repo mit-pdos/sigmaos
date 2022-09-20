@@ -1,9 +1,9 @@
 package fs
 
 import (
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 type MakeInodeF func(CtxI, np.Tperm, np.Tmode, Dir, MakeDirF) (Inode, *np.Err)

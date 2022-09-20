@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 // Sleep for a random time, then crash a server.  Crash a server of a

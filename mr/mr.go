@@ -8,9 +8,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 // Map and reduce functions produce and consume KeyValue pairs

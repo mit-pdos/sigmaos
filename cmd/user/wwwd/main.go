@@ -8,14 +8,14 @@ import (
 	"path"
 	"regexp"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
-	"ulambda/pipe"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/rand"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
+	"sigmaos/pipe"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/rand"
 )
 
 const (

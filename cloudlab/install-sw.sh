@@ -113,7 +113,7 @@ fi
 if [ -d "ulambda" ]; then 
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh --norace --version CLOUDLAB --parallel; ./upload.sh --realm arielck --version CLOUDLAB; ./install.sh --from s3 --realm arielck)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download;)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda sigmaos; cd ulambda; go mod download;)'
 fi
 
 mkdir ~/.aws

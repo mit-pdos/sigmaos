@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/electclnt"
-	"ulambda/fslib"
-	"ulambda/test"
+	"sigmaos/electclnt"
+	"sigmaos/fslib"
+	"sigmaos/test"
 )
 
 const (

@@ -12,11 +12,11 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/klauspost/readahead"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/mr"
-	np "ulambda/ninep"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/mr"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 type Tdata map[string]uint64

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/twopc"
+	"sigmaos/twopc"
 )
 
 func main() {

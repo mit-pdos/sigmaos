@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"runtime/debug"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 type FenceSnapshot struct {

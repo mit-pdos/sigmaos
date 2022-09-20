@@ -5,8 +5,8 @@ import (
 	"sort"
 	"sync"
 
-	"ulambda/intervals"
-	np "ulambda/ninep"
+	"sigmaos/intervals"
+	np "sigmaos/ninep"
 )
 
 // Reply table for a given session.

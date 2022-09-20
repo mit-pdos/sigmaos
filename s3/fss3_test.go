@@ -18,12 +18,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/pathclnt"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/pathclnt"
+	"sigmaos/test"
 )
 
 var ROOT = []string{"a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
@@ -275,7 +275,7 @@ func cleanup(cfg aws.Config) {
 	}
 }
 
-// Run: go test -v ulambda/s3 -bench=. -benchtime=1x -run PutObj
+// Run: go test -v sigmaos/s3 -bench=. -benchtime=1x -run PutObj
 func BenchmarkPutObj(b *testing.B) {
 	const N = 200
 

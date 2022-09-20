@@ -9,10 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
-	"ulambda/named"
-	np "ulambda/ninep"
-	"ulambda/test"
+	"sigmaos/fslib"
+	"sigmaos/named"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 type Tstate struct {

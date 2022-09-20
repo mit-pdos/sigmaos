@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/repldummy"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/repldummy"
 )
 
 func main() {

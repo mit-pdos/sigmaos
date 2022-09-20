@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	db "ulambda/debug"
-	"ulambda/repl"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	"sigmaos/repl"
+	"sigmaos/threadmgr"
 )
 
 type RaftConfig struct {

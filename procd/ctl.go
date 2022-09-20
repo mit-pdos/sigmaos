@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 type SpawnFile struct {

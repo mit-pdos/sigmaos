@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"ulambda/proc"
+	"sigmaos/proc"
 )
 
 const (

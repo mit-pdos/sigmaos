@@ -4,12 +4,12 @@ import (
 	"sort"
 	"strings"
 
-	"ulambda/atomic"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	//	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/atomic"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	//	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 type ReplicaMonitor struct {

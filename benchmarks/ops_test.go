@@ -5,12 +5,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/mr"
-	"ulambda/proc"
-	"ulambda/procdclnt"
-	"ulambda/semclnt"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/mr"
+	"sigmaos/proc"
+	"sigmaos/procdclnt"
+	"sigmaos/semclnt"
+	"sigmaos/test"
 )
 
 //

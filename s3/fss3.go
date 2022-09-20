@@ -7,12 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
-	"ulambda/perf"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
 )
 
 var fss3 *Fss3

@@ -3,9 +3,9 @@ package sessstatesrv
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/threadmgr"
 )
 
 func (st *SessionTable) Snapshot() []byte {

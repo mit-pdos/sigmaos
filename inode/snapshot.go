@@ -3,9 +3,9 @@ package inode
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type InodeSnapshot struct {

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"ulambda/seqgrep"
+	"sigmaos/seqgrep"
 )
 
 func main() {

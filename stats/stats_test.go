@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "ulambda/ninep"
-	"ulambda/stats"
-	"ulambda/test"
+	np "sigmaos/ninep"
+	"sigmaos/stats"
+	"sigmaos/test"
 )
 
 func TestStatsd(t *testing.T) {

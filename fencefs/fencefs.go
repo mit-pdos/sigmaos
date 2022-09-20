@@ -3,12 +3,12 @@ package fencefs
 import (
 	"sync"
 
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 //

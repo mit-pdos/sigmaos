@@ -10,7 +10,7 @@ import (
 
 	"github.com/klauspost/readahead"
 
-	"ulambda/mr"
+	"sigmaos/mr"
 )
 
 func grepline1(n int, line string) {

@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"ulambda/proc"
+	"sigmaos/proc"
 )
 
 //
@@ -34,7 +34,7 @@ func DFatalf(format string, v ...interface{}) {
 	// Get info for the caller.
 	pc, _, _, ok := runtime.Caller(1)
 	fnDetails := runtime.FuncForPC(pc)
-	fnName := strings.TrimLeft(fnDetails.Name(), "ulambda/")
+	fnName := strings.TrimLeft(fnDetails.Name(), "sigmaos/")
 	if ok && fnDetails != nil {
 		log.Fatalf("FATAL %v %v Err: %v", proc.GetName(), fnName, fmt.Sprintf(format, v...))
 	} else {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/npcodec"
-	"ulambda/protsrv"
+	db "sigmaos/debug"
+	"sigmaos/npcodec"
+	"sigmaos/protsrv"
 )
 
 // A connection between replicas

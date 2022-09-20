@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/namespace"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	// "ulambda/seccomp"
-	"ulambda/semclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/namespace"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	// "sigmaos/seccomp"
+	"sigmaos/semclnt"
 )
 
 const (

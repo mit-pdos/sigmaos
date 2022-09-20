@@ -3,7 +3,7 @@ package npcodec
 import (
 	"fmt"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 // Adopted from https://github.com/docker/go-p9p/message.go

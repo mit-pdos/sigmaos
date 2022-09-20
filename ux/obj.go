@@ -10,9 +10,9 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {

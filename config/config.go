@@ -1,9 +1,9 @@
 package config
 
 import (
-	"ulambda/atomic"
-	db "ulambda/debug"
-	"ulambda/fslib"
+	"sigmaos/atomic"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
 )
 
 type ConfigClnt struct {

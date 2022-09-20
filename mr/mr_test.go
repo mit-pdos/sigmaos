@@ -14,13 +14,13 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/mr"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procdclnt"
-	rd "ulambda/rand"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/mr"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procdclnt"
+	rd "sigmaos/rand"
+	"sigmaos/test"
 )
 
 const (

@@ -3,9 +3,9 @@ package group
 import (
 	"strings"
 
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 type GroupCtl struct {

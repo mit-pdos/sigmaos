@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/rand"
+	db "sigmaos/debug"
+	"sigmaos/rand"
 )
 
 //

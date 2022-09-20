@@ -5,13 +5,13 @@ import (
 	"path"
 	"sync"
 
-	"ulambda/crash"
-	db "ulambda/debug"
-	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/crash"
+	db "sigmaos/debug"
+	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 // XXX cmd line utility cp

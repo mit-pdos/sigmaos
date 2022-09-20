@@ -5,9 +5,9 @@ import (
 	"path"
 	"strings"
 
-	"ulambda/atomic"
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	"sigmaos/atomic"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 const (

@@ -6,10 +6,10 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 const PIPESZ = 8192

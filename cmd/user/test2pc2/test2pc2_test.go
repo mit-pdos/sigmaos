@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
-	"ulambda/kernel"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/twopc"
+	"sigmaos/fslib"
+	"sigmaos/kernel"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/twopc"
 )
 
 type Tstate struct {

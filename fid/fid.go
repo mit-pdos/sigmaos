@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
 )
 
 type Pobj struct {

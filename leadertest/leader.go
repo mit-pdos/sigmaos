@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/leaderclnt"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/leaderclnt"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (

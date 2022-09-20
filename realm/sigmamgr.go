@@ -6,17 +6,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ulambda/config"
-	db "ulambda/debug"
-	"ulambda/electclnt"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	"ulambda/machine"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/resource"
-	"ulambda/stats"
+	"sigmaos/config"
+	db "sigmaos/debug"
+	"sigmaos/electclnt"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	"sigmaos/machine"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/resource"
+	"sigmaos/stats"
 )
 
 type SigmaResourceMgr struct {

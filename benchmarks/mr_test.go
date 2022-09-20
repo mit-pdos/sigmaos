@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/groupmgr"
-	"ulambda/mr"
-	"ulambda/test"
+	"sigmaos/groupmgr"
+	"sigmaos/mr"
+	"sigmaos/test"
 )
 
 type MRJobInstance struct {

@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/replica"
-	"ulambda/replraft"
+	db "sigmaos/debug"
+	"sigmaos/replica"
+	"sigmaos/replraft"
 )
 
 func main() {

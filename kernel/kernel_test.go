@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/pathclnt"
-	"ulambda/test"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/pathclnt"
+	"sigmaos/test"
 )
 
 //

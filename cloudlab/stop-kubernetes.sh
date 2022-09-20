@@ -30,8 +30,8 @@ done < $DIR/$SERVERS
 if [[ $is_leader == 1 ]]; then
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH"
-#  #kubectl delete -f ~/ulambda/cloudlab/k8s/cni/calico.yaml
-#  #kubectl delete -f ~/ulambda/cloudlab/k8s/cni/tigera-operator.yaml
+#  #kubectl delete -f ~/sigmaos/cloudlab/k8s/cni/calico.yaml
+#  #kubectl delete -f ~/sigmaos/cloudlab/k8s/cni/tigera-operator.yaml
 #  # Get node names
 #  lines=$(kubectl get nodes | tail -n +2)
 #  while IFS= read -r line; do

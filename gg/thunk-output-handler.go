@@ -4,11 +4,11 @@ import (
 	"log"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 type ThunkOutputHandler struct {

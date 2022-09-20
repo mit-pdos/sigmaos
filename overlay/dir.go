@@ -3,10 +3,10 @@ package overlay
 import (
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 //

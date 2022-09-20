@@ -3,9 +3,9 @@ package sesscond
 import (
 	"sync"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/sessstatesrv"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/sessstatesrv"
 )
 
 type SessCondTable struct {

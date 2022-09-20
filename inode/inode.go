@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ulambda/fs"
-	np "ulambda/ninep"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type Inode struct {

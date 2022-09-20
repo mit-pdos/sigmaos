@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"path"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/semclnt"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/semclnt"
 )
 
-// For documentation on dir structure, see ulambda/proc/dir.go
+// For documentation on dir structure, see sigmaos/proc/dir.go
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {

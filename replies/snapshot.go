@@ -3,9 +3,9 @@ package replies
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
 )
 
 func (rt *ReplyTable) Snapshot() []byte {

@@ -5,10 +5,10 @@ import (
 	"runtime/debug"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 // Right now mounts don't resolve to find the server. So, get the server addr

@@ -3,8 +3,8 @@ package repldummy
 import (
 	"fmt"
 
-	"ulambda/repl"
-	"ulambda/threadmgr"
+	"sigmaos/repl"
+	"sigmaos/threadmgr"
 )
 
 type DummyConfig struct {

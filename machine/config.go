@@ -3,8 +3,8 @@ package machine
 import (
 	"fmt"
 
-	"ulambda/linuxsched"
-	np "ulambda/ninep"
+	"sigmaos/linuxsched"
+	np "sigmaos/ninep"
 )
 
 type Config struct {

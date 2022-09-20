@@ -7,12 +7,12 @@ import (
 	"path"
 	"time"
 
-	"ulambda/benchmarks"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/benchmarks"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 func main() {

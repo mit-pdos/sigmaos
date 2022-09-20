@@ -5,10 +5,10 @@ import (
 	"runtime/debug"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/fdclnt"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/fdclnt"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 type FsLib struct {

@@ -5,9 +5,9 @@ import (
 	"io"
 	"sync"
 
-	db "ulambda/debug"
-	// np "ulambda/ninep"
-	"ulambda/writer"
+	db "sigmaos/debug"
+	// np "sigmaos/ninep"
+	"sigmaos/writer"
 )
 
 type Writer struct {

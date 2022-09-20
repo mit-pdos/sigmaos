@@ -5,12 +5,12 @@ import (
 	"log"
 	"os"
 
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
 )
 
 type Consoled struct {

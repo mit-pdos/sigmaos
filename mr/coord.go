@@ -8,14 +8,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ulambda/crash"
-	db "ulambda/debug"
-	"ulambda/electclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/procdclnt"
+	"sigmaos/crash"
+	db "sigmaos/debug"
+	"sigmaos/electclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/procdclnt"
 )
 
 const (

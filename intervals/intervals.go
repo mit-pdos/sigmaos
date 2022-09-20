@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 type Intervals struct {

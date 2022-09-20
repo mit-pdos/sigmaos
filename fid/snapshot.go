@@ -3,11 +3,11 @@ package fid
 import (
 	"encoding/json"
 
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/fs"
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 type PobjSnapshot struct {

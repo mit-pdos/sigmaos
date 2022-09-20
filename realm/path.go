@@ -3,7 +3,7 @@ package realm
 import (
 	"path"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 const (

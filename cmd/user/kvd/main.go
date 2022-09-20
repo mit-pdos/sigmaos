@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/group"
+	"sigmaos/group"
 )
 
 func main() {

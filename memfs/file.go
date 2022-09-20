@@ -3,9 +3,9 @@ package memfs
 import (
 	//"time"
 
-	"ulambda/file"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	"sigmaos/file"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type File struct {

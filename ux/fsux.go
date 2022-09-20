@@ -5,15 +5,15 @@ import (
 	"sync"
 	"syscall"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/repl"
-	"ulambda/sesssrv"
-	// "ulambda/seccomp"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/repl"
+	"sigmaos/sesssrv"
+	// "sigmaos/seccomp"
 )
 
 var fsux *FsUx

@@ -3,10 +3,10 @@ package machine
 import (
 	"path"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/resource"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/resource"
 )
 
 // Post chunks of available cores.

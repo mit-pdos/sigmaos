@@ -1,11 +1,11 @@
 package leaderclnt
 
 import (
-	"ulambda/electclnt"
-	"ulambda/epochclnt"
-	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	"sigmaos/electclnt"
+	"sigmaos/epochclnt"
+	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 //

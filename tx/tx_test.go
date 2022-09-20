@@ -7,14 +7,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/named"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/realm"
-	"ulambda/tx"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/named"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/realm"
+	"sigmaos/tx"
 )
 
 const (

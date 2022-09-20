@@ -5,11 +5,11 @@ import (
 	"net"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/delay"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/sessconnclnt"
+	db "sigmaos/debug"
+	"sigmaos/delay"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/sessconnclnt"
 )
 
 //

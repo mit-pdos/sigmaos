@@ -1,8 +1,8 @@
 package ctx
 
 import (
-	np "ulambda/ninep"
-	"ulambda/sesscond"
+	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 type Ctx struct {

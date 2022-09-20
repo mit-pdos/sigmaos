@@ -4,11 +4,11 @@ import (
 	"path"
 	"strconv"
 
-	"ulambda/fslib"
-	"ulambda/group"
-	"ulambda/groupmgr"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/fslib"
+	"sigmaos/group"
+	"sigmaos/groupmgr"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (

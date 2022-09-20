@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/leadertest"
+	"sigmaos/leadertest"
 )
 
 func main() {

@@ -6,15 +6,15 @@ import (
 	"path"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	"ulambda/linuxsched"
-	"ulambda/namespace"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/resource"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	"sigmaos/linuxsched"
+	"sigmaos/namespace"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/resource"
 )
 
 const (

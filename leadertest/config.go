@@ -1,7 +1,7 @@
 package leadertest
 
 import (
-	"ulambda/proc"
+	"sigmaos/proc"
 )
 
 type Config struct {

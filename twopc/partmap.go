@@ -3,9 +3,9 @@ package twopc
 import (
 	"fmt"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/pathclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/pathclnt"
 )
 
 type FlwsMap struct {

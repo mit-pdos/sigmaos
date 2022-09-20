@@ -9,7 +9,7 @@ import (
 	"io"
 	"strconv"
 
-	"ulambda/mr"
+	"sigmaos/mr"
 )
 
 func Map(filename string, rdr io.Reader, emit mr.EmitT) error {

@@ -1,4 +1,4 @@
-module ulambda
+module sigmaos
 
 go 1.18
 

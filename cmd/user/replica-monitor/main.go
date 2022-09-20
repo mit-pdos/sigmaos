@@ -4,7 +4,7 @@ import (
 //	"log"
 //	"os"
 //
-//	"ulambda/replica"
+//	"sigmaos/replica"
 )
 
 func main() {

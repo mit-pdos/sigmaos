@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	np "ulambda/ninep"
-	"ulambda/reader"
-	"ulambda/writer"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	np "sigmaos/ninep"
+	"sigmaos/reader"
+	"sigmaos/writer"
 )
 
 //

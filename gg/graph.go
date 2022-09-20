@@ -3,7 +3,7 @@ package gg
 import (
 	"fmt"
 
-	db "ulambda/debug"
+	db "sigmaos/debug"
 )
 
 type Thunk struct {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 type Point struct {

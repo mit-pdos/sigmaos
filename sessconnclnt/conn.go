@@ -1,7 +1,7 @@
 package sessconnclnt
 
 import (
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 type Conn interface {

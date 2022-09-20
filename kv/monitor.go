@@ -5,15 +5,15 @@ import (
 	"strconv"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/group"
-	"ulambda/groupmgr"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/stats"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/group"
+	"sigmaos/groupmgr"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/stats"
 )
 
 const (

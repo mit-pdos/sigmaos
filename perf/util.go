@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/linuxsched"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/linuxsched"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 //

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"ulambda/mr"
-	"ulambda/wc"
+	"sigmaos/mr"
+	"sigmaos/wc"
 )
 
 func main() {

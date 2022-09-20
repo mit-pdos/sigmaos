@@ -1,10 +1,10 @@
 package fenceclnt
 
 import (
-	db "ulambda/debug"
-	"ulambda/epochclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/epochclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 type FenceClnt struct {

@@ -1,18 +1,18 @@
 package fslibsrv
 
 import (
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fidclnt"
-	"ulambda/fs"
-	"ulambda/fslib"
-	"ulambda/memfs"
-	np "ulambda/ninep"
-	"ulambda/procclnt"
-	ps "ulambda/protsrv"
-	"ulambda/repl"
-	"ulambda/sesssrv"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fidclnt"
+	"sigmaos/fs"
+	"sigmaos/fslib"
+	"sigmaos/memfs"
+	np "sigmaos/ninep"
+	"sigmaos/procclnt"
+	ps "sigmaos/protsrv"
+	"sigmaos/repl"
+	"sigmaos/sesssrv"
 )
 
 func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *sesssrv.SessSrv {

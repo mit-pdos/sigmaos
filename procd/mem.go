@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	db "ulambda/debug"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/proc"
 )
 
 func getMemTotal() proc.Tmem {

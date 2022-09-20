@@ -4,10 +4,10 @@ import (
 	"os"
 	"path"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/repl"
-	"ulambda/ux"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/repl"
+	"sigmaos/ux"
 )
 
 type FsUxReplica struct {

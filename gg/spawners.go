@@ -5,7 +5,7 @@ import (
 	//	"log"
 	//	"path"
 
-	"ulambda/proc"
+	"sigmaos/proc"
 )
 
 // Given a PID, create a no-op which waits on that Pid

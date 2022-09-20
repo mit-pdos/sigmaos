@@ -5,12 +5,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/dir"
-	"ulambda/fidclnt"
-	"ulambda/fslib"
-	"ulambda/fssrv"
-	"ulambda/memfs"
-	ps "ulambda/protsrv"
+	"sigmaos/dir"
+	"sigmaos/fidclnt"
+	"sigmaos/fslib"
+	"sigmaos/fssrv"
+	"sigmaos/memfs"
+	ps "sigmaos/protsrv"
 )
 
 // start a minimal server to, for example, connect the proxy too by hand

@@ -12,12 +12,12 @@ import (
 	"time"
 	"unsafe"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 
-	"ulambda/perf"
+	"sigmaos/perf"
 )
 
 const STATS = true

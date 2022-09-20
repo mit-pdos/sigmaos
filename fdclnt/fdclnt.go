@@ -3,12 +3,12 @@ package fdclnt
 import (
 	"fmt"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	np "ulambda/ninep"
-	"ulambda/pathclnt"
-	"ulambda/reader"
-	"ulambda/writer"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	np "sigmaos/ninep"
+	"sigmaos/pathclnt"
+	"sigmaos/reader"
+	"sigmaos/writer"
 )
 
 //

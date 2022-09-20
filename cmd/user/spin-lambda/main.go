@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"ulambda/fslib"
-	"ulambda/semclnt"
+	"sigmaos/fslib"
+	"sigmaos/semclnt"
 )
 
 func spin(args []string) error {

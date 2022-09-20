@@ -1,7 +1,7 @@
 package threadmgr
 
 import (
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 type Op struct {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/fslib"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 //

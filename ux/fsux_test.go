@@ -11,8 +11,8 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	np "ulambda/ninep"
-	"ulambda/test"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 const (

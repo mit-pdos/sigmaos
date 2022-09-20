@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"ulambda/named"
+	"sigmaos/named"
 )
 
 // Usage: <named> address realmId <peerId> <peers>

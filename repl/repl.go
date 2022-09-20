@@ -1,8 +1,8 @@
 package repl
 
 import (
-	np "ulambda/ninep"
-	"ulambda/threadmgr"
+	np "sigmaos/ninep"
+	"sigmaos/threadmgr"
 )
 
 const (

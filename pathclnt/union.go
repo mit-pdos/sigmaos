@@ -4,11 +4,11 @@ import (
 	"errors"
 	"io"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/reader"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/reader"
 )
 
 func (pathc *PathClnt) unionMatch(q, name string) bool {

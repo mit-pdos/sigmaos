@@ -1,9 +1,9 @@
 package memfs
 
 import (
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {

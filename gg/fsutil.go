@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 // Interfaces

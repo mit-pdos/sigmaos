@@ -5,8 +5,8 @@ import (
 //	"os"
 //	"strconv"
 //
-//	"ulambda/fsclnt"
-//	"ulambda/replica"
+//	"sigmaos/fsclnt"
+//	"sigmaos/replica"
 )
 
 func main() {

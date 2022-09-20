@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"ulambda/gg"
+	"sigmaos/gg"
 )
 
 func main() {

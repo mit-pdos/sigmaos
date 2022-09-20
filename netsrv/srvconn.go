@@ -5,9 +5,9 @@ import (
 	"net"
 	"sync"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
 )
 
 type SrvConn struct {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 // To run kernel procs

@@ -7,13 +7,13 @@ import (
 	"os"
 	"path"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/pipe"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/pipe"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 //

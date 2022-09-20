@@ -1,9 +1,9 @@
 package semclnt
 
 import (
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
 )
 
 //

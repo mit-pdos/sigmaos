@@ -10,13 +10,13 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/kv"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/semclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/kv"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/semclnt"
 )
 
 var done = int32(0)

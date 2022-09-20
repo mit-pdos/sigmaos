@@ -3,7 +3,7 @@ package replchain
 import (
 	"sync"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 type RelayOpSet struct {

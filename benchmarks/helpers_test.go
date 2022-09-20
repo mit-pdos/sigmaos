@@ -6,16 +6,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/linuxsched"
-	"ulambda/machine"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/rand"
-	"ulambda/semclnt"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/linuxsched"
+	"sigmaos/machine"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/rand"
+	"sigmaos/semclnt"
+	"sigmaos/test"
 )
 
 // XXX REMOVE AFTER DEADLINE PUSH

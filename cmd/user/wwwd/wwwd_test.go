@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/proc"
-	"ulambda/test"
+	"sigmaos/proc"
+	"sigmaos/test"
 )
 
 type Tstate struct {

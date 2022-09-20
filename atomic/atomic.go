@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/rand"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/rand"
 )
 
 func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) error {

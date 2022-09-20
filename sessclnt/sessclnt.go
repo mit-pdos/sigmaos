@@ -4,12 +4,12 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/intervals"
-	"ulambda/netclnt"
-	np "ulambda/ninep"
-	"ulambda/rand"
-	"ulambda/sessstateclnt"
+	db "sigmaos/debug"
+	"sigmaos/intervals"
+	"sigmaos/netclnt"
+	np "sigmaos/ninep"
+	"sigmaos/rand"
+	"sigmaos/sessstateclnt"
 )
 
 // A session from a client to a logical server (either one server or a

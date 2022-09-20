@@ -1,9 +1,9 @@
 package writer
 
 import (
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	np "sigmaos/ninep"
 )
 
 type Writer struct {

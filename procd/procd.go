@@ -10,15 +10,15 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	"ulambda/linuxsched"
-	"ulambda/namespace"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/fslibsrv"
+	"sigmaos/linuxsched"
+	"sigmaos/namespace"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 type Procd struct {

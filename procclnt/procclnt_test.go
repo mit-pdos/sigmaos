@@ -11,16 +11,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/groupmgr"
-	"ulambda/linuxsched"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/resource"
-	"ulambda/stats"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/groupmgr"
+	"sigmaos/linuxsched"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
+	"sigmaos/resource"
+	"sigmaos/stats"
+	"sigmaos/test"
 )
 
 const (

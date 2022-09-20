@@ -1,8 +1,8 @@
 package pathclnt
 
 import (
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 const (

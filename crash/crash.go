@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/rand"
-	"ulambda/sesssrv"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/rand"
+	"sigmaos/sesssrv"
 )
 
 //

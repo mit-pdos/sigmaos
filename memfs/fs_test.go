@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/ctx"
-	"ulambda/dir"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	"sigmaos/ctx"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type TestState struct {

@@ -4,14 +4,14 @@ import (
 	"os/user"
 	"sync"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/pathclnt"
-	"ulambda/protclnt"
-	"ulambda/sessstatesrv"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/pathclnt"
+	"sigmaos/protclnt"
+	"sigmaos/sessstatesrv"
+	"sigmaos/threadmgr"
 )
 
 type Npd struct {

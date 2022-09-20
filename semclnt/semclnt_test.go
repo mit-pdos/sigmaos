@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/delay"
-	"ulambda/fslib"
-	"ulambda/semclnt"
-	"ulambda/test"
+	"sigmaos/delay"
+	"sigmaos/fslib"
+	"sigmaos/semclnt"
+	"sigmaos/test"
 )
 
 const (

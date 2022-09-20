@@ -9,11 +9,11 @@ import (
 	"net"
 	"strings"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/protsrv"
-	"ulambda/repl"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/protsrv"
+	"sigmaos/repl"
 )
 
 const (

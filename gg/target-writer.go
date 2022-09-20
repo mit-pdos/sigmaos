@@ -3,9 +3,9 @@ package gg
 import (
 	"path"
 
-	"ulambda/fslib"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 // XXX Rename

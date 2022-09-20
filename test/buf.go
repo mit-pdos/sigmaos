@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 func MkBuf(n int) []byte {

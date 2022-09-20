@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/npcodec"
-	"ulambda/proc"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/proc"
+	"sigmaos/threadmgr"
 )
 
 type Op struct {

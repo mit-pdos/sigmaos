@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "ulambda/ninep"
-	"ulambda/test"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 func TestQuery(t *testing.T) {

@@ -3,9 +3,9 @@ package stats
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/inode"
 )
 
 type StatsSnapshot struct {

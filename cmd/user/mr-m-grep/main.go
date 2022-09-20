@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"ulambda/grep"
-	"ulambda/mr"
+	"sigmaos/grep"
+	"sigmaos/mr"
 )
 
 func main() {

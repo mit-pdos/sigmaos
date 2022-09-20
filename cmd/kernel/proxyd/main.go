@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ulambda/netsrv"
-	"ulambda/proc"
-	"ulambda/proxy"
+	"sigmaos/netsrv"
+	"sigmaos/proc"
+	"sigmaos/proxy"
 )
 
 func main() {

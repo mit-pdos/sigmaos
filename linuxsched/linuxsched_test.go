@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/linuxsched"
+	"sigmaos/linuxsched"
 )
 
 func TestBasic(t *testing.T) {

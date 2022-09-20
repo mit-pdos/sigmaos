@@ -5,8 +5,8 @@ import (
 	"strings"
 	// "log"
 
-	// db "ulambda/debug"
-	np "ulambda/ninep"
+	// db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 func MakeTarget(srvaddrs []string) []byte {

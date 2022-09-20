@@ -1,7 +1,7 @@
 package twopc
 
 import (
-	"ulambda/fslib"
+	"sigmaos/fslib"
 )
 
 type TxnI interface {

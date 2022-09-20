@@ -40,7 +40,7 @@ $ export NAMED="hostname:1111"
 
 $ cd ulambda
 
-$ go test -timeout 0 -v ulambda/mr --realm fkaashoek --version=$(cat VERSION.txt) -app mr-grep-wiki2G.yml -run MRJOB > /tmp/mr.out 2>&1  &
+$ go test -timeout 0 -v sigmaos/mr --realm fkaashoek --version=$(cat VERSION.txt) -app mr-grep-wiki2G.yml -run MRJOB > /tmp/mr.out 2>&1  &
 
 # log into the VPC
 

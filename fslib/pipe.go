@@ -1,7 +1,7 @@
 package fslib
 
 import (
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 func (fl *FsLib) MakePipe(name string, lperm np.Tperm) error {

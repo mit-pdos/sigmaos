@@ -4,10 +4,10 @@ import (
 	"os"
 	"syscall"
 
-	db "ulambda/debug"
-	"ulambda/file"
-	"ulambda/fs"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/file"
+	"sigmaos/fs"
+	np "sigmaos/ninep"
 )
 
 type Symlink struct {

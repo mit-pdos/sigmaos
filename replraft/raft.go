@@ -20,9 +20,9 @@ import (
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 const (

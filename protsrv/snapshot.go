@@ -3,10 +3,10 @@ package protsrv
 import (
 	"encoding/json"
 
-	db "ulambda/debug"
-	"ulambda/fid"
-	np "ulambda/ninep"
-	"ulambda/sesssrv"
+	db "sigmaos/debug"
+	"sigmaos/fid"
+	np "sigmaos/ninep"
+	"sigmaos/sesssrv"
 )
 
 type ProtSrvSnapshot struct {

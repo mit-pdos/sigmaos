@@ -8,7 +8,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 const (

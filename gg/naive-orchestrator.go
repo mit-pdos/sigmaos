@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"ulambda/fslib"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (

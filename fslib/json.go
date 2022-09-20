@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {

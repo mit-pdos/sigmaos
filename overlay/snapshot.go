@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"runtime/debug"
 
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	np "sigmaos/ninep"
 )
 
 type DirOverlaySnapshot struct {

@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"ulambda/benchmarks"
-	"ulambda/config"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/realm"
-	"ulambda/test"
+	"sigmaos/benchmarks"
+	"sigmaos/config"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/realm"
+	"sigmaos/test"
 )
 
 //

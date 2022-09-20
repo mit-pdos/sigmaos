@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/kernel"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/kernel"
+	"sigmaos/procclnt"
 )
 
 const (

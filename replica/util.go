@@ -1,10 +1,10 @@
 package replica
 
 import (
-//	db "ulambda/debug"
-//	"ulambda/fslib"
-//	"ulambda/protclnt"
-//	"ulambda/replchain"
+//	db "sigmaos/debug"
+//	"sigmaos/fslib"
+//	"sigmaos/protclnt"
+//	"sigmaos/replchain"
 )
 
 //func GetChainReplConfig(name, port, configPath, addr, unionDirPath, symlinkPath string) *replchain.ChainReplConfig {

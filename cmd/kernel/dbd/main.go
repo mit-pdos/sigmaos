@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"ulambda/dbd"
-	db "ulambda/debug"
+	"sigmaos/dbd"
+	db "sigmaos/debug"
 )
 
 func main() {

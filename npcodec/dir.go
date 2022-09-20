@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 func MarshalSizeDir(dir []*np.Stat) np.Tlength {

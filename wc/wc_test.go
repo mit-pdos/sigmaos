@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/mr"
-	"ulambda/wc"
+	"sigmaos/mr"
+	"sigmaos/wc"
 )
 
 func TestMap(t *testing.T) {

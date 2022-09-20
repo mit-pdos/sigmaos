@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/linuxsched"
-	"ulambda/namespace"
-	np "ulambda/ninep"
-	"ulambda/perf"
-	"ulambda/proc"
+	db "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/linuxsched"
+	"sigmaos/namespace"
+	np "sigmaos/ninep"
+	"sigmaos/perf"
+	"sigmaos/proc"
 )
 
 const (

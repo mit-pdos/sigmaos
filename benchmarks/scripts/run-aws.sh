@@ -111,7 +111,7 @@ run_mr() {
   perf_dir=$3
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -130,7 +130,7 @@ run_kv() {
   perf_dir=$7
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -217,7 +217,7 @@ realm_burst() {
   perf_dir=$OUT_DIR/$run
   cmd="
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -234,7 +234,7 @@ realm_balance() {
     export SIGMADEBUG=\"TEST;\"; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v ulambda/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk $nclerk --clerk_dur $clerk_dur --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk $nclerk --clerk_dur $clerk_dur --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }

@@ -3,10 +3,10 @@ package fslib
 import (
 	"fmt"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/reader"
-	"ulambda/writer"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/reader"
+	"sigmaos/writer"
 )
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {

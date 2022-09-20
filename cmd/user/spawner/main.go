@@ -6,10 +6,10 @@ import (
 	"os"
 	"strconv"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 func main() {

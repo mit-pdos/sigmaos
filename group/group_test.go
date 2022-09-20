@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/group"
-	"ulambda/groupmgr"
-	np "ulambda/ninep"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/group"
+	"sigmaos/groupmgr"
+	np "sigmaos/ninep"
+	"sigmaos/test"
 )
 
 const (

@@ -5,8 +5,8 @@ import (
 
 	"github.com/montanaflynn/stats"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
 )
 
 type Result struct {

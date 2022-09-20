@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	db "ulambda/debug"
-	"ulambda/kv"
+	db "sigmaos/debug"
+	"sigmaos/kv"
 )
 
 func main() {

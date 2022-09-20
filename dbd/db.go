@@ -1,11 +1,11 @@
 package dbd
 
 import (
-	"ulambda/ctx"
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fslibsrv"
-	np "ulambda/ninep"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fslibsrv"
+	np "sigmaos/ninep"
 )
 
 //

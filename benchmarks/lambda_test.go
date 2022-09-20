@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/test"
 )
 
 func spawnLambda(ts *test.Tstate, semPath string) {

@@ -13,11 +13,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
-	"ulambda/fidclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/realm"
+	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/realm"
 )
 
 const (

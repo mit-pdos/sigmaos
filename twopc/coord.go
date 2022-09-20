@@ -10,13 +10,13 @@ import (
 	"log"
 	"os"
 
-	"ulambda/atomic"
-	db "ulambda/debug"
-	//	"ulambda/fenceclnt"
-	"ulambda/fslib"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
+	"sigmaos/atomic"
+	db "sigmaos/debug"
+	//	"sigmaos/fenceclnt"
+	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (

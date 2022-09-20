@@ -3,7 +3,7 @@ package replies
 import (
 	"sync"
 
-	np "ulambda/ninep"
+	np "sigmaos/ninep"
 )
 
 // Future for a reply.

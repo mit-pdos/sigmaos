@@ -10,15 +10,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/benchmarks"
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/linuxsched"
-	"ulambda/mr"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/test"
-	"ulambda/wc"
+	"sigmaos/benchmarks"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/linuxsched"
+	"sigmaos/mr"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
+	"sigmaos/test"
+	"sigmaos/wc"
 )
 
 // Parameters

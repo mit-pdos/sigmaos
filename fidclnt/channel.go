@@ -3,8 +3,8 @@ package fidclnt
 import (
 	"fmt"
 
-	np "ulambda/ninep"
-	"ulambda/protclnt"
+	np "sigmaos/ninep"
+	"sigmaos/protclnt"
 )
 
 // The channel associated with an fid, which connects to an object at

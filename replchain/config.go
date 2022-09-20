@@ -3,8 +3,8 @@ package replchain
 import (
 	"fmt"
 
-	"ulambda/protsrv"
-	"ulambda/repl"
+	"sigmaos/protsrv"
+	"sigmaos/repl"
 )
 
 type ChainReplConfig struct {

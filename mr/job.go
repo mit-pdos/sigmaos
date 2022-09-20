@@ -12,12 +12,12 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
-	"ulambda/groupmgr"
-	np "ulambda/ninep"
-	"ulambda/procclnt"
-	"ulambda/test"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/groupmgr"
+	np "sigmaos/ninep"
+	"sigmaos/procclnt"
+	"sigmaos/test"
 )
 
 func JobDir(job string) string {

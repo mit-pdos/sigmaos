@@ -5,17 +5,17 @@ import (
 	"log"
 	"reflect"
 
-	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fencefs"
-	"ulambda/fs"
-	"ulambda/inode"
-	"ulambda/memfs"
-	np "ulambda/ninep"
-	"ulambda/overlay"
-	"ulambda/sessstatesrv"
-	"ulambda/stats"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	"sigmaos/dir"
+	"sigmaos/fencefs"
+	"sigmaos/fs"
+	"sigmaos/inode"
+	"sigmaos/memfs"
+	np "sigmaos/ninep"
+	"sigmaos/overlay"
+	"sigmaos/sessstatesrv"
+	"sigmaos/stats"
+	"sigmaos/threadmgr"
 )
 
 type Snapshot struct {

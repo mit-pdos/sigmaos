@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"runtime/debug"
 
-	db "ulambda/debug"
-	"ulambda/file"
-	"ulambda/fs"
-	"ulambda/inode"
+	db "sigmaos/debug"
+	"sigmaos/file"
+	"sigmaos/fs"
+	"sigmaos/inode"
 )
 
 type FileSnapshot struct {

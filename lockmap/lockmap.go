@@ -5,9 +5,9 @@ import (
 
 	// "github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/refmap"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/refmap"
 )
 
 //

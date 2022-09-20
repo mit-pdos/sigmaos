@@ -7,11 +7,11 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/replies"
-	"ulambda/threadmgr"
+	db "sigmaos/debug"
+	np "sigmaos/ninep"
+	"sigmaos/proc"
+	"sigmaos/replies"
+	"sigmaos/threadmgr"
 )
 
 //

@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/ctx"
-	"ulambda/fencefs"
-	np "ulambda/ninep"
+	"sigmaos/ctx"
+	"sigmaos/fencefs"
+	np "sigmaos/ninep"
 )
 
 func TestMakeFenceFs(t *testing.T) {

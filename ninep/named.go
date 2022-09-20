@@ -50,7 +50,7 @@ const (
 
 // REALM
 const (
-	TEST_RID = "arielck"
+	TEST_RID = "test-realm"
 )
 
 // SIGMA

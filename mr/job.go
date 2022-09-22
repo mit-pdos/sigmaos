@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -140,33 +141,22 @@ func StartMRJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, job 
 	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, jobname, 0, ncoord, crashcoord, 0, 0)
 }
 
+// XXX run as a proc?
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-
-	// XXX run as a proc?
-	buf := make([]byte, test.BUFSZ)
+	wrt := bufio.NewWriter(file)
 	for i := 0; i < nreduce; i++ {
 		r := strconv.Itoa(i)
 		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r)
 		if err != nil {
 			return err
 		}
-		for {
-			_, err := rdr.Read(buf)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			_, err = file.Write(buf)
-			if err != nil {
-				return err
-			}
+		if _, err := io.Copy(wrt, rdr); err != nil {
+			return err
 		}
 	}
 	return nil

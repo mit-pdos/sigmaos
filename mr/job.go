@@ -148,15 +148,25 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 	defer file.Close()
 
 	// XXX run as a proc?
+	buf := make([]byte, test.BUFSZ)
 	for i := 0; i < nreduce; i++ {
 		r := strconv.Itoa(i)
-		data, err := fsl.GetFile(ReduceOut(jobName) + r)
+		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r)
 		if err != nil {
 			return err
 		}
-		_, err = file.Write(data)
-		if err != nil {
-			return err
+		for {
+			_, err := rdr.Read(buf)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			_, err = file.Write(buf)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

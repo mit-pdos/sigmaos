@@ -174,7 +174,7 @@ func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []s
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
-	b := fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
+	b := fmt.Sprintf("%s\t%s\n", kv.Key, kv.Value)
 	_, err := r.bwrt.Write([]byte(b))
 	return err
 }

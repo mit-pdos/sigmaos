@@ -109,10 +109,13 @@ func TestSeqGrep(t *testing.T) {
 }
 
 func TestSeqWc(t *testing.T) {
+	const OUT = "name/ux/~ip/seqout.txt"
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
-	p := proc.MakeProc("user/seqwc", []string{job.Input, "name/ux/~ip/seqout.txt"})
+	ts.Remove(OUT)
+
+	p := proc.MakeProc("user/seqwc", []string{job.Input, OUT})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.Pid)

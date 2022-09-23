@@ -77,7 +77,6 @@ func TestMapper(t *testing.T) {
 
 	ts := test.MakeTstateAll(t)
 	p := perf.MakePerf("MRMAPPER")
-	defer p.Done()
 
 	ts.Remove(REDUCEIN)
 
@@ -91,6 +90,7 @@ func TestMapper(t *testing.T) {
 		log.Printf("bin %v\n", b)
 		m.DoSplit(&b[0])
 	}
+	p.Done()
 	ts.Shutdown()
 }
 

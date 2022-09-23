@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"os"
 	"strconv"
@@ -23,11 +22,10 @@ func main() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 	log.Printf("input: %s\n", os.Args[1])
-	r, err := fsl.OpenReader(os.Args[1])
+	rdr, err := fsl.OpenAsyncReader(os.Args[1])
 	if err != nil {
 		db.DFatalf("OpenReader %v error %v\n", os.Args[1], err)
 	}
-	rdr := bufio.NewReader(r)
 	n := seqgrep.Grep(rdr)
 	log.Printf("n = %d\n", n)
 	p.Done()

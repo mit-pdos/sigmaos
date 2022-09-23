@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/klauspost/readahead"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -45,13 +44,8 @@ func wcline(n int, line string, data Tdata) int {
 }
 
 func wcFile(rdr io.Reader, data Tdata) int {
-	sz := 8 * (1 << 20)
-	ra, err := readahead.NewReaderSize(rdr, 4, sz)
-	if err != nil {
-		log.Fatalf("readahead err %v\n", err)
-	}
-	scanner := bufio.NewScanner(ra)
-	buf := make([]byte, 0, sz)
+	scanner := bufio.NewScanner(rdr)
+	buf := make([]byte, 0, 8*np.MBYTE)
 	scanner.Buffer(buf, cap(buf))
 	n := 1
 	cnt := 0
@@ -74,11 +68,10 @@ func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
 	nbytes := np.Tlength(0)
 	for _, st := range sts {
 		nbytes += st.Length
-		r, err := fsl.OpenReader(dir + "/" + st.Name)
+		rdr, err := fsl.OpenAsyncReader(dir + "/" + st.Name)
 		if err != nil {
 			return 0, err
 		}
-		rdr := bufio.NewReader(r)
 		m := wcFile(rdr, data)
 		// log.Printf("%v: %d\n", st.Name, m)
 		n += m

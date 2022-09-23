@@ -14,7 +14,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"sigmaos/awriter"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -24,14 +23,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/rand"
 	"sigmaos/test"
-	"sigmaos/writer"
 )
-
-type wrt struct {
-	wrt  *writer.Writer
-	awrt *awriter.Writer
-	bwrt *bufio.Writer
-}
 
 type Mapper struct {
 	*fslib.FsLib
@@ -42,7 +34,7 @@ type Mapper struct {
 	linesz      int
 	input       string
 	bin         string
-	wrts        []*wrt
+	wrts        []*fslib.Wrt
 	rand        string
 	perf        *perf.Perf
 }
@@ -56,7 +48,7 @@ func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *M
 	m.rand = rand.String(16)
 	m.input = input
 	m.bin = path.Base(m.input)
-	m.wrts = make([]*wrt, m.nreducetask)
+	m.wrts = make([]*fslib.Wrt, m.nreducetask)
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.perf = p
 	return m
@@ -83,27 +75,21 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	return m, nil
 }
 
-func (m *Mapper) InitWrt(r int, oname string) error {
-	w, err := m.CreateWriter(oname, 0777, np.OWRITE)
-	if err != nil {
-		m.closewrts()
-		return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
-	}
-	aw := awriter.NewWriterSize(w, np.BUFSZ)
-	bw := bufio.NewWriterSize(aw, np.BUFSZ)
-	m.wrts[r] = &wrt{w, aw, bw}
-	return nil
-}
-
 func (m *Mapper) CloseWrt() (np.Tlength, error) {
-	if err := m.flushwrts(); err != nil {
-		return 0, err
-	}
 	nout, err := m.closewrts()
 	if err != nil {
 		return 0, err
 	}
 	return nout, nil
+}
+
+func (m *Mapper) InitWrt(r int, name string) error {
+	if wrt, err := m.CreateAsyncWriter(name, 0777, np.OWRITE); err != nil {
+		return err
+	} else {
+		m.wrts[r] = wrt
+	}
+	return nil
 }
 
 func (m *Mapper) initMapper() error {
@@ -118,36 +104,25 @@ func (m *Mapper) initMapper() error {
 		// create temp output shard for reducer r
 		oname := mshardfile(m.job, m.bin, r) + m.rand
 		if err := m.InitWrt(r, oname); err != nil {
+			m.closewrts()
 			return err
 		}
 	}
 	return nil
 }
 
-// XXX use writercloser
 func (m *Mapper) closewrts() (np.Tlength, error) {
 	n := np.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
 		if m.wrts[r] != nil {
-			if err := m.wrts[r].awrt.Close(); err != nil {
-				return 0, fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
+			if err := m.wrts[r].Close(); err != nil {
+				return 0, err
+			} else {
+				n += m.wrts[r].Nbytes()
 			}
-			if err := m.wrts[r].wrt.Close(); err != nil {
-				return 0, fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
-			}
-			n += m.wrts[r].wrt.Nbytes()
 		}
 	}
 	return n, nil
-}
-
-func (m *Mapper) flushwrts() error {
-	for r := 0; r < m.nreducetask; r++ {
-		if err := m.wrts[r].bwrt.Flush(); err != nil {
-			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
-		}
-	}
-	return nil
 }
 
 // Inform reducer where to find map output
@@ -189,7 +164,7 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	return encodeKV(m.wrts[r].bwrt, kv.Key, kv.Value, r)
+	return encodeKV(m.wrts[r], kv.Key, kv.Value, r)
 	//	b, err := json.Marshal(kv)
 	//	if err != nil {
 	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
@@ -207,13 +182,12 @@ func (m *Mapper) emit(kv *KeyValue) error {
 func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
-		// -1 to pick up last byte from prev split so that if
-		// s.Offset != 0 below works out correctly. if the
-		// last byte of previous split is a newline, this
-		// mapper should process the first line of the split.
-		// if not, this mapper should ignore the first line of
-		// the split because it has been processed as part of
-		// the previous split.
+		// -1 to pick up last byte from prev split so that if s.Offset
+		// != 0 below works out correctly. if the last byte of
+		// previous split is a newline, this mapper should process the
+		// first line of the split.  if not, this mapper should ignore
+		// the first line of the split because it has been processed
+		// as part of the previous split.
 		off--
 	}
 	rdr, err := m.OpenAsyncReader(s.File, off)

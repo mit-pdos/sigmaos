@@ -7,6 +7,7 @@ import (
 
 	"github.com/klauspost/readahead"
 
+	"sigmaos/awriter"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/reader"
@@ -145,6 +146,43 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 	}
 	wrt := fl.MakeWriter(fd)
 	return wrt, nil
+}
+
+type Wrt struct {
+	wrt  *writer.Writer
+	awrt *awriter.Writer
+	bwrt *bufio.Writer
+}
+
+func (fl *FsLib) CreateAsyncWriter(fname string, perm np.Tperm, mode np.Tmode) (*Wrt, error) {
+	w, err := fl.CreateWriter(fname, perm, mode)
+	if err != nil {
+		return nil, err
+	}
+	aw := awriter.NewWriterSize(w, np.BUFSZ)
+	bw := bufio.NewWriterSize(aw, np.BUFSZ)
+	return &Wrt{w, aw, bw}, nil
+}
+
+func (wrt *Wrt) Close() error {
+	if err := wrt.bwrt.Flush(); err != nil {
+		return err
+	}
+	if err := wrt.awrt.Close(); err != nil {
+		return err
+	}
+	if err := wrt.wrt.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (wrt *Wrt) Write(b []byte) (int, error) {
+	return wrt.awrt.Write(b)
+}
+
+func (wrt *Wrt) Nbytes() np.Tlength {
+	return wrt.wrt.Nbytes()
 }
 
 //

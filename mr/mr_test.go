@@ -85,8 +85,10 @@ func TestMapper(t *testing.T) {
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
+
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
+
 	for _, b := range bins {
 		for _, s := range b {
 			m.DoSplit(&s)

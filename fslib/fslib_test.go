@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/awriter"
@@ -1240,7 +1239,7 @@ const (
 	KBYTE      = 1 << 10
 	NRUNS      = 3
 	SYNCFILESZ = 100 * KBYTE
-	FILESZ     = 512 * np.MBYTE
+	FILESZ     = 100 * np.MBYTE
 	WRITESZ    = 4096
 )
 
@@ -1456,11 +1455,9 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p3 := perf.MakePerfMulti("TEST", "abufreader")
 	defer p3.Done()
 	measure(p3, "readahead", func() np.Tlength {
-		r, err := ts.OpenReader(fn)
+		r, err := ts.OpenAsyncReader(fn)
 		assert.Nil(t, err)
-		br, err := readahead.NewReaderSize(r, 4, np.BUFSZ)
-		assert.Nil(t, err)
-		n, err := test.Reader(t, br, buf, sz)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -1541,12 +1538,10 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
-			n := measure(p3, "readahead", func() np.Tlength {
-				r, err := fsls[i].OpenReader(fns[i])
+			n := measure(p3, "readabuf", func() np.Tlength {
+				r, err := fsls[i].OpenAsyncReader(fns[i])
 				assert.Nil(t, err)
-				br, err := readahead.NewReaderSize(r, 4, np.BUFSZ)
-				assert.Nil(t, err)
-				n, err := test.Reader(t, br, buf, FILESZ)
+				n, err := test.Reader(t, r, buf, FILESZ)
 				assert.Nil(t, err)
 				r.Close()
 				return n

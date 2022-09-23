@@ -22,7 +22,7 @@ func main() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 	log.Printf("input: %s\n", os.Args[1])
-	rdr, err := fsl.OpenAsyncReader(os.Args[1])
+	rdr, err := fsl.OpenAsyncReader(os.Args[1], 0)
 	if err != nil {
 		db.DFatalf("OpenReader %v error %v\n", os.Args[1], err)
 	}

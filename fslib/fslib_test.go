@@ -1455,7 +1455,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p3 := perf.MakePerfMulti("TEST", "abufreader")
 	defer p3.Done()
 	measure(p3, "readahead", func() np.Tlength {
-		r, err := ts.OpenAsyncReader(fn)
+		r, err := ts.OpenAsyncReader(fn, 0)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
@@ -1539,7 +1539,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := range fns {
 		go func(i int) {
 			n := measure(p3, "readabuf", func() np.Tlength {
-				r, err := fsls[i].OpenAsyncReader(fns[i])
+				r, err := fsls[i].OpenAsyncReader(fns[i], 0)
 				assert.Nil(t, err)
 				n, err := test.Reader(t, r, buf, FILESZ)
 				assert.Nil(t, err)

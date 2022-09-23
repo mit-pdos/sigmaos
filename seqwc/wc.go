@@ -66,7 +66,7 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
 	nbytes := np.Tlength(0)
 	for _, st := range sts {
 		nbytes += st.Length
-		rdr, err := fsl.OpenAsyncReader(dir + "/" + st.Name)
+		rdr, err := fsl.OpenAsyncReader(dir+"/"+st.Name, 0)
 		if err != nil {
 			return 0, 0, err
 		}

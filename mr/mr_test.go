@@ -95,7 +95,7 @@ func TestMapper(t *testing.T) {
 	m.CloseWrt()
 
 	data := make(map[string][]string, 0)
-	rdr, err := ts.OpenAsyncReader(REDUCEIN)
+	rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
 	assert.Nil(t, err)
 	err = mr.ReadKVs(rdr, data)
 	assert.Nil(t, err)

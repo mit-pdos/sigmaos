@@ -69,19 +69,22 @@ func (rdr *Rdr) Nbytes() np.Tlength {
 	return rdr.rdr.Nbytes()
 }
 
-func (fl *FsLib) OpenAsyncReader(path string) (*Rdr, error) {
-	var err error
-	rdr := &Rdr{}
-	rdr.rdr, err = fl.OpenReader(path)
+func (fl *FsLib) OpenAsyncReader(path string, offset np.Toffset) (*Rdr, error) {
+	rdr, err := fl.OpenReader(path)
 	if err != nil {
 		return nil, err
 	}
-	rdr.brdr = bufio.NewReaderSize(rdr.rdr, np.BUFSZ)
-	rdr.ardr, err = readahead.NewReaderSize(rdr.brdr, 4, np.BUFSZ)
+	r := &Rdr{}
+	r.rdr = rdr
+	if err := rdr.Lseek(offset); err != nil {
+		return nil, err
+	}
+	r.brdr = bufio.NewReaderSize(rdr, np.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, np.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
-	return rdr, nil
+	return r, nil
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {

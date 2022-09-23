@@ -110,7 +110,7 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 
 	sym := r.input + "/" + file + "/"
 	db.DPrintf("MR", "readFile %v\n", sym)
-	rdr, err := fsl.OpenAsyncReader(sym)
+	rdr, err := fsl.OpenAsyncReader(sym, 0)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
 		return 0, 0, false

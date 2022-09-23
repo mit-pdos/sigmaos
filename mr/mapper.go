@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klauspost/readahead"
-
 	"github.com/dustin/go-humanize"
 
 	"sigmaos/awriter"
@@ -207,12 +205,8 @@ func (m *Mapper) emit(kv *KeyValue) error {
 }
 
 func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
-	rdr, err := m.OpenReader(s.File)
-	if err != nil {
-		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
-	}
-	defer rdr.Close()
-	if s.Offset != 0 {
+	off := s.Offset
+	if off != 0 {
 		// -1 to pick up last byte from prev split so that if
 		// s.Offset != 0 below works out correctly. if the
 		// last byte of previous split is a newline, this
@@ -220,15 +214,14 @@ func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
 		// if not, this mapper should ignore the first line of
 		// the split because it has been processed as part of
 		// the previous split.
-		rdr.Lseek(s.Offset - 1)
+		off--
 	}
-
-	ra, err := readahead.NewReaderSize(rdr, 4, m.linesz)
+	rdr, err := m.OpenAsyncReader(s.File, off)
 	if err != nil {
-		db.DFatalf("readahead err %v\n", err)
+		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
 	}
-
-	scanner := bufio.NewScanner(ra)
+	defer rdr.Close()
+	scanner := bufio.NewScanner(rdr)
 	buf := make([]byte, 0, m.linesz)
 	scanner.Buffer(buf, cap(buf))
 

@@ -22,6 +22,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
+	"sigmaos/seqwc"
 	"sigmaos/test"
 	"sigmaos/wc"
 )
@@ -72,7 +73,7 @@ func TestSplits(t *testing.T) {
 }
 
 func TestMapper(t *testing.T) {
-	const SPLITSZ = 100
+	const SPLITSZ = 100000
 	const REDUCEIN = "name/ux/~ip/test-reducer-in.txt"
 
 	ts := test.MakeTstateAll(t)
@@ -91,6 +92,29 @@ func TestMapper(t *testing.T) {
 		m.DoSplit(&b[0])
 	}
 	m.CloseWrt()
+
+	data := make(map[string][]string, 0)
+	rdr, err := ts.OpenAsyncReader(REDUCEIN)
+	assert.Nil(t, err)
+	err = mr.ReadKVs(rdr, data)
+	assert.Nil(t, err)
+
+	data1 := make(seqwc.Tdata)
+	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)
+	assert.Nil(t, err)
+
+	log.Printf("data %v\n", data)
+	log.Printf("data1 %v\n", data1)
+
+	for k, v := range data1 {
+		if v1, ok := data[k]; !ok {
+			log.Printf("error: k %s missing\n", k)
+		} else {
+			if uint64(len(v1)) != v {
+				log.Printf("error: %v != %v\n", v, v1)
+			}
+		}
+	}
 
 	p.Done()
 	ts.Shutdown()

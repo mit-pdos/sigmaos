@@ -142,13 +142,8 @@ func setVersion() {
 	proc.Version = version
 }
 
-const (
-	MBYTE = 1 << 20
-	BUFSZ = 4 * MBYTE
-)
-
 func Mbyte(sz np.Tlength) float64 {
-	return float64(sz) / float64(MBYTE)
+	return float64(sz) / float64(np.MBYTE)
 }
 
 func TputStr(sz np.Tlength, ms int64) string {

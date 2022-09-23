@@ -75,14 +75,14 @@ func TestDir(t *testing.T) {
 
 func mkfile(t *testing.T, name string) {
 	CNT := 500
-	buf := test.MkBuf(test.BUFSZ)
+	buf := test.MkBuf(np.BUFSZ)
 	start := time.Now()
 	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0666)
 	assert.Nil(t, err)
 	for i := 0; i < CNT; i++ {
-		n, err := syscall.Pwrite(fd, buf, int64(i*test.BUFSZ))
+		n, err := syscall.Pwrite(fd, buf, int64(i*np.BUFSZ))
 		assert.Nil(t, err)
-		assert.Equal(t, test.BUFSZ, n)
+		assert.Equal(t, np.BUFSZ, n)
 	}
 	syscall.Fsync(fd)
 	syscall.Close(fd)

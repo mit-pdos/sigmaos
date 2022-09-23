@@ -53,7 +53,7 @@ func TestHash(t *testing.T) {
 }
 
 func TestSplits(t *testing.T) {
-	const SPLITSZ = 10 * test.MBYTE
+	const SPLITSZ = 10 * np.MBYTE
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
@@ -90,6 +90,8 @@ func TestMapper(t *testing.T) {
 		log.Printf("bin %v\n", b)
 		m.DoSplit(&b[0])
 	}
+	m.CloseWrt()
+
 	p.Done()
 	ts.Shutdown()
 }

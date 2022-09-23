@@ -1,7 +1,11 @@
 package fslib
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+
+	"github.com/klauspost/readahead"
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
@@ -39,6 +43,45 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 		return nil, err
 	}
 	return fl.MakeReader(fd, path, fl.GetChunkSz()), nil
+}
+
+type Rdr struct {
+	rdr  *reader.Reader
+	brdr *bufio.Reader
+	ardr io.ReadCloser
+}
+
+func (rdr *Rdr) Close() error {
+	if err := rdr.ardr.Close(); err != nil {
+		return err
+	}
+	if err := rdr.rdr.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rdr *Rdr) Read(p []byte) (n int, err error) {
+	return rdr.ardr.Read(p)
+}
+
+func (rdr *Rdr) Nbytes() np.Tlength {
+	return rdr.rdr.Nbytes()
+}
+
+func (fl *FsLib) OpenAsyncReader(path string) (*Rdr, error) {
+	var err error
+	rdr := &Rdr{}
+	rdr.rdr, err = fl.OpenReader(path)
+	if err != nil {
+		return nil, err
+	}
+	rdr.brdr = bufio.NewReaderSize(rdr.rdr, np.BUFSZ)
+	rdr.ardr, err = readahead.NewReaderSize(rdr.brdr, 4, np.BUFSZ)
+	if err != nil {
+		return nil, err
+	}
+	return rdr, nil
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {

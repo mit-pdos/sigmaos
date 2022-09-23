@@ -91,10 +91,21 @@ func (m *Mapper) InitWrt(r int, oname string) error {
 		m.closewrts()
 		return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 	}
-	aw := awriter.NewWriterSize(w, test.BUFSZ)
-	bw := bufio.NewWriterSize(aw, test.BUFSZ)
+	aw := awriter.NewWriterSize(w, np.BUFSZ)
+	bw := bufio.NewWriterSize(aw, np.BUFSZ)
 	m.wrts[r] = &wrt{w, aw, bw}
 	return nil
+}
+
+func (m *Mapper) CloseWrt() (np.Tlength, error) {
+	if err := m.flushwrts(); err != nil {
+		return 0, err
+	}
+	nout, err := m.closewrts()
+	if err != nil {
+		return 0, err
+	}
+	return nout, nil
 }
 
 func (m *Mapper) initMapper() error {
@@ -275,10 +286,7 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 		}
 		ni += n
 	}
-	if err := m.flushwrts(); err != nil {
-		return 0, 0, err
-	}
-	nout, err := m.closewrts()
+	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, err
 	}

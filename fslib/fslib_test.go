@@ -1240,7 +1240,7 @@ const (
 	KBYTE      = 1 << 10
 	NRUNS      = 3
 	SYNCFILESZ = 100 * KBYTE
-	FILESZ     = 512 * test.MBYTE
+	FILESZ     = 512 * np.MBYTE
 	WRITESZ    = 4096
 )
 
@@ -1289,14 +1289,14 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err)
 	case HBUF:
-		bw := bufio.NewWriterSize(w, test.BUFSZ)
+		bw := bufio.NewWriterSize(w, np.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
 		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 	case HASYNC:
-		aw := awriter.NewWriterSize(w, test.BUFSZ)
-		bw := bufio.NewWriterSize(aw, test.BUFSZ)
+		aw := awriter.NewWriterSize(w, np.BUFSZ)
+		bw := bufio.NewWriterSize(aw, np.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
 		assert.Nil(t, err)
 		err = bw.Flush()
@@ -1447,7 +1447,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	measure(p2, "bufreader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
-		br := bufio.NewReaderSize(r, test.BUFSZ)
+		br := bufio.NewReaderSize(r, np.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
@@ -1458,7 +1458,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	measure(p3, "readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
-		br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
+		br, err := readahead.NewReaderSize(r, 4, np.BUFSZ)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
@@ -1521,7 +1521,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 			n := measure(p2, "bufreader", func() np.Tlength {
 				r, err := fsls[i].OpenReader(fns[i])
 				assert.Nil(t, err)
-				br := bufio.NewReaderSize(r, test.BUFSZ)
+				br := bufio.NewReaderSize(r, np.BUFSZ)
 				n, err := test.Reader(t, br, buf, FILESZ)
 				assert.Nil(t, err)
 				r.Close()
@@ -1544,7 +1544,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 			n := measure(p3, "readahead", func() np.Tlength {
 				r, err := fsls[i].OpenReader(fns[i])
 				assert.Nil(t, err)
-				br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
+				br, err := readahead.NewReaderSize(r, 4, np.BUFSZ)
 				assert.Nil(t, err)
 				n, err := test.Reader(t, br, buf, FILESZ)
 				assert.Nil(t, err)

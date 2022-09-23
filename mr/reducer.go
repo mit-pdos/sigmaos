@@ -15,7 +15,6 @@ import (
 	//	"runtime/debug"
 
 	"github.com/dustin/go-humanize"
-	"github.com/klauspost/readahead"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -66,7 +65,7 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 		return nil, err
 	}
 	r.wrt = w
-	r.bwrt = bufio.NewWriterSize(w, test.BUFSZ)
+	r.bwrt = bufio.NewWriterSize(w, np.BUFSZ)
 
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
@@ -83,34 +82,15 @@ type result struct {
 	n    np.Tlength
 }
 
-func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, bool) {
-	// Make new fslib to parallelize request to a single fsux
-	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
-	defer fsl.Exit()
-
-	sym := r.input + "/" + file + "/"
-	db.DPrintf("MR", "readFile %v\n", sym)
-	rdr, err := fsl.OpenReader(sym)
-	if err != nil {
-		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
-		return 0, 0, false
-	}
-	defer rdr.Close()
-	start := time.Now()
-
-	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
-	ardr, err := readahead.NewReaderSize(brdr, 4, test.BUFSZ)
-	if err != nil {
-		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
-	}
+func RdrFile(rdr io.Reader, data Tdata) error {
 	for {
 		var kv KeyValue
-		if r := decodeKV(ardr, &kv); r != nil {
-			if r == io.EOF {
+		if err := decodeKV(rdr, &kv); err != nil {
+			if err == io.EOF {
 				break
 			}
-			if r != nil {
-				err = r
+			if err != nil {
+				return err
 				break
 			}
 		}
@@ -119,6 +99,27 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 		}
 		data[kv.Key] = append(data[kv.Key], kv.Value)
 	}
+	return nil
+}
+
+// XXX cut new fslib?
+func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, bool) {
+	// Make new fslib to parallelize request to a single fsux
+	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	defer fsl.Exit()
+
+	sym := r.input + "/" + file + "/"
+	db.DPrintf("MR", "readFile %v\n", sym)
+	rdr, err := fsl.OpenAsyncReader(sym)
+	if err != nil {
+		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
+		return 0, 0, false
+	}
+	defer rdr.Close()
+
+	start := time.Now()
+
+	err = RdrFile(rdr, data)
 	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf("MR", "decodeKV %v err %v\n", sym, err)

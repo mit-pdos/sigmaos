@@ -200,7 +200,7 @@ func TestSymlinkDir(t *testing.T) {
 }
 
 func TestReadSplit(t *testing.T) {
-	const SPLITSZ = 64 * test.MBYTE
+	const SPLITSZ = 64 * np.MBYTE
 
 	ts := test.MakeTstateAll(t)
 
@@ -208,7 +208,7 @@ func TestReadSplit(t *testing.T) {
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)
-	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
+	brdr := bufio.NewReaderSize(rdr, np.BUFSZ)
 	b := make([]byte, SPLITSZ)
 	n, err := brdr.Read(b)
 	assert.Nil(t, err)

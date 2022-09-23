@@ -92,13 +92,10 @@ func mkResult(data interface{}) *Result {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
+func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
 	bin := Bin{}
-	// Set split size to 10MB
-	splitsz := np.Tlength(10 * 1024 * 1024)
-	// splitsz := maxbinsz >> 3 //np.Tlength(10 * 1024 * 1024)
 
 	sts, err := fsl.GetDir(dir)
 	if err != nil {

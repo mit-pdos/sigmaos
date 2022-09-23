@@ -49,34 +49,34 @@ type Mapper struct {
 	perf        *perf.Perf
 }
 
+func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *Mapper {
+	m := &Mapper{}
+	m.mapf = mapf
+	m.job = job
+	m.nreducetask = nr
+	m.linesz = lsz
+	m.rand = rand.String(16)
+	m.input = input
+	m.bin = path.Base(m.input)
+	m.wrts = make([]*wrt, m.nreducetask)
+	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
+	m.perf = p
+	return m
+}
+
 func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if len(args) != 4 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
-	m := &Mapper{}
-	m.mapf = mapf
-	m.job = args[0]
-	m.perf = p
-
-	n, err := strconv.Atoi(args[1])
+	nr, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[1])
 	}
-	m.nreducetask = n
-
-	m.input = args[2]
-
-	n, err = strconv.Atoi(args[3])
+	lsz, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	m.linesz = n
-
-	m.bin = path.Base(m.input)
-	m.rand = rand.String(16)
-	m.wrts = make([]*wrt, m.nreducetask)
-
-	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
+	m := MkMapper(mapf, args[0], p, nr, lsz, args[2])
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
@@ -85,8 +85,19 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	return m, nil
 }
 
-func (m *Mapper) initMapper() error {
+func (m *Mapper) InitWrt(r int, oname string) error {
+	w, err := m.CreateWriter(oname, 0777, np.OWRITE)
+	if err != nil {
+		m.closewrts()
+		return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
+	}
+	aw := awriter.NewWriterSize(w, test.BUFSZ)
+	bw := bufio.NewWriterSize(aw, test.BUFSZ)
+	m.wrts[r] = &wrt{w, aw, bw}
+	return nil
+}
 
+func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	m.MkDir(MLOCALDIR, 0777)
@@ -97,14 +108,9 @@ func (m *Mapper) initMapper() error {
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
 		oname := mshardfile(m.job, m.bin, r) + m.rand
-		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
-		if err != nil {
-			m.closewrts()
-			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
+		if err := m.InitWrt(r, oname); err != nil {
+			return err
 		}
-		aw := awriter.NewWriterSize(w, test.BUFSZ)
-		bw := bufio.NewWriterSize(aw, test.BUFSZ)
-		m.wrts[r] = &wrt{w, aw, bw}
 	}
 	return nil
 }
@@ -189,7 +195,7 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	//	}
 }
 
-func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
+func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
 	rdr, err := m.OpenReader(s.File)
 	if err != nil {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
@@ -259,7 +265,7 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 			return 0, 0, err
 		}
 		db.DPrintf("MR", "Mapper %s: process split %v\n", m.bin, s)
-		n, err := m.doSplit(&s)
+		n, err := m.DoSplit(&s)
 		if err != nil {
 			db.DPrintf("MR", "doSplit %v err %v\n", s, err)
 			return 0, 0, err

@@ -3,6 +3,7 @@ package mr_test
 import (
 	"bytes"
 	"flag"
+	"log"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -17,14 +18,16 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
 	"sigmaos/test"
+	"sigmaos/wc"
 )
 
 const (
-	OUTPUT = "par-mr.out"
+	OUTPUT = "/tmp/par-mr.out"
 	NCOORD = 5
 
 	// time interval (ms) for when a failure might happen. If too
@@ -50,9 +53,10 @@ func TestHash(t *testing.T) {
 }
 
 func TestSplits(t *testing.T) {
+	const SPLITSZ = 10 * test.MBYTE
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
-	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
+	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := np.Tlength(0)
 	for _, b := range bins {
@@ -64,6 +68,29 @@ func TestSplits(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "len %d %v sum %v\n", len(bins), bins, humanize.Bytes(uint64(sum)))
 	assert.NotEqual(t, 0, len(bins))
+	ts.Shutdown()
+}
+
+func TestMapper(t *testing.T) {
+	const SPLITSZ = 100
+	const REDUCEIN = "name/ux/~ip/test-reducer-in.txt"
+
+	ts := test.MakeTstateAll(t)
+	p := perf.MakePerf("MRMAPPER")
+	defer p.Done()
+
+	ts.Remove(REDUCEIN)
+
+	job = mr.ReadJobConfig(app)
+	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
+	assert.Nil(t, err)
+	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
+	err = m.InitWrt(0, REDUCEIN)
+	assert.Nil(t, err)
+	for _, b := range bins {
+		log.Printf("bin %v\n", b)
+		m.DoSplit(&b[0])
+	}
 	ts.Shutdown()
 }
 

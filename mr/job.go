@@ -119,7 +119,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 
 // Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
-	bins, err := MkBins(fsl, job.Input, np.Tlength(job.Binsz))
+	splitsz := np.Tlength(10 * test.MBYTE)
+	// splitsz := maxbinsz >> 3 //np.Tlength(10 * 1024 * 1024)
+
+	bins, err := MkBins(fsl, job.Input, np.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}

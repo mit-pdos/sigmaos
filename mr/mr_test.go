@@ -81,7 +81,7 @@ func TestMapper(t *testing.T) {
 
 	ts.Remove(REDUCEIN)
 
-	job = mr.ReadJobConfig(app)
+	job = mr.ReadJobConfig("mr-ux-test.yml")
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")

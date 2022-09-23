@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"bufio"
 	"fmt"
 	"strconv"
 	"sync"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -228,24 +226,19 @@ func writer(t *testing.T, ch chan error, name string) {
 			if err := fsl.Remove(fn); err != nil && np.IsErrUnreachable(err) {
 				break
 			}
-			w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
+			w, err := fsl.CreateAsyncWriter(fn, 0777, np.OWRITE)
 			if err != nil {
 				assert.True(t, np.IsErrUnreachable(err))
 				break
 			}
 			nfile += 1
-			aw := awriter.NewWriterSize(w, np.BUFSZ)
-			bw := bufio.NewWriterSize(aw, np.BUFSZ)
 			buf := test.MkBuf(WRITESZ)
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				break
 			}
-			if err := bw.Flush(); err != nil {
+			if err := w.Close(); err != nil {
 				assert.True(t, np.IsErrUnreachable(err))
 				break
-			}
-			if err := aw.Close(); err != nil {
-				assert.True(t, np.IsErrUnreachable(err))
 			}
 		}
 	}

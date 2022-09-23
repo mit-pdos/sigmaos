@@ -2,10 +2,10 @@ package seqwc
 
 import (
 	"bufio"
+	"fmt"
 	// "encoding/json"
 	"io"
 	"log"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,20 +20,6 @@ import (
 )
 
 type Tdata map[string]uint64
-
-func wcline1(n int, line string, data Tdata) int {
-	re := regexp.MustCompile("[^a-zA-Z0-9\\s]+")
-	sanitized := strings.ToLower(re.ReplaceAllString(line, " "))
-	cnt := 0
-	for _, w := range strings.Fields(sanitized) {
-		if _, ok := data[w]; !ok {
-			data[w] = uint64(0)
-		}
-		data[w] += 1
-		cnt++
-	}
-	return cnt
-}
 
 func wcline(n int, line string, data Tdata) int {
 	scanner := bufio.NewScanner(strings.NewReader(line))
@@ -77,7 +63,7 @@ func wcFile(rdr io.Reader, data Tdata) int {
 	return cnt
 }
 
-func Wc(fsl *fslib.FsLib, dir string) (int, error) {
+func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return 0, err
@@ -97,9 +83,19 @@ func Wc(fsl *fslib.FsLib, dir string) (int, error) {
 		// log.Printf("%v: %d\n", st.Name, m)
 		n += m
 	}
-	//for k, v := range data {
-	//	fmt.Printf("%s %d\n", k, v)
-	//}
+	wrt, err := fsl.CreateWriter(out, 0777, np.OWRITE|np.OTRUNC)
+	if err != nil {
+		return 0, err
+	}
+	defer wrt.Close()
+	for k, v := range data {
+		b := fmt.Sprintf("%s\t%d\n", k, v)
+		_, err := wrt.Write([]byte(b))
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Wc %s took %vms (%s)", humanize.Bytes(uint64(nbytes)), ms, test.TputStr(nbytes, ms))
 	return n, nil

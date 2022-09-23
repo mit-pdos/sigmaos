@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	n, err := seqwc.Wc(fsl, os.Args[1])
+	n, err := seqwc.Wc(fsl, os.Args[1], os.Args[2])
 	if err != nil {
 		db.DFatalf("Wc: error %v\n", err)
 	}

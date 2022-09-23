@@ -73,7 +73,7 @@ func TestSplits(t *testing.T) {
 }
 
 func TestMapper(t *testing.T) {
-	const SPLITSZ = 100000
+	const SPLITSZ = 500
 	const REDUCEIN = "name/ux/~ip/test-reducer-in.txt"
 
 	ts := test.MakeTstateAll(t)
@@ -88,8 +88,9 @@ func TestMapper(t *testing.T) {
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 	for _, b := range bins {
-		log.Printf("bin %v\n", b)
-		m.DoSplit(&b[0])
+		for _, s := range b {
+			m.DoSplit(&s)
+		}
 	}
 	m.CloseWrt()
 

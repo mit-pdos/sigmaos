@@ -82,7 +82,7 @@ type result struct {
 	n    np.Tlength
 }
 
-func RdrFile(rdr io.Reader, data Tdata) error {
+func ReadKVs(rdr io.Reader, data Tdata) error {
 	for {
 		var kv KeyValue
 		if err := decodeKV(rdr, &kv); err != nil {
@@ -119,7 +119,7 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 
 	start := time.Now()
 
-	err = RdrFile(rdr, data)
+	err = ReadKVs(rdr, data)
 	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf("MR", "decodeKV %v err %v\n", sym, err)

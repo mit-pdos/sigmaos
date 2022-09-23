@@ -57,25 +57,30 @@ func wcFile(rdr io.Reader, data Tdata) int {
 	return cnt
 }
 
-func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
+func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	data := make(Tdata)
 	n := 0
-	start := time.Now()
 	nbytes := np.Tlength(0)
 	for _, st := range sts {
 		nbytes += st.Length
 		rdr, err := fsl.OpenAsyncReader(dir + "/" + st.Name)
 		if err != nil {
-			return 0, err
+			return 0, 0, err
 		}
 		m := wcFile(rdr, data)
 		// log.Printf("%v: %d\n", st.Name, m)
 		n += m
 	}
+	return n, nbytes, nil
+}
+
+func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
+	data := make(Tdata)
+	start := time.Now()
+	n, nbytes, err := WcData(fsl, dir, data)
 	wrt, err := fsl.CreateWriter(out, 0777, np.OWRITE|np.OTRUNC)
 	if err != nil {
 		return 0, err

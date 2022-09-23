@@ -14,7 +14,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/named"
@@ -1281,29 +1280,32 @@ const (
 )
 
 func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz np.Tlength) np.Tlength {
-	w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
-	assert.Nil(t, err, "Error Create writer: %v", err)
 	switch how {
 	case HSYNC:
+		w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err, "Error Create writer: %v", err)
 		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err)
+		err = w.Close()
+		assert.Nil(t, err)
 	case HBUF:
+		w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err, "Error Create writer: %v", err)
 		bw := bufio.NewWriterSize(w, np.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
 		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
+		err = w.Close()
+		assert.Nil(t, err)
 	case HASYNC:
-		aw := awriter.NewWriterSize(w, np.BUFSZ)
-		bw := bufio.NewWriterSize(aw, np.BUFSZ)
-		err = test.Writer(t, bw, buf, sz)
+		w, err := fsl.CreateAsyncWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err, "Error Create writer: %v", err)
+		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err)
-		err = bw.Flush()
-		assert.Nil(t, err)
-		err = aw.Close()
+		err = w.Close()
 		assert.Nil(t, err)
 	}
-	w.Close()
 	st, err := fsl.Stat(fn)
 	assert.Nil(t, err)
 	assert.Equal(t, np.Tlength(sz), st.Length, "stat")

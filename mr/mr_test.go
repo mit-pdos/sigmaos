@@ -104,15 +104,16 @@ func TestMapper(t *testing.T) {
 	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)
 	assert.Nil(t, err)
 
-	log.Printf("data %v\n", data)
-	log.Printf("data1 %v\n", data1)
+	if len(data1) != len(data) {
+		log.Printf("error: len not matching %d %d\n", len(data1), len(data))
+	}
 
 	for k, v := range data1 {
 		if v1, ok := data[k]; !ok {
 			log.Printf("error: k %s missing\n", k)
 		} else {
 			if uint64(len(v1)) != v {
-				log.Printf("error: %v != %v\n", v, v1)
+				log.Printf("error: %s: %v != %v\n", k, v, v1)
 			}
 		}
 	}

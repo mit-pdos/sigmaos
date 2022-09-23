@@ -178,7 +178,7 @@ func (wrt *Wrt) Close() error {
 }
 
 func (wrt *Wrt) Write(b []byte) (int, error) {
-	return wrt.awrt.Write(b)
+	return wrt.bwrt.Write(b)
 }
 
 func (wrt *Wrt) Nbytes() np.Tlength {

@@ -85,7 +85,7 @@ type result struct {
 func ReadKVs(rdr io.Reader, data Tdata) error {
 	for {
 		var kv KeyValue
-		if err := decodeKV(rdr, &kv); err != nil {
+		if err := DecodeKV(rdr, &kv); err != nil {
 			if err == io.EOF {
 				break
 			}

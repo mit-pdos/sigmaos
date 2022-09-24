@@ -3,7 +3,8 @@ package mr_test
 import (
 	"bytes"
 	"flag"
-	"log"
+	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -22,7 +23,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
-	"sigmaos/seqwc"
+	// "sigmaos/seqwc"
 	"sigmaos/test"
 	"sigmaos/wc"
 )
@@ -73,15 +74,16 @@ func TestSplits(t *testing.T) {
 }
 
 func TestMapper(t *testing.T) {
-	const SPLITSZ = 500
+	const SPLITSZ = 10 * np.MBYTE // 500
 	const REDUCEIN = "name/ux/~ip/test-reducer-in.txt"
+	const REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
 
 	ts := test.MakeTstateAll(t)
 	p := perf.MakePerf("MRMAPPER")
 
 	ts.Remove(REDUCEIN)
 
-	job = mr.ReadJobConfig("mr-ux-test.yml")
+	job = mr.ReadJobConfig("mr-ux-wiki1G.yml")
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
@@ -96,29 +98,49 @@ func TestMapper(t *testing.T) {
 	}
 	m.CloseWrt()
 
-	data := make(map[string][]string, 0)
+	data := make(map[string]int, 0)
 	rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
 	assert.Nil(t, err)
-	err = mr.ReadKVs(rdr, data)
-	assert.Nil(t, err)
-
-	data1 := make(seqwc.Tdata)
-	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)
-	assert.Nil(t, err)
-
-	if len(data1) != len(data) {
-		log.Printf("error: len not matching %d %d\n", len(data1), len(data))
-	}
-
-	for k, v := range data1 {
-		if v1, ok := data[k]; !ok {
-			log.Printf("error: k %s missing\n", k)
-		} else {
-			if uint64(len(v1)) != v {
-				log.Printf("error: %s: %v != %v\n", k, v, v1)
+	for {
+		var kv mr.KeyValue
+		if err := mr.DecodeKV(rdr, &kv); err != nil {
+			if err == io.EOF {
+				break
 			}
+			assert.Nil(t, err)
 		}
+		if _, ok := data[kv.Key]; !ok {
+			data[kv.Key] = 0
+		}
+		data[kv.Key] += 1
 	}
+
+	wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, np.OWRITE)
+	assert.Nil(t, err)
+	for k, v := range data {
+		b := fmt.Sprintf("%s\t%d\n", k, v)
+		_, err := wrt.Write([]byte(b))
+		assert.Nil(t, err)
+	}
+	wrt.Close()
+
+	// data1 := make(seqwc.Tdata)
+	// _, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)
+	// assert.Nil(t, err)
+
+	// if len(data1) != len(data) {
+	// 	log.Printf("error: len not matching %d %d\n", len(data1), len(data))
+	// }
+
+	// for k, v := range data1 {
+	// 	if v1, ok := data[k]; !ok {
+	// 		log.Printf("error: k %s missing\n", k)
+	// 	} else {
+	// 		if uint64(len(v1)) != v {
+	// 			log.Printf("error: %s: %v != %v\n", k, v, v1)
+	// 		}
+	// 	}
+	// }
 
 	p.Done()
 	ts.Shutdown()

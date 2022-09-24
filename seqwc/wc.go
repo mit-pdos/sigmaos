@@ -81,7 +81,7 @@ func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
 	data := make(Tdata)
 	start := time.Now()
 	n, nbytes, err := WcData(fsl, dir, data)
-	wrt, err := fsl.CreateWriter(out, 0777, np.OWRITE|np.OTRUNC)
+	wrt, err := fsl.CreateAsyncWriter(out, 0777, np.OWRITE|np.OTRUNC)
 	if err != nil {
 		return 0, err
 	}

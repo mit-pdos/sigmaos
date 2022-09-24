@@ -1,6 +1,7 @@
 package mr_test
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -23,7 +24,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
-	// "sigmaos/seqwc"
+	"sigmaos/seqwc"
 	"sigmaos/test"
 	"sigmaos/wc"
 )
@@ -52,6 +53,33 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 0, mr.Khash("Abbots")%8)
 	assert.Equal(t, 0, mr.Khash("yes")%8)
 	assert.Equal(t, 7, mr.Khash("absently")%8)
+}
+
+func TestMakeWordCount(t *testing.T) {
+	file, err := os.Open("/home/kaashoek/Downloads/enwiki-2G")
+	assert.Nil(t, err)
+	defer file.Close()
+	rdr := bufio.NewReader(file)
+	scanner := bufio.NewScanner(rdr)
+	buf := make([]byte, 0, 2097152)
+	scanner.Buffer(buf, cap(buf))
+	data := make(seqwc.Tdata, 0)
+	for scanner.Scan() {
+		l := scanner.Text()
+		if len(l) > 0 {
+			seqwc.Wcline(0, l, data)
+		}
+	}
+	err = scanner.Err()
+	assert.Nil(t, err)
+	file, err = os.Create("/home/kaashoek/tmp/sigmaos/enwiki-2G.out")
+	assert.Nil(t, err)
+	defer file.Close()
+	for k, v := range data {
+		b := fmt.Sprintf("%s\t%d\n", k, v)
+		_, err := file.Write([]byte(b))
+		assert.Nil(t, err)
+	}
 }
 
 func TestSplits(t *testing.T) {

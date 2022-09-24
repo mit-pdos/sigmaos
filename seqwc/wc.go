@@ -20,7 +20,7 @@ import (
 
 type Tdata map[string]uint64
 
-func wcline(n int, line string, data Tdata) int {
+func Wcline(n int, line string, data Tdata) int {
 	scanner := bufio.NewScanner(strings.NewReader(line))
 	scanner.Split(mr.ScanWords)
 	cnt := 0
@@ -51,7 +51,7 @@ func wcFile(rdr io.Reader, data Tdata) int {
 	cnt := 0
 	for scanner.Scan() {
 		l := scanner.Text()
-		cnt += wcline(n, l, data)
+		cnt += Wcline(n, l, data)
 		n += 1
 	}
 	return cnt

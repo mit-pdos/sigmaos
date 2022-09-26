@@ -56,7 +56,8 @@ func TestHash(t *testing.T) {
 }
 
 func TestMakeWordCount(t *testing.T) {
-	file, err := os.Open("/home/kaashoek/Downloads/enwiki-2G")
+	const INPUT = "enwiki-1G"
+	file, err := os.Open("/home/kaashoek/Downloads/" + INPUT)
 	assert.Nil(t, err)
 	defer file.Close()
 	rdr := bufio.NewReader(file)
@@ -72,7 +73,7 @@ func TestMakeWordCount(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	file, err = os.Create("/home/kaashoek/tmp/sigmaos/enwiki-2G.out")
+	file, err = os.Create("/home/kaashoek/tmp/sigmaos/" + INPUT + ".out")
 	assert.Nil(t, err)
 	defer file.Close()
 	for k, v := range data {

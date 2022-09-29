@@ -22,7 +22,7 @@ def ls_sg(vpc):
             print("Security group:", sg.id, sg.group_name)
 
 def cmp(vm):
-  return int(name(vm[3]).replace("sigma", ""))
+  return int(name(vm[3]).replace("sigma", "").replace("k8s",""))
 
 def name(tags):
     name = ""

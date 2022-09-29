@@ -10,6 +10,7 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/test"
 	"sigmaos/www"
+	"sigmaos/wwwclnt"
 )
 
 type Tstate struct {
@@ -69,11 +70,11 @@ func TestSandbox(t *testing.T) {
 func TestStatic(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/static/hello.html").Output()
+	out, err := wwwclnt.Get("hello.html")
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "hello")
 
-	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
+	out, err = wwwclnt.Get("nonexist.html")
 	assert.NotEqual(t, nil, err) // wget return error because of HTTP not found
 
 	ts.waitWww()
@@ -82,7 +83,7 @@ func TestStatic(t *testing.T) {
 func TestView(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/view/").Output()
+	out, err := wwwclnt.View()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
@@ -92,7 +93,7 @@ func TestView(t *testing.T) {
 func TestEdit(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/edit/Odyssey").Output()
+	out, err := wwwclnt.Edit("Odyssey")
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Odyssey")
 
@@ -102,7 +103,7 @@ func TestEdit(t *testing.T) {
 func TestSave(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyssey", "http://localhost:8080/book/save/Odyssey").Output()
+	out, err := wwwclnt.Save()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
@@ -112,7 +113,7 @@ func TestSave(t *testing.T) {
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
-	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/matmul").Output()
+	err := wwwclnt.MatMul(2000)
 	assert.Equal(t, nil, err)
 	ts.waitWww()
 }

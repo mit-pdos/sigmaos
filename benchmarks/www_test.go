@@ -11,6 +11,7 @@ import (
 	"sigmaos/semclnt"
 	"sigmaos/test"
 	"sigmaos/www"
+	"sigmaos/wwwclnt"
 )
 
 type WwwJobInstance struct {
@@ -58,7 +59,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 	err = ji.WaitStart(a.Pid)
 	ji.pid = a.Pid
 	assert.Equal(ji.T, nil, err)
-	_, err = exec.Command("wget", "-qO-", "http://localhost:8080/matmul").Output()
+	err = wwwclnt.MatMul(4000)
 	assert.Equal(ji.T, nil, err)
 }
 

@@ -43,7 +43,7 @@ func RunWwwd(job, tree string) {
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
-	http.HandleFunc("/matmul/", www.makeHandler(doMatrix))
+	http.HandleFunc("/matmul/", www.makeHandler(doMatMul))
 
 	go func() {
 		www.Serve()
@@ -208,8 +208,7 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	return nil, nil
 }
 
-func doMatrix(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	// XXX should import from benchmarks, but want to run longer than 2,000
-	// 28.3s?
-	return www.spawnApp("user/matmul", w, r, []string{"4000"})
+func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	log.Printf("matmul: %v\n", args)
+	return www.spawnApp("user/matmul", w, r, []string{args})
 }

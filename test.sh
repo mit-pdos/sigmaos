@@ -66,7 +66,7 @@ do
   
   # dbd_test and wwwd_test requires mariadb running
   pgrep mariadb >/dev/null && go test $@ sigmaos/dbd
-  pgrep mariadb >/dev/null && go test $@ sigmaos/cmd/user/wwwd
+  pgrep mariadb >/dev/null && go test $@ sigmaos/www
   
   
   go test $@ sigmaos/mr --version=$VERSION

@@ -7,16 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/proc"
+	rd "sigmaos/rand"
 	"sigmaos/test"
+	"sigmaos/www"
 )
 
 type Tstate struct {
 	*test.Tstate
 	pid proc.Tpid
+	job string
 }
 
 func spawn(t *testing.T, ts *Tstate) proc.Tpid {
-	a := proc.MakeProc("user/wwwd", []string{""})
+	a := proc.MakeProc("user/wwwd", []string{ts.job, ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return a.Pid
@@ -26,6 +29,11 @@ func makeTstate(t *testing.T) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
+
+	ts.job = rd.String(4)
+
+	www.InitWwwFs(ts.FsLib, ts.job)
+
 	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(ts.pid)

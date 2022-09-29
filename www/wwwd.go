@@ -18,8 +18,18 @@ import (
 )
 
 const (
-	SERVER = "server"
+	WWWDIR = "name/www/"
+	SERVER = "wwwd"
+	MEMFS  = "memfs"
 )
+
+func JobDir(job string) string {
+	return path.Join(WWWDIR, job)
+}
+
+func MemFsPath(job string) string {
+	return path.Join(JobDir(job), MEMFS)
+}
 
 //
 // Web front end that spawns an app to handle a request.
@@ -28,8 +38,8 @@ const (
 
 var validPath = regexp.MustCompile(`^/(static|book|exit|matmul)/([=.a-zA-Z0-9/]*)$`)
 
-func RunWwwd(tree string) {
-	www := MakeWwwd(tree)
+func RunWwwd(job, tree string) {
+	www := MakeWwwd(job, tree)
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
@@ -42,6 +52,13 @@ func RunWwwd(tree string) {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+func InitWwwFs(fsl *fslib.FsLib, jobname string) {
+	fsl.MkDir(WWWDIR, 0777)
+	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
+		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
+	}
+}
+
 type Wwwd struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -50,14 +67,13 @@ type Wwwd struct {
 	globalSrvpath string
 }
 
-func MakeWwwd(tree string) *Wwwd {
+func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	mfsPath := "name/wwwd-server"
-	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(mfsPath, "www")
+	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(MemFsPath(job), SERVER)
 	if err != nil {
-		db.DFatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
+		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
@@ -74,7 +90,7 @@ func MakeWwwd(tree string) *Wwwd {
 	www.localSrvpath = path.Join(proc.PROCDIR, SERVER)
 	www.globalSrvpath = path.Join(proc.GetProcDir(), SERVER)
 
-	err = www.Symlink([]byte(mfsPath), www.localSrvpath, 0777)
+	err = www.Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {
 		db.DFatalf("Error symlink memfs wwwd: %v", err)
 	}
@@ -120,6 +136,7 @@ func (www *Wwwd) removePipe(pipeName string) {
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
+	db.DPrintf("WWW", "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
 	fd, err := www.Open(pipePath, np.OREAD)
 	if err != nil {

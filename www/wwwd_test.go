@@ -1,4 +1,4 @@
-package main
+package www_test
 
 import (
 	"os/exec"
@@ -101,10 +101,10 @@ func TestSave(t *testing.T) {
 	ts.waitWww()
 }
 
-func TestMatrix(t *testing.T) {
+func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
-	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/matrix").Output()
+	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/matmul").Output()
 	assert.Equal(t, nil, err)
 	ts.waitWww()
 }

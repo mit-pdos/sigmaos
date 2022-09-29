@@ -1,8 +1,10 @@
 package benchmarks_test
 
 import (
+	"log"
 	"os/exec"
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -52,6 +54,12 @@ func MakeWwwJob(ts *test.Tstate, nwwwd int, nclnts []int, wwwncore, clntncore pr
 	return ji
 }
 
+func (ji *WwwJobInstance) RunClient(ch chan bool) {
+	err := wwwclnt.MatMul(4000)
+	assert.Equal(ji.T, nil, err)
+	ch <- true
+}
+
 func (ji *WwwJobInstance) StartWwwJob() {
 	a := proc.MakeProc("user/wwwd", []string{ji.job, ""})
 	err := ji.Spawn(a)
@@ -59,8 +67,18 @@ func (ji *WwwJobInstance) StartWwwJob() {
 	err = ji.WaitStart(a.Pid)
 	ji.pid = a.Pid
 	assert.Equal(ji.T, nil, err)
-	err = wwwclnt.MatMul(4000)
-	assert.Equal(ji.T, nil, err)
+	for i := 1; i < 4; i++ {
+		ch := make(chan bool)
+		start := time.Now()
+		for c := 0; c < i; c++ {
+			go ji.RunClient(ch)
+		}
+		for c := 0; c < i; c++ {
+			<-ch
+		}
+		d := time.Since(start).Milliseconds()
+		log.Printf("nclnt %d take %v(ms)\n", i, d)
+	}
 }
 
 func (ji *WwwJobInstance) Wait() {

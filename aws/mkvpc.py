@@ -130,7 +130,7 @@ def main():
         sn = find_sn(vpc)
         sg = find_sg(vpc)
         kpn = kpname(vpc)
-        setup_instance(ec2, vpc, sg, sn, kpn, args['instance_type'])
+        setup_instance(ec2, vpc, sg, sn, kpn, args['storage'], args['instance_type'])
 
 if __name__ == "__main__":
     main()

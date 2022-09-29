@@ -200,3 +200,16 @@ func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []
 	}
 	return js, is
 }
+
+// ========== Www Helpers ========
+
+func makeWwwJobs(ts *test.Tstate, n, nwwwd int, nclnts []int, wwwncore, clntncore proc.Tcore) ([]*WwwJobInstance, []interface{}) {
+	ws := make([]*WwwJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeWwwJob(ts, nwwwd, nclnts, wwwncore, clntncore)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}

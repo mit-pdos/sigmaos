@@ -132,3 +132,17 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	db.DPrintf("TEST", "Stopped KV")
 	return time.Since(start)
 }
+
+// XXX Should get job name in a tuple.
+func runWww(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+	ji := i.(*WwwJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc.MonitorProcds()
+	defer pdc.Done()
+	ji.StartWwwJob()
+	ji.Wait()
+	return time.Since(start)
+}

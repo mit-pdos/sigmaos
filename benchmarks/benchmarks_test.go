@@ -399,3 +399,31 @@ func TestRealmBalance(t *testing.T) {
 	ts1.Shutdown()
 	ts2.Shutdown()
 }
+
+func TestWww(t *testing.T) {
+	const NWWW = 1
+	const NCLNT = 1
+	const WWW_NCORE = 2
+	const CLNT_NCORE = 1
+
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(1)
+	setNCoresSigmaRealm(ts)
+	nclnts := []int{NCLNT}
+	db.DPrintf(db.ALWAYS, "Running with %d clients", NCLNT)
+	jobs, ji := makeWwwJobs(ts, 1, NWWW, nclnts, WWW_NCORE, CLNT_NCORE)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	p := monitorCoresAssigned(ts)
+	runOps(ts, ji, runWww, rs)
+	defer p.Done()
+	printResults(rs)
+	ts.Shutdown()
+}

@@ -9,6 +9,7 @@ parser=argparse.ArgumentParser(description='mk VPC on AWS.')
 parser.add_argument('--vpc', metavar='vpc-id', help='Create only vm instance')
 parser.add_argument('name', help='name for this VPC/instance')
 parser.add_argument('--instance_type', type=str, default='t3.small')
+parser.add_argument('--storage', type=int, default=20)
 args = vars(parser.parse_args())
 
 #
@@ -60,13 +61,12 @@ def setup_keypair(vpc, ec2):
     os.chmod(n, 0o400)
     return kpn
 
-def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
+def setup_instance(ec2, vpc, sg, sn, kpn, storage, instance_type):
     script=''
     with open('cloud-localds-user-data', 'r') as fin:
         script = fin.read()
 
     instance = instance_type
-    storage = 20
         
     vm = ec2.create_instances(
         ImageId='ami-09d56f8956ab235b3',
@@ -120,7 +120,7 @@ def main():
         sn = setup_net(ec2, vpc)
         sg = setup_sec_public(ec2, vpc, "public2")
         kpn = setup_keypair(vpc, ec2)
-        setup_instance(ec2, vpc, sg, sn, kpn, args['instance_type'])
+        setup_instance(ec2, vpc, sg, sn, kpn, args['storage'], args['instance_type'])
     else:
         try:
             vpc = ec2.Vpc(args['vpc'])

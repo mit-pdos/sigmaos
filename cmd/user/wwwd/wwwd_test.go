@@ -100,3 +100,11 @@ func TestSave(t *testing.T) {
 
 	ts.waitWww()
 }
+
+func TestMatrix(t *testing.T) {
+	ts := makeTstate(t)
+
+	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/matrix").Output()
+	assert.Equal(t, nil, err)
+	ts.waitWww()
+}

@@ -23,8 +23,8 @@ import (
 //
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <name> args...\n", os.Args[0])
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v args...\n", os.Args[0])
 		os.Exit(1)
 	}
 	m, err := RunBookApp(os.Args)
@@ -48,7 +48,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba := &BookApp{}
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
-	ba.input = strings.Split(args[2], "/")
+	ba.input = strings.Split(args[1], "/")
 	ba.Started()
 
 	return ba, nil
@@ -161,7 +161,7 @@ func (ba *BookApp) Work() *proc.Status {
 	case "edit":
 		return ba.doEdit(ba.input[1])
 	case "save":
-		return ba.doSave(ba.input[1], os.Args[3])
+		return ba.doSave(ba.input[1], os.Args[2])
 	default:
 		return proc.MakeStatusErr("File not found", nil)
 	}

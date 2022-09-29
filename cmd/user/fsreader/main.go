@@ -40,14 +40,14 @@ type Reader struct {
 }
 
 func MakeReader(args []string) (*Reader, error) {
-	if len(args) != 3 {
+	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
-	r.input = args[2]
+	r.input = args[1]
 	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
 	r.Started()
 	return r, nil

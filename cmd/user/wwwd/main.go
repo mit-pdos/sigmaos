@@ -27,7 +27,7 @@ const (
 // XXX limit process's name space to the app binary and pipe.
 //
 
-var validPath = regexp.MustCompile(`^/(static|book|exit)/([=.a-zA-Z0-9/]*)$`)
+var validPath = regexp.MustCompile(`^/(static|book|exit|matrix)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
 	if len(os.Args) != 2 {
@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
+	http.HandleFunc("/matrix/", www.makeHandler(doMatrix))
 
 	go func() {
 		www.Serve()
@@ -150,7 +151,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	pipeName := www.makePipe()
 
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, app, append([]string{pid.String()}, args...))
+	a := proc.MakeProcPid(pid, app, args)
 	// Set the shared link to point to the pipe
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	err := www.Spawn(a)
@@ -193,4 +194,8 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	www.Done()
 	os.Exit(0)
 	return nil, nil
+}
+
+func doMatrix(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	return www.spawnApp("user/matmul", w, r, []string{"100"})
 }

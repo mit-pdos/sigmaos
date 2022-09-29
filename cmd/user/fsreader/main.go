@@ -54,7 +54,7 @@ func MakeReader(args []string) (*Reader, error) {
 }
 
 func (r *Reader) Work() *proc.Status {
-	db.DPrintf("Reader", "Reader: work\n")
+	db.DPrintf("FSREADER", "Reader: %v\n", r.input)
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, np.OWRITE)
 	if err != nil {

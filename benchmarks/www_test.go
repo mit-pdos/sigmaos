@@ -2,7 +2,6 @@ package benchmarks_test
 
 import (
 	"log"
-	"os/exec"
 	"path"
 	"time"
 
@@ -82,17 +81,6 @@ func (ji *WwwJobInstance) StartWwwJob() {
 }
 
 func (ji *WwwJobInstance) Wait() {
-	// wait until test is done
-	ch := make(chan error)
-	go func() {
-		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-		ch <- err
-	}()
-
-	status, err := ji.WaitExit(ji.pid)
-	assert.Nil(ji.T, err, "WaitExit error")
-	assert.True(ji.T, status.IsStatusEvicted(), "Exit status wrong")
-
-	r := <-ch
-	assert.NotEqual(ji.T, nil, r)
+	err := www.StopServer(ji.ProcClnt, ji.pid)
+	assert.Nil(ji.T, err)
 }

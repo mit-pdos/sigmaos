@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 
@@ -211,4 +212,20 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("matmul: %v\n", args)
 	return www.spawnApp("user/matmul", w, r, []string{args})
+}
+
+func StopServer(pclnt *procclnt.ProcClnt, pid proc.Tpid) error {
+	ch := make(chan error)
+	go func() {
+		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
+		ch <- err
+	}()
+
+	_, err := pclnt.WaitExit(pid)
+	if err != nil {
+		return err
+	}
+
+	<-ch
+	return nil
 }

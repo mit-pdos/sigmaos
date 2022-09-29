@@ -1,7 +1,6 @@
 package www_test
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,19 +45,8 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) waitWww() {
-	ch := make(chan error)
-	go func() {
-		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-		ch <- err
-	}()
-
-	status, err := ts.WaitExit(ts.pid)
-	assert.Nil(ts.T, err, "WaitExit error")
-	assert.True(ts.T, status.IsStatusEvicted(), "Exit status wrong")
-
-	r := <-ch
-	assert.NotEqual(ts.T, nil, r)
-
+	err := www.StopServer(ts.ProcClnt, ts.pid)
+	assert.Nil(ts.T, err)
 	ts.Shutdown()
 }
 

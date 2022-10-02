@@ -54,5 +54,5 @@ fi
 ./mkvpc.py --vpc $VPC --instance_type $TYPE $STORAGE $NAME
 
 vm=`./lsvpc.py $VPC | grep -w $NAME | cut -d " " -f 5`
-echo "SETUP $vm"
+echo "SETUP $vm vpc $VPC"
 ./setup-instance.sh --vpc $VPC --vm $vm

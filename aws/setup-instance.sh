@@ -80,21 +80,23 @@ fi
 ssh -i key-$VPC.pem $LOGIN@$VM <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
+mkdir ~/.docker
 chmod 700 ~/.aws
 echo > ~/.aws/credentials
 chmod 600 ~/.aws/credentials
 ENDSSH
 
-# decrypt the aws secrets.
-SECRETS=".aws/credentials"
+# decrypt the aws and docker secrets.
+SECRETS=".aws/credentials .docker/config.json"
 for F in $SECRETS
 do
   gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
-# scp the s3 secrets to the server and remove them locally.
+# scp the aws and docker secrets to the server and remove them locally.
 scp -i key-$VPC.pem .aws/config $LOGIN@$VM:/home/$LOGIN/.aws/
 scp -i key-$VPC.pem .aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
+scp -i key-$VPC.pem .docker/config.json $LOGIN@$VM:/home/$LOGIN/.docker/
 rm $SECRETS
 
 ssh -i key-$VPC.pem $LOGIN@$VM <<ENDSSH

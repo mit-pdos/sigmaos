@@ -1,8 +1,9 @@
 package benchmarks_test
 
 import (
-	"os/exec"
+	"log"
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -11,6 +12,7 @@ import (
 	"sigmaos/semclnt"
 	"sigmaos/test"
 	"sigmaos/www"
+	"sigmaos/wwwclnt"
 )
 
 type WwwJobInstance struct {
@@ -51,6 +53,12 @@ func MakeWwwJob(ts *test.Tstate, nwwwd int, nclnts []int, wwwncore, clntncore pr
 	return ji
 }
 
+func (ji *WwwJobInstance) RunClient(ch chan bool) {
+	err := wwwclnt.MatMul(4000)
+	assert.Equal(ji.T, nil, err)
+	ch <- true
+}
+
 func (ji *WwwJobInstance) StartWwwJob() {
 	a := proc.MakeProc("user/wwwd", []string{ji.job, ""})
 	err := ji.Spawn(a)
@@ -58,22 +66,21 @@ func (ji *WwwJobInstance) StartWwwJob() {
 	err = ji.WaitStart(a.Pid)
 	ji.pid = a.Pid
 	assert.Equal(ji.T, nil, err)
-	_, err = exec.Command("wget", "-qO-", "http://localhost:8080/matmul").Output()
-	assert.Equal(ji.T, nil, err)
+	for i := 1; i < 4; i++ {
+		ch := make(chan bool)
+		start := time.Now()
+		for c := 0; c < i; c++ {
+			go ji.RunClient(ch)
+		}
+		for c := 0; c < i; c++ {
+			<-ch
+		}
+		d := time.Since(start).Milliseconds()
+		log.Printf("nclnt %d take %v(ms)\n", i, d)
+	}
 }
 
 func (ji *WwwJobInstance) Wait() {
-	// wait until test is done
-	ch := make(chan error)
-	go func() {
-		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-		ch <- err
-	}()
-
-	status, err := ji.WaitExit(ji.pid)
-	assert.Nil(ji.T, err, "WaitExit error")
-	assert.True(ji.T, status.IsStatusEvicted(), "Exit status wrong")
-
-	r := <-ch
-	assert.NotEqual(ji.T, nil, r)
+	err := www.StopServer(ji.ProcClnt, ji.pid)
+	assert.Nil(ji.T, err)
 }

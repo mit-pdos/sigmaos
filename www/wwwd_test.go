@@ -1,7 +1,6 @@
 package www_test
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +9,7 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/test"
 	"sigmaos/www"
+	"sigmaos/wwwclnt"
 )
 
 type Tstate struct {
@@ -45,19 +45,8 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) waitWww() {
-	ch := make(chan error)
-	go func() {
-		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-		ch <- err
-	}()
-
-	status, err := ts.WaitExit(ts.pid)
-	assert.Nil(ts.T, err, "WaitExit error")
-	assert.True(ts.T, status.IsStatusEvicted(), "Exit status wrong")
-
-	r := <-ch
-	assert.NotEqual(ts.T, nil, r)
-
+	err := www.StopServer(ts.ProcClnt, ts.pid)
+	assert.Nil(ts.T, err)
 	ts.Shutdown()
 }
 
@@ -69,11 +58,11 @@ func TestSandbox(t *testing.T) {
 func TestStatic(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/static/hello.html").Output()
+	out, err := wwwclnt.Get("hello.html")
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "hello")
 
-	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
+	out, err = wwwclnt.Get("nonexist.html")
 	assert.NotEqual(t, nil, err) // wget return error because of HTTP not found
 
 	ts.waitWww()
@@ -82,7 +71,7 @@ func TestStatic(t *testing.T) {
 func TestView(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/view/").Output()
+	out, err := wwwclnt.View()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
@@ -92,7 +81,7 @@ func TestView(t *testing.T) {
 func TestEdit(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/edit/Odyssey").Output()
+	out, err := wwwclnt.Edit("Odyssey")
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Odyssey")
 
@@ -102,7 +91,7 @@ func TestEdit(t *testing.T) {
 func TestSave(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyssey", "http://localhost:8080/book/save/Odyssey").Output()
+	out, err := wwwclnt.Save()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
@@ -112,7 +101,7 @@ func TestSave(t *testing.T) {
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
-	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/matmul").Output()
+	err := wwwclnt.MatMul(2000)
 	assert.Equal(t, nil, err)
 	ts.waitWww()
 }

@@ -57,20 +57,23 @@ for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
-    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=11.0.0.0/16 > /tmp/start.out 2>&1
+    # Start the first k8s node.
+    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=192.168.0.0/16 2>&1 | tee /tmp/start.out
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config
     # Install CNI
-    kubectl create -f ~/sigmaos/cloudlab/k8s/cni/tigera-operator.yaml
-    kubectl create -f ~/sigmaos/cloudlab/k8s/cni/calico.yaml
-    kubectl create -f ~/sigmaos/cloudlab/k8s/metrics/metrics-server.yaml
-#    # Install dashboard
-#    kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
-#    # Create service account
-#    kubectl create serviceaccount --namespace kube-system tiller
-#    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-#    kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/custom-resources.yaml
+    kubectl create -f ~/ulambda/cloudlab/k8s/metrics/metrics-server.yaml
+    # Un-taint all nodes, so the control-plane node can run pods too
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    # Install dashboard
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+    # Create service account
+    kubectl create serviceaccount --namespace kube-system tiller
+    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+    kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
     sudo kubectl create secret generic regcred --from-file=.dockerconfigjson=/home/ubuntu/.docker/config.json  --type=kubernetes.io/dockerconfigjson
   else
     echo "JOIN k8s follower $vm"
@@ -78,7 +81,7 @@ for vm in $vms; do
         echo "No join command specified"
         exit 1
     fi
-    eval "$join_cmd"
+    eval "sudo $join_cmd"
   fi
 ENDSSH
   # Get command for follower nodes to join the cluster

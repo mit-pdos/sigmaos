@@ -1,15 +1,12 @@
 FROM golang:1.17-alpine
 WORKDIR /app
 COPY . .
+COPY ../generic-make.sh ./make.sh
 
 # Add bash to alpine
 RUN apk add --no-cache bash
 
-## Make the out directory
-#RUN ["mkdir", "-p", "/app/out"]
-
-# XXX Should I try to get rid of this?
 # Build app
-RUN ["./make.sh", "-norace"]
+RUN ["./make.sh", "--parallel"]
 
 ENTRYPOINT ["/app/start.sh"]

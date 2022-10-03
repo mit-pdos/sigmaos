@@ -90,7 +90,7 @@ ENDSSH
 SECRETS=".aws/credentials .docker/config.json"
 for F in $SECRETS
 do
-  gpg --output $F --decrypt ${F}.gpg || exit 1
+  yes | gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
 # scp the aws and docker secrets to the server and remove them locally.

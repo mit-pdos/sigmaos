@@ -62,18 +62,24 @@ for vm in $vms; do
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config
+
     # Install CNI
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/custom-resources.yaml
     kubectl create -f ~/ulambda/cloudlab/k8s/metrics/metrics-server.yaml
+
     # Un-taint all nodes, so the control-plane node can run pods too
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+
     # Install dashboard
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+
     # Create service account
     kubectl create serviceaccount --namespace kube-system tiller
     kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
     kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+
+    # Register docker credentials
     sudo kubectl create secret generic regcred --from-file=.dockerconfigjson=/home/ubuntu/.docker/config.json  --type=kubernetes.io/dockerconfigjson
   else
     echo "JOIN k8s follower $vm"

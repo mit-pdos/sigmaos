@@ -66,7 +66,7 @@ for vm in $vms; do
     # Install CNI
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/custom-resources.yaml
-    kubectl create -f ~/ulambda/cloudlab/k8s/metrics/metrics-server.yaml
+    kubectl create -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
 
     # Un-taint all nodes, so the control-plane node can run pods too
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-

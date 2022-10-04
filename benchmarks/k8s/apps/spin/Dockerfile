@@ -1,7 +1,7 @@
 FROM golang:1.17-alpine
 WORKDIR /app
 COPY . .
-COPY ../generic-make.sh ./make.sh
+COPY ../make-app.sh ./make.sh
 
 # Add bash to alpine
 RUN apk add --no-cache bash

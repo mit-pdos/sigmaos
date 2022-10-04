@@ -17,7 +17,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Fatalf("No port")
+		log.Fatalf("No PORT supplied")
 	}
 	http.ListenAndServe(port, nil)
 }

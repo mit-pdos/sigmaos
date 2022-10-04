@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spin-env-config
+  namespace: default
+data:
+  TEST_ENVVAR: test_val

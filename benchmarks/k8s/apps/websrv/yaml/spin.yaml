@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spin-worker
+spec:
+  selector:
+    matchLabels:
+      run: spin-worker
+  template:
+    metadata:
+      labels:
+        run: spin-worker
+    spec:
+      containers:
+      - name: spin-worker
+        image: arielszekely/spin
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 500m
+        envFrom:
+        - configMapRef:
+            name: spin-env-config
+        args:
+        - "test-arg"
+      imagePullSecrets:
+      - name: regcred

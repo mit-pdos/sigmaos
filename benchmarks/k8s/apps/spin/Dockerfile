@@ -1,6 +1,6 @@
 FROM golang:1.17-alpine
 WORKDIR /app
-COPY . .
+COPY spin .
 COPY ../make-app.sh ./make.sh
 
 # Add bash to alpine

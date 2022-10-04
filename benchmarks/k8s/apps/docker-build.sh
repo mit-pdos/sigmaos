@@ -2,5 +2,6 @@
 
 app=$(basename $(pwd))
 
-docker build -t arielszekely/$app -f Dockerfile .
+cd ..
+docker build -t arielszekely/$app -f $app/Dockerfile .
 docker push arielszekely/$app

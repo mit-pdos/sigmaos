@@ -4,15 +4,13 @@ metadata:
   name: websrv-env-config
   namespace: default
 data:
-  PORT: 8080
+  PORT: ":8080"
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: websrv-worker
-  labels:
-    app.kubernetes.io/name: websrv-worker
 spec:
   selector:
     matchLabels:
@@ -21,6 +19,7 @@ spec:
     metadata:
       labels:
         run: websrv-worker
+        app: websrv-worker
     spec:
       containers:
       - name: websrv-worker
@@ -48,10 +47,11 @@ kind: Service
 metadata:
   name: websrv-service
 spec:
-  selector:
-    app.kubernetes.io/name: websrv-worker
+  type: NodePort
   ports:
   - name: websrv-port
     protocol: TCP
     port: 8080
     targetPort: http-websrv-svc
+  selector:
+    app: websrv-worker

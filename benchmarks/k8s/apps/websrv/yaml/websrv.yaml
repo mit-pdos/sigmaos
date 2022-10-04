@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: spin-worker
+  name: websrv-worker
 spec:
   selector:
     matchLabels:
-      run: spin-worker
+      run: websrv-worker
   template:
     metadata:
       labels:
-        run: spin-worker
+        run: websrv-worker
     spec:
       containers:
-      - name: spin-worker
-        image: arielszekely/spin
+      - name: websrv-worker
+        image: arielszekely/websrv
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -22,7 +22,7 @@ spec:
             cpu: 500m
         envFrom:
         - configMapRef:
-            name: spin-env-config
+            name: websrv-env-config
         args:
         - "test-arg"
       imagePullSecrets:

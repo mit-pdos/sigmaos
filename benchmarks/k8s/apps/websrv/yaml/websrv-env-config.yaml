@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: spin-env-config
+  name: websrv-env-config
   namespace: default
 data:
-  TEST_ENVVAR: test_val
+  PORT: 8080

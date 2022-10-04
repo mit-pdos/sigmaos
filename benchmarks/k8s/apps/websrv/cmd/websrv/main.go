@@ -4,10 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-)
-
-const (
-	PORT = ":8080"
+	"os"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
@@ -18,5 +15,5 @@ func hello(w http.ResponseWriter, req *http.Request) {
 func main() {
 	http.HandleFunc("/hello", hello)
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(os.Getenv("PORT"), nil)
 }

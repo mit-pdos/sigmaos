@@ -1,7 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: websrv-env-config
+  namespace: default
+data:
+  PORT: 8080
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: websrv-worker
+  labels:
+    app.kubernetes.io/name: websrv-worker
 spec:
   selector:
     matchLabels:
@@ -15,11 +26,14 @@ spec:
       - name: websrv-worker
         image: arielszekely/websrv
         imagePullPolicy: IfNotPresent
-        resources:
-          limits:
-            cpu: 1000m
-          requests:
-            cpu: 500m
+#        resources:
+#          limits:
+#            cpu: 1000m
+#          requests:
+#            cpu: 500m
+        ports:
+          - containerPort: 8080
+            name: http-websrv-svc
         envFrom:
         - configMapRef:
             name: websrv-env-config
@@ -27,3 +41,17 @@ spec:
         - "test-arg"
       imagePullSecrets:
       - name: regcred
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websrv-service
+spec:
+  selector:
+    app.kubernetes.io/name: websrv-worker
+  ports:
+  - name: websrv-port
+    protocol: TCP
+    port: 8080
+    targetPort: http-websrv-svc

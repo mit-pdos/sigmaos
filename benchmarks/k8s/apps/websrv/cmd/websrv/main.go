@@ -15,5 +15,9 @@ func hello(w http.ResponseWriter, req *http.Request) {
 func main() {
 	http.HandleFunc("/hello", hello)
 
-	http.ListenAndServe(os.Getenv("PORT"), nil)
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatalf("No port")
+	}
+	http.ListenAndServe(port, nil)
 }

@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: websrv-env-config
-  namespace: default
-data:
-  PORT: 8080

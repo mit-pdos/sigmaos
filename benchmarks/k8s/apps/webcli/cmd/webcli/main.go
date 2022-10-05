@@ -13,7 +13,20 @@ func main() {
 	if url == "" {
 		log.Fatalf("No WEBSRV_URL supplied.")
 	}
-	resp, err := http.Get(url + "/hello")
+
+	path := os.Getenv("REQ_PATH")
+	if path == "" {
+		log.Fatalf("No REQ_PATH supplied.")
+	}
+
+	query := os.Getenv("REQ_QUERY")
+	if path == "mm" {
+		if query == "" {
+			log.Fatalf("No REQ_QUERY for path mm")
+		}
+	}
+
+	resp, err := http.Get(url + "/" + path + query)
 	if err != nil {
 		log.Fatalf("Error GET: %v", err)
 	}

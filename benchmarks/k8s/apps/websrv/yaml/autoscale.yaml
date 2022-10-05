@@ -7,8 +7,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: websrv-worker
-  minReplicas: 640
-  maxReplicas: 640
+  minReplicas: 2
+  maxReplicas: 2
   metrics:
   - type: Resource
     resource:
@@ -21,5 +21,5 @@ spec:
       stabilizationWindowSeconds: 0
       policies:
       - type: Pods
-        value: 640
+        value: 2
         periodSeconds: 1

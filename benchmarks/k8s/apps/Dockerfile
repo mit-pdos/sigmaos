@@ -1,6 +1,7 @@
 FROM golang:1.17-alpine
+ARG APP_NAME
 WORKDIR /app
-COPY webcli .
+COPY ${APP_NAME} .
 COPY ./make-app.sh ./make.sh
 
 # Add bash to alpine

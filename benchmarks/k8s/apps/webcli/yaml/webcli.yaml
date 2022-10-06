@@ -1,39 +1,27 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: webcli-env-config
+  name: webcli-env
   namespace: default
 data:
   WEBSRV_URL: "http://websrv-service:8080"
   REQ_PATH: "mm"
-  REQ_QUERY: "?n=2500"
+  REQ_QUERY: "?n=4000"
+  N_CLNT: "1"
 
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: webcli-worker
+  name: webcli
 spec:
-  selector:
-    matchLabels:
-      run: webcli-worker
-  template:
-    metadata:
-      labels:
-        run: webcli-worker
-        app: webcli-worker
-    spec:
-      containers:
-      - name: webcli-worker
-        image: arielszekely/webcli
-        imagePullPolicy: Always
-#        resources:
-#          limits:
-#            cpu: 1000m
-#          requests:
-#            cpu: 500m
-        envFrom:
-        - configMapRef:
-            name: webcli-env-config
-      imagePullSecrets:
-      - name: regcred
+  containers:
+  - name: webcli
+    image: arielszekely/webcli
+    imagePullPolicy: Always
+    envFrom:
+    - configMapRef:
+        name: webcli-env
+  restartPolicy: Never
+  imagePullSecrets:
+  - name: regcred

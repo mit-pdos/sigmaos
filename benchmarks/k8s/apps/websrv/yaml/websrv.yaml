@@ -10,16 +10,16 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: websrv-worker
+  name: websrv
 spec:
   selector:
     matchLabels:
-      run: websrv-worker
+      run: websrv
   template:
     metadata:
       labels:
-        run: websrv-worker
-        app: websrv-worker
+        run: websrv
+        app: websrv
     spec:
       containers:
       - name: websrv-worker
@@ -54,4 +54,4 @@ spec:
     port: 8080
     targetPort: http-websrv-svc
   selector:
-    app: websrv-worker
+    app: websrv

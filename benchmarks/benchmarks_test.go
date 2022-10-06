@@ -268,8 +268,8 @@ func runKVTest(t *testing.T, nReplicas int) {
 		}
 	}()
 	p := monitorCoresAssigned(ts)
-	runOps(ts, ji, runKV, rs)
 	defer p.Done()
+	runOps(ts, ji, runKV, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -422,8 +422,8 @@ func TestWww(t *testing.T) {
 		}
 	}()
 	p := monitorCoresAssigned(ts)
-	runOps(ts, ji, runWww, rs)
 	defer p.Done()
+	runOps(ts, ji, runWww, rs)
 	printResults(rs)
 	ts.Shutdown()
 }

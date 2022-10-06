@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -16,7 +17,7 @@ func hello(w http.ResponseWriter, req *http.Request) {
 }
 
 func mm(w http.ResponseWriter, req *http.Request) {
-
+	start := time.Now()
 	query := req.URL.Query()
 	n, err := strconv.Atoi(query["n"][0])
 	// Return an error if the requesr didn't contain a valid n
@@ -30,8 +31,9 @@ func mm(w http.ResponseWriter, req *http.Request) {
 	m3 := matrix(n)
 	// Multiply m.m1 and m.m2, and place the result in m.m3
 	m3.Mul(m1, m2)
-	fmt.Fprintf(w, "mm done!\n")
-	log.Printf("mm done!")
+	sec := time.Since(start).Seconds()
+	fmt.Fprintf(w, "%v sec: %vx%v mm done!\n", sec, n, n)
+	log.Printf("%v sec: %vx%v mm done!", sec, n, n)
 }
 
 // Create an n x n matrix.

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -26,6 +27,7 @@ func main() {
 		}
 	}
 
+	start := time.Now()
 	resp, err := http.Get(url + "/" + path + query)
 	if err != nil {
 		log.Fatalf("Error GET: %v", err)
@@ -36,5 +38,5 @@ func main() {
 		log.Fatalf("Error ReadAll: %v", err)
 	}
 
-	log.Printf("Got response: \"%v\"", strings.TrimSpace(string(body)))
+	log.Printf("%v sec got response:\n\"%v\"", time.Since(start).Seconds(), strings.TrimSpace(string(body)))
 }

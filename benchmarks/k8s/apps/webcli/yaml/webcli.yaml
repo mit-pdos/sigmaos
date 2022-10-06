@@ -5,8 +5,8 @@ metadata:
   namespace: default
 data:
   WEBSRV_URL: "http://websrv-service:8080"
-  REQ_PATH: "hello"
-  REQ_QUERY: ""
+  REQ_PATH: "mm"
+  REQ_QUERY: "?n=2500"
 
 ---
 apiVersion: apps/v1

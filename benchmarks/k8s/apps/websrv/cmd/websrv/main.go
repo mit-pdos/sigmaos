@@ -11,6 +11,10 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello\n")
 	log.Printf("hello!")

@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func runCli(url, path, query string, done chan bool) {
 	start := time.Now()
 	resp, err := http.Get(url + "/" + path + query)

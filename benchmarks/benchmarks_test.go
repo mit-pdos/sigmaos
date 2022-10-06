@@ -22,6 +22,7 @@ import (
 )
 
 // Parameters
+var NTRIALS int
 var MR_APP string
 var KV_AUTO string
 var NKVD int
@@ -36,6 +37,7 @@ var NPROC int
 // Read & set the proc version.
 func init() {
 	var nc int
+	flag.IntVar(&NTRIALS, "ntrials", 1, "Number of trials.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&NKVD, "nkvd", 1, "Number of kvds.")
@@ -236,8 +238,8 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 // Test the throughput of spawning procs.
 func TestMicroSpawnTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(NPROC)
-	ps, _ := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{"0s", ""}, []string{}, 1)
+	rs := benchmarks.MakeRawResults(NTRIALS)
+	ps, _ := makeNProcs(NPROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
 	runOps(ts, []interface{}{ps}, spawnBurstTpt, rs)
 	printResults(rs)
 	ts.Shutdown()

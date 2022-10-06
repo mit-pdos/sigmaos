@@ -31,6 +31,7 @@ var CLERK_NCORE proc.Tcore
 var KVD_NCORE proc.Tcore
 var REALM2 string
 var REDIS_ADDR string
+var NPROC int
 
 // Read & set the proc version.
 func init() {
@@ -46,6 +47,7 @@ func init() {
 	KVD_NCORE = proc.Tcore(nc)
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
+	flag.IntVar(&NPROC, "nproc", 1, "Number of procs.")
 }
 
 // ========== Common parameters ==========
@@ -228,6 +230,16 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Test the throughput of spawning procs.
+func TestMicroSpawnTpt(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(NPROC)
+	ps, _ := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{"0s", ""}, []string{}, 1)
+	runOps(ts, []interface{}{ps}, spawnBurstTpt, rs)
+	printResults(rs)
 	ts.Shutdown()
 }
 

@@ -54,7 +54,7 @@ func MakeWwwJob(ts *test.Tstate, nwwwd int, nclnts []int, wwwncore, clntncore pr
 }
 
 func (ji *WwwJobInstance) RunClient(ch chan bool) {
-	err := wwwclnt.MatMul(4000)
+	err := wwwclnt.MatMul(MAT_SIZE)
 	assert.Equal(ji.T, nil, err)
 	ch <- true
 }

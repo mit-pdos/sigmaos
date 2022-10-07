@@ -20,26 +20,29 @@ import (
 )
 
 // Parameters
-var NTRIALS int
+var N_TRIALS int
 var MR_APP string
 var KV_AUTO string
-var NKVD int
-var NCLERK int
+var N_KVD int
+var N_CLERK int
 var CLERK_DURATION string
 var CLERK_NCORE proc.Tcore
 var KVD_NCORE proc.Tcore
 var REALM2 string
 var REDIS_ADDR string
-var NPROC int
+var N_PROC int
+var MAT_SIZE int
+var CONTENDERS_FRAC float64
+var GO_MAX_PROCS int
 
 // Read & set the proc version.
 func init() {
 	var nc int
-	flag.IntVar(&NTRIALS, "ntrials", 1, "Number of trials.")
+	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
-	flag.IntVar(&NKVD, "nkvd", 1, "Number of kvds.")
-	flag.IntVar(&NCLERK, "nclerk", 1, "Number of clerks.")
+	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
+	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&nc, "clerk_ncore", 1, "Clerk Ncore")
 	CLERK_NCORE = proc.Tcore(nc)
@@ -47,23 +50,16 @@ func init() {
 	KVD_NCORE = proc.Tcore(nc)
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
-	flag.IntVar(&NPROC, "nproc", 1, "Number of procs.")
+	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
+	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
+	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
+	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
 }
 
 // ========== Common parameters ==========
 const (
 	OUT_DIR = "name/out_dir"
 )
-
-// ========== Nice parameters ==========
-const (
-	MAT_SIZE        = 2000
-	N_TRIALS_NICE   = 10
-	CONTENDERS_FRAC = 1.0
-)
-
-var MATMUL_NPROCS = linuxsched.NCores
-var CONTENDERS_NPROCS = 1
 
 // ========== Micro parameters ==========
 const (
@@ -73,7 +69,65 @@ const (
 
 var TOTAL_N_CORES_SIGMA_REALM = 0
 
-func TestJsonEncodeTpt(t *testing.T) {
+// Length of time required to do a simple matrix multiplication.
+func TestNiceMatMulBaseline(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
+	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+	runOps(ts, ps, runProc, rs)
+	printResults(rs)
+	ts.Shutdown()
+}
+
+// Start a bunch of spinning procs to contend with one matmul task, and then
+// see how long the matmul task took.
+func TestNiceMatMulWithSpinners(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
+	makeOutDir(ts)
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
+	// Make some spinning procs to take up nContenders cores.
+	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
+	// Burst-spawn BE procs
+	spawnBurstProcs(ts, psSpin)
+	// Wait for the procs to start
+	waitStartProcs(ts, psSpin)
+	// Make the LC proc.
+	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+	// Spawn the LC procs
+	runOps(ts, ps, runProc, rs)
+	printResults(rs)
+	evictProcs(ts, psSpin)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+// Invert the nice relationship. Make spinners high-priority, and make matul
+// low priority. This is intended to verify that changing priorities does
+// actually affect application throughput for procs which have their priority
+// lowered, and by how much.
+func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
+	makeOutDir(ts)
+	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
+	// Make some spinning procs to take up nContenders cores. (AS LC)
+	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
+	// Burst-spawn spinning procs
+	spawnBurstProcs(ts, psSpin)
+	// Wait for the procs to start
+	waitStartProcs(ts, psSpin)
+	// Make the matmul procs.
+	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
+	// Spawn the matmul procs
+	runOps(ts, ps, runProc, rs)
+	printResults(rs)
+	evictProcs(ts, psSpin)
+	rmOutDir(ts)
+	ts.Shutdown()
+}
+
+func TestMicroJsonEncodeTpt(t *testing.T) {
 	nruns := 50
 	N_KV := 1000000
 	kvs := make([]*mr.KeyValue, 0, N_KV)
@@ -93,7 +147,7 @@ func TestJsonEncodeTpt(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Marshaling throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
 }
 
-func TestWCMapfTpt(t *testing.T) {
+func TestMicroWCMapfTpt(t *testing.T) {
 	N_WORDS := 1024 * 1024 * 100
 	WORD_LEN := 2
 	b := make([]byte, 0, N_WORDS*(WORD_LEN+1))
@@ -116,64 +170,6 @@ func TestWCMapfTpt(t *testing.T) {
 	n += len(s)
 	mb := 1024.0 * 1024.0
 	db.DPrintf(db.ALWAYS, "WC Mapping throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
-}
-
-// Length of time required to do a simple matrix multiplication.
-func TestNiceMatMulBaseline(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
-	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	ts.Shutdown()
-}
-
-// Start a bunch of spinning procs to contend with one matmul task, and then
-// see how long the matmul task took.
-func TestNiceMatMulWithSpinners(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
-	makeOutDir(ts)
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-	// Make some spinning procs to take up nContenders cores.
-	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 0)
-	// Burst-spawn BE procs
-	spawnBurstProcs(ts, psSpin)
-	// Wait for the procs to start
-	waitStartProcs(ts, psSpin)
-	// Make the LC proc.
-	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 1)
-	// Spawn the LC procs
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	evictProcs(ts, psSpin)
-	rmOutDir(ts)
-	ts.Shutdown()
-}
-
-// Invert the nice relationship. Make spinners high-priority, and make matul
-// low priority. This is intended to verify that changing priorities does
-// actually affect application throughput for procs which have their priority
-// lowered, and by how much.
-func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_NICE)
-	makeOutDir(ts)
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-	// Make some spinning procs to take up nContenders cores. (AS LC)
-	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", CONTENDERS_NPROCS)}, 1)
-	// Burst-spawn spinning procs
-	spawnBurstProcs(ts, psSpin)
-	// Wait for the procs to start
-	waitStartProcs(ts, psSpin)
-	// Make the matmul procs.
-	_, ps := makeNProcs(N_TRIALS_NICE, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", MATMUL_NPROCS)}, 0)
-	// Spawn the matmul procs
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	evictProcs(ts, psSpin)
-	rmOutDir(ts)
-	ts.Shutdown()
 }
 
 // Test how long it takes to init a semaphore.
@@ -236,8 +232,8 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 // Test the throughput of spawning procs.
 func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(NTRIALS)
-	ps, _ := makeNProcs(NPROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
+	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
 	ts.Shutdown()
@@ -267,9 +263,9 @@ func runKVTest(t *testing.T, nReplicas int) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	setNCoresSigmaRealm(ts)
-	nclerks := []int{NCLERK}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", NCLERK)
-	jobs, ji := makeNKVJobs(ts, 1, NKVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
+	nclerks := []int{N_CLERK}
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
+	jobs, ji := makeNKVJobs(ts, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -369,10 +365,10 @@ func TestRealmBalance(t *testing.T) {
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep KV job
-	nclerks := []int{NCLERK}
+	nclerks := []int{N_CLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, NKVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
+	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
 	p1 := monitorCoresAssigned(ts1)
 	defer p1.Done()
 	p2 := monitorCoresAssigned(ts2)

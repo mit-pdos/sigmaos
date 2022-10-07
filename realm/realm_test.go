@@ -119,6 +119,7 @@ func TestRealmGrowArtificial(t *testing.T) {
 	for realm.GetRealmConfig(rclnt.FsLib, np.TEST_RID).NCores < proc.Tcore(linuxsched.NCores)*2 {
 		rclnt.GrowRealm(np.TEST_RID)
 	}
+	ts.checkNCoreGroups(ts.coreGroupsPerMachine*2, ts.coreGroupsPerMachine*2)
 	ts.e.Shutdown()
 }
 

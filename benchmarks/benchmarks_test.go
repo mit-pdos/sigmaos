@@ -21,6 +21,7 @@ import (
 
 // Parameters
 var N_TRIALS int
+var PREGROW_REALM bool
 var MR_APP string
 var KV_AUTO string
 var N_KVD int
@@ -39,6 +40,7 @@ var GO_MAX_PROCS int
 func init() {
 	var nc int
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
+	flag.BoolVar(&PREGROW_REALM, "pregrow_realm", false, "Pre-grow realm to include all cluster resources.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
@@ -61,13 +63,7 @@ const (
 	OUT_DIR = "name/out_dir"
 )
 
-// ========== Micro parameters ==========
-const (
-	N_TRIALS_MICRO = 1000
-	SLEEP_MICRO    = "5000us"
-)
-
-var TOTAL_N_CORES_SIGMA_REALM = 0
+var N_CLUSTER_CORES = 0
 
 // Length of time required to do a simple matrix multiplication.
 func TestNiceMatMulBaseline(t *testing.T) {
@@ -175,9 +171,9 @@ func TestMicroWCMapfTpt(t *testing.T) {
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
 	makeOutDir(ts)
-	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	_, is := makeNSemaphores(ts, N_TRIALS)
 	runOps(ts, is, initSemaphore, rs)
 	printResults(rs)
 	rmOutDir(ts)
@@ -187,9 +183,9 @@ func TestMicroInitSemaphore(t *testing.T) {
 // Test how long it takes to up a semaphore.
 func TestMicroUpSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
 	makeOutDir(ts)
-	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	_, is := makeNSemaphores(ts, N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
 		initSemaphore(ts, time.Now(), i)
@@ -203,9 +199,9 @@ func TestMicroUpSemaphore(t *testing.T) {
 // Test how long it takes to down a semaphore.
 func TestMicroDownSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
 	makeOutDir(ts)
-	_, is := makeNSemaphores(ts, N_TRIALS_MICRO)
+	_, is := makeNSemaphores(ts, N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
 		initSemaphore(ts, time.Now(), i)
@@ -220,9 +216,9 @@ func TestMicroDownSemaphore(t *testing.T) {
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS_MICRO)
+	rs := benchmarks.MakeRawResults(N_TRIALS)
 	makeOutDir(ts)
-	_, ps := makeNProcs(N_TRIALS_MICRO, "user/sleeper", []string{SLEEP_MICRO, OUT_DIR}, []string{}, 1)
+	_, ps := makeNProcs(N_TRIALS, "user/sleeper", []string{"5000us", OUT_DIR}, []string{}, 1)
 	runOps(ts, ps, runProc, rs)
 	printResults(rs)
 	rmOutDir(ts)
@@ -241,6 +237,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 
 func TestAppMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(1)
 	jobs, apps := makeNMRJobs(ts, 1, MR_APP)
 	// XXX Clean this up/hide this somehow.
@@ -261,8 +258,9 @@ func TestAppMR(t *testing.T) {
 
 func runKVTest(t *testing.T, nReplicas int) {
 	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
+	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(1)
-	setNCoresSigmaRealm(ts)
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
 	jobs, ji := makeNKVJobs(ts, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
@@ -294,13 +292,14 @@ func TestAppKVRepl(t *testing.T) {
 // to start.
 func TestRealmBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
+	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(1)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
-	setNCoresSigmaRealm(ts)
-	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", TOTAL_N_CORES_SIGMA_REALM)
-	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
+	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", N_CLUSTER_CORES)
+	ps, _ := makeNProcs(N_CLUSTER_CORES, "user/spinner", []string{OUT_DIR}, []string{}, 1)
 	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, []interface{}{p}, spawnBurstWaitStartProcs, rs)
@@ -355,7 +354,7 @@ func TestRealmBalance(t *testing.T) {
 	done := make(chan bool)
 	// Find the total number of cores available for spinners across all machines.
 	ts := test.MakeTstateAll(t)
-	setNCoresSigmaRealm(ts)
+	countNClusterCores(ts)
 	// Structures for mr
 	ts1 := test.MakeTstateRealm(t, ts.RealmId())
 	rs1 := benchmarks.MakeRawResults(1)
@@ -410,7 +409,8 @@ func TestWww(t *testing.T) {
 
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
-	setNCoresSigmaRealm(ts)
+	countNClusterCores(ts)
+	maybePregrowRealm(ts)
 	nclnts := []int{NCLNT}
 	db.DPrintf(db.ALWAYS, "Running with %d clients", NCLNT)
 	jobs, ji := makeWwwJobs(ts, 1, NWWW, nclnts, WWW_NCORE, CLNT_NCORE)

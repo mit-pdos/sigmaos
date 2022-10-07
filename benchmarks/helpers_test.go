@@ -13,6 +13,7 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/realm"
 	"sigmaos/semclnt"
 	"sigmaos/test"
 )
@@ -62,7 +63,7 @@ func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 
 // ========== Realm Helpers ==========
 
-func setNCoresSigmaRealm(ts *test.Tstate) {
+func countNClusterCores(ts *test.Tstate) {
 	// If realms are turned on, find aggregate number of cores across all
 	// machines.
 	if ts.RunningInRealm() {
@@ -74,15 +75,28 @@ func setNCoresSigmaRealm(ts *test.Tstate) {
 			if err != nil {
 				return true, err
 			}
-			TOTAL_N_CORES_SIGMA_REALM += int(cfg.Cores.Size())
+			N_CLUSTER_CORES += int(cfg.Cores.Size())
 			return false, nil
 		})
 		assert.Nil(ts.T, err, "Error counting sigma cores: %v", err)
 	} else {
 		db.DPrintf("TEST", "Running without realms")
-		TOTAL_N_CORES_SIGMA_REALM = int(linuxsched.NCores)
+		N_CLUSTER_CORES = int(linuxsched.NCores)
 	}
-	db.DPrintf("TEST", "Aggregate Sigma cores: %v", TOTAL_N_CORES_SIGMA_REALM)
+	db.DPrintf("TEST", "Aggregate number of cores in the cluster: %v", N_CLUSTER_CORES)
+}
+
+// Potentially pregrow a realm to encompass all cluster resources.
+func maybePregrowRealm(ts *test.Tstate) {
+	if PREGROW_REALM {
+		// Make sure we've counted the number of cores in the cluster.
+		countNClusterCores(ts)
+		rclnt := realm.MakeRealmClnt()
+		// While we are missing cores, try to grow.
+		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
+			rclnt.GrowRealm(ts.RealmId())
+		}
+	}
 }
 
 // ========== Dir Helpers ==========

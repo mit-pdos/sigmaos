@@ -52,6 +52,15 @@ func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
 }
 
+func waitExitProcs(ts *test.Tstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		status, err := ts.WaitExit(p.Pid)
+		assert.Nil(ts.T, err, "WaitStart: %v", err)
+		assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+	}
+	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
+}
+
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.Evict(p.Pid)

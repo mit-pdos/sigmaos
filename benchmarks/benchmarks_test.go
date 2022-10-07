@@ -229,6 +229,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
+	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs", N_PROC)
 	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)

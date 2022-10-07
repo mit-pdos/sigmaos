@@ -50,6 +50,18 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	return cfg, nil
 }
 
+func (e *TestEnv) BootMachined() error {
+	var err error
+	pid := proc.Tpid("machined-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, "realm/machined", []string{})
+	machined, err := proc.RunKernelProc(p, fslib.Named())
+	e.machined = append(e.machined, machined)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (e *TestEnv) Shutdown() {
 	db.DPrintf("TEST", "Shutting down")
 	// Destroy the realm
@@ -89,18 +101,6 @@ func (e *TestEnv) bootSigmaMgr() error {
 	}
 	e.sigmamgr = cmd
 	return e.RealmClnt.WaitStart(p.Pid)
-}
-
-func (e *TestEnv) BootMachined() error {
-	var err error
-	pid := proc.Tpid("machined-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, "realm/machined", []string{})
-	machined, err := proc.RunKernelProc(p, fslib.Named())
-	e.machined = append(e.machined, machined)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func kill(cmd *exec.Cmd) {

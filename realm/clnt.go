@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -44,6 +45,13 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	rStartSem.Down()
 
 	return GetRealmConfig(clnt.FsLib, rid)
+}
+
+// Artificially grow a realm. Mainly used for testing purposes.
+func (clnt *RealmClnt) GrowRealm(rid string) {
+	db.DPrintf("REALMCLNT", "Artificially grow realm %v", rid)
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, rid, 1)
+	resource.SendMsg(clnt.FsLib, np.SIGMACTL, msg)
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {

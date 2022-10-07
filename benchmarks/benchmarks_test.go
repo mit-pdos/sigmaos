@@ -232,6 +232,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
+	evictProcs(ts, ps)
 	ts.Shutdown()
 }
 

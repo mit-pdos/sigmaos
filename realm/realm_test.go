@@ -113,9 +113,18 @@ func TestStartStop(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestRealmGrowArtificial(t *testing.T) {
+	ts := makeTstate(t)
+	rclnt := realm.MakeRealmClnt()
+	for realm.GetRealmConfig(rclnt.FsLib, np.TEST_RID).NCores < proc.Tcore(linuxsched.NCores)*2 {
+		rclnt.GrowRealm(np.TEST_RID)
+	}
+	ts.e.Shutdown()
+}
+
 // Start enough spinning lambdas to fill two Nodeds, check that the test
 // realm's allocation expanded, then exit.
-func TestRealmGrow(t *testing.T) {
+func TestRealmGrowAuto(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := int(linuxsched.NCores) / 2

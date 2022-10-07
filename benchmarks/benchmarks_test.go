@@ -12,11 +12,9 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/mr"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/test"
 	"sigmaos/wc"
 )
@@ -236,11 +234,11 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 }
 
 // Test the throughput of spawning procs.
-func TestMicroSpawnTpt(t *testing.T) {
+func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(NTRIALS)
 	ps, _ := makeNProcs(NPROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
-	runOps(ts, []interface{}{ps}, spawnBurstTpt, rs)
+	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
 	ts.Shutdown()
 }
@@ -308,14 +306,8 @@ func TestRealmBurst(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", TOTAL_N_CORES_SIGMA_REALM)
 	ps, _ := makeNProcs(TOTAL_N_CORES_SIGMA_REALM, "user/spinner", []string{OUT_DIR}, []string{}, 1)
 	p := monitorCoresAssigned(ts)
-	sbs := []*SBTuple{}
-	for i := 0; i < len(ps); i += 5 {
-		fsl := fslib.MakeFsLibAddr("sbt", ts.NamedAddr())
-		pclnt := procclnt.MakeProcClntTmp(fsl, ts.NamedAddr())
-		sbs = append(sbs, &SBTuple{pclnt, ps[i : i+5]})
-	}
-	runOps(ts, []interface{}{sbs}, spawnBurstWaitStartProcs, rs)
 	defer p.Done()
+	runOps(ts, []interface{}{p}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
 	evictProcs(ts, ps)
 	rmOutDir(ts)

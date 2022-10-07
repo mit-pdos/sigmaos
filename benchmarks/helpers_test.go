@@ -12,17 +12,10 @@ import (
 	"sigmaos/machine"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/test"
 )
-
-// XXX REMOVE AFTER DEADLINE PUSH
-type SBTuple struct {
-	*procclnt.ProcClnt
-	procs []*proc.Proc
-}
 
 //
 // A set of helper functions that we use across our benchmarks.
@@ -46,33 +39,8 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "Burst-spawning %v procs", len(ps))
-	c := make(chan bool)
-	for i := range ps {
-		go func(i int) {
-			_, errs := ts.SpawnBurst([]*proc.Proc{ps[i]})
-			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-			c <- true
-		}(i)
-	}
-	for _ = range ps {
-		<-c
-	}
-}
-
-// XXX REMOVE AFTER DEADLINE PUSH
-func spawnBurstProcs2(ts *test.Tstate, sbs []*SBTuple) {
-	db.DPrintf("TEST", "Burst-spawning %v procs", len(sbs))
-	c := make(chan bool)
-	for _, sb := range sbs {
-		go func(sb *SBTuple) {
-			_, errs := sb.SpawnBurst(sb.procs)
-			assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-			c <- true
-		}(sb)
-	}
-	for _ = range sbs {
-		<-c
-	}
+	_, errs := ts.SpawnBurst(ps)
+	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 
 func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -81,24 +49,6 @@ func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 	}
 	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(ps))
-}
-
-// XXX REMOVE AFTER DEADLINE PUSH
-func waitStartProcs2(ts *test.Tstate, sbs []*SBTuple) {
-	c := make(chan bool)
-	for _, sb := range sbs {
-		go func(sb *SBTuple) {
-			for _, p := range sb.procs {
-				err := sb.WaitStart(p.Pid)
-				assert.Nil(ts.T, err, "WaitStart: %v", err)
-			}
-			c <- true
-		}(sb)
-	}
-	for _ = range sbs {
-		<-c
-	}
-	db.DPrintf("TEST", "%v burst-spawned procs have all started:", len(sbs))
 }
 
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {

@@ -2,6 +2,7 @@ package www
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"regexp"
 
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	np "sigmaos/ninep"
@@ -18,19 +20,13 @@ import (
 	"sigmaos/rand"
 )
 
+// HTTP server paths
 const (
-	WWWDIR = "name/www/"
-	SERVER = "wwwd"
-	MEMFS  = "memfs"
+	STATIC = "/static/"
+	MATMUL = "/matmul/"
+	BOOK   = "/book/"
+	EXIT   = "/exit/"
 )
-
-func JobDir(job string) string {
-	return path.Join(WWWDIR, job)
-}
-
-func MemFsPath(job string) string {
-	return path.Join(JobDir(job), MEMFS)
-}
 
 //
 // Web front end that spawns an app to handle a request.
@@ -41,23 +37,30 @@ var validPath = regexp.MustCompile(`^/(static|book|exit|matmul)/([=.a-zA-Z0-9/]*
 
 func RunWwwd(job, tree string) {
 	www := MakeWwwd(job, tree)
-	http.HandleFunc("/static/", www.makeHandler(getStatic))
-	http.HandleFunc("/book/", www.makeHandler(doBook))
-	http.HandleFunc("/exit/", www.makeHandler(doExit))
-	http.HandleFunc("/matmul/", www.makeHandler(doMatMul))
+	http.HandleFunc(STATIC, www.makeHandler(getStatic))
+	http.HandleFunc(BOOK, www.makeHandler(doBook))
+	http.HandleFunc(EXIT, www.makeHandler(doExit))
+	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
 
 	go func() {
 		www.Serve()
 	}()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func InitWwwFs(fsl *fslib.FsLib, jobname string) {
-	fsl.MkDir(WWWDIR, 0777)
-	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
-		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
 	}
+
+	l, err := net.Listen("tcp", ip+":0")
+	if err != nil {
+		db.DFatalf("Error Listen: %v", err)
+	}
+
+	// Write a file for clients to discover the server's address.
+	p := JobHTTPAddrsPath(job)
+	www.PutFileJson(p, 0777, []string{l.Addr().String()})
+
+	log.Fatal(http.Serve(l, nil))
 }
 
 type Wwwd struct {
@@ -72,7 +75,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(MemFsPath(job), SERVER)
+	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(MemFsPath(job), WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
@@ -88,8 +91,8 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
-	www.localSrvpath = path.Join(proc.PROCDIR, SERVER)
-	www.globalSrvpath = path.Join(proc.GetProcDir(), SERVER)
+	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
+	www.globalSrvpath = path.Join(proc.GetProcDir(), WWWD)
 
 	err = www.Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {

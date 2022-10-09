@@ -25,11 +25,11 @@ spec:
       - name: websrv-worker
         image: arielszekely/websrv
         imagePullPolicy: Always
-#        resources:
-#          limits:
-#            cpu: 1000m
-#          requests:
-#            cpu: 500m
+        resources:
+          limits:
+            cpu: 2.0
+          requests:
+            cpu: 2.0
         ports:
           - containerPort: 8080
             name: http-websrv-svc

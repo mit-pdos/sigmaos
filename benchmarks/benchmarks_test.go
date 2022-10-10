@@ -55,7 +55,7 @@ func init() {
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
-	flag.IntVar(&nc, "ncore", 2, "Generic proc test Ncore")
+	flag.IntVar(&nc, "ncore", 1, "Generic proc test Ncore")
 	N_CORE = proc.Tcore(nc)
 	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")

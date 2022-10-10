@@ -105,6 +105,8 @@ func maybePregrowRealm(ts *test.Tstate) {
 		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
 			rclnt.GrowRealm(ts.RealmId())
 		}
+		// Sleep for a bit, so procclnts will take note of the change.
+		time.Sleep(2 * np.Conf.Realm.RESIZE_INTERVAL)
 	}
 }
 

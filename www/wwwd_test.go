@@ -9,11 +9,11 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/test"
 	"sigmaos/www"
-	"sigmaos/wwwclnt"
 )
 
 type Tstate struct {
 	*test.Tstate
+	*www.WWWClnt
 	pid proc.Tpid
 	job string
 }
@@ -32,20 +32,20 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.job = rd.String(4)
 
-	www.InitWwwFs(ts.FsLib, ts.job)
+	www.InitWwwFs(ts.Tstate.FsLib, ts.job)
 
 	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(ts.pid)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
-	// ts.Exited(proc.GetPid(), "OK")
+	ts.WWWClnt = www.MakeWWWClnt(ts.Tstate.FsLib, ts.job)
 
 	return ts
 }
 
 func (ts *Tstate) waitWww() {
-	err := www.StopServer(ts.ProcClnt, ts.pid)
+	err := ts.StopServer(ts.ProcClnt, ts.pid)
 	assert.Nil(ts.T, err)
 	ts.Shutdown()
 }
@@ -58,12 +58,12 @@ func TestSandbox(t *testing.T) {
 func TestStatic(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := wwwclnt.Get("hello.html")
-	assert.Equal(t, nil, err)
+	out, err := ts.Get("hello.html")
+	assert.Nil(t, err)
 	assert.Contains(t, string(out), "hello")
 
-	out, err = wwwclnt.Get("nonexist.html")
-	assert.NotEqual(t, nil, err) // wget return error because of HTTP not found
+	out, err = ts.Get("nonexist.html")
+	assert.NotNil(t, err, "Out: %v", string(out)) // wget return error because of HTTP not found
 
 	ts.waitWww()
 }
@@ -71,8 +71,8 @@ func TestStatic(t *testing.T) {
 func TestView(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := wwwclnt.View()
-	assert.Equal(t, nil, err)
+	out, err := ts.View()
+	assert.Nil(t, err)
 	assert.Contains(t, string(out), "Homer")
 
 	ts.waitWww()
@@ -81,8 +81,8 @@ func TestView(t *testing.T) {
 func TestEdit(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := wwwclnt.Edit("Odyssey")
-	assert.Equal(t, nil, err)
+	out, err := ts.Edit("Odyssey")
+	assert.Nil(t, err)
 	assert.Contains(t, string(out), "Odyssey")
 
 	ts.waitWww()
@@ -91,8 +91,8 @@ func TestEdit(t *testing.T) {
 func TestSave(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := wwwclnt.Save()
-	assert.Equal(t, nil, err)
+	out, err := ts.Save()
+	assert.Nil(t, err)
 	assert.Contains(t, string(out), "Homer")
 
 	ts.waitWww()
@@ -101,7 +101,7 @@ func TestSave(t *testing.T) {
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := wwwclnt.MatMul(2000)
-	assert.Equal(t, nil, err)
+	err := ts.MatMul(2000)
+	assert.Nil(t, err)
 	ts.waitWww()
 }

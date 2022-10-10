@@ -1,12 +1,15 @@
 package www
 
 import (
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (
@@ -38,6 +41,10 @@ func (clnt *WWWClnt) get(path string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		err = errors.New(resp.Status)
+		return []byte{}, err
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	return body, err
 }
@@ -47,30 +54,51 @@ func (clnt *WWWClnt) post(path string, vals map[string][]string) ([]byte, error)
 	if err != nil {
 		return []byte{}, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		err = errors.New(resp.Status)
+		return []byte{}, err
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	return body, err
 }
 
-func (clnt *WWWClnt) Get(addr, name string) ([]byte, error) {
+func (clnt *WWWClnt) Get(name string) ([]byte, error) {
 	return clnt.get(STATIC + name)
 }
 
-func (clnt *WWWClnt) View(addr string) ([]byte, error) {
+func (clnt *WWWClnt) View() ([]byte, error) {
 	return clnt.get(VIEW)
 }
 
-func (clnt *WWWClnt) Edit(addr, book string) ([]byte, error) {
+func (clnt *WWWClnt) Edit(book string) ([]byte, error) {
 	return clnt.get(EDIT + book)
 }
 
-func (clnt *WWWClnt) Save(addr string) ([]byte, error) {
+func (clnt *WWWClnt) Save() ([]byte, error) {
 	vals := map[string][]string{
 		"title": []string{"Odyssey"},
 	}
 	return clnt.post(SAVE+"Odyssey", vals)
 }
 
-func (clnt *WWWClnt) MatMul(addr string, n int) error {
+func (clnt *WWWClnt) MatMul(n int) error {
 	_, err := clnt.get(MATMUL + strconv.Itoa(n))
 	return err
+}
+
+// XXX Remove eventually, repalce with Evict
+func (clnt *WWWClnt) StopServer(pclnt *procclnt.ProcClnt, pid proc.Tpid) error {
+	ch := make(chan error)
+	go func() {
+		_, err := clnt.get(EXIT)
+		ch <- err
+	}()
+
+	_, err := pclnt.WaitExit(pid)
+	if err != nil {
+		return err
+	}
+
+	<-ch
+	return nil
 }

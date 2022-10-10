@@ -29,7 +29,7 @@ func MemFsPath(job string) string {
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) ([]string, error) {
 	p := JobHTTPAddrsPath(job)
 	var addrs []string
-	err := fsl.GetFileJson(p, addrs)
+	err := fsl.GetFileJson(p, &addrs)
 	return addrs, err
 }
 

@@ -32,6 +32,7 @@ var KVD_NCORE proc.Tcore
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
+var N_CORE proc.Tcore
 var MAT_SIZE int
 var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
@@ -54,6 +55,8 @@ func init() {
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
+	flag.IntVar(&nc, "ncore", 2, "Generic proc test Ncore")
+	N_CORE = proc.Tcore(nc)
 	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
@@ -232,8 +235,8 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
-	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs with max parallelism %v", N_PROC, MAX_PARALLEL)
-	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)
+	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, N_CORE, MAX_PARALLEL)
+	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, N_CORE)
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
 	waitExitProcs(ts, ps)

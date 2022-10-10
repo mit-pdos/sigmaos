@@ -27,20 +27,20 @@ var KV_AUTO string
 var N_KVD int
 var N_CLERK int
 var CLERK_DURATION string
-var CLERK_NCORE proc.Tcore
-var KVD_NCORE proc.Tcore
+var CLERK_NCORE int
+var KVD_NCORE int
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
-var N_CORE proc.Tcore
+var N_CORE int
 var MAT_SIZE int
 var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
+var AAAA int
 
 // Read & set the proc version.
 func init() {
-	var nc int
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.BoolVar(&PREGROW_REALM, "pregrow_realm", false, "Pre-grow realm to include all cluster resources.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
@@ -48,15 +48,12 @@ func init() {
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
-	flag.IntVar(&nc, "clerk_ncore", 1, "Clerk Ncore")
-	CLERK_NCORE = proc.Tcore(nc)
-	flag.IntVar(&nc, "kvd_ncore", 2, "KVD Ncore")
-	KVD_NCORE = proc.Tcore(nc)
+	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
+	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
-	flag.IntVar(&nc, "ncore", 1, "Generic proc test Ncore")
-	N_CORE = proc.Tcore(nc)
+	flag.IntVar(&N_CORE, "ncore", 1, "Generic proc test Ncore")
 	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
@@ -236,7 +233,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, N_CORE, MAX_PARALLEL)
-	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, N_CORE)
+	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, proc.Tcore(N_CORE))
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResults(rs)
 	waitExitProcs(ts, ps)
@@ -271,7 +268,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	rs := benchmarks.MakeRawResults(1)
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := makeNKVJobs(ts, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
+	jobs, ji := makeNKVJobs(ts, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -375,7 +372,7 @@ func TestRealmBalance(t *testing.T) {
 	nclerks := []int{N_CLERK}
 	// TODO move phases to new clerk type.
 	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
-	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, KVD_NCORE, CLERK_NCORE, KV_AUTO, REDIS_ADDR)
+	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
 	p1 := monitorCoresAssigned(ts1)
 	defer p1.Done()
 	p2 := monitorCoresAssigned(ts2)

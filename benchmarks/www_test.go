@@ -12,7 +12,6 @@ import (
 	"sigmaos/semclnt"
 	"sigmaos/test"
 	"sigmaos/www"
-	"sigmaos/wwwclnt"
 )
 
 type WwwJobInstance struct {
@@ -54,7 +53,8 @@ func MakeWwwJob(ts *test.Tstate, nwwwd int, nclnts []int, wwwncore, clntncore pr
 }
 
 func (ji *WwwJobInstance) RunClient(ch chan bool) {
-	err := wwwclnt.MatMul(MAT_SIZE)
+	clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
+	err := clnt.MatMul(MAT_SIZE)
 	assert.Equal(ji.T, nil, err)
 	ch <- true
 }
@@ -81,6 +81,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 }
 
 func (ji *WwwJobInstance) Wait() {
-	err := www.StopServer(ji.ProcClnt, ji.pid)
+	clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
+	err := clnt.StopServer(ji.ProcClnt, ji.pid)
 	assert.Nil(ji.T, err)
 }

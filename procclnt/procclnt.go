@@ -18,10 +18,6 @@ import (
 	"sigmaos/semclnt"
 )
 
-const (
-	MAXSTATUS = 1000
-)
-
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib

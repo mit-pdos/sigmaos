@@ -62,7 +62,7 @@ func (clnt *WWWClnt) post(path string, vals map[string][]string) ([]byte, error)
 	return body, err
 }
 
-func (clnt *WWWClnt) Get(name string) ([]byte, error) {
+func (clnt *WWWClnt) GetStatic(name string) ([]byte, error) {
 	return clnt.get(STATIC + name)
 }
 

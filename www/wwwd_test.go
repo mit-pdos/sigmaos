@@ -58,11 +58,11 @@ func TestSandbox(t *testing.T) {
 func TestStatic(t *testing.T) {
 	ts := makeTstate(t)
 
-	out, err := ts.Get("hello.html")
+	out, err := ts.GetStatic("hello.html")
 	assert.Nil(t, err)
 	assert.Contains(t, string(out), "hello")
 
-	out, err = ts.Get("nonexist.html")
+	out, err = ts.GetStatic("nonexist.html")
 	assert.NotNil(t, err, "Out: %v", string(out)) // wget return error because of HTTP not found
 
 	ts.waitWww()

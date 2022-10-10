@@ -76,6 +76,50 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	return failed, errs
 }
 
+type errTuple struct {
+	proc *proc.Proc
+	err  error
+}
+
+// XXX Currently for benchmarking purposes... remove eventually.
+func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.Proc, []error) {
+	failed := []*proc.Proc{}
+	errs := []error{}
+	errc := make(chan []*errTuple)
+	clnt.updateProcds()
+	for i := 0; i < len(ps); i += chunksz {
+		go func(i int) {
+			// Take a slice of procs.
+			pslice := ps[i : i+chunksz]
+			es := []*errTuple{}
+			lastUpdate := time.Now()
+			for _, p := range pslice {
+				// Update the list of procds periodically, but not too often
+				if time.Since(lastUpdate) >= np.Conf.Realm.RESIZE_INTERVAL {
+					clnt.updateProcds()
+					lastUpdate = time.Now()
+				}
+				// Update the list of active procds.
+				err := clnt.spawn(clnt.nextProcd(), p)
+				if err != nil {
+					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
+					es = append(es, &errTuple{p, err})
+				}
+			}
+			errc <- es
+		}(i)
+	}
+	// Wait for spawn results.
+	for i := 0; i < len(ps); i += chunksz {
+		es := <-errc
+		for _, e := range es {
+			failed = append(failed, e.proc)
+			errs = append(errs, e.err)
+		}
+	}
+	return failed, errs
+}
+
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~ip", p)
 }

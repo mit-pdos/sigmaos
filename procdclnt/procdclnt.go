@@ -27,6 +27,9 @@ func (t Tload) String() string {
 
 // -1 for ws directory
 func nprocd(sts []*np.Stat) int {
+	if len(sts) == 0 {
+		return 0
+	}
 	return len(sts) - 1
 }
 
@@ -60,6 +63,7 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		return 0, nil, err
 	}
 	r := nprocd(sts)
+	db.DPrintf(db.ALWAYS, "nprocd %v", r)
 	nprocs := make([]Tload, 0, r)
 	for _, st := range sts {
 		if st.Name == "ws" {

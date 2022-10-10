@@ -107,7 +107,7 @@ func maybePregrowRealm(ts *test.Tstate) {
 			rclnt.GrowRealm(ts.RealmId())
 		}
 		// Sleep for a bit, so procclnts will take note of the change.
-		time.Sleep(10 * np.Conf.Realm.RESIZE_INTERVAL)
+		time.Sleep(2 * np.Conf.Realm.RESIZE_INTERVAL)
 		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 		n, _, err := pdc.Nprocd()
 		assert.Nil(ts.T, err, "Err %v", err)

@@ -108,7 +108,7 @@ func maybePregrowRealm(ts *test.Tstate) {
 	if PREGROW_REALM {
 		// Make sure we've counted the number of cores in the cluster.
 		countNClusterCores(ts)
-		rclnt := realm.MakeRealmClnt()
+		rclnt := realm.MakeRealmClntFsl(fslib.MakeFsLib("test-rclnt"), ts.ProcClnt)
 		// While we are missing cores, try to grow.
 		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
 			rclnt.GrowRealm(ts.RealmId())

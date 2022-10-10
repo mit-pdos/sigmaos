@@ -31,6 +31,10 @@ func MakeRealmClnt() *RealmClnt {
 	return clnt
 }
 
+func MakeRealmClntFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *RealmClnt {
+	return &RealmClnt{pclnt, fsl}
+}
+
 // Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {

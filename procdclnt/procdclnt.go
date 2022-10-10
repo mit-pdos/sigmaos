@@ -63,7 +63,6 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		return 0, nil, err
 	}
 	r := nprocd(sts)
-	db.DPrintf(db.ALWAYS, "nprocd %v", r)
 	nprocs := make([]Tload, 0, r)
 	for _, st := range sts {
 		if st.Name == "ws" {

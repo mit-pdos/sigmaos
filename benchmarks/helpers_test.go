@@ -12,6 +12,7 @@ import (
 	"sigmaos/machine"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
+	"sigmaos/procdclnt"
 	"sigmaos/rand"
 	"sigmaos/realm"
 	"sigmaos/semclnt"
@@ -107,6 +108,10 @@ func maybePregrowRealm(ts *test.Tstate) {
 		}
 		// Sleep for a bit, so procclnts will take note of the change.
 		time.Sleep(2 * np.Conf.Realm.RESIZE_INTERVAL)
+		pdc := procdclnt.MakeProcdClnt(rclnt.FsLib, ts.RealmId())
+		n, _, err := pdc.Nprocd()
+		assert.Nil(ts.T, err, "Err %v", err)
+		db.DPrintf("TEST", "Pre-grew realm, now running with %v procds", n)
 	}
 }
 

@@ -37,7 +37,9 @@ var MAT_SIZE int
 var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
-var AAAA int
+
+// XXX REMOVE EVENTUALLY
+var AAA int
 
 // Read & set the proc version.
 func init() {
@@ -58,6 +60,8 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
+	// XXX Remove after protoyping
+	flag.IntVar(&AAA, "aaa", 1, "Num procclnts.")
 }
 
 // ========== Common parameters ==========

@@ -3,6 +3,11 @@ package benchmarks_test
 import (
 	"time"
 
+	// XXX
+	"fmt"
+	"sigmaos/fslib"
+	"sigmaos/procclnt"
+
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
@@ -55,8 +60,30 @@ func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 
 func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ps := i.([]*proc.Proc)
-	spawnBurstProcs(ts, ps)
+	per := len(ps) / AAA
+	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
+	pclnts := []*procclnt.ProcClnt{}
+	for i := 0; i < AAA; i++ {
+		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
+		fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
+		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
+	}
+	start = time.Now()
+	done := make(chan bool)
+	for i := range pclnts {
+		go func(i int) {
+			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
+			db.DPrintf(db.ALWAYS, "Done SB")
+			done <- true
+		}(i)
+	}
+	for _ = range pclnts {
+		<-done
+		db.DPrintf(db.ALWAYS, "Done wait SB")
+	}
+	db.DPrintf(db.ALWAYS, "Done about WS")
 	waitStartProcs(ts, ps)
+	db.DPrintf(db.ALWAYS, "Done WS")
 	return time.Since(start)
 }
 

@@ -12,6 +12,7 @@ import (
 	"sigmaos/machine"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
 	"sigmaos/rand"
 	"sigmaos/realm"
@@ -42,6 +43,12 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
 	db.DPrintf("TEST", "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
 	_, errs := ts.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
+	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+}
+
+func spawnBurstProcs2(ts *test.Tstate, pclnt *procclnt.ProcClnt, ps []*proc.Proc) {
+	db.DPrintf("TEST", "Burst-spawning2 %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
+	_, errs := pclnt.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 

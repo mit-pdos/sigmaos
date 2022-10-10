@@ -230,6 +230,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 // Test the throughput of spawning procs.
 func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+	maybePregrowRealm(ts)
 	rs := benchmarks.MakeRawResults(N_TRIALS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs with max parallelism %v", N_PROC, N_PROC/MAX_PARALLEL)
 	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, 1)

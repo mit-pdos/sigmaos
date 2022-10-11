@@ -14,7 +14,7 @@ func init() {
 	log.SetFlags(0)
 }
 
-func runCli(url, path, query string, done chan bool) {
+func runCli(url, path, query string) {
 	start := time.Now()
 	resp, err := http.Get(url + "/" + path + query)
 	if err != nil {
@@ -27,7 +27,6 @@ func runCli(url, path, query string, done chan bool) {
 	}
 
 	log.Printf("%v sec got response:\n\"%v\"", time.Since(start).Seconds(), strings.TrimSpace(string(body)))
-	done <- true
 }
 
 func main() {
@@ -52,11 +51,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error Invalid N_CLINT (%v): %v", os.Getenv("N_CLNT"), err)
 	}
-	done := make(chan bool)
-	for i := 0; i < nclnt; i++ {
-		go runCli(url, path, query, done)
-	}
-	for i := 0; i < nclnt; i++ {
-		<-done
+
+	for i := 1; i < nclnt; i++ {
+		done := make(chan bool)
+		start := time.Now()
+		for c := 0; c < i; c++ {
+			go func() {
+				runCli(url, path, query)
+				done <- true
+			}()
+		}
+		for c := 0; c < i; c++ {
+			<-done
+		}
+		log.Printf("nclnt %d take %v(ms)\n", i, time.Since(start).Milliseconds())
 	}
 }

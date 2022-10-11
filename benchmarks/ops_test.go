@@ -73,13 +73,13 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 	for i := range pclnts {
 		go func(i int) {
 			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
+			waitStartProcs(ts, ps[i*per:(i+1)*per])
 			done <- true
 		}(i)
 	}
 	for _ = range pclnts {
 		<-done
 	}
-	waitStartProcs(ts, ps)
 	return time.Since(start)
 }
 

@@ -7,7 +7,7 @@ data:
   WEBSRV_URL: "http://websrv-service:8080"
   REQ_PATH: "mm"
   REQ_QUERY: "?n=4000"
-  N_CLNT: "1"
+  N_CLNT: "4"
 
 ---
 apiVersion: v1

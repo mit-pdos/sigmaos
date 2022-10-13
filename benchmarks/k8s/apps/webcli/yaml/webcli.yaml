@@ -7,7 +7,7 @@ data:
   WEBSRV_PORT: ":32585"
   REQ_PATH: "mm"
   REQ_QUERY: "?n=4000"
-  N_CLNT: "1"
+  N_CLNT: "4"
 
 ---
 apiVersion: v1

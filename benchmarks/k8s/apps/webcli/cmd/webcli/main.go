@@ -30,10 +30,17 @@ func runCli(url, path, query string) {
 }
 
 func main() {
-	url := os.Getenv("WEBSRV_URL")
-	if url == "" {
-		log.Fatalf("No WEBSRV_URL supplied.")
+	port := os.Getenv("WEBSRV_PORT")
+	if port == "" {
+		log.Fatalf("No WEBSRV_PORT supplied.")
 	}
+
+	host, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("Can't get hostname: %v", err)
+	}
+
+	url := "http://" + host + port
 
 	path := os.Getenv("REQ_PATH")
 	if path == "" {

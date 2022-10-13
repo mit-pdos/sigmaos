@@ -35,9 +35,9 @@ func main() {
 		log.Fatalf("No WEBSRV_PORT supplied.")
 	}
 
-	host, err := os.Hostname()
-	if err != nil {
-		log.Fatalf("Can't get hostname: %v", err)
+	host := os.Getenv("HOST_IP")
+	if host == "" {
+		log.Fatalf("No HOST_IP supplied.")
 	}
 
 	url := "http://" + host + port

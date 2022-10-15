@@ -58,14 +58,15 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
-    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=192.168.0.0/16 2>&1 | tee /tmp/start.out
+    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=10.244.0.0/16 2>&1 | tee /tmp/start.out
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config
 
     # Install CNI
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/custom-resources.yaml
+    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+#    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
+#    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/custom-resources.yaml
     kubectl create -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
 
     # Un-taint all nodes, so the control-plane node can run pods too

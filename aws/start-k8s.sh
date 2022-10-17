@@ -70,7 +70,7 @@ for vm in $vms; do
     wget -O /tmp/kube-flannel.yml https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
     sed -i "s/10.244.0.0/$flannel_cidr/g" /tmp/kube-flannel.yml
     kubectl apply -f /tmp/kube-flannel.yml
-    kubectl create -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
+    kubectl apply -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
 
     # Un-taint all nodes, so the control-plane node can run pods too
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-

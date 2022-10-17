@@ -28,8 +28,9 @@ var N_KVD int
 var N_CLERK int
 var CLERK_DURATION string
 var CLERK_NCORE int
-var N_CLI int
+var N_CLNT int
 var KVD_NCORE int
+var WWWD_NCORE int
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -50,10 +51,11 @@ func init() {
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
-	flag.IntVar(&N_CLI, "ncli", 1, "Number of wwww clients.")
+	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of wwww clients.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
+	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -413,18 +415,12 @@ func TestRealmBalance(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	const NWWW = 1
-	const NCLNT = 1
-	const WWW_NCORE = 2
-	const CLNT_NCORE = 1
-
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeRawResults(1)
 	countNClusterCores(ts)
 	maybePregrowRealm(ts)
-	nclnts := []int{NCLNT}
-	db.DPrintf(db.ALWAYS, "Running with %d clients", NCLNT)
-	jobs, ji := makeWwwJobs(ts, 1, NWWW, nclnts, WWW_NCORE, CLNT_NCORE)
+	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
+	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE))
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

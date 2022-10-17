@@ -15,7 +15,7 @@ spec:
       - name: REQ_QUERY
         value: "?n=4000"
       - name: N_CLNT
-        value: "4"
+        value: "32"
       - name: HOST_IP
         valueFrom:
           fieldRef:

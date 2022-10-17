@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: websrv-worker
+  name: websrv
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: websrv-worker
+    name: websrv
   minReplicas: 1
   maxReplicas: 16
   metrics:

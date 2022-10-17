@@ -44,7 +44,7 @@ vma=($vms)
 MAIN="${vma[0]}"
 
 # Log into the control-plane node to drain all pods from other nodes.
-ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<"ENDSSH"
   lines=$(kubectl get nodes | tail -n +2)
   while IFS= read -r line; do
     name=$(echo $line | cut -d " " -f1)

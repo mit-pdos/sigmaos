@@ -28,6 +28,7 @@ var N_KVD int
 var N_CLERK int
 var CLERK_DURATION string
 var CLERK_NCORE int
+var N_CLI int
 var KVD_NCORE int
 var REALM2 string
 var REDIS_ADDR string
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
+	flag.IntVar(&N_CLI, "ncli", 1, "Number of wwww clients.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")

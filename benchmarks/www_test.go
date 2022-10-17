@@ -66,7 +66,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 	err = ji.WaitStart(a.Pid)
 	ji.pid = a.Pid
 	assert.Equal(ji.T, nil, err)
-	for i := 1; i < 4; i++ {
+	for i := 1; i < N_CLI; i++ {
 		ch := make(chan bool)
 		start := time.Now()
 		for c := 0; c < i; c++ {

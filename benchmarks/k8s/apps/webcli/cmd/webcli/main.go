@@ -59,7 +59,7 @@ func main() {
 		log.Fatalf("Error Invalid N_CLINT (%v): %v", os.Getenv("N_CLNT"), err)
 	}
 
-	for i := 1; i < nclnt; i++ {
+	for i := 1; i <= nclnt; i++ {
 		done := make(chan bool)
 		start := time.Now()
 		for c := 0; c < i; c++ {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,7 +18,7 @@ func runCli(url, path, query string) {
 	start := time.Now()
 	resp, err := http.Get(url + "/" + path + query)
 	if err != nil {
-		if err == io.EOF {
+		if err.Error() == "EOF" {
 			log.Printf("EOF Error GET: %v", err)
 		}
 		log.Fatalf("Error GET: %v", err)

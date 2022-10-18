@@ -20,6 +20,7 @@ func runCli(url, path, query string) {
 	if err != nil {
 		if strings.Contains(err.Error(), "EOF") {
 			log.Printf("EOF Error GET: %v", err)
+			return
 		}
 		log.Fatalf("Error GET: %v", err)
 	}

@@ -13,4 +13,3 @@ kind: ClusterConfiguration
 kubernetesVersion: v1.16.0
 apiServer:
   extraArgs:
-    advertise-address: 

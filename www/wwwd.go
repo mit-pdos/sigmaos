@@ -169,11 +169,11 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	a := proc.MakeProcPid(pid, app, args)
 	// Set the shared link to point to the pipe
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
-	err := www.Spawn(a)
-	if err != nil {
-		return nil, err
+	_, errs := www.SpawnBurst([]*proc.Proc{a})
+	if len(errs) != 0 {
+		return nil, errs[0]
 	}
-	err = www.WaitStart(pid)
+	err := www.WaitStart(pid)
 	if err != nil {
 		return nil, err
 	}

@@ -161,7 +161,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	www.removePipe(pipeName)
 }
 
-func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (*proc.Status, error) {
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string, ncore proc.Tcore) (*proc.Status, error) {
 	// Create a pipe for the child to write to.
 	pipeName := www.makePipe()
 
@@ -190,7 +190,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
-	return www.spawnApp("user/fsreader", w, r, []string{file})
+	return www.spawnApp("user/fsreader", w, r, []string{file}, 0)
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -202,7 +202,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	//}
 	// log.Printf("\n")
 	title := r.FormValue("title")
-	return www.spawnApp("user/bookapp", w, r, []string{args, title})
+	return www.spawnApp("user/bookapp", w, r, []string{args, title}, 0)
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -213,5 +213,5 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("matmul: %v\n", args)
-	return www.spawnApp("user/matmul", w, r, []string{args})
+	return www.spawnApp("user/matmul", w, r, []string{args}, 2)
 }

@@ -18,7 +18,7 @@ func runCli(url, path, query string) {
 	start := time.Now()
 	resp, err := http.Get(url + "/" + path + query)
 	if err != nil {
-		if err.Error() == "EOF" {
+		if strings.Contains(err.Error(), "EOF") {
 			log.Printf("EOF Error GET: %v", err)
 		}
 		log.Fatalf("Error GET: %v", err)

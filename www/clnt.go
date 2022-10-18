@@ -81,6 +81,10 @@ func (clnt *WWWClnt) Save() ([]byte, error) {
 	return clnt.post(SAVE+"Odyssey", vals)
 }
 
+func (clnt *WWWClnt) Hello() ([]byte, error) {
+	return clnt.get(HELLO)
+}
+
 func (clnt *WWWClnt) MatMul(n int) error {
 	_, err := clnt.get(MATMUL + strconv.Itoa(n))
 	return err

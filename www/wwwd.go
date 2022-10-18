@@ -1,7 +1,6 @@
 package www
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -25,6 +24,7 @@ const (
 	MATMUL = "/matmul/"
 	BOOK   = "/book/"
 	EXIT   = "/exit/"
+	HELLO  = "/hello"
 )
 
 //
@@ -38,6 +38,7 @@ func RunWwwd(job, tree string) {
 	www := MakeWwwd(job, tree)
 	http.HandleFunc(STATIC, www.makeHandler(getStatic))
 	http.HandleFunc(BOOK, www.makeHandler(doBook))
+	http.HandleFunc(HELLO, www.makeHandler(doHello))
 	http.HandleFunc(EXIT, www.makeHandler(doExit))
 	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
 
@@ -59,7 +60,7 @@ func RunWwwd(job, tree string) {
 		www.Serve()
 	}()
 
-	log.Fatal(http.Serve(l, nil))
+	db.DFatalf("%v", http.Serve(l, nil))
 }
 
 type Wwwd struct {
@@ -85,7 +86,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
-	log.Printf("%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
+	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
 	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
@@ -143,7 +144,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	// Read from the pipe.
 	fd, err := www.Open(pipePath, np.OREAD)
 	if err != nil {
-		log.Printf("wwwd: open %v failed %v", pipePath, err)
+		db.DPrintf("wwwd: open %v failed %v", pipePath, err)
 		return
 	}
 	defer www.Close(fd)
@@ -189,13 +190,13 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	log.Printf("%v: getstatic: %v\n", proc.GetProgram(), args)
+	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
 	return www.spawnApp("user/fsreader", w, r, []string{file}, 0)
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	log.Printf("dobook: %v\n", args)
+	db.DPrintf(db.ALWAYS, "dobook: %v\n", args)
 	// XXX maybe pass all form key/values to app
 	//r.ParseForm()
 	//for key, value := range r.Form {
@@ -206,6 +207,14 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	return www.spawnApp("user/bookapp", w, r, []string{args, title}, 0)
 }
 
+func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	_, err := w.Write([]byte("hello"))
+	if err != nil {
+		return nil, err
+	}
+	return proc.MakeStatus(proc.StatusOK), nil
+}
+
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	www.Done()
 	os.Exit(0)
@@ -213,6 +222,6 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 }
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	log.Printf("matmul: %v\n", args)
+	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
 	return www.spawnApp("user/matmul", w, r, []string{args}, 2)
 }

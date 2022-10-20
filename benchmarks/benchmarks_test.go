@@ -31,6 +31,7 @@ var CLERK_NCORE int
 var N_CLNT int
 var KVD_NCORE int
 var WWWD_NCORE int
+var WWWD_REQ_TYPE string
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -56,6 +57,7 @@ func init() {
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
+	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")

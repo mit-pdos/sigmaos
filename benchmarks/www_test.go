@@ -25,7 +25,7 @@ type WwwJobInstance struct {
 	*test.Tstate
 }
 
-func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore) *WwwJobInstance {
+func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore, reqtype string) *WwwJobInstance {
 	ji := &WwwJobInstance{}
 	ji.job = rand.String(16)
 	ji.ready = make(chan bool)

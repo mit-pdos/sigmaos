@@ -10,7 +10,7 @@ import (
 
 const (
 	NNODE   = 1
-	NTENANT = 2
+	NTENANT = 3
 	NTRIAL  = 1 // 10
 
 	NTICK                    = 100
@@ -174,11 +174,12 @@ func (t *Tenant) charge() {
 		c += n.price
 	}
 	t.cost += c
+	t.sim.mgr.revenue += c
 }
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d charge %.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.cost)
+	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d charge %.2f avg cost/tick %.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.cost, float64(t.cost)/float64(t.nwork))
 }
 
 //
@@ -186,9 +187,11 @@ func (t *Tenant) stats() {
 //
 
 type Mgr struct {
-	price float64
-	nodes *[NNODE]Node
-	index int
+	price   float64
+	nodes   *[NNODE]Node
+	index   int
+	revenue float64
+	nwork   int
 }
 
 func mkMgr(nodes *[NNODE]Node) *Mgr {
@@ -203,6 +206,11 @@ func (m *Mgr) String() string {
 		s += fmt.Sprintf("{%v} ", m.nodes[i])
 	}
 	return s + "}"
+}
+
+func (m *Mgr) stats() {
+	n := NTICK * NNODE
+	fmt.Printf("Mgr revenue %.2f avg rev/tick %.2f util %.2f\n", m.revenue, float64(m.revenue)/float64(m.nwork), float64(m.nwork)/float64(n))
 }
 
 func (m *Mgr) findFree(t *Tenant, b float64) *Node {
@@ -298,6 +306,7 @@ func (sim *Sim) tick() {
 		if n.proc != nil {
 			n.proc.nTick--
 			n.tenant.nwork++
+			sim.mgr.nwork++
 			if n.proc.nTick == 0 {
 				n.proc = nil
 			}
@@ -314,5 +323,6 @@ func main() {
 		for i, _ := range sim.tenants {
 			sim.tenants[i].stats()
 		}
+		sim.mgr.stats()
 	}
 }

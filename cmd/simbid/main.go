@@ -75,6 +75,7 @@ type Tenant struct {
 	procs   []*Proc
 	nodes   []*Node
 	sim     *Sim
+	cost    float64
 	nproc   int
 	nnode   int
 	maxnode int
@@ -124,6 +125,7 @@ func (t *Tenant) tick() {
 		t.maxnode = len(t.nodes)
 	}
 	t.nwait += len(t.procs)
+	t.charge()
 }
 
 func (t *Tenant) freeIdle() {
@@ -163,9 +165,20 @@ func (t *Tenant) evict(n *Node) {
 	panic("evict")
 }
 
+func (t *Tenant) charge() {
+	c := float64(0)
+	for _, n := range t.nodes {
+		if n.proc == nil {
+			panic("charge")
+		}
+		c += n.price
+	}
+	t.cost += c
+}
+
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict)
+	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d charge %.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.cost)
 }
 
 //
@@ -205,6 +218,7 @@ func (m *Mgr) findFree(t *Tenant, b float64) *Node {
 }
 
 func (m *Mgr) yield(n *Node) {
+	fmt.Printf("yield %v(%p)\n", n, n)
 	n.tenant = nil
 }
 

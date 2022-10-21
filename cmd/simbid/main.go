@@ -35,7 +35,9 @@ func uniform(r *rand.Rand) uint64 {
 //
 
 type Proc struct {
-	nTick uint64
+	nLength uint64  // in ticks
+	nTick   uint64  // #ticks remaining
+	cost    float64 // cost for this proc
 }
 
 func (p *Proc) String() string {
@@ -49,7 +51,7 @@ func (p *Proc) String() string {
 
 type Node struct {
 	proc   *Proc
-	price  float64
+	price  float64 // the price for a tick
 	tenant *Tenant
 }
 
@@ -71,17 +73,18 @@ func (n *Node) reallocate(to *Tenant, b float64) {
 //
 
 type Tenant struct {
-	maxbid  float64 // per tick
-	procs   []*Proc
-	nodes   []*Node
-	sim     *Sim
-	cost    float64
-	nproc   int
-	nnode   int
-	maxnode int
-	nwork   int
-	nwait   int
-	nevict  int
+	maxbid   float64
+	procs    []*Proc
+	nodes    []*Node
+	sim      *Sim
+	nproc    int // sum of number of procs started
+	nnode    int // sum of number of nodes used at each tick
+	maxnode  int
+	nwork    uint64  // sum of # ticks running a proc
+	cost     float64 // cost for nwork ticks
+	nwait    uint64  // sum of # ticks waiting to be run
+	nevict   uint64  // sum # ticks wasted because of eviction
+	sunkCost float64 // the cost of the wasted ticks
 }
 
 func (t Tenant) String() string {
@@ -124,7 +127,7 @@ func (t *Tenant) tick() {
 	if len(t.nodes) > t.maxnode {
 		t.maxnode = len(t.nodes)
 	}
-	t.nwait += len(t.procs)
+	t.nwait += uint64(len(t.procs))
 	t.charge()
 }
 
@@ -153,7 +156,8 @@ func (t *Tenant) schedule() {
 // Manager is taking away a node
 func (t *Tenant) evict(n *Node) {
 	if n.proc != nil {
-		t.nevict++
+		t.nevict += n.proc.nLength - n.proc.nTick // wasted cycles
+		t.sunkCost += n.proc.cost
 		n.proc = nil
 	}
 	for i, _ := range t.nodes {
@@ -171,6 +175,7 @@ func (t *Tenant) charge() {
 		if n.proc == nil {
 			panic("charge")
 		}
+		n.proc.cost += n.price
 		c += n.price
 	}
 	t.cost += c
@@ -179,7 +184,7 @@ func (t *Tenant) charge() {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d charge %.2f avg cost/tick %.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.cost, float64(t.cost)/float64(t.nwork))
+	fmt.Printf("%p: lambda %.2f avg nnode %.2f max node %d nwork %d load %.2f nwait %d nevict %d charge %.2f avg sunk cost %.2f cost/tick %.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.cost, t.sunkCost, float64(t.cost)/float64(t.nwork))
 }
 
 //
@@ -289,6 +294,7 @@ func (sim *Sim) mkProc() *Proc {
 	p := &Proc{}
 	// p.nTick = zipf(sim.rand)
 	p.nTick = uniform(sim.rand)
+	p.nLength = p.nTick
 	return p
 }
 

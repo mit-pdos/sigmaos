@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	NNODE   = 1
-	NTENANT = 3
+	NNODE   = 10
+	NTENANT = 30
 	NTRIAL  = 1 // 10
 
 	NTICK                    = 100
@@ -67,9 +67,9 @@ func (n *Node) reallocate(to *Tenant, b float64) {
 }
 
 //
-// Tenants run procs on the available nodes to them. If they have more
-// procs to run than available nodes, tenant bids for more nodes up
-// till its maxbid.
+// Tenants run procs on the nodes allocated to them by the mgr. If
+// they have more procs to run than available nodes, tenant bids for
+// more nodes up till its maxbid.
 //
 
 type Tenant struct {
@@ -132,10 +132,11 @@ func (t *Tenant) tick() {
 }
 
 func (t *Tenant) freeIdle() {
-	for i, _ := range t.nodes {
+	for i := 0; i < len(t.nodes); i++ {
 		n := t.nodes[i]
 		if n.proc == nil {
 			t.nodes = append(t.nodes[0:i], t.nodes[i+1:]...)
+			i--
 			t.sim.mgr.yield(n)
 		}
 	}

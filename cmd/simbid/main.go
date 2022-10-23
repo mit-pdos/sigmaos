@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 
 	"gonum.org/v1/gonum/stat/distuv"
@@ -32,10 +33,32 @@ func uniform(r *rand.Rand) uint64 {
 	return (rand.Uint64() % MAX_SERVICE_TIME) + 1
 }
 
+//
+// Price
+//
+
 type Price float64
 
 func (p Price) String() string {
 	return fmt.Sprintf("$%.12f", p)
+}
+
+//
+// Bid
+//
+
+type Bid struct {
+	tenant *Tenant
+	bid    Price
+	nnode  int
+}
+
+func (b *Bid) String() string {
+	return fmt.Sprintf("{%p %v %d}", b.tenant, b.bid, b.nnode)
+}
+
+func mkBid(t *Tenant, b Price, n int) *Bid {
+	return &Bid{t, b, n}
 }
 
 //
@@ -66,14 +89,38 @@ type Node struct {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{proc %v price %v %p}", n.proc, n.price, n.tenant)
+	return fmt.Sprintf("{%p: proc %v price %v %p}", n, n.proc, n.price, n.tenant)
 }
 
-func (n *Node) reallocate(to *Tenant, b Price) {
-	fmt.Printf("reallocate %v(%p) to %p at %v\n", n, n, to, b)
-	n.tenant.evict(n)
-	n.tenant = to
-	n.price = b
+type Nodes []*Node
+
+func (ns *Nodes) remove(n1 *Node) *Node {
+	for i, n := range *ns {
+		if n == n1 {
+			*ns = append((*ns)[:i], (*ns)[i+1:]...)
+			return n
+		}
+	}
+	return nil
+}
+
+func (ns *Nodes) findFree() *Node {
+	for i, n := range *ns {
+		if n.tenant == nil {
+			*ns = append((*ns)[:i], (*ns)[i+1:]...)
+			return n
+		}
+	}
+	return nil
+}
+
+func (ns *Nodes) findVictim(b *Bid) *Node {
+	for _, n := range *ns {
+		if n.tenant != b.tenant && b.bid > n.price {
+			return n
+		}
+	}
+	return nil
 }
 
 //
@@ -86,7 +133,7 @@ type Tenant struct {
 	poisson  *distuv.Poisson
 	maxbid   Price
 	procs    []*Proc
-	nodes    []*Node
+	nodes    Nodes
 	sim      *Sim
 	nproc    int // sum of proc ticks
 	nnode    int // sum of node ticks
@@ -111,30 +158,28 @@ func (t *Tenant) String() string {
 	return s + "]}"
 }
 
-func (t *Tenant) tick() {
+// New procs "arrive" based on Poisson distribution
+func (t *Tenant) genProcs() {
 	nproc := int(t.poisson.Rand())
 	for i := 0; i < nproc; i++ {
 		t.procs = append(t.procs, t.sim.mkProc())
 	}
 	t.nproc += nproc
+}
+
+// Schedule the procs to be run on the available nodes, and release
+// nodes we don't use.
+func (t *Tenant) collectBid() *Bid {
 	t.schedule()
-
-	// if we still have procs queued for execution, bid for a new
-	// node, increasing the bid until mgr accepts or bid reaches max
-	// bid.
-	bid := Price(0.0)
-	for len(t.procs) > 0 && bid <= t.maxbid {
-		if n := t.sim.mgr.bidNode(t, bid); n != nil {
-			//fmt.Printf("%p: bid accepted at %v\n", t, bid)
-			t.nodes = append(t.nodes, n)
-			t.schedule()
-		} else {
-			bid += BIT_INCREMENT
-		}
+	t.yieldIdle()
+	if len(t.procs) > 0 {
+		return mkBid(t, t.maxbid, len(t.procs))
 	}
+	return nil
+}
 
-	t.freeIdle()
-
+func (t *Tenant) scheduleNodes() {
+	t.schedule()
 	t.nnode += len(t.nodes)
 	if len(t.nodes) > t.maxnode {
 		t.maxnode = len(t.nodes)
@@ -143,7 +188,7 @@ func (t *Tenant) tick() {
 	t.charge()
 }
 
-func (t *Tenant) freeIdle() {
+func (t *Tenant) yieldIdle() {
 	for i := 0; i < len(t.nodes); i++ {
 		n := t.nodes[i]
 		if n.proc == nil {
@@ -209,23 +254,30 @@ func (t *Tenant) stats() {
 //
 
 type Mgr struct {
+	sim     *Sim
 	price   Price
-	nodes   *[NNODE]Node
+	free    Nodes
+	cur     Nodes
 	index   int
 	revenue Price
 	nwork   int
 }
 
-func mkMgr(nodes *[NNODE]Node) *Mgr {
+func mkMgr(sim *Sim) *Mgr {
 	m := &Mgr{}
-	m.nodes = nodes
+	m.sim = sim
+	ns := make(Nodes, NNODE, NNODE)
+	for i, _ := range ns {
+		ns[i] = &Node{}
+	}
+	m.free = ns
 	return m
 }
 
 func (m *Mgr) String() string {
 	s := fmt.Sprintf("{mgr price %v nodes:", m.price)
-	for i, _ := range m.nodes {
-		s += fmt.Sprintf("{%v} ", m.nodes[i])
+	for _, n := range m.cur {
+		s += fmt.Sprintf("{%v} ", n)
 	}
 	return s + "}"
 }
@@ -235,46 +287,53 @@ func (m *Mgr) stats() {
 	fmt.Printf("Mgr revenue %.2f avg rev/tick %.2f util %.2f\n", m.revenue, float64(m.revenue)/float64(m.nwork), float64(m.nwork)/float64(n))
 }
 
-func (m *Mgr) findFree(t *Tenant, b Price) *Node {
-	for i, _ := range m.nodes {
-		n := &m.nodes[i]
-		if n.tenant == nil {
-			n.tenant = t
-			n.price = b
-			return n
-		}
-	}
-	return nil
-}
-
 func (m *Mgr) yield(n *Node) {
-	fmt.Printf("yield %v(%p)\n", n, n)
+	fmt.Printf("yield %v\n", n)
 	n.tenant = nil
+	m.free = append(m.free, n)
+	m.cur.remove(n)
 }
 
-func (m *Mgr) bidNode(t *Tenant, b Price) *Node {
-	//fmt.Printf("bidNode %p %v\n", t, b)
-	if n := m.findFree(t, b); n != nil {
-		//fmt.Printf("bidNode -> unused %v\n", n)
-		return n
-	}
-	// no unused nodes; look for a node with price lower than b
-	// re-allocate it to tenant t, after given the old tenant a chance
-	// to evict its proc from the node.
-	s := m.index
-	for {
-		n := &m.nodes[m.index%len(m.nodes)]
-		m.index = (m.index + 1) % len(m.nodes)
-		if b > n.price && n.tenant != t {
-			n.reallocate(t, b)
-			return n
-		}
-		if m.index == s { // looped around; no lower priced node exists
-			//fmt.Printf("bidNode: no lower priced nodes\n")
-			break
+func (m *Mgr) collectBids() (int, []*Bid) {
+	bids := make([]*Bid, 0)
+	n := 0
+	for i, _ := range m.sim.tenants {
+		if b := m.sim.tenants[i].collectBid(); b != nil {
+			bids = append(bids, b)
+			n += b.nnode
 		}
 	}
-	return nil
+	sort.Slice(bids, func(i, j int) bool {
+		return bids[i].bid > bids[j].bid
+	})
+	return n, bids
+}
+
+func (m *Mgr) assignNodes() Nodes {
+	bnn, bids := m.collectBids()
+	fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
+	new := make(Nodes, 0)
+	for _, b := range bids {
+		for i := 0; i < b.nnode; i++ {
+			if n := m.free.findFree(); n != nil {
+				n.tenant = b.tenant
+				n.price = b.bid
+				fmt.Printf("assignNodes: allocate %p to %p at %v\n", n, b.tenant, b.bid)
+				b.tenant.nodes = append(b.tenant.nodes, n)
+				new = append(new, n)
+			} else if n := m.cur.findVictim(b); n != nil {
+				fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, b.tenant, b.bid)
+				n.tenant.evict(n)
+				n.tenant = b.tenant
+				n.price = b.bid
+			} else {
+				fmt.Printf("assignNodes: no nodes left\n")
+			}
+		}
+	}
+	// 		bid += BIT_INCREMENT
+	m.cur = append(m.cur, new...)
+	return m.cur
 }
 
 //
@@ -283,7 +342,6 @@ func (m *Mgr) bidNode(t *Tenant, b Price) *Node {
 
 type Sim struct {
 	time    uint64
-	nodes   [NNODE]Node
 	tenants [NTENANT]Tenant
 	rand    *rand.Rand
 	mgr     *Mgr
@@ -292,7 +350,8 @@ type Sim struct {
 func mkSim() *Sim {
 	sim := &Sim{}
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	sim.mgr = mkMgr(&sim.nodes)
+
+	sim.mgr = mkMgr(sim)
 	for i := 0; i < NTENANT; i++ {
 		t := &sim.tenants[i]
 		t.procs = make([]*Proc, 0)
@@ -300,21 +359,12 @@ func mkSim() *Sim {
 		if i == 0 {
 			t.poisson = &distuv.Poisson{Lambda: 10 * AVG_ARRIVAL_RATE}
 			t.maxbid = MAX_BID
-			if n := t.sim.mgr.bidNode(t, PRICE_ONDEMAND); n != nil {
-				t.nodes = append(t.nodes, n)
-			} else {
-				panic("no nodes?")
-			}
 		} else {
 			t.poisson = &distuv.Poisson{Lambda: AVG_ARRIVAL_RATE}
 			t.maxbid = MAX_BID / 2
 		}
 	}
 	return sim
-}
-
-func (sim *Sim) Print() {
-	fmt.Printf("%v: nodes %v\n", sim.time, sim.nodes)
 }
 
 func (sim *Sim) mkProc() *Proc {
@@ -325,10 +375,21 @@ func (sim *Sim) mkProc() *Proc {
 	return p
 }
 
-func (sim *Sim) tickTenants(tick uint64) {
+// At each tick, a tenants generates load in the form of procs that
+// need to be run.
+func (sim *Sim) genLoad() {
 	for i, _ := range sim.tenants {
-		sim.tenants[i].tick()
+		sim.tenants[i].genProcs()
 	}
+}
+
+func (sim *Sim) scheduleNodes() {
+	for i, _ := range sim.tenants {
+		sim.tenants[i].scheduleNodes()
+	}
+}
+
+func (sim *Sim) printTenants(tick uint64) {
 	fmt.Printf("tick %d:", tick)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
@@ -339,10 +400,8 @@ func (sim *Sim) tickTenants(tick uint64) {
 	fmt.Printf("\n")
 }
 
-func (sim *Sim) tick(tick uint64) {
-	sim.tickTenants(tick)
-	for i, _ := range sim.nodes {
-		n := &sim.nodes[i]
+func (sim *Sim) runProcs(ns Nodes) {
+	for _, n := range ns {
 		if n.proc != nil {
 			n.proc.nTick--
 			n.tenant.nwork++
@@ -352,6 +411,15 @@ func (sim *Sim) tick(tick uint64) {
 			}
 		}
 	}
+}
+
+func (sim *Sim) tick(tick uint64) {
+	sim.genLoad()
+	ns := sim.mgr.assignNodes()
+	fmt.Printf("assignment %d nodes: %v\n", len(ns), ns)
+	sim.scheduleNodes()
+	sim.printTenants(tick)
+	sim.runProcs(ns)
 }
 
 func main() {

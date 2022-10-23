@@ -16,7 +16,11 @@ const (
 	NTICK                    = 100
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
 	MAX_SERVICE_TIME         = 5   // in ticks
-	MAX_BID          float64 = 1.0 // per tick
+	// DURATION                 = NTICK
+	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
+	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
+	BIT_INCREMENT        = 0.000000000001
+	MAX_BID        Price = 3 * PRICE_SPOT
 )
 
 func zipf(r *rand.Rand) uint64 {
@@ -28,6 +32,12 @@ func uniform(r *rand.Rand) uint64 {
 	return (rand.Uint64() % MAX_SERVICE_TIME) + 1
 }
 
+type Price float64
+
+func (p Price) String() string {
+	return fmt.Sprintf("$%.12f", p)
+}
+
 //
 // Tenants runs procs.  At each tick, each tenant creates new procs
 // based AVG_ARRIVAL_RATE.  Each proc runs for nTick, following either
@@ -35,9 +45,9 @@ func uniform(r *rand.Rand) uint64 {
 //
 
 type Proc struct {
-	nLength uint64  // in ticks
-	nTick   uint64  // #ticks remaining
-	cost    float64 // cost for this proc
+	nLength uint64 // in ticks
+	nTick   uint64 // #ticks remaining
+	cost    Price  // cost for this proc
 }
 
 func (p *Proc) String() string {
@@ -51,16 +61,16 @@ func (p *Proc) String() string {
 
 type Node struct {
 	proc   *Proc
-	price  float64 // the price for a tick
+	price  Price // the price for a tick
 	tenant *Tenant
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{proc %v price %.2f %p}", n.proc, n.price, n.tenant)
+	return fmt.Sprintf("{proc %v price %v %p}", n.proc, n.price, n.tenant)
 }
 
-func (n *Node) reallocate(to *Tenant, b float64) {
-	fmt.Printf("reallocate %v(%p) to %p\n", n, n, to)
+func (n *Node) reallocate(to *Tenant, b Price) {
+	fmt.Printf("reallocate %v(%p) to %p at %v\n", n, n, to, b)
 	n.tenant.evict(n)
 	n.tenant = to
 	n.price = b
@@ -74,19 +84,19 @@ func (n *Node) reallocate(to *Tenant, b float64) {
 
 type Tenant struct {
 	poisson  *distuv.Poisson
-	maxbid   float64
+	maxbid   Price
 	procs    []*Proc
 	nodes    []*Node
 	sim      *Sim
 	nproc    int // sum of proc ticks
 	nnode    int // sum of node ticks
 	maxnode  int
-	nwork    uint64  // sum of # ticks running a proc
-	cost     float64 // cost for nwork ticks
-	nwait    uint64  // sum of # ticks waiting to be run
-	nevict   int     // # evictions
-	nwasted  uint64  // sum # ticks wasted because of eviction
-	sunkCost float64 // the cost of the wasted ticks
+	nwork    uint64 // sum of # ticks running a proc
+	cost     Price  // cost for nwork ticks
+	nwait    uint64 // sum of # ticks waiting to be run
+	nevict   int    // # evictions
+	nwasted  uint64 // sum # ticks wasted because of eviction
+	sunkCost Price  // the cost of the wasted ticks
 }
 
 func (t *Tenant) String() string {
@@ -112,17 +122,14 @@ func (t *Tenant) tick() {
 	// if we still have procs queued for execution, bid for a new
 	// node, increasing the bid until mgr accepts or bid reaches max
 	// bid.
-	bid := float64(0.0)
-	if t == &t.sim.tenants[0] {
-		bid = float64(0.5)
-	}
+	bid := Price(0.0)
 	for len(t.procs) > 0 && bid <= t.maxbid {
 		if n := t.sim.mgr.bidNode(t, bid); n != nil {
-			// fmt.Printf("%p: bid accepted at %.2f\n", t, bid)
+			//fmt.Printf("%p: bid accepted at %v\n", t, bid)
 			t.nodes = append(t.nodes, n)
 			t.schedule()
 		} else {
-			bid += 0.1
+			bid += BIT_INCREMENT
 		}
 	}
 
@@ -180,7 +187,7 @@ func (t *Tenant) evict(n *Node) {
 }
 
 func (t *Tenant) charge() {
-	c := float64(0)
+	c := Price(0)
 	for _, n := range t.nodes {
 		if n.proc == nil {
 			panic("charge")
@@ -194,7 +201,7 @@ func (t *Tenant) charge() {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: l %.2f P/T %.2f maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %dT) charge $%.2f sunk $%.2f tick $%.2f\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, float64(t.cost)/float64(t.nwork))
+	fmt.Printf("%p: l %v P/T %.2f maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %dT) charge %v sunk %v tick %v\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, Price(float64(t.cost)/float64(t.nwork)))
 }
 
 //
@@ -202,10 +209,10 @@ func (t *Tenant) stats() {
 //
 
 type Mgr struct {
-	price   float64
+	price   Price
 	nodes   *[NNODE]Node
 	index   int
-	revenue float64
+	revenue Price
 	nwork   int
 }
 
@@ -216,7 +223,7 @@ func mkMgr(nodes *[NNODE]Node) *Mgr {
 }
 
 func (m *Mgr) String() string {
-	s := fmt.Sprintf("{mgr price %.2f nodes:", m.price)
+	s := fmt.Sprintf("{mgr price %v nodes:", m.price)
 	for i, _ := range m.nodes {
 		s += fmt.Sprintf("{%v} ", m.nodes[i])
 	}
@@ -228,7 +235,7 @@ func (m *Mgr) stats() {
 	fmt.Printf("Mgr revenue %.2f avg rev/tick %.2f util %.2f\n", m.revenue, float64(m.revenue)/float64(m.nwork), float64(m.nwork)/float64(n))
 }
 
-func (m *Mgr) findFree(t *Tenant, b float64) *Node {
+func (m *Mgr) findFree(t *Tenant, b Price) *Node {
 	for i, _ := range m.nodes {
 		n := &m.nodes[i]
 		if n.tenant == nil {
@@ -245,10 +252,10 @@ func (m *Mgr) yield(n *Node) {
 	n.tenant = nil
 }
 
-func (m *Mgr) bidNode(t *Tenant, b float64) *Node {
-	// fmt.Printf("bidNode %p %.2f\n", t, b)
+func (m *Mgr) bidNode(t *Tenant, b Price) *Node {
+	//fmt.Printf("bidNode %p %v\n", t, b)
 	if n := m.findFree(t, b); n != nil {
-		// fmt.Printf("bidNode -> unused %v\n", n)
+		//fmt.Printf("bidNode -> unused %v\n", n)
 		return n
 	}
 	// no unused nodes; look for a node with price lower than b
@@ -263,6 +270,7 @@ func (m *Mgr) bidNode(t *Tenant, b float64) *Node {
 			return n
 		}
 		if m.index == s { // looped around; no lower priced node exists
+			//fmt.Printf("bidNode: no lower priced nodes\n")
 			break
 		}
 	}
@@ -287,14 +295,20 @@ func mkSim() *Sim {
 	sim.mgr = mkMgr(&sim.nodes)
 	for i := 0; i < NTENANT; i++ {
 		t := &sim.tenants[i]
-		if i == 0 {
-			t.poisson = &distuv.Poisson{Lambda: 10 * AVG_ARRIVAL_RATE}
-		} else {
-			t.poisson = &distuv.Poisson{Lambda: AVG_ARRIVAL_RATE}
-		}
 		t.procs = make([]*Proc, 0)
 		t.sim = sim
-		t.maxbid = MAX_BID
+		if i == 0 {
+			t.poisson = &distuv.Poisson{Lambda: 10 * AVG_ARRIVAL_RATE}
+			t.maxbid = MAX_BID
+			if n := t.sim.mgr.bidNode(t, PRICE_ONDEMAND); n != nil {
+				t.nodes = append(t.nodes, n)
+			} else {
+				panic("no nodes?")
+			}
+		} else {
+			t.poisson = &distuv.Poisson{Lambda: AVG_ARRIVAL_RATE}
+			t.maxbid = MAX_BID / 2
+		}
 	}
 	return sim
 }

@@ -285,7 +285,7 @@ func (t *Tenant) evict(n *Node) {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: l %v P/T %.2f maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %dT) charge %v sunk %v tick %v\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, Price(float64(t.cost)/float64(t.nwork)))
+	fmt.Printf("%p: l %v P/T %.2f maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %dT) charge %v sunk %v tick %v\n", t, float64(t.nproc)/n, float64(t.nnode)/n, t.maxnode, t.nwork, float64(t.nwork)/float64(t.nnode), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
 //
@@ -294,13 +294,15 @@ func (t *Tenant) stats() {
 
 type Mgr struct {
 	sim     *Sim
-	price   Price
 	free    Nodes
 	cur     Nodes
 	index   int
 	revenue Price
 	nwork   int
 	nidle   uint64
+	low     Price
+	high    Price
+	last    Price
 }
 
 func mkMgr(sim *Sim) *Mgr {
@@ -311,11 +313,12 @@ func mkMgr(sim *Sim) *Mgr {
 		ns[i] = &Node{}
 	}
 	m.free = ns
+	m.low = PRICE_ONDEMAND
 	return m
 }
 
 func (m *Mgr) String() string {
-	s := fmt.Sprintf("{mgr price %v nodes:", m.price)
+	s := fmt.Sprintf("{mgr nodes:")
 	for _, n := range m.cur {
 		s += fmt.Sprintf("{%v} ", n)
 	}
@@ -325,6 +328,7 @@ func (m *Mgr) String() string {
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
 	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f idle %dT\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle)
+	fmt.Printf("Last avg bid %v lowest ever %v highest ever %v\n", m.last, m.low, m.high)
 }
 
 func (m *Mgr) yield(n *Node) {
@@ -354,6 +358,8 @@ func (m *Mgr) assignNodes() Nodes {
 	_, bids := m.collectBids()
 	// fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
 	new := make(Nodes, 0)
+	avgbid := Price(0.0)
+	naccept := 0
 	for {
 		t, bid := bids.PopHighest(m.sim.rand)
 		if t == nil {
@@ -375,15 +381,22 @@ func (m *Mgr) assignNodes() Nodes {
 			// fmt.Printf("assignNodes: no nodes left\n")
 			break
 		}
+		avgbid += bid
+		naccept++
 	}
 	// 		bid += BIT_INCREMENT
 	m.cur = append(m.cur, new...)
 	// fmt.Printf("assignment %d nodes: %v\n", len(m.cur), m.cur)
 	idle := uint64(NNODE - len(m.cur))
 	m.nidle += idle
-	//if idle > 0 {
-	//	fmt.Printf("idle %d\n", idle)
-	//}
+	avgbid = avgbid / Price(naccept)
+	m.last = avgbid
+	if avgbid < m.low {
+		m.low = avgbid
+	}
+	if avgbid > m.high {
+		m.high = avgbid
+	}
 	return m.cur
 }
 

@@ -49,16 +49,36 @@ func (p Price) String() string {
 
 type Bid struct {
 	tenant *Tenant
-	bid    Price
-	nnode  int
+	bids   []Price
 }
 
 func (b *Bid) String() string {
-	return fmt.Sprintf("{%p %v %d}", b.tenant, b.bid, b.nnode)
+	return fmt.Sprintf("{t: %p %v %d}", b.tenant, b.bids, len(b.bids))
 }
 
-func mkBid(t *Tenant, b Price, n int) *Bid {
-	return &Bid{t, b, n}
+func mkBid(t *Tenant, bs []Price) *Bid {
+	return &Bid{t, bs}
+}
+
+type Bids []*Bid
+
+func (bs *Bids) RemoveHighest() (*Tenant, Price) {
+	bid := Price(0.0)
+	var t *Tenant
+	n := 0
+	for i, b := range *bs {
+		if b.bids[0] > bid {
+			bid = b.bids[0]
+			t = b.tenant
+			n = i
+		}
+	}
+	if t == nil {
+		return nil, bid
+	} else {
+		*bs = append((*bs)[:n], (*bs)[n+1:]...)
+		return t, bid
+	}
 }
 
 //
@@ -89,7 +109,7 @@ type Node struct {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{%p: proc %v price %v %p}", n, n.proc, n.price, n.tenant)
+	return fmt.Sprintf("{%p: proc %v price %v t %p}", n, n.proc, n.price, n.tenant)
 }
 
 type Nodes []*Node
@@ -114,9 +134,9 @@ func (ns *Nodes) findFree() *Node {
 	return nil
 }
 
-func (ns *Nodes) findVictim(b *Bid) *Node {
+func (ns *Nodes) findVictim(t *Tenant, bid Price) *Node {
 	for _, n := range *ns {
-		if n.tenant != b.tenant && b.bid > n.price {
+		if n.tenant != t && bid > n.price {
 			return n
 		}
 	}
@@ -173,7 +193,19 @@ func (t *Tenant) collectBid() *Bid {
 	t.schedule()
 	t.yieldIdle()
 	if len(t.procs) > 0 {
-		return mkBid(t, t.maxbid, len(t.procs))
+		bids := make([]Price, 0)
+		if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
+			bids = append(bids, PRICE_ONDEMAND)
+			for i := 0; i < len(t.procs)-1; i++ {
+				bids = append(bids, t.maxbid)
+			}
+
+		} else {
+			for i := 0; i < len(t.procs); i++ {
+				bids = append(bids, t.maxbid)
+			}
+		}
+		return mkBid(t, bids)
 	}
 	return nil
 }
@@ -294,18 +326,19 @@ func (m *Mgr) yield(n *Node) {
 	m.cur.remove(n)
 }
 
-func (m *Mgr) collectBids() (int, []*Bid) {
+func (m *Mgr) collectBids() (int, Bids) {
 	bids := make([]*Bid, 0)
 	n := 0
 	for i, _ := range m.sim.tenants {
 		if b := m.sim.tenants[i].collectBid(); b != nil {
+			// sort the bids in b
+			sort.Slice(b.bids, func(i, j int) bool {
+				return b.bids[i] > b.bids[j]
+			})
+			n += len(b.bids)
 			bids = append(bids, b)
-			n += b.nnode
 		}
 	}
-	sort.Slice(bids, func(i, j int) bool {
-		return bids[i].bid > bids[j].bid
-	})
 	return n, bids
 }
 
@@ -313,22 +346,24 @@ func (m *Mgr) assignNodes() Nodes {
 	bnn, bids := m.collectBids()
 	fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
 	new := make(Nodes, 0)
-	for _, b := range bids {
-		for i := 0; i < b.nnode; i++ {
-			if n := m.free.findFree(); n != nil {
-				n.tenant = b.tenant
-				n.price = b.bid
-				fmt.Printf("assignNodes: allocate %p to %p at %v\n", n, b.tenant, b.bid)
-				b.tenant.nodes = append(b.tenant.nodes, n)
-				new = append(new, n)
-			} else if n := m.cur.findVictim(b); n != nil {
-				fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, b.tenant, b.bid)
-				n.tenant.evict(n)
-				n.tenant = b.tenant
-				n.price = b.bid
-			} else {
-				fmt.Printf("assignNodes: no nodes left\n")
-			}
+	for {
+		t, bid := bids.RemoveHighest()
+		if t == nil {
+			break
+		}
+		if n := m.free.findFree(); n != nil {
+			n.tenant = t
+			n.price = bid
+			//fmt.Printf("assignNodes: allocate %p to %p at %v\n", n, t, bid)
+			t.nodes = append(t.nodes, n)
+			new = append(new, n)
+		} else if n := m.cur.findVictim(t, bid); n != nil {
+			fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, t, bid)
+			n.tenant.evict(n)
+			n.tenant = t
+			n.price = bid
+		} else {
+			// fmt.Printf("assignNodes: no nodes left\n")
 		}
 	}
 	// 		bid += BIT_INCREMENT

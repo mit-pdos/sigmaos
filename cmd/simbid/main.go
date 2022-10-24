@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	NNODE   = 10
+	NNODE   = 20
 	NTENANT = 100
 	NTRIAL  = 1 // 10
 
@@ -49,7 +49,7 @@ func (p Price) String() string {
 
 type Bid struct {
 	tenant *Tenant
-	bids   []Price
+	bids   []Price // one bid per node
 }
 
 func (b *Bid) String() string {
@@ -62,23 +62,38 @@ func mkBid(t *Tenant, bs []Price) *Bid {
 
 type Bids []*Bid
 
-func (bs *Bids) RemoveHighest() (*Tenant, Price) {
+func (bs *Bids) PopHighest(rand *rand.Rand) (*Tenant, Price) {
 	bid := Price(0.0)
-	var t *Tenant
-	n := 0
-	for i, b := range *bs {
+
+	if len(*bs) == 0 {
+		return nil, bid
+	}
+
+	// find highest bid
+	for _, b := range *bs {
 		if b.bids[0] > bid {
 			bid = b.bids[0]
-			t = b.tenant
-			n = i
 		}
 	}
-	if t == nil {
-		return nil, bid
-	} else {
-		*bs = append((*bs)[:n], (*bs)[n+1:]...)
-		return t, bid
+
+	// find bidders for highest
+	bidders := make([]int, 0)
+	for i, b := range *bs {
+		if b.bids[0] == bid {
+			bidders = append(bidders, i)
+		}
 	}
+
+	// pick a random higest
+	n := bidders[int(rand.Uint64()%uint64(len(bidders)))]
+	t := (*bs)[n].tenant
+
+	// remove n's bid
+	(*bs)[n].bids = (*bs)[n].bids[1:]
+	if len((*bs)[n].bids) == 0 {
+		*bs = append((*bs)[:n], (*bs)[n+1:]...)
+	}
+	return t, bid
 }
 
 //
@@ -178,20 +193,20 @@ func (t *Tenant) String() string {
 	return s + "]}"
 }
 
-// New procs "arrive" based on Poisson distribution
+// New procs "arrive" based on Poisson distribution. Schedule queued
+// procs on the available nodes, and release nodes we don't use.
 func (t *Tenant) genProcs() {
 	nproc := int(t.poisson.Rand())
 	for i := 0; i < nproc; i++ {
 		t.procs = append(t.procs, t.sim.mkProc())
 	}
 	t.nproc += nproc
-}
-
-// Schedule the procs to be run on the available nodes, and release
-// nodes we don't use.
-func (t *Tenant) collectBid() *Bid {
 	t.schedule()
 	t.yieldIdle()
+}
+
+// Bid for new nodes if we have queued procs.
+func (t *Tenant) bid() *Bid {
 	if len(t.procs) > 0 {
 		bids := make([]Price, 0)
 		if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
@@ -210,6 +225,7 @@ func (t *Tenant) collectBid() *Bid {
 	return nil
 }
 
+// After bidding, we may have received new nodes; use them.
 func (t *Tenant) scheduleNodes() {
 	t.schedule()
 	t.nnode += len(t.nodes)
@@ -330,7 +346,7 @@ func (m *Mgr) collectBids() (int, Bids) {
 	bids := make([]*Bid, 0)
 	n := 0
 	for i, _ := range m.sim.tenants {
-		if b := m.sim.tenants[i].collectBid(); b != nil {
+		if b := m.sim.tenants[i].bid(); b != nil {
 			// sort the bids in b
 			sort.Slice(b.bids, func(i, j int) bool {
 				return b.bids[i] > b.bids[j]
@@ -347,10 +363,11 @@ func (m *Mgr) assignNodes() Nodes {
 	fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
 	new := make(Nodes, 0)
 	for {
-		t, bid := bids.RemoveHighest()
+		t, bid := bids.PopHighest(m.sim.rand)
 		if t == nil {
 			break
 		}
+		fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
 		if n := m.free.findFree(); n != nil {
 			n.tenant = t
 			n.price = bid
@@ -363,7 +380,8 @@ func (m *Mgr) assignNodes() Nodes {
 			n.tenant = t
 			n.price = bid
 		} else {
-			// fmt.Printf("assignNodes: no nodes left\n")
+			fmt.Printf("assignNodes: no nodes left\n")
+			break
 		}
 	}
 	// 		bid += BIT_INCREMENT
@@ -424,8 +442,8 @@ func (sim *Sim) scheduleNodes() {
 	}
 }
 
-func (sim *Sim) printTenants(tick uint64) {
-	fmt.Printf("tick %d:", tick)
+func (sim *Sim) printTenants(tick uint64, nn int) {
+	fmt.Printf("tick %d nodes %d:", tick, nn)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
 		if len(t.procs) > 0 || len(t.nodes) > 0 {
@@ -453,7 +471,7 @@ func (sim *Sim) tick(tick uint64) {
 	ns := sim.mgr.assignNodes()
 	fmt.Printf("assignment %d nodes: %v\n", len(ns), ns)
 	sim.scheduleNodes()
-	sim.printTenants(tick)
+	sim.printTenants(tick, len(ns))
 	sim.runProcs(ns)
 }
 

@@ -195,14 +195,18 @@ func (t *Tenant) String() string {
 
 // New procs "arrive" based on Poisson distribution. Schedule queued
 // procs on the available nodes, and release nodes we don't use.
-func (t *Tenant) genProcs() {
+func (t *Tenant) genProcs() (int, uint64) {
 	nproc := int(t.poisson.Rand())
+	len := uint64(0)
 	for i := 0; i < nproc; i++ {
-		t.procs = append(t.procs, t.sim.mkProc())
+		p := t.sim.mkProc()
+		len += p.nLength
+		t.procs = append(t.procs, p)
 	}
 	t.nproc += nproc
 	t.schedule()
 	t.yieldIdle()
+	return nproc, len
 }
 
 // Bid for new nodes if we have queued procs.
@@ -392,6 +396,8 @@ type Sim struct {
 	tenants [NTENANT]Tenant
 	rand    *rand.Rand
 	mgr     *Mgr
+	nproc   int    // total # procs started
+	len     uint64 // sum of all procs len
 }
 
 func mkSim() *Sim {
@@ -426,7 +432,9 @@ func (sim *Sim) mkProc() *Proc {
 // need to be run.
 func (sim *Sim) genLoad() {
 	for i, _ := range sim.tenants {
-		sim.tenants[i].genProcs()
+		p, l := sim.tenants[i].genProcs()
+		sim.nproc += p
+		sim.len += l
 	}
 }
 
@@ -483,5 +491,6 @@ func main() {
 			sim.tenants[i].stats()
 		}
 		sim.mgr.stats()
+		fmt.Printf("nproc %dP len %dT avg proclen %.2f\n", sim.nproc, sim.len, float64(sim.nproc)/float64(sim.len))
 	}
 }

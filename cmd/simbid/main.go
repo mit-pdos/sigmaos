@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	NNODE   = 25
+	NNODE   = 35
 	NTENANT = 100
 	NTRIAL  = 1 // 10
 
@@ -226,13 +226,14 @@ func (t *Tenant) bid() *Bid {
 }
 
 // After bidding, we may have received new nodes; use them.
-func (t *Tenant) scheduleNodes() {
+func (t *Tenant) scheduleNodes() int {
 	t.schedule()
 	t.nnode += len(t.nodes)
 	if len(t.nodes) > t.maxnode {
 		t.maxnode = len(t.nodes)
 	}
 	t.nwait += uint64(len(t.procs))
+	return len(t.procs)
 }
 
 func (t *Tenant) yieldIdle() {
@@ -295,6 +296,7 @@ type Mgr struct {
 	index   int
 	revenue Price
 	nwork   int
+	nidle   uint64
 }
 
 func mkMgr(sim *Sim) *Mgr {
@@ -318,7 +320,7 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
-	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n))
+	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f idle %dT\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle)
 }
 
 func (m *Mgr) yield(n *Node) {
@@ -373,6 +375,11 @@ func (m *Mgr) assignNodes() Nodes {
 	// 		bid += BIT_INCREMENT
 	m.cur = append(m.cur, new...)
 	// fmt.Printf("assignment %d nodes: %v\n", len(m.cur), m.cur)
+	idle := uint64(NNODE - len(m.cur))
+	m.nidle += idle
+	//if idle > 0 {
+	//	fmt.Printf("idle %d\n", idle)
+	//}
 	return m.cur
 }
 
@@ -423,14 +430,16 @@ func (sim *Sim) genLoad() {
 	}
 }
 
-func (sim *Sim) scheduleNodes() {
+func (sim *Sim) scheduleNodes() int {
+	pq := 0
 	for i, _ := range sim.tenants {
-		sim.tenants[i].scheduleNodes()
+		pq += sim.tenants[i].scheduleNodes()
 	}
+	return pq
 }
 
-func (sim *Sim) printTenants(tick uint64, nn int) {
-	fmt.Printf("tick %d nodes %d:", tick, nn)
+func (sim *Sim) printTenants(tick uint64, nn, pq int) {
+	fmt.Printf("tick %d nodes %d procq %d:", tick, nn, pq)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
 		if len(t.procs) > 0 || len(t.nodes) > 0 {
@@ -459,8 +468,8 @@ func (sim *Sim) runProcs(ns Nodes) {
 func (sim *Sim) tick(tick uint64) {
 	sim.genLoad()
 	ns := sim.mgr.assignNodes()
-	sim.scheduleNodes()
-	sim.printTenants(tick, len(ns))
+	pq := sim.scheduleNodes()
+	sim.printTenants(tick, len(ns), pq)
 	sim.runProcs(ns)
 }
 

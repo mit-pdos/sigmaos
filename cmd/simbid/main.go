@@ -161,14 +161,15 @@ func (ns *Nodes) findVictim(t *Tenant, bid Price) *Node {
 //
 // Tenants run procs on the nodes allocated to them by the mgr. If
 // they have more procs to run than available nodes, tenant bids for
-// more nodes up till its maxbid.
+// more nodes.
 //
 
 type Tenant struct {
 	poisson  *distuv.Poisson
-	maxbid   Price
 	procs    []*Proc
 	nodes    Nodes
+	nbid     int
+	ngrant   int
 	sim      *Sim
 	nproc    int // sum of proc ticks
 	nnode    int // sum of node ticks
@@ -209,19 +210,21 @@ func (t *Tenant) genProcs() (int, uint64) {
 	return nproc, len
 }
 
-// Bid for new nodes if we have queued procs.
-func (t *Tenant) bid() *Bid {
+// Bid for new nodes if we have queued procs.  last is avg succesful
+// bid in the last round.
+func (t *Tenant) bid(last Price) *Bid {
+	t.ngrant = 0
+	t.nbid = len(t.procs)
 	if len(t.procs) > 0 {
 		bids := make([]Price, 0)
 		if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
 			bids = append(bids, PRICE_ONDEMAND)
-			for i := 0; i < len(t.procs)-1; i++ {
-				bids = append(bids, t.maxbid)
+			for i := 0; i < len(t.procs); i++ {
+				bids = append(bids, 2*last)
 			}
-
 		} else {
 			for i := 0; i < len(t.procs); i++ {
-				bids = append(bids, t.maxbid)
+				bids = append(bids, last)
 			}
 		}
 		return mkBid(t, bids)
@@ -229,8 +232,17 @@ func (t *Tenant) bid() *Bid {
 	return nil
 }
 
+// mgr grants a node
+func (t *Tenant) grantNode(n *Node) {
+	t.ngrant++
+	t.nodes = append(t.nodes, n)
+}
+
 // After bidding, we may have received new nodes; use them.
 func (t *Tenant) scheduleNodes() int {
+	//if t.nbid > 0 && t.ngrant < t.nbid {
+	//	fmt.Printf("%p: asked %d and received %d\n", t, t.nbid, t.ngrant)
+	//}
 	t.schedule()
 	t.nnode += len(t.nodes)
 	if len(t.nodes) > t.maxnode {
@@ -314,6 +326,7 @@ func mkMgr(sim *Sim) *Mgr {
 	}
 	m.free = ns
 	m.low = PRICE_ONDEMAND
+	m.last = PRICE_SPOT
 	return m
 }
 
@@ -342,7 +355,7 @@ func (m *Mgr) collectBids() (int, Bids) {
 	bids := make([]*Bid, 0)
 	n := 0
 	for i, _ := range m.sim.tenants {
-		if b := m.sim.tenants[i].bid(); b != nil {
+		if b := m.sim.tenants[i].bid(m.last); b != nil {
 			// sort the bids in b
 			sort.Slice(b.bids, func(i, j int) bool {
 				return b.bids[i] > b.bids[j]
@@ -370,7 +383,7 @@ func (m *Mgr) assignNodes() Nodes {
 			n.tenant = t
 			n.price = bid
 			//fmt.Printf("assignNodes: allocate %p to %p at %v\n", n, t, bid)
-			t.nodes = append(t.nodes, n)
+			t.grantNode(n)
 			new = append(new, n)
 		} else if n := m.cur.findVictim(t, bid); n != nil {
 			fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, t, bid)
@@ -424,10 +437,8 @@ func mkSim() *Sim {
 		t.sim = sim
 		if i == 0 {
 			t.poisson = &distuv.Poisson{Lambda: 10 * AVG_ARRIVAL_RATE}
-			t.maxbid = MAX_BID
 		} else {
 			t.poisson = &distuv.Poisson{Lambda: AVG_ARRIVAL_RATE}
-			t.maxbid = MAX_BID / 2
 		}
 	}
 	return sim

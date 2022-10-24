@@ -112,6 +112,14 @@ func (p *Proc) String() string {
 	return fmt.Sprintf("n %d", p.nTick)
 }
 
+func mkProc(rand *rand.Rand) *Proc {
+	p := &Proc{}
+	// p.nTick = zipf(rand)
+	p.nTick = uniform(rand)
+	p.nLength = p.nTick
+	return p
+}
+
 //
 // Computing nodes that the manager allocates to tenants.  Each node
 // runs one proc or is idle.
@@ -200,7 +208,7 @@ func (t *Tenant) genProcs() (int, uint64) {
 	nproc := int(t.poisson.Rand())
 	len := uint64(0)
 	for i := 0; i < nproc; i++ {
-		p := t.sim.mkProc()
+		p := mkProc(t.sim.rand)
 		len += p.nLength
 		t.procs = append(t.procs, p)
 	}
@@ -218,8 +226,9 @@ func (t *Tenant) bid(last Price) *Bid {
 	if len(t.procs) > 0 {
 		bids := make([]Price, 0)
 		if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
+			// very first bid for tenant 0, which has a higher load
 			bids = append(bids, PRICE_ONDEMAND)
-			for i := 0; i < len(t.procs); i++ {
+			for i := 0; i < len(t.procs)-1; i++ {
 				bids = append(bids, 2*last)
 			}
 		} else {
@@ -255,7 +264,7 @@ func (t *Tenant) scheduleNodes() int {
 func (t *Tenant) yieldIdle() {
 	for i := 0; i < len(t.nodes); i++ {
 		n := t.nodes[i]
-		if n.proc == nil {
+		if n.proc == nil && n.price != PRICE_ONDEMAND {
 			t.nodes = append(t.nodes[0:i], t.nodes[i+1:]...)
 			i--
 			t.sim.mgr.yield(n)
@@ -444,14 +453,6 @@ func mkSim() *Sim {
 	return sim
 }
 
-func (sim *Sim) mkProc() *Proc {
-	p := &Proc{}
-	// p.nTick = zipf(sim.rand)
-	p.nTick = uniform(sim.rand)
-	p.nLength = p.nTick
-	return p
-}
-
 // At each tick, a tenants generates load in the form of procs that
 // need to be run.
 func (sim *Sim) genLoad() {
@@ -471,7 +472,7 @@ func (sim *Sim) scheduleNodes() int {
 }
 
 func (sim *Sim) printTenants(tick uint64, nn, pq int) {
-	fmt.Printf("tick %d nodes %d procq %d:", tick, nn, pq)
+	fmt.Printf("tick %d nodes %d procq %d avg bid %v", tick, nn, pq, sim.mgr.last)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
 		if len(t.procs) > 0 || len(t.nodes) > 0 {

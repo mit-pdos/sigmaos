@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gonum.org/v1/gonum/stat/distuv"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -22,7 +21,6 @@ type WwwJobInstance struct {
 	nclnt    int
 	nreq     int
 	delay    time.Duration
-	poisson  *distuv.Poisson
 	ready    chan bool
 	sem      *semclnt.SemClnt
 	sempath  string
@@ -36,7 +34,6 @@ func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore, reqtype string, ntrials, n
 	ji.job = rand.String(16)
 	ji.ntrials = ntrials
 	ji.nclnt = nclnt
-	ji.poisson = &distuv.Poisson{Lambda: 1.0}
 	ji.nreq = nreq
 	ji.delay = delay
 	ji.ready = make(chan bool)
@@ -56,7 +53,7 @@ func (ji *WwwJobInstance) RunClient(ch chan time.Duration) {
 	clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
-		time.Sleep(ji.delay * ji.poisson.Rand())
+		time.Sleep(ji.delay * time.Duration(float64(rand.Uint64()%100)/100.0))
 		start := time.Now()
 		err := clnt.MatMul(MAT_SIZE)
 		assert.Equal(ji.T, nil, err)

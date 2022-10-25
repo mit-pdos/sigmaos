@@ -61,7 +61,7 @@ func init() {
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
-	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 250*time.Millisecond, "Average request delay.")
+	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")

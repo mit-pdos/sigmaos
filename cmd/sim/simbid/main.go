@@ -326,6 +326,7 @@ func (t *Tenant) evict(n *Node) {
 		c := n.proc.nLength - n.proc.nTick // wasted ticks
 		t.nevict++
 		t.nwasted += c
+		t.sim.mgr.nwasted += c
 		if c > 0 {
 			t.sunkCost += n.proc.cost
 		}
@@ -363,6 +364,7 @@ type Mgr struct {
 	nwork   int
 	nidle   uint64
 	nevict  uint64
+	nwasted uint64
 	low     Price
 	high    Price
 	last    Price
@@ -391,7 +393,7 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
-	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict)
+	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %dT\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
 	fmt.Printf("Last avg bid %v lowest ever %v highest ever %v\n", m.last, m.low, m.high)
 }
 

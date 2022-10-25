@@ -5,11 +5,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
 )
+
+var validPath = regexp.MustCompile(`^/(static|book|exit|matmul)/([=.a-zA-Z0-9/]*)$`)
 
 func init() {
 	log.SetFlags(0)
@@ -20,15 +23,14 @@ func hello(w http.ResponseWriter, req *http.Request) {
 	log.Printf("hello!")
 }
 
-func mm(w http.ResponseWriter, req *http.Request) {
-	start := time.Now()
-	query := req.URL.Query()
-	n, err := strconv.Atoi(query["n"][0])
+func mm(w http.ResponseWriter, req *http.Request, nstr string) {
+	n, err := strconv.Atoi(nstr)
 	// Return an error if the requesr didn't contain a valid n
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error unmarshalling n: %v", err), http.StatusBadRequest)
 		return
 	}
+	start := time.Now()
 
 	m1 := matrix(n)
 	m2 := matrix(n)
@@ -51,7 +53,14 @@ func matrix(n int) *mat.Dense {
 
 func main() {
 	http.HandleFunc("/hello", hello)
-	http.HandleFunc("/mm", mm)
+	http.HandleFunc("/matmul/", func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		mm(w, r, m[2])
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {

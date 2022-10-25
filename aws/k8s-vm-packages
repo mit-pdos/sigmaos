@@ -49,4 +49,6 @@ runcmd:
   - [ bash, -c, "sudo systemctl restart containerd" ]
   - [ bash, -c, "sudo systemctl restart kubelet" ]
   - [ bash, -c, "sudo systemctl restart containerd" ]
-  - [ bash, -c, "sudo usermod -aG docker $USER" ]
+  - [ bash, -c, "sudo groupadd docker" ]
+  - [ bash, -c, "sudo usermod -aG docker ubuntu" ]
+  - [ bash, -c, "sudo usermod -aG docker ubuntu" ]

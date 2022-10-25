@@ -99,7 +99,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 			ch := make(chan time.Duration)
 			for c := 0; c < i; c++ {
 				db.DPrintf("WWWD_TEST", "Start client %v", i)
-				go ji.RunClient(ch)
+				go ji.RunClient(i, ch)
 			}
 			var totalLatency time.Duration
 			for c := 0; c < i; c++ {

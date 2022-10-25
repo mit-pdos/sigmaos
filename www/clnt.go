@@ -32,6 +32,10 @@ func MakeWWWClnt(fsl *fslib.FsLib, job string) *WWWClnt {
 	return &WWWClnt{job, addrs, fsl}
 }
 
+func MakeWWWClntAddr(addrs []string) *WWWClnt {
+	return &WWWClnt{"NOJOB", addrs, nil}
+}
+
 func addrToUrl(addr string) string {
 	return "http://" + addr
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
@@ -14,23 +15,30 @@ import (
 	"sigmaos/www"
 )
 
+const (
+	K8S_PORT = ":32585"
+)
+
 type WwwJobInstance struct {
-	wwwncore proc.Tcore // Number of exclusive cores allocated to each wwwd
-	job      string
-	ntrials  int
-	nclnt    int
-	nreq     int
-	delay    time.Duration
-	ready    chan bool
-	sem      *semclnt.SemClnt
-	sempath  string
-	cpids    []proc.Tpid
-	pid      proc.Tpid
+	sigmaos    bool
+	k8ssrvaddr string
+	wwwncore   proc.Tcore // Number of exclusive cores allocated to each wwwd
+	job        string
+	ntrials    int
+	nclnt      int
+	nreq       int
+	delay      time.Duration
+	ready      chan bool
+	sem        *semclnt.SemClnt
+	sempath    string
+	cpids      []proc.Tpid
+	pid        proc.Tpid
 	*test.Tstate
 }
 
-func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
+func MakeWwwJob(ts *test.Tstate, sigmaos bool, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
 	ji := &WwwJobInstance{}
+	ji.sigmaos = sigmaos
 	ji.job = rand.String(16)
 	ji.ntrials = ntrials
 	ji.nclnt = nclnt
@@ -41,6 +49,12 @@ func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore, reqtype string, ntrials, n
 
 	www.InitWwwFs(ts.FsLib, ji.job)
 
+	if !sigmaos {
+		ip, err := fidclnt.LocalIP()
+		assert.Nil(ji.T, err, "Error LocalIP: %v", err)
+		ji.k8ssrvaddr = ip + K8S_PORT
+	}
+
 	ji.sempath = path.Join(www.JobDir(ji.job), "kvclerk-sem")
 	ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
@@ -50,7 +64,12 @@ func MakeWwwJob(ts *test.Tstate, wwwncore proc.Tcore, reqtype string, ntrials, n
 }
 
 func (ji *WwwJobInstance) RunClient(ch chan time.Duration) {
-	clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
+	var clnt *www.WWWClnt
+	if ji.sigmaos {
+		clnt = www.MakeWWWClnt(ji.FsLib, ji.job)
+	} else {
+		clnt = www.MakeWWWClntAddr([]string{ji.k8ssrvaddr})
+	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
 		time.Sleep(ji.delay * time.Duration(float64(rand.Uint64()%100)/100.0))
@@ -63,12 +82,14 @@ func (ji *WwwJobInstance) RunClient(ch chan time.Duration) {
 }
 
 func (ji *WwwJobInstance) StartWwwJob() {
-	a := proc.MakeProc("user/wwwd", []string{ji.job, ""})
-	err := ji.Spawn(a)
-	assert.Nil(ji.T, err, "Spawn")
-	err = ji.WaitStart(a.Pid)
-	ji.pid = a.Pid
-	assert.Equal(ji.T, nil, err)
+	if ji.sigmaos {
+		a := proc.MakeProc("user/wwwd", []string{ji.job, ""})
+		err := ji.Spawn(a)
+		assert.Nil(ji.T, err, "Spawn")
+		err = ji.WaitStart(a.Pid)
+		ji.pid = a.Pid
+		assert.Equal(ji.T, nil, err)
+	}
 	db.DPrintf(db.ALWAYS, "StartWwwJob ntrial %v nclnt %v nreq/clnt %v avgdelay %v", ji.ntrials, ji.nclnt, ji.nreq, ji.delay)
 	for i := 1; i <= ji.nclnt; i++ {
 		for j := 0; j < ji.ntrials; j++ {
@@ -87,7 +108,9 @@ func (ji *WwwJobInstance) StartWwwJob() {
 }
 
 func (ji *WwwJobInstance) Wait() {
-	clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
-	err := clnt.StopServer(ji.ProcClnt, ji.pid)
-	assert.Nil(ji.T, err)
+	if ji.sigmaos {
+		clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
+		err := clnt.StopServer(ji.ProcClnt, ji.pid)
+		assert.Nil(ji.T, err)
+	}
 }

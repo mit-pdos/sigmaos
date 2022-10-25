@@ -420,13 +420,14 @@ func TestRealmBalance(t *testing.T) {
 	ts2.Shutdown()
 }
 
-func TestWww(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+func testWww(ts *test.Tstate, sigmaos bool) {
 	rs := benchmarks.MakeRawResults(1)
-	countNClusterCores(ts)
-	maybePregrowRealm(ts)
+	if sigmaos {
+		countNClusterCores(ts)
+		maybePregrowRealm(ts)
+	}
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
+	jobs, ji := makeWwwJobs(ts, sigmaos, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -436,9 +437,23 @@ func TestWww(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	p := monitorCoresAssigned(ts)
-	defer p.Done()
+	if sigmaos {
+		p := monitorCoresAssigned(ts)
+		defer p.Done()
+	}
 	runOps(ts, ji, runWww, rs)
 	printResults(rs)
-	ts.Shutdown()
+	if sigmaos {
+		ts.Shutdown()
+	}
+}
+
+func TestWwwSigmaos(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testWww(ts, true)
+}
+
+func TestWwwK8s(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testWww(ts, false)
 }

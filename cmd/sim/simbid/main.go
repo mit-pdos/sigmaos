@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
+	"runtime"
 	"sort"
 	"time"
 
@@ -13,6 +15,7 @@ const (
 	NNODE   = 35
 	NTENANT = 100
 	NTRIAL  = 1 // 10
+	DEBUG   = false
 
 	NTICK                    = 100
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
@@ -20,7 +23,7 @@ const (
 	// DURATION                 = NTICK
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
-	BIT_INCREMENT        = 0.000000000001
+	BID_INCREMENT        = 0.000000000001
 	MAX_BID        Price = 3 * PRICE_SPOT
 )
 
@@ -90,7 +93,7 @@ func (bs *Bids) PopHighest(rand *rand.Rand) (*Tenant, Price) {
 	n := bidders[int(rand.Uint64()%uint64(len(bidders)))]
 	t := (*bs)[n].tenant
 
-	// remove n's bid
+	// remove higest bid
 	(*bs)[n].bids = (*bs)[n].bids[1:]
 	if len((*bs)[n].bids) == 0 {
 		*bs = append((*bs)[:n], (*bs)[n+1:]...)
@@ -233,10 +236,11 @@ func (t *Tenant) genProcs() (int, uint64) {
 func policyBigMore(t *Tenant, last Price) *Bid {
 	bids := make([]Price, 0)
 	if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
-		// very first bid for tenant 0, which has a higher load
+		// very first bid for tenant 0, which has a higher load grab
+		// one high-priced node to sustant the expected load of 1.
 		bids = append(bids, PRICE_ONDEMAND)
 		for i := 0; i < len(t.procs)-1; i++ {
-			bids = append(bids, 2*last)
+			bids = append(bids, last)
 		}
 	} else {
 		for i := 0; i < len(t.procs); i++ {
@@ -249,7 +253,7 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 func policyLastAvg(t *Tenant, last Price) *Bid {
 	bids := make([]Price, 0)
 	for i := 0; i < len(t.procs); i++ {
-		bids = append(bids, last)
+		bids = append(bids, last+BID_INCREMENT)
 	}
 	return mkBid(t, bids)
 }
@@ -327,7 +331,6 @@ func (t *Tenant) evict(n *Node) {
 		}
 		n.proc = nil
 	}
-	fmt.Printf("%p: t.nodes %v\n", t, t.nodes)
 	for i, _ := range t.nodes {
 		if t.nodes[i] == n {
 			t.nodes = append(t.nodes[0:i], t.nodes[i+1:]...)
@@ -393,7 +396,9 @@ func (m *Mgr) stats() {
 }
 
 func (m *Mgr) yield(n *Node) {
-	fmt.Printf("yield %v\n", n)
+	if DEBUG {
+		fmt.Printf("yield %v\n", n)
+	}
 	n.tenant = nil
 	m.free = append(m.free, n)
 	m.cur.remove(n)
@@ -446,7 +451,9 @@ func (m *Mgr) assignNodes() Nodes {
 			t.grantNode(n)
 			new = append(new, n)
 		} else if n := m.cur.findVictim(t, bid); n != nil {
-			fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, t, bid)
+			if DEBUG {
+				fmt.Printf("assignNodes: reallocate %v to %p at %v\n", n, t, bid)
+			}
 			m.nevict++
 			n.tenant.evict(n)
 			n.tenant = t
@@ -467,7 +474,6 @@ func (m *Mgr) assignNodes() Nodes {
 
 	if naccept > 0 {
 		avgbid = avgbid / Price(naccept)
-		fmt.Printf("avgbid %v\n", avgbid)
 		m.last = avgbid
 		if avgbid < m.low {
 			m.low = avgbid
@@ -563,20 +569,32 @@ func (sim *Sim) tick(tick uint64) {
 	pq := sim.scheduleNodes()
 	sim.nprocq += uint64(pq)
 
-	sim.printTenants(tick, len(ns), pq)
+	if DEBUG {
+		sim.printTenants(tick, len(ns), pq)
+	}
 	sim.runProcs(ns)
+}
+
+func funcName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
 func main() {
 	policies := []Tpolicy{policyFixed, policyLastAvg, policyBigMore}
 	for i := 0; i < NTRIAL; i++ {
 		for _, p := range policies {
+			fmt.Printf("=== Policy %s\n", funcName(p))
 			sim := mkSim(p)
 			for ; sim.time < NTICK; sim.time++ {
 				sim.tick(sim.time)
 			}
-			for i, _ := range sim.tenants {
-				sim.tenants[i].stats()
+			if DEBUG {
+				for i, _ := range sim.tenants {
+					sim.tenants[i].stats()
+				}
+			} else {
+				sim.tenants[0].stats()
+				sim.tenants[1].stats()
 			}
 			sim.mgr.stats()
 			fmt.Printf("nproc %dP len %dT avg proclen %.2f avg procq %.2f\n", sim.nproc, sim.len, float64(sim.nproc)/float64(sim.len), float64(sim.nprocq)/float64(NTICK))

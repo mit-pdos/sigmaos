@@ -72,7 +72,7 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 	done := make(chan bool)
 	for i := range pclnts {
 		go func(i int) {
-			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
+			spawnBurstProcs2(ts, ts.ProcClnt /*pclnts[i],*/, ps[i*per:(i+1)*per])
 			waitStartProcs(ts, ps[i*per:(i+1)*per])
 			done <- true
 		}(i)

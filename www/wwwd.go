@@ -162,13 +162,16 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	www.removePipe(pipeName)
 }
 
-func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string, ncore proc.Tcore) (*proc.Status, error) {
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string, env map[string]string, ncore proc.Tcore) (*proc.Status, error) {
 	// Create a pipe for the child to write to.
 	pipeName := www.makePipe()
 
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, args)
 	a.SetNcore(ncore)
+	for k, v := range env {
+		a.AppendEnv(k, v)
+	}
 	// Set the shared link to point to the pipe
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	_, errs := www.SpawnBurst([]*proc.Proc{a})
@@ -192,7 +195,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
-	return www.spawnApp("user/fsreader", w, r, []string{file}, 0)
+	return www.spawnApp("user/fsreader", w, r, []string{file}, nil, 0)
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -204,7 +207,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	//}
 	// log.Printf("\n")
 	title := r.FormValue("title")
-	return www.spawnApp("user/bookapp", w, r, []string{args, title}, 0)
+	return www.spawnApp("user/bookapp", w, r, []string{args, title}, nil, 0)
 }
 
 func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -223,5 +226,5 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
-	return www.spawnApp("user/matmul", w, r, []string{args}, 2)
+	return www.spawnApp("user/matmul", w, r, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
 }

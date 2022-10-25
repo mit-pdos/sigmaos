@@ -100,7 +100,8 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 					lastUpdate = time.Now()
 				}
 				// Update the list of active procds.
-				err := clnt.spawn(clnt.nextProcdUnsafe(x), p)
+				_ = x
+				err := clnt.spawn(clnt.nextProcd(), p)
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})

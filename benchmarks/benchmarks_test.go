@@ -55,7 +55,7 @@ func init() {
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of www clients.")
-	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 10, "Number of request each www client makes.")
+	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each www client makes.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")

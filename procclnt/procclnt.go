@@ -93,14 +93,14 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 			pslice := ps[i : i+chunksz]
 			es := []*errTuple{}
 			lastUpdate := time.Now()
-			for _, p := range pslice {
+			for x, p := range pslice {
 				// Update the list of procds periodically, but not too often
 				if time.Since(lastUpdate) >= np.Conf.Realm.RESIZE_INTERVAL {
 					clnt.updateProcds()
 					lastUpdate = time.Now()
 				}
 				// Update the list of active procds.
-				err := clnt.spawn(clnt.nextProcd(), p)
+				err := clnt.spawn(clnt.nextProcdUnsafe(x), p)
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -203,6 +203,15 @@ func (clnt *ProcClnt) nextProcd() string {
 
 	clnt.burstOffset++
 	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
+}
+
+// XXX For short-term benchmarking only.
+func (clnt *ProcClnt) nextProcdUnsafe(i int) string {
+	if len(clnt.procds) == 0 {
+		db.DFatalf("Error: no procds to spawn on")
+	}
+
+	return clnt.procds[i%len(clnt.procds)]
 }
 
 // ========== WAIT ==========

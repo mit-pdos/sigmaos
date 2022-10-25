@@ -225,17 +225,18 @@ func (t *Tenant) bid(last Price) *Bid {
 	t.nbid = len(t.procs)
 	if len(t.procs) > 0 {
 		bids := make([]Price, 0)
-		if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
-			// very first bid for tenant 0, which has a higher load
-			bids = append(bids, PRICE_ONDEMAND)
-			for i := 0; i < len(t.procs)-1; i++ {
-				bids = append(bids, 2*last)
-			}
-		} else {
-			for i := 0; i < len(t.procs); i++ {
-				bids = append(bids, last)
-			}
+		// if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
+		// 	// very first bid for tenant 0, which has a higher load
+		// 	bids = append(bids, PRICE_ONDEMAND)
+		// 	for i := 0; i < len(t.procs)-1; i++ {
+		// 		bids = append(bids, 2*last)
+		// 	}
+		// } else {
+
+		for i := 0; i < len(t.procs); i++ {
+			bids = append(bids, last)
 		}
+		// }
 		return mkBid(t, bids)
 	}
 	return nil
@@ -295,6 +296,7 @@ func (t *Tenant) evict(n *Node) {
 		}
 		n.proc = nil
 	}
+	// fmt.Printf("%p: t.nodes %v\n", t, t.nodes)
 	for i, _ := range t.nodes {
 		if t.nodes[i] == n {
 			t.nodes = append(t.nodes[0:i], t.nodes[i+1:]...)
@@ -377,8 +379,8 @@ func (m *Mgr) collectBids() (int, Bids) {
 }
 
 func (m *Mgr) assignNodes() Nodes {
-	_, bids := m.collectBids()
-	// fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
+	bnn, bids := m.collectBids()
+	fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
 	new := make(Nodes, 0)
 	avgbid := Price(0.0)
 	naccept := 0
@@ -387,7 +389,7 @@ func (m *Mgr) assignNodes() Nodes {
 		if t == nil {
 			break
 		}
-		// fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
+		fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
 		if n := m.free.findFree(); n != nil {
 			n.tenant = t
 			n.price = bid
@@ -406,18 +408,22 @@ func (m *Mgr) assignNodes() Nodes {
 		avgbid += bid
 		naccept++
 	}
-	// 		bid += BIT_INCREMENT
 	m.cur = append(m.cur, new...)
 	// fmt.Printf("assignment %d nodes: %v\n", len(m.cur), m.cur)
+
 	idle := uint64(NNODE - len(m.cur))
 	m.nidle += idle
-	avgbid = avgbid / Price(naccept)
-	m.last = avgbid
-	if avgbid < m.low {
-		m.low = avgbid
-	}
-	if avgbid > m.high {
-		m.high = avgbid
+
+	if naccept > 0 {
+		avgbid = avgbid / Price(naccept)
+		fmt.Printf("avgbid %v\n", avgbid)
+		m.last = avgbid
+		if avgbid < m.low {
+			m.low = avgbid
+		}
+		if avgbid > m.high {
+			m.high = avgbid
+		}
 	}
 	return m.cur
 }

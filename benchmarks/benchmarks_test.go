@@ -422,7 +422,7 @@ func TestWww(t *testing.T) {
 	countNClusterCores(ts)
 	maybePregrowRealm(ts)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE))
+	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

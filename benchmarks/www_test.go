@@ -72,7 +72,7 @@ func (ji *WwwJobInstance) RunClient(ch chan time.Duration) {
 	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
-		slp := ji.delay * time.Duration(float64(rand.Uint64()%100)/100.0)
+		slp := ji.delay * time.Millisecond * time.Duration(float64(rand.Uint64()%100)) / 100
 		db.DPrintf("WWWD_TEST", "Random sleep %v", slp)
 		time.Sleep(slp)
 		start := time.Now()

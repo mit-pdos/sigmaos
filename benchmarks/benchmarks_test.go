@@ -29,9 +29,11 @@ var N_CLERK int
 var CLERK_DURATION string
 var CLERK_NCORE int
 var N_CLNT int
+var N_CLNT_REQ int
 var KVD_NCORE int
 var WWWD_NCORE int
 var WWWD_REQ_TYPE string
+var WWWD_REQ_DELAY time.Duration
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -52,12 +54,14 @@ func init() {
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
-	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of wwww clients.")
+	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of www clients.")
+	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 10, "Number of request each www client makes.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
+	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 250*time.Millisecond, "Average request delay.")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -422,7 +426,7 @@ func TestWww(t *testing.T) {
 	countNClusterCores(ts)
 	maybePregrowRealm(ts)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE)
+	jobs, ji := makeWwwJobs(ts, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

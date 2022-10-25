@@ -190,11 +190,11 @@ func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []
 
 // ========== Www Helpers ========
 
-func makeWwwJobs(ts *test.Tstate, n int, wwwncore proc.Tcore, reqtype string) ([]*WwwJobInstance, []interface{}) {
+func makeWwwJobs(ts *test.Tstate, n int, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
 	ws := make([]*WwwJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeWwwJob(ts, wwwncore, reqtype)
+		i := MakeWwwJob(ts, wwwncore, reqtype, ntrials, nclnt, nreq, delay)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

@@ -250,7 +250,8 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 	return mkBid(t, bids)
 }
 
-func policyLastAvg(t *Tenant, last Price) *Bid {
+// Bid one up from last, the lowest winning bid
+func policyLast(t *Tenant, last Price) *Bid {
 	bids := make([]Price, 0)
 	for i := 0; i < len(t.procs); i++ {
 		bids = append(bids, last+BID_INCREMENT)
@@ -365,9 +366,9 @@ type Mgr struct {
 	nidle   uint64
 	nevict  uint64
 	nwasted uint64
-	low     Price
-	high    Price
-	last    Price
+	last    Price // lowest bid accepted in last tick
+	avgbid  Price // avg bid in last tick
+	high    Price // highest bid in last tick
 }
 
 func mkMgr(sim *Sim) *Mgr {
@@ -378,7 +379,6 @@ func mkMgr(sim *Sim) *Mgr {
 		ns[i] = &Node{}
 	}
 	m.free = ns
-	m.low = PRICE_ONDEMAND
 	m.last = PRICE_SPOT
 	return m
 }
@@ -393,8 +393,7 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
-	fmt.Printf("Mgr revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %dT\n", m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
-	fmt.Printf("Last avg bid %v lowest ever %v highest ever %v\n", m.last, m.low, m.high)
+	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %dT\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
 }
 
 func (m *Mgr) yield(n *Node) {
@@ -406,20 +405,18 @@ func (m *Mgr) yield(n *Node) {
 	m.cur.remove(n)
 }
 
-func (m *Mgr) collectBids() (int, Bids) {
+func (m *Mgr) collectBids() Bids {
 	bids := make([]*Bid, 0)
-	n := 0
 	for i, _ := range m.sim.tenants {
 		if b := m.sim.tenants[i].bid(m.last); b != nil {
 			// sort the bids in b
 			sort.Slice(b.bids, func(i, j int) bool {
 				return b.bids[i] > b.bids[j]
 			})
-			n += len(b.bids)
 			bids = append(bids, b)
 		}
 	}
-	return n, bids
+	return bids
 }
 
 func (m *Mgr) checkAssignment(s string) {
@@ -433,18 +430,26 @@ func (m *Mgr) checkAssignment(s string) {
 	}
 }
 
-func (m *Mgr) assignNodes() Nodes {
+func (m *Mgr) assignNodes() (Nodes, Price) {
 	m.checkAssignment("before")
-	_, bids := m.collectBids()
-	// fmt.Printf("bids %v %d %v\n", bids, bnn, len(m.free))
+	bids := m.collectBids()
+	// fmt.Printf("bids %v #free nodes %d\n", bids, len(m.free))
 	new := make(Nodes, 0)
-	avgbid := Price(0.0)
+	m.avgbid = Price(0.0)
+	m.high = Price(0.0)
 	naccept := 0
 	for {
 		t, bid := bids.PopHighest(m.sim.rand)
 		if t == nil {
 			break
 		}
+
+		m.last = bid
+		if bid > m.high {
+			m.high = bid
+		}
+		m.avgbid += bid
+
 		// fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
 		if n := m.free.findFree(); n != nil {
 			n.tenant = t
@@ -465,26 +470,26 @@ func (m *Mgr) assignNodes() Nodes {
 			// fmt.Printf("assignNodes: no nodes left\n")
 			break
 		}
-		avgbid += bid
 		naccept++
 	}
+	price := m.last
 	m.cur = append(m.cur, new...)
 	// fmt.Printf("assignment %d nodes: %v\n", len(m.cur), m.cur)
 	m.checkAssignment("after")
+
+	// if idle nodes, lower price
 	idle := uint64(NNODE - len(m.cur))
 	m.nidle += idle
-
-	if naccept > 0 {
-		avgbid = avgbid / Price(naccept)
-		m.last = avgbid
-		if avgbid < m.low {
-			m.low = avgbid
-		}
-		if avgbid > m.high {
-			m.high = avgbid
-		}
+	if idle > 0 {
+		m.last -= BID_INCREMENT
 	}
-	return m.cur
+
+	// avg bid for stats
+	if naccept > 0 {
+		m.avgbid = m.avgbid / Price(naccept)
+	}
+
+	return m.cur, price
 }
 
 //
@@ -492,13 +497,14 @@ func (m *Mgr) assignNodes() Nodes {
 //
 
 type Sim struct {
-	time    uint64
-	tenants [NTENANT]Tenant
-	rand    *rand.Rand
-	mgr     *Mgr
-	nproc   int    // total # procs started
-	len     uint64 // sum of all procs len
-	nprocq  uint64
+	time     uint64
+	tenants  [NTENANT]Tenant
+	rand     *rand.Rand
+	mgr      *Mgr
+	nproc    int    // total # procs started
+	len      uint64 // sum of all procs len
+	nprocq   uint64
+	avgprice Price // avg price per tick
 }
 
 func mkSim(p Tpolicy) *Sim {
@@ -539,7 +545,7 @@ func (sim *Sim) scheduleNodes() int {
 }
 
 func (sim *Sim) printTenants(tick uint64, nn, pq int) {
-	fmt.Printf("tick %d nodes %d procq %d avg bid %v", tick, nn, pq, sim.mgr.last)
+	fmt.Printf("Tick %d nodes %d procq %d new price %v avgbid %v high %v", tick, nn, pq, sim.mgr.last, sim.mgr.avgbid, sim.mgr.high)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
 		if len(t.procs) > 0 || len(t.nodes) > 0 {
@@ -549,15 +555,16 @@ func (sim *Sim) printTenants(tick uint64, nn, pq int) {
 	fmt.Printf("\n")
 }
 
-func (sim *Sim) runProcs(ns Nodes) {
+func (sim *Sim) runProcs(ns Nodes, p Price) {
+	sim.avgprice += p
 	for _, n := range ns {
 		if n.proc != nil {
 			n.proc.nTick--
-			n.proc.cost += n.price
-			n.tenant.cost += n.price
+			n.proc.cost += p
+			n.tenant.cost += p
 			n.tenant.nwork++
 			sim.mgr.nwork++
-			sim.mgr.revenue += n.price
+			sim.mgr.revenue += p * Price(len(ns))
 			if n.proc.nTick == 0 {
 				n.proc = nil
 			}
@@ -567,14 +574,14 @@ func (sim *Sim) runProcs(ns Nodes) {
 
 func (sim *Sim) tick(tick uint64) {
 	sim.genLoad()
-	ns := sim.mgr.assignNodes()
+	ns, p := sim.mgr.assignNodes()
 	pq := sim.scheduleNodes()
 	sim.nprocq += uint64(pq)
 
 	if DEBUG {
 		sim.printTenants(tick, len(ns), pq)
 	}
-	sim.runProcs(ns)
+	sim.runProcs(ns, p)
 }
 
 func funcName(i interface{}) string {
@@ -582,7 +589,7 @@ func funcName(i interface{}) string {
 }
 
 func main() {
-	policies := []Tpolicy{policyFixed, policyLastAvg, policyBigMore}
+	policies := []Tpolicy{policyFixed, policyLast, policyBigMore}
 	for i := 0; i < NTRIAL; i++ {
 		for _, p := range policies {
 			fmt.Printf("=== Policy %s\n", funcName(p))
@@ -599,7 +606,8 @@ func main() {
 				sim.tenants[1].stats()
 			}
 			sim.mgr.stats()
-			fmt.Printf("nproc %dP len %dT avg proclen %.2f avg procq %.2f\n", sim.nproc, sim.len, float64(sim.nproc)/float64(sim.len), float64(sim.nprocq)/float64(NTICK))
+			n := float64(NTICK)
+			fmt.Printf("nproc %dP len %dT avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.len, float64(sim.len)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
 		}
 	}
 }

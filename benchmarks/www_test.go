@@ -63,7 +63,7 @@ func MakeWwwJob(ts *test.Tstate, sigmaos bool, wwwncore proc.Tcore, reqtype stri
 	return ji
 }
 
-func (ji *WwwJobInstance) RunClient(i int, ch chan time.Duration) {
+func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	var clnt *www.WWWClnt
 	if ji.sigmaos {
 		clnt = www.MakeWWWClnt(ji.FsLib, ji.job)
@@ -73,14 +73,14 @@ func (ji *WwwJobInstance) RunClient(i int, ch chan time.Duration) {
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
 		slp := ji.delay * time.Duration(rand.Uint64()%100) / 100
-		db.DPrintf("WWWD_TEST", "[%v] Random sleep %v", i, slp)
+		db.DPrintf("WWWD_TEST", "[%v] iteration %v Random sleep %v", j, i, slp)
 		time.Sleep(slp)
 		start := time.Now()
 		err := clnt.MatMul(MAT_SIZE)
 		assert.Equal(ji.T, nil, err)
 		latency += time.Since(start)
 	}
-	db.DPrintf("WWWD_TEST", "[%v] done", i)
+	db.DPrintf("WWWD_TEST", "[%v] done", j)
 	ch <- latency
 }
 

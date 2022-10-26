@@ -45,6 +45,7 @@ func (clnt *WWWClnt) get(path string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+	db.DPrintf("WWW_CLNT", "Got response: %v", resp)
 	if resp.StatusCode != http.StatusOK {
 		err = errors.New(resp.Status)
 		return []byte{}, err

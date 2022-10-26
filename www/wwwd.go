@@ -174,6 +174,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	}
 	// Set the shared link to point to the pipe
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
+	db.DPrintf("WWW", "About to spawn %v", a)
 	_, errs := www.SpawnBurst([]*proc.Proc{a})
 	if len(errs) != 0 {
 		return nil, errs[0]
@@ -189,6 +190,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 		www.rwResponse(w, pipeName)
 	}()
 	status, err := www.WaitExit(pid)
+	db.DPrintf("WWW", "WaitExit done %v status %v err %v", pid, status, err)
 	return status, err
 }
 

@@ -23,7 +23,7 @@ const (
 	// DURATION                 = NTICK
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
-	BID_INCREMENT        = 0.000000000001
+	BID_INCREMENT  Price = 0.000000000001
 	MAX_BID        Price = 3 * PRICE_SPOT
 )
 
@@ -237,14 +237,17 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 	bids := make([]Price, 0)
 	if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
 		// very first bid for tenant 0, which has a higher load grab
-		// one high-priced node to sustant the expected load of 1.
+		// one high-priced node to sustain the expected load of 1.
 		bids = append(bids, PRICE_ONDEMAND)
 		for i := 0; i < len(t.procs)-1; i++ {
 			bids = append(bids, last)
 		}
 	} else {
 		for i := 0; i < len(t.procs); i++ {
-			bids = append(bids, last)
+			bid := last + BID_INCREMENT*Price(len(t.procs))
+			//bid := last + BID_INCREMENT
+			//bid := last
+			bids = append(bids, bid)
 		}
 	}
 	return mkBid(t, bids)
@@ -298,6 +301,7 @@ func (t *Tenant) scheduleNodes() int {
 	return len(t.procs)
 }
 
+// Yield idle nodes, except if tenant "reserved" the node
 func (t *Tenant) yieldIdle() {
 	for i := 0; i < len(t.nodes); i++ {
 		n := t.nodes[i]

@@ -177,18 +177,23 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	db.DPrintf("WWW", "About to spawn %v", a)
 	_, errs := www.SpawnBurst([]*proc.Proc{a})
 	if len(errs) != 0 {
+		db.DFatalf("Error SpawnBurst %v", errs)
 		return nil, errs[0]
 	}
+	db.DPrintf("WWW", "About to WaitStart %v", a)
 	err := www.WaitStart(pid)
 	if err != nil {
+		db.DFatalf("Error SpawnBurst %v", err)
 		return nil, err
 	}
+	db.DPrintf("WWW", "Done WaitStart %v", a)
 	// Read from the pipe in another thread. This way, if the child crashes or
 	// terminates normally, we'll catch it with WaitExit and remove the pipe so
 	// we don't block forever.
 	go func() {
 		www.rwResponse(w, pipeName)
 	}()
+	db.DPrintf("WWW", "About to WaitExit %v", a)
 	status, err := www.WaitExit(pid)
 	db.DPrintf("WWW", "WaitExit done %v status %v err %v", pid, status, err)
 	return status, err

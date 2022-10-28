@@ -2,9 +2,11 @@ package www_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/test"
@@ -98,10 +100,40 @@ func TestSave(t *testing.T) {
 	ts.waitWww()
 }
 
+func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
+	clnt := www.MakeWWWClnt(ts.FsLib, ts.job)
+	for i := 0; i < nreq; i++ {
+		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
+		db.DPrintf("TEST", "[%v] iteration %v Random sleep %v", clntid, i, slp)
+		time.Sleep(slp)
+		err := clnt.MatMul(matsize)
+		assert.Nil(ts.T, err, "Error matmul: %v", err)
+	}
+	db.DPrintf("TEST", "[%v] done", clntid)
+	done <- true
+}
+
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.MatMul(2000)
-	assert.Nil(t, err)
+	done := make(chan bool)
+	go matmulClnt(ts, 2000, 0, 1, 0, done)
+	<-done
+
+	ts.waitWww()
+}
+
+func TestMatMulConcurrent(t *testing.T) {
+	ts := makeTstate(t)
+
+	N_CLNT := 40
+	done := make(chan bool)
+	for i := 0; i < N_CLNT; i++ {
+		go matmulClnt(ts, 2000, i, 10, 500*time.Millisecond, done)
+	}
+	for i := 0; i < N_CLNT; i++ {
+		<-done
+	}
+
 	ts.waitWww()
 }

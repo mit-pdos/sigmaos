@@ -262,7 +262,7 @@ func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
 func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 	// Must wait for child to fill in return status pipe.
 	if err := clnt.waitStart(pid); err != nil {
-		db.DPrintf("PROCCLNT", "waitStarted err %v\n", err)
+		db.DPrintf("PROCCLNT", "waitStart err %v\n", err)
 	}
 
 	db.DPrintf("PROCCLNT", "WaitExit %v\n", pid)
@@ -328,7 +328,6 @@ func (clnt *ProcClnt) Started() error {
 	if err != nil && !np.IsErrUnavailable(err) {
 		return fmt.Errorf("Started error %v", err)
 	}
-
 	// Only isolate non-kernel procs
 	if !proc.GetIsPrivilegedProc() {
 		// Isolate the process namespace

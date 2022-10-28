@@ -3,7 +3,6 @@ package procclnt
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path"
 	"sync"
@@ -134,7 +133,7 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
 
-	db.DPrintf("PROCCLNT", "Spawn %v\n", p)
+	db.DPrintf("PROCCLNT", "Spawn %v", p)
 	if clnt.hasExited() != "" {
 		db.DPrintf("PROCCLNT_ERR", "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
@@ -148,7 +147,7 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 	if !p.IsPrivilegedProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
-			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v\n", err)
+			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v", err)
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(np.PROCDREL, procdIp, np.PROCD_SPAWN_FILE)
@@ -240,7 +239,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 			<-done
 		}
 	}
-	db.DPrintf("PROCCLNT", "WaitStart %v %v\n", pid, childDir)
+	db.DPrintf("PROCCLNT", "WaitStart %v %v", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
 }
@@ -250,7 +249,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
 	err := clnt.waitStart(pid)
 	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "WaitStart %v %v\n", pid, err)
+		db.DPrintf("PROCCLNT_ERR", "WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
 	}
 	return nil
@@ -262,10 +261,10 @@ func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
 func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 	// Must wait for child to fill in return status pipe.
 	if err := clnt.waitStart(pid); err != nil {
-		db.DPrintf("PROCCLNT", "waitStart err %v\n", err)
+		db.DPrintf("PROCCLNT", "waitStart err %v", err)
 	}
 
-	db.DPrintf("PROCCLNT", "WaitExit %v\n", pid)
+	db.DPrintf("PROCCLNT", "WaitExit %v", pid)
 
 	// Make sure the child proc has exited.
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
@@ -279,7 +278,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Missing return status, procd must have crashed: %v, %v\n", pid, err)
+		db.DPrintf("PROCCLNT_ERR", "Missing return status, procd must have crashed: %v, %v", pid, err)
 		return nil, fmt.Errorf("Missing return status, procd must have crashed: %v", err)
 	}
 
@@ -294,14 +293,14 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
-	db.DPrintf("PROCCLNT", "WaitEvict %v\n", pid)
+	db.DPrintf("PROCCLNT", "WaitEvict %v", pid)
 	procdir := proc.PROCDIR
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Down()
 	if err != nil {
 		return fmt.Errorf("WaitEvict error %v", err)
 	}
-	db.DPrintf("PROCCLNT", "WaitEvict evicted %v\n", pid)
+	db.DPrintf("PROCCLNT", "WaitEvict evicted %v", pid)
 	return nil
 }
 
@@ -309,11 +308,11 @@ func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf("PROCCLNT", "Started %v\n", clnt.pid)
+	db.DPrintf("PROCCLNT", "Started %v", clnt.pid)
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
-		db.DPrintf("PROCCLNT", "linkSelfIntoParentDir %v err %v\n", clnt.pid, err)
+		db.DPrintf("PROCCLNT", "linkSelfIntoParentDir %v err %v", clnt.pid, err)
 		return err
 	}
 
@@ -322,7 +321,7 @@ func (clnt *ProcClnt) Started() error {
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, semPath)
 	err := semStart.Up()
 	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Started error %v %v\n", semPath, err)
+		db.DPrintf("PROCCLNT_ERR", "Started error %v %v", semPath, err)
 	}
 	// File may not be found if parent exited first or isn't reachable
 	if err != nil && !np.IsErrUnavailable(err) {
@@ -333,7 +332,7 @@ func (clnt *ProcClnt) Started() error {
 		// Isolate the process namespace
 		newRoot := proc.GetNewRoot()
 		if err := namespace.Isolate(newRoot); err != nil {
-			db.DPrintf("PROCCLNT_ERR", "Error Isolate in clnt.Started: %v\n", err)
+			db.DPrintf("PROCCLNT_ERR", "Error Isolate in clnt.Started: %v", err)
 			return fmt.Errorf("Started error %v", err)
 		}
 		// Load a seccomp filter.
@@ -352,13 +351,12 @@ func (clnt *ProcClnt) Started() error {
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
 func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
-	db.DPrintf("PROCCLNT", "exited %v parent %v pid %v status %v\n", procdir, parentdir, pid, status)
+	db.DPrintf("PROCCLNT", "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
-		db.DPrintf("PROCCLNT_ERR", "Exited called after exited %v\n", procdir)
-		os.Exit(1)
+		db.DFatalf("Exited called after exited %v", procdir)
 	}
 
 	b, err := json.Marshal(status)
@@ -369,12 +367,12 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
 	if _, err := clnt.PutFile(fn, 0777, np.OWRITE, b); err != nil {
-		db.DPrintf("PROCCLNT_ERR", "exited error (parent already exited) MakeFile %v err %v\n", fn, err)
+		db.DPrintf("PROCCLNT_ERR", "exited error (parent already exited) MakeFile %v err %v", fn, err)
 	}
 
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
 	if err := semExit.Up(); err != nil {
-		db.DPrintf("PROCCLNT_ERR", "exited semExit up error: %v, %v, %v\n", procdir, pid, err)
+		db.DPrintf("PROCCLNT_ERR", "exited semExit up error: %v, %v, %v", procdir, pid, err)
 	}
 
 	// clean myself up
@@ -391,18 +389,17 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	err := clnt.exited(clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "exited %v err %v\n", proc.GetPid(), err)
-		os.Exit(1)
+		db.DFatalf("exited %v err %v", proc.GetPid(), err)
 	}
 	clnt.FsLib.Exit()
 }
 
 func (clnt *ProcClnt) ExitedProcd(pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {
-	db.DPrintf("PROCCLNT", "exited %v parent %v pid %v status %v\n", procdir, parentdir, pid, status)
+	db.DPrintf("PROCCLNT", "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := clnt.exited(procdir, parentdir, pid, status)
 	if err != nil {
 		// XXX maybe remove any state left of proc?
-		db.DPrintf("PROCCLNT_ERR", "exited %v err %v\n", pid, err)
+		db.DPrintf("PROCCLNT_ERR", "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentdir, proc.START_SEM))
@@ -413,7 +410,7 @@ func (clnt *ProcClnt) ExitedProcd(pid proc.Tpid, procdir string, parentdir strin
 
 // Notifies a proc that it will be evicted using Evict.
 func (clnt *ProcClnt) evict(procdir string) error {
-	db.DPrintf("PROCCLNT", "evict %v\n", procdir)
+	db.DPrintf("PROCCLNT", "evict %v", procdir)
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Up()
 	if err != nil {

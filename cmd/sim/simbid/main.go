@@ -25,6 +25,7 @@ const (
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
 	BID_INCREMENT  Price = 0.000000000001
 	MAX_BID        Price = 3 * PRICE_SPOT
+	MAX_LOAD       Load  = 0.8
 )
 
 func zipf(r *rand.Rand) uint64 {
@@ -46,7 +47,7 @@ type Tick uint64
 type Load float64
 
 func (l Load) String() string {
-	return fmt.Sprintf("$%.2f", l)
+	return fmt.Sprintf("%.2f%%", l)
 }
 
 //
@@ -128,7 +129,7 @@ type Proc struct {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("n %d", p.nTick)
+	return fmt.Sprintf("{n %d c %v}", p.nTick, p.computeT)
 }
 
 func mkProc(rand *rand.Rand) *Proc {
@@ -136,7 +137,7 @@ func mkProc(rand *rand.Rand) *Proc {
 	// p.nTick = zipf(rand)
 	p.nTick = Tick(uniform(rand))
 	p.nLength = p.nTick
-	p.computeT = 1.0
+	p.computeT = 0.5
 	return p
 }
 
@@ -193,6 +194,15 @@ func (n *Node) String() string {
 	return fmt.Sprintf("{%p: proc %v price %v l %v t %p}", n, n.procs, n.price, n.load, n.tenant)
 }
 
+func (n *Node) takeProcs(ps Procs) Procs {
+	if n.load > MAX_LOAD {
+		return ps
+	}
+	n.procs = append(n.procs, ps[0])
+	ps = ps[1:]
+	return ps
+}
+
 type Nodes []*Node
 
 func (ns *Nodes) remove(n1 *Node) *Node {
@@ -231,6 +241,17 @@ func (ns *Nodes) isPresent(nn *Node) bool {
 		}
 	}
 	return false
+}
+
+// Schedule procs in ps on the nodes in ns
+func (ns Nodes) schedule(ps Procs) Procs {
+	for _, n := range ns {
+		if len(ps) == 0 { // no procs left to schedule?
+			break
+		}
+		ps = n.takeProcs(ps)
+	}
+	return ps
 }
 
 //
@@ -281,7 +302,7 @@ func (t *Tenant) genProcs() (int, Tick) {
 		t.procs = append(t.procs, p)
 	}
 	t.nproc += nproc
-	t.schedule()
+	t.procs = t.nodes.schedule(t.procs)
 	t.yieldIdle()
 	return nproc, len
 }
@@ -347,7 +368,12 @@ func (t *Tenant) scheduleNodes() int {
 			fmt.Printf("%p: asked %d and received %d\n", t, t.nbid, t.ngrant)
 		}
 	}
-	t.schedule()
+
+	// 0. use t.ngrant t.nodes[len(t.nodes)-t.ngrant:]
+	// 1. separate list
+
+	t.procs = t.nodes[len(t.nodes)-t.ngrant:].schedule(t.procs)
+
 	t.ntick += Tick(len(t.nodes))
 	if len(t.nodes) > t.maxnode {
 		t.maxnode = len(t.nodes)
@@ -360,22 +386,11 @@ func (t *Tenant) scheduleNodes() int {
 func (t *Tenant) yieldIdle() {
 	for i := 0; i < len(t.nodes); i++ {
 		n := t.nodes[i]
+		n.load = Load(0.0)
 		if len(n.procs) == 0 && n.price != PRICE_ONDEMAND {
 			t.nodes = append(t.nodes[0:i], t.nodes[i+1:]...)
 			i--
 			t.sim.mgr.yield(n)
-		}
-	}
-}
-
-func (t *Tenant) schedule() {
-	for _, n := range t.nodes {
-		if len(t.procs) == 0 {
-			return
-		}
-		if len(n.procs) == 0 {
-			n.procs = append(n.procs, t.procs[0])
-			t.procs = t.procs[1:]
 		}
 	}
 }
@@ -451,7 +466,6 @@ func (m *Mgr) yield(n *Node) {
 	if DEBUG {
 		fmt.Printf("yield %v\n", n)
 	}
-	n.load = 0
 	n.tenant = nil
 	m.free = append(m.free, n)
 	m.cur.remove(n)

@@ -15,11 +15,11 @@ const (
 	NTENANT = 100
 
 	NTICK  = 100
-	DEBUG  = true
+	DEBUG  = false
 	NTRIAL = 1 // 10
 
 	NNODE             = 35
-	NODES_PER_MACHINE = 2
+	NODES_PER_MACHINE = 1
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
 	MAX_SERVICE_TIME         = 5   // in ticks
@@ -236,6 +236,7 @@ func (ps *Procs) wasted() (FTick, Price) {
 }
 
 type Machine struct {
+	mid     Tmid
 	nodes   Nodes
 	ntenant int
 }
@@ -278,6 +279,20 @@ func (ms Machines) leastUsed() *Machine {
 		}
 	}
 	return least
+}
+
+func (ms Machines) nodeOnMachine(mid Tmid) *Node {
+	load := Load(100)
+	var r *Node
+	for _, m := range ms {
+		for _, n := range m.nodes {
+			if n.mid == mid && n.load < load {
+				r = n
+				load = n.load
+			}
+		}
+	}
+	return r
 }
 
 //
@@ -325,6 +340,7 @@ func (ns *Nodes) machines() Machines {
 			m := &Machine{}
 			m.nodes = make(Nodes, 0)
 			ms[n.mid] = m
+			m.mid = n.mid
 		}
 		m := ms[n.mid]
 		m.nodes = append(m.nodes, n)
@@ -348,8 +364,6 @@ func (ns *Nodes) findFree(tms Machines) *Node {
 	m := ms.mostUsed()
 	if m == nil {
 		m = fms.leastUsed()
-	} else {
-		fmt.Printf("colocate on machine\n")
 	}
 	for _, n := range m.nodes {
 		if n.tenant == nil {
@@ -423,6 +437,7 @@ type Tenant struct {
 	cost     Price // cost for nwork ticks
 	nwait    Tick  // sum of # ticks waiting to be run
 	ndelay   Tick  // sum of # extra ticks that proc was on node
+	nmigrate int   // # procs migrated
 	nevict   int   // # evictions
 	nwasted  FTick // sum # fticks wasted because of eviction
 	sunkCost Price // the cost of the wasted ticks
@@ -548,16 +563,25 @@ func (t *Tenant) yieldIdle() {
 
 // Manager is taking away a node
 func (t *Tenant) evict(n *Node) {
-	w, c := n.procs.wasted()
-	t.nevict += len(n.procs)
-	t.nwasted += w
-	t.sim.mgr.nwasted += w
-	t.sunkCost += c
-	n.procs = make(Procs, 0)
 	if t.nodes.remove(n) == nil {
 		fmt.Printf("%p: n not found %v\n", t, n)
 		panic("evict")
 	}
+	ms := t.nodes.machines()
+	if n1 := ms.nodeOnMachine(n.mid); n1 != nil {
+		if DEBUG {
+			fmt.Printf("Migrate %v to %v\n", n, n1)
+		}
+		n1.procs = append(n1.procs, n.procs...)
+		t.nmigrate += len(n.procs)
+	} else {
+		w, c := n.procs.wasted()
+		t.nevict += len(n.procs)
+		t.nwasted += w
+		t.sim.mgr.nwasted += w
+		t.sunkCost += c
+	}
+	n.procs = make(Procs, 0)
 }
 
 func (t *Tenant) isPresent(n *Node) bool {
@@ -566,7 +590,7 @@ func (t *Tenant) isPresent(n *Node) bool {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %v util %.2f nwait %v ndelay %v #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.ndelay, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
+	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %v util %.2f nwait %v ndelay %v #migr %dP #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.ndelay, t.nmigrate, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
 //

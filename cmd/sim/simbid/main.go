@@ -38,7 +38,13 @@ func uniform(r *rand.Rand) uint64 {
 }
 
 type Tpolicy func(*Tenant, Price) *Bid
+
+// Tick
 type Tick uint64
+
+func (t Tick) String() string {
+	return fmt.Sprintf("%dT", t)
+}
 
 //
 // Fractional tick
@@ -132,6 +138,7 @@ func (bs *Bids) PopHighest(rand *rand.Rand) (*Tenant, Price) {
 type Proc struct {
 	nLength Tick  //
 	nTick   FTick // # fractional ticks remaining
+	time    Tick  // # ticks on a node
 	cost    Price // cost for this proc
 	// compute intensivity: 1.0 computes only, while 0.4 is doing i/o
 	// for 0.6T.
@@ -139,7 +146,7 @@ type Proc struct {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("{n %v c %v}", p.nTick, p.computeT)
+	return fmt.Sprintf("{n %v c %v t %v l %v}", p.nTick, p.computeT, p.time, p.nLength)
 }
 
 func mkProc(rand *rand.Rand) *Proc {
@@ -156,10 +163,14 @@ type Procs []*Proc
 
 // Run procs until we used 1 tick of cpu power or we run out of procs.
 // The last selected proc may run only for a fraction of tick.  Return
-// how much we used of the 1 tick.
-func (ps *Procs) run(c Price) Load {
+// how much we used of the 1 tick, and for procs that finished how
+// much delay was incurred.
+func (ps *Procs) run(c Price) (Load, Tick) {
 	load := Load(0.0)
 	last := FTick(0.0)
+	delay := Tick(0.0)
+
+	// compute number of procs we can run until we hit 1 tick
 	n := 0
 	for _, p := range *ps {
 		n += 1
@@ -169,6 +180,7 @@ func (ps *Procs) run(c Price) Load {
 		}
 		f := FTick(1.0 - load)
 		if work < f {
+			last = p.computeT
 			load += Load(work)
 		} else {
 			last = f
@@ -176,6 +188,12 @@ func (ps *Procs) run(c Price) Load {
 			break
 		}
 	}
+
+	for _, p := range *ps {
+		p.time += 1
+	}
+
+	// run the first n
 	qs := (*ps)[0:n]
 	*ps = (*ps)[n:]
 	for i, p := range qs {
@@ -189,13 +207,16 @@ func (ps *Procs) run(c Price) Load {
 		// get to run for p.computeT.
 		p.cost += c / Price(len(qs))
 
-		if p.nTick > 0 { // p is not done
-			// put it at the end of procq so that procs run round
-			// robin
+		if p.nTick <= 0 { // p is done
+			delay += p.time - p.nLength
+		} else {
+			// not done; put it at the end of procq so that procs run
+			// round robin
 			*ps = append(*ps, p)
 		}
 	}
-	return load
+
+	return load, delay
 }
 
 func (ps *Procs) wasted() (FTick, Price) {
@@ -305,6 +326,7 @@ type Tenant struct {
 	nwork    Tick  // sum of # ticks running a proc
 	cost     Price // cost for nwork ticks
 	nwait    Tick  // sum of # ticks waiting to be run
+	ndelay   Tick  // sum of # extra ticks that proc was on node
 	nevict   int   // # evictions
 	nwasted  FTick // sum # fticks wasted because of eviction
 	sunkCost Price // the cost of the wasted ticks
@@ -447,7 +469,7 @@ func (t *Tenant) isPresent(n *Node) bool {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
+	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %v util %.2f nwait %v ndelay %v #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.ndelay, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
 //
@@ -491,7 +513,7 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
-	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
+	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %v nevict %dP nwasted %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
 }
 
 func (m *Mgr) yield(n *Node) {
@@ -656,7 +678,9 @@ func (sim *Sim) printTenants(tick uint64, nn, pq int) {
 func (sim *Sim) runProcs(ns Nodes, p Price) {
 	sim.avgprice += p
 	for _, n := range ns {
-		n.load = n.procs.run(p)
+		l, d := n.procs.run(p)
+		n.load = l
+		n.tenant.ndelay += d
 		n.tenant.cost += p
 		n.tenant.nwork++
 		sim.mgr.nwork++
@@ -701,7 +725,7 @@ func main() {
 			}
 			sim.mgr.stats()
 			n := float64(NTICK)
-			fmt.Printf("nproc %dP len %dT avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.len, float64(sim.len)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
+			fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.len, float64(sim.len)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
 		}
 	}
 }

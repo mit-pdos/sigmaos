@@ -12,11 +12,14 @@ import (
 )
 
 const (
-	NNODE   = 35
 	NTENANT = 100
-	NTICK   = 100
-	DEBUG   = true
-	NTRIAL  = 1 // 10
+
+	NTICK  = 100
+	DEBUG  = true
+	NTRIAL = 1 // 10
+
+	NNODE             = 35
+	NODES_PER_MACHINE = 2
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
 	MAX_SERVICE_TIME         = 5   // in ticks
@@ -38,6 +41,7 @@ func uniform(r *rand.Rand) uint64 {
 }
 
 type Tpolicy func(*Tenant, Price) *Bid
+type Tmid int
 
 // Tick
 type Tick uint64
@@ -164,7 +168,7 @@ type Procs []*Proc
 // Run procs until we used 1 tick of cpu power or we run out of procs.
 // The last selected proc may run only for a fraction of tick.  Return
 // how much we used of the 1 tick, and for procs that finished how
-// much delay was incurred.
+// much delay was incurred (because the nodes was overloaded).
 func (ps *Procs) run(c Price) (Load, Tick) {
 	load := Load(0.0)
 	last := FTick(0.0)
@@ -231,6 +235,51 @@ func (ps *Procs) wasted() (FTick, Price) {
 	return w, c
 }
 
+type Machine struct {
+	nodes   Nodes
+	ntenant int
+}
+
+func (m *Machine) String() string {
+	return fmt.Sprintf("{%d}", m.ntenant)
+}
+
+type Machines map[Tmid]*Machine
+
+func (ms Machines) intersect(ms1 Machines) Machines {
+	r := make(Machines)
+	for k, _ := range ms {
+		if m, ok := ms1[k]; ok {
+			r[k] = m
+		}
+	}
+	return r
+}
+
+func (ms Machines) mostUsed() *Machine {
+	var most *Machine
+	high := 0
+	for _, m := range ms {
+		if m.ntenant > high && m.ntenant < NODES_PER_MACHINE {
+			most = m
+			high = m.ntenant
+		}
+	}
+	return most
+}
+
+func (ms Machines) leastUsed() *Machine {
+	var least *Machine
+	low := NTENANT
+	for _, m := range ms {
+		if m.ntenant < low {
+			least = m
+			low = m.ntenant
+		}
+	}
+	return least
+}
+
 //
 // Computing nodes that the manager allocates to tenants.  Each node
 // runs one proc or is idle.
@@ -241,10 +290,11 @@ type Node struct {
 	price  Price // the price for a tick
 	load   Load
 	tenant *Tenant
+	mid    Tmid
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{%p: proc %v price %v l %v t %p}", n, n.procs, n.price, n.load, n.tenant)
+	return fmt.Sprintf("{%p: proc %v price %v l %v t %p m %d}", n, n.procs, n.price, n.load, n.tenant, n.mid)
 }
 
 func (n *Node) takeProcs(ps Procs) Procs {
@@ -268,10 +318,42 @@ func (ns *Nodes) remove(n1 *Node) *Node {
 	return nil
 }
 
-func (ns *Nodes) findFree() *Node {
-	for i, n := range *ns {
+func (ns *Nodes) machines() Machines {
+	ms := make(map[Tmid]*Machine)
+	for _, n := range *ns {
+		if _, ok := ms[n.mid]; !ok {
+			m := &Machine{}
+			m.nodes = make(Nodes, 0)
+			ms[n.mid] = m
+		}
+		m := ms[n.mid]
+		m.nodes = append(m.nodes, n)
+		if n.tenant != nil {
+			m.ntenant += 1
+		}
+		if m.ntenant > NODES_PER_MACHINE {
+			fmt.Printf("nodes %v\n", ns)
+			panic("machines")
+		}
+	}
+	return ms
+}
+
+func (ns *Nodes) findFree(tms Machines) *Node {
+	if len(*ns) == 0 {
+		return nil
+	}
+	fms := ns.machines()
+	ms := fms.intersect(tms)
+	m := ms.mostUsed()
+	if m == nil {
+		m = fms.leastUsed()
+	} else {
+		fmt.Printf("colocate on machine\n")
+	}
+	for _, n := range m.nodes {
 		if n.tenant == nil {
-			*ns = append((*ns)[:i], (*ns)[i+1:]...)
+			ns.remove(n)
 			return n
 		}
 	}
@@ -294,6 +376,20 @@ func (ns *Nodes) isPresent(nn *Node) bool {
 		}
 	}
 	return false
+}
+
+func (ns *Nodes) check() {
+	m := make(map[*Node]bool)
+	for _, n := range *ns {
+		_, ok := m[n]
+		if !ok {
+			m[n] = true
+		} else {
+			fmt.Printf("double %v\n", ns)
+			panic("check")
+		}
+
+	}
 }
 
 // Schedule procs in ps on the nodes in ns
@@ -342,6 +438,8 @@ func (t *Tenant) String() string {
 	for _, n := range t.nodes {
 		s += fmt.Sprintf("%v ", n)
 	}
+	ms := t.nodes.machines()
+	s += fmt.Sprintf("ms (%d) %v", len(ms), ms)
 	return s + "]}"
 }
 
@@ -413,6 +511,8 @@ func (t *Tenant) bid(last Price) *Bid {
 func (t *Tenant) grantNode(n *Node) {
 	t.ngrant++
 	t.nodes = append(t.nodes, n)
+	t.nodes.check()
+	t.nodes.machines()
 }
 
 // After bidding, we may have received new nodes; use them.
@@ -422,9 +522,6 @@ func (t *Tenant) scheduleNodes() int {
 			fmt.Printf("%p: asked %d and received %d\n", t, t.nbid, t.ngrant)
 		}
 	}
-
-	// 0. use t.ngrant t.nodes[len(t.nodes)-t.ngrant:]
-	// 1. separate list
 
 	t.procs = t.nodes[len(t.nodes)-t.ngrant:].schedule(t.procs)
 
@@ -497,6 +594,7 @@ func mkMgr(sim *Sim) *Mgr {
 	ns := make(Nodes, NNODE, NNODE)
 	for i, _ := range ns {
 		ns[i] = &Node{}
+		ns[i].mid = Tmid(i / NODES_PER_MACHINE)
 	}
 	m.free = ns
 	m.last = PRICE_SPOT
@@ -558,11 +656,14 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 	m.avgbid = Price(0.0)
 	m.high = Price(0.0)
 	naccept := 0
+
 	for {
 		t, bid := bids.PopHighest(m.sim.rand)
 		if t == nil {
 			break
 		}
+
+		ms := t.nodes.machines()
 
 		m.last = bid
 		if bid > m.high {
@@ -571,7 +672,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 		m.avgbid += bid
 
 		// fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
-		if n := m.free.findFree(); n != nil {
+		if n := m.free.findFree(ms); n != nil {
 			n.tenant = t
 			n.price = bid
 			//fmt.Printf("assignNodes: allocate %p to %p at %v\n", n, t, bid)

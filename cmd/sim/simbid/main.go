@@ -14,18 +14,18 @@ import (
 const (
 	NNODE   = 35
 	NTENANT = 100
-	NTRIAL  = 1 // 10
+	NTICK   = 100
 	DEBUG   = true
+	NTRIAL  = 1 // 10
 
-	NTICK                    = 100
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
 	MAX_SERVICE_TIME         = 5   // in ticks
-	// DURATION                 = NTICK
+	MAX_LOAD         Load    = 0.8 // max load per node
+
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
 	BID_INCREMENT  Price = 0.000000000001
 	MAX_BID        Price = 3 * PRICE_SPOT
-	MAX_LOAD       Load  = 0.8
 )
 
 func zipf(r *rand.Rand) uint64 {
@@ -39,6 +39,16 @@ func uniform(r *rand.Rand) uint64 {
 
 type Tpolicy func(*Tenant, Price) *Bid
 type Tick uint64
+
+//
+// Fractional tick
+//
+
+type FTick float64
+
+func (f FTick) String() string {
+	return fmt.Sprintf("%.1fT", f)
+}
 
 //
 // Load
@@ -121,56 +131,78 @@ func (bs *Bids) PopHighest(rand *rand.Rand) (*Tenant, Price) {
 
 type Proc struct {
 	nLength Tick  //
-	nTick   Tick  // #ticks remaining
+	nTick   FTick // # fractional ticks remaining
 	cost    Price // cost for this proc
 	// compute intensivity: 1.0 computes only, while 0.4 is doing i/o
 	// for 0.6T.
-	computeT Load
+	computeT FTick
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("{n %d c %v}", p.nTick, p.computeT)
+	return fmt.Sprintf("{n %v c %v}", p.nTick, p.computeT)
 }
 
 func mkProc(rand *rand.Rand) *Proc {
 	p := &Proc{}
 	// p.nTick = zipf(rand)
-	p.nTick = Tick(uniform(rand))
-	p.nLength = p.nTick
+	t := Tick(uniform(rand))
+	p.nTick = FTick(t)
+	p.nLength = t
 	p.computeT = 0.5
 	return p
 }
 
 type Procs []*Proc
 
-// Run procs until we reach load of 1 or we run out of procs
+// Run procs until we used 1 tick of cpu power or we run out of procs.
+// The last selected proc may run only for a fraction of tick.  Return
+// how much we used of the 1 tick.
 func (ps *Procs) run(c Price) Load {
 	load := Load(0.0)
+	last := FTick(0.0)
 	n := 0
 	for _, p := range *ps {
-		if load+p.computeT > 1.0 {
+		n += 1
+		work := p.computeT
+		if p.nTick < 1 { // only fraction of tick left?
+			work = p.computeT * (1 - p.nTick)
+		}
+		f := FTick(1.0 - load)
+		if work < f {
+			load += Load(work)
+		} else {
+			last = f
+			load += Load(last)
 			break
 		}
-		n += 1
-		load += p.computeT
 	}
 	qs := (*ps)[0:n]
 	*ps = (*ps)[n:]
-	for _, p := range qs {
-		p.nTick--
+	for i, p := range qs {
+		if i < len(qs)-1 {
+			p.nTick--
+		} else {
+			p.nTick -= last / p.computeT
+		}
+
+		// charge every proc equally, even though last proc may not
+		// get to run for p.computeT.
 		p.cost += c / Price(len(qs))
-		if p.nTick > 0 { // p is done
+
+		if p.nTick > 0 { // p is not done
+			// put it at the end of procq so that procs run round
+			// robin
 			*ps = append(*ps, p)
 		}
 	}
 	return load
 }
 
-func (ps *Procs) wasted() (Tick, Price) {
-	w := Tick(0)
+func (ps *Procs) wasted() (FTick, Price) {
+	w := FTick(0)
 	c := Price(0.0)
 	for _, p := range *ps {
-		w += p.nLength - p.nTick // wasted ticks
+		w += FTick(p.nLength) - p.nTick // wasted ticks
 		if w > 0 {
 			c += p.cost
 		}
@@ -274,7 +306,7 @@ type Tenant struct {
 	cost     Price // cost for nwork ticks
 	nwait    Tick  // sum of # ticks waiting to be run
 	nevict   int   // # evictions
-	nwasted  Tick  // sum # ticks wasted because of eviction
+	nwasted  FTick // sum # fticks wasted because of eviction
 	sunkCost Price // the cost of the wasted ticks
 	policy   Tpolicy
 }
@@ -415,7 +447,7 @@ func (t *Tenant) isPresent(n *Node) bool {
 
 func (t *Tenant) stats() {
 	n := float64(NTICK)
-	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %dT) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
+	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %dT util %.2f nwait %dT #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
 //
@@ -431,7 +463,7 @@ type Mgr struct {
 	nwork   int
 	nidle   uint64
 	nevict  uint64
-	nwasted Tick
+	nwasted FTick
 	last    Price // lowest bid accepted in last tick
 	avgbid  Price // avg bid in last tick
 	high    Price // highest bid in last tick
@@ -459,7 +491,7 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := NTICK * NNODE
-	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %dT\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
+	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %dT nevict %dP nwasted %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nevict, m.nwasted)
 }
 
 func (m *Mgr) yield(n *Node) {

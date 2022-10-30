@@ -18,7 +18,7 @@ const (
 	DEBUG  = false
 	NTRIAL = 1
 
-	NNODE             = 35
+	NNODE             = 30
 	NODES_PER_MACHINE = 1
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
@@ -250,6 +250,8 @@ func (m *Machine) String() string {
 
 type Machines map[Tmid]*Machine
 
+// Returns the m's (and their nodes) in ms that are also present in
+// ms1 (which may have fewer nodes)
 func (ms Machines) intersect(ms1 Machines) Machines {
 	r := make(Machines)
 	for k, m := range ms {
@@ -260,6 +262,7 @@ func (ms Machines) intersect(ms1 Machines) Machines {
 	return r
 }
 
+// Find the machine mostly heavily used
 func (ms Machines) mostUsed() *Machine {
 	var most *Machine
 	high := 0
@@ -363,11 +366,11 @@ func (ns *Nodes) findFree(tms Machines) *Node {
 		return nil
 	}
 	fms := ns.machines()
-	ms := fms.intersect(tms)
-	m := ms.mostUsed()
-	if m == nil {
-		m = fms.leastUsed()
-	}
+	//ms1 := tms.intersect(fms)
+	//m := ms1.mostUsed()
+	//if m == nil {
+	m := fms.leastUsed()
+	//}
 	for _, n := range m.nodes {
 		if n.tenant == nil {
 			ns.remove(n)

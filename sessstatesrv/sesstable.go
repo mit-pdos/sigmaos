@@ -47,6 +47,8 @@ func (st *SessionTable) Alloc(cid np.Tclient, sid np.Tsession) *Session {
 
 func (st *SessionTable) allocL(cid np.Tclient, sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
+		sess.Lock()
+		defer sess.Unlock()
 		if sess.ClientId == 0 {
 			sess.ClientId = cid
 		}

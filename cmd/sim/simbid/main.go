@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -14,15 +15,15 @@ import (
 const (
 	NTENANT = 100
 
-	NTICK  = 100
+	NTICK  = 1000
 	DEBUG  = false
 	NTRIAL = 1
 
-	NNODE             = 35
+	NNODE             = 50
 	NODES_PER_MACHINE = 1
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
-	MAX_SERVICE_TIME         = 5   // in ticks
+	MAX_SERVICE_TIME         = 10  // in ticks
 
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
@@ -161,7 +162,7 @@ func mkProc(rand *rand.Rand) *Proc {
 	t := Tick(uniform(rand))
 	p.nTick = FTick(t)
 	p.nLength = t
-	p.computeT = 0.5
+	p.computeT = 0.4 // 0.5
 	return p
 }
 
@@ -264,7 +265,7 @@ func (ms Machines) intersect(ms1 Machines) Machines {
 	return r
 }
 
-// Find the machine mostly heavily used
+// Among ms find the machine most-heavily used
 func (ms Machines) mostUsed() *Machine {
 	var most *Machine
 	high := 0
@@ -277,6 +278,7 @@ func (ms Machines) mostUsed() *Machine {
 	return most
 }
 
+// Among ms find the machine least-heavily used
 func (ms Machines) leastUsed() *Machine {
 	var least *Machine
 	low := NTENANT
@@ -289,7 +291,7 @@ func (ms Machines) leastUsed() *Machine {
 	return least
 }
 
-// Find node on machine mid with least amount of work done in last
+// Find node on machine mid with the least amount of work done in last
 // tick
 func (ms Machines) nodeOnMachine(mid Tmid) *Node {
 	work := FTick(1.1)
@@ -344,6 +346,8 @@ func (ns *Nodes) remove(n1 *Node) *Node {
 	return nil
 }
 
+// Compute a "machine" view of ns. That is, return the machines used
+// by ns, with the ns nodes on each machine.
 func (ns *Nodes) machines() Machines {
 	ms := make(map[Tmid]*Machine)
 	for _, n := range *ns {
@@ -417,6 +421,14 @@ func (ns *Nodes) check() {
 	}
 }
 
+func (ns Nodes) nproc() int {
+	np := 0
+	for _, n := range ns {
+		np += len(n.procs)
+	}
+	return np
+}
+
 // Schedule procs in ps on the nodes in ns
 func (ns Nodes) schedule(ps Procs) Procs {
 	for _, n := range ns {
@@ -485,7 +497,17 @@ func (t *Tenant) genProcs() (int, Tick) {
 	return nproc, len
 }
 
+// XXX give priorities to procs and use that in bid
 func policyBigMore(t *Tenant, last Price) *Bid {
+	nprocs := t.nodes.nproc()
+	nnodes := len(t.nodes)
+	nproc_node := float64(0)
+	nbid := 1
+	if nnodes > 0 {
+		nproc_node = float64(nprocs) / float64(nnodes)
+		nbid = int(math.Round(nproc_node * float64(len(t.procs))))
+	}
+	// fmt.Printf("procq %d nprocs %d nnodes %d %.2f %d\n", len(t.procs), nprocs, nnodes, nproc_node, nbid)
 	bids := make([]Price, 0)
 	if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
 		// very first bid for tenant 0, which has a higher load grab
@@ -495,9 +517,7 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 			bids = append(bids, last)
 		}
 	} else {
-		// Exponentential increase
-		// for i := 0; i < len(t.procs); i++ {
-		for i := 0; i < 1; i++ {
+		for i := 0; i < nbid; i++ {
 			bid := last + BID_INCREMENT*Price(len(t.procs))
 			//bid := last + BID_INCREMENT
 			//bid := last

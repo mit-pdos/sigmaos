@@ -87,7 +87,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
+	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !np.IsErrExists(err) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
@@ -183,7 +183,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	db.DPrintf("WWW", "About to WaitStart %v", a)
 	err := www.WaitStart(pid)
 	if err != nil {
-		db.DFatalf("Error SpawnBurst %v", err)
+		db.DFatalf("Error WaitStart %v", err)
 		return nil, err
 	}
 	db.DPrintf("WWW", "Done WaitStart %v", a)

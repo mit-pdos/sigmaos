@@ -98,13 +98,13 @@ func (ji *WwwJobInstance) StartWwwJob() {
 		for j := 0; j < ji.ntrials; j++ {
 			ch := make(chan time.Duration)
 			for c := 0; c < i; c++ {
-				db.DPrintf("WWWD_TEST", "Start client %v", i)
-				go ji.RunClient(i, ch)
+				db.DPrintf("WWWD_TEST", "Start client %v", c)
+				go ji.RunClient(c, ch)
 			}
 			var totalLatency time.Duration
 			for c := 0; c < i; c++ {
 				totalLatency += <-ch
-				db.DPrintf("WWWD_TEST", "Done client %v", i)
+				db.DPrintf("WWWD_TEST", "Done client %v", c)
 			}
 			d := totalLatency.Milliseconds()
 			db.DPrintf(db.ALWAYS, "trial %v nclnt %d avg latency %vms", j, i, float64(d)/(float64(ji.nreq)*float64(i)))

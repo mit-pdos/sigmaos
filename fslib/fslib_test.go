@@ -728,6 +728,45 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Concurrently remove & watch, but watch may be set after remove.
+func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
+	const N = 10_000
+
+	ts := test.MakeTstatePath(t, path)
+	dn := gopath.Join(path, "d1")
+	err := ts.MkDir(dn, 0777)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan error)
+	done := make(chan bool)
+	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	for i := 0; i < N; i++ {
+		fn := gopath.Join(dn, strconv.Itoa(i))
+		_, err := fsl.PutFile(fn, 0777, np.OWRITE, nil)
+		assert.Nil(t, err, "Err putfile: %v", err)
+	}
+	for i := 0; i < N; i++ {
+		fn := gopath.Join(dn, strconv.Itoa(i))
+		go func(fn string) {
+			err := ts.SetRemoveWatch(fn, func(fn string, r error) {
+				// log.Printf("watch cb %v err %v\n", i, r)
+				ch <- r
+			})
+			// Either no error, or remove already happened.
+			assert.True(ts.T, err == nil || np.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
+			done <- true
+		}(fn)
+		go func(fn string) {
+			err := ts.Remove(fn)
+			assert.Nil(t, err, "Unexpected remove error: %v", err)
+		}(fn)
+	}
+	for i := 0; i < N; i++ {
+		<-done
+	}
+	ts.Shutdown()
+}
+
 func TestConcurFile(t *testing.T) {
 	const N = 20
 	ts := test.MakeTstatePath(t, path)

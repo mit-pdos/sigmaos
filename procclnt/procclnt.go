@@ -226,6 +226,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
+		db.DPrintf("PROCCLNT", "%v set remove watch: %v", pid, procfileLink)
 		done := make(chan bool)
 		err := clnt.SetRemoveWatch(procfileLink, func(string, error) {
 			done <- true

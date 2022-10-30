@@ -84,6 +84,7 @@ func countNClusterCores(ts *test.Tstate) {
 	// If realms are turned on, find aggregate number of cores across all
 	// machines.
 	if ts.RunningInRealm() {
+		N_CLUSTER_CORES = 0
 		db.DPrintf("TEST", "Running with realms")
 		fsl := fslib.MakeFsLib("test")
 		_, err := fsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {

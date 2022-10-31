@@ -29,7 +29,7 @@ type VersionTable struct {
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[np.Tpath, *version]()
+	vt.RefTable = refmap.MkRefTable[np.Tpath, *version]("VERSION")
 	return vt
 }
 

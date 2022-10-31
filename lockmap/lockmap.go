@@ -1,11 +1,13 @@
 package lockmap
 
 import (
+	"strings"
 	"sync"
 
 	// "github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/refmap"
 )
@@ -45,18 +47,17 @@ type PathLockTable struct {
 
 func MkPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.RefTable = refmap.MkRefTable[string, *PathLock]()
+	plt.RefTable = refmap.MkRefTable[string, *PathLock]("LOCKMAP")
 	return plt
 }
 
 // Caller must hold plt lock
 func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
-	lk, _ := plt.Insert(pn, func() *PathLock { return mkLock(pn) })
+	sanitizedPn := strings.Trim(pn, "/")
+	lk, _ := plt.Insert(sanitizedPn, func() *PathLock { return mkLock(sanitizedPn) })
 	return lk
 }
 
-// XXX Normalize paths (e.g., delete extra /) so that matches
-// work for equivalent paths
 func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
@@ -66,13 +67,15 @@ func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
 func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
+	// Normalize paths (e.g., delete leading/trailing "/"s) so that matches
+	// work for equivalent paths
 	return plt.allocLockStringL(pn)
 }
 
-func (plt *PathLockTable) Acquire(path np.Path) *PathLock {
+func (plt *PathLockTable) Acquire(ctx fs.CtxI, path np.Path) *PathLock {
 	lk := plt.allocLock(path)
 	lk.Lock()
-	db.DPrintf("LOCKMAP", "Lock '%s'\n", lk.path)
+	db.DPrintf("LOCKMAP", "%v: Lock '%s'", ctx.Uname(), lk.path)
 	return lk
 }
 
@@ -84,30 +87,30 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 
 // Release lock for path. Caller should have watch locked through
 // Acquire().
-func (plt *PathLockTable) Release(lk *PathLock) {
-	db.DPrintf("LOCKMAP", "Release '%s'\n", lk.path)
+func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock) {
+	db.DPrintf("LOCKMAP", "%v: Release '%s'", ctx.Uname(), lk.path)
 	lk.Unlock()
 	plt.release(lk)
 }
 
 // Caller must have dlk locked
-func (plt *PathLockTable) HandOverLock(dlk *PathLock, name string) *PathLock {
+func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string) *PathLock {
 	flk := plt.allocLockString(dlk.path + "/" + name)
 
-	db.DPrintf("LOCKMAP", "HandoverLock '%s' %s\n", dlk.path, name)
+	db.DPrintf("LOCKMAP", "%v: HandoverLock '%s' %s", ctx.Uname(), dlk.path, name)
 
 	flk.Lock()
-	plt.Release(dlk)
+	plt.Release(ctx, dlk)
 	return flk
 }
 
-func (plt *PathLockTable) AcquireLocks(dir np.Path, file string) (*PathLock, *PathLock) {
-	dlk := plt.Acquire(dir)
-	flk := plt.Acquire(append(dir, file))
+func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir np.Path, file string) (*PathLock, *PathLock) {
+	dlk := plt.Acquire(ctx, dir)
+	flk := plt.Acquire(ctx, append(dir, file))
 	return dlk, flk
 }
 
-func (plt *PathLockTable) ReleaseLocks(dlk, flk *PathLock) {
-	plt.Release(dlk)
-	plt.Release(flk)
+func (plt *PathLockTable) ReleaseLocks(ctx fs.CtxI, dlk, flk *PathLock) {
+	plt.Release(ctx, dlk)
+	plt.Release(ctx, flk)
 }

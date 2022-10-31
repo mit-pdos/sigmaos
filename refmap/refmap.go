@@ -30,11 +30,13 @@ func (e *entry[T]) String() string {
 }
 
 type RefTable[K comparable, T any] struct {
-	refs map[K]*entry[T]
+	debug string
+	refs  map[K]*entry[T]
 }
 
-func MkRefTable[K comparable, T any]() *RefTable[K, T] {
+func MkRefTable[K comparable, T any](debug string) *RefTable[K, T] {
 	rf := &RefTable[K, T]{}
+	rf.debug = debug
 	rf.refs = make(map[K]*entry[T])
 	return rf
 }
@@ -42,21 +44,21 @@ func MkRefTable[K comparable, T any]() *RefTable[K, T] {
 func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
 	var r T
 	if e, ok := rf.refs[k]; ok {
-		db.DPrintf("REFMAP", "lookup %v %v\n", k, e)
+		db.DPrintf(rf.debug+"_REFMAP", "lookup %v %v", k, e)
 		return e.e, true
 	}
-	db.DPrintf("REFMAP", "lookup %v no entry\n", k)
+	db.DPrintf(rf.debug+"_REFMAP", "lookup %v no entry", k)
 	return r, false
 }
 
 func (rf *RefTable[K, T]) Insert(k K, mkT func() T) (T, bool) {
 	if e, ok := rf.refs[k]; ok {
 		e.n += 1
-		db.DPrintf("REFMAP", "insert %v %v\n", k, e)
+		db.DPrintf(rf.debug+"_REFMAP", "insert %v %v", k, e)
 		return e.e, true
 	}
 	e := mkEntry(mkT())
-	db.DPrintf("REFMAP", "new insert %v %v\n", k, e)
+	db.DPrintf(rf.debug+"_REFMAP", "new insert %v %v", k, e)
 	rf.refs[k] = e
 	return e.e, false
 }
@@ -65,11 +67,11 @@ func (rf *RefTable[K, T]) Delete(k K) bool {
 	del := false
 	e, ok := rf.refs[k]
 	if !ok {
-		db.DFatalf("delete %v\n", k)
+		db.DFatalf("delete %v", k)
 	}
 	e.n -= 1
 	if e.n <= 0 {
-		db.DPrintf("REFMAP", "delete %v\n", k)
+		db.DPrintf(rf.debug+"_REFMAP", "delete %v -> %v", k, e.e)
 		del = true
 		delete(rf.refs, k)
 	}

@@ -18,7 +18,7 @@ type ObjTable struct {
 
 func MkObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable[np.Tpath, fs.FsObj]()
+	ot.RefTable = refmap.MkRefTable[np.Tpath, fs.FsObj]("UX")
 	return ot
 }
 

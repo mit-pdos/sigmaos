@@ -250,6 +250,52 @@ func TestWaitNonexistentProc(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestSpawnManyProcsParallel(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	const N_CONCUR = 13
+	const N_SPAWNS = 500
+
+	err := ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 2")
+
+	done := make(chan int)
+
+	for i := 0; i < N_CONCUR; i++ {
+		go func(i int) {
+			for j := 0; j < N_SPAWNS; j++ {
+				pid := proc.GenPid()
+				db.DPrintf("TEST", "Prep spawn %v", pid)
+				a := proc.MakeProcPid(pid, "user/sleeper", []string{"0ms", "name/"})
+				_, errs := ts.SpawnBurst([]*proc.Proc{a})
+				assert.True(t, len(errs) == 0, "Spawn err %v", errs)
+				db.DPrintf("TEST", "Done spawn %v", pid)
+
+				db.DPrintf("TEST", "Prep WaitStart %v", pid)
+				err := ts.WaitStart(a.Pid)
+				db.DPrintf("TEST", "Done WaitStart %v", pid)
+				assert.Nil(t, err, "WaitStart error")
+
+				db.DPrintf("TEST", "Prep WaitExit %v", pid)
+				status, err := ts.WaitExit(a.Pid)
+				db.DPrintf("TEST", "Done WaitExit %v", pid)
+				assert.Nil(t, err, "WaitExit")
+				assert.True(t, status.IsStatusOK(), "Status not OK")
+			}
+			done <- i
+		}(i)
+	}
+	for i := 0; i < N_CONCUR; i++ {
+		x := <-done
+		db.DPrintf("TEST", "Done %v", x)
+	}
+
+	ts.Shutdown()
+}
+
 func TestCrashProcOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 

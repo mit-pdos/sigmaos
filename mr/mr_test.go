@@ -114,7 +114,7 @@ func TestMapper(t *testing.T) {
 
 	job = mr.ReadJobConfig("mr-ux-wiki1G.yml")
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err MkBins %v", err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
 
 	err = m.InitWrt(0, REDUCEIN)
@@ -145,13 +145,15 @@ func TestMapper(t *testing.T) {
 	}
 
 	wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, np.OWRITE)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err createAsynchWriter: %v", err)
 	for k, v := range data {
 		b := fmt.Sprintf("%s\t%d\n", k, v)
 		_, err := wrt.Write([]byte(b))
-		assert.Nil(t, err)
+		assert.Nil(t, err, "Err Write: %v", err)
 	}
-	wrt.Close()
+	if err == nil {
+		wrt.Close()
+	}
 
 	// data1 := make(seqwc.Tdata)
 	// _, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)

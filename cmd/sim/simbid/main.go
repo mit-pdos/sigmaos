@@ -64,16 +64,6 @@ func (f FTick) String() string {
 }
 
 //
-// Load
-//
-
-type Load float64
-
-func (l Load) String() string {
-	return fmt.Sprintf("%.2f%%", l)
-}
-
-//
 // Price
 //
 
@@ -97,6 +87,9 @@ func (b *Bid) String() string {
 }
 
 func mkBid(t *Tenant, bs []Price) *Bid {
+	if len(bs) == 0 {
+		return nil
+	}
 	return &Bid{t, bs}
 }
 
@@ -108,6 +101,8 @@ func (bs *Bids) PopHighest(rand *rand.Rand) (*Tenant, Price) {
 	if len(*bs) == 0 {
 		return nil, bid
 	}
+
+	// fmt.Printf("bids %v\n", *bs)
 
 	// find highest bid
 	for _, b := range *bs {
@@ -162,16 +157,17 @@ func mkProc(rand *rand.Rand) *Proc {
 	t := Tick(uniform(rand))
 	p.nTick = FTick(t)
 	p.nLength = t
-	p.computeT = 0.4 // 0.5
+	p.computeT = 0.5
 	return p
 }
 
 type Procs []*Proc
 
-// Run procs until we used 1 tick of cpu power or we run out of procs.
-// The last selected proc may run only for a fraction of tick.  Return
-// how much we used of the 1 tick, and for procs that finished how
-// much delay was incurred (because the nodes was overloaded).
+// Run procs ps of a node until node used 1 tick of cpu compute or ps
+// runs out of procs.  The last selected proc may run only for a
+// fraction of tick.  Return how much we used of the 1 tick, and for
+// procs that finished how much delay was incurred (because the nodes
+// was overloaded).
 func (ps *Procs) run(c Price) (FTick, Tick) {
 	work := FTick(0.0)
 	last := FTick(0.0)
@@ -185,17 +181,18 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 		if p.nTick < 1 { // only fraction of tick left?
 			w = p.computeT * (1 - p.nTick)
 		}
-		f := FTick(1.0 - work)
-		if work < f {
+		tickLeft := FTick(1.0 - work)
+		if w < tickLeft {
 			last = p.computeT
 			work += FTick(w)
 		} else {
-			last = f
+			last = tickLeft
 			work += FTick(last)
 			break
 		}
 	}
-	if work > FTick(1.0) {
+	if work > FTick(1.1) {
+		fmt.Printf("work %f %v\n", work, *ps)
 		panic("run: work")
 	}
 
@@ -293,7 +290,7 @@ func (ms Machines) leastUsed() *Machine {
 
 // Find node on machine mid with the least amount of work done in last
 // tick
-func (ms Machines) nodeOnMachine(mid Tmid) *Node {
+func (ms Machines) findNodeOnMachine(mid Tmid) *Node {
 	work := FTick(1.1)
 	var r *Node
 	for _, m := range ms {
@@ -308,8 +305,8 @@ func (ms Machines) nodeOnMachine(mid Tmid) *Node {
 }
 
 //
-// Computing nodes that the manager allocates to tenants.  Each node
-// runs one proc or is idle.
+// Computing nodes that the manager allocates to tenants.  A node
+// time-shares the procs assigned to it.
 //
 
 type Node struct {
@@ -347,7 +344,7 @@ func (ns *Nodes) remove(n1 *Node) *Node {
 }
 
 // Compute a "machine" view of ns. That is, return the machines used
-// by ns, with the ns nodes on each machine.
+// by ns, with for each machine the nodes are part of that machine.
 func (ns *Nodes) machines() Machines {
 	ms := make(map[Tmid]*Machine)
 	for _, n := range *ns {
@@ -441,8 +438,8 @@ func (ns Nodes) schedule(ps Procs) Procs {
 }
 
 //
-// Tenants run procs on the nodes allocated to them by the mgr. If
-// they have more procs to run than available nodes, tenant bids for
+// Tenants run procs on the nodes allocated to them by the mgr. If a
+// tenant has more procs to run than available nodes, tenant bids for
 // more nodes.
 //
 
@@ -507,7 +504,7 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 		nproc_node = float64(nprocs) / float64(nnodes)
 		nbid = int(math.Round(nproc_node * float64(len(t.procs))))
 	}
-	// fmt.Printf("procq %d nprocs %d nnodes %d %.2f %d\n", len(t.procs), nprocs, nnodes, nproc_node, nbid)
+	// fmt.Printf("%p: procq %d nprocs %d nnodes %d %.2f %d\n", t, len(t.procs), nprocs, nnodes, nproc_node, nbid)
 	bids := make([]Price, 0)
 	if t == &t.sim.tenants[0] && len(t.nodes) == 0 {
 		// very first bid for tenant 0, which has a higher load grab
@@ -549,10 +546,7 @@ func policyFixed(t *Tenant, last Price) *Bid {
 func (t *Tenant) bid(last Price) *Bid {
 	t.ngrant = 0
 	t.nbid = len(t.procs)
-	if len(t.procs) > 0 {
-		return t.policy(t, last)
-	}
-	return nil
+	return t.policy(t, last)
 }
 
 // mgr grants a node
@@ -563,8 +557,9 @@ func (t *Tenant) grantNode(n *Node) {
 	t.nodes.machines()
 }
 
-// After bidding, we may have received new nodes; use them.
-func (t *Tenant) scheduleNodes() int {
+// After bidding, we may have received ngrant new nodes; schedule
+// procs on them.
+func (t *Tenant) schedule() int {
 	if DEBUG {
 		if t.nbid > 0 && t.ngrant < t.nbid {
 			fmt.Printf("%v %p: asked %d and received %d\n", tick, t, t.nbid, t.ngrant)
@@ -594,7 +589,7 @@ func (t *Tenant) yieldIdle() {
 	}
 }
 
-// Manager is taking awy node n
+// Manager is taking away node n
 func (t *Tenant) evict(n *Node) (uint64, uint64) {
 	if t.nodes.remove(n) == nil {
 		fmt.Printf("%p: n not found %v\n", t, n)
@@ -603,7 +598,7 @@ func (t *Tenant) evict(n *Node) (uint64, uint64) {
 	ms := t.nodes.machines()
 	e := uint64(0)
 	m := uint64(0)
-	if n1 := ms.nodeOnMachine(n.mid); n1 != nil {
+	if n1 := ms.findNodeOnMachine(n.mid); n1 != nil {
 		if DEBUG {
 			fmt.Printf("%v: Migrate %v to %v\n", tick, n, n1)
 		}
@@ -798,7 +793,6 @@ type Sim struct {
 func mkSim(p Tpolicy) *Sim {
 	sim := &Sim{}
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	sim.mgr = mkMgr(sim)
 	for i := 0; i < NTENANT; i++ {
 		t := &sim.tenants[i]
@@ -824,10 +818,10 @@ func (sim *Sim) genLoad() {
 	}
 }
 
-func (sim *Sim) scheduleNodes() int {
+func (sim *Sim) schedule() int {
 	pq := 0
 	for i, _ := range sim.tenants {
-		pq += sim.tenants[i].scheduleNodes()
+		pq += sim.tenants[i].schedule()
 	}
 	return pq
 }
@@ -859,7 +853,7 @@ func (sim *Sim) runProcs(ns Nodes, p Price) {
 func (sim *Sim) tick() {
 	sim.genLoad()
 	ns, p := sim.mgr.assignNodes()
-	pq := sim.scheduleNodes()
+	pq := sim.schedule()
 	sim.nprocq += uint64(pq)
 
 	if DEBUG {

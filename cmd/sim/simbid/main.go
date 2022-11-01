@@ -15,7 +15,7 @@ import (
 const (
 	NTENANT = 100
 
-	NTICK  = 1000
+	NTICK  = 100
 	DEBUG  = false
 	NTRIAL = 1
 
@@ -499,10 +499,12 @@ func policyBigMore(t *Tenant, last Price) *Bid {
 	nprocs := t.nodes.nproc()
 	nnodes := len(t.nodes)
 	nproc_node := float64(0)
-	nbid := 1
+	nbid := 0
 	if nnodes > 0 {
 		nproc_node = float64(nprocs) / float64(nnodes)
 		nbid = int(math.Round(nproc_node * float64(len(t.procs))))
+	} else if len(t.procs) > 0 {
+		nbid = 1
 	}
 	// fmt.Printf("%p: procq %d nprocs %d nnodes %d %.2f %d\n", t, len(t.procs), nprocs, nnodes, nproc_node, nbid)
 	bids := make([]Price, 0)

@@ -64,7 +64,7 @@ def setup_keypair(vpc, ec2):
 
 def setup_instance(ec2, vpc, sg, sn, kpn, storage, instance_type):
     script=''
-    if "sigmaos" in args["name"]:
+    if "sigma" in args["name"]:
       with open('sigmaos-vm-packages', 'r') as fin:
           script = fin.read()
     elif "k8s" in args["name"]:

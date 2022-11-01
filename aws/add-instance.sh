@@ -10,7 +10,7 @@ usage() {
 VPC=""
 NAME=""
 TYPE="t3.small"
-STORAGE=""
+STORAGE="--storage 20"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in

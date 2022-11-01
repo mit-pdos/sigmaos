@@ -206,9 +206,15 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 	*ps = (*ps)[n:]
 	for i, p := range qs {
 		if i < len(qs)-1 {
+			// XXX Shouldn't this be multiplied by compute intensity, or something?
+			// It isn't clear to me whetehr it is "compute done" or "time spent"
 			p.nTick--
 		} else {
-			p.nTick -= last / p.computeT
+			// XXX Why divide by computeT? SInce computeT is < 1.0, wouldn't this
+			// result in overcounting? Also, it seems inconsistent with how we
+			// decrement nTick above...
+			// p.nTick -= last / p.computeT
+			p.nTick -= last
 		}
 
 		// charge every proc equally, even though last proc may not

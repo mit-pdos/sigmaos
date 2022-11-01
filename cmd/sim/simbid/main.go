@@ -147,7 +147,7 @@ type Proc struct {
 	nTick   FTick // # fractional ticks remaining
 	time    Tick  // # ticks on a node
 	cost    Price // cost for this proc
-	// compute intensivity: 1.0 computes only, while 0.4 is doing i/o
+	// compute intensity: 1.0 computes only, while 0.4 is doing i/o
 	// for 0.6T.
 	computeT FTick
 }
@@ -186,6 +186,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			w = p.computeT * (1 - p.nTick)
 		}
 		f := FTick(1.0 - work)
+		// XXX what is going on here? Why work and not w?
 		if work < f {
 			last = p.computeT
 			work += FTick(w)
@@ -498,7 +499,7 @@ func (t *Tenant) genProcs() (int, Tick) {
 }
 
 // XXX give priorities to procs and use that in bid
-func policyBigMore(t *Tenant, last Price) *Bid {
+func policyBidMore(t *Tenant, last Price) *Bid {
 	nprocs := t.nodes.nproc()
 	nnodes := len(t.nodes)
 	nproc_node := float64(0)
@@ -894,8 +895,8 @@ func runSim(p Tpolicy) {
 }
 
 func main() {
-	// policies := []Tpolicy{policyFixed, policyLast, policyBigMore}
-	policies := []Tpolicy{policyBigMore}
+	// policies := []Tpolicy{policyFixed, policyLast, policyBidMore}
+	policies := []Tpolicy{policyBidMore}
 	npm := []int{1, 5, NNODE}
 	for i := 0; i < NTRIAL; i++ {
 		for _, p := range policies {

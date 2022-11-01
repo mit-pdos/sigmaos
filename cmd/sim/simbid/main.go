@@ -192,7 +192,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			break
 		}
 	}
-	if work > FTick(1.1) {
+	if work > FTick(1.0) {
 		fmt.Printf("work %f %v\n", work, *ps)
 		panic("run: work")
 	}
@@ -434,7 +434,6 @@ func (ns *Nodes) check() {
 			fmt.Printf("double %v\n", ns)
 			panic("check")
 		}
-
 	}
 }
 

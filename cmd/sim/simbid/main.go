@@ -179,12 +179,12 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 		n += 1
 		w := p.computeT
 		if p.nTick < 1 { // only fraction of tick left?
-			w = p.computeT * (1 - p.nTick)
+			w = p.computeT * p.nTick
 		}
 
 		tickLeft := FTick(1.0 - work)
 		if w < tickLeft {
-			last = p.computeT
+			last = 1
 			work += FTick(w)
 		} else {
 			last = tickLeft
@@ -205,23 +205,36 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 	qs := (*ps)[0:n]
 	*ps = (*ps)[n:]
 	for i, p := range qs {
+		var nTicksRun FTick
 		if i < len(qs)-1 {
-			// XXX Shouldn't this be multiplied by compute intensity, or something?
-			// It isn't clear to me whetehr it is "compute done" or "time spent"
-			p.nTick--
+			// If this wasn't the last proc it definitely ran for a full tick, or as
+			// much of a tick as it had left, which may be < 1. The latter case is
+			// handled below.
+			nTicksRun = 1
 		} else {
-			// XXX Why divide by computeT? SInce computeT is < 1.0, wouldn't this
-			// result in overcounting? Also, it seems inconsistent with how we
-			// decrement nTick above...
-			// p.nTick -= last / p.computeT
-			p.nTick -= last
+			// If this was the last proc, it ran for "last" ticks.
+			nTicksRun = last
+		}
+		// If the proc didn't actually run for the full amount of time it was
+		// offered (it terminated early), then only subtract the actual number of
+		// ticks run from it.
+		if p.nTick < nTicksRun {
+			p.nTick = 0
+		} else {
+			p.nTick -= nTicksRun
 		}
 
 		// charge every proc equally, even though last proc may not
 		// get to run for p.computeT.
 		p.cost += c / Price(len(qs))
 
-		if p.nTick <= 0 { // p is done
+		// Ensure no proc ever runs for more ticks than its total length.
+		if p.nTick < 0 {
+			fmt.Printf("%v/%vth proc %v\n", i, len(qs), p)
+			panic("Negative nTick")
+		}
+
+		if p.nTick == 0 { // p is done
 			delay += p.time - p.nLength
 		} else {
 			// not done; put it at the end of procq so that procs run

@@ -11,24 +11,24 @@ func TestRun(t *testing.T) {
 	ps := make(Procs, 0)
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.5})
 	l, _ := ps.run(0.1)
-	assert.Equal(t, l, Load(0.5))
+	assert.Equal(t, l, FTick(0.5))
 
 	//fmt.Printf("run: %v %v\n", l, ps)
 
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.3})
 	l, _ = ps.run(0.1)
-	assert.Equal(t, l, Load(0.8))
+	assert.Equal(t, l, FTick(0.8))
 
-	//fmt.Printf("run: %v %v\n", l, ps)
+	fmt.Printf("run: %v %v\n", l, ps)
 
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.4})
 	l, _ = ps.run(0.1)
-	assert.Equal(t, l, Load(1.0))
-	assert.Equal(t, ps[2].nTick, FTick(3.5))
-	//fmt.Printf("run: %v %v\n", l, ps)
+	assert.Equal(t, l, FTick(1.0))
+	fmt.Printf("run: %v %v\n", l, ps)
+	assert.Equal(t, FTick(3.8), ps[2].nTick)
 
 	l, d := ps.run(0.1)
-	assert.Equal(t, l, Load(1.0))
+	assert.Equal(t, l, FTick(1.0))
 	assert.Equal(t, ps[1].nTick, FTick(3.0))
 	assert.Equal(t, d, Tick(0))
 
@@ -36,7 +36,7 @@ func TestRun(t *testing.T) {
 
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.7})
 	l, d = ps.run(0.1)
-	assert.Equal(t, l, Load(1.0))
+	assert.Equal(t, l, FTick(1.0))
 	assert.Equal(t, ps[0].computeT, FTick(0.4))
 	assert.Equal(t, len(ps), 2)
 	assert.Equal(t, d, Tick(0))

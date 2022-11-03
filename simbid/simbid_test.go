@@ -18,20 +18,20 @@ func TestRun(t *testing.T) {
 	l, _ := ps.run(0.1)
 	assert.Equal(t, l, FTick(0.5))
 
-	//fmt.Printf("run: %v %v\n", l, ps)
+	fmt.Printf("run: %v %v\n", l, ps)
 
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.3})
 	l, _ = ps.run(0.1)
 	assert.Equal(t, l, FTick(0.8))
 
-	//fmt.Printf("run: %v %v\n", l, ps)
+	fmt.Printf("run: %v %v\n", l, ps)
 
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.4})
 	l, _ = ps.run(0.1)
 	assert.Equal(t, l, FTick(1.0))
 	assert.Equal(t, FTick(3.5), ps[2].nTick)
 
-	//fmt.Printf("run: %v %v\n", l, ps)
+	fmt.Printf("run: %v %v\n", l, ps)
 
 	l, d := ps.run(0.1)
 	assert.Equal(t, l, FTick(1.0))
@@ -84,6 +84,7 @@ func TestOneTenant(t *testing.T) {
 	fmt.Printf("ntick %v\n", ten.ntick)
 	assert.True(t, int(ten.ntick)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.nwork)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
+	assert.True(t, ten.nidle == 0)
 	assert.True(t, ten.nwait == 0)
 	assert.True(t, ten.ndelay == 0)
 	assert.True(t, ten.nevict == 0)
@@ -102,10 +103,9 @@ func TestComputeI(t *testing.T) {
 	assert.True(t, sim.nproc > nTick-10 && sim.nproc < nTick+10)
 	assert.True(t, ten.maxnode >= HIGH/2)
 	assert.True(t, int(sim.proclen)/sim.nproc == (MAX_SERVICE_TIME+1)/2)
-	fmt.Printf("%d %d\n", (MAX_SERVICE_TIME+1)/2, (MAX_SERVICE_TIME+1)/4)
-	fmt.Printf("%d %d\n", int(ten.ntick)/ten.nproc, int(ten.nwork)/ten.nproc)
-	assert.True(t, int(ten.ntick)/ten.nproc == (MAX_SERVICE_TIME+1)/4)
+	assert.True(t, int(ten.ntick)/ten.nproc >= (MAX_SERVICE_TIME+1)/4 && int(ten.ntick)/ten.nproc < (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.nwork)/ten.nproc == (MAX_SERVICE_TIME+1)/4)
+	assert.True(t, ten.nidle > 0)
 }
 
 func testMigration(t *testing.T) {

@@ -337,9 +337,9 @@ func (ms Machines) findNodeOnMachine(mid Tmid) *Node {
 	var r *Node
 	for _, m := range ms {
 		for _, n := range m.nodes {
-			if n.mid == mid && n.work < work {
+			if n.mid == mid && n.utilLastTick < work {
 				r = n
-				work = n.work
+				work = n.utilLastTick
 			}
 		}
 	}
@@ -352,20 +352,20 @@ func (ms Machines) findNodeOnMachine(mid Tmid) *Node {
 //
 
 type Node struct {
-	procs  Procs
-	price  Price // the price for a tick
-	work   FTick // how much of the last tick was used to run procs
-	tenant *Tenant
-	mid    Tmid
+	procs        Procs
+	price        Price // the price for a tick
+	utilLastTick FTick // how much of the last tick was used to run procs
+	tenant       *Tenant
+	mid          Tmid
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{%p: proc (%d):%v price %v l %v t %p m %d}", n, len(n.procs), n.procs, n.price, n.work, n.tenant, n.mid)
+	return fmt.Sprintf("{%p: proc (%d):%v price %v l %v t %p m %d}", n, len(n.procs), n.procs, n.price, n.utilLastTick, n.tenant, n.mid)
 }
 
 // XXX takes only 1 proc, which may leave the node idle for most of the tick
 func (n *Node) takeProcs(ps Procs) Procs {
-	if len(n.procs) > 0 && n.work >= FTick(1.0) {
+	if len(n.procs) > 0 && n.utilLastTick >= FTick(1.0) {
 		return ps
 	}
 	n.procs = append(n.procs, ps[0])
@@ -491,6 +491,7 @@ type Tenant struct {
 	ntick    Tick // sum of # ticks
 	maxnode  int
 	nwork    FTick  // sum of # tick fractions running a proc
+	nidle    FTick  // sum of partial ticks left idle
 	cost     Price  // cost for nwork ticks
 	nwait    Tick   // sum of # ticks waiting to be run
 	ndelay   Tick   // sum of # extra ticks that proc was on node
@@ -654,7 +655,7 @@ func (t *Tenant) isPresent(n *Node) bool {
 
 func (t *Tenant) stats() {
 	n := float64(t.sim.world.nTick)
-	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %v util %.2f nwait %v ndelay %v #migr %dP #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.ndelay, t.nmigrate, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
+	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d %.2f N/T ntick %v work %v util %.2f nidle %v nwait %v ndelay %v #migr %dP #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, float64(t.ntick)/n, t.ntick, t.nwork, float64(t.nwork)/float64(t.ntick), t.nidle, t.nwait, t.ndelay, t.nmigrate, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
 //
@@ -707,7 +708,7 @@ func (m *Mgr) yield(n *Node) {
 	if DEBUG {
 		fmt.Printf("%v: yield %v\n", m.sim.tick, n)
 	}
-	n.work = FTick(0.0)
+	n.utilLastTick = FTick(0.0)
 	n.tenant = nil
 	m.free = append(m.free, n)
 	m.cur.remove(n)
@@ -893,10 +894,11 @@ func (sim *Sim) runProcs(ns Nodes, p Price) {
 	sim.avgprice += p
 	for _, n := range ns {
 		w, d := n.procs.run(p)
-		n.work = w
+		n.utilLastTick = w
 		n.tenant.ndelay += d
 		n.tenant.cost += p
 		n.tenant.nwork += w
+		n.tenant.nidle += (1 - w)
 		sim.mgr.nwork += w
 	}
 	sim.mgr.revenue += p * Price(len(ns))

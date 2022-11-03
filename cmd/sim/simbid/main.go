@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	DEBUG  = false
+	DEBUG  = true
 	NTRIAL = 1
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
@@ -39,12 +39,12 @@ type World struct {
 	tick            Tick
 }
 
-func mkWorld(n, t, npm int, l []float64, nt Tick, p Tpolicy) *World {
+func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy) *World {
 	w := &World{}
 	w.nNode = n
 	w.nTenant = t
 	w.nodesPerMachine = npm
-	w.lambdas = l
+	w.lambdas = ls
 	w.nTick = nt
 	w.policy = p
 	return w
@@ -161,7 +161,8 @@ type Proc struct {
 	time    Tick  // # ticks on a node
 	cost    Price // cost for this proc
 	// compute intensity: 1.0 computes only, while 0.4 is doing i/o
-	// for 0.6T.
+	// for 0.6T, which overlaps with the computing happening in a
+	// tick.
 	computeT FTick
 }
 
@@ -199,7 +200,6 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 		if p.nTick < 1 { // only fraction of tick left?
 			w = p.computeT * p.nTick
 		}
-
 		tickLeft := FTick(1.0 - work)
 		if w < tickLeft {
 			last = 1
@@ -210,7 +210,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			break
 		}
 	}
-	fmt.Printf("ps %v work %v last %v\n", *ps, work, last)
+	// fmt.Printf("ps %v work %v last %v\n", *ps, work, last)
 	if work > FTick(1.0) {
 		panic("run: work")
 	}
@@ -223,23 +223,21 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 	qs := (*ps)[0:n]
 	*ps = (*ps)[n:]
 	for i, p := range qs {
-		var nTicksRun FTick
-		if i < len(qs)-1 {
-			// If this wasn't the last proc it definitely ran for a full tick, or as
-			// much of a tick as it had left, which may be < 1. The latter case is
-			// handled below.
-			nTicksRun = 1
+		if i < len(qs)-1 || last == 1 {
+			// If this wasn't the last proc it definitely ran for a
+			// full tick, or as much of a tick as it had left, which
+			// may be < 1.  If it was the last proc but runs for a
+			// full tick, then also subtract 1 tick.
+			p.nTick--
+			if p.nTick < 0 {
+				p.nTick = 0
+			}
 		} else {
-			// If this was the last proc, it ran for "last" ticks.
-			nTicksRun = last
-		}
-		// If the proc didn't actually run for the full amount of time it was
-		// offered (it terminated early), then only subtract the actual number of
-		// ticks run from it.
-		if p.nTick < nTicksRun {
-			p.nTick = 0
-		} else {
-			p.nTick -= nTicksRun
+			// If this was the last proc and it ran for a partial
+			// "last" tick.  In this partial tick, p can do
+			// last/p.computeT of its tick, some computing and some
+			// sleeping.
+			p.nTick -= last / p.computeT
 		}
 
 		// charge every proc equally, even though last proc may not
@@ -498,7 +496,6 @@ type Tenant struct {
 	nevict   uint64 // # evicted procs
 	nwasted  FTick  // sum # fticks wasted because of eviction
 	sunkCost Price  // the cost of the wasted ticks
-	policy   Tpolicy
 }
 
 func (t *Tenant) String() string {
@@ -576,7 +573,7 @@ func policyFixed(t *Tenant, last Price) *Bid {
 func (t *Tenant) bid(last Price) *Bid {
 	t.ngrant = 0
 	t.nbid = len(t.procs)
-	return t.policy(t, last)
+	return world.policy(t, last)
 }
 
 // mgr grants a node
@@ -839,7 +836,7 @@ type Sim struct {
 	avgprice Price // avg price per tick
 }
 
-func mkSim(p Tpolicy) *Sim {
+func mkSim() *Sim {
 	sim := &Sim{}
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	sim.mgr = mkMgr(sim)
@@ -848,14 +845,11 @@ func mkSim(p Tpolicy) *Sim {
 		t := &sim.tenants[i]
 		t.procs = make([]*Proc, 0)
 		t.sim = sim
-		t.policy = p
+		t.poisson = &distuv.Poisson{Lambda: world.lambdas[i]}
 		if i == 0 {
-			t.poisson = &distuv.Poisson{Lambda: 10 * AVG_ARRIVAL_RATE}
 			// Allocate one high-priced node to sustain the expected
 			// load of 1.
 			sim.mgr.allocNode(t, 1)
-		} else {
-			t.poisson = &distuv.Poisson{Lambda: AVG_ARRIVAL_RATE}
 		}
 	}
 	return sim
@@ -919,10 +913,10 @@ func funcName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
-func runSim(p Tpolicy) {
-	fmt.Printf("=== Policy %s (n/m %d)\n", funcName(p), world.nodesPerMachine)
+func runSim() {
+	fmt.Printf("=== Policy %s (n/m %d)\n", funcName(world.policy), world.nodesPerMachine)
 
-	sim := mkSim(p)
+	sim := mkSim()
 	for world.tick = 0; world.tick < world.nTick; world.tick++ {
 		sim.tick()
 	}
@@ -932,8 +926,12 @@ func runSim(p Tpolicy) {
 		}
 	} else {
 		sim.tenants[0].stats()
-		//sim.tenants[1].stats()
-		//sim.tenants[2].stats()
+		if world.nTenant >= 2 {
+			sim.tenants[1].stats()
+		}
+		if world.nTenant >= 3 {
+			sim.tenants[2].stats()
+		}
 	}
 	sim.mgr.stats()
 	n := float64(world.nTick)
@@ -942,26 +940,27 @@ func runSim(p Tpolicy) {
 
 func main() {
 	// policies := []Tpolicy{policyFixed, policyLast, policyBidMore}
-	// policies := []Tpolicy{policyBidMore}
-	// npm := []int{1, 5, 10}
+	policies := []Tpolicy{policyBidMore}
+	//policies := []Tpolicy{policyFixed}
 
-	policies := []Tpolicy{policyFixed}
-	npm := []int{1}
-	nNode := 3
-	nTenant := 1
+	nNode := 50
+	nTenant := 2
 	nTick := Tick(100)
-	ls := make([]float64, nTenant, nTenant)
 
+	ls := make([]float64, nTenant, nTenant)
 	ls[0] = 10 * AVG_ARRIVAL_RATE
 	for i := 1; i < nTenant; i++ {
 		ls[i] = AVG_ARRIVAL_RATE
 	}
 
+	//npm := []int{1, 5, nNode}
+	npm := []int{1}
+
 	for i := 0; i < NTRIAL; i++ {
 		for _, p := range policies {
 			for _, n := range npm {
 				world = mkWorld(nNode, nTenant, n, ls, nTick, p)
-				runSim(p)
+				runSim()
 			}
 		}
 	}

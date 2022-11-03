@@ -24,8 +24,9 @@ func TestRun(t *testing.T) {
 	ps = append(ps, &Proc{4, 4, 0, 0.1, 0.4})
 	l, _ = ps.run(0.1)
 	assert.Equal(t, l, FTick(1.0))
+	assert.Equal(t, FTick(3.5), ps[2].nTick)
+
 	fmt.Printf("run: %v %v\n", l, ps)
-	assert.Equal(t, FTick(3.8), ps[2].nTick)
 
 	l, d := ps.run(0.1)
 	assert.Equal(t, l, FTick(1.0))

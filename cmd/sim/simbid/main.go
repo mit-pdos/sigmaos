@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	DEBUG  = true
+	DEBUG  = false
 	NTRIAL = 1
 
 	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
@@ -48,6 +48,14 @@ func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy) *World {
 	w.nTick = nt
 	w.policy = p
 	return w
+}
+
+func funcName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func (w *World) String() string {
+	return fmt.Sprintf("N %d T %d NpM %d P %s", w.nNode, w.nTenant, w.nodesPerMachine, funcName(world.policy))
 }
 
 var world *World
@@ -210,7 +218,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			break
 		}
 	}
-	// fmt.Printf("ps %v work %v last %v\n", *ps, work, last)
+	//fmt.Printf("ps %v work %v last %v n %d\n", *ps, work, last, n)
 	if work > FTick(1.0) {
 		panic("run: work")
 	}
@@ -250,7 +258,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			panic("Negative nTick")
 		}
 
-		if p.nTick == 0 { // p is done
+		if p.nTick <= 0 { // p is done
 			delay += p.time - p.nLength
 		} else {
 			// not done; put it at the end of procq so that procs run
@@ -354,7 +362,7 @@ type Node struct {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{%p: proc %v price %v l %v t %p m %d}", n, n.procs, n.price, n.work, n.tenant, n.mid)
+	return fmt.Sprintf("{%p: proc (%d):%v price %v l %v t %p m %d}", n, len(n.procs), n.procs, n.price, n.work, n.tenant, n.mid)
 }
 
 // XXX takes only 1 proc, which may leave the node idle for most of the tick
@@ -581,11 +589,6 @@ func (t *Tenant) grantNode(n *Node) {
 	t.ngrant++
 	t.nodes = append(t.nodes, n)
 	t.nodes.check()
-
-	if len(t.nodes) > 6 {
-		panic("xxx")
-	}
-
 	t.nodes.machines()
 }
 
@@ -742,15 +745,18 @@ func (m *Mgr) checkAssignment(s string) {
 }
 
 // Allocate n nodes at PRICE_ONDEMAND to tenant t
-func (m *Mgr) allocNode(t *Tenant, n int) {
-	for i := 0; i < n; i++ {
+func (m *Mgr) allocNode(t *Tenant, nn int) Nodes {
+	new := make(Nodes, 0)
+	for i := 0; i < nn; i++ {
 		ms := t.nodes.machines()
 		if n := m.free.findFree(ms); n != nil {
 			n.tenant = t
 			n.price = PRICE_ONDEMAND
 			t.grantNode(n)
+			new = append(new, n)
 		}
 	}
+	return new
 }
 
 func (m *Mgr) assignNodes() (Nodes, Price) {
@@ -846,11 +852,11 @@ func mkSim() *Sim {
 		t.procs = make([]*Proc, 0)
 		t.sim = sim
 		t.poisson = &distuv.Poisson{Lambda: world.lambdas[i]}
-		if i == 0 {
-			// Allocate one high-priced node to sustain the expected
-			// load of 1.
-			sim.mgr.allocNode(t, 1)
-		}
+
+		// Allocate high-priced nodes to sustain the expected load
+		nn := int(math.Round(world.lambdas[i]))
+		new := sim.mgr.allocNode(t, nn)
+		sim.mgr.cur = append(sim.mgr.cur, new...)
 	}
 	return sim
 }
@@ -909,12 +915,8 @@ func (sim *Sim) tick() {
 	sim.runProcs(ns, p)
 }
 
-func funcName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-}
-
 func runSim() {
-	fmt.Printf("=== Policy %s (n/m %d)\n", funcName(world.policy), world.nodesPerMachine)
+	fmt.Printf("=== Policy %v\n", world)
 
 	sim := mkSim()
 	for world.tick = 0; world.tick < world.nTick; world.tick++ {
@@ -944,8 +946,8 @@ func main() {
 	//policies := []Tpolicy{policyFixed}
 
 	nNode := 50
-	nTenant := 2
-	nTick := Tick(100)
+	nTenant := 100
+	nTick := Tick(1000)
 
 	ls := make([]float64, nTenant, nTenant)
 	ls[0] = 10 * AVG_ARRIVAL_RATE
@@ -953,8 +955,8 @@ func main() {
 		ls[i] = AVG_ARRIVAL_RATE
 	}
 
-	//npm := []int{1, 5, nNode}
-	npm := []int{1}
+	npm := []int{1, 5, nNode}
+	// npm := []int{1}
 
 	for i := 0; i < NTRIAL; i++ {
 		for _, p := range policies {

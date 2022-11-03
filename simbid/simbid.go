@@ -1,4 +1,4 @@
-package main
+package simbid
 
 import (
 	"fmt"
@@ -13,11 +13,9 @@ import (
 )
 
 const (
-	DEBUG  = false
-	NTRIAL = 1
+	DEBUG = false
 
-	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
-	MAX_SERVICE_TIME         = 10  // in ticks
+	MAX_SERVICE_TIME = 10 // in ticks
 
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
@@ -36,7 +34,6 @@ type World struct {
 	lambdas         []float64
 	nTick           Tick
 	policy          Tpolicy
-	tick            Tick
 }
 
 func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy) *World {
@@ -55,10 +52,8 @@ func funcName(i interface{}) string {
 }
 
 func (w *World) String() string {
-	return fmt.Sprintf("N %d T %d NpM %d P %s", w.nNode, w.nTenant, w.nodesPerMachine, funcName(world.policy))
+	return fmt.Sprintf("N %d T %d NpM %d P %s", w.nNode, w.nTenant, w.nodesPerMachine, funcName(w.policy))
 }
-
-var world *World
 
 func zipf(r *rand.Rand) uint64 {
 	z := rand.NewZipf(r, 2.0, 1.0, MAX_SERVICE_TIME-1)
@@ -306,12 +301,13 @@ func (ms Machines) intersect(ms1 Machines) Machines {
 	return r
 }
 
-// Among ms find the machine most-heavily used
-func (ms Machines) mostUsed() *Machine {
+// Among ms find the machine most-heavily used, but not completely
+// used.
+func (ms Machines) mostUsed(npm int) *Machine {
 	var most *Machine
 	high := 0
 	for _, m := range ms {
-		if m.ntenant > high && m.ntenant < world.nodesPerMachine {
+		if m.ntenant > high && m.ntenant < npm {
 			most = m
 			high = m.ntenant
 		}
@@ -322,9 +318,9 @@ func (ms Machines) mostUsed() *Machine {
 // Among ms find the machine least-heavily used
 func (ms Machines) leastUsed() *Machine {
 	var least *Machine
-	low := world.nTenant
+	low := 0
 	for _, m := range ms {
-		if m.ntenant < low {
+		if least == nil || m.ntenant < low {
 			least = m
 			low = m.ntenant
 		}
@@ -402,10 +398,6 @@ func (ns *Nodes) machines() Machines {
 		m.nodes = append(m.nodes, n)
 		if n.tenant != nil {
 			m.ntenant += 1
-		}
-		if m.ntenant > world.nodesPerMachine {
-			fmt.Printf("nodes %v\n", ns)
-			panic("machines")
 		}
 	}
 	return ms
@@ -581,7 +573,7 @@ func policyFixed(t *Tenant, last Price) *Bid {
 func (t *Tenant) bid(last Price) *Bid {
 	t.ngrant = 0
 	t.nbid = len(t.procs)
-	return world.policy(t, last)
+	return t.sim.world.policy(t, last)
 }
 
 // mgr grants a node
@@ -589,7 +581,6 @@ func (t *Tenant) grantNode(n *Node) {
 	t.ngrant++
 	t.nodes = append(t.nodes, n)
 	t.nodes.check()
-	t.nodes.machines()
 }
 
 // After bidding, we may have received ngrant new nodes; schedule
@@ -597,7 +588,7 @@ func (t *Tenant) grantNode(n *Node) {
 func (t *Tenant) schedule() int {
 	if DEBUG {
 		if t.nbid > 0 && t.ngrant < t.nbid {
-			fmt.Printf("%v %p: asked %d and received %d\n", world.tick, t, t.nbid, t.ngrant)
+			fmt.Printf("%v %p: asked %d and received %d\n", t.sim.tick, t, t.nbid, t.ngrant)
 		}
 	}
 
@@ -634,13 +625,13 @@ func (t *Tenant) evict(n *Node) (uint64, uint64) {
 	m := uint64(0)
 	if n1 := ms.findNodeOnMachine(n.mid); n1 != nil {
 		if DEBUG {
-			fmt.Printf("%v: Migrate %v to %v\n", world.tick, n, n1)
+			fmt.Printf("%v: Migrate %v to %v\n", t.sim.tick, n, n1)
 		}
 		m += uint64(len(n.procs))
 		n1.procs = append(n1.procs, n.procs...)
 	} else {
 		if DEBUG {
-			fmt.Printf("%v: Evict %v\n", world.tick, n)
+			fmt.Printf("%v: Evict %v\n", t.sim.tick, n)
 		}
 		w, c := n.procs.wasted()
 		e += uint64(len(n.procs))
@@ -659,7 +650,7 @@ func (t *Tenant) isPresent(n *Node) bool {
 }
 
 func (t *Tenant) stats() {
-	n := float64(world.nTick)
+	n := float64(t.sim.world.nTick)
 	fmt.Printf("%p: p %dP l %v P/T %.2f T/P maxN %d work %v util %.2f nwait %v ndelay %v #migr %dP #evict %dP (waste %v) charge %v sunk %v tick %v\n", t, t.nproc, float64(t.nproc)/n, float64(t.ntick)/float64(t.nproc), t.maxnode, t.nwork, float64(t.nwork)/float64(t.ntick), t.nwait, t.ndelay, t.nmigrate, t.nevict, t.nwasted, t.cost, t.sunkCost, t.cost/Price(t.nwork))
 }
 
@@ -686,10 +677,10 @@ type Mgr struct {
 func mkMgr(sim *Sim) *Mgr {
 	m := &Mgr{}
 	m.sim = sim
-	ns := make(Nodes, world.nNode, world.nNode)
+	ns := make(Nodes, sim.world.nNode, sim.world.nNode)
 	for i, _ := range ns {
 		ns[i] = &Node{}
-		ns[i].mid = Tmid(i / world.nodesPerMachine)
+		ns[i].mid = Tmid(i / sim.world.nodesPerMachine)
 	}
 	m.free = ns
 	m.last = PRICE_SPOT
@@ -705,13 +696,13 @@ func (m *Mgr) String() string {
 }
 
 func (m *Mgr) stats() {
-	n := world.nTick * Tick(world.nNode)
+	n := m.sim.world.nTick * Tick(m.sim.world.nNode)
 	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %v nmigrate %dP nevict %dP nwasted %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nmigrate, m.nevict, m.nwasted)
 }
 
 func (m *Mgr) yield(n *Node) {
 	if DEBUG {
-		fmt.Printf("%v: yield %v\n", world.tick, n)
+		fmt.Printf("%v: yield %v\n", m.sim.tick, n)
 	}
 	n.work = FTick(0.0)
 	n.tenant = nil
@@ -793,7 +784,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 			new = append(new, n)
 		} else if n := m.cur.findVictim(t, bid); n != nil {
 			if DEBUG {
-				fmt.Printf("%v: assignNodes: reallocate %v to %p at %v\n", world.tick, n, t, bid)
+				fmt.Printf("%v: assignNodes: reallocate %v to %p at %v\n", m.sim.tick, n, t, bid)
 			}
 			ev, mi := n.tenant.evict(n)
 			n.tenant = t
@@ -813,7 +804,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 	m.checkAssignment("after")
 
 	// if idle nodes, lower price
-	idle := uint64(world.nNode - len(m.cur))
+	idle := uint64(m.sim.world.nNode - len(m.cur))
 	m.nidle += idle
 	if idle > 0 {
 		m.last -= BID_INCREMENT
@@ -832,6 +823,8 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 //
 
 type Sim struct {
+	tick     Tick
+	world    *World
 	time     uint64
 	tenants  []Tenant
 	rand     *rand.Rand
@@ -842,19 +835,20 @@ type Sim struct {
 	avgprice Price // avg price per tick
 }
 
-func mkSim() *Sim {
+func mkSim(w *World) *Sim {
 	sim := &Sim{}
+	sim.world = w
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	sim.mgr = mkMgr(sim)
-	sim.tenants = make([]Tenant, world.nTenant, world.nTenant)
-	for i := 0; i < world.nTenant; i++ {
+	sim.tenants = make([]Tenant, w.nTenant, w.nTenant)
+	for i := 0; i < w.nTenant; i++ {
 		t := &sim.tenants[i]
 		t.procs = make([]*Proc, 0)
 		t.sim = sim
-		t.poisson = &distuv.Poisson{Lambda: world.lambdas[i]}
+		t.poisson = &distuv.Poisson{Lambda: w.lambdas[i]}
 
 		// Allocate high-priced nodes to sustain the expected load
-		nn := int(math.Round(world.lambdas[i]))
+		nn := int(math.Round(w.lambdas[i]))
 		new := sim.mgr.allocNode(t, nn)
 		sim.mgr.cur = append(sim.mgr.cur, new...)
 	}
@@ -880,7 +874,7 @@ func (sim *Sim) schedule() int {
 }
 
 func (sim *Sim) printTenants(nn, pq int) {
-	fmt.Printf("Tick %d nodes %d procq %d nwork %v new price %v avgbid %v high %v", world.tick, nn, pq, sim.mgr.nwork, sim.mgr.last, sim.mgr.avgbid, sim.mgr.high)
+	fmt.Printf("Tick %d nodes %d procq %d nwork %v new price %v avgbid %v high %v", sim.tick, nn, pq, sim.mgr.nwork, sim.mgr.last, sim.mgr.avgbid, sim.mgr.high)
 	for i, _ := range sim.tenants {
 		t := &sim.tenants[i]
 		if len(t.procs) > 0 || len(t.nodes) > 0 {
@@ -903,7 +897,7 @@ func (sim *Sim) runProcs(ns Nodes, p Price) {
 	sim.mgr.revenue += p * Price(len(ns))
 }
 
-func (sim *Sim) tick() {
+func (sim *Sim) oneTick() {
 	sim.genLoad()
 	ns, p := sim.mgr.assignNodes()
 	pq := sim.schedule()
@@ -915,12 +909,13 @@ func (sim *Sim) tick() {
 	sim.runProcs(ns, p)
 }
 
-func runSim() {
+func runSim(world *World) {
+
 	fmt.Printf("=== Policy %v\n", world)
 
-	sim := mkSim()
-	for world.tick = 0; world.tick < world.nTick; world.tick++ {
-		sim.tick()
+	sim := mkSim(world)
+	for sim.tick = 0; sim.tick < sim.world.nTick; sim.tick++ {
+		sim.oneTick()
 	}
 	if DEBUG {
 		for i, _ := range sim.tenants {
@@ -938,32 +933,4 @@ func runSim() {
 	sim.mgr.stats()
 	n := float64(world.nTick)
 	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.len, float64(sim.len)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
-}
-
-func main() {
-	// policies := []Tpolicy{policyFixed, policyLast, policyBidMore}
-	policies := []Tpolicy{policyBidMore}
-	//policies := []Tpolicy{policyFixed}
-
-	nNode := 50
-	nTenant := 100
-	nTick := Tick(1000)
-
-	ls := make([]float64, nTenant, nTenant)
-	ls[0] = 10 * AVG_ARRIVAL_RATE
-	for i := 1; i < nTenant; i++ {
-		ls[i] = AVG_ARRIVAL_RATE
-	}
-
-	npm := []int{1, 5, nNode}
-	// npm := []int{1}
-
-	for i := 0; i < NTRIAL; i++ {
-		for _, p := range policies {
-			for _, n := range npm {
-				world = mkWorld(nNode, nTenant, n, ls, nTick, p)
-				runSim()
-			}
-		}
-	}
 }

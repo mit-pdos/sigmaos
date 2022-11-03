@@ -1,10 +1,15 @@
-package main
+package simbid
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	NTRIAL                   = 1
+	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
 )
 
 func TestRun(t *testing.T) {
@@ -51,4 +56,34 @@ func TestRun(t *testing.T) {
 	l, d = ps.run(0.1)
 	assert.Equal(t, d, Tick(1))
 	fmt.Printf("run: %v %v %v\n", l, ps, d)
+}
+
+func TestOneTenant(t *testing.T) {
+}
+
+func TestMigration(t *testing.T) {
+	// policies := []Tpolicy{policyFixed, policyLast, policyBidMore}
+	policies := []Tpolicy{policyBidMore}
+	//policies := []Tpolicy{policyFixed}
+
+	nNode := 50
+	nTenant := 100
+	nTick := Tick(1000)
+
+	ls := make([]float64, nTenant, nTenant)
+	ls[0] = 10 * AVG_ARRIVAL_RATE
+	for i := 1; i < nTenant; i++ {
+		ls[i] = AVG_ARRIVAL_RATE
+	}
+
+	npm := []int{1, 5, nNode}
+	// npm := []int{1}
+
+	for i := 0; i < NTRIAL; i++ {
+		for _, p := range policies {
+			for _, n := range npm {
+				runSim(mkWorld(nNode, nTenant, n, ls, nTick, p))
+			}
+		}
+	}
 }

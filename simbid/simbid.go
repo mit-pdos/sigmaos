@@ -15,7 +15,7 @@ import (
 const (
 	DEBUG = false
 
-	MAX_SERVICE_TIME = 10 // in ticks
+	MAX_SERVICE_TIME = 9 // in ticks
 
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
@@ -34,9 +34,10 @@ type World struct {
 	lambdas         []float64
 	nTick           Tick
 	policy          Tpolicy
+	computeI        FTick
 }
 
-func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy) *World {
+func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy, c FTick) *World {
 	w := &World{}
 	w.nNode = n
 	w.nTenant = t
@@ -44,6 +45,7 @@ func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy) *World {
 	w.lambdas = ls
 	w.nTick = nt
 	w.policy = p
+	w.computeI = c
 	return w
 }
 
@@ -52,7 +54,7 @@ func funcName(i interface{}) string {
 }
 
 func (w *World) String() string {
-	return fmt.Sprintf("N %d T %d NpM %d P %s", w.nNode, w.nTenant, w.nodesPerMachine, funcName(w.policy))
+	return fmt.Sprintf("N %d T %d NpM %d P %s CI %v", w.nNode, w.nTenant, w.nodesPerMachine, funcName(w.policy), w.computeI)
 }
 
 func zipf(r *rand.Rand) uint64 {
@@ -166,20 +168,20 @@ type Proc struct {
 	// compute intensity: 1.0 computes only, while 0.4 is doing i/o
 	// for 0.6T, which overlaps with the computing happening in a
 	// tick.
-	computeT FTick
+	ci FTick
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("{n %v c %v t %v l %v}", p.nTick, p.computeT, p.time, p.nLength)
+	return fmt.Sprintf("{n %v c %v t %v l %v}", p.nTick, p.ci, p.time, p.nLength)
 }
 
-func mkProc(rand *rand.Rand) *Proc {
+func mkProc(rand *rand.Rand, c FTick) *Proc {
 	p := &Proc{}
 	// p.nTick = zipf(rand)
 	t := Tick(uniform(rand))
 	p.nTick = FTick(t)
 	p.nLength = t
-	p.computeT = 0.5
+	p.ci = c
 	return p
 }
 
@@ -199,9 +201,9 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 	n := 0
 	for _, p := range *ps {
 		n += 1
-		w := p.computeT
+		w := p.ci
 		if p.nTick < 1 { // only fraction of tick left?
-			w = p.computeT * p.nTick
+			w = p.ci * p.nTick
 		}
 		tickLeft := FTick(1.0 - work)
 		if w < tickLeft {
@@ -240,7 +242,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			// "last" tick.  In this partial tick, p can do
 			// last/p.computeT of its tick, some computing and some
 			// sleeping.
-			p.nTick -= last / p.computeT
+			p.nTick -= last / p.ci
 		}
 
 		// charge every proc equally, even though last proc may not
@@ -363,7 +365,7 @@ func (n *Node) String() string {
 
 // XXX takes only 1 proc, which may leave the node idle for most of the tick
 func (n *Node) takeProcs(ps Procs) Procs {
-	if n.work >= FTick(1.0) {
+	if len(n.procs) > 0 && n.work >= FTick(1.0) {
 		return ps
 	}
 	n.procs = append(n.procs, ps[0])
@@ -518,7 +520,7 @@ func (t *Tenant) genProcs() (int, Tick) {
 	nproc := int(t.poisson.Rand())
 	len := Tick(0)
 	for i := 0; i < nproc; i++ {
-		p := mkProc(t.sim.rand)
+		p := mkProc(t.sim.rand, t.sim.world.computeI)
 		len += p.nLength
 		t.procs = append(t.procs, p)
 	}
@@ -592,6 +594,7 @@ func (t *Tenant) schedule() int {
 		}
 	}
 
+	// schedule procs on new nodes
 	t.procs = t.nodes[len(t.nodes)-t.ngrant:].schedule(t.procs)
 
 	t.ntick += Tick(len(t.nodes))
@@ -830,7 +833,7 @@ type Sim struct {
 	rand     *rand.Rand
 	mgr      *Mgr
 	nproc    int  // total # procs started
-	len      Tick // sum of all procs len
+	proclen  Tick // sum of all procs len
 	nprocq   uint64
 	avgprice Price // avg price per tick
 }
@@ -847,10 +850,12 @@ func mkSim(w *World) *Sim {
 		t.sim = sim
 		t.poisson = &distuv.Poisson{Lambda: w.lambdas[i]}
 
-		// Allocate high-priced nodes to sustain the expected load
-		nn := int(math.Round(w.lambdas[i]))
-		new := sim.mgr.allocNode(t, nn)
-		sim.mgr.cur = append(sim.mgr.cur, new...)
+		if funcName(w.policy) == "policyBidMore" {
+			// Allocate high-priced nodes to sustain the expected load
+			nn := int(math.Round(w.lambdas[i]))
+			new := sim.mgr.allocNode(t, nn)
+			sim.mgr.cur = append(sim.mgr.cur, new...)
+		}
 	}
 	return sim
 }
@@ -861,7 +866,7 @@ func (sim *Sim) genLoad() {
 	for i, _ := range sim.tenants {
 		p, l := sim.tenants[i].genProcs()
 		sim.nproc += p
-		sim.len += l
+		sim.proclen += l
 	}
 }
 
@@ -909,28 +914,30 @@ func (sim *Sim) oneTick() {
 	sim.runProcs(ns, p)
 }
 
-func runSim(world *World) {
-
-	fmt.Printf("=== Policy %v\n", world)
-
-	sim := mkSim(world)
-	for sim.tick = 0; sim.tick < sim.world.nTick; sim.tick++ {
-		sim.oneTick()
-	}
+func (sim *Sim) stats() {
+	fmt.Printf("= World %v\n", sim.world)
 	if DEBUG {
 		for i, _ := range sim.tenants {
 			sim.tenants[i].stats()
 		}
 	} else {
 		sim.tenants[0].stats()
-		if world.nTenant >= 2 {
+		if sim.world.nTenant >= 2 {
 			sim.tenants[1].stats()
 		}
-		if world.nTenant >= 3 {
+		if sim.world.nTenant >= 3 {
 			sim.tenants[2].stats()
 		}
 	}
 	sim.mgr.stats()
-	n := float64(world.nTick)
-	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.len, float64(sim.len)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
+	n := float64(sim.world.nTick)
+	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
+}
+
+func runSim(world *World) *Sim {
+	sim := mkSim(world)
+	for sim.tick = 0; sim.tick < sim.world.nTick; sim.tick++ {
+		sim.oneTick()
+	}
+	return sim
 }

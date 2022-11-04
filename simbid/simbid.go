@@ -291,16 +291,19 @@ func (m *Machine) String() string {
 
 type Machines map[Tmid]*Machine
 
-// Returns the m's (and their nodes) in ms that are also present in
-// ms1 (which may have fewer nodes)
-func (ms Machines) intersect(ms1 Machines) Machines {
-	r := make(Machines)
-	for k, m := range ms {
-		if _, ok := ms1[k]; ok {
-			r[k] = m
+// Returns highest len procq on any machine
+func (ms Machines) maxQ() int {
+	q := 0
+	for _, m := range ms {
+		t := 0
+		for _, n := range m.nodes {
+			t += len(n.procs)
+		}
+		if t > q {
+			q = t
 		}
 	}
-	return r
+	return q
 }
 
 // Among ms find the machine least-heavily used
@@ -874,6 +877,7 @@ type Sim struct {
 	proclen  Tick // sum of all procs len
 	nprocq   uint64
 	maxqNode int   // max # procs on a node
+	maxqMach int   // max # procs on a machine
 	avgprice Price // avg price per tick
 }
 
@@ -942,6 +946,10 @@ func (sim *Sim) runProcs(ns Nodes, p Price) {
 		n.tenant.nidle += (1 - w)
 		sim.mgr.nwork += w
 	}
+	q := ns.machines().maxQ()
+	if q > sim.maxqMach {
+		sim.maxqMach = q
+	}
 	sim.mgr.revenue += p * Price(len(ns))
 }
 
@@ -968,7 +976,7 @@ func (sim *Sim) stats() {
 	}
 	sim.mgr.stats()
 	n := float64(sim.world.nTick)
-	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T maxqNode %d avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.maxqNode, sim.avgprice/Price(n))
+	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T maxqNode %d maxqMach %d avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.maxqNode, sim.maxqMach, sim.avgprice/Price(n))
 }
 
 func runSim(world *World) *Sim {

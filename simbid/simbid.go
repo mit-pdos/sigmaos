@@ -303,20 +303,6 @@ func (ms Machines) intersect(ms1 Machines) Machines {
 	return r
 }
 
-// Among ms find the machine most-heavily used, but not completely
-// used.
-func (ms Machines) mostUsed(npm int) *Machine {
-	var most *Machine
-	high := 0
-	for _, m := range ms {
-		if m.ntenant > high && m.ntenant < npm {
-			most = m
-			high = m.ntenant
-		}
-	}
-	return most
-}
-
 // Among ms find the machine least-heavily used
 func (ms Machines) leastUsed() *Machine {
 	var least *Machine
@@ -330,16 +316,15 @@ func (ms Machines) leastUsed() *Machine {
 	return least
 }
 
-// Find node on machine mid with the least amount of work done in last
-// tick
-func (ms Machines) findNodeOnMachine(mid Tmid) *Node {
-	work := FTick(1.1)
+// Find most expensive node on machine mid
+func (ms Machines) findExpensiveNodeOnMachine(mid Tmid) *Node {
 	var r *Node
+	high := Price(0.0)
 	for _, m := range ms {
 		for _, n := range m.nodes {
-			if n.mid == mid && n.utilLastTick < work {
+			if n.mid == mid && n.price > high {
 				r = n
-				work = n.utilLastTick
+				high = n.price
 			}
 		}
 	}
@@ -405,29 +390,49 @@ func (ns *Nodes) machines() Machines {
 	return ms
 }
 
-func (ns *Nodes) findFree(tms Machines) *Node {
+func (ns *Nodes) findFree(tms Machines, npm int) *Node {
 	if len(*ns) == 0 {
 		return nil
 	}
-	fms := ns.machines()
-	//ms1 := tms.intersect(fms)
-	//m := ms1.mostUsed()
-	//if m == nil {
-	m := fms.leastUsed()
-	//}
-	for _, n := range m.nodes {
+
+	// find a free node on a machine where t has an expensive node
+	high := Price(0.0)
+	var f *Node
+	for _, n := range *ns {
 		if n.tenant == nil {
-			ns.remove(n)
-			return n
+			if n1 := tms.findExpensiveNodeOnMachine(n.mid); n1 != nil && n1.price > high {
+				f = n
+				high = n1.price
+			}
 		}
 	}
-	return nil
+
+	// if unsuccessfull, among the machines with free nodes find the
+	// machine with fewest tenants and allocate a node there
+	if high == Price(0.0) {
+		fms := ns.machines()
+		m := fms.leastUsed()
+		for _, n := range m.nodes {
+			if n.tenant == nil {
+				f = n
+				break
+			}
+		}
+	}
+	if f != nil {
+		ns.remove(f)
+	}
+	return f
 }
 
-// Find lowest-priced, lowest-utilized node below bid
+// Find lowest-priced node, preferrable a node whose tenants has an
+// expensive node on the same machine so that tenent can migrate procs
+// to that node.
 func (ns *Nodes) findVictim(t *Tenant, bid Price) *Node {
 	low := PRICE_ONDEMAND
 	var l *Node
+
+	// find the lowest price for nodes in use
 	for _, n := range *ns {
 		if n.tenant != t && bid > n.price {
 			if low > n.price {
@@ -437,11 +442,25 @@ func (ns *Nodes) findVictim(t *Tenant, bid Price) *Node {
 		}
 	}
 	if l != nil {
-		// find lowest utilized node of low-priced nodes
+		// find low-priced node whose tenant has an expensive node on
+		// same machine.
+		high := low
 		for _, n := range *ns {
 			if n.tenant != t && n.price == low {
-				if len(l.procs) > len(n.procs) {
+				ms := n.tenant.nodes.machines()
+				if n1 := ms.findExpensiveNodeOnMachine(n.mid); n1 != nil && n1.price > high {
 					l = n
+					high = n1.price
+				}
+			}
+		}
+		// unsuccessful, find lowest utilized node of low-priced nodes
+		if high == low {
+			for _, n := range *ns {
+				if n.tenant != t && n.price == low {
+					if len(l.procs) > len(n.procs) {
+						l = n
+					}
 				}
 			}
 		}
@@ -644,7 +663,7 @@ func (t *Tenant) evict(n *Node) (uint64, uint64) {
 	ms := t.nodes.machines()
 	e := uint64(0)
 	m := uint64(0)
-	if n1 := ms.findNodeOnMachine(n.mid); n1 != nil {
+	if n1 := ms.findExpensiveNodeOnMachine(n.mid); n1 != nil {
 		if DEBUG {
 			fmt.Printf("%v: Migrate %v to %v\n", t.sim.tick, n, n1)
 		}
@@ -761,7 +780,7 @@ func (m *Mgr) allocNode(t *Tenant, nn int) Nodes {
 	new := make(Nodes, 0)
 	for i := 0; i < nn; i++ {
 		ms := t.nodes.machines()
-		if n := m.free.findFree(ms); n != nil {
+		if n := m.free.findFree(ms, m.sim.world.nodesPerMachine); n != nil {
 			n.tenant = t
 			n.price = PRICE_ONDEMAND
 			t.grantNode(n)
@@ -795,7 +814,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 		m.avgbid += bid
 
 		// fmt.Printf("assignNodes: %p bid highest %v\n", t, bid)
-		if n := m.free.findFree(ms); n != nil {
+		if n := m.free.findFree(ms, m.sim.world.nodesPerMachine); n != nil {
 			n.tenant = t
 			n.price = bid
 			if DEBUG {
@@ -939,7 +958,7 @@ func (sim *Sim) oneTick() {
 }
 
 func (sim *Sim) stats() {
-	fmt.Printf("= World %v\n", sim.world)
+	fmt.Printf("\n= World %v\n", sim.world)
 	if DEBUG {
 		for i, _ := range sim.tenants {
 			sim.tenants[i].stats()

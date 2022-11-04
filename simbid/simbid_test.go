@@ -176,7 +176,7 @@ func TestReserveNode(t *testing.T) {
 		for _, p := range policies {
 			w := mkWorld(nNode, nTenant, 1, ls, nTick, p, ci)
 			s := runSim(w)
-			s.stats()
+			//s.stats()
 			sims = append(sims, s)
 		}
 	}
@@ -184,7 +184,7 @@ func TestReserveNode(t *testing.T) {
 	r1 := float64(sims[2].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
 	fmt.Printf("r0 %f r1 %f\n", r0, r1)
 	assert.True(t, r0 >= 1.5)
-	assert.True(t, r1 >= 1.3)
+	assert.True(t, r1 >= 1.2)
 }
 
 func TestMigration(t *testing.T) {
@@ -204,9 +204,13 @@ func TestMigration(t *testing.T) {
 	}
 	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[1].tenants[0].nevict)
 	r1 := float64(sims[2].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
-	fmt.Printf("%f %f\n", r0, r1)
-	assert.True(t, r0 > 1.25)
-	assert.True(t, r1 > 1.10)
+
+	r00 := float64(sims[0].mgr.nevict) / float64(sims[1].mgr.nevict)
+	r11 := float64(sims[2].mgr.nevict) / float64(sims[3].mgr.nevict)
+
+	fmt.Printf("%f %f %f %f\n", r0, r1, r00, r11)
+	assert.True(t, r0 > 1.3)
+	assert.True(t, r1 > 1.0)
 }
 
 func TestArrivalExp(t *testing.T) {

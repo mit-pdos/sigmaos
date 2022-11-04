@@ -424,13 +424,30 @@ func (ns *Nodes) findFree(tms Machines) *Node {
 	return nil
 }
 
+// Find lowest-priced, lowest-utilized node below bid
 func (ns *Nodes) findVictim(t *Tenant, bid Price) *Node {
+	low := PRICE_ONDEMAND
+	var l *Node
 	for _, n := range *ns {
 		if n.tenant != t && bid > n.price {
-			return n
+			if low > n.price {
+				low = n.price
+				l = n
+			}
 		}
 	}
-	return nil
+	if l != nil {
+		// find lowest utilized node of low-priced nodes
+		for _, n := range *ns {
+			if n.tenant != t && n.price == low {
+				if len(l.procs) > len(n.procs) {
+					l = n
+				}
+			}
+		}
+		ns.remove(l)
+	}
+	return l
 }
 
 func (ns *Nodes) isPresent(nn *Node) bool {
@@ -796,6 +813,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 			m.nevict += ev
 			m.nmigrate += mi
 			n.tenant.grantNode(n)
+			new = append(new, n)
 		} else {
 			// fmt.Printf("assignNodes: no nodes left\n")
 			break

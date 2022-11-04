@@ -164,7 +164,7 @@ func TestFixedVsLast(t *testing.T) {
 	assert.True(t, float64(sims[0].nprocq)/n > 10*float64(sims[1].nprocq)/n)
 }
 
-func TestDedicateNode(t *testing.T) {
+func TestReserveNode(t *testing.T) {
 	nNode := 35
 	nTenant := 100
 	nTick := Tick(1000)
@@ -172,18 +172,19 @@ func TestDedicateNode(t *testing.T) {
 	sims := make([]*Sim, 0)
 	policies := []Tpolicy{policyLast, policyBidMore}
 	cis := []FTick{0.5, 1.0}
-	for _, p := range policies {
-		for _, ci := range cis {
+	for _, ci := range cis {
+		for _, p := range policies {
 			w := mkWorld(nNode, nTenant, 1, ls, nTick, p, ci)
 			s := runSim(w)
-			// s.stats()
+			s.stats()
 			sims = append(sims, s)
 		}
 	}
-	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[2].tenants[0].nevict)
-	r1 := float64(sims[1].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
-	assert.True(t, int(math.Round(r0)) == 2)
-	assert.True(t, int(math.Round(r1)) == 2)
+	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[1].tenants[0].nevict)
+	r1 := float64(sims[2].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
+	fmt.Printf("r0 %f r1 %f\n", r0, r1)
+	assert.True(t, r0 >= 1.5)
+	assert.True(t, r1 >= 1.3)
 }
 
 func TestMigration(t *testing.T) {

@@ -219,8 +219,7 @@ func TestArrivalExp(t *testing.T) {
 	ls, sum := mkArrivalExp(nTenant)
 	fmt.Printf("sum %f\n", sum)
 	npms := []int{1, 5}
-	// nnodes := []int{200, 250}
-	nnodes := []int{200}
+	nnodes := []int{200, 225}
 	sims := make([]*Sim, 0)
 	for _, n := range nnodes {
 		for _, npm := range npms {
@@ -230,4 +229,14 @@ func TestArrivalExp(t *testing.T) {
 			sims = append(sims, s)
 		}
 	}
+	i := nTenant - 1
+	r0 := float64(sims[0].tenants[i].nevict) / float64(sims[1].tenants[i].nevict)
+	r1 := float64(sims[2].tenants[i].nevict) / float64(sims[3].tenants[i].nevict)
+
+	r00 := float64(sims[0].mgr.nevict) / float64(sims[1].mgr.nevict)
+	r11 := float64(sims[2].mgr.nevict) / float64(sims[3].mgr.nevict)
+
+	fmt.Printf("%f %f %f %f\n", r0, r1, r00, r11)
+	assert.True(t, r0 > 2)
+	assert.True(t, r1 > 2)
 }

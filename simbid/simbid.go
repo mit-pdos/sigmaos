@@ -851,7 +851,7 @@ func mkSim(w *World) *Sim {
 		t.sim = sim
 		t.poisson = &distuv.Poisson{Lambda: w.lambdas[i]}
 
-		if funcName(w.policy) == "policyBidMore" {
+		if funcName(w.policy) == "sigmaos/simbid.policyBidMore" {
 			// Allocate high-priced nodes to sustain the expected load
 			nn := int(math.Round(w.lambdas[i]))
 			new := sim.mgr.allocNode(t, nn)
@@ -924,12 +924,6 @@ func (sim *Sim) stats() {
 		}
 	} else {
 		sim.tenants[0].stats()
-		if sim.world.nTenant >= 2 {
-			sim.tenants[1].stats()
-		}
-		if sim.world.nTenant >= 3 {
-			sim.tenants[2].stats()
-		}
 	}
 	sim.mgr.stats()
 	n := float64(sim.world.nTick)

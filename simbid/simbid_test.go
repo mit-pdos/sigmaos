@@ -2,6 +2,7 @@ package simbid
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,6 +70,29 @@ func mkArrival(t int) []float64 {
 	return ls
 }
 
+func mkArrivalExp(t int) ([]float64, float64) {
+	ls := make([]float64, t, t)
+	s := 0
+	n := t / 2
+	h := float64(1)
+	sum := float64(0)
+	for {
+		// fmt.Printf("s = %d %d %f\n", s, n, h)
+		for i := s; i < s+n; i++ {
+			ls[i] = h * AVG_ARRIVAL_RATE
+			sum += ls[i]
+		}
+		s = s + n
+		h = h * 2
+		n = n / 2
+		if n == 0 {
+			ls[s] = h * AVG_ARRIVAL_RATE
+			break
+		}
+	}
+	return ls, sum
+}
+
 func TestOneTenant(t *testing.T) {
 	nTenant := 1
 	nTick := 100
@@ -76,12 +100,10 @@ func TestOneTenant(t *testing.T) {
 	ls := mkArrival(nTenant)
 	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
 	sim := runSim(w)
-	sim.stats()
 	ten := &sim.tenants[0]
 	assert.True(t, sim.nproc > nTick-10 && sim.nproc < nTick+10)
 	assert.True(t, ten.maxnode <= HIGH)
 	assert.True(t, int(sim.proclen)/sim.nproc == (MAX_SERVICE_TIME+1)/2)
-	fmt.Printf("ntick %v\n", ten.ntick)
 	assert.True(t, int(ten.ntick)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.nwork)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, ten.nidle == 0)
@@ -89,6 +111,19 @@ func TestOneTenant(t *testing.T) {
 	assert.True(t, ten.ndelay == 0)
 	assert.True(t, ten.nevict == 0)
 	assert.True(t, ten.nmigrate == 0)
+	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) == 0)
+}
+
+func TestWait(t *testing.T) {
+	nTenant := 1
+	nTick := 100
+	nNode := 5
+	ls := mkArrival(nTenant)
+	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
+	sim := runSim(w)
+	//sim.stats()
+	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) >= 5)
+	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) < 6)
 }
 
 func TestComputeI(t *testing.T) {
@@ -98,33 +133,92 @@ func TestComputeI(t *testing.T) {
 	ls := mkArrival(nTenant)
 	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 0.5)
 	sim := runSim(w)
-	sim.stats()
+	// sim.stats()
 	ten := &sim.tenants[0]
 	assert.True(t, sim.nproc > nTick-10 && sim.nproc < nTick+10)
 	assert.True(t, ten.maxnode >= HIGH/2)
-	assert.True(t, int(sim.proclen)/sim.nproc == (MAX_SERVICE_TIME+1)/2)
-	assert.True(t, int(ten.ntick)/ten.nproc >= (MAX_SERVICE_TIME+1)/4 && int(ten.ntick)/ten.nproc < (MAX_SERVICE_TIME+1)/2)
+	assert.True(t, int(math.Round(float64(sim.proclen)/float64(sim.nproc))) == (MAX_SERVICE_TIME+1)/2)
+	assert.True(t, int(ten.ntick)/ten.nproc >= (MAX_SERVICE_TIME+1)/4)
+	assert.True(t, int(ten.ntick)/ten.nproc < (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.nwork)/ten.nproc == (MAX_SERVICE_TIME+1)/4)
 	assert.True(t, ten.nidle > 0)
 }
 
-func testMigration(t *testing.T) {
-	// policies := []Tpolicy{policyFixed, policyLast, policyBidMore}
-	policies := []Tpolicy{policyBidMore}
-	//policies := []Tpolicy{policyFixed}
-
-	nNode := 50
+func TestFixedVsLast(t *testing.T) {
+	nNode := 35
 	nTenant := 100
 	nTick := Tick(1000)
 	ls := mkArrival(nTenant)
-	npm := []int{1, 5, nNode}
-	// npm := []int{1}
+	sims := make([]*Sim, 0)
+	policies := []Tpolicy{policyFixed, policyLast}
+	for _, p := range policies {
+		w := mkWorld(nNode, nTenant, 1, ls, nTick, p, 0.5)
+		s := runSim(w)
+		sims = append(sims, s)
+	}
+	n := float64(nTick)
+	assert.True(t, float64(sims[0].nprocq)/n > 10*float64(sims[1].nprocq)/n)
+}
 
-	for i := 0; i < NTRIAL; i++ {
-		for _, p := range policies {
-			for _, n := range npm {
-				runSim(mkWorld(nNode, nTenant, n, ls, nTick, p, 0.5))
-			}
+func TestDedicateNode(t *testing.T) {
+	nNode := 35
+	nTenant := 100
+	nTick := Tick(1000)
+	ls := mkArrival(nTenant)
+	sims := make([]*Sim, 0)
+	policies := []Tpolicy{policyLast, policyBidMore}
+	cis := []FTick{0.5, 1.0}
+	for _, p := range policies {
+		for _, ci := range cis {
+			w := mkWorld(nNode, nTenant, 1, ls, nTick, p, ci)
+			s := runSim(w)
+			// s.stats()
+			sims = append(sims, s)
+		}
+	}
+	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[2].tenants[0].nevict)
+	r1 := float64(sims[1].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
+	assert.True(t, int(math.Round(r0)) == 2)
+	assert.True(t, int(math.Round(r1)) == 2)
+}
+
+func TestMigration(t *testing.T) {
+	nTenant := 100
+	nTick := Tick(1000)
+	ls := mkArrival(nTenant)
+	npms := []int{1, 5}
+	nnodes := []int{35, 50}
+	sims := make([]*Sim, 0)
+	for _, n := range nnodes {
+		for _, npm := range npms {
+			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
+			s := runSim(w)
+			s.stats()
+			sims = append(sims, s)
+		}
+	}
+	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[1].tenants[0].nevict)
+	r1 := float64(sims[2].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
+	fmt.Printf("%f %f\n", r0, r1)
+	assert.True(t, r0 > 1.10)
+	assert.True(t, r1 > 1.25)
+}
+
+func TestArrivalExp(t *testing.T) {
+	nTenant := 128
+	nTick := Tick(1000)
+	ls, sum := mkArrivalExp(nTenant)
+	fmt.Printf("sum %f\n", sum)
+	npms := []int{1, 5}
+	// nnodes := []int{200, 250}
+	nnodes := []int{200}
+	sims := make([]*Sim, 0)
+	for _, n := range nnodes {
+		for _, npm := range npms {
+			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
+			s := runSim(w)
+			s.stats()
+			sims = append(sims, s)
 		}
 	}
 }

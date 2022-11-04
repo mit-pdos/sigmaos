@@ -15,7 +15,7 @@ import (
 const (
 	DEBUG = false
 
-	MAX_SERVICE_TIME = 9 // in ticks
+	MAX_SERVICE_TIME = 10 // in ticks
 
 	PRICE_ONDEMAND Price = 0.00000001155555555555 // per ms for 1h on AWS
 	PRICE_SPOT     Price = 0.00000000347222222222 // per ms
@@ -245,7 +245,7 @@ func (ps *Procs) run(c Price) (FTick, Tick) {
 			p.nTick -= last / p.ci
 		}
 
-		// charge every proc equally, even though last proc may not
+		// Charge every proc equally, even though last proc may not
 		// get to run for p.computeT.
 		p.cost += c / Price(len(qs))
 
@@ -836,6 +836,7 @@ type Sim struct {
 	nproc    int  // total # procs started
 	proclen  Tick // sum of all procs len
 	nprocq   uint64
+	maxqNode int   // max # procs on a node
 	avgprice Price // avg price per tick
 }
 
@@ -893,6 +894,9 @@ func (sim *Sim) printTenants(nn, pq int) {
 func (sim *Sim) runProcs(ns Nodes, p Price) {
 	sim.avgprice += p
 	for _, n := range ns {
+		if len(n.procs) > sim.maxqNode {
+			sim.maxqNode = len(n.procs)
+		}
 		w, d := n.procs.run(p)
 		n.utilLastTick = w
 		n.tenant.ndelay += d
@@ -927,7 +931,7 @@ func (sim *Sim) stats() {
 	}
 	sim.mgr.stats()
 	n := float64(sim.world.nTick)
-	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.avgprice/Price(n))
+	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T maxqNode %d avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.maxqNode, sim.avgprice/Price(n))
 }
 
 func runSim(world *World) *Sim {

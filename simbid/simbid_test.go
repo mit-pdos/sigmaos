@@ -101,8 +101,9 @@ func TestOneTenant(t *testing.T) {
 	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
 	sim := runSim(w)
 	ten := &sim.tenants[0]
+	// sim.stats()
 	assert.True(t, sim.nproc > nTick-10 && sim.nproc < nTick+10)
-	assert.True(t, ten.maxnode <= HIGH)
+	assert.True(t, ten.maxnode <= MAX_SERVICE_TIME+1)
 	assert.True(t, int(sim.proclen)/sim.nproc == (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.ntick)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
 	assert.True(t, int(ten.nwork)/ten.nproc == (MAX_SERVICE_TIME+1)/2)
@@ -112,6 +113,7 @@ func TestOneTenant(t *testing.T) {
 	assert.True(t, ten.nevict == 0)
 	assert.True(t, ten.nmigrate == 0)
 	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) == 0)
+	assert.True(t, sim.maxqNode == 1)
 }
 
 func TestWait(t *testing.T) {
@@ -122,8 +124,10 @@ func TestWait(t *testing.T) {
 	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
 	sim := runSim(w)
 	//sim.stats()
-	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) >= 5)
-	assert.True(t, float64(sim.nprocq)/float64(sim.world.nTick) < 6)
+	r := float64(sim.nprocq) / float64(sim.world.nTick)
+	// fmt.Printf("%f\n", r)
+	assert.True(t, r >= MAX_SERVICE_TIME)
+	assert.True(t, r < MAX_SERVICE_TIME+1)
 }
 
 func TestComputeI(t *testing.T) {
@@ -200,8 +204,8 @@ func TestMigration(t *testing.T) {
 	r0 := float64(sims[0].tenants[0].nevict) / float64(sims[1].tenants[0].nevict)
 	r1 := float64(sims[2].tenants[0].nevict) / float64(sims[3].tenants[0].nevict)
 	fmt.Printf("%f %f\n", r0, r1)
-	assert.True(t, r0 > 1.10)
-	assert.True(t, r1 > 1.25)
+	assert.True(t, r0 > 1.25)
+	assert.True(t, r1 > 1.10)
 }
 
 func TestArrivalExp(t *testing.T) {

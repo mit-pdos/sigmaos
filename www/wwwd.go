@@ -7,6 +7,8 @@ import (
 	"path"
 	"regexp"
 
+	"net/http/pprof"
+
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
@@ -41,6 +43,8 @@ func RunWwwd(job, tree string) {
 	http.HandleFunc(HELLO, www.makeHandler(doHello))
 	http.HandleFunc(EXIT, www.makeHandler(doExit))
 	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
+	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {

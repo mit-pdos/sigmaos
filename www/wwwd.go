@@ -145,10 +145,11 @@ func (www *Wwwd) removePipe(pipeName string) {
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
 	db.DPrintf("WWW", "rwResponse: %v\n", pipePath)
+	//	defer www.removePipe(pipeName)
 	// Read from the pipe.
 	fd, err := www.Open(pipePath, np.OREAD)
 	if err != nil {
-		db.DPrintf("wwwd: open %v failed %v", pipePath, err)
+		db.DPrintf(db.ALWAYS, "pipe open %v failed %v", pipePath, err)
 		return
 	}
 	defer www.Close(fd)
@@ -163,7 +164,6 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 			break
 		}
 	}
-	www.removePipe(pipeName)
 }
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string, env map[string]string, ncore proc.Tcore) (*proc.Status, error) {

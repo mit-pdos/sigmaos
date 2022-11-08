@@ -74,6 +74,7 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.MkDir(np.PROCD_WS, 0777)
 	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), 0777)
 	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), 0777)
+	pd.MemFs.GetStats().NoMonitorPaths()
 	pd.MemFs.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
 	pd.Work()

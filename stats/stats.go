@@ -117,6 +117,7 @@ type Stats struct {
 	fs.Inode
 	mu            sync.Mutex // protects some fields of StatInfo
 	sti           *StatInfo
+	monitorPaths  bool
 	pid           int
 	hz            int
 	cores         map[string]bool
@@ -129,6 +130,7 @@ func MkStatsDev(parent fs.Dir) *Stats {
 	st.Inode = inode.MakeInode(nil, np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
 	st.pid = os.Getpid()
+	st.monitorPaths = true
 	return st
 }
 
@@ -240,9 +242,21 @@ func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) (
 	return b, nil
 }
 
+func (st *Stats) NoMonitorPaths() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	st.monitorPaths = false
+	st.sti.Paths = nil
+}
+
 func (st *Stats) IncPath(path np.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
+
+	if !st.monitorPaths {
+		return
+	}
 	p := path.String()
 	if _, ok := st.sti.Paths[p]; !ok {
 		st.sti.Paths[p] = 0
@@ -253,6 +267,10 @@ func (st *Stats) IncPath(path np.Path) {
 func (st *Stats) IncPathString(p string) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
+
+	if !st.monitorPaths {
+		return
+	}
 	if _, ok := st.sti.Paths[p]; !ok {
 		st.sti.Paths[p] = 0
 	}

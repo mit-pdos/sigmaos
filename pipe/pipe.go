@@ -18,6 +18,7 @@ type Pipe struct {
 	mu      sync.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
+	sct     *sesscond.SessCondTable
 	nreader int
 	nwriter int
 	wclosed bool
@@ -30,6 +31,7 @@ func MakePipe(ctx fs.CtxI) *Pipe {
 	pipe := &Pipe{}
 	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
+	pipe.sct = ctx.SessCondTable()
 	pipe.buf = make([]byte, 0, PIPESZ)
 	pipe.nreader = 0
 	pipe.nwriter = 0
@@ -175,11 +177,17 @@ func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	db.DPrintf("PIPE", "Unlnk: %v\n", pipe)
+	db.DPrintf("PIPE", "Unlink: %v\n", pipe)
 
 	pipe.nlink -= 1
 	pipe.condw.Signal()
 	pipe.condr.Signal()
+
+	// Free sess conds.
+	if pipe.nlink == 0 {
+		pipe.sct.FreeSessCond(pipe.condw)
+		pipe.sct.FreeSessCond(pipe.condr)
+	}
 }
 
 func (pipe *Pipe) Size() np.Tlength {

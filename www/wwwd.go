@@ -165,18 +165,20 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	}
 }
 
-func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string, env map[string]string, ncore proc.Tcore) (*proc.Status, error) {
-	// Create a pipe for the child to write to.
-	pipeName := www.makePipe()
-
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pipe bool, args []string, env map[string]string, ncore proc.Tcore) (*proc.Status, error) {
+	var pipeName string
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, args)
 	a.SetNcore(ncore)
 	for k, v := range env {
 		a.AppendEnv(k, v)
 	}
-	// Set the shared link to point to the pipe
-	a.SetShared(path.Join(www.globalSrvpath, pipeName))
+	// Create a pipe for the child to write to.
+	if pipe {
+		pipeName = www.makePipe()
+		// Set the shared link to point to the pipe
+		a.SetShared(path.Join(www.globalSrvpath, pipeName))
+	}
 	db.DPrintf("WWW", "About to spawn %v", a)
 	_, errs := www.SpawnBurst([]*proc.Proc{a})
 	if len(errs) != 0 {
@@ -190,23 +192,27 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 		return nil, err
 	}
 	db.DPrintf("WWW", "Done WaitStart %v", a)
-	// Read from the pipe in another thread. This way, if the child crashes or
-	// terminates normally, we'll catch it with WaitExit and remove the pipe so
-	// we don't block forever.
-	go func() {
-		www.rwResponse(w, pipeName)
-	}()
+	if pipe {
+		// Read from the pipe in another thread. This way, if the child crashes or
+		// terminates normally, we'll catch it with WaitExit and remove the pipe so
+		// we don't block forever.
+		go func() {
+			www.rwResponse(w, pipeName)
+		}()
+	}
 	db.DPrintf("WWW", "About to WaitExit %v", a)
 	status, err := www.WaitExit(pid)
 	db.DPrintf("WWW", "WaitExit done %v status %v err %v", pid, status, err)
-	www.removePipe(pipeName)
+	if pipe {
+		www.removePipe(pipeName)
+	}
 	return status, err
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
-	return www.spawnApp("user/fsreader", w, r, []string{file}, nil, 0)
+	return www.spawnApp("user/fsreader", w, r, true, []string{file}, nil, 0)
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -218,7 +224,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	//}
 	// log.Printf("\n")
 	title := r.FormValue("title")
-	return www.spawnApp("user/bookapp", w, r, []string{args, title}, nil, 0)
+	return www.spawnApp("user/bookapp", w, r, true, []string{args, title}, nil, 0)
 }
 
 func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -237,5 +243,5 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
-	return www.spawnApp("user/matmul", w, r, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
+	return www.spawnApp("user/matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
 }

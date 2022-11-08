@@ -149,6 +149,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	fd, err := www.Open(pipePath, np.OREAD)
 	if err != nil {
 		db.DPrintf("WWW_ERR", "pipe open %v failed %v", pipePath, err)
+		db.DPrintf(db.ALWAYS, "pipe open %v failed %v", pipePath, err)
 		return
 	}
 	defer www.Close(fd)
@@ -199,6 +200,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	db.DPrintf("WWW", "About to WaitExit %v", a)
 	status, err := www.WaitExit(pid)
 	db.DPrintf("WWW", "WaitExit done %v status %v err %v", pid, status, err)
+	db.DPrintf(db.ALWAYS, "remove pipe %v", pipeName)
 	www.removePipe(pipeName)
 	return status, err
 }

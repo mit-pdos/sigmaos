@@ -185,6 +185,7 @@ func (pipe *Pipe) Unlink() {
 
 	// Free sess conds.
 	if pipe.nlink == 0 {
+		db.DPrintf(db.ALWAYS, "PIPE NLINK 0")
 		pipe.sct.FreeSessCond(pipe.condw)
 		pipe.sct.FreeSessCond(pipe.condr)
 	}

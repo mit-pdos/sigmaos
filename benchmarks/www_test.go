@@ -77,7 +77,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 		time.Sleep(slp)
 		start := time.Now()
 		err := clnt.MatMul(MAT_SIZE)
-		assert.Equal(ji.T, nil, err)
+		assert.Nil(ji.T, err, "Error matmul %v", err)
 		latency += time.Since(start)
 	}
 	db.DPrintf("WWWD_TEST", "[%v] done", j)

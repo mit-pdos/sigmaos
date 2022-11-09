@@ -28,6 +28,7 @@ type LinuxProc struct {
 	Env          []string
 	coresAlloced proc.Tcore
 	attr         *proc.Proc
+	stolen       bool
 	pd           *Procd
 	UtilInfo     struct {
 		utime0 uint64
@@ -36,11 +37,12 @@ type LinuxProc struct {
 	}
 }
 
-func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
+func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
 	a.FinalizeEnv(pd.addr)
 	p := &LinuxProc{}
 	p.pd = pd
 	p.attr = a
+	p.stolen = stolen
 	db.DPrintf("PROCD", "Procd init: %v\n", p)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	return p
@@ -69,7 +71,7 @@ func (p *LinuxProc) run() error {
 		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
-	db.DPrintf("PROCD_PERF", "proc queueing delay: %v", time.Since(p.attr.SpawnTime))
+	db.DPrintf("PROCD_PERF", "proc (stolen:%v) queueing delay: %v", p.stolen, time.Since(p.attr.SpawnTime))
 	cmd := exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

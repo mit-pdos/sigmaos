@@ -132,9 +132,9 @@ func (pd *Procd) readDone() bool {
 	return pd.done
 }
 
-func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
+func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// Make a Linux Proc which corresponds to this proc.
-	linuxProc := makeLinuxProc(pd, p)
+	linuxProc := makeLinuxProc(pd, p, stolen)
 	// Allocate dedicated cores for this proc to run on, if it requires them.
 	// Core allocation & resource accounting has to happen at this point, while
 	// we still hold the lock we used to claim the proc, since this procd may be
@@ -150,7 +150,7 @@ func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
 }
 
 // Tries to get a runnable proc if it fits on this procd.
-func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
+func (pd *Procd) tryGetRunnableProc(procPath string, isRemote bool) (*LinuxProc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
@@ -167,7 +167,7 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 		if ok := pd.claimProc(p, procPath); !ok {
 			return nil, nil
 		}
-		linuxProc := pd.registerProcL(p)
+		linuxProc := pd.registerProcL(p, isRemote)
 		return linuxProc, nil
 	} else {
 		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
@@ -199,7 +199,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			if isRemote {
 				procPath += "/"
 			}
-			newProc, err := pd.tryGetRunnableProc(procPath)
+			newProc, err := pd.tryGetRunnableProc(procPath, isRemote)
 			if err != nil {
 				db.DPrintf("PROCD_ERR", "Error getting runnable proc: %v", err)
 				// Remove the symlink, as it must have already been claimed.

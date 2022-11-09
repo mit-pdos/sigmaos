@@ -114,7 +114,11 @@ func (ji *WwwJobInstance) StartWwwJob() {
 			}
 			db.DPrintf(db.ALWAYS, "len ws dir: %v", len(sts))
 			if len(sts) > 0 {
-				db.DPrintf(db.ALWAYS, "len ws dir contents: %v", sts)
+				names := []string{}
+				for _, st := range sts {
+					names = append(names, st.Name)
+				}
+				db.DPrintf(db.ALWAYS, "len ws dir contents: %v", names)
 			}
 		}
 	}

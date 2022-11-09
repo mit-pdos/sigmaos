@@ -143,6 +143,7 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 		return err
 	}
 
+	p.SpawnTime = time.Now()
 	// If this is not a privileged proc, spawn it through procd.
 	if !p.IsPrivilegedProc() {
 		b, err := json.Marshal(p)

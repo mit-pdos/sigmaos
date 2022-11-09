@@ -5,6 +5,7 @@ import (
 	"log"
 	"path"
 	"strings"
+	"time"
 
 	"sigmaos/namespace"
 	np "sigmaos/ninep"
@@ -41,17 +42,18 @@ func (pid Tpid) String() string {
 }
 
 type Proc struct {
-	Pid          Tpid     // SigmaOS PID
-	ProcDir      string   // SigmaOS directory to store this proc's state
-	ParentDir    string   // SigmaOS parent proc directory
-	Program      string   // Program to run
-	LinuxRoot    string   // Path to which this proc will be chroot-ed
-	Args         []string // Args
-	Env          []string // Environment variables
-	Type         Ttype    // Type
-	Ncore        Tcore    // Number of cores requested
-	Mem          Tmem     // Amount of memory required in MB
-	sharedTarget string   // Target of shared state
+	Pid          Tpid      // SigmaOS PID
+	ProcDir      string    // SigmaOS directory to store this proc's state
+	ParentDir    string    // SigmaOS parent proc directory
+	Program      string    // Program to run
+	LinuxRoot    string    // Path to which this proc will be chroot-ed
+	Args         []string  // Args
+	Env          []string  // Environment variables
+	Type         Ttype     // Type
+	Ncore        Tcore     // Number of cores requested
+	Mem          Tmem      // Amount of memory required in MB
+	SpawnTime    time.Time // Time at which the proc was spawned
+	sharedTarget string    // Target of shared state
 }
 
 func MakeEmptyProc() *Proc {

@@ -71,7 +71,7 @@ func (p *LinuxProc) run() error {
 		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
-	db.DPrintf("PROCD_PERF", "proc (stolen:%v) queueing delay: %v", p.stolen, time.Since(p.attr.SpawnTime))
+	db.DPrintf("PROCD_PERF", "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
 	cmd := exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

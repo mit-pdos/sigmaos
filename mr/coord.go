@@ -203,10 +203,10 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
 		// mark task as done
-		s := dir + TIP + "/" + t
-		d := dir + DONE + "/" + t
-		if err := c.Rename(s, d); err != nil {
-			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
+		inProgress := dir + TIP + "/" + t
+		done := dir + DONE + "/" + t
+		if err := c.Rename(inProgress, done); err != nil {
+			db.DFatalf("rename task done %v to %v err %v\n", inProgress, done, err)
 		}
 		r := mkResult(status.Data())
 		ch <- Tresult{t, true, ms, status.Msg(), r}

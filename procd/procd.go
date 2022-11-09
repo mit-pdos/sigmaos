@@ -201,10 +201,10 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			}
 			newProc, err := pd.tryGetRunnableProc(procPath, isRemote)
 			if err != nil {
-				db.DPrintf("PROCD_ERR", "Error getting runnable proc: %v", err)
+				db.DPrintf("PROCD_ERR", "Error getting runnable proc (remote:%v): %v", isRemote, err)
 				// Remove the symlink, as it must have already been claimed.
 				if isRemote {
-					pd.Remove(procPath)
+					pd.deleteWSSymlink(st, procPath, p, isRemote)
 				}
 				return false, nil
 			}

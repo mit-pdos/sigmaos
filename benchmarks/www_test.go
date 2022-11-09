@@ -108,6 +108,11 @@ func (ji *WwwJobInstance) StartWwwJob() {
 			}
 			d := totalLatency.Milliseconds()
 			db.DPrintf(db.ALWAYS, "trial %v nclnt %d avg latency %vms", j, i, float64(d)/(float64(ji.nreq)*float64(i)))
+			sts, err := ji.GetDir("name/ws/runq-lc")
+			if err != nil {
+				db.DFatalf("Error getdir: %v", err)
+			}
+			db.DPrintf(db.ALWAYS, "len ws dir: %v", len(sts))
 		}
 	}
 }

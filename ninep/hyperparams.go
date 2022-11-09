@@ -65,8 +65,8 @@ machine:
   core_group_fraction: 0.5
 
 procd:
-  stealable_proc_timeout: 1000ms
-  work_steal_scan_timeout: 1000ms
+  stealable_proc_timeout: 50ms
+  work_steal_scan_timeout: 50ms
   be_proc_claim_cpu_threshold: 90.0
   be_proc_oversubscription_rate: 1.0
 

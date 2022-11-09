@@ -64,14 +64,14 @@ func (m *MatrixMult) doMM() {
 }
 
 func (m *MatrixMult) Work() {
-	start := time.Now()
 	err := m.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
+	start := time.Now()
 	db.DPrintf("MATMUL", "doMM %v", proc.GetPid())
 	m.doMM()
-	db.DPrintf("MATMUL", "doMM done %v", proc.GetPid())
+	db.DPrintf("MATMUL", "doMM done %v: %v", proc.GetPid(), time.Since(start))
 	m.Exited(proc.MakeStatusInfo(proc.StatusOK, "Latency (us)", time.Since(start).Microseconds()))
 	db.DPrintf("MATMUL", "Exited %v", proc.GetPid())
 }

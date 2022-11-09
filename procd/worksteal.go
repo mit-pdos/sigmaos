@@ -106,7 +106,8 @@ func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, p *LinuxProc, isR
 	// If this proc is remote, remove the symlink.
 	if isRemote {
 		// Remove the symlink (don't follow).
-		pd.Remove(procPath[:len(procPath)-1])
+		err := pd.Remove(procPath[:len(procPath)-1])
+		db.DPrintf(db.ALWAYS, "Remove remote %v: %v", procPath[:len(procPath)-1], err)
 	} else {
 		// If proc was offered up for work stealing...
 		if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
@@ -117,7 +118,8 @@ func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, p *LinuxProc, isR
 				runq = np.PROCD_RUNQ_BE
 			}
 			link := path.Join(np.PROCD_WS, runq, st.Name)
-			pd.Remove(link)
+			err := pd.Remove(link)
+			db.DPrintf(db.ALWAYS, "Remove local %v: %v", link, err)
 		}
 	}
 }

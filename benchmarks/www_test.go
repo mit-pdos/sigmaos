@@ -113,6 +113,9 @@ func (ji *WwwJobInstance) StartWwwJob() {
 				db.DFatalf("Error getdir: %v", err)
 			}
 			db.DPrintf(db.ALWAYS, "len ws dir: %v", len(sts))
+			if len(sts) > 0 {
+				db.DPrintf(db.ALWAYS, "len ws dir contents: %v", sts)
+			}
 		}
 	}
 }

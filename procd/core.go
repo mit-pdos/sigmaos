@@ -46,25 +46,26 @@ func (pd *Procd) initCores(grantedCoresIv string) {
 }
 
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
+	pd.Lock()
+	defer pd.Unlock()
 	cores := parseCoreInterval(msg.Name)
+
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_AVAILABLE)
-	// Notify sleeping workers that they may be able to run procs now.
-	go func() {
-		for i := 0; i < msg.Amount; i++ {
-			pd.stealChan <- true
-		}
-	}()
+	for i := 0; i < msg.Amount; i++ {
+		pd.nToWake++
+		pd.Signal()
+	}
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
+	pd.Lock()
+	defer pd.Unlock()
+
 	cores := parseCoreInterval(msg.Name)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
 }
 
 func (pd *Procd) adjustCoresOwned(oldNCoresOwned, newNCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
-	pd.Lock()
-	defer pd.Unlock()
-
 	// Mark cores according to their new status.
 	pd.markCoresL(coresToMark, newCoreStatus)
 	// Set the new procd core affinity.

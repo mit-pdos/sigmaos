@@ -23,10 +23,10 @@ import (
 
 type Procd struct {
 	sync.Mutex
+	*sync.Cond
 	fs               *ProcdFs
 	realmbin         string              // realm path from which to pull/run bins.
-	spawnChan        chan bool           // Indicates a proc has been spawned on this procd.
-	stealChan        chan bool           // Indicates there is work to be stolen.
+	nToWake          int                 // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
 	wsQueues         map[string][]string // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
 	done             bool
 	addr             string
@@ -48,6 +48,7 @@ type Procd struct {
 
 func RunProcd(realmbin string, grantedCoresIv string) {
 	pd := &Procd{}
+	pd.Cond = sync.NewCond(&pd.Mutex)
 	pd.realmbin = realmbin
 	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
@@ -59,9 +60,6 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.makeFs()
 
 	pd.addr = pd.MyAddr()
-
-	pd.spawnChan = make(chan bool)
-	pd.stealChan = make(chan bool)
 
 	pd.initCores(grantedCoresIv)
 
@@ -107,7 +105,10 @@ func (pd *Procd) deleteProc(p *LinuxProc) {
 }
 
 func (pd *Procd) spawnProc(a *proc.Proc) {
-	pd.spawnChan <- true
+	pd.Lock()
+	pd.nToWake++
+	pd.Signal()
+	pd.Unlock()
 }
 
 // Evict all procs running in this procd
@@ -124,7 +125,7 @@ func (pd *Procd) Done() {
 	pd.done = true
 	pd.perf.Done()
 	pd.evictProcsL(pd.runningProcs)
-	close(pd.spawnChan)
+	pd.Broadcast()
 }
 
 func (pd *Procd) readDone() bool {
@@ -310,11 +311,24 @@ func (pd *Procd) setCoreAffinityL() {
 // Wait for a new proc to be spawned at this procd, or for a stealing
 // opportunity to present itself.
 func (pd *Procd) waitSpawnOrSteal() {
-	select {
-	case _, _ = <-pd.spawnChan:
-		db.DPrintf("PROCD", "done waiting, a proc was spawned")
-	case _, _ = <-pd.stealChan:
-		db.DPrintf("PROCD", "done waiting, a proc can be stolen")
+	pd.Lock()
+	defer pd.Unlock()
+
+	for !pd.done {
+		// If there is work to steal, we're done waiting.
+		for _, q := range pd.wsQueues {
+			if len(q) > 0 {
+				db.DPrintf("PROCD", "done waiting, a proc can be stolen")
+				return
+			}
+		}
+		// Only release nWorkersToWake worker threads.
+		if pd.nToWake > 0 {
+			pd.nToWake--
+			db.DPrintf("PROCD", "done waiting, worker woken")
+			return
+		}
+		pd.Wait()
 	}
 }
 

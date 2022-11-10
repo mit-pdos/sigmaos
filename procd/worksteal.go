@@ -68,16 +68,12 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		// Store the queue of stealable procs for worker threads to read.
 		pd.Lock()
 		pd.wsQueues[wsQueuePath] = stealable
+		// Wake up nStealable waiting workers to try to steal each proc.
+		for i := 0; i < nStealable; i++ {
+			pd.nToWake++
+			pd.Signal()
+		}
 		pd.Unlock()
-		// XXX Doing this in a separate goroutine to avoid blocking & having
-		// workers read from a stale queue. However, it may lead to an explosion of
-		// goroutines. We should probably switch to a counter + cond var.
-		go func() {
-			// Wake up a thread to try to steal each proc.
-			for i := 0; i < nStealable; i++ {
-				pd.stealChan <- true
-			}
-		}()
 	}
 }
 
@@ -119,8 +115,7 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 	// If this proc is remote, remove the symlink.
 	if isRemote {
 		// Remove the symlink (don't follow).
-		err := pd.Remove(procPath[:len(procPath)-1])
-		db.DPrintf(db.ALWAYS, "Remove remote %v: %v", procPath[:len(procPath)-1], err)
+		pd.Remove(procPath[:len(procPath)-1])
 	} else {
 		// If proc was offered up for work stealing...
 		if time.Since(p.attr.SpawnTime) >= np.Conf.Procd.STEALABLE_PROC_TIMEOUT {
@@ -131,8 +126,7 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 				runq = np.PROCD_RUNQ_BE
 			}
 			link := path.Join(np.PROCD_WS, runq, p.attr.Pid.String())
-			err := pd.Remove(link)
-			db.DPrintf(db.ALWAYS, "Remove local %v: %v", link, err)
+			pd.Remove(link)
 		}
 	}
 }

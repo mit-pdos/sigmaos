@@ -642,6 +642,7 @@ func (t *Tenant) schedule() int {
 		t.maxnode = len(t.nodes)
 	}
 	t.nwait += Tick(uint64(len(t.procs)))
+	t.sim.mgr.nwait += Tick(uint64(len(t.procs)))
 	return len(t.procs)
 }
 
@@ -708,10 +709,12 @@ type Mgr struct {
 	index    int
 	revenue  Price
 	nwork    FTick
-	nidle    uint64
+	nidle    Tick
 	nevict   uint64
 	nmigrate uint64
 	nwasted  FTick
+	ndelay   Tick
+	nwait    Tick
 	last     Price // lowest bid accepted in last tick
 	avgbid   Price // avg bid in last tick
 	high     Price // highest bid in last tick
@@ -740,7 +743,8 @@ func (m *Mgr) String() string {
 
 func (m *Mgr) stats() {
 	n := m.sim.world.nTick * Tick(m.sim.world.nNode)
-	fmt.Printf("Mgr: last %v revenue %v avg rev/tick %v util %.2f idle %v nmigrate %dP nevict %dP nwasted %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)), float64(m.nwork)/float64(n), m.nidle, m.nmigrate, m.nevict, m.nwasted)
+	fmt.Printf("Mgr: util %.2f idle %v ndelay %v nwait %v nmigrate %dP nevict %dP nwasted %v\n", float64(m.nwork)/float64(n), m.nidle, m.ndelay, m.nwait, m.nmigrate, m.nevict, m.nwasted)
+	fmt.Printf("last %v revenue %v avg rev/tick %v\n", m.last, m.revenue, Price(float64(m.revenue)/float64(m.nwork)))
 }
 
 func (m *Mgr) yield(n *Node) {
@@ -848,7 +852,7 @@ func (m *Mgr) assignNodes() (Nodes, Price) {
 	m.checkAssignment("after")
 
 	// if idle nodes, lower price
-	idle := uint64(m.sim.world.nNode - len(m.cur))
+	idle := Tick(m.sim.world.nNode - len(m.cur))
 	m.nidle += idle
 	if idle > 0 {
 		m.last -= BID_INCREMENT
@@ -945,6 +949,7 @@ func (sim *Sim) runProcs(ns Nodes, p Price) {
 		n.tenant.nwork += w
 		n.tenant.nidle += (1 - w)
 		sim.mgr.nwork += w
+		sim.mgr.ndelay += d
 	}
 	q := ns.machines().maxQ()
 	if q > sim.maxqMach {
@@ -971,12 +976,10 @@ func (sim *Sim) stats() {
 		for i, _ := range sim.tenants {
 			sim.tenants[i].stats()
 		}
-	} else {
-		sim.tenants[0].stats()
 	}
 	sim.mgr.stats()
 	n := float64(sim.world.nTick)
-	fmt.Printf("nproc %dP len %v avg proclen %.2fT avg procq %.2fP/T maxqNode %d maxqMach %d avg price %v/T\n", sim.nproc, sim.proclen, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.maxqNode, sim.maxqMach, sim.avgprice/Price(n))
+	fmt.Printf("Sim: nproc %dP avg proclen %.2fT avg procq %.2fP/T maxqNode %d maxqMach %d avg price %v/T\n", sim.nproc, float64(sim.proclen)/float64(sim.nproc), float64(sim.nprocq)/n, sim.maxqNode, sim.maxqMach, sim.avgprice/Price(n))
 }
 
 func runSim(world *World) *Sim {

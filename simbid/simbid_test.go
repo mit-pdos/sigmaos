@@ -198,7 +198,7 @@ func TestMigration(t *testing.T) {
 		for _, npm := range npms {
 			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
 			s := runSim(w)
-			s.stats()
+			//s.stats()
 			sims = append(sims, s)
 		}
 	}
@@ -221,15 +221,16 @@ func TestArrivalExp(t *testing.T) {
 	npms := []int{1, 5}
 	nnodes := []int{200, 225}
 	sims := make([]*Sim, 0)
+	i := nTenant - 1
 	for _, n := range nnodes {
 		for _, npm := range npms {
 			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
 			s := runSim(w)
 			s.stats()
+			// s.tenants[i].stats()
 			sims = append(sims, s)
 		}
 	}
-	i := nTenant - 1
 	r0 := float64(sims[0].tenants[i].nevict) / float64(sims[1].tenants[i].nevict)
 	r1 := float64(sims[2].tenants[i].nevict) / float64(sims[3].tenants[i].nevict)
 

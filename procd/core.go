@@ -62,8 +62,8 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 }
 
 func (pd *Procd) adjustCoresOwned(oldNCoresOwned, newNCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 
 	// Mark cores according to their new status.
 	pd.markCoresL(coresToMark, newCoreStatus)
@@ -213,8 +213,8 @@ func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
 }
 
 func (pd *Procd) freeCores(p *LinuxProc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 
 	pd.freeCoresL(p)
 	if p.attr.Type != proc.T_LC {

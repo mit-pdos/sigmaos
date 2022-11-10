@@ -55,8 +55,8 @@ func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
 
 // XXX Cleanup on procd crashes?
 func (pd *Procd) downloadProcBin(program string) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 
 	uxBinPath := path.Join(np.UXBIN, program)
 	s3BinPath := path.Join(np.S3, "~ip", pd.realmbin, program)

@@ -66,9 +66,9 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			db.DFatalf("Error ReadDirWatch: %v", err)
 		}
 		// Store the queue of stealable procs for worker threads to read.
-		pd.mu.Lock()
+		pd.Lock()
 		pd.wsQueues[wsQueuePath] = stealable
-		pd.mu.Unlock()
+		pd.Unlock()
 		// XXX Doing this in a separate goroutine to avoid blocking & having
 		// workers read from a stale queue. However, it may lead to an explosion of
 		// goroutines. We should probably switch to a counter + cond var.

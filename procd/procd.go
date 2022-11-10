@@ -22,7 +22,7 @@ import (
 )
 
 type Procd struct {
-	mu               sync.Mutex
+	sync.Mutex
 	fs               *ProcdFs
 	realmbin         string              // realm path from which to pull/run bins.
 	spawnChan        chan bool           // Indicates a proc has been spawned on this procd.
@@ -82,8 +82,8 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 }
 
 func (pd *Procd) getLCProcUtil() float64 {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 	var total float64 = 0.0
 	for _, p := range pd.runningProcs {
 		// If proc has not been initialized, or it isn't LC, move on
@@ -101,8 +101,8 @@ func (pd *Procd) putProcL(p *LinuxProc) {
 }
 
 func (pd *Procd) deleteProc(p *LinuxProc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 	delete(pd.runningProcs, p.attr.Pid)
 }
 
@@ -118,8 +118,8 @@ func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
 }
 
 func (pd *Procd) Done() {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 
 	pd.done = true
 	pd.perf.Done()
@@ -128,8 +128,8 @@ func (pd *Procd) Done() {
 }
 
 func (pd *Procd) readDone() bool {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 	return pd.done
 }
 
@@ -153,8 +153,8 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 // Tries to claim a runnable proc if it fits on this procd.
 func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error) {
 	// XXX shouldn't I just lock after reading the proc?
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+	pd.Lock()
+	defer pd.Unlock()
 
 	db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
 	p, err := pd.readRunqProc(procPath)
@@ -222,20 +222,20 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			// the work stealing queues and caches names of stealable procs in a
 			// local slice. Worker threads iterate through this slice when trying to
 			// steal procs.
-			pd.mu.Lock()
+			pd.Lock()
 			// Find number of procs in this queue.
 			n := len(pd.wsQueues[runq])
-			pd.mu.Unlock()
+			pd.Unlock()
 			// Iterate through (up to) n items in the queue, or until we've claimed a
 			// proc.
 			for j := 0; j < n && p == nil; j++ {
 				var pid string
-				pd.mu.Lock()
+				pd.Lock()
 				if len(pd.wsQueues[runq]) > 0 {
 					// Pop a proc from the ws queue
 					pid, pd.wsQueues[runq] = pd.wsQueues[runq][0], pd.wsQueues[runq][1:]
 				}
-				pd.mu.Unlock()
+				pd.Unlock()
 				// If the queue was empty, we're done scanning this queue. This may
 				// occur before the loop naturally terminates because:
 				//

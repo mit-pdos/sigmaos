@@ -85,12 +85,12 @@ func (p *LinuxProc) run() error {
 	}
 
 	// Take this lock to ensure we don't race with a thread rebalancing cores.
-	p.pd.mu.Lock()
+	p.pd.Lock()
 	p.SysPid = cmd.Process.Pid
 	p.syspidstr = strconv.Itoa(p.SysPid)
 	p.UtilInfo.t0 = time.Now()
 	p.UtilInfo.utime0, p.UtilInfo.stime0 = perf.GetCPUTimePid(p.syspidstr)
-	p.pd.mu.Unlock()
+	p.pd.Unlock()
 
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
@@ -105,8 +105,8 @@ func (p *LinuxProc) run() error {
 }
 
 func (p *LinuxProc) setCpuAffinity() {
-	p.pd.mu.Lock()
-	defer p.pd.mu.Unlock()
+	p.pd.Lock()
+	defer p.pd.Unlock()
 
 	p.setCpuAffinityL()
 }

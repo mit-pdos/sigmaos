@@ -24,20 +24,21 @@ import (
 type Procd struct {
 	mu               sync.Mutex
 	fs               *ProcdFs
-	realmbin         string    // realm path from which to pull/run bins.
-	spawnChan        chan bool // Indicates a proc has been spawned on this procd.
-	stealChan        chan bool // Indicates there is work to be stolen.
+	realmbin         string              // realm path from which to pull/run bins.
+	spawnChan        chan bool           // Indicates a proc has been spawned on this procd.
+	stealChan        chan bool           // Indicates there is work to be stolen.
+	wsQueues         map[string][]string // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
 	done             bool
 	addr             string
-	procClaimTime    time.Time  // Time used to rate-limit claiming of BE procs.
-	netProcsClaimed  proc.Tcore // Number of BE procs claimed in the last time interval.
-	procsDownloading proc.Tcore // Number of procs currently being downloaded.
-	runningProcs     map[proc.Tpid]*LinuxProc
+	procClaimTime    time.Time                // Time used to rate-limit claiming of BE procs.
+	netProcsClaimed  proc.Tcore               // Number of BE procs claimed in the last time interval.
+	procsDownloading proc.Tcore               // Number of procs currently being downloaded.
+	runningProcs     map[proc.Tpid]*LinuxProc // Map of currently running procs.
 	coreBitmap       []Tcorestatus
-	cpuMask          linuxsched.CPUMask
-	coresOwned       proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail       proc.Tcore // Current number of cores available to run procs on.
-	memAvail         proc.Tmem
+	cpuMask          linuxsched.CPUMask // Mask of CPUs available for this procd to use.
+	coresOwned       proc.Tcore         // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail       proc.Tcore         // Current number of cores available to run procs on.
+	memAvail         proc.Tmem          // Available memory for this procd and its procs to use.
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
@@ -48,7 +49,7 @@ type Procd struct {
 func RunProcd(realmbin string, grantedCoresIv string) {
 	pd := &Procd{}
 	pd.realmbin = realmbin
-
+	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
 	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
@@ -149,8 +150,9 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	return linuxProc
 }
 
-// Tries to get a runnable proc if it fits on this procd.
-func (pd *Procd) tryGetRunnableProc(procPath string, isRemote bool) (*LinuxProc, error) {
+// Tries to claim a runnable proc if it fits on this procd.
+func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error) {
+	// XXX shouldn't I just lock after reading the proc?
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
@@ -175,6 +177,27 @@ func (pd *Procd) tryGetRunnableProc(procPath string, isRemote bool) (*LinuxProc,
 	return nil, nil
 }
 
+func (pd *Procd) tryGetProc(procPath string, isRemote bool) *LinuxProc {
+	// We need to add "/" to follow the symlink for remote queues.
+	if isRemote {
+		procPath += "/"
+	}
+	newProc, err := pd.tryClaimProc(procPath, isRemote)
+	if err != nil {
+		db.DPrintf("PROCD_ERR", "Error getting runnable proc (remote:%v): %v", isRemote, err)
+		// Remove the symlink, as it must have already been claimed.
+		if isRemote {
+			pd.deleteWSSymlink(procPath, newProc, isRemote)
+		}
+	}
+	// We claimed a proc successfully, so delete the work stealing symlink for
+	// this proc.
+	if newProc != nil {
+		pd.deleteWSSymlink(procPath, newProc, isRemote)
+	}
+	return newProc
+}
+
 func (pd *Procd) getProc() (*LinuxProc, error) {
 	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
@@ -193,36 +216,61 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 	for i, runq := range runqs {
 		// Odd indices are remote queues.
 		isRemote := i%2 == 1
-		_, err := pd.ProcessDir(runq, func(st *np.Stat) (bool, error) {
-			procPath := path.Join(runq, st.Name)
-			// We need to add "/" to follow the symlink for remote queues.
-			if isRemote {
-				procPath += "/"
-			}
-			newProc, err := pd.tryGetRunnableProc(procPath, isRemote)
-			if err != nil {
-				db.DPrintf("PROCD_ERR", "Error getting runnable proc (remote:%v): %v", isRemote, err)
-				// Remove the symlink, as it must have already been claimed.
-				if isRemote {
-					pd.deleteWSSymlink(st, procPath, p, isRemote)
+		if isRemote {
+			// Instead of having every worker thread bang on named to try to steal
+			// procs, one procd thread (the Work Stealing Monitor) periodically scans
+			// the work stealing queues and caches names of stealable procs in a
+			// local slice. Worker threads iterate through this slice when trying to
+			// steal procs.
+			pd.mu.Lock()
+			// Find number of procs in this queue.
+			n := len(pd.wsQueues[runq])
+			pd.mu.Unlock()
+			// Iterate through (up to) n items in the queue, or until we've claimed a
+			// proc.
+			for j := 0; j < n && p == nil; j++ {
+				var pid string
+				pd.mu.Lock()
+				if len(pd.wsQueues[runq]) > 0 {
+					// Pop a proc from the ws queue
+					pid, pd.wsQueues[runq] = pd.wsQueues[runq][0], pd.wsQueues[runq][1:]
 				}
-				return false, nil
+				pd.mu.Unlock()
+				// If the queue was empty, we're done scanning this queue. This may
+				// occur before the loop naturally terminates because:
+				//
+				// 1. Other worker threads on this procd popped off the remaining queue
+				// elements.
+				// 2. The monitor thread updated the queue, and it now
+				// contains fewer elements.
+				if pid == "" {
+					break
+				}
+				procPath := path.Join(runq, pid)
+				// Try to get the proc.
+				p = pd.tryGetProc(procPath, isRemote)
 			}
-			// We claimed a proc successfully, so stop.
-			if newProc != nil {
-				p = newProc
-				// Delete the work stealing symlink for this proc.
-				pd.deleteWSSymlink(st, procPath, p, isRemote)
+			// If the proc was successfully claimed, we're done
+			if p != nil {
+				break
+			}
+		} else {
+			_, err := pd.ProcessDir(runq, func(st *np.Stat) (bool, error) {
+				procPath := path.Join(runq, st.Name)
+				p = pd.tryGetProc(procPath, isRemote)
+				// If a proc was not claimed, keep processing.
+				if p == nil {
+					return false, nil
+				}
 				return true, nil
+			})
+			if err != nil {
+				return nil, err
 			}
-			// Couldn't claim a proc, so keep looking.
-			return false, nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		if p != nil {
-			return p, nil
+			// If the proc was successfully claimed, we're done
+			if p != nil {
+				break
+			}
 		}
 	}
 	return p, nil

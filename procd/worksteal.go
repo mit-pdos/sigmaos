@@ -13,20 +13,22 @@ import (
 
 // Thread in charge of stealing procs.
 func (pd *Procd) startWorkStealingMonitors() {
-	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
-	go pd.monitorWSQueue(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+	go pd.monitorWSQueue(np.PROCD_RUNQ_LC)
+	go pd.monitorWSQueue(np.PROCD_RUNQ_BE)
 }
 
 // Monitor a Work-Stealing queue.
 func (pd *Procd) monitorWSQueue(wsQueue string) {
 	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
+	wsQueuePath := path.Join(np.PROCD_WS, wsQueue)
 	for !pd.readDone() {
 		// Wait for a bit to avoid overwhelming named.
 		<-ticker.C
 
 		var nStealable int
+		stealable := make([]string, 0)
 		// Wait untile there is a proc to steal.
-		sts, err := pd.ReadDirWatch(wsQueue, func(sts []*np.Stat) bool {
+		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*np.Stat) bool {
 			// Any procs are local?
 			anyLocal := false
 			nStealable = len(sts)
@@ -34,20 +36,22 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			for _, st := range sts {
 				// See if this proc was spawned on this procd or has been stolen. If
 				// so, discount it from the count of stealable procs.
-				b, err := pd.GetFile(path.Join(wsQueue, st.Name))
+				b, err := pd.GetFile(path.Join(wsQueuePath, st.Name))
 				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
 					anyLocal = true
 					nStealable--
+				} else {
+					stealable = append(stealable, st.Name)
 				}
 			}
+			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
 			// If any procs are local (possibly BE procs which weren't spawned before
 			// due to rate-limiting), try to spawn one of them, so that we don't
 			// deadlock with all the workers sleeping & BE procs waiting to be
 			// spawned.
-			if anyLocal {
+			if wsQueue == np.PROCD_RUNQ_BE && anyLocal {
 				nStealable++
 			}
-			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
 			return nStealable == 0
 		})
 		// Version error may occur if another procd has modified the ws dir, and
@@ -61,10 +65,19 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			pd.perf.Done()
 			db.DFatalf("Error ReadDirWatch: %v", err)
 		}
-		// Wake up a thread to try to steal each proc.
-		for i := 0; i < nStealable; i++ {
-			pd.stealChan <- true
-		}
+		// Store the queue of stealable procs for worker threads to read.
+		pd.mu.Lock()
+		pd.wsQueues[wsQueuePath] = stealable
+		pd.mu.Unlock()
+		// XXX Doing this in a separate goroutine to avoid blocking & having
+		// workers read from a stale queue. However, it may lead to an explosion of
+		// goroutines. We should probably switch to a counter + cond var.
+		go func() {
+			// Wake up a thread to try to steal each proc.
+			for i := 0; i < nStealable; i++ {
+				pd.stealChan <- true
+			}
+		}()
 	}
 }
 
@@ -102,7 +115,7 @@ func (pd *Procd) offerStealableProcs() {
 }
 
 // Delete the work-stealing symlink for a proc.
-func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, p *LinuxProc, isRemote bool) {
+func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 	// If this proc is remote, remove the symlink.
 	if isRemote {
 		// Remove the symlink (don't follow).
@@ -110,14 +123,14 @@ func (pd *Procd) deleteWSSymlink(st *np.Stat, procPath string, p *LinuxProc, isR
 		db.DPrintf(db.ALWAYS, "Remove remote %v: %v", procPath[:len(procPath)-1], err)
 	} else {
 		// If proc was offered up for work stealing...
-		if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
+		if time.Since(p.attr.SpawnTime) >= np.Conf.Procd.STEALABLE_PROC_TIMEOUT {
 			var runq string
 			if p.attr.Type == proc.T_LC {
 				runq = np.PROCD_RUNQ_LC
 			} else {
 				runq = np.PROCD_RUNQ_BE
 			}
-			link := path.Join(np.PROCD_WS, runq, st.Name)
+			link := path.Join(np.PROCD_WS, runq, p.attr.Pid.String())
 			err := pd.Remove(link)
 			db.DPrintf(db.ALWAYS, "Remove local %v: %v", link, err)
 		}

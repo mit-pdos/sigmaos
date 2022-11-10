@@ -1,6 +1,7 @@
 package www
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -27,6 +28,7 @@ const (
 	BOOK   = "/book/"
 	EXIT   = "/exit/"
 	HELLO  = "/hello"
+	USER   = "/user/"
 )
 
 //
@@ -34,7 +36,7 @@ const (
 // XXX limit process's name space to the app binary and pipe.
 //
 
-var validPath = regexp.MustCompile(`^/(static|book|exit|matmul)/([=.a-zA-Z0-9/]*)$`)
+var validPath = regexp.MustCompile(`^/(static|book|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
 
 func RunWwwd(job, tree string) {
 	www := MakeWwwd(job, tree)
@@ -43,6 +45,7 @@ func RunWwwd(job, tree string) {
 	http.HandleFunc(HELLO, www.makeHandler(doHello))
 	http.HandleFunc(EXIT, www.makeHandler(doExit))
 	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
+	http.HandleFunc(USER, www.makeHandler(doUser))
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
@@ -107,6 +110,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 
 func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (*proc.Status, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("path %v\n", r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
@@ -244,4 +248,12 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
 	return www.spawnApp("user/matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
+}
+
+func doUser(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	user := r.FormValue("user")
+	pw := r.FormValue("pw")
+	db.DPrintf(db.ALWAYS, "user: %v %v\n", user, pw)
+
+	return proc.MakeStatus(proc.StatusOK), nil
 }

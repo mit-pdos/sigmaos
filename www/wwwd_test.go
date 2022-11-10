@@ -137,3 +137,12 @@ func TestMatMulConcurrent(t *testing.T) {
 
 	ts.waitWww()
 }
+
+func TestUser(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Login("abc", "pw")
+	assert.Nil(t, err)
+
+	ts.waitWww()
+}

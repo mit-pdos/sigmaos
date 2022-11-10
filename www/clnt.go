@@ -95,6 +95,15 @@ func (clnt *WWWClnt) MatMul(n int) error {
 	return err
 }
 
+func (clnt *WWWClnt) Login(name, pw string) error {
+	vals := map[string][]string{
+		"user": []string{name},
+		"pw":   []string{pw},
+	}
+	_, err := clnt.post(USER, vals)
+	return err
+}
+
 // XXX Remove eventually, repalce with Evict
 func (clnt *WWWClnt) StopServer(pclnt *procclnt.ProcClnt, pid proc.Tpid) error {
 	ch := make(chan error)

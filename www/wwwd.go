@@ -254,6 +254,5 @@ func doUser(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	user := r.FormValue("user")
 	pw := r.FormValue("pw")
 	db.DPrintf(db.ALWAYS, "user: %v %v\n", user, pw)
-
-	return proc.MakeStatus(proc.StatusOK), nil
+	return www.spawnApp("user/user", w, r, true, []string{user, pw}, nil, 0)
 }

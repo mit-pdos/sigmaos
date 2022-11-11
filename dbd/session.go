@@ -88,6 +88,7 @@ func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 
 // XXX wait on close before processing data?
 func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+	log.Printf("Write: %s\n", string(b))
 	rows, err := q.db.Query(string(b))
 	if err != nil {
 		return 0, np.MkErrError(err)

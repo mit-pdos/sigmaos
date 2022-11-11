@@ -64,18 +64,18 @@ func (ba *BookApp) writeResponse(data []byte) *proc.Status {
 }
 
 func (ba *BookApp) query(q string) ([]byte, error) {
-	b, err := ba.GetFile(dbd.DBD + "clone")
+	b, err := ba.GetFile(np.DBD + "clone")
 	if err != nil {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	sid := string(b)
-	_, err = ba.SetFile(dbd.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
+	_, err = ba.SetFile(np.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
 	if err != nil {
 		return nil, fmt.Errorf("Query err %v\n", err)
 	}
 
 	// XXX maybe the caller should use Reader
-	b, err = ba.GetFile(dbd.DBD + sid + "/data")
+	b, err = ba.GetFile(np.DBD + sid + "/data")
 	if err != nil {
 		return nil, fmt.Errorf("Query response err %v\n", err)
 	}

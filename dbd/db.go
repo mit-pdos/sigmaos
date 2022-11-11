@@ -1,7 +1,6 @@
 package dbd
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"strconv"
 
@@ -13,16 +12,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fslibsrv"
 	np "sigmaos/ninep"
-)
-
-//
-// mysql client exporting a database server through the file system
-// interface, modeled after
-// http://man.cat-v.org/plan_9_contrib/4/mysqlfs
-//
-
-const (
-	DBD = "name/db/~ip/"
+	"sigmaos/user"
 )
 
 type Book struct {
@@ -31,10 +21,11 @@ type Book struct {
 	Title  string
 }
 
-type User struct {
-	Username string
-	Password string
-}
+//
+// mysql client exporting a database server through the file system
+// interface, modeled after
+// http://man.cat-v.org/plan_9_contrib/4/mysqlfs
+//
 
 func initDb() {
 	db, err := sql.Open("mysql", "sigma:sigmaos@/books")
@@ -52,14 +43,9 @@ func initDb() {
 	}
 
 	for i := 0; i <= 500; i++ {
-		s := strconv.Itoa(i)
-		u := "Cornell_" + s
-		p := ""
-		for j := 0; j < 10; j++ {
-			p += s
-		}
-		sum := sha256.Sum256([]byte(p))
-		sql := fmt.Sprintf("INSERT INTO user(username, password) VALUES ('%s', '%x')", u, sum)
+		u := "u_" + strconv.Itoa(i)
+		p := user.MkPassword(u)
+		sql := fmt.Sprintf("INSERT INTO user(username, password) VALUES ('%s', '%s')", u, p)
 		_, err := db.Exec(sql)
 		if err != nil {
 			panic(err.Error())

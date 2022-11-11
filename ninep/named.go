@@ -14,8 +14,10 @@ const (
 	S3       = NAMED + S3REL + "/"
 	UXREL    = "ux"
 	UX       = NAMED + UXREL + "/"
-	DBREL    = "db"
-	DB       = NAMED + DBREL + "/"
+
+	DBREL = "db"
+	DB    = NAMED + DBREL + "/"
+	DBD   = DB + "~ip/"
 
 	UXBIN = UX + "~ip/bin/"
 

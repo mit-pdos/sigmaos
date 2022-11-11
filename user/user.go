@@ -38,7 +38,6 @@ func MkPassword(u string) string {
 }
 
 func RunUserLogin(args []string) (*UserLogin, error) {
-	log.Printf("RunUserLogin: %v\n", args)
 	ua := &UserLogin{}
 	ua.FsLib = fslib.MakeFsLib("userlogin")
 	ua.ProcClnt = procclnt.MakeProcClnt(ua.FsLib)
@@ -73,15 +72,11 @@ func (ua *UserLogin) Login() *proc.Status {
 		return proc.MakeStatusErr(fmt.Sprintf("Login unknown user %v\n", ua.input[0]), nil)
 	}
 
-	log.Printf("%v\n", string(u))
-
 	var users []User
 	err = json.Unmarshal(u, &users)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err), nil)
 	}
-
-	log.Printf("users %v\n", users)
 
 	if users[0].Password != ua.input[1] {
 		return proc.MakeStatusErr(fmt.Sprintf("Wrong pass %v\n", ua.input[1]), nil)
@@ -91,6 +86,5 @@ func (ua *UserLogin) Login() *proc.Status {
 }
 
 func (ua *UserLogin) Exit(status *proc.Status) {
-	log.Printf("userlogin exit %v\n", status)
 	ua.Exited(status)
 }

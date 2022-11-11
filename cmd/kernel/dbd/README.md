@@ -9,7 +9,7 @@
 
 * Create db
 
-  mysql -u root -p
+  sudo mysql -u root -p
   mysql> create database books;
   mysql> use books;
   mysql> source init-db.sql

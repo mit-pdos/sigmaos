@@ -1,8 +1,6 @@
 package protdevsrv
 
 import (
-	"strconv"
-
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -20,14 +18,14 @@ type stream struct {
 
 type streamCtl struct {
 	*inode.Inode
-	id string
+	id np.Tsession
 }
 
 func (sc *streamCtl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
 	}
-	return []byte(sc.id), nil
+	return []byte(sc.id.String()), nil
 }
 
 func (sc *streamCtl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
@@ -53,15 +51,15 @@ func makeClone(ctx fs.CtxI, parent fs.Dir, mkStream MkStream) fs.Inode {
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	s := &streamCtl{}
-	s.Inode = inode.MakeInode(nil, 0, nil)
-	s.id = strconv.Itoa(int(s.Inode.Path()))
+	s.Inode = inode.MakeInode(nil, np.DMTMP, nil)
+	s.id = ctx.SessionId()
 
 	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", s.id)
 
 	// create directory for stream
-	di := inode.MakeInode(nil, np.DMDIR, c.Parent())
+	di := inode.MakeInode(nil, np.DMDIR|np.DMTMP, c.Parent())
 	d := dir.MakeDir(di, memfs.MakeInode)
-	err := dir.MkNod(ctx, c.Parent(), s.id, d)
+	err := dir.MkNod(ctx, c.Parent(), s.id.String(), d)
 	if err != nil {
 		db.DFatalf("MkNod d %v err %v\n", d, err)
 	}
@@ -72,7 +70,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 
 	// make data/stream file
 	st := &stream{}
-	st.Inode = inode.MakeInode(nil, 0, d)
+	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
 	st.File, err = c.mkStream()
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
@@ -88,7 +86,7 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 }
 
 func Run(fn string, mkStream MkStream) {
-	mfs, _, _, error := fslibsrv.MakeMemFs(fn, "fsnet"+fn)
+	mfs, _, _, error := fslibsrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

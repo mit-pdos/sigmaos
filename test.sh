@@ -65,9 +65,7 @@ do
   go test $@ sigmaos/sessclnt --version=$VERSION
   
   # dbd_test and wwwd_test requires mariadb running
-  pgrep mariadb >/dev/null && go test $@ sigmaos/dbd
   pgrep mariadb >/dev/null && go test $@ sigmaos/www
-  
   
   go test $@ sigmaos/mr --version=$VERSION
   go test $@ sigmaos/kv --version=$VERSION

@@ -7,11 +7,9 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"sigmaos/ctx"
-	db "sigmaos/debug"
-	"sigmaos/dir"
-	"sigmaos/fslibsrv"
+	// db "sigmaos/debug"
 	np "sigmaos/ninep"
+	"sigmaos/protdevsrv"
 	"sigmaos/user"
 )
 
@@ -56,14 +54,5 @@ func initDb() {
 func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	initDb()
-	mfs, _, _, error := fslibsrv.MakeMemFs(np.DB, "dbd")
-	if error != nil {
-		db.DFatalf("StartMemFs %v\n", error)
-	}
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root()))
-	if err != nil {
-		db.DFatalf("MakeNod clone failed %v\n", err)
-	}
-	mfs.Serve()
-	mfs.Done()
+	protdevsrv.Run(np.DB, mkStream)
 }

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	// db "sigmaos/debug"
+	"sigmaos/dbclnt"
 	"sigmaos/dbd"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
@@ -41,6 +42,7 @@ type BookApp struct {
 	*procclnt.ProcClnt
 	input  []string
 	pipefd int
+	dbc    *dbclnt.DbClnt
 }
 
 func RunBookApp(args []string) (*BookApp, error) {
@@ -49,6 +51,11 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	ba.input = strings.Split(args[1], "/")
+	dbc, err := dbclnt.MkDbClnt(ba.FsLib, np.DBD)
+	if err != nil {
+		return nil, err
+	}
+	ba.dbc = dbc
 	ba.Started()
 
 	return ba, nil
@@ -63,27 +70,8 @@ func (ba *BookApp) writeResponse(data []byte) *proc.Status {
 	return proc.MakeStatus(proc.StatusOK)
 }
 
-func (ba *BookApp) query(q string) ([]byte, error) {
-	b, err := ba.GetFile(np.DBD + "clone")
-	if err != nil {
-		return nil, fmt.Errorf("Clone err %v\n", err)
-	}
-	sid := string(b)
-	_, err = ba.SetFile(np.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
-	if err != nil {
-		return nil, fmt.Errorf("Query err %v\n", err)
-	}
-
-	// XXX maybe the caller should use Reader
-	b, err = ba.GetFile(np.DBD + sid + "/data")
-	if err != nil {
-		return nil, fmt.Errorf("Query response err %v\n", err)
-	}
-	return b, nil
-}
-
 func (ba *BookApp) doView() *proc.Status {
-	b, err := ba.query("select * from book;")
+	b, err := ba.dbc.Query("select * from book;")
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}
@@ -111,7 +99,7 @@ func (ba *BookApp) doView() *proc.Status {
 
 func (ba *BookApp) doEdit(key string) *proc.Status {
 	q := fmt.Sprintf("select * from book where title=\"%v\";", key)
-	b, err := ba.query(q)
+	b, err := ba.dbc.Query(q)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}
@@ -139,7 +127,7 @@ func (ba *BookApp) doEdit(key string) *proc.Status {
 
 func (ba *BookApp) doSave(key string, title string) *proc.Status {
 	q := fmt.Sprintf("update book SET title=\"%v\" where title=\"%v\";", title, key)
-	_, err := ba.query(q)
+	_, err := ba.dbc.Query(q)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}

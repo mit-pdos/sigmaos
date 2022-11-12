@@ -42,9 +42,12 @@ func RunUserLogin(args []string) (*UserLogin, error) {
 	ua.FsLib = fslib.MakeFsLib("userlogin")
 	ua.ProcClnt = procclnt.MakeProcClnt(ua.FsLib)
 	ua.input = args[1:]
-	ua.dbc = dbclnt.MkDbClnt(ua.FsLib)
+	dbc, err := dbclnt.MkDbClnt(ua.FsLib, np.DBD)
+	if err != nil {
+		return nil, err
+	}
+	ua.dbc = dbc
 	ua.Started()
-
 	return ua, nil
 }
 

@@ -4,31 +4,25 @@ import (
 	"fmt"
 
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	"sigmaos/protdevclnt"
 )
 
 type DbClnt struct {
-	*fslib.FsLib
+	pdc *protdevclnt.ProtDevClnt
 }
 
-func MkDbClnt(fsl *fslib.FsLib) *DbClnt {
+func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	dc.FsLib = fsl
-	return dc
+	pdc, err := protdevclnt.MkProtDevClnt(fsl, fn)
+	if err != nil {
+		return nil, err
+	}
+	dc.pdc = pdc
+	return dc, nil
 }
 
 func (dc *DbClnt) Query(q string) ([]byte, error) {
-	b, err := dc.GetFile(np.DBD + "clone")
-	if err != nil {
-		return nil, fmt.Errorf("Clone err %v\n", err)
-	}
-	sid := string(b)
-	_, err = dc.SetFile(np.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
-	if err != nil {
-		return nil, fmt.Errorf("Query err %v\n", err)
-	}
-	// XXX maybe the caller should use Reader
-	b, err = dc.GetFile(np.DBD + sid + "/data")
+	b, err := dc.pdc.RPC([]byte(q))
 	if err != nil {
 		return nil, fmt.Errorf("Query response err %v\n", err)
 	}

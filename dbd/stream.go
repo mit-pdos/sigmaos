@@ -47,6 +47,9 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 	if off > 0 {
 		return nil, nil
 	}
+	if st.rows == nil {
+		return nil, nil
+	}
 	defer st.rows.Close()
 	columns, err := st.rows.Columns()
 	if err != nil {

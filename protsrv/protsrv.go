@@ -184,6 +184,8 @@ func (ps *ProtSrv) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	f.SetMode(args.Mode)
 	if no != nil {
 		f.Pobj().SetObj(no)
+		ps.vt.Insert(no.Path())
+		ps.vt.IncVersion(no.Path())
 		rets.Qid = ps.mkQid(no.Perm(), no.Path())
 	} else {
 		rets.Qid = ps.mkQid(o.Perm(), o.Path())

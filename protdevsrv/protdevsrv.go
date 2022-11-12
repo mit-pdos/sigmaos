@@ -18,20 +18,25 @@ type stream struct {
 	fs.File
 }
 
-type protdev struct {
+type streamCtl struct {
 	*inode.Inode
 	id string
 }
 
-func (p *protdev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (sc *streamCtl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
 	}
-	return []byte(p.id), nil
+	return []byte(sc.id), nil
 }
 
-func (p *protdev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (sc *streamCtl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	return 0, np.MkErr(np.TErrNotSupported, nil)
+}
+
+func (sc *streamCtl) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("PROTDEVSRV", "Close ctl %v\n", sc.id)
+	return nil
 }
 
 type MkStream func() (fs.File, *np.Err)
@@ -47,9 +52,11 @@ func makeClone(ctx fs.CtxI, parent fs.Dir, mkStream MkStream) fs.Inode {
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	s := &protdev{}
+	s := &streamCtl{}
 	s.Inode = inode.MakeInode(nil, 0, nil)
 	s.id = strconv.Itoa(int(s.Inode.Path()))
+
+	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", s.id)
 
 	// create directory for stream
 	di := inode.MakeInode(nil, np.DMDIR, c.Parent())
@@ -63,7 +70,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		db.DFatalf("MkNod err %v\n", err)
 	}
 
-	// make stream file
+	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, 0, d)
 	st.File, err = c.mkStream()
@@ -75,10 +82,15 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return s, nil
 }
 
+func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("PROTDEVSRV", "Close clone\n")
+	return nil
+}
+
 func Run(fn string, mkStream MkStream) {
 	mfs, _, _, error := fslibsrv.MakeMemFs(fn, "fsnet"+fn)
 	if error != nil {
-		db.DFatalf("RunProtDev: %v\n", error)
+		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), mkStream))
 	if err != nil {

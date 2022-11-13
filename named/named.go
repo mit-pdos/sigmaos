@@ -68,7 +68,7 @@ func Run(args []string) {
 	ss.Done()
 }
 
-var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL, np.UXREL, np.S3REL, np.DBREL}
+var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL, np.UXREL, np.S3REL, np.DBREL, np.HOTELREL}
 
 func initfs(ss *sesssrv.SessSrv) error {
 	r := ss.Root()

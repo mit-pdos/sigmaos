@@ -21,9 +21,13 @@ const (
 
 	UXBIN = UX + "~ip/bin/"
 
-	SIGMAMGR = "name/sigmamgr"
+	SIGMAMGR = NAMED + "sigmamgr"
 
-	MEMFS = "name/memfsd/"
+	MEMFS = NAMED + "memfsd/"
+
+	HOTELREL = "hotel"
+	HOTEL    = NAMED + HOTELREL + "/"
+	HOTELGEO = HOTEL + "geo"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

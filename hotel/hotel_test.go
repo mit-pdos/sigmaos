@@ -16,7 +16,7 @@ import (
 
 type Tstate struct {
 	*test.Tstate
-	pid proc.Tpid
+	pids []proc.Tpid
 }
 
 func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
@@ -26,25 +26,31 @@ func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
 	return a.Pid
 }
 
-func makeTstate(t *testing.T, srv string) *Tstate {
+func makeTstate(t *testing.T, srvs []string) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.pid = spawn(t, ts, srv)
-	err = ts.WaitStart(ts.pid)
-	assert.Nil(t, err)
+	ts.pids = make([]proc.Tpid, 0)
+	for _, s := range srvs {
+		pid := spawn(t, ts, s)
+		err = ts.WaitStart(pid)
+		assert.Nil(t, err)
+		ts.pids = append(ts.pids, pid)
+	}
 	return ts
 }
 
-func (ts *Tstate) stop(pid proc.Tpid) {
-	err := ts.Evict(pid)
-	assert.Nil(ts.T, err, "Evict: %v", err)
-	_, err = ts.WaitExit(pid)
-	assert.Nil(ts.T, err)
+func (ts *Tstate) stop() {
+	for _, pid := range ts.pids {
+		err := ts.Evict(pid)
+		assert.Nil(ts.T, err, "Evict: %v", err)
+		_, err = ts.WaitExit(pid)
+		assert.Nil(ts.T, err)
+	}
 }
 
 func TestGeo(t *testing.T) {
-	ts := makeTstate(t, "user/geod")
+	ts := makeTstate(t, []string{"user/hotel-geod"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
 	assert.Nil(t, err)
 	arg := hotel.GeoRequest{
@@ -55,12 +61,12 @@ func TestGeo(t *testing.T) {
 	err = pdc.RPCJson(&arg, &res)
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res)
-	ts.stop(ts.pid)
+	ts.stop()
 	ts.Shutdown()
 }
 
 func TestRate(t *testing.T) {
-	ts := makeTstate(t, "user/rated")
+	ts := makeTstate(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
 	arg := hotel.RateRequest{
@@ -72,6 +78,24 @@ func TestRate(t *testing.T) {
 	err = pdc.RPCJson(&arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	ts.stop(ts.pid)
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestSearch(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
+	assert.Nil(t, err)
+	arg := hotel.SearchRequest{
+		Lat:     37.7749,
+		Lon:     -122.4194,
+		InDate:  "2015-04-09",
+		OutDate: "2015-04-10",
+	}
+	var res hotel.SearchResult
+	err = pdc.RPCJson(&arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(res.RatePlans))
+	ts.stop()
 	ts.Shutdown()
 }

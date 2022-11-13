@@ -25,9 +25,10 @@ const (
 
 	MEMFS = NAMED + "memfsd/"
 
-	HOTELREL = "hotel"
-	HOTEL    = NAMED + HOTELREL + "/"
-	HOTELGEO = HOTEL + "geo"
+	HOTELREL  = "hotel"
+	HOTEL     = NAMED + HOTELREL + "/"
+	HOTELGEO  = HOTEL + "geo"
+	HOTELRATE = HOTEL + "rate"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

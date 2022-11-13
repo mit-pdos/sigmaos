@@ -82,6 +82,23 @@ func TestRate(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRec(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-recd"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
+	assert.Nil(t, err)
+	arg := hotel.RecRequest{
+		Require: "dis",
+		Lat:     38.0235,
+		Lon:     -122.095,
+	}
+	var res hotel.RecResult
+	err = pdc.RPCJson(&arg, &res)
+	assert.Nil(t, err)
+	log.Printf("res %v\n", res.HotelIds)
+	ts.stop()
+	ts.Shutdown()
+}
+
 func TestSearch(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
@@ -95,7 +112,7 @@ func TestSearch(t *testing.T) {
 	var res hotel.SearchResult
 	err = pdc.RPCJson(&arg, &res)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(res.RatePlans))
+	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
 }

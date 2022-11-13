@@ -82,7 +82,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	}
 }
 
-// Scan for detachable sessions, and request that they be detahed.
+// Scan for detachable sessions, and request that they be detached.
 func (sm *SessionMgr) runDetaches() {
 	sessTimeoutT := time.NewTicker(np.Conf.Session.TIMEOUT)
 

@@ -281,7 +281,7 @@ func RunMember(jobdir, grp string) {
 	db.DPrintf("GROUP", "Starting replica with cluster config %v", clusterCfg)
 
 	// start server but don't publish its existence
-	mfs, err1 := fslibsrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg)
+	mfs, err1 := fslibsrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg, nil)
 	if err1 != nil {
 		db.DFatalf("StartMemFs %v\n", err1)
 	}

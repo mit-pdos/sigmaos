@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	np "sigmaos/ninep"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/test"
@@ -146,5 +147,8 @@ func TestUser(t *testing.T) {
 	err := ts.Login(u, user.MkPassword(u))
 	assert.Nil(t, err)
 
+	sts, err := ts.GetDir(np.DBD)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(sts))
 	ts.waitWww()
 }

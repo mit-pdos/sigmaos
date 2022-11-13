@@ -19,14 +19,15 @@ import (
 //
 
 type ProtSrv struct {
-	ssrv  *sesssrv.SessSrv
-	plt   *lockmap.PathLockTable // shared across sessions
-	wt    *watch.WatchTable      // shared across sessions
-	vt    *version.VersionTable  // shared across sessions
-	ft    *fidTable
-	et    *ephemeralTable
-	stats *stats.Stats
-	sid   np.Tsession
+	ssrv   *sesssrv.SessSrv
+	plt    *lockmap.PathLockTable // shared across sessions
+	wt     *watch.WatchTable      // shared across sessions
+	vt     *version.VersionTable  // shared across sessions
+	ft     *fidTable
+	et     *ephemeralTable
+	stats  *stats.Stats
+	sid    np.Tsession
+	detach fs.DetachF
 }
 
 func MakeProtServer(s np.SessServer, sid np.Tsession) np.Protsrv {
@@ -41,6 +42,7 @@ func MakeProtServer(s np.SessServer, sid np.Tsession) np.Protsrv {
 	ps.vt = srv.GetVersionTable()
 	ps.stats = srv.GetStats()
 	ps.sid = sid
+	ps.detach = srv.GetDetach()
 	db.DPrintf("PROTSRV", "MakeProtSrv -> %v", ps)
 	return ps
 }
@@ -88,7 +90,7 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
-	db.DPrintf("PROTSRV", "Detach %v eph %v", ps.sid, ps.et.Get())
+	db.DPrintf("PROTSRV", "Detach %v eph %v %p", ps.sid, ps.et.Get(), ps.detach)
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
@@ -99,6 +101,9 @@ func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	for _, po := range ephemeral {
 		db.DPrintf("PROTSRV", "Detach %v", po.Path())
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
+	}
+	if ps.detach != nil {
+		ps.detach(nil, ps.sid)
 	}
 	return nil
 }

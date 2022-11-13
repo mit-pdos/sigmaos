@@ -53,3 +53,5 @@ func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
 	}
 	return nil, nil
 }
+
+type DetachF func(CtxI, np.Tsession)

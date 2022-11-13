@@ -59,11 +59,12 @@ type SessSrv struct {
 	replicated bool
 	ch         chan bool
 	fsl        *fslib.FsLib
+	detach     fs.DetachF
 }
 
 func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	mkps np.MkProtServer, rps np.RestoreProtServer, pclnt *procclnt.ProcClnt,
-	config repl.Config) *SessSrv {
+	config repl.Config, detach fs.DetachF) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -101,6 +102,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl
+	ssrv.detach = detach
 	return ssrv
 }
 
@@ -118,6 +120,10 @@ func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
 
 func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
+}
+
+func (ssrv *SessSrv) GetDetach() fs.DetachF {
+	return ssrv.detach
 }
 
 func (ssrv *SessSrv) Snapshot() []byte {

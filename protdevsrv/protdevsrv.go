@@ -44,8 +44,8 @@ type Clone struct {
 	mkStream MkStream
 }
 
-func makeClone(ctx fs.CtxI, parent fs.Dir, mkStream MkStream) fs.Inode {
-	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
+func makeClone(ctx fs.CtxI, root fs.Dir, mkStream MkStream) fs.Inode {
+	i := inode.MakeInode(ctx, np.DMDEVICE, root)
 	return &Clone{i, mkStream}
 }
 
@@ -85,11 +85,39 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
+type ProtSrvDev struct {
+	mfs *fslibsrv.MemFs
+}
+
+func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
+	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.mfs, psd.mfs.Root())
+	root := psd.mfs.Root()
+	_, o, _, err := root.LookupPath(nil, np.Path{session.String()})
+	if err != nil {
+		db.DPrintf("PROTDEVSRV", "LookupPath err %v\n", err)
+	}
+	d := o.(fs.Dir)
+	err = d.Remove(nil, "ctl")
+	if err != nil {
+		db.DPrintf("PROTDEVSRV", "Remove ctl err %v\n", err)
+	}
+	err = d.Remove(nil, "data")
+	if err != nil {
+		db.DPrintf("PROTDEVSRV", "Remove data err %v\n", err)
+	}
+	err = root.Remove(nil, session.String())
+	if err != nil {
+		db.DPrintf("PROTDEVSRV", "Detach err %v\n", err)
+	}
+}
+
 func Run(fn string, mkStream MkStream) {
-	mfs, _, _, error := fslibsrv.MakeMemFs(fn, "protdevsrv")
+	psd := ProtSrvDev{}
+	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
+	psd.mfs = mfs
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), mkStream))
 	if err != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err)

@@ -34,8 +34,8 @@ type reservation struct {
 }
 
 type number struct {
-	HotelId string `json:"hotelid"`
-	Number  string `json:"number"`
+	HotelId string
+	Number  int
 }
 
 type Reserve struct {
@@ -157,13 +157,11 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Unknown %v\n", hotelId)
 		}
-		log.Printf("b %v\n", string(b))
 		var nums []number
 		err = json.Unmarshal(b, &nums)
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("nums %v\n", nums)
 		if len(nums) == 0 {
 			return nil, fmt.Errorf("Unknown %v\n", hotelId)
 		}

@@ -3,6 +3,7 @@ package dbd
 import (
 	"encoding/json"
 	"log"
+	"reflect"
 
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
@@ -57,28 +58,36 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 	}
 	count := len(columns)
 	table := make([]map[string]interface{}, 0)
-	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
-	for st.rows.Next() {
-		for i := 0; i < count; i++ {
-			valuePtrs[i] = &values[i]
+
+	colTypes, err := st.rows.ColumnTypes()
+	for i, s := range colTypes {
+		switch s.ScanType().Kind() {
+		case reflect.Int32:
+			valuePtrs[i] = new(int32)
+		default:
+			valuePtrs[i] = new(sql.RawBytes)
 		}
+	}
+
+	for st.rows.Next() {
 		st.rows.Scan(valuePtrs...)
 		entry := make(map[string]interface{})
 		for i, col := range columns {
-			var v interface{}
-			val := values[i]
-			b, ok := val.([]byte)
-			if ok {
-				v = string(b)
-			} else {
-				v = val
+			var val interface{}
+			valptr := valuePtrs[i]
+			switch v := valptr.(type) {
+			case *int32:
+				val = *v
+			case *sql.RawBytes:
+				val = string(*v)
+			default:
+				log.Printf("unknown type %v\n", reflect.TypeOf(valptr))
 			}
-			entry[col] = v
+			entry[col] = val
 		}
 		table = append(table, entry)
 	}
-	log.Printf("table %v\n", table)
 	b, err := json.Marshal(table)
 	if np.Tsize(len(b)) > cnt {
 		np.MkErr(np.TErrInval, "too large")

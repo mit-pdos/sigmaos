@@ -39,15 +39,9 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 // ========== SPAWN ==========
 
 // XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.Cmd, error) {
-	if err := clnt.Spawn(p); err != nil {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, viaProcd bool) (*exec.Cmd, error) {
+	if err := clnt.spawn("~ip", p, viaProcd); err != nil {
 		return nil, err
-	}
-
-	// Make the proc's procdir
-	err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
-	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Err SpawnKernelProc MakeProcDir: %v", err)
 	}
 
 	return proc.RunKernelProc(p, namedAddr)
@@ -124,7 +118,8 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~ip", p)
 }
 
-func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
+// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up and the proc is not actually spawned on procd, since it will be started later.
+func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 	if p.Ncore > 0 && p.Type != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
@@ -145,7 +140,7 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 
 	p.SpawnTime = time.Now()
 	// If this is not a privileged proc, spawn it through procd.
-	if !p.IsPrivilegedProc() {
+	if viaProcd {
 		b, err := json.Marshal(p)
 		if err != nil {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v", err)
@@ -163,6 +158,12 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
 		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
+
+		// Make the proc's procdir
+		err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
+		if err != nil {
+			db.DPrintf("PROCCLNT_ERR", "Err SpawnKernelProc MakeProcDir: %v", err)
+		}
 	}
 
 	return nil

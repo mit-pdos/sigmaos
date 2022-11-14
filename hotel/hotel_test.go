@@ -99,6 +99,25 @@ func TestRec(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestReserve(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-reserved"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
+	assert.Nil(t, err)
+	arg := hotel.ReserveRequest{
+		HotelId:      []string{"1"},
+		CustomerName: "u_0",
+		InDate:       "2015-04-09",
+		OutDate:      "2015-04-10",
+		Number:       1,
+	}
+	var res hotel.ReserveResult
+	err = pdc.RPCJson(&arg, &res)
+	assert.Nil(t, err)
+	log.Printf("res %v\n", res.HotelIds)
+	ts.stop()
+	ts.Shutdown()
+}
+
 func TestSearch(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)

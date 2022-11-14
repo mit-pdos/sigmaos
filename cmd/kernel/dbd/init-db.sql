@@ -8,10 +8,24 @@ CREATE TABLE book (
 );
 
 CREATE TABLE user (
-  id         INT AUTO_INCREMENT NOT NULL,
   username   VARCHAR(128) NOT NULL,
   password   VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`username`)
+);
+
+CREATE TABLE reservation (
+  hotelid    VARCHAR(128) NOT NULL,
+  customer   VARCHAR(128) NOT NULL,
+  indate     VARCHAR(128) NOT NULL,
+  outdate    VARCHAR(128) NOT NULL,
+  number     INT NOT NULL,
+  PRIMARY KEY (`hotelid`)
+);
+
+CREATE TABLE number (
+  hotelid    VARCHAR(128) NOT NULL,
+  number     INT NOT NULL,
+  PRIMARY KEY (`hotelid`)
 );
 
 INSERT INTO book

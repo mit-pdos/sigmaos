@@ -32,6 +32,7 @@ type Search struct {
 func RunSearchSrv(n string) error {
 	s := &Search{}
 	s.fslib = fslib.MakeFsLib(n)
+
 	pdc, err := protdevclnt.MkProtDevClnt(s.fslib, np.HOTELRATE)
 	if err != nil {
 		return err

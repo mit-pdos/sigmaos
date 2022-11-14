@@ -78,6 +78,7 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 		}
 		table = append(table, entry)
 	}
+	log.Printf("table %v\n", table)
 	b, err := json.Marshal(table)
 	if np.Tsize(len(b)) > cnt {
 		np.MkErr(np.TErrInval, "too large")

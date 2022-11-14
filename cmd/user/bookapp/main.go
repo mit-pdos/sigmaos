@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -71,17 +70,11 @@ func (ba *BookApp) writeResponse(data []byte) *proc.Status {
 }
 
 func (ba *BookApp) doView() *proc.Status {
-	b, err := ba.dbc.Query("select * from book;")
+	var books []dbd.Book
+	err := ba.dbc.Query("select * from book;", &books)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}
-
-	var books []dbd.Book
-	err = json.Unmarshal(b, &books)
-	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err), nil)
-	}
-
 	t, err := template.New("test").Parse(`<h1>Books</h1><ul>{{range .}}<li><a href="http://localhost:8080/edit/{{.Title}}">{{.Title}}</a> by {{.Author}}</li> {{end}}</ul>`)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Template parse err %v\n", err), nil)
@@ -98,18 +91,12 @@ func (ba *BookApp) doView() *proc.Status {
 }
 
 func (ba *BookApp) doEdit(key string) *proc.Status {
+	var books []dbd.Book
 	q := fmt.Sprintf("select * from book where title=\"%v\";", key)
-	b, err := ba.dbc.Query(q)
+	err := ba.dbc.Query(q, &books)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}
-
-	var books []dbd.Book
-	err = json.Unmarshal(b, &books)
-	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err), nil)
-	}
-
 	t, err := template.New("edit").Parse(`<h1>Editing {{.Title}}</h1>
 <form action="/save/{{.Title}}" method="POST">
 <div><textarea name="title" rows="20" cols="80">{{printf "%s" .Title}}</textarea></div>
@@ -127,7 +114,7 @@ func (ba *BookApp) doEdit(key string) *proc.Status {
 
 func (ba *BookApp) doSave(key string, title string) *proc.Status {
 	q := fmt.Sprintf("update book SET title=\"%v\" where title=\"%v\";", title, key)
-	_, err := ba.dbc.Query(q)
+	err := ba.dbc.Exec(q)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}

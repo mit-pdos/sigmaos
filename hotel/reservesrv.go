@@ -96,17 +96,17 @@ func (st *StreamReserve) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQ
 
 func (s *Reserve) initDb() error {
 	q := fmt.Sprintf("truncate number;")
-	_, err := s.dbc.Query(q)
+	err := s.dbc.Exec(q)
 	if err != nil {
 		return err
 	}
 	q = fmt.Sprintf("truncate reservation;")
-	_, err = s.dbc.Query(q)
+	err = s.dbc.Exec(q)
 	if err != nil {
 		return err
 	}
 	q = fmt.Sprintf("INSERT INTO number (hotelid, number) VALUES ('%v', '%v');", "1", 200)
-	_, err = s.dbc.Query(q)
+	err = s.dbc.Exec(q)
 	if err != nil {
 		return err
 	}
@@ -136,13 +136,9 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		outdate := inDate.String()[0:10]
 
 		// XXX add indate and outdate
-		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
-		b, err := s.dbc.Query(q)
-		if err != nil {
-			return nil, fmt.Errorf("Unknown %v\n", hotelId)
-		}
 		var reserves []reservation
-		err = json.Unmarshal(b, &reserves)
+		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
+		err := s.dbc.Query(q, &reserves)
 		if err != nil {
 			return nil, err
 		}
@@ -150,22 +146,18 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		for _, r := range reserves {
 			count += r.Number
 		}
+
 		// check capacity
 		hotel_cap := 0
-		q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
-		b, err = s.dbc.Query(q)
-		if err != nil {
-			return nil, fmt.Errorf("Unknown %v\n", hotelId)
-		}
 		var nums []number
-		err = json.Unmarshal(b, &nums)
+		q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
+		err = s.dbc.Query(q, &nums)
 		if err != nil {
 			return nil, err
 		}
 		if len(nums) == 0 {
 			return nil, fmt.Errorf("Unknown %v\n", hotelId)
 		}
-
 		hotel_cap = 200
 		if count+int(req.Number) > hotel_cap {
 			return res, nil
@@ -184,7 +176,7 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		outdate := inDate.String()[0:10]
 
 		q := fmt.Sprintf("INSERT INTO reservation (hotelid, customer, indate, outdate, number) VALUES ('%v', '%v', '%v', '%v', '%v');", hotelId, req.CustomerName, indate, outdate, req.Number)
-		_, err := s.dbc.Query(q)
+		err := s.dbc.Exec(q)
 		if err != nil {
 			return nil, fmt.Errorf("Insert failed %v\n", req)
 		}

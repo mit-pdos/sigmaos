@@ -2,7 +2,6 @@ package user
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"log"
 	"path"
@@ -68,19 +67,15 @@ func (ua *UserLogin) Login() *proc.Status {
 	}
 	ua.pipefd = fd
 	defer ua.Close(fd)
-
-	q := fmt.Sprintf("SELECT * from user where username='%s';", ua.input[0])
-	u, err := ua.dbc.Query(q)
-	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("Login unknown user %v\n", ua.input[0]), nil)
-	}
-
 	var users []User
-	err = json.Unmarshal(u, &users)
+	q := fmt.Sprintf("SELECT * from user where username='%s';", ua.input[0])
+	err = ua.dbc.Query(q, &users)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
 	}
-
+	if len(users) == 0 {
+		return proc.MakeStatusErr(fmt.Sprintf("Unknown user %v\n", err), nil)
+	}
 	if users[0].Password != ua.input[1] {
 		return proc.MakeStatusErr(fmt.Sprintf("Wrong pass %v\n", ua.input[1]), nil)
 	}

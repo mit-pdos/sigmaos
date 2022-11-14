@@ -1,6 +1,7 @@
 package dbclnt
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"sigmaos/fslib"
@@ -21,10 +22,22 @@ func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	return dc, nil
 }
 
-func (dc *DbClnt) Query(q string) ([]byte, error) {
+func (dc *DbClnt) Query(q string, v any) error {
 	b, err := dc.pdc.RPC([]byte(q))
 	if err != nil {
-		return nil, fmt.Errorf("Query response err %v\n", err)
+		return fmt.Errorf("Query err %v\n", err)
 	}
-	return b, nil
+	err = json.Unmarshal(b, v)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dc *DbClnt) Exec(q string) error {
+	_, err := dc.pdc.RPC([]byte(q))
+	if err != nil {
+		return fmt.Errorf("Query err %v\n", err)
+	}
+	return nil
 }

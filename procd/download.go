@@ -94,5 +94,5 @@ func (pd *Procd) downloadProcBin(program string) {
 			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
 		}
 	}
-	db.DFatalf("Couldn't download proc bin %v in over %v retries err %v", program, RETRIES, err)
+	db.DFatalf("Couldn't download proc bin %v (s3 path: %v) in over %v retries err %v", program, s3BinPath, RETRIES, err)
 }

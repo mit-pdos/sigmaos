@@ -77,11 +77,11 @@ func (p *LinuxProc) run() error {
 		cmd = exec.Command(path.Join(np.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
 	} else {
 		cmd = exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
+		namespace.SetupProc(cmd)
 	}
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	namespace.SetupProc(cmd)
 	err := cmd.Start()
 	if err != nil {
 		db.DPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)

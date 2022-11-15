@@ -92,6 +92,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) 
 
 // Boot a "kernel" without named
 func (s *System) Boot() error {
+	// Procd must boot first, since other services are spawned as procs.
 	if err := s.BootProcd(); err != nil {
 		return err
 	}
@@ -107,37 +108,39 @@ func (s *System) Boot() error {
 	return nil
 }
 
-func (s *System) BootSubsystem(binpath string, args []string, viaProcd bool, list *[]*Subsystem) error {
+func (s *System) BootSubsystem(binpath string, args []string, procdIp string, viaProcd bool, list *[]*Subsystem) error {
 	s.Lock()
 	defer s.Unlock()
 
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, binpath, args)
-	ss := makeSubsystem(s.ProcClnt, p, s.procdIp, viaProcd)
+	ss := makeSubsystem(s.ProcClnt, p, procdIp, viaProcd)
 	// Lock appending to list
 	*list = append(*list, ss)
 	return ss.Run(s.namedAddr)
 }
 
 func (s *System) BootProcd() error {
-	err := s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, false, &s.procd)
+	err := s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, "", false, &s.procd)
 	if err != nil {
 		return err
 	}
-	s.GetProcdIp()
+	if s.procdIp == "" {
+		s.GetProcdIp()
+	}
 	return nil
 }
 
 func (s *System) BootFsUxd() error {
-	return s.BootSubsystem("kernel/fsuxd", []string{path.Join(np.UXROOT, s.realmId)}, true, &s.fsuxd)
+	return s.BootSubsystem("kernel/fsuxd", []string{path.Join(np.UXROOT, s.realmId)}, s.procdIp, true, &s.fsuxd)
 }
 
 func (s *System) BootFss3d() error {
-	return s.BootSubsystem("kernel/fss3d", []string{s.realmId}, true, &s.fss3d)
+	return s.BootSubsystem("kernel/fss3d", []string{s.realmId}, s.procdIp, true, &s.fss3d)
 }
 
 func (s *System) BootDbd() error {
-	return s.BootSubsystem("kernel/dbd", []string{}, true, &s.dbd)
+	return s.BootSubsystem("kernel/dbd", []string{}, s.procdIp, true, &s.dbd)
 	return nil
 }
 

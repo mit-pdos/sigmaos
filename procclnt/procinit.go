@@ -31,7 +31,7 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 			db.DPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
-			db.DFatalf("error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
+			db.DFatalf("error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)
 		}
 	}
 }

@@ -278,8 +278,10 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 }
 
 func (pd *Procd) runProc(p *LinuxProc) {
-	// Download the bin from s3, if it isn't already cached locally.
-	pd.downloadProcBin(p.attr.Program)
+	if !p.attr.IsPrivilegedProc() {
+		// Download the bin from s3, if it isn't already cached locally.
+		pd.downloadProcBin(p.attr.Program)
+	}
 
 	// Run the proc.
 	p.run()

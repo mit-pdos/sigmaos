@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -38,19 +39,27 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-// XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.Cmd, error) {
-	if err := clnt.Spawn(p); err != nil {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp string, viaProcd bool) (*exec.Cmd, error) {
+	// Sanity checks
+	if viaProcd && procdIp == "" {
+		debug.PrintStack()
+		db.DFatalf("Spawned kernel proc via procd, with invalid procd IP %v", procdIp)
+	}
+	if !viaProcd && procdIp != "" {
+		debug.PrintStack()
+		db.DFatalf("Spawned kernel proc not via procd, with procd IP %v", procdIp)
+	}
+	// Spawn the proc, either through procd, or just by creating the named state
+	// the proc (and its parent) expects.
+	if err := clnt.spawn(procdIp, viaProcd, p); err != nil {
 		return nil, err
 	}
-
-	// Make the proc's procdir
-	err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
-	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Err SpawnKernelProc MakeProcDir: %v", err)
+	if !viaProcd {
+		// If this proc wasn't intended to be spawned through procd, run it
+		// locally.
+		return proc.RunKernelProc(p, namedAddr)
 	}
-
-	return proc.RunKernelProc(p, namedAddr)
+	return nil, nil
 }
 
 // Burst-spawn a set of procs across available procds. Return a slice of procs
@@ -65,7 +74,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
-		err := clnt.spawn(clnt.nextProcd(), ps[i])
+		err := clnt.spawn(clnt.nextProcd(), true, ps[i])
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -100,7 +109,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 				}
 				// Update the list of active procds.
 				_ = x
-				err := clnt.spawn(clnt.nextProcd(), p)
+				err := clnt.spawn(clnt.nextProcd(), true, p)
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -121,10 +130,13 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~ip", p)
+	return clnt.spawn("~ip", true, p)
 }
 
-func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
+// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
+// and the proc is not actually spawned on procd, since it will be started
+// later.
+func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 	if p.Ncore > 0 && p.Type != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
@@ -139,13 +151,13 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(procdIp, p, childProcdir); err != nil {
+	if err := clnt.addChild(procdIp, p, childProcdir, viaProcd); err != nil {
 		return err
 	}
 
 	p.SpawnTime = time.Now()
 	// If this is not a privileged proc, spawn it through procd.
-	if !p.IsPrivilegedProc() {
+	if viaProcd {
 		b, err := json.Marshal(p)
 		if err != nil {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v", err)
@@ -158,6 +170,11 @@ func (clnt *ProcClnt) spawn(procdIp string, p *proc.Proc) error {
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
+		// Make the proc's procdir
+		err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
+		if err != nil {
+			db.DPrintf("PROCCLNT_ERR", "Err SpawnKernelProc MakeProcDir: %v", err)
+		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, procd will create the semaphore.
 		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))

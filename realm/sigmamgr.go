@@ -334,7 +334,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "realm/realmmgr", []string{realmId})
-	if _, err := m.SpawnKernelProc(p, fslib.Named()); err != nil {
+	if _, err := m.SpawnKernelProc(p, fslib.Named(), "", false); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}
 	if err := m.WaitStart(p.Pid); err != nil {

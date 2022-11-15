@@ -126,7 +126,7 @@ func (s *System) BootProcd() error {
 		return err
 	}
 	if s.procdIp == "" {
-		s.GetProcdIp()
+		s.procdIp = s.GetProcdIp()
 	}
 	return nil
 }
@@ -152,7 +152,6 @@ func (s *System) GetProcdIp() string {
 		db.DFatalf("Error unexpexted num procds: %v", s.procd)
 	}
 	ip := GetSubsystemInfo(s.FsLib, np.KPIDS, s.procd[0].p.Pid.String()).Ip
-	s.procdIp = ip
 	return ip
 }
 

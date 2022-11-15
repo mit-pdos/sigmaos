@@ -120,7 +120,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~ip", true, p)
 }
 
-// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up and the proc is not actually spawned on procd, since it will be started later.
+// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
+// and the proc is not actually spawned on procd, since it will be started
+// later.
 func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 	if p.Ncore > 0 && p.Type != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
@@ -136,7 +138,7 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(procdIp, p, childProcdir); err != nil {
+	if err := clnt.addChild(procdIp, p, childProcdir, viaProcd); err != nil {
 		return err
 	}
 

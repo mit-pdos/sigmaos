@@ -119,7 +119,7 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string) error {
+func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string, viaProcd bool) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
@@ -135,8 +135,9 @@ func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string
 	default:
 		db.DFatalf("Unknown proc type %v", p.Type)
 	}
+	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
-	if !p.IsPrivilegedProc() {
+	if viaProcd {
 		procfileLink = path.Join(np.PROCD, procdIp, q, p.Pid.String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in

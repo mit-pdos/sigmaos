@@ -98,12 +98,3 @@ func (st *SessionTable) LastSession() *Session {
 	}
 	return nil
 }
-
-func (st *SessionTable) WaitClosed() {
-	st.Lock()
-	defer st.Unlock()
-	db.DPrintf("SESSION", "Wait for open sess %v\n", len(st.sessions))
-	//for len(st.sessions) > 0 {
-	//	st.c.Wait()
-	//}
-}

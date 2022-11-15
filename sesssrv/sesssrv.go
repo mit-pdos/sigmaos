@@ -180,7 +180,6 @@ func (ssrv *SessSrv) Serve() {
 		<-ssrv.ch
 	}
 	db.DPrintf("SESSSRV", "Done serving")
-	ssrv.st.WaitClosed()
 }
 
 // The server using ssrv is done; exit.

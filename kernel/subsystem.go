@@ -43,14 +43,18 @@ func (s *Subsystem) Terminate() error {
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
 }
 
-// XXX is this good enough for tests?
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
 	if s.viaProcd {
-		db.DFatalf("Tried to kill a kernel subsystem spawned through procd: %v", s.p)
+		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through procd: %v", s.p)
+		err := s.Evict(s.p.Pid)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error killing procd-spawned kernel proc: %v err %v", s.p.Pid, err)
+		}
+		return err
 	}
-	db.DPrintf(db.ALWAYS, "kill %v %v\n", -s.cmd.Process.Pid, s.p.Pid)
-	return syscall.Kill(-s.cmd.Process.Pid, syscall.SIGKILL)
+	db.DPrintf(db.ALWAYS, "kill %v %v", s.cmd.Process.Pid, s.p.Pid)
+	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
 }
 
 func (s *Subsystem) Wait() {

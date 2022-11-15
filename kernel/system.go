@@ -30,6 +30,7 @@ type System struct {
 	*procclnt.ProcClnt
 	realmId     string
 	namedAddr   []string
+	procdIp     string
 	named       *Subsystem
 	cores       *np.Tinterval
 	fss3d       []*Subsystem
@@ -64,7 +65,7 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *np.Tinterval) 
 	// XXX It's a bit weird that we set program/pid here...
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
-	s.named = makeSubsystemCmd(nil, nil, false, cmd)
+	s.named = makeSubsystemCmd(nil, nil, "", false, cmd)
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s
@@ -112,14 +113,19 @@ func (s *System) BootSubsystem(binpath string, args []string, viaProcd bool, lis
 
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, binpath, args)
-	ss := makeSubsystem(s.ProcClnt, p, viaProcd)
+	ss := makeSubsystem(s.ProcClnt, p, s.procdIp, viaProcd)
 	// Lock appending to list
 	*list = append(*list, ss)
 	return ss.Run(s.namedAddr)
 }
 
 func (s *System) BootProcd() error {
-	return s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, false, &s.procd)
+	err := s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, false, &s.procd)
+	if err != nil {
+		return err
+	}
+	s.GetProcdIp()
+	return nil
 }
 
 func (s *System) BootFsUxd() error {
@@ -132,6 +138,7 @@ func (s *System) BootFss3d() error {
 
 func (s *System) BootDbd() error {
 	return s.BootSubsystem("kernel/dbd", []string{}, true, &s.dbd)
+	return nil
 }
 
 func (s *System) GetProcdIp() string {
@@ -142,6 +149,7 @@ func (s *System) GetProcdIp() string {
 		db.DFatalf("Error unexpexted num procds: %v", s.procd)
 	}
 	ip := GetSubsystemInfo(s.FsLib, np.KPIDS, s.procd[0].p.Pid.String()).Ip
+	s.procdIp = ip
 	return ip
 }
 
@@ -249,7 +257,7 @@ func RunNamed(addr string, replicate bool, id int, peers []string, realmId strin
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), false)
+	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), "", false)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err

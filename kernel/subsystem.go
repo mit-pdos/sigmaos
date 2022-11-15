@@ -14,20 +14,21 @@ import (
 type Subsystem struct {
 	*procclnt.ProcClnt
 	p        *proc.Proc
+	procdIp  string
 	viaProcd bool
 	cmd      *exec.Cmd
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, viaProcd bool) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, viaProcd, nil)
+func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool) *Subsystem {
+	return makeSubsystemCmd(pclnt, p, procdIp, viaProcd, nil)
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, viaProcd bool, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, viaProcd, cmd}
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, p, procdIp, viaProcd, cmd}
 }
 
 func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.viaProcd)
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.procdIp, s.viaProcd)
 	if err != nil {
 		return err
 	}

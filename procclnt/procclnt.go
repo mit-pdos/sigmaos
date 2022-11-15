@@ -38,12 +38,22 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-// XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, viaProcd bool) (*exec.Cmd, error) {
-	if err := clnt.spawn("~ip", viaProcd, p); err != nil {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp string, viaProcd bool) (*exec.Cmd, error) {
+	// Sanity checks
+	if viaProcd && procdIp == "" {
+		db.DFatalf("Spawned kernel proc via procd, with invalid procd IP %v", procdIp)
+	}
+	if !viaProcd && procdIp != "" {
+		db.DFatalf("Spawned kernel proc not via procd, with procd IP %v", procdIp)
+	}
+	// Spawn the proc, either through procd, or just by creating the named state
+	// the proc (and its parent) expects.
+	if err := clnt.spawn(procdIp, viaProcd, p); err != nil {
 		return nil, err
 	}
 	if !viaProcd {
+		// If this proc wasn't intended to be spawned through procd, run it
+		// locally.
 		return proc.RunKernelProc(p, namedAddr)
 	}
 	return nil, nil

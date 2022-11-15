@@ -151,8 +151,7 @@ func (s *System) GetProcdIp() string {
 	if len(s.procd) != 1 {
 		db.DFatalf("Error unexpexted num procds: %v", s.procd)
 	}
-	ip := GetSubsystemInfo(s.FsLib, np.KPIDS, s.procd[0].p.Pid.String()).Ip
-	return ip
+	return GetSubsystemInfo(s.FsLib, np.KPIDS, s.procd[0].p.Pid.String()).Ip
 }
 
 func (s *System) KillOne(srv string) error {

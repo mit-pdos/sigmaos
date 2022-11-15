@@ -3,6 +3,7 @@ package kernel
 import (
 	"os/exec"
 	"path"
+	"syscall"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -12,16 +13,21 @@ import (
 
 type Subsystem struct {
 	*procclnt.ProcClnt
-	p   *proc.Proc
-	cmd *exec.Cmd
+	p        *proc.Proc
+	viaProcd bool
+	cmd      *exec.Cmd
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc) *Subsystem {
-	return &Subsystem{pclnt, p, nil}
+func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, viaProcd bool) *Subsystem {
+	return makeSubsystemCmd(pclnt, p, viaProcd, nil)
+}
+
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, viaProcd bool, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, p, viaProcd, cmd}
 }
 
 func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr)
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.viaProcd)
 	if err != nil {
 		return err
 	}
@@ -29,8 +35,33 @@ func (s *Subsystem) Run(namedAddr []string) error {
 	return s.WaitStart(s.p.Pid)
 }
 
-func (s *Subsystem) Monitor() {
+// Send SIGTERM to a system.
+func (s *Subsystem) Terminate() error {
+	if s.viaProcd {
+		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+	}
+	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
+}
 
+// XXX is this good enough for tests?
+// Kill a subsystem, either by sending SIGKILL or Evicting it.
+func (s *Subsystem) Kill() error {
+	if s.viaProcd {
+		db.DFatalf("Tried to kill a kernel subsystem spawned through procd: %v", s.p)
+	}
+	db.DPrintf(db.ALWAYS, "kill %v %v\n", -s.cmd.Process.Pid, s.p.Pid)
+	return syscall.Kill(-s.cmd.Process.Pid, syscall.SIGKILL)
+}
+
+func (s *Subsystem) Wait() {
+	if s.viaProcd {
+		status, err := s.WaitExit(s.p.Pid)
+		if err != nil || !status.IsStatusOK() {
+			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
+		}
+	} else {
+		s.cmd.Wait()
+	}
 }
 
 type SubsystemInfo struct {
@@ -45,7 +76,7 @@ func MakeSubsystemInfo(kpid proc.Tpid, ip string, nodedId string) *SubsystemInfo
 
 func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {
 	if err := fsl.PutFileJson(path.Join(proc.PROCDIR, SUBSYSTEM_INFO), 0777, si); err != nil {
-		db.DFatalf("PutFileJson: %v", err)
+		db.DFatalf("PutFileJson (%v): %v", path.Join(proc.PROCDIR, SUBSYSTEM_INFO), err)
 	}
 }
 

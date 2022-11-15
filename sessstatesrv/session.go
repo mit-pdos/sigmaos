@@ -65,7 +65,13 @@ func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
-	sess.conn.CloseConnTest()
+	sess.Lock()
+	var conn np.Conn
+	if sess.conn != nil {
+		conn = sess.conn
+	}
+	sess.Unlock()
+	conn.CloseConnTest()
 }
 
 // Server may call Close() several times because client may reconnect

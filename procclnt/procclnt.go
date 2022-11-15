@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -41,9 +42,11 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp string, viaProcd bool) (*exec.Cmd, error) {
 	// Sanity checks
 	if viaProcd && procdIp == "" {
+		debug.PrintStack()
 		db.DFatalf("Spawned kernel proc via procd, with invalid procd IP %v", procdIp)
 	}
 	if !viaProcd && procdIp != "" {
+		debug.PrintStack()
 		db.DFatalf("Spawned kernel proc not via procd, with procd IP %v", procdIp)
 	}
 	// Spawn the proc, either through procd, or just by creating the named state

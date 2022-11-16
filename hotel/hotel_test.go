@@ -49,6 +49,9 @@ func (ts *Tstate) stop() {
 		_, err = ts.WaitExit(pid)
 		assert.Nil(ts.T, err)
 	}
+	sts, err := ts.GetDir(np.DBD)
+	assert.Nil(ts.T, err)
+	assert.Equal(ts.T, 3, len(sts))
 }
 
 func TestGeo(t *testing.T) {
@@ -99,6 +102,22 @@ func TestRec(t *testing.T) {
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestUser(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-userd"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
+	assert.Nil(t, err)
+	arg := hotel.UserRequest{
+		Name:     "u_0",
+		Password: hotel.MkPassword("u_0"),
+	}
+	var res hotel.UserResult
+	err = pdc.RPC("User.Login", arg, &res)
+	assert.Nil(t, err)
+	log.Printf("res %v\n", res)
 	ts.stop()
 	ts.Shutdown()
 }

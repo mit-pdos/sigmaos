@@ -14,6 +14,12 @@ import (
 	np "sigmaos/ninep"
 )
 
+//
+// RPC server, which borrows from go's RPC dispatch
+//
+
+var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
+
 type Request struct {
 	Method string
 	Args   []byte
@@ -52,7 +58,8 @@ func mkService(svci any) *service {
 			mtype.NumIn() != 3 ||
 			//mtype.In(1).Kind() != reflect.Ptr ||
 			mtype.In(2).Kind() != reflect.Ptr ||
-			mtype.NumOut() != 1 {
+			mtype.NumOut() != 1 ||
+			mtype.Out(0) != typeOfError {
 			// the method is not suitable for a handler
 			log.Printf("bad method: %v\n", mname)
 		} else {
@@ -60,7 +67,6 @@ func mkService(svci any) *service {
 			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
 		}
 	}
-
 	return svc
 }
 

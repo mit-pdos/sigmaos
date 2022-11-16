@@ -79,21 +79,28 @@ func (svc *service) dispatch(methname string, req *Request) Reply {
 
 		// call the method.
 		function := method.method.Func
-		function.Call([]reflect.Value{svc.svc, args.Elem(), replyv})
+		rv := function.Call([]reflect.Value{svc.svc, args.Elem(), replyv})
+
+		// The return value for the method is an error.
+		errI := rv[0].Interface()
+		errmsg := ""
+		if errI != nil {
+			errmsg = errI.(error).Error()
+		}
 
 		// encode the reply.
 		rb := new(bytes.Buffer)
 		re := gob.NewEncoder(rb)
 		re.EncodeValue(replyv)
 
-		return Reply{rb.Bytes(), ""}
+		return Reply{rb.Bytes(), errmsg}
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
 			choices = append(choices, k)
 		}
-		log.Fatalf("dispatch(): unknown method %v in %v; expecting one of %v\n",
+		log.Printf("dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		return Reply{}
+		return Reply{nil, "uknown method"}
 	}
 }

@@ -2,7 +2,6 @@ package dbclnt
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"sigmaos/fslib"
 	"sigmaos/protdevclnt"
@@ -22,12 +21,13 @@ func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	return dc, nil
 }
 
-func (dc *DbClnt) Query(q string, v any) error {
-	b, err := dc.pdc.RPC([]byte(q))
+func (dc *DbClnt) Query(q string, res any) error {
+	r := new([]uint8)
+	err := dc.pdc.RPC("Server.Query", q, r)
 	if err != nil {
-		return fmt.Errorf("Query err %v\n", err)
+		return err
 	}
-	err = json.Unmarshal(b, v)
+	err = json.Unmarshal(*r, res)
 	if err != nil {
 		return err
 	}
@@ -35,9 +35,10 @@ func (dc *DbClnt) Query(q string, v any) error {
 }
 
 func (dc *DbClnt) Exec(q string) error {
-	_, err := dc.pdc.RPC([]byte(q))
+	r := new([]uint8)
+	err := dc.pdc.RPC("Server.Exec", q, r)
 	if err != nil {
-		return fmt.Errorf("Query err %v\n", err)
+		return err
 	}
 	return nil
 }

@@ -51,8 +51,13 @@ func initDb() {
 	}
 }
 
-func RunDbd() {
+func RunDbd() error {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	initDb()
-	protdevsrv.Run(np.DB, mkStream)
+	s, err := mkServer()
+	if err != nil {
+		return err
+	}
+	pds := protdevsrv.MakeProtDevSrv(np.DB, s)
+	return pds.RunServer()
 }

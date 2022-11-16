@@ -90,6 +90,7 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 
 type MemFs struct {
 	*fslib.FsLib
+	*procclnt.ProcClnt
 	*sesssrv.SessSrv
 	root fs.Dir
 }
@@ -117,6 +118,7 @@ func MakeMemFsFslDetach(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt,
 		return nil, err
 	}
 	fs.FsLib = fsl
+	fs.ProcClnt = pclnt
 	fs.SessSrv = srv
 	fs.root = root
 	return fs, err

@@ -1,14 +1,11 @@
 package hotel
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"sigmaos/dbclnt"
-	"sigmaos/fs"
-	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -39,59 +36,7 @@ type number struct {
 }
 
 type Reserve struct {
-	*fslib.FsLib
 	dbc *dbclnt.DbClnt
-}
-
-func RunReserveSrv(n string) error {
-	r := &Reserve{}
-	r.FsLib = fslib.MakeFsLib(n)
-	dbc, err := dbclnt.MkDbClnt(r.FsLib, np.DBD)
-	if err != nil {
-		return err
-	}
-	r.dbc = dbc
-	err = r.initDb()
-	if err != nil {
-		return err
-	}
-	protdevsrv.Run(np.HOTELRESERVE, r.mkStream)
-	return nil
-}
-
-type StreamReserve struct {
-	rep     []byte
-	reserve *Reserve
-}
-
-func (reserve *Reserve) mkStream() (fs.File, *np.Err) {
-	st := &StreamReserve{}
-	st.reserve = reserve
-	return st, nil
-}
-
-// XXX wait on close before processing data?
-func (st *StreamReserve) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	var args ReserveRequest
-	err := json.Unmarshal(b, &args)
-	log.Printf("reserve %v\n", args)
-	res, err := st.reserve.MakeReservation(&args)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	st.rep, err = json.Marshal(res)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *StreamReserve) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if len(st.rep) == 0 || off > 0 {
-		return nil, nil
-	}
-	return st.rep, nil
 }
 
 func (s *Reserve) initDb() error {
@@ -113,9 +58,23 @@ func (s *Reserve) initDb() error {
 	return nil
 }
 
+func RunReserveSrv(n string) error {
+	r := &Reserve{}
+	pds := protdevsrv.MakeProtDevSrv(np.HOTELRESERVE, r)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
+	if err != nil {
+		return err
+	}
+	r.dbc = dbc
+	err = r.initDb()
+	if err != nil {
+		return err
+	}
+	return pds.RunServer()
+}
+
 // MakeReservation makes a reservation based on given information
-func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
-	res := new(ReserveResult)
+func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error {
 	res.HotelIds = make([]string, 0)
 
 	inDate, _ := time.Parse(
@@ -140,7 +99,8 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
 		err := s.dbc.Query(q, &reserves)
 		if err != nil {
-			return nil, err
+			log.Printf("reserves err %v\n", err)
+			return err
 		}
 		log.Printf("reserves %v\n", reserves)
 		for _, r := range reserves {
@@ -153,14 +113,14 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
 		err = s.dbc.Query(q, &nums)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if len(nums) == 0 {
-			return nil, fmt.Errorf("Unknown %v\n", hotelId)
+			return fmt.Errorf("Unknown %v\n", hotelId)
 		}
 		hotel_cap = int(nums[0].Number)
 		if count+int(req.Number) > hotel_cap {
-			return res, nil
+			return nil
 		}
 		indate = outdate
 	}
@@ -178,19 +138,18 @@ func (s *Reserve) MakeReservation(req *ReserveRequest) (*ReserveResult, error) {
 		q := fmt.Sprintf("INSERT INTO reservation (hotelid, customer, indate, outdate, number) VALUES ('%v', '%v', '%v', '%v', '%v');", hotelId, req.CustomerName, indate, outdate, req.Number)
 		err := s.dbc.Exec(q)
 		if err != nil {
-			return nil, fmt.Errorf("Insert failed %v\n", req)
+			return fmt.Errorf("Insert failed %v\n", req)
 		}
 		indate = outdate
 	}
 
 	res.HotelIds = append(res.HotelIds, hotelId)
 
-	return res, nil
+	return nil
 }
 
 // CheckAvailability checks if given information is available
-func (s *Reserve) CheckAvailability(req *ReserveRequest) (*ReserveResult, error) {
-	res := new(ReserveResult)
+func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) error {
 	res.HotelIds = make([]string, 0)
 
 	for _, hotelId := range req.HotelId {
@@ -215,7 +174,8 @@ func (s *Reserve) CheckAvailability(req *ReserveRequest) (*ReserveResult, error)
 			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
 			err := s.dbc.Query(q, &reserves)
 			if err != nil {
-				return nil, err
+				log.Printf("check reserves err %v\n", err)
+				return err
 			}
 			log.Printf("reserves %v\n", reserves)
 
@@ -229,10 +189,10 @@ func (s *Reserve) CheckAvailability(req *ReserveRequest) (*ReserveResult, error)
 			q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
 			err = s.dbc.Query(q, &nums)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if len(nums) == 0 {
-				return nil, fmt.Errorf("Unknown %v\n", hotelId)
+				return fmt.Errorf("Unknown %v\n", hotelId)
 			}
 			hotel_cap = int(nums[0].Number)
 			if count+int(req.Number) > hotel_cap {
@@ -245,5 +205,5 @@ func (s *Reserve) CheckAvailability(req *ReserveRequest) (*ReserveResult, error)
 		}
 	}
 
-	return res, nil
+	return nil
 }

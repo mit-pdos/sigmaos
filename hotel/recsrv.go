@@ -9,7 +9,6 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
-	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -37,51 +36,15 @@ type Rec struct {
 }
 
 // Run starts the server
-func RunRecSrv() error {
+func RunRecSrv(n string) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	protdevsrv.Run(np.HOTELREC, r.mkStream)
-	return nil
-}
-
-type StreamRec struct {
-	rep []byte
-	rec *Rec
-}
-
-func (rec *Rec) mkStream() (fs.File, *np.Err) {
-	st := &StreamRec{}
-	st.rec = rec
-	return st, nil
-}
-
-// XXX wait on close before processing data?
-func (st *StreamRec) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	var args RecRequest
-	err := json.Unmarshal(b, &args)
-	log.Printf("recs %v\n", args)
-	res, err := st.rec.GetRecs(&args)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	st.rep, err = json.Marshal(res)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *StreamRec) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if len(st.rep) == 0 || off > 0 {
-		return nil, nil
-	}
-	return st.rep, nil
+	pds := protdevsrv.MakeProtDevSrv(np.HOTELREC, r)
+	return pds.RunServer()
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
-func (s *Rec) GetRecs(req *RecRequest) (*RecResult, error) {
-	res := new(RecResult)
+func (s *Rec) GetRecs(req RecRequest, res *RecResult) error {
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{
@@ -138,7 +101,7 @@ func (s *Rec) GetRecs(req *RecRequest) (*RecResult, error) {
 		// log.Warn().Msgf("Wrong require parameter: %v", require)
 	}
 
-	return res, nil
+	return nil
 }
 
 type Profile struct {

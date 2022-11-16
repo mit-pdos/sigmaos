@@ -69,20 +69,21 @@ func (ua *UserLogin) Login() *proc.Status {
 	defer ua.Close(fd)
 	var users []User
 	q := fmt.Sprintf("SELECT * from user where username='%s';", ua.input[0])
-	err = ua.dbc.Query(q, &users)
-	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err), nil)
+	error := ua.dbc.Query(q, &users)
+	if error != nil {
+		return proc.MakeStatusErr(fmt.Sprintf("Query err %v", error), nil)
 	}
 	if len(users) == 0 {
-		return proc.MakeStatusErr(fmt.Sprintf("Unknown user %v\n", err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("Unknown user %v"), nil)
 	}
 	if users[0].Password != ua.input[1] {
-		return proc.MakeStatusErr(fmt.Sprintf("Wrong pass %v\n", ua.input[1]), nil)
+		return proc.MakeStatusErr("Wrong password", nil)
 	}
-
+	log.Printf("login redirect\n")
 	return proc.MakeStatusErr("Redirect", "/book/view/")
 }
 
 func (ua *UserLogin) Exit(status *proc.Status) {
+	log.Printf("login status %v\n", status)
 	ua.Exited(status)
 }

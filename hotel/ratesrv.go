@@ -7,7 +7,6 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
-	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -43,52 +42,15 @@ type Rate struct {
 }
 
 // Run starts the server
-func RunRateSrv() error {
+func RunRateSrv(n string) error {
 	r := &Rate{}
 	r.rateTable = loadRateTable("data/inventory.json")
-	protdevsrv.Run(np.HOTELRATE, r.mkStream)
-	return nil
-}
-
-type StreamRate struct {
-	rep  []byte
-	rate *Rate
-}
-
-func (rate *Rate) mkStream() (fs.File, *np.Err) {
-	st := &StreamRate{}
-	st.rate = rate
-	return st, nil
-}
-
-// XXX wait on close before processing data?
-func (st *StreamRate) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	var args RateRequest
-	err := json.Unmarshal(b, &args)
-	log.Printf("rate %v\n", args)
-	res, err := st.rate.GetRates(&args)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	st.rep, err = json.Marshal(res)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *StreamRate) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if len(st.rep) == 0 || off > 0 {
-		return nil, nil
-	}
-	return st.rep, nil
+	pds := protdevsrv.MakeProtDevSrv(np.HOTELRATE, r)
+	return pds.RunServer()
 }
 
 // GetRates gets rates for hotels for specific date range.
-func (s *Rate) GetRates(req *RateRequest) (*RateResult, error) {
-	res := new(RateResult)
-
+func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	for _, hotelID := range req.HotelIds {
 		stay := stay{
 			HotelID: hotelID,
@@ -100,7 +62,7 @@ func (s *Rate) GetRates(req *RateRequest) (*RateResult, error) {
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
 // loadRates loads rate codes from JSON file.

@@ -20,10 +20,12 @@ type Tstate struct {
 }
 
 func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
-	a := proc.MakeProc(srv, []string{})
-	err := ts.Spawn(a)
+	p := proc.MakeProc(srv, []string{})
+	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
-	return a.Pid
+	// err = ts.WaitStart(p.Pid)
+	// assert.Nil(t, err, "WaitStarted")
+	return p.Pid
 }
 
 func makeTstate(t *testing.T, srvs []string) *Tstate {
@@ -57,10 +59,11 @@ func TestGeo(t *testing.T) {
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
-	var res hotel.GeoResult
-	err = pdc.RPCJson(&arg, &res)
+	res := &hotel.GeoResult{}
+	err = pdc.RPC("Geo.Nearby", arg, &res)
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res)
+	assert.Equal(t, 5, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
 }
@@ -75,7 +78,7 @@ func TestRate(t *testing.T) {
 		OutDate:  "2015-04-10",
 	}
 	var res hotel.RateResult
-	err = pdc.RPCJson(&arg, &res)
+	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
 	ts.stop()
@@ -92,7 +95,27 @@ func TestRec(t *testing.T) {
 		Lon:     -122.095,
 	}
 	var res hotel.RecResult
-	err = pdc.RPCJson(&arg, &res)
+	err = pdc.RPC("Rec.GetRecs", arg, &res)
+	assert.Nil(t, err)
+	log.Printf("res %v\n", res.HotelIds)
+	assert.Equal(t, 1, len(res.HotelIds))
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestCheck(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-reserved"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
+	assert.Nil(t, err)
+	arg := hotel.ReserveRequest{
+		HotelId:      []string{"1"},
+		CustomerName: "u_0",
+		InDate:       "2015-04-09",
+		OutDate:      "2015-04-10",
+		Number:       1,
+	}
+	var res hotel.ReserveResult
+	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res.HotelIds)
 	ts.stop()
@@ -111,7 +134,7 @@ func TestReserve(t *testing.T) {
 		Number:       1,
 	}
 	var res hotel.ReserveResult
-	err = pdc.RPCJson(&arg, &res)
+	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res.HotelIds)
 	ts.stop()
@@ -129,7 +152,7 @@ func TestSearch(t *testing.T) {
 		OutDate: "2015-04-10",
 	}
 	var res hotel.SearchResult
-	err = pdc.RPCJson(&arg, &res)
+	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()

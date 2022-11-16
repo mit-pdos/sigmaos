@@ -9,58 +9,44 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"sigmaos/debug"
-	"sigmaos/fs"
-	np "sigmaos/ninep"
 )
 
-type Stream struct {
+type Server struct {
 	db   *sql.DB
 	rows *sql.Rows
 }
 
-func mkStream() (fs.File, *np.Err) {
-	st := &Stream{}
+func mkServer() (*Server, error) {
+	s := &Server{}
 	db, error := sql.Open("mysql", "sigma:sigmaos@/books")
 	if error != nil {
-		return nil, np.MkErrError(error)
+		return nil, error
 	}
-	st.db = db
-	error = st.db.Ping()
+	s.db = db
+	error = s.db.Ping()
 	if error != nil {
 		debug.DFatalf("open err %v\n", error)
 	}
 	log.Printf("Connected to db\n")
-	return st, nil
+	return s, nil
 }
 
-// XXX wait on close before processing data?
-func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	rows, err := st.db.Query(string(b))
+func (s *Server) doQuery(arg string, rep *[]byte) error {
+	debug.DPrintf("DBSRV", "doQuery: %v\n", arg)
+	rows, err := s.db.Query(arg)
 	if err != nil {
-		return 0, np.MkErrError(err)
+		return err
 	}
-	st.rows = rows
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if off > 0 {
-		return nil, nil
-	}
-	if st.rows == nil {
-		return nil, nil
-	}
-	defer st.rows.Close()
-	columns, err := st.rows.Columns()
+	defer rows.Close()
+	columns, err := rows.Columns()
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return err
 	}
 	count := len(columns)
 	table := make([]map[string]interface{}, 0)
 	valuePtrs := make([]interface{}, count)
 
-	colTypes, err := st.rows.ColumnTypes()
+	colTypes, err := rows.ColumnTypes()
 	for i, s := range colTypes {
 		switch s.ScanType().Kind() {
 		case reflect.Int32:
@@ -70,8 +56,8 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 		}
 	}
 
-	for st.rows.Next() {
-		st.rows.Scan(valuePtrs...)
+	for rows.Next() {
+		rows.Scan(valuePtrs...)
 		entry := make(map[string]interface{})
 		for i, col := range columns {
 			var val interface{}
@@ -88,12 +74,27 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 		}
 		table = append(table, entry)
 	}
-	b, err := json.Marshal(table)
-	if np.Tsize(len(b)) > cnt {
-		np.MkErr(np.TErrInval, "too large")
-	}
+	debug.DPrintf("DBSRV", "doQuery: table (%d) %v\n", len(table), table)
+	rb, err := json.Marshal(table)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return err
 	}
-	return b, nil
+	*rep = rb
+	return nil
+}
+
+func (s *Server) Query(arg string, rep *[]byte) error {
+	err := s.doQuery(arg, rep)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Server) Exec(arg string, repl *[]byte) error {
+	err := s.doQuery(arg, repl)
+	if err != nil {
+		return err
+	}
+	return nil
 }

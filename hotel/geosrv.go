@@ -3,6 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
@@ -92,6 +93,13 @@ func newGeoIndex(path string) *geoindex.ClusteringIndex {
 	for _, point := range points {
 		index.Add(point)
 	}
-
+	for i := 7; i < NHOTEL; i++ {
+		p := &geoindex.GeoPoint{
+			Pid:  strconv.Itoa(i),
+			Plat: 37.7835 + float64(i)/500.0*3,
+			Plon: -122.41 + float64(i)/500.0*4,
+		}
+		index.Add(p)
+	}
 	return index
 }

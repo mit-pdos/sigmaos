@@ -3,6 +3,7 @@ package hotel
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"sigmaos/dbclnt"
@@ -50,10 +51,35 @@ func (s *Reserve) initDb() error {
 	if err != nil {
 		return err
 	}
-	q = fmt.Sprintf("INSERT INTO number (hotelid, number) VALUES ('%v', '%v');", "1", 200)
+
+	q = fmt.Sprintf("INSERT INTO reservation (hotelid, customer, indate, outdate, number) VALUES ('%s', '%s', '%s', '%s', '%d');", "4", "Alice", "2015-04-09", "2015-04-10", 1)
 	err = s.dbc.Exec(q)
 	if err != nil {
 		return err
+	}
+
+	for i := 0; i < 7; i++ {
+		q = fmt.Sprintf("INSERT INTO number (hotelid, number) VALUES ('%v', '%v');",
+			strconv.Itoa(i), 200)
+		err = s.dbc.Exec(q)
+		if err != nil {
+			return err
+		}
+	}
+	for i := 7; i <= 80; i++ {
+		hotel_id := strconv.Itoa(i)
+		room_num := 200
+		if i%3 == 1 {
+			room_num = 300
+		} else if i%3 == 2 {
+			room_num = 250
+		}
+		q = fmt.Sprintf("INSERT INTO number (hotelid, number) VALUES ('%v', '%v');",
+			hotel_id, room_num)
+		err = s.dbc.Exec(q)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

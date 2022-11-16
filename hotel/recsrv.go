@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"math"
+	"strconv"
 
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
@@ -148,6 +149,41 @@ func loadRecTable(path string) map[string]*Hotel {
 		h.HLon = float64(p.Address.Lon)
 		h.HRate = rates[i]
 		h.HPrice = prices[i]
+		hs[h.HId] = h
+		log.Printf("hotel: %v\n", h)
+	}
+	// add up to 80 hotels
+	for i := 7; i <= NHOTEL; i++ {
+		hotel_id := strconv.Itoa(i)
+		lat := 37.7835 + float64(i)/500.0*3
+		lon := -122.41 + float64(i)/500.0*4
+		rate := 135.00
+		rate_inc := 179.00
+		if i%3 == 0 {
+			if i%5 == 0 {
+				rate = 109.00
+				rate_inc = 123.17
+			} else if i%5 == 1 {
+				rate = 120.00
+				rate_inc = 140.00
+			} else if i%5 == 2 {
+				rate = 124.00
+				rate_inc = 144.00
+			} else if i%5 == 3 {
+				rate = 132.00
+				rate_inc = 158.00
+			} else if i%5 == 4 {
+				rate = 232.00
+				rate_inc = 258.00
+			}
+		}
+		h := &Hotel{
+			HId:    hotel_id,
+			HLat:   lat,
+			HLon:   lon,
+			HRate:  rate,
+			HPrice: rate_inc,
+		}
 		hs[h.HId] = h
 		log.Printf("hotel: %v\n", h)
 	}

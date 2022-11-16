@@ -12,6 +12,10 @@ import (
 	"sigmaos/protdevsrv"
 )
 
+const (
+	NHOTEL = 80
+)
+
 type ProfileFlat struct {
 	Id           string
 	Name         string
@@ -90,7 +94,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	}
 
 	// add up to 80 hotels
-	for i := 7; i <= 80; i++ {
+	for i := 7; i <= NHOTEL; i++ {
 		p := Profile{
 			strconv.Itoa(i),
 			"St. Regis San Francisco",

@@ -3,9 +3,9 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/harlow/go-micro-services/data"
-	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
@@ -28,6 +28,7 @@ type RoomType struct {
 
 type RatePlan struct {
 	HotelId  string
+	Code     string
 	InDate   string
 	OutDate  string
 	RoomType *RoomType
@@ -82,6 +83,53 @@ func loadRateTable(path string) map[stay]*RatePlan {
 			OutDate: ratePlan.OutDate,
 		}
 		rateTable[stay] = ratePlan
+	}
+
+	for i := 7; i <= 80; i++ {
+		if i%3 == 0 {
+			end_date := "2015-04-"
+			rate := 109.00
+			rate_inc := 123.17
+			if i%2 == 0 {
+				end_date = end_date + "17"
+			} else {
+				end_date = end_date + "24"
+			}
+
+			if i%5 == 1 {
+				rate = 120.00
+				rate_inc = 140.00
+			} else if i%5 == 2 {
+				rate = 124.00
+				rate_inc = 144.00
+			} else if i%5 == 3 {
+				rate = 132.00
+				rate_inc = 158.00
+			} else if i%5 == 4 {
+				rate = 232.00
+				rate_inc = 258.00
+			}
+			r := &RatePlan{
+				HotelId: strconv.Itoa(i),
+				Code:    "RACK",
+				InDate:  "2015-04-09",
+				OutDate: end_date,
+				RoomType: &RoomType{
+					rate,
+					rate,
+					rate_inc,
+					"KNG",
+					"",
+					"King sized bed",
+				},
+			}
+			stay := stay{
+				HotelID: strconv.Itoa(i),
+				InDate:  r.InDate,
+				OutDate: r.OutDate,
+			}
+			rateTable[stay] = r
+		}
 	}
 
 	return rateTable

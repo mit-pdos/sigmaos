@@ -10,6 +10,10 @@ import (
 	"sigmaos/protdevsrv"
 )
 
+const (
+	NUSER = 500
+)
+
 type UserRequest struct {
 	Name     string
 	Password string
@@ -58,7 +62,7 @@ func (s *Users) initDB() error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i <= 500; i++ {
+	for i := 0; i <= NUSER; i++ {
 		u := "u_" + strconv.Itoa(i)
 		p := MkPassword(u)
 		q = fmt.Sprintf("INSERT INTO user (username, password) VALUES ('%v', '%v');", u, p)

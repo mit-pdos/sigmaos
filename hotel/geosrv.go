@@ -8,7 +8,6 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
-	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -45,60 +44,20 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv() error {
+func RunGeoSrv(n string) error {
 	geo := &Geo{}
 	geo.geoidx = newGeoIndex("data/geo.json")
-	protdevsrv.Run(np.HOTELGEO, geo.mkStream)
-	return nil
-}
-
-type Stream struct {
-	rep []byte
-	geo *Geo
-}
-
-func (geo *Geo) mkStream() (fs.File, *np.Err) {
-	st := &Stream{}
-	st.geo = geo
-	return st, nil
-}
-
-// XXX wait on close before processing data?
-func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	var args GeoRequest
-	err := json.Unmarshal(b, &args)
-	log.Printf("geo %v\n", args)
-	res, err := st.geo.Nearby(&args)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	st.rep, err = json.Marshal(res)
-	if err != nil {
-		return 0, np.MkErrError(err)
-	}
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if len(st.rep) == 0 || off > 0 {
-		return nil, nil
-	}
-	return st.rep, nil
+	pds := protdevsrv.MakeProtDevSrv(np.HOTELGEO, geo)
+	return pds.RunServer()
 }
 
 // Nearby returns all hotels within a given distance.
-func (s *Geo) Nearby(req *GeoRequest) (*GeoResult, error) {
-	var (
-		points = s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
-		res    = &GeoResult{}
-	)
-
+func (s *Geo) Nearby(req GeoRequest, rep *GeoResult) error {
+	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {
-		res.HotelIds = append(res.HotelIds, p.Id())
+		rep.HotelIds = append(rep.HotelIds, p.Id())
 	}
-
-	return res, nil
+	return nil
 }
 
 func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {

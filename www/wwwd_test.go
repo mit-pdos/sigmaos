@@ -11,7 +11,6 @@ import (
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/test"
-	"sigmaos/user"
 	"sigmaos/www"
 )
 
@@ -137,18 +136,5 @@ func TestMatMulConcurrent(t *testing.T) {
 		<-done
 	}
 
-	ts.waitWww()
-}
-
-func TestUser(t *testing.T) {
-	ts := makeTstate(t)
-
-	u := "u_0"
-	err := ts.Login(u, user.MkPassword(u))
-	assert.Nil(t, err)
-
-	sts, err := ts.GetDir(np.DBD)
-	assert.Nil(t, err)
-	assert.Equal(t, 3, len(sts))
 	ts.waitWww()
 }

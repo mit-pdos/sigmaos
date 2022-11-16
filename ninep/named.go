@@ -32,6 +32,8 @@ const (
 	HOTELSEARCH  = HOTEL + "search"
 	HOTELREC     = HOTEL + "rec"
 	HOTELRESERVE = HOTEL + "reserve"
+	HOTELUSER    = HOTEL + "user"
+	HOTELPROF    = HOTEL + "prof"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

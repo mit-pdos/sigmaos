@@ -125,6 +125,8 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 		} else if status.IsStatusErr() && status.Msg() == "Redirect" {
 			redirectUrl := status.Data().(string)
 			http.Redirect(w, r, redirectUrl, http.StatusFound)
+		} else if status.IsStatusErr() {
+			http.Error(w, status.Msg(), http.StatusInternalServerError)
 		}
 	}
 }

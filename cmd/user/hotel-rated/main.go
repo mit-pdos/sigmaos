@@ -11,5 +11,7 @@ func main() {
 	if len(os.Args) != 1 {
 		db.DFatalf("Usage: %v", os.Args[0])
 	}
-	hotel.RunRateSrv()
+	if err := hotel.RunRateSrv(os.Args[0]); err != nil {
+		db.DFatalf("Start %v err %v\n", os.Args[0], err)
+	}
 }

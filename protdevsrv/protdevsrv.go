@@ -1,6 +1,9 @@
 package protdevsrv
 
 import (
+	"log"
+	"reflect"
+
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -10,6 +13,62 @@ import (
 	"sigmaos/memfs"
 	np "sigmaos/ninep"
 )
+
+//
+// RPC server, which borrows from go's RPC dispatch
+//
+
+var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
+
+type Request struct {
+	Method string
+	Args   []byte
+}
+
+type Reply struct {
+	Res   []byte
+	Error string
+}
+
+type method struct {
+	method    reflect.Method
+	argType   reflect.Type
+	replyType reflect.Type
+}
+
+type service struct {
+	svc     reflect.Value
+	typ     reflect.Type
+	methods map[string]*method
+}
+
+func mkService(svci any) *service {
+	svc := &service{}
+	svc.typ = reflect.TypeOf(svci)
+	svc.svc = reflect.ValueOf(svci)
+	svc.methods = map[string]*method{}
+
+	for m := 0; m < svc.typ.NumMethod(); m++ {
+		methodt := svc.typ.Method(m)
+		mtype := methodt.Type
+		mname := methodt.Name
+
+		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
+		if methodt.PkgPath != "" || // capitalized?
+			mtype.NumIn() != 3 ||
+			//mtype.In(1).Kind() != reflect.Ptr ||
+			mtype.In(2).Kind() != reflect.Ptr ||
+			mtype.NumOut() != 1 ||
+			mtype.Out(0) != typeOfError {
+			// the method is not suitable for a handler
+			log.Printf("bad method: %v\n", mname)
+		} else {
+			// the method looks like a handler
+			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
+		}
+	}
+	return svc
+}
 
 type stream struct {
 	*inode.Inode
@@ -37,16 +96,14 @@ func (sc *streamCtl) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
-type MkStream func() (fs.File, *np.Err)
-
 type Clone struct {
 	fs.Inode
-	mkStream MkStream
+	svc *service
 }
 
-func makeClone(ctx fs.CtxI, root fs.Dir, mkStream MkStream) fs.Inode {
+func makeClone(ctx fs.CtxI, root fs.Dir, svc *service) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, root)
-	return &Clone{i, mkStream}
+	return &Clone{i, svc}
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
@@ -71,7 +128,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.File, err = c.mkStream()
+	st.File, err = mkStream(c.svc)
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
 	}
@@ -86,12 +143,12 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 }
 
 type ProtSrvDev struct {
-	mfs *fslibsrv.MemFs
+	*fslibsrv.MemFs
 }
 
 func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
-	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.mfs, psd.mfs.Root())
-	root := psd.mfs.Root()
+	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.MemFs, psd.MemFs.Root())
+	root := psd.MemFs.Root()
 	_, o, _, err := root.LookupPath(nil, np.Path{session.String()})
 	if err != nil {
 		db.DPrintf("PROTDEVSRV", "LookupPath err %v\n", err)
@@ -111,17 +168,23 @@ func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
 	}
 }
 
-func Run(fn string, mkStream MkStream) {
-	psd := ProtSrvDev{}
+func MakeProtDevSrv(fn string, svci any) *ProtSrvDev {
+	psd := &ProtSrvDev{}
 	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
-	psd.mfs = mfs
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), mkStream))
+	psd.MemFs = mfs
+	svc := mkService(svci)
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), svc))
 	if err != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err)
 	}
-	mfs.Serve()
-	mfs.Done()
+	return psd
+}
+
+func (psd *ProtSrvDev) RunServer() error {
+	psd.MemFs.Serve()
+	psd.MemFs.Done()
+	return nil
 }

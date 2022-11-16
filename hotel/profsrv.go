@@ -3,7 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"strconv"
 
 	"github.com/harlow/go-micro-services/data"
 
@@ -70,10 +70,8 @@ func (ps *ProfSrv) getProf(id string) (*ProfileFlat, error) {
 	q := fmt.Sprintf("SELECT * from profile where hotelid='%s';", id)
 	var profs []ProfileFlat
 	if error := ps.dbc.Query(q, &profs); error != nil {
-		log.Printf("getProf err %v\n", error)
 		return nil, error
 	}
-	log.Printf("profs %v\n", profs)
 	if len(profs) == 0 {
 		return nil, fmt.Errorf("unknown hotel %s", id)
 	}
@@ -90,6 +88,31 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 			return err
 		}
 	}
+
+	// add up to 80 hotels
+	for i := 7; i <= 80; i++ {
+		p := Profile{
+			strconv.Itoa(i),
+			"St. Regis San Francisco",
+			"(415) 284-40" + strconv.Itoa(i),
+			"St. Regis Museum Tower is a 42-story, 484 ft skyscraper in the South of Market district of San Francisco, California, adjacent to Yerba Buena Gardens, Moscone Center, PacBell Building and the San Francisco Museum of Modern Art.",
+			&Address{
+				"125",
+				"3rd St",
+				"San Francisco",
+				"CA",
+				"United States",
+				"94109",
+				37.7835 + float32(i)/500.0*3,
+				-122.41 + float32(i)/500.0*4,
+			},
+			nil,
+		}
+		if err := ps.insertProf(&p); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

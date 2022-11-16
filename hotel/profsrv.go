@@ -93,7 +93,6 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 		}
 	}
 
-	// add up to 80 hotels
 	for i := 7; i <= NHOTEL; i++ {
 		p := Profile{
 			strconv.Itoa(i),

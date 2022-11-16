@@ -85,7 +85,7 @@ func loadRateTable(path string) map[stay]*RatePlan {
 		rateTable[stay] = ratePlan
 	}
 
-	for i := 7; i <= 80; i++ {
+	for i := 7; i <= NHOTEL; i++ {
 		if i%3 == 0 {
 			end_date := "2015-04-"
 			rate := 109.00

@@ -66,7 +66,7 @@ func (s *Reserve) initDb() error {
 			return err
 		}
 	}
-	for i := 7; i <= 80; i++ {
+	for i := 7; i <= NHOTEL; i++ {
 		hotel_id := strconv.Itoa(i)
 		room_num := 200
 		if i%3 == 1 {

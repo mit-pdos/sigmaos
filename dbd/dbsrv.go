@@ -51,6 +51,8 @@ func (s *Server) doQuery(arg string, rep *[]byte) error {
 		switch s.ScanType().Kind() {
 		case reflect.Int32:
 			valuePtrs[i] = new(int32)
+		case reflect.Float32:
+			valuePtrs[i] = new(float32)
 		default:
 			valuePtrs[i] = new(sql.RawBytes)
 		}
@@ -64,6 +66,8 @@ func (s *Server) doQuery(arg string, rep *[]byte) error {
 			valptr := valuePtrs[i]
 			switch v := valptr.(type) {
 			case *int32:
+				val = *v
+			case *float32:
 				val = *v
 			case *sql.RawBytes:
 				val = string(*v)

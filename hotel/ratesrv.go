@@ -52,6 +52,7 @@ func RunRateSrv(n string) error {
 
 // GetRates gets rates for hotels for specific date range.
 func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
+	log.Printf("reqRates %v\n", req)
 	for _, hotelID := range req.HotelIds {
 		stay := stay{
 			HotelID: hotelID,
@@ -84,7 +85,6 @@ func loadRateTable(path string) map[stay]*RatePlan {
 		}
 		rateTable[stay] = ratePlan
 	}
-
 	for i := 7; i <= NHOTEL; i++ {
 		if i%3 == 0 {
 			end_date := "2015-04-"

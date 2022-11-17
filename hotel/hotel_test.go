@@ -1,10 +1,7 @@
 package hotel_test
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -199,20 +196,18 @@ func TestSearch(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWwwUser(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-wwwd"})
-	vals := map[string][]string{
-		"username": []string{"u_0"},
-		"password": []string{hotel.MkPassword("u_0")},
-	}
-	resp, err := http.PostForm("http://localhost:8090/user", vals)
+func TestWww(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-rated",
+		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
+		"user/hotel-reserved", "user/hotel-wwwd"})
+
+	s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
 	assert.Nil(t, err)
-	assert.Equal(t, resp.StatusCode, http.StatusOK)
-	body, err := ioutil.ReadAll(resp.Body)
-	repl := make(map[string]interface{})
-	err = json.Unmarshal(body, &repl)
+	assert.Equal(t, "Login successfully!", s)
+
+	err = hotel.WebSearch("2015-04-09", "2015-04-10", 37.7749, -122.4194)
 	assert.Nil(t, err)
-	assert.Equal(t, "Login successfully!", repl["message"])
+
 	ts.stop()
 	ts.Shutdown()
 }

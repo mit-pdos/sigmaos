@@ -52,7 +52,7 @@ func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
 		log.Fatalf("nearby error: %v", err)
 	}
 
-	log.Printf("gres %v\n", gres.HotelIds)
+	log.Printf("gRes %v\n", gres.HotelIds)
 
 	// find rates for hotels
 	var rres RateResult
@@ -64,6 +64,8 @@ func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
 	if err != nil {
 		log.Fatalf("rates error: %v", err)
 	}
+
+	log.Printf("rres %v\n", rres.RatePlans)
 
 	for _, ratePlan := range rres.RatePlans {
 		res.HotelIds = append(res.HotelIds, ratePlan.HotelId)

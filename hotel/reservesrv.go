@@ -203,7 +203,6 @@ func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) erro
 				log.Printf("check reserves err %v\n", err)
 				return err
 			}
-			log.Printf("reserves %v\n", reserves)
 
 			for _, r := range reserves {
 				count += r.Number

@@ -45,7 +45,9 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 	// Lock the stream.
 	st.Lock()
 	defer st.Unlock()
-	// Sanity-check that there aren't concurrent RPCs on a single stream.
+
+	// Sanity-check that there aren't concurrent RPCs on a single stream. These
+	// should (currently) be synchronized on the client side.
 	if st.inflight {
 		db.DFatalf("Tried to perform an RPC on an already-inflight stream.")
 	}

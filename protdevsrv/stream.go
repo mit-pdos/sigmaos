@@ -64,16 +64,18 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 		// Wake up the writer thread.
 		st.Lock()
 		defer st.Unlock()
+
+		// Mark that the in-flight RPC has terminated..
+		st.inflight = false
 		cond.Signal()
 	}()
 
 	// Wait for the RPC to complete. This allows other sessions to make
 	// concurrent  RPCs to this server.
-	cond.Wait(ctx.SessionId())
+	for st.inflight {
+		cond.Wait(ctx.SessionId())
+	}
 	st.sct.FreeSessCond(cond)
-
-	// Mark that no RPCs are running anymore.
-	st.inflight = false
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

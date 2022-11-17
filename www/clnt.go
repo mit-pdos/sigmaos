@@ -12,12 +12,6 @@ import (
 	"sigmaos/procclnt"
 )
 
-const (
-	VIEW = BOOK + "view/"
-	EDIT = BOOK + "edit/"
-	SAVE = BOOK + "save/"
-)
-
 type WWWClnt struct {
 	jobname  string
 	srvaddrs []string
@@ -71,36 +65,12 @@ func (clnt *WWWClnt) GetStatic(name string) ([]byte, error) {
 	return clnt.get(STATIC + name)
 }
 
-func (clnt *WWWClnt) View() ([]byte, error) {
-	return clnt.get(VIEW)
-}
-
-func (clnt *WWWClnt) Edit(book string) ([]byte, error) {
-	return clnt.get(EDIT + book)
-}
-
-func (clnt *WWWClnt) Save() ([]byte, error) {
-	vals := map[string][]string{
-		"title": []string{"Odyssey"},
-	}
-	return clnt.post(SAVE+"Odyssey", vals)
-}
-
 func (clnt *WWWClnt) Hello() ([]byte, error) {
 	return clnt.get(HELLO)
 }
 
 func (clnt *WWWClnt) MatMul(n int) error {
 	_, err := clnt.get(MATMUL + strconv.Itoa(n))
-	return err
-}
-
-func (clnt *WWWClnt) Login(name, pw string) error {
-	vals := map[string][]string{
-		"user": []string{name},
-		"pw":   []string{pw},
-	}
-	_, err := clnt.post(USER, vals)
 	return err
 }
 

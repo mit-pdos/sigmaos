@@ -25,10 +25,8 @@ import (
 const (
 	STATIC = "/static/"
 	MATMUL = "/matmul/"
-	BOOK   = "/book/"
 	EXIT   = "/exit/"
 	HELLO  = "/hello"
-	USER   = "/user/"
 )
 
 //
@@ -36,16 +34,14 @@ const (
 // XXX limit process's name space to the app binary and pipe.
 //
 
-var validPath = regexp.MustCompile(`^/(static|book|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
+var validPath = regexp.MustCompile(`^/(static|hotel|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
 
 func RunWwwd(job, tree string) {
 	www := MakeWwwd(job, tree)
 	http.HandleFunc(STATIC, www.makeHandler(getStatic))
-	http.HandleFunc(BOOK, www.makeHandler(doBook))
 	http.HandleFunc(HELLO, www.makeHandler(doHello))
 	http.HandleFunc(EXIT, www.makeHandler(doExit))
 	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
-	http.HandleFunc(USER, www.makeHandler(doUser))
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
@@ -221,8 +217,8 @@ func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (
 	return www.spawnApp("user/fsreader", w, r, true, []string{file}, nil, 0)
 }
 
-func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	db.DPrintf(db.ALWAYS, "dobook: %v\n", args)
+func doHotel(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	db.DPrintf(db.ALWAYS, "dohotel: %v\n", args)
 	// XXX maybe pass all form key/values to app
 	//r.ParseForm()
 	//for key, value := range r.Form {
@@ -230,7 +226,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	//}
 	// log.Printf("\n")
 	title := r.FormValue("title")
-	return www.spawnApp("user/bookapp", w, r, true, []string{args, title}, nil, 0)
+	return www.spawnApp("user/hotel-www", w, r, true, []string{args, title}, nil, 0)
 }
 
 func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -250,11 +246,4 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
 	return www.spawnApp("user/matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
-}
-
-func doUser(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	user := r.FormValue("user")
-	pw := r.FormValue("pw")
-	db.DPrintf(db.ALWAYS, "user: %v %v\n", user, pw)
-	return www.spawnApp("user/user", w, r, true, []string{user, pw}, nil, 0)
 }

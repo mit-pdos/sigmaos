@@ -71,36 +71,6 @@ func TestStatic(t *testing.T) {
 	ts.waitWww()
 }
 
-func TestView(t *testing.T) {
-	ts := makeTstate(t)
-
-	out, err := ts.View()
-	assert.Nil(t, err)
-	assert.Contains(t, string(out), "Homer")
-
-	ts.waitWww()
-}
-
-func TestEdit(t *testing.T) {
-	ts := makeTstate(t)
-
-	out, err := ts.Edit("Odyssey")
-	assert.Nil(t, err)
-	assert.Contains(t, string(out), "Odyssey")
-
-	ts.waitWww()
-}
-
-func TestSave(t *testing.T) {
-	ts := makeTstate(t)
-
-	out, err := ts.Save()
-	assert.Nil(t, err)
-	assert.Contains(t, string(out), "Homer")
-
-	ts.waitWww()
-}
-
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
 	clnt := www.MakeWWWClnt(ts.FsLib, ts.job)
 	for i := 0; i < nreq; i++ {

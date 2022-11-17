@@ -67,7 +67,8 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 		cond.Signal()
 	}()
 
-	// Wait for the RPC to complete.
+	// Wait for the RPC to complete. This allows other sessions to make
+	// concurrent  RPCs to this server.
 	cond.Wait(ctx.SessionId())
 	st.sct.FreeSessCond(cond)
 

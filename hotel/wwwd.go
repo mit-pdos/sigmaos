@@ -116,8 +116,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
-
 	inDate := r.FormValue("inDate")
 	outDate := r.FormValue("outDate")
 	if inDate == "" || outDate == "" {

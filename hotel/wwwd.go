@@ -65,6 +65,7 @@ func RunWww(n string) error {
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
 	http.HandleFunc("/recommendations", www.recommendHandler)
+	http.HandleFunc("/reservation", www.reservationHandler)
 	go func() {
 		srv.ListenAndServe()
 	}()
@@ -250,6 +251,87 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(geoJSONResponse(profResp.Hotels))
 }
 
+func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	inDate := r.FormValue("inDate")
+	outDate := r.FormValue("outDate")
+	if inDate == "" || outDate == "" {
+		http.Error(w, "Please specify inDate/outDate params", http.StatusBadRequest)
+		return
+	}
+
+	if !checkDataFormat(inDate) || !checkDataFormat(outDate) {
+		http.Error(w, "Please check inDate/outDate format (YYYY-MM-DD)", http.StatusBadRequest)
+		return
+	}
+
+	hotelId := r.FormValue("hotelId")
+	if hotelId == "" {
+		http.Error(w, "Please specify hotelId params", http.StatusBadRequest)
+		return
+	}
+
+	customerName := r.FormValue("customername")
+	if customerName == "" {
+		http.Error(w, "Please specify customerName params", http.StatusBadRequest)
+		return
+	}
+
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+	if username == "" || password == "" {
+		http.Error(w, "Please specify username and password", http.StatusBadRequest)
+		return
+	}
+
+	numberOfRoom := 0
+	num := r.FormValue("number")
+	if num != "" {
+		numberOfRoom, _ = strconv.Atoi(num)
+	}
+
+	var res UserResult
+
+	// Check username and password
+	err := s.userc.RPC("User.CheckUser", UserRequest{
+		Name:     username,
+		Password: password,
+	}, &res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	str := "Reserve successfully!"
+	if res.OK == "False" {
+		str = "Failed. Please check your username and password. "
+	}
+
+	// Make reservation
+	var resResp ReserveResult
+	err = s.reservec.RPC("Reserve.MakeReservation", &ReserveRequest{
+		CustomerName: customerName,
+		HotelId:      []string{hotelId},
+		InDate:       inDate,
+		OutDate:      outDate,
+		Number:       numberOfRoom,
+	}, &resResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(resResp.HotelIds) == 0 {
+		str = "Failed. Already reserved. "
+	}
+
+	repl := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(repl)
+}
+
 // return a geoJSON response that allows google map to plot points directly on map
 // https://developers.google.com/maps/documentation/javascript/datalayer#sample_geojson
 func geoJSONResponse(hs []*ProfileFlat) map[string]interface{} {
@@ -277,4 +359,22 @@ func geoJSONResponse(hs []*ProfileFlat) map[string]interface{} {
 		"type":     "FeatureCollection",
 		"features": fs,
 	}
+}
+
+func checkDataFormat(date string) bool {
+	if len(date) != 10 {
+		return false
+	}
+	for i := 0; i < 10; i++ {
+		if i == 4 || i == 7 {
+			if date[i] != '-' {
+				return false
+			}
+		} else {
+			if date[i] < '0' || date[i] > '9' {
+				return false
+			}
+		}
+	}
+	return true
 }

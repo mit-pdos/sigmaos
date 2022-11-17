@@ -211,6 +211,10 @@ func TestWww(t *testing.T) {
 	err = hotel.WebRecs("dis", 38.0235, -122.095)
 	assert.Nil(t, err)
 
+	s, err = hotel.WebReserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "Reserve successfully!", s)
+
 	ts.stop()
 	ts.Shutdown()
 }

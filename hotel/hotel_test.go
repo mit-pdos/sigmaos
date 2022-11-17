@@ -201,17 +201,18 @@ func TestWww(t *testing.T) {
 		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 		"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"})
 
-	s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
-	assert.Nil(t, err)
-	assert.Equal(t, "Login successfully!", s)
+	for i := 0; i < 100; i++ {
+		s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
+		assert.Nil(t, err)
+		assert.Equal(t, "Login successfully!", s)
 
-	err = hotel.WebSearch("2015-04-09", "2015-04-10", 37.7749, -122.4194)
-	assert.Nil(t, err)
+		err = hotel.WebSearch("2015-04-09", "2015-04-10", 37.7749, -122.4194)
+		assert.Nil(t, err)
 
-	err = hotel.WebRecs("dis", 38.0235, -122.095)
-	assert.Nil(t, err)
-
-	s, err = hotel.WebReserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
+		err = hotel.WebRecs("dis", 38.0235, -122.095)
+		assert.Nil(t, err)
+	}
+	s, err := hotel.WebReserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 

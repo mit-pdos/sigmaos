@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/test"

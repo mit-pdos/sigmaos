@@ -74,7 +74,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) Login(req UserRequest, res *UserResult) error {
+func (s *Users) CheckUser(req UserRequest, res *UserResult) error {
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
 	error := s.dbc.Query(q, &users)

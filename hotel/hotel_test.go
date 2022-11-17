@@ -1,7 +1,9 @@
 package hotel_test
 
 import (
+	"io/ioutil"
 	"log"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,7 +117,7 @@ func TestUser(t *testing.T) {
 		Password: hotel.MkPassword("u_0"),
 	}
 	var res hotel.UserResult
-	err = pdc.RPC("User.Login", arg, &res)
+	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	log.Printf("res %v\n", res)
 	ts.stop()
@@ -192,6 +194,21 @@ func TestSearch(t *testing.T) {
 	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestWwwUser(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-wwwd"})
+	vals := map[string][]string{
+		"username": []string{"u_0"},
+		"password": []string{hotel.MkPassword("u_0")},
+	}
+	resp, err := http.PostForm("http://localhost:8090/user", vals)
+	assert.Nil(t, err)
+	assert.Equal(t, resp.StatusCode, http.StatusOK)
+	body, err := ioutil.ReadAll(resp.Body)
+	log.Printf("body: %v\n", string(body))
 	ts.stop()
 	ts.Shutdown()
 }

@@ -128,7 +128,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.File, err = mkStream(c.svc)
+	st.File, err = mkStream(ctx, c.svc)
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
 	}

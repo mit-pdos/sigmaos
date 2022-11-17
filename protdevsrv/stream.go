@@ -6,32 +6,72 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"sync"
 
 	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/ninep"
+	"sigmaos/sesscond"
 )
 
 type Stream struct {
-	svc  *service
-	repl []byte
+	sync.Mutex
+	svc      *service
+	sct      *sesscond.SessCondTable
+	inflight bool
+	repl     []byte
 }
 
-func mkStream(svc *service) (fs.File, *np.Err) {
+func mkStream(ctx fs.CtxI, svc *service) (fs.File, *np.Err) {
 	st := &Stream{}
 	st.svc = svc
+	st.sct = ctx.SessCondTable()
 	return st, nil
 }
 
 // XXX wait on close before processing data?
 func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	req := &Request{}
+	var rep *Reply
+
+	// Read request
 	ab := bytes.NewBuffer(b)
 	ad := gob.NewDecoder(ab)
 	if err := ad.Decode(req); err != nil {
 		return 0, np.MkErrError(err)
 	}
-	rep := st.svc.dispatch(req.Method, req)
+
+	// Lock the stream.
+	st.Lock()
+	defer st.Unlock()
+	// Sanity-check that there aren't concurrent RPCs on a single stream.
+	if st.inflight {
+		db.DFatalf("Tried to perform an RPC on an already-inflight stream.")
+	}
+
+	// Mark that an RPC is in-flight.
+	st.inflight = true
+
+	// Create a sesscond to allow concurrent RPCs.
+	cond := st.sct.MakeSessCond(&st.Mutex)
+
+	// Dispatch RPC in a separate thread & store reply.
+	go func() {
+		rep = st.svc.dispatch(req.Method, req)
+		// Wake up the writer thread.
+		st.Lock()
+		defer st.Unlock()
+		cond.Signal()
+	}()
+
+	// Wait for the RPC to complete.
+	cond.Wait(ctx.SessionId())
+	st.sct.FreeSessCond(cond)
+
+	// Mark that no RPCs are running anymore.
+	st.inflight = false
+
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)
 	if err := re.Encode(&rep); err != nil {
@@ -55,7 +95,7 @@ func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 	return st.repl, nil
 }
 
-func (svc *service) dispatch(methname string, req *Request) Reply {
+func (svc *service) dispatch(methname string, req *Request) *Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -67,7 +107,7 @@ func (svc *service) dispatch(methname string, req *Request) Reply {
 		ab := bytes.NewBuffer(req.Args)
 		ad := gob.NewDecoder(ab)
 		if err := ad.Decode(args.Interface()); err != nil {
-			return Reply{nil, err.Error()}
+			return &Reply{nil, err.Error()}
 		}
 
 		// db.DPrintf("PROTDEVSRV", "dispatch %v\n")
@@ -93,7 +133,7 @@ func (svc *service) dispatch(methname string, req *Request) Reply {
 		re := gob.NewEncoder(rb)
 		re.EncodeValue(replyv)
 
-		return Reply{rb.Bytes(), errmsg}
+		return &Reply{rb.Bytes(), errmsg}
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
@@ -101,6 +141,6 @@ func (svc *service) dispatch(methname string, req *Request) Reply {
 		}
 		log.Printf("dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		return Reply{nil, "uknown method"}
+		return &Reply{nil, "uknown method"}
 	}
 }

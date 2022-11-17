@@ -1,6 +1,7 @@
 package hotel_test
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,8 +26,8 @@ func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
 	p := proc.MakeProc(srv, []string{})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
-	// err = ts.WaitStart(p.Pid)
-	// assert.Nil(t, err, "WaitStarted")
+	err = ts.WaitStart(p.Pid)
+	assert.Nil(t, err, "WaitStarted")
 	return p.Pid
 }
 
@@ -208,7 +209,10 @@ func TestWwwUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Printf("body: %v\n", string(body))
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	assert.Nil(t, err)
+	assert.Equal(t, "Login successfully!", repl["message"])
 	ts.stop()
 	ts.Shutdown()
 }

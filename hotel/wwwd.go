@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
+	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 )
@@ -35,7 +36,19 @@ func RunWww(n string) error {
 		Handler: nil,
 	}
 	http.HandleFunc("/user", www.userHandler)
-	return srv.ListenAndServe()
+	go func() {
+		srv.ListenAndServe()
+	}()
+	return www.done()
+}
+
+func (s *Www) done() error {
+	if err := s.WaitEvict(proc.GetPid()); err != nil {
+		log.Printf("Error WaitEvict: %v", err)
+		return err
+	}
+	s.Exited(proc.MakeStatus(proc.StatusEvicted))
+	return nil
 }
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,8 +56,6 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 	username := r.FormValue("username")
 	password := r.FormValue("password")
-
-	log.Printf("username %v\n", username)
 
 	if username == "" || password == "" {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)

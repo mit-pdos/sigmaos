@@ -53,3 +53,16 @@ func WebSearch(inDate, outDate string, lat, lon float64) error {
 	log.Printf("%v", string(body))
 	return nil
 }
+
+func WebRecs(require string, lat, lon float64) error {
+	vals := url.Values{}
+	vals.Set("require", require)
+	vals.Add("lat", fmt.Sprintf("%f", lat))
+	vals.Add("lon", fmt.Sprintf("%f", lon))
+	body, err := webRequest("http://localhost:8090/recommendations", vals)
+	if err != nil {
+		return err
+	}
+	log.Printf("%v", string(body))
+	return nil
+}

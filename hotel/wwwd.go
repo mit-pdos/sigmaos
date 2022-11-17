@@ -20,6 +20,7 @@ type Www struct {
 	searchc  *protdevclnt.ProtDevClnt
 	reservec *protdevclnt.ProtDevClnt
 	profc    *protdevclnt.ProtDevClnt
+	recc     *protdevclnt.ProtDevClnt
 }
 
 // Run starts the server
@@ -48,6 +49,12 @@ func RunWww(n string) error {
 	}
 	www.reservec = pdc
 
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELREC)
+	if err != nil {
+		return err
+	}
+	www.recc = pdc
+
 	if err := www.Started(); err != nil {
 		return err
 	}
@@ -57,6 +64,7 @@ func RunWww(n string) error {
 	}
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
+	http.HandleFunc("/recommendations", www.recommendHandler)
 	go func() {
 		srv.ListenAndServe()
 	}()
@@ -186,6 +194,60 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("profRes %v\n", profRes.Hotels)
 
 	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
+}
+
+func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// lan/lon from query params
+	sLat := r.FormValue("lat")
+	sLon := r.FormValue("lon")
+	if sLat == "" || sLon == "" {
+		http.Error(w, "Please specify location params", http.StatusBadRequest)
+		return
+	}
+
+	Lat, _ := strconv.ParseFloat(sLat, 64)
+	lat := float64(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 64)
+	lon := float64(Lon)
+
+	require := r.FormValue("require")
+	if require != "dis" && require != "rate" && require != "price" {
+		http.Error(w, "Please specify require params", http.StatusBadRequest)
+		return
+	}
+
+	// recommend hotels
+	var recResp RecResult
+	err := s.recc.RPC("Rec.GetRecs", &RecRequest{
+		Require: require,
+		Lat:     lat,
+		Lon:     lon,
+	}, &recResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// grab locale from query params or default to en
+	locale := r.FormValue("locale")
+	if locale == "" {
+		locale = "en"
+	}
+
+	// hotel profiles
+	var profResp ProfResult
+	err = s.profc.RPC("ProfSrv.GetProfiles", &ProfRequest{
+		HotelIds: recResp.HotelIds,
+		Locale:   locale,
+	}, &profResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(geoJSONResponse(profResp.Hotels))
 }
 
 // return a geoJSON response that allows google map to plot points directly on map

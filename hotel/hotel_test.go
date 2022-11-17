@@ -199,13 +199,16 @@ func TestSearch(t *testing.T) {
 func TestWww(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-rated",
 		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-		"user/hotel-reserved", "user/hotel-wwwd"})
+		"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"})
 
 	s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 
 	err = hotel.WebSearch("2015-04-09", "2015-04-10", 37.7749, -122.4194)
+	assert.Nil(t, err)
+
+	err = hotel.WebRecs("dis", 38.0235, -122.095)
 	assert.Nil(t, err)
 
 	ts.stop()

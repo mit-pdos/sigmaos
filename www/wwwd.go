@@ -217,18 +217,6 @@ func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (
 	return www.spawnApp("user/fsreader", w, r, true, []string{file}, nil, 0)
 }
 
-func doHotel(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	db.DPrintf(db.ALWAYS, "dohotel: %v\n", args)
-	// XXX maybe pass all form key/values to app
-	//r.ParseForm()
-	//for key, value := range r.Form {
-	//	log.Printf("form: %v %v", key, value)
-	//}
-	// log.Printf("\n")
-	title := r.FormValue("title")
-	return www.spawnApp("user/hotel-www", w, r, true, []string{args, title}, nil, 0)
-}
-
 func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	_, err := w.Write([]byte("hello"))
 	if err != nil {

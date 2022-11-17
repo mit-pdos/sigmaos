@@ -1,6 +1,7 @@
 package procd
 
 import (
+	"math/rand"
 	"path"
 	"strings"
 	"time"
@@ -65,6 +66,10 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			pd.perf.Done()
 			db.DFatalf("Error ReadDirWatch: %v", err)
 		}
+		// Shuffle the queue of stealable procs.
+		rand.Shuffle(len(stealable), func(i, j int) {
+			stealable[i], stealable[j] = stealable[j], stealable[i]
+		})
 		// Store the queue of stealable procs for worker threads to read.
 		pd.Lock()
 		pd.wsQueues[wsQueuePath] = stealable

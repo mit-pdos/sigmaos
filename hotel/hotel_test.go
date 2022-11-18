@@ -49,7 +49,7 @@ func makeTstate(t *testing.T, srvs []string) *Tstate {
 func (ts *Tstate) Stats(fn string) {
 	b, err := ts.GetFile(fn + "/stats")
 	assert.Nil(ts.T, err)
-	log.Printf("stats: %v\n", string(b))
+	fmt.Printf("stats %s: %v\n", fn, string(b))
 }
 
 func (ts *Tstate) stop() {
@@ -298,7 +298,11 @@ func toss(r *rand.Rand) float64 {
 	return float64(toss) / 1000
 }
 
-func TestBench(t *testing.T) {
+var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
+	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
+	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
+
+func TestBenchDeathStarSingle(t *testing.T) {
 	const (
 		N               = 1000
 		search_ratio    = 0.6
@@ -306,32 +310,58 @@ func TestBench(t *testing.T) {
 		user_ratio      = 0.005
 		reserve_ratio   = 0.005
 	)
-
-	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-rated",
-		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-		"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"})
-
+	ts := makeTstate(t, hotelsvcs)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for i := 0; i < N; i++ {
-		benchSearch(t, r)
-		// coin := toss(r)
-		// if coin < search_ratio {
-		// 	benchSearch(t, r)
-		// } else if coin < search_ratio+recommend_ratio {
-		// 	benchRecommend(t, r)
-		// } else if coin < search_ratio+recommend_ratio+user_ratio {
-		// 	benchLogin(t, r)
-		// } else {
-		// 	benchReserve(t, r)
-		// }
+		coin := toss(r)
+		if coin < search_ratio {
+			benchSearch(t, r)
+		} else if coin < search_ratio+recommend_ratio {
+			benchRecommend(t, r)
+		} else if coin < search_ratio+recommend_ratio+user_ratio {
+			benchLogin(t, r)
+		} else {
+			benchReserve(t, r)
+		}
 	}
-	log.Printf("TestBench N=%d %dms\n", N, time.Since(start).Milliseconds())
-	ts.Stats(np.HOTELPROF)
-	ts.Stats(np.HOTELGEO)
-	ts.Stats(np.HOTELSEARCH)
-	ts.Stats(np.HOTELRATE)
-	ts.Stats(np.DBD)
+	fmt.Printf("TestBenchDeathStarSingle N=%d %dms\n", N, time.Since(start).Milliseconds())
+	for _, s := range np.HOTELSVC {
+		ts.Stats(s)
+	}
 	ts.stop()
 	ts.Shutdown()
+}
+
+func testMultiSearch(t *testing.T, nthread int) {
+	const (
+		N = 1000
+	)
+	ts := makeTstate(t, hotelsvcs)
+	ch := make(chan bool)
+	start := time.Now()
+	for t := 0; t < nthread; t++ {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		go func() {
+			for i := 0; i < N; i++ {
+				benchSearch(ts.T, r)
+			}
+			ch <- true
+		}()
+	}
+	for t := 0; t < nthread; t++ {
+		<-ch
+	}
+	fmt.Printf("TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
+	for _, s := range np.HOTELSVC {
+		ts.Stats(s)
+	}
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestMultiSearch(t *testing.T) {
+	for n := 1; n < 3; n++ {
+		testMultiSearch(t, n)
+	}
 }

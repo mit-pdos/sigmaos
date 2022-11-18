@@ -34,9 +34,8 @@ const (
 	HOTELRESERVE = HOTEL + "reserve"
 	HOTELUSER    = HOTEL + "user"
 	HOTELPROF    = HOTEL + "prof"
-
-	KPIDSREL = "kpids"
-	KPIDS    = NAMED + KPIDSREL
+	KPIDSREL     = "kpids"
+	KPIDS        = NAMED + KPIDSREL
 
 	// Procd spawn file
 	PROCD_SPAWN_FILE = "spawn"
@@ -69,3 +68,6 @@ const (
 const (
 	SIGMACTL = SIGMAMGR + "/" + RESOURCE_CTL
 )
+
+var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
+	HOTELUSER, HOTELPROF, DBD}

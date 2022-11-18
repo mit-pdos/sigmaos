@@ -13,6 +13,7 @@ import (
 type MethodStat struct {
 	N   uint64 // number of invocations of method
 	Tot int64  // tot us for this method
+	Avg float64
 }
 
 type Stats struct {
@@ -52,6 +53,11 @@ func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQvers
 	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.sts)
 	if off > 0 {
 		return nil, nil
+	}
+	for _, st := range std.sts.stats {
+		if st.N > 0 {
+			st.Avg = float64(st.Tot) / float64(st.N)
+		}
 	}
 	b, err := json.Marshal(std.sts.stats)
 	if err != nil {

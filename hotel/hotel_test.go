@@ -328,6 +328,8 @@ func TestBench(t *testing.T) {
 	}
 	log.Printf("TestBench N=%d %dms\n", N, time.Since(start).Milliseconds())
 	ts.Stats(np.HOTELPROF)
+	ts.Stats(np.HOTELGEO)
+	ts.Stats(np.DBD)
 	ts.stop()
 	ts.Shutdown()
 }

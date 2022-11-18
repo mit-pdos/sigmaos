@@ -9,6 +9,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -54,6 +55,7 @@ func RunGeoSrv(n string) error {
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(req GeoRequest, rep *GeoResult) error {
+	db.DPrintf("HOTELGEO", "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {
 		rep.HotelIds = append(rep.HotelIds, p.Id())

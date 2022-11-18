@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -144,18 +145,20 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	lon := float64(Lon)
 
 	var searchRes SearchResult
-	// search for best hotels
-	err := s.searchc.RPC("Search.Nearby", SearchRequest{
+	searchReq := SearchRequest{
 		Lat:     lat,
 		Lon:     lon,
 		InDate:  inDate,
 		OutDate: outDate,
-	}, &searchRes)
+	}
+	// search for best hotels
+	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	db.DPrintf("HOTELWWWD", "Searchres %v %v\n", searchReq, searchRes)
 	// grab locale from query params or default to en
 	locale := r.FormValue("locale")
 	if locale == "" {

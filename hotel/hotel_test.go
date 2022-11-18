@@ -46,6 +46,12 @@ func makeTstate(t *testing.T, srvs []string) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) Stats(fn string) {
+	b, err := ts.GetFile(fn + "/stats")
+	assert.Nil(ts.T, err)
+	log.Printf("stats: %v\n", string(b))
+}
+
 func (ts *Tstate) stop() {
 	for _, pid := range ts.pids {
 		err := ts.Evict(pid)
@@ -55,7 +61,7 @@ func (ts *Tstate) stop() {
 	}
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
-	assert.Equal(ts.T, 3, len(sts))
+	assert.Equal(ts.T, 4, len(sts))
 }
 
 func TestGeo(t *testing.T) {
@@ -294,7 +300,7 @@ func toss(r *rand.Rand) float64 {
 
 func TestBench(t *testing.T) {
 	const (
-		N               = 1000
+		N               = 10 // 00 //000
 		search_ratio    = 0.6
 		recommend_ratio = 0.39
 		user_ratio      = 0.005
@@ -308,18 +314,20 @@ func TestBench(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for i := 0; i < N; i++ {
-		coin := toss(r)
-		if coin < search_ratio {
-			benchSearch(t, r)
-		} else if coin < search_ratio+recommend_ratio {
-			benchRecommend(t, r)
-		} else if coin < search_ratio+recommend_ratio+user_ratio {
-			benchLogin(t, r)
-		} else {
-			benchReserve(t, r)
-		}
+		benchSearch(t, r)
+		// coin := toss(r)
+		// if coin < search_ratio {
+		// 	benchSearch(t, r)
+		// } else if coin < search_ratio+recommend_ratio {
+		// 	benchRecommend(t, r)
+		// } else if coin < search_ratio+recommend_ratio+user_ratio {
+		// 	benchLogin(t, r)
+		// } else {
+		// 	benchReserve(t, r)
+		// }
 	}
 	log.Printf("TestBench N=%d %dms\n", N, time.Since(start).Milliseconds())
+	ts.Stats(np.HOTELPROF)
 	ts.stop()
 	ts.Shutdown()
 }

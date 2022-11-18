@@ -80,6 +80,13 @@ type streamCtl struct {
 	id np.Tsession
 }
 
+func mkStreamCtl(sid np.Tsession) *streamCtl {
+	s := &streamCtl{}
+	s.id = sid
+	s.Inode = inode.MakeInode(nil, np.DMTMP, nil)
+	return s
+}
+
 func (sc *streamCtl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
@@ -98,29 +105,27 @@ func (sc *streamCtl) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 type Clone struct {
 	fs.Inode
-	svc *service
+	psd *ProtSrvDev
 }
 
-func makeClone(ctx fs.CtxI, root fs.Dir, svc *service) fs.Inode {
+func makeClone(ctx fs.CtxI, root fs.Dir, psd *ProtSrvDev) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, root)
-	return &Clone{i, svc}
+	return &Clone{i, psd}
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	s := &streamCtl{}
-	s.Inode = inode.MakeInode(nil, np.DMTMP, nil)
-	s.id = ctx.SessionId()
+	sc := mkStreamCtl(ctx.SessionId())
 
-	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", s.id)
+	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", sc.id)
 
 	// create directory for stream
 	di := inode.MakeInode(nil, np.DMDIR|np.DMTMP, c.Parent())
 	d := dir.MakeDir(di, memfs.MakeInode)
-	err := dir.MkNod(ctx, c.Parent(), s.id.String(), d)
+	err := dir.MkNod(ctx, c.Parent(), sc.id.String(), d)
 	if err != nil {
 		db.DFatalf("MkNod d %v err %v\n", d, err)
 	}
-	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into stream dir
+	err = dir.MkNod(ctx, d, "ctl", sc) // put ctl file into stream dir
 	if err != nil {
 		db.DFatalf("MkNod err %v\n", err)
 	}
@@ -128,13 +133,13 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.File, err = mkStream(ctx, c.svc)
+	st.File, err = mkStream(ctx, c.psd.sts, c.psd.svc)
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
 	}
 	dir.MkNod(ctx, d, "data", st)
 
-	return s, nil
+	return sc, nil
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
@@ -144,6 +149,8 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 type ProtSrvDev struct {
 	*fslibsrv.MemFs
+	sts *Stats
+	svc *service
 }
 
 func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
@@ -175,8 +182,13 @@ func MakeProtDevSrv(fn string, svci any) *ProtSrvDev {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
 	psd.MemFs = mfs
-	svc := mkService(svci)
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), svc))
+	psd.svc = mkService(svci)
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), psd))
+	if err != nil {
+		db.DFatalf("MakeNod clone failed %v\n", err)
+	}
+	psd.sts = MkStats()
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "stats", makeStatsDev(nil, mfs.Root(), psd.sts))
 	if err != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err)
 	}

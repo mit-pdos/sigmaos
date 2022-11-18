@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	// db "sigmaos/debug"
 	db "sigmaos/debug"
@@ -18,14 +19,16 @@ import (
 type Stream struct {
 	sync.Mutex
 	svc      *service
+	sts      *Stats
 	sct      *sesscond.SessCondTable
 	inflight bool
 	repl     []byte
 }
 
-func mkStream(ctx fs.CtxI, svc *service) (fs.File, *np.Err) {
+func mkStream(ctx fs.CtxI, sts *Stats, svc *service) (fs.File, *np.Err) {
 	st := &Stream{}
 	st.svc = svc
+	st.sts = sts
 	st.sct = ctx.SessCondTable()
 	return st, nil
 }
@@ -60,11 +63,13 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 
 	// Dispatch RPC in a separate thread & store reply.
 	go func() {
+		start := time.Now()
 		rep = st.svc.dispatch(req.Method, req)
 		// Wake up the writer thread.
 		st.Lock()
 		defer st.Unlock()
-
+		t := time.Since(start).Microseconds()
+		st.sts.stat(req.Method, t)
 		// Mark that the in-flight RPC has terminated..
 		st.inflight = false
 		cond.Signal()

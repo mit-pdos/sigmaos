@@ -2,7 +2,6 @@ package hotel
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -74,7 +73,6 @@ func RunWww(n string) error {
 
 func (s *Www) done() error {
 	if err := s.WaitEvict(proc.GetPid()); err != nil {
-		log.Printf("Error WaitEvict: %v", err)
 		return err
 	}
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
@@ -164,8 +162,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		locale = "en"
 	}
 
-	log.Printf("searchRes %v\n", searchRes.HotelIds)
-
 	var reserveRes ReserveResult
 	err = s.reservec.RPC("Reserve.CheckAvailability", &ReserveRequest{
 		CustomerName: "",
@@ -179,8 +175,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("reserveRes %v\n", reserveRes.HotelIds)
-
 	// hotel profiles
 	var profRes ProfResult
 	err = s.profc.RPC("ProfSrv.GetProfiles", ProfRequest{
@@ -191,8 +185,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("profRes %v\n", profRes.Hotels)
 
 	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
 }

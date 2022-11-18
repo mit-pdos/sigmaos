@@ -52,7 +52,6 @@ func RunRateSrv(n string) error {
 
 // GetRates gets rates for hotels for specific date range.
 func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
-	log.Printf("reqRates %v\n", req)
 	for _, hotelID := range req.HotelIds {
 		stay := stay{
 			HotelID: hotelID,

@@ -150,7 +150,6 @@ func loadRecTable(path string) map[string]*Hotel {
 		h.HRate = rates[i]
 		h.HPrice = prices[i]
 		hs[h.HId] = h
-		log.Printf("hotel: %v\n", h)
 	}
 	for i := 7; i <= NHOTEL; i++ {
 		hotel_id := strconv.Itoa(i)
@@ -184,7 +183,6 @@ func loadRecTable(path string) map[string]*Hotel {
 			HPrice: rate_inc,
 		}
 		hs[h.HId] = h
-		log.Printf("hotel: %v\n", h)
 	}
 	return hs
 }

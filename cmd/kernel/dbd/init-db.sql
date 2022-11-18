@@ -5,12 +5,13 @@ CREATE TABLE user (
 );
 
 CREATE TABLE reservation (
+  id         INT AUTO_INCREMENT NOT NULL,
   hotelid    VARCHAR(128) NOT NULL,
   customer   VARCHAR(128) NOT NULL,
   indate     VARCHAR(128) NOT NULL,
   outdate    VARCHAR(128) NOT NULL,
   number     INT NOT NULL,
-  PRIMARY KEY (`hotelid`)
+  PRIMARY KEY (`id`)
 );
 
 CREATE TABLE number (

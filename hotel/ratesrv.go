@@ -3,6 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"sort"
 	"strconv"
 
 	"github.com/harlow/go-micro-services/data"
@@ -34,12 +35,26 @@ type RatePlan struct {
 	RoomType *RoomType
 }
 
+type RatePlans []*RatePlan
+
+func (r RatePlans) Len() int {
+	return len(r)
+}
+
+func (r RatePlans) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
+func (r RatePlans) Less(i, j int) bool {
+	return r[i].RoomType.TotalRate > r[j].RoomType.TotalRate
+}
+
 type RateResult struct {
 	RatePlans []*RatePlan
 }
 
 type Rate struct {
-	rateTable map[stay]*RatePlan
+	rateTable map[string]*RatePlan
 }
 
 // Run starts the server
@@ -50,24 +65,21 @@ func RunRateSrv(n string) error {
 	return pds.RunServer()
 }
 
-// GetRates gets rates for hotels for specific date range.
+// GetRates gets rates for hotels
 func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
+	ratePlans := make(RatePlans, 0)
 	for _, hotelID := range req.HotelIds {
-		stay := stay{
-			HotelID: hotelID,
-			InDate:  req.InDate,
-			OutDate: req.OutDate,
-		}
-		if s.rateTable[stay] != nil {
-			res.RatePlans = append(res.RatePlans, s.rateTable[stay])
+		if s.rateTable[hotelID] != nil {
+			ratePlans = append(ratePlans, s.rateTable[hotelID])
 		}
 	}
-
+	sort.Sort(ratePlans)
+	res.RatePlans = ratePlans
 	return nil
 }
 
 // loadRates loads rate codes from JSON file.
-func loadRateTable(path string) map[stay]*RatePlan {
+func loadRateTable(path string) map[string]*RatePlan {
 	file := data.MustAsset(path)
 
 	rates := []*RatePlan{}
@@ -75,14 +87,9 @@ func loadRateTable(path string) map[stay]*RatePlan {
 		log.Fatalf("Failed to load json: %v", err)
 	}
 
-	rateTable := make(map[stay]*RatePlan)
+	rateTable := make(map[string]*RatePlan)
 	for _, ratePlan := range rates {
-		stay := stay{
-			HotelID: ratePlan.HotelId,
-			InDate:  ratePlan.InDate,
-			OutDate: ratePlan.OutDate,
-		}
-		rateTable[stay] = ratePlan
+		rateTable[ratePlan.HotelId] = ratePlan
 	}
 	for i := 7; i <= NHOTEL; i++ {
 		if i%3 == 0 {
@@ -122,20 +129,9 @@ func loadRateTable(path string) map[stay]*RatePlan {
 					"King sized bed",
 				},
 			}
-			stay := stay{
-				HotelID: strconv.Itoa(i),
-				InDate:  r.InDate,
-				OutDate: r.OutDate,
-			}
-			rateTable[stay] = r
+			rateTable[strconv.Itoa(i)] = r
 		}
 	}
 
 	return rateTable
-}
-
-type stay struct {
-	HotelID string
-	InDate  string
-	OutDate string
 }

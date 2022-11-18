@@ -29,7 +29,7 @@ func WebLogin(u, p string) (string, error) {
 	vals := url.Values{}
 	vals.Set("username", u)
 	vals.Set("password", p)
-	// db.DPrintf("WEBC", "Login vals %v\n", vals)
+	db.DPrintf("WEBC", "Login vals %v\n", vals)
 	body, err := webRequest("http://localhost:8090/user", vals)
 	if err != nil {
 		return "", err
@@ -48,7 +48,7 @@ func WebSearch(inDate, outDate string, lat, lon float64) error {
 	vals.Set("outDate", outDate)
 	vals.Set("lat", fmt.Sprintf("%f", lat))
 	vals.Set("lon", fmt.Sprintf("%f", lon))
-	//db.DPrintf("WEBC", "Search vals %v\n", vals)
+	db.DPrintf("WEBC", "Search vals %v\n", vals)
 	_, err := webRequest("http://localhost:8090/hotels", vals)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func WebRecs(require string, lat, lon float64) error {
 	vals.Set("require", require)
 	vals.Add("lat", fmt.Sprintf("%f", lat))
 	vals.Add("lon", fmt.Sprintf("%f", lon))
-	//db.DPrintf("WEBC", "Recs vals %v\n", vals)
+	db.DPrintf("WEBC", "Recs vals %v\n", vals)
 	_, err := webRequest("http://localhost:8090/recommendations", vals)
 	if err != nil {
 		return err

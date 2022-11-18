@@ -2,12 +2,13 @@ package hotel
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"sort"
 	"strconv"
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/dbclnt"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -54,14 +55,26 @@ type RateResult struct {
 }
 
 type Rate struct {
-	rateTable map[string]*RatePlan
+	dbc *dbclnt.DbClnt
 }
 
 // Run starts the server
 func RunRateSrv(n string) error {
 	r := &Rate{}
-	r.rateTable = loadRateTable("data/inventory.json")
 	pds := protdevsrv.MakeProtDevSrv(np.HOTELRATE, r)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
+	if err != nil {
+		return err
+	}
+	r.dbc = dbc
+	file := data.MustAsset("data/inventory.json")
+	rates := []*RatePlan{}
+	if err := json.Unmarshal(file, &rates); err != nil {
+		return err
+	}
+	if err := r.initDB(rates); err != nil {
+		return err
+	}
 	return pds.RunServer()
 }
 
@@ -69,8 +82,12 @@ func RunRateSrv(n string) error {
 func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelID := range req.HotelIds {
-		if s.rateTable[hotelID] != nil {
-			ratePlans = append(ratePlans, s.rateTable[hotelID])
+		r, err := s.getRate(hotelID)
+		if err != nil {
+			return err
+		}
+		if r != nil {
+			ratePlans = append(ratePlans, r)
 		}
 	}
 	sort.Sort(ratePlans)
@@ -78,18 +95,64 @@ func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	return nil
 }
 
-// loadRates loads rate codes from JSON file.
-func loadRateTable(path string) map[string]*RatePlan {
-	file := data.MustAsset(path)
-
-	rates := []*RatePlan{}
-	if err := json.Unmarshal(file, &rates); err != nil {
-		log.Fatalf("Failed to load json: %v", err)
+func (s *Rate) insertRate(r *RatePlan) error {
+	q := fmt.Sprintf("INSERT INTO rate (hotelid, code, indate, outdate, roombookrate, roomtotalrate, roomtotalinclusive, roomcode, roomcurrency, roomdescription) VALUES ('%s', '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s');", r.HotelId, r.Code, r.InDate, r.OutDate, r.RoomType.BookableRate, r.RoomType.TotalRate, r.RoomType.TotalRateInclusive, r.RoomType.Code, r.RoomType.Currency, r.RoomType.RoomDescription)
+	if err := s.dbc.Exec(q); err != nil {
+		return err
 	}
+	return nil
+}
 
-	rateTable := make(map[string]*RatePlan)
-	for _, ratePlan := range rates {
-		rateTable[ratePlan.HotelId] = ratePlan
+type RateFlat struct {
+	HotelId                string
+	Code                   string
+	InDate                 string
+	OutDate                string
+	RoomBookableRate       float64
+	RoomTotalRate          float64
+	RoomTotalRateInclusive float64
+	RoomCode               string
+	RoomCurrency           string
+	RoomDescription        string
+}
+
+func (s *Rate) getRate(id string) (*RatePlan, error) {
+	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
+	var rates []RateFlat
+	if error := s.dbc.Query(q, &rates); error != nil {
+		return nil, error
+	}
+	if len(rates) == 0 {
+		return nil, nil
+	}
+	rf := &rates[0]
+	r := &RatePlan{
+		HotelId: rf.HotelId,
+		Code:    rf.Code,
+		InDate:  rf.InDate,
+		OutDate: rf.OutDate,
+		RoomType: &RoomType{
+			rf.RoomBookableRate,
+			rf.RoomTotalRate,
+			rf.RoomTotalRateInclusive,
+			rf.RoomCode,
+			rf.RoomCurrency,
+			rf.RoomDescription,
+		},
+	}
+	return r, nil
+}
+
+// loadRates loads rate codes from JSON file.
+func (s *Rate) initDB(rates []*RatePlan) error {
+	q := fmt.Sprintf("truncate rate;")
+	if err := s.dbc.Exec(q); err != nil {
+		return err
+	}
+	for _, r := range rates {
+		if err := s.insertRate(r); err != nil {
+			return err
+		}
 	}
 	for i := 7; i <= NHOTEL; i++ {
 		if i%3 == 0 {
@@ -129,9 +192,11 @@ func loadRateTable(path string) map[string]*RatePlan {
 					"King sized bed",
 				},
 			}
-			rateTable[strconv.Itoa(i)] = r
+			if err := s.insertRate(r); err != nil {
+				return err
+			}
 		}
 	}
 
-	return rateTable
+	return nil
 }

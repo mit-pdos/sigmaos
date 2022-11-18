@@ -20,6 +20,20 @@ CREATE TABLE number (
   PRIMARY KEY (`hotelid`)
 );
 
+CREATE TABLE rate (
+  hotelid    VARCHAR(128) NOT NULL,
+  code       VARCHAR(128) NOT NULL,
+  indate     VARCHAR(128) NOT NULL,
+  outdate    VARCHAR(128) NOT NULL,
+  roombookrate        FLOAT NOT NULL,
+  roomtotalrate       FLOAT NOT NULL,
+  roomtotalinclusive  FLOAT NOT NULL,
+  roomcode            VARCHAR(128) NOT NULL,
+  roomcurrency        VARCHAR(128) NOT NULL,
+  roomdescription     VARCHAR(512) NOT NULL,
+  PRIMARY KEY (`hotelid`)
+);
+
 CREATE TABLE profile (
   hotelid    VARCHAR(128) NOT NULL,
   name       VARCHAR(128) NOT NULL,

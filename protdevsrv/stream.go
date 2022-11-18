@@ -6,7 +6,6 @@ import (
 	"log"
 	"reflect"
 	"strings"
-	"sync" // XXX needed?
 	"time"
 
 	// db "sigmaos/debug"
@@ -15,7 +14,6 @@ import (
 )
 
 type Stream struct {
-	sync.Mutex
 	svc      *service
 	sts      *Stats
 	inflight bool

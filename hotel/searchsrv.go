@@ -3,6 +3,7 @@ package hotel
 import (
 	"log"
 
+	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
@@ -44,28 +45,30 @@ func RunSearchSrv(n string) error {
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
 	var gres GeoResult
-	err := s.geoc.RPC("Geo.Nearby", GeoRequest{
+	greq := GeoRequest{
 		Lat: req.Lat,
 		Lon: req.Lon,
-	}, &gres)
+	}
+	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
 		log.Fatalf("nearby error: %v", err)
 	}
 
-	log.Printf("gRes %v\n", gres.HotelIds)
+	db.DPrintf("HOTELSEARCH", "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
 	var rres RateResult
-	err = s.ratec.RPC("Rate.GetRates", RateRequest{
+	rreq := RateRequest{
 		HotelIds: gres.HotelIds,
 		InDate:   req.InDate,
 		OutDate:  req.OutDate,
-	}, &rres)
+	}
+	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
 	if err != nil {
 		log.Fatalf("rates error: %v", err)
 	}
 
-	log.Printf("rres %v\n", rres.RatePlans)
+	db.DPrintf("HOTELSEARCH", "Search Getrates: %v %v\n", rreq, rres)
 
 	for _, ratePlan := range rres.RatePlans {
 		res.HotelIds = append(res.HotelIds, ratePlan.HotelId)

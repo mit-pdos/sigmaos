@@ -6,6 +6,8 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"sync" // XXX needed?
+	"time"
 
 	// db "sigmaos/debug"
 	"sigmaos/fs"
@@ -13,13 +15,17 @@ import (
 )
 
 type Stream struct {
-	svc  *service
-	repl []byte
+	sync.Mutex
+	svc      *service
+	sts      *Stats
+	inflight bool
+	repl     []byte
 }
 
-func mkStream(svc *service) (fs.File, *np.Err) {
+func mkStream(sts *Stats, svc *service) (fs.File, *np.Err) {
 	st := &Stream{}
 	st.svc = svc
+	st.sts = sts
 	return st, nil
 }
 
@@ -35,8 +41,10 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 		return 0, np.MkErrError(err)
 	}
 
-	// Dispatch RPC in a separate thread & store reply.
+	start := time.Now()
 	rep = st.svc.dispatch(req.Method, req)
+	t := time.Since(start).Microseconds()
+	st.sts.stat(req.Method, t)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

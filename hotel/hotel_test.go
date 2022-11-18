@@ -1,8 +1,12 @@
 package hotel_test
 
 import (
+	"fmt"
 	"log"
+	"math/rand"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -42,6 +46,12 @@ func makeTstate(t *testing.T, srvs []string) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) Stats(fn string) {
+	b, err := ts.GetFile(fn + "/stats")
+	assert.Nil(ts.T, err)
+	log.Printf("stats: %v\n", string(b))
+}
+
 func (ts *Tstate) stop() {
 	for _, pid := range ts.pids {
 		err := ts.Evict(pid)
@@ -51,7 +61,7 @@ func (ts *Tstate) stop() {
 	}
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
-	assert.Equal(ts.T, 3, len(sts))
+	assert.Equal(ts.T, 4, len(sts))
 }
 
 func TestGeo(t *testing.T) {
@@ -215,6 +225,111 @@ func TestWww(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 
+	ts.stop()
+	ts.Shutdown()
+}
+
+func benchSearch(t *testing.T, r *rand.Rand) {
+	in_date := r.Intn(14) + 9
+	out_date := in_date + r.Intn(5) + 1
+	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
+	if in_date <= 9 {
+		in_date_str = fmt.Sprintf("2015-04-0%d", in_date)
+	}
+	out_date_str := fmt.Sprintf("2015-04-%d", out_date)
+	if out_date <= 9 {
+		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
+	}
+	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
+	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	err := hotel.WebSearch(in_date_str, out_date_str, lat, lon)
+	assert.Nil(t, err)
+}
+
+func benchRecommend(t *testing.T, r *rand.Rand) {
+	coin := toss(r)
+	req := ""
+	if coin < 0.33 {
+		req = "dis"
+	} else if coin < 0.66 {
+		req = "rate"
+	} else {
+		req = "price"
+	}
+	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
+	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	err := hotel.WebRecs(req, lat, lon)
+	assert.Nil(t, err)
+}
+
+func benchLogin(t *testing.T, r *rand.Rand) {
+	user := fmt.Sprintf("u_%d", r.Intn(500))
+	pw := hotel.MkPassword(user)
+	s, err := hotel.WebLogin(user, pw)
+	assert.Nil(t, err)
+	assert.Equal(t, "Login successfully!", s)
+}
+
+func benchReserve(t *testing.T, r *rand.Rand) {
+	in_date := r.Intn(14) + 9
+	out_date := in_date + r.Intn(5) + 1
+	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
+	if in_date <= 9 {
+		in_date_str = fmt.Sprintf("2015-04-0%d", in_date)
+	}
+	out_date_str := fmt.Sprintf("2015-04-%d", out_date)
+	if out_date <= 9 {
+		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
+	}
+	hotelid := strconv.Itoa(r.Intn(80) + 1)
+	user := fmt.Sprintf("u_%d", r.Intn(500))
+	pw := hotel.MkPassword(user)
+	cust_name := user
+	num := 1
+	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
+	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	s, err := hotel.WebReserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
+	assert.Nil(t, err)
+	assert.Equal(t, "Reserve successfully!", s)
+}
+
+func toss(r *rand.Rand) float64 {
+	toss := r.Intn(1000)
+	return float64(toss) / 1000
+}
+
+func TestBench(t *testing.T) {
+	const (
+		N               = 10 // 00 //000
+		search_ratio    = 0.6
+		recommend_ratio = 0.39
+		user_ratio      = 0.005
+		reserve_ratio   = 0.005
+	)
+
+	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-rated",
+		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
+		"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"})
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	start := time.Now()
+	for i := 0; i < N; i++ {
+		benchSearch(t, r)
+		// coin := toss(r)
+		// if coin < search_ratio {
+		// 	benchSearch(t, r)
+		// } else if coin < search_ratio+recommend_ratio {
+		// 	benchRecommend(t, r)
+		// } else if coin < search_ratio+recommend_ratio+user_ratio {
+		// 	benchLogin(t, r)
+		// } else {
+		// 	benchReserve(t, r)
+		// }
+	}
+	log.Printf("TestBench N=%d %dms\n", N, time.Since(start).Milliseconds())
+	ts.Stats(np.HOTELPROF)
+	ts.Stats(np.HOTELGEO)
+	ts.Stats(np.DBD)
 	ts.stop()
 	ts.Shutdown()
 }

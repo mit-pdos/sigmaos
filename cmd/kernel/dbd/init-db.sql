@@ -5,17 +5,32 @@ CREATE TABLE user (
 );
 
 CREATE TABLE reservation (
+  id         INT AUTO_INCREMENT NOT NULL,
   hotelid    VARCHAR(128) NOT NULL,
   customer   VARCHAR(128) NOT NULL,
   indate     VARCHAR(128) NOT NULL,
   outdate    VARCHAR(128) NOT NULL,
   number     INT NOT NULL,
-  PRIMARY KEY (`hotelid`)
+  PRIMARY KEY (`id`)
 );
 
 CREATE TABLE number (
   hotelid    VARCHAR(128) NOT NULL,
   number     INT NOT NULL,
+  PRIMARY KEY (`hotelid`)
+);
+
+CREATE TABLE rate (
+  hotelid    VARCHAR(128) NOT NULL,
+  code       VARCHAR(128) NOT NULL,
+  indate     VARCHAR(128) NOT NULL,
+  outdate    VARCHAR(128) NOT NULL,
+  roombookrate        FLOAT NOT NULL,
+  roomtotalrate       FLOAT NOT NULL,
+  roomtotalinclusive  FLOAT NOT NULL,
+  roomcode            VARCHAR(128) NOT NULL,
+  roomcurrency        VARCHAR(128) NOT NULL,
+  roomdescription     VARCHAR(512) NOT NULL,
   PRIMARY KEY (`hotelid`)
 );
 

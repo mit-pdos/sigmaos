@@ -8,6 +8,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/dbclnt"
+	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -120,6 +121,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 }
 
 func (ps *ProfSrv) GetProfiles(req ProfRequest, res *ProfResult) error {
+	db.DPrintf("HOTELPROF", "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p, err := ps.getProf(id)
 		if err != nil {

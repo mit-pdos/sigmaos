@@ -2,10 +2,10 @@ package hotel
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -74,7 +74,6 @@ func RunWww(n string) error {
 
 func (s *Www) done() error {
 	if err := s.WaitEvict(proc.GetPid()); err != nil {
-		log.Printf("Error WaitEvict: %v", err)
 		return err
 	}
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
@@ -146,25 +145,25 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	lon := float64(Lon)
 
 	var searchRes SearchResult
-	// search for best hotels
-	err := s.searchc.RPC("Search.Nearby", SearchRequest{
+	searchReq := SearchRequest{
 		Lat:     lat,
 		Lon:     lon,
 		InDate:  inDate,
 		OutDate: outDate,
-	}, &searchRes)
+	}
+	// search for best hotels
+	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	db.DPrintf("HOTELWWWD", "Searchres %v %v\n", searchReq, searchRes)
 	// grab locale from query params or default to en
 	locale := r.FormValue("locale")
 	if locale == "" {
 		locale = "en"
 	}
-
-	log.Printf("searchRes %v\n", searchRes.HotelIds)
 
 	var reserveRes ReserveResult
 	err = s.reservec.RPC("Reserve.CheckAvailability", &ReserveRequest{
@@ -179,8 +178,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("reserveRes %v\n", reserveRes.HotelIds)
-
 	// hotel profiles
 	var profRes ProfResult
 	err = s.profc.RPC("ProfSrv.GetProfiles", ProfRequest{
@@ -191,8 +188,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("profRes %v\n", profRes.Hotels)
 
 	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
 }
@@ -306,6 +301,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	str := "Reserve successfully!"
 	if res.OK == "False" {
 		str = "Failed. Please check your username and password. "
+		http.Error(w, str, http.StatusBadRequest)
 	}
 
 	// Make reservation

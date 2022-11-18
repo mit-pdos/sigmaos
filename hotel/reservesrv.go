@@ -112,16 +112,14 @@ func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error 
 	hotelId := req.HotelId[0]
 
 	indate := inDate.String()[0:10]
-
 	for inDate.Before(outDate) {
 		// check reservations
 		count := 0
 		inDate = inDate.AddDate(0, 0, 1)
 		outdate := inDate.String()[0:10]
 
-		// XXX add indate and outdate
 		var reserves []reservation
-		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
+		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
 		err := s.dbc.Query(q, &reserves)
 		if err != nil {
 			return err
@@ -185,17 +183,15 @@ func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) erro
 			time.RFC3339,
 			req.OutDate+"T12:00:00+00:00")
 
-		// indate := inDate.String()[0:10]
-
+		indate := inDate.String()[0:10]
 		for inDate.Before(outDate) {
 			// check reservations
 			count := 0
 			inDate = inDate.AddDate(0, 0, 1)
-			//outdate := inDate.String()[0:10]
+			outdate := inDate.String()[0:10]
 
-			// XXX add indate and outdate; factor out query
 			var reserves []reservation
-			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s';", hotelId)
+			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
 			err := s.dbc.Query(q, &reserves)
 			if err != nil {
 				return err
@@ -224,6 +220,7 @@ func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) erro
 			if inDate.Equal(outDate) {
 				res.HotelIds = append(res.HotelIds, hotelId)
 			}
+			indate = outdate
 		}
 	}
 

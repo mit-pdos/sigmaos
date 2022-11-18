@@ -203,6 +203,10 @@ func (ssrv *SessSrv) GetStats() *stats.Stats {
 	return ssrv.stats
 }
 
+func (ssrv *SessSrv) QueueLen() int {
+	return ssrv.st.QueueLen()
+}
+
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
 	return ssrv.wt
 }

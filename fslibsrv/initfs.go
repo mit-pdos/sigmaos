@@ -99,6 +99,10 @@ func (fs *MemFs) Root() fs.Dir {
 	return fs.root
 }
 
+func (fs *MemFs) QueueLen() int {
+	return fs.SessSrv.QueueLen()
+}
+
 func MakeMemFsDetach(path string, name string, detach fs.DetachF) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)

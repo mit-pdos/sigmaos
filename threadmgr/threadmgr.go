@@ -46,6 +46,12 @@ func (t *ThreadMgr) GetExecuting() map[*Op]bool {
 	return t.executing
 }
 
+func (t *ThreadMgr) QueueLen() int {
+	t.Lock()
+	defer t.Unlock()
+	return len(t.ops)
+}
+
 func (t *ThreadMgr) replayOps(ops []*Op) {
 	t.Lock()
 	defer t.Unlock()

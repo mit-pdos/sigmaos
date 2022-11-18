@@ -48,6 +48,10 @@ func makeSession(protsrv np.Protsrv, cid np.Tclient, sid np.Tsession, t *threadm
 	return sess
 }
 
+func (sess *Session) QueueLen() int {
+	return sess.threadmgr.QueueLen()
+}
+
 func (sess *Session) GetReplyTable() *replies.ReplyTable {
 	return sess.rt
 }

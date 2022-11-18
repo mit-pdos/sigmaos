@@ -105,10 +105,10 @@ func (sc *streamCtl) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 type Clone struct {
 	fs.Inode
-	psd *ProtSrvDev
+	psd *ProtDevSrv
 }
 
-func makeClone(ctx fs.CtxI, root fs.Dir, psd *ProtSrvDev) fs.Inode {
+func makeClone(ctx fs.CtxI, root fs.Dir, psd *ProtDevSrv) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, root)
 	return &Clone{i, psd}
 }
@@ -147,13 +147,17 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
-type ProtSrvDev struct {
+type ProtDevSrv struct {
 	*fslibsrv.MemFs
 	sts *Stats
 	svc *service
 }
 
-func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
+func (psd *ProtDevSrv) QueueLen() int {
+	return psd.MemFs.QueueLen()
+}
+
+func (psd *ProtDevSrv) Detach(ctx fs.CtxI, session np.Tsession) {
 	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.MemFs, psd.MemFs.Root())
 	root := psd.MemFs.Root()
 	_, o, _, err := root.LookupPath(nil, np.Path{session.String()})
@@ -175,8 +179,8 @@ func (psd *ProtSrvDev) Detach(ctx fs.CtxI, session np.Tsession) {
 	}
 }
 
-func MakeProtDevSrv(fn string, svci any) *ProtSrvDev {
-	psd := &ProtSrvDev{}
+func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
+	psd := &ProtDevSrv{}
 	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
@@ -195,7 +199,7 @@ func MakeProtDevSrv(fn string, svci any) *ProtSrvDev {
 	return psd
 }
 
-func (psd *ProtSrvDev) RunServer() error {
+func (psd *ProtDevSrv) RunServer() error {
 	psd.MemFs.Serve()
 	psd.MemFs.Done()
 	return nil

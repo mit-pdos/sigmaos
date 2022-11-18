@@ -31,6 +31,16 @@ func MakeSessionTable(mkps np.MkProtServer, sesssrv np.SessServer, tm *threadmgr
 	return st
 }
 
+func (st *SessionTable) QueueLen() int {
+	st.Lock()
+	defer st.Unlock()
+	len := 0
+	for _, s := range st.sessions {
+		len += s.QueueLen()
+	}
+	return len
+}
+
 func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	st.Lock()
 	defer st.Unlock()

@@ -23,23 +23,24 @@ type SearchResult struct {
 type Search struct {
 	ratec *protdevclnt.ProtDevClnt
 	geoc  *protdevclnt.ProtDevClnt
+	pds   *protdevsrv.ProtDevSrv
 }
 
 // Run starts the server
 func RunSearchSrv(n string) error {
 	s := &Search{}
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELSEARCH, s)
-	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELRATE)
+	s.pds = protdevsrv.MakeProtDevSrv(np.HOTELSEARCH, s)
+	pdc, err := protdevclnt.MkProtDevClnt(s.pds.FsLib, np.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(s.pds.FsLib, np.HOTELGEO)
 	if err != nil {
 		return err
 	}
 	s.geoc = pdc
-	return pds.RunServer()
+	return s.pds.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv

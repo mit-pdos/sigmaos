@@ -298,6 +298,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	str := "Reserve successfully!"
 	if res.OK == "False" {
 		str = "Failed. Please check your username and password. "
+		http.Error(w, str, http.StatusBadRequest)
 	}
 
 	// Make reservation

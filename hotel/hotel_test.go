@@ -300,7 +300,7 @@ func toss(r *rand.Rand) float64 {
 
 func TestBench(t *testing.T) {
 	const (
-		N               = 10 // 00 //000
+		N               = 1000
 		search_ratio    = 0.6
 		recommend_ratio = 0.39
 		user_ratio      = 0.005
@@ -329,6 +329,8 @@ func TestBench(t *testing.T) {
 	log.Printf("TestBench N=%d %dms\n", N, time.Since(start).Milliseconds())
 	ts.Stats(np.HOTELPROF)
 	ts.Stats(np.HOTELGEO)
+	ts.Stats(np.HOTELSEARCH)
+	ts.Stats(np.HOTELRATE)
 	ts.Stats(np.DBD)
 	ts.stop()
 	ts.Shutdown()

@@ -13,6 +13,7 @@ import (
 type MethodStat struct {
 	N   uint64 // number of invocations of method
 	Tot int64  // tot us for this method
+	Max int64
 	Avg float64
 }
 
@@ -37,6 +38,9 @@ func (sts *Stats) stat(m string, t int64) {
 	}
 	st.N += 1
 	st.Tot += t
+	if st.Max == 0 || t > st.Max {
+		st.Max = t
+	}
 }
 
 type statsDev struct {

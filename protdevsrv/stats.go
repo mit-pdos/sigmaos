@@ -18,23 +18,35 @@ type MethodStat struct {
 }
 
 type Stats struct {
+	MStats map[string]*MethodStat
+	Len    uint64
+}
+
+type StatInfo struct {
 	sync.Mutex
-	stats map[string]*MethodStat
+	st *Stats
 }
 
-func MkStats() *Stats {
-	s := &Stats{}
-	s.stats = make(map[string]*MethodStat)
-	return s
+func MkStats() *StatInfo {
+	si := &StatInfo{}
+	si.st = &Stats{}
+	si.st.MStats = make(map[string]*MethodStat)
+	return si
 }
 
-func (sts *Stats) stat(m string, t int64) {
+func (sts *StatInfo) queuelen(ql int) {
 	sts.Lock()
 	defer sts.Unlock()
-	st, ok := sts.stats[m]
+	sts.st.Len += uint64(ql)
+}
+
+func (sts *StatInfo) stat(m string, t int64) {
+	sts.Lock()
+	defer sts.Unlock()
+	st, ok := sts.st.MStats[m]
 	if !ok {
 		st = &MethodStat{}
-		sts.stats[m] = st
+		sts.st.MStats[m] = st
 	}
 	st.N += 1
 	st.Tot += t
@@ -45,25 +57,25 @@ func (sts *Stats) stat(m string, t int64) {
 
 type statsDev struct {
 	*inode.Inode
-	sts *Stats
+	si *StatInfo
 }
 
-func makeStatsDev(ctx fs.CtxI, root fs.Dir, st *Stats) fs.Inode {
+func makeStatsDev(ctx fs.CtxI, root fs.Dir, si *StatInfo) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, root)
-	return &statsDev{i, st}
+	return &statsDev{i, si}
 }
 
 func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.sts)
+	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.si)
 	if off > 0 {
 		return nil, nil
 	}
-	for _, st := range std.sts.stats {
+	for _, st := range std.si.st.MStats {
 		if st.N > 0 {
 			st.Avg = float64(st.Tot) / float64(st.N)
 		}
 	}
-	b, err := json.Marshal(std.sts.stats)
+	b, err := json.Marshal(std.si.st)
 	if err != nil {
 		return nil, np.MkErrError(err)
 	}

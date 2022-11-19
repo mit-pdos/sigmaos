@@ -14,14 +14,12 @@ import (
 )
 
 type Stream struct {
-	svc *service
-	sts *Stats
+	pds *ProtDevSrv
 }
 
-func mkStream(sts *Stats, svc *service) (fs.RPC, *np.Err) {
+func mkStream(pds *ProtDevSrv) (fs.RPC, *np.Err) {
 	st := &Stream{}
-	st.svc = svc
-	st.sts = sts
+	st.pds = pds
 	return st, nil
 }
 
@@ -37,10 +35,11 @@ func (st *Stream) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 		return nil, np.MkErrError(err)
 	}
 
+	st.pds.sts.queuelen(st.pds.QueueLen())
 	start := time.Now()
-	rep = st.svc.dispatch(req.Method, req)
+	rep = st.pds.svc.dispatch(req.Method, req)
 	t := time.Since(start).Microseconds()
-	st.sts.stat(req.Method, t)
+	st.pds.sts.stat(req.Method, t)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

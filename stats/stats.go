@@ -22,15 +22,22 @@ import (
 
 const STATS = true
 
-type Tcounter uint64
+type Tcounter int64
 type TCycles uint64
 
 type UtilFn func() float64
 
 func (c *Tcounter) Inc() {
 	if STATS {
-		n := (*uint64)(unsafe.Pointer(c))
-		atomic.AddUint64(n, 1)
+		n := (*int64)(unsafe.Pointer(c))
+		atomic.AddInt64(n, 1)
+	}
+}
+
+func (c *Tcounter) Dec() {
+	if STATS {
+		n := (*int64)(unsafe.Pointer(c))
+		atomic.AddInt64(n, -1)
 	}
 }
 

@@ -6,12 +6,6 @@ import (
 	"sigmaos/protdevsrv"
 )
 
-type Book struct {
-	Author string
-	Price  string
-	Title  string
-}
-
 //
 // mysql client exporting a database server through the file system
 // interface, modeled after
@@ -25,5 +19,6 @@ func RunDbd() error {
 		return err
 	}
 	pds := protdevsrv.MakeProtDevSrv(np.DB, s)
+	pds.QueueLen()
 	return pds.RunServer()
 }

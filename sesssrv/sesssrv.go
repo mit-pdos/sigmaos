@@ -60,6 +60,7 @@ type SessSrv struct {
 	ch         chan bool
 	fsl        *fslib.FsLib
 	detach     fs.DetachF
+	cnt        stats.Tcounter
 }
 
 func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
@@ -204,7 +205,7 @@ func (ssrv *SessSrv) GetStats() *stats.Stats {
 }
 
 func (ssrv *SessSrv) QueueLen() int {
-	return ssrv.st.QueueLen()
+	return ssrv.st.QueueLen() + int(ssrv.cnt)
 }
 
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
@@ -250,7 +251,9 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 		// If the fcall is a server-generated heartbeat, don't worry about
 		// processing it sequentially on the session's thread.
 		if fc.Session == 0 || fc.Type == np.TTwriteread {
+			ssrv.cnt.Inc()
 			ssrv.srvfcall(fc)
+			ssrv.cnt.Dec()
 		} else {
 			sess.GetThread().Process(fc)
 		}

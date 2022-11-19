@@ -133,7 +133,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.RPC, err = mkStream(c.psd.sts, c.psd.svc)
+	st.RPC, err = mkStream(c.psd)
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
 	}
@@ -149,7 +149,7 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 type ProtDevSrv struct {
 	*fslibsrv.MemFs
-	sts *Stats
+	sts *StatInfo
 	svc *service
 }
 

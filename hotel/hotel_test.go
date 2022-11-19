@@ -361,7 +361,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 }
 
 func TestMultiSearch(t *testing.T) {
-	for n := 5; n < 6; n++ {
+	for n := 1; n < 5; n++ {
 		testMultiSearch(t, n)
 	}
 }

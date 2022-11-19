@@ -176,6 +176,18 @@ func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {
 	return fdc.writeFid(fd, fid, off, data, np.NoV)
 }
 
+func (fdc *FdClient) WriteRead(fd int, data []byte) ([]byte, error) {
+	fid, _, error := fdc.fds.lookupOff(fd)
+	if error != nil {
+		return nil, error
+	}
+	b, err := fdc.PathClnt.WriteRead(fid, data)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func (fdc *FdClient) Seek(fd int, off np.Toffset) error {
 	err := fdc.fds.setOffset(fd, off)
 	if err != nil {

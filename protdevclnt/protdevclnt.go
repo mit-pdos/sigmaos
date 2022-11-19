@@ -14,6 +14,7 @@ type ProtDevClnt struct {
 	*fslib.FsLib
 	sid string
 	fn  string
+	fd  int
 }
 
 func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
@@ -25,6 +26,11 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	pdc.sid = "/" + string(b)
+	n, err := pdc.Open(pdc.fn+pdc.sid+"/data", np.ORDWR)
+	if err != nil {
+		return nil, err
+	}
+	pdc.fd = n
 	return pdc, nil
 }
 
@@ -36,15 +42,9 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*protdevsrv.Reply, error) 
 	if err := ae.Encode(req); err != nil {
 		return nil, err
 	}
-	_, err := pdc.SetFile(pdc.fn+pdc.sid+"/data", ab.Bytes(), np.OWRITE, 0)
+	b, err := pdc.WriteRead(pdc.fd, ab.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v\n", err)
-	}
-	// XXX maybe the caller should use Reader
-	// or maybe have two interfaces: rpc and request+response?
-	b, err := pdc.GetFile(pdc.fn + pdc.sid + "/data")
-	if err != nil {
-		return nil, fmt.Errorf("Query response err %v", err)
 	}
 	rep := &protdevsrv.Reply{}
 	rb := bytes.NewBuffer(b)

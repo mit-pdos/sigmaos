@@ -100,6 +100,19 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 	return sz, err
 }
 
+func (f *Fid) WriteRead(req []byte) ([]byte, *np.Err) {
+	o := f.Pobj().Obj()
+	var err *np.Err
+	var b []byte
+	switch i := o.(type) {
+	case fs.RPC:
+		b, err = i.WriteRead(f.Pobj().Ctx(), req)
+	default:
+		db.DFatalf("Write: obj type %T isn't RPC\n", o)
+	}
+	return b, err
+}
+
 func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)

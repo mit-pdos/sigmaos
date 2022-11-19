@@ -318,7 +318,7 @@ func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV0", "%v: ReadV f %v args %v v %d", f.Pobj().Ctx().Uname(), f, args, v)
+	db.DPrintf("PROTSRV1", "%v: ReadV f %v args %v v %d", f.Pobj().Ctx().Uname(), f, args, v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
@@ -343,13 +343,27 @@ func (ps *ProtSrv) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rwriteread) *np.Rerror {
+	f, err := ps.ft.Lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	db.DPrintf("PROTSRV0", "%v: WriteRead %v args %v path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
+	rets.Data, err = f.WriteRead(args.Data)
+	if err != nil {
+		return err.Rerror()
+	}
+	ps.vt.IncVersion(f.Pobj().Obj().Path())
+	return nil
+}
+
 func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV0", "%v: WriteV %v args %v path %d v %d", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
+	db.DPrintf("PROTSRV1", "%v: WriteV %v args %v path %d v %d", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}

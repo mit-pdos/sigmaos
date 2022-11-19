@@ -113,6 +113,10 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		reply := &np.Rheartbeat{}
 		reply.Sids = req.Sids
 		return reply, false, nil
+	case *np.Twriteread:
+		reply := &np.Rwriteread{}
+		err := s.protsrv.WriteRead(req, reply)
+		return reply, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
 		return nil, false, np.MkErr(np.TErrUnknownMsg, msg).Rerror()

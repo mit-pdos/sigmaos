@@ -97,6 +97,14 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 		msg := fcall.GetMsg().(*np.Tputfile)
 		data = msg.Data
 		dataBuf = true
+	case np.TTwriteread:
+		msg := fcall.GetMsg().(*np.Twriteread)
+		data = msg.Data
+		dataBuf = true
+	case np.TRwriteread:
+		msg := fcall.GetMsg().(*np.Rwriteread)
+		data = msg.Data
+		dataBuf = true
 	default:
 	}
 	if dataBuf {

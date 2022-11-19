@@ -14,13 +14,11 @@ import (
 )
 
 type Stream struct {
-	svc      *service
-	sts      *Stats
-	inflight bool
-	repl     []byte
+	svc *service
+	sts *Stats
 }
 
-func mkStream(sts *Stats, svc *service) (fs.File, *np.Err) {
+func mkStream(sts *Stats, svc *service) (fs.RPC, *np.Err) {
 	st := &Stream{}
 	st.svc = svc
 	st.sts = sts
@@ -28,7 +26,7 @@ func mkStream(sts *Stats, svc *service) (fs.File, *np.Err) {
 }
 
 // XXX wait on close before processing data?
-func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (st *Stream) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	req := &Request{}
 	var rep *Reply
 
@@ -36,7 +34,7 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 	ab := bytes.NewBuffer(b)
 	ad := gob.NewDecoder(ab)
 	if err := ad.Decode(req); err != nil {
-		return 0, np.MkErrError(err)
+		return nil, np.MkErrError(err)
 	}
 
 	start := time.Now()
@@ -47,24 +45,9 @@ func (st *Stream) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)
 	if err := re.Encode(&rep); err != nil {
-		return 0, np.MkErrError(err)
+		return nil, np.MkErrError(err)
 	}
-	st.repl = rb.Bytes()
-	return np.Tsize(len(b)), nil
-}
-
-// XXX incremental read
-func (st *Stream) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if off > 0 {
-		return nil, nil
-	}
-	if st.repl == nil {
-		return nil, nil
-	}
-	if np.Tsize(len(st.repl)) > cnt {
-		np.MkErr(np.TErrInval, "too large")
-	}
-	return st.repl, nil
+	return rb.Bytes(), nil
 }
 
 func (svc *service) dispatch(methname string, req *Request) *Reply {

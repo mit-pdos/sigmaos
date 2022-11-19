@@ -72,7 +72,7 @@ func mkService(svci any) *service {
 
 type stream struct {
 	*inode.Inode
-	fs.File
+	fs.RPC
 }
 
 type streamCtl struct {
@@ -133,7 +133,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// make data/stream file
 	st := &stream{}
 	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.File, err = mkStream(c.psd.sts, c.psd.svc)
+	st.RPC, err = mkStream(c.psd.sts, c.psd.svc)
 	if err != nil {
 		db.DFatalf("mkStream err %v\n", err)
 	}

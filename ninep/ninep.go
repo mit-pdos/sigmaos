@@ -314,6 +314,8 @@ const (
 	TRdetach
 	TTheartbeat
 	TRheartbeat
+	TTwriteread
+	TRwriteread
 )
 
 func (fct Tfcall) String() string {
@@ -403,6 +405,10 @@ func (fct Tfcall) String() string {
 		return "Theartbeat"
 	case TRheartbeat:
 		return "Rheartbeat"
+	case TTwriteread:
+		return "Twriteread"
+	case TRwriteread:
+		return "Rwriteread"
 	default:
 		return "Tunknown"
 	}
@@ -792,6 +798,15 @@ type Rheartbeat struct {
 	Sids []Tsession // List of sessions in this heartbeat.
 }
 
+type Twriteread struct {
+	Fid  Tfid
+	Data []byte // Data must be last
+}
+
+type Rwriteread struct {
+	Data []byte // Data must be last
+}
+
 func (Tversion) Type() Tfcall { return TTversion }
 func (Rversion) Type() Tfcall { return TRversion }
 func (Tauth) Type() Tfcall    { return TTauth }
@@ -838,3 +853,5 @@ func (Tdetach) Type() Tfcall     { return TTdetach }
 func (Rdetach) Type() Tfcall     { return TRdetach }
 func (Theartbeat) Type() Tfcall  { return TTheartbeat }
 func (Rheartbeat) Type() Tfcall  { return TRheartbeat }
+func (Twriteread) Type() Tfcall  { return TTwriteread }
+func (Rwriteread) Type() Tfcall  { return TRwriteread }

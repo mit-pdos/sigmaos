@@ -301,6 +301,10 @@ func (npc *NpConn) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) WriteRead(args *np.Twriteread, rets *np.Rwriteread) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) Snapshot() []byte {
 	return nil
 }

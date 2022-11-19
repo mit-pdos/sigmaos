@@ -32,6 +32,10 @@ type File interface {
 	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
 }
 
+type RPC interface {
+	WriteRead(CtxI, []byte) ([]byte, *np.Err)
+}
+
 type FsObj interface {
 	Path() np.Tpath
 	Perm() np.Tperm

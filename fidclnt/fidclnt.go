@@ -229,6 +229,18 @@ func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQver
 	return reply.Count, nil
 }
 
+func (fidc *FidClnt) WriteRead(fid np.Tfid, data []byte) ([]byte, *np.Err) {
+	ch := fidc.fids.lookup(fid)
+	if ch == nil {
+		return nil, np.MkErr(np.TErrUnreachable, "WriteRead")
+	}
+	reply, err := fidc.fids.lookup(fid).pc.WriteRead(fid, data)
+	if err != nil {
+		return nil, err
+	}
+	return reply.Data, nil
+}
+
 func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, cnt np.Tsize, resolve bool) ([]byte, *np.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {

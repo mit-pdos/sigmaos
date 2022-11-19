@@ -92,6 +92,10 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return &np.Theartbeat{}, nil
 	case np.TRheartbeat:
 		return &np.Rheartbeat{}, nil
+	case np.TTwriteread:
+		return &np.Twriteread{}, nil
+	case np.TRwriteread:
+		return &np.Rwriteread{}, nil
 	}
 	return nil, np.MkErr(np.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

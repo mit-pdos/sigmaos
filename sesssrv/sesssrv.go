@@ -249,7 +249,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	if !ssrv.replicated {
 		// If the fcall is a server-generated heartbeat, don't worry about
 		// processing it sequentially on the session's thread.
-		if fc.Session == 0 {
+		if fc.Session == 0 || fc.Type == np.TTwriteread {
 			ssrv.srvfcall(fc)
 		} else {
 			sess.GetThread().Process(fc)

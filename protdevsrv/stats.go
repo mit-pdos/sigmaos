@@ -18,13 +18,14 @@ type MethodStat struct {
 }
 
 type Stats struct {
-	MStats map[string]*MethodStat
-	Len    uint64
+	MStats  map[string]*MethodStat
+	AvgQLen float64
 }
 
 type StatInfo struct {
 	sync.Mutex
-	st *Stats
+	st  *Stats
+	len uint64
 }
 
 func MkStats() *StatInfo {
@@ -34,15 +35,10 @@ func MkStats() *StatInfo {
 	return si
 }
 
-func (sts *StatInfo) queuelen(ql int) {
+func (sts *StatInfo) stat(m string, t int64, ql int) {
 	sts.Lock()
 	defer sts.Unlock()
-	sts.st.Len += uint64(ql)
-}
-
-func (sts *StatInfo) stat(m string, t int64) {
-	sts.Lock()
-	defer sts.Unlock()
+	sts.len += uint64(ql)
 	st, ok := sts.st.MStats[m]
 	if !ok {
 		st = &MethodStat{}
@@ -66,14 +62,22 @@ func makeStatsDev(ctx fs.CtxI, root fs.Dir, si *StatInfo) fs.Inode {
 }
 
 func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	std.si.Lock()
+	defer std.si.Unlock()
+
 	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.si)
 	if off > 0 {
 		return nil, nil
 	}
+	n := uint64(0)
 	for _, st := range std.si.st.MStats {
+		n += st.N
 		if st.N > 0 {
 			st.Avg = float64(st.Tot) / float64(st.N)
 		}
+	}
+	if n > 0 {
+		std.si.st.AvgQLen = float64(std.si.len) / float64(n)
 	}
 	b, err := json.Marshal(std.si.st)
 	if err != nil {

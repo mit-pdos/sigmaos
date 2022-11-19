@@ -35,11 +35,11 @@ func (st *Stream) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 		return nil, np.MkErrError(err)
 	}
 
-	st.pds.sts.queuelen(st.pds.QueueLen())
+	ql := st.pds.QueueLen()
 	start := time.Now()
 	rep = st.pds.svc.dispatch(req.Method, req)
 	t := time.Since(start).Microseconds()
-	st.pds.sts.stat(req.Method, t)
+	st.pds.sts.stat(req.Method, t, ql)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

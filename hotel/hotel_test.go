@@ -81,6 +81,32 @@ func TestGeo(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestCache(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-cached"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
+	assert.Nil(t, err)
+	v := []byte("hello")
+	arg := hotel.CacheRequest{
+		Key:   "x",
+		Value: v,
+	}
+	res := &hotel.CacheResult{}
+	err = pdc.RPC("Cache.Set", arg, &res)
+	assert.Nil(t, err)
+
+	err = pdc.RPC("Cache.Get", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, v, res.Value)
+
+	arg.Key = "y"
+	err = pdc.RPC("Cache.Get", arg, &res)
+	assert.NotNil(t, err)
+	assert.Equal(t, "Not found", err.Error())
+
+	ts.stop()
+	ts.Shutdown()
+}
+
 func TestRate(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)

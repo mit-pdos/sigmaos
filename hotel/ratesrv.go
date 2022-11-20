@@ -10,6 +10,7 @@ import (
 
 	"sigmaos/dbclnt"
 	np "sigmaos/ninep"
+	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 )
 
@@ -55,7 +56,8 @@ type RateResult struct {
 }
 
 type Rate struct {
-	dbc *dbclnt.DbClnt
+	dbc    *dbclnt.DbClnt
+	cachec *protdevclnt.ProtDevClnt
 }
 
 // Run starts the server
@@ -67,6 +69,11 @@ func RunRateSrv(n string) error {
 		return err
 	}
 	r.dbc = dbc
+	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELCACHE)
+	if err != nil {
+		return err
+	}
+	r.cachec = pdc
 	file := data.MustAsset("data/inventory.json")
 	rates := []*RatePlan{}
 	if err := json.Unmarshal(file, &rates); err != nil {
@@ -82,11 +89,31 @@ func RunRateSrv(n string) error {
 func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelID := range req.HotelIds {
-		r, err := s.getRate(hotelID)
-		if err != nil {
-			return err
+		req := &CacheRequest{}
+		req.Key = hotelID
+		var res CacheResult
+		r := &RatePlan{}
+		err := s.cachec.RPC("Cache.Get", req, &res)
+		if err == nil {
+			err = json.Unmarshal(res.Value, r)
+			if err != nil {
+				return err
+			}
+		} else {
+			r, err = s.getRate(hotelID)
+			if err != nil {
+				return err
+			}
+			req.Value, err = json.Marshal(r)
+			if err != nil {
+				return nil
+			}
+			err := s.cachec.RPC("Cache.Set", req, &res)
+			if err != nil {
+				return err
+			}
 		}
-		if r != nil {
+		if r != nil && r.HotelId != "" {
 			ratePlans = append(ratePlans, r)
 		}
 	}

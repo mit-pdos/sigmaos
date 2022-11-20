@@ -108,7 +108,7 @@ func TestCache(t *testing.T) {
 }
 
 func TestRate(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-rated"})
+	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
 	arg := hotel.RateRequest{
@@ -117,6 +117,9 @@ func TestRate(t *testing.T) {
 		OutDate:  "2015-04-10",
 	}
 	var res hotel.RateResult
+	err = pdc.RPC("Rate.GetRates", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(res.RatePlans))
 	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))

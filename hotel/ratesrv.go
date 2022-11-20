@@ -9,6 +9,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/dbclnt"
+	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -90,18 +91,21 @@ func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &RatePlan{}
-		if err := s.cachec.Get(hotelId, r); err != nil {
-			return err
-		} else {
+		key := hotelId + "_rate"
+		if err := s.cachec.Get(key, r); err != nil {
+			if err.Error() != ErrMiss.Error() {
+				return err
+			}
+			db.DPrintf("HOTELRATE", "Cache miss: key %v\n", hotelId)
 			r, err = s.getRate(hotelId)
 			if err != nil {
 				return err
 			}
-			if err := s.cachec.Set(hotelId, r); err != nil {
+			if err := s.cachec.Set(key, r); err != nil {
 				return err
 			}
 		}
-		if r.HotelId != "" {
+		if r != nil && r.HotelId != "" {
 			ratePlans = append(ratePlans, r)
 		}
 	}

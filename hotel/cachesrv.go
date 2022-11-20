@@ -1,12 +1,16 @@
 package hotel
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+)
+
+var (
+	ErrMiss = errors.New("cache miss")
 )
 
 type CacheRequest struct {
@@ -54,5 +58,5 @@ func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
 		rep.Value = b
 		return nil
 	}
-	return fmt.Errorf("Not found")
+	return ErrMiss
 }

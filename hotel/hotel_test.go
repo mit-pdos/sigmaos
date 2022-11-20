@@ -101,7 +101,7 @@ func TestCache(t *testing.T) {
 	arg.Key = "y"
 	err = pdc.RPC("Cache.Get", arg, &res)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Not found", err.Error())
+	assert.Equal(t, hotel.ErrMiss, err)
 
 	ts.stop()
 	ts.Shutdown()
@@ -172,6 +172,7 @@ func TestProfile(t *testing.T) {
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
+	log.Printf("res %v\n", res.Hotels[0])
 
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
@@ -182,11 +183,11 @@ func TestProfile(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-reserved"})
+	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
-		HotelId:      []string{"1"},
+		HotelId:      []string{"4"},
 		CustomerName: "u_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
@@ -195,26 +196,35 @@ func TestCheck(t *testing.T) {
 	var res hotel.ReserveResult
 	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
-	log.Printf("res %v\n", res.HotelIds)
+	assert.Equal(t, 1, len(res.HotelIds))
+	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
 }
 
 func TestReserve(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-reserved"})
+	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
-		HotelId:      []string{"1"},
+		HotelId:      []string{"4"},
 		CustomerName: "u_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
 	var res hotel.ReserveResult
+
 	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
-	log.Printf("res %v\n", res.HotelIds)
+	assert.Equal(t, 1, len(res.HotelIds))
+
+	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(res.HotelIds))
+
 	ts.stop()
 	ts.Shutdown()
 }
@@ -331,7 +341,7 @@ func toss(r *rand.Rand) float64 {
 
 var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
+	"user/hotel-reserved", "user/hotel-recd", "user/hotel-cached", "user/hotel-wwwd"}
 
 func TestBenchDeathStarSingle(t *testing.T) {
 	const (

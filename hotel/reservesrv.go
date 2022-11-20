@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sigmaos/dbclnt"
+	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -36,7 +37,8 @@ type number struct {
 }
 
 type Reserve struct {
-	dbc *dbclnt.DbClnt
+	dbc    *dbclnt.DbClnt
+	cachec *CacheClnt
 }
 
 func (s *Reserve) initDb() error {
@@ -57,7 +59,7 @@ func (s *Reserve) initDb() error {
 		return err
 	}
 
-	for i := 0; i < 7; i++ {
+	for i := 1; i < 7; i++ {
 		q = fmt.Sprintf("INSERT INTO number (hotelid, number) VALUES ('%v', '%v');",
 			strconv.Itoa(i), 200)
 		err = s.dbc.Exec(q)
@@ -91,6 +93,11 @@ func RunReserveSrv(n string) error {
 		return err
 	}
 	r.dbc = dbc
+	cachec, err := MkCacheClnt(pds.MemFs.FsLib, np.HOTELCACHE)
+	if err != nil {
+		return err
+	}
+	r.cachec = cachec
 	err = r.initDb()
 	if err != nil {
 		return err
@@ -98,9 +105,97 @@ func RunReserveSrv(n string) error {
 	return pds.RunServer()
 }
 
+// checkAvailability checks if given information is available
+func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, map[string]int, error) {
+	inDate, _ := time.Parse(
+		time.RFC3339,
+		req.InDate+"T12:00:00+00:00")
+
+	outDate, _ := time.Parse(
+		time.RFC3339,
+		req.OutDate+"T12:00:00+00:00")
+
+	num_date := make(map[string]int)
+	indate := inDate.String()[0:10]
+	for inDate.Before(outDate) {
+		// check reservations
+		count := 0
+		inDate = inDate.AddDate(0, 0, 1)
+		outdate := inDate.String()[0:10]
+
+		key := hotelId + "_" + indate + "_" + outdate
+
+		var reserves []reservation
+		if err := s.cachec.Get(key, &count); err != nil {
+			if err.Error() != ErrMiss.Error() {
+				return false, nil, err
+			}
+			db.DPrintf("HOTELRESERVE", "Check: cache miss res: key %v\n", key)
+			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
+			err := s.dbc.Query(q, &reserves)
+			if err != nil {
+				return false, nil, err
+			}
+			for _, r := range reserves {
+				count += r.Number
+			}
+			if err := s.cachec.Set(key, &count); err != nil {
+				return false, nil, err
+			}
+		}
+
+		num_date[key] = count + int(req.Number)
+
+		// check capacity
+		hotel_cap := 0
+		key = hotelId + "_cap"
+		if err := s.cachec.Get(key, &hotel_cap); err != nil {
+			if err.Error() != ErrMiss.Error() {
+				return false, nil, err
+			}
+			db.DPrintf("HOTELRESERVE", "Check: cache miss id: key %v\n", key)
+			var nums []number
+			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
+			err = s.dbc.Query(q, &nums)
+			if err != nil {
+				return false, nil, err
+			}
+			if len(nums) == 0 {
+				return false, nil, fmt.Errorf("Unknown %v", hotelId)
+			}
+			hotel_cap = int(nums[0].Number)
+			if err := s.cachec.Set(key, &hotel_cap); err != nil {
+				return false, nil, err
+			}
+		}
+		if count+int(req.Number) > hotel_cap {
+			return false, nil, nil
+		}
+		indate = outdate
+	}
+	return true, num_date, nil
+}
+
 // MakeReservation makes a reservation based on given information
+// XXX make check and reservation atomic
 func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error {
+	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
+	b, date_num, err := s.checkAvailability(hotelId, req)
+	if err != nil {
+		return err
+	}
+	if !b {
+		return nil
+	}
+
+	// update reservation number
+	db.DPrintf("HOTELRESERVE", "Update cache %v\n", date_num)
+	for key, cnt := range date_num {
+		if err := s.cachec.Set(key, &cnt); err != nil {
+			return err
+		}
+	}
 
 	inDate, _ := time.Parse(
 		time.RFC3339,
@@ -109,49 +204,8 @@ func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error 
 	outDate, _ := time.Parse(
 		time.RFC3339,
 		req.OutDate+"T12:00:00+00:00")
-	hotelId := req.HotelId[0]
 
 	indate := inDate.String()[0:10]
-	for inDate.Before(outDate) {
-		// check reservations
-		count := 0
-		inDate = inDate.AddDate(0, 0, 1)
-		outdate := inDate.String()[0:10]
-
-		var reserves []reservation
-		q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
-		err := s.dbc.Query(q, &reserves)
-		if err != nil {
-			return err
-		}
-
-		for _, r := range reserves {
-			count += r.Number
-		}
-
-		// check capacity
-		hotel_cap := 0
-		var nums []number
-		q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
-		err = s.dbc.Query(q, &nums)
-		if err != nil {
-			return err
-		}
-		if len(nums) == 0 {
-			return fmt.Errorf("Unknown %v", hotelId)
-		}
-		hotel_cap = int(nums[0].Number)
-		if count+int(req.Number) > hotel_cap {
-			return nil
-		}
-		indate = outdate
-	}
-
-	inDate, _ = time.Parse(
-		time.RFC3339,
-		req.InDate+"T12:00:00+00:00")
-
-	indate = inDate.String()[0:10]
 
 	for inDate.Before(outDate) {
 		inDate = inDate.AddDate(0, 0, 1)
@@ -164,65 +218,21 @@ func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error 
 		}
 		indate = outdate
 	}
-
 	res.HotelIds = append(res.HotelIds, hotelId)
-
 	return nil
 }
 
-// CheckAvailability checks if given information is available
 func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) error {
-	res.HotelIds = make([]string, 0)
-
+	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
-		inDate, _ := time.Parse(
-			time.RFC3339,
-			req.InDate+"T12:00:00+00:00")
-
-		outDate, _ := time.Parse(
-			time.RFC3339,
-			req.OutDate+"T12:00:00+00:00")
-
-		indate := inDate.String()[0:10]
-		for inDate.Before(outDate) {
-			// check reservations
-			count := 0
-			inDate = inDate.AddDate(0, 0, 1)
-			outdate := inDate.String()[0:10]
-
-			var reserves []reservation
-			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
-			err := s.dbc.Query(q, &reserves)
-			if err != nil {
-				return err
-			}
-
-			for _, r := range reserves {
-				count += r.Number
-			}
-
-			// check capacity
-			hotel_cap := 0
-			var nums []number
-			q = fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
-			err = s.dbc.Query(q, &nums)
-			if err != nil {
-				return err
-			}
-			if len(nums) == 0 {
-				return fmt.Errorf("Unknown %v", hotelId)
-			}
-			hotel_cap = int(nums[0].Number)
-			if count+int(req.Number) > hotel_cap {
-				break
-			}
-			// indate = outdate
-			if inDate.Equal(outDate) {
-				res.HotelIds = append(res.HotelIds, hotelId)
-			}
-			indate = outdate
+		b, _, err := s.checkAvailability(hotelId, req)
+		if err != nil {
+			return err
+		}
+		if b {
+			hotelids = append(hotelids, hotelId)
 		}
 	}
-
+	res.HotelIds = hotelids
 	return nil
 }

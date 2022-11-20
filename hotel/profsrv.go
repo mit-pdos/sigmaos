@@ -130,18 +130,21 @@ func (ps *ProfSrv) GetProfiles(req ProfRequest, res *ProfResult) error {
 	db.DPrintf("HOTELPROF", "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &ProfileFlat{}
-		if err := ps.cachec.Get(id, p); err != nil {
-			return err
-		} else {
+		key := id + "_prof"
+		if err := ps.cachec.Get(key, p); err != nil {
+			if err.Error() != ErrMiss.Error() {
+				return err
+			}
+			db.DPrintf("HOTELPROF", "Cache miss: key %v\n", id)
 			p, err = ps.getProf(id)
 			if err != nil {
 				return err
 			}
-			if err := ps.cachec.Set(id, p); err != nil {
+			if err := ps.cachec.Set(key, p); err != nil {
 				return err
 			}
 		}
-		if p.HotelId != "" {
+		if p != nil && p.HotelId != "" {
 			res.Hotels = append(res.Hotels, p)
 		}
 	}

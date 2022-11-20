@@ -229,8 +229,8 @@ func TestReserve(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSearch(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
+func TestSingleSearch(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-cached", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := hotel.SearchRequest{
@@ -243,14 +243,18 @@ func TestSearch(t *testing.T) {
 	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
+	err = pdc.RPC("Search.Nearby", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-rated",
-		"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-		"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"})
+	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-cached",
+		"user/hotel-rated", "user/hotel-geod", "user/hotel-profd",
+		"user/hotel-searchd", "user/hotel-reserved", "user/hotel-recd",
+		"user/hotel-wwwd"})
 
 	s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
 	assert.Nil(t, err)

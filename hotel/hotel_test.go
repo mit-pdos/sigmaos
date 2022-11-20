@@ -345,7 +345,7 @@ func toss(r *rand.Rand) float64 {
 
 var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-	"user/hotel-reserved", "user/hotel-recd", "user/hotel-cached", "user/hotel-wwwd"}
+	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
 func TestBenchDeathStarSingle(t *testing.T) {
 	const (
@@ -406,7 +406,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 }
 
 func TestMultiSearch(t *testing.T) {
-	for n := 1; n < 10; n++ {
+	for _, n := range []int{1, 2, 4, 8} {
 		testMultiSearch(t, n)
 	}
 }

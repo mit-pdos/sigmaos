@@ -336,7 +336,7 @@ func geoJSONResponse(hs []*ProfileFlat) map[string]interface{} {
 	for _, h := range hs {
 		fs = append(fs, map[string]interface{}{
 			"type": "Feature",
-			"id":   h.Id,
+			"id":   h.HotelId,
 			"properties": map[string]string{
 				"name":         h.Name,
 				"phone_number": h.PhoneNumber,

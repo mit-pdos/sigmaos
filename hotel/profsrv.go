@@ -18,7 +18,7 @@ const (
 )
 
 type ProfileFlat struct {
-	Id           string
+	HotelId      string
 	Name         string
 	PhoneNumber  string
 	Description  string
@@ -42,7 +42,8 @@ type ProfResult struct {
 }
 
 type ProfSrv struct {
-	dbc *dbclnt.DbClnt
+	dbc    *dbclnt.DbClnt
+	cachec *CacheClnt
 }
 
 func RunProfSrv(n string) error {
@@ -53,6 +54,11 @@ func RunProfSrv(n string) error {
 		return err
 	}
 	ps.dbc = dbc
+	cachec, err := MkCacheClnt(pds.MemFs.FsLib, np.HOTELCACHE)
+	if err != nil {
+		return err
+	}
+	ps.cachec = cachec
 	file := data.MustAsset("data/hotels.json")
 	profs := []*Profile{}
 	if err := json.Unmarshal(file, &profs); err != nil {
@@ -123,11 +129,21 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 func (ps *ProfSrv) GetProfiles(req ProfRequest, res *ProfResult) error {
 	db.DPrintf("HOTELPROF", "Req %v\n", req)
 	for _, id := range req.HotelIds {
-		p, err := ps.getProf(id)
-		if err != nil {
+		p := &ProfileFlat{}
+		if err := ps.cachec.Get(id, p); err != nil {
 			return err
+		} else {
+			p, err = ps.getProf(id)
+			if err != nil {
+				return err
+			}
+			if err := ps.cachec.Set(id, p); err != nil {
+				return err
+			}
 		}
-		res.Hotels = append(res.Hotels, p)
+		if p.HotelId != "" {
+			res.Hotels = append(res.Hotels, p)
+		}
 	}
 	return nil
 }

@@ -162,7 +162,7 @@ func TestUser(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-profd"})
+	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-profd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
 	assert.Nil(t, err)
 	arg := hotel.ProfRequest{
@@ -171,10 +171,12 @@ func TestProfile(t *testing.T) {
 	var res hotel.ProfResult
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
-	for _, p := range res.Hotels {
-		log.Printf("p %v\n", p)
-	}
 	assert.Equal(t, 2, len(res.Hotels))
+
+	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(res.Hotels))
+
 	ts.stop()
 	ts.Shutdown()
 }

@@ -101,7 +101,7 @@ func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 				return err
 			}
 		}
-		if r != nil && r.HotelId != "" {
+		if r.HotelId != "" {
 			ratePlans = append(ratePlans, r)
 		}
 	}

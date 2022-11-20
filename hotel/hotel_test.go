@@ -343,7 +343,7 @@ func toss(r *rand.Rand) float64 {
 	return float64(toss) / 1000
 }
 
-var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
+var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-cached", "user/hotel-wwwd"}
 

@@ -355,6 +355,13 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-ra
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
+func TestStartAll(t *testing.T) {
+	ts := makeTstate(t, hotelsvcs)
+	db.DPrintf(db.ALWAYS, "Setup done")
+	for {
+	}
+}
+
 func TestBenchDeathStarSingle(t *testing.T) {
 	const (
 		N               = 1000

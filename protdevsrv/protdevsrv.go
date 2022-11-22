@@ -4,13 +4,11 @@ import (
 	"log"
 	"reflect"
 
-	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
 	"sigmaos/inode"
-	"sigmaos/memfs"
 	np "sigmaos/ninep"
 )
 
@@ -47,34 +45,6 @@ type service struct {
 	methods map[string]*method
 }
 
-func mkService(svci any) *service {
-	svc := &service{}
-	svc.typ = reflect.TypeOf(svci)
-	svc.svc = reflect.ValueOf(svci)
-	svc.methods = map[string]*method{}
-
-	for m := 0; m < svc.typ.NumMethod(); m++ {
-		methodt := svc.typ.Method(m)
-		mtype := methodt.Type
-		mname := methodt.Name
-
-		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
-		if methodt.PkgPath != "" || // capitalized?
-			mtype.NumIn() != 3 ||
-			//mtype.In(1).Kind() != reflect.Ptr ||
-			mtype.In(2).Kind() != reflect.Ptr ||
-			mtype.NumOut() != 1 ||
-			mtype.Out(0) != typeOfError {
-			// the method is not suitable for a handler
-			log.Printf("bad method: %v\n", mname)
-		} else {
-			// the method looks like a handler
-			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
-		}
-	}
-	return svc
-}
-
 type stream struct {
 	*inode.Inode
 	fs.RPC
@@ -85,10 +55,10 @@ type streamCtl struct {
 	id np.Tsession
 }
 
-func mkStreamCtl(sid np.Tsession) *streamCtl {
+func mkStreamCtl(mfs *fslibsrv.MemFs, sid np.Tsession) *streamCtl {
 	s := &streamCtl{}
 	s.id = sid
-	s.Inode = inode.MakeInode(nil, np.DMTMP, nil)
+	s.Inode = mfs.MakeInode(np.DMTMP) // XXX root
 	return s
 }
 
@@ -113,23 +83,21 @@ type Clone struct {
 	psd *ProtDevSrv
 }
 
-func makeClone(ctx fs.CtxI, root fs.Dir, psd *ProtDevSrv) fs.Inode {
-	i := inode.MakeInode(ctx, np.DMDEVICE, root)
+func makeClone(mfs *fslibsrv.MemFs, psd *ProtDevSrv) fs.Inode {
+	i := mfs.MakeInode(np.DMDEVICE)
 	return &Clone{i, psd}
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	sc := mkStreamCtl(ctx.SessionId())
 
-	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", sc.id)
+	// XXX should pass in directory
 
-	// create directory for stream
-	di := inode.MakeInode(nil, np.DMDIR|np.DMTMP, c.Parent())
-	d := dir.MakeDir(di, memfs.MakeInode)
-	err := dir.MkNod(ctx, c.Parent(), sc.id.String(), d)
-	if err != nil {
-		db.DFatalf("MkNod d %v err %v\n", d, err)
-	}
+	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", ctx.SessionId())
+
+	i, err := c.psd.MemFs.Create(ctx.SessionId().String(), np.DMDIR|np.DMTMP, np.ORDWR)
+	d := i.(fs.Dir)
+
+	sc := mkStreamCtl(c.psd.MemFs, ctx.SessionId())
 	err = dir.MkNod(ctx, d, "ctl", sc) // put ctl file into stream dir
 	if err != nil {
 		db.DFatalf("MkNod err %v\n", err)
@@ -158,6 +126,26 @@ type ProtDevSrv struct {
 	svc *service
 }
 
+func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
+	psd := &ProtDevSrv{}
+	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
+	if error != nil {
+		db.DFatalf("protdevsrv.Run: %v\n", error)
+	}
+	psd.MemFs = mfs
+	psd.mkService(svci)
+	err := mfs.MkNod(CLONE, makeClone(mfs, psd))
+	if err != nil {
+		db.DFatalf("MakeNod clone failed %v\n", err)
+	}
+	psd.sts = MkStats()
+	err = mfs.MkNod(STATS, makeStatsDev(nil, mfs.Root(), psd.sts))
+	if err != nil {
+		db.DFatalf("MakeNod stats failed %v\n", err)
+	}
+	return psd
+}
+
 func (psd *ProtDevSrv) QueueLen() int {
 	return psd.MemFs.QueueLen()
 }
@@ -184,24 +172,32 @@ func (psd *ProtDevSrv) Detach(ctx fs.CtxI, session np.Tsession) {
 	}
 }
 
-func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
-	psd := &ProtDevSrv{}
-	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
-	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+func (psd *ProtDevSrv) mkService(svci any) {
+	svc := &service{}
+	svc.typ = reflect.TypeOf(svci)
+	svc.svc = reflect.ValueOf(svci)
+	svc.methods = map[string]*method{}
+
+	for m := 0; m < svc.typ.NumMethod(); m++ {
+		methodt := svc.typ.Method(m)
+		mtype := methodt.Type
+		mname := methodt.Name
+
+		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
+		if methodt.PkgPath != "" || // capitalized?
+			mtype.NumIn() != 3 ||
+			//mtype.In(1).Kind() != reflect.Ptr ||
+			mtype.In(2).Kind() != reflect.Ptr ||
+			mtype.NumOut() != 1 ||
+			mtype.Out(0) != typeOfError {
+			// the method is not suitable for a handler
+			log.Printf("bad method: %v\n", mname)
+		} else {
+			// the method looks like a handler
+			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
+		}
 	}
-	psd.MemFs = mfs
-	psd.svc = mkService(svci)
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), CLONE, makeClone(nil, mfs.Root(), psd))
-	if err != nil {
-		db.DFatalf("MakeNod clone failed %v\n", err)
-	}
-	psd.sts = MkStats()
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), STATS, makeStatsDev(nil, mfs.Root(), psd.sts))
-	if err != nil {
-		db.DFatalf("MakeNod stats failed %v\n", err)
-	}
-	return psd
+	psd.svc = svc
 }
 
 func (psd *ProtDevSrv) RunServer() error {

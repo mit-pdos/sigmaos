@@ -28,7 +28,7 @@ type Stats struct {
 }
 
 func (st *Stats) String() string {
-	s := "stats:\nmethods:\n"
+	s := "stats:\n methods:\n"
 	for k, st := range st.MStats {
 		s += fmt.Sprintf("  %s: %s\n", k, st.String())
 	}

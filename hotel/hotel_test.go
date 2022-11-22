@@ -15,6 +15,7 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
 	"sigmaos/test"
 )
 
@@ -47,9 +48,10 @@ func makeTstate(t *testing.T, srvs []string) *Tstate {
 }
 
 func (ts *Tstate) Stats(fn string) {
-	b, err := ts.GetFile(fn + "/stats")
+	stats := &protdevsrv.Stats{}
+	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
 	assert.Nil(ts.T, err)
-	fmt.Printf("stats %s: %v\n", fn, string(b))
+	fmt.Printf("= %s: %v\n", fn, stats)
 }
 
 func (ts *Tstate) stop() {
@@ -406,7 +408,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 }
 
 func TestMultiSearch(t *testing.T) {
-	for _, n := range []int{1, 2, 4, 8} {
+	for _, n := range []int{1, 4} {
 		testMultiSearch(t, n)
 	}
 }

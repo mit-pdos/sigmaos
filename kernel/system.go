@@ -142,8 +142,9 @@ func (s *System) BootFss3d() error {
 
 func (s *System) BootDbd() error {
 	var dbdaddr string
+	dbdaddr = os.Getenv("SIGMADBADDR")
 	// XXX don't pass dbd addr as an envvar, it's messy.
-	if os.Getenv("SIGMADBADDR") == "" {
+	if dbdaddr == "" {
 		dbdaddr = "127.0.0.1:3306"
 	}
 	return s.BootSubsystem("kernel/dbd", []string{dbdaddr}, s.procdIp, true, &s.dbd)

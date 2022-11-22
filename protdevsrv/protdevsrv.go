@@ -14,6 +14,11 @@ import (
 	np "sigmaos/ninep"
 )
 
+const (
+	STATS = "stats"
+	CLONE = "clone"
+)
+
 //
 // RPC server, which borrows from go's RPC dispatch
 //
@@ -187,14 +192,14 @@ func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
 	}
 	psd.MemFs = mfs
 	psd.svc = mkService(svci)
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root(), psd))
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), CLONE, makeClone(nil, mfs.Root(), psd))
 	if err != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err)
 	}
 	psd.sts = MkStats()
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "stats", makeStatsDev(nil, mfs.Root(), psd.sts))
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), STATS, makeStatsDev(nil, mfs.Root(), psd.sts))
 	if err != nil {
-		db.DFatalf("MakeNod clone failed %v\n", err)
+		db.DFatalf("MakeNod stats failed %v\n", err)
 	}
 	return psd
 }

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"path"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
@@ -21,7 +23,7 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	pdc := &ProtDevClnt{}
 	pdc.FsLib = fsl
 	pdc.fn = fn
-	b, err := pdc.GetFile(pdc.fn + "/clone")
+	b, err := pdc.GetFile(path.Join(pdc.fn, protdevsrv.CLONE))
 	if err != nil {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
@@ -74,4 +76,13 @@ func (pdc *ProtDevClnt) RPC(method string, arg any, res any) error {
 		return err
 	}
 	return nil
+}
+
+func (pdc *ProtDevClnt) Stats() (*protdevsrv.Stats, error) {
+	stats := &protdevsrv.Stats{}
+	if err := pdc.GetFileJson(path.Join(pdc.fn, protdevsrv.STATS), stats); err != nil {
+		db.DFatalf("Error getting stats")
+		return nil, err
+	}
+	return stats, nil
 }

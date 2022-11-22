@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"net"
+	"os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -140,7 +141,12 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootDbd() error {
-	return s.BootSubsystem("kernel/dbd", []string{}, s.procdIp, true, &s.dbd)
+	var dbdaddr string
+	// XXX don't pass dbd addr as an envvar, it's messy.
+	if os.Getenv("SIGMADBADDR") == "" {
+		dbdaddr = "127.0.0.1:3306"
+	}
+	return s.BootSubsystem("kernel/dbd", []string{dbdaddr}, s.procdIp, true, &s.dbd)
 	return nil
 }
 

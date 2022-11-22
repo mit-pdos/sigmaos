@@ -12,9 +12,9 @@ import (
 // http://man.cat-v.org/plan_9_contrib/4/mysqlfs
 //
 
-func RunDbd() error {
+func RunDbd(dbdaddr string) error {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
-	s, err := mkServer()
+	s, err := mkServer(dbdaddr)
 	if err != nil {
 		return err
 	}

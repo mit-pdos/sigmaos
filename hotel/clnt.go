@@ -8,10 +8,26 @@ import (
 	"net/url"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 )
 
-func webRequest(url string, vals url.Values) ([]byte, error) {
-	resp, err := http.PostForm(url, vals)
+type WebClnt struct {
+	jobname  string
+	srvaddrs []string
+	baseurl  string
+	*fslib.FsLib
+}
+
+func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
+	addrs, err := GetJobHTTPAddrs(fsl, job)
+	if err != nil {
+		db.DFatalf("Error wwwd job http addrs: %v", err)
+	}
+	return &WebClnt{job, addrs, "http://" + addrs[0], fsl}
+}
+
+func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
+	resp, err := http.PostForm(wc.baseurl+path, vals)
 	if err != nil {
 		return nil, err
 	}
@@ -25,12 +41,12 @@ func webRequest(url string, vals url.Values) ([]byte, error) {
 	return body, nil
 }
 
-func WebLogin(u, p string) (string, error) {
+func (wc *WebClnt) Login(u, p string) (string, error) {
 	vals := url.Values{}
 	vals.Set("username", u)
 	vals.Set("password", p)
 	db.DPrintf("WEBC", "Login vals %v\n", vals)
-	body, err := webRequest("http://localhost:8090/user", vals)
+	body, err := wc.request("/user", vals)
 	if err != nil {
 		return "", err
 	}
@@ -42,34 +58,34 @@ func WebLogin(u, p string) (string, error) {
 	return repl["message"].(string), nil
 }
 
-func WebSearch(inDate, outDate string, lat, lon float64) error {
+func (wc *WebClnt) Search(inDate, outDate string, lat, lon float64) error {
 	vals := url.Values{}
 	vals.Set("inDate", inDate)
 	vals.Set("outDate", outDate)
 	vals.Set("lat", fmt.Sprintf("%f", lat))
 	vals.Set("lon", fmt.Sprintf("%f", lon))
 	db.DPrintf("WEBC", "Search vals %v\n", vals)
-	_, err := webRequest("http://localhost:8090/hotels", vals)
+	_, err := wc.request("/hotels", vals)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func WebRecs(require string, lat, lon float64) error {
+func (wc *WebClnt) Recs(require string, lat, lon float64) error {
 	vals := url.Values{}
 	vals.Set("require", require)
 	vals.Add("lat", fmt.Sprintf("%f", lat))
 	vals.Add("lon", fmt.Sprintf("%f", lon))
 	db.DPrintf("WEBC", "Recs vals %v\n", vals)
-	_, err := webRequest("http://localhost:8090/recommendations", vals)
+	_, err := wc.request("/recommendations", vals)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func WebReserve(inDate, outDate string, lat, lon float64, hotelid, name, u, p string, n int) (string, error) {
+func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, name, u, p string, n int) (string, error) {
 	vals := url.Values{}
 	vals.Set("inDate", inDate)
 	vals.Set("outDate", outDate)
@@ -83,7 +99,7 @@ func WebReserve(inDate, outDate string, lat, lon float64, hotelid, name, u, p st
 
 	db.DPrintf("WEBC", "Reserve vals %v\n", vals)
 
-	body, err := webRequest("http://localhost:8090/reservation", vals)
+	body, err := wc.request("/reservation", vals)
 	if err != nil {
 		return "", err
 	}

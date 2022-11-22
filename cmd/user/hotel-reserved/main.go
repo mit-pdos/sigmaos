@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 1 {
-		db.DFatalf("Usage: %v", os.Args[0])
+	if len(os.Args) != 2 {
+		db.DFatalf("Usage: %v jobname", os.Args[0])
 	}
 	if err := hotel.RunReserveSrv(os.Args[0]); err != nil {
 		db.DFatalf("Start %v err %v", os.Args[0], err)

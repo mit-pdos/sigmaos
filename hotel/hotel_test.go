@@ -15,16 +15,18 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
+	rd "sigmaos/rand"
 	"sigmaos/test"
 )
 
 type Tstate struct {
 	*test.Tstate
+	job  string
 	pids []proc.Tpid
 }
 
-func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
-	p := proc.MakeProc(srv, []string{})
+func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
+	p := proc.MakeProc(srv, []string{job})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.Pid)
@@ -35,10 +37,12 @@ func spawn(t *testing.T, ts *Tstate, srv string) proc.Tpid {
 func makeTstate(t *testing.T, srvs []string) *Tstate {
 	var err error
 	ts := &Tstate{}
+	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
+	hotel.InitHotelFs(ts.FsLib, ts.job)
 	ts.pids = make([]proc.Tpid, 0)
 	for _, s := range srvs {
-		pid := spawn(t, ts, s)
+		pid := spawn(t, ts, s, ts.job)
 		err = ts.WaitStart(pid)
 		assert.Nil(t, err)
 		ts.pids = append(ts.pids, pid)
@@ -256,17 +260,19 @@ func TestWww(t *testing.T) {
 		"user/hotel-searchd", "user/hotel-reserved", "user/hotel-recd",
 		"user/hotel-wwwd"})
 
-	s, err := hotel.WebLogin("u_0", hotel.MkPassword("u_0"))
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+
+	s, err := wc.Login("u_0", hotel.MkPassword("u_0"))
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 
-	err = hotel.WebSearch("2015-04-09", "2015-04-10", 37.7749, -122.4194)
+	err = wc.Search("2015-04-09", "2015-04-10", 37.7749, -122.4194)
 	assert.Nil(t, err)
 
-	err = hotel.WebRecs("dis", 38.0235, -122.095)
+	err = wc.Recs("dis", 38.0235, -122.095)
 	assert.Nil(t, err)
 
-	s, err = hotel.WebReserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
+	s, err = wc.Reserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 
@@ -274,7 +280,7 @@ func TestWww(t *testing.T) {
 	ts.Shutdown()
 }
 
-func benchSearch(t *testing.T, r *rand.Rand) {
+func benchSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	in_date := r.Intn(14) + 9
 	out_date := in_date + r.Intn(5) + 1
 	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
@@ -287,11 +293,11 @@ func benchSearch(t *testing.T, r *rand.Rand) {
 	}
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
 	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	err := hotel.WebSearch(in_date_str, out_date_str, lat, lon)
+	err := wc.Search(in_date_str, out_date_str, lat, lon)
 	assert.Nil(t, err)
 }
 
-func benchRecommend(t *testing.T, r *rand.Rand) {
+func benchRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	coin := toss(r)
 	req := ""
 	if coin < 0.33 {
@@ -303,19 +309,19 @@ func benchRecommend(t *testing.T, r *rand.Rand) {
 	}
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
 	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	err := hotel.WebRecs(req, lat, lon)
+	err := wc.Recs(req, lat, lon)
 	assert.Nil(t, err)
 }
 
-func benchLogin(t *testing.T, r *rand.Rand) {
+func benchLogin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	user := fmt.Sprintf("u_%d", r.Intn(500))
 	pw := hotel.MkPassword(user)
-	s, err := hotel.WebLogin(user, pw)
+	s, err := wc.Login(user, pw)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 }
 
-func benchReserve(t *testing.T, r *rand.Rand) {
+func benchReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	in_date := r.Intn(14) + 9
 	out_date := in_date + r.Intn(5) + 1
 	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
@@ -333,7 +339,7 @@ func benchReserve(t *testing.T, r *rand.Rand) {
 	num := 1
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
 	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	s, err := hotel.WebReserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
+	s, err := wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 }
@@ -356,18 +362,19 @@ func TestBenchDeathStarSingle(t *testing.T) {
 		reserve_ratio   = 0.005
 	)
 	ts := makeTstate(t, hotelsvcs)
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for i := 0; i < N; i++ {
 		coin := toss(r)
 		if coin < search_ratio {
-			benchSearch(t, r)
+			benchSearch(t, wc, r)
 		} else if coin < search_ratio+recommend_ratio {
-			benchRecommend(t, r)
+			benchRecommend(t, wc, r)
 		} else if coin < search_ratio+recommend_ratio+user_ratio {
-			benchLogin(t, r)
+			benchLogin(t, wc, r)
 		} else {
-			benchReserve(t, r)
+			benchReserve(t, wc, r)
 		}
 	}
 	fmt.Printf("TestBenchDeathStarSingle N=%d %dms\n", N, time.Since(start).Milliseconds())
@@ -383,13 +390,14 @@ func testMultiSearch(t *testing.T, nthread int) {
 		N = 1000
 	)
 	ts := makeTstate(t, hotelsvcs)
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()
 	for t := 0; t < nthread; t++ {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		go func() {
 			for i := 0; i < N; i++ {
-				benchSearch(ts.T, r)
+				benchSearch(ts.T, wc, r)
 			}
 			ch <- true
 		}()

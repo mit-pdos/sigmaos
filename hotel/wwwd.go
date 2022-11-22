@@ -2,10 +2,12 @@ package hotel
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"strconv"
 
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -16,6 +18,7 @@ import (
 type Www struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	job      string
 	userc    *protdevclnt.ProtDevClnt
 	searchc  *protdevclnt.ProtDevClnt
 	reservec *protdevclnt.ProtDevClnt
@@ -24,9 +27,10 @@ type Www struct {
 }
 
 // Run starts the server
-func RunWww(n string) error {
+func RunWww(job string) error {
 	www := &Www{}
-	www.FsLib = fslib.MakeFsLib(n)
+	www.job = job
+	www.FsLib = fslib.MakeFsLib("hotel-wwwd-" + job)
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELUSER)
 	if err != nil {
@@ -55,20 +59,35 @@ func RunWww(n string) error {
 	}
 	www.recc = pdc
 
-	if err := www.Started(); err != nil {
-		return err
-	}
-	srv := &http.Server{
-		Addr:    ":8090",
-		Handler: nil,
-	}
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
 	http.HandleFunc("/recommendations", www.recommendHandler)
 	http.HandleFunc("/reservation", www.reservationHandler)
+
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
+	}
+
+	l, err := net.Listen("tcp", ip+":0")
+	if err != nil {
+		db.DFatalf("Error Listen: %v", err)
+	}
+
 	go func() {
-		srv.ListenAndServe()
+		db.DFatalf("%v", http.Serve(l, nil))
 	}()
+
+	// Write a file for clients to discover the server's address.
+	p := JobHTTPAddrsPath(job)
+	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
+		db.DFatalf("Error PutFileJson addrs %v", err)
+	}
+
+	if err := www.Started(); err != nil {
+		return err
+	}
+
 	return www.done()
 }
 

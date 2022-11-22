@@ -88,21 +88,6 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 	return srv, nil
 }
 
-type MemFs struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	*sesssrv.SessSrv
-	root fs.Dir
-}
-
-func (fs *MemFs) Root() fs.Dir {
-	return fs.root
-}
-
-func (fs *MemFs) QueueLen() int {
-	return fs.SessSrv.QueueLen()
-}
-
 func MakeMemFsDetach(path string, name string, detach fs.DetachF) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)
@@ -125,6 +110,7 @@ func MakeMemFsFslDetach(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt,
 	fs.ProcClnt = pclnt
 	fs.SessSrv = srv
 	fs.root = root
+	fs.ctx = ctx.MkCtx(path, 0, nil)
 	return fs, err
 }
 

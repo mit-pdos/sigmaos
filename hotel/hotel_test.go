@@ -29,6 +29,7 @@ type Tstate struct {
 func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
 	p := proc.MakeProc(srv, []string{job})
 	err := ts.Spawn(p)
+	p.SetNcore(1)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.Pid)
 	assert.Nil(t, err, "WaitStarted")

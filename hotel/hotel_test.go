@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/hotel"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -358,7 +358,9 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-ra
 
 func TestStartAll(t *testing.T) {
 	ts := makeTstate(t, hotelsvcs)
-	db.DPrintf(db.ALWAYS, "Setup done")
+	addrs, err := hotel.GetJobHTTPAddrs(ts.FsLib, ts.job)
+	assert.Nil(t, err, "Err get http addr")
+	db.DPrintf(db.ALWAYS, "Setup done addrs %v", addrs)
 	for {
 	}
 }

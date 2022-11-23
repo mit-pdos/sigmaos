@@ -29,18 +29,21 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string) error {
 	s := &Search{}
-	s.pds = protdevsrv.MakeProtDevSrv(np.HOTELSEARCH, s)
-	pdc, err := protdevclnt.MkProtDevClnt(s.pds.FsLib, np.HOTELRATE)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELSEARCH, s)
+	if err != nil {
+		return err
+	}
+	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(s.pds.FsLib, np.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELGEO)
 	if err != nil {
 		return err
 	}
 	s.geoc = pdc
-	return s.pds.RunServer()
+	return pds.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv

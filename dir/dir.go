@@ -50,7 +50,7 @@ func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
 }
 
 func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
-	err := dir.(*DirImpl).CreateDev(ctx, name, np.DMDEVICE, 0, i)
+	err := dir.(*DirImpl).CreateDev(ctx, name, i)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode, i fs.Inode) *np.Err {
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *np.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

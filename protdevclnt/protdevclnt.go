@@ -28,7 +28,7 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	pdc.sid = "/" + string(b)
-	n, err := pdc.Open(pdc.fn+pdc.sid+"/data", np.ORDWR)
+	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+protdevsrv.RPC, np.ORDWR)
 	if err != nil {
 		return nil, err
 	}

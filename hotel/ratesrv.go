@@ -63,7 +63,10 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(n string) error {
 	r := &Rate{}
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELRATE, r)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELRATE, r)
+	if err != nil {
+		return err
+	}
 	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
 	if err != nil {
 		return err

@@ -48,7 +48,10 @@ type ProfSrv struct {
 
 func RunProfSrv(n string) error {
 	ps := &ProfSrv{}
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELPROF, ps)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELPROF, ps)
+	if err != nil {
+		return err
+	}
 	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
 	if err != nil {
 		return err

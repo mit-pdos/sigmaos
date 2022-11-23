@@ -34,7 +34,10 @@ type Users struct {
 
 func RunUserSrv(n string) error {
 	u := &Users{}
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELUSER, u)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELUSER, u)
+	if err != nil {
+		return err
+	}
 	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fslibsrv"
 	"sigmaos/inode"
 	np "sigmaos/ninep"
 )
@@ -70,9 +71,14 @@ type statsDev struct {
 	si *StatInfo
 }
 
-func makeStatsDev(ctx fs.CtxI, root fs.Dir, si *StatInfo) fs.Inode {
-	i := inode.MakeInode(ctx, np.DMDEVICE, root)
-	return &statsDev{i, si}
+func makeStatsDev(mfs *fslibsrv.MemFs, si *StatInfo) *np.Err {
+	std := &statsDev{}
+	i, err := mfs.MkDev(STATS, std)
+	if err != nil {
+		return err
+	}
+	std.Inode = i
+	return nil
 }
 
 func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {

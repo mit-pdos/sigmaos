@@ -18,7 +18,10 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	pds := protdevsrv.MakeProtDevSrv(np.DB, s)
+	pds, err := protdevsrv.MakeProtDevSrv(np.DB, s)
+	if err != nil {
+		return err
+	}
 	pds.QueueLen()
 	return pds.RunServer()
 }

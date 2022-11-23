@@ -100,7 +100,7 @@ func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, na
 	vals.Set("lat", fmt.Sprintf("%f", lat))
 	vals.Set("lon", fmt.Sprintf("%f", lon))
 	vals.Set("hotelId", hotelid)
-	vals.Set("customername", name)
+	vals.Set("customerName", name)
 	vals.Set("username", u)
 	vals.Set("password", p)
 	vals.Set("number", fmt.Sprintf("%d", n))

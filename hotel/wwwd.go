@@ -296,7 +296,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	customerName := r.URL.Query().Get("customername")
+	customerName := r.URL.Query().Get("customerName")
 	//	customerName := r.FormValue("customername")
 	if customerName == "" {
 		http.Error(w, "Please specify customerName params", http.StatusBadRequest)

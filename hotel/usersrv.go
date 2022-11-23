@@ -38,7 +38,7 @@ func RunUserSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), np.DBD)
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,25 @@ import (
 	"sigmaos/sesssrv"
 )
 
+//
+// Servers use fslibsrv to make an MemFs file server, which uses
+// protsrv to export sigmaP to clients.  Servers can plug in what a
+// file/directory is by passing in their root directory, which is a
+// concrete instance for the fs.Dir interface; for example, memfsd
+// passes in an in-memory directory, fsux passes in a unix directory
+// etc and implement their notions of directories/files. But they
+// don't have to implement sigmaP, because MemFs provides that through
+// sesssrv and protsrv.
+//
+
+type MemFs struct {
+	*sesssrv.SessSrv
+	fsl      *fslib.FsLib
+	procclnt *procclnt.ProcClnt
+	root     fs.Dir
+	ctx      fs.CtxI // server context
+}
+
 func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config, detach fs.DetachF) *sesssrv.SessSrv {
 	srv := sesssrv.MakeSessSrv(root, addr, fsl, protsrv.MakeProtServer, protsrv.Restore, pclnt, config, detach)
 	return srv
@@ -106,7 +125,7 @@ func MakeMemFsFslDetach(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt,
 	if err != nil {
 		return nil, err
 	}
-	fs.FsLib = fsl
+	fs.fsl = fsl
 	fs.procclnt = pclnt
 	fs.SessSrv = srv
 	fs.root = root

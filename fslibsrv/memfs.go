@@ -6,20 +6,14 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/inode"
 	np "sigmaos/ninep"
-	"sigmaos/procclnt"
-	"sigmaos/sesssrv"
 )
-
-type MemFs struct {
-	*fslib.FsLib
-	*sesssrv.SessSrv
-	procclnt *procclnt.ProcClnt
-	root     fs.Dir
-	ctx      fs.CtxI // server context
-}
 
 func (fs *MemFs) Root() fs.Dir {
 	return fs.root
+}
+
+func (fs *MemFs) FsLib() *fslib.FsLib {
+	return fs.fsl
 }
 
 func (mfs *MemFs) nameiParent(path np.Path) (fs.Dir, *np.Err) {

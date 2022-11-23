@@ -33,12 +33,12 @@ func RunSearchSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELRATE)
+	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib(), np.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib, np.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib(), np.HOTELGEO)
 	if err != nil {
 		return err
 	}

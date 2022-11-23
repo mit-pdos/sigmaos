@@ -12,18 +12,14 @@ import (
 
 type MemFs struct {
 	*fslib.FsLib
-	procclnt *procclnt.ProcClnt
 	*sesssrv.SessSrv
-	root fs.Dir
-	ctx  fs.CtxI // server context
+	procclnt *procclnt.ProcClnt
+	root     fs.Dir
+	ctx      fs.CtxI // server context
 }
 
 func (fs *MemFs) Root() fs.Dir {
 	return fs.root
-}
-
-func (mfs *MemFs) QueueLen() int {
-	return mfs.SessSrv.QueueLen()
 }
 
 func (mfs *MemFs) nameiParent(path np.Path) (fs.Dir, *np.Err) {

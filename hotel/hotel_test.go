@@ -15,6 +15,7 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	"sigmaos/test"
 )

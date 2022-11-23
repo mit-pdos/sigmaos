@@ -2,6 +2,7 @@ package protdevsrv
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	db "sigmaos/debug"
@@ -17,9 +18,22 @@ type MethodStat struct {
 	Avg float64
 }
 
+func (ms *MethodStat) String() string {
+	return fmt.Sprintf("N %d Tot %dus Max %dus Avg %.1fus", ms.N, ms.Tot, ms.Max, ms.Avg)
+}
+
 type Stats struct {
 	MStats  map[string]*MethodStat
 	AvgQLen float64
+}
+
+func (st *Stats) String() string {
+	s := "stats:\nmethods:\n"
+	for k, st := range st.MStats {
+		s += fmt.Sprintf("  %s: %s\n", k, st.String())
+	}
+	s += fmt.Sprintf(" AvgQLen: %.3f", st.AvgQLen)
+	return s
 }
 
 type StatInfo struct {

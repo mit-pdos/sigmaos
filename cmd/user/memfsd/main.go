@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/fslibsrv"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/repldummy"
@@ -21,7 +21,7 @@ func main() {
 		addr := ip + ":0"
 		config := repldummy.MakeConfig()
 		if os.Args[1] == "dummy" {
-			fss, err := fslibsrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config, nil)
+			fss, err := memfssrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config, nil)
 			if err != nil {
 				db.DFatalf("Error makreplmemfs: %v", err)
 			}
@@ -29,7 +29,7 @@ func main() {
 			fss.Done()
 		}
 	} else {
-		mfs, _, _, err := fslibsrv.MakeMemFs(name, name)
+		mfs, _, _, err := memfssrv.MakeMemFs(name, name)
 		if err != nil {
 			db.DFatalf("MakeMemFs %v\n", err)
 		}

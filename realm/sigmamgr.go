@@ -10,8 +10,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/machine"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -29,7 +29,7 @@ type SigmaResourceMgr struct {
 	*procclnt.ProcClnt
 	*config.ConfigClnt
 	*fslib.FsLib
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 }
 
 func MakeSigmaResourceMgr() *SigmaResourceMgr {
@@ -37,7 +37,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, m.ProcClnt, err = fslibsrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
+	m.MemFs, m.FsLib, m.ProcClnt, err = memfssrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

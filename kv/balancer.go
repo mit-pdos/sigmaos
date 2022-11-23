@@ -29,9 +29,9 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/inode"
 	"sigmaos/leaderclnt"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -92,7 +92,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), np.DMSYMLINK|077)
 
 	// start server but don't publish its existence
-	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}

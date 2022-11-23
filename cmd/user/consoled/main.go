@@ -9,17 +9,17 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 )
 
 type Consoled struct {
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 }
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	mfs, _, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
+	mfs, _, _, err := memfssrv.MakeMemFs("name/consoled", "consoled")
 	if err != nil {
 		db.DFatalf("MakeSrvFsLib %v\n", err)
 	}

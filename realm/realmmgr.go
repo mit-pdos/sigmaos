@@ -12,9 +12,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -33,7 +33,7 @@ type RealmResourceMgr struct {
 	sigmaFsl *fslib.FsLib
 	lock     *electclnt.ElectClnt
 	*config.ConfigClnt
-	memfs *fslibsrv.MemFs
+	memfs *memfssrv.MemFs
 	*procclnt.ProcClnt
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
@@ -49,7 +49,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 
 	var err error
-	m.memfs, err = fslibsrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
+	m.memfs, err = memfssrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}

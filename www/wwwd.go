@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/pipe"
 	"sigmaos/proc"
@@ -69,7 +69,7 @@ func RunWwwd(job, tree string) {
 type Wwwd struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 	localSrvpath  string
 	globalSrvpath string
 }
@@ -78,7 +78,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(MemFsPath(job), WWWD)
+	www.MemFs, www.FsLib, www.ProcClnt, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}

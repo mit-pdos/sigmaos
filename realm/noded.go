@@ -9,9 +9,9 @@ import (
 	"sigmaos/electclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/kernel"
 	"sigmaos/machine"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -22,7 +22,7 @@ import (
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 	id        string
 	machineId string
 	localIP   string
@@ -44,7 +44,7 @@ func MakeNoded(machineId string) *Noded {
 	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
 	nd.ConfigClnt = config.MakeConfigClnt(nd.FsLib)
 	var err error
-	nd.MemFs, err = fslibsrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
+	nd.MemFs, err = memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFsFsl: %v", err)
 	}

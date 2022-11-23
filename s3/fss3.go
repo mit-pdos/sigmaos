@@ -10,7 +10,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fslibsrv"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 )
@@ -18,14 +18,14 @@ import (
 var fss3 *Fss3
 
 type Fss3 struct {
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 	mu     sync.Mutex
 	client *s3.Client
 }
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	mfs, _, _, err := fslibsrv.MakeMemFs(np.S3, np.S3REL)
+	mfs, _, _, err := memfssrv.MakeMemFs(np.S3, np.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

@@ -7,8 +7,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/inode"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 )
 
@@ -70,7 +70,7 @@ type statsDev struct {
 	si *StatInfo
 }
 
-func makeStatsDev(mfs *fslibsrv.MemFs) (*StatInfo, *np.Err) {
+func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *np.Err) {
 	std := &statsDev{}
 	i, err := mfs.MkDev(STATS, std)
 	if err != nil {

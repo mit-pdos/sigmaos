@@ -7,8 +7,8 @@ import (
 	db "sigmaos/debug"
 	// "sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/inode"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 )
@@ -88,7 +88,7 @@ type Clone struct {
 	psd *ProtDevSrv
 }
 
-func makeClone(mfs *fslibsrv.MemFs, psd *ProtDevSrv) *np.Err {
+func makeClone(mfs *memfssrv.MemFs, psd *ProtDevSrv) *np.Err {
 	cl := &Clone{}
 	cl.psd = psd
 	i, err := psd.MemFs.MkDev(CLONE, cl) // put clone file into root dir
@@ -114,14 +114,14 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 }
 
 type ProtDevSrv struct {
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 	sti *StatInfo
 	svc *service
 }
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	psd := &ProtDevSrv{}
-	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
+	mfs, _, _, error := memfssrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

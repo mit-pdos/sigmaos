@@ -7,8 +7,8 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fslibsrv"
 	"sigmaos/kernel"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -49,9 +49,9 @@ func Run(args []string) {
 			peers := strings.Split(args[4], ",")
 			config = replraft.MakeRaftConfig(id, peers, true)
 		}
-		ss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config, nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", config, nil)
 	} else {
-		ss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil, nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", nil, nil)
 	}
 
 	if err != nil {

@@ -12,8 +12,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/linuxsched"
+	"sigmaos/memfssrv"
 	"sigmaos/namespace"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
@@ -43,7 +43,7 @@ type Procd struct {
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
 	*fslib.FsLib
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 }
 
 func RunProcd(realmbin string, grantedCoresIv string) {

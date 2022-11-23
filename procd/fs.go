@@ -11,7 +11,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -30,7 +30,7 @@ func (pd *Procd) makeFs() {
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
 	var err error
-	pd.MemFs, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
+	pd.MemFs, pd.FsLib, pd.procclnt, err = memfssrv.MakeMemFs(np.PROCD, np.PROCDREL)
 	if err != nil {
 		db.DFatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}

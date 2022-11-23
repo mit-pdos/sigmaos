@@ -8,8 +8,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
 	"sigmaos/linuxsched"
+	"sigmaos/memfssrv"
 	"sigmaos/namespace"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -33,7 +33,7 @@ type Machined struct {
 	*Config
 	*procclnt.ProcClnt
 	*fslib.FsLib
-	*fslibsrv.MemFs
+	*memfssrv.MemFs
 }
 
 func MakeMachined(args []string) *Machined {
@@ -42,7 +42,7 @@ func MakeMachined(args []string) *Machined {
 	m.Config = makeMachineConfig()
 	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
-	mfs, err := fslibsrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

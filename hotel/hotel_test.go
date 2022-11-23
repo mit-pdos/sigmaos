@@ -1,8 +1,8 @@
 package hotel_test
 
 import (
+	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	//	db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/hotel"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -19,6 +19,12 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/test"
 )
+
+var K8S_ADDR string
+
+func init() {
+	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
+}
 
 type Tstate struct {
 	*test.Tstate
@@ -82,7 +88,7 @@ func TestGeo(t *testing.T) {
 	res := &hotel.GeoResult{}
 	err = pdc.RPC("Geo.Nearby", arg, &res)
 	assert.Nil(t, err)
-	log.Printf("res %v\n", res)
+	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	assert.Equal(t, 5, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
@@ -146,7 +152,7 @@ func TestRec(t *testing.T) {
 	var res hotel.RecResult
 	err = pdc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
-	log.Printf("res %v\n", res.HotelIds)
+	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
@@ -163,7 +169,7 @@ func TestUser(t *testing.T) {
 	var res hotel.UserResult
 	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
-	log.Printf("res %v\n", res)
+	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -179,7 +185,7 @@ func TestProfile(t *testing.T) {
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
-	log.Printf("res %v\n", res.Hotels[0])
+	db.DPrintf(db.ALWAYS, "res %v\n", res.Hotels[0])
 
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
@@ -365,7 +371,7 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-ra
 //	}
 //}
 
-func TestBenchDeathStarSingle(t *testing.T) {
+func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 	const (
 		N               = 1000
 		search_ratio    = 0.6
@@ -373,26 +379,51 @@ func TestBenchDeathStarSingle(t *testing.T) {
 		user_ratio      = 0.005
 		reserve_ratio   = 0.005
 	)
-	ts := makeTstate(t, hotelsvcs)
-	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for i := 0; i < N; i++ {
 		coin := toss(r)
 		if coin < search_ratio {
-			benchSearch(t, wc, r)
+			benchSearch(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio {
-			benchRecommend(t, wc, r)
+			benchRecommend(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio+user_ratio {
-			benchLogin(t, wc, r)
+			benchLogin(ts.T, wc, r)
 		} else {
-			benchReserve(t, wc, r)
+			benchReserve(ts.T, wc, r)
 		}
 	}
 	fmt.Printf("TestBenchDeathStarSingle N=%d %dms\n", N, time.Since(start).Milliseconds())
 	for _, s := range np.HOTELSVC {
 		ts.Stats(s)
 	}
+}
+
+func TestBenchDeathStarSingle(t *testing.T) {
+	ts := makeTstate(t, hotelsvcs)
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+	benchDSB(ts, wc)
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestBenchDeathStarSingleK8s(t *testing.T) {
+	// Bail out if no addr was provided.
+	if K8S_ADDR == "" {
+		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
+		return
+	}
+
+	ts := makeTstate(t, hotelsvcs)
+
+	// Write a file for clients to discover the server's address.
+	p := hotel.JobHTTPAddrsPath(ts.job)
+	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
+		db.DFatalf("Error PutFileJson addrs %v", err)
+	}
+
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+	benchDSB(ts, wc)
 	ts.stop()
 	ts.Shutdown()
 }

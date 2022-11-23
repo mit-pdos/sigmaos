@@ -27,7 +27,15 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
-	resp, err := http.PostForm(wc.baseurl+path, vals)
+	u, err := url.Parse(wc.baseurl + path)
+	if err != nil {
+		return nil, err
+	}
+	u.RawQuery, err = url.QueryUnescape(vals.Encode())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
 	}

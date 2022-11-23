@@ -102,8 +102,9 @@ func (s *Www) done() error {
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	username := r.FormValue("username")
-	password := r.FormValue("password")
+	username, password := r.URL.Query().Get("username"), r.URL.Query().Get("password")
+	//	username := r.FormValue("username")
+	//	password := r.FormValue("password")
 
 	if username == "" || password == "" {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
@@ -137,22 +138,25 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	headerContentTtype := r.Header.Get("Content-Type")
-	if headerContentTtype != "application/x-www-form-urlencoded" {
-		http.Error(w, "not urlencoded", http.StatusUnsupportedMediaType)
-		return
-	}
+	//	headerContentTtype := r.Header.Get("Content-Type")
+	//	if headerContentTtype != "application/x-www-form-urlencoded" {
+	//		db.DPrintf(db.ALWAYS, "format %v", headerContentTtype)
+	//		http.Error(w, "not urlencoded", http.StatusUnsupportedMediaType)
+	//		return
+	//	}
 
-	inDate := r.FormValue("inDate")
-	outDate := r.FormValue("outDate")
+	inDate, outDate := r.URL.Query().Get("inDate"), r.URL.Query().Get("outDate")
+	//	inDate := r.FormValue("inDate")
+	//	outDate := r.FormValue("outDate")
 	if inDate == "" || outDate == "" {
 		http.Error(w, "Please specify inDate/outDate params", http.StatusBadRequest)
 		return
 	}
 
 	// lan/lon from query params
-	sLat := r.FormValue("lat")
-	sLon := r.FormValue("lon")
+	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
+	//	sLat := r.FormValue("lat")
+	//	sLon := r.FormValue("lon")
 	if sLat == "" || sLon == "" {
 		http.Error(w, "Please specify location params", http.StatusBadRequest)
 		return
@@ -179,7 +183,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.DPrintf("HOTELWWWD", "Searchres %v %v\n", searchReq, searchRes)
 	// grab locale from query params or default to en
-	locale := r.FormValue("locale")
+	locale := r.URL.Query().Get("locale")
+	//	locale := r.FormValue("locale")
 	if locale == "" {
 		locale = "en"
 	}
@@ -215,8 +220,9 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// lan/lon from query params
-	sLat := r.FormValue("lat")
-	sLon := r.FormValue("lon")
+	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
+	//	sLat := r.FormValue("lat")
+	//	sLon := r.FormValue("lon")
 	if sLat == "" || sLon == "" {
 		http.Error(w, "Please specify location params", http.StatusBadRequest)
 		return
@@ -227,7 +233,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float64(Lon)
 
-	require := r.FormValue("require")
+	require := r.URL.Query().Get("require")
+	//	require := r.FormValue("require")
 	if require != "dis" && require != "rate" && require != "price" {
 		http.Error(w, "Please specify require params", http.StatusBadRequest)
 		return
@@ -246,7 +253,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// grab locale from query params or default to en
-	locale := r.FormValue("locale")
+	locale := r.URL.Query().Get("locale")
+	//	locale := r.FormValue("locale")
 	if locale == "" {
 		locale = "en"
 	}
@@ -268,8 +276,9 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	inDate := r.FormValue("inDate")
-	outDate := r.FormValue("outDate")
+	inDate, outDate := r.URL.Query().Get("inDate"), r.URL.Query().Get("outDate")
+	//	inDate := r.FormValue("inDate")
+	//	outDate := r.FormValue("outDate")
 	if inDate == "" || outDate == "" {
 		http.Error(w, "Please specify inDate/outDate params", http.StatusBadRequest)
 		return
@@ -280,27 +289,31 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hotelId := r.FormValue("hotelId")
+	hotelId := r.URL.Query().Get("hotelId")
+	//	hotelId := r.FormValue("hotelId")
 	if hotelId == "" {
 		http.Error(w, "Please specify hotelId params", http.StatusBadRequest)
 		return
 	}
 
-	customerName := r.FormValue("customername")
+	customerName := r.URL.Query().Get("customername")
+	//	customerName := r.FormValue("customername")
 	if customerName == "" {
 		http.Error(w, "Please specify customerName params", http.StatusBadRequest)
 		return
 	}
 
-	username := r.FormValue("username")
-	password := r.FormValue("password")
+	username, password := r.URL.Query().Get("username"), r.URL.Query().Get("password")
+	//	username := r.FormValue("username")
+	//	password := r.FormValue("password")
 	if username == "" || password == "" {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
 		return
 	}
 
 	numberOfRoom := 0
-	num := r.FormValue("number")
+	num := r.URL.Query().Get("number")
+	//	num := r.FormValue("number")
 	if num != "" {
 		numberOfRoom, _ = strconv.Atoi(num)
 	}

@@ -35,7 +35,10 @@ func RunCacheSrv(n string) error {
 	s := &CacheSrv{}
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELCACHE, s)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE, s)
+	if err != nil {
+		return err
+	}
 	return pds.RunServer()
 }
 

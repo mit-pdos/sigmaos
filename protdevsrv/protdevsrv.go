@@ -5,16 +5,19 @@ import (
 	"reflect"
 
 	db "sigmaos/debug"
-	"sigmaos/dir"
+	// "sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
 	"sigmaos/inode"
 	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 const (
 	STATS = "stats"
 	CLONE = "clone"
+	RPC   = "rpc"
+	CTL   = "ctl"
 )
 
 //
@@ -45,88 +48,78 @@ type service struct {
 	methods map[string]*method
 }
 
-type stream struct {
-	*inode.Inode
-	fs.RPC
-}
-
-type streamCtl struct {
+type rpcSession struct {
 	*inode.Inode
 	id np.Tsession
 }
 
-func mkStreamCtl(mfs *fslibsrv.MemFs, sid np.Tsession) *streamCtl {
-	s := &streamCtl{}
+func mkRpcSession(psd *ProtDevSrv, sid np.Tsession) (*rpcSession, *np.Err) {
+	s := &rpcSession{}
 	s.id = sid
-	s.Inode = mfs.MakeInode(np.DMTMP) // XXX root
-	return s
+	i, err := psd.MemFs.MkDev(sid.String()+"/"+CTL, s)
+	if err != nil {
+		return nil, err
+	}
+	s.Inode = i
+	if err := mkRPCDev(sid.String(), psd); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
-func (sc *streamCtl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (sc *rpcSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
 	}
 	return []byte(sc.id.String()), nil
 }
 
-func (sc *streamCtl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (sc *rpcSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	return 0, np.MkErr(np.TErrNotSupported, nil)
 }
 
-func (sc *streamCtl) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (sc *rpcSession) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	db.DPrintf("PROTDEVSRV", "Close ctl %v\n", sc.id)
 	return nil
 }
 
 type Clone struct {
-	fs.Inode
+	*inode.Inode
 	psd *ProtDevSrv
 }
 
-func makeClone(mfs *fslibsrv.MemFs, psd *ProtDevSrv) fs.Inode {
-	i := mfs.MakeInode(np.DMDEVICE)
-	return &Clone{i, psd}
+func makeClone(mfs *fslibsrv.MemFs, psd *ProtDevSrv) *np.Err {
+	cl := &Clone{}
+	cl.psd = psd
+	i, err := psd.MemFs.MkDev(CLONE, cl) // put clone file into root dir
+	if err != nil {
+		return err
+	}
+	cl.Inode = i
+	return nil
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-
-	// XXX should pass in directory
-
-	db.DPrintf("PROTDEVSRV", "Open clone: create dir %v\n", ctx.SessionId())
-
-	i, err := c.psd.MemFs.Create(ctx.SessionId().String(), np.DMDIR|np.DMTMP, np.ORDWR)
-	d := i.(fs.Dir)
-
-	sc := mkStreamCtl(c.psd.MemFs, ctx.SessionId())
-	err = dir.MkNod(ctx, d, "ctl", sc) // put ctl file into stream dir
-	if err != nil {
-		db.DFatalf("MkNod err %v\n", err)
+	sid := ctx.SessionId()
+	db.DPrintf("PROTDEVSRV", "%v: Open clone dir %v\n", proc.GetProgram(), sid)
+	if _, err := c.psd.MemFs.Create(sid.String(), np.DMDIR, np.ORDWR); err != nil {
+		return nil, err
 	}
-
-	// make data/stream file
-	st := &stream{}
-	st.Inode = inode.MakeInode(nil, np.DMTMP, d)
-	st.RPC, err = mkStream(c.psd)
-	if err != nil {
-		db.DFatalf("mkStream err %v\n", err)
-	}
-	dir.MkNod(ctx, d, "data", st)
-
-	return sc, nil
+	return mkRpcSession(c.psd, sid)
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
-	db.DPrintf("PROTDEVSRV", "Close clone\n")
+	db.DPrintf("PROTDEVSRV", "%v: Close clone\n", proc.GetProgram())
 	return nil
 }
 
 type ProtDevSrv struct {
 	*fslibsrv.MemFs
-	sts *StatInfo
+	sti *StatInfo
 	svc *service
 }
 
-func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
+func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	psd := &ProtDevSrv{}
 	mfs, _, _, error := fslibsrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
 	if error != nil {
@@ -134,16 +127,15 @@ func MakeProtDevSrv(fn string, svci any) *ProtDevSrv {
 	}
 	psd.MemFs = mfs
 	psd.mkService(svci)
-	err := mfs.MkNod(CLONE, makeClone(mfs, psd))
-	if err != nil {
-		db.DFatalf("MakeNod clone failed %v\n", err)
+	if err := makeClone(mfs, psd); err != nil {
+		return nil, err
 	}
-	psd.sts = MkStats()
-	err = mfs.MkNod(STATS, makeStatsDev(nil, mfs.Root(), psd.sts))
-	if err != nil {
-		db.DFatalf("MakeNod stats failed %v\n", err)
+	if si, err := makeStatsDev(mfs); err != nil {
+		return nil, err
+	} else {
+		psd.sti = si
 	}
-	return psd
+	return psd, nil
 }
 
 func (psd *ProtDevSrv) QueueLen() int {
@@ -152,22 +144,14 @@ func (psd *ProtDevSrv) QueueLen() int {
 
 func (psd *ProtDevSrv) Detach(ctx fs.CtxI, session np.Tsession) {
 	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.MemFs, psd.MemFs.Root())
-	root := psd.MemFs.Root()
-	_, o, _, err := root.LookupPath(nil, np.Path{session.String()})
-	if err != nil {
-		db.DPrintf("PROTDEVSRV", "LookupPath err %v\n", err)
-	}
-	d := o.(fs.Dir)
-	err = d.Remove(nil, "ctl")
-	if err != nil {
+	dir := session.String() + "/"
+	if err := psd.MemFs.RemoveXXX(dir + CTL); err != nil {
 		db.DPrintf("PROTDEVSRV", "Remove ctl err %v\n", err)
 	}
-	err = d.Remove(nil, "data")
-	if err != nil {
-		db.DPrintf("PROTDEVSRV", "Remove data err %v\n", err)
+	if err := psd.MemFs.RemoveXXX(dir + RPC); err != nil {
+		db.DPrintf("PROTDEVSRV", "Remove rpc err %v\n", err)
 	}
-	err = root.Remove(nil, session.String())
-	if err != nil {
+	if err := psd.MemFs.RemoveXXX(dir); err != nil {
 		db.DPrintf("PROTDEVSRV", "Detach err %v\n", err)
 	}
 }
@@ -201,6 +185,7 @@ func (psd *ProtDevSrv) mkService(svci any) {
 }
 
 func (psd *ProtDevSrv) RunServer() error {
+	db.DPrintf("PROTDEVSRV", "Run %v\n", proc.GetProgram())
 	psd.MemFs.Serve()
 	psd.MemFs.Done()
 	return nil

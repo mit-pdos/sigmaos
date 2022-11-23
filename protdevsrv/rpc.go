@@ -10,21 +10,28 @@ import (
 
 	// db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/inode"
 	np "sigmaos/ninep"
 )
 
-type Stream struct {
+type rpcDev struct {
+	*inode.Inode
 	pds *ProtDevSrv
 }
 
-func mkStream(pds *ProtDevSrv) (fs.RPC, *np.Err) {
-	st := &Stream{}
-	st.pds = pds
-	return st, nil
+func mkRPCDev(fn string, pds *ProtDevSrv) *np.Err {
+	rpc := &rpcDev{}
+	rpc.pds = pds
+	i, err := pds.MemFs.MkDev(fn+"/"+RPC, rpc)
+	if err != nil {
+		return err
+	}
+	rpc.Inode = i
+	return nil
 }
 
 // XXX wait on close before processing data?
-func (st *Stream) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
+func (rpc *rpcDev) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	req := &Request{}
 	var rep *Reply
 
@@ -35,11 +42,11 @@ func (st *Stream) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 		return nil, np.MkErrError(err)
 	}
 
-	ql := st.pds.QueueLen()
+	ql := rpc.pds.QueueLen()
 	start := time.Now()
-	rep = st.pds.svc.dispatch(req.Method, req)
+	rep = rpc.pds.svc.dispatch(req.Method, req)
 	t := time.Since(start).Microseconds()
-	st.pds.sts.stat(req.Method, t, ql)
+	rpc.pds.sti.stat(req.Method, t, ql)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

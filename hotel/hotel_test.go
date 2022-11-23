@@ -362,6 +362,7 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-ra
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
+<<<<<<< HEAD
 //func TestStartAll(t *testing.T) {
 //	ts := makeTstate(t, hotelsvcs)
 //	addrs, err := hotel.GetJobHTTPAddrs(ts.FsLib, ts.job)

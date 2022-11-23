@@ -49,7 +49,10 @@ type Geo struct {
 func RunGeoSrv(n string) error {
 	geo := &Geo{}
 	geo.geoidx = newGeoIndex("data/geo.json")
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELGEO, geo)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELGEO, geo)
+	if err != nil {
+		return err
+	}
 	return pds.RunServer()
 }
 

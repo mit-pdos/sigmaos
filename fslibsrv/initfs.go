@@ -107,7 +107,7 @@ func MakeMemFsFslDetach(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt,
 		return nil, err
 	}
 	fs.FsLib = fsl
-	fs.ProcClnt = pclnt
+	fs.procclnt = pclnt
 	fs.SessSrv = srv
 	fs.root = root
 	fs.ctx = ctx.MkCtx(path, 0, nil)

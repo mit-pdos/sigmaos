@@ -87,7 +87,10 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(n string) error {
 	r := &Reserve{}
-	pds := protdevsrv.MakeProtDevSrv(np.HOTELRESERVE, r)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELRESERVE, r)
+	if err != nil {
+		return err
+	}
 	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib, np.DBD)
 	if err != nil {
 		return err

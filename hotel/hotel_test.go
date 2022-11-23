@@ -393,10 +393,7 @@ func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 			benchReserve(ts.T, wc, r)
 		}
 	}
-	fmt.Printf("TestBenchDeathStarSingle N=%d %dms\n", N, time.Since(start).Milliseconds())
-	for _, s := range np.HOTELSVC {
-		ts.Stats(s)
-	}
+	fmt.Printf("benchDSB N=%d %dms\n", N, time.Since(start).Milliseconds())
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
@@ -414,7 +411,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		return
 	}
 
-	ts := makeTstate(t, hotelsvcs)
+	ts := makeTstate(t, nil)
 
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
@@ -424,6 +421,9 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
+	for _, s := range np.HOTELSVC {
+		ts.Stats(s)
+	}
 	ts.stop()
 	ts.Shutdown()
 }

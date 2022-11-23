@@ -12,7 +12,7 @@ import (
 
 type MemFs struct {
 	*fslib.FsLib
-	*procclnt.ProcClnt
+	procclnt *procclnt.ProcClnt
 	*sesssrv.SessSrv
 	root fs.Dir
 	ctx  fs.CtxI // server context

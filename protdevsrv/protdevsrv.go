@@ -115,7 +115,7 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 type ProtDevSrv struct {
 	*fslibsrv.MemFs
-	sts *StatInfo
+	sti *StatInfo
 	svc *service
 }
 
@@ -130,9 +130,10 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	if err := makeClone(mfs, psd); err != nil {
 		return nil, err
 	}
-	psd.sts = MkStats()
-	if err := makeStatsDev(mfs, psd.sts); err != nil {
+	if si, err := makeStatsDev(mfs); err != nil {
 		return nil, err
+	} else {
+		psd.sti = si
 	}
 	return psd, nil
 }

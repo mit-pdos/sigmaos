@@ -28,6 +28,12 @@ type Stats struct {
 	AvgQLen float64
 }
 
+func mkStats() *Stats {
+	st := &Stats{}
+	st.MStats = make(map[string]*MethodStat)
+	return st
+}
+
 func (st *Stats) String() string {
 	s := "stats:\n methods:\n"
 	for k, st := range st.MStats {
@@ -41,13 +47,6 @@ type StatInfo struct {
 	sync.Mutex
 	st  *Stats
 	len uint64
-}
-
-func MkStats() *StatInfo {
-	si := &StatInfo{}
-	si.st = &Stats{}
-	si.st.MStats = make(map[string]*MethodStat)
-	return si
 }
 
 func (sts *StatInfo) stat(m string, t int64, ql int) {
@@ -71,14 +70,16 @@ type statsDev struct {
 	si *StatInfo
 }
 
-func makeStatsDev(mfs *fslibsrv.MemFs, si *StatInfo) *np.Err {
+func makeStatsDev(mfs *fslibsrv.MemFs) (*StatInfo, *np.Err) {
 	std := &statsDev{}
 	i, err := mfs.MkDev(STATS, std)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	std.Inode = i
-	return nil
+	std.si = &StatInfo{}
+	std.si.st = mkStats()
+	return std.si, nil
 }
 
 func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {

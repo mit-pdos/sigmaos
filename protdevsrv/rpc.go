@@ -46,7 +46,7 @@ func (rpc *rpcDev) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	start := time.Now()
 	rep = rpc.pds.svc.dispatch(req.Method, req)
 	t := time.Since(start).Microseconds()
-	rpc.pds.sts.stat(req.Method, t, ql)
+	rpc.pds.sti.stat(req.Method, t, ql)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)

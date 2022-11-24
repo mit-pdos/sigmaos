@@ -22,7 +22,6 @@ import (
 
 type MemFs struct {
 	*sesssrv.SessSrv
-	memfs    *MemFs
 	root     fs.Dir
 	ctx      fs.CtxI // server context
 	fsl      *fslib.FsLib

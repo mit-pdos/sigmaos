@@ -42,8 +42,8 @@ type Procd struct {
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
+	memfssrv         *memfssrv.MemFs
 	*fslib.FsLib
-	*memfssrv.MemFs
 }
 
 func RunProcd(realmbin string, grantedCoresIv string) {
@@ -59,7 +59,7 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 
 	pd.makeFs()
 
-	pd.addr = pd.MyAddr()
+	pd.addr = pd.memfssrv.MyAddr()
 
 	pd.initCores(grantedCoresIv)
 
@@ -73,8 +73,8 @@ func RunProcd(realmbin string, grantedCoresIv string) {
 	pd.MkDir(np.PROCD_WS, 0777)
 	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), 0777)
 	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), 0777)
-	pd.MemFs.GetStats().DisablePathCnts()
-	pd.MemFs.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
+	pd.memfssrv.GetStats().DisablePathCnts()
+	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
 	pd.Work()
 }
@@ -202,7 +202,7 @@ func (pd *Procd) tryGetProc(procPath string, isRemote bool) *LinuxProc {
 func (pd *Procd) getProc() (*LinuxProc, error) {
 	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
-	localPath := path.Join(np.PROCD, pd.MyAddr())
+	localPath := path.Join(np.PROCD, pd.memfssrv.MyAddr())
 	// Claim order:
 	// 1. local LC queue
 	// 2. remote LC queue
@@ -307,7 +307,7 @@ func (pd *Procd) setCoreAffinityL() {
 	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), &pd.cpuMask)
 	// Update the set of cores whose CPU utilization we're monitoring.
-	pd.MemFs.GetStats().UpdateCores()
+	pd.memfssrv.GetStats().UpdateCores()
 }
 
 // Wait for a new proc to be spawned at this procd, or for a stealing
@@ -385,9 +385,9 @@ func (pd *Procd) Work() {
 	pd.group.Add(1)
 	go func() {
 		defer pd.group.Done()
-		pd.Serve()
-		pd.Done()
-		pd.MemFs.Done()
+		pd.memfssrv.Serve()
+		pd.memfssrv.Done()
+		pd.memfssrv.Done()
 	}()
 	go pd.offerStealableProcs()
 	pd.startWorkStealingMonitors()

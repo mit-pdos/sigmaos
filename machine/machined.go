@@ -33,7 +33,7 @@ type Machined struct {
 	*Config
 	*procclnt.ProcClnt
 	*fslib.FsLib
-	*memfssrv.MemFs
+	memfssrv *memfssrv.MemFs
 }
 
 func MakeMachined(args []string) *Machined {
@@ -46,9 +46,9 @@ func MakeMachined(args []string) *Machined {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	m.MemFs = mfs
-	m.path = path.Join(MACHINES, m.MyAddr())
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
+	m.memfssrv = mfs
+	m.path = path.Join(MACHINES, m.memfssrv.MyAddr())
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfssrv.Root(), np.RESOURCE_CTL)
 	m.initFS()
 	m.cleanLinuxFS()
 	return m
@@ -94,7 +94,7 @@ func (m *Machined) bootNoded(pid proc.Tpid) {
 
 	db.DPrintf("MACHINED", "Booting noded %v", pid)
 
-	p := proc.MakeProcPid(pid, "realm/noded", []string{m.MyAddr()})
+	p := proc.MakeProcPid(pid, "realm/noded", []string{m.memfssrv.MyAddr()})
 	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", false)
 	if err != nil {
 		db.DFatalf("RunKernelProc: %v", err)
@@ -137,13 +137,13 @@ func (m *Machined) postCores() {
 		if uint(iv.End) > linuxsched.NCores+1 {
 			iv.End = np.Toffset(linuxsched.NCores + 1)
 		}
-		PostCores(m.FsLib, m.MyAddr(), iv)
+		PostCores(m.FsLib, m.memfssrv.MyAddr(), iv)
 	}
 }
 
 func (m *Machined) postConfig() {
 	// Post config in local fs.
-	if err := m.PutFileJson(path.Join(MACHINES, m.MyAddr(), CONFIG), 0777, m.Config); err != nil {
+	if err := m.PutFileJson(path.Join(MACHINES, m.memfssrv.MyAddr(), CONFIG), 0777, m.Config); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 }

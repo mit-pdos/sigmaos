@@ -14,6 +14,7 @@ import (
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
@@ -434,6 +435,8 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 func TestBenchSearch(t *testing.T) {
 	ts := makeTstate(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+	p := perf.MakePerf("TEST")
+	defer p.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
 		benchSearch(ts.T, wc, r)

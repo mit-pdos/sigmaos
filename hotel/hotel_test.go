@@ -308,7 +308,7 @@ func benchSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
 	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
 	err := wc.Search(in_date_str, out_date_str, lat, lon)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err search %v", err)
 }
 
 func benchRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {

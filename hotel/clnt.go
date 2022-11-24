@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -26,14 +25,14 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)
 	}
-	transport := &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout: 2 * time.Minute,
-		}).Dial,
-	}
+	//	transport := &http.Transport{
+	//		Dial: (&net.Dialer{
+	//			Timeout: 2 * time.Minute,
+	//		}).Dial,
+	//	}
 	clnt := &http.Client{
-		Timeout:   2 * time.Minute,
-		Transport: transport,
+		Timeout: 2 * time.Minute,
+		//		Transport: transport,
 	}
 	return &WebClnt{job, addrs, "http://" + addrs[0], clnt, fsl}
 }

@@ -55,8 +55,7 @@ func MkPassword(u string) string {
 	for j := 0; j < 10; j++ {
 		p += u
 	}
-	s := sha256.Sum256([]byte(p))
-	return fmt.Sprintf("%x", s)
+	return p
 }
 
 func (s *Users) initDB() error {
@@ -69,7 +68,8 @@ func (s *Users) initDB() error {
 		suffix := strconv.Itoa(i)
 		u := "Cornell_" + suffix
 		p := MkPassword(suffix)
-		q = fmt.Sprintf("INSERT INTO user (username, password) VALUES ('%v', '%v');", u, p)
+		sum := sha256.Sum256([]byte(p))
+		q = fmt.Sprintf("INSERT INTO user (username, password) VALUES ('%v', '%x');", u, sum)
 		err = s.dbc.Exec(q)
 		if err != nil {
 			return err
@@ -89,7 +89,8 @@ func (s *Users) CheckUser(req UserRequest, res *UserResult) error {
 	if len(users) == 0 {
 		return fmt.Errorf("Unknown user %v", req.Name)
 	}
-	if req.Password != users[0].Password {
+	sum := sha256.Sum256([]byte(req.Password))
+	if fmt.Sprintf("%x", sum) != users[0].Password {
 		return fmt.Errorf("Wrong password")
 	}
 	res.OK = "True"

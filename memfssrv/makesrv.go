@@ -14,6 +14,12 @@ import (
 	"sigmaos/sesssrv"
 )
 
+//
+// Servers use memfsssrv to create an in-memory file server.
+// memfsssrv uses sesssrv and protsrv to handle client sigmaP
+// requests.
+//
+
 type MemFs struct {
 	*sesssrv.SessSrv
 	memfs    *MemFs

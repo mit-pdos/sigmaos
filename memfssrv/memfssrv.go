@@ -49,7 +49,7 @@ func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) 
 	return d.Create(mfs.ctx, path.Base(), p, m)
 }
 
-func (mfs *MemFs) RemoveXXX(pn string) *np.Err {
+func (mfs *MemFs) Remove(pn string) *np.Err {
 	path := np.Split(pn)
 	d, err := mfs.nameiParent(path)
 	if err != nil {

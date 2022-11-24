@@ -145,13 +145,13 @@ func (psd *ProtDevSrv) QueueLen() int {
 func (psd *ProtDevSrv) Detach(ctx fs.CtxI, session np.Tsession) {
 	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.MemFs, psd.MemFs.Root())
 	dir := session.String() + "/"
-	if err := psd.MemFs.RemoveXXX(dir + CTL); err != nil {
+	if err := psd.MemFs.Remove(dir + CTL); err != nil {
 		db.DPrintf("PROTDEVSRV", "Remove ctl err %v\n", err)
 	}
-	if err := psd.MemFs.RemoveXXX(dir + RPC); err != nil {
+	if err := psd.MemFs.Remove(dir + RPC); err != nil {
 		db.DPrintf("PROTDEVSRV", "Remove rpc err %v\n", err)
 	}
-	if err := psd.MemFs.RemoveXXX(dir); err != nil {
+	if err := psd.MemFs.Remove(dir); err != nil {
 		db.DPrintf("PROTDEVSRV", "Detach err %v\n", err)
 	}
 }

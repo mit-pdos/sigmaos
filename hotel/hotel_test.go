@@ -395,7 +395,7 @@ func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 			benchReserve(ts.T, wc, r)
 		}
 	}
-	fmt.Printf("benchDSB N=%d %dms\n", N, time.Since(start).Milliseconds())
+	db.DPrintf(db.ALWAYS, "benchDSB N=%d %dms\n", N, time.Since(start).Milliseconds())
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
@@ -449,7 +449,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	for t := 0; t < nthread; t++ {
 		<-ch
 	}
-	fmt.Printf("TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
+	db.DPrintf(db.ALWAYS, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
 	for _, s := range np.HOTELSVC {
 		ts.Stats(s)
 	}

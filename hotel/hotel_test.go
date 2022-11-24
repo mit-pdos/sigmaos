@@ -400,6 +400,9 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	ts := makeTstate(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
+	for _, s := range np.HOTELSVC {
+		ts.Stats(s)
+	}
 	ts.stop()
 	ts.Shutdown()
 }
@@ -421,9 +424,6 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
-	for _, s := range np.HOTELSVC {
-		ts.Stats(s)
-	}
 	ts.stop()
 	ts.Shutdown()
 }

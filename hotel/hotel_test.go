@@ -163,8 +163,8 @@ func TestUser(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
 	assert.Nil(t, err)
 	arg := hotel.UserRequest{
-		Name:     "u_0",
-		Password: hotel.MkPassword("u_0"),
+		Name:     "Cornell_0",
+		Password: hotel.MkPassword("0"),
 	}
 	var res hotel.UserResult
 	err = pdc.RPC("User.CheckUser", arg, &res)
@@ -201,7 +201,7 @@ func TestCheck(t *testing.T) {
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
 		HotelId:      []string{"4"},
-		CustomerName: "u_0",
+		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
@@ -223,7 +223,7 @@ func TestReserve(t *testing.T) {
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
 		HotelId:      []string{"4"},
-		CustomerName: "u_0",
+		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
@@ -271,7 +271,7 @@ func TestWww(t *testing.T) {
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 
-	s, err := wc.Login("u_0", hotel.MkPassword("u_0"))
+	s, err := wc.Login("Cornell_0", hotel.MkPassword("0"))
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 
@@ -281,7 +281,7 @@ func TestWww(t *testing.T) {
 	err = wc.Recs("dis", 38.0235, -122.095)
 	assert.Nil(t, err)
 
-	s, err = wc.Reserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "u_0", "u_0", hotel.MkPassword("u_0"), 1)
+	s, err = wc.Reserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "Cornell_0", "Cornell_0", hotel.MkPassword("0"), 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 
@@ -323,8 +323,9 @@ func benchRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func benchLogin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	user := fmt.Sprintf("u_%d", r.Intn(500))
-	pw := hotel.MkPassword(user)
+	suffix := strconv.Itoa(r.Intn(500))
+	user := "Cornell_" + suffix
+	pw := hotel.MkPassword(suffix)
 	s, err := wc.Login(user, pw)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
@@ -342,8 +343,9 @@ func benchReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
 	hotelid := strconv.Itoa(r.Intn(80) + 1)
-	user := fmt.Sprintf("u_%d", r.Intn(500))
-	pw := hotel.MkPassword(user)
+	suffix := strconv.Itoa(r.Intn(500))
+	user := "Cornell_" + suffix
+	pw := hotel.MkPassword(suffix)
 	cust_name := user
 	num := 1
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0

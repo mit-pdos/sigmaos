@@ -66,8 +66,9 @@ func (s *Users) initDB() error {
 		return err
 	}
 	for i := 0; i <= NUSER; i++ {
-		u := "u_" + strconv.Itoa(i)
-		p := MkPassword(u)
+		suffix := strconv.Itoa(i)
+		u := "Cornell_" + suffix
+		p := MkPassword(suffix)
 		q = fmt.Sprintf("INSERT INTO user (username, password) VALUES ('%v', '%v');", u, p)
 		err = s.dbc.Exec(q)
 		if err != nil {

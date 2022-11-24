@@ -51,7 +51,7 @@ func RunUserSrv(n string) error {
 }
 
 func MkPassword(u string) string {
-	p := u
+	p := ""
 	for j := 0; j < 10; j++ {
 		p += u
 	}

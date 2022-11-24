@@ -48,7 +48,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *np.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), i)
 }
 
-// XXX handle d being removed between lookup and create?
+// XXX handle d being removed between lookup and create; use sessrv's lockmap.
 func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	path := np.Split(pn)
 	d, err := mfs.nameiParent(path)

@@ -7,9 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
@@ -37,7 +35,7 @@ func RunFss3(buckets []string) {
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, np.Path{}, np.DMDIR)
-		if err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), bucket, d); err != nil {
+		if err := mfs.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}
 	}

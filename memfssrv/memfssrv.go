@@ -39,6 +39,15 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) (*inode.Inode, *np.Err) {
 	return i, dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
+func (mfs *MemFs) MkNod(pn string, i fs.Inode) *np.Err {
+	path := np.Split(pn)
+	d, err := mfs.nameiParent(path)
+	if err != nil {
+		return err
+	}
+	return dir.MkNod(mfs.ctx, d, path.Base(), i)
+}
+
 // XXX handle d being removed between lookup and create?
 func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	path := np.Split(pn)

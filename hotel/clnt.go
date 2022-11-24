@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -24,7 +25,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)
 	}
-	return &WebClnt{job, addrs, "http://" + addrs[0], &http.Client{}, fsl}
+	return &WebClnt{job, addrs, "http://" + addrs[0], &http.Client{Timeout: 2 * time.Minute}, fsl}
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {

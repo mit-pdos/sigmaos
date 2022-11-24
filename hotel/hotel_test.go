@@ -12,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel"
+	"sigmaos/loadgen"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
@@ -21,9 +22,13 @@ import (
 )
 
 var K8S_ADDR string
+var MAX_RPS int
+var DURATION time.Duration
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
+	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
+	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 }
 
 type Tstate struct {
@@ -426,6 +431,21 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
+	ts.Shutdown()
+}
+
+func TestBenchSearch(t *testing.T) {
+	ts := makeTstate(t, hotelsvcs)
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+		benchSearch(ts.T, wc, r)
+	})
+	lg.Run()
+	for _, s := range np.HOTELSVC {
+		ts.Stats(s)
+	}
+	ts.stop()
 	ts.Shutdown()
 }
 

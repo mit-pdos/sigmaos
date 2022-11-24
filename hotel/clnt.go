@@ -15,6 +15,7 @@ type WebClnt struct {
 	jobname  string
 	srvaddrs []string
 	baseurl  string
+	clnt     *http.Client
 	*fslib.FsLib
 }
 
@@ -23,7 +24,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)
 	}
-	return &WebClnt{job, addrs, "http://" + addrs[0], fsl}
+	return &WebClnt{job, addrs, "http://" + addrs[0], &http.Client{}, fsl}
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
@@ -35,7 +36,7 @@ func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Get(u.String())
+	resp, err := wc.clnt.Get(u.String())
 	if err != nil {
 		return nil, err
 	}

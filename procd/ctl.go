@@ -6,7 +6,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
 )
@@ -16,9 +15,15 @@ type SpawnFile struct {
 	fs.Inode
 }
 
-func makeSpawnFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *SpawnFile {
-	i := inode.MakeInode(ctx, 0, parent)
-	return &SpawnFile{pd, i}
+func makeSpawnFile(pd *Procd) *np.Err {
+	sp := &SpawnFile{}
+	sp.pd = pd
+	i, err := pd.memfssrv.MkDev(np.PROCD_SPAWN_FILE, sp)
+	if err != nil {
+		return err
+	}
+	sp.Inode = i
+	return nil
 }
 
 func (ctl *SpawnFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {

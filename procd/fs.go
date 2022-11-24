@@ -6,9 +6,7 @@ import (
 	"log"
 	"path"
 
-	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
@@ -19,10 +17,9 @@ import (
 )
 
 type ProcdFs struct {
-	pd        *Procd
-	run       fs.Dir
-	spawnFile fs.Inode
-	ctlFile   fs.Inode
+	pd      *Procd
+	run     fs.Dir
+	ctlFile fs.Inode
 }
 
 // Set up this procd instance's FS
@@ -37,10 +34,8 @@ func (pd *Procd) makeFs() {
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
 	// Set up spawn file
-	pd.fs.spawnFile = makeSpawnFile(pd, nil, pd.memfssrv.Root())
-	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.memfssrv.Root(), np.PROCD_SPAWN_FILE, pd.fs.spawnFile)
-	if err1 != nil {
-		db.DFatalf("Error MkNod in RunProcd: %v", err1)
+	if err := makeSpawnFile(pd); err != nil {
+		db.DFatalf("Error MkDev in RunProcd: %v", err)
 	}
 
 	// Set up ctl file
@@ -50,7 +45,7 @@ func (pd *Procd) makeFs() {
 	dirs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE, np.PROCD_RUNNING, proc.PIDS}
 	for _, d := range dirs {
 		if err := pd.MkDir(path.Join(np.PROCD, pd.memfssrv.MyAddr(), d), 0777); err != nil {
-			db.DFatalf("Error creating dir: %v", err1)
+			db.DFatalf("Error creating dir: %v", err)
 		}
 	}
 }

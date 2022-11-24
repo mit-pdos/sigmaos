@@ -426,7 +426,6 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
-	ts.stop()
 	ts.Shutdown()
 }
 

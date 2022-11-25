@@ -25,20 +25,20 @@ type Procd struct {
 	sync.Mutex
 	*sync.Cond
 	fs               *ProcdFs
-	realmbin         string              // realm path from which to pull/run bins.
-	nToWake          int                 // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
-	wsQueues         map[string][]string // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
-	done             bool
-	addr             string
+	realmbin         string                   // realm path from which to pull/run bins.
+	nToWake          int                      // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
+	wsQueues         map[string][]string      // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
+	done             bool                     // Finished running.
+	addr             string                   // Address of this procd.
 	procClaimTime    time.Time                // Time used to rate-limit claiming of BE procs.
 	netProcsClaimed  proc.Tcore               // Number of BE procs claimed in the last time interval.
 	procsDownloading proc.Tcore               // Number of procs currently being downloaded.
 	runningProcs     map[proc.Tpid]*LinuxProc // Map of currently running procs.
-	coreBitmap       []Tcorestatus
-	cpuMask          linuxsched.CPUMask // Mask of CPUs available for this procd to use.
-	coresOwned       proc.Tcore         // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail       proc.Tcore         // Current number of cores available to run procs on.
-	memAvail         proc.Tmem          // Available memory for this procd and its procs to use.
+	coreBitmap       []Tcorestatus            // Bitmap of cores owned by this proc
+	cpuMask          linuxsched.CPUMask       // Mask of CPUs available for this procd to use.
+	coresOwned       proc.Tcore               // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail       proc.Tcore               // Current number of cores available to run procs on.
+	memAvail         proc.Tmem                // Available memory for this procd and its procs to use.
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt

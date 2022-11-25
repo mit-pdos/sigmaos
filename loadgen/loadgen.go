@@ -95,7 +95,7 @@ func (lg *LoadGenerator) Stats() {
 		db.DFatalf("Error calculating percentile 100.0: %v", err)
 	}
 	db.DPrintf(db.ALWAYS,
-		"\nLatency Stats:\n\nMean: %vms\n50%: %vms\n75%: %vms\n90%: %vms\n99%: %vms\n99.9%: %vms\n99.99%: %vms\n100%: %vms",
+		"\nLatency Stats:\n\nMean: %vms\n50%%: %vms\n75%%: %vms\n90%%: %vms\n99%%: %vms\n99.9%%: %vms\n99.99%%: %vms\n100%%: %vms",
 		mean, median, p75, p90, p99, p999, p9999, p100)
 }
 

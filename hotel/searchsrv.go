@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 )
@@ -43,6 +44,10 @@ func RunSearchSrv(n string) error {
 		return err
 	}
 	s.geoc = pdc
+
+	p := perf.MakePerf("HOTEL_SEARCH")
+	defer p.Done()
+
 	return pds.RunServer()
 }
 

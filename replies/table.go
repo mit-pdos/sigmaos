@@ -12,9 +12,8 @@ import (
 // Reply table for a given session.
 type ReplyTable struct {
 	sync.Mutex
-	closed   bool
-	entries  map[np.Tseqno]*ReplyFuture
-	maxSeqno np.Tseqno
+	closed  bool
+	entries map[np.Tseqno]*ReplyFuture
 	// pruned has seqnos pruned from entries; client has received
 	// the response for those.
 	pruned *intervals.Intervals
@@ -65,28 +64,6 @@ func (rt *ReplyTable) Register(request *np.Fcall) bool {
 		delete(rt.entries, np.Tseqno(s))
 	}
 	rt.pruned.Insert(&request.Received)
-	// Update the latest seqno we've seen
-	if rt.maxSeqno < request.Seqno {
-		// If there is a gap, fill the gap.
-		//
-		// A single seqno counter is shared across all connections to all servers.
-		// This is to ensure that a [session, seqno] pair uniquely identifies an RPC
-		// in the entire system (which is useful for debuggability). However, this
-		// means that the server may see "holes" in the intervals of seqnos it sees
-		// from any one client. This can cause its intervals list to grow infinitely
-		// long (ReplyTable.pruned).
-		//
-		// In order to avoid this, we "fill in the gaps" of seqnos which were sent to
-		// other servers, and which this server never saw. This should be safe to do,
-		// since RPCs are guaranteed to be sent in order. So, if there is a gap
-		// between the seqno of this RPC and the last interval this sever knows
-		// about, we can safely assume that the intervening RPCs were sent to other
-		// servers and "fill in the gap".
-		if rt.maxSeqno+1 < request.Seqno {
-			rt.pruned.Insert(np.MkInterval(np.Toffset(rt.maxSeqno+1), np.Toffset(request.Seqno)))
-		}
-		rt.maxSeqno = request.Seqno
-	}
 	// if seqno in pruned, then drop
 	if request.Seqno != 0 && rt.pruned.Contains(np.Toffset(request.Seqno)) {
 		return false

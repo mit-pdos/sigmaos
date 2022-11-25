@@ -49,10 +49,15 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd(realmbin string, grantedCoresIv string) {
+func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	pd := &Procd{}
 	pd.Cond = sync.NewCond(&pd.Mutex)
 	pd.kernelProcs = make(map[string]bool)
+	// If we aren't spawning a full system on this procd, then kernel init is
+	// done (this procd can start to accept procs).
+	if !spawningSys {
+		pd.kernelInitDone = true
+	}
 	pd.realmbin = realmbin
 	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
@@ -139,6 +144,9 @@ func (pd *Procd) readDone() bool {
 }
 
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
+	if p.IsPrivilegedProc() && pd.kernelInitDone {
+		db.DFatalf("Spawned privileged proc %v on fully initialized procd", p)
+	}
 	// Make a Linux Proc which corresponds to this proc.
 	linuxProc := makeLinuxProc(pd, p, stolen)
 	// Allocate dedicated cores for this proc to run on, if it requires them.

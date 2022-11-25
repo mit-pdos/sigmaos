@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	db "sigmaos/debug"
-	// "sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"

@@ -2,6 +2,7 @@ package dbd
 
 import (
 	// db "sigmaos/debug"
+	"sigmaos/clonedev"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -22,6 +23,9 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	pds.QueueLen()
+	fd := mkFileDev(dbdaddr)
+	if err := clonedev.MkCloneDev(pds.MemFs, CLONEFDEV, fd.mkFileSession); err != nil {
+		return nil
+	}
 	return pds.RunServer()
 }

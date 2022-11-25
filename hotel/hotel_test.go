@@ -68,7 +68,7 @@ func (ts *Tstate) stop() {
 	}
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
-	assert.Equal(ts.T, 4, len(sts))
+	assert.Equal(ts.T, 5, len(sts))
 }
 
 func TestGeo(t *testing.T) {

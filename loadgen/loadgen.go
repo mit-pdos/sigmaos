@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/montanaflynn/stats"
+
 	db "sigmaos/debug"
 )
 
@@ -56,11 +58,45 @@ func (lg *LoadGenerator) warmup() {
 }
 
 func (lg *LoadGenerator) Stats() {
-	var tot time.Duration
-	for _, l := range lg.lats {
-		tot += l
+	data := make([]float64, len(lg.lats))
+	for i, l := range lg.lats {
+		data[i] = float64(l.Microseconds()) / 1000.0
 	}
-	db.DPrintf(db.ALWAYS, "Average latency: %v", tot/time.Duration(len(lg.lats)))
+	mean, err := stats.Mean(data)
+	if err != nil {
+		db.DFatalf("Error calculating mean: %v", err)
+	}
+	median, err := stats.Percentile(data, 50)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 50: %v", err)
+	}
+	p75, err := stats.Percentile(data, 75)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 75: %v", err)
+	}
+	p90, err := stats.Percentile(data, 90)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 90: %v", err)
+	}
+	p99, err := stats.Percentile(data, 99)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 99: %v", err)
+	}
+	p999, err := stats.Percentile(data, 99.9)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 99.9: %v", err)
+	}
+	p9999, err := stats.Percentile(data, 99.99)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 99.99: %v", err)
+	}
+	p100, err := stats.Percentile(data, 100)
+	if err != nil {
+		db.DFatalf("Error calculating percentile 100.0: %v", err)
+	}
+	db.DPrintf(db.ALWAYS,
+		"\nLatency Stats:\n\nMean: %vms\n50%: %vms\n75%: %vms\n90%: %vms\n99%: %vms\n99.9%: %vms\n99.99%: %vms\n100%: %vms",
+		mean, median, p75, p90, p99, p999, p9999, p100)
 }
 
 func (lg *LoadGenerator) Run() {

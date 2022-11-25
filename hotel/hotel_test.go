@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -121,6 +122,42 @@ func TestCache(t *testing.T) {
 	err = pdc.RPC("Cache.Get", arg, &res)
 	assert.NotNil(t, err)
 	assert.Equal(t, hotel.ErrMiss, err)
+
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestCacheConcur(t *testing.T) {
+	const N = 3
+	ts := makeTstate(t, []string{"user/hotel-cached"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
+	assert.Nil(t, err)
+	v := []byte("hello")
+	arg := hotel.CacheRequest{
+		Key:   "x",
+		Value: v,
+	}
+	res := &hotel.CacheResult{}
+	err = pdc.RPC("Cache.Set", arg, &res)
+	assert.Nil(t, err)
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < N; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			arg := hotel.CacheRequest{
+				Key:   "x",
+				Value: v,
+			}
+			res := &hotel.CacheResult{}
+			err = pdc.RPC("Cache.Get", arg, res)
+			assert.Nil(t, err)
+			assert.Equal(t, v, res.Value)
+			db.DPrintf("TEST", "Done get")
+		}()
+	}
+	wg.Wait()
 
 	ts.stop()
 	ts.Shutdown()

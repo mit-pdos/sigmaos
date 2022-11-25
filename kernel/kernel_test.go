@@ -186,7 +186,7 @@ func TestEphemeral(t *testing.T) {
 
 	start := time.Now()
 	for {
-		if time.Since(start) > 5*np.Conf.Session.TIMEOUT {
+		if time.Since(start) > 3*np.Conf.Session.TIMEOUT {
 			break
 		}
 		time.Sleep(np.Conf.Session.TIMEOUT / 10)
@@ -195,7 +195,7 @@ func TestEphemeral(t *testing.T) {
 			log.Printf("retry\n")
 			continue
 		}
-		assert.True(t, np.IsErrNotfound(err))
+		assert.True(t, np.IsErrNotfound(err) || np.IsErrUnreachable(err), "Wrong err %v", err)
 		break
 	}
 	assert.Greater(t, 3*np.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")

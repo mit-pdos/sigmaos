@@ -205,7 +205,7 @@ func (ssrv *SessSrv) GetStats() *stats.Stats {
 }
 
 func (ssrv *SessSrv) QueueLen() int {
-	return ssrv.st.QueueLen() + int(ssrv.cnt)
+	return ssrv.st.QueueLen() + int(ssrv.cnt.Read())
 }
 
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
@@ -251,9 +251,11 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 		// If the fcall is a server-generated heartbeat, don't worry about
 		// processing it sequentially on the session's thread.
 		if fc.Session == 0 || fc.Type == np.TTwriteread {
-			ssrv.cnt.Inc()
-			ssrv.srvfcall(fc)
-			ssrv.cnt.Dec()
+			go func() {
+				ssrv.cnt.Inc()
+				ssrv.srvfcall(fc)
+				ssrv.cnt.Dec()
+			}()
 		} else {
 			sess.GetThread().Process(fc)
 		}
@@ -323,6 +325,8 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 		db.DPrintf("RTABLE", "table: %v", sess.GetReplyTable())
 		ssrv.stats.StatInfo().Inc(fc.Msg.Type())
 		ssrv.fenceFcall(sess, fc)
+	} else {
+		db.DPrintf("SESSSRV", "srvfcall %v duplicate request dropped", fc)
 	}
 }
 

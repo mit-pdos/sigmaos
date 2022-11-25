@@ -83,6 +83,8 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 		}
 		// Set the Program to user/VERSION/prog.bin
 		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
+	} else {
+		p.Type = T_LC
 	}
 	p.setBaseEnv()
 	return p

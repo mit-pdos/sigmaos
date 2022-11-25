@@ -50,10 +50,22 @@ type StatInfo struct {
 }
 
 func MakeStatInfo() *StatInfo {
-	return &StatInfo{st: mkStats()}
+	si := &StatInfo{}
+	si.st = mkStats()
+	return si
 }
 
 func (si *StatInfo) Stats() *Stats {
+	n := uint64(0)
+	for _, st := range si.st.MStats {
+		n += st.N
+		if st.N > 0 {
+			st.Avg = float64(st.Tot) / float64(st.N)
+		}
+	}
+	if n > 0 {
+		si.st.AvgQLen = float64(si.len) / float64(n)
+	}
 	return si.st
 }
 
@@ -90,23 +102,15 @@ func makeStatsDev(mfs *fslibsrv.MemFs) (*StatInfo, *np.Err) {
 }
 
 func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	if off > 0 {
+		return nil, nil
+	}
+
 	std.si.Lock()
 	defer std.si.Unlock()
 
 	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.si)
-	if off > 0 {
-		return nil, nil
-	}
-	n := uint64(0)
-	for _, st := range std.si.st.MStats {
-		n += st.N
-		if st.N > 0 {
-			st.Avg = float64(st.Tot) / float64(st.N)
-		}
-	}
-	if n > 0 {
-		std.si.st.AvgQLen = float64(std.si.len) / float64(n)
-	}
+	std.si.Stats()
 	b, err := json.Marshal(std.si.st)
 	if err != nil {
 		return nil, np.MkErrError(err)

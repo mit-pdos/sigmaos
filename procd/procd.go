@@ -2,6 +2,7 @@ package procd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -29,6 +30,8 @@ type Procd struct {
 	nToWake          int                      // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
 	wsQueues         map[string][]string      // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
 	done             bool                     // Finished running.
+	kernelInitDone   bool                     // True if kernel init has finished (this procd has spawned ux & s3).
+	kernelProcs      map[string]bool          // Map of kernel procs spawned on this procd.
 	addr             string                   // Address of this procd.
 	procClaimTime    time.Time                // Time used to rate-limit claiming of BE procs.
 	netProcsClaimed  proc.Tcore               // Number of BE procs claimed in the last time interval.
@@ -49,6 +52,7 @@ type Procd struct {
 func RunProcd(realmbin string, grantedCoresIv string) {
 	pd := &Procd{}
 	pd.Cond = sync.NewCond(&pd.Mutex)
+	pd.kernelProcs = make(map[string]bool)
 	pd.realmbin = realmbin
 	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
@@ -164,8 +168,13 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 		db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
 		return nil, err
 	}
-	// See if the proc fits on this procd.
-	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) {
+	// Don't steal remote kernel procs.
+	if isRemote && p.IsPrivilegedProc() {
+		return nil, fmt.Errorf("Try steal remote kernel proc")
+	}
+	// See if the proc fits on this procd. Also, make sure that we spawn all
+	// kernel procs before any user procs.
+	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) && (pd.kernelInitDone || p.IsPrivilegedProc()) {
 		// Proc may have been stolen
 		if ok := pd.claimProc(p, procPath); !ok {
 			return nil, nil

@@ -14,6 +14,7 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 )
 
 const (
@@ -75,6 +76,26 @@ func (p *LinuxProc) run() error {
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
 		cmd = exec.Command(path.Join(np.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
+		// If this is a privileged proc, wait for it to start & then mark it as
+		// started.
+		go func() {
+			semStart := semclnt.MakeSemClnt(p.pd.FsLib, path.Join(p.attr.ProcDir, proc.START_SEM))
+			semStart.Down()
+
+			p.pd.Lock()
+			defer p.pd.Unlock()
+			// Sanity check that we don't start 2 of the same kernel proc on the same
+			// procd.
+			if _, ok := p.pd.kernelProcs[p.attr.Program]; ok {
+				db.DFatalf("Double-spawned %v on procd %v", p.attr.Program, p.pd.addr)
+			}
+			// Mark that we've spawned a new kernel proc.
+			p.pd.kernelProcs[p.attr.Program] = true
+			// If we have spawned all kernel procs, then kernel init is done.
+			if len(p.pd.kernelProcs) == 3 {
+				p.pd.kernelInitDone = true
+			}
+		}()
 	} else {
 		cmd = exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 		namespace.SetupProc(cmd)

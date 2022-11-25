@@ -101,8 +101,10 @@ func (lg *LoadGenerator) Stats() {
 }
 
 func (lg *LoadGenerator) Run() {
+	db.DPrintf("TEST", "Start load generator")
 	// Calibrate.
 	lg.calibrate()
+	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	lg.warmup()
 	t := time.NewTicker(lg.sleepdur)
 	var i int

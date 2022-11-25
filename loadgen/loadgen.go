@@ -61,7 +61,7 @@ func (lg *LoadGenerator) Stats() {
 	data := make([]float64, len(lg.lats))
 	for i, l := range lg.lats {
 		data[i] = float64(l.Microseconds()) / 1000.0
-		db.DPrintf(db.ALWAYS, "Latency %v", l)
+		db.DPrintf("TEST", "Latency %v", l)
 	}
 	mean, err := stats.Mean(data)
 	if err != nil {

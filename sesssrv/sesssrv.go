@@ -250,7 +250,9 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	if !ssrv.replicated {
 		// If the fcall is a server-generated heartbeat, don't worry about
 		// processing it sequentially on the session's thread.
-		if fc.Session == 0 || fc.Type == np.TTwriteread {
+		if fc.Session == 0 {
+			ssrv.srvfcall(fc)
+		} else if fc.Type == np.TTwriteread {
 			ssrv.cnt.Inc()
 			go func() {
 				ssrv.srvfcall(fc)

@@ -84,7 +84,7 @@ func (pfs *ProcdFs) finish(p *LinuxProc) error {
 func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	var runq string
 	switch {
-	case a.Ncore > 0:
+	case a.Type == proc.T_LC:
 		runq = np.PROCD_RUNQ_LC
 	default:
 		runq = np.PROCD_RUNQ_BE
@@ -94,6 +94,7 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
+	db.DPrintf("PROCD", "Procd created q file %v", path.Join(np.PROCD, pfs.pd.MyAddr(), runq, a.Pid.String()))
 	pfs.pd.spawnProc(a)
 	return nil
 }

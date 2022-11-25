@@ -99,6 +99,11 @@ func (s *Www) done() error {
 	if err := s.WaitEvict(proc.GetPid()); err != nil {
 		return err
 	}
+	db.DPrintf("HOTEL_WWW_STATS", "\nUserc %v", s.userc.StatsClnt())
+	db.DPrintf("HOTEL_WWW_STATS", "\nSearchc %v", s.searchc.StatsClnt())
+	db.DPrintf("HOTEL_WWW_STATS", "\nReservec %v", s.reservec.StatsClnt())
+	db.DPrintf("HOTEL_WWW_STATS", "\nProfc %v", s.profc.StatsClnt())
+	db.DPrintf("HOTEL_WWW_STATS", "\nRecc %v", s.recc.StatsClnt())
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
@@ -216,7 +221,6 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
 }
 

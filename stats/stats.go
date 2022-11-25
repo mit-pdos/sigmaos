@@ -41,6 +41,14 @@ func (c *Tcounter) Dec() {
 	}
 }
 
+func (c *Tcounter) Read() int64 {
+	if STATS {
+		n := (*int64)(unsafe.Pointer(c))
+		return atomic.LoadInt64(n)
+	}
+	return 0
+}
+
 // XXX separate cache lines
 type StatInfo struct {
 	Nversion    Tcounter

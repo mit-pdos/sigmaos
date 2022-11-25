@@ -53,6 +53,10 @@ func MakeStatInfo() *StatInfo {
 	return &StatInfo{st: mkStats()}
 }
 
+func (si *StatInfo) Stats() *Stats {
+	return si.st
+}
+
 func (sts *StatInfo) Stat(m string, t int64, ql int) {
 	sts.Lock()
 	defer sts.Unlock()

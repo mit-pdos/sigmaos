@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"path"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -17,10 +18,12 @@ type ProtDevClnt struct {
 	sid string
 	fn  string
 	fd  int
+	si  *protdevsrv.StatInfo
 }
 
 func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	pdc := &ProtDevClnt{}
+	pdc.si = protdevsrv.MakeStatInfo()
 	pdc.FsLib = fsl
 	pdc.fn = fn
 	b, err := pdc.GetFile(path.Join(pdc.fn, protdevsrv.CLONE))
@@ -44,10 +47,13 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*protdevsrv.Reply, error) 
 	if err := ae.Encode(req); err != nil {
 		return nil, err
 	}
+	start := time.Now()
 	b, err := pdc.WriteRead(pdc.fd, ab.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v\n", err)
 	}
+	// Record stats (qlen not used for now).
+	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
 	rep := &protdevsrv.Reply{}
 	rb := bytes.NewBuffer(b)
 	re := gob.NewDecoder(rb)
@@ -78,7 +84,11 @@ func (pdc *ProtDevClnt) RPC(method string, arg any, res any) error {
 	return nil
 }
 
-func (pdc *ProtDevClnt) Stats() (*protdevsrv.Stats, error) {
+func (pdc *ProtDevClnt) StatsClnt() *protdevsrv.Stats {
+	return pdc.si.Stats()
+}
+
+func (pdc *ProtDevClnt) StatsSrv() (*protdevsrv.Stats, error) {
 	stats := &protdevsrv.Stats{}
 	if err := pdc.GetFileJson(path.Join(pdc.fn, protdevsrv.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")

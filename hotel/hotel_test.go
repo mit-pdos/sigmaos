@@ -462,8 +462,8 @@ func TestBenchSearchK8s(t *testing.T) {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	per := perf.MakePerf("TEST")
-	defer per.Done()
+	pf := perf.MakePerf("TEST")
+	defer pf.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
 		benchSearch(ts.T, wc, r)

@@ -10,6 +10,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
@@ -83,6 +84,9 @@ func RunWww(job string) error {
 	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
+
+	pf := perf.MakePerf("HOTEL_WWW")
+	defer pf.Done()
 
 	if err := www.Started(); err != nil {
 		return err

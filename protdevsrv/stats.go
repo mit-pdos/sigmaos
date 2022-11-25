@@ -20,7 +20,7 @@ type MethodStat struct {
 }
 
 func (ms *MethodStat) String() string {
-	return fmt.Sprintf("N %d Tot %dus Max %dus Avg %.1fus", ms.N, ms.Tot, ms.Max, ms.Avg)
+	return fmt.Sprintf("N %d Tot %dus Max %dus Avg %.1fms", ms.N, ms.Tot, ms.Max, ms.Avg)
 }
 
 type Stats struct {
@@ -60,7 +60,7 @@ func (si *StatInfo) Stats() *Stats {
 	for _, st := range si.st.MStats {
 		n += st.N
 		if st.N > 0 {
-			st.Avg = float64(st.Tot) / float64(st.N)
+			st.Avg = float64(st.Tot) / float64(st.N) / 1000.0
 		}
 	}
 	if n > 0 {

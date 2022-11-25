@@ -34,6 +34,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 		Timeout:   2 * time.Minute,
 		Transport: http.DefaultTransport,
 	}
+	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	return &WebClnt{job, addrs, "http://" + addrs[0], clnt, fsl}
 }

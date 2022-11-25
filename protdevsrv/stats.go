@@ -49,7 +49,11 @@ type StatInfo struct {
 	len uint64
 }
 
-func (sts *StatInfo) stat(m string, t int64, ql int) {
+func MakeStatInfo() *StatInfo {
+	return &StatInfo{st: mkStats()}
+}
+
+func (sts *StatInfo) Stat(m string, t int64, ql int) {
 	sts.Lock()
 	defer sts.Unlock()
 	sts.len += uint64(ql)
@@ -77,8 +81,7 @@ func makeStatsDev(mfs *fslibsrv.MemFs) (*StatInfo, *np.Err) {
 		return nil, err
 	}
 	std.Inode = i
-	std.si = &StatInfo{}
-	std.si.st = mkStats()
+	std.si = MakeStatInfo()
 	return std.si, nil
 }
 

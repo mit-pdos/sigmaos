@@ -5,6 +5,7 @@ import (
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
+	"sigmaos/namei"
 	np "sigmaos/ninep"
 	"sigmaos/sesssrv"
 	"sigmaos/stats"
@@ -69,7 +70,7 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
 		dlk := ps.plt.Acquire(ctx, np.Path{})
-		_, lo, lk, rest, err := ps.namei(ctx, root, dlk, np.Path{}, path, nil)
+		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, np.Path{}, path, nil)
 		defer ps.plt.Release(ctx, lk)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()

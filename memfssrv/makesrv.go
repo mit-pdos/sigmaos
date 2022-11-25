@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
+	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	np "sigmaos/ninep"
 	"sigmaos/procclnt"
@@ -24,6 +25,7 @@ type MemFs struct {
 	*sesssrv.SessSrv
 	root     fs.Dir
 	ctx      fs.CtxI // server context
+	plt      *lockmap.PathLockTable
 	fsl      *fslib.FsLib
 	procclnt *procclnt.ProcClnt
 }
@@ -85,9 +87,10 @@ func MakeMemFsFslDetach(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt,
 	if err != nil {
 		return nil, err
 	}
+	fs.SessSrv = srv
+	fs.plt = srv.GetPathLockTable()
 	fs.fsl = fsl
 	fs.procclnt = pclnt
-	fs.SessSrv = srv
 	fs.root = root
 	fs.ctx = ctx.MkCtx(path, 0, nil)
 	return fs, err

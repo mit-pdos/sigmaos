@@ -165,6 +165,8 @@ else
   touch ~/.nobuild
 fi
 
+ulimit -n 100000
+
 echo -n > ~/.hushlogin
 ENDSSH
 
@@ -174,8 +176,9 @@ if [ $VPC == $K8S_VPC ]; then
     bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
     bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
     bash -c "sudo apt update"
+#    bash -c "sudo apt-mark unhold kubelet kubeadm kubectl"
+#    bash -c "sudo apt remove -y kubelet kubeadm kubectl"
     bash -c "sudo apt install -y kubelet kubeadm kubectl"
-    bash -c "sudo apt-mark hold kubelet kubeadm kubectl"
     bash -c "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg"
     bash -c "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null"
     bash -c "sudo apt update"
@@ -185,7 +188,7 @@ if [ $VPC == $K8S_VPC ]; then
     bash -c "sudo apt install apt-transport-https --yes"
     bash -c "echo \"deb https://baltocdn.com/helm/stable/debian/ all main\" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list"
     bash -c "sudo apt update"
-    bash -c "sudo apt install helm"
+    bash -c "sudo apt install -y helm"
     bash -c "helm repo add stable https://charts.helm.sh/stable"
     bash -c "sudo swapoff -a"
     bash -c "echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf"
@@ -205,6 +208,9 @@ if [ $VPC == $K8S_VPC ]; then
     bash -c "sudo groupadd docker"
     bash -c "sudo usermod -aG docker ubuntu"
     bash -c "sudo usermod -aG docker ubuntu"
+    # For DeathStarBench
+    bash -c "sudo apt install -y docker-compose luarocks libssl-dev zlib1g-dev"
+    bash -c "sudo luarocks install luasocket"
 ENDSSH
 fi
 

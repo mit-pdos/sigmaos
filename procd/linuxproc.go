@@ -87,7 +87,7 @@ func (p *LinuxProc) run() error {
 			// Sanity check that we don't start 2 of the same kernel proc on the same
 			// procd.
 			if _, ok := p.pd.kernelProcs[p.attr.Program]; ok {
-				db.DFatalf("Double-spawned %v on procd %v", p.attr.Program, p.pd.addr)
+				db.DPrintf(db.ALWAYS, "Double-spawned %v on procd %v", p.attr.Program, p.pd.addr)
 			}
 			// Mark that we've spawned a new kernel proc.
 			p.pd.kernelProcs[p.attr.Program] = true

@@ -64,8 +64,8 @@ func TestReadOff(t *testing.T) {
 func TestTwo(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	//	// Make a second one
-	//	ts.BootFss3d()
+	// Make a second one
+	ts.BootFss3d()
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -80,8 +80,8 @@ func TestTwo(t *testing.T) {
 func TestUnionSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	//	// Make a second one
-	//	ts.BootFss3d()
+	// Make a second one
+	ts.BootFss3d()
 
 	dirents, err := ts.GetDir(path.Join(np.S3, "~ip/9ps3/"))
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -94,8 +94,8 @@ func TestUnionSimple(t *testing.T) {
 func TestUnionDir(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	//	// Make a second one
-	//	ts.BootFss3d()
+	// Make a second one
+	ts.BootFss3d()
 
 	dirents, err := ts.GetDir(path.Join(np.S3, "~ip/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
@@ -108,8 +108,8 @@ func TestUnionDir(t *testing.T) {
 func TestUnionFile(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	//	// Make a second one
-	//	ts.BootFss3d()
+	// Make a second one
+	ts.BootFss3d()
 
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")

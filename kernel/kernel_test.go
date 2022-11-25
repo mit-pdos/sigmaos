@@ -186,7 +186,7 @@ func TestEphemeral(t *testing.T) {
 
 	start := time.Now()
 	for {
-		if time.Since(start) > 3*np.Conf.Session.TIMEOUT {
+		if time.Since(start) > 5*np.Conf.Session.TIMEOUT {
 			break
 		}
 		time.Sleep(np.Conf.Session.TIMEOUT / 10)

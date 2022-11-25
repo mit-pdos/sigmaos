@@ -145,7 +145,7 @@ func (pd *Procd) readDone() bool {
 
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	if p.IsPrivilegedProc() && pd.kernelInitDone {
-		db.DFatalf("Spawned privileged proc %v on fully initialized procd", p)
+		db.DPrintf(db.ALWAYS, "Spawned privileged proc %v on fully initialized procd", p)
 	}
 	// Make a Linux Proc which corresponds to this proc.
 	linuxProc := makeLinuxProc(pd, p, stolen)

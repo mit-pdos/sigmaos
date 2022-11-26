@@ -14,7 +14,7 @@ type Server struct {
 
 func mkServer(dbdaddr string) (*Server, error) {
 	s := &Server{}
-	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+dbdaddr+")/books")
+	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+dbdaddr+")/sigmaos")
 	if error != nil {
 		return nil, error
 	}

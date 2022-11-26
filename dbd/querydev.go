@@ -34,7 +34,7 @@ type fileSession struct {
 // XXX wait on close before processing data?
 func (fs *fileSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	debug.DPrintf("DBSRV", "doQuery: %v\n", string(b))
-	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/books")
+	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
 		return 0, np.MkErrError(error)
 	}

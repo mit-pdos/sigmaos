@@ -65,7 +65,7 @@ type SessSrv struct {
 
 func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	mkps np.MkProtServer, rps np.RestoreProtServer, pclnt *procclnt.ProcClnt,
-	config repl.Config, detach fs.DetachF) *SessSrv {
+	config repl.Config) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -103,7 +103,6 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl
-	ssrv.detach = detach
 	return ssrv
 }
 
@@ -125,6 +124,12 @@ func (ssrv *SessSrv) Root() fs.Dir {
 
 func (ssrv *SessSrv) GetDetach() fs.DetachF {
 	return ssrv.detach
+}
+
+// XXX maybe take np.Tsession?
+func (sssrv *SessSrv) RegisterDetach(f fs.DetachF) error {
+	sssrv.detach = f
+	return nil
 }
 
 func (ssrv *SessSrv) Snapshot() []byte {

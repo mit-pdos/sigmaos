@@ -7,7 +7,7 @@ import (
 )
 
 func RunMemfsdReplica(name string, config repl.Config) {
-	fss, err := memfssrv.MakeReplMemFs("INVALID", "", name, config, nil)
+	fss, err := memfssrv.MakeReplMemFs("INVALID", "", name, config)
 	if err != nil {
 		db.DFatalf("RunMemfdReplica: err %v\n", err)
 	}

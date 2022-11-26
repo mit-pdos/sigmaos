@@ -6,9 +6,7 @@ import (
 
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
 )
 
@@ -55,7 +53,7 @@ type ProtDevSrv struct {
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	psd := &ProtDevSrv{}
-	mfs, _, _, error := memfssrv.MakeMemFsDetach(fn, "protdevsrv", psd.Detach)
+	mfs, _, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
@@ -75,20 +73,6 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 
 func (psd *ProtDevSrv) QueueLen() int {
 	return psd.MemFs.QueueLen()
-}
-
-func (psd *ProtDevSrv) Detach(ctx fs.CtxI, session np.Tsession) {
-	db.DPrintf("PROTDEVSRV", "Detach %v %p %v\n", session, psd.MemFs, psd.MemFs.Root())
-	dir := session.String() + "/"
-	if err := psd.MemFs.Remove(dir + CTL); err != nil {
-		db.DPrintf("PROTDEVSRV", "Remove ctl err %v\n", err)
-	}
-	if err := psd.MemFs.Remove(dir + RPC); err != nil {
-		db.DPrintf("PROTDEVSRV", "Remove rpc err %v\n", err)
-	}
-	if err := psd.MemFs.Remove(dir); err != nil {
-		db.DPrintf("PROTDEVSRV", "Detach err %v\n", err)
-	}
 }
 
 func (psd *ProtDevSrv) mkService(svci any) {

@@ -49,9 +49,9 @@ func Run(args []string) {
 			peers := strings.Split(args[4], ",")
 			config = replraft.MakeRaftConfig(id, peers, true)
 		}
-		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", config, nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", config)
 	} else {
-		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", nil, nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", nil)
 	}
 
 	if err != nil {

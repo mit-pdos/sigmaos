@@ -45,7 +45,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Co
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
 	}
-	srv, fsl, _, error := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config, nil)
+	srv, fsl, _, error := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config)
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}

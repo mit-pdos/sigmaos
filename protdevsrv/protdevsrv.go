@@ -4,9 +4,9 @@ import (
 	"log"
 	"reflect"
 
+	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 	"sigmaos/proc"
@@ -47,71 +47,6 @@ type service struct {
 	methods map[string]*method
 }
 
-type rpcSession struct {
-	*inode.Inode
-	id np.Tsession
-}
-
-func mkRpcSession(psd *ProtDevSrv, sid np.Tsession) (*rpcSession, *np.Err) {
-	s := &rpcSession{}
-	s.id = sid
-	i, err := psd.MemFs.MkDev(sid.String()+"/"+CTL, s)
-	if err != nil {
-		return nil, err
-	}
-	s.Inode = i
-	if err := mkRPCDev(sid.String(), psd); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-func (sc *rpcSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	if off > 0 {
-		return nil, nil
-	}
-	return []byte(sc.id.String()), nil
-}
-
-func (sc *rpcSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return 0, np.MkErr(np.TErrNotSupported, nil)
-}
-
-func (sc *rpcSession) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
-	db.DPrintf("PROTDEVSRV", "Close ctl %v\n", sc.id)
-	return nil
-}
-
-type Clone struct {
-	*inode.Inode
-	psd *ProtDevSrv
-}
-
-func makeClone(mfs *memfssrv.MemFs, psd *ProtDevSrv) *np.Err {
-	cl := &Clone{}
-	cl.psd = psd
-	i, err := psd.MemFs.MkDev(CLONE, cl) // put clone file into root dir
-	if err != nil {
-		return err
-	}
-	cl.Inode = i
-	return nil
-}
-
-func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	sid := ctx.SessionId()
-	db.DPrintf("PROTDEVSRV", "%v: Open clone dir %v\n", proc.GetProgram(), sid)
-	if _, err := c.psd.MemFs.Create(sid.String(), np.DMDIR, np.ORDWR); err != nil {
-		return nil, err
-	}
-	return mkRpcSession(c.psd, sid)
-}
-
-func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
-	db.DPrintf("PROTDEVSRV", "%v: Close clone\n", proc.GetProgram())
-	return nil
-}
-
 type ProtDevSrv struct {
 	*memfssrv.MemFs
 	sti *StatInfo
@@ -126,7 +61,8 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	}
 	psd.MemFs = mfs
 	psd.mkService(svci)
-	if err := makeClone(mfs, psd); err != nil {
+	rd := mkRpcDev(psd)
+	if err := clonedev.MkCloneDev(psd.MemFs, CLONE, rd.mkRpcSession); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {

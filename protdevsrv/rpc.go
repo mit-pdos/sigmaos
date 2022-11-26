@@ -10,18 +10,27 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
 )
 
 type rpcDev struct {
+	pds *ProtDevSrv
+}
+
+func mkRpcDev(pds *ProtDevSrv) *rpcDev {
+	return &rpcDev{pds}
+}
+
+type rpcSession struct {
 	*inode.Inode
 	pds *ProtDevSrv
 }
 
-func mkRPCDev(fn string, pds *ProtDevSrv) *np.Err {
-	rpc := &rpcDev{}
-	rpc.pds = pds
-	i, err := pds.MemFs.MkDev(fn+"/"+RPC, rpc)
+func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+	rpc := &rpcSession{}
+	rpc.pds = rd.pds
+	i, err := mfs.MkDev(sid.String()+"/"+RPC, rpc)
 	if err != nil {
 		return err
 	}
@@ -30,7 +39,7 @@ func mkRPCDev(fn string, pds *ProtDevSrv) *np.Err {
 }
 
 // XXX wait on close before processing data?
-func (rpc *rpcDev) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	req := &Request{}
 	var rep *Reply
 

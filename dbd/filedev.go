@@ -2,8 +2,8 @@ package dbd
 
 import (
 	"database/sql"
-	"log"
 
+	"sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
@@ -32,8 +32,7 @@ type fileSession struct {
 
 // XXX wait on close before processing data?
 func (fs *fileSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	log.Printf("Write: %s\n", string(b))
-
+	debug.DPrintf("DBSRV", "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/books")
 	if error != nil {
 		return 0, np.MkErrError(error)

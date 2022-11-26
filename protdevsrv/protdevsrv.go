@@ -12,7 +12,7 @@ import (
 
 const (
 	STATS = "stats"
-	CLONE = "clone"
+	CLONE = "clone-rpc"
 	RPC   = "rpc"
 	CTL   = "ctl"
 )

@@ -1,8 +1,6 @@
 package dbd
 
 import (
-	"log"
-
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
@@ -23,9 +21,8 @@ func mkServer(dbdaddr string) (*Server, error) {
 	s.db = db
 	error = s.db.Ping()
 	if error != nil {
-		debug.DFatalf("open err %v\n", error)
+		debug.DFatalf("db.Ping err %v\n", error)
 	}
-	log.Printf("Connected to db\n")
 	return s, nil
 }
 

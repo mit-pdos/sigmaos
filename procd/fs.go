@@ -89,7 +89,7 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
-	db.DPrintf("PROCD", "Procd created q file %v", path.Join(np.PROCD, pfs.pd.MyAddr(), runq, a.Pid.String()))
+	db.DPrintf("PROCD", "Procd created q file %v", path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()))
 	pfs.pd.spawnProc(a)
 	return nil
 }

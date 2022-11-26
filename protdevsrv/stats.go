@@ -92,11 +92,10 @@ type statsDev struct {
 
 func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *np.Err) {
 	std := &statsDev{}
-	i, err := mfs.MkDev(STATS, std)
-	if err != nil {
+	std.Inode = mfs.MakeDevInode()
+	if err := mfs.MkDev(STATS, std); err != nil {
 		return nil, err
 	}
-	std.Inode = i
 	std.si = MakeStatInfo()
 	return std.si, nil
 }

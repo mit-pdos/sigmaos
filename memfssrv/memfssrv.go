@@ -20,6 +20,11 @@ func (fs *MemFs) FsLib() *fslib.FsLib {
 	return fs.fsl
 }
 
+// Note: MkDev() sets parent
+func (mfs *MemFs) MakeDevInode() *inode.Inode {
+	return inode.MakeInode(mfs.ctx, np.DMDEVICE, nil)
+}
+
 func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *np.Err) {
 	d := mfs.root
 	lk := mfs.plt.Acquire(mfs.ctx, rootP)
@@ -34,16 +39,16 @@ func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *np.Err
 	return d, lk, nil
 }
 
-// Caller must store i in dev.Inode
-func (mfs *MemFs) MkDev(pn string, dev fs.Inode) (*inode.Inode, *np.Err) {
+func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *np.Err {
 	path := np.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	i := inode.MakeInode(mfs.ctx, np.DMDEVICE, d)
-	return i, dir.MkNod(mfs.ctx, d, path.Base(), dev)
+	// i := inode.MakeInode(mfs.ctx, np.DMDEVICE, d)
+	dev.SetParent(d)
+	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
 func (mfs *MemFs) MkNod(pn string, i fs.Inode) *np.Err {

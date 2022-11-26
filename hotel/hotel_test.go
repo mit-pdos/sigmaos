@@ -1,6 +1,7 @@
 package hotel_test
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -11,7 +12,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/dbd"
 	db "sigmaos/debug"
+	"sigmaos/filedev"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
@@ -282,6 +285,26 @@ func TestReserve(t *testing.T) {
 	assert.Equal(t, 1, len(res.HotelIds))
 
 	ts.stop()
+	ts.Shutdown()
+}
+
+func TestQueryDev(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	b, err := ts.GetFile(np.DBD + filedev.CLONE + dbd.QDEV)
+	assert.Nil(t, err)
+	sid := string(b)
+	q := fmt.Sprintf("select * from reservation")
+	_, err = ts.SetFile(np.DBD+sid+"/"+filedev.DATA+dbd.QDEV, []byte(q), np.OWRITE, 0)
+	assert.Nil(t, err)
+	b, err = ts.GetFile(np.DBD + sid + "/" + filedev.DATA + dbd.QDEV)
+	assert.Nil(t, err)
+
+	res := []hotel.Reservation{}
+	err = json.Unmarshal(b, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, "Alice", res[0].Customer)
+
 	ts.Shutdown()
 }
 

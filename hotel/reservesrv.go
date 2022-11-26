@@ -23,15 +23,15 @@ type ReserveResult struct {
 	HotelIds []string
 }
 
-type reservation struct {
-	HotelID      string
-	CustomerName string
-	InDate       string
-	OutDate      string
-	Number       int
+type Reservation struct {
+	HotelID  string
+	Customer string
+	InDate   string
+	OutDate  string
+	Number   int
 }
 
-type number struct {
+type Number struct {
 	HotelId string
 	Number  int
 }
@@ -128,7 +128,7 @@ func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, m
 
 		key := hotelId + "_" + indate + "_" + outdate
 
-		var reserves []reservation
+		var reserves []Reservation
 		if err := s.cachec.Get(key, &count); err != nil {
 			if err.Error() != ErrMiss.Error() {
 				return false, nil, err
@@ -157,7 +157,7 @@ func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, m
 				return false, nil, err
 			}
 			db.DPrintf("HOTELRESERVE", "Check: cache miss id: key %v\n", key)
-			var nums []number
+			var nums []Number
 			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
 			err = s.dbc.Query(q, &nums)
 			if err != nil {

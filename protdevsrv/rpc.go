@@ -30,11 +30,10 @@ type rpcSession struct {
 func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	rpc := &rpcSession{}
 	rpc.pds = rd.pds
-	i, err := mfs.MkDev(sid.String()+"/"+RPC, rpc)
-	if err != nil {
+	rpc.Inode = mfs.MakeDevInode()
+	if err := mfs.MkDev(sid.String()+"/"+RPC, rpc); err != nil {
 		return err
 	}
-	rpc.Inode = i
 	return nil
 }
 

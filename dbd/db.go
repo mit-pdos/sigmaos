@@ -23,8 +23,8 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	fd := mkFileDev(dbdaddr)
-	if err := clonedev.MkCloneDev(pds.MemFs, CLONEFDEV, fd.mkFileSession); err != nil {
+	fd := mkFileDev(dbdaddr, pds.MemFs)
+	if err := clonedev.MkCloneDev(pds.MemFs, CLONEFDEV, fd.mkSession, fd.detachSession); err != nil {
 		return nil
 	}
 	return pds.RunServer()

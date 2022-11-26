@@ -60,7 +60,7 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := clonedev.MkCloneDev(psd.MemFs, CLONE, rd.mkRpcSession); err != nil {
+	if err := clonedev.MkCloneDev(psd.MemFs, CLONE, rd.mkRpcSession, rd.detachRpcSession); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {

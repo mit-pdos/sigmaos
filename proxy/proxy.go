@@ -123,7 +123,7 @@ func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Detach(rets *np.Rdetach) *np.Rerror {
+func (npc *NpConn) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 	db.DPrintf("PROXY", "Detach\n")
 	return nil
 }

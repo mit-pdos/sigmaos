@@ -19,9 +19,10 @@ type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
+	detach    np.DetachF
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mksessionf MkSessionF) *np.Err {
+func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np.Err {
 	cl := &Clone{}
 	i, err := mfs.MkDev(fn, cl) // put clone file into root dir
 	if err != nil {
@@ -29,8 +30,8 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mksessionf MkSessionF) *np.Err {
 	}
 	cl.Inode = i
 	cl.mfs = mfs
-	cl.mksession = mksessionf
-	mfs.RegisterDetach(cl.Detach)
+	cl.mksession = mks
+	cl.detach = d
 	return nil
 }
 
@@ -48,6 +49,9 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		return nil, err
 	}
 	s.Inode = i
+	if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
+		db.DPrintf("CLONEDEV", "%v: RegisterDetach err %v\n", proc.GetProgram(), err)
+	}
 	if err := c.mksession(c.mfs, sid); err != nil {
 		return nil, err
 	}
@@ -59,22 +63,22 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
-func (c *Clone) Detach(ctx fs.CtxI, session np.Tsession) {
+func (c *Clone) Detach(session np.Tsession) {
 	db.DPrintf("CLONEDEV", "Detach %v\n", session)
 	dir := session.String() + "/"
 	if err := c.mfs.Remove(dir + CTL); err != nil {
 		db.DPrintf("CLONEDEV", "Remove ctl err %v\n", err)
 	}
-	//if err := psd.MemFs.Remove(dir + RPC); err != nil {
-	//db.DPrintf("CLONEDEV", "Remove rpc err %v\n", err)
-	//}
+	if c.detach != nil {
+		c.detach(session)
+	}
 	if err := c.mfs.Remove(dir); err != nil {
 		db.DPrintf("CLONEDEV", "Detach err %v\n", err)
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF) error {
-	if err := makeClone(mfs, fn, f); err != nil {
+func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d np.DetachF) error {
+	if err := makeClone(mfs, fn, f, d); err != nil {
 		return err
 	}
 	return nil

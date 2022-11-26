@@ -34,6 +34,7 @@ type Session struct {
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
+	detach        np.DetachF
 }
 
 func makeSession(protsrv np.Protsrv, cid np.Tclient, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
@@ -186,4 +187,16 @@ func (sess *Session) timedOut() (bool, time.Time) {
 		return true, sess.lastHeartbeat
 	}
 	return sess.timedout || time.Since(sess.lastHeartbeat) > np.Conf.Session.TIMEOUT, sess.lastHeartbeat
+}
+
+func (sess *Session) RegisterDetach(f np.DetachF) {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.detach = f
+}
+
+func (sess *Session) GetDetach() np.DetachF {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.detach
 }

@@ -17,10 +17,11 @@ const (
 
 type fileDev struct {
 	dbaddr string
+	mfs    *memfssrv.MemFs
 }
 
-func mkFileDev(dbaddr string) *fileDev {
-	return &fileDev{dbaddr}
+func mkFileDev(dbaddr string, mfs *memfssrv.MemFs) *fileDev {
+	return &fileDev{dbaddr, mfs}
 }
 
 type fileSession struct {
@@ -59,7 +60,7 @@ func (fs *fileSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQve
 }
 
 // XXX clean up in case of error
-func (fd *fileDev) mkFileSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+func (fd *fileDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	fs := &fileSession{}
 	fs.id = sid
 	fs.dbaddr = fd.dbaddr
@@ -69,4 +70,10 @@ func (fd *fileDev) mkFileSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	}
 	fs.Inode = i
 	return nil
+}
+
+func (fd *fileDev) detachSession(sid np.Tsession) {
+	if err := fd.mfs.Remove(sid.String() + "/" + QUERY); err != nil {
+		debug.DPrintf("DBSRV", "detachSessoin err %v\n", err)
+	}
 }

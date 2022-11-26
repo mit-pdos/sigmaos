@@ -43,9 +43,11 @@ type Protsrv interface {
 	SetFile(*Tsetfile, *Rwrite) *Rerror
 	PutFile(*Tputfile, *Rwrite) *Rerror
 	WriteRead(*Twriteread, *Rwriteread) *Rerror
-	Detach(*Rdetach) *Rerror
+	Detach(*Rdetach, DetachF) *Rerror
 	Snapshot() []byte
 }
 
 type MkProtServer func(SessServer, Tsession) Protsrv
 type RestoreProtServer func(SessServer, []byte) Protsrv
+
+type DetachF func(Tsession)

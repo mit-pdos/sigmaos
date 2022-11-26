@@ -38,6 +38,12 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	return nil
 }
 
+func (rd *rpcDev) detachRpcSession(sid np.Tsession) {
+	if err := rd.pds.MemFs.Remove(sid.String() + "/" + RPC); err != nil {
+		db.DPrintf("RPCDEV", "detachRpcSessoin err %v\n", err)
+	}
+}
+
 // XXX wait on close before processing data?
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	req := &Request{}

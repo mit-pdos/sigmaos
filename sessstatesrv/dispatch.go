@@ -105,7 +105,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		db.DPrintf("SESSION", "Try to detach l %v p %v", req.LeadId, req.PropId)
 		// If the leader proposed this detach message, accept it.
 		if req.LeadId == req.PropId {
-			err := s.protsrv.Detach(reply)
+			err := s.protsrv.Detach(reply, s.detach)
 			return reply, true, err
 		}
 		return reply, false, nil

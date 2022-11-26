@@ -59,7 +59,6 @@ type SessSrv struct {
 	replicated bool
 	ch         chan bool
 	fsl        *fslib.FsLib
-	detach     fs.DetachF
 	cnt        stats.Tcounter
 }
 
@@ -122,13 +121,12 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (ssrv *SessSrv) GetDetach() fs.DetachF {
-	return ssrv.detach
-}
-
-// XXX maybe take np.Tsession?
-func (sssrv *SessSrv) RegisterDetach(f fs.DetachF) error {
-	sssrv.detach = f
+func (sssrv *SessSrv) RegisterDetach(f np.DetachF, sid np.Tsession) *np.Err {
+	sess, ok := sssrv.st.Lookup(sid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, sid)
+	}
+	sess.RegisterDetach(f)
 	return nil
 }
 

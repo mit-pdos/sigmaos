@@ -2,6 +2,7 @@ package procd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -25,20 +26,22 @@ type Procd struct {
 	sync.Mutex
 	*sync.Cond
 	fs               *ProcdFs
-	realmbin         string              // realm path from which to pull/run bins.
-	nToWake          int                 // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
-	wsQueues         map[string][]string // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
-	done             bool
-	addr             string
+	realmbin         string                   // realm path from which to pull/run bins.
+	nToWake          int                      // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
+	wsQueues         map[string][]string      // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
+	done             bool                     // Finished running.
+	kernelInitDone   bool                     // True if kernel init has finished (this procd has spawned ux & s3).
+	kernelProcs      map[string]bool          // Map of kernel procs spawned on this procd.
+	addr             string                   // Address of this procd.
 	procClaimTime    time.Time                // Time used to rate-limit claiming of BE procs.
 	netProcsClaimed  proc.Tcore               // Number of BE procs claimed in the last time interval.
 	procsDownloading proc.Tcore               // Number of procs currently being downloaded.
 	runningProcs     map[proc.Tpid]*LinuxProc // Map of currently running procs.
-	coreBitmap       []Tcorestatus
-	cpuMask          linuxsched.CPUMask // Mask of CPUs available for this procd to use.
-	coresOwned       proc.Tcore         // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail       proc.Tcore         // Current number of cores available to run procs on.
-	memAvail         proc.Tmem          // Available memory for this procd and its procs to use.
+	coreBitmap       []Tcorestatus            // Bitmap of cores owned by this proc
+	cpuMask          linuxsched.CPUMask       // Mask of CPUs available for this procd to use.
+	coresOwned       proc.Tcore               // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail       proc.Tcore               // Current number of cores available to run procs on.
+	memAvail         proc.Tmem                // Available memory for this procd and its procs to use.
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
@@ -46,9 +49,15 @@ type Procd struct {
 	*fslib.FsLib
 }
 
-func RunProcd(realmbin string, grantedCoresIv string) {
+func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	pd := &Procd{}
 	pd.Cond = sync.NewCond(&pd.Mutex)
+	pd.kernelProcs = make(map[string]bool)
+	// If we aren't spawning a full system on this procd, then kernel init is
+	// done (this procd can start to accept procs).
+	if !spawningSys {
+		pd.kernelInitDone = true
+	}
 	pd.realmbin = realmbin
 	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
@@ -135,6 +144,9 @@ func (pd *Procd) readDone() bool {
 }
 
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
+	if p.IsPrivilegedProc() && pd.kernelInitDone {
+		db.DPrintf(db.ALWAYS, "Spawned privileged proc %v on fully initialized procd", p)
+	}
 	// Make a Linux Proc which corresponds to this proc.
 	linuxProc := makeLinuxProc(pd, p, stolen)
 	// Allocate dedicated cores for this proc to run on, if it requires them.
@@ -164,8 +176,13 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 		db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
 		return nil, err
 	}
-	// See if the proc fits on this procd.
-	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) {
+	// Don't steal remote kernel procs.
+	if isRemote && p.IsPrivilegedProc() {
+		return nil, fmt.Errorf("Try steal remote kernel proc")
+	}
+	// See if the proc fits on this procd. Also, make sure that we spawn all
+	// kernel procs before any user procs.
+	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) && (pd.kernelInitDone || p.IsPrivilegedProc()) {
 		// Proc may have been stolen
 		if ok := pd.claimProc(p, procPath); !ok {
 			return nil, nil

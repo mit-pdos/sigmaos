@@ -72,7 +72,7 @@ func TestTwo(t *testing.T) {
 	dirents, err := ts.GetDir(np.S3)
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 2, len(dirents))
+	assert.Equal(t, 1, len(dirents))
 
 	ts.Shutdown()
 }

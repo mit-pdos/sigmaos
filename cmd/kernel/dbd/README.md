@@ -1,11 +1,19 @@
 # Installation
 
-* Install mairiadb
+* Install mariadb
 
   https://wiki.archlinux.org/title/MariaDB#Installation
   # systemctl start mariadb
   
   use root and default pw
+
+* Make mariadb accessible by remote hosts
+
+  $ printf "[mysqld]\nbind-address = 0.0.0.0" | sudo tee /etc/mysql/my.cnf
+
+* Configure mariadb security settings.
+
+  $ sudo mysql_secure_installation
 
 * Create db
 
@@ -26,7 +34,7 @@
 * Create user sigma with pw sigmaos
 
   CREATE USER 'sigma'@'localhost' IDENTIFIED BY 'sigmaos';
-  GRANT ALL PRIVILEGES ON books.* TO 'sigma'@'localhost';
+  GRANT ALL PRIVILEGES ON books.* TO 'sigma'@'%';
   FLUSH PRIVILEGES;
 
 * Run db

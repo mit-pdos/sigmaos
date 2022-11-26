@@ -94,7 +94,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) 
 // Boot a "kernel" without named
 func (s *System) Boot() error {
 	// Procd must boot first, since other services are spawned as procs.
-	if err := s.BootProcd(); err != nil {
+	if err := s.bootProcd(true); err != nil {
 		return err
 	}
 	if err := s.BootFsUxd(); err != nil {
@@ -122,7 +122,13 @@ func (s *System) BootSubsystem(binpath string, args []string, procdIp string, vi
 }
 
 func (s *System) BootProcd() error {
-	err := s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, "", false, &s.procd)
+	return s.bootProcd(false)
+}
+
+// Boot a procd. If spawningSys is true, procd will wait for all kernel procs
+// to be spawned before claiming any procs.
+func (s *System) bootProcd(spawningSys bool) error {
+	err := s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String(), strconv.FormatBool(spawningSys)}, "", false, &s.procd)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -15,6 +16,7 @@ type WebClnt struct {
 	jobname  string
 	srvaddrs []string
 	baseurl  string
+	clnt     *http.Client
 	*fslib.FsLib
 }
 
@@ -23,11 +25,30 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)
 	}
-	return &WebClnt{job, addrs, "http://" + addrs[0], fsl}
+	//	transport := &http.Transport{
+	//		Dial: (&net.Dialer{
+	//			Timeout: 2 * time.Minute,
+	//		}).Dial,
+	//	}
+	clnt := &http.Client{
+		Timeout:   2 * time.Minute,
+		Transport: http.DefaultTransport,
+	}
+	// XXX This is sort of arbitrary, perhaps change or remove?.
+	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
+	return &WebClnt{job, addrs, "http://" + addrs[0], clnt, fsl}
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
-	resp, err := http.PostForm(wc.baseurl+path, vals)
+	u, err := url.Parse(wc.baseurl + path)
+	if err != nil {
+		return nil, err
+	}
+	u.RawQuery, err = url.QueryUnescape(vals.Encode())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := wc.clnt.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +113,7 @@ func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, na
 	vals.Set("lat", fmt.Sprintf("%f", lat))
 	vals.Set("lon", fmt.Sprintf("%f", lon))
 	vals.Set("hotelId", hotelid)
-	vals.Set("customername", name)
+	vals.Set("customerName", name)
 	vals.Set("username", u)
 	vals.Set("password", p)
 	vals.Set("number", fmt.Sprintf("%d", n))

@@ -3,12 +3,11 @@ package protdevsrv
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
 	"reflect"
 	"strings"
 	"time"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/ninep"
@@ -46,13 +45,14 @@ func (rpc *rpcDev) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	start := time.Now()
 	rep = rpc.pds.svc.dispatch(req.Method, req)
 	t := time.Since(start).Microseconds()
-	rpc.pds.sti.stat(req.Method, t, ql)
+	rpc.pds.sti.Stat(req.Method, t, ql)
 
 	rb := new(bytes.Buffer)
 	re := gob.NewEncoder(rb)
 	if err := re.Encode(&rep); err != nil {
 		return nil, np.MkErrError(err)
 	}
+	db.DPrintf("RPCDEV", "Done writeread")
 	return rb.Bytes(), nil
 }
 
@@ -100,7 +100,7 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		for k, _ := range svc.methods {
 			choices = append(choices, k)
 		}
-		log.Printf("dispatch(): unknown method %v in %v; expecting one of %v\n",
+		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
 		return &Reply{nil, "uknown method"}
 	}

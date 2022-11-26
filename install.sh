@@ -8,6 +8,7 @@ usage() {
 
 FROM="local"
 REALM=""
+VERSION=""
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -19,6 +20,11 @@ while [[ "$#" -gt 0 ]]; do
   --realm)
     shift
     REALM=$1
+    shift
+    ;;
+  --version)
+    shift
+    VERSION=$1
     shift
     ;;
   --profile)
@@ -50,7 +56,9 @@ mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
 rm -rf $UXROOT/$REALM/bin/user/*
 if [ $FROM == "local" ]; then
-  VERSION=$(cat "${VERSION_FILE}")
+  if [ -z "$VERSION" ]; then
+    VERSION=$(cat "${VERSION_FILE}")
+  fi
   # Make the user program dir
   mkdir -p $UXROOT/$REALM/bin/user/$VERSION/
   # Copy from local

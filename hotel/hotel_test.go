@@ -86,8 +86,8 @@ func (ts *Tstate) startSrvs(srvs []string) {
 	}
 }
 
-func (ts *Tstate) startCache() {
-	for g := 0; g < NCACHE; g++ {
+func (ts *Tstate) startCache(n int) {
+	for g := 0; g < n; g++ {
 		gn := group.GRP + strconv.Itoa(g)
 		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
 		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
@@ -233,10 +233,13 @@ func TestCacheConcur(t *testing.T) {
 }
 
 func TestShardedCache(t *testing.T) {
-	const N = 10
+	const (
+		N      = 10
+		NSHARD = 2
+	)
 
 	ts := mkTstate(t)
-	ts.startCache()
+	ts.startCache(NSHARD)
 
 	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NCACHE)
 	assert.Nil(t, err)

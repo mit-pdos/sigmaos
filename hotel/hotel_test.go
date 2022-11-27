@@ -162,7 +162,7 @@ func TestCache(t *testing.T) {
 }
 
 func TestCacheDump(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached"})
+	ts := makeTstate(t, []string{"user/cached"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
 	assert.Nil(t, err, "Error mkpdc %v", err)
 	v := []byte("hello")
@@ -194,7 +194,7 @@ func TestCacheDump(t *testing.T) {
 
 func TestCacheConcur(t *testing.T) {
 	const N = 3
-	ts := makeTstate(t, []string{"user/hotel-cached"})
+	ts := makeTstate(t, []string{"user/cached"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
 	assert.Nil(t, err)
 	v := []byte("hello")

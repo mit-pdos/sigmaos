@@ -7,66 +7,37 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
-	"sigmaos/group"
 	"sigmaos/groupmgr"
-	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/test"
 )
 
 type Tstate struct {
 	*test.Tstate
-	job     string
+	cm      *cacheclnt.CacheMgr
 	grpmgrs []*groupmgr.GroupMgr
 }
 
 func mkTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
+	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, rd.String(8), 2)
+	ts.cm.StartCache()
 	return ts
 }
 
-func (ts *Tstate) startCache(n int) {
-	for g := 0; g < n; g++ {
-		gn := group.GRP + strconv.Itoa(g)
-		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
-		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
-	}
-}
-
-func (ts *Tstate) stopCache() {
-	for _, grpmgr := range ts.grpmgrs {
-		err := grpmgr.Stop()
-		assert.Nil(ts.T, err)
-	}
-}
-
-func (ts *Tstate) stop() {
-	ts.stopCache()
-}
-
-func TestShardedCache(t *testing.T) {
+func TestCache(t *testing.T) {
 	const (
 		N      = 10
 		NSHARD = 2
 	)
-
 	ts := mkTstate(t)
-
-	ts.startCache(NSHARD)
-
 	cc, err := cacheclnt.MkCacheClnt(ts.FsLib)
 	assert.Nil(t, err)
 
-	arg := cachesrv.CacheRequest{}
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		arg.Key = key
-		arg.Value = []byte(key)
-		res := &cachesrv.CacheResult{}
-		err = cc.RPC("Cache.Set", arg, &res)
+		err = cc.Set(key, key)
 		assert.Nil(t, err)
 	}
 
@@ -76,6 +47,6 @@ func TestShardedCache(t *testing.T) {
 		assert.Equal(t, 5, len(m))
 	}
 
-	ts.stop()
+	ts.cm.StopCache()
 	ts.Shutdown()
 }

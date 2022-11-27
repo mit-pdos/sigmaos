@@ -17,8 +17,6 @@ import (
 	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
-	"sigmaos/group"
-	"sigmaos/groupmgr"
 	"sigmaos/hotel"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
@@ -44,9 +42,9 @@ func init() {
 
 type Tstate struct {
 	*test.Tstate
-	job     string
-	pids    []proc.Tpid
-	grpmgrs []*groupmgr.GroupMgr
+	job  string
+	pids []proc.Tpid
+	cm   *cacheclnt.CacheMgr
 }
 
 func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
@@ -65,6 +63,7 @@ func mkTstate(t *testing.T) *Tstate {
 	ts.Tstate = test.MakeTstateAll(t)
 	hotel.InitHotelFs(ts.FsLib, ts.job)
 	ts.pids = make([]proc.Tpid, 0)
+	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, cacheclnt.NCACHE)
 	return ts
 }
 
@@ -76,7 +75,7 @@ func makeTstate(t *testing.T, srvs []string) *Tstate {
 
 func makeTstateCache(t *testing.T, srvs []string) *Tstate {
 	ts := mkTstate(t)
-	ts.startCache(cacheclnt.NCACHE)
+	ts.cm.StartCache()
 	ts.startSrvs(srvs)
 	return ts
 }
@@ -99,22 +98,6 @@ func (ts *Tstate) startSrvs(srvs []string) {
 	}
 }
 
-func (ts *Tstate) startCache(n int) {
-	for g := 0; g < n; g++ {
-		gn := group.GRP + strconv.Itoa(g)
-		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
-		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
-
-	}
-}
-
-func (ts *Tstate) stopCache() {
-	for _, grpmgr := range ts.grpmgrs {
-		err := grpmgr.Stop()
-		assert.Nil(ts.T, err)
-	}
-}
-
 func (ts *Tstate) Stats(fn string) {
 	stats := &protdevsrv.Stats{}
 	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
@@ -129,7 +112,7 @@ func (ts *Tstate) stop() {
 		_, err = ts.WaitExit(pid)
 		assert.Nil(ts.T, err)
 	}
-	ts.stopCache()
+	ts.cm.StopCache()
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, 5, len(sts))

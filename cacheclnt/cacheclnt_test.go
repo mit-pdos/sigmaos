@@ -50,6 +50,15 @@ func TestCacheSingle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
+
+	m, err := cc.Dump(0)
+	assert.Nil(t, err)
+	assert.Equal(t, N, len(m))
+
+	m, err = cc.Dump(0)
+	assert.Nil(t, err)
+	assert.Equal(t, N, len(m))
+
 	ts.cm.StopCache()
 	ts.Shutdown()
 }

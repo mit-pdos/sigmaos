@@ -25,7 +25,7 @@ func (mfs *MemFs) MakeDevInode() *inode.Inode {
 	return inode.MakeInode(mfs.ctx, np.DMDEVICE, nil)
 }
 
-func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *np.Err) {
+func (mfs *MemFs) lookup(path np.Path) (fs.FsObj, *lockmap.PathLock, *np.Err) {
 	d := mfs.root
 	lk := mfs.plt.Acquire(mfs.ctx, rootP)
 	if len(path) == 0 {
@@ -33,9 +33,18 @@ func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *np.Err
 	}
 	_, lo, lk, _, err := namei.Walk(mfs.plt, mfs.ctx, d, lk, rootP, path, nil)
 	if err != nil {
+		mfs.plt.Release(mfs.ctx, lk)
 		return nil, nil, err
 	}
-	d = lo.(fs.Dir)
+	return lo, lk, nil
+}
+
+func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *np.Err) {
+	lo, lk, err := mfs.lookup(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	d := lo.(fs.Dir)
 	return d, lk, nil
 }
 
@@ -79,4 +88,14 @@ func (mfs *MemFs) Remove(pn string) *np.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
 	return d.Remove(mfs.ctx, path.Base())
+}
+
+func (mfs *MemFs) Open(pn string, m np.Tmode) (fs.FsObj, *np.Err) {
+	path := np.Split(pn)
+	lo, lk, err := mfs.lookup(path)
+	if err != nil {
+		return nil, err
+	}
+	mfs.plt.Release(mfs.ctx, lk)
+	return lo, nil
 }

@@ -50,31 +50,42 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	sid := ctx.SessionId()
 	n := SidName(sid.String(), c.fn)
-	db.DPrintf("CLONEDEV", "%v: Clone dir %v %v %v\n", proc.GetProgram(), c.fn, sid, n)
-	if _, err := c.mfs.Create(n, np.DMDIR, np.ORDWR); err != nil {
-		db.DPrintf("CLONEDEV", "%v: MkDir %v err %v\n", proc.GetProgram(), n, err)
+	db.DPrintf("CLONEDEV", "%v: Clone create %v\n", proc.GetName(), n)
+	_, err := c.mfs.Create(n, np.DMDIR, np.ORDWR)
+	if err != nil && err.Code() != np.TErrExists {
+		db.DPrintf("CLONEDEV", "%v: MkDir %v err %v\n", proc.GetName(), n, err)
 		return nil, err
 	}
-	s := &session{}
-	s.id = sid
-	s.Inode = c.mfs.MakeDevInode()
+	var s *session
 	ctl := n + "/" + CTL
-	err := c.mfs.MkDev(ctl, s)
-	if err != nil {
-		db.DPrintf("CLONEDEV", "%v: MkDev %v err %v\n", proc.GetProgram(), ctl, err)
-		return nil, err
-	}
-	if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
-		db.DPrintf("CLONEDEV", "%v: RegisterDetach err %v\n", proc.GetProgram(), err)
-	}
-	if err := c.mksession(c.mfs, sid); err != nil {
-		return nil, err
+	if err == nil {
+		s = &session{}
+		s.id = sid
+		s.Inode = c.mfs.MakeDevInode()
+		if err := c.mfs.MkDev(ctl, s); err != nil {
+			db.DPrintf("CLONEDEV", "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
+			return nil, err
+		}
+		if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
+			db.DPrintf("CLONEDEV", "%v: RegisterDetach err %v\n", proc.GetName(), err)
+		}
+		if err := c.mksession(c.mfs, sid); err != nil {
+			return nil, err
+		}
+	} else {
+		lo, err := c.mfs.Open(ctl, np.OREAD)
+		s = lo.(*session)
+		if err != nil {
+			db.DPrintf("CLONEDEV", "%v: open %v err %v\n", proc.GetName(), ctl, err)
+			return nil, err
+		}
 	}
 	return s, nil
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
-	db.DPrintf("CLONEDEV", "%v: Close clone\n", proc.GetProgram())
+	sid := SidName(ctx.SessionId().String(), c.fn)
+	db.DPrintf("CLONEDEV", "%v: Close %v\n", proc.GetName(), sid)
 	return nil
 }
 

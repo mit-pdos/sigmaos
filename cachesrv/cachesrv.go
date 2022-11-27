@@ -49,7 +49,7 @@ func RunCacheSrv(args []string) error {
 	}
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
-	db.DPrintf("HOTELCACHE", "%v: Run %v\n", proc.GetName(), s.grp)
+	db.DPrintf("CACHESRV", "%v: Run %v\n", proc.GetName(), s.grp)
 	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE+s.grp, s)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func RunCacheSrv(args []string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
-	db.DPrintf("HOTELCACHE", "%v: Set %v\n", proc.GetName(), req)
+	db.DPrintf("CACHESRV", "%v: Set %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 	s.c.cache[req.Key] = req.Value
@@ -70,7 +70,7 @@ func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
 }
 
 func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
-	db.DPrintf("HOTELCACHE", "%v: Get %v\n", proc.GetName(), req)
+	db.DPrintf("CACHESRV", "%v: Get %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 
@@ -84,12 +84,13 @@ func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
 
 type cacheSession struct {
 	*inode.Inode
-	c *cache
+	c   *cache
+	sid np.Tsession
 }
 
 func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, *np.Err) {
-	cs := &cacheSession{mfs.MakeDevInode(), s.c}
-	db.DPrintf("HOTELCACHE", "mkSession %v %p\n", cs.c, cs)
+	cs := &cacheSession{mfs.MakeDevInode(), s.c, sid}
+	db.DPrintf("CACHESRV", "mkSession %v %p\n", cs.c, cs)
 	return cs, nil
 }
 
@@ -98,7 +99,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQv
 	if off > 0 {
 		return nil, nil
 	}
-	db.DPrintf("HOTELCACHE", "Dump cache %p %v\n", cs, cs.c)
+	db.DPrintf("CACHESRV", "Dump cache %p %v\n", cs, cs.c)
 	b, err := json.Marshal(cs.c.cache)
 	if err != nil {
 		return nil, np.MkErrError(err)
@@ -108,4 +109,9 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQv
 
 func (cs *cacheSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	return 0, np.MkErr(np.TErrNotSupported, nil)
+}
+
+func (cs *cacheSession) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("CACHESRV", "%v: Close %v\n", proc.GetName(), cs.sid)
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"sigmaos/group"
 	np "sigmaos/ninep"
 	"sigmaos/protdevclntgrp"
+	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
 )
 
@@ -27,11 +28,13 @@ func key2shard(key string, nshard int) int {
 
 type CacheClnt struct {
 	*protdevclntgrp.ClntGroup
-	fsl *fslib.FsLib
+	fsl    *fslib.FsLib
+	nshard int
 }
 
 func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	cc := &CacheClnt{}
+	cc.nshard = n
 	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, np.HOTELCACHE, n)
 	if err != nil {
 		return nil, err
@@ -95,4 +98,24 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
+	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
+	for i := 0; i < cc.nshard; i++ {
+		st, err := cc.ClntGroup.StatsSrv(i)
+		if err != nil {
+			return nil, err
+		}
+		stats = append(stats, st)
+	}
+	return stats, nil
+}
+
+func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
+	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
+	for i := 0; i < cc.nshard; i++ {
+		stats = append(stats, cc.ClntGroup.StatsClnt(i))
+	}
+	return stats
 }

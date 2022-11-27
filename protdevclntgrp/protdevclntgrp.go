@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
 )
 
 type ClntGroup struct {
@@ -34,4 +35,12 @@ func (gc *ClntGroup) Nshard() int {
 
 func (gc *ClntGroup) RPC(g int, m string, arg any, res any) error {
 	return gc.clnts[g].RPC(m, arg, res)
+}
+
+func (gc *ClntGroup) StatsSrv(g int) (*protdevsrv.Stats, error) {
+	return gc.clnts[g].StatsSrv()
+}
+
+func (gc *ClntGroup) StatsClnt(g int) *protdevsrv.Stats {
+	return gc.clnts[g].StatsClnt()
 }

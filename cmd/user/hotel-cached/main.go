@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		db.DFatalf("Usage: %v jobname", os.Args[0])
+	if len(os.Args) < 2 {
+		db.DFatalf("Usage: %v jobname [grpname]", os.Args[0])
 	}
-	if err := hotel.RunCacheSrv(os.Args[0]); err != nil {
+	if err := hotel.RunCacheSrv(os.Args); err != nil {
 		db.DFatalf("Start %v err %v\n", os.Args[0], err)
 	}
 }

@@ -15,12 +15,15 @@ import (
 	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
+	"sigmaos/group"
+	"sigmaos/groupmgr"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
+	"sigmaos/protdevclntgrp"
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	"sigmaos/sessdev"
@@ -39,8 +42,9 @@ func init() {
 
 type Tstate struct {
 	*test.Tstate
-	job  string
-	pids []proc.Tpid
+	job     string
+	pids    []proc.Tpid
+	grpmgrs []*groupmgr.GroupMgr
 }
 
 func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
@@ -53,20 +57,29 @@ func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
 	return p.Pid
 }
 
-func makeTstate(t *testing.T, srvs []string) *Tstate {
-	var err error
+func mkTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
 	hotel.InitHotelFs(ts.FsLib, ts.job)
 	ts.pids = make([]proc.Tpid, 0)
+	return ts
+}
+
+func makeTstate(t *testing.T, srvs []string) *Tstate {
+	ts := mkTstate(t)
+	ts.startSrvs(srvs)
+	return ts
+}
+
+func (ts *Tstate) startSrvs(srvs []string) {
+	var err error
 	for _, s := range srvs {
-		pid := spawn(t, ts, s, ts.job)
+		pid := spawn(ts.T, ts, s, ts.job)
 		err = ts.WaitStart(pid)
-		assert.Nil(t, err)
+		assert.Nil(ts.T, err)
 		ts.pids = append(ts.pids, pid)
 	}
-	return ts
 }
 
 func (ts *Tstate) Stats(fn string) {
@@ -194,6 +207,39 @@ func TestCacheConcur(t *testing.T) {
 	}
 	wg.Wait()
 
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestShardedCache(t *testing.T) {
+	const (
+		N = 2
+	)
+	ts := mkTstate(t)
+
+	for g := 0; g < N; g++ {
+		gn := group.GRP + strconv.Itoa(g)
+		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
+		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
+
+	}
+
+	clntgrp, err := protdevclntgrp.MkProtDevClntGrp(ts.FsLib, N)
+	assert.Nil(t, err)
+
+	v := []byte("hello")
+	arg := hotel.CacheRequest{
+		Key:   "x",
+		Value: v,
+	}
+	res := &hotel.CacheResult{}
+	err = clntgrp.RPC(0, "Cache.Set", arg, &res)
+	assert.Nil(t, err)
+
+	for _, grpmgr := range ts.grpmgrs {
+		err := grpmgr.Stop()
+		assert.Nil(t, err)
+	}
 	ts.stop()
 	ts.Shutdown()
 }

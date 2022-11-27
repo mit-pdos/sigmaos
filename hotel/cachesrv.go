@@ -10,6 +10,7 @@ import (
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
 )
@@ -37,14 +38,19 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	c *cache
+	c   *cache
+	grp string
 }
 
-func RunCacheSrv(n string) error {
+func RunCacheSrv(args []string) error {
 	s := &CacheSrv{}
+	if len(args) > 2 {
+		s.grp = args[2]
+	}
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE, s)
+	db.DPrintf("HOTELCACHE", "%v: Run %v\n", proc.GetName(), s.grp)
+	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE+s.grp, s)
 	if err != nil {
 		return err
 	}
@@ -56,7 +62,7 @@ func RunCacheSrv(n string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
-	db.DPrintf("HOTELCACHE", "Set %v\n", req)
+	db.DPrintf("HOTELCACHE", "%v: Set %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 	s.c.cache[req.Key] = req.Value
@@ -64,7 +70,7 @@ func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
 }
 
 func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
-	db.DPrintf("HOTELCACHE", "Get %v\n", req)
+	db.DPrintf("HOTELCACHE", "%v: Get %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 

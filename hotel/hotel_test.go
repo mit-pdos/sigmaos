@@ -153,7 +153,10 @@ func TestCacheDump(t *testing.T) {
 	b, err = ts.GetFile(fn)
 	assert.Nil(t, err)
 
-	fmt.Printf("dump %v\n", string(b))
+	m := map[string]string{}
+	err = json.Unmarshal(b, &m)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(m))
 
 	ts.stop()
 	ts.Shutdown()

@@ -1,4 +1,4 @@
-package hotel
+package cachesrv
 
 import (
 	"encoding/json"

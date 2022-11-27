@@ -5,7 +5,6 @@ import (
 
 	"sigmaos/fslib"
 	"sigmaos/group"
-	np "sigmaos/ninep"
 	"sigmaos/protdevclnt"
 )
 
@@ -14,13 +13,13 @@ type ClntGroup struct {
 	clnts []*protdevclnt.ProtDevClnt
 }
 
-func MkProtDevClntGrp(fsl *fslib.FsLib, n int) (*ClntGroup, error) {
+func MkProtDevClntGrp(fsl *fslib.FsLib, fn string, n int) (*ClntGroup, error) {
 	clntgrp := &ClntGroup{}
 	clntgrp.clnts = make([]*protdevclnt.ProtDevClnt, 0)
 	clntgrp.FsLib = fsl
 	for g := 0; g < n; g++ {
 		gn := group.GRP + strconv.Itoa(g)
-		pdc, err := protdevclnt.MkProtDevClnt(fsl, np.HOTELCACHE+gn)
+		pdc, err := protdevclnt.MkProtDevClnt(fsl, fn+gn)
 		if err != nil {
 			return nil, err
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
@@ -39,10 +40,6 @@ func init() {
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 }
-
-const (
-	NCACHE = 2
-)
 
 type Tstate struct {
 	*test.Tstate
@@ -72,6 +69,13 @@ func mkTstate(t *testing.T) *Tstate {
 
 func makeTstate(t *testing.T, srvs []string) *Tstate {
 	ts := mkTstate(t)
+	ts.startSrvs(srvs)
+	return ts
+}
+
+func makeTstateCache(t *testing.T, srvs []string) *Tstate {
+	ts := mkTstate(t)
+	ts.startCache(cacheclnt.NCACHE)
 	ts.startSrvs(srvs)
 	return ts
 }
@@ -140,15 +144,15 @@ func TestGeo(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached"})
+	ts := makeTstate(t, []string{"user/cached"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
 	assert.Nil(t, err)
 	v := []byte("hello")
-	arg := hotel.CacheRequest{
+	arg := cachesrv.CacheRequest{
 		Key:   "x",
 		Value: v,
 	}
-	res := &hotel.CacheResult{}
+	res := &cachesrv.CacheResult{}
 	err = pdc.RPC("Cache.Set", arg, &res)
 	assert.Nil(t, err)
 
@@ -159,7 +163,7 @@ func TestCache(t *testing.T) {
 	arg.Key = "y"
 	err = pdc.RPC("Cache.Get", arg, &res)
 	assert.NotNil(t, err)
-	assert.Equal(t, hotel.ErrMiss, err)
+	assert.Equal(t, cacheclnt.ErrMiss, err)
 
 	ts.stop()
 	ts.Shutdown()
@@ -170,20 +174,20 @@ func TestCacheDump(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
 	assert.Nil(t, err)
 	v := []byte("hello")
-	arg := hotel.CacheRequest{
+	arg := cachesrv.CacheRequest{
 		Key:   "x",
 		Value: v,
 	}
-	res := &hotel.CacheResult{}
+	res := &cachesrv.CacheResult{}
 	err = pdc.RPC("Cache.Set", arg, &res)
 	assert.Nil(t, err)
 
-	b, err := ts.GetFile(np.HOTELCACHE + "/" + clonedev.CloneName(hotel.DUMP))
+	b, err := ts.GetFile(np.HOTELCACHE + "/" + clonedev.CloneName(cachesrv.DUMP))
 	assert.Nil(t, err)
 	sid := string(b)
 
-	sidn := clonedev.SidName(sid, hotel.DUMP)
-	fn := np.HOTELCACHE + "/" + sidn + "/" + sessdev.DataName(hotel.DUMP)
+	sidn := clonedev.SidName(sid, cachesrv.DUMP)
+	fn := np.HOTELCACHE + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = ts.GetFile(fn)
 	assert.Nil(t, err)
 
@@ -202,11 +206,11 @@ func TestCacheConcur(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
 	assert.Nil(t, err)
 	v := []byte("hello")
-	arg := hotel.CacheRequest{
+	arg := cachesrv.CacheRequest{
 		Key:   "x",
 		Value: v,
 	}
-	res := &hotel.CacheResult{}
+	res := &cachesrv.CacheResult{}
 	err = pdc.RPC("Cache.Set", arg, &res)
 	assert.Nil(t, err)
 
@@ -215,11 +219,11 @@ func TestCacheConcur(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			arg := hotel.CacheRequest{
+			arg := cachesrv.CacheRequest{
 				Key:   "x",
 				Value: v,
 			}
-			res := &hotel.CacheResult{}
+			res := &cachesrv.CacheResult{}
 			err = pdc.RPC("Cache.Get", arg, res)
 			assert.Nil(t, err)
 			assert.Equal(t, v, res.Value)
@@ -241,20 +245,20 @@ func TestShardedCache(t *testing.T) {
 	ts := mkTstate(t)
 	ts.startCache(NSHARD)
 
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NCACHE)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib)
 	assert.Nil(t, err)
 
-	arg := hotel.CacheRequest{}
+	arg := cachesrv.CacheRequest{}
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
 		arg.Key = key
 		arg.Value = []byte(key)
-		res := &hotel.CacheResult{}
+		res := &cachesrv.CacheResult{}
 		err = cc.RPC("Cache.Set", arg, &res)
 		assert.Nil(t, err)
 	}
 
-	for g := 0; g < NCACHE; g++ {
+	for g := 0; g < cacheclnt.NCACHE; g++ {
 		m, err := cc.Dump(g)
 		assert.Nil(t, err)
 		assert.Equal(t, 5, len(m))
@@ -265,7 +269,7 @@ func TestShardedCache(t *testing.T) {
 }
 
 func TestRate(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-rated"})
+	ts := makeTstateCache(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
 	arg := hotel.RateRequest{
@@ -319,7 +323,7 @@ func TestUser(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-profd"})
+	ts := makeTstateCache(t, []string{"user/hotel-profd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
 	assert.Nil(t, err)
 	arg := hotel.ProfRequest{
@@ -340,7 +344,7 @@ func TestProfile(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-reserved"})
+	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
@@ -362,7 +366,7 @@ func TestCheck(t *testing.T) {
 }
 
 func TestReserve(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-cached", "user/hotel-reserved"})
+	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := hotel.ReserveRequest{
@@ -408,7 +412,7 @@ func TestQueryDev(t *testing.T) {
 }
 
 func TestSingleSearch(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-cached", "user/hotel-rated", "user/hotel-searchd"})
+	ts := makeTstateCache(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := hotel.SearchRequest{
@@ -429,7 +433,7 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-userd", "user/hotel-cached",
+	ts := makeTstateCache(t, []string{"user/hotel-userd",
 		"user/hotel-rated", "user/hotel-geod", "user/hotel-profd",
 		"user/hotel-searchd", "user/hotel-reserved", "user/hotel-recd",
 		"user/hotel-wwwd"})
@@ -525,7 +529,7 @@ func toss(r *rand.Rand) float64 {
 	return float64(toss) / 1000
 }
 
-var hotelsvcs = []string{"user/hotel-userd", "user/hotel-cached", "user/hotel-rated",
+var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
@@ -564,7 +568,7 @@ func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := makeTstate(t, hotelsvcs)
+	ts := makeTstateCache(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
 	for _, s := range np.HOTELSVC {
@@ -592,7 +596,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearch(t *testing.T) {
-	ts := makeTstate(t, hotelsvcs)
+	ts := makeTstateCache(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
@@ -635,7 +639,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := makeTstate(t, hotelsvcs)
+	ts := makeTstateCache(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

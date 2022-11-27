@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
@@ -38,7 +39,7 @@ type Number struct {
 
 type Reserve struct {
 	dbc    *dbclnt.DbClnt
-	cachec *CacheClnt
+	cachec *cacheclnt.CacheClnt
 }
 
 func (s *Reserve) initDb() error {
@@ -96,7 +97,7 @@ func RunReserveSrv(n string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(pds.MemFs.FsLib(), np.HOTELCACHE)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib())
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, m
 
 		var reserves []Reservation
 		if err := s.cachec.Get(key, &count); err != nil {
-			if err.Error() != ErrMiss.Error() {
+			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return false, nil, err
 			}
 			db.DPrintf("HOTELRESERVE", "Check: cache miss res: key %v\n", key)
@@ -153,7 +154,7 @@ func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, m
 		hotel_cap := 0
 		key = hotelId + "_cap"
 		if err := s.cachec.Get(key, &hotel_cap); err != nil {
-			if err.Error() != ErrMiss.Error() {
+			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return false, nil, err
 			}
 			db.DPrintf("HOTELRESERVE", "Check: cache miss id: key %v\n", key)

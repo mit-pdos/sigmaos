@@ -5,13 +5,21 @@ import (
 	"hash/fnv"
 	"strconv"
 
+	"sigmaos/cachesrv"
 	"sigmaos/clonedev"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	"sigmaos/hotel"
 	np "sigmaos/ninep"
 	"sigmaos/protdevclntgrp"
 	"sigmaos/sessdev"
+)
+
+const (
+	NCACHE = 2
+)
+
+var (
+	ErrMiss = cachesrv.ErrMiss
 )
 
 func key2shard(key string, nshard int) int {
@@ -26,9 +34,9 @@ type CacheClnt struct {
 	fsl *fslib.FsLib
 }
 
-func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
+func MkCacheClnt(fsl *fslib.FsLib) (*CacheClnt, error) {
 	cc := &CacheClnt{}
-	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, n)
+	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, np.HOTELCACHE, NCACHE)
 	if err != nil {
 		return nil, err
 	}
@@ -37,22 +45,50 @@ func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	return cc, nil
 }
 
-func (cc *CacheClnt) RPC(m string, arg hotel.CacheRequest, res any) error {
+func (cc *CacheClnt) RPC(m string, arg cachesrv.CacheRequest, res any) error {
 	n := key2shard(arg.Key, cc.Nshard())
 	return cc.ClntGroup.RPC(n, m, arg, res)
+}
+
+func (c *CacheClnt) Set(key string, val any) error {
+	req := cachesrv.CacheRequest{}
+	req.Key = key
+	b, err := json.Marshal(val)
+	if err != nil {
+		return nil
+	}
+	req.Value = b
+	var res cachesrv.CacheResult
+	if err := c.RPC("Cache.Set", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CacheClnt) Get(key string, val any) error {
+	req := cachesrv.CacheRequest{}
+	req.Key = key
+	var res cachesrv.CacheResult
+	if err := c.RPC("Cache.Get", req, &res); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(res.Value, val); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	gn := group.GRP + strconv.Itoa(g)
 
-	b, err := cc.fsl.GetFile(np.HOTELCACHE + gn + "/" + clonedev.CloneName(hotel.DUMP))
+	b, err := cc.fsl.GetFile(np.HOTELCACHE + gn + "/" + clonedev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
 
-	sidn := clonedev.SidName(sid, hotel.DUMP)
-	fn := np.HOTELCACHE + gn + "/" + sidn + "/" + sessdev.DataName(hotel.DUMP)
+	sidn := clonedev.SidName(sid, cachesrv.DUMP)
+	fn := np.HOTELCACHE + gn + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err

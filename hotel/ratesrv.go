@@ -8,6 +8,7 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
@@ -57,7 +58,7 @@ type RateResult struct {
 
 type Rate struct {
 	dbc    *dbclnt.DbClnt
-	cachec *CacheClnt
+	cachec *cacheclnt.CacheClnt
 }
 
 // Run starts the server
@@ -72,7 +73,7 @@ func RunRateSrv(n string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(pds.MemFs.FsLib(), np.HOTELCACHE)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib())
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 		r := &RatePlan{}
 		key := hotelId + "_rate"
 		if err := s.cachec.Get(key, r); err != nil {
-			if err.Error() != ErrMiss.Error() {
+			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return err
 			}
 			db.DPrintf("HOTELRATE", "Cache miss: key %v\n", hotelId)

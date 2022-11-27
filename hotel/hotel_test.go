@@ -43,6 +43,7 @@ type Tstate struct {
 	job  string
 	pids []proc.Tpid
 	cm   *cacheclnt.CacheMgr
+	cc   *cacheclnt.CacheClnt
 }
 
 func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
@@ -75,6 +76,9 @@ func makeTstateCache(t *testing.T, srvs []string) *Tstate {
 	ts := mkTstate(t)
 	ts.cm.StartCache()
 	ts.startSrvs(srvs)
+	var err error
+	ts.cc, err = cacheclnt.MkCacheClnt(ts.FsLib, hotel.NCACHE)
+	assert.Nil(ts.T, err)
 	return ts
 }
 
@@ -96,7 +100,18 @@ func (ts *Tstate) startSrvs(srvs []string) {
 	}
 }
 
-func (ts *Tstate) Stats(fn string) {
+func (ts *Tstate) PrintStats() {
+	for _, s := range np.HOTELSVC {
+		ts.statsSrv(s)
+	}
+	cs, err := ts.cc.StatsSrv()
+	assert.Nil(ts.T, err)
+	for i, cstat := range cs {
+		fmt.Printf("= cache-%v: %v\n", i, cstat)
+	}
+}
+
+func (ts *Tstate) statsSrv(fn string) {
 	stats := &protdevsrv.Stats{}
 	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
 	assert.Nil(ts.T, err, "error get stats %v", err)
@@ -436,9 +451,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	ts := makeTstateCache(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	benchDSB(ts, wc)
-	for _, s := range np.HOTELSVC {
-		ts.Stats(s)
-	}
+	ts.PrintStats()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -449,7 +462,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstate(t, nil)
+	ts := makeTstateCache(t, nil)
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
@@ -470,9 +483,7 @@ func TestBenchSearch(t *testing.T) {
 		benchSearch(ts.T, wc, r)
 	})
 	lg.Run()
-	for _, s := range np.HOTELSVC {
-		ts.Stats(s)
-	}
+	ts.PrintStats()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -483,7 +494,7 @@ func TestBenchSearchK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstate(t, nil)
+	ts := makeTstateCache(t, nil)
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
@@ -521,9 +532,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 		<-ch
 	}
 	db.DPrintf(db.ALWAYS, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
-	for _, s := range np.HOTELSVC {
-		ts.Stats(s)
-	}
+	ts.PrintStats()
 	ts.stop()
 	ts.Shutdown()
 }

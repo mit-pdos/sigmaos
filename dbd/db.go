@@ -2,9 +2,9 @@ package dbd
 
 import (
 	// db "sigmaos/debug"
-	"sigmaos/filedev"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+	"sigmaos/sessdev"
 )
 
 //
@@ -28,7 +28,7 @@ func RunDbd(dbdaddr string) error {
 		return err
 	}
 	qd := &queryDev{dbdaddr}
-	if err := filedev.MkFileDev(pds.MemFs, QDEV, qd.mkSession); err != nil {
+	if err := sessdev.MkSessDev(pds.MemFs, QDEV, qd.mkSession); err != nil {
 		return err
 	}
 	return pds.RunServer()

@@ -14,7 +14,6 @@ import (
 
 	"sigmaos/dbd"
 	db "sigmaos/debug"
-	"sigmaos/filedev"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
@@ -23,6 +22,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
+	"sigmaos/sessdev"
 	"sigmaos/test"
 )
 
@@ -291,13 +291,13 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	b, err := ts.GetFile(np.DBD + filedev.CLONE + dbd.QDEV)
+	b, err := ts.GetFile(np.DBD + sessdev.CLONE + dbd.QDEV)
 	assert.Nil(t, err)
 	sid := string(b)
 	q := fmt.Sprintf("select * from reservation")
-	_, err = ts.SetFile(np.DBD+sid+"/"+filedev.DATA+dbd.QDEV, []byte(q), np.OWRITE, 0)
+	_, err = ts.SetFile(np.DBD+sid+"/"+sessdev.DATA+dbd.QDEV, []byte(q), np.OWRITE, 0)
 	assert.Nil(t, err)
-	b, err = ts.GetFile(np.DBD + sid + "/" + filedev.DATA + dbd.QDEV)
+	b, err = ts.GetFile(np.DBD + sid + "/" + sessdev.DATA + dbd.QDEV)
 	assert.Nil(t, err)
 
 	res := []hotel.Reservation{}

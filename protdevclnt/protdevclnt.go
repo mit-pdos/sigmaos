@@ -11,6 +11,7 @@ import (
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+	"sigmaos/sessdev"
 )
 
 type ProtDevClnt struct {
@@ -26,12 +27,12 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	pdc.si = protdevsrv.MakeStatInfo()
 	pdc.FsLib = fsl
 	pdc.fn = fn
-	b, err := pdc.GetFile(path.Join(pdc.fn, protdevsrv.CLONE))
+	b, err := pdc.GetFile(pdc.fn + "/" + sessdev.CLONE + protdevsrv.RPC)
 	if err != nil {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	pdc.sid = "/" + string(b)
-	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+protdevsrv.RPC, np.ORDWR)
+	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.DATA+protdevsrv.RPC, np.ORDWR)
 	if err != nil {
 		return nil, err
 	}

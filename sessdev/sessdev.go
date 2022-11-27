@@ -1,4 +1,4 @@
-package filedev
+package sessdev
 
 import (
 	"sigmaos/clonedev"
@@ -15,14 +15,14 @@ const (
 
 type MkSessionF func(*memfssrv.MemFs, np.Tsession) (fs.Inode, *np.Err)
 
-type FileDev struct {
+type SessDev struct {
 	mfs *memfssrv.MemFs
 	fn  string
 	mks MkSessionF
 }
 
-func MkFileDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
-	fd := &FileDev{mfs, fn, mks}
+func MkSessDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
+	fd := &SessDev{mfs, fn, mks}
 	if err := clonedev.MkCloneDev(mfs, CLONE+fn, fd.mkSession, fd.detachSession); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func MkFileDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
 }
 
 // XXX clean up in case of error
-func (fd *FileDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+func (fd *SessDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	sess, err := fd.mks(mfs, sid)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (fd *FileDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	return nil
 }
 
-func (fd *FileDev) detachSession(sid np.Tsession) {
+func (fd *SessDev) detachSession(sid np.Tsession) {
 	if err := fd.mfs.Remove(sid.String() + "/" + DATA + fd.fn); err != nil {
 		debug.DPrintf("DBSRV", "detachSessoin err %v\n", err)
 	}

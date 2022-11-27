@@ -27,20 +27,11 @@ type rpcSession struct {
 	pds *ProtDevSrv
 }
 
-func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, *np.Err) {
 	rpc := &rpcSession{}
 	rpc.pds = rd.pds
 	rpc.Inode = mfs.MakeDevInode()
-	if err := mfs.MkDev(sid.String()+"/"+RPC, rpc); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (rd *rpcDev) detachRpcSession(sid np.Tsession) {
-	if err := rd.pds.MemFs.Remove(sid.String() + "/" + RPC); err != nil {
-		db.DPrintf("RPCDEV", "detachRpcSessoin err %v\n", err)
-	}
+	return rpc, nil
 }
 
 // XXX wait on close before processing data?

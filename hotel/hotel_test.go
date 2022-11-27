@@ -40,6 +40,10 @@ func init() {
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 }
 
+const (
+	NCACHE = 2
+)
+
 type Tstate struct {
 	*test.Tstate
 	job     string
@@ -82,6 +86,22 @@ func (ts *Tstate) startSrvs(srvs []string) {
 	}
 }
 
+func (ts *Tstate) startCache() {
+	for g := 0; g < NCACHE; g++ {
+		gn := group.GRP + strconv.Itoa(g)
+		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
+		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
+
+	}
+}
+
+func (ts *Tstate) stopCache() {
+	for _, grpmgr := range ts.grpmgrs {
+		err := grpmgr.Stop()
+		assert.Nil(ts.T, err)
+	}
+}
+
 func (ts *Tstate) Stats(fn string) {
 	stats := &protdevsrv.Stats{}
 	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
@@ -96,6 +116,7 @@ func (ts *Tstate) stop() {
 		_, err = ts.WaitExit(pid)
 		assert.Nil(ts.T, err)
 	}
+	ts.stopCache()
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, 5, len(sts))
@@ -212,19 +233,10 @@ func TestCacheConcur(t *testing.T) {
 }
 
 func TestShardedCache(t *testing.T) {
-	const (
-		N = 2
-	)
 	ts := mkTstate(t)
+	ts.startCache()
 
-	for g := 0; g < N; g++ {
-		gn := group.GRP + strconv.Itoa(g)
-		grpmgr := groupmgr.Start(ts.FsLib, ts.ProcClnt, 1, "user/hotel-cached", []string{gn}, ts.job, proc.Tcore(1), 0, 0, 0, 0)
-		ts.grpmgrs = append(ts.grpmgrs, grpmgr)
-
-	}
-
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, N)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NCACHE)
 	assert.Nil(t, err)
 
 	v := []byte("hello")
@@ -236,10 +248,6 @@ func TestShardedCache(t *testing.T) {
 	err = cc.RPC("Cache.Set", arg, &res)
 	assert.Nil(t, err)
 
-	for _, grpmgr := range ts.grpmgrs {
-		err := grpmgr.Stop()
-		assert.Nil(t, err)
-	}
 	ts.stop()
 	ts.Shutdown()
 }

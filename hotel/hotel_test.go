@@ -20,6 +20,7 @@ import (
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	"sigmaos/hotel"
+	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
@@ -81,6 +82,14 @@ func makeTstateCache(t *testing.T, srvs []string) *Tstate {
 }
 
 func (ts *Tstate) startSrvs(srvs []string) {
+	// If running as a test (not in a realm), and too few cores, then start more
+	// procds.
+	if !ts.RunningInRealm() {
+		// Start enough procds to run all of the srvs.
+		for i := 1; int(linuxsched.NCores)*i < len(srvs); i++ {
+			ts.BootProcd()
+		}
+	}
 	var err error
 	for _, s := range srvs {
 		pid := spawn(ts.T, ts, s, ts.job)
@@ -172,7 +181,7 @@ func TestCache(t *testing.T) {
 func TestCacheDump(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-cached"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Error mkpdc %v", err)
 	v := []byte("hello")
 	arg := cachesrv.CacheRequest{
 		Key:   "x",

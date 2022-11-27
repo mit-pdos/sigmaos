@@ -82,8 +82,8 @@ func (ts *Tstate) startSrvs(srvs []string) {
 	// If running as a test (not in a realm), and too few cores, then start more
 	// procds.
 	if !ts.RunningInRealm() {
-		// Start enough procds to run all of the srvs.
-		for i := 1; int(linuxsched.NCores)*i < len(srvs); i++ {
+		// Start enough procds to run all of the srvs and the caches.
+		for i := 1; int(linuxsched.NCores)*i < len(srvs)+hotel.NCACHE; i++ {
 			ts.BootProcd()
 		}
 	}

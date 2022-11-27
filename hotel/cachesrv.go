@@ -32,7 +32,8 @@ type CacheResult struct {
 }
 
 type cache struct {
-	sync.Map
+	sync.Mutex
+	cache map[string][]byte
 }
 
 type CacheSrv struct {
@@ -42,6 +43,7 @@ type CacheSrv struct {
 func RunCacheSrv(n string) error {
 	s := &CacheSrv{}
 	s.c = &cache{}
+	s.c.cache = make(map[string][]byte)
 	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE, s)
 	if err != nil {
 		return err
@@ -55,15 +57,20 @@ func RunCacheSrv(n string) error {
 // XXX support timeout
 func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
 	db.DPrintf("HOTELCACHE", "Set %v\n", req)
-	s.c.Map.Store(req.Key, req.Value)
+	s.c.Lock()
+	defer s.c.Unlock()
+	s.c.cache[req.Key] = req.Value
 	return nil
 }
 
 func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
 	db.DPrintf("HOTELCACHE", "Get %v\n", req)
-	v, ok := s.c.Map.Load(req.Key)
+	s.c.Lock()
+	defer s.c.Unlock()
+
+	b, ok := s.c.cache[req.Key]
 	if ok {
-		rep.Value = v.([]byte)
+		rep.Value = b
 		return nil
 	}
 	return ErrMiss

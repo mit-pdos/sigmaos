@@ -24,11 +24,11 @@ type Clone struct {
 
 func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np.Err {
 	cl := &Clone{}
-	i, err := mfs.MkDev(fn, cl) // put clone file into root dir
+	cl.Inode = mfs.MakeDevInode()
+	err := mfs.MkDev(fn, cl) // put clone file into root dir
 	if err != nil {
 		return err
 	}
-	cl.Inode = i
 	cl.mfs = mfs
 	cl.mksession = mks
 	cl.detach = d
@@ -44,11 +44,11 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	}
 	s := &session{}
 	s.id = sid
-	i, err := c.mfs.MkDev(sid.String()+"/"+CTL, s)
+	s.Inode = c.mfs.MakeDevInode()
+	err := c.mfs.MkDev(sid.String()+"/"+CTL, s)
 	if err != nil {
 		return nil, err
 	}
-	s.Inode = i
 	if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
 		db.DPrintf("CLONEDEV", "%v: RegisterDetach err %v\n", proc.GetProgram(), err)
 	}

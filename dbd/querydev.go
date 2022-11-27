@@ -10,25 +10,15 @@ import (
 	np "sigmaos/ninep"
 )
 
-const (
-	CLONEQDEV = "clone-query"
-	QUERY     = "query"
-)
-
 type queryDev struct {
 	dbaddr string
-	mfs    *memfssrv.MemFs
-}
-
-func mkFileDev(dbaddr string, mfs *memfssrv.MemFs) *queryDev {
-	return &queryDev{dbaddr, mfs}
 }
 
 type fileSession struct {
 	*inode.Inode
 	id     np.Tsession
-	res    []byte
 	dbaddr string
+	res    []byte
 }
 
 // XXX wait on close before processing data?
@@ -60,20 +50,10 @@ func (fs *fileSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQve
 }
 
 // XXX clean up in case of error
-func (fd *queryDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+func (qd *queryDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, *np.Err) {
 	fs := &fileSession{}
+	fs.Inode = mfs.MakeDevInode()
 	fs.id = sid
-	fs.dbaddr = fd.dbaddr
-	i, err := mfs.MkDev(sid.String()+"/"+QUERY, fs)
-	if err != nil {
-		return err
-	}
-	fs.Inode = i
-	return nil
-}
-
-func (fd *queryDev) detachSession(sid np.Tsession) {
-	if err := fd.mfs.Remove(sid.String() + "/" + QUERY); err != nil {
-		debug.DPrintf("DBSRV", "detachSessoin err %v\n", err)
-	}
+	fs.dbaddr = qd.dbaddr
+	return fs, nil
 }

@@ -18,11 +18,11 @@ type SpawnFile struct {
 func makeSpawnFile(pd *Procd) *np.Err {
 	sp := &SpawnFile{}
 	sp.pd = pd
-	i, err := pd.memfssrv.MkDev(np.PROCD_SPAWN_FILE, sp)
+	sp.Inode = pd.memfssrv.MakeDevInode()
+	err := pd.memfssrv.MkDev(np.PROCD_SPAWN_FILE, sp)
 	if err != nil {
 		return err
 	}
-	sp.Inode = i
 	return nil
 }
 

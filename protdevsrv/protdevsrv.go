@@ -4,17 +4,15 @@ import (
 	"log"
 	"reflect"
 
-	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/sessdev"
 )
 
 const (
 	STATS = "stats"
-	CLONE = "clone-rpc"
 	RPC   = "rpc"
-	CTL   = "ctl"
 )
 
 //
@@ -60,7 +58,7 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := clonedev.MkCloneDev(psd.MemFs, CLONE, rd.mkRpcSession, rd.detachRpcSession); err != nil {
+	if err := sessdev.MkSessDev(psd.MemFs, RPC, rd.mkRpcSession); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {

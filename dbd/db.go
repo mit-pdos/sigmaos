@@ -2,9 +2,9 @@ package dbd
 
 import (
 	// db "sigmaos/debug"
-	"sigmaos/clonedev"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+	"sigmaos/sessdev"
 )
 
 //
@@ -12,6 +12,10 @@ import (
 // interface, modeled after
 // http://man.cat-v.org/plan_9_contrib/4/mysqlfs
 //
+
+const (
+	QDEV = "query"
+)
 
 func RunDbd(dbdaddr string) error {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
@@ -23,9 +27,9 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	fd := mkFileDev(dbdaddr, pds.MemFs)
-	if err := clonedev.MkCloneDev(pds.MemFs, CLONEQDEV, fd.mkSession, fd.detachSession); err != nil {
-		return nil
+	qd := &queryDev{dbdaddr}
+	if err := sessdev.MkSessDev(pds.MemFs, QDEV, qd.mkSession); err != nil {
+		return err
 	}
 	return pds.RunServer()
 }

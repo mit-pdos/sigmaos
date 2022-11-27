@@ -14,10 +14,6 @@ import (
 	"sigmaos/sessdev"
 )
 
-const (
-	NCACHE = 2
-)
-
 var (
 	ErrMiss = cachesrv.ErrMiss
 )
@@ -34,9 +30,9 @@ type CacheClnt struct {
 	fsl *fslib.FsLib
 }
 
-func MkCacheClnt(fsl *fslib.FsLib) (*CacheClnt, error) {
+func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	cc := &CacheClnt{}
-	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, np.HOTELCACHE, NCACHE)
+	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, np.HOTELCACHE, n)
 	if err != nil {
 		return nil, err
 	}

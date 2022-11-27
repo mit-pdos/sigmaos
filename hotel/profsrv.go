@@ -16,6 +16,7 @@ import (
 
 const (
 	NHOTEL = 80
+	NCACHE = 2
 )
 
 type ProfileFlat struct {
@@ -58,7 +59,7 @@ func RunProfSrv(n string) error {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib())
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), NCACHE)
 	if err != nil {
 		return err
 	}

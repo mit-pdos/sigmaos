@@ -236,38 +236,6 @@ func TestCacheConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestShardedCache(t *testing.T) {
-	const (
-		N      = 10
-		NSHARD = 2
-	)
-
-	ts := mkTstate(t)
-	ts.startCache(NSHARD)
-
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib)
-	assert.Nil(t, err)
-
-	arg := cachesrv.CacheRequest{}
-	for k := 0; k < N; k++ {
-		key := strconv.Itoa(k)
-		arg.Key = key
-		arg.Value = []byte(key)
-		res := &cachesrv.CacheResult{}
-		err = cc.RPC("Cache.Set", arg, &res)
-		assert.Nil(t, err)
-	}
-
-	for g := 0; g < cacheclnt.NCACHE; g++ {
-		m, err := cc.Dump(g)
-		assert.Nil(t, err)
-		assert.Equal(t, 5, len(m))
-	}
-
-	ts.stop()
-	ts.Shutdown()
-}
-
 func TestRate(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)

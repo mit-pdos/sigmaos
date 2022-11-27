@@ -13,6 +13,14 @@ const (
 	DATA  = "data-"
 )
 
+func Clone(fn string) string {
+	return CLONE + fn
+}
+
+func Data(fn string) string {
+	return DATA + fn
+}
+
 type MkSessionF func(*memfssrv.MemFs, np.Tsession) (fs.Inode, *np.Err)
 
 type SessDev struct {

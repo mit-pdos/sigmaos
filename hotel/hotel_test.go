@@ -291,13 +291,13 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	b, err := ts.GetFile(np.DBD + sessdev.CLONE + dbd.QDEV)
+	b, err := ts.GetFile(np.DBD + sessdev.Clone(dbd.QDEV))
 	assert.Nil(t, err)
 	sid := string(b)
 	q := fmt.Sprintf("select * from reservation")
-	_, err = ts.SetFile(np.DBD+sid+"/"+sessdev.DATA+dbd.QDEV, []byte(q), np.OWRITE, 0)
+	_, err = ts.SetFile(np.DBD+sid+"/"+sessdev.Data(dbd.QDEV), []byte(q), np.OWRITE, 0)
 	assert.Nil(t, err)
-	b, err = ts.GetFile(np.DBD + sid + "/" + sessdev.DATA + dbd.QDEV)
+	b, err = ts.GetFile(np.DBD + sid + "/" + sessdev.Data(dbd.QDEV))
 	assert.Nil(t, err)
 
 	res := []hotel.Reservation{}

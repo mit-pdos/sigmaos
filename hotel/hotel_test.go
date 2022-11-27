@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
 	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
@@ -63,7 +61,7 @@ func mkTstate(t *testing.T) *Tstate {
 	ts.Tstate = test.MakeTstateAll(t)
 	hotel.InitHotelFs(ts.FsLib, ts.job)
 	ts.pids = make([]proc.Tpid, 0)
-	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, cacheclnt.NCACHE)
+	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, hotel.NCACHE)
 	return ts
 }
 
@@ -131,99 +129,6 @@ func TestGeo(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	assert.Equal(t, 5, len(res.HotelIds))
-	ts.stop()
-	ts.Shutdown()
-}
-
-func TestCache(t *testing.T) {
-	ts := makeTstate(t, []string{"user/cached"})
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
-	assert.Nil(t, err)
-	v := []byte("hello")
-	arg := cachesrv.CacheRequest{
-		Key:   "x",
-		Value: v,
-	}
-	res := &cachesrv.CacheResult{}
-	err = pdc.RPC("Cache.Set", arg, &res)
-	assert.Nil(t, err)
-
-	err = pdc.RPC("Cache.Get", arg, &res)
-	assert.Nil(t, err)
-	assert.Equal(t, v, res.Value)
-
-	arg.Key = "y"
-	err = pdc.RPC("Cache.Get", arg, &res)
-	assert.NotNil(t, err)
-	assert.Equal(t, cacheclnt.ErrMiss, err)
-
-	ts.stop()
-	ts.Shutdown()
-}
-
-func TestCacheDump(t *testing.T) {
-	ts := makeTstate(t, []string{"user/cached"})
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
-	assert.Nil(t, err, "Error mkpdc %v", err)
-	v := []byte("hello")
-	arg := cachesrv.CacheRequest{
-		Key:   "x",
-		Value: v,
-	}
-	res := &cachesrv.CacheResult{}
-	err = pdc.RPC("Cache.Set", arg, &res)
-	assert.Nil(t, err)
-
-	b, err := ts.GetFile(np.HOTELCACHE + "/" + clonedev.CloneName(cachesrv.DUMP))
-	assert.Nil(t, err)
-	sid := string(b)
-
-	sidn := clonedev.SidName(sid, cachesrv.DUMP)
-	fn := np.HOTELCACHE + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
-	b, err = ts.GetFile(fn)
-	assert.Nil(t, err)
-
-	m := map[string]string{}
-	err = json.Unmarshal(b, &m)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(m))
-
-	ts.stop()
-	ts.Shutdown()
-}
-
-func TestCacheConcur(t *testing.T) {
-	const N = 3
-	ts := makeTstate(t, []string{"user/cached"})
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
-	assert.Nil(t, err)
-	v := []byte("hello")
-	arg := cachesrv.CacheRequest{
-		Key:   "x",
-		Value: v,
-	}
-	res := &cachesrv.CacheResult{}
-	err = pdc.RPC("Cache.Set", arg, &res)
-	assert.Nil(t, err)
-
-	wg := &sync.WaitGroup{}
-	for i := 0; i < N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			arg := cachesrv.CacheRequest{
-				Key:   "x",
-				Value: v,
-			}
-			res := &cachesrv.CacheResult{}
-			err = pdc.RPC("Cache.Get", arg, res)
-			assert.Nil(t, err)
-			assert.Equal(t, v, res.Value)
-			db.DPrintf("TEST", "Done get")
-		}()
-	}
-	wg.Wait()
-
 	ts.stop()
 	ts.Shutdown()
 }

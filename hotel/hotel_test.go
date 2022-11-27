@@ -233,20 +233,29 @@ func TestCacheConcur(t *testing.T) {
 }
 
 func TestShardedCache(t *testing.T) {
+	const N = 10
+
 	ts := mkTstate(t)
 	ts.startCache()
 
 	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NCACHE)
 	assert.Nil(t, err)
 
-	v := []byte("hello")
-	arg := hotel.CacheRequest{
-		Key:   "x",
-		Value: v,
+	arg := hotel.CacheRequest{}
+	for k := 0; k < N; k++ {
+		key := strconv.Itoa(k)
+		arg.Key = key
+		arg.Value = []byte(key)
+		res := &hotel.CacheResult{}
+		err = cc.RPC("Cache.Set", arg, &res)
+		assert.Nil(t, err)
 	}
-	res := &hotel.CacheResult{}
-	err = cc.RPC("Cache.Set", arg, &res)
-	assert.Nil(t, err)
+
+	for g := 0; g < NCACHE; g++ {
+		m, err := cc.Dump(g)
+		assert.Nil(t, err)
+		assert.Equal(t, 5, len(m))
+	}
 
 	ts.stop()
 	ts.Shutdown()

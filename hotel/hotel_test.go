@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/cacheclnt"
 	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
@@ -23,7 +24,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevclntgrp"
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	"sigmaos/sessdev"
@@ -224,7 +224,7 @@ func TestShardedCache(t *testing.T) {
 
 	}
 
-	clntgrp, err := protdevclntgrp.MkProtDevClntGrp(ts.FsLib, N)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, N)
 	assert.Nil(t, err)
 
 	v := []byte("hello")
@@ -233,7 +233,7 @@ func TestShardedCache(t *testing.T) {
 		Value: v,
 	}
 	res := &hotel.CacheResult{}
-	err = clntgrp.RPC(0, "Cache.Set", arg, &res)
+	err = cc.RPC("Cache.Set", arg, &res)
 	assert.Nil(t, err)
 
 	for _, grpmgr := range ts.grpmgrs {

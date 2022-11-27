@@ -29,6 +29,10 @@ func MkProtDevClntGrp(fsl *fslib.FsLib, n int) (*ClntGroup, error) {
 	return clntgrp, nil
 }
 
+func (gc *ClntGroup) Nshard() int {
+	return len(gc.clnts)
+}
+
 func (gc *ClntGroup) RPC(g int, m string, arg any, res any) error {
 	return gc.clnts[g].RPC(m, arg, res)
 }

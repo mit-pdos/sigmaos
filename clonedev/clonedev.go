@@ -10,43 +10,58 @@ import (
 )
 
 const (
-	CTL = "ctl"
+	CLONE = "clone-"
+	CTL   = "ctl"
 )
 
 type MkSessionF func(*memfssrv.MemFs, np.Tsession) *np.Err
+
+func SidName(sid string, fn string) string {
+	return sid + "-" + fn
+}
+
+func CloneName(fn string) string {
+	return CLONE + fn
+}
 
 type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
 	detach    np.DetachF
+	fn        string
 }
 
 func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
-	err := mfs.MkDev(fn, cl) // put clone file into root dir
+	err := mfs.MkDev(CloneName(fn), cl) // put clone file into root dir
 	if err != nil {
 		return err
 	}
 	cl.mfs = mfs
 	cl.mksession = mks
 	cl.detach = d
+	cl.fn = fn
 	return nil
 }
 
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	sid := ctx.SessionId()
-	db.DPrintf("CLONEDEV", "%v: Open clone dir %v\n", proc.GetProgram(), sid)
-	if _, err := c.mfs.Create(sid.String(), np.DMDIR, np.ORDWR); err != nil {
+	n := SidName(sid.String(), c.fn)
+	db.DPrintf("CLONEDEV", "%v: Clone dir %v %v %v\n", proc.GetProgram(), c.fn, sid, n)
+	if _, err := c.mfs.Create(n, np.DMDIR, np.ORDWR); err != nil {
+		db.DPrintf("CLONEDEV", "%v: MkDir %v err %v\n", proc.GetProgram(), n, err)
 		return nil, err
 	}
 	s := &session{}
 	s.id = sid
 	s.Inode = c.mfs.MakeDevInode()
-	err := c.mfs.MkDev(sid.String()+"/"+CTL, s)
+	ctl := n + "/" + CTL
+	err := c.mfs.MkDev(ctl, s)
 	if err != nil {
+		db.DPrintf("CLONEDEV", "%v: MkDev %v err %v\n", proc.GetProgram(), ctl, err)
 		return nil, err
 	}
 	if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
@@ -65,9 +80,10 @@ func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 func (c *Clone) Detach(session np.Tsession) {
 	db.DPrintf("CLONEDEV", "Detach %v\n", session)
-	dir := session.String() + "/"
-	if err := c.mfs.Remove(dir + CTL); err != nil {
-		db.DPrintf("CLONEDEV", "Remove ctl err %v\n", err)
+	dir := SidName(session.String(), c.fn)
+	n := dir + "/" + CTL
+	if err := c.mfs.Remove(n); err != nil {
+		db.DPrintf("CLONEDEV", "Remove %v err %v\n", n, err)
 	}
 	if c.detach != nil {
 		c.detach(session)

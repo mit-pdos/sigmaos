@@ -9,15 +9,10 @@ import (
 )
 
 const (
-	CLONE = "clone-"
-	DATA  = "data-"
+	DATA = "data-"
 )
 
-func Clone(fn string) string {
-	return CLONE + fn
-}
-
-func Data(fn string) string {
+func DataName(fn string) string {
 	return DATA + fn
 }
 
@@ -31,7 +26,7 @@ type SessDev struct {
 
 func MkSessDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
 	fd := &SessDev{mfs, fn, mks}
-	if err := clonedev.MkCloneDev(mfs, CLONE+fn, fd.mkSession, fd.detachSession); err != nil {
+	if err := clonedev.MkCloneDev(mfs, fn, fd.mkSession, fd.detachSession); err != nil {
 		return err
 	}
 	return nil
@@ -43,14 +38,20 @@ func (fd *SessDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	if err != nil {
 		return err
 	}
-	if err := mfs.MkDev(sid.String()+"/"+DATA+fd.fn, sess); err != nil {
+	sidn := clonedev.SidName(sid.String(), fd.fn)
+	fn := sidn + "/" + DataName(fd.fn)
+	debug.DPrintf("SESSDEV", "mkSession %v\n", fn)
+	if err := mfs.MkDev(fn, sess); err != nil {
+		debug.DPrintf("SESSDEV", "mkSession %v err %v\n", fn, err)
 		return err
 	}
 	return nil
 }
 
 func (fd *SessDev) detachSession(sid np.Tsession) {
-	if err := fd.mfs.Remove(sid.String() + "/" + DATA + fd.fn); err != nil {
-		debug.DPrintf("DBSRV", "detachSessoin err %v\n", err)
+	sidn := clonedev.SidName(sid.String(), fd.fn)
+	fn := sidn + "/" + DataName(fd.fn)
+	if err := fd.mfs.Remove(fn); err != nil {
+		debug.DPrintf("SESSDEV", "detachSession %v err %v\n", fn, err)
 	}
 }

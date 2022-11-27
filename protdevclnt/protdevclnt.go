@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
@@ -27,12 +28,13 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	pdc.si = protdevsrv.MakeStatInfo()
 	pdc.FsLib = fsl
 	pdc.fn = fn
-	b, err := pdc.GetFile(pdc.fn + "/" + sessdev.Clone(protdevsrv.RPC))
+	b, err := pdc.GetFile(pdc.fn + "/" + clonedev.CloneName(protdevsrv.RPC))
 	if err != nil {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
-	pdc.sid = "/" + string(b)
-	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.Data(protdevsrv.RPC), np.ORDWR)
+	sid := string(b)
+	pdc.sid = "/" + clonedev.SidName(sid, protdevsrv.RPC)
+	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.DataName(protdevsrv.RPC), np.ORDWR)
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/clonedev"
 	"sigmaos/dbd"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
@@ -125,6 +126,34 @@ func TestCache(t *testing.T) {
 	err = pdc.RPC("Cache.Get", arg, &res)
 	assert.NotNil(t, err)
 	assert.Equal(t, hotel.ErrMiss, err)
+
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestCacheDump(t *testing.T) {
+	ts := makeTstate(t, []string{"user/hotel-cached"})
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELCACHE)
+	assert.Nil(t, err)
+	v := []byte("hello")
+	arg := hotel.CacheRequest{
+		Key:   "x",
+		Value: v,
+	}
+	res := &hotel.CacheResult{}
+	err = pdc.RPC("Cache.Set", arg, &res)
+	assert.Nil(t, err)
+
+	b, err := ts.GetFile(np.HOTELCACHE + "/" + clonedev.CloneName(hotel.DUMP))
+	assert.Nil(t, err)
+	sid := string(b)
+
+	sidn := clonedev.SidName(sid, hotel.DUMP)
+	fn := np.HOTELCACHE + "/" + sidn + "/" + sessdev.DataName(hotel.DUMP)
+	b, err = ts.GetFile(fn)
+	assert.Nil(t, err)
+
+	fmt.Printf("dump %v\n", string(b))
 
 	ts.stop()
 	ts.Shutdown()
@@ -291,13 +320,14 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	b, err := ts.GetFile(np.DBD + sessdev.Clone(dbd.QDEV))
+	b, err := ts.GetFile(np.DBD + clonedev.CloneName(dbd.QDEV))
 	assert.Nil(t, err)
-	sid := string(b)
 	q := fmt.Sprintf("select * from reservation")
-	_, err = ts.SetFile(np.DBD+sid+"/"+sessdev.Data(dbd.QDEV), []byte(q), np.OWRITE, 0)
+	sidn := clonedev.SidName(string(b), dbd.QDEV)
+	fn := np.DBD + sidn + "/" + sessdev.DataName(dbd.QDEV)
+	_, err = ts.SetFile(fn, []byte(q), np.OWRITE, 0)
 	assert.Nil(t, err)
-	b, err = ts.GetFile(np.DBD + sid + "/" + sessdev.Data(dbd.QDEV))
+	b, err = ts.GetFile(fn)
 	assert.Nil(t, err)
 
 	res := []hotel.Reservation{}

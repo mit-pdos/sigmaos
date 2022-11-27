@@ -101,7 +101,7 @@ func (ts *Tstate) startSrvs(srvs []string) {
 func (ts *Tstate) Stats(fn string) {
 	stats := &protdevsrv.Stats{}
 	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.T, err, "error get stats %v", err)
 	fmt.Printf("= %s: %v\n", fn, stats)
 }
 

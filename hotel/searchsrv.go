@@ -11,17 +11,6 @@ import (
 	"sigmaos/protdevsrv"
 )
 
-//type SearchRequest struct {
-//	Lat     float32
-//	Lon     float32
-//	InDate  string
-//	OutDate string
-//}
-//
-//type SearchResult struct {
-//	HotelIds []string
-//}
-
 type Search struct {
 	ratec *protdevclnt.ProtDevClnt
 	geoc  *protdevclnt.ProtDevClnt

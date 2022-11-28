@@ -402,6 +402,8 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	db.DPrintf("HOTEL_WWW", "Geo Nearby: %v %v\n", greq, gres)

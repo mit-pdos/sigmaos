@@ -131,7 +131,7 @@ func (ts *Tstate) stop() {
 	assert.Equal(ts.T, 5, len(sts))
 }
 
-func TestGeo(t *testing.T) {
+func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
 	assert.Nil(t, err)

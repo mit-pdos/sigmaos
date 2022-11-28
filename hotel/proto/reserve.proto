@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package = "ulambda/hotel/proto";
+
+service Reserve {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc MakeReservation(ReserveRequest) returns (ReserveResult);
+  rpc CheckAvailability(ReserveRequest) returns (ReserveResult);
+}
+
+// The latitude and longitude of the current location.
+message ReserveRequest {
+	string          customerName = 1;
+	repeated string hotelId = 2;
+	string          inDate = 3;
+	string          outDate = 4;
+	int32           number = 5;
+}
+
+message ReserveResult {
+  repeated string hotelIds = 1;
+}

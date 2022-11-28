@@ -228,18 +228,18 @@ func TestCheck(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
-	arg := hotel.ReserveRequest{
+	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res hotel.ReserveResult
-	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	var res proto.ReserveResult
+	err = pdc.RPCproto("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
-	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	err = pdc.RPCproto("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
@@ -250,20 +250,20 @@ func TestReserve(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
-	arg := hotel.ReserveRequest{
+	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res hotel.ReserveResult
+	var res proto.ReserveResult
 
-	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
+	err = pdc.RPCproto("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 
-	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
+	err = pdc.RPCproto("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 

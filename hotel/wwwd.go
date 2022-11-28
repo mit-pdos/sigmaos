@@ -207,8 +207,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		locale = "en"
 	}
 
-	var reserveRes ReserveResult
-	err = s.reservec.RPC("Reserve.CheckAvailability", &ReserveRequest{
+	var reserveRes proto.ReserveResult
+	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName: "",
 		HotelId:      searchRes.HotelIds,
 		InDate:       inDate,
@@ -354,13 +354,13 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make reservation
-	var resResp ReserveResult
-	err = s.reservec.RPC("Reserve.MakeReservation", &ReserveRequest{
+	var resResp proto.ReserveResult
+	err = s.reservec.RPC("Reserve.MakeReservation", &proto.ReserveRequest{
 		CustomerName: customerName,
 		HotelId:      []string{hotelId},
 		InDate:       inDate,
 		OutDate:      outDate,
-		Number:       numberOfRoom,
+		Number:       int32(numberOfRoom),
 	}, &resResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

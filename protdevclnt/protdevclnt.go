@@ -14,6 +14,7 @@ import (
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"
 )
 
@@ -44,8 +45,8 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	return pdc, nil
 }
 
-func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*protdevsrv.Reply, error) {
-	req := protdevsrv.Request{}
+func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*rpcproto.Reply, error) {
+	req := rpcproto.Request{}
 	req.Method = method
 	req.Protobuf = p
 	req.Args = a
@@ -63,7 +64,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*protdevsrv.Reply,
 	// Record stats (qlen not used for now).
 	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
 
-	rep := &protdevsrv.Reply{}
+	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
 		return nil, np.MkErrError(err)
 	}

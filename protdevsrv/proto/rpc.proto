@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "ulambda/protdevsrv";
+option go_package = "sigmaos/protdevsrv";
 
 message Request {
         string method = 1;

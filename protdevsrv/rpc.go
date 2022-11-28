@@ -14,6 +14,7 @@ import (
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
+	rpcproto "sigmaos/protdevsrv/proto"
 )
 
 type rpcDev struct {
@@ -38,8 +39,8 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, 
 
 // XXX wait on close before processing data?
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
-	req := Request{}
-	var rep *Reply
+	req := rpcproto.Request{}
+	var rep *rpcproto.Reply
 	if err := proto.Unmarshal(b, &req); err != nil {
 		return nil, np.MkErrError(err)
 	}
@@ -63,7 +64,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 	return b, nil
 }
 
-func (svc *service) dispatch(methname string, req *Request) *Reply {
+func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -75,7 +76,7 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		ab := bytes.NewBuffer(req.Args)
 		ad := gob.NewDecoder(ab)
 		if err := ad.Decode(args.Interface()); err != nil {
-			r := &Reply{}
+			r := &rpcproto.Reply{}
 			r.Error = err.Error()
 			return r
 		}
@@ -101,7 +102,7 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		rb := new(bytes.Buffer)
 		re := gob.NewEncoder(rb)
 		re.EncodeValue(replyv)
-		r := &Reply{}
+		r := &rpcproto.Reply{}
 		r.Res = rb.Bytes()
 		r.Error = errmsg
 		return r
@@ -112,13 +113,13 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		r := &Reply{}
+		r := &rpcproto.Reply{}
 		r.Error = "unknown method"
 		return r
 	}
 }
 
-func (svc *service) dispatchproto(methname string, req *Request) *Reply {
+func (svc *service) dispatchproto(methname string, req *rpcproto.Request) *rpcproto.Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -127,7 +128,7 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
 		if err := proto.Unmarshal(req.Args, reqmsg); err != nil {
-			r := &Reply{}
+			r := &rpcproto.Reply{}
 			r.Error = err.Error()
 			return r
 		}
@@ -155,7 +156,7 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		if err != nil {
 			errmsg = err.Error()
 		}
-		r := &Reply{}
+		r := &rpcproto.Reply{}
 		r.Res = b
 		r.Error = errmsg
 		return r
@@ -166,7 +167,7 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		r := &Reply{}
+		r := &rpcproto.Reply{}
 		r.Error = "unknown method"
 		return r
 	}

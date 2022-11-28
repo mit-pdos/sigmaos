@@ -173,13 +173,13 @@ func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-recd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
 	assert.Nil(t, err)
-	arg := hotel.RecRequest{
+	arg := &proto.RecRequest{
 		Require: "dis",
 		Lat:     38.0235,
 		Lon:     -122.095,
 	}
-	var res hotel.RecResult
-	err = pdc.RPC("Rec.GetRecs", arg, &res)
+	var res proto.RecResult
+	err = pdc.RPCproto("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))

@@ -10,19 +10,20 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
 
-type RecRequest struct {
-	Require string
-	Lat     float64
-	Lon     float64
-}
-
-type RecResult struct {
-	HotelIds []string
-}
+//	type RecRequest struct {
+//		Require string
+//		Lat     float64
+//		Lon     float64
+//	}
+//
+//	type RecResult struct {
+//		HotelIds []string
+//	}
 
 type Hotel struct {
 	HId    string
@@ -48,7 +49,7 @@ func RunRecSrv(n string) error {
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
-func (s *Rec) GetRecs(req RecRequest, res *RecResult) error {
+func (s *Rec) GetRecs(req proto.RecRequest, res *proto.RecResult) error {
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{

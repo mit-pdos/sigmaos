@@ -258,8 +258,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// recommend hotels
-	var recResp RecResult
-	err := s.recc.RPC("Rec.GetRecs", &RecRequest{
+	var recResp proto.RecResult
+	err := s.recc.RPCproto("Rec.GetRecs", &proto.RecRequest{
 		Require: require,
 		Lat:     lat,
 		Lon:     lon,

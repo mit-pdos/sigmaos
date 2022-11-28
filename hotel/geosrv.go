@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 )
 
@@ -53,6 +54,10 @@ func RunGeoSrv(n string) error {
 	if err != nil {
 		return err
 	}
+
+	p := perf.MakePerf("HOTEL_GEO")
+	defer p.Done()
+
 	return pds.RunServer()
 }
 

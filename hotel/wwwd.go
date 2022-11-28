@@ -25,6 +25,7 @@ type Www struct {
 	reservec *protdevclnt.ProtDevClnt
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
+	geoc     *protdevclnt.ProtDevClnt
 }
 
 // Run starts the server
@@ -60,10 +61,17 @@ func RunWww(job string) error {
 	}
 	www.recc = pdc
 
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELGEO)
+	if err != nil {
+		return err
+	}
+	www.geoc = pdc
+
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
 	http.HandleFunc("/recommendations", www.recommendHandler)
 	http.HandleFunc("/reservation", www.reservationHandler)
+	http.HandleFunc("/geo", www.geoHandler)
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
@@ -366,6 +374,47 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(repl)
+}
+
+func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	//XXX
+	// lan/lon from query params
+	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
+	//	sLat := r.FormValue("lat")
+	//	sLon := r.FormValue("lon")
+	if sLat == "" || sLon == "" {
+		http.Error(w, "Please specify location params", http.StatusBadRequest)
+		return
+	}
+
+	Lat, _ := strconv.ParseFloat(sLat, 64)
+	lat := float64(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 64)
+	lon := float64(Lon)
+
+	var gres GeoResult
+	greq := GeoRequest{
+		Lat: lat,
+		Lon: lon,
+	}
+	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	if err != nil {
+		db.DFatalf("nearby error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	db.DPrintf("HOTEL_WWW", "Geo Nearby: %v %v\n", greq, gres)
+
+	str := "Geo!"
+
+	reply := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(reply)
 }
 
 // return a geoJSON response that allows google map to plot points directly on map

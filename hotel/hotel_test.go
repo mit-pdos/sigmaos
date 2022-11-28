@@ -139,8 +139,8 @@ func TestGeo(t *testing.T) {
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
-	res := &hotel.GeoResult{}
-	err = pdc.RPC("Geo.Nearby", arg, &res)
+	res := hotel.GeoResult{}
+	err = pdc.RPCproto("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	assert.Equal(t, 5, len(res.HotelIds))

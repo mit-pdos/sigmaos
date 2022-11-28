@@ -11,8 +11,8 @@ import (
 )
 
 type SearchRequest struct {
-	Lat     float64
-	Lon     float64
+	Lat     float32
+	Lon     float32
 	InDate  string
 	OutDate string
 }

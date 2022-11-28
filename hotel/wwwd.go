@@ -172,9 +172,9 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Lat, _ := strconv.ParseFloat(sLat, 64)
-	lat := float64(Lat)
+	lat := float32(Lat)
 	Lon, _ := strconv.ParseFloat(sLon, 64)
-	lon := float64(Lon)
+	lon := float32(Lon)
 
 	var searchRes SearchResult
 	searchReq := SearchRequest{

@@ -7,6 +7,8 @@ import (
 	"path"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -42,8 +44,8 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	return pdc, nil
 }
 
-func (pdc *ProtDevClnt) rpc(method string, a []byte) (*protdevsrv.Reply, error) {
-	req := &protdevsrv.Request{method, a}
+func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*protdevsrv.Reply, error) {
+	req := &protdevsrv.Request{method, p, a}
 
 	ab := new(bytes.Buffer)
 	ae := gob.NewEncoder(ab)
@@ -66,13 +68,31 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*protdevsrv.Reply, error) 
 	return rep, nil
 }
 
+func (pdc *ProtDevClnt) RPCproto(method string, arg proto.Message, res proto.Message) error {
+	b, err := proto.Marshal(arg)
+	if err != nil {
+		return err
+	}
+	rep, err := pdc.rpc(method, b, true)
+	if err != nil {
+		return err
+	}
+	if rep.Error != "" {
+		return fmt.Errorf("%s", rep.Error)
+	}
+	if err := proto.Unmarshal(rep.Res, res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (pdc *ProtDevClnt) RPC(method string, arg any, res any) error {
 	ab := new(bytes.Buffer)
 	ae := gob.NewEncoder(ab)
 	if err := ae.Encode(arg); err != nil {
 		return err
 	}
-	rep, err := pdc.rpc(method, ab.Bytes())
+	rep, err := pdc.rpc(method, ab.Bytes(), false)
 	if err != nil {
 		return err
 	}

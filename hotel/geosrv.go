@@ -19,16 +19,16 @@ const (
 	maxSearchResults = 5
 )
 
-type GeoRequest struct {
-	Lat float64
-	Lon float64
-}
+// type GeoRequest struct {
+// 	Lat float64
+// 	Lon float64
+// }
 
-type GeoResult struct {
-	HotelIds []string
-}
+// type GeoResult struct {
+// 	HotelIds []string
+// }
 
-// point represents a hotels's geo location on map
+// Point represents a hotels's geo location on map
 type point struct {
 	Pid  string  `json:"hotelId"`
 	Plat float64 `json:"lat"`

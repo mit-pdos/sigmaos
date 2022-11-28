@@ -16,29 +16,6 @@ import (
 	"sigmaos/protdevsrv"
 )
 
-//type RateRequest struct {
-//	HotelIds []string
-//	InDate   string
-//	OutDate  string
-//}
-//
-//type RoomType struct {
-//	BookableRate       float64
-//	TotalRate          float64
-//	TotalRateInclusive float64
-//	Code               string
-//	Currency           string
-//	RoomDescription    string
-//}
-//
-//type RatePlan struct {
-//	HotelId  string
-//	Code     string
-//	InDate   string
-//	OutDate  string
-//	RoomType *RoomType
-//}
-
 type RatePlans []*proto.RatePlan
 
 func (r RatePlans) Len() int {
@@ -52,10 +29,6 @@ func (r RatePlans) Swap(i, j int) {
 func (r RatePlans) Less(i, j int) bool {
 	return r[i].RoomType.TotalRate > r[j].RoomType.TotalRate
 }
-
-//type RateResult struct {
-//	RatePlans []*proto.RatePlan
-//}
 
 type Rate struct {
 	dbc    *dbclnt.DbClnt

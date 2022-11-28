@@ -221,8 +221,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profRes ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", ProfRequest{
+	var profRes proto.ProfResult
+	err = s.profc.RPCproto("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds: reserveRes.HotelIds,
 		Locale:   locale,
 	}, &profRes)
@@ -277,8 +277,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profResp ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", &ProfRequest{
+	var profResp proto.ProfResult
+	err = s.profc.RPCproto("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds: recResp.HotelIds,
 		Locale:   locale,
 	}, &profResp)
@@ -421,7 +421,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 // return a geoJSON response that allows google map to plot points directly on map
 // https://developers.google.com/maps/documentation/javascript/datalayer#sample_geojson
-func geoJSONResponse(hs []*ProfileFlat) map[string]interface{} {
+func geoJSONResponse(hs []*proto.ProfileFlat) map[string]interface{} {
 	fs := []interface{}{}
 
 	for _, h := range hs {

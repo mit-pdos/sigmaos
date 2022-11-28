@@ -207,11 +207,11 @@ func TestProfile(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-profd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
 	assert.Nil(t, err)
-	arg := hotel.ProfRequest{
+	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
 	}
-	var res hotel.ProfResult
-	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
+	var res proto.ProfResult
+	err = pdc.RPCproto("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 	db.DPrintf(db.ALWAYS, "res %v\n", res.Hotels[0])

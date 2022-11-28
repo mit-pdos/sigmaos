@@ -10,6 +10,7 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -19,29 +20,29 @@ const (
 	NCACHE = 2
 )
 
-type ProfileFlat struct {
-	HotelId      string
-	Name         string
-	PhoneNumber  string
-	Description  string
-	StreetNumber string
-	StreetName   string
-	City         string
-	State        string
-	Country      string
-	PostalCode   string
-	Lat          float32
-	Lon          float32
-}
-
-type ProfRequest struct {
-	HotelIds []string
-	Locale   string
-}
-
-type ProfResult struct {
-	Hotels []*ProfileFlat
-}
+//type ProfileFlat struct {
+//	HotelId      string
+//	Name         string
+//	PhoneNumber  string
+//	Description  string
+//	StreetNumber string
+//	StreetName   string
+//	City         string
+//	State        string
+//	Country      string
+//	PostalCode   string
+//	Lat          float32
+//	Lon          float32
+//}
+//
+//type ProfRequest struct {
+//	HotelIds []string
+//	Locale   string
+//}
+//
+//type ProfResult struct {
+//	Hotels []*ProfileFlat
+//}
 
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
@@ -82,9 +83,9 @@ func (ps *ProfSrv) insertProf(p *Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) getProf(id string) (*ProfileFlat, error) {
+func (ps *ProfSrv) getProf(id string) (*proto.ProfileFlat, error) {
 	q := fmt.Sprintf("SELECT * from profile where hotelid='%s';", id)
-	var profs []ProfileFlat
+	var profs []proto.ProfileFlat
 	if error := ps.dbc.Query(q, &profs); error != nil {
 		return nil, error
 	}
@@ -131,10 +132,10 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) GetProfiles(req ProfRequest, res *ProfResult) error {
+func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) error {
 	db.DPrintf("HOTELPROF", "Req %v\n", req)
 	for _, id := range req.HotelIds {
-		p := &ProfileFlat{}
+		p := &proto.ProfileFlat{}
 		key := id + "_prof"
 		if err := ps.cachec.Get(key, p); err != nil {
 			if err.Error() != cacheclnt.ErrMiss.Error() {

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/hotel";
+option go_package = "ulambda/hotel/proto";
 
 service Search {
   // Finds the hotels contained nearby the current lat/lon.
@@ -9,10 +9,10 @@ service Search {
 
 // The latitude and longitude of the current location.
 message SearchRequest {
-	float lat = 1;
-	float lon = 2;
-	string inDate = 3;
-	string outDate = 4;
+  float lat = 1;
+  float lon = 2;
+  string inDate = 3;
+  string outDate = 4;
 }
 
 message SearchResult {

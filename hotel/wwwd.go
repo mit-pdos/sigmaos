@@ -132,7 +132,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
+	err := s.userc.RPCproto("User.CheckUser", &proto.UserRequest{
 		Name:     username,
 		Password: password,
 	}, &res)
@@ -208,7 +208,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var reserveRes proto.ReserveResult
-	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
+	err = s.reservec.RPCproto("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName: "",
 		HotelId:      searchRes.HotelIds,
 		InDate:       inDate,
@@ -338,7 +338,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
+	err := s.userc.RPCproto("User.CheckUser", &proto.UserRequest{
 		Name:     username,
 		Password: password,
 	}, &res)
@@ -355,7 +355,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make reservation
 	var resResp proto.ReserveResult
-	err = s.reservec.RPC("Reserve.MakeReservation", &proto.ReserveRequest{
+	err = s.reservec.RPCproto("Reserve.MakeReservation", &proto.ReserveRequest{
 		CustomerName: customerName,
 		HotelId:      []string{hotelId},
 		InDate:       inDate,
@@ -401,7 +401,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 		Lon: lon,
 	}
 	err := s.geoc.RPCproto("Geo.Nearby", &greq, &gres)
-	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	//	err := s.geoc.RPCproto("Geo.Nearby", greq, &gres)
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

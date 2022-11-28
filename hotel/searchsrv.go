@@ -44,11 +44,11 @@ func RunSearchSrv(n string) error {
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error {
 	var gres proto.GeoResult
-	greq := proto.GeoRequest{
+	greq := &proto.GeoRequest{
 		Lat: req.Lat,
 		Lon: req.Lon,
 	}
-	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	err := s.geoc.RPCproto("Geo.Nearby", greq, &gres)
 	if err != nil {
 		log.Fatalf("nearby error: %v", err)
 	}

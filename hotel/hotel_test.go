@@ -162,7 +162,7 @@ func TestRateSingle(t *testing.T) {
 	err = pdc.RPCproto("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	err = pdc.RPC("Rate.GetRates", arg, &res)
+	err = pdc.RPCproto("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
 	ts.stop()
@@ -196,7 +196,7 @@ func TestUserSingle(t *testing.T) {
 		Password: hotel.MkPassword("0"),
 	}
 	var res proto.UserResult
-	err = pdc.RPC("User.CheckUser", arg, &res)
+	err = pdc.RPCproto("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	ts.stop()
@@ -216,7 +216,7 @@ func TestProfile(t *testing.T) {
 	assert.Equal(t, 2, len(res.Hotels))
 	db.DPrintf(db.ALWAYS, "res %v\n", res.Hotels[0])
 
-	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
+	err = pdc.RPCproto("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 

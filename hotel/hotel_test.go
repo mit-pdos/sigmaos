@@ -191,11 +191,11 @@ func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-userd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
 	assert.Nil(t, err)
-	arg := hotel.UserRequest{
+	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
 		Password: hotel.MkPassword("0"),
 	}
-	var res hotel.UserResult
+	var res proto.UserResult
 	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)

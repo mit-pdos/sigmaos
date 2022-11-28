@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/dbclnt"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
@@ -14,14 +15,14 @@ const (
 	NUSER = 500
 )
 
-type UserRequest struct {
-	Name     string
-	Password string
-}
-
-type UserResult struct {
-	OK string
-}
+//type UserRequest struct {
+//	Name     string
+//	Password string
+//}
+//
+//type UserResult struct {
+//	OK string
+//}
 
 type User struct {
 	Username string
@@ -78,7 +79,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) CheckUser(req UserRequest, res *UserResult) error {
+func (s *Users) CheckUser(req proto.UserRequest, res *proto.UserResult) error {
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
 	error := s.dbc.Query(q, &users)

@@ -131,3 +131,20 @@ func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, na
 	}
 	return repl["message"].(string), nil
 }
+
+func (wc *WebClnt) Geo(lat, lon float64) (string, error) {
+	vals := url.Values{}
+	vals.Set("lat", fmt.Sprintf("%f", lat))
+	vals.Set("lon", fmt.Sprintf("%f", lon))
+	db.DPrintf("WEBC", "Geo vals %v\n", vals)
+	body, err := wc.request("/geo", vals)
+	if err != nil {
+		return "", err
+	}
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	if err != nil {
+		return "", err
+	}
+	return repl["message"].(string), nil
+}

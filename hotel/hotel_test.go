@@ -334,6 +334,10 @@ func TestWww(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 
+	s, err = wc.Geo(37.7749, -122.4194)
+	assert.Nil(t, err)
+	assert.Equal(t, "Geo!", s)
+
 	ts.stop()
 	ts.Shutdown()
 }
@@ -510,6 +514,44 @@ func TestBenchSearchK8s(t *testing.T) {
 	lg.Run()
 	ts.Shutdown()
 }
+
+//func TestBenchGeo(t *testing.T) {
+//	ts := makeTstate(t, hotelsvcs)
+//	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+//	p := perf.MakePerf("TEST")
+//	defer p.Done()
+//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+//	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+//		benchSearch(ts.T, wc, r)
+//	})
+//	lg.Run()
+//	ts.PrintStats()
+//	ts.stop()
+//	ts.Shutdown()
+//}
+//
+//func TestBenchGeoK8s(t *testing.T) {
+//	// Bail out if no addr was provided.
+//	if K8S_ADDR == "" {
+//		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
+//		return
+//	}
+//	ts := makeTstate(t, nil)
+//	// Write a file for clients to discover the server's address.
+//	p := hotel.JobHTTPAddrsPath(ts.job)
+//	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
+//		db.DFatalf("Error PutFileJson addrs %v", err)
+//	}
+//	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+//	pf := perf.MakePerf("TEST")
+//	defer pf.Done()
+//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+//	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+//		benchSearch(ts.T, wc, r)
+//	})
+//	lg.Run()
+//	ts.Shutdown()
+//}
 
 func testMultiSearch(t *testing.T, nthread int) {
 	const (

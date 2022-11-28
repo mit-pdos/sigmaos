@@ -6,6 +6,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
+	"sigmaos/proc"
 )
 
 const (
@@ -54,4 +55,10 @@ func (fd *SessDev) detachSession(sid np.Tsession) {
 	if err := fd.mfs.Remove(fn); err != nil {
 		debug.DPrintf("SESSDEV", "detachSession %v err %v\n", fn, err)
 	}
+}
+
+func (fd *SessDev) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	fn := clonedev.SidName(ctx.SessionId().String(), fd.fn) + "/" + DataName(fd.fn)
+	debug.DPrintf("SESSDEV", "%v: Close %v\n", proc.GetName(), fn)
+	return nil
 }

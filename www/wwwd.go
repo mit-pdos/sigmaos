@@ -60,7 +60,7 @@ func RunWwwd(job, tree string) {
 	www.PutFileJson(p, 0777, []string{l.Addr().String()})
 
 	go func() {
-		www.Serve()
+		www.mfs.Serve()
 	}()
 
 	db.DFatalf("%v", http.Serve(l, nil))
@@ -69,7 +69,7 @@ func RunWwwd(job, tree string) {
 type Wwwd struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*memfssrv.MemFs
+	mfs           *memfssrv.MemFs
 	localSrvpath  string
 	globalSrvpath string
 }
@@ -78,7 +78,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.MemFs, www.FsLib, www.ProcClnt, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
+	www.mfs, www.FsLib, www.ProcClnt, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
@@ -226,7 +226,7 @@ func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*p
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	www.Done()
+	www.mfs.Done()
 	os.Exit(0)
 	return nil, nil
 }

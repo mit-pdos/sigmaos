@@ -69,6 +69,7 @@ do
   
   go test $@ sigmaos/mr --version=$VERSION
   go test $@ sigmaos/kv --version=$VERSION
+  go test $@ sigmaos/cacheclnt --version=$VERSION
   go test $@ sigmaos/hotel --version=$VERSION
   
   # XXX broken

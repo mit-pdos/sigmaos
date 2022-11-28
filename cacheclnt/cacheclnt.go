@@ -85,14 +85,12 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 		return nil, err
 	}
 	sid := string(b)
-
 	sidn := clonedev.SidName(sid, cachesrv.DUMP)
 	fn := np.HOTELCACHE + gn + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err
 	}
-
 	m := map[string]string{}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return nil, err

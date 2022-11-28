@@ -408,6 +408,15 @@ func benchReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Equal(t, "Reserve successfully!", s)
 }
 
+func benchGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+	// XXX change? Or leave the same?
+	lat := 37.7749
+	lon := -122.4194
+	s, err := wc.Geo(lat, lon)
+	assert.Nil(t, err, "Err geo %v", err)
+	assert.Equal(t, "Geo!", s)
+}
+
 func toss(r *rand.Rand) float64 {
 	toss := r.Intn(1000)
 	return float64(toss) / 1000
@@ -515,20 +524,21 @@ func TestBenchSearchK8s(t *testing.T) {
 	ts.Shutdown()
 }
 
-//func TestBenchGeo(t *testing.T) {
-//	ts := makeTstate(t, hotelsvcs)
-//	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-//	p := perf.MakePerf("TEST")
-//	defer p.Done()
-//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-//	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
-//		benchSearch(ts.T, wc, r)
-//	})
-//	lg.Run()
-//	ts.PrintStats()
-//	ts.stop()
-//	ts.Shutdown()
-//}
+func TestBenchGeo(t *testing.T) {
+	ts := makeTstateCache(t, hotelsvcs)
+	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
+	p := perf.MakePerf("TEST")
+	defer p.Done()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+		benchGeo(ts.T, wc, r)
+	})
+	lg.Run()
+	ts.PrintStats()
+	ts.stop()
+	ts.Shutdown()
+}
+
 //
 //func TestBenchGeoK8s(t *testing.T) {
 //	// Bail out if no addr was provided.

@@ -11,16 +11,16 @@ import (
 	"sigmaos/protdevsrv"
 )
 
-type SearchRequest struct {
-	Lat     float32
-	Lon     float32
-	InDate  string
-	OutDate string
-}
-
-type SearchResult struct {
-	HotelIds []string
-}
+//type SearchRequest struct {
+//	Lat     float32
+//	Lon     float32
+//	InDate  string
+//	OutDate string
+//}
+//
+//type SearchResult struct {
+//	HotelIds []string
+//}
 
 type Search struct {
 	ratec *protdevclnt.ProtDevClnt
@@ -53,7 +53,7 @@ func RunSearchSrv(n string) error {
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
+func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error {
 	var gres proto.GeoResult
 	greq := proto.GeoRequest{
 		Lat: req.Lat,

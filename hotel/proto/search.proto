@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/hotel";
+
+service Search {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc Nearby(SearchRequest) returns (SearchResult);
+}
+
+// The latitude and longitude of the current location.
+message SearchRequest {
+	float lat = 1;
+	float lon = 2;
+	string inDate = 3;
+	string outDate = 4;
+}
+
+message SearchResult {
+  repeated string hotelIds = 1;
+}

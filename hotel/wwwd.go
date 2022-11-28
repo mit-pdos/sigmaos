@@ -185,15 +185,15 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
-	var searchRes SearchResult
-	searchReq := SearchRequest{
+	var searchRes proto.SearchResult
+	searchReq := &proto.SearchRequest{
 		Lat:     lat,
 		Lon:     lon,
 		InDate:  inDate,
 		OutDate: outDate,
 	}
 	// search for best hotels
-	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
+	err := s.searchc.RPCproto("Search.Nearby", searchReq, &searchRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

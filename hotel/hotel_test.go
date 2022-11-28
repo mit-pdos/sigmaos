@@ -296,17 +296,17 @@ func TestSingleSearch(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
 	assert.Nil(t, err)
-	arg := hotel.SearchRequest{
+	arg := &proto.SearchRequest{
 		Lat:     37.7749,
 		Lon:     -122.4194,
 		InDate:  "2015-04-09",
 		OutDate: "2015-04-10",
 	}
-	var res hotel.SearchResult
-	err = pdc.RPC("Search.Nearby", arg, &res)
+	var res proto.SearchResult
+	err = pdc.RPCproto("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
-	err = pdc.RPC("Search.Nearby", arg, &res)
+	err = pdc.RPCproto("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()

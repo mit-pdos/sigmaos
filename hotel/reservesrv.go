@@ -9,6 +9,7 @@ import (
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 )
 
@@ -106,6 +107,8 @@ func RunReserveSrv(n string) error {
 	if err != nil {
 		return err
 	}
+	p := perf.MakePerf("HOTEL_RESERVE")
+	defer p.Done()
 	return pds.RunServer()
 }
 

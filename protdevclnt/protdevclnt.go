@@ -45,26 +45,29 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 }
 
 func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*protdevsrv.Reply, error) {
-	req := &protdevsrv.Request{method, p, a}
+	req := protdevsrv.Request{}
+	req.Method = method
+	req.Protobuf = p
+	req.Args = a
 
-	ab := new(bytes.Buffer)
-	ae := gob.NewEncoder(ab)
-	if err := ae.Encode(req); err != nil {
-		return nil, err
+	b, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, np.MkErrError(err)
 	}
+
 	start := time.Now()
-	b, err := pdc.WriteRead(pdc.fd, ab.Bytes())
+	b, err = pdc.WriteRead(pdc.fd, b)
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v\n", err)
 	}
 	// Record stats (qlen not used for now).
 	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
+
 	rep := &protdevsrv.Reply{}
-	rb := bytes.NewBuffer(b)
-	re := gob.NewDecoder(rb)
-	if err := re.Decode(rep); err != nil {
-		return nil, err
+	if err := proto.Unmarshal(b, rep); err != nil {
+		return nil, np.MkErrError(err)
 	}
+
 	return rep, nil
 }
 

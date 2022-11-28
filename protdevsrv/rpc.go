@@ -38,33 +38,29 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, 
 
 // XXX wait on close before processing data?
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
-	req := &Request{}
+	req := Request{}
 	var rep *Reply
-
-	// Read request
-	ab := bytes.NewBuffer(b)
-	ad := gob.NewDecoder(ab)
-	if err := ad.Decode(req); err != nil {
+	if err := proto.Unmarshal(b, &req); err != nil {
 		return nil, np.MkErrError(err)
 	}
+
 	db.DPrintf("PROTDEVSRV", "WriteRead req %v\n", req)
+
 	ql := rpc.pds.QueueLen()
 	start := time.Now()
 	if req.Protobuf {
-		rep = rpc.pds.svc.dispatchproto(req.Method, req)
+		rep = rpc.pds.svc.dispatchproto(req.Method, &req)
 	} else {
-		rep = rpc.pds.svc.dispatch(req.Method, req)
+		rep = rpc.pds.svc.dispatch(req.Method, &req)
 	}
 	t := time.Since(start).Microseconds()
 	rpc.pds.sti.Stat(req.Method, t, ql)
 
-	rb := new(bytes.Buffer)
-	re := gob.NewEncoder(rb)
-	if err := re.Encode(&rep); err != nil {
+	b, err := proto.Marshal(rep)
+	if err != nil {
 		return nil, np.MkErrError(err)
 	}
-	db.DPrintf("PROTDEVSRV", "Done writeread")
-	return rb.Bytes(), nil
+	return b, nil
 }
 
 func (svc *service) dispatch(methname string, req *Request) *Reply {
@@ -79,7 +75,9 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		ab := bytes.NewBuffer(req.Args)
 		ad := gob.NewDecoder(ab)
 		if err := ad.Decode(args.Interface()); err != nil {
-			return &Reply{nil, err.Error()}
+			r := &Reply{}
+			r.Error = err.Error()
+			return r
 		}
 		// db.DPrintf("PROTDEVSRV", "dispatch %v\n")
 
@@ -103,8 +101,10 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		rb := new(bytes.Buffer)
 		re := gob.NewEncoder(rb)
 		re.EncodeValue(replyv)
-
-		return &Reply{rb.Bytes(), errmsg}
+		r := &Reply{}
+		r.Res = rb.Bytes()
+		r.Error = errmsg
+		return r
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
@@ -112,7 +112,9 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		return &Reply{nil, "uknown method"}
+		r := &Reply{}
+		r.Error = "unknown method"
+		return r
 	}
 }
 
@@ -125,7 +127,9 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
 		if err := proto.Unmarshal(req.Args, reqmsg); err != nil {
-			return &Reply{nil, err.Error()}
+			r := &Reply{}
+			r.Error = err.Error()
+			return r
 		}
 
 		db.DPrintf("PROTDEVSRV", "dispatchproto %v %v\n", name, reqmsg)
@@ -151,8 +155,10 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		if err != nil {
 			errmsg = err.Error()
 		}
-
-		return &Reply{b, errmsg}
+		r := &Reply{}
+		r.Res = b
+		r.Error = errmsg
+		return r
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
@@ -160,6 +166,8 @@ func (svc *service) dispatchproto(methname string, req *Request) *Reply {
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		return &Reply{nil, "uknown method"}
+		r := &Reply{}
+		r.Error = "unknown method"
+		return r
 	}
 }

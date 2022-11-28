@@ -21,17 +21,6 @@ const (
 
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
-type Request struct {
-	Method   string
-	Protobuf bool
-	Args     []byte
-}
-
-type Reply struct {
-	Res   []byte
-	Error string
-}
-
 type method struct {
 	method    reflect.Method
 	argType   reflect.Type

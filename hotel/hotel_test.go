@@ -148,7 +148,7 @@ func TestGeoSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRate(t *testing.T) {
+func TestRateSingle(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
@@ -168,7 +168,7 @@ func TestRate(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRec(t *testing.T) {
+func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-recd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
 	assert.Nil(t, err)
@@ -186,7 +186,7 @@ func TestRec(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestUser(t *testing.T) {
+func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-userd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
 	assert.Nil(t, err)

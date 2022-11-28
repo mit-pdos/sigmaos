@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "ulambda/protdevsrv";
+
+message Request {
+        string method = 1;
+        bool protobuf = 2;
+        bytes args = 3;
+}
+
+message Reply {
+        bytes res = 1;
+        string error = 2;
+}

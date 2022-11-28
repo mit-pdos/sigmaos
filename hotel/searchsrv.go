@@ -56,13 +56,13 @@ func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error 
 	db.DPrintf("HOTELSEARCH", "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
-	var rres RateResult
-	rreq := RateRequest{
+	var rres proto.RateResult
+	rreq := &proto.RateRequest{
 		HotelIds: gres.HotelIds,
 		InDate:   req.InDate,
 		OutDate:  req.OutDate,
 	}
-	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
+	err = s.ratec.RPCproto("Rate.GetRates", rreq, &rres)
 	if err != nil {
 		log.Fatalf("rates error: %v", err)
 	}

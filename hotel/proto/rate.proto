@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option go_package = "ulambda/hotel/proto";
+
+service Rate {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc GetRates(RateRequest) returns (RateResult);
+}
+
+// The latitude and longitude of the current location.
+message RateRequest {
+  repeated string hotelIds = 1;
+  string inDate = 2;
+  string outDate = 3;
+}
+
+message RoomType {
+  double bookableRate = 1;
+  double totalRate = 2;
+  double totalRateInclusive = 3;
+  string code = 4;
+  string currency = 5;
+  string roomDescription = 6;
+}
+
+message RatePlan {
+  string    hotelId = 1;
+  string    code = 2;
+  string    inDate = 3;
+  string    outDate = 4;
+  RoomType roomType = 5;
+}
+
+message RateResult {
+  repeated RatePlan ratePlans = 1;
+}

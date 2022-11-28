@@ -20,30 +20,6 @@ const (
 	NCACHE = 2
 )
 
-//type ProfileFlat struct {
-//	HotelId      string
-//	Name         string
-//	PhoneNumber  string
-//	Description  string
-//	StreetNumber string
-//	StreetName   string
-//	City         string
-//	State        string
-//	Country      string
-//	PostalCode   string
-//	Lat          float32
-//	Lon          float32
-//}
-//
-//type ProfRequest struct {
-//	HotelIds []string
-//	Locale   string
-//}
-//
-//type ProfResult struct {
-//	Hotels []*ProfileFlat
-//}
-
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
 	cachec *cacheclnt.CacheClnt

@@ -153,13 +153,13 @@ func TestRateSingle(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
-	arg := hotel.RateRequest{
+	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
 		InDate:   "2015-04-09",
 		OutDate:  "2015-04-10",
 	}
-	var res hotel.RateResult
-	err = pdc.RPC("Rate.GetRates", arg, &res)
+	var res proto.RateResult
+	err = pdc.RPCproto("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
 	err = pdc.RPC("Rate.GetRates", arg, &res)

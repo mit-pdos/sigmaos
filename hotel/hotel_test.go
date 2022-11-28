@@ -16,6 +16,7 @@ import (
 	"sigmaos/dbd"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
+	"sigmaos/hotel/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
@@ -135,11 +136,11 @@ func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
 	assert.Nil(t, err)
-	arg := hotel.GeoRequest{
+	arg := proto.GeoRequest{
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
-	res := hotel.GeoResult{}
+	res := proto.GeoResult{}
 	err = pdc.RPCproto("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)

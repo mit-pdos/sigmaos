@@ -10,6 +10,7 @@ import (
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	db "sigmaos/debug"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
@@ -19,15 +20,6 @@ const (
 	maxSearchRadius  = 10
 	maxSearchResults = 5
 )
-
-// type GeoRequest struct {
-// 	Lat float64
-// 	Lon float64
-// }
-
-// type GeoResult struct {
-// 	HotelIds []string
-// }
 
 // Point represents a hotels's geo location on map
 type point struct {
@@ -62,7 +54,7 @@ func RunGeoSrv(n string) error {
 }
 
 // Nearby returns all hotels within a given distance.
-func (s *Geo) Nearby(req GeoRequest, rep *GeoResult) error {
+func (s *Geo) Nearby(req proto.GeoRequest, rep *proto.GeoResult) error {
 	db.DPrintf("HOTELGEO", "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {

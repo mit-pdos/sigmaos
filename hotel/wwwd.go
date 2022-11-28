@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -394,8 +395,8 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
-	var gres GeoResult
-	greq := GeoRequest{
+	var gres proto.GeoResult
+	greq := proto.GeoRequest{
 		Lat: lat,
 		Lon: lon,
 	}

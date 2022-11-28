@@ -264,7 +264,9 @@ func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f np.Tfence, v np
 }
 
 func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rwriteread, *np.Err) {
-	args := &np.Twriteread{fid, data}
+	args := &np.Twriteread{}
+	args.Fid = uint64(fid)
+	args.Data = data
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err

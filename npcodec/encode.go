@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 )
@@ -209,12 +211,26 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Tmsg:
-			elements, err := fields9p(v)
-			if err != nil {
-				return err
-			}
-			if err := e.encode(elements...); err != nil {
-				return err
+			if v.Type() == np.TTwriteread {
+				msg := v.(proto.Message)
+				b, err := proto.Marshal(msg)
+				if err != nil {
+					return err
+				}
+				if err := e.encode(uint32(len(b))); err != nil {
+					return err
+				}
+				if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+					return err
+				}
+			} else {
+				elements, err := fields9p(v)
+				if err != nil {
+					return err
+				}
+				if err := e.encode(elements...); err != nil {
+					return err
+				}
 			}
 		default:
 			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
@@ -382,11 +398,26 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			msg, err := newMsg(v.Type)
-			if err != nil {
-				return err
-			}
-			if err := d.decode(msg); err != nil {
-				return err
+			if v.Type == np.TTwriteread {
+				var l uint32
+				if err := d.decode(&l); err != nil {
+					return err
+				}
+				b := make([]byte, int(l))
+				if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+					return err
+				}
+				m := msg.(proto.Message)
+				if err := proto.Unmarshal(b, m); err != nil {
+					return err
+				}
+			} else {
+				if err != nil {
+					return err
+				}
+				if err := d.decode(msg); err != nil {
+					return err
+				}
 			}
 			v.Msg = msg
 		case np.Tmsg:

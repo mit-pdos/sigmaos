@@ -17,7 +17,6 @@ import (
 
 const (
 	NHOTEL = 80
-	NCACHE = 2
 )
 
 type ProfSrv struct {

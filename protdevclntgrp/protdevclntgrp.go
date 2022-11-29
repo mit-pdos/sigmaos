@@ -3,6 +3,8 @@ package protdevclntgrp
 import (
 	"strconv"
 
+	"google.golang.org/protobuf/proto"
+
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/protdevclnt"
@@ -35,6 +37,10 @@ func (gc *ClntGroup) Nshard() int {
 
 func (gc *ClntGroup) RPC(g int, m string, arg any, res any) error {
 	return gc.clnts[g].RPC(m, arg, res)
+}
+
+func (gc *ClntGroup) RPCproto(g int, m string, arg proto.Message, res proto.Message) error {
+	return gc.clnts[g].RPCproto(m, arg, res)
 }
 
 func (gc *ClntGroup) StatsSrv(g int) (*protdevsrv.Stats, error) {

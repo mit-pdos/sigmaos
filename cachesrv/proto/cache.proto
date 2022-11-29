@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "ulambda/cachesrv/proto";
+
+service Cache {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc Get(CacheRequest) returns (CacheResult);
+  rpc Set(CacheRequest) returns (CacheResult);
+}
+
+// The latitude and longitude of the current location.
+message CacheRequest {
+  string key = 1;
+  bytes value = 2;
+}
+
+message CacheResult {
+  bytes value = 1;
+}

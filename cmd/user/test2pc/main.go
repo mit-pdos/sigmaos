@@ -7,9 +7,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	np "sigmaos/sigmap"
 	"sigmaos/twopc"
 )
 

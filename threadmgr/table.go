@@ -1,7 +1,7 @@
 package threadmgr
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type ProcessFn func(fc *np.FcallMsg)

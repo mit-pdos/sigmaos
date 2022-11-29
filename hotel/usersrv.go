@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/dbclnt"
 	"sigmaos/hotel/proto"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 )
 

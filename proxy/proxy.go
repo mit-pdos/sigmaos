@@ -7,10 +7,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 

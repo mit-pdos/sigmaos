@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/file"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type File struct {

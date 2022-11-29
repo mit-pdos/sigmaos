@@ -17,7 +17,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/named"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/stats"
 	"sigmaos/test"

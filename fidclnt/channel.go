@@ -3,8 +3,8 @@ package fidclnt
 import (
 	"fmt"
 
-	np "sigmaos/ninep"
 	"sigmaos/protclnt"
+	np "sigmaos/sigmap"
 )
 
 // The channel associated with an fid, which connects to an object at

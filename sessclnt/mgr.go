@@ -6,7 +6,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Mgr struct {

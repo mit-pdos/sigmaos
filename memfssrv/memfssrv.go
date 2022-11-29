@@ -7,7 +7,7 @@ import (
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 var rootP = np.Path{""}

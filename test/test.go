@@ -12,7 +12,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/linuxsched"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/realm"
 )

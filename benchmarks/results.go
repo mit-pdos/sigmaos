@@ -6,7 +6,7 @@ import (
 	"github.com/montanaflynn/stats"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Result struct {

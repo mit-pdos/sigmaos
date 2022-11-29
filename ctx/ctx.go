@@ -1,7 +1,7 @@
 package ctx
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sesscond"
 )
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"sigmaos/namespace"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Tpid string

@@ -3,7 +3,7 @@ package memfs
 import (
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {

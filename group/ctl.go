@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type GroupCtl struct {

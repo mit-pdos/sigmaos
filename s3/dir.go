@@ -11,9 +11,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	np "sigmaos/sigmap"
 	"sigmaos/sorteddir"
+	"sigmaos/spcodec"
 )
 
 const DOT = "_._"
@@ -186,7 +186,7 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		}
 		d.sts = append(d.sts, st)
 	}
-	d.sz = npcodec.MarshalSizeDir(d.sts)
+	d.sz = spcodec.MarshalSizeDir(d.sts)
 	return d, nil
 }
 

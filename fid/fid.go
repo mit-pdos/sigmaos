@@ -6,8 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 type Pobj struct {
@@ -119,7 +119,7 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	if err != nil {
 		return err
 	}
-	b, n, err := npcodec.MarshalDir(count, dirents)
+	b, n, err := spcodec.MarshalDir(count, dirents)
 	if err != nil {
 		return err
 	}

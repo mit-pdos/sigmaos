@@ -4,7 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {

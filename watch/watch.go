@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/lockmap"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sesscond"
 )
 

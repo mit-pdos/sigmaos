@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"sigmaos/intervals"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 // Reply table for a given session.

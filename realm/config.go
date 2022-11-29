@@ -6,7 +6,7 @@ import (
 
 	"sigmaos/config"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 

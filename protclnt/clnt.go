@@ -3,9 +3,9 @@ package protclnt
 import (
 	"sync/atomic"
 
-	np "sigmaos/ninep"
 	"sigmaos/rand"
 	"sigmaos/sessclnt"
+	np "sigmaos/sigmap"
 )
 
 // Each proc has a unique client ID.

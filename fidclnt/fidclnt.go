@@ -3,8 +3,8 @@ package fidclnt
 import (
 	"fmt"
 
-	np "sigmaos/ninep"
 	"sigmaos/protclnt"
+	np "sigmaos/sigmap"
 )
 
 //

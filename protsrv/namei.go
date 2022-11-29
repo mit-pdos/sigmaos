@@ -5,7 +5,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 // LookupObj/namei will return an lo and a locked watch for it, even

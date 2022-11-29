@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 type SrvConn struct {
@@ -101,16 +101,16 @@ func (c *SrvConn) GetReplyC() chan *np.FcallMsg {
 func (c *SrvConn) reader() {
 	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
-		frame, err := npcodec.ReadFrame(c.br)
+		frame, err := spcodec.ReadFrame(c.br)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			return
 		}
 		var fm *np.FcallMsg
 		if c.wireCompat {
-			fm, err = npcodec.UnmarshalFcallWireCompat(frame)
+			fm, err = spcodec.UnmarshalFcallWireCompat(frame)
 		} else {
-			fm, err = npcodec.UnmarshalFcallMsg(frame)
+			fm, err = spcodec.UnmarshalFcallMsg(frame)
 		}
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
@@ -159,7 +159,7 @@ func (c *SrvConn) writer() {
 		} else {
 			writableFcall = fm
 		}
-		if err := npcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
+		if err := spcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
 			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}

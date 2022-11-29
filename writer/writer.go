@@ -3,7 +3,7 @@ package writer
 import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Writer struct {

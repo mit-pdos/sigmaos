@@ -13,7 +13,7 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/overlay"
 	"sigmaos/proc"
 	"sigmaos/procclnt"

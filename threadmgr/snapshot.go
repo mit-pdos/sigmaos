@@ -5,8 +5,8 @@ import (
 	"sort"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 type OpSnapshot struct {
@@ -14,8 +14,8 @@ type OpSnapshot struct {
 	N  uint64
 }
 
-func MakeOpSnapshot(fc *np.FcallMsg, n uint64) *OpSnapshot {
-	b, err := npcodec.MarshalFcallMsgByte(fc)
+func MakeOpSnapshot(fc *sp.FcallMsg, n uint64) *OpSnapshot {
+	b, err := spcodec.MarshalFcallMsgByte(fc)
 	if err != nil {
 		db.DFatalf("error marshalling fcall in MakeOpSnapshot: %v", err)
 	}
@@ -60,7 +60,7 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	// List of ops currently executing.
 	executing := []*Op{}
 	for _, op := range opss {
-		fm, err1 := npcodec.UnmarshalFcallMsg(op.Fc)
+		fm, err1 := spcodec.UnmarshalFcallMsg(op.Fc)
 		if err1 != nil {
 			db.DFatalf("error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}

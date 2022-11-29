@@ -2,7 +2,7 @@ package fs
 
 import (
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sesscond"
 )
 

@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 )
 

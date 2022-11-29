@@ -14,7 +14,7 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/procclnt"
 	"sigmaos/reader"
 )

@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/reader"
 	"sigmaos/writer"
 )

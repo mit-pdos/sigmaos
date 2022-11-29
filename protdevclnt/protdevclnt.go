@@ -10,7 +10,7 @@ import (
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"

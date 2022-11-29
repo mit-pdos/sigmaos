@@ -6,7 +6,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type CtlFile struct {

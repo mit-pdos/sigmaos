@@ -16,7 +16,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 

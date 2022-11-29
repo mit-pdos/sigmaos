@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/sigmap";
+
+message Twriteread {
+        uint64 fid = 1; 
+        bytes data = 2;
+}
+
+message Rwriteread {
+        bytes data = 1;
+}
+
+message Tinterval {
+        uint64 start = 1;
+        uint64 end = 2;
+};
+
+message Tfenceid {
+        uint64 path = 1;
+        uint64 serverid = 2;
+};
+
+message Tfence {
+        Tfenceid fenceid = 1;
+        uint64 epoch = 2;
+};
+
+message Fcall {
+        uint32 type = 1;
+        uint32 tag = 2;
+        uint64 client = 3;
+        uint64 session = 4;
+        uint64 seqno = 5;
+        Tinterval received = 6;
+        Tfence fence = 7;       
+}

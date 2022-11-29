@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/refmap"
 )
 

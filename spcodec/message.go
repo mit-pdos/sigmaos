@@ -1,0 +1,101 @@
+package spcodec
+
+import (
+	"fmt"
+
+	np "sigmaos/sigmap"
+)
+
+// Adopted from https://github.com/docker/go-p9p/message.go
+
+func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
+	switch typ {
+	case np.TTversion:
+		return &np.Tversion{}, nil
+	case np.TRversion:
+		return &np.Rversion{}, nil
+	case np.TTauth:
+		return &np.Tauth{}, nil
+	case np.TRauth:
+		return &np.Rauth{}, nil
+	case np.TTattach:
+		return &np.Tattach{}, nil
+	case np.TRattach:
+		return &np.Rattach{}, nil
+	case np.TRerror:
+		return &np.Rerror{}, nil
+	case np.TTflush:
+		return &np.Tflush{}, nil
+	case np.TRflush:
+		return &np.Rflush{}, nil
+	case np.TTwalk:
+		return &np.Twalk{}, nil
+	case np.TRwalk:
+		return &np.Rwalk{}, nil
+	case np.TTopen:
+		return &np.Topen{}, nil
+	case np.TRopen:
+		return &np.Ropen{}, nil
+	case np.TTcreate:
+		return &np.Tcreate{}, nil
+	case np.TRcreate:
+		return &np.Rcreate{}, nil
+	case np.TTread:
+		return &np.Tread{}, nil
+	case np.TRread:
+		return &np.Rread{}, nil
+	case np.TTwrite:
+		return &np.Twrite{}, nil
+	case np.TRwrite:
+		return &np.Rwrite{}, nil
+	case np.TTclunk:
+		return &np.Tclunk{}, nil
+	case np.TRclunk:
+		return &np.Rclunk{}, nil // no response body
+	case np.TTremove:
+		return &np.Tremove{}, nil
+	case np.TRremove:
+		return &np.Rremove{}, nil
+	case np.TTstat:
+		return &np.Tstat{}, nil
+	case np.TRstat:
+		return &np.Rstat{}, nil
+	case np.TTwstat:
+		return &np.Twstat{}, nil
+	case np.TRwstat:
+		return &np.Rwstat{}, nil
+	case np.TTwatch:
+		return &np.Twatch{}, nil
+	case np.TTreadV:
+		return &np.TreadV{}, nil
+	case np.TTwriteV:
+		return &np.TwriteV{}, nil
+	case np.TTrenameat:
+		return &np.Trenameat{}, nil
+	case np.TRrenameat:
+		return &np.Rrenameat{}, nil
+	case np.TTremovefile:
+		return &np.Tremovefile{}, nil
+	case np.TTgetfile:
+		return &np.Tgetfile{}, nil
+	case np.TRgetfile:
+		return &np.Rgetfile{}, nil
+	case np.TTsetfile:
+		return &np.Tsetfile{}, nil
+	case np.TTputfile:
+		return &np.Tputfile{}, nil
+	case np.TTdetach:
+		return &np.Tdetach{}, nil
+	case np.TRdetach:
+		return &np.Rdetach{}, nil
+	case np.TTheartbeat:
+		return &np.Theartbeat{}, nil
+	case np.TRheartbeat:
+		return &np.Rheartbeat{}, nil
+	case np.TTwriteread:
+		return &np.Twriteread{}, nil
+	case np.TRwriteread:
+		return &np.Rwriteread{}, nil
+	}
+	return nil, np.MkErr(np.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
+}

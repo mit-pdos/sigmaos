@@ -4,7 +4,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type SessionMgr struct {

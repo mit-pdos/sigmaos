@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/fslib"
 	"sigmaos/named"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

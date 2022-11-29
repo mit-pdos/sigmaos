@@ -4,7 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/epochclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type FenceClnt struct {

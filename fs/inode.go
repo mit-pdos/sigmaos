@@ -1,7 +1,7 @@
 package fs
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type SnapshotF func(Inode) np.Tpath

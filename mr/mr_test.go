@@ -19,7 +19,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/mr"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procdclnt"

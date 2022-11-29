@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/file"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Symlink struct {

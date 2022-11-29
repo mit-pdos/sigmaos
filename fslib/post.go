@@ -6,7 +6,7 @@ import (
 	// "log"
 
 	// db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func MakeTarget(srvaddrs []string) []byte {

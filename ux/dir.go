@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 )
 

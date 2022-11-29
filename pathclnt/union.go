@@ -6,9 +6,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 func (pathc *PathClnt) unionMatch(q, name string) bool {
@@ -60,7 +60,7 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	drdr := rdr.NewDirReader()
 	for {
-		de, err := npcodec.UnmarshalDirEnt(drdr)
+		de, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}

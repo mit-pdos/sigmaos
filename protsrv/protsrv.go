@@ -6,7 +6,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sesssrv"
 	"sigmaos/stats"
 	"sigmaos/version"

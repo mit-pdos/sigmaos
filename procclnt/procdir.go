@@ -5,7 +5,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 )

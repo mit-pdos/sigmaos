@@ -6,9 +6,9 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 func (fl *FsLib) MkDir(path string, perm np.Tperm) error {
@@ -38,7 +38,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	defer rdr.Close()
 	drdr := rdr.NewDirReader()
 	for {
-		st, err := npcodec.UnmarshalDirEnt(drdr)
+		st, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
@@ -69,7 +69,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, *reader.Reader, error) {
 	dirents := []*np.Stat{}
 	drdr := rdr.NewDirReader()
 	for {
-		st, err := npcodec.UnmarshalDirEnt(drdr)
+		st, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}

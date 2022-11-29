@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Point struct {

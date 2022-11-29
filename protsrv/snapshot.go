@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fid"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/sesssrv"
 )
 

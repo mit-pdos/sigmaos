@@ -32,7 +32,7 @@ import (
 	"sigmaos/inode"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )

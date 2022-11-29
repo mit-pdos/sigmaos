@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
 	"sigmaos/sessstatesrv"
+	np "sigmaos/sigmap"
 )
 
 type SessCondTable struct {

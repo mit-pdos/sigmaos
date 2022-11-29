@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/fid"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type fidTable struct {

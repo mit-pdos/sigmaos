@@ -12,7 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {

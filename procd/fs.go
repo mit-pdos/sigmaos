@@ -10,7 +10,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"

@@ -8,9 +8,9 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/replies"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 

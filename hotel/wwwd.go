@@ -10,7 +10,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/hotel/proto"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"

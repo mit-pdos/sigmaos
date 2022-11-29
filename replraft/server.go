@@ -5,7 +5,7 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 

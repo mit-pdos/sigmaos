@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/realm"

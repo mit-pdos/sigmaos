@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *np.Err) {

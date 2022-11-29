@@ -9,7 +9,7 @@ import (
 	"sigmaos/ctx"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type TestState struct {

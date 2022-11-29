@@ -3,7 +3,7 @@ package semclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 //

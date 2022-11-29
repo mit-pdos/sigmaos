@@ -7,9 +7,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	np "sigmaos/sigmap"
 	"sigmaos/sorteddir"
+	"sigmaos/spcodec"
 )
 
 type DirImpl struct {
@@ -104,7 +104,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = npcodec.MarshalSizeDir(sts)
+	st.Length = spcodec.MarshalSizeDir(sts)
 	return st, nil
 }
 
@@ -115,7 +115,7 @@ func (dir *DirImpl) Size() (np.Tlength, *np.Err) {
 	if err != nil {
 		return 0, err
 	}
-	return npcodec.MarshalSizeDir(sts), nil
+	return spcodec.MarshalSizeDir(sts), nil
 }
 
 func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *np.Err) {

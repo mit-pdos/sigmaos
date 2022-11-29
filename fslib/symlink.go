@@ -1,7 +1,7 @@
 package fslib
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func (fl *FsLib) Symlink(target []byte, link string, lperm np.Tperm) error {

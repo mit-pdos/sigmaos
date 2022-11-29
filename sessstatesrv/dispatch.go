@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {

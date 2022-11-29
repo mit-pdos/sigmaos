@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslibsrv"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"

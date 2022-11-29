@@ -8,7 +8,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 const (

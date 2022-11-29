@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 // A Request Queue which guarantees:

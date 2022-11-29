@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Inode struct {

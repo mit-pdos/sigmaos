@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 // Map and reduce functions produce and consume KeyValue pairs

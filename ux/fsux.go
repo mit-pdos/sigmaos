@@ -9,7 +9,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"

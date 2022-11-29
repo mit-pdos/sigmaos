@@ -9,7 +9,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type MethodStat struct {

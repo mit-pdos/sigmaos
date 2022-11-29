@@ -4,7 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type session struct {

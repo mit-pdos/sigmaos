@@ -2,7 +2,7 @@ package pathclnt
 
 import (
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 const (

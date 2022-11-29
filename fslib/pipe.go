@@ -1,7 +1,7 @@
 package fslib
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func (fl *FsLib) MakePipe(name string, lperm np.Tperm) error {

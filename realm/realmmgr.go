@@ -15,7 +15,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"

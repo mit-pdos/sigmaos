@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
 )

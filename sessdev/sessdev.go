@@ -5,7 +5,7 @@ import (
 	"sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 

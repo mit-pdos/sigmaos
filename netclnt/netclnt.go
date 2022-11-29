@@ -7,9 +7,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/delay"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/sessconnclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 //
@@ -26,7 +26,7 @@ type NetClnt struct {
 	bw     *bufio.Writer
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *np.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *sp.Err) {
 	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
@@ -71,7 +71,7 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect(addrs []string) *np.Err {
+func (nc *NetClnt) connect(addrs []string) *sp.Err {
 	for _, addr := range addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -79,13 +79,13 @@ func (nc *NetClnt) connect(addrs []string) *np.Err {
 		}
 		nc.conn = c
 		nc.addr = addr
-		nc.br = bufio.NewReaderSize(c, np.Conf.Conn.MSG_LEN)
-		nc.bw = bufio.NewWriterSize(c, np.Conf.Conn.MSG_LEN)
+		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
+		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
 		db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
 		return nil
 	}
 	db.DPrintf("NETCLNT_ERR", "NetClnt unable to connect to any of %v\n", addrs)
-	return np.MkErr(np.TErrUnreachable, "no connection")
+	return sp.MkErr(sp.TErrUnreachable, "no connection")
 }
 
 // Try to send a request to the server. If an error occurs, close the
@@ -104,11 +104,11 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 
 	// Otherwise, marshall and write the fcall.
-	err := npcodec.MarshalFcallMsg(rpc.Req, nc.bw)
+	err := spcodec.MarshalFcallMsg(rpc.Req, nc.bw)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
-		if err.Code() != np.TErrUnreachable {
+		if err.Code() != sp.TErrUnreachable {
 			db.DFatalf("Unexpected error in netclnt.writer: %v", err)
 		}
 		return
@@ -119,14 +119,14 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*np.FcallMsg, *np.Err) {
-	frame, err := npcodec.ReadFrame(nc.br)
+func (nc *NetClnt) recv() (*sp.FcallMsg, *sp.Err) {
+	frame, err := spcodec.ReadFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return nil, np.MkErr(np.TErrUnreachable, nc.Src()+"->"+nc.Dst())
+		return nil, sp.MkErr(sp.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
-	fm, err := npcodec.UnmarshalFcallMsg(frame)
+	fm, err := spcodec.UnmarshalFcallMsg(frame)
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 	}

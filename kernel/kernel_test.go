@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/pathclnt"
 	"sigmaos/test"
 )

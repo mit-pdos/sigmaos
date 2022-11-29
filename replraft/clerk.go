@@ -6,9 +6,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/proc"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
 )
 
@@ -54,7 +54,7 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				if req, err := npcodec.UnmarshalFcallMsg(frame); err != nil {
+				if req, err := spcodec.UnmarshalFcallMsg(frame); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
@@ -69,7 +69,7 @@ func (c *Clerk) serve() {
 func (c *Clerk) propose(op *Op) {
 	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
-	frame, err := npcodec.MarshalFcallMsgByte(op.request)
+	frame, err := spcodec.MarshalFcallMsgByte(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}

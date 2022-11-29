@@ -7,9 +7,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
-	np "sigmaos/ninep"
 	"sigmaos/rand"
 	"sigmaos/sessstateclnt"
+	np "sigmaos/sigmap"
 )
 
 // A session from a client to a logical server (either one server or a

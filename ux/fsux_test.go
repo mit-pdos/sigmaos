@@ -11,7 +11,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

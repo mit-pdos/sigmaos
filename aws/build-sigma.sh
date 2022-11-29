@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM [--version VERSION] [--force-build]" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM [--version VERSION] [--force-build] [--branch BRANCH]" 1>&2
 }
 
 VPC=""
 REALM=""
 FORCE=""
 VERSION=""
+BRANCH="master"
 while [[ $# -gt 0 ]]; do
   case $1 in
   --vpc)
@@ -23,6 +24,11 @@ while [[ $# -gt 0 ]]; do
   --version)
     shift
     VERSION=$1
+    shift
+    ;;
+  --branch)
+    shift
+    BRANCH=$1
     shift
     ;;
   --force-build)
@@ -53,6 +59,7 @@ MAIN="${vms[0]}"
 
 echo "UPDATE: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
+ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; ( cd ulambda; git fetch --all; git checkout master; )'
 ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
 (cd ulambda; ./stop.sh)
 # Make sure we build the first time sigmaos is installed.

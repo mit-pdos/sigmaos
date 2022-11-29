@@ -188,16 +188,9 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
 				return err
 			}
-			if err := e.encode(v.Msg); err != nil {
-				return err
-			}
-		case *np.FcallMsg:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case np.Tmsg:
-			if v.Type() == np.TTwriteread {
-				b, err := proto.Marshal(v.(proto.Message))
+			switch np.Tfcall(v.Fc.Type) {
+			case np.TTwriteread:
+				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
 				}
@@ -207,14 +200,22 @@ func (e *encoder) encode(vs ...interface{}) error {
 				if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
 					return err
 				}
-			} else {
-				elements, err := fields9p(v)
-				if err != nil {
+			default:
+				if err := e.encode(v.Msg); err != nil {
 					return err
 				}
-				if err := e.encode(elements...); err != nil {
-					return err
-				}
+			}
+		case *np.FcallMsg:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
+		case np.Tmsg:
+			elements, err := fields9p(v)
+			if err != nil {
+				return err
+			}
+			if err := e.encode(elements...); err != nil {
+				return err
 			}
 		default:
 			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
@@ -378,7 +379,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			msg, err := newMsg(np.Tfcall(v.Fc.Type))
-			if np.Tfcall(v.Fc.Type) == np.TTwriteread {
+			if err != nil {
+				return err
+			}
+			switch np.Tfcall(v.Fc.Type) {
+			case np.TTwriteread:
 				var l uint32
 				if err := d.decode(&l); err != nil {
 					return err
@@ -391,10 +396,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				if err := proto.Unmarshal(b, m); err != nil {
 					return err
 				}
-			} else {
-				if err != nil {
-					return err
-				}
+			default:
 				if err := d.decode(msg); err != nil {
 					return err
 				}

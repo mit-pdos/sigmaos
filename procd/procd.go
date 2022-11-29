@@ -404,7 +404,6 @@ func (pd *Procd) Work() {
 		defer pd.group.Done()
 		pd.memfssrv.Serve()
 		pd.memfssrv.Done()
-		pd.memfssrv.Done()
 	}()
 	go pd.offerStealableProcs()
 	pd.startWorkStealingMonitors()

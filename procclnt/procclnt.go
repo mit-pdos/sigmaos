@@ -375,6 +375,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
+		debug.PrintStack()
 		db.DFatalf("Exited called after exited %v", procdir)
 	}
 

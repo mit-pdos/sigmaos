@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -568,25 +567,4 @@ func fields9p(v interface{}) ([]interface{}, *np.Err) {
 	}
 
 	return elements, nil
-}
-
-func string9p(v interface{}) string {
-	if v == nil {
-		return "nil"
-	}
-
-	rv := reflect.Indirect(reflect.ValueOf(v))
-
-	if rv.Kind() != reflect.Struct {
-		db.DFatalf("not a struct")
-	}
-
-	var s string
-
-	for i := 0; i < rv.NumField(); i++ {
-		f := rv.Field(i)
-		s += fmt.Sprintf(" %v=%v", strings.ToLower(rv.Type().Field(i).Name), f.Interface())
-	}
-
-	return s
 }

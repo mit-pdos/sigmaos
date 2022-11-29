@@ -3,7 +3,7 @@
 # Install the sigmaOS software, either from the local build or from s3.
 
 usage() {
-    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE]" 1>&2
+    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE] [--version VERSION]" 1>&2
 }
 
 FROM="local"

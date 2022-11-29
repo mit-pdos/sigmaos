@@ -290,7 +290,6 @@ func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		ShutdownNamedReplicas(nd.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
-		db.DPrintf(db.ALWAYS, "REMOVE REALM CONFIG FILE %v", RealmConfPath(realmCfg.Rid))
 		if err := nd.Remove(RealmConfPath(realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}

@@ -1,8 +1,6 @@
 package protdevsrv
 
 import (
-	"bytes"
-	"encoding/gob"
 	"reflect"
 	"strings"
 	"time"
@@ -49,11 +47,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 
 	ql := rpc.pds.QueueLen()
 	start := time.Now()
-	if req.Protobuf {
-		rep = rpc.pds.svc.dispatchproto(req.Method, &req)
-	} else {
-		rep = rpc.pds.svc.dispatch(req.Method, &req)
-	}
+	rep = rpc.pds.svc.dispatch(req.Method, &req)
 	t := time.Since(start).Microseconds()
 	rpc.pds.sti.Stat(req.Method, t, ql)
 
@@ -65,61 +59,6 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
 }
 
 func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.Reply {
-	dot := strings.LastIndex(methname, ".")
-	name := methname[dot+1:]
-	if method, ok := svc.methods[name]; ok {
-		// prepare space into which to read the argument.
-		// the Value's type will be a pointer to req.argsType.
-		args := reflect.New(method.argType)
-
-		// decode the argument
-		ab := bytes.NewBuffer(req.Args)
-		ad := gob.NewDecoder(ab)
-		if err := ad.Decode(args.Interface()); err != nil {
-			r := &rpcproto.Reply{}
-			r.Error = err.Error()
-			return r
-		}
-		// db.DPrintf("PROTDEVSRV", "dispatch %v\n")
-
-		// allocate space for the reply.
-		replyType := method.replyType
-		replyType = replyType.Elem()
-		replyv := reflect.New(replyType)
-
-		// call the method.
-		function := method.method.Func
-		rv := function.Call([]reflect.Value{svc.svc, args.Elem(), replyv})
-
-		// The return value for the method is an error.
-		errI := rv[0].Interface()
-		errmsg := ""
-		if errI != nil {
-			errmsg = errI.(error).Error()
-		}
-
-		// encode the reply.
-		rb := new(bytes.Buffer)
-		re := gob.NewEncoder(rb)
-		re.EncodeValue(replyv)
-		r := &rpcproto.Reply{}
-		r.Res = rb.Bytes()
-		r.Error = errmsg
-		return r
-	} else {
-		choices := []string{}
-		for k, _ := range svc.methods {
-			choices = append(choices, k)
-		}
-		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
-			methname, req.Method, choices)
-		r := &rpcproto.Reply{}
-		r.Error = "unknown method"
-		return r
-	}
-}
-
-func (svc *service) dispatchproto(methname string, req *rpcproto.Request) *rpcproto.Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {

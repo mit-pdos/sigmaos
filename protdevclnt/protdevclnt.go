@@ -1,8 +1,6 @@
 package protdevclnt
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"path"
 	"time"
@@ -45,10 +43,9 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	return pdc, nil
 }
 
-func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*rpcproto.Reply, error) {
+func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{}
 	req.Method = method
-	req.Protobuf = p
 	req.Args = a
 
 	b, err := proto.Marshal(&req)
@@ -72,12 +69,12 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte, p bool) (*rpcproto.Reply, e
 	return rep, nil
 }
 
-func (pdc *ProtDevClnt) RPCproto(method string, arg proto.Message, res proto.Message) error {
+func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message) error {
 	b, err := proto.Marshal(arg)
 	if err != nil {
 		return err
 	}
-	rep, err := pdc.rpc(method, b, true)
+	rep, err := pdc.rpc(method, b)
 	if err != nil {
 		return err
 	}
@@ -85,27 +82,6 @@ func (pdc *ProtDevClnt) RPCproto(method string, arg proto.Message, res proto.Mes
 		return fmt.Errorf("%s", rep.Error)
 	}
 	if err := proto.Unmarshal(rep.Res, res); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (pdc *ProtDevClnt) RPC(method string, arg any, res any) error {
-	ab := new(bytes.Buffer)
-	ae := gob.NewEncoder(ab)
-	if err := ae.Encode(arg); err != nil {
-		return err
-	}
-	rep, err := pdc.rpc(method, ab.Bytes(), false)
-	if err != nil {
-		return err
-	}
-	if rep.Error != "" {
-		return fmt.Errorf("%s", rep.Error)
-	}
-	rb := bytes.NewBuffer(rep.Res)
-	rd := gob.NewDecoder(rb)
-	if err := rd.Decode(res); err != nil {
 		return err
 	}
 	return nil

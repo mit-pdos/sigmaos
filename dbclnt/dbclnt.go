@@ -25,7 +25,7 @@ func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 func (dc *DbClnt) Query(q string, res any) error {
 	req := &proto.DBRequest{Cmd: q}
 	rep := proto.DBResult{}
-	err := dc.pdc.RPCproto("Server.Query", req, &rep)
+	err := dc.pdc.RPC("Server.Query", req, &rep)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (dc *DbClnt) Query(q string, res any) error {
 func (dc *DbClnt) Exec(q string) error {
 	req := &proto.DBRequest{Cmd: q}
 	rep := proto.DBResult{}
-	err := dc.pdc.RPCproto("Server.Exec", req, &rep)
+	err := dc.pdc.RPC("Server.Exec", req, &rep)
 	if err != nil {
 		return err
 	}

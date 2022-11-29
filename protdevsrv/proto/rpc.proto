@@ -4,8 +4,7 @@ option go_package = "sigmaos/protdevsrv";
 
 message Request {
         string method = 1;
-        bool protobuf = 2;
-        bytes args = 3;
+        bytes args = 2;
 }
 
 message Reply {

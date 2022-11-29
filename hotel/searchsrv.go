@@ -48,7 +48,7 @@ func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error 
 		Lat: req.Lat,
 		Lon: req.Lon,
 	}
-	err := s.geoc.RPCproto("Geo.Nearby", greq, &gres)
+	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
 		log.Fatalf("nearby error: %v", err)
 	}
@@ -62,7 +62,7 @@ func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error 
 		InDate:   req.InDate,
 		OutDate:  req.OutDate,
 	}
-	err = s.ratec.RPCproto("Rate.GetRates", rreq, &rres)
+	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
 	if err != nil {
 		log.Fatalf("rates error: %v", err)
 	}

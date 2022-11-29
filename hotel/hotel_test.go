@@ -141,7 +141,7 @@ func TestGeoSingle(t *testing.T) {
 		Lon: -122.4194,
 	}
 	res := proto.GeoResult{}
-	err = pdc.RPCproto("Geo.Nearby", &arg, &res)
+	err = pdc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	assert.Equal(t, 5, len(res.HotelIds))
@@ -159,10 +159,10 @@ func TestRateSingle(t *testing.T) {
 		OutDate:  "2015-04-10",
 	}
 	var res proto.RateResult
-	err = pdc.RPCproto("Rate.GetRates", arg, &res)
+	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	err = pdc.RPCproto("Rate.GetRates", arg, &res)
+	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
 	ts.stop()
@@ -179,7 +179,7 @@ func TestRecSingle(t *testing.T) {
 		Lon:     -122.095,
 	}
 	var res proto.RecResult
-	err = pdc.RPCproto("Rec.GetRecs", arg, &res)
+	err = pdc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
@@ -196,7 +196,7 @@ func TestUserSingle(t *testing.T) {
 		Password: hotel.MkPassword("0"),
 	}
 	var res proto.UserResult
-	err = pdc.RPCproto("User.CheckUser", arg, &res)
+	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	ts.stop()
@@ -211,12 +211,12 @@ func TestProfile(t *testing.T) {
 		HotelIds: []string{"1", "2"},
 	}
 	var res proto.ProfResult
-	err = pdc.RPCproto("ProfSrv.GetProfiles", arg, &res)
+	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 	db.DPrintf(db.ALWAYS, "res %v\n", res.Hotels[0])
 
-	err = pdc.RPCproto("ProfSrv.GetProfiles", arg, &res)
+	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 
@@ -236,10 +236,10 @@ func TestCheck(t *testing.T) {
 		Number:       1,
 	}
 	var res proto.ReserveResult
-	err = pdc.RPCproto("Reserve.CheckAvailability", arg, &res)
+	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
-	err = pdc.RPCproto("Reserve.CheckAvailability", arg, &res)
+	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
@@ -259,11 +259,11 @@ func TestReserve(t *testing.T) {
 	}
 	var res proto.ReserveResult
 
-	err = pdc.RPCproto("Reserve.MakeReservation", arg, &res)
+	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 
-	err = pdc.RPCproto("Reserve.MakeReservation", arg, &res)
+	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 
@@ -303,10 +303,10 @@ func TestSingleSearch(t *testing.T) {
 		OutDate: "2015-04-10",
 	}
 	var res proto.SearchResult
-	err = pdc.RPCproto("Search.Nearby", arg, &res)
+	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
-	err = pdc.RPCproto("Search.Nearby", arg, &res)
+	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()

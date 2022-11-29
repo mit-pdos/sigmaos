@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"strconv"
 	"testing"
 	"time"
 
@@ -343,68 +342,24 @@ func TestWww(t *testing.T) {
 	ts.Shutdown()
 }
 
-func benchSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	in_date := r.Intn(14) + 9
-	out_date := in_date + r.Intn(5) + 1
-	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
-	if in_date <= 9 {
-		in_date_str = fmt.Sprintf("2015-04-0%d", in_date)
-	}
-	out_date_str := fmt.Sprintf("2015-04-%d", out_date)
-	if out_date <= 9 {
-		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
-	}
-	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
-	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	err := wc.Search(in_date_str, out_date_str, lat, lon)
+func runSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+	err := hotel.RandSearchReq(wc, r)
 	assert.Nil(t, err, "Err search %v", err)
 }
 
 func benchRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	coin := toss(r)
-	req := ""
-	if coin < 0.33 {
-		req = "dis"
-	} else if coin < 0.66 {
-		req = "rate"
-	} else {
-		req = "price"
-	}
-	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
-	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	err := wc.Recs(req, lat, lon)
+	err := hotel.RandRecsReq(wc, r)
 	assert.Nil(t, err)
 }
 
 func benchLogin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	suffix := strconv.Itoa(r.Intn(500))
-	user := "Cornell_" + suffix
-	pw := hotel.MkPassword(suffix)
-	s, err := wc.Login(user, pw)
+	s, err := hotel.RandLoginReq(wc, r)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 }
 
 func benchReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	in_date := r.Intn(14) + 9
-	out_date := in_date + r.Intn(5) + 1
-	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
-	if in_date <= 9 {
-		in_date_str = fmt.Sprintf("2015-04-0%d", in_date)
-	}
-	out_date_str := fmt.Sprintf("2015-04-%d", out_date)
-	if out_date <= 9 {
-		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
-	}
-	hotelid := strconv.Itoa(r.Intn(80) + 1)
-	suffix := strconv.Itoa(r.Intn(500))
-	user := "Cornell_" + suffix
-	pw := hotel.MkPassword(suffix)
-	cust_name := user
-	num := 1
-	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
-	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	s, err := wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
+	s, err := hotel.RandReserveReq(wc, r)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 }
@@ -449,7 +404,7 @@ func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 	for i := 0; i < N; i++ {
 		coin := toss(r)
 		if coin < search_ratio {
-			benchSearch(ts.T, wc, r)
+			runSearch(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio {
 			benchRecommend(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio+user_ratio {
@@ -494,7 +449,7 @@ func TestBenchSearch(t *testing.T) {
 	defer p.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
-		benchSearch(ts.T, wc, r)
+		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
 	ts.PrintStats()
@@ -519,7 +474,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	defer pf.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
-		benchSearch(ts.T, wc, r)
+		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
 	ts.Shutdown()
@@ -575,7 +530,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		go func() {
 			for i := 0; i < N; i++ {
-				benchSearch(ts.T, wc, r)
+				runSearch(ts.T, wc, r)
 			}
 			ch <- true
 		}()

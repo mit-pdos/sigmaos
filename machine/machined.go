@@ -50,6 +50,7 @@ func MakeMachined(args []string) *Machined {
 	m.path = path.Join(MACHINES, m.memfssrv.MyAddr())
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfssrv.Root(), np.RESOURCE_CTL)
 	m.initFS()
+	m.memfssrv.GetStats().MonitorCPUUtil(nil)
 	m.cleanLinuxFS()
 	return m
 }

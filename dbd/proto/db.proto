@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "ulambda/dbd/proto";
+
+service DB {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc Query(DBRequest) returns (DBResult);
+  rpc Exec(DBRequest) returns (DBResult);
+}
+
+// The latitude and longitude of the current location.
+message DBRequest {
+  string cmd = 1;
+}
+
+message DBResult {
+  bytes res = 1;
+}

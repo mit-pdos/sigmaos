@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
+	"sigmaos/dbd/proto"
 	"sigmaos/debug"
 )
 
@@ -36,16 +37,16 @@ func (s *Server) doQuery(arg string, rep *[]byte) error {
 	return nil
 }
 
-func (s *Server) Query(arg string, rep *[]byte) error {
-	err := s.doQuery(arg, rep)
+func (s *Server) Query(req proto.DBRequest, rep *proto.DBResult) error {
+	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Server) Exec(arg string, repl *[]byte) error {
-	err := s.doQuery(arg, repl)
+func (s *Server) Exec(req proto.DBRequest, rep *proto.DBResult) error {
+	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err
 	}

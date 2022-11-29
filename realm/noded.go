@@ -22,7 +22,7 @@ import (
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*memfssrv.MemFs
+	mfs       *memfssrv.MemFs
 	id        string
 	machineId string
 	localIP   string
@@ -44,13 +44,13 @@ func MakeNoded(machineId string) *Noded {
 	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
 	nd.ConfigClnt = config.MakeConfigClnt(nd.FsLib)
 	var err error
-	nd.MemFs, err = memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
+	nd.mfs, err = memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFsFsl: %v", err)
 	}
 
 	// Make a control file
-	resource.MakeCtlFile(nd.receiveResourceGrant, nd.handleResourceRequest, nd.MemFs.Root(), np.RESOURCE_CTL)
+	resource.MakeCtlFile(nd.receiveResourceGrant, nd.handleResourceRequest, nd.mfs.Root(), np.RESOURCE_CTL)
 
 	// Mount the KPIDS dir.
 	if err := procclnt.MountPids(nd.FsLib, fslib.Named()); err != nil {
@@ -213,7 +213,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NCores += nd.countNCores()
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
+	if err := nd.Symlink(fslib.MakeTarget([]string{nd.mfs.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }
@@ -290,6 +290,7 @@ func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		ShutdownNamedReplicas(nd.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
+		db.DPrintf(db.ALWAYS, "REMOVE REALM CONFIG FILE %v", RealmConfPath(realmCfg.Rid))
 		if err := nd.Remove(RealmConfPath(realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}

@@ -13,7 +13,7 @@ type Config struct {
 
 func makeMachineConfig() *Config {
 	cfg := MakeEmptyConfig()
-	cfg.Cores = np.MkInterval(0, np.Toffset(linuxsched.NCores))
+	cfg.Cores = np.MkInterval(0, uint64(linuxsched.NCores))
 	return cfg
 }
 

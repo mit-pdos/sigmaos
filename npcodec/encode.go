@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -170,30 +169,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tinterval:
-			if err := e.encode(v.Start, v.End); err != nil {
-				return err
-			}
-		case *np.Tinterval:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case np.Tfenceid:
-			if err := e.encode(v.Path, v.ServerId); err != nil {
-				return err
-			}
-		case *np.Tfenceid:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case np.Tfence:
-			if err := e.encode(v.FenceId, v.Epoch); err != nil {
-				return err
-			}
-		case *np.Tfence:
-			if err := e.encode(v.FenceId, v.Epoch); err != nil {
-				return err
-			}
 		case np.FcallWireCompat:
 			if err := e.encode(v.Type, v.Tag, v.Msg); err != nil {
 				return err
@@ -202,18 +177,20 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Fcall:
-			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Received, v.Fence, v.Msg); err != nil {
+		case np.FcallMsg:
+			b, err := proto.Marshal(v.Fc)
+			if err != nil {
 				return err
 			}
-		case *np.Fcall:
-			if err := e.encode(*v); err != nil {
+			if err := e.encode(uint32(len(b))); err != nil {
 				return err
 			}
-		case np.Tmsg:
-			if v.Type() == np.TTwriteread {
-				msg := v.(proto.Message)
-				b, err := proto.Marshal(msg)
+			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+				return err
+			}
+			switch np.Tfcall(v.Fc.Type) {
+			case np.TTwriteread:
+				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
 				}
@@ -223,14 +200,22 @@ func (e *encoder) encode(vs ...interface{}) error {
 				if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
 					return err
 				}
-			} else {
-				elements, err := fields9p(v)
-				if err != nil {
+			default:
+				if err := e.encode(v.Msg); err != nil {
 					return err
 				}
-				if err := e.encode(elements...); err != nil {
-					return err
-				}
+			}
+		case *np.FcallMsg:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
+		case np.Tmsg:
+			elements, err := fields9p(v)
+			if err != nil {
+				return err
+			}
+			if err := e.encode(elements...); err != nil {
+				return err
 			}
 		default:
 			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
@@ -369,18 +354,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
-		case *np.Tinterval:
-			if err := d.decode(&v.Start, &v.End); err != nil {
-				return err
-			}
-		case *np.Tfenceid:
-			if err := d.decode(&v.Path, &v.ServerId); err != nil {
-				return err
-			}
-		case *np.Tfence:
-			if err := d.decode(&v.FenceId, &v.Epoch); err != nil {
-				return err
-			}
 		case *np.FcallWireCompat:
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
@@ -393,12 +366,24 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			v.Msg = msg
-		case *np.Fcall:
-			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Received, &v.Fence); err != nil {
+		case *np.FcallMsg:
+			var l uint32
+			if err := d.decode(&l); err != nil {
 				return err
 			}
-			msg, err := newMsg(v.Type)
-			if v.Type == np.TTwriteread {
+			b := make([]byte, int(l))
+			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+				return err
+			}
+			if err := proto.Unmarshal(b, v.Fc); err != nil {
+				return err
+			}
+			msg, err := newMsg(np.Tfcall(v.Fc.Type))
+			if err != nil {
+				return err
+			}
+			switch np.Tfcall(v.Fc.Type) {
+			case np.TTwriteread:
 				var l uint32
 				if err := d.decode(&l); err != nil {
 					return err
@@ -411,10 +396,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				if err := proto.Unmarshal(b, m); err != nil {
 					return err
 				}
-			} else {
-				if err != nil {
-					return err
-				}
+			default:
 				if err := d.decode(msg); err != nil {
 					return err
 				}
@@ -502,7 +484,7 @@ func SizeNp(vs ...interface{}) uint32 {
 		case *np.FcallWireCompat:
 			s += SizeNp(*v)
 		case np.Fcall:
-			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg)
+			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
 		case *np.Fcall:
 			s += SizeNp(*v)
 		case np.Tmsg:
@@ -551,25 +533,4 @@ func fields9p(v interface{}) ([]interface{}, *np.Err) {
 	}
 
 	return elements, nil
-}
-
-func string9p(v interface{}) string {
-	if v == nil {
-		return "nil"
-	}
-
-	rv := reflect.Indirect(reflect.ValueOf(v))
-
-	if rv.Kind() != reflect.Struct {
-		db.DFatalf("not a struct")
-	}
-
-	var s string
-
-	for i := 0; i < rv.NumField(); i++ {
-		f := rv.Field(i)
-		s += fmt.Sprintf(" %v=%v", strings.ToLower(rv.Type().Field(i).Name), f.Interface())
-	}
-
-	return s
 }

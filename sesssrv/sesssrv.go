@@ -244,18 +244,19 @@ func (ssrv *SessSrv) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
-	sess, ok := ssrv.st.Lookup(fc.Session)
+func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
+	s := np.Tsession(fc.Fc.Session)
+	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
-	if !ok && fc.Session != 0 {
-		db.DFatalf("SrvFcall: no session %v for req %v\n", fc.Session, fc)
+	if !ok && s != 0 {
+		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
 	}
 	if !ssrv.replicated {
 		// If the fcall is a server-generated heartbeat, don't worry about
 		// processing it sequentially on the session's thread.
-		if fc.Session == 0 {
+		if s == 0 {
 			ssrv.srvfcall(fc)
-		} else if fc.Type == np.TTwriteread {
+		} else if np.Tfcall(fc.Fc.Type) == np.TTwriteread {
 			ssrv.cnt.Inc()
 			go func() {
 				ssrv.srvfcall(fc)
@@ -269,8 +270,8 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstatesrv.Session) {
-	fcall := np.MakeFcallReply(request, reply)
+func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply np.Tmsg, sess *sessstatesrv.Session) {
+	fcall := np.MakeFcallMsgReply(request, reply)
 
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, fcall)
@@ -279,16 +280,17 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstate
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
-	if request.Seqno != 0 && ok {
+	if request.Fc.Seqno != 0 && ok {
 		sess.SendConn(fcall)
 	}
 }
 
-func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
+func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
-	if fc.Session == 0 {
+	s := np.Tsession(fc.Fc.Session)
+	if s == 0 {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*np.Theartbeat))
 		return
 	}
@@ -297,7 +299,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// will be in this function, so the conn will be set to
 	// nil. If it came from the client, the conn will already be
 	// set.
-	sess := ssrv.st.Alloc(fc.Client, fc.Session)
+	sess := ssrv.st.Alloc(np.Tclient(fc.Fc.Client), s)
 	// Reply cache needs to live under the replication layer in order to
 	// handle duplicate requests. These may occur if, for example:
 	//
@@ -318,7 +320,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// asynchrony is necessary in order to allow other ops on the thread to
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
-	if replyFuture, ok := sess.GetReplyTable().Get(fc); ok {
+	if replyFuture, ok := sess.GetReplyTable().Get(fc.Fc); ok {
 		db.DPrintf("SESSSRV", "srvfcall %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
@@ -337,9 +339,9 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.Fcall) {
-	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
-	if f, err := fencefs.CheckFence(ssrv.ffs, fc.Fence); err != nil {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
+	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
+	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		reply := err.Rerror()
 		ssrv.sendReply(fc, reply, sess)
 		return
@@ -353,7 +355,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.Fcall) {
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.Fcall) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	reply, close, rerror := sess.Dispatch(fc.Msg)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)

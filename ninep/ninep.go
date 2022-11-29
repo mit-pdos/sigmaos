@@ -8,6 +8,7 @@ package ninep
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -67,22 +68,6 @@ func String2Epoch(epoch string) (Tepoch, error) {
 		return Tepoch(0), err
 	}
 	return Tepoch(e), nil
-}
-
-type Tfenceid struct {
-	Path     Tpath
-	ServerId uint64 // XXX public key of server?
-}
-
-type Tfence struct {
-	FenceId Tfenceid
-	Epoch   Tepoch
-}
-
-var NoFence = Tfence{}
-
-func (f *Tfence) String() string {
-	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
 }
 
 //
@@ -429,35 +414,36 @@ type FcallWireCompat struct {
 	Msg  Tmsg
 }
 
-type Tinterval struct {
-	Start Toffset
-	End   Toffset
-}
-
-func MkInterval(start, end Toffset) *Tinterval {
-	return &Tinterval{start, end}
+func MkInterval(start, end uint64) *Tinterval {
+	return &Tinterval{
+		Start: start,
+		End:   end,
+	}
 }
 
 func (iv *Tinterval) Size() Tsize {
 	return Tsize(iv.End - iv.Start)
 }
 
-func (iv *Tinterval) String() string {
-	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
-}
-
+// XXX should atoi be uint64?
 func (iv *Tinterval) Unmarshal(s string) {
 	idxs := strings.Split(s[1:len(s)-1], ", ")
 	start, err := strconv.Atoi(idxs[0])
 	if err != nil {
+		debug.PrintStack()
 		log.Fatalf("FATAL unmarshal interval: %v", err)
 	}
-	iv.Start = Toffset(start)
+	iv.Start = uint64(start)
 	end, err := strconv.Atoi(idxs[1])
 	if err != nil {
+		debug.PrintStack()
 		log.Fatalf("FATAL unmarshal interval: %v", err)
 	}
-	iv.End = Toffset(end)
+	iv.End = uint64(end)
+}
+
+func (iv *Tinterval) Marshal() string {
+	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
 }
 
 func (fcallWC *FcallWireCompat) GetType() Tfcall {
@@ -468,64 +454,73 @@ func (fcallWC *FcallWireCompat) GetMsg() Tmsg {
 	return fcallWC.Msg
 }
 
-func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
-	fcall := &Fcall{}
-	fcall.Type = fcallWC.Type
-	fcall.Tag = fcallWC.Tag
-	fcall.Msg = fcallWC.Msg
-	fcall.Session = NoSession
-	fcall.Seqno = NoSeqno
-	fcall.Fence = NoFence
-	return fcall
+func (fcallWC *FcallWireCompat) ToInternal() *FcallMsg {
+	fm := MakeFcallMsgNull()
+	fm.Fc.Type = uint32(fcallWC.Type)
+	fm.Fc.Tag = uint32(fcallWC.Tag)
+	fm.Fc.Session = uint64(NoSession)
+	fm.Fc.Seqno = uint64(NoSeqno)
+	fm.Msg = fcallWC.Msg
+	return fm
 }
 
-type Fcall struct {
-	Type     Tfcall
-	Tag      Ttag
-	Client   Tclient
-	Session  Tsession
-	Seqno    Tseqno
-	Received Tinterval
-	Fence    Tfence
-	Msg      Tmsg
+type FcallMsg struct {
+	Fc  *Fcall
+	Msg Tmsg
 }
 
-func MakeFcall(msg Tmsg, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence) *Fcall {
+func MakeFenceNull() *Tfence {
+	return &Tfence{Fenceid: &Tfenceid{}}
+}
+
+func MakeFcallMsgNull() *FcallMsg {
+	fc := &Fcall{Received: &Tinterval{}, Fence: MakeFenceNull()}
+	return &FcallMsg{fc, nil}
+}
+
+func MakeFcallMsg(msg Tmsg, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
 	if rcv == nil {
 		rcv = &Tinterval{}
 	}
-	if seqno == nil {
-		return &Fcall{msg.Type(), 0, cli, sess, 0, *rcv, f, msg}
-	} else {
-		return &Fcall{msg.Type(), 0, cli, sess, seqno.Next(), *rcv, f, msg}
+	fcall := &Fcall{
+		Type:     uint32(msg.Type()),
+		Tag:      0,
+		Client:   uint64(cli),
+		Session:  uint64(sess),
+		Received: rcv,
+		Fence:    f,
 	}
+	if seqno != nil {
+		fcall.Seqno = uint64(seqno.Next())
+	}
+	return &FcallMsg{fcall, msg}
 }
 
-func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
-	fcall := MakeFcall(reply, req.Client, req.Session, nil, nil, NoFence)
-	fcall.Seqno = req.Seqno
-	fcall.Received = req.Received
-	fcall.Tag = req.Tag
-	return fcall
+func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
+	fm := MakeFcallMsg(reply, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
+	fm.Fc.Seqno = req.Fc.Seqno
+	fm.Fc.Received = req.Fc.Received
+	fm.Fc.Tag = req.Fc.Tag
+	return fm
 }
 
-func (fc *Fcall) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Received, fc.Msg, fc.Fence)
+func (fm *FcallMsg) String() string {
+	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg, fm.Fc.Fence)
 }
 
-func (fcall *Fcall) GetType() Tfcall {
-	return fcall.Type
+func (fm *FcallMsg) GetType() Tfcall {
+	return Tfcall(fm.Fc.Type)
 }
 
-func (fcall *Fcall) GetMsg() Tmsg {
-	return fcall.Msg
+func (fm *FcallMsg) GetMsg() Tmsg {
+	return fm.Msg
 }
 
-func (fcall *Fcall) ToWireCompatible() *FcallWireCompat {
+func (fm *FcallMsg) ToWireCompatible() *FcallWireCompat {
 	fcallWC := &FcallWireCompat{}
-	fcallWC.Type = fcall.Type
-	fcallWC.Tag = fcall.Tag
-	fcallWC.Msg = fcall.Msg
+	fcallWC.Type = Tfcall(fm.Fc.Type)
+	fcallWC.Tag = Ttag(fm.Fc.Tag)
+	fcallWC.Msg = fm.Msg
 	return fcallWC
 }
 

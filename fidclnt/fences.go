@@ -35,17 +35,17 @@ func (ft *FenceTable) Insert(p string, f np.Tfence) *np.Err {
 	return nil
 }
 
-func (ft *FenceTable) Lookup(path np.Path) np.Tfence {
+func (ft *FenceTable) Lookup(path np.Path) *np.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
 	for pn, f := range ft.fencedDirs {
 		db.DPrintf("FIDCLNT", "Lookup fence %v %v\n", path, f)
 		if path.IsParent(np.Split(pn)) {
-			return f
+			return &f
 		}
 	}
 	db.DPrintf("FIDCLNT", "Lookup fence %v: no fence\n", path)
-	return np.Tfence{}
+	return np.MakeFenceNull()
 
 }

@@ -68,7 +68,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	// XXX make fslib exit?
 	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
 	ts.namedAddr = rconfig.NamedAddrs
-	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
+	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, uint64(linuxsched.NCores)))
 	return ts
 }
 
@@ -109,7 +109,7 @@ func (ts *Tstate) Shutdown() {
 
 func (ts *Tstate) addNamedReplica(i int) {
 	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", np.TEST_RID, i, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
+	r := kernel.MakeSystemNamed("test", np.TEST_RID, i, np.MkInterval(0, uint64(linuxsched.NCores)))
 	ts.Lock()
 	defer ts.Unlock()
 	ts.replicas = append(ts.replicas, r)
@@ -129,7 +129,7 @@ func (ts *Tstate) makeSystem(mkSys func(string, string, int, *np.Tinterval) *ker
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	go func() {
 		defer ts.wg.Done()
-		ts.System = mkSys("test", np.TEST_RID, 0, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
+		ts.System = mkSys("test", np.TEST_RID, 0, np.MkInterval(0, uint64(linuxsched.NCores)))
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()

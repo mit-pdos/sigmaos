@@ -669,13 +669,13 @@ func TestProcdResize1(t *testing.T) {
 	checkSleeperResult(t, ts, pid)
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
@@ -699,7 +699,7 @@ func TestProcdResize1(t *testing.T) {
 
 	// Grant the procd back its cores.
 	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
 
@@ -718,7 +718,7 @@ func TestProcdResizeN(t *testing.T) {
 	N := 5
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
@@ -733,7 +733,7 @@ func TestProcdResizeN(t *testing.T) {
 
 		// Remove some cores from the procd.
 		db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 		assert.Nil(t, err, "SetFile revoke: %v", err)
 
@@ -757,7 +757,7 @@ func TestProcdResizeN(t *testing.T) {
 
 		// Grant the procd back its cores.
 		db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
+		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
 		assert.Nil(t, err, "SetFile grant: %v", err)
 
@@ -786,13 +786,13 @@ func TestProcdResizeEvict(t *testing.T) {
 
 	// Revoke half + 1 of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
@@ -833,13 +833,13 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
@@ -858,7 +858,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Grant the procd back its cores.
 	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
 
@@ -928,7 +928,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
@@ -946,7 +946,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 

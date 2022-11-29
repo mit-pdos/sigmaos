@@ -18,7 +18,7 @@ type SrvConn struct {
 	wireCompat bool
 	br         *bufio.Reader
 	bw         *bufio.Writer
-	replies    chan *np.Fcall
+	replies    chan *np.FcallMsg
 	sesssrv    np.SessServer
 	clid       np.Tclient
 	sessid     np.Tsession
@@ -33,7 +33,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.wireCompat,
 		bufio.NewReaderSize(conn, np.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, np.Conf.Conn.MSG_LEN),
-		make(chan *np.Fcall),
+		make(chan *np.FcallMsg),
 		srv.sesssrv,
 		0,
 		0,
@@ -92,7 +92,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyC() chan *np.Fcall {
+func (c *SrvConn) GetReplyC() chan *np.FcallMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -106,26 +106,26 @@ func (c *SrvConn) reader() {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			return
 		}
-		var fcall *np.Fcall
+		var fm *np.FcallMsg
 		if c.wireCompat {
-			fcall, err = npcodec.UnmarshalFcallWireCompat(frame)
+			fm, err = npcodec.UnmarshalFcallWireCompat(frame)
 		} else {
-			fcall, err = npcodec.UnmarshalFcall(frame)
+			fm, err = npcodec.UnmarshalFcallMsg(frame)
 		}
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return
 		}
-		db.DPrintf("NETSRV", "srv req %v\n", fcall)
+		db.DPrintf("NETSRV", "srv req %v\n", fm)
 		if c.sessid == 0 {
-			c.sessid = fcall.Session
-			c.clid = fcall.Client
-			if err := c.sesssrv.Register(fcall.Client, fcall.Session, c); err != nil {
+			c.sessid = np.Tsession(fm.Fc.Session)
+			c.clid = np.Tclient(fm.Fc.Client)
+			if err := c.sesssrv.Register(c.clid, c.sessid, c); err != nil {
 				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fc := np.MakeFcallReply(fcall, err.Rerror())
-				c.GetReplyC() <- fc
+				fm := np.MakeFcallMsgReply(fm, err.Rerror())
+				c.GetReplyC() <- fm
 				close(c.replies)
 				return
 			} else {
@@ -134,10 +134,10 @@ func (c *SrvConn) reader() {
 				// the connection has broken.
 				defer c.sesssrv.Unregister(c.clid, c.sessid, c)
 			}
-		} else if c.sessid != fcall.Session {
-			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
+		} else if c.sessid != np.Tsession(fm.Fc.Session) {
+			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fm.Fc.Session)
 		}
-		c.sesssrv.SrvFcall(fcall)
+		c.sesssrv.SrvFcall(fm)
 	}
 }
 
@@ -145,26 +145,26 @@ func (c *SrvConn) writer() {
 	// Close the TCP connection once we return.
 	defer c.conn.Close()
 	for {
-		fcall, ok := <-c.replies
+		fm, ok := <-c.replies
 		if !ok {
 			db.DPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
 			return
 		}
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
-		db.DPrintf("NETSRV", "rep %v\n", fcall)
+		db.DPrintf("NETSRV", "rep %v\n", fm)
 		var writableFcall np.WritableFcall
 		if c.wireCompat {
-			writableFcall = fcall.ToWireCompatible()
+			writableFcall = fm.ToWireCompatible()
 		} else {
-			writableFcall = fcall
+			writableFcall = fm
 		}
-		if err := npcodec.MarshalFcall(writableFcall, c.bw); err != nil {
+		if err := npcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
 			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
 		if error := c.bw.Flush(); error != nil {
-			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fcall, c.Src(), error)
+			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fm, c.Src(), error)
 		}
 	}
 }

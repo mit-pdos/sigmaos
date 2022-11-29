@@ -7,15 +7,15 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyC() chan *Fcall
+	GetReplyC() chan *FcallMsg
 }
 
-type Fsrvfcall func(*Fcall)
+type Fsrvfcall func(*FcallMsg)
 
 type SessServer interface {
 	Register(Tclient, Tsession, Conn) *Err
 	Unregister(Tclient, Tsession, Conn)
-	SrvFcall(*Fcall)
+	SrvFcall(*FcallMsg)
 	Snapshot() []byte
 	Restore([]byte)
 }

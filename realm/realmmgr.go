@@ -122,7 +122,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		cores := ndCfg.Cores[len(ndCfg.Cores)-1]
 		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		// Otherwise, take some cores away.
-		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
+		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.Marshal(), int(cores.Size()))
 		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		m.updateResizeTimeL(m.realmId)
@@ -151,7 +151,7 @@ func (m *RealmResourceMgr) growRealm() {
 	} else {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
-		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
+		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.Marshal(), int(cores.Size()))
 		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
 	}
 	m.updateResizeTime(m.realmId)

@@ -36,12 +36,12 @@ func (pd *Procd) initCores(grantedCoresIv string) {
 	grantedCores := np.MkInterval(0, 0)
 	grantedCores.Unmarshal(grantedCoresIv)
 	// First, revoke access to all cores.
-	allCoresIv := np.MkInterval(0, np.Toffset(linuxsched.NCores))
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, allCoresIv.String(), int(linuxsched.NCores))
+	allCoresIv := np.MkInterval(0, uint64(linuxsched.NCores))
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, allCoresIv.Marshal(), int(linuxsched.NCores))
 	pd.removeCores(revokeMsg)
 
 	// Then, enable access to the granted core interval.
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, grantedCores.String(), int(grantedCores.Size()))
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, grantedCores.Marshal(), int(grantedCores.Size()))
 	pd.addCores(grantMsg)
 }
 

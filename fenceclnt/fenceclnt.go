@@ -41,10 +41,10 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence np.Tfence, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence *np.Tfence, paths []string) error {
 	db.DPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
-		err := fc.registerFence(p, fence)
+		err := fc.registerFence(p, *fence)
 		if err != nil {
 			db.DPrintf("FENCECLNT_ERR", "fencePath %v err %v", p, err)
 			return err
@@ -102,7 +102,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 			db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
 			return err
 		}
-		fn := srv + "/" + np.FENCEDIR + "/" + f.FenceId.Path.String()
+		fn := srv + "/" + np.FENCEDIR + "/" + np.Tpath(f.Fenceid.Path).String()
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf("FENCECLNT_ERR", "Remove %v err %v", fn, err)
 			return err

@@ -132,11 +132,11 @@ func (m *Machined) initFS() {
 }
 
 func (m *Machined) postCores() {
-	coreGroupSize := uint(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
-	for i := uint(0); i < linuxsched.NCores; i += coreGroupSize {
-		iv := np.MkInterval(np.Toffset(i), np.Toffset(i+coreGroupSize))
+	coreGroupSize := uint64(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	for i := uint64(0); i < uint64(linuxsched.NCores); i += coreGroupSize {
+		iv := np.MkInterval(i, i+coreGroupSize)
 		if uint(iv.End) > linuxsched.NCores+1 {
-			iv.End = np.Toffset(linuxsched.NCores + 1)
+			iv.End = uint64(linuxsched.NCores + 1)
 		}
 		PostCores(m.FsLib, m.memfssrv.MyAddr(), iv)
 	}

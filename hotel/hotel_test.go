@@ -476,7 +476,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstateCache(t, nil)
+	ts := makeTstate(t, nil)
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {

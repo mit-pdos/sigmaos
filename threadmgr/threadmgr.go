@@ -66,7 +66,7 @@ func (t *ThreadMgr) replayOps(ops []*Op) {
 }
 
 // Enqueue a new op to be processed.
-func (t *ThreadMgr) Process(fc *np.Fcall) {
+func (t *ThreadMgr) Process(fc *np.FcallMsg) {
 	t.Lock()
 	defer t.Unlock()
 
@@ -148,10 +148,10 @@ func (t *ThreadMgr) run() {
 			// Process the op. Run the next op in a new goroutine (which may sleep or
 			// block).
 			go func() {
-				db.DPrintf("THREADMGR", "Run %v", op.Fc)
+				db.DPrintf("THREADMGR", "Run %v", op.Fm)
 				// Execute the op.
-				t.pfn(op.Fc)
-				db.DPrintf("THREADMGR", "Done running %v", op.Fc)
+				t.pfn(op.Fm)
+				db.DPrintf("THREADMGR", "Done running %v", op.Fm)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.
@@ -160,7 +160,7 @@ func (t *ThreadMgr) run() {
 				t.cond.Signal()
 				// Unlock to allow the ThreadMgr to make progress.
 				t.Unlock()
-				db.DPrintf("THREADMGR", "Complete %v", op.Fc)
+				db.DPrintf("THREADMGR", "Complete %v", op.Fm)
 			}()
 			// Wait for the op to sleep or complete.
 			t.cond.Wait()

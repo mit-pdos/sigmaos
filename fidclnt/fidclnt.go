@@ -213,7 +213,7 @@ func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQver
 
 // Unfenced read
 func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.NoFence, v)
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.MakeFenceNull(), v)
 	if err != nil {
 		return nil, err
 	}

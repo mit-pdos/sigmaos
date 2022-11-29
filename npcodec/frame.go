@@ -65,7 +65,7 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *np.Err {
 	return WriteRawBuffer(wr, buf)
 }
 
-func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
+func MarshalFcallMsg(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 	frame, error := marshal1(true, fcall)
 	if error != nil {
 		return np.MkErr(np.TErrBadFcall, error.Error())
@@ -114,7 +114,7 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 	}
 }
 
-func MarshalFcallByte(fcall *np.Fcall) ([]byte, *np.Err) {
+func MarshalFcallMsgByte(fcall *np.FcallMsg) ([]byte, *np.Err) {
 	if b, error := marshal(fcall); error != nil {
 		return nil, np.MkErr(np.TErrBadFcall, error)
 	} else {
@@ -122,15 +122,16 @@ func MarshalFcallByte(fcall *np.Fcall) ([]byte, *np.Err) {
 	}
 }
 
-func UnmarshalFcall(frame []byte) (*np.Fcall, *np.Err) {
-	fcall := &np.Fcall{}
-	if err := unmarshal(frame, fcall); err != nil {
+func UnmarshalFcallMsg(frame []byte) (*np.FcallMsg, *np.Err) {
+	fm := np.MakeFcallMsgNull()
+
+	if err := unmarshal(frame, fm); err != nil {
 		return nil, np.MkErr(np.TErrBadFcall, err)
 	}
-	return fcall, nil
+	return fm, nil
 }
 
-func UnmarshalFcallWireCompat(frame []byte) (*np.Fcall, *np.Err) {
+func UnmarshalFcallWireCompat(frame []byte) (*np.FcallMsg, *np.Err) {
 	fcallWC := &np.FcallWireCompat{}
 	if err := unmarshal(frame, fcallWC); err != nil {
 		return nil, np.MkErr(np.TErrBadFcall, err)

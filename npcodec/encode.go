@@ -179,7 +179,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Tfenceid:
-			if err := e.encode(v.Path, v.ServerId); err != nil {
+			if err := e.encode(v.Path, v.Serverid); err != nil {
 				return err
 			}
 		case *np.Tfenceid:
@@ -187,11 +187,11 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Tfence:
-			if err := e.encode(v.FenceId, v.Epoch); err != nil {
+			if err := e.encode(v.Fenceid, v.Epoch); err != nil {
 				return err
 			}
 		case *np.Tfence:
-			if err := e.encode(v.FenceId, v.Epoch); err != nil {
+			if err := e.encode(v.Fenceid, v.Epoch); err != nil {
 				return err
 			}
 		case np.FcallWireCompat:
@@ -202,18 +202,27 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Fcall:
-			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Received, v.Fence, v.Msg); err != nil {
+		case np.FcallMsg:
+			b, err := proto.Marshal(v.Fc)
+			if err != nil {
 				return err
 			}
-		case *np.Fcall:
+			if err := e.encode(uint32(len(b))); err != nil {
+				return err
+			}
+			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+				return err
+			}
+			if err := e.encode(v.Msg); err != nil {
+				return err
+			}
+		case *np.FcallMsg:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
 		case np.Tmsg:
 			if v.Type() == np.TTwriteread {
-				msg := v.(proto.Message)
-				b, err := proto.Marshal(msg)
+				b, err := proto.Marshal(v.(proto.Message))
 				if err != nil {
 					return err
 				}
@@ -374,11 +383,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		case *np.Tfenceid:
-			if err := d.decode(&v.Path, &v.ServerId); err != nil {
+			if err := d.decode(&v.Path, &v.Serverid); err != nil {
 				return err
 			}
 		case *np.Tfence:
-			if err := d.decode(&v.FenceId, &v.Epoch); err != nil {
+			if err := d.decode(&v.Fenceid, &v.Epoch); err != nil {
 				return err
 			}
 		case *np.FcallWireCompat:
@@ -393,12 +402,20 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			v.Msg = msg
-		case *np.Fcall:
-			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Received, &v.Fence); err != nil {
+		case *np.FcallMsg:
+			var l uint32
+			if err := d.decode(&l); err != nil {
 				return err
 			}
-			msg, err := newMsg(v.Type)
-			if v.Type == np.TTwriteread {
+			b := make([]byte, int(l))
+			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+				return err
+			}
+			if err := proto.Unmarshal(b, v.Fc); err != nil {
+				return err
+			}
+			msg, err := newMsg(np.Tfcall(v.Fc.Type))
+			if np.Tfcall(v.Fc.Type) == np.TTwriteread {
 				var l uint32
 				if err := d.decode(&l); err != nil {
 					return err
@@ -502,7 +519,7 @@ func SizeNp(vs ...interface{}) uint32 {
 		case *np.FcallWireCompat:
 			s += SizeNp(*v)
 		case np.Fcall:
-			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg)
+			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
 		case *np.Fcall:
 			s += SizeNp(*v)
 		case np.Tmsg:

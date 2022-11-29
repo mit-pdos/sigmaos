@@ -86,19 +86,20 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
 func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
-	if new.FenceId.Path == 0 {
+	if new.Fenceid.Path == 0 {
 		return nil, nil
 	}
-	f, err := allocFence(root, new.FenceId.Path.String())
+	f, err := allocFence(root, np.Tpath(new.Fenceid.Path).String())
 	if f == nil {
 		return nil, err
 	}
-	if new.Epoch < f.epoch {
+	e := np.Tepoch(new.Epoch)
+	if e < f.epoch {
 		db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
 		f.RUnlock()
 		return nil, np.MkErr(np.TErrStale, new)
 	}
-	if new.Epoch == f.epoch {
+	if e == f.epoch {
 		return f, nil
 	}
 
@@ -106,9 +107,9 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	f.RUnlock()
 	f.Lock()
 
-	if new.Epoch > f.epoch {
+	if e > f.epoch {
 		db.DPrintf("FENCES", "New epoch %v\n", new)
-		f.epoch = new.Epoch
+		f.epoch = e
 	}
 
 	// Now f.epoch == to new.Epoch. If after down grading this is
@@ -116,7 +117,7 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	// have increased, and we return TErrStale.
 	f.Unlock()
 	f.RLock()
-	if new.Epoch == f.epoch {
+	if e == f.epoch {
 		return f, nil
 	}
 	db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)

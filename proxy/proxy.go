@@ -30,16 +30,16 @@ func (npd *Npd) mkProtServer(sesssrv np.SessServer, sid np.Tsession) np.Protsrv 
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fc *np.Fcall) {
-	t := fc.Tag
-	sess, _ := npd.st.Lookup(fc.Session)
-	reply, _, rerror := sess.Dispatch(fc.Msg)
+func (npd *Npd) serve(fm *np.FcallMsg) {
+	s := np.Tsession(fm.Fc.Session)
+	sess, _ := npd.st.Lookup(s)
+	reply, _, rerror := sess.Dispatch(fm.Msg)
 	if rerror != nil {
 		reply = rerror
 	}
-	fcall := np.MakeFcall(reply, fc.Client, fc.Session, nil, nil, np.NoFence)
-	fcall.Tag = t
-	sess.SendConn(fcall)
+	fm1 := np.MakeFcallMsg(reply, np.Tclient(fm.Fc.Client), s, nil, nil, np.MakeFenceNull())
+	fm1.Fc.Tag = fm.Fc.Tag
+	sess.SendConn(fm1)
 }
 
 func (npd *Npd) Register(cid np.Tclient, sid np.Tsession, conn np.Conn) *np.Err {
@@ -58,7 +58,7 @@ func (npd *Npd) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fcall *np.Fcall) {
+func (npd *Npd) SrvFcall(fcall *np.FcallMsg) {
 	go npd.serve(fcall)
 }
 

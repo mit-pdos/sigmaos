@@ -5,17 +5,17 @@ import (
 )
 
 type Reply struct {
-	fc  *np.Fcall
+	fm  *np.FcallMsg
 	err *np.Err
 }
 
 type Rpc struct {
 	addrs  []string
-	Req    *np.Fcall
+	Req    *np.FcallMsg
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs []string, fc *np.Fcall) *Rpc {
+func MakeRpc(addrs []string, fc *np.FcallMsg) *Rpc {
 	rpc := &Rpc{}
 	rpc.addrs = addrs
 	rpc.Req = fc
@@ -29,11 +29,11 @@ func (rpc *Rpc) Await() (np.Tmsg, *np.Err) {
 	if !ok {
 		return nil, np.MkErr(np.TErrUnreachable, rpc.addrs)
 	}
-	return reply.fc.Msg, reply.err
+	return reply.fm.Msg, reply.err
 }
 
 // Complete a reply
-func (rpc *Rpc) Complete(reply *np.Fcall, err *np.Err) {
+func (rpc *Rpc) Complete(reply *np.FcallMsg, err *np.Err) {
 	rpc.ReplyC <- &Reply{reply, err}
 	close(rpc.ReplyC)
 }

@@ -126,7 +126,7 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 				db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
 			}
 			// Sanity check: we always take the last cores allocated.
-			if cores.String() != msg.Name {
+			if cores.Marshal() != msg.Name {
 				db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
 			}
 

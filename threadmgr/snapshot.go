@@ -14,8 +14,8 @@ type OpSnapshot struct {
 	N  uint64
 }
 
-func MakeOpSnapshot(fc *np.Fcall, n uint64) *OpSnapshot {
-	b, err := npcodec.MarshalFcallByte(fc)
+func MakeOpSnapshot(fc *np.FcallMsg, n uint64) *OpSnapshot {
+	b, err := npcodec.MarshalFcallMsgByte(fc)
 	if err != nil {
 		db.DFatalf("error marshalling fcall in MakeOpSnapshot: %v", err)
 	}
@@ -38,7 +38,7 @@ func (tmt *ThreadMgrTable) snapshot() []byte {
 	})
 	opss := make([]*OpSnapshot, len(ops))
 	for idx, op := range ops {
-		opss[idx] = MakeOpSnapshot(op.Fc, op.N)
+		opss[idx] = MakeOpSnapshot(op.Fm, op.N)
 	}
 	b, err := json.Marshal(opss)
 	if err != nil {
@@ -60,11 +60,11 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	// List of ops currently executing.
 	executing := []*Op{}
 	for _, op := range opss {
-		fc, err1 := npcodec.UnmarshalFcall(op.Fc)
+		fm, err1 := npcodec.UnmarshalFcallMsg(op.Fc)
 		if err1 != nil {
 			db.DFatalf("error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}
-		executing = append(executing, makeOp(fc, op.N))
+		executing = append(executing, makeOp(fm, op.N))
 	}
 	// Make sure to chop off the last op (which will be the snapshot op).
 	executing = executing[:len(executing)-1]

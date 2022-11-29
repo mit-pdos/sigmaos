@@ -5,10 +5,10 @@ import (
 )
 
 type Op struct {
-	Fc *np.Fcall
+	Fm *np.FcallMsg
 	N  uint64 // Order in which this op was received.
 }
 
-func makeOp(fc *np.Fcall, n uint64) *Op {
-	return &Op{fc, n}
+func makeOp(fm *np.FcallMsg, n uint64) *Op {
+	return &Op{fm, n}
 }

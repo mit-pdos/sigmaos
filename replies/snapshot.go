@@ -14,7 +14,7 @@ func (rt *ReplyTable) Snapshot() []byte {
 		var b []byte
 		var err1 *np.Err
 		if rf.reply != nil {
-			b, err1 = npcodec.MarshalFcallByte(rf.reply)
+			b, err1 = npcodec.MarshalFcallMsgByte(rf.reply)
 			if err1 != nil {
 				db.DFatalf("Error marshal np.Fcall in ReplyTable.Snapshot: %v, %v", err1, rf.reply)
 			}
@@ -36,14 +36,14 @@ func Restore(b []byte) *ReplyTable {
 	}
 	rt := MakeReplyTable()
 	for seqno, b := range entries {
-		fc, err1 := npcodec.UnmarshalFcall(b)
+		fm, err1 := npcodec.UnmarshalFcallMsg(b)
 		if len(b) != 0 && err1 != nil {
 			db.DFatalf("Error unmarshal np.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))
 		}
 
-		if fc != nil {
+		if fm != nil {
 			rf := MakeReplyFuture()
-			rf.Complete(fc)
+			rf.Complete(fm)
 			rt.entries[seqno] = rf
 		}
 	}

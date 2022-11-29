@@ -13,8 +13,8 @@ import (
 )
 
 type Op struct {
-	request   *np.Fcall
-	reply     *np.Fcall
+	request   *np.FcallMsg
+	reply     *np.FcallMsg
 	frame     []byte
 	startTime time.Time
 }
@@ -54,7 +54,7 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				if req, err := npcodec.UnmarshalFcall(frame); err != nil {
+				if req, err := npcodec.UnmarshalFcallMsg(frame); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
@@ -69,7 +69,7 @@ func (c *Clerk) serve() {
 func (c *Clerk) propose(op *Op) {
 	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
-	frame, err := npcodec.MarshalFcallByte(op.request)
+	frame, err := npcodec.MarshalFcallMsgByte(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
@@ -93,7 +93,7 @@ func (c *Clerk) reproposeOps() {
 	}
 }
 
-func (c *Clerk) apply(fc *np.Fcall, leader uint64) {
+func (c *Clerk) apply(fc *np.FcallMsg, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
 	op := c.getOp(fc)
 	if op != nil {
@@ -113,45 +113,51 @@ func (c *Clerk) registerOp(op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	m, ok := c.opmap[op.request.Session]
+	s := np.Tsession(op.request.Fc.Session)
+	seq := np.Tseqno(op.request.Fc.Seqno)
+	m, ok := c.opmap[s]
 	if !ok {
 		m = make(map[np.Tseqno]*Op)
-		c.opmap[op.request.Session] = m
+		c.opmap[s] = m
 	}
-	if _, ok := m[op.request.Seqno]; ok {
+	if _, ok := m[seq]; ok {
 		// Detaches and server-driven heartbeats may be re-executed many times.
 		if op.request.GetType() != np.TTdetach && op.request.GetType() != np.TTheartbeat {
-			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
+			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[seq].request)
 		}
 	}
-	m[op.request.Seqno] = op
+	m[seq] = op
 }
 
 // Get the full op struct associated with an fcall.
-func (c *Clerk) getOp(fc *np.Fcall) *Op {
+func (c *Clerk) getOp(fc *np.FcallMsg) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	var op *Op
-	if m, ok := c.opmap[fc.Session]; ok {
-		if o, ok := m[fc.Seqno]; ok {
-			delete(m, fc.Seqno)
+	s := np.Tsession(fc.Fc.Session)
+	seq := np.Tseqno(fc.Fc.Seqno)
+	if m, ok := c.opmap[s]; ok {
+		if o, ok := m[seq]; ok {
+			delete(m, seq)
 			op = o
 		}
 		if len(m) == 0 {
-			delete(c.opmap, fc.Session)
+			delete(c.opmap, s)
 		}
 	}
 	return op
 }
 
 // Print how much time an op spent in raft.
-func (c *Clerk) printOpTiming(rep *np.Fcall, frame []byte) {
+func (c *Clerk) printOpTiming(rep *np.FcallMsg, frame []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if m, ok := c.opmap[rep.Session]; ok {
-		if op, ok := m[rep.Seqno]; ok {
+	s := np.Tsession(rep.Fc.Session)
+	seqno := np.Tseqno(rep.Fc.Seqno)
+	if m, ok := c.opmap[s]; ok {
+		if op, ok := m[seqno]; ok {
 			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(frame))
 		}
 	}

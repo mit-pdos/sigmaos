@@ -53,36 +53,37 @@ func (rt *ReplyTable) String() string {
 	return s
 }
 
-func (rt *ReplyTable) Register(request *np.Fcall) bool {
+func (rt *ReplyTable) Register(request *np.FcallMsg) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
 	if rt.closed {
 		return false
 	}
-	for s := request.Received.Start; s < request.Received.End; s++ {
+	for s := request.Fc.Received.Start; s < request.Fc.Received.End; s++ {
 		delete(rt.entries, np.Tseqno(s))
 	}
-	rt.pruned.Insert(&request.Received)
+	rt.pruned.Insert(request.Fc.Received)
 	// if seqno in pruned, then drop
-	if request.Seqno != 0 && rt.pruned.Contains(np.Toffset(request.Seqno)) {
+	if request.Fc.Seqno != 0 && rt.pruned.Contains(request.Fc.Seqno) {
 		return false
 	}
-	rt.entries[request.Seqno] = MakeReplyFuture()
+	rt.entries[np.Tseqno(request.Fc.Seqno)] = MakeReplyFuture()
 	return true
 }
 
 // Expects that the request has already been registered.
-func (rt *ReplyTable) Put(request *np.Fcall, reply *np.Fcall) bool {
+func (rt *ReplyTable) Put(request *np.FcallMsg, reply *np.FcallMsg) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
+	s := np.Tseqno(request.Fc.Seqno)
 	if rt.closed {
 		return false
 	}
-	_, ok := rt.entries[request.Seqno]
+	_, ok := rt.entries[s]
 	if ok {
-		rt.entries[request.Seqno].Complete(reply)
+		rt.entries[s].Complete(reply)
 	}
 	return ok
 }
@@ -90,7 +91,7 @@ func (rt *ReplyTable) Put(request *np.Fcall, reply *np.Fcall) bool {
 func (rt *ReplyTable) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	rt.Lock()
 	defer rt.Unlock()
-	rf, ok := rt.entries[request.Seqno]
+	rf, ok := rt.entries[np.Tseqno(request.Seqno)]
 	return rf, ok
 }
 

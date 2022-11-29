@@ -88,7 +88,7 @@ func (ivs *Intervals) Insert(n *np.Tinterval) {
 // Caller received [start, end), which may increase lower bound of
 // what the caller has seen sofar.  XXX split insert from prune
 // and use a better name for Prune
-func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
+func (ivs *Intervals) Prune(lb, start, end uint64) uint64 {
 	ivs.Insert(np.MkInterval(start, end))
 	iv0 := ivs.ivs[0]
 	if iv0.Start > lb { // out of order
@@ -101,7 +101,7 @@ func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
 	return iv0.End - iv0.Start
 }
 
-func (ivs *Intervals) Contains(e np.Toffset) bool {
+func (ivs *Intervals) Contains(e uint64) bool {
 	ivs.Lock()
 	defer ivs.Unlock()
 

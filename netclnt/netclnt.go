@@ -104,7 +104,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 
 	// Otherwise, marshall and write the fcall.
-	err := npcodec.MarshalFcall(rpc.Req, nc.bw)
+	err := npcodec.MarshalFcallMsg(rpc.Req, nc.bw)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
@@ -119,19 +119,19 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*np.Fcall, *np.Err) {
+func (nc *NetClnt) recv() (*np.FcallMsg, *np.Err) {
 	frame, err := npcodec.ReadFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
 		return nil, np.MkErr(np.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
-	fcall, err := npcodec.UnmarshalFcall(frame)
+	fm, err := npcodec.UnmarshalFcallMsg(frame)
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 	}
-	db.DPrintf("NETCLNT", "recv %v from %v\n", fcall, nc.Dst())
-	return fcall, nil
+	db.DPrintf("NETCLNT", "recv %v from %v\n", fm, nc.Dst())
+	return fm, nil
 }
 
 // Reader loop. The reader is in charge of resetting the connection if an error

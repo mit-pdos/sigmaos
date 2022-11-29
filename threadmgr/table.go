@@ -4,7 +4,7 @@ import (
 	np "sigmaos/ninep"
 )
 
-type ProcessFn func(fc *np.Fcall)
+type ProcessFn func(fc *np.FcallMsg)
 
 type ThreadMgrTable struct {
 	pfn        ProcessFn

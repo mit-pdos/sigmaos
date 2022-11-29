@@ -100,8 +100,8 @@ func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence, error) {
 		db.DPrintf("EPOCHCLNT_ERR", "Qid %v err %v", fd, err)
 		return np.Tfence{}, err
 	}
-	f.Epoch = epoch
-	f.FenceId.Path = qid.Path
+	f.Epoch = uint64(epoch)
+	f.Fenceid.Path = uint64(qid.Path)
 	return f, nil
 
 }

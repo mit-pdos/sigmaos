@@ -3,6 +3,7 @@ package dbclnt
 import (
 	"encoding/json"
 
+	"sigmaos/dbd/proto"
 	"sigmaos/fslib"
 	"sigmaos/protdevclnt"
 )
@@ -22,12 +23,13 @@ func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 }
 
 func (dc *DbClnt) Query(q string, res any) error {
-	r := new([]uint8)
-	err := dc.pdc.RPC("Server.Query", q, r)
+	req := &proto.DBRequest{Cmd: q}
+	rep := proto.DBResult{}
+	err := dc.pdc.RPC("Server.Query", req, &rep)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(*r, res)
+	err = json.Unmarshal(rep.Res, res)
 	if err != nil {
 		return err
 	}
@@ -35,8 +37,9 @@ func (dc *DbClnt) Query(q string, res any) error {
 }
 
 func (dc *DbClnt) Exec(q string) error {
-	r := new([]uint8)
-	err := dc.pdc.RPC("Server.Exec", q, r)
+	req := &proto.DBRequest{Cmd: q}
+	rep := proto.DBResult{}
+	err := dc.pdc.RPC("Server.Exec", req, &rep)
 	if err != nil {
 		return err
 	}

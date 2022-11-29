@@ -16,6 +16,7 @@ import (
 	"sigmaos/dbd"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
+	"sigmaos/hotel/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	np "sigmaos/ninep"
@@ -131,16 +132,16 @@ func (ts *Tstate) stop() {
 	assert.Equal(ts.T, 5, len(sts))
 }
 
-func TestGeo(t *testing.T) {
+func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
 	assert.Nil(t, err)
-	arg := hotel.GeoRequest{
+	arg := proto.GeoRequest{
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
-	res := &hotel.GeoResult{}
-	err = pdc.RPC("Geo.Nearby", arg, &res)
+	res := proto.GeoResult{}
+	err = pdc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
 	assert.Equal(t, 5, len(res.HotelIds))
@@ -148,16 +149,16 @@ func TestGeo(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRate(t *testing.T) {
+func TestRateSingle(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-rated"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
-	arg := hotel.RateRequest{
+	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
 		InDate:   "2015-04-09",
 		OutDate:  "2015-04-10",
 	}
-	var res hotel.RateResult
+	var res proto.RateResult
 	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
@@ -168,16 +169,16 @@ func TestRate(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRec(t *testing.T) {
+func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-recd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
 	assert.Nil(t, err)
-	arg := hotel.RecRequest{
+	arg := &proto.RecRequest{
 		Require: "dis",
 		Lat:     38.0235,
 		Lon:     -122.095,
 	}
-	var res hotel.RecResult
+	var res proto.RecResult
 	err = pdc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
@@ -186,15 +187,15 @@ func TestRec(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestUser(t *testing.T) {
+func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-userd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
 	assert.Nil(t, err)
-	arg := hotel.UserRequest{
+	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
 		Password: hotel.MkPassword("0"),
 	}
-	var res hotel.UserResult
+	var res proto.UserResult
 	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "res %v\n", res)
@@ -206,10 +207,10 @@ func TestProfile(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-profd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
 	assert.Nil(t, err)
-	arg := hotel.ProfRequest{
+	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
 	}
-	var res hotel.ProfResult
+	var res proto.ProfResult
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
@@ -227,14 +228,14 @@ func TestCheck(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
-	arg := hotel.ReserveRequest{
+	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res hotel.ReserveResult
+	var res proto.ReserveResult
 	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
@@ -249,14 +250,14 @@ func TestReserve(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
-	arg := hotel.ReserveRequest{
+	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res hotel.ReserveResult
+	var res proto.ReserveResult
 
 	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
@@ -295,13 +296,13 @@ func TestSingleSearch(t *testing.T) {
 	ts := makeTstateCache(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
 	assert.Nil(t, err)
-	arg := hotel.SearchRequest{
+	arg := &proto.SearchRequest{
 		Lat:     37.7749,
 		Lon:     -122.4194,
 		InDate:  "2015-04-09",
 		OutDate: "2015-04-10",
 	}
-	var res hotel.SearchResult
+	var res proto.SearchResult
 	err = pdc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))

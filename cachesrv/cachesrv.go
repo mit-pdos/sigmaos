@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"sigmaos/cachesrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -22,15 +23,6 @@ const (
 var (
 	ErrMiss = errors.New("cache miss")
 )
-
-type CacheRequest struct {
-	Key   string
-	Value []byte
-}
-
-type CacheResult struct {
-	Value []byte
-}
 
 type cache struct {
 	sync.Mutex
@@ -61,7 +53,7 @@ func RunCacheSrv(args []string) error {
 }
 
 // XXX support timeout
-func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
+func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
 	db.DPrintf("CACHESRV", "%v: Set %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
@@ -69,7 +61,7 @@ func (s *CacheSrv) Set(req CacheRequest, rep *CacheResult) error {
 	return nil
 }
 
-func (s *CacheSrv) Get(req CacheRequest, rep *CacheResult) error {
+func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
 	db.DPrintf("CACHESRV", "%v: Get %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()

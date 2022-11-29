@@ -1,17 +1,18 @@
 package protdevclnt
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"path"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
+	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"
 )
 
@@ -42,46 +43,45 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	return pdc, nil
 }
 
-func (pdc *ProtDevClnt) rpc(method string, a []byte) (*protdevsrv.Reply, error) {
-	req := &protdevsrv.Request{method, a}
+func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
+	req := rpcproto.Request{}
+	req.Method = method
+	req.Args = a
 
-	ab := new(bytes.Buffer)
-	ae := gob.NewEncoder(ab)
-	if err := ae.Encode(req); err != nil {
-		return nil, err
+	b, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, np.MkErrError(err)
 	}
+
 	start := time.Now()
-	b, err := pdc.WriteRead(pdc.fd, ab.Bytes())
+	b, err = pdc.WriteRead(pdc.fd, b)
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v\n", err)
 	}
 	// Record stats (qlen not used for now).
 	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
-	rep := &protdevsrv.Reply{}
-	rb := bytes.NewBuffer(b)
-	re := gob.NewDecoder(rb)
-	if err := re.Decode(rep); err != nil {
-		return nil, err
+
+	rep := &rpcproto.Reply{}
+	if err := proto.Unmarshal(b, rep); err != nil {
+		return nil, np.MkErrError(err)
 	}
+
 	return rep, nil
 }
 
-func (pdc *ProtDevClnt) RPC(method string, arg any, res any) error {
-	ab := new(bytes.Buffer)
-	ae := gob.NewEncoder(ab)
-	if err := ae.Encode(arg); err != nil {
+func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+	b, err := proto.Marshal(arg)
+	if err != nil {
 		return err
 	}
-	rep, err := pdc.rpc(method, ab.Bytes())
+	rep, err := pdc.rpc(method, b)
 	if err != nil {
 		return err
 	}
 	if rep.Error != "" {
 		return fmt.Errorf("%s", rep.Error)
 	}
-	rb := bytes.NewBuffer(rep.Res)
-	rd := gob.NewDecoder(rb)
-	if err := rd.Decode(res); err != nil {
+	if err := proto.Unmarshal(rep.Res, res); err != nil {
 		return err
 	}
 	return nil

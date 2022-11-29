@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "ulambda/ninep";
+
+message Twriteread {
+        uint64 fid = 1; 
+        bytes data = 2;
+}
+
+message Rwriteread {
+        bytes data = 1;
+}

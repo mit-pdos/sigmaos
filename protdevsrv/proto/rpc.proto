@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/protdevsrv";
+
+message Request {
+        string method = 1;
+        bytes args = 2;
+}
+
+message Reply {
+        bytes res = 1;
+        string error = 2;
+}

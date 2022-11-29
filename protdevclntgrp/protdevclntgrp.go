@@ -3,6 +3,8 @@ package protdevclntgrp
 import (
 	"strconv"
 
+	"google.golang.org/protobuf/proto"
+
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/protdevclnt"
@@ -33,7 +35,7 @@ func (gc *ClntGroup) Nshard() int {
 	return len(gc.clnts)
 }
 
-func (gc *ClntGroup) RPC(g int, m string, arg any, res any) error {
+func (gc *ClntGroup) RPC(g int, m string, arg proto.Message, res proto.Message) error {
 	return gc.clnts[g].RPC(m, arg, res)
 }
 

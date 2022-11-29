@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -128,10 +129,10 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res UserResult
+	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", UserRequest{
+	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
 		Name:     username,
 		Password: password,
 	}, &res)
@@ -180,12 +181,12 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Lat, _ := strconv.ParseFloat(sLat, 64)
-	lat := float64(Lat)
+	lat := float32(Lat)
 	Lon, _ := strconv.ParseFloat(sLon, 64)
-	lon := float64(Lon)
+	lon := float32(Lon)
 
-	var searchRes SearchResult
-	searchReq := SearchRequest{
+	var searchRes proto.SearchResult
+	searchReq := &proto.SearchRequest{
 		Lat:     lat,
 		Lon:     lon,
 		InDate:  inDate,
@@ -206,8 +207,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		locale = "en"
 	}
 
-	var reserveRes ReserveResult
-	err = s.reservec.RPC("Reserve.CheckAvailability", &ReserveRequest{
+	var reserveRes proto.ReserveResult
+	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName: "",
 		HotelId:      searchRes.HotelIds,
 		InDate:       inDate,
@@ -220,8 +221,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profRes ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", ProfRequest{
+	var profRes proto.ProfResult
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds: reserveRes.HotelIds,
 		Locale:   locale,
 	}, &profRes)
@@ -257,8 +258,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// recommend hotels
-	var recResp RecResult
-	err := s.recc.RPC("Rec.GetRecs", &RecRequest{
+	var recResp proto.RecResult
+	err := s.recc.RPC("Rec.GetRecs", &proto.RecRequest{
 		Require: require,
 		Lat:     lat,
 		Lon:     lon,
@@ -276,8 +277,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profResp ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", &ProfRequest{
+	var profResp proto.ProfResult
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds: recResp.HotelIds,
 		Locale:   locale,
 	}, &profResp)
@@ -334,10 +335,10 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		numberOfRoom, _ = strconv.Atoi(num)
 	}
 
-	var res UserResult
+	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", UserRequest{
+	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
 		Name:     username,
 		Password: password,
 	}, &res)
@@ -353,13 +354,13 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make reservation
-	var resResp ReserveResult
-	err = s.reservec.RPC("Reserve.MakeReservation", &ReserveRequest{
+	var resResp proto.ReserveResult
+	err = s.reservec.RPC("Reserve.MakeReservation", &proto.ReserveRequest{
 		CustomerName: customerName,
 		HotelId:      []string{hotelId},
 		InDate:       inDate,
 		OutDate:      outDate,
-		Number:       numberOfRoom,
+		Number:       int32(numberOfRoom),
 	}, &resResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -390,16 +391,17 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Lat, _ := strconv.ParseFloat(sLat, 64)
-	lat := float64(Lat)
+	lat := float32(Lat)
 	Lon, _ := strconv.ParseFloat(sLon, 64)
-	lon := float64(Lon)
+	lon := float32(Lon)
 
-	var gres GeoResult
-	greq := GeoRequest{
+	var gres proto.GeoResult
+	greq := proto.GeoRequest{
 		Lat: lat,
 		Lon: lon,
 	}
-	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	err := s.geoc.RPC("Geo.Nearby", &greq, &gres)
+	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -419,7 +421,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 // return a geoJSON response that allows google map to plot points directly on map
 // https://developers.google.com/maps/documentation/javascript/datalayer#sample_geojson
-func geoJSONResponse(hs []*ProfileFlat) map[string]interface{} {
+func geoJSONResponse(hs []*proto.ProfileFlat) map[string]interface{} {
 	fs := []interface{}{}
 
 	for _, h := range hs {

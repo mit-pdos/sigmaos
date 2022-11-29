@@ -798,14 +798,14 @@ type Rheartbeat struct {
 	Sids []Tsession // List of sessions in this heartbeat.
 }
 
-type Twriteread struct {
-	Fid  Tfid
-	Data []byte // Data must be last
-}
+// type Twriteread struct {
+// 	Fid  Tfid
+// 	Data []byte // Data must be last
+// }
 
-type Rwriteread struct {
-	Data []byte // Data must be last
-}
+// type Rwriteread struct {
+// 	Data []byte // Data must be last
+// }
 
 func (Tversion) Type() Tfcall { return TTversion }
 func (Rversion) Type() Tfcall { return TRversion }

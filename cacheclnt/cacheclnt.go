@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/cachesrv"
+	"sigmaos/cachesrv/proto"
 	"sigmaos/clonedev"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -44,20 +45,20 @@ func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	return cc, nil
 }
 
-func (cc *CacheClnt) RPC(m string, arg cachesrv.CacheRequest, res any) error {
+func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
 	n := key2shard(arg.Key, cc.Nshard())
 	return cc.ClntGroup.RPC(n, m, arg, res)
 }
 
 func (c *CacheClnt) Set(key string, val any) error {
-	req := cachesrv.CacheRequest{}
+	req := &proto.CacheRequest{}
 	req.Key = key
 	b, err := json.Marshal(val)
 	if err != nil {
 		return nil
 	}
 	req.Value = b
-	var res cachesrv.CacheResult
+	var res proto.CacheResult
 	if err := c.RPC("Cache.Set", req, &res); err != nil {
 		return err
 	}
@@ -65,9 +66,9 @@ func (c *CacheClnt) Set(key string, val any) error {
 }
 
 func (c *CacheClnt) Get(key string, val any) error {
-	req := cachesrv.CacheRequest{}
+	req := &proto.CacheRequest{}
 	req.Key = key
-	var res cachesrv.CacheResult
+	var res proto.CacheResult
 	if err := c.RPC("Cache.Get", req, &res); err != nil {
 		return err
 	}

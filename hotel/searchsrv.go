@@ -4,22 +4,12 @@ import (
 	"log"
 
 	db "sigmaos/debug"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 )
-
-type SearchRequest struct {
-	Lat     float64
-	Lon     float64
-	InDate  string
-	OutDate string
-}
-
-type SearchResult struct {
-	HotelIds []string
-}
 
 type Search struct {
 	ratec *protdevclnt.ProtDevClnt
@@ -52,9 +42,9 @@ func RunSearchSrv(n string) error {
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
-	var gres GeoResult
-	greq := GeoRequest{
+func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error {
+	var gres proto.GeoResult
+	greq := &proto.GeoRequest{
 		Lat: req.Lat,
 		Lon: req.Lon,
 	}
@@ -66,8 +56,8 @@ func (s *Search) Nearby(req SearchRequest, res *SearchResult) error {
 	db.DPrintf("HOTELSEARCH", "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
-	var rres RateResult
-	rreq := RateRequest{
+	var rres proto.RateResult
+	rreq := &proto.RateRequest{
 		HotelIds: gres.HotelIds,
 		InDate:   req.InDate,
 		OutDate:  req.OutDate,

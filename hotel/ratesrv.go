@@ -11,34 +11,12 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/protdevsrv"
 )
 
-type RateRequest struct {
-	HotelIds []string
-	InDate   string
-	OutDate  string
-}
-
-type RoomType struct {
-	BookableRate       float64
-	TotalRate          float64
-	TotalRateInclusive float64
-	Code               string
-	Currency           string
-	RoomDescription    string
-}
-
-type RatePlan struct {
-	HotelId  string
-	Code     string
-	InDate   string
-	OutDate  string
-	RoomType *RoomType
-}
-
-type RatePlans []*RatePlan
+type RatePlans []*proto.RatePlan
 
 func (r RatePlans) Len() int {
 	return len(r)
@@ -50,10 +28,6 @@ func (r RatePlans) Swap(i, j int) {
 
 func (r RatePlans) Less(i, j int) bool {
 	return r[i].RoomType.TotalRate > r[j].RoomType.TotalRate
-}
-
-type RateResult struct {
-	RatePlans []*RatePlan
 }
 
 type Rate struct {
@@ -80,7 +54,7 @@ func RunRateSrv(n string) error {
 	r.cachec = cachec
 
 	file := data.MustAsset("data/inventory.json")
-	rates := []*RatePlan{}
+	rates := []*proto.RatePlan{}
 	if err := json.Unmarshal(file, &rates); err != nil {
 		return err
 	}
@@ -91,10 +65,10 @@ func RunRateSrv(n string) error {
 }
 
 // GetRates gets rates for hotels
-func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
+func (s *Rate) GetRates(req proto.RateRequest, res *proto.RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
-		r := &RatePlan{}
+		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
 		if err := s.cachec.Get(key, r); err != nil {
 			if err.Error() != cacheclnt.ErrMiss.Error() {
@@ -118,7 +92,7 @@ func (s *Rate) GetRates(req RateRequest, res *RateResult) error {
 	return nil
 }
 
-func (s *Rate) insertRate(r *RatePlan) error {
+func (s *Rate) insertRate(r *proto.RatePlan) error {
 	q := fmt.Sprintf("INSERT INTO rate (hotelid, code, indate, outdate, roombookrate, roomtotalrate, roomtotalinclusive, roomcode, roomcurrency, roomdescription) VALUES ('%s', '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s');", r.HotelId, r.Code, r.InDate, r.OutDate, r.RoomType.BookableRate, r.RoomType.TotalRate, r.RoomType.TotalRateInclusive, r.RoomType.Code, r.RoomType.Currency, r.RoomType.RoomDescription)
 	if err := s.dbc.Exec(q); err != nil {
 		return err
@@ -139,7 +113,7 @@ type RateFlat struct {
 	RoomDescription        string
 }
 
-func (s *Rate) getRate(id string) (*RatePlan, error) {
+func (s *Rate) getRate(id string) (*proto.RatePlan, error) {
 	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
 	var rates []RateFlat
 	if error := s.dbc.Query(q, &rates); error != nil {
@@ -149,25 +123,25 @@ func (s *Rate) getRate(id string) (*RatePlan, error) {
 		return nil, nil
 	}
 	rf := &rates[0]
-	r := &RatePlan{
+	r := &proto.RatePlan{
 		HotelId: rf.HotelId,
 		Code:    rf.Code,
 		InDate:  rf.InDate,
 		OutDate: rf.OutDate,
-		RoomType: &RoomType{
-			rf.RoomBookableRate,
-			rf.RoomTotalRate,
-			rf.RoomTotalRateInclusive,
-			rf.RoomCode,
-			rf.RoomCurrency,
-			rf.RoomDescription,
+		RoomType: &proto.RoomType{
+			BookableRate:       rf.RoomBookableRate,
+			TotalRate:          rf.RoomTotalRate,
+			TotalRateInclusive: rf.RoomTotalRateInclusive,
+			Code:               rf.RoomCode,
+			Currency:           rf.RoomCurrency,
+			RoomDescription:    rf.RoomDescription,
 		},
 	}
 	return r, nil
 }
 
 // loadRates loads rate codes from JSON file.
-func (s *Rate) initDB(rates []*RatePlan) error {
+func (s *Rate) initDB(rates []*proto.RatePlan) error {
 	q := fmt.Sprintf("truncate rate;")
 	if err := s.dbc.Exec(q); err != nil {
 		return err
@@ -201,18 +175,18 @@ func (s *Rate) initDB(rates []*RatePlan) error {
 				rate = 232.00
 				rate_inc = 258.00
 			}
-			r := &RatePlan{
+			r := &proto.RatePlan{
 				HotelId: strconv.Itoa(i),
 				Code:    "RACK",
 				InDate:  "2015-04-09",
 				OutDate: end_date,
-				RoomType: &RoomType{
-					rate,
-					rate,
-					rate_inc,
-					"KNG",
-					"",
-					"King sized bed",
+				RoomType: &proto.RoomType{
+					BookableRate:       rate,
+					TotalRate:          rate,
+					TotalRateInclusive: rate_inc,
+					Code:               "KNG",
+					Currency:           "",
+					RoomDescription:    "King sized bed",
 				},
 			}
 			if err := s.insertRate(r); err != nil {

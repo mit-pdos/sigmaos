@@ -8,22 +8,23 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/hotel/proto"
 	np "sigmaos/ninep"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 )
 
-type ReserveRequest struct {
-	CustomerName string
-	HotelId      []string
-	InDate       string
-	OutDate      string
-	Number       int
-}
-
-type ReserveResult struct {
-	HotelIds []string
-}
+//type proto.ReserveRequest struct {
+//	CustomerName string
+//	HotelId      []string
+//	InDate       string
+//	OutDate      string
+//	Number       int
+//}
+//
+//type proto.ReserveResult struct {
+//	HotelIds []string
+//}
 
 type Reservation struct {
 	HotelID  string
@@ -113,7 +114,7 @@ func RunReserveSrv(n string) error {
 }
 
 // checkAvailability checks if given information is available
-func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, map[string]int, error) {
+func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (bool, map[string]int, error) {
 	inDate, _ := time.Parse(
 		time.RFC3339,
 		req.InDate+"T12:00:00+00:00")
@@ -185,7 +186,7 @@ func (s *Reserve) checkAvailability(hotelId string, req ReserveRequest) (bool, m
 
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
-func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error {
+func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
 	b, date_num, err := s.checkAvailability(hotelId, req)
@@ -229,7 +230,7 @@ func (s *Reserve) MakeReservation(req ReserveRequest, res *ReserveResult) error 
 	return nil
 }
 
-func (s *Reserve) CheckAvailability(req ReserveRequest, res *ReserveResult) error {
+func (s *Reserve) CheckAvailability(req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
 		b, _, err := s.checkAvailability(hotelId, req)

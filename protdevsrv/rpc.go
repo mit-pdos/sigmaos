@@ -1,17 +1,18 @@
 package protdevsrv
 
 import (
-	"bytes"
-	"encoding/gob"
 	"reflect"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	np "sigmaos/ninep"
+	rpcproto "sigmaos/protdevsrv/proto"
 )
 
 type rpcDev struct {
@@ -36,52 +37,48 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, 
 
 // XXX wait on close before processing data?
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *np.Err) {
-	req := &Request{}
-	var rep *Reply
-
-	// Read request
-	ab := bytes.NewBuffer(b)
-	ad := gob.NewDecoder(ab)
-	if err := ad.Decode(req); err != nil {
+	req := rpcproto.Request{}
+	var rep *rpcproto.Reply
+	if err := proto.Unmarshal(b, &req); err != nil {
 		return nil, np.MkErrError(err)
 	}
+
+	db.DPrintf("PROTDEVSRV", "WriteRead req %v\n", req)
 
 	ql := rpc.pds.QueueLen()
 	start := time.Now()
-	rep = rpc.pds.svc.dispatch(req.Method, req)
+	rep = rpc.pds.svc.dispatch(req.Method, &req)
 	t := time.Since(start).Microseconds()
 	rpc.pds.sti.Stat(req.Method, t, ql)
 
-	rb := new(bytes.Buffer)
-	re := gob.NewEncoder(rb)
-	if err := re.Encode(&rep); err != nil {
+	b, err := proto.Marshal(rep)
+	if err != nil {
 		return nil, np.MkErrError(err)
 	}
-	db.DPrintf("RPCDEV", "Done writeread")
-	return rb.Bytes(), nil
+	return b, nil
 }
 
-func (svc *service) dispatch(methname string, req *Request) *Reply {
+func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
 		// prepare space into which to read the argument.
 		// the Value's type will be a pointer to req.argsType.
 		args := reflect.New(method.argType)
-
-		// decode the argument
-		ab := bytes.NewBuffer(req.Args)
-		ad := gob.NewDecoder(ab)
-		if err := ad.Decode(args.Interface()); err != nil {
-			return &Reply{nil, err.Error()}
+		reqmsg := args.Interface().(proto.Message)
+		if err := proto.Unmarshal(req.Args, reqmsg); err != nil {
+			r := &rpcproto.Reply{}
+			r.Error = err.Error()
+			return r
 		}
 
-		// db.DPrintf("PROTDEVSRV", "dispatch %v\n")
+		db.DPrintf("PROTDEVSRV", "dispatchproto %v %v\n", name, reqmsg)
 
 		// allocate space for the reply.
 		replyType := method.replyType
 		replyType = replyType.Elem()
 		replyv := reflect.New(replyType)
+		repmsg := replyv.Interface().(proto.Message)
 
 		// call the method.
 		function := method.method.Func
@@ -94,12 +91,14 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 			errmsg = errI.(error).Error()
 		}
 
-		// encode the reply.
-		rb := new(bytes.Buffer)
-		re := gob.NewEncoder(rb)
-		re.EncodeValue(replyv)
-
-		return &Reply{rb.Bytes(), errmsg}
+		b, err := proto.Marshal(repmsg)
+		if err != nil {
+			errmsg = err.Error()
+		}
+		r := &rpcproto.Reply{}
+		r.Res = b
+		r.Error = errmsg
+		return r
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
@@ -107,6 +106,8 @@ func (svc *service) dispatch(methname string, req *Request) *Reply {
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
-		return &Reply{nil, "uknown method"}
+		r := &rpcproto.Reply{}
+		r.Error = "unknown method"
+		return r
 	}
 }

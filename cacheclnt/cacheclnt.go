@@ -45,9 +45,9 @@ func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	return cc, nil
 }
 
-func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res any) error {
+func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
 	n := key2shard(arg.Key, cc.Nshard())
-	return cc.ClntGroup.RPC(n, m, arg, res)
+	return cc.ClntGroup.RPCproto(n, m, arg, res)
 }
 
 func (c *CacheClnt) Set(key string, val any) error {

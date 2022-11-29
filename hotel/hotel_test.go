@@ -347,25 +347,25 @@ func runSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Nil(t, err, "Err search %v", err)
 }
 
-func benchRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+func runRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	err := hotel.RandRecsReq(wc, r)
 	assert.Nil(t, err)
 }
 
-func benchLogin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+func runLogin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	s, err := hotel.RandLoginReq(wc, r)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 }
 
-func benchReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+func runReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	s, err := hotel.RandReserveReq(wc, r)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 }
 
-func benchGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	// XXX change? Or leave the same?
+func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+	// Same coordinates to make sure performance is very consistent.
 	lat := 37.7749
 	lon := -122.4194
 	s, err := wc.Geo(lat, lon)
@@ -406,11 +406,11 @@ func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
 		if coin < search_ratio {
 			runSearch(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio {
-			benchRecommend(ts.T, wc, r)
+			runRecommend(ts.T, wc, r)
 		} else if coin < search_ratio+recommend_ratio+user_ratio {
-			benchLogin(ts.T, wc, r)
+			runLogin(ts.T, wc, r)
 		} else {
-			benchReserve(ts.T, wc, r)
+			runReserve(ts.T, wc, r)
 		}
 	}
 	db.DPrintf(db.ALWAYS, "benchDSB N=%d %dms\n", N, time.Since(start).Milliseconds())
@@ -487,7 +487,7 @@ func TestBenchGeo(t *testing.T) {
 	defer p.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
-		benchGeo(ts.T, wc, r)
+		runGeo(ts.T, wc, r)
 	})
 	lg.Run()
 	ts.PrintStats()
@@ -512,7 +512,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	defer pf.Done()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
-		benchGeo(ts.T, wc, r)
+		runGeo(ts.T, wc, r)
 	})
 	lg.Run()
 	ts.Shutdown()

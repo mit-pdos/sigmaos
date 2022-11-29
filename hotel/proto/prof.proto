@@ -3,11 +3,9 @@ syntax = "proto3";
 option go_package = "ulambda/hotel/proto";
 
 service Prof {
-  // Finds the hotels contained nearby the current lat/lon.
   rpc GetProfiles(ProfRequest) returns (ProfResult);
 }
 
-// The latitude and longitude of the current location.
 message ProfRequest {
   repeated string hotelIds = 1;
   string locale = 2;

@@ -3,11 +3,9 @@ syntax = "proto3";
 option go_package = "ulambda/hotel/proto";
 
 service Geo {
-  // Finds the hotels contained nearby the current lat/lon.
   rpc Nearby(GeoRequest) returns (GeoResult);
 }
 
-// The latitude and longitude of the current location.
 message GeoRequest {
   float lat = 1;
   float lon = 2;

@@ -219,7 +219,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
+			return errors.New(fmt.Sprintf("Encode: unknown type: %v", reflect.TypeOf(v)))
 		}
 	}
 
@@ -413,7 +413,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			errors.New("unknown type")
+			errors.New("decode: unknown type")
 		}
 	}
 

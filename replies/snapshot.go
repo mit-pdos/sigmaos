@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -12,7 +13,7 @@ func (rt *ReplyTable) Snapshot() []byte {
 	entries := make(map[sp.Tseqno][]byte)
 	for seqno, rf := range rt.entries {
 		var b []byte
-		var err1 *sp.Err
+		var err1 *fcall.Err
 		if rf.reply != nil {
 			b, err1 = spcodec.MarshalFcallMsgByte(rf.reply)
 			if err1 != nil {

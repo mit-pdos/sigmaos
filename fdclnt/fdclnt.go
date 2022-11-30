@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
 	"sigmaos/writer"
@@ -94,7 +95,7 @@ func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 
 func (fdc *FdClient) CreateOpen(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fd, err := fdc.Create(path, perm, mode)
-	if err != nil && !np.IsErrExists(err) {
+	if err != nil && !fcall.IsErrExists(err) {
 		db.DPrintf("FDCLNT_ERR", "Create %v err %v", path, err)
 		return -1, err
 	}

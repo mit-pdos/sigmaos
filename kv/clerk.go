@@ -129,7 +129,7 @@ func (kc *KvClerk) switchConfig() error {
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
-			if np.IsErrVersion(err) || np.IsErrStale(err) {
+			if fcall.IsErrVersion(err) || fcall.IsErrStale(err) {
 				db.DPrintf("KVCLERK_ERR", "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
@@ -147,15 +147,15 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
+	if fcall.IsErrNotfound(err) && strings.HasPrefix(fcall.ErrPath(err), "shard") {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf("KVCLERK_ERR", "Wait for shard %v", np.ErrPath(err))
+		db.DPrintf("KVCLERK_ERR", "Wait for shard %v", fcall.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if np.IsErrStale(err) {
+	if fcall.IsErrStale(err) {
 		db.DPrintf("KVCLERK_ERR", "fixRetry %v", err)
 		return kc.switchConfig()
 	}

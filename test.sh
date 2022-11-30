@@ -18,6 +18,7 @@ do
   #
 
   go test $@ sigmaos/spcodec
+  go test $@ sigmaos/npcodec
   go test $@ sigmaos/linuxsched
   go test $@ sigmaos/perf
   

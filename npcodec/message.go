@@ -3,99 +3,100 @@ package npcodec
 import (
 	"fmt"
 
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
 )
 
 // Adopted from https://github.com/docker/go-p9p/message.go
 
-func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
+func newMsg(typ fcall.Tfcall) (np.Tmsg, *fcall.Err) {
 	switch typ {
-	case np.TTversion:
+	case fcall.TTversion:
 		return &np.Tversion{}, nil
-	case np.TRversion:
+	case fcall.TRversion:
 		return &np.Rversion{}, nil
-	case np.TTauth:
+	case fcall.TTauth:
 		return &np.Tauth{}, nil
-	case np.TRauth:
+	case fcall.TRauth:
 		return &np.Rauth{}, nil
-	case np.TTattach:
+	case fcall.TTattach:
 		return &np.Tattach{}, nil
-	case np.TRattach:
+	case fcall.TRattach:
 		return &np.Rattach{}, nil
-	case np.TRerror:
+	case fcall.TRerror:
 		return &np.Rerror{}, nil
-	case np.TTflush:
+	case fcall.TTflush:
 		return &np.Tflush{}, nil
-	case np.TRflush:
+	case fcall.TRflush:
 		return &np.Rflush{}, nil
-	case np.TTwalk:
+	case fcall.TTwalk:
 		return &np.Twalk{}, nil
-	case np.TRwalk:
+	case fcall.TRwalk:
 		return &np.Rwalk{}, nil
-	case np.TTopen:
+	case fcall.TTopen:
 		return &np.Topen{}, nil
-	case np.TRopen:
+	case fcall.TRopen:
 		return &np.Ropen{}, nil
-	case np.TTcreate:
+	case fcall.TTcreate:
 		return &np.Tcreate{}, nil
-	case np.TRcreate:
+	case fcall.TRcreate:
 		return &np.Rcreate{}, nil
-	case np.TTread:
+	case fcall.TTread:
 		return &np.Tread{}, nil
-	case np.TRread:
+	case fcall.TRread:
 		return &np.Rread{}, nil
-	case np.TTwrite:
+	case fcall.TTwrite:
 		return &np.Twrite{}, nil
-	case np.TRwrite:
+	case fcall.TRwrite:
 		return &np.Rwrite{}, nil
-	case np.TTclunk:
+	case fcall.TTclunk:
 		return &np.Tclunk{}, nil
-	case np.TRclunk:
+	case fcall.TRclunk:
 		return &np.Rclunk{}, nil // no response body
-	case np.TTremove:
+	case fcall.TTremove:
 		return &np.Tremove{}, nil
-	case np.TRremove:
+	case fcall.TRremove:
 		return &np.Rremove{}, nil
-	case np.TTstat:
+	case fcall.TTstat:
 		return &np.Tstat{}, nil
-	case np.TRstat:
+	case fcall.TRstat:
 		return &np.Rstat{}, nil
-	case np.TTwstat:
+	case fcall.TTwstat:
 		return &np.Twstat{}, nil
-	case np.TRwstat:
+	case fcall.TRwstat:
 		return &np.Rwstat{}, nil
-	case np.TTwatch:
+	case fcall.TTwatch:
 		return &np.Twatch{}, nil
-	case np.TTreadV:
+	case fcall.TTreadV:
 		return &np.TreadV{}, nil
-	case np.TTwriteV:
+	case fcall.TTwriteV:
 		return &np.TwriteV{}, nil
-	case np.TTrenameat:
+	case fcall.TTrenameat:
 		return &np.Trenameat{}, nil
-	case np.TRrenameat:
+	case fcall.TRrenameat:
 		return &np.Rrenameat{}, nil
-	case np.TTremovefile:
+	case fcall.TTremovefile:
 		return &np.Tremovefile{}, nil
-	case np.TTgetfile:
+	case fcall.TTgetfile:
 		return &np.Tgetfile{}, nil
-	case np.TRgetfile:
+	case fcall.TRgetfile:
 		return &np.Rgetfile{}, nil
-	case np.TTsetfile:
+	case fcall.TTsetfile:
 		return &np.Tsetfile{}, nil
-	case np.TTputfile:
+	case fcall.TTputfile:
 		return &np.Tputfile{}, nil
-	case np.TTdetach:
+	case fcall.TTdetach:
 		return &np.Tdetach{}, nil
-	case np.TRdetach:
+	case fcall.TRdetach:
 		return &np.Rdetach{}, nil
-	case np.TTheartbeat:
+	case fcall.TTheartbeat:
 		return &np.Theartbeat{}, nil
-	case np.TRheartbeat:
+	case fcall.TRheartbeat:
 		return &np.Rheartbeat{}, nil
-	case np.TTwriteread:
+	case fcall.TTwriteread:
 		return &np.Twriteread{}, nil
-	case np.TRwriteread:
+	case fcall.TRwriteread:
 		return &np.Rwriteread{}, nil
 	}
-	return nil, np.MkErr(np.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
+	return nil, fcall.MkErr(fcall.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

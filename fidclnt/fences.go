@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -24,7 +25,7 @@ func MakeFenceTable() *FenceTable {
 }
 
 // If already exist, just update
-func (ft *FenceTable) Insert(p string, f np.Tfence) *np.Err {
+func (ft *FenceTable) Insert(p string, f np.Tfence) *fcall.Err {
 	ft.Lock()
 	defer ft.Unlock()
 

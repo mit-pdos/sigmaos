@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/reader"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/spcodec"
 )
 
@@ -196,7 +197,7 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*np.Stat, error) {
 				ch <- r
 			}); err != nil {
 				rdr.Close()
-				if np.IsErrVersion(err) {
+				if fcall.IsErrVersion(err) {
 					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
 					continue
 				}

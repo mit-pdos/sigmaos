@@ -7,19 +7,20 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
-	np "sigmaos/sigmap"
 	"sigmaos/overlay"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/sesscond"
 	"sigmaos/sessstatesrv"
+	np "sigmaos/sigmap"
 	"sigmaos/snapshot"
 	"sigmaos/stats"
 	"sigmaos/threadmgr"
@@ -121,10 +122,10 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f np.DetachF, sid np.Tsession) *np.Err {
+func (sssrv *SessSrv) RegisterDetach(f np.DetachF, sid fcall.Tsession) *fcall.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, sid)
+		return fcall.MkErr(fcall.TErrNotfound, sid)
 	}
 	sess.RegisterDetach(f)
 	return nil
@@ -154,7 +155,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
-func (ssrv *SessSrv) Sess(sid np.Tsession) *sessstatesrv.Session {
+func (ssrv *SessSrv) Sess(sid fcall.Tsession) *sessstatesrv.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
 		db.DFatalf("%v: no sess %v\n", proc.GetName(), sid)
@@ -223,29 +224,30 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 	return ssrv.snap
 }
 
-func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {
+func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid fcall.Tsession) (fs.Dir, fs.CtxI) {
 	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid np.Tclient, sid np.Tsession, conn np.Conn) *np.Err {
+func (ssrv *SessSrv) Register(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) *fcall.Err {
 	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
+func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
-	if sid == np.NoSession {
+	if sid == fcall.NoSession {
 		return
 	}
 	sess := ssrv.st.Alloc(cid, sid)
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
-	s := np.Tsession(fc.Fc.Session)
+func (ssrv *SessSrv) SrvFcall(f fcall.Fcall) {
+	fc := f.(*np.FcallMsg)
+	s := fcall.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
@@ -256,7 +258,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
 		// processing it sequentially on the session's thread.
 		if s == 0 {
 			ssrv.srvfcall(fc)
-		} else if np.Tfcall(fc.Fc.Type) == np.TTwriteread {
+		} else if fcall.Tfcall(fc.Fc.Type) == fcall.TTwriteread {
 			ssrv.cnt.Inc()
 			go func() {
 				ssrv.srvfcall(fc)
@@ -289,7 +291,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
-	s := np.Tsession(fc.Fc.Session)
+	s := fcall.Tsession(fc.Fc.Session)
 	if s == 0 {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*np.Theartbeat))
 		return
@@ -299,7 +301,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 	// will be in this function, so the conn will be set to
 	// nil. If it came from the client, the conn will already be
 	// set.
-	sess := ssrv.st.Alloc(np.Tclient(fc.Fc.Client), s)
+	sess := ssrv.st.Alloc(fcall.Tclient(fc.Fc.Client), s)
 	// Reply cache needs to live under the replication layer in order to
 	// handle duplicate requests. These may occur if, for example:
 	//
@@ -342,7 +344,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
-		reply := err.Rerror()
+		reply := np.MkRerror(err)
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {

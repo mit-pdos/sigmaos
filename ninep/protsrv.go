@@ -1,5 +1,9 @@
 package ninep
 
+import (
+	"sigmaos/fcall"
+)
+
 type Isrvconn interface {
 }
 
@@ -13,8 +17,8 @@ type Conn interface {
 type Fsrvfcall func(*FcallMsg)
 
 type SessServer interface {
-	Register(Tclient, Tsession, Conn) *Err
-	Unregister(Tclient, Tsession, Conn)
+	Register(Tclient, fcall.Tsession, Conn) *fcall.Err
+	Unregister(Tclient, fcall.Tsession, Conn)
 	SrvFcall(*FcallMsg)
 	Snapshot() []byte
 	Restore([]byte)
@@ -47,7 +51,7 @@ type Protsrv interface {
 	Snapshot() []byte
 }
 
-type MkProtServer func(SessServer, Tsession) Protsrv
+type MkProtServer func(SessServer, fcall.Tsession) Protsrv
 type RestoreProtServer func(SessServer, []byte) Protsrv
 
-type DetachF func(Tsession)
+type DetachF func(fcall.Tsession)

@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type CtlFile struct {
@@ -24,11 +25,11 @@ func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir
 	}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	return nil, np.MkErr(np.TErrNotSupported, "Read")
+func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	msg := &ResourceMsg{}
 	msg.Unmarshal(b)
 	switch msg.MsgType {

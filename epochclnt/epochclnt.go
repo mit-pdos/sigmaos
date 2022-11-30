@@ -93,7 +93,7 @@ func (ec *EpochClnt) GetFence(epoch np.Tepoch) (*np.Tfence, error) {
 	}
 	if string(b) != epoch.String() {
 		db.DPrintf("EPOCHCLNT_ERR", "Epoch mismatch %v err %v", ec.path, err)
-		return f, np.MkErr(np.TErrStale, "newer epoch: "+string(b))
+		return f, fcall.MkErr(fcall.TErrStale, "newer epoch: "+string(b))
 	}
 	qid, err := ec.Qid(fd)
 	if err != nil {

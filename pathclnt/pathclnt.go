@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	np "sigmaos/sigmap"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
@@ -97,10 +98,10 @@ func (pathc *PathClnt) MakeWriter(fid np.Tfid) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
-func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
+func (pathc *PathClnt) readlink(fid np.Tfid) (string, *fcall.Err) {
 	qid := pathc.Qid(fid)
 	if qid.Type&np.QTSYMLINK == 0 {
-		return "", np.MkErr(np.TErrNotSymlink, qid.Type)
+		return "", fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, np.OREAD)
 	if err != nil {
@@ -114,9 +115,9 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
 	return string(b), nil
 }
 
-func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {
+func (pathc *PathClnt) mount(fid np.Tfid, path string) *fcall.Err {
 	if err := pathc.mnt.add(np.Split(path), fid); err != nil {
-		if err.Code() == np.TErrExists {
+		if err.Code() == fcall.TErrExists {
 			// Another thread may already have mounted
 			// path; clunk the fid and don't return an
 			// error.
@@ -188,7 +189,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string) *np.Err {
+func (pathc *PathClnt) renameat(old, new string) *fcall.Err {
 	db.DPrintf("PATHCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
@@ -207,7 +208,7 @@ func (pathc *PathClnt) renameat(old, new string) *np.Err {
 	return pathc.FidClnt.Renameat(fid, o, fid1, n)
 }
 
-func (pathc *PathClnt) umountFree(path []string) *np.Err {
+func (pathc *PathClnt) umountFree(path []string) *fcall.Err {
 	if fid, err := pathc.mnt.umount(path); err != nil {
 		return err
 	} else {
@@ -228,7 +229,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
+		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -306,7 +307,7 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 		return err
 	}
 	if w == nil {
-		return np.MkErr(np.TErrInval, "watch")
+		return fcall.MkErr(fcall.TErrInval, "watch")
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -333,7 +334,7 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 	// symlink.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, np.EndSlash(path))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) {
+		if fcall.IsMaybeSpecialElem(err) {
 			fid, err = pathc.WalkPath(p, np.EndSlash(path), nil)
 			if err != nil {
 				return nil, err
@@ -363,7 +364,7 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, np.EndSlash(path))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
+		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
@@ -393,7 +394,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
+		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
 			dir := p.Dir()
 			base := np.Path{p.Base()}
 			fid, err = pathc.WalkPath(dir, true, nil)

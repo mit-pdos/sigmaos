@@ -7,10 +7,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
-	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -26,30 +27,30 @@ func MakeNpd() *Npd {
 	return npd
 }
 
-func (npd *Npd) mkProtServer(sesssrv np.SessServer, sid np.Tsession) np.Protsrv {
+func (npd *Npd) mkProtServer(sesssrv np.SessServer, sid fcall.Tsession) np.Protsrv {
 	return makeNpConn(npd.named)
 }
 
 func (npd *Npd) serve(fm *np.FcallMsg) {
-	s := np.Tsession(fm.Fc.Session)
+	s := fcall.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
 	reply, _, rerror := sess.Dispatch(fm.Msg)
 	if rerror != nil {
 		reply = rerror
 	}
-	fm1 := np.MakeFcallMsg(reply, np.Tclient(fm.Fc.Client), s, nil, nil, np.MakeFenceNull())
+	fm1 := np.MakeFcallMsg(reply, fcall.Tclient(fm.Fc.Client), s, nil, nil, np.MakeFenceNull())
 	fm1.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(fm1)
 }
 
-func (npd *Npd) Register(cid np.Tclient, sid np.Tsession, conn np.Conn) *np.Err {
+func (npd *Npd) Register(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) *fcall.Err {
 	sess := npd.st.Alloc(cid, sid)
 	sess.SetConn(conn)
 	return nil
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (npd *Npd) Unregister(cid np.Tclient, sid np.Tsession, conn np.Conn) {
+func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == np.NoSession {
 		return
@@ -97,7 +98,7 @@ func (npc *NpConn) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
 }
 
 func (npc *NpConn) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
-	return np.MkRerrorWC(np.TErrNotSupported)
+	return np.MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
@@ -131,7 +132,7 @@ func (npc *NpConn) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
@@ -148,7 +149,7 @@ func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	qid, err := npc.fidc.Open(fid, args.Mode)
 	if err != nil {
@@ -167,7 +168,7 @@ func (npc *NpConn) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
@@ -185,7 +186,7 @@ func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
@@ -203,7 +204,7 @@ func (npc *NpConn) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, np.NoV)
 	if err != nil {
@@ -218,7 +219,7 @@ func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, np.NoV)
 	if err != nil {
@@ -233,7 +234,7 @@ func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	err := npc.fidc.Remove(fid)
 	if err != nil {
@@ -251,7 +252,7 @@ func (npc *NpConn) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
@@ -266,7 +267,7 @@ func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
 	}
 	err := npc.fidc.Wstat(fid, &args.Stat)
 	if err != nil {
@@ -278,15 +279,15 @@ func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 }
 
 func (npc *NpConn) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	return np.MkRerrorWC(np.TErrNotSupported)
+	return np.MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
-	return np.MkRerrorWC(np.TErrNotSupported)
+	return np.MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
-	return np.MkRerrorWC(np.TErrNotSupported)
+	return np.MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {

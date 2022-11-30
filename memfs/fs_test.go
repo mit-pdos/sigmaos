@@ -10,6 +10,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type TestState struct {
@@ -54,7 +55,7 @@ func (ts *TestState) testRename(t int) {
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
 		if err != nil {
-			assert.True(ts.t, np.IsErrNotfound(err))
+			assert.True(ts.t, fcall.IsErrNotfound(err))
 		}
 	}
 }

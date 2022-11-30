@@ -3,6 +3,7 @@ package fdclnt
 import (
 	"sync"
 
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -52,17 +53,17 @@ func (fdt *FdTable) closefd(fd int) {
 }
 
 // Caller must have locked fdt
-func (fdt *FdTable) lookupL(fd int) (*FdState, *np.Err) {
+func (fdt *FdTable) lookupL(fd int) (*FdState, *fcall.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
-		return nil, np.MkErr(np.TErrBadFd, fd)
+		return nil, fcall.MkErr(fcall.TErrBadFd, fd)
 	}
 	if fdt.fds[fd].fid == np.NoFid {
-		return nil, np.MkErr(np.TErrBadFd, fd)
+		return nil, fcall.MkErr(fcall.TErrBadFd, fd)
 	}
 	return &fdt.fds[fd], nil
 }
 
-func (fdt *FdTable) lookup(fd int) (np.Tfid, *np.Err) {
+func (fdt *FdTable) lookup(fd int) (np.Tfid, *fcall.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -73,7 +74,7 @@ func (fdt *FdTable) lookup(fd int) (np.Tfid, *np.Err) {
 	return st.fid, nil
 }
 
-func (fdt *FdTable) lookupOff(fd int) (np.Tfid, np.Toffset, *np.Err) {
+func (fdt *FdTable) lookupOff(fd int) (np.Tfid, np.Toffset, *fcall.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -84,7 +85,7 @@ func (fdt *FdTable) lookupOff(fd int) (np.Tfid, np.Toffset, *np.Err) {
 	return st.fid, st.offset, nil
 }
 
-func (fdt *FdTable) setOffset(fd int, off np.Toffset) *np.Err {
+func (fdt *FdTable) setOffset(fd int, off np.Toffset) *fcall.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -96,7 +97,7 @@ func (fdt *FdTable) setOffset(fd int, off np.Toffset) *np.Err {
 	return nil
 }
 
-func (fdt *FdTable) incOff(fd int, off np.Toffset) *np.Err {
+func (fdt *FdTable) incOff(fd int, off np.Toffset) *fcall.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 

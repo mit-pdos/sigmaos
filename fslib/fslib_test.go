@@ -18,6 +18,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/named"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/perf"
 	"sigmaos/stats"
 	"sigmaos/test"
@@ -67,7 +68,7 @@ func TestCreateTwice(t *testing.T) {
 	assert.Equal(t, nil, err)
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.NotNil(t, err)
-	assert.True(t, np.IsErrExists(err))
+	assert.True(t, fcall.IsErrExists(err))
 	ts.Shutdown()
 }
 
@@ -90,13 +91,13 @@ func TestConnect(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "disconnected")
 
 	_, err = ts.Write(fd, d)
-	assert.True(t, np.IsErrUnreachable(err))
+	assert.True(t, fcall.IsErrUnreachable(err))
 
 	err = ts.Close(fd)
-	assert.True(t, np.IsErrUnreachable(err))
+	assert.True(t, fcall.IsErrUnreachable(err))
 
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.True(t, np.IsErrUnreachable(err))
+	assert.True(t, fcall.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }
@@ -457,7 +458,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	defer fsl.Close(fd)
 
 	b, err := fsl.ReadV(fd, 1000)
-	if err != nil && np.IsErrVersion(err) {
+	if err != nil && fcall.IsErrVersion(err) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -471,7 +472,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 
 	b = []byte(strconv.Itoa(n))
 	_, err = fsl.WriteV(fd, b)
-	if err != nil && np.IsErrVersion(err) {
+	if err != nil && fcall.IsErrVersion(err) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -527,7 +528,7 @@ func TestWatchCreate(t *testing.T) {
 	})
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, -1, fd, err)
-	assert.True(t, np.IsErrNotfound(err))
+	assert.True(t, fcall.IsErrNotfound(err))
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
@@ -753,7 +754,7 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 				ch <- r
 			})
 			// Either no error, or remove already happened.
-			assert.True(ts.T, err == nil || np.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
+			assert.True(ts.T, err == nil || fcall.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {
@@ -819,7 +820,7 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 				i = i + 1
 				ok = true
 			} else {
-				assert.True(ts.T, np.IsErrNotfound(err))
+				assert.True(ts.T, fcall.IsErrNotfound(err))
 			}
 		}
 	}
@@ -1268,7 +1269,7 @@ func TestFslibExit(t *testing.T) {
 
 	_, err = ts.Stat(dot)
 	assert.NotNil(t, err)
-	assert.True(t, np.IsErrUnreachable(err))
+	assert.True(t, fcall.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }

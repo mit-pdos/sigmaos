@@ -3,53 +3,54 @@ package fs
 import (
 	db "sigmaos/debug"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/sesscond"
 )
 
-type MakeInodeF func(CtxI, np.Tperm, np.Tmode, Dir, MakeDirF) (Inode, *np.Err)
+type MakeInodeF func(CtxI, np.Tperm, np.Tmode, Dir, MakeDirF) (Inode, *fcall.Err)
 type MakeDirF func(Inode, MakeInodeF) Inode
 
 type CtxI interface {
 	Uname() string
-	SessionId() np.Tsession
+	SessionId() fcall.Tsession
 	SessCondTable() *sesscond.SessCondTable
 	Snapshot() []byte
 }
 
 type Dir interface {
 	FsObj
-	LookupPath(CtxI, np.Path) ([]FsObj, FsObj, np.Path, *np.Err)
-	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
-	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
-	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
-	Remove(CtxI, string) *np.Err
-	Rename(CtxI, string, string) *np.Err
-	Renameat(CtxI, string, Dir, string) *np.Err
+	LookupPath(CtxI, np.Path) ([]FsObj, FsObj, np.Path, *fcall.Err)
+	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *fcall.Err)
+	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *fcall.Err)
+	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *fcall.Err)
+	Remove(CtxI, string) *fcall.Err
+	Rename(CtxI, string, string) *fcall.Err
+	Renameat(CtxI, string, Dir, string) *fcall.Err
 }
 
 type File interface {
-	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, *np.Err)
-	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
+	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, *fcall.Err)
+	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *fcall.Err)
 }
 
 type RPC interface {
-	WriteRead(CtxI, []byte) ([]byte, *np.Err)
+	WriteRead(CtxI, []byte) ([]byte, *fcall.Err)
 }
 
 type FsObj interface {
 	Path() np.Tpath
 	Perm() np.Tperm
 	Parent() Dir
-	Open(CtxI, np.Tmode) (FsObj, *np.Err)
-	Close(CtxI, np.Tmode) *np.Err // for pipes
-	Stat(CtxI) (*np.Stat, *np.Err)
+	Open(CtxI, np.Tmode) (FsObj, *fcall.Err)
+	Close(CtxI, np.Tmode) *fcall.Err // for pipes
+	Stat(CtxI) (*np.Stat, *fcall.Err)
 	String() string
 }
 
-func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
+func Obj2File(o FsObj, fname np.Path) (File, *fcall.Err) {
 	switch i := o.(type) {
 	case Dir:
-		return nil, np.MkErr(np.TErrNotFile, fname)
+		return nil, fcall.MkErr(fcall.TErrNotFile, fname)
 	case File:
 		return i, nil
 	default:

@@ -7,26 +7,27 @@ import (
 	db "sigmaos/debug"
 	np "sigmaos/sigmap"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type NetServer struct {
-	addr       string
-	sesssrv    np.SessServer
-	wireCompat bool
+	addr      string
+	sesssrv   sp.SessServer
+	sesssrv9p np.SessServer
 }
 
-func MakeNetServer(sesssrv np.SessServer, address string) *NetServer {
-	return makeNetServer(sesssrv, address, false)
+func MakeNetServer(sesssrv sp.SessServer, address string) *NetServer {
+	return makeNetServer(sesssrv, address, nil)
 }
 
-func MakeNetServerWireCompatible(address string, sesssrv np.SessServer) *NetServer {
-	return makeNetServer(sesssrv, address, true)
+func MakeNetServer9p(address string, sesssrv np.SessServer) *NetServer {
+	return makeNetServer(nil, address, sesssrv)
 }
 
-func makeNetServer(ss np.SessServer, address string, wireCompat bool) *NetServer {
+func makeNetServer(ss sp.SessServer, address string, npss np.SessServer) *NetServer {
 	srv := &NetServer{"",
 		ss,
-		wireCompat,
+		npss,
 	}
 	// Create and start the main server listener
 	var l net.Listener

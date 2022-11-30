@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/sessstatesrv"
-	np "sigmaos/sigmap"
 )
 
 type SessCondTable struct {
@@ -65,7 +65,7 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 // sct while bailing out (e.g., to remove an emphemeral file), but
 // threads shouldn't wait on these sess conds, so we don't have to
 // close those.
-func (sct *SessCondTable) DeleteSess(sessid np.Tsession) {
+func (sct *SessCondTable) DeleteSess(sessid fcall.Tsession) {
 	t := sct.toSlice()
 	db.DPrintf("SESSCOND", "%v: delete sess %v\n", sessid, t)
 	for _, sc := range t {

@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/delay"
+	"sigmaos/fcall"
 	"sigmaos/sessconnclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -26,7 +27,7 @@ type NetClnt struct {
 	bw     *bufio.Writer
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *sp.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *fcall.Err) {
 	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
@@ -71,7 +72,7 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect(addrs []string) *sp.Err {
+func (nc *NetClnt) connect(addrs []string) *fcall.Err {
 	for _, addr := range addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -85,7 +86,7 @@ func (nc *NetClnt) connect(addrs []string) *sp.Err {
 		return nil
 	}
 	db.DPrintf("NETCLNT_ERR", "NetClnt unable to connect to any of %v\n", addrs)
-	return sp.MkErr(sp.TErrUnreachable, "no connection")
+	return fcall.MkErr(fcall.TErrUnreachable, "no connection")
 }
 
 // Try to send a request to the server. If an error occurs, close the
@@ -108,7 +109,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
-		if err.Code() != sp.TErrUnreachable {
+		if err.Code() != fcall.TErrUnreachable {
 			db.DFatalf("Unexpected error in netclnt.writer: %v", err)
 		}
 		return
@@ -119,12 +120,12 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*sp.FcallMsg, *sp.Err) {
+func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
 	frame, err := spcodec.ReadFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return nil, sp.MkErr(sp.TErrUnreachable, nc.Src()+"->"+nc.Dst())
+		return nil, fcall.MkErr(fcall.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
 	fm, err := spcodec.UnmarshalFcallMsg(frame)
 	if err != nil {

@@ -109,7 +109,7 @@ func (mv *Mover) delShard(sharddir string) {
 
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.
-	if _, err := mv.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
+	if _, err := mv.Stat(sharddir); err != nil && fcall.IsErrNotfound(err) {
 		db.DPrintf("KVMV_ERR", "Delete conf %v not found %v\n", mv.epochstr, sharddir)
 		mv.Exited(proc.MakeStatus(proc.StatusOK))
 		return

@@ -4,10 +4,11 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *np.Err) {
+func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *fcall.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
 	db.DPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
@@ -89,10 +90,10 @@ func SplitTargetReplicated(target string) (np.Path, np.Path) {
 	return servers, rest
 }
 
-func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) *np.Err {
+func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) *fcall.Err {
 	db.DPrintf("PATHCLNT0", "automount %v to %v\n", target, path)
 	var fid np.Tfid
-	var err *np.Err
+	var err *fcall.Err
 	if IsReplicated(target) {
 		addrs, r := SplitTargetReplicated(target)
 		fid, err = pathc.Attach(uname, addrs, path.String(), r.String())

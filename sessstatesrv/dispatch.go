@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -13,7 +14,8 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
 		db.DPrintf("SESSION_ERR", "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
-		return nil, true, np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", s.Sid)).Rerror()
+		err := fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", s.Sid))
+		return nil, true, np.MkRerror(err)
 	}
 	switch req := msg.(type) {
 	case *np.Tversion:
@@ -119,6 +121,6 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		return reply, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
-		return nil, false, np.MkErr(np.TErrUnknownMsg, msg).Rerror()
+		return nil, false, np.MkRerror(fcall.MkErr(fcall.TErrUnknownMsg, msg))
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"sigmaos/awriter"
 	db "sigmaos/debug"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/reader"
 	"sigmaos/writer"
 )
@@ -96,7 +97,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			ch <- err
 		})
 		db.DPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
-		if err != nil && np.IsErrNotfound(err) {
+		if err != nil && fcall.IsErrNotfound(err) {
 			r := <-ch
 			if r != nil {
 				db.DPrintf("FSLIB", "OpenWatch watch %v err %v\n", path, err)

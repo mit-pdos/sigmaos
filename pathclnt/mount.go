@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -31,14 +32,14 @@ func makeMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path np.Path, fid np.Tfid) *np.Err {
+func (mnt *MntTable) add(path np.Path, fid np.Tfid) *fcall.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if path.Eq(p.path) {
-			return np.MkErr(np.TErrExists, fmt.Sprintf("%v (mount)", p.path))
+			return fcall.MkErr(fcall.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
@@ -77,12 +78,12 @@ func matchexact(mp np.Path, path np.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
+func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return np.NoFid, path, np.MkErr(np.TErrUnreachable, path)
+		return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, path)
 	}
 
 	for _, p := range mnt.mounts {
@@ -91,11 +92,11 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
 			return p.fid, left, nil
 		}
 	}
-	return np.NoFid, path, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
+func (mnt *MntTable) umount(path np.Path) (np.Tfid, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -107,7 +108,7 @@ func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return np.NoFid, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

@@ -4,18 +4,19 @@ import (
 	"errors"
 	"io"
 
-	np "sigmaos/sigmap"
+	"sigmaos/fcall"
+	sp "sigmaos/sigmap"
 )
 
-func MarshalSizeDir(dir []*np.Stat) np.Tlength {
+func MarshalSizeDir(dir []*sp.Stat) sp.Tlength {
 	sz := uint32(0)
 	for _, st := range dir {
 		sz += SizeNp(*st)
 	}
-	return np.Tlength(sz)
+	return sp.Tlength(sz)
 }
 
-func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
+func MarshalDir(cnt sp.Tsize, dir []*sp.Stat) ([]byte, int, *fcall.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -23,13 +24,13 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	}
 	n := 0
 	for _, st := range dir {
-		sz := np.Tsize(SizeNp(*st))
+		sz := sp.Tsize(SizeNp(*st))
 		if cnt < sz {
 			break
 		}
-		b, err := marshal(*st)
-		if err != nil {
-			return nil, n, np.MkErrError(err)
+		b, e := marshal(*st)
+		if e != nil {
+			return nil, n, fcall.MkErrError(e)
 		}
 		buf = append(buf, b...)
 		cnt -= sz
@@ -38,14 +39,14 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	return buf, n, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *np.Err) {
-	st := np.Stat{}
+func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *fcall.Err) {
+	st := sp.Stat{}
 	if error := unmarshalReader(rdr, &st); error != nil {
-		var nperr *np.Err
+		var nperr *fcall.Err
 		if errors.As(error, &nperr) {
 			return nil, nperr
 		}
-		return nil, np.MkErrError(error)
+		return nil, fcall.MkErrError(error)
 	}
 	return &st, nil
 }

@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
@@ -39,7 +40,7 @@ func umode2Perm(umode uint16) np.Tperm {
 	return perm
 }
 
-func ustat(path np.Path) (*np.Stat, *np.Err) {
+func ustat(path np.Path) (*np.Stat, *fcall.Err) {
 	var statx unix.Statx_t
 	db.DPrintf("UXD", "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -67,7 +68,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path np.Path) (*Obj, *np.Err) {
+func makeObj(path np.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
@@ -98,7 +99,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -155,7 +156,7 @@ func (o *Obj) SetParent(p fs.Dir) {
 func (o *Obj) Unlink() {
 }
 
-func (o *Obj) Size() (np.Tlength, *np.Err) {
+func (o *Obj) Size() (np.Tlength, *fcall.Err) {
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return 0, err

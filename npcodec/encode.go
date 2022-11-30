@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
 )
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
@@ -47,8 +48,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -126,11 +127,11 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case *[]np.Tsession:
+		case *[]fcall.Tsession:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case []np.Tsession:
+		case []fcall.Tsession:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
@@ -188,8 +189,8 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
 				return err
 			}
-			switch np.Tfcall(v.Fc.Type) {
-			case np.TTwriteread:
+			switch fcall.Tfcall(v.Fc.Type) {
+			case fcall.TTwriteread:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
@@ -232,7 +233,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -317,14 +318,14 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
-		case *[]np.Tsession:
+		case *[]fcall.Tsession:
 			var l uint16
 
 			if err := d.decode(&l); err != nil {
 				return err
 			}
 			elements := make([]interface{}, int(l))
-			*v = make([]np.Tsession, int(l))
+			*v = make([]fcall.Tsession, int(l))
 			for i := range elements {
 				elements[i] = &(*v)[i]
 			}
@@ -378,12 +379,12 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := proto.Unmarshal(b, v.Fc); err != nil {
 				return err
 			}
-			msg, err := newMsg(np.Tfcall(v.Fc.Type))
+			msg, err := newMsg(fcall.Tfcall(v.Fc.Type))
 			if err != nil {
 				return err
 			}
-			switch np.Tfcall(v.Fc.Type) {
-			case np.TTwriteread:
+			switch fcall.Tfcall(v.Fc.Type) {
+			case fcall.TTwriteread:
 				var l uint32
 				if err := d.decode(&l); err != nil {
 					return err
@@ -431,8 +432,8 @@ func SizeNp(vs ...interface{}) uint32 {
 		}
 
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			s += uint32(binary.Size(v))
 		case []byte:
 			s += uint32(binary.Size(uint32(0)) + len(v))
@@ -509,11 +510,11 @@ func SizeNp(vs ...interface{}) uint32 {
 // writing. We are using a lot of reflection here for fairly static
 // serialization but we can replace this in the future with generated code if
 // performance is an issue.
-func fields9p(v interface{}) ([]interface{}, *np.Err) {
+func fields9p(v interface{}) ([]interface{}, *fcall.Err) {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		return nil, np.MkErr(np.TErrBadFcall, "cannot extract fields from non-struct")
+		return nil, fcall.MkErr(fcall.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
 	elements := make([]interface{}, 0, rv.NumField())

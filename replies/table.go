@@ -5,6 +5,7 @@ import (
 	"sort"
 	"sync"
 
+	"sigmaos/fcall"
 	"sigmaos/intervals"
 	np "sigmaos/sigmap"
 )
@@ -98,7 +99,7 @@ func (rt *ReplyTable) Get(request *np.Fcall) (*ReplyFuture, bool) {
 // Empty and permanently close the replies table. There may be server-side
 // threads waiting on reply results, so make sure to complete all of them with
 // an error.
-func (rt *ReplyTable) Close(cli np.Tclient, sid np.Tsession) {
+func (rt *ReplyTable) Close(cli fcall.Tclient, sid fcall.Tsession) {
 	rt.Lock()
 	defer rt.Unlock()
 	for _, rf := range rt.entries {

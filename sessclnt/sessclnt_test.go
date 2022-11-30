@@ -223,12 +223,12 @@ func writer(t *testing.T, ch chan error, name string) {
 		case <-ch:
 			stop = true
 		default:
-			if err := fsl.Remove(fn); err != nil && np.IsErrUnreachable(err) {
+			if err := fsl.Remove(fn); err != nil && fcall.IsErrUnreachable(err) {
 				break
 			}
 			w, err := fsl.CreateAsyncWriter(fn, 0777, np.OWRITE)
 			if err != nil {
-				assert.True(t, np.IsErrUnreachable(err))
+				assert.True(t, fcall.IsErrUnreachable(err))
 				break
 			}
 			nfile += 1
@@ -237,7 +237,7 @@ func writer(t *testing.T, ch chan error, name string) {
 				break
 			}
 			if err := w.Close(); err != nil {
-				assert.True(t, np.IsErrUnreachable(err))
+				assert.True(t, fcall.IsErrUnreachable(err))
 				break
 			}
 		}

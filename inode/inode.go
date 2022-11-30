@@ -8,6 +8,7 @@ import (
 
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type Inode struct {
@@ -72,15 +73,15 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() (np.Tlength, *np.Err) {
+func (i *Inode) Size() (np.Tlength, *fcall.Err) {
 	return 0, nil
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
+func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *fcall.Err) {
 	return nil, nil
 }
 
-func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
+func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
 	return nil
 }
 
@@ -95,7 +96,7 @@ func (inode *Inode) Mode() np.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 

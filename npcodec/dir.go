@@ -4,7 +4,8 @@ import (
 	"errors"
 	"io"
 
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
 )
 
 func MarshalSizeDir(dir []*np.Stat) np.Tlength {
@@ -15,7 +16,7 @@ func MarshalSizeDir(dir []*np.Stat) np.Tlength {
 	return np.Tlength(sz)
 }
 
-func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
+func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *fcall.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -27,9 +28,9 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 		if cnt < sz {
 			break
 		}
-		b, err := marshal(*st)
-		if err != nil {
-			return nil, n, np.MkErrError(err)
+		b, e := marshal(*st)
+		if e != nil {
+			return nil, n, fcall.MkErrError(e)
 		}
 		buf = append(buf, b...)
 		cnt -= sz
@@ -38,14 +39,14 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	return buf, n, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *np.Err) {
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *fcall.Err) {
 	st := np.Stat{}
 	if error := unmarshalReader(rdr, &st); error != nil {
-		var nperr *np.Err
+		var nperr *fcall.Err
 		if errors.As(error, &nperr) {
 			return nil, nperr
 		}
-		return nil, np.MkErrError(error)
+		return nil, fcall.MkErrError(error)
 	}
 	return &st, nil
 }

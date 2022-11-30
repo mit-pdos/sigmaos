@@ -6,6 +6,7 @@ import (
 
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type File struct {
@@ -19,7 +20,7 @@ func MakeFile() *File {
 	return f
 }
 
-func (f *File) Size() (np.Tlength, *np.Err) {
+func (f *File) Size() (np.Tlength, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return np.Tlength(len(f.data)), nil
@@ -29,7 +30,7 @@ func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -59,7 +60,7 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

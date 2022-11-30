@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 //
@@ -66,11 +67,11 @@ func (dir *DirOverlay) ls() []*np.Stat {
 }
 
 // lookup in overlay
-func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
+func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *fcall.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, nil
 	}
-	return nil, np.MkErr(np.TErrNotfound, name)
+	return nil, fcall.MkErr(fcall.TErrNotfound, name)
 	// else {
 	// 	db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", name)
 	// 	o, err := dir.underlay.Lookup(ctx, name)
@@ -81,7 +82,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *np.Err) {
 	// }
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *fcall.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
@@ -93,13 +94,13 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsO
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	return dir.underlay.Create(ctx, name, perm, m)
 }
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignoressy size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err
@@ -112,19 +113,19 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversi
 	return sts, nil
 }
 
-func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	return dir.underlay.WriteDir(ctx, offset, b, v)
 }
 
-func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *np.Err {
+func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *fcall.Err {
 	return dir.underlay.Rename(ctx, from, to)
 }
 
-func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np.Err {
+func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *fcall.Err {
 	return dir.underlay.Renameat(ctx, old, nd, new)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *np.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *fcall.Err {
 	return dir.underlay.Remove(ctx, n)
 }
 

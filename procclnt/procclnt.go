@@ -13,6 +13,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/namespace"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	// "sigmaos/seccomp"
 	"sigmaos/semclnt"
@@ -251,7 +252,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 		})
 		if err != nil {
 			db.DPrintf("PROCCLNT_ERR", "Error waitStart SetRemoveWatch %v", err)
-			if np.IsErrUnreachable(err) {
+			if fcall.IsErrUnreachable(err) {
 				return err
 			}
 		} else {
@@ -343,7 +344,7 @@ func (clnt *ProcClnt) Started() error {
 		db.DPrintf("PROCCLNT_ERR", "Started error %v %v", semPath, err)
 	}
 	// File may not be found if parent exited first or isn't reachable
-	if err != nil && !np.IsErrUnavailable(err) {
+	if err != nil && !fcall.IsErrUnavailable(err) {
 		return fmt.Errorf("Started error %v", err)
 	}
 	// Only isolate non-kernel procs

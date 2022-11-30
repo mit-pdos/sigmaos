@@ -4,9 +4,10 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
-func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {
+func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *fcall.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return mk(i, MakeInode), nil
@@ -17,6 +18,6 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDir
 	} else if p.IsFile() || p.IsEphemeral() {
 		return MakeFile(i), nil
 	} else {
-		return nil, np.MkErr(np.TErrInval, p)
+		return nil, fcall.MkErr(fcall.TErrInval, p)
 	}
 }

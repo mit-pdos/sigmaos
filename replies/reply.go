@@ -3,6 +3,7 @@ package replies
 import (
 	"sync"
 
+	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -44,11 +45,11 @@ func (f *ReplyFuture) Complete(fc *np.FcallMsg) {
 }
 
 // Abort waiting for a reply.
-func (f *ReplyFuture) Abort(cli np.Tclient, sid np.Tsession) {
+func (f *ReplyFuture) Abort(cli fcall.Tclient, sid fcall.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = np.MakeFcallMsg(np.MkErr(np.TErrClosed, nil).Rerror(), cli, sid, nil, nil, np.MakeFenceNull())
+		f.reply = np.MakeFcallMsg(np.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), cli, sid, nil, nil, np.MakeFenceNull())
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

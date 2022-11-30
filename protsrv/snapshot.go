@@ -6,13 +6,14 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fid"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/sesssrv"
 )
 
 type ProtSrvSnapshot struct {
 	Fid       map[np.Tfid][]byte
 	Ephemeral map[np.Tpath][]byte
-	Sid       np.Tsession
+	Sid       fcall.Tsession
 }
 
 func MakeProtSrvSnapshot() *ProtSrvSnapshot {

@@ -1,17 +1,17 @@
 package ctx
 
 import (
-	np "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/sesscond"
 )
 
 type Ctx struct {
 	uname  string
-	sessid np.Tsession
+	sessid fcall.Tsession
 	sct    *sesscond.SessCondTable
 }
 
-func MkCtx(uname string, sessid np.Tsession, sct *sesscond.SessCondTable) *Ctx {
+func MkCtx(uname string, sessid fcall.Tsession, sct *sesscond.SessCondTable) *Ctx {
 	return &Ctx{uname, sessid, sct}
 }
 
@@ -19,7 +19,7 @@ func (ctx *Ctx) Uname() string {
 	return ctx.uname
 }
 
-func (ctx *Ctx) SessionId() np.Tsession {
+func (ctx *Ctx) SessionId() fcall.Tsession {
 	return ctx.sessid
 }
 

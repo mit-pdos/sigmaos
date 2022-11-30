@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
@@ -84,45 +85,45 @@ func MkStatInfo() *StatInfo {
 	return sti
 }
 
-func (si *StatInfo) Inc(fct np.Tfcall) {
+func (si *StatInfo) Inc(fct fcall.Tfcall) {
 	switch fct {
-	case np.TTversion:
+	case fcall.TTversion:
 		si.Nversion.Inc()
-	case np.TTauth:
+	case fcall.TTauth:
 		si.Nauth.Inc()
-	case np.TTattach:
+	case fcall.TTattach:
 		si.Nattach.Inc()
-	case np.TTflush:
+	case fcall.TTflush:
 		si.Nflush.Inc()
-	case np.TTwalk:
+	case fcall.TTwalk:
 		si.Nwalk.Inc()
-	case np.TTopen:
+	case fcall.TTopen:
 		si.Nopen.Inc()
-	case np.TTcreate:
+	case fcall.TTcreate:
 		si.Ncreate.Inc()
-	case np.TTread:
+	case fcall.TTread:
 		si.Nread.Inc()
-	case np.TTwrite:
+	case fcall.TTwrite:
 		si.Nwrite.Inc()
-	case np.TTclunk:
+	case fcall.TTclunk:
 		si.Nclunk.Inc()
-	case np.TTremove:
+	case fcall.TTremove:
 		si.Nremove.Inc()
-	case np.TTremovefile:
+	case fcall.TTremovefile:
 		si.Nremovefile.Inc()
-	case np.TTstat:
+	case fcall.TTstat:
 		si.Nstat.Inc()
-	case np.TTwstat:
+	case fcall.TTwstat:
 		si.Nwstat.Inc()
-	case np.TTwatch:
+	case fcall.TTwatch:
 		si.Nwatch.Inc()
-	case np.TTrenameat:
+	case fcall.TTrenameat:
 		si.Nrenameat.Inc()
-	case np.TTgetfile:
+	case fcall.TTgetfile:
 		si.Nget.Inc()
-	case np.TTsetfile:
+	case fcall.TTsetfile:
 		si.Nset.Inc()
-	case np.TTputfile:
+	case fcall.TTputfile:
 		si.Nput.Inc()
 	default:
 	}
@@ -242,11 +243,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	if st == nil {
 		return nil, nil
 	}

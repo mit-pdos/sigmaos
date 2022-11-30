@@ -8,6 +8,7 @@ import (
 	"sigmaos/file"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type Symlink struct {
@@ -15,18 +16,18 @@ type Symlink struct {
 	*file.File
 }
 
-func makeSymlink(path np.Path, iscreate bool) (*Symlink, *np.Err) {
+func makeSymlink(path np.Path, iscreate bool) (*Symlink, *fcall.Err) {
 	s := &Symlink{}
 	o, err := makeObj(path)
 	if err == nil && iscreate {
-		return nil, np.MkErr(np.TErrExists, path)
+		return nil, fcall.MkErr(fcall.TErrExists, path)
 	}
 	s.Obj = o
 	s.File = file.MakeFile()
 	return s, nil
 }
 
-func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("UXD", "%v: SymOpen %v m %x\n", ctx, s, m)
 	if m&np.OWRITE == np.OWRITE {
 		// no calls to update target of an existing symlink,
@@ -52,7 +53,7 @@ func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return nil, nil
 }
 
-func (s *Symlink) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
+func (s *Symlink) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
 	db.DPrintf("UXD", "%v: SymClose %v %x\n", ctx, s, mode)
 	if mode&np.OWRITE == np.OWRITE {
 		d, err := s.File.Read(ctx, 0, np.MAXGETSET, np.NoV)

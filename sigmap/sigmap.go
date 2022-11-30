@@ -1,8 +1,7 @@
 package sigmap
 
 //
-// Go structures for 9P based on the wire format in Linux's 9p net/9p,
-// include/net/9p, and various Go 9p implementations.
+// Go structures for sigmap protocol, which is based on 9P.
 //
 
 import (
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"sigmaos/fcall"
 )
 
 type Tsize uint32
@@ -34,16 +35,7 @@ func (fid Tfid) String() string {
 // Augmentated types for sigmaOS
 //
 
-type Tclient uint64
-type Tsession uint64
 type Tseqno uint64
-
-// NoSession signifies the fcall came from a wire-compatible peer
-const NoSession Tsession = ^Tsession(0)
-
-func (s Tsession) String() string {
-	return strconv.FormatUint(uint64(s), 16)
-}
 
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
@@ -249,167 +241,17 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-type Tfcall uint8
-
-const (
-	TTversion Tfcall = iota + 100
-	TRversion
-	TTauth
-	TRauth
-	TTattach
-	TRattach
-	TTerror
-	TRerror
-	TTflush
-	TRflush
-	TTwalk
-	TRwalk
-	TTopen
-	TRopen
-	TTcreate
-	TRcreate
-	TTread
-	TRread
-	TTwrite
-	TRwrite
-	TTclunk
-	TRclunk
-	TTremove
-	TRremove
-	TTstat
-	TRstat
-	TTwstat
-	TRwstat
-
-	//
-	// SigmaP
-	//
-
-	TTreadV
-	TTwriteV
-	TTwatch
-	TTrenameat
-	TRrenameat
-	TTremovefile
-	TTgetfile
-	TRgetfile
-	TTsetfile
-	TTputfile
-	TTdetach
-	TRdetach
-	TTheartbeat
-	TRheartbeat
-	TTwriteread
-	TRwriteread
-)
-
-func (fct Tfcall) String() string {
-	switch fct {
-	case TTversion:
-		return "Tversion"
-	case TRversion:
-		return "Rversion"
-	case TTauth:
-		return "Tauth"
-	case TRauth:
-		return "Rauth"
-	case TTattach:
-		return "Tattach"
-	case TRattach:
-		return "Rattach"
-	case TTerror:
-		return "Terror"
-	case TRerror:
-		return "Rerror"
-	case TTflush:
-		return "Tflush"
-	case TRflush:
-		return "Rflush"
-	case TTwalk:
-		return "Twalk"
-	case TRwalk:
-		return "Rwalk"
-	case TTopen:
-		return "Topen"
-	case TRopen:
-		return "Ropen"
-	case TTcreate:
-		return "Tcreate"
-	case TRcreate:
-		return "Rcreate"
-	case TTread:
-		return "Tread"
-	case TRread:
-		return "Rread"
-	case TTwrite:
-		return "Twrite"
-	case TRwrite:
-		return "Rwrite"
-	case TTclunk:
-		return "Tclunk"
-	case TRclunk:
-		return "Rclunk"
-	case TTremove:
-		return "Tremove"
-	case TRremove:
-		return "Rremove"
-	case TTstat:
-		return "Tstat"
-	case TRstat:
-		return "Rstat"
-	case TTwstat:
-		return "Twstat"
-	case TRwstat:
-		return "Rwstat"
-
-	case TTreadV:
-		return "TreadV"
-	case TTwriteV:
-		return "TwriteV"
-	case TTwatch:
-		return "Twatch"
-	case TTrenameat:
-		return "Trenameat"
-	case TRrenameat:
-		return "Rrenameat"
-	case TTremovefile:
-		return "Tremovefile"
-	case TTgetfile:
-		return "Tgetfile"
-	case TRgetfile:
-		return "Rgetfile"
-	case TTsetfile:
-		return "Tsetfile"
-	case TTputfile:
-		return "Tputfile"
-	case TTdetach:
-		return "Tdetach"
-	case TRdetach:
-		return "Rdetach"
-	case TTheartbeat:
-		return "Theartbeat"
-	case TRheartbeat:
-		return "Rheartbeat"
-	case TTwriteread:
-		return "Twriteread"
-	case TRwriteread:
-		return "Rwriteread"
-	default:
-		return "Tunknown"
-	}
-}
-
 type Tmsg interface {
-	Type() Tfcall
+	Type() fcall.Tfcall
 }
 
 type WritableFcall interface {
-	GetType() Tfcall
+	GetType() fcall.Tfcall
 	GetMsg() Tmsg
 }
 
 type FcallWireCompat struct {
-	Type Tfcall
+	Type fcall.Tfcall
 	Tag  Ttag
 	Msg  Tmsg
 }
@@ -446,7 +288,7 @@ func (iv *Tinterval) Marshal() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
 }
 
-func (fcallWC *FcallWireCompat) GetType() Tfcall {
+func (fcallWC *FcallWireCompat) GetType() fcall.Tfcall {
 	return fcallWC.Type
 }
 
@@ -458,7 +300,7 @@ func (fcallWC *FcallWireCompat) ToInternal() *FcallMsg {
 	fm := MakeFcallMsgNull()
 	fm.Fc.Type = uint32(fcallWC.Type)
 	fm.Fc.Tag = uint32(fcallWC.Tag)
-	fm.Fc.Session = uint64(NoSession)
+	fm.Fc.Session = uint64(fcall.NoSession)
 	fm.Fc.Seqno = uint64(NoSeqno)
 	fm.Msg = fcallWC.Msg
 	return fm
@@ -467,6 +309,18 @@ func (fcallWC *FcallWireCompat) ToInternal() *FcallMsg {
 type FcallMsg struct {
 	Fc  *Fcall
 	Msg Tmsg
+}
+
+func (fcm *FcallMsg) Session() fcall.Tsession {
+	return fcall.Tsession(fcm.Fc.Session)
+}
+
+func (fcm *FcallMsg) Client() fcall.Tclient {
+	return fcall.Tclient(fcm.Fc.Client)
+}
+
+func (fcm *FcallMsg) Type() fcall.Tfcall {
+	return fcall.Tfcall(fcm.Fc.Type)
 }
 
 func MakeFenceNull() *Tfence {
@@ -478,7 +332,7 @@ func MakeFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil}
 }
 
-func MakeFcallMsg(msg Tmsg, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
+func MakeFcallMsg(msg Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
 	if rcv == nil {
 		rcv = &Tinterval{}
 	}
@@ -497,7 +351,7 @@ func MakeFcallMsg(msg Tmsg, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tint
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
+	fm := MakeFcallMsg(reply, fcall.Tclient(req.Fc.Client), fcall.Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -508,8 +362,8 @@ func (fm *FcallMsg) String() string {
 	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg, fm.Fc.Fence)
 }
 
-func (fm *FcallMsg) GetType() Tfcall {
-	return Tfcall(fm.Fc.Type)
+func (fm *FcallMsg) GetType() fcall.Tfcall {
+	return fcall.Tfcall(fm.Fc.Type)
 }
 
 func (fm *FcallMsg) GetMsg() Tmsg {
@@ -518,7 +372,7 @@ func (fm *FcallMsg) GetMsg() Tmsg {
 
 func (fm *FcallMsg) ToWireCompatible() *FcallWireCompat {
 	fcallWC := &FcallWireCompat{}
-	fcallWC.Type = Tfcall(fm.Fc.Type)
+	fcallWC.Type = fcall.Tfcall(fm.Fc.Type)
 	fcallWC.Tag = Ttag(fm.Fc.Tag)
 	fcallWC.Msg = fm.Msg
 	return fcallWC
@@ -569,6 +423,24 @@ func (m Tattach) String() string {
 
 type Rattach struct {
 	Qid Tqid
+}
+
+// Make Wire-compatible Rerror
+func MkRerrorWC(ec fcall.Terror) *Rerror {
+	return &Rerror{ec.String()}
+}
+
+func MkRerror(err *fcall.Err) *Rerror {
+	return &Rerror{err.Error()}
+}
+
+// Return  wire-compatible error format. If error isn't 9p error,
+// log it.
+func RerrorWC(e *fcall.Err) *Rerror {
+	if e.ErrCode > fcall.TErrWalknodir {
+		log.Printf("RerrorWC: unknown err %v\n", e)
+	}
+	return &Rerror{e.ErrCode.String()}
 }
 
 type Rerror struct {
@@ -786,11 +658,11 @@ type Rdetach struct {
 }
 
 type Theartbeat struct {
-	Sids []Tsession // List of sessions in this heartbeat.
+	Sids []fcall.Tsession // List of sessions in this heartbeat.
 }
 
 type Rheartbeat struct {
-	Sids []Tsession // List of sessions in this heartbeat.
+	Sids []fcall.Tsession // List of sessions in this heartbeat.
 }
 
 // type Twriteread struct {
@@ -802,51 +674,51 @@ type Rheartbeat struct {
 // 	Data []byte // Data must be last
 // }
 
-func (Tversion) Type() Tfcall { return TTversion }
-func (Rversion) Type() Tfcall { return TRversion }
-func (Tauth) Type() Tfcall    { return TTauth }
-func (Rauth) Type() Tfcall    { return TRauth }
-func (Tflush) Type() Tfcall   { return TTflush }
-func (Rflush) Type() Tfcall   { return TRflush }
-func (Tattach) Type() Tfcall  { return TTattach }
-func (Rattach) Type() Tfcall  { return TRattach }
-func (Rerror) Type() Tfcall   { return TRerror }
-func (Twalk) Type() Tfcall    { return TTwalk }
-func (Rwalk) Type() Tfcall    { return TRwalk }
-func (Topen) Type() Tfcall    { return TTopen }
-func (Twatch) Type() Tfcall   { return TTwatch }
-func (Ropen) Type() Tfcall    { return TRopen }
-func (Tcreate) Type() Tfcall  { return TTcreate }
-func (Rcreate) Type() Tfcall  { return TRcreate }
-func (Tread) Type() Tfcall    { return TTread }
-func (Rread) Type() Tfcall    { return TRread }
-func (Twrite) Type() Tfcall   { return TTwrite }
-func (Rwrite) Type() Tfcall   { return TRwrite }
-func (Tclunk) Type() Tfcall   { return TTclunk }
-func (Rclunk) Type() Tfcall   { return TRclunk }
-func (Tremove) Type() Tfcall  { return TTremove }
-func (Rremove) Type() Tfcall  { return TRremove }
-func (Tstat) Type() Tfcall    { return TTstat }
-func (Rstat) Type() Tfcall    { return TRstat }
-func (Twstat) Type() Tfcall   { return TTwstat }
-func (Rwstat) Type() Tfcall   { return TRwstat }
+func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }
+func (Rversion) Type() fcall.Tfcall { return fcall.TRversion }
+func (Tauth) Type() fcall.Tfcall    { return fcall.TTauth }
+func (Rauth) Type() fcall.Tfcall    { return fcall.TRauth }
+func (Tflush) Type() fcall.Tfcall   { return fcall.TTflush }
+func (Rflush) Type() fcall.Tfcall   { return fcall.TRflush }
+func (Tattach) Type() fcall.Tfcall  { return fcall.TTattach }
+func (Rattach) Type() fcall.Tfcall  { return fcall.TRattach }
+func (Rerror) Type() fcall.Tfcall   { return fcall.TRerror }
+func (Twalk) Type() fcall.Tfcall    { return fcall.TTwalk }
+func (Rwalk) Type() fcall.Tfcall    { return fcall.TRwalk }
+func (Topen) Type() fcall.Tfcall    { return fcall.TTopen }
+func (Twatch) Type() fcall.Tfcall   { return fcall.TTwatch }
+func (Ropen) Type() fcall.Tfcall    { return fcall.TRopen }
+func (Tcreate) Type() fcall.Tfcall  { return fcall.TTcreate }
+func (Rcreate) Type() fcall.Tfcall  { return fcall.TRcreate }
+func (Tread) Type() fcall.Tfcall    { return fcall.TTread }
+func (Rread) Type() fcall.Tfcall    { return fcall.TRread }
+func (Twrite) Type() fcall.Tfcall   { return fcall.TTwrite }
+func (Rwrite) Type() fcall.Tfcall   { return fcall.TRwrite }
+func (Tclunk) Type() fcall.Tfcall   { return fcall.TTclunk }
+func (Rclunk) Type() fcall.Tfcall   { return fcall.TRclunk }
+func (Tremove) Type() fcall.Tfcall  { return fcall.TTremove }
+func (Rremove) Type() fcall.Tfcall  { return fcall.TRremove }
+func (Tstat) Type() fcall.Tfcall    { return fcall.TTstat }
+func (Rstat) Type() fcall.Tfcall    { return fcall.TRstat }
+func (Twstat) Type() fcall.Tfcall   { return fcall.TTwstat }
+func (Rwstat) Type() fcall.Tfcall   { return fcall.TRwstat }
 
 //
 // sigmaP
 //
 
-func (TreadV) Type() Tfcall      { return TTreadV }
-func (TwriteV) Type() Tfcall     { return TTwriteV }
-func (Trenameat) Type() Tfcall   { return TTrenameat }
-func (Rrenameat) Type() Tfcall   { return TRrenameat }
-func (Tremovefile) Type() Tfcall { return TTremovefile }
-func (Tgetfile) Type() Tfcall    { return TTgetfile }
-func (Rgetfile) Type() Tfcall    { return TRgetfile }
-func (Tsetfile) Type() Tfcall    { return TTsetfile }
-func (Tputfile) Type() Tfcall    { return TTputfile }
-func (Tdetach) Type() Tfcall     { return TTdetach }
-func (Rdetach) Type() Tfcall     { return TRdetach }
-func (Theartbeat) Type() Tfcall  { return TTheartbeat }
-func (Rheartbeat) Type() Tfcall  { return TRheartbeat }
-func (Twriteread) Type() Tfcall  { return TTwriteread }
-func (Rwriteread) Type() Tfcall  { return TRwriteread }
+func (TreadV) Type() fcall.Tfcall      { return fcall.TTreadV }
+func (TwriteV) Type() fcall.Tfcall     { return fcall.TTwriteV }
+func (Trenameat) Type() fcall.Tfcall   { return fcall.TTrenameat }
+func (Rrenameat) Type() fcall.Tfcall   { return fcall.TRrenameat }
+func (Tremovefile) Type() fcall.Tfcall { return fcall.TTremovefile }
+func (Tgetfile) Type() fcall.Tfcall    { return fcall.TTgetfile }
+func (Rgetfile) Type() fcall.Tfcall    { return fcall.TRgetfile }
+func (Tsetfile) Type() fcall.Tfcall    { return fcall.TTsetfile }
+func (Tputfile) Type() fcall.Tfcall    { return fcall.TTputfile }
+func (Tdetach) Type() fcall.Tfcall     { return fcall.TTdetach }
+func (Rdetach) Type() fcall.Tfcall     { return fcall.TRdetach }
+func (Theartbeat) Type() fcall.Tfcall  { return fcall.TTheartbeat }
+func (Rheartbeat) Type() fcall.Tfcall  { return fcall.TRheartbeat }
+func (Twriteread) Type() fcall.Tfcall  { return fcall.TTwriteread }
+func (Rwriteread) Type() fcall.Tfcall  { return fcall.TRwriteread }

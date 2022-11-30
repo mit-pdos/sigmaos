@@ -17,6 +17,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/namespace"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -365,11 +366,11 @@ func (pd *Procd) worker() {
 			pd.waitSpawnOrSteal()
 			continue
 		}
-		if error != nil && (errors.Is(error, io.EOF) || np.IsErrUnreachable(error)) {
+		if error != nil && (errors.Is(error, io.EOF) || fcall.IsErrUnreachable(error)) {
 			continue
 		}
 		if error != nil {
-			if np.IsErrNotfound(error) {
+			if fcall.IsErrNotfound(error) {
 				db.DPrintf("PROCD_ERR", "cond file not found: %v", error)
 				return
 			}

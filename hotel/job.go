@@ -3,8 +3,11 @@ package hotel
 import (
 	"path"
 
+	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 const (
@@ -39,4 +42,42 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
 	}
+}
+
+func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncore proc.Tcore, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+	var cc *cacheclnt.CacheClnt
+	var cm *cacheclnt.CacheMgr
+	var err error
+
+	// Init fs.
+	InitHotelFs(fsl, job)
+
+	// Create a cache clnt.
+	if ncache > 0 {
+		cm = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache)
+		cm.StartCache()
+		cc, err = cacheclnt.MkCacheClnt(fsl, ncache)
+		if err != nil {
+			db.DFatalf("Error cacheclnt %v", err)
+			return nil, nil, nil, err
+		}
+	}
+
+	pids := make([]proc.Tpid, 0, len(srvs))
+
+	for _, srv := range srvs {
+		p := proc.MakeProc(srv, []string{job})
+		p.SetNcore(ncore)
+		if err = pclnt.Spawn(p); err != nil {
+			db.DFatalf("Error spawn proc %v: %v", p, err)
+			return nil, nil, nil, err
+		}
+		if err = pclnt.WaitStart(p.Pid); err != nil {
+			db.DFatalf("Error spawn proc %v: %v", p, err)
+			return nil, nil, nil, err
+		}
+		pids = append(pids, p.Pid)
+	}
+
+	return cc, cm, pids, nil
 }

@@ -42,62 +42,26 @@ type Tstate struct {
 	*test.Tstate
 	job  string
 	pids []proc.Tpid
-	cm   *cacheclnt.CacheMgr
 	cc   *cacheclnt.CacheClnt
+	cm   *cacheclnt.CacheMgr
 }
 
-func spawn(t *testing.T, ts *Tstate, srv, job string) proc.Tpid {
-	p := proc.MakeProc(srv, []string{job})
-	p.SetNcore(1)
-	err := ts.Spawn(p)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(p.Pid)
-	assert.Nil(t, err, "WaitStarted")
-	return p.Pid
-}
-
-func mkTstate(t *testing.T) *Tstate {
+func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
-	hotel.InitHotelFs(ts.FsLib, ts.job)
-	ts.pids = make([]proc.Tpid, 0)
-	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, hotel.NCACHE)
-	return ts
-}
-
-func makeTstate(t *testing.T, srvs []string) *Tstate {
-	ts := mkTstate(t)
-	ts.startSrvs(srvs)
-	return ts
-}
-
-func makeTstateCache(t *testing.T, srvs []string) *Tstate {
-	ts := mkTstate(t)
-	ts.cm.StartCache()
-	ts.startSrvs(srvs)
-	var err error
-	ts.cc, err = cacheclnt.MkCacheClnt(ts.FsLib, hotel.NCACHE)
-	assert.Nil(ts.T, err)
-	return ts
-}
-
-func (ts *Tstate) startSrvs(srvs []string) {
 	// If running as a test (not in a realm), and too few cores, then start more
 	// procds.
 	if !ts.RunningInRealm() {
 		// Start enough procds to run all of the srvs and the caches.
-		for i := 1; int(linuxsched.NCores)*i < len(srvs)+hotel.NCACHE; i++ {
+		for i := 1; int(linuxsched.NCores)*i < len(srvs)+ncache; i++ {
 			ts.BootProcd()
 		}
 	}
-	var err error
-	for _, s := range srvs {
-		pid := spawn(ts.T, ts, s, ts.job)
-		err = ts.WaitStart(pid)
-		assert.Nil(ts.T, err)
-		ts.pids = append(ts.pids, pid)
-	}
+	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, 1, ncache)
+	assert.Nil(ts.T, err)
+	return ts
 }
 
 func (ts *Tstate) PrintStats() {
@@ -125,14 +89,16 @@ func (ts *Tstate) stop() {
 		_, err = ts.WaitExit(pid)
 		assert.Nil(ts.T, err)
 	}
-	ts.cm.StopCache()
+	if ts.cm != nil {
+		ts.cm.StopCache()
+	}
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, 5, len(sts))
 }
 
 func TestGeoSingle(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-geod"})
+	ts := makeTstate(t, []string{"user/hotel-geod"}, 0)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
@@ -149,7 +115,7 @@ func TestGeoSingle(t *testing.T) {
 }
 
 func TestRateSingle(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-rated"})
+	ts := makeTstate(t, []string{"user/hotel-rated"}, hotel.NCACHE)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
@@ -169,7 +135,7 @@ func TestRateSingle(t *testing.T) {
 }
 
 func TestRecSingle(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-recd"})
+	ts := makeTstate(t, []string{"user/hotel-recd"}, 0)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
@@ -187,7 +153,7 @@ func TestRecSingle(t *testing.T) {
 }
 
 func TestUserSingle(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-userd"})
+	ts := makeTstate(t, []string{"user/hotel-userd"}, 0)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
@@ -203,7 +169,7 @@ func TestUserSingle(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-profd"})
+	ts := makeTstate(t, []string{"user/hotel-profd"}, hotel.NCACHE)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
@@ -224,7 +190,7 @@ func TestProfile(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
+	ts := makeTstate(t, []string{"user/hotel-reserved"}, hotel.NCACHE)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -246,7 +212,7 @@ func TestCheck(t *testing.T) {
 }
 
 func TestReserve(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-reserved"})
+	ts := makeTstate(t, []string{"user/hotel-reserved"}, hotel.NCACHE)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -292,7 +258,7 @@ func TestQueryDev(t *testing.T) {
 }
 
 func TestSingleSearch(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"})
+	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"}, hotel.NCACHE)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
@@ -313,10 +279,10 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstateCache(t, []string{"user/hotel-userd",
+	ts := makeTstate(t, []string{"user/hotel-userd",
 		"user/hotel-rated", "user/hotel-geod", "user/hotel-profd",
 		"user/hotel-searchd", "user/hotel-reserved", "user/hotel-recd",
-		"user/hotel-wwwd"})
+		"user/hotel-wwwd"}, hotel.NCACHE)
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 
@@ -375,7 +341,7 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := makeTstateCache(t, hotelsvcs)
+	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	hotel.RunDSB(t, 1000, wc)
 	ts.PrintStats()
@@ -389,7 +355,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstate(t, nil)
+	ts := makeTstate(t, nil, 0)
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
@@ -401,7 +367,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearch(t *testing.T) {
-	ts := makeTstateCache(t, hotelsvcs)
+	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
@@ -429,7 +395,7 @@ func TestBenchSearchK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstate(t, nil)
+	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
@@ -443,7 +409,7 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeo(t *testing.T) {
-	ts := makeTstateCache(t, hotelsvcs)
+	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
@@ -463,7 +429,7 @@ func TestBenchGeoK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := makeTstate(t, nil)
+	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
@@ -480,7 +446,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := makeTstateCache(t, hotelsvcs)
+	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

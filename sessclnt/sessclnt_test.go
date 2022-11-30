@@ -14,6 +14,7 @@ import (
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/test"

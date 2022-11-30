@@ -60,7 +60,7 @@ func (c *Clerk) serve() {
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
 					//				c.printOpTiming(req, frame)
-					c.apply(req, committedReqs.leader)
+					c.apply(req.(*np.FcallMsg), committedReqs.leader)
 				}
 			}
 		}

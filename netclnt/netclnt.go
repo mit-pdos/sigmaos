@@ -132,7 +132,7 @@ func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 	}
 	db.DPrintf("NETCLNT", "recv %v from %v\n", fm, nc.Dst())
-	return fm, nil
+	return fm.(*sp.FcallMsg), nil
 }
 
 // Reader loop. The reader is in charge of resetting the connection if an error

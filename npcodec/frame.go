@@ -66,53 +66,12 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *fcall.Err {
 	return WriteRawBuffer(wr, buf)
 }
 
-func MarshalFcallMsg(fc np.WritableFcall, b *bufio.Writer) *fcall.Err {
+func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 	frame, error := marshal1(true, fc)
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
-	dataBuf := false
-	var data []byte
-	switch fc.GetType() {
-	case fcall.TTwrite:
-		msg := fc.GetMsg().(*np.Twrite)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTwriteV:
-		msg := fc.GetMsg().(*np.TwriteV)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRread:
-		msg := fc.GetMsg().(*np.Rread)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRgetfile:
-		msg := fc.GetMsg().(*np.Rgetfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTsetfile:
-		msg := fc.GetMsg().(*np.Tsetfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTputfile:
-		msg := fc.GetMsg().(*np.Tputfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTwriteread:
-		msg := fc.GetMsg().(*np.Twriteread)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRwriteread:
-		msg := fc.GetMsg().(*np.Rwriteread)
-		data = msg.Data
-		dataBuf = true
-	default:
-	}
-	if dataBuf {
-		return WriteFrameAndBuf(b, frame, data)
-	} else {
-		return WriteFrame(b, frame)
-	}
+	return WriteFrame(b, frame)
 }
 
 func MarshalFcallMsgByte(fcm *np.FcallMsg) ([]byte, *fcall.Err) {
@@ -132,7 +91,7 @@ func UnmarshalFcallMsg(frame []byte) (*np.FcallMsg, *fcall.Err) {
 	return fm, nil
 }
 
-func UnmarshalFcallWireCompat(frame []byte) (*np.FcallMsg, *fcall.Err) {
+func UnmarshalFcallWireCompat(frame []byte) (fcall.Fcall, *fcall.Err) {
 	fcallWC := &np.FcallWireCompat{}
 	if err := unmarshal(frame, fcallWC); err != nil {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)

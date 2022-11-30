@@ -245,11 +245,6 @@ type Tmsg interface {
 	Type() fcall.Tfcall
 }
 
-type WritableFcall interface {
-	GetType() fcall.Tfcall
-	GetMsg() Tmsg
-}
-
 type FcallWireCompat struct {
 	Type fcall.Tfcall
 	Tag  Ttag

@@ -44,7 +44,7 @@ func Restore(b []byte) *ReplyTable {
 
 		if fm != nil {
 			rf := MakeReplyFuture()
-			rf.Complete(fm)
+			rf.Complete(fm.(*sp.FcallMsg))
 			rt.entries[seqno] = rf
 		}
 	}

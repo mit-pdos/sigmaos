@@ -66,44 +66,45 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *fcall.Err {
 	return WriteRawBuffer(wr, buf)
 }
 
-func MarshalFcallMsg(fc sp.WritableFcall, b *bufio.Writer) *fcall.Err {
-	frame, error := marshal1(true, fc)
+func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
+	fcm := fc.(*sp.FcallMsg)
+	frame, error := marshal1(true, fcm)
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
 	dataBuf := false
 	var data []byte
-	switch fc.GetType() {
+	switch fcm.Type() {
 	case fcall.TTwrite:
-		msg := fc.GetMsg().(*sp.Twrite)
+		msg := fcm.Msg.(*sp.Twrite)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TTwriteV:
-		msg := fc.GetMsg().(*sp.TwriteV)
+		msg := fcm.Msg.(*sp.TwriteV)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TRread:
-		msg := fc.GetMsg().(*sp.Rread)
+		msg := fcm.Msg.(*sp.Rread)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TRgetfile:
-		msg := fc.GetMsg().(*sp.Rgetfile)
+		msg := fcm.Msg.(*sp.Rgetfile)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TTsetfile:
-		msg := fc.GetMsg().(*sp.Tsetfile)
+		msg := fcm.Msg.(*sp.Tsetfile)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TTputfile:
-		msg := fc.GetMsg().(*sp.Tputfile)
+		msg := fcm.Msg.(*sp.Tputfile)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TTwriteread:
-		msg := fc.GetMsg().(*sp.Twriteread)
+		msg := fcm.Msg.(*sp.Twriteread)
 		data = msg.Data
 		dataBuf = true
 	case fcall.TRwriteread:
-		msg := fc.GetMsg().(*sp.Rwriteread)
+		msg := fcm.Msg.(*sp.Rwriteread)
 		data = msg.Data
 		dataBuf = true
 	default:
@@ -123,7 +124,7 @@ func MarshalFcallMsgByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
 	}
 }
 
-func UnmarshalFcallMsg(frame []byte) (*sp.FcallMsg, *fcall.Err) {
+func UnmarshalFcallMsg(frame []byte) (fcall.Fcall, *fcall.Err) {
 	fm := sp.MakeFcallMsgNull()
 
 	if err := unmarshal(frame, fm); err != nil {

@@ -1,33 +1,31 @@
 package netsrv
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
+type MarshalF func(fcall.Fcall, *bufio.Writer) *fcall.Err
+type UnmarshalF func([]byte) (fcall.Fcall, *fcall.Err)
+
 type NetServer struct {
 	addr      string
 	sesssrv   sp.SessServer
-	sesssrv9p np.SessServer
+	marshal   MarshalF
+	unmarshal UnmarshalF
 }
 
-func MakeNetServer(sesssrv sp.SessServer, address string) *NetServer {
-	return makeNetServer(sesssrv, address, nil)
-}
-
-func MakeNetServer9p(address string, sesssrv np.SessServer) *NetServer {
-	return makeNetServer(nil, address, sesssrv)
-}
-
-func makeNetServer(ss sp.SessServer, address string, npss np.SessServer) *NetServer {
+func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *NetServer {
 	srv := &NetServer{"",
 		ss,
-		npss,
+		m,
+		u,
 	}
 	// Create and start the main server listener
 	var l net.Listener

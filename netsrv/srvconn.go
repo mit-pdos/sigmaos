@@ -7,8 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	"sigmaos/npcodec"
-	np "sigmaos/sigmap"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -22,7 +20,8 @@ type SrvConn struct {
 	br        *bufio.Reader
 	bw        *bufio.Writer
 	replies   chan *sp.FcallMsg
-	sesssrv9p np.SessServer
+	marshal   MarshalF
+	unmarshal UnmarshalF
 	clid      fcall.Tclient
 	sessid    fcall.Tsession
 }
@@ -37,7 +36,8 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		make(chan *sp.FcallMsg),
-		srv.sesssrv9p,
+		srv.marshal,
+		srv.unmarshal,
 		0,
 		0,
 	}
@@ -109,12 +109,7 @@ func (c *SrvConn) reader() {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			return
 		}
-		var fc fcall.Fcall
-		if c.sesssrv9p != nil {
-			fc, err = npcodec.UnmarshalFcallWireCompat(frame)
-		} else {
-			fc, err = spcodec.UnmarshalFcallMsg(frame)
-		}
+		fc, err := c.unmarshal(frame)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return
@@ -155,19 +150,12 @@ func (c *SrvConn) writer() {
 		}
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
-		db.DPrintf("NETSRV", "rep %v %v\n", c.sesssrv9p, fm)
-		if c.sesssrv9p != nil {
-			writableFcall := fm.ToWireCompatible()
-			if err := npcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
-				db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
-				continue
-			}
-		} else {
-			if err := spcodec.MarshalFcallMsg(fm, c.bw); err != nil {
-				db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
-				continue
-			}
+		db.DPrintf("NETSRV", "rep %v\n", fm)
+		if err := c.marshal(fm, c.bw); err != nil {
+			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
+			continue
 		}
+
 		if error := c.bw.Flush(); error != nil {
 			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fm, c.Src(), error)
 		}

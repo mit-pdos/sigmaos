@@ -5,13 +5,13 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -52,15 +52,16 @@ func (npd *Npd) Register(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) *f
 // Disassociate a connection with a session, and let it close gracefully.
 func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
-	if sid == np.NoSession {
+	if sid == fcall.NoSession {
 		return
 	}
 	sess := npd.st.Alloc(cid, sid)
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fcall *np.FcallMsg) {
-	go npd.serve(fcall)
+func (npd *Npd) SrvFcall(fcall fcall.Fcall) {
+	fm := fcall.(*np.FcallMsg)
+	go npd.serve(fm)
 }
 
 func (npd *Npd) Snapshot() []byte {
@@ -111,7 +112,7 @@ func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	fid, err := npc.fidc.Attach(npc.uname, npc.named, "", "")
 	if err != nil {
 		db.DPrintf("PROXY", "Attach args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerror(err)
 	}
 	if err := npc.pc.Mount(fid, np.NAMED); err != nil {
 		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
@@ -132,12 +133,12 @@ func (npc *NpConn) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
 		db.DPrintf("PROXY", "Walk args %v err: %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	qids := npc.pc.Qids(fid1)
 	rets.Qids = qids[len(qids)-len(args.Wnames):]
@@ -149,12 +150,12 @@ func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	qid, err := npc.fidc.Open(fid, args.Mode)
 	if err != nil {
 		db.DPrintf("PROXY", "Open args %v err: %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	rets.Qid = qid
 	db.DPrintf("PROXY", "Open args %v rets: %v\n", args, rets)
@@ -168,12 +169,12 @@ func (npc *NpConn) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
 		db.DPrintf("PROXY", "Create args %v err: %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
@@ -186,12 +187,12 @@ func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Clunk: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Clunk: args %v rets %v\n", args, rets)
 	return nil
@@ -204,12 +205,12 @@ func (npc *NpConn) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, np.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	rets.Data = d
 	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
@@ -219,12 +220,12 @@ func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, np.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	rets.Count = n
 	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
@@ -234,12 +235,12 @@ func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Remove(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Remove: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Remove: args %v rets %v\n", args, rets)
 	return nil
@@ -252,12 +253,12 @@ func (npc *NpConn) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Stats: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	rets.Stat = *st
 	db.DPrintf("PROXY", "Stat: req %v rets %v\n", args, rets)
@@ -267,12 +268,12 @@ func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, args.Fid).RerrorWC()
+		return np.MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Wstat(fid, &args.Stat)
 	if err != nil {
 		db.DPrintf("PROXY", "Wstats: args %v err %v\n", args, err)
-		return err.RerrorWC()
+		return np.MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Wstat: req %v rets %v\n", args, rets)
 	return nil

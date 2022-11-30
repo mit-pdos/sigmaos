@@ -37,32 +37,6 @@ type Tseqno uint64
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
 
-// Atomically increment pointer and return result
-func (n *Tseqno) Next() Tseqno {
-	next := atomic.AddUint64((*uint64)(n), 1)
-	return Tseqno(next)
-}
-
-type Tepoch uint64
-
-const NoEpoch Tepoch = ^Tepoch(0)
-
-func (e Tepoch) String() string {
-	return strconv.FormatUint(uint64(e), 16)
-}
-
-func String2Epoch(epoch string) (Tepoch, error) {
-	e, err := strconv.ParseUint(epoch, 16, 64)
-	if err != nil {
-		return Tepoch(0), err
-	}
-	return Tepoch(e), nil
-}
-
-//
-//  End augmentated types
-//
-
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
 
@@ -71,9 +45,6 @@ const NoTag Ttag = ^Ttag(0)
 // this session.
 const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
-
-// If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET Tsize = 1_000_000
 
 type Tpath uint64
 
@@ -239,7 +210,7 @@ func (p Tperm) String() string {
 }
 
 type Tmsg interface {
-	Type() fcall.Tfcall
+h	Type() fcall.Tfcall
 }
 
 type FcallWireCompat struct {
@@ -311,11 +282,6 @@ func (m Tattach) String() string {
 
 type Rattach struct {
 	Qid Tqid
-}
-
-// Make Wire-compatible Rerror
-func MkRerrorWC(ec fcall.Terror) *Rerror {
-	return &Rerror{ec.String()}
 }
 
 type Rerror struct {

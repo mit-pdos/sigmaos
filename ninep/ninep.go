@@ -209,34 +209,6 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-type Tmsg interface {
-h	Type() fcall.Tfcall
-}
-
-type FcallWireCompat struct {
-	Type fcall.Tfcall
-	Tag  Ttag
-	Msg  Tmsg
-}
-
-func (fcallWC *FcallWireCompat) GetType() fcall.Tfcall {
-	return fcallWC.Type
-}
-
-func (fcallWC *FcallWireCompat) GetMsg() Tmsg {
-	return fcallWC.Msg
-}
-
-func (fcallWC *FcallWireCompat) ToInternal() *FcallMsg {
-	fm := MakeFcallMsgNull()
-	fm.Fc.Type = uint32(fcallWC.Type)
-	fm.Fc.Tag = uint32(fcallWC.Tag)
-	fm.Fc.Session = uint64(fcall.NoSession)
-	fm.Fc.Seqno = uint64(NoSeqno)
-	fm.Msg = fcallWC.Msg
-	return fm
-}
-
 type Tversion struct {
 	Msize   Tsize
 	Version string

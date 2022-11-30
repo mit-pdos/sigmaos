@@ -170,14 +170,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.FcallWireCompat:
-			if err := e.encode(v.Type, v.Tag, v.Msg); err != nil {
-				return err
-			}
-		case *np.FcallWireCompat:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
 		case np.FcallMsg:
 			b, err := proto.Marshal(v.Fc)
 			if err != nil {
@@ -355,18 +347,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
-		case *np.FcallWireCompat:
-			if err := d.decode(&v.Type, &v.Tag); err != nil {
-				return err
-			}
-			msg, err := newMsg(v.Type)
-			if err != nil {
-				return err
-			}
-			if err := d.decode(msg); err != nil {
-				return err
-			}
-			v.Msg = msg
 		case *np.FcallMsg:
 			var l uint32
 			if err := d.decode(&l); err != nil {
@@ -479,10 +459,6 @@ func SizeNp(vs ...interface{}) uint32 {
 			}
 			s += SizeNp(elements...)
 		case *[]np.Stat:
-			s += SizeNp(*v)
-		case np.FcallWireCompat:
-			s += SizeNp(v.Type, v.Tag, v.Msg)
-		case *np.FcallWireCompat:
 			s += SizeNp(*v)
 		case np.Fcall:
 			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)

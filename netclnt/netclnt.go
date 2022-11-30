@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/delay"
 	"sigmaos/fcall"
+	"sigmaos/frame"
 	"sigmaos/sessconnclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -121,13 +122,13 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 }
 
 func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
-	frame, err := spcodec.ReadFrame(nc.br)
+	f, err := frame.ReadFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
 		return nil, fcall.MkErr(fcall.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
-	fm, err := spcodec.UnmarshalFcallMsg(frame)
+	fm, err := spcodec.UnmarshalFcallMsg(f)
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 	}

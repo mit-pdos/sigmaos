@@ -7,8 +7,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
+	"sigmaos/frame"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
 )
 
 type SrvConn struct {
@@ -104,12 +104,12 @@ func (c *SrvConn) GetReplyC() chan *sp.FcallMsg {
 func (c *SrvConn) reader() {
 	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
-		frame, err := spcodec.ReadFrame(c.br)
+		f, err := frame.ReadFrame(c.br)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			return
 		}
-		fc, err := c.unmarshal(frame)
+		fc, err := c.unmarshal(f)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return

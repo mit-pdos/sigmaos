@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"path"
 	"strconv"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"math/rand"
 	db "sigmaos/debug"
@@ -114,4 +118,30 @@ func GeoReq(wc *WebClnt) (string, error) {
 func toss(r *rand.Rand) float64 {
 	toss := r.Intn(1000)
 	return float64(toss) / 1000
+}
+
+func RunDSB(t *testing.T, N int, wc *WebClnt) {
+	const (
+		search_ratio    = 0.6
+		recommend_ratio = 0.39
+		user_ratio      = 0.005
+		reserve_ratio   = 0.005
+	)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < N; i++ {
+		coin := toss(r)
+		if coin < search_ratio {
+			err := RandSearchReq(wc, r)
+			assert.Nil(t, err)
+		} else if coin < search_ratio+recommend_ratio {
+			err := RandRecsReq(wc, r)
+			assert.Nil(t, err)
+		} else if coin < search_ratio+recommend_ratio+user_ratio {
+			_, err := RandLoginReq(wc, r)
+			assert.Nil(t, err)
+		} else {
+			_, err := RandReserveReq(wc, r)
+			assert.Nil(t, err)
+		}
+	}
 }

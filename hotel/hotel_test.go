@@ -379,44 +379,10 @@ var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
-//func TestStartAll(t *testing.T) {
-//	ts := makeTstate(t, hotelsvcs)
-//	addrs, err := hotel.GetJobHTTPAddrs(ts.FsLib, ts.job)
-//	assert.Nil(t, err, "Err get http addr")
-//	db.DPrintf(db.ALWAYS, "Setup done addrs %v", addrs)
-//	for {
-//	}
-//}
-
-func benchDSB(ts *Tstate, wc *hotel.WebClnt) {
-	const (
-		N               = 1000
-		search_ratio    = 0.6
-		recommend_ratio = 0.39
-		user_ratio      = 0.005
-		reserve_ratio   = 0.005
-	)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	start := time.Now()
-	for i := 0; i < N; i++ {
-		coin := toss(r)
-		if coin < search_ratio {
-			runSearch(ts.T, wc, r)
-		} else if coin < search_ratio+recommend_ratio {
-			runRecommend(ts.T, wc, r)
-		} else if coin < search_ratio+recommend_ratio+user_ratio {
-			runLogin(ts.T, wc, r)
-		} else {
-			runReserve(ts.T, wc, r)
-		}
-	}
-	db.DPrintf(db.ALWAYS, "benchDSB N=%d %dms\n", N, time.Since(start).Milliseconds())
-}
-
 func TestBenchDeathStarSingle(t *testing.T) {
 	ts := makeTstateCache(t, hotelsvcs)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	benchDSB(ts, wc)
+	hotel.RunDSB(t, 1000, wc)
 	ts.PrintStats()
 	ts.stop()
 	ts.Shutdown()
@@ -435,7 +401,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	benchDSB(ts, wc)
+	hotel.RunDSB(t, 1000, wc)
 	ts.Shutdown()
 }
 

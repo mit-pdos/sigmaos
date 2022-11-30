@@ -370,11 +370,6 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Equal(t, "Geo!", s)
 }
 
-func toss(r *rand.Rand) float64 {
-	toss := r.Intn(1000)
-	return float64(toss) / 1000
-}
-
 var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}

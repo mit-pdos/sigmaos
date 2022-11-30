@@ -420,6 +420,14 @@ func TestBenchSearch(t *testing.T) {
 	ts.Shutdown()
 }
 
+func setupK8sState(ts *Tstate) {
+	// Write a file for clients to discover the server's address.
+	p := hotel.JobHTTPAddrsPath(ts.job)
+	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
+		db.DFatalf("Error PutFileJson addrs %v", err)
+	}
+}
+
 func TestBenchSearchK8s(t *testing.T) {
 	// Bail out if no addr was provided.
 	if K8S_ADDR == "" {
@@ -427,11 +435,7 @@ func TestBenchSearchK8s(t *testing.T) {
 		return
 	}
 	ts := makeTstate(t, nil)
-	// Write a file for clients to discover the server's address.
-	p := hotel.JobHTTPAddrsPath(ts.job)
-	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
-		db.DFatalf("Error PutFileJson addrs %v", err)
-	}
+	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()
@@ -465,11 +469,7 @@ func TestBenchGeoK8s(t *testing.T) {
 		return
 	}
 	ts := makeTstate(t, nil)
-	// Write a file for clients to discover the server's address.
-	p := hotel.JobHTTPAddrsPath(ts.job)
-	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {
-		db.DFatalf("Error PutFileJson addrs %v", err)
-	}
+	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()

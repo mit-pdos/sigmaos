@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	np "sigmaos/sigmap"
@@ -178,38 +176,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.FcallMsg:
-			b, err := proto.Marshal(v.Fc)
-			if err != nil {
-				return err
-			}
-			if err := e.encode(uint32(len(b))); err != nil {
-				return err
-			}
-			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
-				return err
-			}
-			switch fcall.Tfcall(v.Fc.Type) {
-			case fcall.TTwriteread:
-				b, err := proto.Marshal(v.Msg.(proto.Message))
-				if err != nil {
-					return err
-				}
-				if err := e.encode(uint32(len(b))); err != nil {
-					return err
-				}
-				if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
-					return err
-				}
-			default:
-				if err := e.encode(v.Msg); err != nil {
-					return err
-				}
-			}
-		case *np.FcallMsg:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
 		case np.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
@@ -365,42 +331,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 			if err := d.decode(msg); err != nil {
 				return err
-			}
-			v.Msg = msg
-		case *np.FcallMsg:
-			var l uint32
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-			b := make([]byte, int(l))
-			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
-				return err
-			}
-			if err := proto.Unmarshal(b, v.Fc); err != nil {
-				return err
-			}
-			msg, err := newMsg(fcall.Tfcall(v.Fc.Type))
-			if err != nil {
-				return err
-			}
-			switch fcall.Tfcall(v.Fc.Type) {
-			case fcall.TTwriteread:
-				var l uint32
-				if err := d.decode(&l); err != nil {
-					return err
-				}
-				b := make([]byte, int(l))
-				if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
-					return err
-				}
-				m := msg.(proto.Message)
-				if err := proto.Unmarshal(b, m); err != nil {
-					return err
-				}
-			default:
-				if err := d.decode(msg); err != nil {
-					return err
-				}
 			}
 			v.Msg = msg
 		case np.Tmsg:

@@ -155,8 +155,6 @@ func (r *Results) Summary() (string, string) {
 	fstring := "Stats:\n Mean: %v\n Std: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
 	lsum := fmt.Sprintf("\n= Latency "+fstring,
 		meanL, stdL, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
-	//	lsum := fmt.Sprintf("\n= Latency "+fstring,
-	//		meanL, stdL, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
 	tsum := fmt.Sprintf("\n= Throughput "+fstring,
 		meanT, stdT, medianT, p75T, p90T, p99T, p999T, p9999T, p100T)
 	return lsum, tsum

@@ -336,12 +336,8 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Equal(t, "Geo!", s)
 }
 
-var hotelsvcs = []string{"user/hotel-userd", "user/hotel-rated",
-	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
-	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
-
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
+	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	hotel.RunDSB(t, 1000, wc)
 	ts.PrintStats()
@@ -367,7 +363,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearch(t *testing.T) {
-	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
+	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
@@ -409,7 +405,7 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeo(t *testing.T) {
-	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
+	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
@@ -446,7 +442,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := makeTstate(t, hotelsvcs, hotel.NCACHE)
+	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

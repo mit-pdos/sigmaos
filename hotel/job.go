@@ -44,6 +44,10 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	}
 }
 
+var HotelSvcs = []string{"user/hotel-userd", "user/hotel-rated",
+	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
+	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
+
 func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncore proc.Tcore, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr

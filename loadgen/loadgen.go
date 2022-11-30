@@ -58,7 +58,7 @@ func (lg *LoadGenerator) warmup() {
 
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
-	db.DPrintf("LOADGEN", "Load generator latencies: %v", lg.res)
+	db.DPrintf("LOADGEN", "Load generator latencies:\n%v", lg.res)
 	// Print stats.
 	mean, _ := lg.res.Mean()
 	median, _ := lg.res.Percentile(50)

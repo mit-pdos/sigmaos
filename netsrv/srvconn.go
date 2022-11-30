@@ -155,15 +155,15 @@ func (c *SrvConn) writer() {
 		}
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
-		db.DPrintf("NETSRV", "rep %v\n", fm)
-		var writableFcall sp.WritableFcall
+		db.DPrintf("NETSRV", "rep %v %v\n", c.sesssrv9p, fm)
 		if c.sesssrv9p != nil {
+			writableFcall := fm.ToWireCompatible()
 			if err := npcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
 				db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 				continue
 			}
 		} else {
-			if err := spcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
+			if err := spcodec.MarshalFcallMsg(fm, c.bw); err != nil {
 				db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 				continue
 			}

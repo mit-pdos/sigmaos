@@ -365,10 +365,7 @@ func runReserve(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
-	// Same coordinates to make sure performance is very consistent.
-	lat := 37.7749
-	lon := -122.4194
-	s, err := wc.Geo(lat, lon)
+	s, err := hotel.GeoReq(wc)
 	assert.Nil(t, err, "Err geo %v", err)
 	assert.Equal(t, "Geo!", s)
 }

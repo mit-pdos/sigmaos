@@ -104,6 +104,13 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	return wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
 }
 
+func GeoReq(wc *WebClnt) (string, error) {
+	// Same coordinates to make sure performance is very consistent.
+	lat := 37.7749
+	lon := -122.4194
+	return wc.Geo(lat, lon)
+}
+
 func toss(r *rand.Rand) float64 {
 	toss := r.Intn(1000)
 	return float64(toss) / 1000

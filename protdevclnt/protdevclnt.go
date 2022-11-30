@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"

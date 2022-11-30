@@ -7,7 +7,6 @@ import (
 	"path"
 	"time"
 
-	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	np "sigmaos/ninep"
@@ -86,13 +85,8 @@ func (s *Sleeper) sleep(ch chan *proc.Status) {
 			db.DPrintf(db.ALWAYS, "Error: Makefile %v in Sleeper.Work: %v\n", fpath, err)
 		}
 	}
-	latency := time.Since(s.Time)
-	// Measure latency & NRPC of all ops except for Exited.
-	res := benchmarks.MakeResult()
-	res.Throughput = 0.0
-	res.Latency = float64(latency.Microseconds())
-	res.NRPC = s.ReadSeqNo()
-	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", res)
+	// Measure latency of all ops except for Exited.
+	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
 }
 
 func (s *Sleeper) Work() {

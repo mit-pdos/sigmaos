@@ -22,23 +22,23 @@ import (
 // The set of basic operations that we benchmark.
 //
 
-type testOp func(*test.Tstate, time.Time, interface{}) time.Duration
+type testOp func(*test.Tstate, time.Time, interface{}) (time.Duration, float64)
 
-func initSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func initSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
 	assert.Nil(ts.T, err, "Sem init: %v", err)
 	return time.Since(start)
 }
 
-func upSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func upSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
 	assert.Nil(ts.T, err, "Sem up: %v", err)
 	return time.Since(start)
 }
 
-func downSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func downSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
 	assert.Nil(ts.T, err, "Sem down: %v", err)
@@ -46,7 +46,7 @@ func downSemaphore(ts *test.Tstate, start time.Time, i interface{}) time.Duratio
 }
 
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func runProc(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf("TEST1", "Spawned %v", p)
@@ -58,7 +58,7 @@ func runProc(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	return time.Since(start)
 }
 
-func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	ps := i.([]*proc.Proc)
 	per := len(ps) / AAA
 	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
@@ -83,7 +83,7 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) t
 	return time.Since(start)
 }
 
-func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
 		// Spawn a lambda, which will Up this semaphore when it starts.

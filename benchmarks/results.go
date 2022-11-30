@@ -141,6 +141,27 @@ func (r *Results) toFloats() ([]float64, []float64) {
 	return lat, tpt
 }
 
+// Print summary of results.
+func (r *Results) Summary() (string, string) {
+	meanL, meanT := r.Mean()
+	stdL, stdT := r.StdDev()
+	medianL, medianT := r.Percentile(50)
+	p75L, p75T := r.Percentile(75)
+	p90L, p90T := r.Percentile(90)
+	p99L, p99T := r.Percentile(99)
+	p999L, p999T := r.Percentile(99.9)
+	p9999L, p9999T := r.Percentile(99.99)
+	p100L, p100T := r.Percentile(100)
+	fstring := "Stats:\n Mean: %v\n Std: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
+	lsum := fmt.Sprintf("\n= Latency "+fstring,
+		meanL, stdL, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
+	//	lsum := fmt.Sprintf("\n= Latency "+fstring,
+	//		meanL, stdL, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
+	tsum := fmt.Sprintf("\n= Throughput "+fstring,
+		meanT, stdT, medianT, p75T, p90T, p99T, p999T, p9999T, p100T)
+	return lsum, tsum
+}
+
 func (r *Results) String() string {
 	if len(r.dur) == 0 {
 		db.DFatalf("Error no results")

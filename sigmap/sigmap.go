@@ -245,12 +245,6 @@ type Tmsg interface {
 	Type() fcall.Tfcall
 }
 
-type FcallWireCompat struct {
-	Type fcall.Tfcall
-	Tag  Ttag
-	Msg  Tmsg
-}
-
 func MkInterval(start, end uint64) *Tinterval {
 	return &Tinterval{
 		Start: start,
@@ -281,24 +275,6 @@ func (iv *Tinterval) Unmarshal(s string) {
 
 func (iv *Tinterval) Marshal() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
-}
-
-func (fcallWC *FcallWireCompat) GetType() fcall.Tfcall {
-	return fcallWC.Type
-}
-
-func (fcallWC *FcallWireCompat) GetMsg() Tmsg {
-	return fcallWC.Msg
-}
-
-func (fcallWC *FcallWireCompat) ToInternal() *FcallMsg {
-	fm := MakeFcallMsgNull()
-	fm.Fc.Type = uint32(fcallWC.Type)
-	fm.Fc.Tag = uint32(fcallWC.Tag)
-	fm.Fc.Session = uint64(fcall.NoSession)
-	fm.Fc.Seqno = uint64(NoSeqno)
-	fm.Msg = fcallWC.Msg
-	return fm
 }
 
 type FcallMsg struct {
@@ -365,14 +341,6 @@ func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
 }
 
-func (fm *FcallMsg) ToWireCompatible() *FcallWireCompat {
-	fcallWC := &FcallWireCompat{}
-	fcallWC.Type = fcall.Tfcall(fm.Fc.Type)
-	fcallWC.Tag = Ttag(fm.Fc.Tag)
-	fcallWC.Msg = fm.Msg
-	return fcallWC
-}
-
 type Tversion struct {
 	Msize   Tsize
 	Version string
@@ -420,22 +388,8 @@ type Rattach struct {
 	Qid Tqid
 }
 
-// Make Wire-compatible Rerror
-func MkRerrorWC(ec fcall.Terror) *Rerror {
-	return &Rerror{ec.String()}
-}
-
 func MkRerror(err *fcall.Err) *Rerror {
 	return &Rerror{err.Error()}
-}
-
-// Return  wire-compatible error format. If error isn't 9p error,
-// log it.
-func RerrorWC(e *fcall.Err) *Rerror {
-	if e.ErrCode > fcall.TErrWalknodir {
-		log.Printf("RerrorWC: unknown err %v\n", e)
-	}
-	return &Rerror{e.ErrCode.String()}
 }
 
 type Rerror struct {

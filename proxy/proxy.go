@@ -92,6 +92,11 @@ func makeNpConn(named []string) *NpConn {
 	return npc
 }
 
+// Make Wire-compatible Rerror
+func MkRerrorWC(ec fcall.Terror) *np.Rerror {
+	return &np.Rerror{ec.String()}
+}
+
 func (npc *NpConn) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
@@ -99,7 +104,7 @@ func (npc *NpConn) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
 }
 
 func (npc *NpConn) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
-	return np.MkRerrorWC(fcall.TErrNotSupported)
+	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
@@ -133,12 +138,12 @@ func (npc *NpConn) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
 		db.DPrintf("PROXY", "Walk args %v err: %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	qids := npc.pc.Qids(fid1)
 	rets.Qids = qids[len(qids)-len(args.Wnames):]
@@ -150,12 +155,12 @@ func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	qid, err := npc.fidc.Open(fid, args.Mode)
 	if err != nil {
 		db.DPrintf("PROXY", "Open args %v err: %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	rets.Qid = qid
 	db.DPrintf("PROXY", "Open args %v rets: %v\n", args, rets)
@@ -169,12 +174,12 @@ func (npc *NpConn) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
 		db.DPrintf("PROXY", "Create args %v err: %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
@@ -187,12 +192,12 @@ func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Clunk: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Clunk: args %v rets %v\n", args, rets)
 	return nil
@@ -205,12 +210,12 @@ func (npc *NpConn) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, np.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	rets.Data = d
 	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
@@ -220,12 +225,12 @@ func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, np.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	rets.Count = n
 	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
@@ -235,12 +240,12 @@ func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Remove(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Remove: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Remove: args %v rets %v\n", args, rets)
 	return nil
@@ -253,12 +258,12 @@ func (npc *NpConn) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
 		db.DPrintf("PROXY", "Stats: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	rets.Stat = *st
 	db.DPrintf("PROXY", "Stat: req %v rets %v\n", args, rets)
@@ -268,27 +273,27 @@ func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
-		return np.MkRerrorWC(fcall.TErrNotfound)
+		return MkRerrorWC(fcall.TErrNotfound)
 	}
 	err := npc.fidc.Wstat(fid, &args.Stat)
 	if err != nil {
 		db.DPrintf("PROXY", "Wstats: args %v err %v\n", args, err)
-		return np.MkRerrorWC(err.Code())
+		return MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY", "Wstat: req %v rets %v\n", args, rets)
 	return nil
 }
 
 func (npc *NpConn) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	return np.MkRerrorWC(fcall.TErrNotSupported)
+	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
-	return np.MkRerrorWC(fcall.TErrNotSupported)
+	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
-	return np.MkRerrorWC(fcall.TErrNotSupported)
+	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
 func (npc *NpConn) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {

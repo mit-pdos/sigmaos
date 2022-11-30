@@ -8,9 +8,33 @@ import (
 	np "sigmaos/sigmap"
 )
 
+type FcallWireCompat struct {
+	Type fcall.Tfcall
+	Tag  np.Ttag
+	Msg  np.Tmsg
+}
+
+func ToInternal(fcallWC *FcallWireCompat) *np.FcallMsg {
+	fm := np.MakeFcallMsgNull()
+	fm.Fc.Type = uint32(fcallWC.Type)
+	fm.Fc.Tag = uint32(fcallWC.Tag)
+	fm.Fc.Session = uint64(fcall.NoSession)
+	fm.Fc.Seqno = uint64(np.NoSeqno)
+	fm.Msg = fcallWC.Msg
+	return fm
+}
+
+func ToWireCompatible(fm *np.FcallMsg) *FcallWireCompat {
+	fcallWC := &FcallWireCompat{}
+	fcallWC.Type = fcall.Tfcall(fm.Fc.Type)
+	fcallWC.Tag = np.Ttag(fm.Fc.Tag)
+	fcallWC.Msg = fm.Msg
+	return fcallWC
+}
+
 func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 	fcm := fc.(*np.FcallMsg)
-	f, error := marshal1(true, fcm.ToWireCompatible())
+	f, error := marshal1(true, ToWireCompatible(fcm))
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
@@ -59,9 +83,9 @@ func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 }
 
 func UnmarshalFcallWireCompat(frame []byte) (fcall.Fcall, *fcall.Err) {
-	fcallWC := &np.FcallWireCompat{}
+	fcallWC := &FcallWireCompat{}
 	if err := unmarshal(frame, fcallWC); err != nil {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)
 	}
-	return fcallWC.ToInternal(), nil
+	return ToInternal(fcallWC), nil
 }

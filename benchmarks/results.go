@@ -118,10 +118,6 @@ func (r *Results) Percentile(p float64) (time.Duration, float64) {
 	return plat, ptpt
 }
 
-func (r *Results) RawLatencies() []time.Duration {
-	return r.dur
-}
-
 // Convert time.Duration to float for stats library, and calculate tpt. Cache
 // the results of conversion.
 func (r *Results) toFloats() ([]float64, []float64) {

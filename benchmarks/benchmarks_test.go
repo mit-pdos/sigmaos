@@ -81,108 +81,64 @@ const (
 
 var N_CLUSTER_CORES = 0
 
-// Length of time required to do a simple matrix multiplication.
-func TestNiceMatMulBaseline(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	ts.Shutdown()
-}
-
-// Start a bunch of spinning procs to contend with one matmul task, and then
-// see how long the matmul task took.
-func TestNiceMatMulWithSpinners(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	makeOutDir(ts)
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-	// Make some spinning procs to take up nContenders cores.
-	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
-	// Burst-spawn BE procs
-	spawnBurstProcs(ts, psSpin)
-	// Wait for the procs to start
-	waitStartProcs(ts, psSpin)
-	// Make the LC proc.
-	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-	// Spawn the LC procs
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	evictProcs(ts, psSpin)
-	rmOutDir(ts)
-	ts.Shutdown()
-}
-
-// Invert the nice relationship. Make spinners high-priority, and make matul
-// low priority. This is intended to verify that changing priorities does
-// actually affect application throughput for procs which have their priority
-// lowered, and by how much.
-func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
-	makeOutDir(ts)
-	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-	// Make some spinning procs to take up nContenders cores. (AS LC)
-	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
-	// Burst-spawn spinning procs
-	spawnBurstProcs(ts, psSpin)
-	// Wait for the procs to start
-	waitStartProcs(ts, psSpin)
-	// Make the matmul procs.
-	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
-	// Spawn the matmul procs
-	runOps(ts, ps, runProc, rs)
-	printResults(rs)
-	evictProcs(ts, psSpin)
-	rmOutDir(ts)
-	ts.Shutdown()
-}
-
-func TestMicroJsonEncodeTpt(t *testing.T) {
-	nruns := 50
-	N_KV := 1000000
-	kvs := make([]*mr.KeyValue, 0, N_KV)
-	for i := 0; i < N_KV; i++ {
-		kvs = append(kvs, &mr.KeyValue{"", ""})
-	}
-	start := time.Now()
-	n := 0
-	for i := 0; i < nruns; i++ {
-		for _, kv := range kvs {
-			b, err := json.Marshal(kv)
-			assert.Nil(t, err, "Marshal")
-			n += len(b)
-		}
-	}
-	mb := 1024.0 * 1024.0
-	db.DPrintf(db.ALWAYS, "Marshaling throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
-}
-
-func TestMicroWCMapfTpt(t *testing.T) {
-	N_WORDS := 1024 * 1024 * 100
-	WORD_LEN := 2
-	b := make([]byte, 0, N_WORDS*(WORD_LEN+1))
-	for i := 0; i < N_WORDS; i++ {
-		for j := 0; j < WORD_LEN; j++ {
-			b = append(b, 'A')
-		}
-		b = append(b, ' ')
-	}
-	s := string(b)
-	db.DPrintf(db.ALWAYS, "Input length: %vMB", len(s)/(1024*1024))
-	n := 0
-	start := time.Now()
-	wc.Map("", strings.NewReader(s), func(kv *mr.KeyValue) error {
-		b, err := json.Marshal(kv)
-		assert.Nil(t, err, "Marshal")
-		n += len(b)
-		return nil
-	})
-	n += len(s)
-	mb := 1024.0 * 1024.0
-	db.DPrintf(db.ALWAYS, "WC Mapping throughput: %v MB/s", float64(n)/mb/time.Since(start).Seconds())
-}
+// XXX Switch to spin.
+//// Length of time required to do a simple matrix multiplication.
+//func TestNiceMatMulBaseline(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+//	runOps(ts, ps, runProc, rs)
+//	printResults(rs)
+//	ts.Shutdown()
+//}
+//
+//// Start a bunch of spinning procs to contend with one matmul task, and then
+//// see how long the matmul task took.
+//func TestNiceMatMulWithSpinners(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	makeOutDir(ts)
+//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
+//	// Make some spinning procs to take up nContenders cores.
+//	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
+//	// Burst-spawn BE procs
+//	spawnBurstProcs(ts, psSpin)
+//	// Wait for the procs to start
+//	waitStartProcs(ts, psSpin)
+//	// Make the LC proc.
+//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+//	// Spawn the LC procs
+//	runOps(ts, ps, runProc, rs)
+//	printResults(rs)
+//	evictProcs(ts, psSpin)
+//	rmOutDir(ts)
+//	ts.Shutdown()
+//}
+//
+//// Invert the nice relationship. Make spinners high-priority, and make matul
+//// low priority. This is intended to verify that changing priorities does
+//// actually affect application throughput for procs which have their priority
+//// lowered, and by how much.
+//func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	makeOutDir(ts)
+//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
+//	// Make some spinning procs to take up nContenders cores. (AS LC)
+//	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
+//	// Burst-spawn spinning procs
+//	spawnBurstProcs(ts, psSpin)
+//	// Wait for the procs to start
+//	waitStartProcs(ts, psSpin)
+//	// Make the matmul procs.
+//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
+//	// Spawn the matmul procs
+//	runOps(ts, ps, runProc, rs)
+//	printResults(rs)
+//	evictProcs(ts, psSpin)
+//	rmOutDir(ts)
+//	ts.Shutdown()
+//}
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {

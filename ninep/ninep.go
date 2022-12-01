@@ -7,13 +7,7 @@ package ninep
 
 import (
 	"fmt"
-	"log"
-	"runtime/debug"
 	"strconv"
-	"strings"
-	"sync/atomic"
-
-	"sigmaos/fcall"
 )
 
 type Tsize uint32
@@ -60,7 +54,7 @@ func String2Path(path string) (Tpath, error) {
 	return Tpath(p), nil
 }
 
-type Qtype uint8
+type Qtype9P uint8
 type TQversion uint32
 
 const NoPath Tpath = ^Tpath(0)
@@ -73,17 +67,17 @@ func VEq(v1, v2 TQversion) bool {
 // A Qid's type field represents the type of a file, the high 8 bits of
 // the file's permission.
 const (
-	QTDIR     Qtype = 0x80 // directories
-	QTAPPEND  Qtype = 0x40 // append only files
-	QTEXCL    Qtype = 0x20 // exclusive use files
-	QTMOUNT   Qtype = 0x10 // mounted channel
-	QTAUTH    Qtype = 0x08 // authentication file (afid)
-	QTTMP     Qtype = 0x04 // non-backed-up file
-	QTSYMLINK Qtype = 0x02
-	QTFILE    Qtype = 0x00
+	QTDIR     Qtype9P = 0x80 // directories
+	QTAPPEND  Qtype9P = 0x40 // append only files
+	QTEXCL    Qtype9P = 0x20 // exclusive use files
+	QTMOUNT   Qtype9P = 0x10 // mounted channel
+	QTAUTH    Qtype9P = 0x08 // authentication file (afid)
+	QTTMP     Qtype9P = 0x04 // non-backed-up file
+	QTSYMLINK Qtype9P = 0x02
+	QTFILE    Qtype9P = 0x00
 )
 
-func (qt Qtype) String() string {
+func (qt Qtype9P) String() string {
 	s := ""
 	if qt&QTDIR == QTDIR {
 		s += "d"
@@ -115,21 +109,21 @@ func (qt Qtype) String() string {
 // A Qid is the server's unique identification for the file being
 // accessed: two files on the same server hierarchy are the same if
 // and only if their qids are the same.
-type Tqid struct {
-	Type    Qtype
+type Tqid9P struct {
+	Type    Qtype9P
 	Version TQversion
 	Path    Tpath
 }
 
-func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
-	return Tqid{t, v, p}
+func MakeQid(t Qtype9P, v TQversion, p Tpath) Tqid9P {
+	return Tqid9P{t, v, p}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
-	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
+func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid9P {
+	return MakeQid(Qtype9P(perm>>QTYPESHIFT), v, p)
 }
 
-func (q Tqid) String() string {
+func (q Tqid9P) String() string {
 	return fmt.Sprintf("{%v v %v p %v}", q.Type, q.Version, q.Path)
 }
 
@@ -205,7 +199,7 @@ func (p Tperm) IsEphemeral() bool  { return p&DMTMP == DMTMP }
 func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 
 func (p Tperm) String() string {
-	qt := Qtype(p >> QTYPESHIFT)
+	qt := Qtype9P(p >> QTYPESHIFT)
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
@@ -238,7 +232,7 @@ func (m Tauth) String() string {
 }
 
 type Rauth struct {
-	Aqid Tqid
+	Aqid Tqid9P
 }
 
 type Tattach struct {
@@ -252,8 +246,8 @@ func (m Tattach) String() string {
 	return fmt.Sprintf("{%v a %v u %v a '%v'}", m.Fid, m.Afid, m.Uname, m.Aname)
 }
 
-type Rattach struct {
-	Qid Tqid
+type Rattach9P struct {
+	Qid Tqid9P
 }
 
 type Rerror struct {
@@ -274,7 +268,7 @@ type Twalk struct {
 }
 
 type Rwalk struct {
-	Qids []Tqid
+	Qids []Tqid9P
 }
 
 type Topen struct {
@@ -287,7 +281,7 @@ type Twatch struct {
 }
 
 type Ropen struct {
-	Qid    Tqid
+	Qid    Tqid9P
 	Iounit Tiounit
 }
 
@@ -299,7 +293,7 @@ type Tcreate struct {
 }
 
 type Rcreate struct {
-	Qid    Tqid
+	Qid    Tqid9P
 	Iounit Tiounit
 }
 
@@ -376,7 +370,7 @@ type Tstat struct {
 type Stat struct {
 	Type   uint16
 	Dev    uint32
-	Qid    Tqid
+	Qid    Tqid9P
 	Mode   Tperm
 	Atime  uint32  // last access time in seconds
 	Mtime  uint32  // last modified time in seconds
@@ -385,7 +379,6 @@ type Stat struct {
 	Uid    string  // owner name
 	Gid    string  // group name
 	Muid   string  // name of the last user that modified the file
-
 }
 
 func (s Stat) String() string {

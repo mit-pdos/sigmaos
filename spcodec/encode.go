@@ -182,7 +182,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 			switch fcall.Tfcall(v.Fc.Type) {
-			case fcall.TTwriteread:
+			case fcall.TTwriteread, fcall.TRattach:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
@@ -364,7 +364,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			switch fcall.Tfcall(v.Fc.Type) {
-			case fcall.TTwriteread:
+			case fcall.TTwriteread, fcall.TRattach:
 				var l uint32
 				if err := d.decode(&l); err != nil {
 					return err

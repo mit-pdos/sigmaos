@@ -1,4 +1,4 @@
-package spcodec
+package npcodec
 
 import (
 	"errors"
@@ -6,19 +6,19 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	sp "sigmaos/sigmap"
+	np "sigmaos/ninep"
 )
 
-func MarshalSizeDir(dir []*sp.Stat) sp.Tlength {
+func MarshalSizeDir(dir []*np.Stat) np.Tlength {
 	sz := uint64(0)
 	for _, st := range dir {
-		sz += SizeNp(*st)
+		sz += sizeNp(*st)
 	}
-	return sp.Tlength(sz)
+	return np.Tlength(sz)
 }
 
-func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
-	sz := SizeNp(*st)
+func MarshalDirEnt(st *np.Stat, cnt uint64) ([]byte, *fcall.Err) {
+	sz := sizeNp(*st)
 	if cnt < sz {
 		return nil, nil
 	}
@@ -32,8 +32,8 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
 	return b, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *fcall.Err) {
-	st := sp.Stat{}
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *fcall.Err) {
+	st := np.Stat{}
 	if error := unmarshalReader(rdr, &st); error != nil {
 		var nperr *fcall.Err
 		if errors.As(error, &nperr) {

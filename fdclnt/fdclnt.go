@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
@@ -63,10 +63,10 @@ func (fdc *FdClient) Close(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) Qid(fd int) (np.Tqid, error) {
+func (fdc *FdClient) Qid(fd int) (*np.Tqid, error) {
 	fid, error := fdc.fds.lookup(fd)
 	if error != nil {
-		return np.Tqid{}, error
+		return nil, error
 	}
 	return fdc.PathClnt.Qid(fid), nil
 }
@@ -140,7 +140,7 @@ func (fdc *FdClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
 		return nil, error
 	}
 	qid := fdc.PathClnt.Qid(fid)
-	return fdc.readFid(fd, fid, off, cnt, qid.Version)
+	return fdc.readFid(fd, fid, off, cnt, np.TQversion(qid.Version))
 }
 
 func (fdc *FdClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
@@ -166,7 +166,7 @@ func (fdc *FdClient) WriteV(fd int, data []byte) (np.Tsize, error) {
 		return 0, error
 	}
 	qid := fdc.PathClnt.Qid(fid)
-	return fdc.writeFid(fd, fid, off, data, qid.Version)
+	return fdc.writeFid(fd, fid, off, data, np.TQversion(qid.Version))
 }
 
 func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {

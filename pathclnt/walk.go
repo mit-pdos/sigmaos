@@ -170,7 +170,7 @@ func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left path.Path, resolve bo
 
 	// if len(left) == 0 and !resolve, don't resolve
 	// symlinks, so that the client can remove a symlink
-	if qid.Type&np.QTSYMLINK == np.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
+	if np.Qtype(qid.Type)&np.QTSYMLINK == np.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
 		done := len(path) - len(left)
 		resolved := path[0:done]
 		db.DPrintf("WALK", "walkSymlink %v resolved %v left %v\n", fid, resolved, left)

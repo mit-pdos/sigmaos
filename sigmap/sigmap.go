@@ -92,7 +92,7 @@ func String2Path(path string) (Tpath, error) {
 	return Tpath(p), nil
 }
 
-type Qtype uint8
+type Qtype uint32
 type TQversion uint32
 
 const NoPath Tpath = ^Tpath(0)
@@ -144,25 +144,12 @@ func (qt Qtype) String() string {
 	return s
 }
 
-// A Qid is the server's unique identification for the file being
-// accessed: two files on the same server hierarchy are the same if
-// and only if their qids are the same.
-type Tqid struct {
-	Type    Qtype
-	Version TQversion
-	Path    Tpath
-}
-
 func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
-	return Tqid{t, v, p}
+	return Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
 func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
-}
-
-func (q Tqid) String() string {
-	return fmt.Sprintf("{%v v %v p %v}", q.Type, q.Version, q.Path)
 }
 
 type Tmode uint8
@@ -382,10 +369,6 @@ type Tattach struct {
 
 func (m Tattach) String() string {
 	return fmt.Sprintf("{%v a %v u %v a '%v'}", m.Fid, m.Afid, m.Uname, m.Aname)
-}
-
-type Rattach struct {
-	Qid Tqid
 }
 
 func MkRerror(err *fcall.Err) *Rerror {

@@ -2,13 +2,16 @@ package fs
 
 import (
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
+	"sigmaos/fcall"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
+	"sigmaos/path"
 	"sigmaos/sesscond"
+	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
-type MakeInodeF func(CtxI, np.Tperm, np.Tmode, Dir, MakeDirF) (Inode, *fcall.Err)
+type MakeInodeF func(CtxI, sp.Tperm, sp.Tmode, Dir, MakeDirF) (Inode, *fcall.Err)
 type MakeDirF func(Inode, MakeInodeF) Inode
 
 type CtxI interface {
@@ -21,17 +24,17 @@ type CtxI interface {
 type Dir interface {
 	FsObj
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *fcall.Err)
-	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *fcall.Err)
-	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *fcall.Err)
-	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *fcall.Err)
+	Create(CtxI, string, sp.Tperm, sp.Tmode) (FsObj, *fcall.Err)
+	ReadDir(CtxI, int, sp.Tsize, sp.TQversion) ([]*sp.Stat, *fcall.Err)
+	WriteDir(CtxI, sp.Toffset, []byte, sp.TQversion) (sp.Tsize, *fcall.Err)
 	Remove(CtxI, string) *fcall.Err
 	Rename(CtxI, string, string) *fcall.Err
 	Renameat(CtxI, string, Dir, string) *fcall.Err
 }
 
 type File interface {
-	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, *fcall.Err)
-	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *fcall.Err)
+	Read(CtxI, sp.Toffset, sp.Tsize, sp.TQversion) ([]byte, *fcall.Err)
+	Write(CtxI, sp.Toffset, []byte, sp.TQversion) (sp.Tsize, *fcall.Err)
 }
 
 type RPC interface {
@@ -39,12 +42,12 @@ type RPC interface {
 }
 
 type FsObj interface {
-	Path() np.Tpath
-	Perm() np.Tperm
+	Path() sp.Tpath
+	Perm() sp.Tperm
 	Parent() Dir
-	Open(CtxI, np.Tmode) (FsObj, *fcall.Err)
-	Close(CtxI, np.Tmode) *fcall.Err // for pipes
-	Stat(CtxI) (*np.Stat, *fcall.Err)
+	Open(CtxI, sp.Tmode) (FsObj, *fcall.Err)
+	Close(CtxI, sp.Tmode) *fcall.Err // for pipes
+	Stat(CtxI) (*sp.Stat, *fcall.Err)
 	String() string
 }
 
@@ -58,4 +61,36 @@ func Obj2File(o FsObj, fname path.Path) (File, *fcall.Err) {
 		db.DFatalf("Obj2File: obj type %T isn't Dir or File\n", o)
 	}
 	return nil, nil
+}
+
+func MarshalDir[Dir *sp.Stat | *np.Stat](cnt sp.Tsize, dir []Dir) ([]byte, int, *fcall.Err) {
+	var buf []byte
+
+	if len(dir) == 0 {
+		return nil, 0, nil
+	}
+	n := 0
+	for _, st := range dir {
+		var b []byte
+		var e *fcall.Err
+		switch any(st).(type) {
+		case *np.Stat:
+			b, e = npcodec.MarshalDirEnt(any(st).(*np.Stat), uint64(cnt))
+		case *sp.Stat:
+			b, e = spcodec.MarshalDirEnt(any(st).(*sp.Stat), uint64(cnt))
+		default:
+			db.DFatalf("MARSHAL", "MarshalDir unknown type %T\n", st)
+		}
+		if e != nil {
+			return nil, 0, e
+		}
+		if b == nil {
+			break
+		}
+
+		buf = append(buf, b...)
+		cnt -= sp.Tsize(len(b))
+		n += 1
+	}
+	return buf, n, nil
 }

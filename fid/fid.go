@@ -5,11 +5,10 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
-	"sigmaos/spcodec"
 )
 
 type Pobj struct {
@@ -121,7 +120,7 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	if err != nil {
 		return err
 	}
-	b, n, err := spcodec.MarshalDir(count, dirents)
+	b, n, err := fs.MarshalDir(count, dirents)
 	if err != nil {
 		return err
 	}

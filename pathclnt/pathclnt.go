@@ -101,7 +101,7 @@ func (pathc *PathClnt) MakeWriter(fid np.Tfid) *writer.Writer {
 
 func (pathc *PathClnt) readlink(fid np.Tfid) (string, *fcall.Err) {
 	qid := pathc.Qid(fid)
-	if qid.Type&np.QTSYMLINK == 0 {
+	if np.Qtype(qid.Type)&np.QTSYMLINK == 0 {
 		return "", fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, np.OREAD)

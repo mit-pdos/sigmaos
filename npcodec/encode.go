@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"reflect"
 	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	np "sigmaos/sigmap"
+	np "sigmaos/ninep"
+	sp "sigmaos/sigmap"
 )
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
@@ -46,8 +48,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, sp.Tseqno, fcall.Tsession, fcall.Tfcall, sp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sp.Tsize, sp.Tpath, sp.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
+			*bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -103,15 +105,24 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tqid:
+		case np.Tqid9P:
 			if err := e.encode(v.Type, v.Version, v.Path); err != nil {
 				return err
 			}
-		case *np.Tqid:
+		case sp.Tqid:
+			t := np.Qtype9P(v.Type)
+			if err := e.encode(t, v.Version, v.Path); err != nil {
+				return err
+			}
+		case *sp.Tqid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case []np.Tqid:
+		case **sp.Tqid:
+			if err := e.encode(**v); err != nil {
+				return err
+			}
+		case []sp.Tqid:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
@@ -121,7 +132,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 					return err
 				}
 			}
-		case *[]np.Tqid:
+		case *[]sp.Tqid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
@@ -143,28 +154,17 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			sz := uint16(SizeNp(elements...)) // Stat sz
+			sz := uint16(sizeNp(elements...)) // Stat sz
 			if err := e.encode(sz); err != nil {
 				return err
 			}
-
 			if err := e.encode(elements...); err != nil {
 				return err
 			}
-		case *np.Stat:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case []np.Stat:
-			if err := e.encode(uint16(len(v))); err != nil {
-				return err
-			}
-			for _, m := range v {
-				if err := e.encode(m); err != nil {
-					return err
-				}
-			}
-		case *[]np.Stat:
+		case sp.Stat:
+			npst := Sp2NpStat(&v)
+			e.encode(*npst)
+		case *sp.Stat:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
@@ -176,7 +176,10 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tmsg:
+		case sp.Tmsg:
+			if v.Type() == fcall.TRattach {
+				log.Printf("TRattach %v", v)
+			}
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -185,7 +188,8 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
+			log.Printf("encode: unknown type %T\n", v)
+			return errors.New(fmt.Sprintf("Encode unknown type: %T", v))
 		}
 	}
 
@@ -199,7 +203,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -264,11 +268,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 
 			*v = time.Unix(int64(epoch), 0).UTC()
-		case *np.Tqid:
+		case *sp.Tqid:
 			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
 				return err
 			}
-		case *[]np.Tqid:
+		case *[]sp.Tqid:
 			var l uint16
 
 			if err := d.decode(&l); err != nil {
@@ -276,7 +280,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 
 			elements := make([]interface{}, int(l))
-			*v = make([]np.Tqid, int(l))
+			*v = make([]sp.Tqid, int(l))
 			for i := range elements {
 				elements[i] = &(*v)[i]
 			}
@@ -299,7 +303,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
-		case *np.Stat:
+		case *sp.Stat:
 			var l uint16
 
 			if err := d.decode(&l); err != nil {
@@ -333,7 +337,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			v.Msg = msg
-		case np.Tmsg:
+		case sp.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -343,7 +347,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			errors.New("unknown type")
+			errors.New("Decode unknown type")
 		}
 	}
 
@@ -353,72 +357,68 @@ func (d *decoder) decode(vs ...interface{}) error {
 // SizeNp calculates the projected size of the values in vs when encoded into
 // 9p binary protocol. If an element or elements are not valid for 9p encoded,
 // the value 0 will be used for the size. The error will be detected when
-// encoding.
-func SizeNp(vs ...interface{}) uint32 {
-	var s uint32
+// encoding.  XXX just used for Stat
+func sizeNp(vs ...interface{}) uint64 {
+	var s uint64
 	for _, v := range vs {
 		if v == nil {
 			continue
 		}
 
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
-			s += uint32(binary.Size(v))
+		case bool, uint8, uint16, uint32, uint64, sp.Tseqno, fcall.Tsession, fcall.Tfcall, sp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sp.Tsize, np.Tpath, sp.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
+			*bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *sp.Tsize, *np.Tpath, *sp.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
+			s += uint64(binary.Size(v))
 		case []byte:
-			s += uint32(binary.Size(uint32(0)) + len(v))
+			s += uint64(binary.Size(uint64(0)) + len(v))
 		case *[]byte:
-			s += SizeNp(uint32(0), *v)
+			s += sizeNp(uint64(0), *v)
 		case string:
-			s += uint32(binary.Size(uint16(0)) + len(v))
+			s += uint64(binary.Size(uint16(0)) + len(v))
 		case *string:
-			s += SizeNp(*v)
+			s += sizeNp(*v)
 		case []string:
-			s += SizeNp(uint16(0))
+			s += sizeNp(uint16(0))
 
 			for _, sv := range v {
-				s += SizeNp(sv)
+				s += sizeNp(sv)
 			}
 		case *[]string:
-			s += SizeNp(*v)
-		case np.Tqid:
-			s += SizeNp(v.Type, v.Version, v.Path)
-		case *np.Tqid:
-			s += SizeNp(*v)
-		case []np.Tqid:
-			s += SizeNp(uint16(0))
+			s += sizeNp(*v)
+		case sp.Tqid:
+			s += sizeNp(v.Type, v.Version, v.Path)
+		case *sp.Tqid:
+			s += sizeNp(*v)
+		case np.Tqid9P:
+			s += sizeNp(v.Type, v.Version, v.Path)
+		case *np.Tqid9P:
+			s += sizeNp(*v)
+		case []sp.Tqid:
+			s += sizeNp(uint16(0))
 			elements := make([]interface{}, len(v))
 			for i := range elements {
 				elements[i] = &v[i]
 			}
-			s += SizeNp(elements...)
-		case *[]np.Tqid:
-			s += SizeNp(*v)
+			s += sizeNp(elements...)
+		case *[]sp.Tqid:
+			s += sizeNp(*v)
 		case np.Stat:
 			elements, err := fields9p(v)
 			if err != nil {
 				db.DFatalf("Stat %v", err)
 			}
-			s += SizeNp(elements...) + SizeNp(uint16(0))
+			s += sizeNp(elements...) + sizeNp(uint16(0))
 		case *np.Stat:
-			s += SizeNp(*v)
-		case []np.Stat:
-			elements := make([]interface{}, len(v))
-			for i := range elements {
-				elements[i] = &v[i]
-			}
-			s += SizeNp(elements...)
-		case *[]np.Stat:
-			s += SizeNp(*v)
+			s += sizeNp(*v)
 		case FcallWireCompat:
-			s += SizeNp(v.Type, v.Tag, v.Msg)
+			s += sizeNp(v.Type, v.Tag, v.Msg)
 		case *FcallWireCompat:
-			s += SizeNp(*v)
-		case np.Fcall:
-			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
-		case *np.Fcall:
-			s += SizeNp(*v)
-		case np.Tmsg:
+			s += sizeNp(*v)
+		case sp.Fcall:
+			s += sizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
+		case *sp.Fcall:
+			s += sizeNp(*v)
+		case sp.Tmsg:
 			// walk the fields of the message to get the total size. we just
 			// use the field order from the message struct. We may add tag
 			// ignoring if needed.
@@ -427,9 +427,9 @@ func SizeNp(vs ...interface{}) uint32 {
 				db.DFatalf("Tmsg %v", err)
 			}
 
-			s += SizeNp(elements...)
+			s += sizeNp(elements...)
 		default:
-			db.DFatalf("Unknown type")
+			db.DFatalf("sizeNp: Unknown type %T", v)
 		}
 	}
 

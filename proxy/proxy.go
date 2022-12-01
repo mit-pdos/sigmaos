@@ -1,18 +1,27 @@
 package proxy
 
 import (
+	"bufio"
+	"bytes"
+	"errors"
+	"io"
+	"log"
 	"os/user"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/fidclnt"
+	"sigmaos/fs"
 	"sigmaos/fslib"
+	np "sigmaos/ninep"
+	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
 )
 
@@ -28,30 +37,30 @@ func MakeNpd() *Npd {
 	return npd
 }
 
-func (npd *Npd) mkProtServer(sesssrv np.SessServer, sid fcall.Tsession) np.Protsrv {
+func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid fcall.Tsession) sp.Protsrv {
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fm *np.FcallMsg) {
+func (npd *Npd) serve(fm *sp.FcallMsg) {
 	s := fcall.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
 	reply, _, rerror := sess.Dispatch(fm.Msg)
 	if rerror != nil {
 		reply = rerror
 	}
-	fm1 := np.MakeFcallMsg(reply, fcall.Tclient(fm.Fc.Client), s, nil, nil, np.MakeFenceNull())
+	fm1 := sp.MakeFcallMsg(reply, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
 	fm1.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(fm1)
 }
 
-func (npd *Npd) Register(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) *fcall.Err {
+func (npd *Npd) Register(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) *fcall.Err {
 	sess := npd.st.Alloc(cid, sid)
 	sess.SetConn(conn)
 	return nil
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) {
+func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == fcall.NoSession {
 		return
@@ -61,7 +70,7 @@ func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) 
 }
 
 func (npd *Npd) SrvFcall(fcall fcall.Fcall) {
-	fm := fcall.(*np.FcallMsg)
+	fm := fcall.(*sp.FcallMsg)
 	go npd.serve(fm)
 }
 
@@ -88,55 +97,55 @@ func makeNpConn(named []string) *NpConn {
 	npc.clnt = protclnt.MakeClnt()
 	npc.named = named
 	npc.fidc = fidclnt.MakeFidClnt()
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, np.Tsize(1_000_000))
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }
 
 // Make Wire-compatible Rerror
-func MkRerrorWC(ec fcall.Terror) *np.Rerror {
-	return &np.Rerror{ec.String()}
+func MkRerrorWC(ec fcall.Terror) *sp.Rerror {
+	return &sp.Rerror{ec.String()}
 }
 
-func (npc *NpConn) Version(args *np.Tversion, rets *np.Rversion) *np.Rerror {
+func (npc *NpConn) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (npc *NpConn) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
+func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
+func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	u, error := user.Current()
 	if error != nil {
-		return &np.Rerror{error.Error()}
+		return &sp.Rerror{error.Error()}
 	}
 	npc.uname = u.Uid
 
 	fid, err := npc.fidc.Attach(npc.uname, npc.named, "", "")
 	if err != nil {
 		db.DPrintf("PROXY", "Attach args %v err %v\n", args, err)
-		return np.MkRerror(err)
+		return sp.MkRerror(err)
 	}
-	if err := npc.pc.Mount(fid, np.NAMED); err != nil {
+	if err := npc.pc.Mount(fid, sp.NAMED); err != nil {
 		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
-		return &np.Rerror{error.Error()}
+		return &sp.Rerror{error.Error()}
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Fid, fid)
-	npc.fidc.Lookup(fid).SetPath(path.Split(np.NAMED))
+	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return nil
 }
 
-func (npc *NpConn) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
+func (npc *NpConn) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
 	db.DPrintf("PROXY", "Detach\n")
 	return nil
 }
 
-func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -149,11 +158,10 @@ func (npc *NpConn) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	qids := npc.pc.Qids(fid1)
 	rets.Qids = qids[len(qids)-len(args.Wnames):]
 	npc.fm.mapTo(args.NewFid, fid1)
-	db.DPrintf("PROXY", "Walk args %v rets: %v\n", args, rets)
 	return nil
 }
 
-func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -168,11 +176,11 @@ func (npc *NpConn) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -185,12 +193,12 @@ func (npc *NpConn) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
 	}
-	rets.Qid = npc.pc.Qid(fid1)
+	rets.Qid = *npc.pc.Qid(fid1)
 	db.DPrintf("PROXY", "Create args %v rets: %v\n", args, rets)
 	return nil
 }
 
-func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -204,31 +212,57 @@ func (npc *NpConn) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
+func (npc *NpConn) Flush(args *sp.Tflush, rets *sp.Rflush) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) Read(args *sp.Tread, rets *sp.Rread) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, np.NoV)
+	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, sp.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
+	}
+	db.DPrintf("PROXY", "ReadUV: args %v rets %v\n", args, rets)
+	qid := npc.pc.Qid(fid)
+	log.Printf("qid %v\n", qid)
+	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
+		log.Printf("qid dir %v\n", npc.pc.Qid(fid))
+		// convert d back to np.Dir
+		rdr := bytes.NewReader(d)
+		brdr := bufio.NewReader(rdr)
+		npsts := make([]*np.Stat, 0)
+		for {
+			spst, err := spcodec.UnmarshalDirEnt(brdr)
+			if err != nil && errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				return MkRerrorWC(err.Code())
+			}
+			npst := npcodec.Sp2NpStat(spst)
+			npsts = append(npsts, npst)
+		}
+		d, _, err = fs.MarshalDir(args.Count, npsts)
+		if err != nil {
+			return MkRerrorWC(err.Code())
+		}
+		log.Printf("npsts %v\n", npsts)
 	}
 	rets.Data = d
 	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
 	return nil
 }
 
-func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) Write(args *sp.Twrite, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, np.NoV)
+	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, sp.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
@@ -238,7 +272,7 @@ func (npc *NpConn) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -252,11 +286,11 @@ func (npc *NpConn) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
+func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -271,7 +305,7 @@ func (npc *NpConn) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
@@ -285,31 +319,31 @@ func (npc *NpConn) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) WriteV(args *sp.TwriteV, rets *sp.Rwrite) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rgetfile) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) SetFile(args *sp.Tsetfile, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) PutFile(args *sp.Tputfile, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *np.Twriteread, rets *np.Rwriteread) *np.Rerror {
+func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rwriteread) *sp.Rerror {
 	return nil
 }
 

@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"sigmaos/fcall"
+	"sigmaos/path"
 	"sigmaos/protclnt"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
 )
 
 // The channel associated with an fid, which connects to an object at
@@ -44,7 +44,7 @@ func (c *Channel) SetPath(p path.Path) {
 }
 
 func (c *Channel) Version() np.TQversion {
-	return c.Lastqid().Version
+	return np.TQversion(c.Lastqid().Version)
 }
 
 func (c *Channel) Copy() *Channel {
@@ -68,8 +68,8 @@ func (c *Channel) AddN(qs []np.Tqid, path path.Path) {
 	}
 }
 
-func (c *Channel) Lastqid() np.Tqid {
-	return c.qids[len(c.qids)-1]
+func (c *Channel) Lastqid() *np.Tqid {
+	return &c.qids[len(c.qids)-1]
 }
 
 // Simulate network partition to server that exports path

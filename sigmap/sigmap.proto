@@ -2,13 +2,17 @@ syntax = "proto3";
 
 option go_package = "sigmaos/sigmap";
 
-message Twriteread {
-        uint64 fid = 1; 
-        bytes data = 2;
-}
+// A Qid is the server's unique identification for the file being
+// accessed: two files on the same server hierarchy are the same if
+// and only if their qids are the same.
+message Tqid {
+        uint32  type = 1;
+        uint32  version = 2;
+        uint64  path = 3;
+};
 
-message Rwriteread {
-        bytes data = 1;
+message Rattach {
+        Tqid qid = 1;        
 }
 
 message Tinterval {
@@ -34,4 +38,13 @@ message Fcall {
         uint64 seqno = 5;
         Tinterval received = 6;
         Tfence fence = 7;       
+}
+
+message Twriteread {
+        uint64 fid = 1; 
+        bytes data = 2;
+}
+
+message Rwriteread {
+        bytes data = 1;
 }

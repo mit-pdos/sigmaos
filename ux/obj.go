@@ -11,10 +11,10 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
@@ -73,7 +73,7 @@ func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
-		return &Obj{path, st.Qid.Path, st.Mode}, nil
+		return &Obj{path, np.Tpath(st.Qid.Path), st.Mode}, nil
 	}
 }
 

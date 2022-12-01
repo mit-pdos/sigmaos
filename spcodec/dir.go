@@ -4,16 +4,32 @@ import (
 	"errors"
 	"io"
 
+	db "sigmaos/debug"
 	"sigmaos/fcall"
 	sp "sigmaos/sigmap"
 )
 
 func MarshalSizeDir(dir []*sp.Stat) sp.Tlength {
-	sz := uint32(0)
+	sz := uint64(0)
 	for _, st := range dir {
 		sz += SizeNp(*st)
 	}
 	return sp.Tlength(sz)
+}
+
+func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
+	sz := SizeNp(*st)
+	if cnt < sz {
+		return nil, nil
+	}
+	b, e := marshal(*st)
+	if e != nil {
+		return nil, fcall.MkErrError(e)
+	}
+	if sz != uint64(len(b)) {
+		db.DFatalf("MARSHAL", "MarshalDirEnt %v %v\n", sz, len(b))
+	}
+	return b, nil
 }
 
 func MarshalDir(cnt sp.Tsize, dir []*sp.Stat) ([]byte, int, *fcall.Err) {
@@ -24,16 +40,15 @@ func MarshalDir(cnt sp.Tsize, dir []*sp.Stat) ([]byte, int, *fcall.Err) {
 	}
 	n := 0
 	for _, st := range dir {
-		sz := sp.Tsize(SizeNp(*st))
-		if cnt < sz {
+		b, e := MarshalDirEnt(st, uint64(cnt))
+		if e != nil {
+			return nil, 0, e
+		}
+		if b == nil {
 			break
 		}
-		b, e := marshal(*st)
-		if e != nil {
-			return nil, n, fcall.MkErrError(e)
-		}
 		buf = append(buf, b...)
-		cnt -= sz
+		cnt -= sp.Tsize(len(b))
 		n += 1
 	}
 	return buf, n, nil

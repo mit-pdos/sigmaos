@@ -404,8 +404,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 // 9p binary protocol. If an element or elements are not valid for 9p encoded,
 // the value 0 will be used for the size. The error will be detected when
 // encoding.
-func SizeNp(vs ...interface{}) uint32 {
-	var s uint32
+func SizeNp(vs ...interface{}) uint64 {
+	var s uint64
 	for _, v := range vs {
 		if v == nil {
 			continue
@@ -414,13 +414,13 @@ func SizeNp(vs ...interface{}) uint32 {
 		switch v := v.(type) {
 		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
 			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
-			s += uint32(binary.Size(v))
+			s += uint64(binary.Size(v))
 		case []byte:
-			s += uint32(binary.Size(uint32(0)) + len(v))
+			s += uint64(binary.Size(uint64(0)) + len(v))
 		case *[]byte:
-			s += SizeNp(uint32(0), *v)
+			s += SizeNp(uint64(0), *v)
 		case string:
-			s += uint32(binary.Size(uint16(0)) + len(v))
+			s += uint64(binary.Size(uint16(0)) + len(v))
 		case *string:
 			s += SizeNp(*v)
 		case []string:

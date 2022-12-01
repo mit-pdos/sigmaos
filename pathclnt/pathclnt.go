@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/fidclnt"
+	"sigmaos/path"
 	"sigmaos/reader"
 	np "sigmaos/sigmap"
 	"sigmaos/writer"
@@ -65,8 +66,8 @@ func (pathc *PathClnt) Exit() error {
 // Detach from server. XXX Mixes up umount a file system at server and
 // closing session; if two mounts point to the same server; the first
 // detach will close the session regardless of the second mount point.
-func (pathc *PathClnt) Detach(path string) error {
-	fid, err := pathc.mnt.umount(np.Split(path))
+func (pathc *PathClnt) Detach(pn string) error {
+	fid, err := pathc.mnt.umount(path.Split(pn))
 	if err != nil {
 		return err
 	}
@@ -78,8 +79,8 @@ func (pathc *PathClnt) Detach(path string) error {
 }
 
 // Simulate network partition to server that exports path
-func (pathc *PathClnt) Disconnect(path string) error {
-	fid, err := pathc.mnt.umount(np.Split(path))
+func (pathc *PathClnt) Disconnect(pn string) error {
+	fid, err := pathc.mnt.umount(path.Split(pn))
 	if err != nil {
 		return err
 	}
@@ -115,8 +116,8 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *fcall.Err) {
 	return string(b), nil
 }
 
-func (pathc *PathClnt) mount(fid np.Tfid, path string) *fcall.Err {
-	if err := pathc.mnt.add(np.Split(path), fid); err != nil {
+func (pathc *PathClnt) mount(fid np.Tfid, pn string) *fcall.Err {
+	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
 		if err.Code() == fcall.TErrExists {
 			// Another thread may already have mounted
 			// path; clunk the fid and don't return an
@@ -139,7 +140,7 @@ func (pathc *PathClnt) Mount(fid np.Tfid, path string) error {
 
 func (pathc *PathClnt) Create(p string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
 	db.DPrintf("PATHCLNT", "Create %v perm %v\n", p, perm)
-	path := np.Split(p)
+	path := path.Split(p)
 	dir := path.Dir()
 	base := path.Base()
 	fid, err := pathc.WalkPath(dir, true, nil)
@@ -157,8 +158,8 @@ func (pathc *PathClnt) Create(p string, perm np.Tperm, mode np.Tmode) (np.Tfid, 
 // for within a directory.
 func (pathc *PathClnt) Rename(old string, new string) error {
 	db.DPrintf("PATHCLNT", "Rename %v %v\n", old, new)
-	opath := np.Split(old)
-	npath := np.Split(new)
+	opath := path.Split(old)
+	npath := path.Split(new)
 
 	if len(opath) != len(npath) {
 		if err := pathc.renameat(old, new); err != nil {
@@ -174,7 +175,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 			return nil
 		}
 	}
-	fid, err := pathc.WalkPath(opath, np.EndSlash(old), nil)
+	fid, err := pathc.WalkPath(opath, path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
@@ -191,16 +192,16 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 // Rename across directories of a single server using Renameat
 func (pathc *PathClnt) renameat(old, new string) *fcall.Err {
 	db.DPrintf("PATHCLNT", "Renameat %v %v\n", old, new)
-	opath := np.Split(old)
-	npath := np.Split(new)
+	opath := path.Split(old)
+	npath := path.Split(new)
 	o := opath[len(opath)-1]
 	n := npath[len(npath)-1]
-	fid, err := pathc.WalkPath(opath[:len(opath)-1], np.EndSlash(old), nil)
+	fid, err := pathc.WalkPath(opath[:len(opath)-1], path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	fid1, err := pathc.WalkPath(npath[:len(npath)-1], np.EndSlash(old), nil)
+	fid1, err := pathc.WalkPath(npath[:len(npath)-1], path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
@@ -219,18 +220,18 @@ func (pathc *PathClnt) umountFree(path []string) *fcall.Err {
 
 func (pathc *PathClnt) Remove(name string) error {
 	db.DPrintf("PATHCLNT", "Remove %v\n", name)
-	path := np.Split(name)
-	fid, rest, err := pathc.mnt.resolve(path)
+	pn := path.Split(name)
+	fid, rest, err := pathc.mnt.resolve(pn)
 	if err != nil {
 		return err
 	}
 	// Optimistcally remove obj without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	err = pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
+	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
 	if err != nil {
 		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
-			fid, err = pathc.WalkPath(path, np.EndSlash(name), nil)
+			fid, err = pathc.WalkPath(pn, path.EndSlash(name), nil)
 			if err != nil {
 				return err
 			}
@@ -246,15 +247,15 @@ func (pathc *PathClnt) Remove(name string) error {
 
 func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	db.DPrintf("PATHCLNT", "Stat %v\n", name)
-	path := np.Split(name)
+	pn := path.Split(name)
 	// XXX ignore err?
-	target, rest, _ := pathc.mnt.resolve(path)
-	if len(rest) == 0 && !np.EndSlash(name) {
+	target, rest, _ := pathc.mnt.resolve(pn)
+	if len(rest) == 0 && !path.EndSlash(name) {
 		st := &np.Stat{}
 		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
 		return st, nil
 	} else {
-		fid, err := pathc.WalkPath(np.Split(name), np.EndSlash(name), nil)
+		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -267,10 +268,10 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	}
 }
 
-func (pathc *PathClnt) OpenWatch(path string, mode np.Tmode, w Watch) (np.Tfid, error) {
-	db.DPrintf("PATHCLNT", "Open %v %v\n", path, mode)
-	p := np.Split(path)
-	fid, err := pathc.WalkPath(p, np.EndSlash(path), w)
+func (pathc *PathClnt) OpenWatch(pn string, mode np.Tmode, w Watch) (np.Tfid, error) {
+	db.DPrintf("PATHCLNT", "Open %v %v\n", pn, mode)
+	p := path.Split(pn)
+	fid, err := pathc.WalkPath(p, path.EndSlash(pn), w)
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -299,10 +300,10 @@ func (pathc *PathClnt) SetDirWatch(fid np.Tfid, path string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
-	db.DPrintf("PATHCLNT", "SetRemoveWatch %v", path)
-	p := np.Split(path)
-	fid, err := pathc.WalkPath(p, np.EndSlash(path), nil)
+func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
+	db.DPrintf("PATHCLNT", "SetRemoveWatch %v", pn)
+	p := path.Split(pn)
+	fid, err := pathc.WalkPath(p, path.EndSlash(pn), nil)
 	if err != nil {
 		return err
 	}
@@ -311,20 +312,20 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf("PATHCLNT", "SetRemoveWatch: Watch %v %v err %v\n", fid, path, err)
+		db.DPrintf("PATHCLNT", "SetRemoveWatch: Watch %v %v err %v\n", fid, pn, err)
 		if err == nil {
-			w(path, nil)
+			w(pn, nil)
 		} else {
-			w(path, err)
+			w(pn, err)
 		}
 		pathc.Clunk(fid)
 	}()
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DPrintf("PATHCLNT", "GetFile %v %v\n", path, mode)
-	p := np.Split(path)
+func (pathc *PathClnt) GetFile(pn string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+	db.DPrintf("PATHCLNT", "GetFile %v %v\n", pn, mode)
+	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {
 		return nil, err
@@ -332,10 +333,10 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 	// Optimistcally GetFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, np.EndSlash(path))
+	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
 		if fcall.IsMaybeSpecialElem(err) {
-			fid, err = pathc.WalkPath(p, np.EndSlash(path), nil)
+			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err
 			}
@@ -352,9 +353,9 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 }
 
 // Write file
-func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
-	db.DPrintf("PATHCLNT", "SetFile %v %v\n", path, mode)
-	p := np.Split(path)
+func (pathc *PathClnt) SetFile(pn string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
+	db.DPrintf("PATHCLNT", "SetFile %v %v\n", pn, mode)
+	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {
 		return 0, err
@@ -362,10 +363,10 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 	// Optimistcally SetFile without doing a pathname walk; this
 	// may fail if rest contains an automount symlink.
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
-	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, np.EndSlash(path))
+	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, path.EndSlash(pn))
 	if err != nil {
 		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
-			fid, err = pathc.WalkPath(p, np.EndSlash(path), nil)
+			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return 0, err
 			}
@@ -382,9 +383,9 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 }
 
 // Create file
-func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
-	db.DPrintf("PATHCLNT", "PutFile %v %v\n", path, mode)
-	p := np.Split(path)
+func (pathc *PathClnt) PutFile(pn string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
+	db.DPrintf("PATHCLNT", "PutFile %v %v\n", pn, mode)
+	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {
 		return 0, err
@@ -396,7 +397,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	if err != nil {
 		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
 			dir := p.Dir()
-			base := np.Path{p.Base()}
+			base := path.Path{p.Base()}
 			fid, err = pathc.WalkPath(dir, true, nil)
 			if err != nil {
 				return 0, err
@@ -414,15 +415,15 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 }
 
 // Return path to the root directory for last server on path
-func (pathc *PathClnt) PathServer(path string) (string, np.Path, error) {
-	if _, err := pathc.Stat(path + "/"); err != nil {
-		db.DPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)
+func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
+	if _, err := pathc.Stat(pn + "/"); err != nil {
+		db.DPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", pn, err)
 		return "", nil, err
 	}
-	p := np.Split(path)
+	p := path.Split(pn)
 	_, left, err := pathc.mnt.resolve(p)
 	if err != nil {
-		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", path, err)
+		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
 		return "", nil, err
 	}
 	p = p[0 : len(p)-len(left)]
@@ -430,16 +431,16 @@ func (pathc *PathClnt) PathServer(path string) (string, np.Path, error) {
 }
 
 // Return path to server, replacing ~ip with the IP address of the mounted server
-func (pathc *PathClnt) AbsPathServer(path string) (np.Path, np.Path, error) {
-	srv, left, err := pathc.PathServer(path)
+func (pathc *PathClnt) AbsPathServer(pn string) (path.Path, path.Path, error) {
+	srv, left, err := pathc.PathServer(pn)
 	if err != nil {
 		return nil, nil, err
 	}
-	p := np.Split(srv)
-	if np.IsUnionElem(p.Base()) {
+	p := path.Split(srv)
+	if path.IsUnionElem(p.Base()) {
 		st, err := pathc.Stat(srv)
 		if err != nil {
-			return np.Path{}, left, err
+			return path.Path{}, left, err
 		}
 		p[len(p)-1] = st.Name
 		return p, left, nil

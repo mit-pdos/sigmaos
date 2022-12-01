@@ -8,6 +8,7 @@ import (
 	"sigmaos/file"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 )
 
@@ -16,7 +17,7 @@ type Symlink struct {
 	*file.File
 }
 
-func makeSymlink(path np.Path, iscreate bool) (*Symlink, *fcall.Err) {
+func makeSymlink(path path.Path, iscreate bool) (*Symlink, *fcall.Err) {
 	s := &Symlink{}
 	o, err := makeObj(path)
 	if err == nil && iscreate {

@@ -2,16 +2,17 @@ package memfssrv
 
 import (
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
-var rootP = np.Path{""}
+var rootP = path.Path{""}
 
 func (fs *MemFs) Root() fs.Dir {
 	return fs.root
@@ -26,7 +27,7 @@ func (mfs *MemFs) MakeDevInode() *inode.Inode {
 	return inode.MakeInode(mfs.ctx, np.DMDEVICE, nil)
 }
 
-func (mfs *MemFs) lookup(path np.Path) (fs.FsObj, *lockmap.PathLock, *fcall.Err) {
+func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *fcall.Err) {
 	d := mfs.root
 	lk := mfs.plt.Acquire(mfs.ctx, rootP)
 	if len(path) == 0 {
@@ -40,7 +41,7 @@ func (mfs *MemFs) lookup(path np.Path) (fs.FsObj, *lockmap.PathLock, *fcall.Err)
 	return lo, lk, nil
 }
 
-func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *fcall.Err) {
+func (mfs *MemFs) lookupParent(path path.Path) (fs.Dir, *lockmap.PathLock, *fcall.Err) {
 	lo, lk, err := mfs.lookup(path)
 	if err != nil {
 		return nil, nil, err
@@ -50,7 +51,7 @@ func (mfs *MemFs) lookupParent(path np.Path) (fs.Dir, *lockmap.PathLock, *fcall.
 }
 
 func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *fcall.Err {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *fcall.Err {
 }
 
 func (mfs *MemFs) MkNod(pn string, i fs.Inode) *fcall.Err {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return err
@@ -72,7 +73,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *fcall.Err {
 }
 
 func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return nil, err
@@ -82,7 +83,7 @@ func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Er
 }
 
 func (mfs *MemFs) Remove(pn string) *fcall.Err {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return err
@@ -92,7 +93,7 @@ func (mfs *MemFs) Remove(pn string) *fcall.Err {
 }
 
 func (mfs *MemFs) Open(pn string, m np.Tmode) (fs.FsObj, *fcall.Err) {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	lo, lk, err := mfs.lookup(path)
 	if err != nil {
 		return nil, err

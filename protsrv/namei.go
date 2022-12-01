@@ -1,17 +1,17 @@
 package protsrv
 
 import (
+	"sigmaos/fcall"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
+	"sigmaos/path"
 )
 
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target np.Path) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, np.Path, *fcall.Err) {
+func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *fcall.Err) {
 	src := po.Path()
 	lk := ps.plt.Acquire(ctx, src)
 	o := po.Obj()

@@ -4,6 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/pipe"
 )
@@ -13,7 +14,7 @@ type Pipe struct {
 	*Obj
 }
 
-func makePipe(ctx fs.CtxI, pathName np.Path) (*Pipe, *fcall.Err) {
+func makePipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *fcall.Err) {
 	p := &Pipe{}
 	o, err := makeObj(pathName)
 	if err != nil {

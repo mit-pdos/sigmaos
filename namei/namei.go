@@ -2,10 +2,10 @@ package namei
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
+	"sigmaos/path"
 )
 
 func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {
@@ -17,7 +17,7 @@ func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {
 // Walk traverses target element by element or in one LookupPath call,
 // depending if the underlying file system can do a lookup for the
 // complete path.  Caller provides locked dir.
-func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, dn, target np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, np.Path, *fcall.Err) {
+func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, dn, target path.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *fcall.Err) {
 	// ps.stats.IncPathString(dlk.Path())
 	fn := dn.AppendPath(target)
 	var plk *lockmap.PathLock

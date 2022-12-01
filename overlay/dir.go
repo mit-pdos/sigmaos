@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 )
 
@@ -82,7 +83,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *fcall.Err) {
 	// }
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *fcall.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {

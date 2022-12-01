@@ -8,6 +8,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
@@ -125,7 +126,7 @@ func (npc *NpConn) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Fid, fid)
-	npc.fidc.Lookup(fid).SetPath(np.Split(np.NAMED))
+	npc.fidc.Lookup(fid).SetPath(path.Split(np.NAMED))
 	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/fcall"
+	"sigmaos/path"
 	"sigmaos/protclnt"
 	np "sigmaos/sigmap"
 )
@@ -71,7 +72,7 @@ func (fidc *FidClnt) Qids(fid np.Tfid) []np.Tqid {
 	return fidc.Lookup(fid).qids
 }
 
-func (fidc *FidClnt) Path(fid np.Tfid) np.Path {
+func (fidc *FidClnt) Path(fid np.Tfid) path.Path {
 	return fidc.Lookup(fid).Path()
 }
 
@@ -88,15 +89,15 @@ func (fidc *FidClnt) Clunk(fid np.Tfid) *fcall.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname string, addrs []string, path, tree string) (np.Tfid, *fcall.Err) {
+func (fidc *FidClnt) Attach(uname string, addrs []string, pn, tree string) (np.Tfid, *fcall.Err) {
 	fid := fidc.allocFid()
-	reply, err := fidc.pc.Attach(addrs, uname, fid, np.Split(tree))
+	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
 	if err != nil {
 		fidc.freeFid(fid)
 		return np.NoFid, err
 	}
 	pc := fidc.pc.MakeProtClnt(addrs)
-	fidc.fids.insert(fid, makeChannel(pc, uname, np.Split(path), []np.Tqid{reply.Qid}))
+	fidc.fids.insert(fid, makeChannel(pc, uname, path.Split(pn), []np.Tqid{reply.Qid}))
 	return fid, nil
 }
 
@@ -135,7 +136,7 @@ func (fidc *FidClnt) Clone(fid np.Tfid) (np.Tfid, *fcall.Err) {
 	if channel == nil {
 		return np.NoFid, fcall.MkErr(fcall.TErrUnreachable, "clone")
 	}
-	_, err := channel.pc.Walk(fid, nfid, np.Path{})
+	_, err := channel.pc.Walk(fid, nfid, path.Path{})
 	if err != nil {
 		fidc.freeFid(nfid)
 		return fid, err

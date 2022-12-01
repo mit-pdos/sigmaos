@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 )
 
@@ -14,7 +15,7 @@ type File struct {
 	fd int
 }
 
-func makeFile(path np.Path) (*File, *fcall.Err) {
+func makeFile(path path.Path) (*File, *fcall.Err) {
 	f := &File{}
 	o, err := makeObj(path)
 	if err != nil {

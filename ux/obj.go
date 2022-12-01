@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 )
 
@@ -40,7 +41,7 @@ func umode2Perm(umode uint16) np.Tperm {
 	return perm
 }
 
-func ustat(path np.Path) (*np.Stat, *fcall.Err) {
+func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 	var statx unix.Statx_t
 	db.DPrintf("UXD", "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -59,7 +60,7 @@ func ustat(path np.Path) (*np.Stat, *fcall.Err) {
 }
 
 type Obj struct {
-	pathName np.Path
+	pathName path.Path
 	path     np.Tpath
 	perm     np.Tperm // XXX kill, but requires changing Perm() API
 }
@@ -68,7 +69,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path np.Path) (*Obj, *fcall.Err) {
+func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {

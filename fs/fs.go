@@ -3,6 +3,7 @@ package fs
 import (
 	db "sigmaos/debug"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/sesscond"
 )
@@ -19,7 +20,7 @@ type CtxI interface {
 
 type Dir interface {
 	FsObj
-	LookupPath(CtxI, np.Path) ([]FsObj, FsObj, np.Path, *fcall.Err)
+	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *fcall.Err)
 	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *fcall.Err)
 	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *fcall.Err)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *fcall.Err)
@@ -47,7 +48,7 @@ type FsObj interface {
 	String() string
 }
 
-func Obj2File(o FsObj, fname np.Path) (File, *fcall.Err) {
+func Obj2File(o FsObj, fname path.Path) (File, *fcall.Err) {
 	switch i := o.(type) {
 	case Dir:
 		return nil, fcall.MkErr(fcall.TErrNotFile, fname)

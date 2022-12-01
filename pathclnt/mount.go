@@ -7,10 +7,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
 )
 
 type Point struct {
-	path np.Path
+	path path.Path
 	fid  np.Tfid
 }
 
@@ -32,7 +33,7 @@ func makeMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path np.Path, fid np.Tfid) *fcall.Err {
+func (mnt *MntTable) add(path path.Path, fid np.Tfid) *fcall.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -54,7 +55,7 @@ func (mnt *MntTable) add(path np.Path, fid np.Tfid) *fcall.Err {
 }
 
 // prefix match and return postfix
-func match(mp np.Path, path np.Path) (bool, np.Path) {
+func match(mp path.Path, path path.Path) (bool, path.Path) {
 	for i, s := range mp {
 		if i >= len(path) {
 			return false, nil
@@ -66,7 +67,7 @@ func match(mp np.Path, path np.Path) (bool, np.Path) {
 	return true, path[len(mp):]
 }
 
-func matchexact(mp np.Path, path np.Path) bool {
+func matchexact(mp path.Path, path path.Path) bool {
 	if len(mp) != len(path) {
 		return false
 	}
@@ -78,7 +79,7 @@ func matchexact(mp np.Path, path np.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *fcall.Err) {
+func (mnt *MntTable) resolve(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -96,7 +97,7 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *fcall.Err) {
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path np.Path) (np.Tfid, *fcall.Err) {
+func (mnt *MntTable) umount(path path.Path) (np.Tfid, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 

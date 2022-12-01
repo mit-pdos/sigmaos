@@ -1065,7 +1065,7 @@ func TestSymlinkPath(t *testing.T) {
 
 	sts, err := ts.GetDir(gopath.Join(path, "namedself") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
 
 	ts.Shutdown()
 }
@@ -1092,7 +1092,7 @@ func TestSymlinkRemote(t *testing.T) {
 
 	sts, err := ts.GetDir(gopath.Join(path, "namedself") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
 
 	ts.Shutdown()
 }
@@ -1106,16 +1106,16 @@ func TestUnionDir(t *testing.T) {
 
 	err = ts.Symlink(target(t, ts, path), gopath.Join(path, "d/namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(np.Path{":2222"}), gopath.Join(path, "d/namedself1"), 0777|np.DMTMP)
+	err = ts.Symlink(fslib.MakeTarget(path.Path{":2222"}), gopath.Join(path, "d/namedself1"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(gopath.Join(path, "d/~any") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"d"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
 	sts, err = ts.GetDir(gopath.Join(path, "d/~any/d") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"namedself0", "namedself1"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
 	ts.Shutdown()
 }
@@ -1125,12 +1125,12 @@ func TestUnionRoot(t *testing.T) {
 
 	err := ts.Symlink(target(t, ts, path), gopath.Join(path, "namedself0"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(np.Path{"xxx"}), gopath.Join(path, "namedself1"), 0777|np.DMTMP)
+	err = ts.Symlink(fslib.MakeTarget(path.Path{"xxx"}), gopath.Join(path, "namedself1"), 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(gopath.Join(path, "~any") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"namedself0", "namedself1"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
 	ts.Shutdown()
 }
@@ -1149,12 +1149,12 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	sts, err := ts.GetDir(gopath.Join(path, "~any/d/namedself1") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"d", "namedself0"}), "root wrong")
+	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself0"}), "root wrong")
 
 	sts, err = ts.GetDir(gopath.Join(path, "~any/d/namedself1/d") + "/")
 	assert.Equal(t, nil, err)
 	db.DPrintf(db.ALWAYS, "sts %v", sts)
-	assert.True(t, fslib.Present(sts, np.Path{"namedself1"}), "d wrong")
+	assert.True(t, fslib.Present(sts, path.Path{"namedself1"}), "d wrong")
 
 	ts.Shutdown()
 }
@@ -1176,7 +1176,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	sts, err := ts.GetDir(gopath.Join(path, "~any/namedself0") + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"f", "g"}), "root wrong")
+	assert.True(t, fslib.Present(sts, path.Path{"f", "g"}), "root wrong")
 
 	d, err := ts.GetFile(gopath.Join(path, "~any/namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")

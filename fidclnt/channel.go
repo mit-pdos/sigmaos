@@ -6,18 +6,19 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/protclnt"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
 )
 
 // The channel associated with an fid, which connects to an object at
 // a server.
 type Channel struct {
 	pc    *protclnt.ProtClnt
-	path  np.Path
+	path  path.Path
 	qids  []np.Tqid
 	uname string
 }
 
-func makeChannel(pc *protclnt.ProtClnt, uname string, path np.Path, qs []np.Tqid) *Channel {
+func makeChannel(pc *protclnt.ProtClnt, uname string, path path.Path, qs []np.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -34,11 +35,11 @@ func (c *Channel) Uname() string {
 	return c.uname
 }
 
-func (c *Channel) Path() np.Path {
+func (c *Channel) Path() path.Path {
 	return c.path
 }
 
-func (c *Channel) SetPath(p np.Path) {
+func (c *Channel) SetPath(p path.Path) {
 	c.path = p
 }
 
@@ -58,7 +59,7 @@ func (c *Channel) add(name string, q np.Tqid) {
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []np.Tqid, path np.Path) {
+func (c *Channel) AddN(qs []np.Tqid, path path.Path) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}

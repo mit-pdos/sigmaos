@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
+	"sigmaos/path"
 	"sigmaos/sesssrv"
 	np "sigmaos/sigmap"
 	"sigmaos/stats"
@@ -63,13 +64,13 @@ func (ps *ProtSrv) Auth(args *np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("PROTSRV", "Attach %v", args)
-	path := np.Split(args.Aname)
+	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.AttachTree(args.Uname, args.Aname, ps.sid)
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
-		dlk := ps.plt.Acquire(ctx, np.Path{})
-		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, np.Path{}, path, nil)
+		dlk := ps.plt.Acquire(ctx, path.Path{})
+		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, path.Path{}, p, nil)
 		defer ps.plt.Release(ctx, lk)
 		if len(rest) > 0 || err != nil {
 			return np.MkRerror(err)
@@ -83,7 +84,7 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(path, tree, ctx), 0, qid))
+	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	return nil
 }
@@ -116,7 +117,7 @@ func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *fcall.Err) {
+func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Path, resolve bool) (fs.FsObj, *fcall.Err) {
 	_, lo, lk, _, err := ps.lookupObj(ctx, f.Pobj(), names)
 	ps.plt.Release(ctx, lk)
 	if err != nil {
@@ -224,7 +225,7 @@ func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, eph bool, qid np.Tqid) *fid.Fid {
+func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, eph bool, qid np.Tqid) *fid.Fid {
 	p := dir.Copy()
 	po := fid.MkPobj(append(p, name), o, ctx)
 	nf := fid.MakeFidPath(po, 0, qid)
@@ -236,7 +237,7 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, ep
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn np.Path, perm np.Tperm, mode np.Tmode) (fs.FsObj, *lockmap.PathLock, *fcall.Err) {
+func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm np.Tperm, mode np.Tmode) (fs.FsObj, *lockmap.PathLock, *fcall.Err) {
 	name := fn.Base()
 	if name == "." {
 		return nil, nil, fcall.MkErr(fcall.TErrInval, name)
@@ -375,7 +376,7 @@ func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
+func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path) *np.Rerror {
 	name := path.Base()
 	if name == "." {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, name))
@@ -450,7 +451,7 @@ func (ps *ProtSrv) Wstat(args *np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
 
-		dst := f.Pobj().Path().Dir().Copy().AppendPath(np.Split(args.Stat.Name))
+		dst := f.Pobj().Path().Dir().Copy().AppendPath(path.Split(args.Stat.Name))
 
 		dlk, slk := ps.plt.AcquireLocks(f.Pobj().Ctx(), f.Pobj().Path().Dir(), f.Pobj().Path().Base())
 		defer ps.plt.ReleaseLocks(f.Pobj().Ctx(), dlk, slk)
@@ -533,7 +534,7 @@ func (ps *ProtSrv) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *fcall.Err) {
+func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames path.Path, resolve bool) (*fid.Fid, path.Path, fs.FsObj, *fcall.Err) {
 	f, err := ps.ft.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -549,7 +550,7 @@ func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.F
 	return f, fname, lo, nil
 }
 
-func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.FsObj, fs.File, *fcall.Err) {
+func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames path.Path, resolve bool, mode np.Tmode) (*fid.Fid, path.Path, fs.FsObj, fs.File, *fcall.Err) {
 	f, fname, lo, err := ps.lookupWalk(fid, wnames, resolve)
 	if err != nil {
 		return nil, nil, nil, nil, err

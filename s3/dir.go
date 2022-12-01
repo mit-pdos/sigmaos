@@ -12,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
@@ -20,7 +21,7 @@ import (
 const DOT = "_._"
 
 func toDot(pn string) string {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	if len(path) > 0 && path.Base() == "." {
 		path[len(path)-1] = DOT
 	}
@@ -43,7 +44,7 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func makeDir(bucket string, key np.Path, perm np.Tperm) *Dir {
+func makeDir(bucket string, key path.Path, perm np.Tperm) *Dir {
 	o := makeObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
@@ -143,7 +144,7 @@ func mkObjs(base *Obj) []fs.FsObj {
 	return os
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *fcall.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), np.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
 		// name is a file; done

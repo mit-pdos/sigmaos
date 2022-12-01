@@ -13,10 +13,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 )
 
-func mkTpath(key np.Path) np.Tpath {
+func mkTpath(key path.Path) np.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return np.Tpath(h.Sum64())
@@ -25,7 +26,7 @@ func mkTpath(key np.Path) np.Tpath {
 type Obj struct {
 	bucket string
 	perm   np.Tperm
-	key    np.Path
+	key    path.Path
 
 	// set by fill()
 	sz    np.Tlength
@@ -38,7 +39,7 @@ type Obj struct {
 	off np.Toffset
 }
 
-func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
+func makeObj(bucket string, key path.Path, perm np.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
@@ -82,7 +83,7 @@ func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
 	return nil
 }
 
-func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
+func makeFsObj(bucket string, perm np.Tperm, key path.Path) fs.FsObj {
 	if perm.IsDir() {
 		return makeDir(bucket, key.Copy(), perm)
 	} else {

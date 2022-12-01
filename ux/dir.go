@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/sorteddir"
 )
@@ -23,7 +24,7 @@ func (d *Dir) String() string {
 	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
 }
 
-func makeDir(path np.Path) (*Dir, *fcall.Err) {
+func makeDir(path path.Path) (*Dir, *fcall.Err) {
 	d := &Dir{}
 	o, err := makeObj(path)
 	if err != nil {
@@ -142,7 +143,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *fcall.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	name := path[0]
 	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, name)
 	st, err := ustat(d.pathName.Append(name))

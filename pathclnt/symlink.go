@@ -5,28 +5,29 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *fcall.Err) {
+func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left path.Path) (path.Path, *fcall.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
 	db.DPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
 	if err != nil {
 		return left, err
 	}
-	var path np.Path
+	var p path.Path
 	if IsRemoteTarget(target) {
 		err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
 			db.DPrintf("WALK", "automount %v %v err %v\n", resolved, target, err)
 			return left, err
 		}
-		path = append(resolved, left...)
+		p = append(resolved, left...)
 	} else {
-		path = append(np.Split(target), left...)
+		p = append(path.Split(target), left...)
 	}
-	return path, nil
+	return p, nil
 }
 
 // Replicated: >1 of IPv6/IPv4, separated by a '\n'
@@ -56,32 +57,32 @@ func IsReplicated(target string) bool {
 }
 
 // XXX pubkey is unused
-func SplitTarget(target string) (string, np.Path) {
+func SplitTarget(target string) (string, path.Path) {
 	var server string
-	var rest np.Path
+	var rest path.Path
 
 	db.DPrintf("WALK", "split %v\n", target)
 	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
 		parts := strings.SplitN(target, ":", 5)
 		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
 		if len(parts[4:]) > 0 && parts[4] != "" {
-			rest = np.Split(parts[4])
+			rest = path.Split(parts[4])
 		}
 	} else { // IPv4
 		parts := strings.SplitN(target, ":", 4)
 		server = parts[0] + ":" + parts[1]
 		if len(parts[3:]) > 0 && parts[3] != "" {
-			rest = np.Split(parts[3])
+			rest = path.Split(parts[3])
 		}
 	}
 	return server, rest
 }
 
-func SplitTargetReplicated(target string) (np.Path, np.Path) {
+func SplitTargetReplicated(target string) (path.Path, path.Path) {
 	target = strings.TrimSpace(target)
 	targets := strings.Split(target, "\n")
-	servers := np.Path{}
-	rest := np.Path{}
+	servers := path.Path{}
+	rest := path.Path{}
 	for _, t := range targets {
 		serv, r := SplitTarget(t)
 		rest = r
@@ -90,7 +91,7 @@ func SplitTargetReplicated(target string) (np.Path, np.Path) {
 	return servers, rest
 }
 
-func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) *fcall.Err {
+func (pathc *PathClnt) autoMount(uname string, target string, path path.Path) *fcall.Err {
 	db.DPrintf("PATHCLNT0", "automount %v to %v\n", target, path)
 	var fid np.Tfid
 	var err *fcall.Err

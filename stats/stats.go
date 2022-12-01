@@ -17,6 +17,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
 
 	"sigmaos/perf"
 )
@@ -266,7 +267,7 @@ func (st *Stats) DisablePathCnts() {
 	st.sti.Paths = nil
 }
 
-func (st *Stats) IncPath(path np.Path) {
+func (st *Stats) IncPath(path path.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 

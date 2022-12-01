@@ -7,21 +7,22 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
+    "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/spcodec"
 )
 
 type Pobj struct {
-	path np.Path
+	path path.Path
 	obj  fs.FsObj
 	ctx  fs.CtxI
 }
 
-func MkPobj(p np.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+func MkPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{p, o, ctx}
 }
 
-func (po *Pobj) Path() np.Path {
+func (po *Pobj) Path() path.Path {
 	return po.path
 }
 
@@ -29,7 +30,7 @@ func (po *Pobj) Ctx() fs.CtxI {
 	return po.ctx
 }
 
-func (po *Pobj) SetPath(path np.Path) {
+func (po *Pobj) SetPath(path path.Path) {
 	po.path = path
 }
 

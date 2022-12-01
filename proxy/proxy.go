@@ -1,27 +1,18 @@
 package proxy
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
-	"io"
-	"log"
 	"os/user"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	"sigmaos/fs"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
 )
 
@@ -228,29 +219,11 @@ func (npc *NpConn) Read(args *sp.Tread, rets *sp.Rread) *sp.Rerror {
 	}
 	db.DPrintf("PROXY", "ReadUV: args %v rets %v\n", args, rets)
 	qid := npc.pc.Qid(fid)
-	log.Printf("qid %v\n", qid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
-		log.Printf("qid dir %v\n", npc.pc.Qid(fid))
-		// convert d back to np.Dir
-		rdr := bytes.NewReader(d)
-		brdr := bufio.NewReader(rdr)
-		npsts := make([]*np.Stat, 0)
-		for {
-			spst, err := spcodec.UnmarshalDirEnt(brdr)
-			if err != nil && errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				return MkRerrorWC(err.Code())
-			}
-			npst := npcodec.Sp2NpStat(spst)
-			npsts = append(npsts, npst)
-		}
-		d, _, err = fs.MarshalDir(args.Count, npsts)
+		d, err = Sp2NpDir(d, args.Count)
 		if err != nil {
 			return MkRerrorWC(err.Code())
 		}
-		log.Printf("npsts %v\n", npsts)
 	}
 	rets.Data = d
 	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)

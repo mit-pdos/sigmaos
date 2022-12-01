@@ -177,9 +177,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case sp.Tmsg:
-			if v.Type() == fcall.TRattach {
-				log.Printf("TRattach %v", v)
-			}
 			elements, err := fields9p(v)
 			if err != nil {
 				return err

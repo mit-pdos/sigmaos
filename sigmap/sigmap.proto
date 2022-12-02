@@ -68,6 +68,11 @@ message Tstat {
         uint32 fid = 1;
 }
 
+message Rstat {
+        uint32 size = 1;
+        Stat stat = 2;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

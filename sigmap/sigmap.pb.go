@@ -677,6 +677,61 @@ func (x *Tstat) GetFid() uint32 {
 	return 0
 }
 
+type Rstat struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Size uint32 `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
+	Stat *Stat  `protobuf:"bytes,2,opt,name=stat,proto3" json:"stat,omitempty"`
+}
+
+func (x *Rstat) Reset() {
+	*x = Rstat{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmap_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Rstat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Rstat) ProtoMessage() {}
+
+func (x *Rstat) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmap_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Rstat.ProtoReflect.Descriptor instead.
+func (*Rstat) Descriptor() ([]byte, []int) {
+	return file_sigmap_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Rstat) GetSize() uint32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *Rstat) GetStat() *Stat {
+	if x != nil {
+		return x.Stat
+	}
+	return nil
+}
+
 type Twriteread struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -689,7 +744,7 @@ type Twriteread struct {
 func (x *Twriteread) Reset() {
 	*x = Twriteread{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_proto_msgTypes[10]
+		mi := &file_sigmap_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -702,7 +757,7 @@ func (x *Twriteread) String() string {
 func (*Twriteread) ProtoMessage() {}
 
 func (x *Twriteread) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_proto_msgTypes[10]
+	mi := &file_sigmap_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -715,7 +770,7 @@ func (x *Twriteread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Twriteread.ProtoReflect.Descriptor instead.
 func (*Twriteread) Descriptor() ([]byte, []int) {
-	return file_sigmap_proto_rawDescGZIP(), []int{10}
+	return file_sigmap_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Twriteread) GetFid() uint64 {
@@ -743,7 +798,7 @@ type Rwriteread struct {
 func (x *Rwriteread) Reset() {
 	*x = Rwriteread{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_proto_msgTypes[11]
+		mi := &file_sigmap_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -756,7 +811,7 @@ func (x *Rwriteread) String() string {
 func (*Rwriteread) ProtoMessage() {}
 
 func (x *Rwriteread) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_proto_msgTypes[11]
+	mi := &file_sigmap_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -769,7 +824,7 @@ func (x *Rwriteread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rwriteread.ProtoReflect.Descriptor instead.
 func (*Rwriteread) Descriptor() ([]byte, []int) {
-	return file_sigmap_proto_rawDescGZIP(), []int{11}
+	return file_sigmap_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Rwriteread) GetData() []byte {
@@ -836,14 +891,17 @@ var file_sigmap_proto_rawDesc = []byte{
 	0x6b, 0x12, 0x19, 0x0a, 0x04, 0x71, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
 	0x05, 0x2e, 0x54, 0x71, 0x69, 0x64, 0x52, 0x04, 0x71, 0x69, 0x64, 0x73, 0x22, 0x19, 0x0a, 0x05,
 	0x54, 0x73, 0x74, 0x61, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0d, 0x52, 0x03, 0x66, 0x69, 0x64, 0x22, 0x32, 0x0a, 0x0a, 0x54, 0x77, 0x72, 0x69, 0x74,
-	0x65, 0x72, 0x65, 0x61, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x04, 0x52, 0x03, 0x66, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x20, 0x0a, 0x0a, 0x52,
-	0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74,
-	0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x42, 0x10, 0x5a,
-	0x0e, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x28, 0x0d, 0x52, 0x03, 0x66, 0x69, 0x64, 0x22, 0x36, 0x0a, 0x05, 0x52, 0x73, 0x74, 0x61, 0x74,
+	0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04,
+	0x73, 0x69, 0x7a, 0x65, 0x12, 0x19, 0x0a, 0x04, 0x73, 0x74, 0x61, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x05, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x52, 0x04, 0x73, 0x74, 0x61, 0x74, 0x22,
+	0x32, 0x0a, 0x0a, 0x54, 0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61, 0x64, 0x12, 0x10, 0x0a,
+	0x03, 0x66, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x66, 0x69, 0x64, 0x12,
+	0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64,
+	0x61, 0x74, 0x61, 0x22, 0x20, 0x0a, 0x0a, 0x52, 0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61,
+	0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x04, 0x64, 0x61, 0x74, 0x61, 0x42, 0x10, 0x5a, 0x0e, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73,
+	0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -858,7 +916,7 @@ func file_sigmap_proto_rawDescGZIP() []byte {
 	return file_sigmap_proto_rawDescData
 }
 
-var file_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_sigmap_proto_goTypes = []interface{}{
 	(*Tqid)(nil),       // 0: Tqid
 	(*Stat)(nil),       // 1: Stat
@@ -870,8 +928,9 @@ var file_sigmap_proto_goTypes = []interface{}{
 	(*Twalk)(nil),      // 7: Twalk
 	(*Rwalk)(nil),      // 8: Rwalk
 	(*Tstat)(nil),      // 9: Tstat
-	(*Twriteread)(nil), // 10: Twriteread
-	(*Rwriteread)(nil), // 11: Rwriteread
+	(*Rstat)(nil),      // 10: Rstat
+	(*Twriteread)(nil), // 11: Twriteread
+	(*Rwriteread)(nil), // 12: Rwriteread
 }
 var file_sigmap_proto_depIdxs = []int32{
 	0, // 0: Stat.qid:type_name -> Tqid
@@ -880,11 +939,12 @@ var file_sigmap_proto_depIdxs = []int32{
 	3, // 3: Fcall.received:type_name -> Tinterval
 	5, // 4: Fcall.fence:type_name -> Tfence
 	0, // 5: Rwalk.qids:type_name -> Tqid
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	1, // 6: Rstat.stat:type_name -> Stat
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_sigmap_proto_init() }
@@ -1014,7 +1074,7 @@ func file_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Twriteread); i {
+			switch v := v.(*Rstat); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1026,6 +1086,18 @@ func file_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Twriteread); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmap_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Rwriteread); i {
 			case 0:
 				return &v.state
@@ -1044,7 +1116,7 @@ func file_sigmap_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmap_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

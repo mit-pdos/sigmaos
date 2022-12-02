@@ -161,15 +161,25 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(elements...); err != nil {
 				return err
 			}
-		case sp.Stat:
-			npst := Sp2NpStat(&v)
-			e.encode(*npst)
+		case *np.Stat9P:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case *sp.Stat:
+			npst := Sp2NpStat(v)
+			e.encode(*npst)
+		case **sp.Stat:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
 		case FcallWireCompat:
-			if err := e.encode(v.Type, v.Tag, v.Msg); err != nil {
+			msg := v.Msg
+			if v.Type == fcall.TRstat {
+				sprstat := msg.(*sp.Rstat)
+				npst := Sp2NpStat(sprstat.Stat)
+				msg = &np.Rstat9P{uint16(sprstat.Size), *npst}
+			}
+			if err := e.encode(v.Type, v.Tag, msg); err != nil {
 				return err
 			}
 		case *FcallWireCompat:

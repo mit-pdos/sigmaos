@@ -433,7 +433,7 @@ func (ps *ProtSrv) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
 	if r != nil {
 		return np.MkRerror(r)
 	}
-	rets.Stat = *st
+	rets.Stat = st
 	return nil
 }
 

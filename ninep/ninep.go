@@ -8,6 +8,8 @@ package ninep
 import (
 	"fmt"
 	"strconv"
+
+	"sigmaos/fcall"
 )
 
 type Tsize uint32
@@ -386,7 +388,7 @@ func (s Stat9P) String() string {
 		s.Qid, s.Mode, s.Atime, s.Mtime, s.Length, s.Name, s.Uid, s.Gid, s.Muid)
 }
 
-type Rstat struct {
+type Rstat9P struct {
 	Size uint16 // extra Size, see stat(5)
 	Stat Stat9P
 }
@@ -398,3 +400,5 @@ type Twstat struct {
 }
 
 type Rwstat struct{}
+
+func (Rstat9P) Type() fcall.Tfcall { return fcall.TRstat9P }

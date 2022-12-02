@@ -273,7 +273,7 @@ func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 		db.DPrintf("PROXY", "Stats: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
 	}
-	rets.Stat = *st
+	rets.Stat = st
 	db.DPrintf("PROXY", "Stat: req %v rets %v\n", args, rets)
 	return nil
 }

@@ -561,11 +561,6 @@ func (st *Stat) Tmode() Tperm {
 	return Tperm(st.Mode)
 }
 
-type Rstat struct {
-	Size uint16 // extra Size, see stat(5)
-	Stat Stat
-}
-
 type Twstat struct {
 	Fid  Tfid
 	Size uint16 // extra Size, see stat(5)
@@ -680,7 +675,6 @@ func (Rclunk) Type() fcall.Tfcall   { return fcall.TRclunk }
 func (Tremove) Type() fcall.Tfcall  { return fcall.TTremove }
 func (Rremove) Type() fcall.Tfcall  { return fcall.TRremove }
 func (Tstat) Type() fcall.Tfcall    { return fcall.TTstat }
-func (Rstat) Type() fcall.Tfcall    { return fcall.TRstat }
 func (Twstat) Type() fcall.Tfcall   { return fcall.TTwstat }
 func (Rwstat) Type() fcall.Tfcall   { return fcall.TRwstat }
 
@@ -688,6 +682,7 @@ func (Rwstat) Type() fcall.Tfcall   { return fcall.TRwstat }
 // sigmaP
 //
 
+func (Rstat) Type() fcall.Tfcall       { return fcall.TRstat }
 func (TreadV) Type() fcall.Tfcall      { return fcall.TTreadV }
 func (TwriteV) Type() fcall.Tfcall     { return fcall.TTwriteV }
 func (Trenameat) Type() fcall.Tfcall   { return fcall.TTrenameat }

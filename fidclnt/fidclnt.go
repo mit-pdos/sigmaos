@@ -201,7 +201,7 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return &reply.Stat, nil
+	return reply.Stat, nil
 }
 
 func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {

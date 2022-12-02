@@ -52,7 +52,7 @@ const (
 	TTremove
 	TRremove
 	TTstat
-	TRstat
+	TRstat9P
 	TTwstat
 	TRwstat
 
@@ -60,6 +60,7 @@ const (
 	// SigmaP
 	//
 
+	TRstat
 	TTreadV
 	TTwriteV
 	TTwatch
@@ -130,13 +131,15 @@ func (fct Tfcall) String() string {
 		return "Rremove"
 	case TTstat:
 		return "Tstat"
-	case TRstat:
-		return "Rstat"
+	case TRstat9P:
+		return "Rstat9p"
 	case TTwstat:
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
 
+	case TRstat:
+		return "Rstat"
 	case TTreadV:
 		return "TreadV"
 	case TTwriteV:

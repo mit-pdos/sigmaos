@@ -16,8 +16,8 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
 
 	"sigmaos/perf"
 )
@@ -102,9 +102,9 @@ func (si *StatInfo) Inc(fct fcall.Tfcall) {
 		si.Nopen.Inc()
 	case fcall.TTcreate:
 		si.Ncreate.Inc()
-	case fcall.TTread:
+	case fcall.TTread, fcall.TTreadV:
 		si.Nread.Inc()
-	case fcall.TTwrite:
+	case fcall.TTwrite, fcall.TTwriteV:
 		si.Nwrite.Inc()
 	case fcall.TTclunk:
 		si.Nclunk.Inc()

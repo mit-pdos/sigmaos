@@ -302,7 +302,7 @@ func (fcm *FcallMsg) Seqno() Tseqno {
 }
 
 func (fcm *FcallMsg) Tag() Ttag {
-	return Ttag(fcm.Fc.Seqno)
+	return Ttag(fcm.Fc.Tag)
 }
 
 func MakeFenceNull() *Tfence {

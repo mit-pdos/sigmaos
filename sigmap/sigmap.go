@@ -431,10 +431,6 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-type Rwalk struct {
-	Qids []Tqid
-}
-
 type Topen struct {
 	Fid  Tfid
 	Mode Tmode

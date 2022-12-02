@@ -60,6 +60,10 @@ message Twalk {
         repeated string wnames = 3;
 }
 
+message Rwalk {
+        repeated Tqid qids = 1;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

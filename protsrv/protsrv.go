@@ -109,10 +109,10 @@ func (ps *ProtSrv) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
-	var qids []np.Tqid
+func (ps *ProtSrv) makeQids(os []fs.FsObj) []*np.Tqid {
+	var qids []*np.Tqid
 	for _, o := range os {
-		qids = append(qids, *ps.mkQid(o.Perm(), o.Path()))
+		qids = append(qids, ps.mkQid(o.Perm(), o.Path()))
 	}
 	return qids
 }

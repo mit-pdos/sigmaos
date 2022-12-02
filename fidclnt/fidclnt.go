@@ -68,7 +68,7 @@ func (fidc *FidClnt) Qid(fid np.Tfid) *np.Tqid {
 	return fidc.Lookup(fid).Lastqid()
 }
 
-func (fidc *FidClnt) Qids(fid np.Tfid) []np.Tqid {
+func (fidc *FidClnt) Qids(fid np.Tfid) []*np.Tqid {
 	return fidc.Lookup(fid).qids
 }
 
@@ -97,7 +97,7 @@ func (fidc *FidClnt) Attach(uname string, addrs []string, pn, tree string) (np.T
 		return np.NoFid, err
 	}
 	pc := fidc.pc.MakeProtClnt(addrs)
-	fidc.fids.insert(fid, makeChannel(pc, uname, path.Split(pn), []np.Tqid{*reply.Qid}))
+	fidc.fids.insert(fid, makeChannel(pc, uname, path.Split(pn), []*np.Tqid{reply.Qid}))
 	return fid, nil
 }
 
@@ -151,7 +151,7 @@ func (fidc *FidClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmo
 	if err != nil {
 		return np.NoFid, err
 	}
-	fidc.fids.lookup(fid).add(name, reply.Qid)
+	fidc.fids.lookup(fid).add(name, &reply.Qid)
 	return fid, nil
 }
 

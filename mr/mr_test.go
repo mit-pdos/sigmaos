@@ -19,12 +19,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/mr"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
 	"sigmaos/seqwc"
+	np "sigmaos/sigmap"
+	"sigmaos/stats"
 	"sigmaos/test"
 	"sigmaos/wc"
 )
@@ -322,7 +323,16 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 		<-crashchan
 	}
 
-	ts.checkJob()
+	//ts.checkJob()
+	stat := stats.StatInfo{}
+	err = ts.GetFileJson(np.NAMED+np.STATSD, &stat)
+	assert.Nil(t, err, "statsd")
+	fmt.Printf("stats named %v\n", stat)
+
+	stat = stats.StatInfo{}
+	err = ts.GetFileJson(np.UX+"~ip/"+np.STATSD, &stat)
+	assert.Nil(t, err, "statsd")
+	fmt.Printf("stats ux %v\n", stat)
 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)

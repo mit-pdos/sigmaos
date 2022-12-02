@@ -115,7 +115,7 @@ func (c *Clerk) registerOp(op *Op) {
 	defer c.mu.Unlock()
 
 	s := fcall.Tsession(op.request.Fc.Session)
-	seq := np.Tseqno(op.request.Fc.Seqno)
+	seq := op.request.Seqno()
 	m, ok := c.opmap[s]
 	if !ok {
 		m = make(map[np.Tseqno]*Op)
@@ -136,8 +136,8 @@ func (c *Clerk) getOp(fc *np.FcallMsg) *Op {
 	defer c.mu.Unlock()
 
 	var op *Op
-	s := fcall.Tsession(fc.Fc.Session)
-	seq := np.Tseqno(fc.Fc.Seqno)
+	s := fc.Session()
+	seq := fc.Seqno()
 	if m, ok := c.opmap[s]; ok {
 		if o, ok := m[seq]; ok {
 			delete(m, seq)
@@ -156,7 +156,7 @@ func (c *Clerk) printOpTiming(rep *np.FcallMsg, frame []byte) {
 	defer c.mu.Unlock()
 
 	s := fcall.Tsession(rep.Fc.Session)
-	seqno := np.Tseqno(rep.Fc.Seqno)
+	seqno := rep.Seqno()
 	if m, ok := c.opmap[s]; ok {
 		if op, ok := m[seqno]; ok {
 			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(frame))

@@ -88,7 +88,7 @@ func (c *SessClnt) Reset() {
 
 // Complete an RPC and pass the response up the stack.
 func (c *SessClnt) CompleteRPC(reply *np.FcallMsg, err *fcall.Err) {
-	s := np.Tseqno(reply.Fc.Seqno)
+	s := reply.Seqno()
 	rpc, ok := c.queue.Remove(s)
 	// the outstanding request may have been cleared if the conn is closing, or
 	// if a previous version of this request was sent and received, in which case

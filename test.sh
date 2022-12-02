@@ -26,6 +26,7 @@ do
   # tests without servers
   #
   go test $@ sigmaos/ninep
+  go test $@ sigmaos/sigmap
   go test $@ sigmaos/memfs
   go test $@ sigmaos/pathclnt
   

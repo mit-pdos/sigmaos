@@ -153,17 +153,17 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	}
 	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
 	var o fs.FsObj
-	if np.Tperm(st.Mode).IsDir() {
+	if st.Tmode().IsDir() {
 		o, err = makeDir(append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err
 		}
-	} else if np.Tperm(st.Mode).IsSymlink() {
+	} else if st.Tmode().IsSymlink() {
 		o, err = makeSymlink(append(d.pathName, name), false)
 		if err != nil {
 			return nil, nil, path, err
 		}
-	} else if np.Tperm(st.Mode).IsPipe() {
+	} else if st.Tmode().IsPipe() {
 		o, err = makePipe(ctx, append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err

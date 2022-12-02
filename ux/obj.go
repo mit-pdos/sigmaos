@@ -68,7 +68,7 @@ func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
-		return &Obj{path, np.Tpath(st.Qid.Path), np.Tperm(st.Mode)}, nil
+		return &Obj{path, st.Qid.Tpath(), st.Tmode()}, nil
 	}
 }
 
@@ -157,7 +157,7 @@ func (o *Obj) Size() (np.Tlength, *fcall.Err) {
 	if err != nil {
 		return 0, err
 	}
-	return np.Tlength(st.Length), nil
+	return st.Tlength(), nil
 }
 
 func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {

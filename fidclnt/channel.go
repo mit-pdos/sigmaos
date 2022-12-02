@@ -44,7 +44,7 @@ func (c *Channel) SetPath(p path.Path) {
 }
 
 func (c *Channel) Version() np.TQversion {
-	return np.TQversion(c.Lastqid().Version)
+	return c.Lastqid().Tversion()
 }
 
 func (c *Channel) Copy() *Channel {

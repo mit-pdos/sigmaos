@@ -155,7 +155,7 @@ func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
-	ps.vt.Insert(np.Tpath(qid.Path))
+	ps.vt.Insert(qid.Tpath())
 
 	return nil
 }
@@ -215,7 +215,7 @@ func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 	defer ps.plt.Release(f.Pobj().Ctx(), pl)
 
 	v := ps.vt.GetVersion(ino)
-	if !np.VEq(np.TQversion(f.Qid().Version), v) {
+	if !np.VEq(f.Qid().Tversion(), v) {
 		return np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
 	}
 	err = ps.wt.WaitWatch(pl, ps.sid)

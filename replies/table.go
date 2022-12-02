@@ -69,7 +69,7 @@ func (rt *ReplyTable) Register(request *np.FcallMsg) bool {
 	if request.Fc.Seqno != 0 && rt.pruned.Contains(request.Fc.Seqno) {
 		return false
 	}
-	rt.entries[np.Tseqno(request.Fc.Seqno)] = MakeReplyFuture()
+	rt.entries[request.Seqno()] = MakeReplyFuture()
 	return true
 }
 
@@ -78,7 +78,7 @@ func (rt *ReplyTable) Put(request *np.FcallMsg, reply *np.FcallMsg) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
-	s := np.Tseqno(request.Fc.Seqno)
+	s := request.Seqno()
 	if rt.closed {
 		return false
 	}
@@ -92,7 +92,7 @@ func (rt *ReplyTable) Put(request *np.FcallMsg, reply *np.FcallMsg) bool {
 func (rt *ReplyTable) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	rt.Lock()
 	defer rt.Unlock()
-	rf, ok := rt.entries[np.Tseqno(request.Seqno)]
+	rf, ok := rt.entries[request.Tseqno()]
 	return rf, ok
 }
 

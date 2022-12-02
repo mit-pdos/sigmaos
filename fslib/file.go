@@ -201,7 +201,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		return err
 	}
 	defer fl.Close(fdsrc)
-	fddst, err := fl.Create(dst, np.Tperm(st.Mode), np.OWRITE)
+	fddst, err := fl.Create(dst, st.Tmode(), np.OWRITE)
 	if err != nil {
 		return err
 	}

@@ -46,7 +46,7 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 	if rq.closed {
 		db.DFatalf("Tried to enqueue a request on a closed request queue %v", rpc.Req)
 	}
-	s := np.Tseqno(rpc.Req.Fc.Seqno)
+	s := rpc.Req.Seqno()
 	if _, ok := rq.outstanding[s]; ok {
 		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req)
 	}

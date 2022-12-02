@@ -152,6 +152,18 @@ func MakeQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
+func (qid *Tqid) Tversion() TQversion {
+	return TQversion(qid.Version)
+}
+
+func (qid *Tqid) Tpath() Tpath {
+	return Tpath(qid.Path)
+}
+
+func (qid *Tqid) Ttype() Qtype {
+	return Qtype(qid.Type)
+}
+
 type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
@@ -281,6 +293,18 @@ func (fcm *FcallMsg) Type() fcall.Tfcall {
 	return fcall.Tfcall(fcm.Fc.Type)
 }
 
+func (fc *Fcall) Tseqno() Tseqno {
+	return Tseqno(fc.Seqno)
+}
+
+func (fcm *FcallMsg) Seqno() Tseqno {
+	return fcm.Fc.Tseqno()
+}
+
+func (fcm *FcallMsg) Tag() Ttag {
+	return Ttag(fcm.Fc.Seqno)
+}
+
 func MakeFenceNull() *Tfence {
 	return &Tfence{Fenceid: &Tfenceid{}}
 }
@@ -288,6 +312,14 @@ func MakeFenceNull() *Tfence {
 func MakeFcallMsgNull() *FcallMsg {
 	fc := &Fcall{Received: &Tinterval{}, Fence: MakeFenceNull()}
 	return &FcallMsg{fc, nil}
+}
+
+func (fi *Tfenceid) Tpath() Tpath {
+	return Tpath(fi.Path)
+}
+
+func (f *Tfence) Tepoch() Tepoch {
+	return Tepoch(f.Epoch)
 }
 
 func MakeFcallMsg(msg Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {

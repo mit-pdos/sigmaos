@@ -6,10 +6,10 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 //
@@ -90,11 +90,11 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *fcall.Err) {
 	if new.Fenceid.Path == 0 {
 		return nil, nil
 	}
-	f, err := allocFence(root, np.Tpath(new.Fenceid.Path).String())
+	f, err := allocFence(root, new.Fenceid.Tpath().String())
 	if f == nil {
 		return nil, err
 	}
-	e := np.Tepoch(new.Epoch)
+	e := new.Tepoch()
 	if e < f.epoch {
 		db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
 		f.RUnlock()

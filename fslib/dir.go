@@ -27,7 +27,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return np.Tperm(st.Mode).IsDir(), nil
+	return st.Tmode().IsDir(), nil
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.
@@ -131,7 +131,7 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 		return err
 	}
 	for _, st := range sts {
-		if np.Tperm(st.Mode).IsDir() {
+		if st.Tmode().IsDir() {
 			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
 				return err
 			}
@@ -156,7 +156,7 @@ func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 	}
 	for _, st := range sts {
 		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Qid.Type)
-		if np.Tperm(st.Mode).IsDir() {
+		if st.Tmode().IsDir() {
 			s1, err := fsl.sprintfDirIndent(d+"/"+st.Name, indent+" ")
 			if err != nil {
 				return s, err

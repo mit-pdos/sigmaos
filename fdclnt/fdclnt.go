@@ -140,7 +140,7 @@ func (fdc *FdClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
 		return nil, error
 	}
 	qid := fdc.PathClnt.Qid(fid)
-	return fdc.readFid(fd, fid, off, cnt, np.TQversion(qid.Version))
+	return fdc.readFid(fd, fid, off, cnt, qid.Tversion())
 }
 
 func (fdc *FdClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
@@ -166,7 +166,7 @@ func (fdc *FdClient) WriteV(fd int, data []byte) (np.Tsize, error) {
 		return 0, error
 	}
 	qid := fdc.PathClnt.Qid(fid)
-	return fdc.writeFid(fd, fid, off, data, np.TQversion(qid.Version))
+	return fdc.writeFid(fd, fid, off, data, qid.Tversion())
 }
 
 func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {

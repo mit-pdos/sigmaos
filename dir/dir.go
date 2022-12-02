@@ -106,7 +106,11 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(spcodec.MarshalSizeDir(sts))
+	l, err := spcodec.MarshalSizeDir(sts)
+	if err != nil {
+		return nil, err
+	}
+	st.Length = uint64(l)
 	return st, nil
 }
 
@@ -117,7 +121,7 @@ func (dir *DirImpl) Size() (np.Tlength, *fcall.Err) {
 	if err != nil {
 		return 0, err
 	}
-	return spcodec.MarshalSizeDir(sts), nil
+	return spcodec.MarshalSizeDir(sts)
 }
 
 func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *fcall.Err) {

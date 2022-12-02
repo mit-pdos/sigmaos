@@ -188,7 +188,11 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 		}
 		d.sts = append(d.sts, st)
 	}
-	d.sz = spcodec.MarshalSizeDir(d.sts)
+	sz, err := spcodec.MarshalSizeDir(d.sts)
+	if err != nil {
+		return nil, err
+	}
+	d.sz = sz
 	return d, nil
 }
 

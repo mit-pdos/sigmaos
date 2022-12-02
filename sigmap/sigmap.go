@@ -463,11 +463,24 @@ type Tread struct {
 	Count  Tsize
 }
 
-type TreadV struct {
-	Fid     Tfid
-	Offset  Toffset
-	Count   Tsize
-	Version TQversion
+func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion) *TreadV {
+	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v)}
+}
+
+func (r *TreadV) Tfid() Tfid {
+	return Tfid(r.Fid)
+}
+
+func (r *TreadV) Tversion() TQversion {
+	return TQversion(r.Version)
+}
+
+func (r *TreadV) Toffset() Toffset {
+	return Toffset(r.Offset)
+}
+
+func (r *TreadV) Tcount() Tsize {
+	return Tsize(r.Count)
 }
 
 type Rread struct {

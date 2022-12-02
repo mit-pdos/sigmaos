@@ -73,6 +73,13 @@ message Rstat {
         Stat stat = 2;
 }
 
+message TreadV {
+        uint32 fid = 1;
+        uint64 offset = 2;
+        uint32 count = 3;
+        uint32 version = 4;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

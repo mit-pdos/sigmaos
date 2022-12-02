@@ -314,17 +314,17 @@ func (ps *ProtSrv) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
 	db.DPrintf("PROTSRV1", "%v: ReadV f %v args %v v %d", f.Pobj().Ctx().Uname(), f, args, v)
-	if !np.VEq(args.Version, v) {
+	if !np.VEq(args.Tversion(), v) {
 		return np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
 	}
 
-	err = f.Read(args.Offset, args.Count, args.Version, rets)
+	err = f.Read(args.Toffset(), args.Tcount(), args.Tversion(), rets)
 	if err != nil {
 		return np.MkRerror(err)
 	}

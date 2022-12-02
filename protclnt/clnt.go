@@ -227,7 +227,7 @@ func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.R
 }
 
 func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence, v np.TQversion) (*np.Rread, *fcall.Err) {
-	args := &np.TreadV{fid, offset, cnt, v}
+	args := np.MkReadV(fid, offset, cnt, v)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

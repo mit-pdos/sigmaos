@@ -6,8 +6,8 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
 	"sigmaos/sesscond"
+	np "sigmaos/sigmap"
 )
 
 type PobjSnapshot struct {
@@ -58,7 +58,7 @@ func MakeFidSnapshot() *FidSnapshot {
 func (fid *Fid) Snapshot() []byte {
 	fs := MakeFidSnapshot()
 	fs.M = fid.m
-	fs.Qid = fid.qid
+	fs.Qid = *fid.qid
 	fs.Cursor = fid.cursor
 	fs.PobjSnap = fid.po.Snapshot()
 	b, err := json.Marshal(fs)
@@ -78,7 +78,7 @@ func Restore(fn fs.RestoreF, sct *sesscond.SessCondTable, b []byte) *Fid {
 	fid.po = RestorePobj(fn, sct, fsnap.PobjSnap)
 	fid.isOpen = fsnap.IsOpen
 	fid.m = fsnap.M
-	fid.qid = fsnap.Qid
+	fid.qid = &fsnap.Qid
 	fid.cursor = fsnap.Cursor
 	return fid
 }

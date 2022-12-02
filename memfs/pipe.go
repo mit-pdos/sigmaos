@@ -2,10 +2,10 @@ package memfs
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/pipe"
+	np "sigmaos/sigmap"
 )
 
 type Pipe struct {
@@ -46,6 +46,6 @@ func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = p.Pipe.Size()
+	st.Length = uint64(p.Pipe.Size())
 	return nil, nil
 }

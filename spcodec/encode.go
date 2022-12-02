@@ -106,18 +106,35 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Tqid:
-			if err := e.encode(v.Type, v.Version, v.Path); err != nil {
+			if err := e.encode(&v); err != nil {
 				return err
 			}
 		case *np.Tqid:
-			if err := e.encode(*v); err != nil {
+			b, err := proto.Marshal(v)
+			if err != nil {
+				return err
+			}
+			if err := e.encode(uint32(len(b))); err != nil {
+				return err
+			}
+			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+				return err
+			}
+		case *np.Stat:
+			b, err := proto.Marshal(v)
+			if err != nil {
+				return err
+			}
+			if err := e.encode(uint32(len(b))); err != nil {
+				return err
+			}
+			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
 				return err
 			}
 		case []np.Tqid:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
-
 			for _, m := range v {
 				if err := e.encode(m); err != nil {
 					return err
@@ -141,33 +158,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				}
 			}
 		case np.Stat:
-			elements, err := fields9p(v)
-			if err != nil {
-				return err
-			}
-			sz := uint16(SizeNp(elements...)) // Stat sz
-			if err := e.encode(sz); err != nil {
-				return err
-			}
-
-			if err := e.encode(elements...); err != nil {
-				return err
-			}
-		case *np.Stat:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case []np.Stat:
-			if err := e.encode(uint16(len(v))); err != nil {
-				return err
-			}
-			for _, m := range v {
-				if err := e.encode(m); err != nil {
-					return err
-				}
-			}
-		case *[]np.Stat:
-			if err := e.encode(*v); err != nil {
+			if err := e.encode(&v); err != nil {
 				return err
 			}
 		case np.FcallMsg:
@@ -291,7 +282,27 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			*v = time.Unix(int64(epoch), 0).UTC()
 		case *np.Tqid:
-			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
+			var l uint32
+			if err := d.decode(&l); err != nil {
+				return err
+			}
+			b := make([]byte, int(l))
+			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+				return err
+			}
+			if err := proto.Unmarshal(b, v); err != nil {
+				return err
+			}
+		case *np.Stat:
+			var l uint32
+			if err := d.decode(&l); err != nil {
+				return err
+			}
+			b := make([]byte, int(l))
+			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+				return err
+			}
+			if err := proto.Unmarshal(b, v); err != nil {
 				return err
 			}
 		case *[]np.Tqid:
@@ -323,28 +334,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 
 			if err := d.decode(elements...); err != nil {
-				return err
-			}
-		case *np.Stat:
-			var l uint16
-
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-
-			b := make([]byte, l)
-			if _, err := io.ReadFull(d.rd, b); err != nil {
-				return err
-			}
-
-			elements, err := fields9p(v)
-			if err != nil {
-				return err
-			}
-
-			dec := &decoder{bytes.NewReader(b)}
-
-			if err := dec.decode(elements...); err != nil {
 				return err
 			}
 		case *np.FcallMsg:

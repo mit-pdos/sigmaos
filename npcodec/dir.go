@@ -9,7 +9,7 @@ import (
 	np "sigmaos/ninep"
 )
 
-func MarshalSizeDir(dir []*np.Stat) np.Tlength {
+func MarshalSizeDir(dir []*np.Stat9P) np.Tlength {
 	sz := uint64(0)
 	for _, st := range dir {
 		sz += sizeNp(*st)
@@ -17,7 +17,7 @@ func MarshalSizeDir(dir []*np.Stat) np.Tlength {
 	return np.Tlength(sz)
 }
 
-func MarshalDirEnt(st *np.Stat, cnt uint64) ([]byte, *fcall.Err) {
+func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *fcall.Err) {
 	sz := sizeNp(*st)
 	if cnt < sz {
 		return nil, nil
@@ -32,8 +32,8 @@ func MarshalDirEnt(st *np.Stat, cnt uint64) ([]byte, *fcall.Err) {
 	return b, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *fcall.Err) {
-	st := np.Stat{}
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat9P, *fcall.Err) {
+	st := np.Stat9P{}
 	if error := unmarshalReader(rdr, &st); error != nil {
 		var nperr *fcall.Err
 		if errors.As(error, &nperr) {

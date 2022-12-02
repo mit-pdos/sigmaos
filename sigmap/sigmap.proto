@@ -11,6 +11,20 @@ message Tqid {
         uint64  path = 3;
 };
 
+message Stat {
+        uint32  type = 1;
+        uint32  dev = 2;
+        Tqid    qid = 3;
+        uint32  mode = 4;
+        uint32  atime = 5;   // last access time in seconds
+        uint32  mtime = 6;   // last modified time in seconds
+        uint64  length = 7;  // file length in bytes
+        string  name = 8;    // file name
+        string  uid = 9;     // owner name
+        string  gid = 10;     // group name
+        string  muid = 11;    // name of the last user that modified the file
+} 
+
 message Rattach {
         Tqid qid = 1;        
 }

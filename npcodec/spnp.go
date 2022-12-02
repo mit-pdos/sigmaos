@@ -13,11 +13,11 @@ func Sp2NpQid(spqid sp.Tqid) np.Tqid9P {
 	return npqid
 }
 
-func Sp2NpStat(spst *sp.Stat) *np.Stat {
-	npst := &np.Stat{}
-	npst.Type = spst.Type
+func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
+	npst := &np.Stat9P{}
+	npst.Type = uint16(spst.Type)
 	npst.Dev = spst.Dev
-	npst.Qid = Sp2NpQid(spst.Qid)
+	npst.Qid = Sp2NpQid(*spst.Qid)
 	npst.Mode = np.Tperm(spst.Mode)
 	npst.Atime = spst.Atime
 	npst.Mtime = spst.Mtime

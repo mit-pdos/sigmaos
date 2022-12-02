@@ -46,11 +46,11 @@ type Fid struct {
 	isOpen bool
 	po     *Pobj
 	m      np.Tmode
-	qid    np.Tqid // the qid of obj at the time of invoking MakeFidPath
-	cursor int     // for directories
+	qid    *np.Tqid // the qid of obj at the time of invoking MakeFidPath
+	cursor int      // for directories
 }
 
-func MakeFidPath(pobj *Pobj, m np.Tmode, qid np.Tqid) *Fid {
+func MakeFidPath(pobj *Pobj, m np.Tmode, qid *np.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
@@ -75,7 +75,7 @@ func (f *Fid) IsOpen() bool {
 	return f.isOpen
 }
 
-func (f *Fid) Qid() np.Tqid {
+func (f *Fid) Qid() *np.Tqid {
 	return f.qid
 }
 

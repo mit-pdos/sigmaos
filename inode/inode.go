@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type Inode struct {
@@ -100,17 +100,9 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
-	stat := &np.Stat{}
-	stat.Type = 0 // XXX
-	stat.Qid = np.MakeQidPerm(inode.perm, 0, inode.inum)
-	stat.Mode = inode.Mode()
-	stat.Mtime = uint32(inode.mtime)
-	stat.Atime = 0
-	stat.Name = ""
-	stat.Uid = inode.owner
-	stat.Gid = inode.owner
-	stat.Muid = ""
-	return stat, nil
+	st := np.MkStat(np.MakeQidPerm(inode.perm, 0, inode.inum),
+		inode.Mode(), uint32(inode.mtime), "", inode.owner)
+	return st, nil
 }
 
 func (inode *Inode) Snapshot(fn fs.SnapshotF) []byte {

@@ -9,9 +9,9 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
+	"sigmaos/fcall"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
@@ -201,7 +201,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		return err
 	}
 	defer fl.Close(fdsrc)
-	fddst, err := fl.Create(dst, st.Mode, np.OWRITE)
+	fddst, err := fl.Create(dst, np.Tperm(st.Mode), np.OWRITE)
 	if err != nil {
 		return err
 	}

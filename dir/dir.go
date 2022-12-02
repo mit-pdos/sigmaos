@@ -6,10 +6,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
 )
@@ -106,7 +106,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = spcodec.MarshalSizeDir(sts)
+	st.Length = uint64(spcodec.MarshalSizeDir(sts))
 	return st, nil
 }
 

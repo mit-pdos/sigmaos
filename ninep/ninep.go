@@ -367,7 +367,7 @@ type Tstat struct {
 	Fid Tfid
 }
 
-type Stat struct {
+type Stat9P struct {
 	Type   uint16
 	Dev    uint32
 	Qid    Tqid9P
@@ -381,20 +381,20 @@ type Stat struct {
 	Muid   string  // name of the last user that modified the file
 }
 
-func (s Stat) String() string {
+func (s Stat9P) String() string {
 	return fmt.Sprintf("stat(%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v)",
 		s.Qid, s.Mode, s.Atime, s.Mtime, s.Length, s.Name, s.Uid, s.Gid, s.Muid)
 }
 
 type Rstat struct {
 	Size uint16 // extra Size, see stat(5)
-	Stat Stat
+	Stat Stat9P
 }
 
 type Twstat struct {
 	Fid  Tfid
 	Size uint16 // extra Size, see stat(5)
-	Stat Stat
+	Stat Stat9P
 }
 
 type Rwstat struct{}

@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
 )
@@ -129,7 +129,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 		return nil, err
 	}
 	st := d.stat()
-	st.Length = d.sz
+	st.Length = uint64(d.sz)
 	return st, nil
 }
 

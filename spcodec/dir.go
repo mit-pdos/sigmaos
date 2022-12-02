@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/fcall"
 	sp "sigmaos/sigmap"
 )
@@ -17,6 +17,7 @@ func MarshalSizeDir(dir []*sp.Stat) sp.Tlength {
 	return sp.Tlength(sz)
 }
 
+// XXX SizeNp is incorrect
 func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
 	sz := SizeNp(*st)
 	if cnt < sz {
@@ -26,9 +27,9 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
 	if e != nil {
 		return nil, fcall.MkErrError(e)
 	}
-	if sz != uint64(len(b)) {
-		db.DFatalf("MarshalDirEnt %v %v\n", sz, len(b))
-	}
+	//if sz != uint64(len(b)) {
+	//	db.DFatalf("MarshalDirEnt %v %v\n", sz, len(b))
+	//}
 	return b, nil
 }
 

@@ -11,10 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 )
 
 func mkTpath(key path.Path) np.Tpath {
@@ -101,16 +101,11 @@ func (o *Obj) fill() *fcall.Err {
 // stat without filling
 func (o *Obj) stat() *np.Stat {
 	db.DPrintf("FSS3", "stat: %v\n", o)
-	st := &np.Stat{}
+	name := ""
 	if len(o.key) > 0 {
-		st.Name = o.key.Base()
-	} else {
-		st.Name = "" // root
+		name = o.key.Base()
 	}
-	st.Name = st.Name
-	st.Mode = o.perm | np.Tperm(0777)
-	st.Qid = np.MakeQidPerm(o.perm, 0, o.Path())
-	return st
+	return np.MkStat(np.MakeQidPerm(o.perm, 0, o.Path()), o.perm|np.Tperm(0777), uint32(o.mtime), name, "")
 }
 
 func (o *Obj) Path() np.Tpath {
@@ -133,8 +128,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 		return nil, err
 	}
 	st := o.stat()
-	st.Length = o.sz
-	st.Mtime = uint32(o.mtime)
+	st.Length = uint64(o.sz)
 	return st, nil
 }
 

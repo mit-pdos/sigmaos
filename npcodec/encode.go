@@ -149,7 +149,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 					return err
 				}
 			}
-		case np.Stat:
+		case np.Stat9P:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -399,13 +399,13 @@ func sizeNp(vs ...interface{}) uint64 {
 			s += sizeNp(elements...)
 		case *[]sp.Tqid:
 			s += sizeNp(*v)
-		case np.Stat:
+		case np.Stat9P:
 			elements, err := fields9p(v)
 			if err != nil {
 				db.DFatalf("Stat %v", err)
 			}
 			s += sizeNp(elements...) + sizeNp(uint16(0))
-		case *np.Stat:
+		case *np.Stat9P:
 			s += sizeNp(*v)
 		case FcallWireCompat:
 			s += sizeNp(v.Type, v.Tag, v.Msg)

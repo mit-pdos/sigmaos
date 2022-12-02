@@ -63,7 +63,7 @@ func Obj2File(o FsObj, fname path.Path) (File, *fcall.Err) {
 	return nil, nil
 }
 
-func MarshalDir[Dir *sp.Stat | *np.Stat](cnt sp.Tsize, dir []Dir) ([]byte, int, *fcall.Err) {
+func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, *fcall.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -74,8 +74,8 @@ func MarshalDir[Dir *sp.Stat | *np.Stat](cnt sp.Tsize, dir []Dir) ([]byte, int, 
 		var b []byte
 		var e *fcall.Err
 		switch any(st).(type) {
-		case *np.Stat:
-			b, e = npcodec.MarshalDirEnt(any(st).(*np.Stat), uint64(cnt))
+		case *np.Stat9P:
+			b, e = npcodec.MarshalDirEnt(any(st).(*np.Stat9P), uint64(cnt))
 		case *sp.Stat:
 			b, e = spcodec.MarshalDirEnt(any(st).(*sp.Stat), uint64(cnt))
 		default:

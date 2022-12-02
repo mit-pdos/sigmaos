@@ -144,11 +144,11 @@ func (qt Qtype) String() string {
 	return s
 }
 
-func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
-	return Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
+func MakeQid(t Qtype, v TQversion, p Tpath) *Tqid {
+	return &Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
+func MakeQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
@@ -492,24 +492,28 @@ type Tstat struct {
 	Fid Tfid
 }
 
-type Stat struct {
-	Type   uint16
-	Dev    uint32
-	Qid    Tqid
-	Mode   Tperm
-	Atime  uint32  // last access time in seconds
-	Mtime  uint32  // last modified time in seconds
-	Length Tlength // file length in bytes
-	Name   string  // file name
-	Uid    string  // owner name
-	Gid    string  // group name
-	Muid   string  // name of the last user that modified the file
+func MkStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
+	st := &Stat{
+		Type:  0, // XXX
+		Qid:   qid,
+		Mode:  uint32(perm),
+		Mtime: mtime,
+		Atime: 0,
+		Name:  name,
+		Uid:   owner,
+		Gid:   owner,
+		Muid:  "",
+	}
+	return st
 
 }
 
-func (s Stat) String() string {
-	return fmt.Sprintf("stat(%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v)",
-		s.Qid, s.Mode, s.Atime, s.Mtime, s.Length, s.Name, s.Uid, s.Gid, s.Muid)
+func (st *Stat) Tlength() Tlength {
+	return Tlength(st.Length)
+}
+
+func (st *Stat) Tmode() Tperm {
+	return Tperm(st.Mode)
 }
 
 type Rstat struct {

@@ -48,7 +48,7 @@ func MakeProtServer(s np.SessServer, sid fcall.Tsession) np.Protsrv {
 	return ps
 }
 
-func (ps *ProtSrv) mkQid(perm np.Tperm, path np.Tpath) np.Tqid {
+func (ps *ProtSrv) mkQid(perm np.Tperm, path np.Tpath) *np.Tqid {
 	return np.MakeQidPerm(perm, ps.vt.GetVersion(path), path)
 }
 
@@ -85,7 +85,7 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 		ps.vt.Insert(root.Path())
 	}
 	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
-	rets.Qid = &qid
+	rets.Qid = qid
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (ps *ProtSrv) Detach(rets *np.Rdetach, detach np.DetachF) *np.Rerror {
 func (ps *ProtSrv) makeQids(os []fs.FsObj) []np.Tqid {
 	var qids []np.Tqid
 	for _, o := range os {
-		qids = append(qids, ps.mkQid(o.Perm(), o.Path()))
+		qids = append(qids, *ps.mkQid(o.Perm(), o.Path()))
 	}
 	return qids
 }
@@ -192,9 +192,9 @@ func (ps *ProtSrv) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 		f.Pobj().SetObj(no)
 		ps.vt.Insert(no.Path())
 		ps.vt.IncVersion(no.Path())
-		rets.Qid = ps.mkQid(no.Perm(), no.Path())
+		rets.Qid = *ps.mkQid(no.Perm(), no.Path())
 	} else {
-		rets.Qid = ps.mkQid(o.Perm(), o.Path())
+		rets.Qid = *ps.mkQid(o.Perm(), o.Path())
 	}
 	return nil
 }
@@ -225,7 +225,7 @@ func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, eph bool, qid np.Tqid) *fid.Fid {
+func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, eph bool, qid *np.Tqid) *fid.Fid {
 	p := dir.Copy()
 	po := fid.MkPobj(append(p, name), o, ctx)
 	nf := fid.MakeFidPath(po, 0, qid)
@@ -292,7 +292,7 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	ps.ft.Add(args.Fid, nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Mode)
-	rets.Qid = qid
+	rets.Qid = *qid
 	return nil
 }
 

@@ -8,10 +8,10 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 	"sigmaos/sorteddir"
 )
 
@@ -153,17 +153,17 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	}
 	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
 	var o fs.FsObj
-	if st.Mode.IsDir() {
+	if np.Tperm(st.Mode).IsDir() {
 		o, err = makeDir(append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err
 		}
-	} else if st.Mode.IsSymlink() {
+	} else if np.Tperm(st.Mode).IsSymlink() {
 		o, err = makeSymlink(append(d.pathName, name), false)
 		if err != nil {
 			return nil, nil, path, err
 		}
-	} else if st.Mode.IsPipe() {
+	} else if np.Tperm(st.Mode).IsPipe() {
 		o, err = makePipe(ctx, append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err

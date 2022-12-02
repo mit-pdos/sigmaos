@@ -17,7 +17,7 @@ import (
 func Sp2NpDir(d []byte, cnt sp.Tsize) ([]byte, *fcall.Err) {
 	rdr := bytes.NewReader(d)
 	brdr := bufio.NewReader(rdr)
-	npsts := make([]*np.Stat, 0)
+	npsts := make([]*np.Stat9P, 0)
 	for {
 		spst, err := spcodec.UnmarshalDirEnt(brdr)
 		if err != nil && errors.Is(err, io.EOF) {

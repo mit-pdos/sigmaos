@@ -94,7 +94,7 @@ func mkResult(data interface{}) *Result {
 // until the bin is full
 func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
-	binsz := np.Tlength(0)
+	binsz := uint64(0)
 	bin := Bin{}
 
 	sts, err := fsl.GetDir(dir)
@@ -102,20 +102,20 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, 
 		return nil, err
 	}
 	for _, st := range sts {
-		for i := np.Tlength(0); ; {
-			n := splitsz
+		for i := uint64(0); ; {
+			n := uint64(splitsz)
 			if i+n > st.Length {
 				n = st.Length - i
 			}
-			split := Split{dir + "/" + st.Name, np.Toffset(i), n}
+			split := Split{dir + "/" + st.Name, np.Toffset(i), np.Tlength(n)}
 			bin = append(bin, split)
 			binsz += n
-			if binsz+splitsz > maxbinsz { // bin full?
+			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}
-				binsz = np.Tlength(0)
+				binsz = uint64(0)
 			}
-			if n < splitsz { // next file
+			if n < uint64(splitsz) { // next file
 				break
 			}
 			i += n

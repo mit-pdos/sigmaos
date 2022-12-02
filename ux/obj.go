@@ -21,7 +21,7 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) np.Tqid {
+func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) *np.Tqid {
 	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
 }
 
@@ -48,14 +48,9 @@ func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 		db.DPrintf("UXD", "ustat %v err %v\n", path, error)
 		return nil, UxTo9PError(error, path.Base())
 	}
-	st := &np.Stat{}
-	st.Name = path.Base()
-	st.Mode = umode2Perm(statx.Mode)
-	// XXX use Btime in path?
-	st.Qid = np.MakeQidPerm(st.Mode, 0, np.Tpath(statx.Ino))
-	st.Length = np.Tlength(statx.Size)
 	t := statxTimestampToTime(statx.Mtime)
-	st.Mtime = uint32(t.Unix())
+	st := np.MkStat(np.MakeQidPerm(umode2Perm(statx.Mode), 0, np.Tpath(statx.Ino)),
+		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	return st, nil
 }
 
@@ -73,7 +68,7 @@ func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
-		return &Obj{path, np.Tpath(st.Qid.Path), st.Mode}, nil
+		return &Obj{path, np.Tpath(st.Qid.Path), np.Tperm(st.Mode)}, nil
 	}
 }
 
@@ -162,7 +157,7 @@ func (o *Obj) Size() (np.Tlength, *fcall.Err) {
 	if err != nil {
 		return 0, err
 	}
-	return st.Length, nil
+	return np.Tlength(st.Length), nil
 }
 
 func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {

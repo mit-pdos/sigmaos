@@ -3,10 +3,10 @@ package memfs
 import (
 	//"time"
 
+	"sigmaos/fcall"
 	"sigmaos/file"
 	"sigmaos/fs"
 	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type File struct {
@@ -30,7 +30,8 @@ func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length, _ = f.Size()
+	l, _ := f.Size()
+	st.Length = uint64(l)
 	return st, nil
 }
 

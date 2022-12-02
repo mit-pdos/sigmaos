@@ -65,10 +65,6 @@ func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 		msg := fcm.Msg.(*np.Twriteread)
 		data = msg.Data
 		dataBuf = true
-	case fcall.TRwriteread:
-		msg := fcm.Msg.(*np.Rread)
-		data = msg.Data
-		dataBuf = true
 	default:
 	}
 	if dataBuf {

@@ -21,30 +21,6 @@ func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 		msg := fcm.Msg.(*sp.Twrite)
 		data = msg.Data
 		dataBuf = true
-	case fcall.TTwriteV:
-		msg := fcm.Msg.(*sp.TwriteV)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRread:
-		msg := fcm.Msg.(*sp.Rread)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTsetfile:
-		msg := fcm.Msg.(*sp.Tsetfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTputfile:
-		msg := fcm.Msg.(*sp.Tputfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTwriteread:
-		msg := fcm.Msg.(*sp.Twriteread)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRwriteread:
-		msg := fcm.Msg.(*sp.Rread)
-		data = msg.Data
-		dataBuf = true
 	default:
 	}
 	if dataBuf {

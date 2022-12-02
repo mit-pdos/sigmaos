@@ -76,7 +76,6 @@ const (
 	TTheartbeat
 	TRheartbeat
 	TTwriteread
-	TRwriteread
 )
 
 func (fct Tfcall) String() string {

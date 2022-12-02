@@ -134,7 +134,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Path, resol
 // contains a special path element; in that, case the client must walk
 // args.Wnames.
 func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -153,7 +153,7 @@ func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 	rets.Qids = ps.makeQids(os)
 	qid := ps.mkQid(lo.Perm(), lo.Path())
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
-	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	ps.ft.Add(args.Tnewfid(), fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
 	ps.vt.Insert(qid.Tpath())
 

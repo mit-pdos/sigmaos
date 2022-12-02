@@ -137,7 +137,7 @@ func (npc *NpConn) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
 }
 
 func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
@@ -148,7 +148,7 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 	qids := npc.pc.Qids(fid1)
 	rets.Qids = qids[len(qids)-len(args.Wnames):]
-	npc.fm.mapTo(args.NewFid, fid1)
+	npc.fm.mapTo(args.Tnewfid(), fid1)
 	return nil
 }
 

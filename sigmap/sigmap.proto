@@ -54,6 +54,12 @@ message Fcall {
         Tfence fence = 7;       
 }
 
+message Twalk {
+        uint32 fid = 1;
+        uint32 newFid = 2;
+        repeated string wnames = 3;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

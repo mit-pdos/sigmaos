@@ -4,10 +4,10 @@ import (
 	"sync/atomic"
 
 	"sigmaos/fcall"
+	"sigmaos/path"
 	"sigmaos/rand"
 	"sigmaos/sessclnt"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
 )
 
 // Each proc has a unique client ID.
@@ -110,7 +110,7 @@ func (pclnt *ProtClnt) Flush(tag np.Ttag) *fcall.Err {
 }
 
 func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwalk, *fcall.Err) {
-	args := &np.Twalk{fid, nfid, path}
+	args := np.MkTwalk(fid, nfid, path)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err

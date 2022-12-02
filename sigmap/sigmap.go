@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"sigmaos/fcall"
+	"sigmaos/path"
 )
 
 type Tsize uint32
@@ -418,10 +419,16 @@ type Tflush struct {
 type Rflush struct {
 }
 
-type Twalk struct {
-	Fid    Tfid
-	NewFid Tfid
-	Wnames []string
+func MkTwalk(fid, nfid Tfid, p path.Path) *Twalk {
+	return &Twalk{Fid: uint32(fid), NewFid: uint32(nfid), Wnames: p}
+}
+
+func (w *Twalk) Tfid() Tfid {
+	return Tfid(w.Fid)
+}
+
+func (w *Twalk) Tnewfid() Tfid {
+	return Tfid(w.NewFid)
 }
 
 type Rwalk struct {

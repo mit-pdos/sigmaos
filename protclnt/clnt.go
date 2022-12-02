@@ -346,7 +346,7 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 }
 
 func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, resolve bool, f *np.Tfence, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := &np.Tsetfile{fid, mode, offset, path, resolve, data}
+	args := np.MkTsetfile(fid, mode, offset, path, resolve, data)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

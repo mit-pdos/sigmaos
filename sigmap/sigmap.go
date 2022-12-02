@@ -612,17 +612,20 @@ func (g *Tgetfile) Tcount() Tsize {
 	return Tsize(g.Count)
 }
 
-type Tsetfile struct {
-	Fid     Tfid
-	Mode    Tmode
-	Offset  Toffset
-	Wnames  []string
-	Resolve bool
-	Data    []byte // Data must be last
+func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool, d []byte) *Tsetfile {
+	return &Tsetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Wnames: path, Resolve: resolve, Data: d}
 }
 
-func (m Tsetfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v r %v len %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data))
+func (s *Tsetfile) Tfid() Tfid {
+	return Tfid(s.Fid)
+}
+
+func (s *Tsetfile) Tmode() Tmode {
+	return Tmode(s.Mode)
+}
+
+func (s *Tsetfile) Toffset() Toffset {
+	return Toffset(s.Offset)
 }
 
 type Tputfile struct {

@@ -605,26 +605,26 @@ func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
-	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 
 	db.DPrintf("PROTSRV", "SetFile f %v args %v %v", f.Pobj().Ctx().Uname(), args, fname)
 
-	if args.Mode&np.OAPPEND == np.OAPPEND && args.Offset != np.NoOffset {
+	if args.Tmode()&np.OAPPEND == np.OAPPEND && args.Toffset() != np.NoOffset {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "offset should be np.NoOffset"))
 	}
-	if args.Offset == np.NoOffset && args.Mode&np.OAPPEND != np.OAPPEND {
+	if args.Toffset() == np.NoOffset && args.Tmode()&np.OAPPEND != np.OAPPEND {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
-	n, err := i.Write(f.Pobj().Ctx(), args.Offset, args.Data, np.NoV)
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), args.Data, np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}
 
-	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Tmode()); err != nil {
 		return np.MkRerror(err)
 	}
 	rets.Count = uint32(n)

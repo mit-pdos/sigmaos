@@ -108,6 +108,15 @@ message Tgetfile {
         bool resolve = 6;
 }
 
+message Tsetfile {
+        uint32 fid = 1;
+        uint32 mode = 2;
+        uint64 offset = 3;
+        repeated string Wnames = 4;
+        bool resolve = 5;
+        bytes data = 6;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

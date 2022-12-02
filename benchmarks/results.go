@@ -9,19 +9,29 @@ import (
 	db "sigmaos/debug"
 )
 
+type Tunit string
+
+const (
+	MB  Tunit = "MB"
+	B   Tunit = "B"
+	OPS Tunit = "ops"
+	REQ Tunit = "req"
+	E2E Tunit = "e2e runs"
+)
+
 type Results struct {
 	dur  []time.Duration // Duration.
 	amt  []float64       // Amount (e.g. bytes read/written).
-	unit string
-	lat  []float64 // To avoid converting to float slices many times for the stats library.
-	tpt  []float64 // To avoid converting to float slices many times for the stats library.
+	unit Tunit           // Unit for throughput
+	lat  []float64       // To avoid converting to float slices many times for the stats library.
+	tpt  []float64       // To avoid converting to float slices many times for the stats library.
 }
 
-func MakeResults(n int, unit string) *Results {
+func MakeResults(n int, u Tunit) *Results {
 	r := &Results{}
 	r.dur = make([]time.Duration, 0, n)
 	r.amt = make([]float64, 0, n)
-	r.unit = unit
+	r.unit = u
 	r.lat = nil
 	r.tpt = nil
 	return r

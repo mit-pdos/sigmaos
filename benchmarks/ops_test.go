@@ -22,31 +22,35 @@ import (
 // The set of basic operations that we benchmark.
 //
 
-type testOp func(*test.Tstate, time.Time, interface{}) (time.Duration, float64)
+type testOp func(*test.Tstate, interface{}) (time.Duration, float64)
 
-func initSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func initSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
 	assert.Nil(ts.T, err, "Sem init: %v", err)
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func upSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func upSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
 	assert.Nil(ts.T, err, "Sem up: %v", err)
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func downSemaphore(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func downSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
 	assert.Nil(ts.T, err, "Sem down: %v", err)
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf("TEST1", "Spawned %v", p)
@@ -55,10 +59,10 @@ func runProc(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, fl
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
 	assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func spawnBurstWaitStartProcs(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	ps := i.([]*proc.Proc)
 	per := len(ps) / AAA
 	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
@@ -68,7 +72,7 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) (
 		fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
 		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
 	}
-	start = time.Now()
+	start := time.Now()
 	done := make(chan bool)
 	for i := range pclnts {
 		go func(i int) {
@@ -80,10 +84,11 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, start time.Time, i interface{}) (
 	for _ = range pclnts {
 		<-done
 	}
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) (time.Duration, float64) {
+func invokeWaitStartLambdas(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
 		// Spawn a lambda, which will Up this semaphore when it starts.
@@ -93,22 +98,24 @@ func invokeWaitStartLambdas(ts *test.Tstate, start time.Time, i interface{}) (ti
 	}
 	for _, sem := range sems {
 		// Wait for all the lambdas to start.
-		downSemaphore(ts, time.Now(), sem)
+		downSemaphore(ts, sem)
 	}
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func invokeWaitStartOneLambda(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func invokeWaitStartOneLambda(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	sem := i.(*semclnt.SemClnt)
 	go func(sem *semclnt.SemClnt) {
 		spawnLambda(ts, sem.GetPath())
 	}(sem)
-	downSemaphore(ts, time.Now(), sem)
-	return time.Since(start)
+	downSemaphore(ts, sem)
+	return time.Since(start), 1.0
 }
 
 // XXX Should get job name in a tuple.
-func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func runMR(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	ji := i.(*MRJobInstance)
 	ji.PrepareMRJob()
 	ji.ready <- true
@@ -121,10 +128,11 @@ func runMR(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	ji.Wait()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
-func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	ji := i.(*KVJobInstance)
 	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	pdc.MonitorProcds()
@@ -153,11 +161,12 @@ func runKV(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	}
 	ji.Stop()
 	db.DPrintf("TEST", "Stopped KV")
-	return time.Since(start)
+	return time.Since(start), 1.0
 }
 
 // XXX Should get job name in a tuple.
-func runWww(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
+func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	start := time.Now()
 	ji := i.(*WwwJobInstance)
 	ji.ready <- true
 	<-ji.ready
@@ -167,5 +176,5 @@ func runWww(ts *test.Tstate, start time.Time, i interface{}) time.Duration {
 	defer pdc.Done()
 	ji.StartWwwJob()
 	ji.Wait()
-	return time.Since(start)
+	return time.Since(start), 1.0
 }

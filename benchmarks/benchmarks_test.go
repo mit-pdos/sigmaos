@@ -1,22 +1,18 @@
 package benchmarks_test
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	// XXX Used for matrix tests before.
+	//	"fmt"
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/mr"
 	"sigmaos/proc"
 	"sigmaos/test"
-	"sigmaos/wc"
 )
 
 // Parameters
@@ -85,10 +81,10 @@ var N_CLUSTER_CORES = 0
 //// Length of time required to do a simple matrix multiplication.
 //func TestNiceMatMulBaseline(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
-//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	rs := benchmarks.MakeResults(N_TRIALS)
 //	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
 //	runOps(ts, ps, runProc, rs)
-//	printResults(rs)
+//	printResultSummary(rs)
 //	ts.Shutdown()
 //}
 //
@@ -96,7 +92,7 @@ var N_CLUSTER_CORES = 0
 //// see how long the matmul task took.
 //func TestNiceMatMulWithSpinners(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
-//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	rs := benchmarks.MakeResults(N_TRIALS)
 //	makeOutDir(ts)
 //	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 //	// Make some spinning procs to take up nContenders cores.
@@ -109,7 +105,7 @@ var N_CLUSTER_CORES = 0
 //	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
 //	// Spawn the LC procs
 //	runOps(ts, ps, runProc, rs)
-//	printResults(rs)
+//	printResultSummary(rs)
 //	evictProcs(ts, psSpin)
 //	rmOutDir(ts)
 //	ts.Shutdown()
@@ -121,7 +117,7 @@ var N_CLUSTER_CORES = 0
 //// lowered, and by how much.
 //func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
-//	rs := benchmarks.MakeRawResults(N_TRIALS)
+//	rs := benchmarks.MakeResults(N_TRIALS)
 //	makeOutDir(ts)
 //	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 //	// Make some spinning procs to take up nContenders cores. (AS LC)
@@ -134,7 +130,7 @@ var N_CLUSTER_CORES = 0
 //	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
 //	// Spawn the matmul procs
 //	runOps(ts, ps, runProc, rs)
-//	printResults(rs)
+//	printResultSummary(rs)
 //	evictProcs(ts, psSpin)
 //	rmOutDir(ts)
 //	ts.Shutdown()
@@ -143,11 +139,11 @@ var N_CLUSTER_CORES = 0
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts)
 	_, is := makeNSemaphores(ts, N_TRIALS)
 	runOps(ts, is, initSemaphore, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -155,15 +151,15 @@ func TestMicroInitSemaphore(t *testing.T) {
 // Test how long it takes to up a semaphore.
 func TestMicroUpSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts)
 	_, is := makeNSemaphores(ts, N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, time.Now(), i)
+		initSemaphore(ts, i)
 	}
 	runOps(ts, is, upSemaphore, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -171,16 +167,16 @@ func TestMicroUpSemaphore(t *testing.T) {
 // Test how long it takes to down a semaphore.
 func TestMicroDownSemaphore(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts)
 	_, is := makeNSemaphores(ts, N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, time.Now(), i)
-		upSemaphore(ts, time.Now(), i)
+		initSemaphore(ts, i)
+		upSemaphore(ts, i)
 	}
 	runOps(ts, is, downSemaphore, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -188,11 +184,11 @@ func TestMicroDownSemaphore(t *testing.T) {
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts)
 	_, ps := makeNProcs(N_TRIALS, "user/sleeper", []string{"5000us", OUT_DIR}, []string{}, 1)
 	runOps(ts, ps, runProc, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -201,11 +197,11 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 func TestMicroSpawnBurstTpt(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	maybePregrowRealm(ts)
-	rs := benchmarks.MakeRawResults(N_TRIALS)
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, N_CORE, MAX_PARALLEL)
 	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, proc.Tcore(N_CORE))
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	waitExitProcs(ts, ps)
 	ts.Shutdown()
 }
@@ -213,7 +209,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 func TestAppMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	maybePregrowRealm(ts)
-	rs := benchmarks.MakeRawResults(1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, apps := makeNMRJobs(ts, 1, MR_APP)
 	// XXX Clean this up/hide this somehow.
 	go func() {
@@ -227,7 +223,7 @@ func TestAppMR(t *testing.T) {
 	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, apps, runMR, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	ts.Shutdown()
 }
 
@@ -235,7 +231,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	ts := test.MakeTstateAll(t)
 	countNClusterCores(ts)
 	maybePregrowRealm(ts)
-	rs := benchmarks.MakeRawResults(1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
 	jobs, ji := makeNKVJobs(ts, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
@@ -251,7 +247,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, ji, runKV, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	ts.Shutdown()
 }
 
@@ -269,7 +265,7 @@ func TestRealmBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	countNClusterCores(ts)
 	maybePregrowRealm(ts)
-	rs := benchmarks.MakeRawResults(1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
@@ -278,7 +274,7 @@ func TestRealmBurst(t *testing.T) {
 	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, []interface{}{p}, spawnBurstWaitStartProcs, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	evictProcs(ts, ps)
 	rmOutDir(ts)
 	ts.Shutdown()
@@ -286,7 +282,7 @@ func TestRealmBurst(t *testing.T) {
 
 func TestLambdaBurst(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
@@ -295,17 +291,17 @@ func TestLambdaBurst(t *testing.T) {
 	ss, is := makeNSemaphores(ts, N_LAMBDAS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, time.Now(), i)
+		initSemaphore(ts, i)
 	}
 	runOps(ts, []interface{}{ss}, invokeWaitStartLambdas, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
 
 func TestLambdaInvokeWaitStart(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	rs := benchmarks.MakeRawResults(720)
+	rs := benchmarks.MakeResults(720, benchmarks.E2E)
 	makeOutDir(ts)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
@@ -314,10 +310,10 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 	_, is := makeNSemaphores(ts, N_LAMBDAS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts, time.Now(), i)
+		initSemaphore(ts, i)
 	}
 	runOps(ts, is, invokeWaitStartOneLambda, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	rmOutDir(ts)
 	ts.Shutdown()
 }
@@ -332,10 +328,10 @@ func TestRealmBalance(t *testing.T) {
 	countNClusterCores(ts)
 	// Structures for mr
 	ts1 := test.MakeTstateRealm(t, ts.RealmId())
-	rs1 := benchmarks.MakeRawResults(1)
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Structure for kv
 	ts2 := test.MakeTstateRealm(t, REALM2)
-	rs2 := benchmarks.MakeRawResults(1)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep KV job
@@ -370,14 +366,14 @@ func TestRealmBalance(t *testing.T) {
 	// Wait for both jobs to finish.
 	<-done
 	<-done
-	printResults(rs1)
-	printResults(rs2)
+	printResultSummary(rs1)
+	printResultSummary(rs2)
 	ts1.Shutdown()
 	ts2.Shutdown()
 }
 
 func testWww(ts *test.Tstate, sigmaos bool) {
-	rs := benchmarks.MakeRawResults(1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	if sigmaos {
 		countNClusterCores(ts)
 		maybePregrowRealm(ts)
@@ -398,7 +394,7 @@ func testWww(ts *test.Tstate, sigmaos bool) {
 		defer p.Done()
 	}
 	runOps(ts, ji, runWww, rs)
-	printResults(rs)
+	printResultSummary(rs)
 	if sigmaos {
 		ts.Shutdown()
 	}

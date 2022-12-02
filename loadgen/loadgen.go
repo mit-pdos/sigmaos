@@ -49,7 +49,7 @@ func (lg *LoadGenerator) calibrate() {
 	}
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries.
-	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat)), "req")
+	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat)), benchmarks.REQ)
 }
 
 func (lg *LoadGenerator) warmup() {

@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
+	"sigmaos/frame"
 	np "sigmaos/sigmap"
 )
 
@@ -73,7 +74,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := binary.Write(e.wr, binary.LittleEndian, uint16(len(v))); err != nil {
 				return err
 			}
-
 			_, err := io.WriteString(e.wr, v)
 			if err != nil {
 				return err
@@ -114,10 +114,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			if err := e.encode(uint32(len(b))); err != nil {
-				return err
-			}
-			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+			if err := frame.PushToFrame(e.wr, b); err != nil {
 				return err
 			}
 		case *np.Stat:
@@ -125,10 +122,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			if err := e.encode(uint32(len(b))); err != nil {
-				return err
-			}
-			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+			if err := frame.PushToFrame(e.wr, b); err != nil {
 				return err
 			}
 		case []np.Tqid:
@@ -166,22 +160,16 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			if err := e.encode(uint32(len(b))); err != nil {
+			if err := frame.PushToFrame(e.wr, b); err != nil {
 				return err
 			}
-			if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
-				return err
-			}
-			switch fcall.Tfcall(v.Fc.Type) {
+			switch fcall.Tfcall(v.Type()) {
 			case fcall.TTwriteread, fcall.TRattach:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
 				}
-				if err := e.encode(uint32(len(b))); err != nil {
-					return err
-				}
-				if err := binary.Write(e.wr, binary.LittleEndian, b); err != nil {
+				if err := frame.PushToFrame(e.wr, b); err != nil {
 					return err
 				}
 			default:
@@ -282,24 +270,16 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			*v = time.Unix(int64(epoch), 0).UTC()
 		case *np.Tqid:
-			var l uint32
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-			b := make([]byte, int(l))
-			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+			b, err := frame.PopFromFrame(d.rd)
+			if err != nil {
 				return err
 			}
 			if err := proto.Unmarshal(b, v); err != nil {
 				return err
 			}
 		case *np.Stat:
-			var l uint32
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-			b := make([]byte, int(l))
-			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+			b, err := frame.PopFromFrame(d.rd)
+			if err != nil {
 				return err
 			}
 			if err := proto.Unmarshal(b, v); err != nil {
@@ -337,29 +317,21 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		case *np.FcallMsg:
-			var l uint32
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-			b := make([]byte, int(l))
-			if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+			b, err := frame.PopFromFrame(d.rd)
+			if err != nil {
 				return err
 			}
 			if err := proto.Unmarshal(b, v.Fc); err != nil {
 				return err
 			}
-			msg, err := newMsg(fcall.Tfcall(v.Fc.Type))
-			if err != nil {
+			msg, error := newMsg(v.Type())
+			if error != nil {
 				return err
 			}
-			switch fcall.Tfcall(v.Fc.Type) {
+			switch v.Type() {
 			case fcall.TTwriteread, fcall.TRattach:
-				var l uint32
-				if err := d.decode(&l); err != nil {
-					return err
-				}
-				b := make([]byte, int(l))
-				if _, err := d.rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+				b, err := frame.PopFromFrame(d.rd)
+				if err != nil {
 					return err
 				}
 				m := msg.(proto.Message)

@@ -1,7 +1,6 @@
 package spcodec
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,10 +12,12 @@ func TestQid(t *testing.T) {
 	qid := sp.MakeQid(0, 3, 2)
 	b, err := marshal(qid)
 	assert.Nil(t, err)
-	st1 := sp.Tqid{}
-	err = unmarshal(b, &st1)
+	qid1 := sp.Tqid{}
+	err = unmarshal(b, &qid1)
 	assert.Nil(t, err)
-	fmt.Printf("qid1 %v\n", st1)
+	assert.Equal(t, qid.Type, qid1.Type)
+	assert.Equal(t, qid.Path, qid1.Path)
+	assert.Equal(t, qid.Version, qid1.Version)
 }
 
 func TestStat(t *testing.T) {
@@ -24,11 +25,9 @@ func TestStat(t *testing.T) {
 	st.Length = 10
 	b, err := marshal(st)
 	assert.Nil(t, err)
-	fmt.Printf("st %v\n", string(b))
 	st1 := sp.Stat{}
 	err = unmarshal(b, &st1)
 	assert.Nil(t, err)
-	fmt.Printf("st1 %v\n", st1)
 	assert.Equal(t, "alice", st1.Name)
 }
 

@@ -61,3 +61,25 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *fcall.Err {
 	}
 	return WriteRawBuffer(wr, buf)
 }
+
+func PushToFrame(wr io.Writer, b []byte) error {
+	if err := binary.Write(wr, binary.LittleEndian, uint32(len(b))); err != nil {
+		return err
+	}
+	if err := binary.Write(wr, binary.LittleEndian, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func PopFromFrame(rd io.Reader) ([]byte, error) {
+	var l uint32
+	if err := binary.Read(rd, binary.LittleEndian, &l); err != nil {
+		return nil, err
+	}
+	b := make([]byte, int(l))
+	if _, err := rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+		return nil, err
+	}
+	return b, nil
+}

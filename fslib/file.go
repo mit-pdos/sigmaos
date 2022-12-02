@@ -9,8 +9,9 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
@@ -96,7 +97,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			ch <- err
 		})
 		db.DPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
-		if err != nil && np.IsErrNotfound(err) {
+		if err != nil && fcall.IsErrNotfound(err) {
 			r := <-ch
 			if r != nil {
 				db.DPrintf("FSLIB", "OpenWatch watch %v err %v\n", path, err)
@@ -200,7 +201,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		return err
 	}
 	defer fl.Close(fdsrc)
-	fddst, err := fl.Create(dst, st.Mode, np.OWRITE)
+	fddst, err := fl.Create(dst, st.Tmode(), np.OWRITE)
 	if err != nil {
 		return err
 	}

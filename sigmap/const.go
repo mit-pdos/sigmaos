@@ -1,4 +1,4 @@
-package ninep
+package sigmap
 
 const (
 	MBYTE = 1 << 20

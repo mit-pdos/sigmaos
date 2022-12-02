@@ -5,11 +5,13 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
+    "sigmaos/path"
 )
 
 type Point struct {
-	path np.Path
+	path path.Path
 	fid  np.Tfid
 }
 
@@ -31,14 +33,14 @@ func makeMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path np.Path, fid np.Tfid) *np.Err {
+func (mnt *MntTable) add(path path.Path, fid np.Tfid) *fcall.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if path.Eq(p.path) {
-			return np.MkErr(np.TErrExists, fmt.Sprintf("%v (mount)", p.path))
+			return fcall.MkErr(fcall.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
@@ -53,7 +55,7 @@ func (mnt *MntTable) add(path np.Path, fid np.Tfid) *np.Err {
 }
 
 // prefix match and return postfix
-func match(mp np.Path, path np.Path) (bool, np.Path) {
+func match(mp path.Path, path path.Path) (bool, path.Path) {
 	for i, s := range mp {
 		if i >= len(path) {
 			return false, nil
@@ -65,7 +67,7 @@ func match(mp np.Path, path np.Path) (bool, np.Path) {
 	return true, path[len(mp):]
 }
 
-func matchexact(mp np.Path, path np.Path) bool {
+func matchexact(mp path.Path, path path.Path) bool {
 	if len(mp) != len(path) {
 		return false
 	}
@@ -77,12 +79,12 @@ func matchexact(mp np.Path, path np.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
+func (mnt *MntTable) resolve(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return np.NoFid, path, np.MkErr(np.TErrUnreachable, path)
+		return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, path)
 	}
 
 	for _, p := range mnt.mounts {
@@ -91,11 +93,11 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
 			return p.fid, left, nil
 		}
 	}
-	return np.NoFid, path, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
+func (mnt *MntTable) umount(path path.Path) (np.Tfid, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -107,7 +109,7 @@ func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return np.NoFid, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

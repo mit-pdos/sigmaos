@@ -1,33 +1,10 @@
-package ninep
+package path
 
 import (
-	"errors"
-	"io"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestEOF(t *testing.T) {
-	err := MkErrError(io.EOF)
-	assert.True(t, errors.Is(err, io.EOF))
-}
-
-func TestError(t *testing.T) {
-	for c := TErrBadattach; c <= TErrError; c++ {
-		log.Printf("%d %v\n", c, c)
-		assert.True(t, c.String() != "unknown error", c)
-	}
-}
-
-func TestString(t *testing.T) {
-	qt := Qtype(QTSYMLINK | QTTMP)
-	assert.Equal(t, qt.String(), "ts")
-
-	p := Tperm(0x60001ff)
-	assert.Equal(t, "qt ts qp ff", p.String())
-}
 
 func TestSplit(t *testing.T) {
 	s := Split("name/s3/192.168.2.114:43471//b.txt")

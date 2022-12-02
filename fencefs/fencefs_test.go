@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/fencefs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func TestMakeFenceFs(t *testing.T) {

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 )
@@ -57,7 +58,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		})
 		// Version error may occur if another procd has modified the ws dir, and
 		// unreachable err may occur if the other procd is shutting down.
-		if err != nil && (np.IsErrVersion(err) || np.IsErrUnreachable(err)) {
+		if err != nil && (fcall.IsErrVersion(err) || fcall.IsErrUnreachable(err)) {
 			db.DPrintf("PROCD_ERR", "Error ReadDirWatch: %v %v", err, len(sts))
 			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
@@ -100,7 +101,7 @@ func (pd *Procd) offerStealableProcs() {
 					// If proc has been haning in the runq for too long...
 					target := path.Join(runqPath, st.Name) + "/"
 					link := path.Join(np.PROCD_WS, runq, st.Name)
-					if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !np.IsErrExists(err) {
+					if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !fcall.IsErrExists(err) {
 						db.DFatalf("Error Symlink: %v", err)
 						return false, err
 					}
@@ -155,7 +156,7 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 	// claimed the proc, so bail out. If the procd that created the semaphore
 	// crashed, its semaphore will be automatically removed (since the semaphore
 	// is ephemeral) and another procd will eventually re-try the claim.
-	if err1 != nil && np.IsErrExists(err1) {
+	if err1 != nil && fcall.IsErrExists(err1) {
 		return false
 	}
 	// Try to claim the proc by removing it from the runq. If the remove is

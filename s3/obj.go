@@ -11,11 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 )
 
-func mkTpath(key np.Path) np.Tpath {
+func mkTpath(key path.Path) np.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return np.Tpath(h.Sum64())
@@ -24,7 +26,7 @@ func mkTpath(key np.Path) np.Tpath {
 type Obj struct {
 	bucket string
 	perm   np.Tperm
-	key    np.Path
+	key    path.Path
 
 	// set by fill()
 	sz    np.Tlength
@@ -37,7 +39,7 @@ type Obj struct {
 	off np.Toffset
 }
 
-func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
+func makeObj(bucket string, key path.Path, perm np.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
@@ -53,7 +55,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
 }
 
-func (o *Obj) Size() (np.Tlength, *np.Err) {
+func (o *Obj) Size() (np.Tlength, *fcall.Err) {
 	return o.sz, nil
 }
 
@@ -61,7 +63,7 @@ func (o *Obj) SetSize(sz np.Tlength) {
 	o.sz = sz
 }
 
-func (o *Obj) readHead(fss3 *Fss3) *np.Err {
+func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
 	key := o.key.String()
 	key = toDot(key)
 	input := &s3.HeadObjectInput{
@@ -70,7 +72,7 @@ func (o *Obj) readHead(fss3 *Fss3) *np.Err {
 	}
 	result, err := fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
-		return np.MkErrError(err)
+		return fcall.MkErrError(err)
 	}
 
 	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
@@ -81,7 +83,7 @@ func (o *Obj) readHead(fss3 *Fss3) *np.Err {
 	return nil
 }
 
-func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
+func makeFsObj(bucket string, perm np.Tperm, key path.Path) fs.FsObj {
 	if perm.IsDir() {
 		return makeDir(bucket, key.Copy(), perm)
 	} else {
@@ -89,7 +91,7 @@ func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
 	}
 }
 
-func (o *Obj) fill() *np.Err {
+func (o *Obj) fill() *fcall.Err {
 	if err := o.readHead(fss3); err != nil {
 		return err
 	}
@@ -99,16 +101,11 @@ func (o *Obj) fill() *np.Err {
 // stat without filling
 func (o *Obj) stat() *np.Stat {
 	db.DPrintf("FSS3", "stat: %v\n", o)
-	st := &np.Stat{}
+	name := ""
 	if len(o.key) > 0 {
-		st.Name = o.key.Base()
-	} else {
-		st.Name = "" // root
+		name = o.key.Base()
 	}
-	st.Name = st.Name
-	st.Mode = o.perm | np.Tperm(0777)
-	st.Qid = np.MakeQidPerm(o.perm, 0, o.Path())
-	return st
+	return np.MkStat(np.MakeQidPerm(o.perm, 0, o.Path()), o.perm|np.Tperm(0777), uint32(o.mtime), name, "")
 }
 
 func (o *Obj) Path() np.Tpath {
@@ -125,19 +122,18 @@ func (o *Obj) Parent() fs.Dir {
 	return makeDir(o.bucket, dir, np.DMDIR)
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	db.DPrintf("FSS3", "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
 	st := o.stat()
-	st.Length = o.sz
-	st.Mtime = uint32(o.mtime)
+	st.Length = uint64(o.sz)
 	return st, nil
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
 	if err := o.fill(); err != nil {
 		return nil, err
@@ -148,20 +144,20 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return o, nil
 }
 
-func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
 	if m == np.OWRITE {
 		o.w.Close()
 		// wait for uploader to finish
 		err := <-o.ch
 		if err != nil {
-			return np.MkErrError(err)
+			return fcall.MkErrError(err)
 		}
 	}
 	return nil
 }
 
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *fcall.Err) {
 	key := o.key.String()
 	region := ""
 	if off != 0 || np.Tlength(cnt) < o.sz {
@@ -175,7 +171,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	}
 	result, err := fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, 0, np.MkErrError(err)
+		return nil, 0, fcall.MkErrError(err)
 	}
 	region1 := ""
 	if result.ContentRange != nil {
@@ -185,7 +181,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	return result.Body, np.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
 	if np.Tlength(off) >= o.sz {
 		return nil, nil
@@ -198,7 +194,7 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 	b, error := io.ReadAll(rdr)
 	if error != nil {
 		db.DPrintf("FSS3", "Read: Read %d err %v\n", n, error)
-		return nil, np.MkErrError(error)
+		return nil, fcall.MkErrError(error)
 	}
 	return b, nil
 }
@@ -229,15 +225,15 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
 		db.DPrintf("FSS3", "Write %v err\n", o.off)
-		return 0, np.MkErr(np.TErrInval, off)
+		return 0, fcall.MkErr(fcall.TErrInval, off)
 	}
 	if n, err := o.w.Write(b); err != nil {
 		db.DPrintf("FSS3", "Write %v %v err %v\n", off, len(b), err)
-		return 0, np.MkErrError(err)
+		return 0, fcall.MkErrError(err)
 	} else {
 		o.off += np.Toffset(n)
 		o.SetSize(np.Tlength(o.off))

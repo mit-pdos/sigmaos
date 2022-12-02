@@ -6,10 +6,12 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 	"sigmaos/sorteddir"
+	"sigmaos/spcodec"
 )
 
 type DirImpl struct {
@@ -49,7 +51,7 @@ func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
 	return i.(fs.Dir)
 }
 
-func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *fcall.Err {
 	err := dir.(*DirImpl).CreateDev(ctx, name, i)
 	if err != nil {
 		return err
@@ -57,33 +59,33 @@ func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
 	return nil
 }
 
-func (dir *DirImpl) unlinkL(name string) *np.Err {
+func (dir *DirImpl) unlinkL(name string) *fcall.Err {
 	_, ok := dir.dents.Lookup(name)
 	if ok {
 		dir.dents.Delete(name)
 		return nil
 	}
-	return np.MkErr(np.TErrNotfound, name)
+	return fcall.MkErr(fcall.TErrNotfound, name)
 }
 
-func (dir *DirImpl) createL(ino fs.Inode, name string) *np.Err {
+func (dir *DirImpl) createL(ino fs.Inode, name string) *fcall.Err {
 	ok := dir.dents.Insert(name, ino)
 	if !ok {
-		return np.MkErr(np.TErrExists, name)
+		return fcall.MkErr(fcall.TErrExists, name)
 	}
 	return nil
 }
 
-func (dir *DirImpl) lookup(name string) (fs.Inode, *np.Err) {
+func (dir *DirImpl) lookup(name string) (fs.Inode, *fcall.Err) {
 	v, ok := dir.dents.Lookup(name)
 	if ok {
 		return v.(fs.Inode), nil
 	} else {
-		return nil, np.MkErr(np.TErrNotfound, name)
+		return nil, fcall.MkErr(fcall.TErrNotfound, name)
 	}
 }
 
-func (dir *DirImpl) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	o, err := dir.lookup(path[0])
@@ -93,7 +95,7 @@ func (dir *DirImpl) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj,
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	st, err := dir.Inode.Stat(ctx)
@@ -104,23 +106,23 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = npcodec.MarshalSizeDir(sts)
+	st.Length = uint64(spcodec.MarshalSizeDir(sts))
 	return st, nil
 }
 
-func (dir *DirImpl) Size() (np.Tlength, *np.Err) {
+func (dir *DirImpl) Size() (np.Tlength, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	sts, err := dir.lsL(0)
 	if err != nil {
 		return 0, err
 	}
-	return npcodec.MarshalSizeDir(sts), nil
+	return spcodec.MarshalSizeDir(sts), nil
 }
 
-func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *np.Err) {
+func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *fcall.Err) {
 	entries := []*np.Stat{}
-	var r *np.Err
+	var r *fcall.Err
 	dir.dents.Iter(func(n string, e interface{}) bool {
 		if n == "." {
 			return true
@@ -157,14 +159,14 @@ func nonemptydir(inode fs.FsObj) bool {
 	}
 }
 
-func (dir *DirImpl) remove(name string) *np.Err {
+func (dir *DirImpl) remove(name string) *fcall.Err {
 	inode, err := dir.lookup(name)
 	if err != nil {
 		db.DPrintf("MEMFS", "remove %v file not found %v", dir, name)
 		return err
 	}
 	if nonemptydir(inode) {
-		return np.MkErr(np.TErrNotEmpty, name)
+		return fcall.MkErr(fcall.TErrNotEmpty, name)
 	}
 	dir.SetMtime(time.Now().Unix())
 	return dir.unlinkL(name)
@@ -172,7 +174,7 @@ func (dir *DirImpl) remove(name string) *np.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -181,19 +183,19 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 }
 
 // XXX ax WriteDir from fs.Dir
-func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return 0, np.MkErr(np.TErrIsdir, dir)
+	return 0, fcall.MkErr(fcall.TErrIsdir, dir)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	if v, ok := dir.dents.Lookup(name); ok {
 		i := v.(fs.Inode)
-		return i, np.MkErr(np.TErrExists, name)
+		return i, fcall.MkErr(fcall.TErrExists, name)
 	}
 	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)
 	if err != nil {
@@ -204,7 +206,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *np.Err {
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *fcall.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -242,7 +244,7 @@ func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
 }
 
 // Rename inode within directory
-func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
+func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *fcall.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -255,7 +257,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	// check if to is non-existing, or, if a dir, non-empty
 	inoto, terr := dir.lookup(to)
 	if terr == nil && nonemptydir(inoto) {
-		return np.MkErr(np.TErrNotEmpty, to)
+		return fcall.MkErr(fcall.TErrNotEmpty, to)
 	}
 
 	err = dir.unlinkL(from)
@@ -280,7 +282,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 
 }
 
-func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np.Err {
+func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *fcall.Err {
 	newdir := nd.(*DirImpl)
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)
@@ -288,7 +290,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np
 	db.DPrintf("MEMFS", "Renameat %v %v to %v %v\n", dir, old, newdir, new)
 	ino, err := dir.lookup(old)
 	if err != nil {
-		return np.MkErr(np.TErrNotfound, old)
+		return fcall.MkErr(fcall.TErrNotfound, old)
 	}
 	err = dir.unlinkL(old)
 	if err != nil {
@@ -307,7 +309,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np
 	return nil
 }
 
-func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *fcall.Err {
 	db.DPrintf("MEMFS", "Remove: %v %v\n", dir, n)
 
 	dir.mu.Lock()

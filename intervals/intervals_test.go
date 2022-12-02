@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 func TestSimple(t *testing.T) {

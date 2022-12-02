@@ -3,20 +3,22 @@ package fidclnt
 import (
 	"fmt"
 
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	"sigmaos/path"
 	"sigmaos/protclnt"
+	np "sigmaos/sigmap"
 )
 
 // The channel associated with an fid, which connects to an object at
 // a server.
 type Channel struct {
 	pc    *protclnt.ProtClnt
-	path  np.Path
+	path  path.Path
 	qids  []np.Tqid
 	uname string
 }
 
-func makeChannel(pc *protclnt.ProtClnt, uname string, path np.Path, qs []np.Tqid) *Channel {
+func makeChannel(pc *protclnt.ProtClnt, uname string, path path.Path, qs []np.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -33,16 +35,16 @@ func (c *Channel) Uname() string {
 	return c.uname
 }
 
-func (c *Channel) Path() np.Path {
+func (c *Channel) Path() path.Path {
 	return c.path
 }
 
-func (c *Channel) SetPath(p np.Path) {
+func (c *Channel) SetPath(p path.Path) {
 	c.path = p
 }
 
 func (c *Channel) Version() np.TQversion {
-	return c.Lastqid().Version
+	return c.Lastqid().Tversion()
 }
 
 func (c *Channel) Copy() *Channel {
@@ -57,7 +59,7 @@ func (c *Channel) add(name string, q np.Tqid) {
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []np.Tqid, path np.Path) {
+func (c *Channel) AddN(qs []np.Tqid, path path.Path) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}
@@ -66,12 +68,12 @@ func (c *Channel) AddN(qs []np.Tqid, path np.Path) {
 	}
 }
 
-func (c *Channel) Lastqid() np.Tqid {
-	return c.qids[len(c.qids)-1]
+func (c *Channel) Lastqid() *np.Tqid {
+	return &c.qids[len(c.qids)-1]
 }
 
 // Simulate network partition to server that exports path
-func (c *Channel) Disconnect() *np.Err {
+func (c *Channel) Disconnect() *fcall.Err {
 	return c.pc.Disconnect()
 }
 

@@ -21,7 +21,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/pathclnt"
 	"sigmaos/test"
 )

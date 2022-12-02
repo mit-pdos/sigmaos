@@ -15,7 +15,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"

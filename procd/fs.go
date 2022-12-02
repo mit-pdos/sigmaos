@@ -10,7 +10,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
@@ -51,16 +52,16 @@ func (pd *Procd) makeFs() {
 }
 
 // Publishes a proc as running
-func (pfs *ProcdFs) running(p *LinuxProc) *np.Err {
+func (pfs *ProcdFs) running(p *LinuxProc) *fcall.Err {
 	// Make sure we write the proc description before we publish it.
 	b, error := json.Marshal(p.attr)
 	if error != nil {
-		return np.MkErrError(fmt.Errorf("running marshal err %v", error))
+		return fcall.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
 	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
-		// TODO: return an np.Err return err
+		// TODO: return an fcall.Err return err
 	}
 	return nil
 }

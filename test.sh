@@ -17,7 +17,8 @@ do
   # test some support package
   #
 
-  go test $@ sigmaos/npcodec
+  go test $@ sigmaos/path
+  go test $@ sigmaos/fcall
   go test $@ sigmaos/linuxsched
   go test $@ sigmaos/perf
   
@@ -25,6 +26,7 @@ do
   # tests without servers
   #
   go test $@ sigmaos/ninep
+  go test $@ sigmaos/sigmap
   go test $@ sigmaos/memfs
   go test $@ sigmaos/pathclnt
   

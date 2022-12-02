@@ -3,17 +3,17 @@ package replchain
 import (
 	"sync"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type RelayOpSet struct {
 	mu      sync.Mutex
-	entries map[np.Tsession]map[np.Tseqno][]*RelayOp
+	entries map[fcall.Tsession]map[np.Tseqno][]*RelayOp
 }
 
 func MakeRelayOpSet() *RelayOpSet {
 	s := &RelayOpSet{}
-	s.entries = map[np.Tsession]map[np.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[np.Tseqno][]*RelayOp{}
 	return s
 }
 
@@ -63,7 +63,7 @@ func (s *RelayOpSet) RemoveAll() []*RelayOp {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ops := s.getOpsL()
-	s.entries = map[np.Tsession]map[np.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[np.Tseqno][]*RelayOp{}
 	return ops
 }
 

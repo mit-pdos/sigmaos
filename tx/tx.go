@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/atomic"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 const (

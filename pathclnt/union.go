@@ -5,10 +5,11 @@ import (
 	"io"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
 	"sigmaos/reader"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 func (pathc *PathClnt) unionMatch(q, name string) bool {
@@ -30,7 +31,7 @@ func (pathc *PathClnt) unionMatch(q, name string) bool {
 	return true
 }
 
-func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *np.Err) {
+func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *fcall.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
 	if err != nil {
 		return np.NoFid, err
@@ -52,7 +53,7 @@ func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *np.Err)
 }
 
 // Caller is responsible for clunking fid
-func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
+func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *fcall.Err) {
 	_, err := pathc.FidClnt.Open(fid, np.OREAD)
 	if err != nil {
 		return np.NoFid, err
@@ -60,7 +61,7 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	drdr := rdr.NewDirReader()
 	for {
-		de, err := npcodec.UnmarshalDirEnt(drdr)
+		de, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
@@ -76,5 +77,5 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 			return fid1, nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrNotfound, q)
+	return np.NoFid, fcall.MkErr(fcall.TErrNotfound, q)
 }

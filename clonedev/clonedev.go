@@ -5,7 +5,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 )
 
@@ -14,7 +15,7 @@ const (
 	CTL   = "ctl"
 )
 
-type MkSessionF func(*memfssrv.MemFs, np.Tsession) *np.Err
+type MkSessionF func(*memfssrv.MemFs, fcall.Tsession) *fcall.Err
 
 func SidName(sid string, fn string) string {
 	return sid + "-" + fn
@@ -32,7 +33,7 @@ type Clone struct {
 	fn        string
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np.Err {
+func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *fcall.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
 	err := mfs.MkDev(CloneName(fn), cl) // put clone file into root dir
@@ -47,12 +48,12 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d np.DetachF) *np
 }
 
 // XXX clean up in case of error
-func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	sid := ctx.SessionId()
 	n := SidName(sid.String(), c.fn)
 	db.DPrintf("CLONEDEV", "%v: Clone create %v\n", proc.GetName(), n)
 	_, err := c.mfs.Create(n, np.DMDIR, np.ORDWR)
-	if err != nil && err.Code() != np.TErrExists {
+	if err != nil && err.Code() != fcall.TErrExists {
 		db.DPrintf("CLONEDEV", "%v: MkDir %v err %v\n", proc.GetName(), n, err)
 		return nil, err
 	}
@@ -83,13 +84,13 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return s, nil
 }
 
-func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (c *Clone) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	sid := SidName(ctx.SessionId().String(), c.fn)
 	db.DPrintf("CLONEDEV", "%v: Close %v\n", proc.GetName(), sid)
 	return nil
 }
 
-func (c *Clone) Detach(session np.Tsession) {
+func (c *Clone) Detach(session fcall.Tsession) {
 	db.DPrintf("CLONEDEV", "Detach %v\n", session)
 	dir := SidName(session.String(), c.fn)
 	n := dir + "/" + CTL

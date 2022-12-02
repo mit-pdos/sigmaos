@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	"sigmaos/path"
 	"sigmaos/refmap"
 )
 
@@ -58,10 +58,10 @@ func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
 	return lk
 }
 
-func (plt *PathLockTable) allocLock(path np.Path) *PathLock {
+func (plt *PathLockTable) allocLock(p path.Path) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
-	return plt.allocLockStringL(path.String())
+	return plt.allocLockStringL(p.String())
 }
 
 func (plt *PathLockTable) allocLockString(pn string) *PathLock {
@@ -72,7 +72,7 @@ func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 	return plt.allocLockStringL(pn)
 }
 
-func (plt *PathLockTable) Acquire(ctx fs.CtxI, path np.Path) *PathLock {
+func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path) *PathLock {
 	lk := plt.allocLock(path)
 	lk.Lock()
 	db.DPrintf("LOCKMAP", "%v: Lock '%s'", ctx.Uname(), lk.path)
@@ -104,7 +104,7 @@ func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string) 
 	return flk
 }
 
-func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir np.Path, file string) (*PathLock, *PathLock) {
+func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir path.Path, file string) (*PathLock, *PathLock) {
 	dlk := plt.Acquire(ctx, dir)
 	flk := plt.Acquire(ctx, append(dir, file))
 	return dlk, flk

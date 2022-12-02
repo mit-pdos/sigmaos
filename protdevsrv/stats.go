@@ -9,7 +9,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type MethodStat struct {
@@ -90,7 +91,7 @@ type statsDev struct {
 	si *StatInfo
 }
 
-func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *np.Err) {
+func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *fcall.Err) {
 	std := &statsDev{}
 	std.Inode = mfs.MakeDevInode()
 	if err := mfs.MkDev(STATS, std); err != nil {
@@ -100,7 +101,7 @@ func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *np.Err) {
 	return std.si, nil
 }
 
-func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}
@@ -112,16 +113,16 @@ func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQvers
 	std.si.Stats()
 	b, err := json.Marshal(std.si.st)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 	return b, nil
 }
 
-func (std *statsDev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return 0, np.MkErr(np.TErrNotSupported, nil)
+func (std *statsDev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 
-func (std *statsDev) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (std *statsDev) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	db.DPrintf("PROTDEVSRV", "Close stats\n")
 	return nil
 }

@@ -32,7 +32,8 @@ import (
 	"sigmaos/inode"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
@@ -165,7 +166,7 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, mfs string) error {
 		if err == nil {
 			return nil
 		}
-		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
+		if fcall.IsErrUnavailable(err) || fcall.IsErrRetry(err) {
 			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
@@ -188,10 +189,10 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
-		return 0, np.MkErr(np.TErrInval, words)
+		return 0, fcall.MkErr(fcall.TErrInval, words)
 	}
 	err := c.bl.balance(words[0], words[1])
 	if err != nil {
@@ -200,8 +201,8 @@ func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 	return np.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	return nil, np.MkErr(np.TErrNotSupported, "Read")
+func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
 func (bl *Balancer) monitor() {
@@ -225,7 +226,7 @@ func (bl *Balancer) monitorMyself() {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if err != nil {
-			if np.IsErrUnreachable(err) {
+			if fcall.IsErrUnreachable(err) {
 				db.DFatalf("disconnected\n")
 			}
 		}
@@ -305,7 +306,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			np.IsErrUnreachable(err)) {
+			fcall.IsErrUnreachable(err)) {
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
@@ -369,9 +370,9 @@ func (bl *Balancer) doMoves(moves Moves) {
 	db.DPrintf(db.ALWAYS, "%v: all moves done\n", bl.conf)
 }
 
-func (bl *Balancer) balance(opcode, mfs string) *np.Err {
+func (bl *Balancer) balance(opcode, mfs string) *fcall.Err {
 	if bl.testAndSetIsBusy() {
-		return np.MkErr(np.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
+		return fcall.MkErr(fcall.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
 	}
 	defer bl.clearIsBusy()
 
@@ -402,11 +403,11 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	epoch, err := bl.lc.EnterNextEpoch([]string{})
 	if err != nil {
 		db.DPrintf("KVBAL_ERR", "EnterNextEpoch fail %v\n", err)
-		var nperr *np.Err
+		var nperr *fcall.Err
 		if errors.As(err, &nperr) {
 			return nperr
 		}
-		return np.MkErr(np.TErrError, err)
+		return fcall.MkErr(fcall.TErrError, err)
 	}
 
 	bl.conf.Epoch = epoch

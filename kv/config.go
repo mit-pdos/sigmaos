@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Move struct {

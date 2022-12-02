@@ -8,9 +8,10 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/replies"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -29,15 +30,15 @@ type Session struct {
 	rt            *replies.ReplyTable
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
-	Sid           np.Tsession
-	ClientId      np.Tclient
+	Sid           fcall.Tsession
+	ClientId      fcall.Tclient
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
 	detach        np.DetachF
 }
 
-func makeSession(protsrv np.Protsrv, cid np.Tclient, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv np.Protsrv, cid fcall.Tclient, sid fcall.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.rt = replies.MakeReplyTable()
@@ -124,11 +125,11 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts talking to a new replica or a client reconnects quickly.
-func (sess *Session) SetConn(conn np.Conn) *np.Err {
+func (sess *Session) SetConn(conn np.Conn) *fcall.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+		return fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
 	}
 	db.DPrintf("SESSION", "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn

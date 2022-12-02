@@ -1,7 +1,7 @@
 package repl
 
 import (
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 

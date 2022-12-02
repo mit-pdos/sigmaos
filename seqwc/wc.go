@@ -14,7 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/mr"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -65,7 +65,7 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
 	n := 0
 	nbytes := np.Tlength(0)
 	for _, st := range sts {
-		nbytes += st.Length
+		nbytes += st.Tlength()
 		rdr, err := fsl.OpenAsyncReader(dir+"/"+st.Name, 0)
 		if err != nil {
 			return 0, 0, err

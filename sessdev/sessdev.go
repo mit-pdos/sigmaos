@@ -5,7 +5,8 @@ import (
 	"sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 )
 
@@ -17,7 +18,7 @@ func DataName(fn string) string {
 	return DATA + fn
 }
 
-type MkSessionF func(*memfssrv.MemFs, np.Tsession) (fs.Inode, *np.Err)
+type MkSessionF func(*memfssrv.MemFs, fcall.Tsession) (fs.Inode, *fcall.Err)
 
 type SessDev struct {
 	mfs *memfssrv.MemFs
@@ -34,7 +35,7 @@ func MkSessDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
 }
 
 // XXX clean up in case of error
-func (fd *SessDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
+func (fd *SessDev) mkSession(mfs *memfssrv.MemFs, sid fcall.Tsession) *fcall.Err {
 	sess, err := fd.mks(mfs, sid)
 	if err != nil {
 		return err
@@ -49,7 +50,7 @@ func (fd *SessDev) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) *np.Err {
 	return nil
 }
 
-func (fd *SessDev) detachSession(sid np.Tsession) {
+func (fd *SessDev) detachSession(sid fcall.Tsession) {
 	sidn := clonedev.SidName(sid.String(), fd.fn)
 	fn := sidn + "/" + DataName(fd.fn)
 	if err := fd.mfs.Remove(fn); err != nil {
@@ -57,7 +58,7 @@ func (fd *SessDev) detachSession(sid np.Tsession) {
 	}
 }
 
-func (fd *SessDev) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (fd *SessDev) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	fn := clonedev.SidName(ctx.SessionId().String(), fd.fn) + "/" + DataName(fd.fn)
 	debug.DPrintf("SESSDEV", "%v: Close %v\n", proc.GetName(), fn)
 	return nil

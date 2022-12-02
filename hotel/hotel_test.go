@@ -18,7 +18,7 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"

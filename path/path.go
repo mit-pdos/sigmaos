@@ -1,4 +1,4 @@
-package ninep
+package path
 
 import (
 	"regexp"

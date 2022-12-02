@@ -1,4 +1,4 @@
-package ninep
+package sigmap
 
 import (
 	"log"

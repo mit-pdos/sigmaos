@@ -5,7 +5,7 @@ import (
 	"sigmaos/epochclnt"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 //

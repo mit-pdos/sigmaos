@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"

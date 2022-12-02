@@ -65,7 +65,7 @@ mkdir -p bin/kernel
 mkdir -p bin/user
 mkdir -p bin/realm
 
-LDF="-X sigmaos/ninep.Target=$TARGET -X sigmaos/proc.Version=$VERSION"
+LDF="-X sigmaos/sigmap.Target=$TARGET -X sigmaos/proc.Version=$VERSION"
 
 for k in `ls cmd`; do
   echo "Building $k components"

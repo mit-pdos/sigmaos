@@ -6,22 +6,24 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/fcall"
+	"sigmaos/frame"
+	sp "sigmaos/sigmap"
 )
 
 type SrvConn struct {
 	*sync.Mutex
-	wg         *sync.WaitGroup
-	conn       net.Conn
-	closed     bool
-	wireCompat bool
-	br         *bufio.Reader
-	bw         *bufio.Writer
-	replies    chan *np.FcallMsg
-	sesssrv    np.SessServer
-	clid       np.Tclient
-	sessid     np.Tsession
+	wg        *sync.WaitGroup
+	conn      net.Conn
+	closed    bool
+	sesssrv   sp.SessServer
+	br        *bufio.Reader
+	bw        *bufio.Writer
+	replies   chan *sp.FcallMsg
+	marshal   MarshalF
+	unmarshal UnmarshalF
+	clid      fcall.Tclient
+	sessid    fcall.Tsession
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
@@ -30,11 +32,12 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		&sync.WaitGroup{},
 		conn,
 		false,
-		srv.wireCompat,
-		bufio.NewReaderSize(conn, np.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, np.Conf.Conn.MSG_LEN),
-		make(chan *np.FcallMsg),
 		srv.sesssrv,
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		make(chan *sp.FcallMsg),
+		srv.marshal,
+		srv.unmarshal,
 		0,
 		0,
 	}
@@ -92,7 +95,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyC() chan *np.FcallMsg {
+func (c *SrvConn) GetReplyC() chan *sp.FcallMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -101,30 +104,25 @@ func (c *SrvConn) GetReplyC() chan *np.FcallMsg {
 func (c *SrvConn) reader() {
 	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
-		frame, err := npcodec.ReadFrame(c.br)
+		f, err := frame.ReadFrame(c.br)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			return
 		}
-		var fm *np.FcallMsg
-		if c.wireCompat {
-			fm, err = npcodec.UnmarshalFcallWireCompat(frame)
-		} else {
-			fm, err = npcodec.UnmarshalFcallMsg(frame)
-		}
+		fc, err := c.unmarshal(f)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return
 		}
-		db.DPrintf("NETSRV", "srv req %v\n", fm)
+		db.DPrintf("NETSRV", "srv req %v\n", fc)
 		if c.sessid == 0 {
-			c.sessid = np.Tsession(fm.Fc.Session)
-			c.clid = np.Tclient(fm.Fc.Client)
+			c.sessid = fcall.Tsession(fc.Session())
+			c.clid = fc.Client()
 			if err := c.sesssrv.Register(c.clid, c.sessid, c); err != nil {
 				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fm := np.MakeFcallMsgReply(fm, err.Rerror())
+				fm := sp.MakeFcallMsgReply(fc.(*sp.FcallMsg), sp.MkRerror(err))
 				c.GetReplyC() <- fm
 				close(c.replies)
 				return
@@ -134,10 +132,10 @@ func (c *SrvConn) reader() {
 				// the connection has broken.
 				defer c.sesssrv.Unregister(c.clid, c.sessid, c)
 			}
-		} else if c.sessid != np.Tsession(fm.Fc.Session) {
-			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fm.Fc.Session)
+		} else if c.sessid != fcall.Tsession(fc.Session()) {
+			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fc.Session())
 		}
-		c.sesssrv.SrvFcall(fm)
+		c.sesssrv.SrvFcall(fc)
 	}
 }
 
@@ -153,16 +151,11 @@ func (c *SrvConn) writer() {
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
 		db.DPrintf("NETSRV", "rep %v\n", fm)
-		var writableFcall np.WritableFcall
-		if c.wireCompat {
-			writableFcall = fm.ToWireCompatible()
-		} else {
-			writableFcall = fm
-		}
-		if err := npcodec.MarshalFcallMsg(writableFcall, c.bw); err != nil {
+		if err := c.marshal(fm, c.bw); err != nil {
 			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
+
 		if error := c.bw.Flush(); error != nil {
 			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fm, c.Src(), error)
 		}

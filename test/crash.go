@@ -7,7 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 

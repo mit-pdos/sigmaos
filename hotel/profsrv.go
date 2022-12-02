@@ -11,7 +11,7 @@ import (
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 )
 

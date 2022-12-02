@@ -9,7 +9,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/path"
 	"sigmaos/perf"
 )
 
@@ -34,7 +35,7 @@ func RunFss3(buckets []string) {
 	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
-		d := makeDir(bucket, np.Path{}, np.DMDIR)
+		d := makeDir(bucket, path.Path{}, np.DMDIR)
 		if err := mfs.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}

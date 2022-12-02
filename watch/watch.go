@@ -6,8 +6,8 @@ import (
 	// "github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/lockmap"
-	np "sigmaos/ninep"
 	"sigmaos/sesscond"
 )
 
@@ -46,7 +46,7 @@ func mkWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
 }
 
 // Caller should hold path lock. On return caller has path lock again
-func (ws *Watch) Watch(sessid np.Tsession) *np.Err {
+func (ws *Watch) Watch(sessid fcall.Tsession) *fcall.Err {
 	db.DPrintf("WATCH", "Watch '%s'\n", ws.pl.Path())
 	err := ws.sc.Wait(sessid)
 	if err != nil {
@@ -130,7 +130,7 @@ func (wt *WatchTable) FreeWatch(ws *Watch) {
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, sid np.Tsession) *np.Err {
+func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, sid fcall.Tsession) *fcall.Err {
 	ws := wt.allocWatch(pl)
 	err := ws.Watch(sid)
 	wt.FreeWatch(ws)

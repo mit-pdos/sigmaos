@@ -17,7 +17,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"

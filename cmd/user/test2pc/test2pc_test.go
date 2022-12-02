@@ -12,8 +12,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/kernel"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
+	np "sigmaos/sigmap"
 	"sigmaos/twopc"
 )
 

@@ -11,15 +11,17 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) np.Tqid {
+func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) *np.Tqid {
 	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
 }
 
@@ -39,26 +41,21 @@ func umode2Perm(umode uint16) np.Tperm {
 	return perm
 }
 
-func ustat(path np.Path) (*np.Stat, *np.Err) {
+func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 	var statx unix.Statx_t
 	db.DPrintf("UXD", "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
 		db.DPrintf("UXD", "ustat %v err %v\n", path, error)
 		return nil, UxTo9PError(error, path.Base())
 	}
-	st := &np.Stat{}
-	st.Name = path.Base()
-	st.Mode = umode2Perm(statx.Mode)
-	// XXX use Btime in path?
-	st.Qid = np.MakeQidPerm(st.Mode, 0, np.Tpath(statx.Ino))
-	st.Length = np.Tlength(statx.Size)
 	t := statxTimestampToTime(statx.Mtime)
-	st.Mtime = uint32(t.Unix())
+	st := np.MkStat(np.MakeQidPerm(umode2Perm(statx.Mode), 0, np.Tpath(statx.Ino)),
+		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	return st, nil
 }
 
 type Obj struct {
-	pathName np.Path
+	pathName path.Path
 	path     np.Tpath
 	perm     np.Tperm // XXX kill, but requires changing Perm() API
 }
@@ -67,11 +64,11 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path np.Path) (*Obj, *np.Err) {
+func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, np.DMSYMLINK}, err
 	} else {
-		return &Obj{path, st.Qid.Path, st.Mode}, nil
+		return &Obj{path, st.Qid.Tpath(), st.Tmode()}, nil
 	}
 }
 
@@ -98,7 +95,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -155,12 +152,12 @@ func (o *Obj) SetParent(p fs.Dir) {
 func (o *Obj) Unlink() {
 }
 
-func (o *Obj) Size() (np.Tlength, *np.Err) {
+func (o *Obj) Size() (np.Tlength, *fcall.Err) {
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return 0, err
 	}
-	return st.Length, nil
+	return st.Tlength(), nil
 }
 
 func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {

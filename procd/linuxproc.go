@@ -11,7 +11,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/namespace"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"

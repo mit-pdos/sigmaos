@@ -12,7 +12,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
@@ -148,7 +149,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := c.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		if np.IsErrUnreachable(err) { // partitioned?
+		if fcall.IsErrUnreachable(err) { // partitioned?
 			return "", err
 		}
 		// another thread claimed the task before us

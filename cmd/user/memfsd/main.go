@@ -6,9 +6,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
 	"sigmaos/proc"
 	"sigmaos/repldummy"
+	np "sigmaos/sigmap"
 )
 
 func main() {

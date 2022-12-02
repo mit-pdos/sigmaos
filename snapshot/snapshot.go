@@ -11,7 +11,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/overlay"
 	"sigmaos/sessstatesrv"
 	"sigmaos/stats"

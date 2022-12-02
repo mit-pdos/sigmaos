@@ -10,7 +10,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
@@ -77,33 +78,33 @@ func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
 type cacheSession struct {
 	*inode.Inode
 	c   *cache
-	sid np.Tsession
+	sid fcall.Tsession
 }
 
-func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid np.Tsession) (fs.Inode, *np.Err) {
+func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inode, *fcall.Err) {
 	cs := &cacheSession{mfs.MakeDevInode(), s.c, sid}
 	db.DPrintf("CACHESRV", "mkSession %v %p\n", cs.c, cs)
 	return cs, nil
 }
 
 // XXX incremental read
-func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}
 	db.DPrintf("CACHESRV", "Dump cache %p %v\n", cs, cs.c)
 	b, err := json.Marshal(cs.c.cache)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 	return b, nil
 }
 
-func (cs *cacheSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return 0, np.MkErr(np.TErrNotSupported, nil)
+func (cs *cacheSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 
-func (cs *cacheSession) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+func (cs *cacheSession) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	db.DPrintf("CACHESRV", "%v: Close %v\n", proc.GetName(), cs.sid)
 	return nil
 }

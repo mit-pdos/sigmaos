@@ -5,8 +5,9 @@ import (
 	"io"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Reader struct {
@@ -38,7 +39,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	var b []byte
-	var err *np.Err
+	var err *fcall.Err
 	sz := np.Tsize(len(p))
 	if rdr.fenced {
 		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, np.NoV)
@@ -70,7 +71,7 @@ func (rdr *Reader) GetData() ([]byte, error) {
 	return b, nil
 }
 
-func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
+func (rdr *Reader) GetDataErr() ([]byte, *fcall.Err) {
 	return rdr.fc.ReadV(rdr.fid, 0, np.MAXGETSET, np.NoV)
 }
 

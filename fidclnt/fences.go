@@ -4,7 +4,9 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 )
 
 //
@@ -24,28 +26,28 @@ func MakeFenceTable() *FenceTable {
 }
 
 // If already exist, just update
-func (ft *FenceTable) Insert(p string, f np.Tfence) *np.Err {
+func (ft *FenceTable) Insert(p string, f np.Tfence) *fcall.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
-	path := np.Split(p) // cleans up p
+	path := path.Split(p) // cleans up p
 
 	db.DPrintf("FIDCLNT", "Insert fence %v %v\n", path, f)
 	ft.fencedDirs[path.String()] = f
 	return nil
 }
 
-func (ft *FenceTable) Lookup(path np.Path) *np.Tfence {
+func (ft *FenceTable) Lookup(p path.Path) *np.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
 	for pn, f := range ft.fencedDirs {
-		db.DPrintf("FIDCLNT", "Lookup fence %v %v\n", path, f)
-		if path.IsParent(np.Split(pn)) {
+		db.DPrintf("FIDCLNT", "Lookup fence %v %v\n", p, f)
+		if p.IsParent(path.Split(pn)) {
 			return &f
 		}
 	}
-	db.DPrintf("FIDCLNT", "Lookup fence %v: no fence\n", path)
+	db.DPrintf("FIDCLNT", "Lookup fence %v: no fence\n", p)
 	return np.MakeFenceNull()
 
 }

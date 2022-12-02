@@ -6,7 +6,8 @@ import (
 	// "log"
 
 	// db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 )
 
 func MakeTarget(srvaddrs []string) []byte {
@@ -17,7 +18,7 @@ func MakeTarget(srvaddrs []string) []byte {
 	return []byte(strings.Join(targets, "\n"))
 }
 
-func MakeTargetTree(srvaddr string, tree np.Path) []byte {
+func MakeTargetTree(srvaddr string, tree path.Path) []byte {
 	target := []string{srvaddr, "pubkey", tree.String()}
 	return []byte(strings.Join(target, ":"))
 }
@@ -40,10 +41,10 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvpath, server string) error {
 	return err
 }
 
-func (fsl *FsLib) Post(srvaddr, path string) error {
-	if np.EndSlash(path) {
-		return fsl.PostServiceUnion(srvaddr, path, srvaddr)
+func (fsl *FsLib) Post(srvaddr, pn string) error {
+	if path.EndSlash(pn) {
+		return fsl.PostServiceUnion(srvaddr, pn, srvaddr)
 	} else {
-		return fsl.PostService(srvaddr, path)
+		return fsl.PostService(srvaddr, pn)
 	}
 }

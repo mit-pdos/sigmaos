@@ -3,9 +3,10 @@ package memfs
 import (
 	//"time"
 
+	"sigmaos/fcall"
 	"sigmaos/file"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type File struct {
@@ -20,16 +21,17 @@ func MakeFile(i fs.Inode) *File {
 	return f
 }
 
-func (f *File) Size() (np.Tlength, *np.Err) {
+func (f *File) Size() (np.Tlength, *fcall.Err) {
 	return f.File.Size()
 }
 
-func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	st, err := f.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
-	st.Length, _ = f.Size()
+	l, _ := f.Size()
+	st.Length = uint64(l)
 	return st, nil
 }
 

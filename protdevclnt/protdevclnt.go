@@ -10,7 +10,8 @@ import (
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"
@@ -50,7 +51,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 
 	start := time.Now()
@@ -63,7 +64,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 
 	return rep, nil

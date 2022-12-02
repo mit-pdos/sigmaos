@@ -10,16 +10,18 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 	"sigmaos/sorteddir"
+	"sigmaos/spcodec"
 )
 
 const DOT = "_._"
 
 func toDot(pn string) string {
-	path := np.Split(pn)
+	path := path.Split(pn)
 	if len(path) > 0 && path.Base() == "." {
 		path[len(path)-1] = DOT
 	}
@@ -42,7 +44,7 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func makeDir(bucket string, key np.Path, perm np.Tperm) *Dir {
+func makeDir(bucket string, key path.Path, perm np.Tperm) *Dir {
 	o := makeObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
@@ -50,7 +52,7 @@ func makeDir(bucket string, key np.Path, perm np.Tperm) *Dir {
 	return dir
 }
 
-func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
+func (d *Dir) s3ReadDir(fss3 *Fss3) *fcall.Err {
 	maxKeys := 0
 
 	key := d.key.String()
@@ -74,7 +76,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return np.MkErr(np.TErrInval, err)
+			return fcall.MkErr(fcall.TErrInval, err)
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf("FSS30", "key %v\n", *obj.Key)
@@ -96,7 +98,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 	return nil
 }
 
-func (d *Dir) fill() *np.Err {
+func (d *Dir) fill() *fcall.Err {
 	if d.sz > 0 { // already filled?
 		return nil
 	}
@@ -119,7 +121,7 @@ func (d *Dir) dirents() []*Obj {
 	return dents
 }
 
-func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	d.Lock()
 	defer d.Unlock()
 	db.DPrintf("FSS3", "Stat dir %v\n", d)
@@ -127,7 +129,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 		return nil, err
 	}
 	st := d.stat()
-	st.Length = d.sz
+	st.Length = uint64(d.sz)
 	return st, nil
 }
 
@@ -142,7 +144,7 @@ func mkObjs(base *Obj) []fs.FsObj {
 	return os
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), np.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
 		// name is a file; done
@@ -159,13 +161,13 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Pa
 	if d1.dents.Len() == 0 {
 		// not a directory either
 		db.DPrintf("FSS3", "%v: Lookup %v not found\n", ctx, path)
-		return nil, nil, path, np.MkErr(np.TErrNotfound, path)
+		return nil, nil, path, fcall.MkErr(fcall.TErrNotfound, path)
 	}
 	db.DPrintf("FSS3", "%v: Lookup return %v %v\n", ctx, path, d1)
 	return append(mkObjs(d1.Obj), d1), d1, nil, nil
 }
 
-func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "open dir %v (%T) %v\n", d, d, m)
 	if err := d.fill(); err != nil {
 		return nil, err
@@ -173,7 +175,7 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	d.sts = make([]*np.Stat, 0, d.dents.Len())
 	for _, o := range d.dirents() {
 		var st *np.Stat
-		var err *np.Err
+		var err *fcall.Err
 		if o.perm.IsDir() {
 			st = o.stat()
 		} else {
@@ -186,11 +188,11 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		}
 		d.sts = append(d.sts, st)
 	}
-	d.sz = npcodec.MarshalSizeDir(d.sts)
+	d.sz = spcodec.MarshalSizeDir(d.sts)
 	return d, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
 	db.DPrintf("FSS3", "ReadDir %v\n", d)
 
 	if cursor > len(d.sts) {
@@ -200,12 +202,12 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return 0, np.MkErr(np.TErrIsdir, d)
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+	return 0, fcall.MkErr(fcall.TErrIsdir, d)
 }
 
 // Create a fake file in dir to materialize dir
-func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.Err) {
+func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *fcall.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()
 	db.DPrintf("FSS3", "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
@@ -214,18 +216,18 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.
 	}
 	_, err := fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 	o := makeFsObj(d.bucket, perm, d.key.Copy().Append(name))
 	return o, nil
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
 	o := makeObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
 	if err == nil {
-		return nil, np.MkErr(np.TErrExists, name)
+		return nil, fcall.MkErr(fcall.TErrExists, name)
 	}
 	if perm.IsDir() {
 		obj, err := d.CreateDir(ctx, name, perm)
@@ -241,11 +243,11 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	return o, nil
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
-	return np.MkErr(np.TErrNotSupported, "Renameat")
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *fcall.Err {
+	return fcall.MkErr(fcall.TErrNotSupported, "Renameat")
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string) *fcall.Err {
 	key := d.key.Copy().Append(name)
 	if err := d.fill(); err != nil {
 		return err
@@ -254,7 +256,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	e, ok := d.dents.Lookup(name)
 	if !ok {
 		db.DPrintf("FSS3", "Delete %v err %v\n", key, name)
-		return np.MkErr(np.TErrNotfound, name)
+		return fcall.MkErr(fcall.TErrNotfound, name)
 	}
 	perm := e.(np.Tperm)
 	if perm.IsDir() {
@@ -263,7 +265,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 			return err
 		}
 		if d1.dents.Len() > 1 {
-			return np.MkErr(np.TErrNotEmpty, name)
+			return fcall.MkErr(fcall.TErrNotEmpty, name)
 		}
 		key = key.Append(DOT)
 	}
@@ -274,14 +276,14 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	}
 	if _, err := fss3.client.DeleteObject(context.TODO(), input); err != nil {
 		db.DPrintf("FSS3", "DeleteObject %v err %v\n", k, err)
-		return np.MkErrError(err)
+		return fcall.MkErrError(err)
 	}
 	d.dents.Delete(name)
 	return nil
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
-	return np.MkErr(np.TErrNotSupported, "Rename")
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) *fcall.Err {
+	return fcall.MkErr(fcall.TErrNotSupported, "Rename")
 }
 
 // ===== The following functions are needed to make an s3 dir of type fs.Inode

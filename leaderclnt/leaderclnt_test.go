@@ -11,7 +11,7 @@ import (
 	"sigmaos/crash"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

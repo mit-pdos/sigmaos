@@ -10,10 +10,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	np "sigmaos/sigmap"
 )
 
 //

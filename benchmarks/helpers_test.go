@@ -10,7 +10,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/procdclnt"

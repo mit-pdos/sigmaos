@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/linuxsched"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type Config struct {

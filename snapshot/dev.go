@@ -4,7 +4,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type Dev struct {
@@ -17,7 +18,7 @@ func MakeDev(srv np.SessServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	return &Dev{i, srv}
 }
 
-func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	b := dev.srv.Snapshot()
 	if len(b) > int(np.MAXGETSET) {
 		db.DFatalf("snapshot too big: %v bytes", len(b))
@@ -25,7 +26,7 @@ func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 	return b, nil
 }
 
-func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	db.DPrintf("SNAP", "Received snapshot of length %v", len(b))
 	dev.srv.Restore(b)
 	return np.Tsize(len(b)), nil

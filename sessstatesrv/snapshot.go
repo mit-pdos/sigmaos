@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
 func (st *SessionTable) Snapshot() []byte {
-	sessions := make(map[np.Tsession][]byte)
+	sessions := make(map[fcall.Tsession][]byte)
 	for sid, sess := range st.sessions {
 		sessions[sid] = sess.Snapshot()
 	}
@@ -21,7 +22,7 @@ func (st *SessionTable) Snapshot() []byte {
 }
 
 func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
-	sessions := make(map[np.Tsession][]byte)
+	sessions := make(map[fcall.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
 		db.DFatalf("error unmarshal session table in restore: %v", err)
@@ -39,7 +40,7 @@ func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtS
 
 type SessionSnapshot struct {
 	ProtsrvSnap []byte
-	ClientId    np.Tclient
+	ClientId    fcall.Tclient
 	closed      bool
 }
 
@@ -59,7 +60,7 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, sesssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid fcall.Tsession, sesssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {

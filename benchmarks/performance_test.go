@@ -9,7 +9,7 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/realm"
 	"sigmaos/test"

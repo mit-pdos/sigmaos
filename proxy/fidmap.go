@@ -3,7 +3,7 @@ package proxy
 import (
 	"sync"
 
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type fidMap struct {

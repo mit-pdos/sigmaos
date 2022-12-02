@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/sigmap";
+
+// A Qid is the server's unique identification for the file being
+// accessed: two files on the same server hierarchy are the same if
+// and only if their qids are the same.
+message Tqid {
+        uint32  type = 1;
+        uint32  version = 2;
+        uint64  path = 3;
+};
+
+message Stat {
+        uint32  type = 1;
+        uint32  dev = 2;
+        Tqid    qid = 3;
+        uint32  mode = 4;
+        uint32  atime = 5;   // last access time in seconds
+        uint32  mtime = 6;   // last modified time in seconds
+        uint64  length = 7;  // file length in bytes
+        string  name = 8;    // file name
+        string  uid = 9;     // owner name
+        string  gid = 10;     // group name
+        string  muid = 11;    // name of the last user that modified the file
+} 
+
+message Rattach {
+        Tqid qid = 1;        
+}
+
+message Tinterval {
+        uint64 start = 1;
+        uint64 end = 2;
+};
+
+message Tfenceid {
+        uint64 path = 1;
+        uint64 serverid = 2;
+};
+
+message Tfence {
+        Tfenceid fenceid = 1;
+        uint64 epoch = 2;
+};
+
+message Fcall {
+        uint32 type = 1;
+        uint32 tag = 2;
+        uint64 client = 3;
+        uint64 session = 4;
+        uint64 seqno = 5;
+        Tinterval received = 6;
+        Tfence fence = 7;       
+}
+
+message Twriteread {
+        uint64 fid = 1; 
+        bytes data = 2;
+}
+
+message Rwriteread {
+        bytes data = 1;
+}

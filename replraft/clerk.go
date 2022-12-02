@@ -6,9 +6,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/fcall"
 	"sigmaos/proc"
+	np "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
 )
 
@@ -23,7 +24,7 @@ type Clerk struct {
 	mu       *sync.Mutex
 	id       int
 	tm       *threadmgr.ThreadMgr
-	opmap    map[np.Tsession]map[np.Tseqno]*Op
+	opmap    map[fcall.Tsession]map[np.Tseqno]*Op
 	requests chan *Op
 	commit   <-chan *committedEntries
 	proposeC chan<- []byte
@@ -34,7 +35,7 @@ func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan *committedEntries,
 	c.mu = &sync.Mutex{}
 	c.id = id
 	c.tm = tm
-	c.opmap = make(map[np.Tsession]map[np.Tseqno]*Op)
+	c.opmap = make(map[fcall.Tsession]map[np.Tseqno]*Op)
 	c.requests = make(chan *Op)
 	c.commit = commit
 	c.proposeC = propose
@@ -54,12 +55,12 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				if req, err := npcodec.UnmarshalFcallMsg(frame); err != nil {
+				if req, err := spcodec.UnmarshalFcallMsg(frame); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
 					//				c.printOpTiming(req, frame)
-					c.apply(req, committedReqs.leader)
+					c.apply(req.(*np.FcallMsg), committedReqs.leader)
 				}
 			}
 		}
@@ -69,7 +70,7 @@ func (c *Clerk) serve() {
 func (c *Clerk) propose(op *Op) {
 	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
-	frame, err := npcodec.MarshalFcallMsgByte(op.request)
+	frame, err := spcodec.MarshalFcallMsgByte(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
@@ -100,7 +101,7 @@ func (c *Clerk) apply(fc *np.FcallMsg, leader uint64) {
 		db.DPrintf("TIMING", "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), fc)
 	}
 	// For now, every node can cause a detach to happen
-	if fc.GetType() == np.TTdetach {
+	if fc.GetType() == fcall.TTdetach {
 		msg := fc.Msg.(*np.Tdetach)
 		msg.LeadId = uint32(leader)
 		fc.Msg = msg
@@ -113,8 +114,8 @@ func (c *Clerk) registerOp(op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	s := np.Tsession(op.request.Fc.Session)
-	seq := np.Tseqno(op.request.Fc.Seqno)
+	s := fcall.Tsession(op.request.Fc.Session)
+	seq := op.request.Seqno()
 	m, ok := c.opmap[s]
 	if !ok {
 		m = make(map[np.Tseqno]*Op)
@@ -122,7 +123,7 @@ func (c *Clerk) registerOp(op *Op) {
 	}
 	if _, ok := m[seq]; ok {
 		// Detaches and server-driven heartbeats may be re-executed many times.
-		if op.request.GetType() != np.TTdetach && op.request.GetType() != np.TTheartbeat {
+		if op.request.GetType() != fcall.TTdetach && op.request.GetType() != fcall.TTheartbeat {
 			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[seq].request)
 		}
 	}
@@ -135,8 +136,8 @@ func (c *Clerk) getOp(fc *np.FcallMsg) *Op {
 	defer c.mu.Unlock()
 
 	var op *Op
-	s := np.Tsession(fc.Fc.Session)
-	seq := np.Tseqno(fc.Fc.Seqno)
+	s := fc.Session()
+	seq := fc.Seqno()
 	if m, ok := c.opmap[s]; ok {
 		if o, ok := m[seq]; ok {
 			delete(m, seq)
@@ -154,8 +155,8 @@ func (c *Clerk) printOpTiming(rep *np.FcallMsg, frame []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	s := np.Tsession(rep.Fc.Session)
-	seqno := np.Tseqno(rep.Fc.Seqno)
+	s := fcall.Tsession(rep.Fc.Session)
+	seqno := rep.Seqno()
 	if m, ok := c.opmap[s]; ok {
 		if op, ok := m[seqno]; ok {
 			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(frame))

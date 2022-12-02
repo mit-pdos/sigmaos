@@ -4,7 +4,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	"sigmaos/fcall"
+	np "sigmaos/sigmap"
 )
 
 type SessionMgr struct {
@@ -40,11 +41,11 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find connected sessions.
-func (sm *SessionMgr) getConnectedSessions() []np.Tsession {
+func (sm *SessionMgr) getConnectedSessions() []fcall.Tsession {
 	// Lock the session table.
 	sm.st.Lock()
 	defer sm.st.Unlock()
-	sess := make([]np.Tsession, 0, len(sm.st.sessions))
+	sess := make([]fcall.Tsession, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.isConnected() {

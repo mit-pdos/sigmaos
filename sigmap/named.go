@@ -1,4 +1,4 @@
-package ninep
+package sigmap
 
 // if name ends in "/", it is the root directory for that service
 const (

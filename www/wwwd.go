@@ -14,7 +14,8 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -90,7 +91,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !np.IsErrExists(err) {
+	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !fcall.IsErrExists(err) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 

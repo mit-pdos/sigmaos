@@ -11,7 +11,7 @@ import (
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	"sigmaos/hotel/proto"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 )
 

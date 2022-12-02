@@ -4,7 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/epochclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type FenceClnt struct {
@@ -102,7 +102,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 			db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
 			return err
 		}
-		fn := srv + "/" + np.FENCEDIR + "/" + np.Tpath(f.Fenceid.Path).String()
+		fn := srv + "/" + np.FENCEDIR + "/" + f.Fenceid.Tpath().String()
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf("FENCECLNT_ERR", "Remove %v err %v", fn, err)
 			return err

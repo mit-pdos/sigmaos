@@ -4,12 +4,12 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
-	np "sigmaos/ninep"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
@@ -30,7 +30,7 @@ type MemFs struct {
 	procclnt *procclnt.ProcClnt
 }
 
-func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*sesssrv.SessSrv, *np.Err) {
+func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*sesssrv.SessSrv, *fcall.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
@@ -49,7 +49,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 		srv, err = fslibsrv.MakeReplServerFsl(root, addr, path, nil, nil, conf)
 	}
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, fcall.MkErrError(err)
 	}
 	// If this *was* the init named, we now need to init fsl
 	if isInitNamed {
@@ -60,7 +60,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	return srv, nil
 }
 
-func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*sesssrv.SessSrv, *np.Err) {
+func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*sesssrv.SessSrv, *fcall.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	srv, err := fslibsrv.MakeReplServerFsl(root, addr, path, fsl, pclnt, conf)
 	if err != nil {

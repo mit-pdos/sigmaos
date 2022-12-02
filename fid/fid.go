@@ -5,22 +5,23 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/path"
+	np "sigmaos/sigmap"
 )
 
 type Pobj struct {
-	path np.Path
+	path path.Path
 	obj  fs.FsObj
 	ctx  fs.CtxI
 }
 
-func MkPobj(p np.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+func MkPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{p, o, ctx}
 }
 
-func (po *Pobj) Path() np.Path {
+func (po *Pobj) Path() path.Path {
 	return po.path
 }
 
@@ -28,7 +29,7 @@ func (po *Pobj) Ctx() fs.CtxI {
 	return po.ctx
 }
 
-func (po *Pobj) SetPath(path np.Path) {
+func (po *Pobj) SetPath(path path.Path) {
 	po.path = path
 }
 
@@ -45,11 +46,11 @@ type Fid struct {
 	isOpen bool
 	po     *Pobj
 	m      np.Tmode
-	qid    np.Tqid // the qid of obj at the time of invoking MakeFidPath
-	cursor int     // for directories
+	qid    *np.Tqid // the qid of obj at the time of invoking MakeFidPath
+	cursor int      // for directories
 }
 
-func MakeFidPath(pobj *Pobj, m np.Tmode, qid np.Tqid) *Fid {
+func MakeFidPath(pobj *Pobj, m np.Tmode, qid *np.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
@@ -74,7 +75,7 @@ func (f *Fid) IsOpen() bool {
 	return f.isOpen
 }
 
-func (f *Fid) Qid() np.Tqid {
+func (f *Fid) Qid() *np.Tqid {
 	return f.qid
 }
 
@@ -84,9 +85,9 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
 	o := f.Pobj().Obj()
-	var err *np.Err
+	var err *fcall.Err
 	sz := np.Tsize(0)
 
 	switch i := o.(type) {
@@ -100,9 +101,9 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 	return sz, err
 }
 
-func (f *Fid) WriteRead(req []byte) ([]byte, *np.Err) {
+func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
 	o := f.Pobj().Obj()
-	var err *np.Err
+	var err *fcall.Err
 	var b []byte
 	switch i := o.(type) {
 	case fs.RPC:
@@ -113,13 +114,13 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *np.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
+func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *fcall.Err {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
 		return err
 	}
-	b, n, err := npcodec.MarshalDir(count, dirents)
+	b, n, err := fs.MarshalDir(count, dirents)
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	return nil
 }
 
-func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
+func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *fcall.Err {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:

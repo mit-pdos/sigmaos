@@ -15,7 +15,8 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
@@ -176,7 +177,7 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string) (*np.Tinterval, bool)
 			return cores, true
 		} else {
 			// Unexpected error
-			if !np.IsErrNotfound(err) {
+			if !fcall.IsErrNotfound(err) {
 				db.DFatalf("Error Remove %v", err)
 			}
 		}

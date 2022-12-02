@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/npcodec"
 	"sigmaos/protsrv"
 	"sigmaos/repl"

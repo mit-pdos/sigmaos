@@ -1,9 +1,11 @@
-package ninep
+package fcall
 
 import (
 	"fmt"
 	"log"
 	"strings"
+
+	"sigmaos/path"
 )
 
 type Terror uint8
@@ -145,11 +147,6 @@ func (err Terror) String() string {
 	}
 }
 
-// Make Wire-compatible Rerror
-func MkRerrorWC(ec Terror) *Rerror {
-	return &Rerror{ec.String()}
-}
-
 type Err struct {
 	ErrCode Terror
 	Obj     string
@@ -178,19 +175,6 @@ func (err *Err) String() string {
 	return err.Error()
 }
 
-func (err *Err) Rerror() *Rerror {
-	return &Rerror{err.Error()}
-}
-
-// Return  wire-compatible error format. If error isn't 9p error,
-// log it.
-func (err *Err) RerrorWC() *Rerror {
-	if err.ErrCode > TErrWalknodir {
-		log.Printf("RerrorWC: unknown err %v\n", err)
-	}
-	return &Rerror{err.ErrCode.String()}
-}
-
 // SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
 	return error != nil && strings.Contains(error.Error(), TErrNotfound.String())
@@ -215,15 +199,6 @@ func ErrPath(error error) string {
 	} else {
 		return ""
 	}
-}
-
-func IsDirNotFound(error error) bool {
-	b := false
-	if IsErrNotfound(error) {
-		p := Split(strings.TrimPrefix(error.Error(), TErrNotfound.String()))
-		b = len(p) > 1
-	}
-	return b
 }
 
 func IsErrExists(error error) bool {
@@ -260,7 +235,7 @@ func IsMaybeSpecialElem(error error) bool {
 }
 
 func IsErrUnionElem(error error) bool {
-	return IsErrNotfound(error) && IsUnionElem(ErrPath(error))
+	return IsErrNotfound(error) && path.IsUnionElem(ErrPath(error))
 }
 
 func String2Err(error string) *Err {

@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 

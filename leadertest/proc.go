@@ -8,7 +8,7 @@ import (
 	"sigmaos/delay"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )

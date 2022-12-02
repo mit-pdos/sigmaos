@@ -9,7 +9,8 @@ import (
 	"sigmaos/ctx"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
+    "sigmaos/fcall"
 )
 
 type TestState struct {
@@ -32,29 +33,29 @@ func (ts *TestState) initfs() {
 	assert.Nil(ts.t, err, "Create done")
 	_, err = ts.rooti.Create(ts.ctx, "todo", np.DMDIR|07000, 0)
 	assert.Nil(ts.t, err, "Create todo")
-	_, _, _, err = ts.rooti.LookupPath(ts.ctx, np.Path{"todo"})
+	_, _, _, err = ts.rooti.LookupPath(ts.ctx, path.Path{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
 }
 
 func (ts *TestState) testRename(t int) {
-	_, lo, _, err := ts.rooti.LookupPath(ts.ctx, np.Path{"todo"})
+	_, lo, _, err := ts.rooti.LookupPath(ts.ctx, path.Path{"todo"})
 	assert.Nil(ts.t, err, "Lookup todo")
 	d1 := lo.(fs.Dir)
 
-	_, lo, _, err = ts.rooti.LookupPath(ts.ctx, np.Path{"done"})
+	_, lo, _, err = ts.rooti.LookupPath(ts.ctx, path.Path{"done"})
 	assert.Nil(ts.t, err, "Lookup done")
 	d2 := lo.(fs.Dir)
 
 	sts, err := d1.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
-		_, _, _, err := d1.LookupPath(ts.ctx, np.Path{st.Name})
+		_, _, _, err := d1.LookupPath(ts.ctx, path.Path{st.Name})
 		if err != nil {
 			continue
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
 		if err != nil {
-			assert.True(ts.t, np.IsErrNotfound(err))
+			assert.True(ts.t, fcall.IsErrNotfound(err))
 		}
 	}
 }

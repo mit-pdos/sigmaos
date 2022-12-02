@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/ninep"
+	np "sigmaos/sigmap"
 )
 
 type ResourceGrantHandler func(*ResourceMsg)

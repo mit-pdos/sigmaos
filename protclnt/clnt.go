@@ -281,7 +281,7 @@ func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rwriteread, *fca
 }
 
 func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, *fcall.Err) {
-	args := &np.Tstat{fid}
+	args := np.MkTstat(fid)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err

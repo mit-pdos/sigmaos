@@ -523,8 +523,12 @@ type Tremovefile struct {
 type Rremove struct {
 }
 
-type Tstat struct {
-	Fid Tfid
+func MkTstat(fid Tfid) *Tstat {
+	return &Tstat{Fid: uint32(fid)}
+}
+
+func (s *Tstat) Tfid() Tfid {
+	return Tfid(s.Fid)
 }
 
 func MkStatNull() *Stat {

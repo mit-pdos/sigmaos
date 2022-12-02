@@ -64,6 +64,10 @@ message Rwalk {
         repeated Tqid qids = 1;
 }
 
+message Tstat {
+        uint32 fid = 1;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

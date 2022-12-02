@@ -423,7 +423,7 @@ func (ps *ProtSrv) Remove(args *np.Tremove, rets *np.Rremove) *np.Rerror {
 }
 
 func (ps *ProtSrv) Stat(args *np.Tstat, rets *np.Rstat) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}

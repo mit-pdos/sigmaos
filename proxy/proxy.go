@@ -264,7 +264,7 @@ func (npc *NpConn) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 }
 
 func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}

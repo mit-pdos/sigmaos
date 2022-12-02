@@ -88,6 +88,26 @@ message Rread {
         bytes data = 1;
 }
 
+message TwriteV {
+        uint32 fid = 1;
+        uint64 offset = 2;
+        uint32 version = 3;
+        bytes data = 4;
+}
+
+message Rwrite {
+        uint32 count = 1;
+}
+
+message Tgetfile {
+        uint32 fid = 1;
+        uint32 mode = 2;
+        uint64 offset = 3;
+        uint32 count = 4;
+        repeated string wnames = 5;
+        bool resolve = 6;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

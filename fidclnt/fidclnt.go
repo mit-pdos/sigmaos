@@ -228,7 +228,7 @@ func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQver
 	if err != nil {
 		return 0, err
 	}
-	return reply.Count, nil
+	return reply.Tcount(), nil
 }
 
 func (fidc *FidClnt) WriteRead(fid np.Tfid, data []byte) ([]byte, *fcall.Err) {
@@ -266,7 +266,7 @@ func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 	if err != nil {
 		return 0, err
 	}
-	return reply.Count, nil
+	return reply.Tcount(), nil
 }
 
 func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, off np.Toffset, data []byte) (np.Tsize, *fcall.Err) {
@@ -279,5 +279,5 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 	if err != nil {
 		return 0, err
 	}
-	return reply.Count, nil
+	return reply.Tcount(), nil
 }

@@ -493,19 +493,24 @@ func (tw Twrite) String() string {
 	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
 }
 
-type TwriteV struct {
-	Fid     Tfid
-	Offset  Toffset
-	Version TQversion
-	Data    []byte // Data must be last
+func MkTwriteV(fid Tfid, o Toffset, v TQversion, d []byte) *TwriteV {
+	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Data: d}
 }
 
-func (tw TwriteV) String() string {
-	return fmt.Sprintf("{%v off %v len %d v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Version)
+func (w *TwriteV) Tfid() Tfid {
+	return Tfid(w.Fid)
 }
 
-type Rwrite struct {
-	Count Tsize
+func (w *TwriteV) Toffset() Toffset {
+	return Toffset(w.Offset)
+}
+
+func (w *TwriteV) Tversion() TQversion {
+	return TQversion(w.Version)
+}
+
+func (wr *Rwrite) Tcount() Tsize {
+	return Tsize(wr.Count)
 }
 
 func MkTclunk(fid Tfid) *Tclunk {
@@ -587,25 +592,28 @@ type Trenameat struct {
 
 type Rrenameat struct{}
 
-type Tgetfile struct {
-	Fid     Tfid
-	Mode    Tmode
-	Offset  Toffset
-	Count   Tsize
-	Wnames  []string
-	Resolve bool
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool) *Tgetfile {
+	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve}
 }
 
-func (m Tgetfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v cnt %v}", m.Fid, m.Offset, m.Wnames, m.Count)
+func (g *Tgetfile) Tfid() Tfid {
+	return Tfid(g.Fid)
+}
+
+func (g *Tgetfile) Tmode() Tmode {
+	return Tmode(g.Mode)
+}
+
+func (g *Tgetfile) Toffset() Toffset {
+	return Toffset(g.Offset)
+}
+
+func (g *Tgetfile) Tcount() Tsize {
+	return Tsize(g.Count)
 }
 
 type Rgetfile struct {
 	Data []byte
-}
-
-func (m Rgetfile) String() string {
-	return fmt.Sprintf("{len %v}", len(m.Data))
 }
 
 type Tsetfile struct {

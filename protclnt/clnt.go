@@ -253,7 +253,7 @@ func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.R
 }
 
 func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v np.TQversion, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := &np.TwriteV{fid, offset, v, data}
+	args := np.MkTwriteV(fid, offset, v, data)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 }
 
 func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence) (*np.Rgetfile, *fcall.Err) {
-	args := &np.Tgetfile{fid, mode, offset, cnt, path, resolve}
+	args := np.MkTgetfile(fid, mode, offset, cnt, path, resolve)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

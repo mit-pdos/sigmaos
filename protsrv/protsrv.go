@@ -336,10 +336,11 @@ func (ps *ProtSrv) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
+	n, err := f.Write(args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}
+	rets.Count = uint32(n)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	return nil
 }
@@ -359,19 +360,20 @@ func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rwriteread) *np.Rerro
 }
 
 func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
 	db.DPrintf("PROTSRV1", "%v: WriteV %v args %v path %d v %d", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
-	if !np.VEq(args.Version, v) {
+	if !np.VEq(args.Tversion(), v) {
 		return np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
 	}
-	rets.Count, err = f.Write(args.Offset, args.Data, args.Version)
+	n, err := f.Write(args.Toffset(), args.Data, args.Tversion())
 	if err != nil {
 		return np.MkRerror(err)
 	}
+	rets.Count = uint32(n)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	return nil
 }
@@ -581,19 +583,19 @@ func (ps *ProtSrv) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 }
 
 func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
-	if args.Count > np.MAXGETSET {
+	if args.Tcount() > np.MAXGETSET {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
-	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 	db.DPrintf("PROTSRV", "GetFile f %v args %v %v", f.Pobj().Ctx().Uname(), args, fname)
-	rets.Data, err = i.Read(f.Pobj().Ctx(), args.Offset, args.Count, np.NoV)
+	rets.Data, err = i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Tmode()); err != nil {
 		return np.MkRerror(err)
 	}
 	return nil
@@ -625,7 +627,7 @@ func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
 		return np.MkRerror(err)
 	}
-	rets.Count = n
+	rets.Count = uint32(n)
 	return nil
 }
 
@@ -668,7 +670,7 @@ func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	rets.Count = n
+	rets.Count = uint32(n)
 	return nil
 }
 

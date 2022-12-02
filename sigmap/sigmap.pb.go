@@ -897,6 +897,211 @@ func (x *Rread) GetData() []byte {
 	return nil
 }
 
+type TwriteV struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Fid     uint32 `protobuf:"varint,1,opt,name=fid,proto3" json:"fid,omitempty"`
+	Offset  uint64 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Version uint32 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	Data    []byte `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *TwriteV) Reset() {
+	*x = TwriteV{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmap_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TwriteV) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TwriteV) ProtoMessage() {}
+
+func (x *TwriteV) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmap_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TwriteV.ProtoReflect.Descriptor instead.
+func (*TwriteV) Descriptor() ([]byte, []int) {
+	return file_sigmap_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TwriteV) GetFid() uint32 {
+	if x != nil {
+		return x.Fid
+	}
+	return 0
+}
+
+func (x *TwriteV) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *TwriteV) GetVersion() uint32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *TwriteV) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type Rwrite struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Count uint32 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+}
+
+func (x *Rwrite) Reset() {
+	*x = Rwrite{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmap_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Rwrite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Rwrite) ProtoMessage() {}
+
+func (x *Rwrite) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmap_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Rwrite.ProtoReflect.Descriptor instead.
+func (*Rwrite) Descriptor() ([]byte, []int) {
+	return file_sigmap_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *Rwrite) GetCount() uint32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type Tgetfile struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Fid     uint32   `protobuf:"varint,1,opt,name=fid,proto3" json:"fid,omitempty"`
+	Mode    uint32   `protobuf:"varint,2,opt,name=mode,proto3" json:"mode,omitempty"`
+	Offset  uint64   `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	Count   uint32   `protobuf:"varint,4,opt,name=count,proto3" json:"count,omitempty"`
+	Wnames  []string `protobuf:"bytes,5,rep,name=wnames,proto3" json:"wnames,omitempty"`
+	Resolve bool     `protobuf:"varint,6,opt,name=resolve,proto3" json:"resolve,omitempty"`
+}
+
+func (x *Tgetfile) Reset() {
+	*x = Tgetfile{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmap_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Tgetfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Tgetfile) ProtoMessage() {}
+
+func (x *Tgetfile) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmap_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Tgetfile.ProtoReflect.Descriptor instead.
+func (*Tgetfile) Descriptor() ([]byte, []int) {
+	return file_sigmap_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *Tgetfile) GetFid() uint32 {
+	if x != nil {
+		return x.Fid
+	}
+	return 0
+}
+
+func (x *Tgetfile) GetMode() uint32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
+func (x *Tgetfile) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *Tgetfile) GetCount() uint32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *Tgetfile) GetWnames() []string {
+	if x != nil {
+		return x.Wnames
+	}
+	return nil
+}
+
+func (x *Tgetfile) GetResolve() bool {
+	if x != nil {
+		return x.Resolve
+	}
+	return false
+}
+
 type Twriteread struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -909,7 +1114,7 @@ type Twriteread struct {
 func (x *Twriteread) Reset() {
 	*x = Twriteread{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_proto_msgTypes[14]
+		mi := &file_sigmap_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -922,7 +1127,7 @@ func (x *Twriteread) String() string {
 func (*Twriteread) ProtoMessage() {}
 
 func (x *Twriteread) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_proto_msgTypes[14]
+	mi := &file_sigmap_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +1140,7 @@ func (x *Twriteread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Twriteread.ProtoReflect.Descriptor instead.
 func (*Twriteread) Descriptor() ([]byte, []int) {
-	return file_sigmap_proto_rawDescGZIP(), []int{14}
+	return file_sigmap_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Twriteread) GetFid() uint64 {
@@ -963,7 +1168,7 @@ type Rwriteread struct {
 func (x *Rwriteread) Reset() {
 	*x = Rwriteread{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_proto_msgTypes[15]
+		mi := &file_sigmap_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -976,7 +1181,7 @@ func (x *Rwriteread) String() string {
 func (*Rwriteread) ProtoMessage() {}
 
 func (x *Rwriteread) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_proto_msgTypes[15]
+	mi := &file_sigmap_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -989,7 +1194,7 @@ func (x *Rwriteread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rwriteread.ProtoReflect.Descriptor instead.
 func (*Rwriteread) Descriptor() ([]byte, []int) {
-	return file_sigmap_proto_rawDescGZIP(), []int{15}
+	return file_sigmap_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Rwriteread) GetData() []byte {
@@ -1069,14 +1274,32 @@ var file_sigmap_proto_rawDesc = []byte{
 	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e,
 	0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x22,
 	0x1b, 0x0a, 0x05, 0x52, 0x72, 0x65, 0x61, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x32, 0x0a, 0x0a,
-	0x54, 0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69,
-	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x66, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x22, 0x20, 0x0a, 0x0a, 0x52, 0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61, 0x64, 0x12, 0x12,
-	0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61,
-	0x74, 0x61, 0x42, 0x10, 0x5a, 0x0e, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69,
-	0x67, 0x6d, 0x61, 0x70, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x61, 0x0a, 0x07,
+	0x54, 0x77, 0x72, 0x69, 0x74, 0x65, 0x56, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x66, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66,
+	0x73, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65,
+	0x74, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x0d, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x64,
+	0x61, 0x74, 0x61, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22,
+	0x1e, 0x0a, 0x06, 0x52, 0x77, 0x72, 0x69, 0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x22,
+	0x90, 0x01, 0x0a, 0x08, 0x54, 0x67, 0x65, 0x74, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x10, 0x0a, 0x03,
+	0x66, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x66, 0x69, 0x64, 0x12, 0x12,
+	0x0a, 0x04, 0x6d, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6d, 0x6f,
+	0x64, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x12, 0x16, 0x0a, 0x06, 0x77, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x09,
+	0x52, 0x06, 0x77, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x72, 0x65, 0x73, 0x6f,
+	0x6c, 0x76, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x72, 0x65, 0x73, 0x6f, 0x6c,
+	0x76, 0x65, 0x22, 0x32, 0x0a, 0x0a, 0x54, 0x77, 0x72, 0x69, 0x74, 0x65, 0x72, 0x65, 0x61, 0x64,
+	0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x66,
+	0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
+	0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x20, 0x0a, 0x0a, 0x52, 0x77, 0x72, 0x69, 0x74, 0x65,
+	0x72, 0x65, 0x61, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x42, 0x10, 0x5a, 0x0e, 0x73, 0x69, 0x67, 0x6d,
+	0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -1091,7 +1314,7 @@ func file_sigmap_proto_rawDescGZIP() []byte {
 	return file_sigmap_proto_rawDescData
 }
 
-var file_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_sigmap_proto_goTypes = []interface{}{
 	(*Tqid)(nil),       // 0: Tqid
 	(*Stat)(nil),       // 1: Stat
@@ -1107,8 +1330,11 @@ var file_sigmap_proto_goTypes = []interface{}{
 	(*Rstat)(nil),      // 11: Rstat
 	(*TreadV)(nil),     // 12: TreadV
 	(*Rread)(nil),      // 13: Rread
-	(*Twriteread)(nil), // 14: Twriteread
-	(*Rwriteread)(nil), // 15: Rwriteread
+	(*TwriteV)(nil),    // 14: TwriteV
+	(*Rwrite)(nil),     // 15: Rwrite
+	(*Tgetfile)(nil),   // 16: Tgetfile
+	(*Twriteread)(nil), // 17: Twriteread
+	(*Rwriteread)(nil), // 18: Rwriteread
 }
 var file_sigmap_proto_depIdxs = []int32{
 	0, // 0: Stat.qid:type_name -> Tqid
@@ -1300,7 +1526,7 @@ func file_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Twriteread); i {
+			switch v := v.(*TwriteV); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1312,6 +1538,42 @@ func file_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Rwrite); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmap_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Tgetfile); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmap_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Twriteread); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmap_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Rwriteread); i {
 			case 0:
 				return &v.state
@@ -1330,7 +1592,7 @@ func file_sigmap_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmap_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

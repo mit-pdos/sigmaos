@@ -240,7 +240,7 @@ func (npc *NpConn) Write(args *sp.Twrite, rets *sp.Rwrite) *sp.Rerror {
 		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
 	}
-	rets.Count = n
+	rets.Count = uint32(n)
 	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
 	return nil
 }

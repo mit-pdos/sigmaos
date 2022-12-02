@@ -122,7 +122,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(**v); err != nil {
 				return err
 			}
-		case []sp.Tqid:
+		case []*sp.Tqid:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
@@ -132,7 +132,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 					return err
 				}
 			}
-		case *[]sp.Tqid:
+		case *[]*sp.Tqid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}

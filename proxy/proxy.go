@@ -316,7 +316,7 @@ func (npc *NpConn) PutFile(args *sp.Tputfile, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rwriteread) *sp.Rerror {
+func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rread) *sp.Rerror {
 	return nil
 }
 

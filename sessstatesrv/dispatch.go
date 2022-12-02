@@ -116,7 +116,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		reply.Sids = req.Sids
 		return reply, false, nil
 	case *np.Twriteread:
-		reply := &np.Rwriteread{}
+		reply := &np.Rread{}
 		err := s.protsrv.WriteRead(req, reply)
 		return reply, false, err
 	default:

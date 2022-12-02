@@ -168,8 +168,6 @@ func (fct Tfcall) String() string {
 		return "Rheartbeat"
 	case TTwriteread:
 		return "Twriteread"
-	case TRwriteread:
-		return "Rwriteread"
 	default:
 		return "Tunknown"
 	}

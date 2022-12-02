@@ -654,15 +654,6 @@ type Rheartbeat struct {
 	Sids []fcall.Tsession // List of sessions in this heartbeat.
 }
 
-// type Twriteread struct {
-// 	Fid  Tfid
-// 	Data []byte // Data must be last
-// }
-
-// type Rwriteread struct {
-// 	Data []byte // Data must be last
-// }
-
 func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }
 func (Rversion) Type() fcall.Tfcall { return fcall.TRversion }
 func (Tauth) Type() fcall.Tfcall    { return fcall.TTauth }
@@ -709,4 +700,3 @@ func (Rdetach) Type() fcall.Tfcall     { return fcall.TRdetach }
 func (Theartbeat) Type() fcall.Tfcall  { return fcall.TTheartbeat }
 func (Rheartbeat) Type() fcall.Tfcall  { return fcall.TRheartbeat }
 func (Twriteread) Type() fcall.Tfcall  { return fcall.TTwriteread }
-func (Rwriteread) Type() fcall.Tfcall  { return fcall.TRwriteread }

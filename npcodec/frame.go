@@ -66,7 +66,7 @@ func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 		data = msg.Data
 		dataBuf = true
 	case fcall.TRwriteread:
-		msg := fcm.Msg.(*np.Rwriteread)
+		msg := fcm.Msg.(*np.Rread)
 		data = msg.Data
 		dataBuf = true
 	default:

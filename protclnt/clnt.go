@@ -265,7 +265,7 @@ func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v n
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rwriteread, *fcall.Err) {
+func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rread, *fcall.Err) {
 	args := &np.Twriteread{}
 	args.Fid = uint64(fid)
 	args.Data = data
@@ -273,7 +273,7 @@ func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rwriteread, *fca
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwriteread)
+	msg, ok := reply.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwriteread")
 	}

@@ -46,7 +46,7 @@ type Protsrv interface {
 	GetFile(*Tgetfile, *Rread) *Rerror
 	SetFile(*Tsetfile, *Rwrite) *Rerror
 	PutFile(*Tputfile, *Rwrite) *Rerror
-	WriteRead(*Twriteread, *Rwriteread) *Rerror
+	WriteRead(*Twriteread, *Rread) *Rerror
 	Detach(*Rdetach, DetachF) *Rerror
 	Snapshot() []byte
 }

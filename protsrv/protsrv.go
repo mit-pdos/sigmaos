@@ -345,7 +345,7 @@ func (ps *ProtSrv) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rwriteread) *np.Rerror {
+func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(np.Tfid(args.Fid))
 	if err != nil {
 		return np.MkRerror(err)

@@ -483,14 +483,6 @@ func (r *TreadV) Tcount() Tsize {
 	return Tsize(r.Count)
 }
 
-type Rread struct {
-	Data []byte
-}
-
-func (rr Rread) String() string {
-	return fmt.Sprintf("{len %d}", len(rr.Data))
-}
-
 type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
@@ -516,8 +508,12 @@ type Rwrite struct {
 	Count Tsize
 }
 
-type Tclunk struct {
-	Fid Tfid
+func MkTclunk(fid Tfid) *Tclunk {
+	return &Tclunk{Fid: uint32(fid)}
+}
+
+func (c *Tclunk) Tfid() Tfid {
+	return Tfid(c.Fid)
 }
 
 type Rclunk struct {

@@ -161,7 +161,7 @@ func (ps *ProtSrv) Walk(args *np.Twalk, rets *np.Rwalk) *np.Rerror {
 }
 
 func (ps *ProtSrv) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -170,7 +170,7 @@ func (ps *ProtSrv) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
 	}
-	ps.ft.Del(args.Fid)
+	ps.ft.Del(args.Tfid())
 	ps.vt.Delete(f.Pobj().Obj().Path())
 	return nil
 }

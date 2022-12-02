@@ -175,7 +175,7 @@ func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames path.Path, resolve bool, f
 }
 
 func (pclnt *ProtClnt) Clunk(fid np.Tfid) *fcall.Err {
-	args := &np.Tclunk{fid}
+	args := np.MkTclunk(fid)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return err

@@ -180,7 +180,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	st := &np.Stat{}
+	st := np.MkStatNull()
 	st.Name = npath[len(npath)-1]
 	err = pathc.FidClnt.Wstat(fid, st)
 	if err != nil {
@@ -251,7 +251,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	// XXX ignore err?
 	target, rest, _ := pathc.mnt.resolve(pn)
 	if len(rest) == 0 && !path.EndSlash(name) {
-		st := &np.Stat{}
+		st := np.MkStatNull()
 		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
 		return st, nil
 	} else {

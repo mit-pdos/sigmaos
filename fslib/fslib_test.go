@@ -3,7 +3,6 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"log"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -35,7 +34,6 @@ func init() {
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	sts, err := ts.GetDir(pathname)
-	log.Printf("err %v\n", err)
 	assert.Equal(t, nil, err)
 	if pathname == np.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")

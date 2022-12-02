@@ -11,7 +11,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/frame"
 	np "sigmaos/sigmap"
@@ -359,88 +358,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 	}
 
 	return nil
-}
-
-// SizeNp calculates the projected size of the values in vs when encoded into
-// 9p binary protocol. If an element or elements are not valid for 9p encoded,
-// the value 0 will be used for the size. The error will be detected when
-// encoding.
-func SizeNp(vs ...interface{}) uint64 {
-	var s uint64
-	for _, v := range vs {
-		if v == nil {
-			continue
-		}
-
-		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, fcall.Tsession, fcall.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *fcall.Tsession, *fcall.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
-			s += uint64(binary.Size(v))
-		case []byte:
-			s += uint64(binary.Size(uint64(0)) + len(v))
-		case *[]byte:
-			s += SizeNp(uint64(0), *v)
-		case string:
-			s += uint64(binary.Size(uint16(0)) + len(v))
-		case *string:
-			s += SizeNp(*v)
-		case []string:
-			s += SizeNp(uint16(0))
-
-			for _, sv := range v {
-				s += SizeNp(sv)
-			}
-		case *[]string:
-			s += SizeNp(*v)
-		case np.Tqid:
-			s += SizeNp(v.Type, v.Version, v.Path)
-		case *np.Tqid:
-			s += SizeNp(*v)
-		case []np.Tqid:
-			s += SizeNp(uint16(0))
-			elements := make([]interface{}, len(v))
-			for i := range elements {
-				elements[i] = &v[i]
-			}
-			s += SizeNp(elements...)
-		case *[]np.Tqid:
-			s += SizeNp(*v)
-		case np.Stat:
-			elements, err := fields9p(v)
-			if err != nil {
-				db.DFatalf("Stat %v", err)
-			}
-			s += SizeNp(elements...) + SizeNp(uint16(0))
-		case *np.Stat:
-			s += SizeNp(*v)
-		case []np.Stat:
-			elements := make([]interface{}, len(v))
-			for i := range elements {
-				elements[i] = &v[i]
-			}
-			s += SizeNp(elements...)
-		case *[]np.Stat:
-			s += SizeNp(*v)
-		case np.Fcall:
-			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
-		case *np.Fcall:
-			s += SizeNp(*v)
-		case np.Tmsg:
-			// walk the fields of the message to get the total size. we just
-			// use the field order from the message struct. We may add tag
-			// ignoring if needed.
-			elements, err := fields9p(v)
-			if err != nil {
-				db.DFatalf("Tmsg %v", err)
-			}
-
-			s += SizeNp(elements...)
-		default:
-			db.DFatalf("Unknown type")
-		}
-	}
-
-	return s
 }
 
 // fields9p lists the settable fields from a struct type for reading and

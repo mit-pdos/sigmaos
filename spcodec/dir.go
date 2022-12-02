@@ -1,13 +1,15 @@
 package spcodec
 
 import (
-	"errors"
+	"bytes"
+	"encoding/binary"
 	"io"
 
 	"google.golang.org/protobuf/proto"
 
 	// db "sigmaos/debug"
 	"sigmaos/fcall"
+	"sigmaos/frame"
 	sp "sigmaos/sigmap"
 )
 
@@ -23,30 +25,35 @@ func MarshalSizeDir(dir []*sp.Stat) (sp.Tlength, *fcall.Err) {
 	return sp.Tlength(sz), nil
 }
 
-// XXX Cut SizeN[ and pass cnt to marshal/encode?  Or call protobuf.Marshal?
 func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *fcall.Err) {
-	sz := SizeNp(*st)
-	if cnt < sz {
+	var buf bytes.Buffer
+	b, err := proto.Marshal(st)
+	if err != nil {
+		return nil, fcall.MkErrError(err)
+	}
+	sz := binary.Size(uint64(len(b)))
+	if cnt < uint64(len(b)+sz) {
 		return nil, nil
 	}
-	b, e := marshal(*st)
-	if e != nil {
-		return nil, fcall.MkErrError(e)
+	if err := frame.PushToFrame(&buf, b); err != nil {
+		return nil, fcall.MkErrError(err)
 	}
-	//if sz != uint64(len(b)) {
-	//	db.DFatalf("MarshalDirEnt %v %v\n", sz, len(b))
-	//}
-	return b, nil
+	return buf.Bytes(), nil
 }
 
 func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *fcall.Err) {
-	st := sp.Stat{}
-	if error := unmarshalReader(rdr, &st); error != nil {
-		var nperr *fcall.Err
-		if errors.As(error, &nperr) {
-			return nil, nperr
-		}
-		return nil, fcall.MkErrError(error)
+	st := sp.MkStatNull()
+	b, err := frame.PopFromFrame(rdr)
+	if err != nil {
+		return nil, fcall.MkErrError(err)
 	}
-	return &st, nil
+	if err := proto.Unmarshal(b, st); err != nil {
+		return nil, fcall.MkErrError(err)
+	}
+	//var nperr *fcall.Err
+	//if errors.As(error, &nperr) {
+	//		return nil, nperr
+	//	}
+	//	return nil, fcall.MkErrError(error)
+	return st, nil
 }

@@ -524,6 +524,12 @@ type Tstat struct {
 	Fid Tfid
 }
 
+func MkStatNull() *Stat {
+	st := &Stat{}
+	st.Qid = MakeQid(0, 0, 0)
+	return st
+}
+
 func MkStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
 	st := &Stat{
 		Type:  0, // XXX

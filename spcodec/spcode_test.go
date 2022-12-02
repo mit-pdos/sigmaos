@@ -1,6 +1,7 @@
 package spcodec
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,10 +24,10 @@ func TestQid(t *testing.T) {
 func TestStat(t *testing.T) {
 	st := sp.MkStat(sp.MakeQid(0, 0, 2), 0, 0, "alice", "bob")
 	st.Length = 10
-	b, err := marshal(st)
+	b, err := MarshalDirEnt(st, 1000)
 	assert.Nil(t, err)
-	st1 := sp.Stat{}
-	err = unmarshal(b, &st1)
+	buf := bytes.NewReader(b)
+	st1, err := UnmarshalDirEnt(buf)
 	assert.Nil(t, err)
 	assert.Equal(t, "alice", st1.Name)
 }

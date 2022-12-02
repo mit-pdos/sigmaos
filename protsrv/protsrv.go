@@ -582,7 +582,7 @@ func (ps *ProtSrv) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
 }
 
-func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rread) *np.Rerror {
 	if args.Tcount() > np.MAXGETSET {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}

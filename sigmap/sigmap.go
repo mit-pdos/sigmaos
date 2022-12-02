@@ -612,10 +612,6 @@ func (g *Tgetfile) Tcount() Tsize {
 	return Tsize(g.Count)
 }
 
-type Rgetfile struct {
-	Data []byte
-}
-
 type Tsetfile struct {
 	Fid     Tfid
 	Mode    Tmode
@@ -706,7 +702,6 @@ func (Trenameat) Type() fcall.Tfcall   { return fcall.TTrenameat }
 func (Rrenameat) Type() fcall.Tfcall   { return fcall.TRrenameat }
 func (Tremovefile) Type() fcall.Tfcall { return fcall.TTremovefile }
 func (Tgetfile) Type() fcall.Tfcall    { return fcall.TTgetfile }
-func (Rgetfile) Type() fcall.Tfcall    { return fcall.TRgetfile }
 func (Tsetfile) Type() fcall.Tfcall    { return fcall.TTsetfile }
 func (Tputfile) Type() fcall.Tfcall    { return fcall.TTputfile }
 func (Tdetach) Type() fcall.Tfcall     { return fcall.TTdetach }

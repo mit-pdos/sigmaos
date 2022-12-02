@@ -154,8 +154,6 @@ func (fct Tfcall) String() string {
 		return "Tremovefile"
 	case TTgetfile:
 		return "Tgetfile"
-	case TRgetfile:
-		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
 	case TTputfile:

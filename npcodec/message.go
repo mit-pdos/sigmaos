@@ -79,8 +79,6 @@ func newMsg(typ fcall.Tfcall) (np.Tmsg, *fcall.Err) {
 		return &np.Tremovefile{}, nil
 	case fcall.TTgetfile:
 		return &np.Tgetfile{}, nil
-	case fcall.TRgetfile:
-		return &np.Rgetfile{}, nil
 	case fcall.TTsetfile:
 		return &np.Tsetfile{}, nil
 	case fcall.TTputfile:

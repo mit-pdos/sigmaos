@@ -43,7 +43,7 @@ type Protsrv interface {
 	Stat(*Tstat, *Rstat) *Rerror
 	Wstat(*Twstat, *Rwstat) *Rerror
 	Renameat(*Trenameat, *Rrenameat) *Rerror
-	GetFile(*Tgetfile, *Rgetfile) *Rerror
+	GetFile(*Tgetfile, *Rread) *Rerror
 	SetFile(*Tsetfile, *Rwrite) *Rerror
 	PutFile(*Tputfile, *Rwrite) *Rerror
 	WriteRead(*Twriteread, *Rwriteread) *Rerror

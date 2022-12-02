@@ -91,7 +91,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		err := s.protsrv.Renameat(req, reply)
 		return reply, false, err
 	case *np.Tgetfile:
-		reply := &np.Rgetfile{}
+		reply := &np.Rread{}
 		err := s.protsrv.GetFile(req, reply)
 		return reply, false, err
 	case *np.Tsetfile:

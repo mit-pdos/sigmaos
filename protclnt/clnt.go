@@ -332,13 +332,13 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence) (*np.Rgetfile, *fcall.Err) {
+func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence) (*np.Rread, *fcall.Err) {
 	args := np.MkTgetfile(fid, mode, offset, cnt, path, resolve)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rgetfile)
+	msg, ok := reply.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rgetfile")
 	}

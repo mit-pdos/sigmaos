@@ -304,7 +304,7 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, rets *sp.Rwrite) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rgetfile) *sp.Rerror {
+func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) *sp.Rerror {
 	return nil
 }
 

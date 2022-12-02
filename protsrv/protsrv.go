@@ -318,20 +318,6 @@ func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Write(args *np.Twrite, rets *np.Rwrite) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
-	if err != nil {
-		return np.MkRerror(err)
-	}
-	n, err := f.Write(args.Offset, args.Data, np.NoV)
-	if err != nil {
-		return np.MkRerror(err)
-	}
-	rets.Count = uint32(n)
-	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	return nil
-}
-
 func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(np.Tfid(args.Fid))
 	if err != nil {

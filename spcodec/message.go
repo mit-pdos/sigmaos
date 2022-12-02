@@ -43,8 +43,6 @@ func newMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
 		return &sp.Rcreate{}, nil
 	case fcall.TRread:
 		return &sp.Rread{}, nil
-	case fcall.TTwrite:
-		return &sp.Twrite{}, nil
 	case fcall.TRwrite:
 		return &sp.Rwrite{}, nil
 	case fcall.TTclunk:

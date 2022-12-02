@@ -35,7 +35,6 @@ type Protsrv interface {
 	Watch(*Twatch, *Ropen) *Rerror
 	Clunk(*Tclunk, *Rclunk) *Rerror
 	ReadV(*TreadV, *Rread) *Rerror
-	Write(*Twrite, *Rwrite) *Rerror
 	WriteV(*TwriteV, *Rwrite) *Rerror
 	Remove(*Tremove, *Rremove) *Rerror
 	RemoveFile(*Tremovefile, *Rremove) *Rerror

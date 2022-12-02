@@ -339,6 +339,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 			var msg fcall.Tmsg
 			if v.Type == fcall.TTread {
 				msg = &np.Tread{}
+			} else if v.Type == fcall.TTwrite {
+				msg = &np.Twrite{}
 			} else {
 				m, err := newMsg(v.Type)
 				if err != nil {
@@ -350,9 +352,13 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			if v.Type == fcall.TTread {
-				log.Printf("TTread: %v\n", msg)
 				m := msg.(*np.Tread)
 				r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)
+				msg = r
+			}
+			if v.Type == fcall.TTwrite {
+				m := msg.(*np.Twrite)
+				r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0, m.Data)
 				msg = r
 			}
 			v.Msg = msg

@@ -226,19 +226,6 @@ func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *n
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := &np.Twrite{fid, offset, data}
-	reply, err := pclnt.CallNoFence(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(*np.Rwrite)
-	if !ok {
-		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwrite")
-	}
-	return msg, nil
-}
-
 func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v np.TQversion, data []byte) (*np.Rwrite, *fcall.Err) {
 	args := np.MkTwriteV(fid, offset, v, data)
 	reply, err := pclnt.Call(args, f)

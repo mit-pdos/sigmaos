@@ -54,10 +54,6 @@ func (s *Session) Dispatch(msg fcall.Tmsg) (fcall.Tmsg, bool, *np.Rerror) {
 		reply := &np.Rread{}
 		err := s.protsrv.ReadV(req, reply)
 		return reply, false, err
-	case *np.Twrite:
-		reply := &np.Rwrite{}
-		err := s.protsrv.Write(req, reply)
-		return reply, false, err
 	case *np.TwriteV:
 		reply := &np.Rwrite{}
 		err := s.protsrv.WriteV(req, reply)

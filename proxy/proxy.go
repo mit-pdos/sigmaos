@@ -207,21 +207,6 @@ func (npc *NpConn) Flush(args *sp.Tflush, rets *sp.Rflush) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Write(args *sp.Twrite, rets *sp.Rwrite) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
-	if !ok {
-		return MkRerrorWC(fcall.TErrNotfound)
-	}
-	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, sp.NoV)
-	if err != nil {
-		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
-		return MkRerrorWC(err.Code())
-	}
-	rets.Count = uint32(n)
-	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
-	return nil
-}
-
 func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
@@ -297,7 +282,18 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
 }
 
 func (npc *NpConn) WriteV(args *sp.TwriteV, rets *sp.Rwrite) *sp.Rerror {
-	return MkRerrorWC(fcall.TErrNotSupported)
+	fid, ok := npc.fm.lookup(args.Tfid())
+	if !ok {
+		return MkRerrorWC(fcall.TErrNotfound)
+	}
+	n, err := npc.fidc.WriteV(fid, args.Toffset(), args.Data, sp.NoV)
+	if err != nil {
+		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
+		return MkRerrorWC(err.Code())
+	}
+	rets.Count = uint32(n)
+	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
+	return nil
 }
 
 func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) *sp.Rerror {

@@ -473,16 +473,6 @@ func (r *TreadV) Tcount() Tsize {
 	return Tsize(r.Count)
 }
 
-type Twrite struct {
-	Fid    Tfid
-	Offset Toffset
-	Data   []byte // Data must be last
-}
-
-func (tw Twrite) String() string {
-	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
-}
-
 func MkTwriteV(fid Tfid, o Toffset, v TQversion, d []byte) *TwriteV {
 	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Data: d}
 }
@@ -676,7 +666,6 @@ func (Ropen) Type() fcall.Tfcall    { return fcall.TRopen }
 func (Tcreate) Type() fcall.Tfcall  { return fcall.TTcreate }
 func (Rcreate) Type() fcall.Tfcall  { return fcall.TRcreate }
 func (Rread) Type() fcall.Tfcall    { return fcall.TRread }
-func (Twrite) Type() fcall.Tfcall   { return fcall.TTwrite }
 func (Rwrite) Type() fcall.Tfcall   { return fcall.TRwrite }
 func (Tclunk) Type() fcall.Tfcall   { return fcall.TTclunk }
 func (Rclunk) Type() fcall.Tfcall   { return fcall.TRclunk }

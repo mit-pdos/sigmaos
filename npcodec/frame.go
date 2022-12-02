@@ -41,10 +41,6 @@ func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
 	dataBuf := false
 	var data []byte
 	switch fcm.Type() {
-	case fcall.TTwrite:
-		msg := fcm.Msg.(*np.Twrite)
-		data = msg.Data
-		dataBuf = true
 	case fcall.TTwriteV:
 		msg := fcm.Msg.(*np.TwriteV)
 		data = msg.Data

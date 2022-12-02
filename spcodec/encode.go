@@ -165,7 +165,8 @@ func (e *encoder) encode(vs ...interface{}) error {
 			switch fcall.Tfcall(v.Type()) {
 			case fcall.TTwriteread, fcall.TRattach, fcall.TTwalk, fcall.TRwalk,
 				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
-				fcall.TTclunk, fcall.TTgetfile:
+				fcall.TTwriteV, fcall.TRwrite, fcall.TTclunk,
+				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
@@ -332,7 +333,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 			switch v.Type() {
 			case fcall.TTwriteread, fcall.TRattach, fcall.TTwalk, fcall.TRwalk,
 				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
-				fcall.TTclunk, fcall.TTgetfile:
+				fcall.TTwriteV, fcall.TRwrite,
+				fcall.TTclunk, fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile:
 				b, err := frame.PopFromFrame(d.rd)
 				if err != nil {
 					return err

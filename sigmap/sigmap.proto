@@ -117,6 +117,15 @@ message Tsetfile {
         bytes data = 6;
 }
 
+message Tputfile {
+        uint32 fid = 1;
+        uint32 mode = 2;
+        uint32 perm = 3;
+        uint64 offset = 4;
+        repeated string Wnames = 5;
+        bytes data = 6;
+}
+
 message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;

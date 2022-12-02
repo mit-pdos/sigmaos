@@ -359,7 +359,7 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 }
 
 func (pclnt *ProtClnt) PutFile(fid np.Tfid, path path.Path, mode np.Tmode, perm np.Tperm, offset np.Toffset, f *np.Tfence, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := &np.Tputfile{fid, mode, perm, offset, path, data}
+	args := np.MkTputfile(fid, mode, perm, offset, path, data)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

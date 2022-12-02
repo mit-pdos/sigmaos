@@ -628,17 +628,24 @@ func (s *Tsetfile) Toffset() Toffset {
 	return Toffset(s.Offset)
 }
 
-type Tputfile struct {
-	Fid    Tfid
-	Mode   Tmode
-	Perm   Tperm
-	Offset Toffset
-	Wnames []string
-	Data   []byte // Data must be last
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, d []byte) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Data: d}
 }
 
-func (m Tputfile) String() string {
-	return fmt.Sprintf("{%v %v p %v off %v p %v len %v}", m.Fid, m.Mode, m.Perm, m.Offset, m.Wnames, len(m.Data))
+func (p *Tputfile) Tfid() Tfid {
+	return Tfid(p.Fid)
+}
+
+func (p *Tputfile) Tmode() Tmode {
+	return Tmode(p.Mode)
+}
+
+func (p *Tputfile) Tperm() Tperm {
+	return Tperm(p.Perm)
+}
+
+func (p *Tputfile) Toffset() Toffset {
+	return Toffset(p.Offset)
 }
 
 type Tdetach struct {

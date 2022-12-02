@@ -636,7 +636,7 @@ func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	// walk to directory
-	f, dname, lo, err := ps.lookupWalk(args.Fid, args.Wnames[0:len(args.Wnames)-1], false)
+	f, dname, lo, err := ps.lookupWalk(args.Tfid(), args.Wnames[0:len(args.Wnames)-1], false)
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -651,22 +651,22 @@ func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
 	// flk also ensures that two Puts execute atomically
-	lo, flk, err := ps.createObj(f.Pobj().Ctx(), lo.(fs.Dir), dlk, fn, args.Perm, args.Mode)
+	lo, flk, err := ps.createObj(f.Pobj().Ctx(), lo.(fs.Dir), dlk, fn, args.Tperm(), args.Tmode())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
 	qid := ps.mkQid(lo.Perm(), lo.Path())
-	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Perm.IsEphemeral(), qid)
+	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Tperm().IsEphemeral(), qid)
 	i, err := fs.Obj2File(lo, fn)
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	n, err := i.Write(f.Pobj().Ctx(), args.Offset, args.Data, np.NoV)
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), args.Data, np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	err = lo.Close(f.Pobj().Ctx(), args.Mode)
+	err = lo.Close(f.Pobj().Ctx(), args.Tmode())
 	if err != nil {
 		return np.MkRerror(err)
 	}

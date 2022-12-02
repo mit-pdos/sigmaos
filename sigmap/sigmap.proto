@@ -99,6 +99,13 @@ message Rwrite {
         uint32 count = 1;
 }
 
+message Trenameat {
+        uint32 oldFid = 1;
+        string oldName = 2;
+        uint32 newFid = 3;
+        string newName = 4;
+}
+
 message Tgetfile {
         uint32 fid = 1;
         uint32 mode = 2;

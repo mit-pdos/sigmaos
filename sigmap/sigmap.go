@@ -583,11 +583,16 @@ type Twstat struct {
 
 type Rwstat struct{}
 
-type Trenameat struct {
-	OldFid  Tfid
-	OldName string
-	NewFid  Tfid
-	NewName string
+func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string) *Trenameat {
+	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname}
+}
+
+func (r *Trenameat) Tnewfid() Tfid {
+	return Tfid(r.NewFid)
+}
+
+func (r *Trenameat) Toldfid() Tfid {
+	return Tfid(r.OldFid)
 }
 
 type Rrenameat struct{}

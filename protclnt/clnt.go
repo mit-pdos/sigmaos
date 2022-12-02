@@ -320,7 +320,7 @@ func (pclnt *ProtClnt) WstatF(fid np.Tfid, st *np.Stat, f *np.Tfence) (*np.Rwsta
 }
 
 func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string, f *np.Tfence) (*np.Rrenameat, *fcall.Err) {
-	args := &np.Trenameat{oldfid, oldname, newfid, newname}
+	args := np.MkTrenameat(oldfid, oldname, newfid, newname)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

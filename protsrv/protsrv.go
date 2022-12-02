@@ -487,11 +487,11 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 }
 
 func (ps *ProtSrv) Renameat(args *np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	oldf, err := ps.ft.Lookup(args.OldFid)
+	oldf, err := ps.ft.Lookup(args.Toldfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	newf, err := ps.ft.Lookup(args.NewFid)
+	newf, err := ps.ft.Lookup(args.Tnewfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}

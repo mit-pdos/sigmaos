@@ -1626,7 +1626,7 @@ func TestDirCreatePerf(t *testing.T) {
 }
 
 func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
-	const NITER = 10000
+	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
 		go func() {
@@ -1647,28 +1647,28 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
 	}
 }
 
-//func TestDirReadPerf(t *testing.T) {
-//	const N = 10000
-//	const NFILE = 10
-//	const NCLERK = 1
-//	ts := test.MakeTstatePath(t, pathname)
-//	dir := path + "d"
-//	n := mkDir(t, ts.FsLib, dir, NFILE)
-//	assert.Equal(t, NFILE, n)
-//	// measuredir("read dir", 1, func() int {
-//	// 	n := 0
-//	// 	ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-//	// 		n += 1
-//	// 		return false, nil
-//	// 	})
-//	// 	return n
-//	// })
-//	// lookuper(t, 1, N, dir)
-//	lookuper(t, NCLERK, N, dir, NFILE)
-//	err := ts.RmDir(dir)
-//	assert.Nil(t, err)
-//	ts.Shutdown()
-//}
+func TestDirReadPerf(t *testing.T) {
+	const N = 10000
+	const NFILE = 10
+	const NCLERK = 1
+	ts := test.MakeTstatePath(t, pathname)
+	dir := pathname + "d"
+	n := mkDir(t, ts.FsLib, dir, NFILE)
+	assert.Equal(t, NFILE, n)
+	measuredir("read dir", 1, func() int {
+		n := 0
+		ts.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+			n += 1
+			return false, nil
+		})
+		return n
+	})
+	lookuper(t, 1, N, dir, NFILE)
+	//lookuper(t, NCLERK, N, dir, NFILE)
+	err := ts.RmDir(dir)
+	assert.Nil(t, err)
+	ts.Shutdown()
+}
 
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000

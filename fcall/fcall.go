@@ -68,7 +68,6 @@ const (
 	TRrenameat
 	TTremovefile
 	TTgetfile
-	TRgetfile
 	TTsetfile
 	TTputfile
 	TTdetach

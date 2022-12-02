@@ -9,7 +9,7 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/message.go
 
-func newMsg(typ fcall.Tfcall) (sp.Tmsg, *fcall.Err) {
+func newMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
 	switch typ {
 	case fcall.TTversion:
 		return &sp.Tversion{}, nil
@@ -41,8 +41,6 @@ func newMsg(typ fcall.Tfcall) (sp.Tmsg, *fcall.Err) {
 		return &sp.Tcreate{}, nil
 	case fcall.TRcreate:
 		return &sp.Rcreate{}, nil
-	case fcall.TTread:
-		return &sp.Tread{}, nil
 	case fcall.TRread:
 		return &sp.Rread{}, nil
 	case fcall.TTwrite:

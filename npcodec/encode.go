@@ -186,7 +186,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case sp.Tmsg:
+		case fcall.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -210,7 +210,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -336,15 +336,27 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
 			}
-			msg, err := newMsg(v.Type)
-			if err != nil {
-				return err
+			var msg fcall.Tmsg
+			if v.Type == fcall.TTread {
+				msg = &np.Tread{}
+			} else {
+				m, err := newMsg(v.Type)
+				if err != nil {
+					return err
+				}
+				msg = m
 			}
 			if err := d.decode(msg); err != nil {
 				return err
 			}
+			if v.Type == fcall.TTread {
+				log.Printf("TTread: %v\n", msg)
+				m := msg.(*np.Tread)
+				r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)
+				msg = r
+			}
 			v.Msg = msg
-		case sp.Tmsg:
+		case fcall.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -425,7 +437,7 @@ func sizeNp(vs ...interface{}) uint64 {
 			s += sizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
 		case *sp.Fcall:
 			s += sizeNp(*v)
-		case sp.Tmsg:
+		case fcall.Tmsg:
 			// walk the fields of the message to get the total size. we just
 			// use the field order from the message struct. We may add tag
 			// ignoring if needed.

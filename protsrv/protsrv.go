@@ -300,19 +300,6 @@ func (ps *ProtSrv) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Read(args *np.Tread, rets *np.Rread) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
-	if err != nil {
-		return np.MkRerror(err)
-	}
-	db.DPrintf("PROTSRV", "%v: Read f %v args %v", f.Pobj().Ctx().Uname(), f, args)
-	err = f.Read(args.Offset, args.Count, np.NoV, rets)
-	if err != nil {
-		return np.MkRerror(err)
-	}
-	return nil
-}
-
 func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {

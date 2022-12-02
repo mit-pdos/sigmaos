@@ -273,7 +273,7 @@ func (ssrv *SessSrv) SrvFcall(f fcall.Fcall) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply np.Tmsg, sess *sessstatesrv.Session) {
+func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply fcall.Tmsg, sess *sessstatesrv.Session) {
 	fcall := np.MakeFcallMsgReply(request, reply)
 
 	// Store the reply in the reply cache.

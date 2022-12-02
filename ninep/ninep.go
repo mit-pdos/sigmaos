@@ -402,3 +402,4 @@ type Twstat struct {
 type Rwstat struct{}
 
 func (Rstat9P) Type() fcall.Tfcall { return fcall.TRstat9P }
+func (Tread) Type() fcall.Tfcall   { return fcall.TTread }

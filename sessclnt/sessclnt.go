@@ -48,7 +48,7 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req np.Tmsg, f *np.Tfence) (np.Tmsg, *fcall.Err) {
+func (c *SessClnt) RPC(req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 	rpc, err := c.send(req, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -127,7 +127,7 @@ func (c *SessClnt) Detach() *fcall.Err {
 // Check if the session needs to be closed, either because the server killed
 // it, or because the client called detach. Close will be called in CompleteRPC
 // once the Rdetach is received.
-func srvClosedSess(msg np.Tmsg, err *fcall.Err) bool {
+func srvClosedSess(msg fcall.Tmsg, err *fcall.Err) bool {
 	if msg.Type() == fcall.TRdetach {
 		return true
 	}
@@ -141,7 +141,7 @@ func srvClosedSess(msg np.Tmsg, err *fcall.Err) bool {
 	return false
 }
 
-func (c *SessClnt) send(req np.Tmsg, f *np.Tfence) (*netclnt.Rpc, *fcall.Err) {
+func (c *SessClnt) send(req fcall.Tmsg, f *np.Tfence) (*netclnt.Rpc, *fcall.Err) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -156,7 +156,7 @@ func (c *SessClnt) send(req np.Tmsg, f *np.Tfence) (*netclnt.Rpc, *fcall.Err) {
 
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *fcall.Err) {
+func (c *SessClnt) recv(rpc *netclnt.Rpc) (fcall.Tmsg, *fcall.Err) {
 	return rpc.Await()
 }
 

@@ -184,7 +184,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tmsg:
+		case fcall.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -351,7 +351,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				}
 			}
 			v.Msg = msg
-		case np.Tmsg:
+		case fcall.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err

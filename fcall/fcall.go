@@ -21,6 +21,10 @@ type Fcall interface {
 	Client() Tclient
 }
 
+type Tmsg interface {
+	Type() Tfcall
+}
+
 const (
 
 	//

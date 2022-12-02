@@ -207,29 +207,6 @@ func (npc *NpConn) Flush(args *sp.Tflush, rets *sp.Rflush) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Read(args *sp.Tread, rets *sp.Rread) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
-	if !ok {
-		return MkRerrorWC(fcall.TErrNotfound)
-	}
-	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, sp.NoV)
-	if err != nil {
-		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
-		return MkRerrorWC(err.Code())
-	}
-	db.DPrintf("PROXY", "ReadUV: args %v rets %v\n", args, rets)
-	qid := npc.pc.Qid(fid)
-	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
-		d, err = Sp2NpDir(d, args.Count)
-		if err != nil {
-			return MkRerrorWC(err.Code())
-		}
-	}
-	rets.Data = d
-	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
-	return nil
-}
-
 func (npc *NpConn) Write(args *sp.Twrite, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {
@@ -297,7 +274,26 @@ func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 }
 
 func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
-	return MkRerrorWC(fcall.TErrNotSupported)
+	fid, ok := npc.fm.lookup(args.Tfid())
+	if !ok {
+		return MkRerrorWC(fcall.TErrNotfound)
+	}
+	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
+	if err != nil {
+		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
+		return MkRerrorWC(err.Code())
+	}
+	db.DPrintf("PROXY", "ReadUV: args %v rets %v\n", args, rets)
+	qid := npc.pc.Qid(fid)
+	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
+		d, err = Sp2NpDir(d, args.Tcount())
+		if err != nil {
+			return MkRerrorWC(err.Code())
+		}
+	}
+	rets.Data = d
+	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
+	return nil
 }
 
 func (npc *NpConn) WriteV(args *sp.TwriteV, rets *sp.Rwrite) *sp.Rerror {

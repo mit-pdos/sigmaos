@@ -241,10 +241,6 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-type Tmsg interface {
-	Type() fcall.Tfcall
-}
-
 func MkInterval(start, end uint64) *Tinterval {
 	return &Tinterval{
 		Start: start,
@@ -279,7 +275,7 @@ func (iv *Tinterval) Marshal() string {
 
 type FcallMsg struct {
 	Fc  *Fcall
-	Msg Tmsg
+	Msg fcall.Tmsg
 }
 
 func (fcm *FcallMsg) Session() fcall.Tsession {
@@ -323,7 +319,7 @@ func (f *Tfence) Tepoch() Tepoch {
 	return Tepoch(f.Epoch)
 }
 
-func MakeFcallMsg(msg Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
+func MakeFcallMsg(msg fcall.Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
 	if rcv == nil {
 		rcv = &Tinterval{}
 	}
@@ -341,7 +337,7 @@ func MakeFcallMsg(msg Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqn
 	return &FcallMsg{fcall, msg}
 }
 
-func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
+func MakeFcallMsgReply(req *FcallMsg, reply fcall.Tmsg) *FcallMsg {
 	fm := MakeFcallMsg(reply, fcall.Tclient(req.Fc.Client), fcall.Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
@@ -357,7 +353,7 @@ func (fm *FcallMsg) GetType() fcall.Tfcall {
 	return fcall.Tfcall(fm.Fc.Type)
 }
 
-func (fm *FcallMsg) GetMsg() Tmsg {
+func (fm *FcallMsg) GetMsg() fcall.Tmsg {
 	return fm.Msg
 }
 
@@ -455,12 +451,6 @@ type Tcreate struct {
 type Rcreate struct {
 	Qid    Tqid
 	Iounit Tiounit
-}
-
-type Tread struct {
-	Fid    Tfid
-	Offset Toffset
-	Count  Tsize
 }
 
 func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion) *TreadV {
@@ -685,7 +675,6 @@ func (Twatch) Type() fcall.Tfcall   { return fcall.TTwatch }
 func (Ropen) Type() fcall.Tfcall    { return fcall.TRopen }
 func (Tcreate) Type() fcall.Tfcall  { return fcall.TTcreate }
 func (Rcreate) Type() fcall.Tfcall  { return fcall.TRcreate }
-func (Tread) Type() fcall.Tfcall    { return fcall.TTread }
 func (Rread) Type() fcall.Tfcall    { return fcall.TRread }
 func (Twrite) Type() fcall.Tfcall   { return fcall.TTwrite }
 func (Rwrite) Type() fcall.Tfcall   { return fcall.TRwrite }

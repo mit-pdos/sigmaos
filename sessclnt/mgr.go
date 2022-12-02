@@ -53,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *fcall.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req np.Tmsg, f *np.Tfence) (np.Tmsg, *fcall.Err) {
+func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {

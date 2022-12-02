@@ -37,7 +37,7 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 	return np.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs []string, args np.Tmsg, fence *np.Tfence) (np.Tmsg, *fcall.Err) {
+func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, fence *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, fence)
 	if err != nil {
 		return nil, err
@@ -88,11 +88,11 @@ func (pclnt *ProtClnt) Disconnect() *fcall.Err {
 	return pclnt.clnt.sm.Disconnect(pclnt.addrs)
 }
 
-func (pclnt *ProtClnt) Call(args np.Tmsg, f *np.Tfence) (np.Tmsg, *fcall.Err) {
+func (pclnt *ProtClnt) Call(args fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, f)
 }
 
-func (pclnt *ProtClnt) CallNoFence(args np.Tmsg) (np.Tmsg, *fcall.Err) {
+func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (fcall.Tmsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, np.MakeFenceNull())
 }
 
@@ -211,19 +211,6 @@ func (pclnt *ProtClnt) Watch(fid np.Tfid) *fcall.Err {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rwatch")
 	}
 	return nil
-}
-
-func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, *fcall.Err) {
-	args := &np.Tread{fid, offset, cnt}
-	reply, err := pclnt.CallNoFence(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(*np.Rread)
-	if !ok {
-		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rread")
-	}
-	return msg, nil
 }
 
 func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence, v np.TQversion) (*np.Rread, *fcall.Err) {

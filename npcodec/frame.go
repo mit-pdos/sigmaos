@@ -11,7 +11,7 @@ import (
 type FcallWireCompat struct {
 	Type fcall.Tfcall
 	Tag  np.Ttag
-	Msg  np.Tmsg
+	Msg  fcall.Tmsg
 }
 
 func ToInternal(fcallWC *FcallWireCompat) *np.FcallMsg {

@@ -27,7 +27,6 @@ type SessServer interface {
 type Protsrv interface {
 	Version(*Tversion, *Rversion) *Rerror
 	Auth(*Tauth, *Rauth) *Rerror
-	Flush(*Tflush, *Rflush) *Rerror
 	Attach(*Tattach, *Rattach) *Rerror
 	Walk(*Twalk, *Rwalk) *Rerror
 	Create(*Tcreate, *Rcreate) *Rerror

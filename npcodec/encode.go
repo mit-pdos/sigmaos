@@ -338,6 +338,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			var msg fcall.Tmsg
+			// XXX maybe also TTflush
 			if v.Type == fcall.TTread {
 				msg = &np.Tread{}
 			} else if v.Type == fcall.TTwrite {

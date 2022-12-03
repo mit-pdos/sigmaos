@@ -30,10 +30,6 @@ func (s *Session) Dispatch(msg fcall.Tmsg) (fcall.Tmsg, bool, *np.Rerror) {
 		reply := &np.Rattach{}
 		err := s.protsrv.Attach(req, reply)
 		return reply, false, err
-	case *np.Tflush:
-		reply := &np.Rflush{}
-		err := s.protsrv.Flush(req, reply)
-		return reply, false, err
 	case *np.Twalk:
 		reply := &np.Rwalk{}
 		err := s.protsrv.Walk(req, reply)

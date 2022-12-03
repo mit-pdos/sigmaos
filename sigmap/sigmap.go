@@ -361,13 +361,6 @@ func MkRerror(err *fcall.Err) *Rerror {
 	return &Rerror{Ename: err.Error()}
 }
 
-type Tflush struct {
-	Oldtag Ttag
-}
-
-type Rflush struct {
-}
-
 func MkTwalk(fid, nfid Tfid, p path.Path) *Twalk {
 	return &Twalk{Fid: uint32(fid), NewFid: uint32(nfid), Wnames: p}
 }
@@ -614,8 +607,6 @@ func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }
 func (Rversion) Type() fcall.Tfcall { return fcall.TRversion }
 func (Tauth) Type() fcall.Tfcall    { return fcall.TTauth }
 func (Rauth) Type() fcall.Tfcall    { return fcall.TRauth }
-func (Tflush) Type() fcall.Tfcall   { return fcall.TTflush }
-func (Rflush) Type() fcall.Tfcall   { return fcall.TRflush }
 func (Tattach) Type() fcall.Tfcall  { return fcall.TTattach }
 func (Rattach) Type() fcall.Tfcall  { return fcall.TRattach }
 func (Rerror) Type() fcall.Tfcall   { return fcall.TRerror }

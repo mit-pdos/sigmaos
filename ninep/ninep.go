@@ -401,6 +401,8 @@ type Twstat struct {
 
 type Rwstat struct{}
 
+func (Tflush) Type() fcall.Tfcall  { return fcall.TTflush }
+func (Rflush) Type() fcall.Tfcall  { return fcall.TRflush }
 func (Rstat9P) Type() fcall.Tfcall { return fcall.TRstat9P }
 func (Tread) Type() fcall.Tfcall   { return fcall.TTread }
 func (Twrite) Type() fcall.Tfcall  { return fcall.TTwrite }

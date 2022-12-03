@@ -203,10 +203,6 @@ func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Flush(args *sp.Tflush, rets *sp.Rflush) *sp.Rerror {
-	return nil
-}
-
 func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Fid)
 	if !ok {

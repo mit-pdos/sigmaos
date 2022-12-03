@@ -96,19 +96,6 @@ func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (fcall.Tmsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, np.MakeFenceNull())
 }
 
-func (pclnt *ProtClnt) Flush(tag np.Ttag) *fcall.Err {
-	args := &np.Tflush{tag}
-	reply, err := pclnt.CallNoFence(args)
-	if err != nil {
-		return err
-	}
-	_, ok := reply.(*np.Rflush)
-	if !ok {
-		return fcall.MkErr(fcall.TErrBadFcall, "Rflush")
-	}
-	return nil
-}
-
 func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwalk, *fcall.Err) {
 	args := np.MkTwalk(fid, nfid, path)
 	reply, err := pclnt.CallNoFence(args)

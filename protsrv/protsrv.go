@@ -296,10 +296,6 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Flush(args *np.Tflush, rets *np.Rflush) *np.Rerror {
-	return nil
-}
-
 func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {

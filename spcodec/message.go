@@ -25,10 +25,6 @@ func NewMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
 		return &sp.Rattach{}, nil
 	case fcall.TRerror:
 		return &sp.Rerror{}, nil
-	case fcall.TTflush:
-		return &sp.Tflush{}, nil
-	case fcall.TRflush:
-		return &sp.Rflush{}, nil
 	case fcall.TTwalk:
 		return &sp.Twalk{}, nil
 	case fcall.TRwalk:

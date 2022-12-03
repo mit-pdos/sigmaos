@@ -123,7 +123,7 @@ func (pclnt *ProtClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.T
 }
 
 func (pclnt *ProtClnt) Remove(fid np.Tfid) *fcall.Err {
-	args := &np.Tremove{fid}
+	args := np.MkTremove(fid)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) *fcall.Err {
 }
 
 func (pclnt *ProtClnt) RemoveF(fid np.Tfid, f *np.Tfence) *fcall.Err {
-	args := &np.Tremove{fid}
+	args := np.MkTremove(fid)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return err

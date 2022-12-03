@@ -118,19 +118,6 @@ message Rcreate {
         uint32 iounit = 2;
 }
 
-message Tclunk {
-        uint32 fid = 1;
-}
-
-message Tstat {
-        uint32 fid = 1;
-}
-
-message Rstat {
-        uint32 size = 1;
-        Stat stat = 2;
-}
-
 message TreadV {
         uint32 fid = 1;
         uint64 offset = 2;
@@ -151,6 +138,29 @@ message TwriteV {
 
 message Rwrite {
         uint32 count = 1;
+}
+
+message Tclunk {
+        uint32 fid = 1;
+}
+
+message Rclunk {
+}
+
+message Tremove {
+        uint32 fid = 1;
+}
+
+message Rremove {
+}
+
+message Tstat {
+        uint32 fid = 1;
+}
+
+message Rstat {
+        uint32 size = 1;
+        Stat stat = 2;
 }
 
 message Twatch {

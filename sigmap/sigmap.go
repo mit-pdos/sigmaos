@@ -465,20 +465,18 @@ func (c *Tclunk) Tfid() Tfid {
 	return Tfid(c.Fid)
 }
 
-type Rclunk struct {
+func MkTremove(fid Tfid) *Tremove {
+	return &Tremove{Fid: uint32(fid)}
 }
 
-type Tremove struct {
-	Fid Tfid
+func (r *Tremove) Tfid() Tfid {
+	return Tfid(r.Fid)
 }
 
 type Tremovefile struct {
 	Fid     Tfid
 	Wnames  []string
 	Resolve bool
-}
-
-type Rremove struct {
 }
 
 func MkTstat(fid Tfid) *Tstat {

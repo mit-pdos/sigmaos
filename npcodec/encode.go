@@ -376,7 +376,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 			if v.Type == fcall.TTcreate9P {
 				m := msg.(*np.Tcreate9P)
-				log.Printf("create9p %v\n", m)
 				r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
 				msg = r
 			}

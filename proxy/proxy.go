@@ -204,7 +204,7 @@ func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 }
 
 func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}

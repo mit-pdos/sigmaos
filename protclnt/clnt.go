@@ -149,7 +149,7 @@ func (pclnt *ProtClnt) RemoveF(fid np.Tfid, f *np.Tfence) *fcall.Err {
 }
 
 func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames path.Path, resolve bool, f *np.Tfence) *fcall.Err {
-	args := &np.Tremovefile{fid, wnames, resolve}
+	args := np.MkTremovefile(fid, wnames, resolve)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return err

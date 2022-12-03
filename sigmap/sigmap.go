@@ -473,12 +473,6 @@ func (r *Tremove) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-type Tremovefile struct {
-	Fid     Tfid
-	Wnames  []string
-	Resolve bool
-}
-
 func MkTstat(fid Tfid) *Tstat {
 	return &Tstat{Fid: uint32(fid)}
 }
@@ -593,6 +587,14 @@ func (p *Tputfile) Tperm() Tperm {
 
 func (p *Tputfile) Toffset() Toffset {
 	return Toffset(p.Offset)
+}
+
+func MkTremovefile(fid Tfid, path path.Path, r bool) *Tremovefile {
+	return &Tremovefile{Fid: uint32(fid), Wnames: path, Resolve: r}
+}
+
+func (r *Tremovefile) Tfid() Tfid {
+	return Tfid(r.Fid)
 }
 
 type Tdetach struct {

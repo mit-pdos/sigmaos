@@ -543,7 +543,7 @@ func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames path.Path, resolve bool, m
 }
 
 func (ps *ProtSrv) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror {
-	f, fname, lo, err := ps.lookupWalk(args.Fid, args.Wnames, args.Resolve)
+	f, fname, lo, err := ps.lookupWalk(args.Tfid(), args.Wnames, args.Resolve)
 	if err != nil {
 		return np.MkRerror(err)
 	}

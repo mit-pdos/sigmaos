@@ -21,8 +21,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/pathclnt"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -72,7 +72,7 @@ func TestTwo(t *testing.T) {
 	dirents, err := ts.GetDir(np.S3)
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 1, len(dirents))
+	assert.Equal(t, 2, len(dirents))
 
 	ts.Shutdown()
 }

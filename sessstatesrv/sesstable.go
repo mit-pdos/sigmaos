@@ -76,7 +76,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *np.Theartbeat) {
 	defer st.Unlock()
 
 	for _, sid := range hbs.Sids {
-		sess := st.allocL(0, sid)
+		sess := st.allocL(0, fcall.Tsession(sid))
 		sess.Lock()
 		if !sess.closed {
 			sess.heartbeatL(hbs)

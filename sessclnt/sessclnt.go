@@ -64,7 +64,7 @@ func (c *SessClnt) RPC(req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(np.Theartbeat{[]fcall.Tsession{c.sid}}, np.MakeFenceNull())
+	_, err := c.RPC(np.MkTheartbeat([]uint64{uint64(c.sid)}), np.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -112,7 +112,7 @@ func (c *SessClnt) CompleteRPC(reply *np.FcallMsg, err *fcall.Err) {
 
 // Send a detach.
 func (c *SessClnt) Detach() *fcall.Err {
-	rep, err := c.RPC(np.Tdetach{0, 0}, np.MakeFenceNull())
+	rep, err := c.RPC(np.MkTdetach(0, 0), np.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
 	}

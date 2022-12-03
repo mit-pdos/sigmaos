@@ -595,20 +595,12 @@ func (r *Tremovefile) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-type Tdetach struct {
-	PropId uint32 // ID of the server proposing detach.
-	LeadId uint32 // ID of the leader when change was proposed (filled in later).
+func MkTheartbeat(sess []uint64) *Theartbeat {
+	return &Theartbeat{Sids: sess}
 }
 
-type Rdetach struct {
-}
-
-type Theartbeat struct {
-	Sids []fcall.Tsession // List of sessions in this heartbeat.
-}
-
-type Rheartbeat struct {
-	Sids []fcall.Tsession // List of sessions in this heartbeat.
+func MkTdetach(pid, lid uint32) *Tdetach {
+	return &Tdetach{PropId: pid, LeadId: lid}
 }
 
 func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }

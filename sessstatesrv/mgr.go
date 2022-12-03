@@ -4,7 +4,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
 	np "sigmaos/sigmap"
 )
 
@@ -41,16 +40,16 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find connected sessions.
-func (sm *SessionMgr) getConnectedSessions() []fcall.Tsession {
+func (sm *SessionMgr) getConnectedSessions() []uint64 {
 	// Lock the session table.
 	sm.st.Lock()
 	defer sm.st.Unlock()
-	sess := make([]fcall.Tsession, 0, len(sm.st.sessions))
+	sess := make([]uint64, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.isConnected() {
 			db.DPrintf("SESSION", "Sess %v is connected, generating heartbeat.", sid)
-			sess = append(sess, s.Sid)
+			sess = append(sess, uint64(s.Sid))
 		}
 	}
 	return sess
@@ -78,7 +77,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := np.MakeFcallMsg(&np.Theartbeat{sess}, 0, 0, nil, nil, np.MakeFenceNull())
+		hbs := np.MakeFcallMsg(np.MkTheartbeat(sess), 0, 0, nil, nil, np.MakeFenceNull())
 		sm.srvfcall(hbs)
 	}
 }

@@ -177,6 +177,8 @@ func (e *encoder) encode(vs ...interface{}) error {
 				fcall.TTwstat, fcall.TRwstat,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
 				fcall.TTrenameat,
+				fcall.TTdetach, fcall.TRdetach,
+				fcall.TTheartbeat, fcall.TRheartbeat,
 				fcall.TTwriteread:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
@@ -356,6 +358,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 				fcall.TTwstat, fcall.TRwstat,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
 				fcall.TTrenameat,
+				fcall.TTdetach, fcall.TRdetach,
+				fcall.TTheartbeat, fcall.TRheartbeat,
 				fcall.TTwriteread:
 				b, err := frame.PopFromFrame(d.rd)
 				if err != nil {

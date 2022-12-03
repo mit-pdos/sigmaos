@@ -333,7 +333,7 @@ func (pclnt *ProtClnt) PutFile(fid np.Tfid, path path.Path, mode np.Tmode, perm 
 }
 
 func (pclnt *ProtClnt) Detach() *fcall.Err {
-	args := &np.Tdetach{0, 0}
+	args := np.MkTdetach(0, 0)
 	_, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return err

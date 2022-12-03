@@ -211,6 +211,22 @@ message Tputfile {
         bytes data = 6;
 }
 
+message Tdetach {
+        uint32 propId = 1;
+        uint32 leadId = 2;
+}
+
+message Rdetach {
+}
+
+message Theartbeat {
+        repeated uint64 sids = 1;
+}
+
+message Rheartbeat {
+        repeated uint64 sids = 1;
+}
+
 message Tremovefile {
         uint32 fid = 1;
         repeated string Wnames = 2;

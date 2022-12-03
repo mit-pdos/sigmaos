@@ -37,6 +37,7 @@ const (
 	TRauth
 	TTattach
 	TRattach
+	TTerror
 	TRerror
 	TTflush
 	TRflush

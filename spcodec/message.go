@@ -7,8 +7,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Adopted from https://github.com/docker/go-p9p/message.go
-
 func NewMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
 	switch typ {
 	case fcall.TTversion:

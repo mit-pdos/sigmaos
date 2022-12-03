@@ -328,7 +328,7 @@ func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
+func (ps *ProtSrv) WriteV(args *np.TwriteV, data []byte, rets *np.Rwrite) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
@@ -338,7 +338,7 @@ func (ps *ProtSrv) WriteV(args *np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	if !np.VEq(args.Tversion(), v) {
 		return np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
 	}
-	n, err := f.Write(args.Toffset(), args.Data, args.Tversion())
+	n, err := f.Write(args.Toffset(), data, args.Tversion())
 	if err != nil {
 		return np.MkRerror(err)
 	}

@@ -9,15 +9,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// XXX cut out copy
-func MarshalFcallMsg(fc fcall.Fcall, bwr *bufio.Writer) *fcall.Err {
-	fcm := fc.(*sp.FcallMsg)
+func MarshalFcallMsg(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
-	frame.WriteFrame(bwr, f.Bytes())
-	return nil
+	return frame.WriteFrameAndBuf(bwr, f.Bytes(), fcm.Data)
 }
 
 func MarshalFcallMsgByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
@@ -29,7 +26,7 @@ func MarshalFcallMsgByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
 	return f.Bytes(), nil
 }
 
-func UnmarshalFcallMsg(frame []byte) (fcall.Fcall, *fcall.Err) {
+func UnmarshalFcallMsg(frame []byte) (*sp.FcallMsg, *fcall.Err) {
 	fm := sp.MakeFcallMsgNull()
 	if err := decode(bytes.NewReader(frame), fm); err != nil {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)

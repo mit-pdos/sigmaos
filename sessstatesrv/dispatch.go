@@ -8,7 +8,7 @@ import (
 	np "sigmaos/sigmap"
 )
 
-func (s *Session) Dispatch(msg fcall.Tmsg) (fcall.Tmsg, bool, *np.Rerror) {
+func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, bool, *np.Rerror) {
 	// If another replica detached a session, and the client sent their request
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.
@@ -52,7 +52,7 @@ func (s *Session) Dispatch(msg fcall.Tmsg) (fcall.Tmsg, bool, *np.Rerror) {
 		return reply, false, err
 	case *np.TwriteV:
 		reply := &np.Rwrite{}
-		err := s.protsrv.WriteV(req, reply)
+		err := s.protsrv.WriteV(req, data, reply)
 		return reply, false, err
 	case *np.Tclunk:
 		reply := &np.Rclunk{}

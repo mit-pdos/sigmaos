@@ -35,11 +35,11 @@ func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid fcall.Tsession) sp.Prots
 func (npd *Npd) serve(fm *sp.FcallMsg) {
 	s := fcall.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
-	reply, _, rerror := sess.Dispatch(fm.Msg)
+	reply, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
 		reply = rerror
 	}
-	fm1 := sp.MakeFcallMsg(reply, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
+	fm1 := sp.MakeFcallMsg(reply, nil, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
 	fm1.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(fm1)
 }
@@ -60,9 +60,8 @@ func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) 
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fcall fcall.Fcall) {
-	fm := fcall.(*sp.FcallMsg)
-	go npd.serve(fm)
+func (npd *Npd) SrvFcall(fc *sp.FcallMsg) {
+	go npd.serve(fc)
 }
 
 func (npd *Npd) Snapshot() []byte {
@@ -277,12 +276,12 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteV(args *sp.TwriteV, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteV(fid, args.Toffset(), args.Data, sp.NoV)
+	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())

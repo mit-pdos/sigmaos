@@ -246,8 +246,7 @@ func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.C
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(f fcall.Fcall) {
-	fc := f.(*np.FcallMsg)
+func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
 	s := fcall.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
@@ -360,7 +359,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
-	reply, close, rerror := sess.Dispatch(fc.Msg)
+	reply, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
 
 	if rerror != nil {

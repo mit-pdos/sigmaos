@@ -14,12 +14,12 @@ type Conn interface {
 	GetReplyC() chan *FcallMsg
 }
 
-type Fsrvfcall func(fcall.Fcall)
+type Fsrvfcall func(*FcallMsg)
 
 type SessServer interface {
 	Register(fcall.Tclient, fcall.Tsession, Conn) *fcall.Err
 	Unregister(fcall.Tclient, fcall.Tsession, Conn)
-	SrvFcall(fcall.Fcall)
+	SrvFcall(*FcallMsg)
 	Snapshot() []byte
 	Restore([]byte)
 }
@@ -34,7 +34,7 @@ type Protsrv interface {
 	Watch(*Twatch, *Ropen) *Rerror
 	Clunk(*Tclunk, *Rclunk) *Rerror
 	ReadV(*TreadV, *Rread) *Rerror
-	WriteV(*TwriteV, *Rwrite) *Rerror
+	WriteV(*TwriteV, []byte, *Rwrite) *Rerror
 	Remove(*Tremove, *Rremove) *Rerror
 	RemoveFile(*Tremovefile, *Rremove) *Rerror
 	Stat(*Tstat, *Rstat) *Rerror

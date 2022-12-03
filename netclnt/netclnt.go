@@ -132,8 +132,15 @@ func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 	}
+	buf, err := frame.ReadBuf(nc.br)
 	db.DPrintf("NETCLNT", "recv %v from %v\n", fm, nc.Dst())
-	return fm.(*sp.FcallMsg), nil
+	if err != nil {
+		db.DPrintf("NETCLNT_ERR", "%v ReadBuf err %v\n", fm.Session, err)
+		return nil, err
+	}
+	db.DPrintf("NETCLNT", "%v recv data %d\n", fm.Session, len(buf))
+	fm.Data = buf
+	return fm, nil
 }
 
 // Reader loop. The reader is in charge of resetting the connection if an error

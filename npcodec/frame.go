@@ -32,45 +32,19 @@ func ToWireCompatible(fm *np.FcallMsg) *FcallWireCompat {
 	return fcallWC
 }
 
-func MarshalFcallMsg(fc fcall.Fcall, b *bufio.Writer) *fcall.Err {
-	fcm := fc.(*np.FcallMsg)
+func MarshalFcallMsg(fcm *np.FcallMsg, b *bufio.Writer) *fcall.Err {
 	f, error := marshal1(true, ToWireCompatible(fcm))
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
-	dataBuf := false
-	var data []byte
-	switch fcm.Type() {
-	case fcall.TTwriteV:
-		msg := fcm.Msg.(*np.TwriteV)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TRread:
-		msg := fcm.Msg.(*np.Rread)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTsetfile:
-		msg := fcm.Msg.(*np.Tsetfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTputfile:
-		msg := fcm.Msg.(*np.Tputfile)
-		data = msg.Data
-		dataBuf = true
-	case fcall.TTwriteread:
-		msg := fcm.Msg.(*np.Twriteread)
-		data = msg.Data
-		dataBuf = true
-	default:
-	}
-	if dataBuf {
-		return frame.WriteFrameAndBuf(b, f, data)
+	if fcm.Data != nil {
+		return frame.WriteFrameAndBuf(b, f, fcm.Data)
 	} else {
 		return frame.WriteFrame(b, f)
 	}
 }
 
-func UnmarshalFcallWireCompat(frame []byte) (fcall.Fcall, *fcall.Err) {
+func UnmarshalFcallWireCompat(frame []byte) (*np.FcallMsg, *fcall.Err) {
 	fcallWC := &FcallWireCompat{}
 	if err := unmarshal(frame, fcallWC); err != nil {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)

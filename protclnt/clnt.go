@@ -37,8 +37,8 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 	return np.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, fence *np.Tfence) (fcall.Tmsg, *fcall.Err) {
-	reply, err := clnt.sm.RPC(addrs, args, fence)
+func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, data []byte, fence *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+	reply, err := clnt.sm.RPC(addrs, args, data, fence)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, fence *np.Tfence) 
 
 func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path path.Path) (*np.Rattach, *fcall.Err) {
 	args := np.MkTattach(fid, np.NoFid, uname, path)
-	reply, err := clnt.CallServer(addrs, args, np.MakeFenceNull())
+	reply, err := clnt.CallServer(addrs, args, nil, np.MakeFenceNull())
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +89,15 @@ func (pclnt *ProtClnt) Disconnect() *fcall.Err {
 }
 
 func (pclnt *ProtClnt) Call(args fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, f)
+	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, f)
+}
+
+func (pclnt *ProtClnt) CallData(args fcall.Tmsg, data []byte, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+	return pclnt.clnt.CallServer(pclnt.addrs, args, data, f)
 }
 
 func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (fcall.Tmsg, *fcall.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, np.MakeFenceNull())
+	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, np.MakeFenceNull())
 }
 
 func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwalk, *fcall.Err) {
@@ -214,8 +218,8 @@ func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *n
 }
 
 func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v np.TQversion, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := np.MkTwriteV(fid, offset, v, data)
-	reply, err := pclnt.Call(args, f)
+	args := np.MkTwriteV(fid, offset, v)
+	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err
 	}

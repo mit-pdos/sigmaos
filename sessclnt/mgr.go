@@ -53,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *fcall.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
@@ -61,7 +61,7 @@ func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fc
 		return nil, err
 	}
 	db.DPrintf("SESSCLNT", "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
-	msg, err := sess.RPC(req, f)
+	msg, err := sess.RPC(req, data, f)
 	return msg, err
 }
 

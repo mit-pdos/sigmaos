@@ -394,7 +394,9 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 			if v.Type == fcall.TTwrite {
 				m := msg.(*np.Twrite)
-				r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0, m.Data)
+				// XXX fix me; add Data to WireCompat
+				r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0)
+				// v.Data = m.Data
 				msg = r
 			}
 			if v.Type == fcall.TTopen9P {

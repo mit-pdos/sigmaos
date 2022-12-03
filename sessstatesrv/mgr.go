@@ -77,7 +77,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := np.MakeFcallMsg(np.MkTheartbeat(sess), 0, 0, nil, nil, np.MakeFenceNull())
+		hbs := np.MakeFcallMsg(np.MkTheartbeat(sess), nil, 0, 0, nil, nil, np.MakeFenceNull())
 		sm.srvfcall(hbs)
 	}
 }
@@ -90,7 +90,7 @@ func (sm *SessionMgr) runDetaches() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := np.MakeFcallMsg(&np.Tdetach{}, s.ClientId, s.Sid, nil, nil, np.MakeFenceNull())
+			detach := np.MakeFcallMsg(&np.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, np.MakeFenceNull())
 			sm.srvfcall(detach)
 		}
 	}

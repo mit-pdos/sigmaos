@@ -48,8 +48,8 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
-	rpc, err := c.send(req, f)
+func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+	rpc, err := c.send(req, data, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
 		return nil, err
@@ -64,7 +64,7 @@ func (c *SessClnt) RPC(req fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(np.MkTheartbeat([]uint64{uint64(c.sid)}), np.MakeFenceNull())
+	_, err := c.RPC(np.MkTheartbeat([]uint64{uint64(c.sid)}), nil, np.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -112,7 +112,7 @@ func (c *SessClnt) CompleteRPC(reply *np.FcallMsg, err *fcall.Err) {
 
 // Send a detach.
 func (c *SessClnt) Detach() *fcall.Err {
-	rep, err := c.RPC(np.MkTdetach(0, 0), np.MakeFenceNull())
+	rep, err := c.RPC(np.MkTdetach(0, 0), nil, np.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
 	}
@@ -141,14 +141,14 @@ func srvClosedSess(msg fcall.Tmsg, err *fcall.Err) bool {
 	return false
 }
 
-func (c *SessClnt) send(req fcall.Tmsg, f *np.Tfence) (*netclnt.Rpc, *fcall.Err) {
+func (c *SessClnt) send(req fcall.Tmsg, data []byte, f *np.Tfence) (*netclnt.Rpc, *fcall.Err) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcallMsg(req, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

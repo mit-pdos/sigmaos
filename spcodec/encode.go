@@ -48,5 +48,6 @@ func decode(rdr io.Reader, fcm *sp.FcallMsg) error {
 		return err
 	}
 	fcm.Msg = msg
+
 	return nil
 }

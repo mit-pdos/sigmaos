@@ -49,7 +49,7 @@ func (f *ReplyFuture) Abort(cli fcall.Tclient, sid fcall.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = np.MakeFcallMsg(np.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), cli, sid, nil, nil, np.MakeFenceNull())
+		f.reply = np.MakeFcallMsg(np.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), nil, cli, sid, nil, nil, np.MakeFenceNull())
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

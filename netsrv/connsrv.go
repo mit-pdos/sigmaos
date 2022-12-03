@@ -114,7 +114,13 @@ func (c *SrvConn) reader() {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
 			return
 		}
-		db.DPrintf("NETSRV", "srv req %v\n", fc)
+		buf, err := frame.ReadBuf(c.br)
+		if err != nil {
+			db.DPrintf("NETSRV_ERR", "%v ReadBuf err %v\n", c.sessid, err)
+			return
+		}
+		fc.Data = buf
+		db.DPrintf("NETSRV", "srv req %v data %d\n", fc, len(buf))
 		if c.sessid == 0 {
 			c.sessid = fcall.Tsession(fc.Session())
 			c.clid = fc.Client()
@@ -122,7 +128,7 @@ func (c *SrvConn) reader() {
 				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fm := sp.MakeFcallMsgReply(fc.(*sp.FcallMsg), sp.MkRerror(err))
+				fm := sp.MakeFcallMsgReply(fc, sp.MkRerror(err))
 				c.GetReplyC() <- fm
 				close(c.replies)
 				return

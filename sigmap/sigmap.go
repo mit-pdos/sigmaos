@@ -274,8 +274,9 @@ func (iv *Tinterval) Marshal() string {
 }
 
 type FcallMsg struct {
-	Fc  *Fcall
-	Msg fcall.Tmsg
+	Fc   *Fcall
+	Msg  fcall.Tmsg
+	Data []byte
 }
 
 func (fcm *FcallMsg) Session() fcall.Tsession {
@@ -308,7 +309,7 @@ func MakeFenceNull() *Tfence {
 
 func MakeFcallMsgNull() *FcallMsg {
 	fc := &Fcall{Received: &Tinterval{}, Fence: MakeFenceNull()}
-	return &FcallMsg{fc, nil}
+	return &FcallMsg{fc, nil, nil}
 }
 
 func (fi *Tfenceid) Tpath() Tpath {
@@ -319,7 +320,7 @@ func (f *Tfence) Tepoch() Tepoch {
 	return Tepoch(f.Epoch)
 }
 
-func MakeFcallMsg(msg fcall.Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
+func MakeFcallMsg(msg fcall.Tmsg, data []byte, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
 	if rcv == nil {
 		rcv = &Tinterval{}
 	}
@@ -334,11 +335,11 @@ func MakeFcallMsg(msg fcall.Tmsg, cli fcall.Tclient, sess fcall.Tsession, seqno 
 	if seqno != nil {
 		fcall.Seqno = uint64(seqno.Next())
 	}
-	return &FcallMsg{fcall, msg}
+	return &FcallMsg{fcall, msg, data}
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply fcall.Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, fcall.Tclient(req.Fc.Client), fcall.Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
+	fm := MakeFcallMsg(reply, nil, fcall.Tclient(req.Fc.Client), fcall.Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -429,8 +430,8 @@ func (r *TreadV) Tcount() Tsize {
 	return Tsize(r.Count)
 }
 
-func MkTwriteV(fid Tfid, o Toffset, v TQversion, d []byte) *TwriteV {
-	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Data: d}
+func MkTwriteV(fid Tfid, o Toffset, v TQversion) *TwriteV {
+	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v)}
 }
 
 func (w *TwriteV) Tfid() Tfid {

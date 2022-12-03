@@ -95,7 +95,7 @@ func makeNpConn(named []string) *NpConn {
 
 // Make Wire-compatible Rerror
 func MkRerrorWC(ec fcall.Terror) *sp.Rerror {
-	return &sp.Rerror{ec.String()}
+	return &sp.Rerror{Ename: ec.String()}
 }
 
 func (npc *NpConn) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
@@ -111,7 +111,7 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	u, error := user.Current()
 	if error != nil {
-		return &sp.Rerror{error.Error()}
+		return &sp.Rerror{Ename: error.Error()}
 	}
 	npc.uname = u.Uid
 
@@ -122,7 +122,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	}
 	if err := npc.pc.Mount(fid, sp.NAMED); err != nil {
 		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
-		return &sp.Rerror{error.Error()}
+		return &sp.Rerror{Ename: error.Error()}
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Tfid(), fid)

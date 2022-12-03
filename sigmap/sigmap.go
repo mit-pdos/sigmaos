@@ -358,11 +358,7 @@ func (fm *FcallMsg) GetMsg() fcall.Tmsg {
 }
 
 func MkRerror(err *fcall.Err) *Rerror {
-	return &Rerror{err.Error()}
-}
-
-type Rerror struct {
-	Ename string
+	return &Rerror{Ename: err.Error()}
 }
 
 type Tflush struct {

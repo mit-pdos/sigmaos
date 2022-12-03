@@ -393,10 +393,6 @@ func (o *Topen) Tmode() Tmode {
 	return Tmode(o.Mode)
 }
 
-type Twatch struct {
-	Fid Tfid
-}
-
 func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode) *Tcreate {
 	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode)}
 }
@@ -451,6 +447,14 @@ func (w *TwriteV) Tversion() TQversion {
 
 func (wr *Rwrite) Tcount() Tsize {
 	return Tsize(wr.Count)
+}
+
+func MkTwatch(fid Tfid) *Twatch {
+	return &Twatch{Fid: uint32(fid)}
+}
+
+func (w *Twatch) Tfid() Tfid {
+	return Tfid(w.Fid)
 }
 
 func MkTclunk(fid Tfid) *Tclunk {

@@ -153,6 +153,10 @@ message Rwrite {
         uint32 count = 1;
 }
 
+message Twatch {
+        uint32 fid = 1;
+}
+
 message Trenameat {
         uint32 oldFid = 1;
         string oldName = 2;

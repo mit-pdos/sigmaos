@@ -200,7 +200,7 @@ func (ps *ProtSrv) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (ps *ProtSrv) Watch(args *np.Twatch, rets *np.Ropen) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}

@@ -1,11 +1,7 @@
 package spcodec
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
 	"io"
-	"reflect"
 
 	"google.golang.org/protobuf/proto"
 
@@ -13,51 +9,21 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func marshal(v interface{}) ([]byte, error) {
-	return marshal1(false, v)
-}
-
-func marshal1(bailOut bool, v interface{}) ([]byte, error) {
-	var b bytes.Buffer
-	enc := &encoder{bailOut, &b}
-	if err := enc.encode(v); err != nil {
-		return nil, err
+func encode(wr io.Writer, fcm *sp.FcallMsg) error {
+	b, err := proto.Marshal(fcm.Fc)
+	if err != nil {
+		return err
 	}
-	return b.Bytes(), nil
-}
-
-type encoder struct {
-	bailOut bool // Optionally bail out when marshalling buffers
-	wr      io.Writer
-}
-
-func (e *encoder) encode(vs ...interface{}) error {
-	for _, v := range vs {
-		switch v := v.(type) {
-		case sp.FcallMsg:
-			b, err := proto.Marshal(v.Fc)
-			if err != nil {
-				return err
-			}
-			if err := frame.PushToFrame(e.wr, b); err != nil {
-				return err
-			}
-			b, err = proto.Marshal(v.Msg.(proto.Message))
-			if err != nil {
-				return err
-			}
-			if err := frame.PushToFrame(e.wr, b); err != nil {
-				return err
-			}
-		case *sp.FcallMsg:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		default:
-			return errors.New(fmt.Sprintf("Encode: unknown type: %v", reflect.TypeOf(v)))
-		}
+	if err := frame.PushToFrame(wr, b); err != nil {
+		return err
 	}
-
+	b, err = proto.Marshal(fcm.Msg.(proto.Message))
+	if err != nil {
+		return err
+	}
+	if err := frame.PushToFrame(wr, b); err != nil {
+		return err
+	}
 	return nil
 }
 

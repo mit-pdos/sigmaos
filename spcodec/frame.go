@@ -2,6 +2,7 @@ package spcodec
 
 import (
 	"bufio"
+	"bytes"
 
 	"sigmaos/fcall"
 	"sigmaos/frame"
@@ -27,8 +28,7 @@ func MarshalFcallMsgByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
 
 func UnmarshalFcallMsg(frame []byte) (fcall.Fcall, *fcall.Err) {
 	fm := sp.MakeFcallMsgNull()
-
-	if err := unmarshal(frame, fm); err != nil {
+	if err := decode(bytes.NewReader(frame), fm); err != nil {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)
 	}
 	return fm, nil

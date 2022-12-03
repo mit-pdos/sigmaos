@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/frame"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func marshal(v interface{}) ([]byte, error) {
@@ -26,15 +26,6 @@ func marshal1(bailOut bool, v interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func unmarshal(data []byte, v interface{}) error {
-	return unmarshalReader(bytes.NewReader(data), v)
-}
-
-func unmarshalReader(rdr io.Reader, v interface{}) error {
-	dec := &decoder{rdr}
-	return dec.decode(v)
-}
-
 type encoder struct {
 	bailOut bool // Optionally bail out when marshalling buffers
 	wr      io.Writer
@@ -43,7 +34,7 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case np.FcallMsg:
+		case sp.FcallMsg:
 			b, err := proto.Marshal(v.Fc)
 			if err != nil {
 				return err
@@ -58,7 +49,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := frame.PushToFrame(e.wr, b); err != nil {
 				return err
 			}
-		case *np.FcallMsg:
+		case *sp.FcallMsg:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
@@ -70,38 +61,26 @@ func (e *encoder) encode(vs ...interface{}) error {
 	return nil
 }
 
-type decoder struct {
-	rd io.Reader
-}
-
-func (d *decoder) decode(vs ...interface{}) error {
-	for _, v := range vs {
-		switch v := v.(type) {
-		case *np.FcallMsg:
-			b, err := frame.PopFromFrame(d.rd)
-			if err != nil {
-				return err
-			}
-			if err := proto.Unmarshal(b, v.Fc); err != nil {
-				return err
-			}
-			msg, error := NewMsg(v.Type())
-			if error != nil {
-				return err
-			}
-			b, err = frame.PopFromFrame(d.rd)
-			if err != nil {
-				return err
-			}
-			m := msg.(proto.Message)
-			if err := proto.Unmarshal(b, m); err != nil {
-				return err
-			}
-			v.Msg = msg
-		default:
-			return fmt.Errorf("decode: unknown type %T", v)
-		}
+func decode(rdr io.Reader, fcm *sp.FcallMsg) error {
+	b, err := frame.PopFromFrame(rdr)
+	if err != nil {
+		return err
 	}
-
+	if err := proto.Unmarshal(b, fcm.Fc); err != nil {
+		return err
+	}
+	msg, error := NewMsg(fcm.Type())
+	if error != nil {
+		return err
+	}
+	b, err = frame.PopFromFrame(rdr)
+	if err != nil {
+		return err
+	}
+	m := msg.(proto.Message)
+	if err := proto.Unmarshal(b, m); err != nil {
+		return err
+	}
+	fcm.Msg = msg
 	return nil
 }

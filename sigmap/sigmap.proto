@@ -181,6 +181,9 @@ message Trenameat {
         string newName = 4;
 }
 
+message Rrenameat {
+}
+
 message Tgetfile {
         uint32 fid = 1;
         uint32 mode = 2;

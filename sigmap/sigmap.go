@@ -531,8 +531,6 @@ func (r *Trenameat) Toldfid() Tfid {
 	return Tfid(r.OldFid)
 }
 
-type Rrenameat struct{}
-
 func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve}
 }

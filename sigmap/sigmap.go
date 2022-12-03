@@ -165,7 +165,7 @@ func (qid *Tqid) Ttype() Qtype {
 	return Qtype(qid.Type)
 }
 
-type Tmode uint8
+type Tmode uint32
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
@@ -381,30 +381,36 @@ func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
 }
 
-type Topen struct {
-	Fid  Tfid
-	Mode Tmode
+func MkTopen(fid Tfid, mode Tmode) *Topen {
+	return &Topen{Fid: uint32(fid), Mode: uint32(mode)}
+}
+
+func (o *Topen) Tfid() Tfid {
+	return Tfid(o.Fid)
+}
+
+func (o *Topen) Tmode() Tmode {
+	return Tmode(o.Mode)
 }
 
 type Twatch struct {
 	Fid Tfid
 }
 
-type Ropen struct {
-	Qid    Tqid
-	Iounit Tiounit
+func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode) *Tcreate {
+	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode)}
 }
 
-type Tcreate struct {
-	Fid  Tfid
-	Name string
-	Perm Tperm
-	Mode Tmode
+func (c *Tcreate) Tfid() Tfid {
+	return Tfid(c.Fid)
 }
 
-type Rcreate struct {
-	Qid    Tqid
-	Iounit Tiounit
+func (c *Tcreate) Tperm() Tperm {
+	return Tperm(c.Perm)
+}
+
+func (c *Tcreate) Tmode() Tmode {
+	return Tmode(c.Mode)
 }
 
 func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion) *TreadV {

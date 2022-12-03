@@ -153,11 +153,11 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 }
 
 func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	qid, err := npc.fidc.Open(fid, args.Mode)
+	qid, err := npc.fidc.Open(fid, args.Tmode())
 	if err != nil {
 		db.DPrintf("PROXY", "Open args %v err: %v\n", args, err)
 		return MkRerrorWC(err.Code())
@@ -172,11 +172,11 @@ func (npc *NpConn) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 }
 
 func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Perm, args.Mode)
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode())
 	if err != nil {
 		db.DPrintf("PROXY", "Create args %v err: %v\n", args, err)
 		return MkRerrorWC(err.Code())
@@ -184,7 +184,7 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
 	}
-	rets.Qid = *npc.pc.Qid(fid1)
+	rets.Qid = npc.pc.Qid(fid1)
 	db.DPrintf("PROXY", "Create args %v rets: %v\n", args, rets)
 	return nil
 }

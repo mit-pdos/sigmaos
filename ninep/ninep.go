@@ -129,18 +129,18 @@ func (q Tqid9P) String() string {
 	return fmt.Sprintf("{%v v %v p %v}", q.Type, q.Version, q.Path)
 }
 
-type Tmode uint8
+type Tmode9P uint8
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD   Tmode = 0    // read-only
-	OWRITE  Tmode = 0x01 // write-only
-	ORDWR   Tmode = 0x02 // read-write
-	OEXEC   Tmode = 0x03 // execute (implies OREAD)
-	OTRUNC  Tmode = 0x10 // or truncate file first
-	OCEXEC  Tmode = 0x20 // or close on exec
-	ORCLOSE Tmode = 0x40 // remove on close
-	OAPPEND Tmode = 0x80 // append
+	OREAD   Tmode9P = 0    // read-only
+	OWRITE  Tmode9P = 0x01 // write-only
+	ORDWR   Tmode9P = 0x02 // read-write
+	OEXEC   Tmode9P = 0x03 // execute (implies OREAD)
+	OTRUNC  Tmode9P = 0x10 // or truncate file first
+	OCEXEC  Tmode9P = 0x20 // or close on exec
+	ORCLOSE Tmode9P = 0x40 // remove on close
+	OAPPEND Tmode9P = 0x80 // append
 
 	// sigmaP extension: a client uses OWATCH to block at the
 	// server until a file/directiory is create or removed, or a
@@ -150,10 +150,10 @@ const (
 	// when a client creates or removes the file.  OWATCH on open
 	// for a directory and a closure will invoke the closure if
 	// the directory changes.
-	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
+	OWATCH Tmode9P = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
 )
 
-func (m Tmode) String() string {
+func (m Tmode9P) String() string {
 	return fmt.Sprintf("m %x", uint8(m&0xFF))
 }
 
@@ -273,9 +273,9 @@ type Rwalk struct {
 	Qids []Tqid9P
 }
 
-type Topen struct {
+type Topen9P struct {
 	Fid  Tfid
-	Mode Tmode
+	Mode Tmode9P
 }
 
 type Twatch struct {
@@ -287,11 +287,11 @@ type Ropen struct {
 	Iounit Tiounit
 }
 
-type Tcreate struct {
+type Tcreate9P struct {
 	Fid  Tfid
 	Name string
 	Perm Tperm
-	Mode Tmode
+	Mode Tmode9P
 }
 
 type Rcreate struct {
@@ -401,8 +401,10 @@ type Twstat struct {
 
 type Rwstat struct{}
 
-func (Tflush) Type() fcall.Tfcall  { return fcall.TTflush }
-func (Rflush) Type() fcall.Tfcall  { return fcall.TRflush }
-func (Rstat9P) Type() fcall.Tfcall { return fcall.TRstat9P }
-func (Tread) Type() fcall.Tfcall   { return fcall.TTread }
-func (Twrite) Type() fcall.Tfcall  { return fcall.TTwrite }
+func (Tflush) Type() fcall.Tfcall    { return fcall.TTflush }
+func (Rflush) Type() fcall.Tfcall    { return fcall.TRflush }
+func (Tcreate9P) Type() fcall.Tfcall { return fcall.TTcreate }
+func (Topen9P) Type() fcall.Tfcall   { return fcall.TTopen }
+func (Rstat9P) Type() fcall.Tfcall   { return fcall.TRstat9P }
+func (Tread) Type() fcall.Tfcall     { return fcall.TTread }
+func (Twrite) Type() fcall.Tfcall    { return fcall.TTwrite }

@@ -151,14 +151,14 @@ func (fidc *FidClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmo
 	if err != nil {
 		return np.NoFid, err
 	}
-	fidc.fids.lookup(fid).add(name, &reply.Qid)
+	fidc.fids.lookup(fid).add(name, reply.Qid)
 	return fid, nil
 }
 
-func (fidc *FidClnt) Open(fid np.Tfid, mode np.Tmode) (np.Tqid, *fcall.Err) {
+func (fidc *FidClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Tqid, *fcall.Err) {
 	reply, err := fidc.fids.lookup(fid).pc.Open(fid, mode)
 	if err != nil {
-		return np.Tqid{}, err
+		return nil, err
 	}
 	return reply.Qid, nil
 }

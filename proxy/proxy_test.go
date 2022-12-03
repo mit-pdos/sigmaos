@@ -78,20 +78,20 @@ func TestBasic(t *testing.T) {
 	out, err = run("rm /mnt/9p/xxx")
 	assert.Equal(t, nil, err)
 
-	out, err = run("mkdir /mnt/9p/d")
+	out, err = run("mkdir /mnt/9p/ddd")
 	assert.Equal(t, nil, err)
 
-	out, err = run("echo hello > /mnt/9p/d/xxx")
+	out, err = run("echo hello > /mnt/9p/ddd/xxx")
 	assert.Equal(t, nil, err)
 
-	out, err = run("ls /mnt/9p/d | grep 'xxx'")
+	out, err = run("ls /mnt/9p/ddd | grep 'xxx'")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "xxx\n", string(out))
 
-	out, err = run("rm /mnt/9p/d/xxx")
+	out, err = run("rm /mnt/9p/ddd/xxx")
 	assert.Equal(t, nil, err)
 
-	out, err = run("rmdir /mnt/9p/d")
+	out, err = run("rmdir /mnt/9p/ddd")
 	assert.Equal(t, nil, err)
 
 	out, err = run("ls /mnt/9p/xxx")

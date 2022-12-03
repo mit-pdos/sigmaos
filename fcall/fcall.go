@@ -43,9 +43,9 @@ const (
 	TRflush
 	TTwalk
 	TRwalk
-	TTopen
+	TTopen9P
 	TRopen
-	TTcreate
+	TTcreate9P
 	TRcreate
 	TTread
 	TRread
@@ -63,7 +63,8 @@ const (
 	//
 	// SigmaP
 	//
-
+	TTopen
+	TTcreate
 	TRstat
 	TTreadV
 	TTwriteV
@@ -105,11 +106,11 @@ func (fct Tfcall) String() string {
 		return "Twalk"
 	case TRwalk:
 		return "Rwalk"
-	case TTopen:
+	case TTopen9P:
 		return "Topen"
 	case TRopen:
 		return "Ropen"
-	case TTcreate:
+	case TTcreate9P:
 		return "Tcreate"
 	case TRcreate:
 		return "Rcreate"
@@ -138,6 +139,10 @@ func (fct Tfcall) String() string {
 	case TRwstat:
 		return "Rwstat"
 
+	case TTopen:
+		return "Ropen"
+	case TTcreate:
+		return "Tcreate"
 	case TRstat:
 		return "Rstat"
 	case TTreadV:

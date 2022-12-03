@@ -176,25 +176,25 @@ func (ps *ProtSrv) Clunk(args *np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (ps *ProtSrv) Open(args *np.Topen, rets *np.Ropen) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
 	db.DPrintf("PROTSRV", "%v: Open f %v %v", f.Pobj().Ctx().Uname(), f, args)
 
 	o := f.Pobj().Obj()
-	no, r := o.Open(f.Pobj().Ctx(), args.Mode)
+	no, r := o.Open(f.Pobj().Ctx(), args.Tmode())
 	if r != nil {
 		return np.MkRerror(r)
 	}
-	f.SetMode(args.Mode)
+	f.SetMode(args.Tmode())
 	if no != nil {
 		f.Pobj().SetObj(no)
 		ps.vt.Insert(no.Path())
 		ps.vt.IncVersion(no.Path())
-		rets.Qid = *ps.mkQid(no.Perm(), no.Path())
+		rets.Qid = ps.mkQid(no.Perm(), no.Path())
 	} else {
-		rets.Qid = *ps.mkQid(o.Perm(), o.Path())
+		rets.Qid = ps.mkQid(o.Perm(), o.Path())
 	}
 	return nil
 }
@@ -266,7 +266,7 @@ func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn pa
 }
 
 func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	f, err := ps.ft.Lookup(args.Fid)
+	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -280,7 +280,7 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	dlk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
 	defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
-	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Perm, args.Mode)
+	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode())
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -288,11 +288,11 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
-	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.Perm.IsEphemeral(), qid)
-	ps.ft.Add(args.Fid, nf)
+	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.Tperm().IsEphemeral(), qid)
+	ps.ft.Add(args.Tfid(), nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	nf.SetMode(args.Mode)
-	rets.Qid = *qid
+	nf.SetMode(args.Tmode())
+	rets.Qid = qid
 	return nil
 }
 

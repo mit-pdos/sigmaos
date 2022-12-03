@@ -19,6 +19,8 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
+// XXX clean up after split sigmap from ninep
+
 func marshal(v interface{}) ([]byte, error) {
 	return marshal1(false, v)
 }
@@ -211,7 +213,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -343,6 +345,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 				msg = &np.Tread{}
 			} else if v.Type == fcall.TTwrite {
 				msg = &np.Twrite{}
+			} else if v.Type == fcall.TTopen9P {
+				msg = &np.Topen9P{}
+			} else if v.Type == fcall.TTcreate9P {
+				msg = &np.Tcreate9P{}
 			} else {
 				m, err := spcodec.NewMsg(v.Type)
 				if err != nil {
@@ -363,6 +369,17 @@ func (d *decoder) decode(vs ...interface{}) error {
 				r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0, m.Data)
 				msg = r
 			}
+			if v.Type == fcall.TTopen9P {
+				m := msg.(*np.Topen9P)
+				r := sp.MkTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
+				msg = r
+			}
+			if v.Type == fcall.TTcreate9P {
+				m := msg.(*np.Tcreate9P)
+				log.Printf("create9p %v\n", m)
+				r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
+				msg = r
+			}
 			v.Msg = msg
 		case fcall.Tmsg:
 			elements, err := fields9p(v)
@@ -374,6 +391,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		default:
+			log.Printf("Decode unknown type: %T\n", v)
 			errors.New("Decode unknown type")
 		}
 	}

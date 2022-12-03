@@ -110,7 +110,7 @@ func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwal
 }
 
 func (pclnt *ProtClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmode) (*np.Rcreate, *fcall.Err) {
-	args := &np.Tcreate{fid, name, perm, mode}
+	args := np.MkTcreate(fid, name, perm, mode)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (pclnt *ProtClnt) Clunk(fid np.Tfid) *fcall.Err {
 }
 
 func (pclnt *ProtClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, *fcall.Err) {
-	args := &np.Topen{fid, mode}
+	args := np.MkTopen(fid, mode)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err

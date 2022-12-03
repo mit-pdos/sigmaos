@@ -96,6 +96,28 @@ message Rwalk {
         repeated Tqid qids = 1;
 }
 
+message Topen {
+        uint32 fid = 1;
+        uint32 mode = 2;
+}
+
+message Ropen {
+        Tqid qid = 1;
+        uint32 iounit = 2;
+}
+
+message Tcreate {
+        uint32 fid = 1;
+        string name = 2;
+        uint32 perm = 3;
+        uint32 mode = 4;
+}
+
+message Rcreate {
+        Tqid qid = 1;
+        uint32 iounit = 2;
+}
+
 message Tclunk {
         uint32 fid = 1;
 }

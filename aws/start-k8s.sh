@@ -55,6 +55,9 @@ flannel_cidr="10.123.0.0"
 
 join_cmd=""
 
+id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
+key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
+
 for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
@@ -85,6 +88,9 @@ for vm in $vms; do
 
     # Register docker credentials
     kubectl create secret generic regcred --from-file=.dockerconfigjson=/home/ubuntu/.docker/config.json  --type=kubernetes.io/dockerconfigjson
+
+    # Register aws credentials
+    kubectl create secret generic aws-creds --from-literal=aws-id=$id --from-literal=aws-secret=$key
   else
     echo "JOIN k8s follower $vm"
     if [ -z "$join_cmd" ]; then

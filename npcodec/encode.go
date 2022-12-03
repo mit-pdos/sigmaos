@@ -14,6 +14,7 @@ import (
 	"sigmaos/fcall"
 	np "sigmaos/ninep"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
@@ -342,7 +343,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			} else if v.Type == fcall.TTwrite {
 				msg = &np.Twrite{}
 			} else {
-				m, err := newMsg(v.Type)
+				m, err := spcodec.NewMsg(v.Type)
 				if err != nil {
 					return err
 				}

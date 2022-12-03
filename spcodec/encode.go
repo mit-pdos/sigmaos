@@ -329,7 +329,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := proto.Unmarshal(b, v.Fc); err != nil {
 				return err
 			}
-			msg, error := newMsg(v.Type())
+			msg, error := NewMsg(v.Type())
 			if error != nil {
 				return err
 			}

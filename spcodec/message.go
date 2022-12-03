@@ -9,7 +9,7 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/message.go
 
-func newMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
+func NewMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
 	switch typ {
 	case fcall.TTversion:
 		return &sp.Tversion{}, nil

@@ -221,7 +221,3 @@ message Twriteread {
         uint64 fid = 1; 
         bytes data = 2;
 }
-
-message Rwriteread {
-        bytes data = 1;
-}

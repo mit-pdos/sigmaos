@@ -357,49 +357,6 @@ func (fm *FcallMsg) GetMsg() fcall.Tmsg {
 	return fm.Msg
 }
 
-type Tversion struct {
-	Msize   Tsize
-	Version string
-}
-
-func (m Tversion) String() string {
-	return fmt.Sprintf("{msize %v version %v}", m.Msize, m.Version)
-}
-
-type Rversion struct {
-	Msize   Tsize
-	Version string
-}
-
-func (m Rversion) String() string {
-	return fmt.Sprintf("{msize %v version %v}", m.Msize, m.Version)
-}
-
-type Tauth struct {
-	Afid   Tfid
-	Unames []string
-	Anames []string
-}
-
-func (m Tauth) String() string {
-	return fmt.Sprintf("{afid %v u %v a %v}", m.Afid, m.Unames, m.Anames)
-}
-
-type Rauth struct {
-	Aqid Tqid
-}
-
-type Tattach struct {
-	Fid   Tfid
-	Afid  Tfid
-	Uname string
-	Aname string
-}
-
-func (m Tattach) String() string {
-	return fmt.Sprintf("{%v a %v u %v a '%v'}", m.Fid, m.Afid, m.Uname, m.Aname)
-}
-
 func MkRerror(err *fcall.Err) *Rerror {
 	return &Rerror{err.Error()}
 }
@@ -425,6 +382,14 @@ func (w *Twalk) Tfid() Tfid {
 
 func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
+}
+
+func MkTattach(fid, afid Tfid, uname string, path path.Path) *Tattach {
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: uname, Aname: path.String()}
+}
+
+func (a *Tattach) Tfid() Tfid {
+	return Tfid(a.Fid)
 }
 
 type Topen struct {

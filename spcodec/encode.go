@@ -163,7 +163,9 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 			switch fcall.Tfcall(v.Type()) {
-			case fcall.TTwriteread, fcall.TRattach, fcall.TTwalk, fcall.TRwalk,
+			case fcall.TTattach, fcall.TRattach, fcall.TTversion, fcall.TRversion,
+				fcall.TTauth, fcall.TRauth,
+				fcall.TTwriteread, fcall.TTwalk, fcall.TRwalk,
 				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
 				fcall.TTwriteV, fcall.TRwrite, fcall.TTclunk,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
@@ -332,7 +334,9 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			switch v.Type() {
-			case fcall.TTwriteread, fcall.TRattach, fcall.TTwalk, fcall.TRwalk,
+			case fcall.TTattach, fcall.TRattach, fcall.TTversion, fcall.TRversion,
+				fcall.TTauth, fcall.TRauth,
+				fcall.TTwriteread, fcall.TTwalk, fcall.TRwalk,
 				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
 				fcall.TTwriteV, fcall.TRwrite,
 				fcall.TTclunk, fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,

@@ -50,7 +50,7 @@ func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, fence *np.Tfence) 
 }
 
 func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path path.Path) (*np.Rattach, *fcall.Err) {
-	args := &np.Tattach{fid, np.NoFid, uname, path.String()}
+	args := np.MkTattach(fid, np.NoFid, uname, path)
 	reply, err := clnt.CallServer(addrs, args, np.MakeFenceNull())
 	if err != nil {
 		return nil, err

@@ -84,7 +84,7 @@ func (ps *ProtSrv) Attach(args *np.Tattach, rets *np.Rattach) *np.Rerror {
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
+	ps.ft.Add(args.Tfid(), fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	return nil
 }

@@ -25,6 +25,33 @@ message Stat {
         string  muid = 11;    // name of the last user that modified the file
 } 
 
+message Tversion {
+        uint32 msize = 1;
+        string version = 2;
+}
+
+message Rversion {
+        uint32 msize = 1;
+        string version = 2;
+}
+
+message Tauth {
+        uint32 afid = 1;
+        repeated string Unames = 2;
+        repeated string Anames = 3;
+}
+
+message Rauth {
+       Tqid aqid = 1;
+}
+
+message Tattach {
+        uint32 fid = 1;
+        uint32 afid = 2;
+        string uname = 3;
+        string aname = 4;
+}
+
 message Rattach {
         Tqid qid = 1;        
 }

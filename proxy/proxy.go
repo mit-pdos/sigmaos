@@ -125,7 +125,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 		return &sp.Rerror{error.Error()}
 	}
 	rets.Qid = npc.fidc.Qid(fid)
-	npc.fm.mapTo(args.Fid, fid)
+	npc.fm.mapTo(args.Tfid(), fid)
 	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return nil

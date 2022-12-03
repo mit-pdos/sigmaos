@@ -180,7 +180,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if v.Type == fcall.TRstat {
 				sprstat := msg.(*sp.Rstat)
 				npst := Sp2NpStat(sprstat.Stat)
-				msg = &np.Rstat9P{uint16(sprstat.Size), *npst}
+				msg = &np.Rstat9P{0, *npst}
 			}
 			if err := e.encode(v.Type, v.Tag, msg); err != nil {
 				return err
@@ -213,7 +213,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -282,6 +282,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
 				return err
 			}
+		case *np.Tqid9P:
+			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
+				return err
+			}
 		case *[]sp.Tqid:
 			var l uint16
 
@@ -335,6 +339,28 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
+		case *np.Stat9P:
+			var l uint16
+
+			if err := d.decode(&l); err != nil {
+				return err
+			}
+
+			b := make([]byte, l)
+			if _, err := io.ReadFull(d.rd, b); err != nil {
+				return err
+			}
+
+			elements, err := fields9p(v)
+			if err != nil {
+				return err
+			}
+
+			dec := &decoder{bytes.NewReader(b)}
+
+			if err := dec.decode(elements...); err != nil {
+				return err
+			}
 		case *FcallWireCompat:
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
@@ -349,6 +375,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 				msg = &np.Topen9P{}
 			} else if v.Type == fcall.TTcreate9P {
 				msg = &np.Tcreate9P{}
+			} else if v.Type == fcall.TTwstat9P {
+				msg = &np.Twstat9P{}
 			} else {
 				m, err := spcodec.NewMsg(v.Type)
 				if err != nil {
@@ -377,6 +405,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if v.Type == fcall.TTcreate9P {
 				m := msg.(*np.Tcreate9P)
 				r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
+				msg = r
+			}
+			if v.Type == fcall.TTwstat9P {
+				m := msg.(*np.Twstat9P)
+				r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat))
 				msg = r
 			}
 			v.Msg = msg

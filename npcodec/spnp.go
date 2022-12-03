@@ -13,6 +13,14 @@ func Sp2NpQid(spqid sp.Tqid) np.Tqid9P {
 	return npqid
 }
 
+func Np2SpQid(npqid np.Tqid9P) *sp.Tqid {
+	spqid := &sp.Tqid{}
+	spqid.Type = uint32(npqid.Type)
+	spqid.Version = uint32(npqid.Version)
+	spqid.Path = uint64(npqid.Path)
+	return spqid
+}
+
 func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
 	npst := &np.Stat9P{}
 	npst.Type = uint16(spst.Type)
@@ -27,4 +35,20 @@ func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
 	npst.Gid = spst.Gid
 	npst.Muid = spst.Muid
 	return npst
+}
+
+func Np2SpStat(npst np.Stat9P) *sp.Stat {
+	spst := &sp.Stat{}
+	spst.Type = uint32(npst.Type)
+	spst.Dev = npst.Dev
+	spst.Qid = Np2SpQid(npst.Qid)
+	spst.Mode = uint32(npst.Mode)
+	spst.Atime = npst.Atime
+	spst.Mtime = npst.Mtime
+	spst.Length = uint64(npst.Length)
+	spst.Name = npst.Name
+	spst.Uid = npst.Uid
+	spst.Gid = npst.Gid
+	spst.Muid = npst.Muid
+	return spst
 }

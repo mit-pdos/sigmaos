@@ -159,8 +159,15 @@ message Tstat {
 }
 
 message Rstat {
-        uint32 size = 1;
-        Stat stat = 2;
+        Stat stat = 1;
+}
+
+message Twstat {
+        uint32 fid = 1;
+        Stat stat = 3;
+}
+
+message Rwstat {
 }
 
 message Twatch {

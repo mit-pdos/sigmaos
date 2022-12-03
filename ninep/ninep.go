@@ -393,7 +393,7 @@ type Rstat9P struct {
 	Stat Stat9P
 }
 
-type Twstat struct {
+type Twstat9P struct {
 	Fid  Tfid
 	Size uint16 // extra Size, see stat(5)
 	Stat Stat9P
@@ -405,6 +405,7 @@ func (Tflush) Type() fcall.Tfcall    { return fcall.TTflush }
 func (Rflush) Type() fcall.Tfcall    { return fcall.TRflush }
 func (Tcreate9P) Type() fcall.Tfcall { return fcall.TTcreate }
 func (Topen9P) Type() fcall.Tfcall   { return fcall.TTopen }
-func (Rstat9P) Type() fcall.Tfcall   { return fcall.TRstat9P }
 func (Tread) Type() fcall.Tfcall     { return fcall.TTread }
 func (Twrite) Type() fcall.Tfcall    { return fcall.TTwrite }
+func (Rstat9P) Type() fcall.Tfcall   { return fcall.TRstat9P }
+func (Twstat9P) Type() fcall.Tfcall  { return fcall.TTwstat }

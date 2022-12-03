@@ -511,13 +511,13 @@ func (st *Stat) Tmode() Tperm {
 	return Tperm(st.Mode)
 }
 
-type Twstat struct {
-	Fid  Tfid
-	Size uint16 // extra Size, see stat(5)
-	Stat Stat
+func MkTwstat(fid Tfid, st *Stat) *Twstat {
+	return &Twstat{Fid: uint32(fid), Stat: st}
 }
 
-type Rwstat struct{}
+func (w *Twstat) Tfid() Tfid {
+	return Tfid(w.Fid)
+}
 
 func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string) *Trenameat {
 	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname}

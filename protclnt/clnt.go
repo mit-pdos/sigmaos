@@ -255,7 +255,7 @@ func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, *fcall.Err) {
 }
 
 func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, *fcall.Err) {
-	args := &np.Twstat{fid, 0, *st}
+	args := np.MkTwstat(fid, st)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err
@@ -268,7 +268,7 @@ func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, *fcall.Err) 
 }
 
 func (pclnt *ProtClnt) WstatF(fid np.Tfid, st *np.Stat, f *np.Tfence) (*np.Rwstat, *fcall.Err) {
-	args := &np.Twstat{fid, 0, *st}
+	args := np.MkTwstat(fid, st)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err

@@ -237,11 +237,11 @@ func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 }
 
 func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
-	fid, ok := npc.fm.lookup(args.Fid)
+	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return MkRerrorWC(fcall.TErrNotfound)
 	}
-	err := npc.fidc.Wstat(fid, &args.Stat)
+	err := npc.fidc.Wstat(fid, args.Stat)
 	if err != nil {
 		db.DPrintf("PROXY", "Wstats: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
@@ -264,7 +264,7 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
 		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
 		return MkRerrorWC(err.Code())
 	}
-	db.DPrintf("PROXY", "ReadUV: args %v rets %v\n", args, rets)
+	db.DPrintf("PROXY0", "ReadUV: args %v rets %v\n", args, rets)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d, err = Sp2NpDir(d, args.Tcount())

@@ -75,7 +75,10 @@ func TestBasic(t *testing.T) {
 	out, err = run("echo hello > /mnt/9p/xxx")
 	assert.Equal(t, nil, err)
 
-	out, err = run("rm /mnt/9p/xxx")
+	out, err = run("mv /mnt/9p/xxx /mnt/9p/yyy")
+	assert.Equal(t, nil, err)
+
+	out, err = run("rm /mnt/9p/yyy")
 	assert.Equal(t, nil, err)
 
 	out, err = run("mkdir /mnt/9p/ddd")

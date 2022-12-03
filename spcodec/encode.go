@@ -174,6 +174,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				fcall.TTstat, fcall.TRstat,
 				fcall.TTreadV, fcall.TRread,
 				fcall.TTwriteV, fcall.TRwrite,
+				fcall.TTwstat, fcall.TRwstat,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
 				fcall.TTrenameat,
 				fcall.TTwriteread:
@@ -352,6 +353,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				fcall.TTstat, fcall.TRstat,
 				fcall.TTreadV, fcall.TRread,
 				fcall.TTwriteV, fcall.TRwrite,
+				fcall.TTwstat, fcall.TRwstat,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
 				fcall.TTrenameat,
 				fcall.TTwriteread:

@@ -57,7 +57,7 @@ const (
 	TRremove
 	TTstat
 	TRstat9P
-	TTwstat
+	TTwstat9P
 	TRwstat
 
 	//
@@ -65,10 +65,11 @@ const (
 	//
 	TTopen
 	TTcreate
-	TRstat
 	TTreadV
 	TTwriteV
 	TTwatch
+	TRstat
+	TTwstat
 	TTrenameat
 	TRrenameat
 	TTremovefile
@@ -134,8 +135,8 @@ func (fct Tfcall) String() string {
 		return "Tstat"
 	case TRstat9P:
 		return "Rstat9p"
-	case TTwstat:
-		return "Twstat"
+	case TTwstat9P:
+		return "Twstat9p"
 	case TRwstat:
 		return "Rwstat"
 
@@ -143,12 +144,14 @@ func (fct Tfcall) String() string {
 		return "Ropen"
 	case TTcreate:
 		return "Tcreate"
-	case TRstat:
-		return "Rstat"
 	case TTreadV:
 		return "TreadV"
 	case TTwriteV:
 		return "TwriteV"
+	case TRstat:
+		return "Rstat"
+	case TTwstat:
+		return "Tstat"
 	case TTwatch:
 		return "Twatch"
 	case TTrenameat:

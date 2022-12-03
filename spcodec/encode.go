@@ -163,13 +163,18 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 			switch fcall.Tfcall(v.Type()) {
-			case fcall.TTattach, fcall.TRattach, fcall.TTversion, fcall.TRversion,
+			case fcall.TTversion, fcall.TRversion,
 				fcall.TTauth, fcall.TRauth,
-				fcall.TTwriteread, fcall.TTwalk, fcall.TRwalk,
-				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
-				fcall.TTwriteV, fcall.TRwrite, fcall.TTclunk,
+				fcall.TTattach, fcall.TRattach,
+				fcall.TRerror,
+				fcall.TTwalk, fcall.TRwalk,
+				fcall.TTclunk,
+				fcall.TTstat, fcall.TRstat,
+				fcall.TTreadV, fcall.TRread,
+				fcall.TTwriteV, fcall.TRwrite,
 				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
-				fcall.TTrenameat:
+				fcall.TTrenameat,
+				fcall.TTwriteread:
 				b, err := proto.Marshal(v.Msg.(proto.Message))
 				if err != nil {
 					return err
@@ -334,13 +339,18 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			switch v.Type() {
-			case fcall.TTattach, fcall.TRattach, fcall.TTversion, fcall.TRversion,
+			case fcall.TTversion, fcall.TRversion,
 				fcall.TTauth, fcall.TRauth,
-				fcall.TTwriteread, fcall.TTwalk, fcall.TRwalk,
-				fcall.TTstat, fcall.TRstat, fcall.TTreadV, fcall.TRread,
+				fcall.TTattach, fcall.TRattach,
+				fcall.TRerror,
+				fcall.TTwalk, fcall.TRwalk,
+				fcall.TTclunk,
+				fcall.TTstat, fcall.TRstat,
+				fcall.TTreadV, fcall.TRread,
 				fcall.TTwriteV, fcall.TRwrite,
-				fcall.TTclunk, fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
-				fcall.TTrenameat:
+				fcall.TTgetfile, fcall.TTsetfile, fcall.TTputfile,
+				fcall.TTrenameat,
+				fcall.TTwriteread:
 				b, err := frame.PopFromFrame(d.rd)
 				if err != nil {
 					return err

@@ -37,7 +37,6 @@ const (
 	TRauth
 	TTattach
 	TRattach
-	TTerror
 	TRerror
 	TTflush
 	TRflush
@@ -95,8 +94,6 @@ func (fct Tfcall) String() string {
 		return "Tattach"
 	case TRattach:
 		return "Rattach"
-	case TTerror:
-		return "Terror"
 	case TRerror:
 		return "Rerror"
 	case TTflush:

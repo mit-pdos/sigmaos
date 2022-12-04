@@ -41,7 +41,11 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 	ji.Tstate = ts
 
 	var err error
-	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, hotel.HotelSvcs, ncore, hotel.NCACHE)
+	var svcs []string
+	if sigmaos {
+		svcs = hotel.HotelSvcs
+	}
+	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncore, hotel.NCACHE)
 	assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 
 	if !sigmaos {

@@ -25,12 +25,12 @@ func MakeRpc(addrs []string, fc *np.FcallMsg) *Rpc {
 }
 
 // Wait for a reply
-func (rpc *Rpc) Await() (fcall.Tmsg, *fcall.Err) {
+func (rpc *Rpc) Await() (*np.FcallMsg, *fcall.Err) {
 	reply, ok := <-rpc.ReplyC
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, rpc.addrs)
 	}
-	return reply.fm.Msg, reply.err
+	return reply.fm, reply.err
 }
 
 // Complete a reply

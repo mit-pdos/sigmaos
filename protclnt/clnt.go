@@ -37,12 +37,12 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 	return np.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, data []byte, fence *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, data []byte, fence *np.Tfence) (*np.FcallMsg, *fcall.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, data, fence)
 	if err != nil {
 		return nil, err
 	}
-	rmsg, ok := reply.(*np.Rerror)
+	rmsg, ok := reply.Msg.(*np.Rerror)
 	if ok {
 		return nil, fcall.String2Err(rmsg.Ename)
 	}
@@ -55,7 +55,7 @@ func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path path.Pa
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rattach)
+	msg, ok := reply.Msg.(*np.Rattach)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "clnt")
 	}
@@ -88,15 +88,15 @@ func (pclnt *ProtClnt) Disconnect() *fcall.Err {
 	return pclnt.clnt.sm.Disconnect(pclnt.addrs)
 }
 
-func (pclnt *ProtClnt) Call(args fcall.Tmsg, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+func (pclnt *ProtClnt) Call(args fcall.Tmsg, f *np.Tfence) (*np.FcallMsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, f)
 }
 
-func (pclnt *ProtClnt) CallData(args fcall.Tmsg, data []byte, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+func (pclnt *ProtClnt) CallData(args fcall.Tmsg, data []byte, f *np.Tfence) (*np.FcallMsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, data, f)
 }
 
-func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (fcall.Tmsg, *fcall.Err) {
+func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (*np.FcallMsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, np.MakeFenceNull())
 }
 
@@ -106,7 +106,7 @@ func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwal
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwalk)
+	msg, ok := reply.Msg.(*np.Rwalk)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwalk")
 	}
@@ -119,7 +119,7 @@ func (pclnt *ProtClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.T
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rcreate)
+	msg, ok := reply.Msg.(*np.Rcreate)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rcreate")
 	}
@@ -132,7 +132,7 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) *fcall.Err {
 	if err != nil {
 		return err
 	}
-	_, ok := reply.(*np.Rremove)
+	_, ok := reply.Msg.(*np.Rremove)
 	if !ok {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rremove")
 	}
@@ -145,7 +145,7 @@ func (pclnt *ProtClnt) RemoveF(fid np.Tfid, f *np.Tfence) *fcall.Err {
 	if err != nil {
 		return err
 	}
-	_, ok := reply.(*np.Rremove)
+	_, ok := reply.Msg.(*np.Rremove)
 	if !ok {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rremove")
 	}
@@ -158,7 +158,7 @@ func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames path.Path, resolve bool, f
 	if err != nil {
 		return err
 	}
-	_, ok := reply.(*np.Rremove)
+	_, ok := reply.Msg.(*np.Rremove)
 	if !ok {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rremovefile")
 	}
@@ -171,7 +171,7 @@ func (pclnt *ProtClnt) Clunk(fid np.Tfid) *fcall.Err {
 	if err != nil {
 		return err
 	}
-	_, ok := reply.(*np.Rclunk)
+	_, ok := reply.Msg.(*np.Rclunk)
 	if !ok {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rclunk")
 	}
@@ -184,7 +184,7 @@ func (pclnt *ProtClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, *fcall.Err) 
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Ropen)
+	msg, ok := reply.Msg.(*np.Ropen)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Ropen")
 	}
@@ -197,7 +197,7 @@ func (pclnt *ProtClnt) Watch(fid np.Tfid) *fcall.Err {
 	if err != nil {
 		return err
 	}
-	_, ok := reply.(*np.Ropen)
+	_, ok := reply.Msg.(*np.Ropen)
 	if !ok {
 		return fcall.MkErr(fcall.TErrBadFcall, "Rwatch")
 	}
@@ -210,7 +210,7 @@ func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *n
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rread)
+	msg, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rread")
 	}
@@ -223,7 +223,7 @@ func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v n
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwrite)
+	msg, ok := reply.Msg.(*np.Rwrite)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwrite")
 	}
@@ -238,7 +238,7 @@ func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rread, *fcall.Er
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rread)
+	msg, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwriteread")
 	}
@@ -251,7 +251,7 @@ func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, *fcall.Err) {
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rstat)
+	msg, ok := reply.Msg.(*np.Rstat)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rstat")
 	}
@@ -264,7 +264,7 @@ func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, *fcall.Err) 
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwstat)
+	msg, ok := reply.Msg.(*np.Rwstat)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwstat")
 	}
@@ -277,7 +277,7 @@ func (pclnt *ProtClnt) WstatF(fid np.Tfid, st *np.Stat, f *np.Tfence) (*np.Rwsta
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwstat)
+	msg, ok := reply.Msg.(*np.Rwstat)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwstat")
 	}
@@ -290,7 +290,7 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rrenameat)
+	msg, ok := reply.Msg.(*np.Rrenameat)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rrenameat")
 	}
@@ -303,7 +303,7 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rread)
+	msg, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rgetfile")
 	}
@@ -316,7 +316,7 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwrite)
+	msg, ok := reply.Msg.(*np.Rwrite)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwrite")
 	}
@@ -329,7 +329,7 @@ func (pclnt *ProtClnt) PutFile(fid np.Tfid, path path.Path, mode np.Tmode, perm 
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.(*np.Rwrite)
+	msg, ok := reply.Msg.(*np.Rwrite)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwrite")
 	}

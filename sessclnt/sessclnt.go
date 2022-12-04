@@ -48,7 +48,7 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *np.Tfence) (fcall.Tmsg, *fcall.Err) {
+func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *np.Tfence) (*np.FcallMsg, *fcall.Err) {
 	rpc, err := c.send(req, data, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -116,7 +116,7 @@ func (c *SessClnt) Detach() *fcall.Err {
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
 	}
-	rmsg, ok := rep.(*np.Rerror)
+	rmsg, ok := rep.Msg.(*np.Rerror)
 	if ok {
 		err := fcall.String2Err(rmsg.Ename)
 		return err
@@ -156,7 +156,7 @@ func (c *SessClnt) send(req fcall.Tmsg, data []byte, f *np.Tfence) (*netclnt.Rpc
 
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (fcall.Tmsg, *fcall.Err) {
+func (c *SessClnt) recv(rpc *netclnt.Rpc) (*np.FcallMsg, *fcall.Err) {
 	return rpc.Await()
 }
 

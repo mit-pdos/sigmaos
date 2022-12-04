@@ -462,14 +462,14 @@ func TestHotelK8sSearch(t *testing.T) {
 	})
 }
 
-func TestHotelSigmaos(t *testing.T) {
+func TestHotelSigmaosAll(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(ts.T, 1, wc, r)
 	})
 }
 
-func TestHotelK8s(t *testing.T) {
+func TestHotelK8sAll(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(ts.T, 1, wc, r)

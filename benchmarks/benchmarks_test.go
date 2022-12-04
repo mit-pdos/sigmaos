@@ -341,34 +341,6 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Structure for kv
 	ts2 := test.MakeTstateRealm(t, REALM2)
-	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	//	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {
-	//	})
-	//	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	//	if sigmaos {
-	//		countNClusterCores(ts)
-	//		maybePregrowRealm(ts)
-	//	}
-	//	// XXX Clean this up/hide this somehow.
-	//	go func() {
-	//		for _, j := range jobs {
-	//			// Wait until ready
-	//			<-j.ready
-	//			// Ack to allow the job to proceed.
-	//			j.ready <- true
-	//		}
-	//	}()
-	//	if sigmaos {
-	//		p := monitorCoresAssigned(ts)
-	//		defer p.Done()
-	//	}
-	//	runOps(ts, ji, runHotel, rs)
-	//	jobs[0].lg.Stats()
-	//	//	printResultSummary(rs)
-	//	if sigmaos {
-	//		ts.Shutdown()
-	//	}
-
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep Hotel job

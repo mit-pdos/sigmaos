@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -82,14 +81,13 @@ func toss(r *rand.Rand) float64 {
 	return float64(toss) / 1000
 }
 
-func RunDSB(t *testing.T, N int, wc *WebClnt) {
+func RunDSB(t *testing.T, N int, wc *WebClnt, r *rand.Rand) {
 	const (
 		search_ratio    = 0.6
 		recommend_ratio = 0.39
 		user_ratio      = 0.005
 		reserve_ratio   = 0.005
 	)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < N; i++ {
 		coin := toss(r)
 		if coin < search_ratio {

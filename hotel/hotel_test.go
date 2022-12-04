@@ -18,13 +18,13 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	"sigmaos/sessdev"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -64,7 +64,10 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) PrintStats() {
+func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
+	if lg != nil {
+		lg.Stats()
+	}
 	for _, s := range np.HOTELSVC {
 		ts.statsSrv(s)
 	}
@@ -339,8 +342,9 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 func TestBenchDeathStarSingle(t *testing.T) {
 	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	hotel.RunDSB(t, 1000, wc)
-	ts.PrintStats()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	hotel.RunDSB(t, 1000, wc, r)
+	ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -358,7 +362,8 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	hotel.RunDSB(t, 1000, wc)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	hotel.RunDSB(t, 1000, wc, r)
 	ts.Shutdown()
 }
 
@@ -372,7 +377,7 @@ func TestBenchSearch(t *testing.T) {
 		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
-	ts.PrintStats()
+	ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -414,7 +419,7 @@ func TestBenchGeo(t *testing.T) {
 		runGeo(ts.T, wc, r)
 	})
 	lg.Run()
-	ts.PrintStats()
+	ts.PrintStats(lg)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -459,7 +464,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 		<-ch
 	}
 	db.DPrintf(db.ALWAYS, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
-	ts.PrintStats()
+	ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()
 }

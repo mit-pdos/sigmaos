@@ -119,8 +119,7 @@ func (c *SessClnt) Detach() *fcall.Err {
 	}
 	rmsg, ok := rep.Msg.(*np.Rerror)
 	if ok {
-		err := fcall.String2Err(rmsg.Ename)
-		return err
+		return np.MkErr(rmsg)
 	}
 	return nil
 }
@@ -134,7 +133,7 @@ func srvClosedSess(msg fcall.Tmsg, err *fcall.Err) bool {
 	}
 	rerr, ok := msg.(*np.Rerror)
 	if ok {
-		err := fcall.String2Err(rerr.Ename)
+		err := np.MkErr(rerr)
 		if fcall.IsErrSessClosed(err) {
 			return true
 		}

@@ -2,13 +2,12 @@ package fcall
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"sigmaos/path"
 )
 
-type Terror uint8
+type Terror uint32
 
 const (
 	TErrBadattach Terror = iota + 1
@@ -236,17 +235,4 @@ func IsMaybeSpecialElem(error error) bool {
 
 func IsErrUnionElem(error error) bool {
 	return IsErrNotfound(error) && path.IsUnionElem(ErrPath(error))
-}
-
-func String2Err(error string) *Err {
-	err := &Err{TErrError, error, nil}
-	for c := TErrBadattach; c <= TErrError; c++ {
-		if strings.HasPrefix(error, c.String()) {
-			err.ErrCode = c
-			err.Obj = strings.TrimPrefix(error, c.String()+" ")
-			return err
-		}
-	}
-	log.Fatalf("FATAL cannot decode = %v err %v\n", error, err)
-	return err
 }

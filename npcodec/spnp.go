@@ -107,8 +107,13 @@ func np2SpMsg(fcm *sp.FcallMsg) {
 func sp2NpMsg(fcm *sp.FcallMsg) {
 	switch fcm.Type() {
 	case fcall.TRread:
-		r := np.Rread9P{fcm.Data}
-		fcm.Msg = r
+		fcm.Fc.Type = uint32(fcall.TRread9P)
+		fcm.Msg = np.Rread9P{Data: fcm.Data}
 		fcm.Data = nil
+	case fcall.TRerror:
+		fcm.Fc.Type = uint32(fcall.TRerror9P)
+		m := fcm.Msg.(*sp.Rerror)
+		fcm.Msg = np.Rerror9P{Ename: fcall.Terror(m.ErrCode).String()}
 	}
+
 }

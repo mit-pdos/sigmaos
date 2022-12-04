@@ -1329,7 +1329,7 @@ type TwriteV struct {
 
 	Fid     uint32 `protobuf:"varint,1,opt,name=fid,proto3" json:"fid,omitempty"`
 	Offset  uint64 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
-	Version uint32 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"` // bytes data = 4;
+	Version uint32 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
 }
 
 func (x *TwriteV) Reset() {

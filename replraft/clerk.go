@@ -1,6 +1,7 @@
 package replraft
 
 import (
+	"bytes"
 	"log"
 	"sync"
 	"time"
@@ -55,7 +56,7 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				if req, err := spcodec.UnmarshalFcallMsg(frame); err != nil {
+				if req, err := spcodec.UnmarshalFrame(bytes.NewReader(frame)); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)

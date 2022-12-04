@@ -198,7 +198,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			log.Printf("encode: unknown type %T\n", v)
+			log.Printf("npcodec encode: unknown type %T\n", v)
 			return errors.New(fmt.Sprintf("Encode unknown type: %T", v))
 		}
 	}
@@ -213,7 +213,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -386,33 +386,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 			if err := d.decode(msg); err != nil {
 				return err
-			}
-			if v.Type == fcall.TTread {
-				m := msg.(*np.Tread)
-				r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)
-				msg = r
-			}
-			if v.Type == fcall.TTwrite {
-				m := msg.(*np.Twrite)
-				// XXX fix me; add Data to WireCompat
-				r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0)
-				// v.Data = m.Data
-				msg = r
-			}
-			if v.Type == fcall.TTopen9P {
-				m := msg.(*np.Topen9P)
-				r := sp.MkTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
-				msg = r
-			}
-			if v.Type == fcall.TTcreate9P {
-				m := msg.(*np.Tcreate9P)
-				r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
-				msg = r
-			}
-			if v.Type == fcall.TTwstat9P {
-				m := msg.(*np.Twstat9P)
-				r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat))
-				msg = r
 			}
 			v.Msg = msg
 		case fcall.Tmsg:

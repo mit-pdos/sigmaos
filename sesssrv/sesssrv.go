@@ -98,7 +98,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 		ssrv.replSrv.Start()
 		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
 	}
-	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.MarshalFcallMsg, spcodec.UnmarshalFcallMsg)
+	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.MarshalFrame, spcodec.UnmarshalFrame)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.pclnt = pclnt

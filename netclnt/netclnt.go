@@ -8,7 +8,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/delay"
 	"sigmaos/fcall"
-	"sigmaos/frame"
 	"sigmaos/sessconnclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -106,7 +105,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 
 	// Otherwise, marshall and write the fcall.
-	err := spcodec.MarshalFcallMsg(rpc.Req, nc.bw)
+	err := spcodec.MarshalFrame(rpc.Req, nc.bw)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
@@ -122,24 +121,12 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 }
 
 func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
-	f, err := frame.ReadFrame(nc.br)
+	fm, err := spcodec.UnmarshalFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return nil, fcall.MkErr(fcall.TErrUnreachable, nc.Src()+"->"+nc.Dst())
-	}
-	fm, err := spcodec.UnmarshalFcallMsg(f)
-	if err != nil {
-		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
-	}
-	buf, err := frame.ReadBuf(nc.br)
-	db.DPrintf("NETCLNT", "recv %v from %v\n", fm, nc.Dst())
-	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "%v ReadBuf err %v\n", fm.Session, err)
 		return nil, err
 	}
-	db.DPrintf("NETCLNT", "%v recv data %d\n", fm.Session, len(buf))
-	fm.Data = buf
 	return fm, nil
 }
 

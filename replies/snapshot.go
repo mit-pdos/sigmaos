@@ -1,6 +1,7 @@
 package replies
 
 import (
+	"bytes"
 	"encoding/json"
 
 	db "sigmaos/debug"
@@ -37,7 +38,7 @@ func Restore(b []byte) *ReplyTable {
 	}
 	rt := MakeReplyTable()
 	for seqno, b := range entries {
-		fm, err1 := spcodec.UnmarshalFcallMsg(b)
+		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(b))
 		if len(b) != 0 && err1 != nil {
 			db.DFatalf("Error unmarshal sp.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))
 		}

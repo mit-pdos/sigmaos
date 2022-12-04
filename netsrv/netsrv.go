@@ -3,6 +3,7 @@ package netsrv
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 
 	db "sigmaos/debug"
@@ -12,7 +13,7 @@ import (
 )
 
 type MarshalF func(*sp.FcallMsg, *bufio.Writer) *fcall.Err
-type UnmarshalF func([]byte) (*sp.FcallMsg, *fcall.Err)
+type UnmarshalF func(rdr io.Reader) (*sp.FcallMsg, *fcall.Err)
 
 type NetServer struct {
 	addr      string

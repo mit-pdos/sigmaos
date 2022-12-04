@@ -1,6 +1,7 @@
 package threadmgr
 
 import (
+	"bytes"
 	"encoding/json"
 	"sort"
 
@@ -60,7 +61,7 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	// List of ops currently executing.
 	executing := []*Op{}
 	for _, op := range opss {
-		fm, err1 := spcodec.UnmarshalFcallMsg(op.Fc)
+		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(op.Fc))
 		if err1 != nil {
 			db.DFatalf("error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}

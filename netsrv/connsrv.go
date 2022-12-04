@@ -7,23 +7,22 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	"sigmaos/frame"
 	sp "sigmaos/sigmap"
 )
 
 type SrvConn struct {
 	*sync.Mutex
-	wg        *sync.WaitGroup
-	conn      net.Conn
-	closed    bool
-	sesssrv   sp.SessServer
-	br        *bufio.Reader
-	bw        *bufio.Writer
-	replies   chan *sp.FcallMsg
-	marshal   MarshalF
-	unmarshal UnmarshalF
-	clid      fcall.Tclient
-	sessid    fcall.Tsession
+	wg             *sync.WaitGroup
+	conn           net.Conn
+	closed         bool
+	sesssrv        sp.SessServer
+	br             *bufio.Reader
+	bw             *bufio.Writer
+	replies        chan *sp.FcallMsg
+	marshalframe   MarshalF
+	unmarshalframe UnmarshalF
+	clid           fcall.Tclient
+	sessid         fcall.Tsession
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
@@ -104,23 +103,12 @@ func (c *SrvConn) GetReplyC() chan *sp.FcallMsg {
 func (c *SrvConn) reader() {
 	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
-		f, err := frame.ReadFrame(c.br)
+		fc, err := c.unmarshalframe(c.br)
 		if err != nil {
-			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
+			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad frame: %v", c.sessid, c.Src(), err)
 			return
 		}
-		fc, err := c.unmarshal(f)
-		if err != nil {
-			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: %v", c.sessid, c.Src(), err)
-			return
-		}
-		buf, err := frame.ReadBuf(c.br)
-		if err != nil {
-			db.DPrintf("NETSRV_ERR", "%v ReadBuf err %v\n", c.sessid, err)
-			return
-		}
-		fc.Data = buf
-		db.DPrintf("NETSRV", "srv req %v data %d\n", fc, len(buf))
+		db.DPrintf("NETSRV", "srv req %v data %d\n", fc, len(fc.Data))
 		if c.sessid == 0 {
 			c.sessid = fcall.Tsession(fc.Session())
 			c.clid = fc.Client()
@@ -157,11 +145,10 @@ func (c *SrvConn) writer() {
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
 		db.DPrintf("NETSRV", "rep %v\n", fm)
-		if err := c.marshal(fm, c.bw); err != nil {
+		if err := c.marshalframe(fm, c.bw); err != nil {
 			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
-
 		if error := c.bw.Flush(); error != nil {
 			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fm, c.Src(), error)
 		}

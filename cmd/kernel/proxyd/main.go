@@ -9,7 +9,7 @@ import (
 
 func main() {
 	proc.SetProgram("proxy")
-	netsrv.MakeNetServer(proxy.MakeNpd(), ":1110", npcodec.MarshalFcallMsg, npcodec.UnmarshalFcallWireCompat)
+	netsrv.MakeNetServer(proxy.MakeNpd(), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})
 	<-ch
 }

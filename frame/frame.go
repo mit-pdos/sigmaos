@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	db "sigmaos/debug"
 	"sigmaos/fcall"
 )
 
@@ -12,12 +13,17 @@ func ReadFrame(rd io.Reader) ([]byte, *fcall.Err) {
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, err)
 	}
-	msg := make([]byte, len)
-	n, e := io.ReadFull(rd, msg)
+	db.DPrintf("FRAME", "ReadFrame %d\n", len)
+	len = len - 4
+	if len <= 0 {
+		return nil, fcall.MkErr(fcall.TErrUnreachable, "readMsg too short")
+	}
+	frame := make([]byte, len)
+	n, e := io.ReadFull(rd, frame)
 	if n != int(len) {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, e)
 	}
-	return msg, nil
+	return frame, nil
 }
 
 func ReadBuf(rd io.Reader) ([]byte, *fcall.Err) {
@@ -37,7 +43,7 @@ func ReadBuf(rd io.Reader) ([]byte, *fcall.Err) {
 }
 
 func WriteFrame(wr io.Writer, frame []byte) *fcall.Err {
-	l := uint32(len(frame))
+	l := uint32(len(frame) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
 		return fcall.MkErr(fcall.TErrUnreachable, err.Error())
 	}
@@ -45,15 +51,6 @@ func WriteFrame(wr io.Writer, frame []byte) *fcall.Err {
 }
 
 func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *fcall.Err {
-	if err := WriteFrame(wr, frame); err != nil {
-		return err
-	}
-	if error := binary.Write(wr, binary.LittleEndian, uint32(len(buf))); error != nil {
-		return fcall.MkErr(fcall.TErrUnreachable, error.Error())
-	}
-	if len(buf) > 0 {
-		return WriteRawBuffer(wr, buf)
-	}
 	return nil
 }
 

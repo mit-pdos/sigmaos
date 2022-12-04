@@ -328,10 +328,91 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceMRHotel(t *testing.T) {
+	done := make(chan bool)
+	// Find the total number of cores available for spinners across all machines.
+	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	// Structure for kv
+	ts2 := test.MakeTstateRealm(t, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	//	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	//	})
+	//	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	//	if sigmaos {
+	//		countNClusterCores(ts)
+	//		maybePregrowRealm(ts)
+	//	}
+	//	// XXX Clean this up/hide this somehow.
+	//	go func() {
+	//		for _, j := range jobs {
+	//			// Wait until ready
+	//			<-j.ready
+	//			// Ack to allow the job to proceed.
+	//			j.ready <- true
+	//		}
+	//	}()
+	//	if sigmaos {
+	//		p := monitorCoresAssigned(ts)
+	//		defer p.Done()
+	//	}
+	//	runOps(ts, ji, runHotel, rs)
+	//	jobs[0].lg.Stats()
+	//	//	printResultSummary(rs)
+	//	if sigmaos {
+	//		ts.Shutdown()
+	//	}
+
+	// Prep MR job
+	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
+	// Prep Hotel job
+	hotelJobs, ji := makeHotelJobs(ts, true, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RunDSB(ts.T, 1, wc, r)
+	})
+	p1 := monitorCoresAssigned(ts1)
+	defer p1.Done()
+	p2 := monitorCoresAssigned(ts2)
+	defer p2.Done()
+	// Run Hotel job
+	go func() {
+		runOps(ts, ji, runHotel, rs2)
+		done <- true
+	}()
+	// Wait for hotel jobs to set up.
+	<-hotelJobs[0].ready
+	// Run MR job
+	go func() {
+		runOps(ts1, mrapps, runMR, rs1)
+		done <- true
+	}()
+	// Wait for MR jobs to set up.
+	<-mrjobs[0].ready
+	// Kick off MR jobs.
+	mrjobs[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(70 * time.Second)
+	// Kick off hotel jobs
+	hotelJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	printResultSummary(rs1)
+	hotelJobs[0].lg.Stats()
+	ts1.Shutdown()
+	ts2.Shutdown()
+}
+
+// XXX Old realm balance benchmark involving KV & MR.
 // Start a realm with a long-running BE mr job. Then, start a realm with a kv
 // job. In phases, ramp the kv job's CPU utilization up and down, and watch the
 // realm-level software balance resource requests across realms.
-func TestRealmBalance(t *testing.T) {
+func TestKVMRRRB(t *testing.T) {
 	done := make(chan bool)
 	// Find the total number of cores available for spinners across all machines.
 	ts := test.MakeTstateAll(t)
@@ -346,8 +427,6 @@ func TestRealmBalance(t *testing.T) {
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep KV job
 	nclerks := []int{N_CLERK}
-	// TODO move phases to new clerk type.
-	// phases := parseDurations(ts2, []string{"5s", "5s", "5s", "5s", "5s"})
 	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
 	p1 := monitorCoresAssigned(ts1)
 	defer p1.Done()

@@ -15,6 +15,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	RAND_INIT = 12345
+)
+
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
@@ -64,7 +68,7 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 	}
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ji.job)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(12345))
 	// Make a load generator.
 	ji.lg = loadgen.MakeLoadGenerator(ji.dur, ji.maxrps, func() {
 		// Run a single request.

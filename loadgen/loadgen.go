@@ -82,5 +82,4 @@ func (lg *LoadGenerator) Run() {
 	}
 	db.DPrintf(db.ALWAYS, "Avg req/sec: %v", float64(i)/time.Since(start).Seconds())
 	lg.wg.Wait()
-	lg.Stats()
 }

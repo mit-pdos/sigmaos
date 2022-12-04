@@ -296,36 +296,36 @@ func (ps *ProtSrv) Create(args *np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) *np.Rerror {
+func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) ([]byte, *np.Rerror) {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
 	db.DPrintf("PROTSRV1", "%v: ReadV f %v args %v v %d", f.Pobj().Ctx().Uname(), f, args, v)
 	if !np.VEq(args.Tversion(), v) {
-		return np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
+		return nil, np.MkRerror(fcall.MkErr(fcall.TErrVersion, v))
 	}
 
-	err = f.Read(args.Toffset(), args.Tcount(), args.Tversion(), rets)
+	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tversion())
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
-	return nil
+	return data, nil
 }
 
-func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) *np.Rerror {
+func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) ([]byte, *np.Rerror) {
 	f, err := ps.ft.Lookup(np.Tfid(args.Fid))
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
 	db.DPrintf("PROTSRV0", "%v: WriteRead %v args %v path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
-	rets.Data, err = f.WriteRead(args.Data)
+	data, err := f.WriteRead(args.Data)
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	return nil
+	return data, nil
 }
 
 func (ps *ProtSrv) WriteV(args *np.TwriteV, data []byte, rets *np.Rwrite) *np.Rerror {
@@ -551,23 +551,23 @@ func (ps *ProtSrv) RemoveFile(args *np.Tremovefile, rets *np.Rremove) *np.Rerror
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
 }
 
-func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rread) *np.Rerror {
+func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rread) ([]byte, *np.Rerror) {
 	if args.Tcount() > np.MAXGETSET {
-		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
+		return nil, np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
 	db.DPrintf("PROTSRV", "GetFile f %v args %v %v", f.Pobj().Ctx().Uname(), args, fname)
-	rets.Data, err = i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), np.NoV)
+	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), np.NoV)
 	if err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
 	if err := lo.Close(f.Pobj().Ctx(), args.Tmode()); err != nil {
-		return np.MkRerror(err)
+		return nil, np.MkRerror(err)
 	}
-	return nil
+	return data, nil
 }
 
 func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {

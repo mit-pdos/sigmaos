@@ -204,17 +204,17 @@ func (pclnt *ProtClnt) Watch(fid np.Tfid) *fcall.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence, v np.TQversion) (*np.Rread, *fcall.Err) {
+func (pclnt *ProtClnt) ReadVF(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence, v np.TQversion) ([]byte, *fcall.Err) {
 	args := np.MkReadV(fid, offset, cnt, v)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.Msg.(*np.Rread)
+	_, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rread")
 	}
-	return msg, nil
+	return reply.Data, nil
 }
 
 func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v np.TQversion, data []byte) (*np.Rwrite, *fcall.Err) {
@@ -230,7 +230,7 @@ func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v n
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rread, *fcall.Err) {
+func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) ([]byte, *fcall.Err) {
 	args := &np.Twriteread{}
 	args.Fid = uint64(fid)
 	args.Data = data
@@ -238,11 +238,11 @@ func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) (*np.Rread, *fcall.Er
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.Msg.(*np.Rread)
+	_, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rwriteread")
 	}
-	return msg, nil
+	return reply.Data, nil
 }
 
 func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, *fcall.Err) {
@@ -297,17 +297,17 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence) (*np.Rread, *fcall.Err) {
+func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence) ([]byte, *fcall.Err) {
 	args := np.MkTgetfile(fid, mode, offset, cnt, path, resolve)
 	reply, err := pclnt.Call(args, f)
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.Msg.(*np.Rread)
+	_, ok := reply.Msg.(*np.Rread)
 	if !ok {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, "Rgetfile")
 	}
-	return msg, nil
+	return reply.Data, nil
 }
 
 func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, resolve bool, f *np.Tfence, data []byte) (*np.Rwrite, *fcall.Err) {

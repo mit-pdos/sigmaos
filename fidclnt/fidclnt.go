@@ -206,20 +206,20 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *fcall.Err) {
 
 func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
+	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
 	if err != nil {
 		return nil, err
 	}
-	return reply.Data, nil
+	return data, nil
 }
 
 // Unfenced read
 func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.MakeFenceNull(), v)
+	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.MakeFenceNull(), v)
 	if err != nil {
 		return nil, err
 	}
-	return reply.Data, nil
+	return data, nil
 }
 
 func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
@@ -236,11 +236,11 @@ func (fidc *FidClnt) WriteRead(fid np.Tfid, data []byte) ([]byte, *fcall.Err) {
 	if ch == nil {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, "WriteRead")
 	}
-	reply, err := fidc.fids.lookup(fid).pc.WriteRead(fid, data)
+	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, data)
 	if err != nil {
 		return nil, err
 	}
-	return reply.Data, nil
+	return data, nil
 }
 
 func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, cnt np.Tsize, resolve bool) ([]byte, *fcall.Err) {
@@ -249,11 +249,11 @@ func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 		return nil, fcall.MkErr(fcall.TErrUnreachable, "getfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.GetFile(fid, path, mode, off, cnt, resolve, f)
+	data, err := ch.pc.GetFile(fid, path, mode, off, cnt, resolve, f)
 	if err != nil {
 		return nil, err
 	}
-	return reply.Data, err
+	return data, err
 }
 
 func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, data []byte, resolve bool) (np.Tsize, *fcall.Err) {

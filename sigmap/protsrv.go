@@ -33,17 +33,17 @@ type Protsrv interface {
 	Open(*Topen, *Ropen) *Rerror
 	Watch(*Twatch, *Ropen) *Rerror
 	Clunk(*Tclunk, *Rclunk) *Rerror
-	ReadV(*TreadV, *Rread) *Rerror
+	ReadV(*TreadV, *Rread) ([]byte, *Rerror)
 	WriteV(*TwriteV, []byte, *Rwrite) *Rerror
 	Remove(*Tremove, *Rremove) *Rerror
 	RemoveFile(*Tremovefile, *Rremove) *Rerror
 	Stat(*Tstat, *Rstat) *Rerror
 	Wstat(*Twstat, *Rwstat) *Rerror
 	Renameat(*Trenameat, *Rrenameat) *Rerror
-	GetFile(*Tgetfile, *Rread) *Rerror
+	GetFile(*Tgetfile, *Rread) ([]byte, *Rerror)
 	SetFile(*Tsetfile, *Rwrite) *Rerror
 	PutFile(*Tputfile, *Rwrite) *Rerror
-	WriteRead(*Twriteread, *Rread) *Rerror
+	WriteRead(*Twriteread, *Rread) ([]byte, *Rerror)
 	Detach(*Rdetach, DetachF) *Rerror
 	Snapshot() []byte
 }

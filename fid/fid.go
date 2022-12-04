@@ -114,35 +114,33 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *fcall.Err {
+func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b, n, err := fs.MarshalDir(count, dirents)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	f.cursor += n
-	rets.Data = b
-	return nil
+	return b, nil
 }
 
-func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *fcall.Err {
+func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:
-		return f.readDir(po.Obj(), off, count, v, rets)
+		return f.readDir(po.Obj(), off, count, v)
 	case fs.File:
 		b, err := i.Read(po.Ctx(), off, count, v)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		rets.Data = b
-		return nil
+		return b, nil
 	default:
 		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", po.Obj(), po.Obj())
-		return nil
+		return nil, nil
 	}
 }

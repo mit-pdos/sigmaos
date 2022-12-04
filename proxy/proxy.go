@@ -35,13 +35,14 @@ func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid fcall.Tsession) sp.Prots
 func (npd *Npd) serve(fm *sp.FcallMsg) {
 	s := fcall.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
-	reply, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
+	msg, data, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
-		reply = rerror
+		msg = rerror
 	}
-	fm1 := sp.MakeFcallMsg(reply, nil, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
-	fm1.Fc.Tag = fm.Fc.Tag
-	sess.SendConn(fm1)
+	reply := sp.MakeFcallMsg(msg, nil, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
+	reply.Data = data
+	reply.Fc.Tag = fm.Fc.Tag
+	sess.SendConn(reply)
 }
 
 func (npd *Npd) Register(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) *fcall.Err {
@@ -253,27 +254,26 @@ func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return MkRerrorWC(fcall.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) *sp.Rerror {
+func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return MkRerrorWC(fcall.TErrNotfound)
+		return nil, MkRerrorWC(fcall.TErrNotfound)
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
 	if err != nil {
 		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
-		return MkRerrorWC(err.Code())
+		return nil, MkRerrorWC(err.Code())
 	}
 	db.DPrintf("PROXY0", "ReadUV: args %v rets %v\n", args, rets)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d, err = Sp2NpDir(d, args.Tcount())
 		if err != nil {
-			return MkRerrorWC(err.Code())
+			return nil, MkRerrorWC(err.Code())
 		}
 	}
-	rets.Data = d
 	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
-	return nil
+	return d, nil
 }
 
 func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
@@ -291,8 +291,8 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	return nil
 }
 
-func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) *sp.Rerror {
-	return nil
+func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
+	return nil, nil
 }
 
 func (npc *NpConn) SetFile(args *sp.Tsetfile, rets *sp.Rwrite) *sp.Rerror {
@@ -303,8 +303,8 @@ func (npc *NpConn) PutFile(args *sp.Tputfile, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rread) *sp.Rerror {
-	return nil
+func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rread) ([]byte, *sp.Rerror) {
+	return nil, nil
 }
 
 func (npc *NpConn) Snapshot() []byte {

@@ -272,18 +272,16 @@ func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply fcall.Tmsg, sess *sessstatesrv.Session) {
-	fcall := np.MakeFcallMsgReply(request, reply)
-
+func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply *np.FcallMsg, sess *sessstatesrv.Session) {
 	// Store the reply in the reply cache.
-	ok := sess.GetReplyTable().Put(request, fcall)
+	ok := sess.GetReplyTable().Put(request, reply)
 
-	db.DPrintf("SESSSRV", "sendReply req %v rep %v ok %v", request, fcall, ok)
+	db.DPrintf("SESSSRV", "sendReply req %v rep %v ok %v", request, reply, ok)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
 	if request.Fc.Seqno != 0 && ok {
-		sess.SendConn(fcall)
+		sess.SendConn(reply)
 	}
 }
 
@@ -325,7 +323,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 	if replyFuture, ok := sess.GetReplyTable().Get(fc.Fc); ok {
 		db.DPrintf("SESSSRV", "srvfcall %v reply in cache", fc)
 		go func() {
-			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
+			ssrv.sendReply(fc, replyFuture.Await(), sess)
 		}()
 		return
 	}
@@ -344,7 +342,8 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
-		reply := np.MkRerror(err)
+		msg := np.MkRerror(err)
+		reply := np.MakeFcallMsgReply(fc, msg)
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {
@@ -359,12 +358,15 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
-	reply, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
+	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
 
 	if rerror != nil {
-		reply = rerror
+		msg = rerror
 	}
+
+	reply := np.MakeFcallMsgReply(fc, msg)
+	reply.Data = data
 
 	ssrv.sendReply(fc, reply, sess)
 

@@ -305,18 +305,11 @@ type Tread struct {
 	Count  Tsize
 }
 
-type TreadV struct {
-	Fid     Tfid
-	Offset  Toffset
-	Count   Tsize
-	Version TQversion
-}
-
-type Rread struct {
+type Rread9P struct {
 	Data []byte
 }
 
-func (rr Rread) String() string {
+func (rr Rread9P) String() string {
 	return fmt.Sprintf("{len %d}", len(rr.Data))
 }
 
@@ -328,17 +321,6 @@ type Twrite struct {
 
 func (tw Twrite) String() string {
 	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
-}
-
-type TwriteV struct {
-	Fid     Tfid
-	Offset  Toffset
-	Version TQversion
-	Data    []byte // Data must be last
-}
-
-func (tw TwriteV) String() string {
-	return fmt.Sprintf("{%v off %v len %d v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Version)
 }
 
 type Rwrite struct {
@@ -406,6 +388,7 @@ func (Rflush) Type() fcall.Tfcall    { return fcall.TRflush }
 func (Tcreate9P) Type() fcall.Tfcall { return fcall.TTcreate }
 func (Topen9P) Type() fcall.Tfcall   { return fcall.TTopen }
 func (Tread) Type() fcall.Tfcall     { return fcall.TTread }
+func (Rread9P) Type() fcall.Tfcall   { return fcall.TRread9P }
 func (Twrite) Type() fcall.Tfcall    { return fcall.TTwrite }
 func (Rstat9P) Type() fcall.Tfcall   { return fcall.TRstat9P }
 func (Twstat9P) Type() fcall.Tfcall  { return fcall.TTwstat }

@@ -48,7 +48,7 @@ const (
 	TTcreate9P
 	TRcreate
 	TTread
-	TRread
+	TRread9P
 	TTwrite
 	TRwrite
 	TTclunk
@@ -66,6 +66,7 @@ const (
 	TTopen
 	TTcreate
 	TTreadV
+	TRread
 	TTwriteV
 	TTwatch
 	TRstat

@@ -165,6 +165,15 @@ else
   touch ~/.nobuild
 fi
 
+if [ -d "corral" ] 
+then
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd corral; git pull;)'
+else
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:corral; (cd corral; git checkout k8s; git pull; go mod download;)'
+  # Indicate that sigma has not been build yet on this instance
+  touch ~/.nobuild
+fi
+
 ulimit -n 100000
 
 echo -n > ~/.hushlogin

@@ -11,13 +11,13 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type FcallWireCompat struct {
+type Fcall9P struct {
 	Type fcall.Tfcall
 	Tag  sp.Ttag
 	Msg  fcall.Tmsg
 }
 
-func ToInternal(fcallWC *FcallWireCompat) *sp.FcallMsg {
+func toSP(fcallWC *Fcall9P) *sp.FcallMsg {
 	fm := sp.MakeFcallMsgNull()
 	fm.Fc.Type = uint32(fcallWC.Type)
 	fm.Fc.Tag = uint32(fcallWC.Tag)
@@ -27,8 +27,8 @@ func ToInternal(fcallWC *FcallWireCompat) *sp.FcallMsg {
 	return fm
 }
 
-func ToWireCompatible(fm *sp.FcallMsg) *FcallWireCompat {
-	fcallWC := &FcallWireCompat{}
+func to9P(fm *sp.FcallMsg) *Fcall9P {
+	fcallWC := &Fcall9P{}
 	fcallWC.Type = fcall.Tfcall(fm.Fc.Type)
 	fcallWC.Tag = sp.Ttag(fm.Fc.Tag)
 	fcallWC.Msg = fm.Msg
@@ -36,7 +36,12 @@ func ToWireCompatible(fm *sp.FcallMsg) *FcallWireCompat {
 }
 
 func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
-	f, error := marshal1(false, ToWireCompatible(fcm))
+	if fcm.Type() == fcall.TRread {
+		r := np.Rread9P{fcm.Data}
+		fcm.Msg = r
+		fcm.Data = nil
+	}
+	f, error := marshal1(false, to9P(fcm))
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}
@@ -52,12 +57,12 @@ func UnmarshalFrame(rdr io.Reader) (*sp.FcallMsg, *fcall.Err) {
 		db.DPrintf("NPCODEC", "ReadFrame err %v\n", err)
 		return nil, err
 	}
-	fc9p := &FcallWireCompat{}
+	fc9p := &Fcall9P{}
 	if err := unmarshal(f, fc9p); err != nil {
 		db.DPrintf("NPCODEC", "unmarshal err %v\n", err)
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)
 	}
-	fc := ToInternal(fc9p)
+	fc := toSP(fc9p)
 	if fc9p.Type == fcall.TTread {
 		m := fc.Msg.(*np.Tread)
 		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)

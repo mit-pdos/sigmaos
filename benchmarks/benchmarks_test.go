@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"flag"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
+	"sigmaos/hotel"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/test"
@@ -418,13 +420,13 @@ func TestWwwK8s(t *testing.T) {
 	testWww(ts, false)
 }
 
-func testHotel(ts *test.Tstate, sigmaos bool) {
+func testHotel(ts *test.Tstate, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	if sigmaos {
 		countNClusterCores(ts)
 		maybePregrowRealm(ts)
 	}
-	jobs, ji := makeHotelJobs(ts, sigmaos, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS)
+	jobs, ji := makeHotelJobs(ts, sigmaos, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS, fn)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -446,12 +448,30 @@ func testHotel(ts *test.Tstate, sigmaos bool) {
 	}
 }
 
+func TestHotelSigmaosSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+}
+
+func TestHotelK8sSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+}
+
 func TestHotelSigmaos(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	testHotel(ts, true)
+	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RunDSB(ts.T, 1, wc, r)
+	})
 }
 
 func TestHotelK8s(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	testHotel(ts, false)
+	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RunDSB(ts.T, 1, wc, r)
+	})
 }

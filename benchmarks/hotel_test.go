@@ -15,6 +15,8 @@ import (
 	"sigmaos/test"
 )
 
+type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
+
 type HotelJobInstance struct {
 	sigmaos    bool
 	k8ssrvaddr string
@@ -23,6 +25,7 @@ type HotelJobInstance struct {
 	dur        time.Duration
 	maxrps     int
 	ready      chan bool
+	fn         hotelFn
 	pids       []proc.Tpid
 	cc         *cacheclnt.CacheClnt
 	cm         *cacheclnt.CacheMgr
@@ -30,7 +33,7 @@ type HotelJobInstance struct {
 	*test.Tstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Duration, maxrps int) *HotelJobInstance {
+func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Duration, maxrps int, fn hotelFn) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.ncore = ncore
@@ -38,6 +41,7 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 	ji.dur = dur
 	ji.maxrps = maxrps
 	ji.ready = make(chan bool)
+	ji.fn = fn
 	ji.Tstate = ts
 
 	var err error
@@ -61,8 +65,8 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// Make a load generator.
 	ji.lg = loadgen.MakeLoadGenerator(ji.dur, ji.maxrps, func() {
-		// Run a single DSB hotel request.
-		hotel.RunDSB(ts.T, 1, wc, r)
+		// Run a single request.
+		ji.fn(wc, r)
 	})
 
 	return ji

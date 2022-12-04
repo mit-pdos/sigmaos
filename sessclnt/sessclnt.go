@@ -115,6 +115,7 @@ func (c *SessClnt) Detach() *fcall.Err {
 	rep, err := c.RPC(np.MkTdetach(0, 0), nil, np.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
+		return err
 	}
 	rmsg, ok := rep.Msg.(*np.Rerror)
 	if ok {

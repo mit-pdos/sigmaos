@@ -23,19 +23,25 @@ func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	if error := binary.Write(bwr, binary.LittleEndian, uint32(len(fcm.Data))); error != nil {
 		return fcall.MkErr(fcall.TErrUnreachable, error.Error())
 	}
-	db.DPrintf("SPCODEC", "Marshal frame %d buf %d\n", len(f.Bytes()), len(fcm.Data))
+	db.DPrintf("SPCODEC", "Marshal frame %v %d buf %d\n", fcm.Msg, len(f.Bytes()), len(fcm.Data))
 	if len(fcm.Data) > 0 {
-		return frame.WriteRawBuffer(bwr, fcm.Data)
+		if err := frame.WriteRawBuffer(bwr, fcm.Data); err != nil {
+			return fcall.MkErr(fcall.TErrUnreachable, err.Error())
+		}
+	}
+	if error := bwr.Flush(); error != nil {
+		db.DPrintf("SPCODEC", "flush %v err %v", fcm, error)
 	}
 	return nil
 }
 
-func MarshalFcallMsgByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
+func MarshalFrameByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
 	var f bytes.Buffer
-	if error := encode(&f, fcm); error != nil {
-		return nil, fcall.MkErr(fcall.TErrBadFcall, error)
-	}
+	wr := bufio.NewWriter(&f)
 
+	if err := MarshalFrame(fcm, wr); err != nil {
+		return nil, err
+	}
 	return f.Bytes(), nil
 }
 

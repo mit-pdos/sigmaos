@@ -71,7 +71,7 @@ func (c *Clerk) serve() {
 func (c *Clerk) propose(op *Op) {
 	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
-	frame, err := spcodec.MarshalFcallMsgByte(op.request)
+	frame, err := spcodec.MarshalFrameByte(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}

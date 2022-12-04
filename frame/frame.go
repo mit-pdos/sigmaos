@@ -50,10 +50,6 @@ func WriteFrame(wr io.Writer, frame []byte) *fcall.Err {
 	return WriteRawBuffer(wr, frame)
 }
 
-func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *fcall.Err {
-	return nil
-}
-
 func WriteRawBuffer(wr io.Writer, buf []byte) *fcall.Err {
 	if n, err := wr.Write(buf); err != nil {
 		return fcall.MkErr(fcall.TErrUnreachable, err.Error())

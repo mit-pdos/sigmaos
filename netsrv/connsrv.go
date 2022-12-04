@@ -149,8 +149,5 @@ func (c *SrvConn) writer() {
 			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
-		if error := c.bw.Flush(); error != nil {
-			db.DPrintf("NETSRV_ERR", "flush %v to %v err %v", fm, c.Src(), error)
-		}
 	}
 }

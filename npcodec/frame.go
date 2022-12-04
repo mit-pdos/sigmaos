@@ -19,6 +19,10 @@ func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	if err := frame.WriteFrame(bwr, f); err != nil {
 		return err
 	}
+	if error := bwr.Flush(); error != nil {
+		db.DPrintf("NPCODEC", "flush %v err %v", fcm, error)
+		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
+	}
 	return nil
 }
 

@@ -132,12 +132,12 @@ func runMR(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 }
 
 func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
-	start := time.Now()
 	ji := i.(*KVJobInstance)
 	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	// Start some balancers
+	start := time.Now()
 	ji.StartKVJob()
 	db.DPrintf("TEST", "Made KV job")
 	// Add more kvd groups.
@@ -166,7 +166,6 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 
 // XXX Should get job name in a tuple.
 func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
-	start := time.Now()
 	ji := i.(*WwwJobInstance)
 	ji.ready <- true
 	<-ji.ready
@@ -174,7 +173,22 @@ func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 	pdc.MonitorProcds()
 	defer pdc.Done()
+	start := time.Now()
 	ji.StartWwwJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
+func runHotel(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*HotelJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc.MonitorProcds()
+	defer pdc.Done()
+	start := time.Now()
+	ji.StartHotelJob()
 	ji.Wait()
 	return time.Since(start), 1.0
 }

@@ -30,6 +30,9 @@ var KVD_NCORE int
 var WWWD_NCORE int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
+var HOTEL_NCORE int
+var HOTEL_DUR time.Duration
+var HOTEL_MAX_RPS int
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -38,6 +41,7 @@ var MAT_SIZE int
 var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
+var K8S_ADDR string
 
 // XXX REMOVE EVENTUALLY
 var AAA int
@@ -58,6 +62,10 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
+	flag.IntVar(&HOTEL_NCORE, "hotel_ncore", 1, "Hotel Ncore.")
+	flag.DurationVar(&HOTEL_DUR, "hotel_dur", 10*time.Second, "Hotel benchmark load generation duration.")
+	flag.IntVar(&HOTEL_MAX_RPS, "hotel_max_rps", 1000, "Max requests/second for hotel bench.")
+	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -408,4 +416,42 @@ func TestWwwSigmaos(t *testing.T) {
 func TestWwwK8s(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testWww(ts, false)
+}
+
+func testHotel(ts *test.Tstate, sigmaos bool) {
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	if sigmaos {
+		countNClusterCores(ts)
+		maybePregrowRealm(ts)
+	}
+	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
+	jobs, ji := makeHotelJobs(ts, sigmaos, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS)
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	if sigmaos {
+		p := monitorCoresAssigned(ts)
+		defer p.Done()
+	}
+	runOps(ts, ji, runHotel, rs)
+	printResultSummary(rs)
+	if sigmaos {
+		ts.Shutdown()
+	}
+}
+
+func TestHotelSigmaos(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, true)
+}
+
+func TestHotelK8s(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, false)
 }

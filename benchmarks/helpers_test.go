@@ -10,13 +10,13 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
 	"sigmaos/rand"
 	"sigmaos/realm"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -196,6 +196,21 @@ func makeWwwJobs(ts *test.Tstate, sigmaos bool, n int, wwwncore proc.Tcore, reqt
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := MakeWwwJob(ts, sigmaos, wwwncore, reqtype, ntrials, nclnt, nreq, delay)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+// ========== Hotel Helpers ========
+
+func makeHotelJobs(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Duration, maxrps int) ([]*HotelJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*HotelJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeHotelJob(ts, sigmaos, ncore, dur, maxrps)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

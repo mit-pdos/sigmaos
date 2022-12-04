@@ -82,9 +82,10 @@ message Rattach {
 }
 
 message Rerror {
-        string ename = 1;
+        uint32 errCode = 1;
+        string obj = 2;
+        string err = 3;
 }
-
 
 message Twalk {
         uint32 fid = 1;

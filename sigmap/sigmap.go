@@ -358,8 +358,16 @@ func (fm *FcallMsg) GetMsg() fcall.Tmsg {
 	return fm.Msg
 }
 
+func MkErr(msg *Rerror) *fcall.Err {
+	return &fcall.Err{fcall.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
+}
+
 func MkRerror(err *fcall.Err) *Rerror {
-	return &Rerror{Ename: err.Error()}
+	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
+}
+
+func MkRerrorCode(ec fcall.Terror) *Rerror {
+	return &Rerror{ErrCode: uint32(ec)}
 }
 
 func MkTwalk(fid, nfid Tfid, p path.Path) *Twalk {

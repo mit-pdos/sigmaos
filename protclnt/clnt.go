@@ -44,7 +44,7 @@ func (clnt *Clnt) CallServer(addrs []string, args fcall.Tmsg, data []byte, fence
 	}
 	rmsg, ok := reply.Msg.(*np.Rerror)
 	if ok {
-		return nil, fcall.String2Err(rmsg.Ename)
+		return nil, np.MkErr(rmsg)
 	}
 	return reply, nil
 }

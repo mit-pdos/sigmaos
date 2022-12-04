@@ -12,7 +12,9 @@ import (
 
 func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	sp2NpMsg(fcm)
-	f, error := marshal1(false, to9P(fcm))
+	fc9P := to9P(fcm)
+	db.DPrintf("NPCODEC", "MarshalFrame %v\n", fc9P)
+	f, error := marshal1(false, fc9P)
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
 	}

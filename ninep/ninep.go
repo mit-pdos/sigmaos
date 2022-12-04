@@ -252,7 +252,7 @@ type Rattach9P struct {
 	Qid Tqid9P
 }
 
-type Rerror struct {
+type Rerror9P struct {
 	Ename string
 }
 
@@ -383,6 +383,7 @@ type Twstat9P struct {
 
 type Rwstat struct{}
 
+func (Rerror9P) Type() fcall.Tfcall  { return fcall.TRerror9P }
 func (Tflush) Type() fcall.Tfcall    { return fcall.TTflush }
 func (Rflush) Type() fcall.Tfcall    { return fcall.TRflush }
 func (Tcreate9P) Type() fcall.Tfcall { return fcall.TTcreate }

@@ -7,40 +7,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/frame"
-	np "sigmaos/ninep"
 	sp "sigmaos/sigmap"
 )
 
-type Fcall9P struct {
-	Type fcall.Tfcall
-	Tag  sp.Ttag
-	Msg  fcall.Tmsg
-}
-
-func toSP(fcall9P *Fcall9P) *sp.FcallMsg {
-	fm := sp.MakeFcallMsgNull()
-	fm.Fc.Type = uint32(fcall9P.Type)
-	fm.Fc.Tag = uint32(fcall9P.Tag)
-	fm.Fc.Session = uint64(fcall.NoSession)
-	fm.Fc.Seqno = uint64(sp.NoSeqno)
-	fm.Msg = fcall9P.Msg
-	return fm
-}
-
-func to9P(fm *sp.FcallMsg) *Fcall9P {
-	fcall9P := &Fcall9P{}
-	fcall9P.Type = fcall.Tfcall(fm.Fc.Type)
-	fcall9P.Tag = sp.Ttag(fm.Fc.Tag)
-	fcall9P.Msg = fm.Msg
-	return fcall9P
-}
-
 func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
-	if fcm.Type() == fcall.TRread {
-		r := np.Rread9P{fcm.Data}
-		fcm.Msg = r
-		fcm.Data = nil
-	}
+	sp2NpMsg(fcm)
 	f, error := marshal1(false, to9P(fcm))
 	if error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
@@ -63,31 +34,6 @@ func UnmarshalFrame(rdr io.Reader) (*sp.FcallMsg, *fcall.Err) {
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)
 	}
 	fc := toSP(fc9p)
-	if fc9p.Type == fcall.TTread {
-		m := fc.Msg.(*np.Tread)
-		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)
-		fc.Msg = r
-	}
-	if fc9p.Type == fcall.TTwrite {
-		m := fc.Msg.(*np.Twrite)
-		r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0)
-		fc.Msg = r
-		fc.Data = m.Data
-	}
-	if fc9p.Type == fcall.TTopen9P {
-		m := fc.Msg.(*np.Topen9P)
-		r := sp.MkTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
-		fc.Msg = r
-	}
-	if fc9p.Type == fcall.TTcreate9P {
-		m := fc.Msg.(*np.Tcreate9P)
-		r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
-		fc.Msg = r
-	}
-	if fc9p.Type == fcall.TTwstat9P {
-		m := fc.Msg.(*np.Twstat9P)
-		r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat))
-		fc.Msg = r
-	}
+	np2SpMsg(fc)
 	return fc, nil
 }

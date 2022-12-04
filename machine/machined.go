@@ -11,10 +11,10 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/memfssrv"
 	"sigmaos/namespace"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 )
 
 const (
@@ -50,7 +50,7 @@ func MakeMachined(args []string) *Machined {
 	m.path = path.Join(MACHINES, m.memfssrv.MyAddr())
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfssrv.Root(), np.RESOURCE_CTL)
 	m.initFS()
-	m.memfssrv.GetStats().MonitorCPUUtil(nil)
+	//	m.memfssrv.GetStats().MonitorCPUUtil(nil)
 	m.cleanLinuxFS()
 	return m
 }

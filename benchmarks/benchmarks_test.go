@@ -424,7 +424,6 @@ func testHotel(ts *test.Tstate, sigmaos bool) {
 		countNClusterCores(ts)
 		maybePregrowRealm(ts)
 	}
-	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
 	jobs, ji := makeHotelJobs(ts, sigmaos, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS)
 	// XXX Clean this up/hide this somehow.
 	go func() {
@@ -440,7 +439,8 @@ func testHotel(ts *test.Tstate, sigmaos bool) {
 		defer p.Done()
 	}
 	runOps(ts, ji, runHotel, rs)
-	printResultSummary(rs)
+	jobs[0].lg.Stats()
+	//	printResultSummary(rs)
 	if sigmaos {
 		ts.Shutdown()
 	}

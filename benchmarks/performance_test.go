@@ -9,9 +9,9 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/realm"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -44,7 +44,7 @@ func printResultSummary(rs *benchmarks.Results) {
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
 	lsum, tsum := rs.Summary()
-	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====%v%v=====\n\n", fnName, lsum, tsum)
+	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====%v%v\n=====\n\n", fnName, lsum, tsum)
 }
 
 // Monitor how many cores have been assigned to a realm.

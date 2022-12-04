@@ -184,9 +184,11 @@ func runHotel(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-	pdc.MonitorProcds()
-	defer pdc.Done()
+	if ji.sigmaos {
+		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+		pdc.MonitorProcds()
+		defer pdc.Done()
+	}
 	start := time.Now()
 	ji.StartHotelJob()
 	ji.Wait()

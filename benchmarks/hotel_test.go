@@ -65,8 +65,9 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v kubernetes (%v,%v) maxrps %v", ji.dur, !ji.sigmaos, ji.k8ssrvaddr, ji.maxrps)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
 	ji.lg.Run()
+	db.DPrintf(db.ALWAYS, "Done running HotelJob")
 }
 
 func (ji *HotelJobInstance) Wait() {

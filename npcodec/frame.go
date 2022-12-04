@@ -17,22 +17,22 @@ type Fcall9P struct {
 	Msg  fcall.Tmsg
 }
 
-func toSP(fcallWC *Fcall9P) *sp.FcallMsg {
+func toSP(fcall9P *Fcall9P) *sp.FcallMsg {
 	fm := sp.MakeFcallMsgNull()
-	fm.Fc.Type = uint32(fcallWC.Type)
-	fm.Fc.Tag = uint32(fcallWC.Tag)
+	fm.Fc.Type = uint32(fcall9P.Type)
+	fm.Fc.Tag = uint32(fcall9P.Tag)
 	fm.Fc.Session = uint64(fcall.NoSession)
 	fm.Fc.Seqno = uint64(sp.NoSeqno)
-	fm.Msg = fcallWC.Msg
+	fm.Msg = fcall9P.Msg
 	return fm
 }
 
 func to9P(fm *sp.FcallMsg) *Fcall9P {
-	fcallWC := &Fcall9P{}
-	fcallWC.Type = fcall.Tfcall(fm.Fc.Type)
-	fcallWC.Tag = sp.Ttag(fm.Fc.Tag)
-	fcallWC.Msg = fm.Msg
-	return fcallWC
+	fcall9P := &Fcall9P{}
+	fcall9P.Type = fcall.Tfcall(fm.Fc.Type)
+	fcall9P.Tag = sp.Ttag(fm.Fc.Tag)
+	fcall9P.Msg = fm.Msg
+	return fcall9P
 }
 
 func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {

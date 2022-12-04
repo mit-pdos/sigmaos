@@ -295,15 +295,15 @@ func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	return nil, nil
 }
 
-func (npc *NpConn) SetFile(args *sp.Tsetfile, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpConn) SetFile(args *sp.Tsetfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) PutFile(args *sp.Tputfile, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *sp.Twriteread, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpConn) WriteRead(args *sp.Twriteread, d []byte, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return nil, nil
 }
 

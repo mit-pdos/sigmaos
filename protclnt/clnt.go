@@ -100,6 +100,10 @@ func (pclnt *ProtClnt) CallNoFence(args fcall.Tmsg) (*np.FcallMsg, *fcall.Err) {
 	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, np.MakeFenceNull())
 }
 
+func (pclnt *ProtClnt) CallNoFenceData(args fcall.Tmsg, data []byte) (*np.FcallMsg, *fcall.Err) {
+	return pclnt.clnt.CallServer(pclnt.addrs, args, data, np.MakeFenceNull())
+}
+
 func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path path.Path) (*np.Rwalk, *fcall.Err) {
 	args := np.MkTwalk(fid, nfid, path)
 	reply, err := pclnt.CallNoFence(args)
@@ -231,10 +235,8 @@ func (pclnt *ProtClnt) WriteVF(fid np.Tfid, offset np.Toffset, f *np.Tfence, v n
 }
 
 func (pclnt *ProtClnt) WriteRead(fid np.Tfid, data []byte) ([]byte, *fcall.Err) {
-	args := &np.Twriteread{}
-	args.Fid = uint64(fid)
-	args.Data = data
-	reply, err := pclnt.CallNoFence(args)
+	args := np.MkTwriteread(fid)
+	reply, err := pclnt.CallNoFenceData(args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -311,8 +313,8 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 }
 
 func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offset np.Toffset, resolve bool, f *np.Tfence, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := np.MkTsetfile(fid, mode, offset, path, resolve, data)
-	reply, err := pclnt.Call(args, f)
+	args := np.MkTsetfile(fid, mode, offset, path, resolve)
+	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err
 	}
@@ -324,8 +326,8 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path path.Path, mode np.Tmode, offse
 }
 
 func (pclnt *ProtClnt) PutFile(fid np.Tfid, path path.Path, mode np.Tmode, perm np.Tperm, offset np.Toffset, f *np.Tfence, data []byte) (*np.Rwrite, *fcall.Err) {
-	args := np.MkTputfile(fid, mode, perm, offset, path, data)
-	reply, err := pclnt.Call(args, f)
+	args := np.MkTputfile(fid, mode, perm, offset, path)
+	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err
 	}

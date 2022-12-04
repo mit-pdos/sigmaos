@@ -84,11 +84,11 @@ func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, boo
 		return reply, data, false, err
 	case *np.Tsetfile:
 		reply := &np.Rwrite{}
-		err := s.protsrv.SetFile(req, reply)
+		err := s.protsrv.SetFile(req, data, reply)
 		return reply, nil, false, err
 	case *np.Tputfile:
 		reply := &np.Rwrite{}
-		err := s.protsrv.PutFile(req, reply)
+		err := s.protsrv.PutFile(req, data, reply)
 		return reply, nil, false, err
 	case *np.Tdetach:
 		reply := &np.Rdetach{}
@@ -105,7 +105,7 @@ func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, boo
 		return reply, nil, false, nil
 	case *np.Twriteread:
 		reply := &np.Rread{}
-		data, err := s.protsrv.WriteRead(req, reply)
+		data, err := s.protsrv.WriteRead(req, data, reply)
 		return reply, data, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)

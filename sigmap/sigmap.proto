@@ -197,7 +197,6 @@ message Tsetfile {
         uint64 offset = 3;
         repeated string Wnames = 4;
         bool resolve = 5;
-        bytes data = 6;
 }
 
 message Tputfile {
@@ -206,7 +205,6 @@ message Tputfile {
         uint32 perm = 3;
         uint64 offset = 4;
         repeated string Wnames = 5;
-        bytes data = 6;
 }
 
 message Tdetach {
@@ -232,6 +230,5 @@ message Tremovefile {
 }
 
 message Twriteread {
-        uint64 fid = 1; 
-        bytes data = 2;
+        uint32 fid = 1; 
 }

@@ -314,18 +314,18 @@ func (ps *ProtSrv) ReadV(args *np.TreadV, rets *np.Rread) ([]byte, *np.Rerror) {
 	return data, nil
 }
 
-func (ps *ProtSrv) WriteRead(args *np.Twriteread, rets *np.Rread) ([]byte, *np.Rerror) {
+func (ps *ProtSrv) WriteRead(args *np.Twriteread, data []byte, rets *np.Rread) ([]byte, *np.Rerror) {
 	f, err := ps.ft.Lookup(np.Tfid(args.Fid))
 	if err != nil {
 		return nil, np.MkRerror(err)
 	}
 	db.DPrintf("PROTSRV0", "%v: WriteRead %v args %v path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
-	data, err := f.WriteRead(args.Data)
+	retdata, err := f.WriteRead(data)
 	if err != nil {
 		return nil, np.MkRerror(err)
 	}
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	return data, nil
+	return retdata, nil
 }
 
 func (ps *ProtSrv) WriteV(args *np.TwriteV, data []byte, rets *np.Rwrite) *np.Rerror {
@@ -570,8 +570,8 @@ func (ps *ProtSrv) GetFile(args *np.Tgetfile, rets *np.Rread) ([]byte, *np.Rerro
 	return data, nil
 }
 
-func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
-	if np.Tsize(len(args.Data)) > np.MAXGETSET {
+func (ps *ProtSrv) SetFile(args *np.Tsetfile, data []byte, rets *np.Rwrite) *np.Rerror {
+	if np.Tsize(len(data)) > np.MAXGETSET {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
@@ -588,7 +588,7 @@ func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), args.Data, np.NoV)
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}
@@ -600,8 +600,8 @@ func (ps *ProtSrv) SetFile(args *np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
-	if np.Tsize(len(args.Data)) > np.MAXGETSET {
+func (ps *ProtSrv) PutFile(args *np.Tputfile, data []byte, rets *np.Rwrite) *np.Rerror {
+	if np.Tsize(len(data)) > np.MAXGETSET {
 		return np.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	// walk to directory
@@ -631,7 +631,7 @@ func (ps *ProtSrv) PutFile(args *np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return np.MkRerror(err)
 	}
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), args.Data, np.NoV)
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, np.NoV)
 	if err != nil {
 		return np.MkRerror(err)
 	}

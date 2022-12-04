@@ -41,9 +41,9 @@ type Protsrv interface {
 	Wstat(*Twstat, *Rwstat) *Rerror
 	Renameat(*Trenameat, *Rrenameat) *Rerror
 	GetFile(*Tgetfile, *Rread) ([]byte, *Rerror)
-	SetFile(*Tsetfile, *Rwrite) *Rerror
-	PutFile(*Tputfile, *Rwrite) *Rerror
-	WriteRead(*Twriteread, *Rread) ([]byte, *Rerror)
+	SetFile(*Tsetfile, []byte, *Rwrite) *Rerror
+	PutFile(*Tputfile, []byte, *Rwrite) *Rerror
+	WriteRead(*Twriteread, []byte, *Rread) ([]byte, *Rerror)
 	Detach(*Rdetach, DetachF) *Rerror
 	Snapshot() []byte
 }

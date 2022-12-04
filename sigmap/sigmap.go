@@ -552,8 +552,8 @@ func (g *Tgetfile) Tcount() Tsize {
 	return Tsize(g.Count)
 }
 
-func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool, d []byte) *Tsetfile {
-	return &Tsetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Wnames: path, Resolve: resolve, Data: d}
+func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool) *Tsetfile {
+	return &Tsetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Wnames: path, Resolve: resolve}
 }
 
 func (s *Tsetfile) Tfid() Tfid {
@@ -568,8 +568,8 @@ func (s *Tsetfile) Toffset() Toffset {
 	return Toffset(s.Offset)
 }
 
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, d []byte) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Data: d}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path}
 }
 
 func (p *Tputfile) Tfid() Tfid {
@@ -602,6 +602,14 @@ func MkTheartbeat(sess []uint64) *Theartbeat {
 
 func MkTdetach(pid, lid uint32) *Tdetach {
 	return &Tdetach{PropId: pid, LeadId: lid}
+}
+
+func MkTwriteread(fid Tfid) *Twriteread {
+	return &Twriteread{Fid: uint32(fid)}
+}
+
+func (wr *Twriteread) Tfid() Tfid {
+	return Tfid(wr.Fid)
 }
 
 func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }

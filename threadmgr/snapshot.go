@@ -63,7 +63,7 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	for _, op := range opss {
 		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(op.Fc))
 		if err1 != nil {
-			db.DFatalf("error unmarshal fcall in ThreadMgrTable.Restore: %v")
+			db.DFatalf("error unmarshal fcall in ThreadMgrTable.Restore: %v", err1)
 		}
 		executing = append(executing, makeOp(fm, op.N))
 	}

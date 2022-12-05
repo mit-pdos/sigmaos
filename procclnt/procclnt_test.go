@@ -15,10 +15,10 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
 )
@@ -767,54 +767,6 @@ func TestProcdResizeN(t *testing.T) {
 		assert.True(t, status.IsStatusOK(), "WaitExit status 3")
 		checkSleeperResult(t, ts, pid1)
 	}
-
-	ts.Shutdown()
-}
-
-func TestProcdResizeEvict(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	// Run a proc that claims all cores save one.
-	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores)-1)
-	err := ts.WaitStart(pid)
-	assert.Nil(t, err, "WaitStart")
-
-	// Run a proc that claims one core.
-	pid1 := spawnSpinnerNcore(t, ts, proc.Tcore(1))
-	err = ts.WaitStart(pid1)
-	assert.Nil(t, err, "WaitStart")
-
-	// Revoke half + 1 of the procd's cores.
-	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
-
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
-
-	// Remove some cores from the procd.
-	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
-	assert.Nil(t, err, "SetFile revoke: %v", err)
-
-	db.DPrintf("TEST", "Waiting for small proc to exit")
-	// Ensure that the small proc was evicted.
-	status, err := ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-
-	db.DPrintf("TEST", "Small proc exited.")
-
-	// Evict the big proc
-	err = ts.Evict(pid)
-	assert.Nil(ts.T, err, "Evict")
-
-	db.DPrintf("TEST", "Waiting for big proc to exit.")
-
-	status, err = ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-
-	db.DPrintf("TEST", "Big proc exited.")
 
 	ts.Shutdown()
 }

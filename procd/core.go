@@ -75,12 +75,7 @@ func (pd *Procd) adjustCoresOwned(oldNCoresOwned, newNCoresOwned proc.Tcore, cor
 	pd.sanityCheckCoreCountsL()
 }
 
-// Rebalances procs across set of available cores. We allocate each proc a
-// share of the owned cores proportional to their prior allocation, or the
-// number of cores the proc requested, whichever is less. For simplicity, we
-// currently move around all of the procs, even if they aren't having their
-// cores revoked. In future, we should probably only move procs which
-// absolutely need to release their cores.
+// Rebalances procs across set of available cores. Procs are never evicted.
 func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
 	// Free all procs' cores.
 	for _, p := range pd.runningProcs {
@@ -93,10 +88,9 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	// Update the number of cores owned/available.
 	pd.coresOwned = newNCoresOwned
 	pd.coresAvail = newNCoresOwned
-	toEvict := map[proc.Tpid]*LinuxProc{}
-	// Calculate new core allocation for each proc, and allocate it cores. Some
-	// of these procs may need to be evicted if there isn't enough space for
-	// them.
+	frac := map[proc.Tpid]*LinuxProc{} // Map of procs which would get a fractional core.
+	// Calculate new (proportional) core allocation for each proc, and track the
+	// allocation. Rather than evict procs that don't fit, give them "0" cores.
 	for pid, p := range pd.runningProcs {
 		newNCore := p.attr.Ncore * newNCoresOwned / oldNCoresOwned
 		// Don't allocate more than the number of cores this proc initially asked
@@ -111,7 +105,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 		// If this proc would be allocated less than one core, slate it for
 		// eviction, and don't alloc any cores.
 		if newNCore < 1 {
-			toEvict[pid] = p
+			frac[pid] = p
 		} else {
 			// Resize the proc's core allocation.
 			// Allocate cores to the proc.
@@ -120,19 +114,19 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 			p.setCpuAffinityL()
 		}
 	}
-	// See if any of the procs to be evicted can still be squeezed in, in case
-	// the "proportional allocation" strategy above left some cores unused.
-	for pid, p := range toEvict {
+	// Give the fractional procs a remaining core each, until we run out of
+	// cores. Give the remaining ones 0 cores.
+	for _, p := range frac {
+		var ncore proc.Tcore
 		// If the proc fits...
-		if p.attr.Ncore < pd.coresAvail {
-			// Allocate cores to the proc.
-			pd.allocCoresL(p, p.attr.Ncore)
-			// Set the CPU affinity for this proc to match procd.
-			p.setCpuAffinityL()
-			delete(toEvict, pid)
+		if p.attr.Ncore <= pd.coresAvail {
+			ncore = p.attr.Ncore
 		}
+		// Allocate cores to the proc.
+		pd.allocCoresL(p, ncore)
+		// Set the CPU affinity for this proc to match procd.
+		p.setCpuAffinityL()
 	}
-	pd.evictProcsL(toEvict)
 }
 
 // Rate-limit how quickly we claim BE procs, since utilization statistics will

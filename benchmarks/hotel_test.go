@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -11,7 +12,9 @@ import (
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/proc"
+	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -84,8 +87,26 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")
 }
 
+func (ji *HotelJobInstance) PrintStats(lg *loadgen.LoadGenerator) {
+	if lg != nil {
+		lg.Stats()
+	}
+	for _, s := range sp.HOTELSVC {
+		stats := &protdevsrv.Stats{}
+		err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
+		assert.Nil(ji.T, err, "error get stats %v", err)
+		fmt.Printf("= %s: %v\n", s, stats)
+	}
+	cs, err := ji.cc.StatsSrv()
+	assert.Nil(ji.T, err)
+	for i, cstat := range cs {
+		fmt.Printf("= cache-%v: %v\n", i, cstat)
+	}
+}
+
 func (ji *HotelJobInstance) Wait() {
 	if ji.sigmaos {
+		ji.PrintStats(nil)
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
 			assert.Nil(ji.T, err, "Evict: %v", err)

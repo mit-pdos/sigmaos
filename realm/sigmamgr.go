@@ -12,10 +12,10 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 	"sigmaos/stats"
 )
 
@@ -185,6 +185,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		db.DPrintf(debug, "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
+	db.DPrintf(debug, "Noded %v has %v cores remaining.", nodedId, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
 		qs := []string{np.PROCD_RUNQ_LC}
@@ -221,6 +222,8 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 			if p.Type == proc.T_LC {
 				db.DPrintf(debug, "Can't evict noded, running LC proc")
 				return false
+			} else {
+				db.DPrintf(debug, "Noded %v's proc %v, is not LC", nodedId, p)
 			}
 		}
 		db.DPrintf(debug, "Evicting noded %v realm %v", nodedId, realmId)

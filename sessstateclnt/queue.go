@@ -50,10 +50,10 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 	if _, ok := rq.outstanding[s]; ok {
 		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req)
 	}
-	db.DPrintf("SESSCLNTQ", "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
+	//	db.DPrintf("SESSCLNTQ", "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
 	rq.queue = append(rq.queue, rpc)
 	rq.outstanding[s] = rpc
-	db.DPrintf("SESSCLNTQ", "Outstanding %v seq %v to %v", rpc.Req, s, rq.addrs)
+	//	db.DPrintf("SESSCLNTQ", "Outstanding %v seq %v to %v", rpc.Req, s, rq.addrs)
 	rq.Signal()
 }
 

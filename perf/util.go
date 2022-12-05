@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -16,8 +17,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
+	np "sigmaos/sigmap"
 )
 
 //
@@ -365,6 +366,7 @@ func (p *Perf) setupPprof(fpath string) {
 	p.pprof = true
 	p.pprofFile = f
 	if err := pprof.StartCPUProfile(f); err != nil {
+		debug.PrintStack()
 		db.DFatalf("Couldn't start CPU profile: %v", err)
 	}
 }

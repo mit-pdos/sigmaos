@@ -11,23 +11,55 @@ import (
 type Req func()
 
 type LoadGenerator struct {
+	sync.Mutex
 	totaldur  time.Duration       // Duration of load generation.
-	sleepdur  time.Duration       // Interval at which to fire off new requests.
 	maxrps    int64               // Max number of requests per second.
+	nthread   int                 // Number of "initiator threads", which start asynchronous requests.
+	rpss      []int64             // RPS for each initiator thread.
+	sleepdurs []time.Duration     // Interval at which to fire off new requests for each thread.
 	req       Req                 // Request func.
 	avgReqLat time.Duration       // Average request duration, when not under contention.
 	res       *benchmarks.Results // Latency results
 	wg        sync.WaitGroup      // Wait for request threads.
+	initC     chan int64          // Channel on which initiator threads report how many total requests they initiated
 }
 
 func MakeLoadGenerator(dur time.Duration, maxrps int, req Req) *LoadGenerator {
 	lg := &LoadGenerator{}
 	lg.totaldur = dur
-	lg.sleepdur = time.Second / time.Duration(maxrps)
 	lg.maxrps = int64(maxrps)
 	lg.req = req
 	lg.res = nil
+	lg.initC = make(chan int64)
+	lg.setupInitThreads()
 	return lg
+}
+
+// Set up "initiator threads", which kick off asynch request threads at a fixed
+// rate. This method helps determine the fixed rate at which each of these
+// initiator threads should operate.  One initiator thread can kick off roughly
+// 1K asynch requests per second.
+func (lg *LoadGenerator) setupInitThreads() {
+	lg.rpss = make([]int64, 0)
+	lg.sleepdurs = make([]time.Duration, 0)
+	// Rate at which a single initiator thread can kick off asynch requests.
+	N := int64(1000)
+	rps := lg.maxrps
+	for rps > 0 {
+		// Number of reqests to be fired off by this initiator thread, each second.
+		r := N
+		if rps < N {
+			// If there are less than N request/sec left, set r = rps.
+			r = rps
+		}
+		lg.rpss = append(lg.rpss, r)
+		// Sleep duration between asynch request invocations.
+		lg.sleepdurs = append(lg.sleepdurs, time.Second/time.Duration(r))
+		if rps < N {
+			break
+		}
+		rps -= N
+	}
 }
 
 func (lg *LoadGenerator) runReq(i int, store bool) {
@@ -56,6 +88,25 @@ func (lg *LoadGenerator) warmup() {
 	// TODO: some warmup scheme?
 }
 
+func (lg *LoadGenerator) initiatorThread(tid int) {
+	t := time.NewTicker(lg.sleepdurs[tid])
+	var nreq int64
+	start := time.Now()
+	for time.Since(start) < lg.totaldur {
+		<-t.C
+		// Increment the number of requests done by this initiator thread.
+		nreq++
+		// Make space for requester to store request latency stats.
+		lg.Lock()
+		idx := lg.res.Append(0, 0)
+		lg.Unlock()
+		// Run request in a separate thread.
+		lg.wg.Add(1)
+		go lg.runReq(idx, true)
+	}
+	lg.initC <- nreq
+}
+
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
 	db.DPrintf("LOADGEN", "Load generator latencies:\n%v", lg.res)
@@ -69,17 +120,16 @@ func (lg *LoadGenerator) Run() {
 	lg.calibrate()
 	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	lg.warmup()
-	t := time.NewTicker(lg.sleepdur)
-	var i int
+	// Start initiator threads.
 	start := time.Now()
-	for ; time.Since(start) < lg.totaldur; i++ {
-		<-t.C
-		// Make space for thread to store request latency.
-		lg.res.Append(0, 0)
-		// Run request in a separate thread.
-		lg.wg.Add(1)
-		go lg.runReq(i, true)
+	for tid := 0; tid < len(lg.rpss); tid++ {
+		go lg.initiatorThread(tid)
 	}
-	db.DPrintf(db.ALWAYS, "Avg req/sec: %v", float64(i)/time.Since(start).Seconds())
+	// Total requests
+	var nreq int64
+	for tid := 0; tid < len(lg.rpss); tid++ {
+		nreq += <-lg.initC
+	}
+	db.DPrintf(db.ALWAYS, "Avg req/sec: %v", float64(nreq)/time.Since(start).Seconds())
 	lg.wg.Wait()
 }

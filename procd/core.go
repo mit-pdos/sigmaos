@@ -7,10 +7,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 )
 
 type Tcorestatus uint8

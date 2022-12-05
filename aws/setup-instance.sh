@@ -53,8 +53,8 @@ if [ $REBOOT = "reboot" ]; then
   echo -n "wait until cloud-init is done "
   
   while true; do
-    done=`ssh -n -o ConnectionAttempts=1000 -i key-$VPC.pem $LOGIN@$VM sudo grep "finished" /var/log/cloud-init-output.log`
-    if [ ! -z "$done" ]; then
+    done=`ssh -n -o ConnectionAttempts=1000 -i key-$VPC.pem $LOGIN@$VM cloud-init status`
+    if [ "$done" = "status: done" ]; then
       break
     fi
     echo -n "."
@@ -173,6 +173,10 @@ else
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi
+
+# If cloud-init is interrupted, run the following to fix errors caused by dpkg interruption.
+# sudo dpkg --configure -a
+# sudo apt install -y golang make emacs net-tools python3 python3-boto3 awscli jq
 
 ulimit -n 100000
 

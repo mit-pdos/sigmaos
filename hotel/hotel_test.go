@@ -377,7 +377,7 @@ func TestBenchSearch(t *testing.T) {
 		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
-	ts.PrintStats(nil)
+	ts.PrintStats(lg)
 	ts.stop()
 	ts.Shutdown()
 }

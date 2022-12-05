@@ -72,6 +72,8 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv, []string{job})
 		p.SetNcore(ncore)
+		sts, _, _ := fsl.ReadDir("name/procd")
+		db.DPrintf(db.ALWAYS, "Pre spawn proc %v: %v, pd %v", p, sts)
 		if err = pclnt.Spawn(p); err != nil {
 			sts, _, _ := fsl.ReadDir("name/procd")
 			db.DFatalf("Error spawn proc %v: %v, pd %v", p, err, sts)

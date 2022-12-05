@@ -105,7 +105,7 @@ func (ji *HotelJobInstance) PrintStats(lg *loadgen.LoadGenerator) {
 }
 
 func (ji *HotelJobInstance) Wait() {
-	db.Printf("TEST", "Evicting hotel procs")
+	db.DPrintf("TEST", "Evicting hotel procs")
 	if ji.sigmaos {
 		ji.PrintStats(nil)
 		for _, pid := range ji.pids {

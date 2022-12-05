@@ -92,16 +92,16 @@ func RunDSB(t *testing.T, N int, wc *WebClnt, r *rand.Rand) {
 		coin := toss(r)
 		if coin < search_ratio {
 			err := RandSearchReq(wc, r)
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Err %v", err)
 		} else if coin < search_ratio+recommend_ratio {
 			err := RandRecsReq(wc, r)
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Err %v", err)
 		} else if coin < search_ratio+recommend_ratio+user_ratio {
 			_, err := RandLoginReq(wc, r)
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Err %v", err)
 		} else {
 			_, err := RandReserveReq(wc, r)
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Err %v", err)
 		}
 	}
 }

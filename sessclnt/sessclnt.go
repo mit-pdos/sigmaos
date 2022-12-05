@@ -59,7 +59,7 @@ func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *np.Tfence) (*np.FcallMsg,
 		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
-	db.DPrintf("SESSCLNT", "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
+	//	db.DPrintf("SESSCLNT", "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
 	return rep, err1
 }
 

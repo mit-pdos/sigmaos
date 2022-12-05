@@ -12,11 +12,11 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 )
 
 type Noded struct {
@@ -111,6 +111,7 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 
 		// If all cores were requested, shut down.
 		if msg.Name == machine.ALL_CORES || len(nd.cfg.Cores) == 1 {
+			db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
 			// Leave the realm and prepare to shut down.
 			nd.leaveRealm()
 			nd.done <- true

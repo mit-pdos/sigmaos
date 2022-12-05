@@ -37,7 +37,7 @@ func MakeResults(n int, u Tunit) *Results {
 	return r
 }
 
-// Add a data point, and return the
+// Add a data point, and return the index of the added data point..
 func (r *Results) Append(d time.Duration, amt float64) int {
 	i := len(r.dur)
 	r.dur = append(r.dur, d)
@@ -155,6 +155,7 @@ func (r *Results) toFloats() ([]float64, []float64) {
 func (r *Results) Summary() (string, string) {
 	meanL, meanT := r.Mean()
 	stdL, stdT := r.StdDev()
+	p0L, p0T := r.Percentile(0.1)
 	medianL, medianT := r.Percentile(50)
 	p75L, p75T := r.Percentile(75)
 	p90L, p90T := r.Percentile(90)
@@ -162,11 +163,11 @@ func (r *Results) Summary() (string, string) {
 	p999L, p999T := r.Percentile(99.9)
 	p9999L, p9999T := r.Percentile(99.99)
 	p100L, p100T := r.Percentile(100)
-	fstring := "Stats:\n Mean: %v\n Std: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
+	fstring := "Stats:\n Mean: %v\n Std: %v\n 0.1: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
 	lsum := fmt.Sprintf("\n= Latency "+fstring,
-		meanL, stdL, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
+		meanL, stdL, p0L, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
 	tsum := fmt.Sprintf("\n= Throughput "+fstring,
-		meanT, stdT, medianT, p75T, p90T, p99T, p999T, p9999T, p100T)
+		meanT, stdT, p0T, medianT, p75T, p90T, p99T, p999T, p9999T, p100T)
 	return lsum, tsum
 }
 

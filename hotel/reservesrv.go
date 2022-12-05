@@ -14,18 +14,6 @@ import (
 	"sigmaos/protdevsrv"
 )
 
-//type proto.ReserveRequest struct {
-//	CustomerName string
-//	HotelId      []string
-//	InDate       string
-//	OutDate      string
-//	Number       int
-//}
-//
-//type proto.ReserveResult struct {
-//	HotelIds []string
-//}
-
 type Reservation struct {
 	HotelID  string
 	Customer string

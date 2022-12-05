@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	db "sigmaos/debug"
@@ -83,8 +84,8 @@ func (wc *WebClnt) Search(inDate, outDate string, lat, lon float64) error {
 	vals := url.Values{}
 	vals.Set("inDate", inDate)
 	vals.Set("outDate", outDate)
-	vals.Set("lat", fmt.Sprintf("%f", lat))
-	vals.Set("lon", fmt.Sprintf("%f", lon))
+	vals.Set("lat", strconv.FormatFloat(lat, 'f', -1, 64))
+	vals.Set("lon", strconv.FormatFloat(lon, 'f', -1, 64))
 	db.DPrintf("WEBC", "Search vals %v\n", vals)
 	_, err := wc.request("/hotels", vals)
 	if err != nil {
@@ -96,8 +97,8 @@ func (wc *WebClnt) Search(inDate, outDate string, lat, lon float64) error {
 func (wc *WebClnt) Recs(require string, lat, lon float64) error {
 	vals := url.Values{}
 	vals.Set("require", require)
-	vals.Add("lat", fmt.Sprintf("%f", lat))
-	vals.Add("lon", fmt.Sprintf("%f", lon))
+	vals.Add("lat", strconv.FormatFloat(lat, 'f', -1, 64))
+	vals.Add("lon", strconv.FormatFloat(lon, 'f', -1, 64))
 	db.DPrintf("WEBC", "Recs vals %v\n", vals)
 	_, err := wc.request("/recommendations", vals)
 	if err != nil {
@@ -110,13 +111,13 @@ func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, na
 	vals := url.Values{}
 	vals.Set("inDate", inDate)
 	vals.Set("outDate", outDate)
-	vals.Set("lat", fmt.Sprintf("%f", lat))
-	vals.Set("lon", fmt.Sprintf("%f", lon))
+	vals.Set("lat", strconv.FormatFloat(lat, 'f', -1, 64))
+	vals.Set("lon", strconv.FormatFloat(lon, 'f', -1, 64))
 	vals.Set("hotelId", hotelid)
 	vals.Set("customerName", name)
 	vals.Set("username", u)
 	vals.Set("password", p)
-	vals.Set("number", fmt.Sprintf("%d", n))
+	vals.Set("number", strconv.Itoa(n))
 
 	db.DPrintf("WEBC", "Reserve vals %v\n", vals)
 
@@ -134,8 +135,8 @@ func (wc *WebClnt) Reserve(inDate, outDate string, lat, lon float64, hotelid, na
 
 func (wc *WebClnt) Geo(lat, lon float64) (string, error) {
 	vals := url.Values{}
-	vals.Set("lat", fmt.Sprintf("%f", lat))
-	vals.Set("lon", fmt.Sprintf("%f", lon))
+	vals.Set("lat", strconv.FormatFloat(lat, 'f', -1, 64))
+	vals.Set("lon", strconv.FormatFloat(lon, 'f', -1, 64))
 	db.DPrintf("WEBC", "Geo vals %v\n", vals)
 	body, err := wc.request("/geo", vals)
 	if err != nil {

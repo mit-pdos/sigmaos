@@ -10,11 +10,11 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
+	np "sigmaos/sigmap"
 )
 
 type Www struct {
@@ -113,6 +113,7 @@ func (s *Www) done() error {
 	db.DPrintf("HOTEL_WWW_STATS", "\nReservec %v", s.reservec.StatsClnt())
 	db.DPrintf("HOTEL_WWW_STATS", "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf("HOTEL_WWW_STATS", "\nRecc %v", s.recc.StatsClnt())
+	db.DPrintf("HOTEL_WWW", "Www %v evicted", proc.GetPid())
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

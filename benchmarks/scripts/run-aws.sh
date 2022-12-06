@@ -116,24 +116,24 @@ run_mr() {
   run_benchmark $n_vm $perf_dir "$cmd"
 }
 
-run_kv() {
-  if [ $# -ne 7 ]; then
-    echo "run_kv args: n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
-    exit 1
-  fi
-  n_vm=$1
-  nkvd=$2
-  nkvd_ncore=$3
-  nclerk=$4
-  auto=$5
-  redisaddr=$6
-  perf_dir=$7
-  cmd="
-    go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
-  "
-  run_benchmark $n_vm $perf_dir "$cmd"
-}
+#run_kv() {
+#  if [ $# -ne 7 ]; then
+#    echo "run_kv args: n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
+#    exit 1
+#  fi
+#  n_vm=$1
+#  nkvd=$2
+#  nkvd_ncore=$3
+#  nclerk=$4
+#  auto=$5
+#  redisaddr=$6
+#  perf_dir=$7
+#  cmd="
+#    go clean -testcache; \
+#    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+#  "
+#  run_benchmark $n_vm $perf_dir "$cmd"
+#}
 
 # ========== Top-level benchmarks ==========
 
@@ -150,7 +150,7 @@ mr_scalability() {
 mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
-  dataset_size="2G"  # "4G"   #"2G 4G"
+  dataset_size="4G"
   for size in $dataset_size ; do
     mrapp="$app$size.yml"
     run=${FUNCNAME[0]}/$mrapp
@@ -160,55 +160,55 @@ mr_vs_corral() {
   done
 }
 
-mr_overlap() {
-  mrapp=mr-wc-wiki4G.yml
-  n_vm=16
-  run=${FUNCNAME[0]}
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  # TODO
-  echo "TODO"
-#  run_mr $n_vm $mrapp $perf_dir
-}
+#mr_overlap() {
+#  mrapp=mr-wc-wiki4G.yml
+#  n_vm=16
+#  run=${FUNCNAME[0]}
+#  echo "========== Running $run =========="
+#  perf_dir=$OUT_DIR/$run
+#  # TODO
+#  echo "TODO"
+##  run_mr $n_vm $mrapp $perf_dir
+#}
 
-kv_scalability() {
-  # First, run against our KV.
-  auto="manual"
-  nkvd=1
-  kvd_ncore=1
-  redisaddr=""
-  n_vm=16
-  for nclerk in 1 2 4 8 16 ; do
-    run=${FUNCNAME[0]}/sigmaOS/$nclerk
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/$run
-    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
-  done
+#kv_scalability() {
+#  # First, run against our KV.
+#  auto="manual"
+#  nkvd=1
+#  kvd_ncore=1
+#  redisaddr=""
+#  n_vm=16
+#  for nclerk in 1 2 4 8 16 ; do
+#    run=${FUNCNAME[0]}/sigmaOS/$nclerk
+#    echo "========== Running $run =========="
+#    perf_dir=$OUT_DIR/$run
+#    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+#  done
+#
+#  # Then, run against a redis instance started on the last VM.
+#  nkvd=0
+#  redisaddr="10.0.134.192:6379"
+#  n_vm=15
+#  for nclerk in 1 2 4 8 16 ; do
+#    run=${FUNCNAME[0]}/redis/$nclerk
+#    echo "========== Running $run =========="
+#    perf_dir=$OUT_DIR/$run
+#    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto $redisaddr $perf_dir
+#  done
+#}
 
-  # Then, run against a redis instance started on the last VM.
-  nkvd=0
-  redisaddr="10.0.134.192:6379"
-  n_vm=15
-  for nclerk in 1 2 4 8 16 ; do
-    run=${FUNCNAME[0]}/redis/$nclerk
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/$run
-    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto $redisaddr $perf_dir
-  done
-}
-
-kv_elasticity() {
-  auto="auto"
-  nkvd=1
-  kvd_ncore=2
-  nclerk=16
-  redisaddr=""
-  n_vm=16
-  run=${FUNCNAME[0]}
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
-}
+#kv_elasticity() {
+#  auto="auto"
+#  nkvd=1
+#  kvd_ncore=2
+#  nclerk=16
+#  redisaddr=""
+#  n_vm=16
+#  run=${FUNCNAME[0]}
+#  echo "========== Running $run =========="
+#  perf_dir=$OUT_DIR/$run
+#  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+#}
 
 realm_burst() {
   n_vm=16
@@ -224,8 +224,8 @@ realm_burst() {
 
 realm_balance() {
   mrapp=mr-grep-wiki.yml
-  nclerk=8
-  clerk_dur="120s"
+  hotel_dur="60s"
+  hotel_max_rps=1000
   n_vm=16
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -234,7 +234,7 @@ realm_balance() {
     export SIGMADEBUG=\"TEST;\"; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --nclerk $nclerk --clerk_dur $clerk_dur --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $n_vm $perf_dir "$cmd"
 }
@@ -274,26 +274,26 @@ graph_mr_overlap() {
   # TODO
 }
 
-graph_kv_aggregate_tpt() {
-  fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing 1 KV Server"
-}
-
-graph_kv_scalability() {
-  fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Single Key-Value Server Throughput"
-}
-
-graph_kv_elasticity() {
-  fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Throughput of a Dynamically-Scaled KV Service with 16 Clerks"
-}
+#graph_kv_aggregate_tpt() {
+#  fname=${FUNCNAME[0]}
+#  graph="${fname##graph_}"
+#  echo "========== Graphing $graph =========="
+#  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/kv_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "16 Clerks' Aggregate Throughput Accessing 1 KV Server"
+#}
+#
+#graph_kv_scalability() {
+#  fname=${FUNCNAME[0]}
+#  graph="${fname##graph_}"
+#  echo "========== Graphing $graph =========="
+#  $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "ops/sec" --xlabel "Number of Clerks" --ylabel "Aggregate Throughput (ops/sec)" --title "Single Key-Value Server Throughput"
+#}
+#
+#graph_kv_elasticity() {
+#  fname=${FUNCNAME[0]}
+#  graph="${fname##graph_}"
+#  echo "========== Graphing $graph =========="
+#  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Throughput of a Dynamically-Scaled KV Service with 16 Clerks"
+#}
 
 scrape_realm_burst() {
   fname=${FUNCNAME[0]}
@@ -317,23 +317,18 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#mr_scalability
+mr_scalability
 mr_vs_corral
 #mr_overlap
-#kv_scalability
-#kv_elasticity
 #realm_burst
 #realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_aggregate_tpt
-#graph_mr_scalability
+graph_mr_scalability
 scrape_mr_vs_corral
 #graph_mr_overlap
-#graph_kv_aggregate_tpt
-#graph_kv_scalability
-#graph_kv_elasticity
 #scrape_realm_burst
 #graph_realm_balance
 

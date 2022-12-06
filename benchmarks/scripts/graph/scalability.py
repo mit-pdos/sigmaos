@@ -47,7 +47,6 @@ def graph_data(input_dir, out, xlabel, ylabel, title, speedup):
   x = get_x_axis(systems, input_dir)
   y = get_y_axes(systems, input_dir, x)
   for i in range(len(y)):
-#    y[i] = scale_y_axis(y[i])
     if speedup:
       y[i] = y[i][0] / y[i]
   color = "orange"

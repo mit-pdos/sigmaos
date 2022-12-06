@@ -11,10 +11,10 @@ import (
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/namespace"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 )
 
 const (
@@ -86,7 +86,7 @@ func (p *LinuxProc) run() error {
 			defer p.pd.Unlock()
 			// Sanity check that we don't start 2 of the same kernel proc on the same
 			// procd.
-			if _, ok := p.pd.kernelProcs[p.attr.Program]; ok {
+			if _, ok := p.pd.kernelProcs[p.attr.Program]; ok && p.attr.Program != "kernel/dbd" {
 				db.DPrintf(db.ALWAYS, "Double-spawned %v on procd %v", p.attr.Program, p.pd.addr)
 			}
 			// Mark that we've spawned a new kernel proc.

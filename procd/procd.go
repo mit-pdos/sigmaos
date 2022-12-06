@@ -12,15 +12,15 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/memfssrv"
 	"sigmaos/namespace"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	np "sigmaos/sigmap"
 )
 
 type Procd struct {
@@ -54,6 +54,7 @@ func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	pd := &Procd{}
 	pd.Cond = sync.NewCond(&pd.Mutex)
 	pd.kernelProcs = make(map[string]bool)
+	pd.kernelProcs["kernel/dbd"] = true
 	// If we aren't spawning a full system on this procd, then kernel init is
 	// done (this procd can start to accept procs).
 	if !spawningSys {

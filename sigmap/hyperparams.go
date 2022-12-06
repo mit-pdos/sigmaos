@@ -29,7 +29,7 @@ realm:
   shrink_cpu_util_threshold: 25
 
 machine:
-  core_group_fraction: 0.5
+  core_group_fraction: 0.25
 
 procd:
   stealable_proc_timeout: 100ms
@@ -62,7 +62,7 @@ realm:
   shrink_cpu_util_threshold: 10
 
 machine:
-  core_group_fraction: 0.5
+  core_group_fraction: 0.25
 
 procd:
   stealable_proc_timeout: 50ms

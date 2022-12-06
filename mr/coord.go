@@ -33,6 +33,8 @@ const (
 	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer
+
+	MEM_REQ = 7900
 )
 
 // XXX update
@@ -130,14 +132,14 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, 7900)
+	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, MEM_REQ)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, 7900)
+	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, MEM_REQ)
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {

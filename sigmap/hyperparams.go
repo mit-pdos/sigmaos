@@ -62,7 +62,7 @@ realm:
   shrink_cpu_util_threshold: 10
 
 machine:
-  core_group_fraction: 0.25
+  core_group_fraction: 0.5
 
 procd:
   stealable_proc_timeout: 50ms

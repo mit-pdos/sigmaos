@@ -12,8 +12,8 @@ import (
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
+	np "sigmaos/sigmap"
 )
 
 type RatePlans []*proto.RatePlan

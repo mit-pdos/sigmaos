@@ -58,8 +58,9 @@ fi
 
 for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  export SIGMADBADDR="10.0.134.192:3306"
+  export SIGMADBADDR="10.0.102.10:3306"
   export NAMED="${NAMED}"
+  # export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
     (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)

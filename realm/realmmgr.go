@@ -11,15 +11,15 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 	"sigmaos/stats"
 )
 
@@ -361,7 +361,8 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	return "", false
 }
 
-func (m *RealmResourceMgr) realmShouldGrow() bool {
+// Returns true if the realm should grow, and returns the queue length.
+func (m *RealmResourceMgr) realmShouldGrow() (int, bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
@@ -369,24 +370,24 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 	realmCfg, err := m.getRealmConfig()
 	if err != nil {
 		db.DPrintf("REALMMGR", "Error getRealmConfig: %v", err)
-		return false
+		return 0, false
 	}
 
 	// If the realm is shutting down, return
 	if realmCfg.Shutdown {
-		return false
+		return 0, false
 	}
 
 	// If we don't have enough noded replicas to start the realm yet, we need to
 	// grow the realm.
 	if len(realmCfg.NodedsAssigned) < nReplicas() {
-		return true
+		return 1, true
 	}
 
 	// If we haven't finished booting, we aren't ready to start scanning/growing
 	// the realm.
 	if len(realmCfg.NodedsActive) < nReplicas() {
-		return false
+		return 0, false
 	} else {
 		// If the realm just finished booting, finish initialization.
 		if m.FsLib == nil {
@@ -396,21 +397,21 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 
 	// If we have resized too recently, return
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
-		return false
+		return 0, false
 	}
 
 	// If there are a lot of procs waiting to be run/stolen...
 	qlen := m.getRealmQueueLen()
 	if qlen >= int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
-		return true
+		return qlen, true
 	}
 
 	avgUtil, _ := m.getRealmUtil(realmCfg)
 
 	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD && qlen >= 0 {
-		return true
+		return qlen, true
 	}
-	return false
+	return 0, false
 }
 
 func (m *RealmResourceMgr) Work() {
@@ -426,9 +427,9 @@ func (m *RealmResourceMgr) Work() {
 	}()
 
 	for {
-		if m.realmShouldGrow() {
-			db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
-			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, m.realmId, 1)
+		if qlen, ok := m.realmShouldGrow(); ok {
+			db.DPrintf("REALMMGR", "Try to grow realm %v qlen %v", m.realmId, qlen)
+			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, m.realmId, qlen)
 			resource.SendMsg(m.sigmaFsl, np.SIGMACTL, msg)
 		}
 		// Sleep for a bit.

@@ -179,7 +179,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		cload := pd.memfssrv.GetStats().GetLoad()
 		rlc := pd.procClaimRateLimitCheck(util, p)
 		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-			db.DPrintf("PROCD", "Claimed BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
+			db.DPrintf("PROCD", "Have enough cores for BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
 			return true
 		}
 		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)

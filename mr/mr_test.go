@@ -25,7 +25,7 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/seqwc"
 	np "sigmaos/sigmap"
-	"sigmaos/stats"
+	// "sigmaos/stats"
 	"sigmaos/test"
 	"sigmaos/wc"
 )

@@ -30,6 +30,9 @@ $ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
 will update the sigmaos software on each EC2 instances and restart
 sigmaos daemons.
 
+When doing this often:
+ ./stop-sigmaos.sh --vpc $SIGMA_VPC --parallel && ./build-sigma.sh --vpc $SIGMA_VPC --realm $R --version $V && ./install-sigma.sh --vpc $SIGMA_VPC --realm $R --parallel && ./start-sigmaos.sh --vpc $SIGMA_VPC --realm $R
+
 # run test on VPC
 
 $ ssh -i key-vpc-02f7e3816c4cc8e7f.pem ubuntu@ec2-52-54-107-185.compute-1.amazonaws.com

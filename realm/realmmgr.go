@@ -144,10 +144,13 @@ func (m *RealmResourceMgr) growRealm() {
 	if nodedId == "" {
 		db.DPrintf("REALMMGR", "Start a new noded for realm %v on %v with cores %v", m.realmId, machineId, cores)
 		// Request the machine to start a noded.
-		nodedId := m.requestNoded(machineId)
-		db.DPrintf("REALMMGR", "Started noded for realm %v %v on %v", m.realmId, nodedId, machineId)
+		nodedId := proc.Tpid("noded-" + proc.GenPid().String()).String()
 		// Allocate the noded to this realm.
-		m.allocNoded(m.realmId, machineId, nodedId.String(), cores)
+		db.DPrintf("REALMMGR", "Allocating %v to realm %v", nodedId, m.realmId)
+		m.allocNoded(m.realmId, machineId, nodedId, cores)
+		db.DPrintf("REALMMGR", "Requesting noded %v", nodedId)
+		m.requestNoded(nodedId, machineId)
+		db.DPrintf("REALMMGR", "Started noded for realm %v %v on %v", m.realmId, nodedId, machineId)
 		db.DPrintf("REALMMGR", "Allocated %v to realm %v", nodedId, m.realmId)
 	} else {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
@@ -239,18 +242,16 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 }
 
 // Request a machine to create a new Noded)
-func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
-	pid := proc.Tpid("noded-" + proc.GenPid().String())
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, pid.String(), 1)
+func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, nodedId, 1)
 	resource.SendMsg(m.sigmaFsl, path.Join(machine.MACHINES, machineId, np.RESOURCE_CTL), msg)
-	return pid
 }
 
 // Alloc a Noded to this realm.
 func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
 	ndCfg := MakeNodedConfig()
-	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
+	ndCfg.Id = nodedId
 	ndCfg.RealmId = realmId
 	ndCfg.MachineId = machineId
 	ndCfg.Cores = append(ndCfg.Cores, cores)

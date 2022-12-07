@@ -68,12 +68,6 @@ func MakeNoded(machineId string) *Noded {
 
 	// Set up the noded config
 	nd.cfg = MakeNodedConfig()
-	nd.cfg.Id = nd.id
-	nd.cfg.RealmId = kernel.NO_REALM
-	nd.cfg.MachineId = machineId
-
-	// Write the initial config file
-	nd.WriteConfig(nd.cfgPath, nd.cfg)
 
 	return nd
 }
@@ -324,16 +318,18 @@ func (nd *Noded) leaveRealm() {
 }
 
 func (nd *Noded) Work() {
-	if err := nd.Started(); err != nil {
-		db.DFatalf("Error Started: %v", err)
-	}
-	db.DPrintf("NODED", "Noded %v started", nd.id)
 	// Get the next realm assignment.
+	db.DPrintf("NODED", "Noded %v started, waiting for config", nd.id)
 	nd.getNextConfig()
 	db.DPrintf("NODED", "Noded %v got config %v", nd.id, nd.cfg)
 
 	// Join a realm
 	nd.joinRealm()
+
+	if err := nd.Started(); err != nil {
+		db.DFatalf("Error Started: %v", err)
+	}
+	db.DPrintf("NODED", "Noded %v started", nd.id)
 
 	<-nd.done
 

@@ -218,6 +218,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 
 func TestAppMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
 	maybePregrowRealm(ts)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, apps := makeNMRJobs(ts, 1, MR_APP)

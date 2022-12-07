@@ -132,7 +132,7 @@ func (m *Machined) initFS() {
 }
 
 func (m *Machined) postCores() {
-	coreGroupSize := uint64(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	coreGroupSize := NodedNCores()
 	if coreGroupSize == 0 {
 		db.DFatalf("Core group size 0")
 	}

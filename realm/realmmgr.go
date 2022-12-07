@@ -13,7 +13,6 @@ import (
 	"sigmaos/electclnt"
 	"sigmaos/fcall"
 	"sigmaos/fslib"
-	"sigmaos/linuxsched"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -404,7 +403,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (int, bool) {
 
 	// If there are a lot of procs waiting to be run/stolen...
 	qlen := m.getRealmQueueLen()
-	if qlen >= int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
+	if qlen >= int(machine.NodedNCores()) {
 		return qlen, true
 	}
 

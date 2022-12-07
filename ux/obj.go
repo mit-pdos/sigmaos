@@ -51,6 +51,7 @@ func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 	t := statxTimestampToTime(statx.Mtime)
 	st := np.MkStat(np.MakeQidPerm(umode2Perm(statx.Mode), 0, np.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
+	st.Length = statx.Size
 	return st, nil
 }
 

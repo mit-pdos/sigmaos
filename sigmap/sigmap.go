@@ -498,15 +498,16 @@ func MkStatNull() *Stat {
 
 func MkStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
 	st := &Stat{
-		Type:  0, // XXX
-		Qid:   qid,
-		Mode:  uint32(perm),
-		Mtime: mtime,
-		Atime: 0,
-		Name:  name,
-		Uid:   owner,
-		Gid:   owner,
-		Muid:  "",
+		Type:   0, // XXX
+		Qid:    qid,
+		Mode:   uint32(perm),
+		Atime:  0,
+		Mtime:  mtime,
+		Name:   name,
+		Length: 0,
+		Uid:    owner,
+		Gid:    owner,
+		Muid:   "",
 	}
 	return st
 

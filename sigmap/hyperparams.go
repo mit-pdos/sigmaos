@@ -56,8 +56,8 @@ session:
   timeout: 40000ms
 
 realm:
-  scan_interval: 100ms
-  resize_interval: 100ms
+  scan_interval: 1000ms
+  resize_interval: 1000ms
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 10
 

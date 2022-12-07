@@ -252,6 +252,7 @@ func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores 
 	ndCfg := MakeNodedConfig()
 	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 	ndCfg.RealmId = realmId
+	ndCfg.MachineId = machineId
 	ndCfg.Cores = append(ndCfg.Cores, cores)
 	m.WriteConfig(NodedConfPath(nodedId), ndCfg)
 

@@ -133,6 +133,9 @@ func (m *Machined) initFS() {
 
 func (m *Machined) postCores() {
 	coreGroupSize := uint64(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	if coreGroupSize == 0 {
+		db.DFatalf("Core group size 0")
+	}
 	for i := uint64(0); i < uint64(linuxsched.NCores); i += coreGroupSize {
 		iv := np.MkInterval(i, i+coreGroupSize)
 		if uint(iv.End) > linuxsched.NCores+1 {

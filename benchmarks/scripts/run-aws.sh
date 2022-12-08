@@ -255,15 +255,12 @@ graph_mr_scalability() {
   $GRAPH_SCRIPTS_DIR/scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --xlabel "Number of VMs" --ylabel "Speedup Over 1VM" --title "Elastic MapReduce End-to-end Speedup" --speedup
 }
 
-scrape_mr_vs_corral() {
+graph_mr_vs_corral() {
   fname=${FUNCNAME[0]}
-  graph="${fname##scrape_}"
-  echo "========== Scraping $graph =========="
-  for dir in $OUT_DIR/$graph/* ; do
-    dataset=$(basename $dir)
-    res=$(grep "PASS:" $dir/bench.out)
-    echo -e "Dataset: $dataset\nResult: $res"
-  done
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  datasize=2G
+  $GRAPH_SCRIPTS_DIR/mr_vs_corral.py --measurement_dir $OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/$graph.pdf --datasize=$datasize
 }
 
 graph_mr_overlap() {
@@ -326,8 +323,8 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_aggregate_tpt
-graph_mr_scalability
-scrape_mr_vs_corral
+#graph_mr_scalability
+graph_mr_vs_corral
 #graph_mr_overlap
 #scrape_realm_burst
 #graph_realm_balance

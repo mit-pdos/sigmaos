@@ -140,7 +140,7 @@ run_hotel() {
   cmd="
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -156,7 +156,7 @@ run_hotel() {
   fi
   n_cores=4
   # Since we only use 5 VMs anyway, it should be fine to run the client on VM 14, which should also exist in the k8s cluster.
-  run_benchmark $vpc $n_cores 5 $perf_dir "$cmd" $cli_vm
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm
 }
 
 #run_kv() {
@@ -205,9 +205,9 @@ mr_vs_corral() {
 
 hotel_tail() {
   # Make sure to fill in new k8s addr.
-  k8saddr=10.96.170.114:5000
+  k8saddr="10.111.131.148:5000"
   for sys in Sigmaos K8s ; do
-    for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 ; do
+    for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
@@ -379,19 +379,19 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #mr_scalability
 #mr_vs_corral
-#hotel_tail
 #realm_burst
 #realm_balance
+hotel_tail
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_aggregate_tpt
 #graph_mr_scalability
 #graph_mr_vs_corral
-graph_hotel_tail
 #graph_mr_overlap
 #scrape_realm_burst
 #graph_realm_balance
+graph_hotel_tail
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

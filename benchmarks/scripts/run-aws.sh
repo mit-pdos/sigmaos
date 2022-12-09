@@ -139,6 +139,7 @@ run_hotel() {
   perf_dir=$4
   cmd="
     go clean -testcache; \
+    ulimit -n 100000; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then

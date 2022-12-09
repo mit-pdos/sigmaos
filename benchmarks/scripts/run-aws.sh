@@ -141,7 +141,7 @@ run_hotel() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}All --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps > /tmp/bench.out 2>&1
   "
-  if [ "$sys" = "Sigma" ]; then
+  if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
     # We're only running on 5 machines, so use #14 as a client (it is unused).
     cli_vm=14
@@ -205,7 +205,7 @@ mr_vs_corral() {
 hotel_tail() {
   # Make sure to fill in new k8s addr.
   k8saddr=10.96.170.114:5000
-  for sys in Sigma K8s ; do
+  for sys in Sigmaos K8s ; do
     for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="

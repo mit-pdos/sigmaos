@@ -189,6 +189,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 
 // Allocate cores to a proc. Caller holds lock.
 func (pd *Procd) allocCoresL(p *LinuxProc, n proc.Tcore) {
+	if n > pd.coresAvail {
+		debug.PrintStack()
+		db.DFatalf("Alloc too many cores %v %v", p, n)
+	}
 	p.coresAlloced = n
 	pd.coresAvail -= n
 	pd.netProcsClaimed++

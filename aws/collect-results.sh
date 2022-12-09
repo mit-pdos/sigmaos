@@ -64,16 +64,12 @@ for vm in $vms; do
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
     eval "$cmd2"
-    if [ $vm == $MAIN ]; then
-      eval "$cmd3"
-    fi
+    eval "$cmd3"
   else
     (
       eval "$cmd1"
       eval "$cmd2"
-      if [ $vm == $MAIN ]; then
-        eval "$cmd3"
-      fi
+      eval "$cmd3"
     ) &
   fi
 done

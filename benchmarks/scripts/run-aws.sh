@@ -207,7 +207,7 @@ hotel_tail() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.111.131.148:5000"
   for sys in Sigmaos K8s ; do
-    for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 ; do
+    for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
@@ -377,7 +377,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#mr_scalability
+mr_scalability
 #mr_vs_corral
 #realm_burst
 #realm_balance
@@ -385,10 +385,9 @@ hotel_tail
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
+graph_mr_aggregate_tpt
+graph_mr_scalability
 #graph_mr_vs_corral
-#graph_mr_overlap
 #scrape_realm_burst
 #graph_realm_balance
 graph_hotel_tail

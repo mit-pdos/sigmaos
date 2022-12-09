@@ -204,7 +204,7 @@ func makeWwwJobs(ts *test.Tstate, sigmaos bool, n int, wwwncore proc.Tcore, reqt
 
 // ========== Hotel Helpers ========
 
-func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur time.Duration, maxrps int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)

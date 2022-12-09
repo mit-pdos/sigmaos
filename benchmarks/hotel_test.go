@@ -3,6 +3,8 @@ package benchmarks_test
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -28,26 +30,40 @@ type HotelJobInstance struct {
 	sigmaos    bool
 	k8ssrvaddr string
 	job        string
-	dur        time.Duration
-	maxrps     int
+	dur        []time.Duration
+	maxrps     []int
 	ready      chan bool
 	fn         hotelFn
 	pids       []proc.Tpid
 	cc         *cacheclnt.CacheClnt
 	cm         *cacheclnt.CacheMgr
-	lg         *loadgen.LoadGenerator
+	lgs        []*loadgen.LoadGenerator
 	*test.Tstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, dur time.Duration, maxrps int, fn hotelFn) *HotelJobInstance {
+func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
-	ji.dur = dur
-	ji.maxrps = maxrps
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.Tstate = ts
+
+	durslice := strings.Split(durs, ",")
+	maxrpsslice := strings.Split(maxrpss, ",")
+	assert.Equal(ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
+
+	ji.dur = make([]time.Duration, 0, len(durslice))
+	ji.maxrps = make([]int, 0, len(durslice))
+
+	for i := range durslice {
+		d, err := time.ParseDuration(durslice[i])
+		assert.Nil(ts.T, err, "Bad duration %v", err)
+		n, err := strconv.Atoi(maxrpsslice[i])
+		assert.Nil(ts.T, err, "Bad duration %v", err)
+		ji.dur = append(ji.dur, d)
+		ji.maxrps = append(ji.maxrps, n)
+	}
 
 	var err error
 	var ncache int
@@ -69,42 +85,49 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, dur time.Duration, maxrps int, 
 	}
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ji.job)
-	// Make a load generator.
-	ji.lg = loadgen.MakeLoadGenerator(ji.dur, ji.maxrps, func(r *rand.Rand) {
-		// Run a single request.
-		ji.fn(wc, r)
-	})
-
+	// Make a load generators.
+	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
+	for i := range ji.dur {
+		ji.lgs = append(ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
+			// Run a single request.
+			ji.fn(wc, r)
+		}))
+		ji.lgs[i].Calibrate()
+	}
 	return ji
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
 	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
-	ji.lg.Run()
+	for _, lg := range ji.lgs {
+		lg.Run()
+	}
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")
 }
 
-func (ji *HotelJobInstance) PrintStats(lg *loadgen.LoadGenerator) {
-	if lg != nil {
+func (ji *HotelJobInstance) printStats() {
+	if ji.sigmaos {
+		for _, s := range sp.HOTELSVC {
+			stats := &protdevsrv.Stats{}
+			err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
+			assert.Nil(ji.T, err, "error get stats %v", err)
+			fmt.Printf("= %s: %v\n", s, stats)
+		}
+		cs, err := ji.cc.StatsSrv()
+		assert.Nil(ji.T, err)
+		for i, cstat := range cs {
+			fmt.Printf("= cache-%v: %v\n", i, cstat)
+		}
+	}
+	for _, lg := range ji.lgs {
 		lg.Stats()
-	}
-	for _, s := range sp.HOTELSVC {
-		stats := &protdevsrv.Stats{}
-		err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
-		assert.Nil(ji.T, err, "error get stats %v", err)
-		fmt.Printf("= %s: %v\n", s, stats)
-	}
-	cs, err := ji.cc.StatsSrv()
-	assert.Nil(ji.T, err)
-	for i, cstat := range cs {
-		fmt.Printf("= cache-%v: %v\n", i, cstat)
 	}
 }
 
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf("TEST", "Evicting hotel procs")
+	ji.printStats()
 	if ji.sigmaos {
-		ji.PrintStats(nil)
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
 			assert.Nil(ji.T, err, "Evict: %v", err)

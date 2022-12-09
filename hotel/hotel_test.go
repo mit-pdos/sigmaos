@@ -375,6 +375,7 @@ func TestBenchSearch(t *testing.T) {
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
@@ -403,6 +404,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.Shutdown()
 }
@@ -415,6 +417,7 @@ func TestBenchGeo(t *testing.T) {
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
@@ -435,6 +438,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.Shutdown()
 }

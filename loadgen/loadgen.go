@@ -73,7 +73,7 @@ func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
 }
 
 // Find the base latency on which to base future measurements.
-func (lg *LoadGenerator) calibrate() {
+func (lg *LoadGenerator) Calibrate() {
 	const N = 1000
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
@@ -84,6 +84,7 @@ func (lg *LoadGenerator) calibrate() {
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries.
 	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat)), benchmarks.REQ)
+	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 }
 
 func (lg *LoadGenerator) warmup() {
@@ -119,9 +120,6 @@ func (lg *LoadGenerator) Stats() {
 
 func (lg *LoadGenerator) Run() {
 	db.DPrintf("TEST", "Start load generator")
-	// Calibrate.
-	lg.calibrate()
-	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	lg.warmup()
 	// Start initiator threads.
 	start := time.Now()

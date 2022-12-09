@@ -279,10 +279,10 @@ realm_burst() {
 }
 
 realm_balance() {
-  mrapp=mr-grep-wiki.yml
+  mrapp=mr-wc-wiki4G.yml
   hotel_dur="60s"
   hotel_max_rps=1000
-  n_vm=16
+  n_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
@@ -292,7 +292,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 0
 }
 
 # ========== Make Graphs ==========
@@ -368,7 +368,7 @@ graph_realm_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --kv_realm $REALM2 --title "Aggregate Throughput Balancing 2 Realms' Applications"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --title "Aggregate Throughput Balancing 2 Realms' Applications"
 }
 
 # ========== Preamble ==========
@@ -377,20 +377,20 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-mr_scalability
+#mr_scalability
 #mr_vs_corral
 #realm_burst
-#realm_balance
-hotel_tail
+realm_balance
+#hotel_tail
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_aggregate_tpt
-graph_mr_scalability
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
 #graph_mr_vs_corral
 #scrape_realm_burst
-#graph_realm_balance
-graph_hotel_tail
+graph_realm_balance
+#graph_hotel_tail
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

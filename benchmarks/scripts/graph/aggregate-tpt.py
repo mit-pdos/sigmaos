@@ -115,34 +115,34 @@ def setup_graph():
   ax2.set_ylabel("Cores Assigned")
   return fig, ax, ax2
 
-def graph_data(input_dir, title, out, kv_realm, mr_realm):
-  if kv_realm is None and mr_realm is None:
+def graph_data(input_dir, title, out, hotel_realm, mr_realm):
+  if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
   else:
-    procd_tpts = read_tpts(input_dir, kv_realm)
+    procd_tpts = read_tpts(input_dir, hotel_realm)
     procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
     assert(len(procd_tpts) == 2)
   procd_range = get_time_range(procd_tpts)
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
-  kv_tpts = read_tpts(input_dir, "kv")
-  kv_range = get_time_range(kv_tpts)
+  hotel_tpts = read_tpts(input_dir, "hotel")
+  hotel_range = get_time_range(hotel_tpts)
   # Time range for graph
-  time_range = get_overall_time_range([procd_range, mr_range, kv_range])
+  time_range = get_overall_time_range([procd_range, mr_range, hotel_range])
   extend_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
-  kv_tpts = fit_times_to_range(kv_tpts, time_range)
+  hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  kv_buckets = bucketize(kv_tpts, time_range)
+  hotel_buckets = bucketize(hotel_tpts, time_range)
   fig, ax, ax2 = setup_graph()
   plots = []
-  if len(kv_tpts) > 0:
-    x, y = buckets_to_lists(kv_buckets)
+  if len(hotel_tpts) > 0:
+    x, y = buckets_to_lists(hotel_buckets)
     y = moving_avg(y)
-    p = add_data_to_graph(ax, x, y, "KV Throughput", "blue", "-", normalize=True)
+    p = add_data_to_graph(ax, x, y, "Hotel Throughput", "blue", "-", normalize=True)
     plots.append(p)
   mr_buckets = bucketize(mr_tpts, time_range)
   if len(mr_tpts) > 0:
@@ -154,7 +154,7 @@ def graph_data(input_dir, title, out, kv_realm, mr_realm):
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "KV Realm Cores Assigned", "green", "--", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "Hotel Realm Cores Assigned", "green", "--", normalize=False)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
       p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "green", "-", normalize=False)
@@ -169,9 +169,9 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
-  parser.add_argument("--kv_realm", type=str, default=None)
+  parser.add_argument("--hotel_realm", type=str, default=None)
   parser.add_argument("--mr_realm", type=str, default=None)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.kv_realm, args.mr_realm)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm)

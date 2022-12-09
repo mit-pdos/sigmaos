@@ -69,9 +69,8 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, dur time.Duration, maxrps int, 
 	}
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ji.job)
-	r := rand.New(rand.NewSource(12345))
 	// Make a load generator.
-	ji.lg = loadgen.MakeLoadGenerator(ji.dur, ji.maxrps, func() {
+	ji.lg = loadgen.MakeLoadGenerator(ji.dur, ji.maxrps, func(r *rand.Rand) {
 		// Run a single request.
 		ji.fn(wc, r)
 	})

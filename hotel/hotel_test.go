@@ -372,8 +372,7 @@ func TestBenchSearch(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
@@ -401,8 +400,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
 	lg.Run()
@@ -414,8 +412,7 @@ func TestBenchGeo(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
 	lg.Run()
@@ -435,8 +432,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
 	lg.Run()

@@ -14,15 +14,16 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/mr"
+	"sigmaos/perf"
 	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 type Tdata map[string]uint64
 
-func Wcline(n int, line string, data Tdata) int {
+func Wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) int {
 	scanner := bufio.NewScanner(strings.NewReader(line))
-	scanner.Split(mr.ScanWords)
+	scanner.Split(sbc.ScanWords)
 	cnt := 0
 	for scanner.Scan() {
 		w := scanner.Text()
@@ -43,7 +44,7 @@ func Wcline(n int, line string, data Tdata) int {
 	return cnt
 }
 
-func wcFile(rdr io.Reader, data Tdata) int {
+func wcFile(rdr io.Reader, data Tdata, sbc *mr.ScanByteCounter) int {
 	scanner := bufio.NewScanner(rdr)
 	buf := make([]byte, 0, 8*np.MBYTE)
 	scanner.Buffer(buf, cap(buf))
@@ -51,13 +52,13 @@ func wcFile(rdr io.Reader, data Tdata) int {
 	cnt := 0
 	for scanner.Scan() {
 		l := scanner.Text()
-		cnt += Wcline(n, l, data)
+		cnt += Wcline(n, l, data, sbc)
 		n += 1
 	}
 	return cnt
 }
 
-func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
+func WcData(fsl *fslib.FsLib, dir string, data Tdata, sbc *mr.ScanByteCounter) (int, np.Tlength, error) {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return 0, 0, err
@@ -70,7 +71,7 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
 		if err != nil {
 			return 0, 0, err
 		}
-		m := wcFile(rdr, data)
+		m := wcFile(rdr, data, sbc)
 		// log.Printf("%v: %d\n", st.Name, m)
 		n += m
 	}
@@ -78,9 +79,11 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata) (int, np.Tlength, error) {
 }
 
 func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
+	p := perf.MakePerf("SEQWC")
+	sbc := mr.MakeScanByteCounter(p)
 	data := make(Tdata)
 	start := time.Now()
-	n, nbytes, err := WcData(fsl, dir, data)
+	n, nbytes, err := WcData(fsl, dir, data, sbc)
 	wrt, err := fsl.CreateAsyncWriter(out, 0777, np.OWRITE|np.OTRUNC)
 	if err != nil {
 		return 0, err

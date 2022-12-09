@@ -12,26 +12,26 @@ const (
 	jsonPadding = "AAAAA"
 )
 
-func encodeKV(wr io.Writer, key, value string, r int) error {
+func encodeKV(wr io.Writer, key, value string, r int) (int, error) {
 	// Custom JSON marshalling.
 	l1 := int64(len(key))
 	l2 := int64(len(value))
 	if err := binary.Write(wr, binary.LittleEndian, l1); err != nil {
-		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+		return 0, fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	if err := binary.Write(wr, binary.LittleEndian, l2); err != nil {
-		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+		return 0, fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	if n, err := wr.Write([]byte(key)); err != nil || n != len(key) {
-		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+		return 0, fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	if n, err := wr.Write([]byte(value)); err != nil || n != len(value) {
-		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+		return 0, fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
 	if n, err := wr.Write([]byte(jsonPadding)); err != nil || n != len(jsonPadding) {
-		return fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
+		return 0, fmt.Errorf("%v: mapper write err %v r %v", proc.GetName(), r, err)
 	}
-	return nil
+	return 16 + int(l1) + int(l2) + len(jsonPadding), nil
 }
 
 func DecodeKV(rd io.Reader, kv *KeyValue) error {

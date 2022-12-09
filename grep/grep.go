@@ -25,9 +25,9 @@ func init() {
 	}
 }
 
-func Map(filename string, rdr io.Reader, emit mr.EmitT) error {
+func Map(filename string, rdr io.Reader, split bufio.SplitFunc, emit mr.EmitT) error {
 	scanner := bufio.NewScanner(rdr)
-	scanner.Split(mr.ScanWords)
+	scanner.Split(split)
 	for scanner.Scan() {
 		w := scanner.Text()
 		if _, ok := target[w]; ok {

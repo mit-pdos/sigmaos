@@ -66,10 +66,13 @@ func TestMakeWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
+	proc.SetPid("test")
+	p := perf.MakePerf("SEQWC")
+	sbc := mr.MakeScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {
-			seqwc.Wcline(0, l, data)
+			seqwc.Wcline(0, l, data, sbc)
 		}
 	}
 	err = scanner.Err()

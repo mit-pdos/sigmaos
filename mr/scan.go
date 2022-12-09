@@ -3,10 +3,32 @@ package mr
 import (
 	"unicode"
 	"unicode/utf8"
+
+	"sigmaos/perf"
 )
 
+type ScanByteCounter struct {
+	bytesRead int
+	p         *perf.Perf
+}
+
+func MakeScanByteCounter(p *perf.Perf) *ScanByteCounter {
+	return &ScanByteCounter{0, p}
+}
+
+func (sbc *ScanByteCounter) ScanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	a, t, e := scanWords(data, atEOF)
+	sbc.bytesRead += a
+	sbc.p.TptTick(float64(a))
+	return a, t, e
+}
+
+func (sbc *ScanByteCounter) BytesRead() int {
+	return sbc.bytesRead
+}
+
 // Scan for words for mappers. Implement grep's definition of a word
-func ScanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func scanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	// Skip leading non letters
 	start := 0
 	for width := 0; start < len(data); start += width {

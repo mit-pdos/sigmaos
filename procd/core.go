@@ -88,42 +88,17 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	// Update the number of cores owned/available.
 	pd.coresOwned = newNCoresOwned
 	pd.coresAvail = newNCoresOwned
-	frac := map[proc.Tpid]*LinuxProc{} // Map of procs which would get a fractional core.
-	// Calculate new (proportional) core allocation for each proc, and track the
+	// Calculate new core allocation for each proc, and track the
 	// allocation. Rather than evict procs that don't fit, give them "0" cores.
-	for pid, p := range pd.runningProcs {
-		newNCore := p.attr.Ncore * newNCoresOwned / oldNCoresOwned
-		// Don't allocate more than the number of cores this proc initially asked
-		// for.
-		if newNCore > p.attr.Ncore {
-			// XXX This seems to me like it could lead to some fishiness when
-			// growing back after a shrink. One proc may not get all of its desired
-			// cores back, while some of those cores may sit idle. It is simple,
-			// though, so keep it for now.
-			newNCore = p.attr.Ncore
+	for _, p := range pd.runningProcs {
+		newNCore := p.attr.Ncore
+		// Make sure we don't overflow allocated cores.
+		if newNCore > pd.coresAvail {
+			newNCore = pd.coresAvail
 		}
-		// If this proc would be allocated less than one core, slate it for
-		// eviction, and don't alloc any cores.
-		if newNCore < 1 {
-			frac[pid] = p
-		} else {
-			// Resize the proc's core allocation.
-			// Allocate cores to the proc.
-			pd.allocCoresL(p, newNCore)
-			// Set the CPU affinity for this proc to match procd.
-			p.setCpuAffinityL()
-		}
-	}
-	// Give the fractional procs a remaining core each, until we run out of
-	// cores. Give the remaining ones 0 cores.
-	for _, p := range frac {
-		var ncore proc.Tcore
-		// If the proc fits...
-		if p.attr.Ncore <= pd.coresAvail {
-			ncore = p.attr.Ncore
-		}
+		// Resize the proc's core allocation.
 		// Allocate cores to the proc.
-		pd.allocCoresL(p, ncore)
+		pd.allocCoresL(p, newNCore)
 		// Set the CPU affinity for this proc to match procd.
 		p.setCpuAffinityL()
 	}

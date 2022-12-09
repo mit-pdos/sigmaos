@@ -21,7 +21,7 @@ def get_y_axes(systems, input_dir, x_vals):
       with open(os.path.join(input_dir, system, str(x), "bench.out")) as f:
         b = f.read()
       lines = b.split("\n")
-      lines = [ l.strip() for l in lines if " 90:" in l ]
+      lines = [ l.strip() for l in lines if " 99:" in l ]
       # Take latency tail, not the throughput tail.
       if len(lines) != 1:
         print(lines, "input_dir", input_dir, "x", x)

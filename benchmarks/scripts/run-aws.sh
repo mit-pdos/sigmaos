@@ -301,7 +301,7 @@ graph_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --title "MapReduce Aggregate Throughput"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --tpt_unit "MB" --title "MapReduce Aggregate Throughput"
 }
 
 graph_mr_scalability() {
@@ -368,7 +368,7 @@ graph_realm_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --title "Aggregate Throughput Balancing 2 Realms' Applications"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --tpt_unit "MB" --title "Aggregate Throughput Balancing 2 Realms' Applications"
 }
 
 # ========== Preamble ==========
@@ -385,12 +385,12 @@ realm_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#graph_mr_vs_corral
+graph_mr_aggregate_tpt
+graph_mr_scalability
+graph_mr_vs_corral
 #scrape_realm_burst
 graph_realm_balance
-#graph_hotel_tail
+graph_hotel_tail
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

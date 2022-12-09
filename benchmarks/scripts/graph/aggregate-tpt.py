@@ -60,7 +60,7 @@ def find_bucket(time, step_size):
 
 # Fit into 10ms buckets.
 def bucketize(tpts, time_range):
-  step_size = 10
+  step_size = 500
   buckets = {}
   for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
     buckets[i] = 0.0
@@ -76,7 +76,7 @@ def buckets_to_lists(buckets):
 
 def moving_avg(y):
   # to get ms, multiply by step_size in bucketize
-  window_size = 50
+  window_size = 1
   moving_avgs = []
   for i in range(len(y) - window_size + 1):
     window = y[ i : i + window_size ]
@@ -107,15 +107,18 @@ def finalize_graph(fig, ax, plots, title, out):
   plt.legend(lns, labels)
   fig.savefig(out)
 
-def setup_graph():
+def setup_graph(tpt_unit, normalized):
   fig, ax = plt.subplots()
   ax.set_xlabel("Time (sec)")
-  ax.set_ylabel("Normalized Aggregate Throughput")
+  ylabel = "Aggregate Throughput (" + tpt_unit + "/sec)"
+  if normalized:
+    ylabel = "Normalized " + ylabel
+  ax.set_ylabel(ylabel)
   ax2 = ax.twinx()
   ax2.set_ylabel("Cores Assigned")
   return fig, ax, ax2
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, normalize):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -137,31 +140,33 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm):
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   hotel_buckets = bucketize(hotel_tpts, time_range)
-  fig, ax, ax2 = setup_graph()
+  fig, ax, ax2 = setup_graph(tpt_unit, normalize)
   plots = []
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
     y = moving_avg(y)
-    p = add_data_to_graph(ax, x, y, "Hotel Throughput", "blue", "-", normalize=True)
+    p = add_data_to_graph(ax, x, y, "Hotel Throughput", "blue", "-", normalize)
     plots.append(p)
   mr_buckets = bucketize(mr_tpts, time_range)
   if len(mr_tpts) > 0:
     x, y = buckets_to_lists(mr_buckets)
     y = moving_avg(y)
-    p = add_data_to_graph(ax, x, y, "MR Throughput", "orange", "-", normalize=True)
+    if tpt_unit == "MB":
+      y = y / 1000000
+    p = add_data_to_graph(ax, x, y, "MR Throughput", "orange", "-", normalize)
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "Hotel Realm Cores Assigned", "green", "--", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "Hotel Realm Cores Assigned", "green", "--", normalize)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "green", "-", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "green", "-", normalize)
       plots.append(p)
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "Cores Assigned", "green", "--", normalize=False)
+      p = add_data_to_graph(ax2, x, y, "Cores Assigned", "green", "--", normalize)
       plots.append(p)
   finalize_graph(fig, ax, plots, title, out)
 
@@ -171,7 +176,9 @@ if __name__ == "__main__":
   parser.add_argument("--title", type=str, required=True)
   parser.add_argument("--hotel_realm", type=str, default=None)
   parser.add_argument("--mr_realm", type=str, default=None)
+  parser.add_argument("--tpt_unit", type=str, required=True)
+  parser.add_argument("--normalize", action='store_true', default=False)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.tpt_unit, args.normalize)

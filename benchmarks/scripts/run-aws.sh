@@ -319,13 +319,20 @@ graph_mr_vs_corral() {
   $GRAPH_SCRIPTS_DIR/mr_vs_corral.py --measurement_dir $OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/$graph.pdf --datasize=$datasize
 }
 
-graph_mr_overlap() {
+graph_hotel_tail() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  echo "TODO"
-  # TODO
+  $GRAPH_SCRIPTS_DIR/tail_latency.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf 
 }
+
+#graph_mr_overlap() {
+#  fname=${FUNCNAME[0]}
+#  graph="${fname##graph_}"
+#  echo "========== Graphing $graph =========="
+#  echo "TODO"
+#  # TODO
+#}
 
 #graph_kv_aggregate_tpt() {
 #  fname=${FUNCNAME[0]}
@@ -381,6 +388,7 @@ source ~/env/3.10/bin/activate
 #graph_mr_aggregate_tpt
 #graph_mr_scalability
 #graph_mr_vs_corral
+graph_hotel_tail
 #graph_mr_overlap
 #scrape_realm_burst
 #graph_realm_balance

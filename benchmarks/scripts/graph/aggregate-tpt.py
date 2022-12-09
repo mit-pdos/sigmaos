@@ -76,7 +76,7 @@ def buckets_to_lists(buckets):
 
 def moving_avg(y):
   # to get ms, multiply by step_size in bucketize
-  window_size = 30
+  window_size = 50
   moving_avgs = []
   for i in range(len(y) - window_size + 1):
     window = y[ i : i + window_size ]

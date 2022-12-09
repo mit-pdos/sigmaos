@@ -379,7 +379,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #mr_scalability
 #mr_vs_corral
-hotel_tail
+#hotel_tail
 #realm_burst
 #realm_balance
 

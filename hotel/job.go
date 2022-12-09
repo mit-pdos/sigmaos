@@ -48,7 +48,11 @@ var HotelSvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
-func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncore proc.Tcore, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+var ncores = []int{1, 2,
+	1, 2, 2,
+	2, 2, 2}
+
+func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -69,9 +73,9 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 
 	pids := make([]proc.Tpid, 0, len(srvs))
 
-	for _, srv := range srvs {
+	for i, srv := range srvs {
 		p := proc.MakeProc(srv, []string{job})
-		p.SetNcore(ncore)
+		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := pclnt.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, nil, nil, err

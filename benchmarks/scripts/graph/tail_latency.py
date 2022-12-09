@@ -10,11 +10,9 @@ import sys
 import durationpy
 
 def get_x_axis(systems, input_dir):
-  return np.arange(sorted([ int(x) for x in os.listdir(os.path.join(input_dir, systems[0])) ]))
+  return sorted([ int(x) for x in os.listdir(os.path.join(input_dir, systems[0])) ])
 
 def get_y_axes(systems, input_dir, x_vals):
-  # TODO
-  sys.exit(1)
   y_vals = []
   systems=os.listdir(input_dir)
   for system in systems:
@@ -23,11 +21,11 @@ def get_y_axes(systems, input_dir, x_vals):
       with open(os.path.join(input_dir, system, str(x), "bench.out")) as f:
         b = f.read()
       lines = b.split("\n")
-      lines = [ l.strip() for l in lines if " 99:" in l ]
+      lines = [ l.strip() for l in lines if " 90:" in l ]
       # Take latency tail, not the throughput tail.
-      if len(lines) != 2:
+      if len(lines) != 1:
         print(lines, "input_dir", input_dir, "x", x)
-      assert(len(lines) == 2)
+      assert(len(lines) == 1)
       line = lines[0].split(" ")
       sec = durationpy.from_str(line[-1]).total_seconds()
       msec = sec * 1000.0

@@ -10,6 +10,10 @@ import (
 	"sigmaos/procclnt"
 )
 
+const (
+	CACHE_NCORE = 2
+)
+
 type CacheMgr struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -30,7 +34,7 @@ func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int) *
 func (cm *CacheMgr) StartCache() {
 	for g := 0; g < cm.n; g++ {
 		gn := group.GRP + strconv.Itoa(g)
-		grpmgr := groupmgr.Start(cm.FsLib, cm.ProcClnt, 1, "user/cached", []string{gn}, cm.job, proc.Tcore(1), 0, 0, 0, 0)
+		grpmgr := groupmgr.Start(cm.FsLib, cm.ProcClnt, 1, "user/cached", []string{gn}, cm.job, proc.Tcore(CACHE_NCORE), 0, 0, 0, 0)
 		cm.grpmgrs = append(cm.grpmgrs, grpmgr)
 	}
 }

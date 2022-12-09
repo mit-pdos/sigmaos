@@ -55,11 +55,11 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	// procds.
 	if !ts.RunningInRealm() {
 		// Start enough procds to run all of the srvs and the caches.
-		for i := 1; int(linuxsched.NCores)*i < len(srvs)+ncache; i++ {
+		for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
 			ts.BootProcd()
 		}
 	}
-	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, 1, ncache)
+	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, ncache)
 	assert.Nil(ts.T, err)
 	return ts
 }

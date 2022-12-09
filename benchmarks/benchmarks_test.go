@@ -32,7 +32,6 @@ var KVD_NCORE int
 var WWWD_NCORE int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
-var HOTEL_NCORE int
 var HOTEL_DUR time.Duration
 var HOTEL_MAX_RPS int
 var REALM2 string
@@ -64,7 +63,6 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
-	flag.IntVar(&HOTEL_NCORE, "hotel_ncore", 1, "Hotel Ncore.")
 	flag.DurationVar(&HOTEL_DUR, "hotel_dur", 10*time.Second, "Hotel benchmark load generation duration.")
 	flag.IntVar(&HOTEL_MAX_RPS, "hotel_max_rps", 1000, "Max requests/second for hotel bench.")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
@@ -346,7 +344,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep Hotel job
-	hotelJobs, ji := makeHotelJobs(ts2, true, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := makeHotelJobs(ts2, true, HOTEL_DUR, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		hotel.RandSearchReq(wc, r)
 	})
@@ -480,7 +478,7 @@ func testHotel(ts *test.Tstate, sigmaos bool, fn hotelFn) {
 		countNClusterCores(ts)
 		maybePregrowRealm(ts)
 	}
-	jobs, ji := makeHotelJobs(ts, sigmaos, proc.Tcore(HOTEL_NCORE), HOTEL_DUR, HOTEL_MAX_RPS, fn)
+	jobs, ji := makeHotelJobs(ts, sigmaos, HOTEL_DUR, HOTEL_MAX_RPS, fn)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {

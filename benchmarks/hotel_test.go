@@ -27,7 +27,6 @@ type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 type HotelJobInstance struct {
 	sigmaos    bool
 	k8ssrvaddr string
-	ncore      proc.Tcore // Number of exclusive cores allocated to each server
 	job        string
 	dur        time.Duration
 	maxrps     int
@@ -40,10 +39,9 @@ type HotelJobInstance struct {
 	*test.Tstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Duration, maxrps int, fn hotelFn) *HotelJobInstance {
+func MakeHotelJob(ts *test.Tstate, sigmaos bool, dur time.Duration, maxrps int, fn hotelFn) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
-	ji.ncore = ncore
 	ji.job = rd.String(8)
 	ji.dur = dur
 	ji.maxrps = maxrps
@@ -58,7 +56,7 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Dura
 		svcs = hotel.HotelSvcs
 		ncache = hotel.NCACHE
 	}
-	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncore, ncache)
+	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
 	assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 
 	if !sigmaos {

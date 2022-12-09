@@ -181,7 +181,7 @@ run_hotel() {
 # ========== Top-level benchmarks ==========
 
 mr_scalability() {
-  mrapp=mr-grep-wiki-120G.yml
+  mrapp=mr-grep-wiki120G.yml
   for n_vm in 1 2 4 8 16 ; do
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="

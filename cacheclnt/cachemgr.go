@@ -1,46 +1,24 @@
 package cacheclnt
 
 import (
-	"strconv"
-
 	"sigmaos/fslib"
-	"sigmaos/group"
-	"sigmaos/groupmgr"
-	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/shardsvcmgr"
+	sp "sigmaos/sigmap"
 )
 
 type CacheMgr struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	job     string
-	grpmgrs []*groupmgr.GroupMgr
-	n       int
+	*shardsvcmgr.ShardMgr
+	job string
+	n   int
 }
 
-func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int) *CacheMgr {
+func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	cm.job = job
-	cm.FsLib = fsl
-	cm.ProcClnt = pclnt
-	cm.n = n
-	return cm
-}
-
-func (cm *CacheMgr) StartCache() {
-	for g := 0; g < cm.n; g++ {
-		gn := group.GRP + strconv.Itoa(g)
-		grpmgr := groupmgr.Start(cm.FsLib, cm.ProcClnt, 1, "user/cached", []string{gn}, cm.job, proc.Tcore(1), 0, 0, 0, 0)
-		cm.grpmgrs = append(cm.grpmgrs, grpmgr)
+	sm, err := shardsvcmgr.MkShardMgr(fsl, pclnt, n, job, "user/cached", sp.HOTELCACHE)
+	if err != nil {
+		return nil, err
 	}
-}
-
-func (cm *CacheMgr) StopCache() error {
-	for _, grpmgr := range cm.grpmgrs {
-		err := grpmgr.Stop()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	cm.ShardMgr = sm
+	return cm, nil
 }

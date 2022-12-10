@@ -3,17 +3,15 @@ package cacheclnt
 import (
 	"encoding/json"
 	"hash/fnv"
-	"strconv"
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
 	"sigmaos/clonedev"
 	"sigmaos/fslib"
-	"sigmaos/group"
-	np "sigmaos/sigmap"
-	"sigmaos/protdevclntgrp"
 	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
+	"sigmaos/shardsvcclnt"
+	np "sigmaos/sigmap"
 )
 
 var (
@@ -28,7 +26,7 @@ func key2shard(key string, nshard int) int {
 }
 
 type CacheClnt struct {
-	*protdevclntgrp.ClntGroup
+	*shardsvcclnt.ShardSvcClnt
 	fsl    *fslib.FsLib
 	nshard int
 }
@@ -36,18 +34,18 @@ type CacheClnt struct {
 func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
 	cc := &CacheClnt{}
 	cc.nshard = n
-	cg, err := protdevclntgrp.MkProtDevClntGrp(fsl, np.HOTELCACHE, n)
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.HOTELCACHE, n)
 	if err != nil {
 		return nil, err
 	}
 	cc.fsl = fsl
-	cc.ClntGroup = cg
+	cc.ShardSvcClnt = cg
 	return cc, nil
 }
 
 func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
 	n := key2shard(arg.Key, cc.Nshard())
-	return cc.ClntGroup.RPC(n, m, arg, res)
+	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 
 func (c *CacheClnt) Set(key string, val any) error {
@@ -79,15 +77,14 @@ func (c *CacheClnt) Get(key string, val any) error {
 }
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
-	gn := group.GRP + strconv.Itoa(g)
-
-	b, err := cc.fsl.GetFile(np.HOTELCACHE + gn + "/" + clonedev.CloneName(cachesrv.DUMP))
+	srv := cc.Server(g)
+	b, err := cc.fsl.GetFile(srv + "/" + clonedev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
 	sidn := clonedev.SidName(sid, cachesrv.DUMP)
-	fn := np.HOTELCACHE + gn + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
+	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err
@@ -102,7 +99,7 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
 	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
 	for i := 0; i < cc.nshard; i++ {
-		st, err := cc.ClntGroup.StatsSrv(i)
+		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +111,7 @@ func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
 func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
 	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
 	for i := 0; i < cc.nshard; i++ {
-		stats = append(stats, cc.ClntGroup.StatsClnt(i))
+		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}
 	return stats
 }

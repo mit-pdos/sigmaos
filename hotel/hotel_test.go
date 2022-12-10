@@ -93,7 +93,7 @@ func (ts *Tstate) stop() {
 		assert.Nil(ts.T, err)
 	}
 	if ts.cm != nil {
-		ts.cm.StopCache()
+		ts.cm.Stop()
 	}
 	sts, err := ts.GetDir(np.DBD)
 	assert.Nil(ts.T, err)

@@ -58,8 +58,11 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache)
-		cm.StartCache()
+		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache)
+		if err != nil {
+			db.DFatalf("Error MkCacheMgr %v", err)
+			return nil, nil, nil, err
+		}
 		cc, err = cacheclnt.MkCacheClnt(fsl, ncache)
 		if err != nil {
 			db.DFatalf("Error cacheclnt %v", err)

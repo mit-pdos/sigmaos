@@ -130,7 +130,7 @@ def setup_graph(nplots, tpt_units, total_ncore, normalized):
   coresax = []
   for ax in tptax:
     ax2 = ax.twinx()
-    ax2.set_ylim((0, total_ncore + 2))
+    ax2.set_ylim((0, total_ncore + 5))
     ax2.set_ylabel("Cores Assigned")
     coresax.append(ax2)
   return fig, tptax, coresax

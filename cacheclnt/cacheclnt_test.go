@@ -190,7 +190,7 @@ func TestCacheClerk(t *testing.T) {
 
 func TestElasticCache(t *testing.T) {
 	const (
-		N      = 3
+		N      = 2
 		NSHARD = 1
 		NKEYS  = 100
 		DUR    = "30s"
@@ -212,7 +212,11 @@ func TestElasticCache(t *testing.T) {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrv()
 		assert.Nil(t, err)
-		log.Printf("sts %v\n", sts)
+		qlen := sts[0].AvgQLen
+		log.Printf("Qlen %v\n", qlen)
+		if qlen > 1.1 && i < 1 {
+			ts.cm.AddShard()
+		}
 	}
 
 	ts.stop()

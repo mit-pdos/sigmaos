@@ -521,6 +521,14 @@ func (st *Stat) Tmode() Tperm {
 	return Tperm(st.Mode)
 }
 
+func Names(sts []*Stat) []string {
+	r := []string{}
+	for _, st := range sts {
+		r = append(r, st.Name)
+	}
+	return r
+}
+
 func MkTwstat(fid Tfid, st *Stat) *Twstat {
 	return &Twstat{Fid: uint32(fid), Stat: st}
 }

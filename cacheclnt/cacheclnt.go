@@ -3,12 +3,14 @@ package cacheclnt
 import (
 	"encoding/json"
 	"hash/fnv"
+	"log"
 	"strconv"
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
 	"sigmaos/clonedev"
 	"sigmaos/fslib"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/reader"
 	"sigmaos/sessdev"
@@ -40,13 +42,18 @@ type CacheClnt struct {
 func MkCacheClnt(fsl *fslib.FsLib, job string, n int) (*CacheClnt, error) {
 	cc := &CacheClnt{}
 	cc.nshard = n
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.CACHE, n)
+	cc.fsl = fsl
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.CACHE, n, cc.Watch)
 	if err != nil {
 		return nil, err
 	}
-	cc.fsl = fsl
 	cc.ShardSvcClnt = cg
 	return cc, nil
+}
+
+func (cc *CacheClnt) Watch(path string, nshard int, err error) {
+	log.Printf("%v: CacheClnt watch %v %d err %v\n", proc.GetName(), path, nshard, err)
+	cc.nshard = nshard
 }
 
 func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {

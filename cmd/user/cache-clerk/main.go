@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -116,45 +117,6 @@ func run(pclnt *procclnt.ProcClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, 
 	pclnt.Exited(status)
 }
 
-type Value struct {
-	Pid proc.Tpid
-	Key string
-	N   uint64
-}
-
-func check(cc *cacheclnt.CacheClnt, key string, ntest uint64, p *perf.Perf) error {
-	n := uint64(0)
-	rdr, err := cc.GetReader(key)
-	if err != nil {
-		return err
-	}
-	rdr.Unfence()
-	defer rdr.Close()
-	err = fslib.JsonReader(rdr, func() interface{} { return new(Value) }, func(a interface{}) error {
-		// Record op for throughput calculation.
-		p.TptTick(1.0)
-		val := a.(*Value)
-		if val.Pid != proc.GetPid() {
-			return nil
-		}
-		if val.Key != key {
-			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), key, val.Key)
-		}
-		if val.N != n {
-			return fmt.Errorf("%v: wrong N for %v: expected %v observed %v", proc.GetName(), rdr.Path(), n, val.N)
-		}
-		n += 1
-		return nil
-	})
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "JsonReader: err %v\n", err)
-	}
-	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, n)
-	}
-	return nil
-}
-
 func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
 	for i := uint64(0); i < uint64(nkeys) && atomic.LoadInt32(&done) == 0; i++ {
 		key := cacheclnt.MkKey(i + keyOffset)
@@ -181,6 +143,7 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			*nops++
 			var s string
 			if err := cc.Get(key, &s); err != nil {
+				log.Printf("miss %v\n", key)
 				return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

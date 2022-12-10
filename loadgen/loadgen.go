@@ -111,6 +111,10 @@ func (lg *LoadGenerator) initiatorThread(tid int) {
 	lg.initC <- nreq
 }
 
+func (lg *LoadGenerator) StatsDataString() string {
+	return lg.res.String()
+}
+
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
 	db.DPrintf("LOADGEN", "Load generator latencies:\n%v", lg.res)

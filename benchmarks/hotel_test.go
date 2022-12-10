@@ -129,6 +129,9 @@ func (ji *HotelJobInstance) printStats() {
 		}
 	}
 	for _, lg := range ji.lgs {
+		db.DPrintf(db.ALWAYS, "Data:%v", lg.StatsDataString())
+	}
+	for _, lg := range ji.lgs {
 		lg.Stats()
 	}
 }

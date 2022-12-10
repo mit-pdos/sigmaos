@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -27,7 +26,6 @@ func main() {
 	if len(os.Args) < 6 {
 		db.DFatalf("Usage: %v job nshard nkeys duration keyOffset sempath [redisaddr]", os.Args[0])
 	}
-	log.Printf("args %v\n", os.Args)
 	var dur time.Duration
 	var nkeys int
 	var keyOffset int

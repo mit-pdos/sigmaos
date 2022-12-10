@@ -33,7 +33,6 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.Path() + "-cacheclerk-sem"
-	log.Printf("semph %v\n", ts.sempn)
 	ts.sem = semclnt.MakeSemClnt(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t, err)

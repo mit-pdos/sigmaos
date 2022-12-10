@@ -7,14 +7,14 @@ import (
 
 	"sigmaos/cachesrv/proto"
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
+	np "sigmaos/sigmap"
 )
 
 const (
@@ -31,19 +31,19 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	c   *cache
-	grp string
+	c    *cache
+	shrd string
 }
 
 func RunCacheSrv(args []string) error {
 	s := &CacheSrv{}
 	if len(args) > 2 {
-		s.grp = args[2]
+		s.shrd = args[2]
 	}
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
-	db.DPrintf("CACHESRV", "%v: Run %v\n", proc.GetName(), s.grp)
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELCACHE+s.grp, s)
+	db.DPrintf("CACHESRV", "%v: Run %v\n", proc.GetName(), s.shrd)
+	pds, err := protdevsrv.MakeProtDevSrv(np.CACHE+s.shrd, s)
 	if err != nil {
 		return err
 	}

@@ -171,12 +171,13 @@ func TestCacheClerk(t *testing.T) {
 		N      = 2
 		NSHARD = 2
 		NKEYS  = 100
+		DUR    = "10s"
 	)
 
 	ts := mkTstate(t, NSHARD)
 
 	for i := 0; i < N; i++ {
-		args := []string{strconv.Itoa(NKEYS), "60s", strconv.Itoa(i * NKEYS), ts.sempn}
+		args := []string{strconv.Itoa(NKEYS), DUR, strconv.Itoa(i * NKEYS), ts.sempn}
 		ts.StartClerk(args, 0)
 	}
 

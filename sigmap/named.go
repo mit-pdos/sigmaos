@@ -25,6 +25,9 @@ const (
 
 	MEMFS = NAMED + "memfsd/"
 
+	CACHEREL = "cache"
+	CACHE    = NAMED + CACHEREL + "/"
+
 	HOTELREL     = "hotel"
 	HOTEL        = NAMED + HOTELREL + "/"
 	HOTELGEO     = HOTEL + "geo"
@@ -34,7 +37,6 @@ const (
 	HOTELRESERVE = HOTEL + "reserve"
 	HOTELUSER    = HOTEL + "user"
 	HOTELPROF    = HOTEL + "prof"
-	HOTELCACHE   = HOTEL + "cache"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

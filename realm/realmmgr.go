@@ -72,7 +72,7 @@ func (m *RealmResourceMgr) initFS() {
 func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
-		db.DPrintf("REALMMGR", "[%v] resource.Tcore granted", m.realmId)
+		db.DPrintf("REALMMGR", "[%v] resource.Tcore granted %v", m.realmId, msg.Amount)
 		m.growRealm(msg.Amount)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -136,7 +136,7 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 	// Find a machine with free cores and claim them
 	machineIds, nodedIds, cores, ok := m.getFreeCores(amt)
 	if !ok {
-		db.DFatalf("Unable to get free cores to grow realm")
+		db.DFatalf("Unable to get free cores to grow realm %v", amt)
 	}
 	// For each machine, allocate some cores.
 	for i := range machineIds {
@@ -168,7 +168,7 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 		}
 	}
 	if amt > 0 {
-		db.DFatalf("Grew realm, but not by enough")
+		db.DFatalf("Grew realm, but not by enough %v", amt)
 	}
 }
 

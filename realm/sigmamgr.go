@@ -120,7 +120,7 @@ func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 
 func (m *SigmaResourceMgr) allocCores(realmId string, i int64) {
 	atomic.AddInt64(&m.freeCoreGroups, -1*i)
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, "", 1)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, "", int(i))
 	resource.SendMsg(m.FsLib, path.Join(realmMgrPath(realmId), np.RESOURCE_CTL), msg)
 }
 
@@ -143,7 +143,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
 		if nfree < nallocd {
 			nallocd = nfree
 		}
-		db.DPrintf(db.ALWAYS, "Allocate %v cores", nallocd)
+		db.DPrintf("SIGMAMGR", "Allocate %v free cores", nallocd)
 		// Allocate cores to this realm.
 		if nallocd > 0 {
 			m.allocCores(realmId, nallocd)

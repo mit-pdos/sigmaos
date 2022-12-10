@@ -207,7 +207,9 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 	pd.Lock()
 	defer pd.Unlock()
 
-	db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
+	if db.WillBePrinted("PROCD") {
+		db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
+	}
 	p, err := pd.readRunqProc(procPath)
 	// Proc may have been stolen
 	if err != nil {
@@ -228,7 +230,9 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 		linuxProc := pd.registerProcL(p, isRemote)
 		return linuxProc, nil
 	} else {
-		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
+		if db.WillBePrinted("PROCD") {
+			db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
+		}
 	}
 	return nil, nil
 }

@@ -57,11 +57,11 @@ do
   stop="
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
         (cd ulambda; ./stop.sh)
-        rm -rf $UXROOT
-        rm /tmp/bench.out
-        rm /tmp/start.out
-        rm /tmp/make.out
-        rm /tmp/machine.out
+        rm -rf $UXROOT > /dev/null 2>&1
+        rm /tmp/bench.out > /dev/null 2>&1
+        rm /tmp/start.out > /dev/null 2>&1
+        rm /tmp/make.out > /dev/null 2>&1
+        rm /tmp/machine.out > /dev/null 2>&1
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$stop"

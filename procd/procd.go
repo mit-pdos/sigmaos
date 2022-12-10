@@ -126,8 +126,6 @@ func (pd *Procd) spawnProc(a *proc.Proc) {
 	pd.nToWake++
 	pd.Signal()
 	pd.Unlock()
-	// This procd will likely claim this proc, so cache it.
-	pd.pcache.Set(a.Pid, a)
 }
 
 // Evict all procs running in this procd

@@ -86,6 +86,8 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	default:
 		runq = np.PROCD_RUNQ_BE
 	}
+	// This procd will likely claim this proc, so cache it.
+	pfs.pd.pcache.Set(a.Pid, a)
 	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)

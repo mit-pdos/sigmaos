@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 )
 
@@ -35,8 +36,10 @@ func (pc *ProcCache) Get(pid proc.Tpid) (*proc.Proc, bool) {
 
 	if e, ok := pc.ps[pid]; ok {
 		e.lastUsed = time.Now()
+		db.DPrintf("PROCCACHE", "Cache hit proc %v->%v", pid, e.p)
 		return e.p, true
 	}
+	db.DPrintf("PROCCACHE", "Cache miss pid %v", pid)
 	return nil, false
 }
 
@@ -48,8 +51,10 @@ func (pc *ProcCache) Set(pid proc.Tpid, p *proc.Proc) {
 
 	if e, ok := pc.ps[pid]; ok {
 		e.lastUsed = time.Now()
+		return
 	}
 	pc.ps[pid] = &ProcCacheEntry{time.Now(), p}
+	db.DPrintf("PROCCACHE", "Set cache proc %v->%v", pid, p)
 }
 
 func (pc *ProcCache) Remove(pid proc.Tpid) {

@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
 	np "sigmaos/sigmap"
@@ -151,11 +150,9 @@ func (pd *Procd) canClaimBEProcL() (float64, bool, bool) {
 	// utilization and rate-limiting. If utilization is below a certain threshold,
 	// take the proc.
 	util, _ := pd.memfssrv.GetStats().GetUtil()
-	load := perf.GetLinuxLoad()
-	cload := pd.memfssrv.GetStats().GetLoad()
 	rlc := pd.procClaimRateLimitCheck(util)
 	if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-		db.DPrintf("PROCD", "Have enough cores for BE proc: util %v Linux load %v Custom load %v rate-limit check %v", util, load, cload, rlc)
+		db.DPrintf("PROCD", "Have enough cores for BE proc: util %v rate-limit check %v", util, rlc)
 		return util, rlc, true
 	}
 	db.DPrintf("PROCD", "Can't claim BE proc: util %v rate-limit check %v", util, rlc)

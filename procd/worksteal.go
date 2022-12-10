@@ -7,10 +7,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
+	"sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 )
 
 // Thread in charge of stealing procs.
@@ -21,15 +21,21 @@ func (pd *Procd) startWorkStealingMonitors() {
 
 // Monitor a Work-Stealing queue.
 func (pd *Procd) monitorWSQueue(wsQueue string) {
-	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 	wsQueuePath := path.Join(np.PROCD_WS, wsQueue)
 	for !pd.readDone() {
 		// Wait for a bit to avoid overwhelming named.
-		<-ticker.C
+		time.Sleep(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
+		// Don't bother reading the BE queue if util is high
+		if wsQueue == np.PROCD_RUNQ_BE {
+			util, _ := pd.memfssrv.GetStats().GetUtil()
+			if util >= np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD {
+				continue
+			}
+		}
 
 		var nStealable int
 		stealable := make([]string, 0)
-		// Wait untile there is a proc to steal.
+		// Wait until there is a proc to steal.
 		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*np.Stat) bool {
 			// Any procs are local?
 			anyLocal := false

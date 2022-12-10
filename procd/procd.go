@@ -316,7 +316,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 				// enough capacity, then add it back to the queue so we can try and
 				// claim it later.
 				if p == nil && noCapacity {
-					pd.wsQueuePush(pid, runq)
+					//					pd.wsQueuePush(pid, runq)
 				}
 			}
 			// If the proc was successfully claimed, we're done
@@ -397,7 +397,8 @@ func (pd *Procd) waitSpawnOrSteal() {
 		db.DPrintf("PROCD", "Worker woke, check for stealable BE procs.")
 		if len(pd.wsQueues[WS_BE_QUEUE_PATH]) > 0 {
 			_, _, ok := pd.canClaimBEProcL()
-			if ok {
+			// XXX a bit hacky... should do something more principled.
+			if ok && pd.memAvail > 500 {
 				return
 			}
 		}

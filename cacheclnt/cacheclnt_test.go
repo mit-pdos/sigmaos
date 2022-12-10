@@ -1,6 +1,7 @@
 package cacheclnt_test
 
 import (
+	"log"
 	"strconv"
 	"sync"
 	"testing"
@@ -9,24 +10,57 @@ import (
 
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/proc"
 	rd "sigmaos/rand"
+	"sigmaos/semclnt"
 	"sigmaos/test"
 )
 
 type Tstate struct {
 	*test.Tstate
-	cm      *cacheclnt.CacheMgr
-	grpmgrs []*groupmgr.GroupMgr
+	cm    *cacheclnt.CacheMgr
+	clrks []proc.Tpid
+	job   string
+	sempn string
+	sem   *semclnt.SemClnt
 }
 
 func mkTstate(t *testing.T, n int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	cm, err := cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, rd.String(8), n)
+	ts.job = rd.String(16)
+	cm, err := cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, n)
 	assert.Nil(t, err)
 	ts.cm = cm
+	ts.sempn = cm.Path() + "-cacheclerk-sem"
+	log.Printf("semph %v\n", ts.sempn)
+	ts.sem = semclnt.MakeSemClnt(ts.FsLib, ts.sempn)
+	err = ts.sem.Init(0)
+	assert.Nil(t, err)
 	return ts
+}
+
+func (ts *Tstate) stop() {
+	db.DPrintf(db.ALWAYS, "clerks to exit %v\n", len(ts.clrks))
+	for _, ck := range ts.clrks {
+		status, err := ts.WaitExit(ck)
+		assert.Nil(ts.T, err, "StopClerk: %v", err)
+		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
+	}
+	ts.cm.Stop()
+}
+
+func (ts *Tstate) StartClerk(args []string, ncore proc.Tcore) {
+	args = append([]string{ts.job, strconv.Itoa(ts.cm.Nshard())}, args...)
+	p := proc.MakeProc("user/cache-clerk", args)
+	p.SetNcore(ncore)
+	// SpawnBurst to spread clerks across procds.
+	_, errs := ts.SpawnBurst([]*proc.Proc{p})
+	assert.True(ts.T, len(errs) == 0)
+	err := ts.WaitStart(p.Pid)
+	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+
+	ts.clrks = append(ts.clrks, p.Pid)
 }
 
 func TestCacheSingle(t *testing.T) {
@@ -36,7 +70,7 @@ func TestCacheSingle(t *testing.T) {
 	)
 
 	ts := mkTstate(t, NSHARD)
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NSHARD)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -60,7 +94,6 @@ func TestCacheSingle(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
 
-	ts.cm.Stop()
 	ts.Shutdown()
 }
 
@@ -69,7 +102,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		N = 10
 	)
 	ts := mkTstate(t, nshard)
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, nshard)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, nshard)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -92,7 +125,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		assert.True(t, len(m) >= 1)
 	}
 
-	ts.cm.Stop()
+	ts.stop()
 	ts.Shutdown()
 }
 
@@ -111,7 +144,7 @@ func TestCacheConcur(t *testing.T) {
 	)
 	ts := mkTstate(t, NSHARD)
 	v := "hello"
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, NSHARD)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
 	assert.Nil(t, err)
 	err = cc.Set("x", v)
 	assert.Nil(t, err)
@@ -129,6 +162,26 @@ func TestCacheConcur(t *testing.T) {
 	}
 	wg.Wait()
 
-	ts.cm.Stop()
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestCacheClerk(t *testing.T) {
+	const (
+		N      = 1
+		NSHARD = 1
+		NKEYS  = 100
+	)
+
+	ts := mkTstate(t, NSHARD)
+
+	for i := 0; i < N; i++ {
+		args := []string{strconv.Itoa(NKEYS), "10s", strconv.Itoa(i * NKEYS), ts.sempn}
+		ts.StartClerk(args, 0)
+	}
+
+	ts.sem.Up()
+
+	ts.stop()
 	ts.Shutdown()
 }

@@ -9,9 +9,9 @@ import (
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
+	np "sigmaos/sigmap"
 )
 
 type Reservation struct {
@@ -76,7 +76,7 @@ func (s *Reserve) initDb() error {
 	return nil
 }
 
-func RunReserveSrv(n string) error {
+func RunReserveSrv(job string) error {
 	r := &Reserve{}
 	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELRESERVE, r)
 	if err != nil {
@@ -87,7 +87,7 @@ func RunReserveSrv(n string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), NCACHE)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job, NCACHE)
 	if err != nil {
 		return err
 	}

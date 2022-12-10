@@ -39,6 +39,14 @@ func Shard(i int) string {
 	return strconv.Itoa(i)
 }
 
+func (sm *ShardMgr) Nshard() int {
+	return len(sm.shards)
+}
+
+func (sm *ShardMgr) Path() string {
+	return sm.pn
+}
+
 func (sm *ShardMgr) Server(i int) string {
 	return sm.pn + Shard(i)
 }

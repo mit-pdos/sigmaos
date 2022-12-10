@@ -10,7 +10,6 @@ import (
 type CacheMgr struct {
 	*shardsvcmgr.ShardMgr
 	job string
-	n   int
 }
 
 func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int) (*CacheMgr, error) {

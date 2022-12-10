@@ -11,8 +11,8 @@ import (
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
+	np "sigmaos/sigmap"
 )
 
 const (
@@ -24,7 +24,7 @@ type ProfSrv struct {
 	cachec *cacheclnt.CacheClnt
 }
 
-func RunProfSrv(n string) error {
+func RunProfSrv(job string) error {
 	ps := &ProfSrv{}
 	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELPROF, ps)
 	if err != nil {
@@ -35,7 +35,7 @@ func RunProfSrv(n string) error {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), NCACHE)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job, NCACHE)
 	if err != nil {
 		return err
 	}

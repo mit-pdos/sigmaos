@@ -3,12 +3,14 @@ package cacheclnt
 import (
 	"encoding/json"
 	"hash/fnv"
+	"strconv"
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
 	"sigmaos/clonedev"
 	"sigmaos/fslib"
 	"sigmaos/protdevsrv"
+	"sigmaos/reader"
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
 	np "sigmaos/sigmap"
@@ -17,6 +19,10 @@ import (
 var (
 	ErrMiss = cachesrv.ErrMiss
 )
+
+func MkKey(k uint64) string {
+	return strconv.FormatUint(k, 16)
+}
 
 func key2shard(key string, nshard int) int {
 	h := fnv.New32a()
@@ -31,7 +37,7 @@ type CacheClnt struct {
 	nshard int
 }
 
-func MkCacheClnt(fsl *fslib.FsLib, n int) (*CacheClnt, error) {
+func MkCacheClnt(fsl *fslib.FsLib, job string, n int) (*CacheClnt, error) {
 	cc := &CacheClnt{}
 	cc.nshard = n
 	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.HOTELCACHE, n)
@@ -114,4 +120,16 @@ func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}
 	return stats
+}
+
+//
+// stubs to make cache-clerk compile
+//
+
+func (cc *CacheClnt) GetReader(key string) (*reader.Reader, error) {
+	return nil, nil
+}
+
+func (c *CacheClnt) Append(key string, val any) error {
+	return nil
 }

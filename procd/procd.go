@@ -355,8 +355,11 @@ func (pd *Procd) waitSpawnOrSteal() {
 		}
 		// If there is a BE proc available to work-steal, and this procd can run
 		// another one, release the worker thread.
-		if len(pd.wsQueues[np.PROCD_RUNQ_BE]) > 0 && pd.canClaimBEProc() {
-			return
+		if len(pd.wsQueues[np.PROCD_RUNQ_BE]) > 0 {
+			_, _, ok := pd.canClaimBEProcL()
+			if ok {
+				return
+			}
 		}
 		// Only release nToWake worker threads.
 		if pd.nToWake > 0 {

@@ -144,7 +144,7 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			var s string
 			if err := cc.Get(key, &s); err != nil {
 				log.Printf("miss %v\n", key)
-				return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
+				// return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

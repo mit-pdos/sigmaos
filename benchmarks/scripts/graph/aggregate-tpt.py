@@ -8,6 +8,7 @@ import numpy as np
 import argparse
 import os
 import sys
+import durationpy
 
 def read_tpt(fpath):
   with open(fpath, "r") as f:
@@ -20,6 +21,23 @@ def read_tpts(input_dir, substr):
   fnames = [ f for f in os.listdir(input_dir) if substr in f ]
   tpts = [ read_tpt(os.path.join(input_dir, f)) for f in fnames ]
   return tpts
+
+def read_latency(fpath):
+  with open(fpath, "r") as f:
+    x = f.read()
+  lines = [ l.split(" ") for l in x.split("\n") if "Time" in l and "Lat" in l and "Tpt" in l ]
+  # Get the time, ignoring "us"
+  times = [ l[2][:-2] for l in lines ] 
+  latencies = [ durationpy.from_str(l[4]) for l in lines ]
+  lat = [ (float(times[i]), float(latencies[i].total_seconds() * 1000.0)) for i in range(len(times)) ]
+  return lat
+
+def read_latencies(input_dir, substr):
+  fnames = [ f for f in os.listdir(input_dir) if substr in f ]
+  lats = [ read_latency(os.path.join(input_dir, f)) for f in fnames ]
+  if len(lats[0]) == 0:
+    return []
+  return lats
 
 def get_time_range(tpts):
   start = sys.maxsize
@@ -60,9 +78,8 @@ def find_bucket(time, step_size):
   return int(time - time % step_size)
 
 # XXX correct terminology is "window" not "bucket"
-# Fit into 10ms buckets.
-def bucketize(tpts, time_range):
-  step_size = 1000
+# Fit into step_size ms buckets.
+def bucketize(tpts, time_range, step_size=1000):
   buckets = {}
   for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
     buckets[i] = 0.0
@@ -71,25 +88,27 @@ def bucketize(tpts, time_range):
       buckets[find_bucket(t[0], step_size)] += t[1]
   return buckets
 
+def bucketize_latency(tpts, time_range, step_size=1000):
+  buckets = {}
+  for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
+    buckets[i] = []
+  for tpt in tpts:
+    for t in tpt:
+      buckets[find_bucket(t[0], step_size)].append(t[1])
+  return buckets
+
+def buckets_to_percentile(buckets, percentile):
+  for t in buckets.keys():
+    if len(buckets[t]) > 0:
+      buckets[t] = np.percentile(buckets[t], percentile)
+    else:
+      buckets[t] = 0.0
+  return buckets
+
 def buckets_to_lists(buckets):
   x = np.array(sorted(list(buckets.keys())))
   y = np.array([ buckets[x1] for x1 in x ])
   return (x, y)
-
-def moving_avg(y):
-  # to get ms, multiply by step_size in bucketize
-  window_size = 1
-  moving_avgs = []
-  for i in range(len(y) - window_size + 1):
-    window = y[ i : i + window_size ]
-    window_avg = sum(window) / window_size
-    moving_avgs.append(window_avg)
-  # Fill in the last few slots.
-  for i in range(len(y) - len(moving_avgs)):
-    window = y[len(moving_avgs):]
-    window_avg = sum(window) / len(window)
-    moving_avgs.append(window_avg)
-  return np.array(moving_avgs)
 
 def add_data_to_graph(ax, x, y, label, color, linestyle, marker, normalize=False):
   if normalize:
@@ -110,9 +129,10 @@ def finalize_graph(fig, ax, plots, title, out):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
   # plt.legend(lns, labels)
+  fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 
-def setup_graph(nplots, tpt_units, total_ncore, normalized):
+def setup_graph(nplots, units, total_ncore, normalized):
   figsize=(6.4, 4.8)
   if nplots == 1:
     figsize=(6.4, 2.4)
@@ -128,8 +148,8 @@ def setup_graph(nplots, tpt_units, total_ncore, normalized):
     coresax = [ tptax[-1] ]
     tptax = tptax[:-1]
   ylabels = []
-  for tpt_unit in tpt_units.split(","):
-    ylabel = "Tpt (" + tpt_unit + "/sec)"
+  for unit in units.split(","):
+    ylabel = unit
     if normalized:
       ylabel = "Normalized " + ylabel
     ylabels.append(ylabel)
@@ -146,7 +166,7 @@ def setup_graph(nplots, tpt_units, total_ncore, normalized):
     ax.set_ylabel("Cores Assigned")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_ncore, normalize):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, normalize):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -159,32 +179,40 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_nco
   mr_range = get_time_range(mr_tpts)
   hotel_tpts = read_tpts(input_dir, "hotel")
   hotel_range = get_time_range(hotel_tpts)
+  hotel_lats = read_latencies(input_dir, "bench.out")
+  hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
-  time_range = get_overall_time_range([procd_range, mr_range, hotel_range])
+  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
   hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
+  hotel_lats = fit_times_to_range(hotel_lats, time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  hotel_buckets = bucketize(hotel_tpts, time_range)
+  hotel_buckets = bucketize(hotel_tpts, time_range, step_size=1000)
   if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
-    fig, tptax, coresax = setup_graph(2, tpt_unit, total_ncore, normalize)
+    fig, tptax, coresax = setup_graph(3, units, total_ncore, normalize)
   else:
-    fig, tptax, coresax = setup_graph(1, tpt_unit, total_ncore, normalize)
+    fig, tptax, coresax = setup_graph(1, units, total_ncore, normalize)
   tptax_idx = 0
   plots = []
+  hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, step_size=50)
+  hotel_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
+  if len(hotel_lats) > 0:
+    x, y = buckets_to_lists(hotel_lat_buckets)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel " + str(percentile) + "% Latency", "red", "-", "", normalize)
+    plots.append(p)
+    tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    y = moving_avg(y)
     p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "", normalize)
     plots.append(p)
     tptax_idx = tptax_idx + 1
-  mr_buckets = bucketize(mr_tpts, time_range)
+  mr_buckets = bucketize(mr_tpts, time_range, step_size=1000)
   if len(mr_tpts) > 0:
     x, y = buckets_to_lists(mr_buckets)
-    y = moving_avg(y)
-    if "MB" in tpt_unit:
+    if "MB" in units:
       y = y / 1000000
     p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", "", normalize)
     plots.append(p)
@@ -194,10 +222,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_nco
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores Assigned", "blue", line_style, marker, normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores", "blue", line_style, marker, normalize)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores Assigned", "orange", line_style, marker, normalize)
+      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores", "orange", line_style, marker, normalize)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
@@ -217,10 +245,11 @@ if __name__ == "__main__":
   parser.add_argument("--title", type=str, required=True)
   parser.add_argument("--hotel_realm", type=str, default=None)
   parser.add_argument("--mr_realm", type=str, default=None)
-  parser.add_argument("--tpt_unit", type=str, required=True)
+  parser.add_argument("--units", type=str, required=True)
   parser.add_argument("--total_ncore", type=int, required=True)
+  parser.add_argument("--percentile", type=float, default=99.0)
   parser.add_argument("--normalize", action='store_true', default=False)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.tpt_unit, args.total_ncore, args.normalize)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.normalize)

@@ -237,6 +237,7 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 }
 
 func GetLinuxLoad() Tload {
+	// If load file isn't open, open it. Otherwise, seek to the beginning.
 	if loadfile == nil {
 		var err error
 		loadfile, err = os.Open("/proc/loadavg")

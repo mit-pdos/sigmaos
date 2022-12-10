@@ -181,7 +181,7 @@ func (r *Results) String() string {
 	}
 	s := ""
 	for i := 0; i < len(r.dur); i++ {
-		s += fmt.Sprintf("&{ Time: %vus Lat %v Tpt %f %v/sec }\n", r.ts[i].UnixMicro(), r.dur[i], r.amt[i]/r.dur[i].Seconds(), r.unit)
+		s += fmt.Sprintf("&{ Time %vus Lat %v Tpt %f %v/sec }\n", r.ts[i].UnixMicro(), r.dur[i], r.amt[i]/r.dur[i].Seconds(), r.unit)
 	}
 	return s
 }

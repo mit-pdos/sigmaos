@@ -40,7 +40,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 }
 
 func (ts *Tstate) stop() {
-	db.DPrintf(db.ALWAYS, "clerks to exit %v\n", len(ts.clrks))
+	db.DPrintf(db.ALWAYS, "wait for %d clerks to exit\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
 		status, err := ts.WaitExit(ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
@@ -168,15 +168,15 @@ func TestCacheConcur(t *testing.T) {
 
 func TestCacheClerk(t *testing.T) {
 	const (
-		N      = 1
-		NSHARD = 1
+		N      = 2
+		NSHARD = 2
 		NKEYS  = 100
 	)
 
 	ts := mkTstate(t, NSHARD)
 
 	for i := 0; i < N; i++ {
-		args := []string{strconv.Itoa(NKEYS), "10s", strconv.Itoa(i * NKEYS), ts.sempn}
+		args := []string{strconv.Itoa(NKEYS), "60s", strconv.Itoa(i * NKEYS), ts.sempn}
 		ts.StartClerk(args, 0)
 	}
 

@@ -73,7 +73,7 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
 		db.DPrintf("REALMMGR", "[%v] resource.Tcore granted", m.realmId)
-		m.growRealm()
+		m.growRealm(msg.Amount)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -132,51 +132,65 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 }
 
 // This realm has been granted cores. Now grow it. Sigmamgr must hold lock.
-func (m *RealmResourceMgr) growRealm() {
+func (m *RealmResourceMgr) growRealm(amt int) {
 	// Find a machine with free cores and claim them
-	machineId, nodedId, cores, ok := m.getFreeCores(1)
+	machineIds, nodedIds, cores, ok := m.getFreeCores(amt)
 	if !ok {
 		db.DFatalf("Unable to get free cores to grow realm")
 	}
-	// If we couldn't claim cores on any machines already running a noded from
-	// this realm, start a new noded.
-	if nodedId == "" {
-		db.DPrintf("REALMMGR", "[%v] Start a new noded on %v with cores %v", m.realmId, machineId, cores)
-		// Request the machine to start a noded.
-		nodedId := proc.Tpid("noded-" + proc.GenPid().String()).String()
-		// Allocate the noded to this realm.
-		db.DPrintf("REALMMGR", "[%v] Allocating %v to realm", m.realmId, nodedId)
-		m.allocNoded(m.realmId, machineId, nodedId, cores)
-		db.DPrintf("REALMMGR", "[%v] Requesting noded %v", m.realmId, nodedId)
-		m.requestNoded(nodedId, machineId)
-		db.DPrintf("REALMMGR", "[%v] Started noded %v on %v", m.realmId, nodedId, machineId)
-		db.DPrintf("REALMMGR", "[%v] Allocated %v", m.realmId, nodedId)
-	} else {
-		db.DPrintf("REALMMGR", "[%v] Growing noded %v core allocation on machine %v by %v", m.realmId, nodedId, machineId, cores)
-		// Otherwise, grant new cores to this noded.
-		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.Marshal(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
+	// For each machine, allocate some cores.
+	for i := range machineIds {
+		// Allocate each core claimed on this machine, one at a time.
+		for _, c := range cores[i] {
+			amt--
+			// If there was no noded from this realm already running on this
+			// machine...
+			if nodedIds[i] == "" {
+				db.DPrintf("REALMMGR", "[%v] Start a new noded on %v with cores %v", m.realmId, machineIds[i], cores)
+				nodedIds[i] = proc.Tpid("noded-" + proc.GenPid().String()).String()
+				// Allocate the noded to this realm by creating its config file. This
+				// must happen before actually requesting the noded, so we don't
+				// deadlock.
+				db.DPrintf("REALMMGR", "[%v] Allocating %v to realm", m.realmId, nodedIds[i])
+				m.allocNoded(m.realmId, machineIds[i], nodedIds[i], c)
+				db.DPrintf("REALMMGR", "[%v] Requesting noded %v", m.realmId, nodedIds[i])
+				// Request the machine to start a noded.
+				m.requestNoded(nodedIds[i], machineIds[i])
+				db.DPrintf("REALMMGR", "[%v] Started noded %v on %v", m.realmId, nodedIds[i], machineIds[i])
+				db.DPrintf("REALMMGR", "[%v] Allocated %v", m.realmId, nodedIds[i])
+			} else {
+				db.DPrintf("REALMMGR", "[%v] Growing noded %v core allocation on machine %v by %v", m.realmId, nodedIds[i], machineIds[i], cores)
+				// Otherwise, grant new cores to this noded.
+				msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, c.Marshal(), int(c.Size()))
+				resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedIds[i]), msg)
+			}
+			m.updateResizeTime(m.realmId)
+		}
 	}
-	m.updateResizeTime(m.realmId)
+	if amt > 0 {
+		db.DFatalf("Grew realm, but not by enough")
+	}
 }
 
-func (m *RealmResourceMgr) tryClaimCores(machineId string) (*np.Tinterval, bool) {
+func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*np.Tinterval, bool) {
 	cdir := path.Join(machine.MACHINES, machineId, machine.CORES)
 	coreGroups, err := m.sigmaFsl.GetDir(cdir)
 	if err != nil {
 		db.DFatalf("Error GetDir: %v", err)
 	}
+	cores := make([]*np.Tinterval, 0)
 	// Try to steal a core group
-	for i := 0; i < len(coreGroups); i++ {
+	for i := 0; i < len(coreGroups) && amt > 0; i++ {
 		// Read the core file.
 		coreFile := path.Join(cdir, coreGroups[i].Name)
 		// Claim the cores
 		err = m.sigmaFsl.Remove(coreFile)
 		if err == nil {
 			// Cores successfully claimed.
-			cores := np.MkInterval(0, 0)
-			cores.Unmarshal(string(coreGroups[i].Name))
-			return cores, true
+			c := np.MkInterval(0, 0)
+			c.Unmarshal(string(coreGroups[i].Name))
+			cores = append(cores, c)
+			amt--
 		} else {
 			// Unexpected error
 			if !fcall.IsErrNotfound(err) {
@@ -184,60 +198,59 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string) (*np.Tinterval, bool)
 			}
 		}
 	}
-	//Cores not claimed successfully
-	return nil, false
+	return cores, len(cores) > 0
 }
 
-func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinterval, bool) {
+func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Tinterval, bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
-	var machineId string
-	var nodedId string
-	var cores *np.Tinterval
-	var ok bool
+	machineIds := make([]string, 0)
+	nodedIds := make([]string, 0)
+	cores := make([][]*np.Tinterval, 0)
 	var err error
 
-	for i := 0; i < nRetries; i++ {
-		// First, try to get cores on a machine already running a noded from this
-		// realm.
-		ok, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
-			ndCfg := MakeNodedConfig()
-			m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
-			// Try to claim additional cores on the machine this noded lives on.
-			if c, ok := m.tryClaimCores(ndCfg.MachineId); ok {
-				cores = c
-				machineId = ndCfg.MachineId
-				nodedId = nd.Name
-				return true, nil
-			}
-			return false, nil
-		})
-		if err != nil {
-			db.DFatalf("Error ProcessDir: %v", err)
+	// First, try to get cores on a machine already running a noded from this
+	// realm.
+	_, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
+		ndCfg := MakeNodedConfig()
+		m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
+		// Try to claim additional cores on the machine this noded lives on.
+		if c, ok := m.tryClaimCores(ndCfg.MachineId, amt); ok {
+			cores = append(cores, c)
+			machineIds = append(machineIds, ndCfg.MachineId)
+			nodedIds = append(nodedIds, nd.Name)
+			amt -= len(c)
 		}
-		// If successfully claimed cores, return
-		if ok {
-			break
+		if amt == 0 {
+			return true, nil
 		}
-		// Otherwise, Try to get cores on any machine.
-		ok, err = m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
-			if c, ok := m.tryClaimCores(st.Name); ok {
-				cores = c
-				machineId = st.Name
-				return true, nil
-			}
-			return false, nil
-		})
-		if err != nil {
-			db.DFatalf("Error ProcessDir: %v", err)
-		}
-		// If successfully claimed cores, return
-		if ok {
-			break
-		}
+		return false, nil
+	})
+	if err != nil {
+		db.DFatalf("Error ProcessDir: %v", err)
 	}
-	return machineId, nodedId, cores, ok
+	// If successfully claimed enough cores, return
+	if amt == 0 {
+		return machineIds, nodedIds, cores, true
+	}
+	// Otherwise, Try to get cores on any machine.
+	_, err = m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
+		if c, ok := m.tryClaimCores(st.Name, amt); ok {
+			cores = append(cores, c)
+			machineIds = append(machineIds, st.Name)
+			nodedIds = append(nodedIds, "")
+			amt -= len(c)
+		}
+		if amt == 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		db.DFatalf("Error ProcessDir: %v", err)
+	}
+	return machineIds, nodedIds, cores, amt == 0
 }
 
 // Request a machine to create a new Noded)

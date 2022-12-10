@@ -45,6 +45,7 @@ func (ts *Tstate) stop() {
 		status, err := ts.WaitExit(ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
 		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
+		log.Printf("clerk %v %v %v\n", ck, status, status.Data().(float64))
 	}
 	ts.cm.Stop()
 }

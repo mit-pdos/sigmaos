@@ -105,7 +105,10 @@ def finalize_graph(fig, ax, plots, title, out):
     lns += p
   labels = [ l.get_label() for l in lns ]
   ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
-#  plt.legend(lns, labels)
+  for idx in range(len(ax)):
+    ax[idx].set_xlim(left=0)
+    ax[idx].set_ylim(bottom=0)
+  # plt.legend(lns, labels)
   fig.savefig(out)
 
 def setup_graph(nplots, tpt_units, total_ncore, normalized):

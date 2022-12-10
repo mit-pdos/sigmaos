@@ -42,6 +42,8 @@ def finalize_graph(out):
   plt.ylabel("99% Tail Latency (msec)")
   plt.title("Hotel Application Tail Latency")
   plt.legend()
+  plt.xlim(left=0)
+  plt.ylim(bottom=0)
   plt.savefig(out)
 
 def graph_data(input_dir, out):

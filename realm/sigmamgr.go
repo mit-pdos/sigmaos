@@ -136,13 +136,19 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
 	if m.tryGetFreeCores(1) {
 		// Try to alloc qlen cores, or as many as are currently free otherwise.
 		nallocd := int64(qlen)
+		if nallocd == 0 {
+			nallocd = 1
+		}
 		nfree := atomic.LoadInt64(&m.freeCoreGroups)
 		if nfree < nallocd {
 			nallocd = nfree
 		}
+		db.DPrintf(db.ALWAYS, "Allocate %v cores", nallocd)
 		// Allocate cores to this realm.
-		m.allocCores(realmId, nallocd)
-		return true
+		if nallocd > 0 {
+			m.allocCores(realmId, nallocd)
+			return true
+		}
 	}
 	// No cores were available, so try to find a realm with spare resources.
 	opRealmId, ok := m.findOverProvisionedRealm(realmId)

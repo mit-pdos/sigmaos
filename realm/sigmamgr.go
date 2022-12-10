@@ -95,11 +95,9 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		defer m.Unlock()
 
 		realmId := msg.Name
-		for i := 0; i < msg.Amount; i++ {
-			// If realm still exists, try to grow it.
-			if _, ok := m.realmLocks[realmId]; ok {
-				m.growRealmL(realmId)
-			}
+		// If realm still exists, try to grow it.
+		if _, ok := m.realmLocks[realmId]; ok {
+			m.growRealmL(realmId, msg.Amount)
 		}
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -133,11 +131,17 @@ func (m *SigmaResourceMgr) freeCores(i int64) {
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
 // then retry. Caller holds lock.
-func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
+func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
 	// See if any cores are available.
 	if m.tryGetFreeCores(1) {
+		// Try to alloc qlen cores, or as many as are currently free otherwise.
+		nallocd := int64(qlen)
+		nfree := atomic.LoadInt64(&m.freeCoreGroups)
+		if nfree < nallocd {
+			nallocd = nfree
+		}
 		// Allocate cores to this realm.
-		m.allocCores(realmId, 1)
+		m.allocCores(realmId, nallocd)
 		return true
 	}
 	// No cores were available, so try to find a realm with spare resources.
@@ -150,7 +154,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 	m.requestCores(opRealmId)
 	// Wait for the over-provisioned realm to cede its cores.
 	if m.tryGetFreeCores(100) {
-		// Allocate cores to this realm.
+		// Allocate core to this realm.
 		m.allocCores(realmId, 1)
 		return true
 	}

@@ -83,7 +83,7 @@ func (lg *LoadGenerator) Calibrate() {
 	}
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries.
-	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat))+1000, benchmarks.REQ)
+	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat))+N, benchmarks.REQ)
 	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	for i := 0; i < N; i++ {
 		lg.res.Append(lg.avgReqLat, 1)

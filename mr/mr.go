@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -98,7 +99,8 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, 
 	binsz := uint64(0)
 	bin := Bin{}
 
-	sts, err := fsl.GetDir(dir)
+	anydir := strings.ReplaceAll(dir, "~ip", "~any")
+	sts, err := fsl.GetDir(anydir)
 	if err != nil {
 		return nil, err
 	}

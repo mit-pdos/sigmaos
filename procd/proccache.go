@@ -74,6 +74,7 @@ func (pc *ProcCache) gc() {
 	if len(pc.ps) < pc.maxSize {
 		return
 	}
+	db.DPrintf("PROCCACHE", "Doing GC")
 	ps := make([]*ProcCacheEntry, 0, len(pc.ps))
 	for _, pce := range pc.ps {
 		ps = append(ps, pce)

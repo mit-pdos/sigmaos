@@ -80,10 +80,8 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		pd.wsQueues[wsQueuePath] = stealable
 		// Wake up nStealable waiting workers to try to steal each proc.
 		for i := 0; i < nStealable; i++ {
-			pd.nToWake++
 			pd.Signal()
 		}
-		db.DPrintf("PROCD", "Done work stealing pass, nToWake = %v", pd.nToWake)
 		pd.Unlock()
 	}
 }

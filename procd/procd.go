@@ -347,26 +347,31 @@ func (pd *Procd) waitSpawnOrSteal() {
 	defer pd.Unlock()
 
 	for !pd.done {
-		// If there is work to steal, we're done waiting.
-		for _, q := range pd.wsQueues {
-			if len(q) > 0 {
-				db.DPrintf("PROCD", "done waiting, a proc can be stolen")
-				return
-			}
+		// If there is an LC proc available to work-steal, and this procd has cores
+		// to spare, release the worker thread.
+		if len(pd.wsQueues[np.PROCD_RUNQ_LC]) > 0 && pd.coresAvail > 0 {
+			db.DPrintf("PROCD", "done waiting, an LC proc can be stolen")
+			return
 		}
-		// Only release nWorkersToWake worker threads.
+		// If there is a BE proc available to work-steal, and this procd can run
+		// another one, release the worker thread.
+		if len(pd.wsQueues[np.PROCD_RUNQ_BE]) > 0 && pd.canClaimBEProc() {
+			return
+		}
+		// Only release nToWake worker threads.
 		if pd.nToWake > 0 {
 			pd.nToWake--
 			db.DPrintf("PROCD", "done waiting, worker woken")
 			return
 		}
+		db.DPrintf("PROCD", "Worker wait %v", pd.nToWake)
 		pd.Wait()
 	}
 }
 
 // Worker runs one proc a time. If the proc it runs has Ncore == 0, then
 // another worker is spawned to take this one's place. This worker will then
-// exit once it finishes runing the proc.
+// exit once it finishes running the proc.
 func (pd *Procd) worker() {
 	defer pd.group.Done()
 	for !pd.readDone() {

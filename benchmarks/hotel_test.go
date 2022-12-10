@@ -146,13 +146,3 @@ func (ji *HotelJobInstance) Wait() {
 		ji.cm.StopCache()
 	}
 }
-
-// XXX print stats
-//	for _, s := range np.HOTELSVC {
-//		ts.statsSrv(s)
-//	}
-//	cs, err := ts.cc.StatsSrv()
-//	assert.Nil(ts.T, err)
-//	for i, cstat := range cs {
-//		fmt.Printf("= cache-%v: %v\n", i, cstat)
-//	}

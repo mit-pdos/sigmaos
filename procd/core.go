@@ -51,8 +51,7 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_AVAILABLE)
 	for i := 0; i < msg.Amount; i++ {
-		pd.nToWake++
-		pd.Signal()
+		pd.wakeWorkerL()
 	}
 }
 

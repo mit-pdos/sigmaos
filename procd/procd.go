@@ -122,10 +122,39 @@ func (pd *Procd) deleteProc(p *LinuxProc) {
 }
 
 func (pd *Procd) spawnProc(a *proc.Proc) {
+	pd.wakeWorker()
+}
+
+func (pd *Procd) wakeWorker() {
 	pd.Lock()
+	defer pd.Unlock()
+
+	pd.wakeWorkerL()
+}
+
+func (pd *Procd) wakeWorkerL() {
 	pd.nToWake++
 	pd.Signal()
-	pd.Unlock()
+}
+
+func (pd *Procd) wsQueuePop(runq string) (string, bool) {
+	pd.Lock()
+	defer pd.Unlock()
+
+	var pid string
+	var ok bool
+	if len(pd.wsQueues[runq]) > 0 {
+		// Pop a proc from the ws queue
+		pid, pd.wsQueues[runq] = pd.wsQueues[runq][0], pd.wsQueues[runq][1:]
+		ok = true
+	}
+	return pid, ok
+}
+
+func (pd *Procd) wsQueuePush(pid string, runq string) {
+	pd.Lock()
+	defer pd.Unlock()
+	pd.wsQueues[runq] = append(pd.wsQueues[runq], pid)
 }
 
 // Evict all procs running in this procd
@@ -203,7 +232,8 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 	return nil, nil
 }
 
-func (pd *Procd) tryGetProc(procPath string, isRemote bool) *LinuxProc {
+// Returns true if the proc was there, but there was a capacity issue.
+func (pd *Procd) tryGetProc(procPath string, isRemote bool) (*LinuxProc, bool) {
 	// We need to add "/" to follow the symlink for remote queues.
 	if isRemote {
 		procPath += "/"
@@ -221,7 +251,9 @@ func (pd *Procd) tryGetProc(procPath string, isRemote bool) *LinuxProc {
 	if newProc != nil {
 		pd.deleteWSSymlink(procPath, newProc, isRemote)
 	}
-	return newProc
+	// If newProc and err are both nil, then the reason we couldn't claim this
+	// proc is that we don't have enough capacity. Note this to higher layers.
+	return newProc, newProc == nil && err == nil
 }
 
 func (pd *Procd) getProc() (*LinuxProc, error) {
@@ -260,13 +292,6 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 			// Iterate through (up to) n items in the queue, or until we've claimed a
 			// proc.
 			for j := 0; j < n && p == nil; j++ {
-				var pid string
-				pd.Lock()
-				if len(pd.wsQueues[runq]) > 0 {
-					// Pop a proc from the ws queue
-					pid, pd.wsQueues[runq] = pd.wsQueues[runq][0], pd.wsQueues[runq][1:]
-				}
-				pd.Unlock()
 				// If the queue was empty, we're done scanning this queue. This may
 				// occur before the loop naturally terminates because:
 				//
@@ -274,12 +299,20 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 				// elements.
 				// 2. The monitor thread updated the queue, and it now
 				// contains fewer elements.
-				if pid == "" {
+				pid, ok := pd.wsQueuePop(runq)
+				if !ok {
 					break
 				}
 				procPath := path.Join(runq, pid)
 				// Try to get the proc.
-				p = pd.tryGetProc(procPath, isRemote)
+				var noCapacity bool
+				p, noCapacity = pd.tryGetProc(procPath, isRemote)
+				// If the reason we couldn't claim this proc is that there wasn't
+				// enough capacity, then add it back to the queue so we can try and
+				// claim it later.
+				if p == nil && noCapacity {
+					pd.wsQueuePush(pid, runq)
+				}
 			}
 			// If the proc was successfully claimed, we're done
 			if p != nil {
@@ -288,7 +321,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 		} else {
 			_, err := pd.ProcessDir(runq, func(st *np.Stat) (bool, error) {
 				procPath := path.Join(runq, st.Name)
-				p = pd.tryGetProc(procPath, isRemote)
+				p, _ = pd.tryGetProc(procPath, isRemote)
 				// If a proc was not claimed, keep processing.
 				if p == nil {
 					return false, nil
@@ -349,12 +382,14 @@ func (pd *Procd) waitSpawnOrSteal() {
 	for !pd.done {
 		// If there is an LC proc available to work-steal, and this procd has cores
 		// to spare, release the worker thread.
+		db.DPrintf("PROCD", "Worker woke, check for stealable LC procs.")
 		if len(pd.wsQueues[np.PROCD_RUNQ_LC]) > 0 && pd.coresAvail > 0 {
 			db.DPrintf("PROCD", "done waiting, an LC proc can be stolen")
 			return
 		}
 		// If there is a BE proc available to work-steal, and this procd can run
 		// another one, release the worker thread.
+		db.DPrintf("PROCD", "Worker woke, check for stealable BE procs.")
 		if len(pd.wsQueues[np.PROCD_RUNQ_BE]) > 0 {
 			_, _, ok := pd.canClaimBEProcL()
 			if ok {
@@ -367,7 +402,7 @@ func (pd *Procd) waitSpawnOrSteal() {
 			db.DPrintf("PROCD", "done waiting, worker woken")
 			return
 		}
-		db.DPrintf("PROCD", "Worker wait %v", pd.nToWake)
+		db.DPrintf("PROCD", "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[np.PROCD_RUNQ_LC]), len(pd.wsQueues[np.PROCD_RUNQ_BE]))
 		pd.Wait()
 	}
 }
@@ -408,10 +443,14 @@ func (pd *Procd) worker() {
 		replaced := false
 		if p.attr.Ncore == 0 {
 			replaced = true
+			// Wake a new worker to take this worker's place.
+			pd.wakeWorker()
 			pd.group.Add(1)
 			go pd.worker()
 		}
 		pd.runProc(p)
+		// Wake a worker, since we may be able to run something else now.
+		pd.wakeWorker()
 		if replaced {
 			return
 		}

@@ -28,37 +28,28 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		// Don't bother reading the BE queue if we couldn't possibly claim the
 		// proc.
 		if wsQueue == np.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
+			db.DPrintf("PROCD", "Skip monitoring BE WS queue because we can't claim another BE proc")
 			continue
 		}
 
-		var nStealable int
+		var nremote int
 		stealable := make([]string, 0)
 		// Wait until there is a proc to steal.
 		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*np.Stat) bool {
-			// Any procs are local?
-			anyLocal := false
-			nStealable = len(sts)
 			// Discount procs already on this procd
 			for _, st := range sts {
 				// See if this proc was spawned on this procd or has been stolen. If
 				// so, discount it from the count of stealable procs.
 				b, err := pd.GetFile(path.Join(wsQueuePath, st.Name))
-				if err != nil || strings.Contains(string(b), pd.memfssrv.MyAddr()) {
-					anyLocal = true
-					nStealable--
-				} else {
+				if err != nil {
+					if !strings.Contains(string(b), pd.memfssrv.MyAddr()) {
+						nremote++
+					}
 					stealable = append(stealable, st.Name)
 				}
 			}
-			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
-			// If any procs are local (possibly BE procs which weren't spawned before
-			// due to rate-limiting), try to spawn one of them, so that we don't
-			// deadlock with all the workers sleeping & BE procs waiting to be
-			// spawned.
-			if wsQueue == np.PROCD_RUNQ_BE && anyLocal {
-				nStealable++
-			}
-			return nStealable == 0
+			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(stealable), nremote)
+			return len(stealable) == 0
 		})
 		// Version error may occur if another procd has modified the ws dir, and
 		// unreachable err may occur if the other procd is shutting down.
@@ -77,9 +68,10 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		})
 		// Store the queue of stealable procs for worker threads to read.
 		pd.Lock()
+		db.DPrintf("PROCD", "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
 		pd.wsQueues[wsQueuePath] = stealable
-		// Wake up nStealable waiting workers to try to steal each proc.
-		for i := 0; i < nStealable; i++ {
+		// Wake up waiting workers to try to steal each proc.
+		for _ = range stealable {
 			pd.Signal()
 		}
 		pd.Unlock()

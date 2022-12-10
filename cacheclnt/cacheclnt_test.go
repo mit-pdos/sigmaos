@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -182,6 +183,37 @@ func TestCacheClerk(t *testing.T) {
 	}
 
 	ts.sem.Up()
+
+	ts.stop()
+	ts.Shutdown()
+}
+
+func TestElasticCache(t *testing.T) {
+	const (
+		N      = 3
+		NSHARD = 1
+		NKEYS  = 100
+		DUR    = "30s"
+	)
+
+	ts := mkTstate(t, NSHARD)
+
+	for i := 0; i < N; i++ {
+		args := []string{strconv.Itoa(NKEYS), DUR, strconv.Itoa(i * NKEYS), ts.sempn}
+		ts.StartClerk(args, 0)
+	}
+
+	ts.sem.Up()
+
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
+	assert.Nil(t, err)
+
+	for i := 0; i < 5; i++ {
+		time.Sleep(5 * time.Second)
+		sts, err := cc.StatsSrv()
+		assert.Nil(t, err)
+		log.Printf("sts %v\n", sts)
+	}
 
 	ts.stop()
 	ts.Shutdown()

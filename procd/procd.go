@@ -23,6 +23,10 @@ import (
 	np "sigmaos/sigmap"
 )
 
+const (
+	PROC_CACHE_SIZE = 500
+)
+
 type Procd struct {
 	sync.Mutex
 	*sync.Cond
@@ -43,6 +47,7 @@ type Procd struct {
 	coresOwned       proc.Tcore               // Current number of cores which this procd "owns", and can run procs on.
 	coresAvail       proc.Tcore               // Current number of cores available to run procs on.
 	memAvail         proc.Tmem                // Available memory for this procd and its procs to use.
+	pcache           *ProcCache
 	perf             *perf.Perf
 	group            sync.WaitGroup
 	procclnt         *procclnt.ProcClnt
@@ -52,6 +57,7 @@ type Procd struct {
 
 func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	pd := &Procd{}
+	pd.pcache = MakeProcCache(PROC_CACHE_SIZE)
 	pd.Cond = sync.NewCond(&pd.Mutex)
 	pd.kernelProcs = make(map[string]bool)
 	pd.kernelProcs["kernel/dbd"] = true
@@ -120,6 +126,7 @@ func (pd *Procd) spawnProc(a *proc.Proc) {
 	pd.nToWake++
 	pd.Signal()
 	pd.Unlock()
+	pd.pcache.Set(a.Pid, a)
 }
 
 // Evict all procs running in this procd

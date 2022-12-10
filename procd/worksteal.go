@@ -142,11 +142,17 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 }
 
 func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, error) {
+	pid := proc.Tpid(path.Base(procPath))
+	if p, ok := pd.pcache.Get(pid); ok {
+		return p, nil
+	}
 	p := proc.MakeEmptyProc()
 	err := pd.GetFileJson(procPath, p)
 	if err != nil {
+		pd.pcache.Remove(pid)
 		return nil, err
 	}
+	pd.pcache.Set(p.Pid, p)
 	return p, nil
 }
 

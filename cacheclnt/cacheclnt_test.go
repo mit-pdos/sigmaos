@@ -23,8 +23,9 @@ type Tstate struct {
 func mkTstate(t *testing.T, n int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.cm = cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, rd.String(8), n)
-	ts.cm.StartCache()
+	cm, err := cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, rd.String(8), n)
+	assert.Nil(t, err)
+	ts.cm = cm
 	return ts
 }
 
@@ -59,7 +60,7 @@ func TestCacheSingle(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
 
-	ts.cm.StopCache()
+	ts.cm.Stop()
 	ts.Shutdown()
 }
 
@@ -91,7 +92,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		assert.True(t, len(m) >= 1)
 	}
 
-	ts.cm.StopCache()
+	ts.cm.Stop()
 	ts.Shutdown()
 }
 
@@ -128,6 +129,6 @@ func TestCacheConcur(t *testing.T) {
 	}
 	wg.Wait()
 
-	ts.cm.StopCache()
+	ts.cm.Stop()
 	ts.Shutdown()
 }

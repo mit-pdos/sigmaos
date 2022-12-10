@@ -25,12 +25,10 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 	for !pd.readDone() {
 		// Wait for a bit to avoid overwhelming named.
 		time.Sleep(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
-		// Don't bother reading the BE queue if util is high
-		if wsQueue == np.PROCD_RUNQ_BE {
-			util, _ := pd.memfssrv.GetStats().GetUtil()
-			if util >= np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD {
-				continue
-			}
+		// Don't bother reading the BE queue if we couldn't possibly claim the
+		// proc.
+		if wsQueue == np.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
+			continue
 		}
 
 		var nStealable int
@@ -92,15 +90,14 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 // Find if any procs spawned at this procd haven't been run in a while. If so,
 // offer them as stealable.
 func (pd *Procd) offerStealableProcs() {
-	ticker := time.NewTicker(np.Conf.Procd.STEALABLE_PROC_TIMEOUT)
 	for !pd.readDone() {
 		// Wait for a bit.
-		<-ticker.C
+		time.Sleep(np.Conf.Procd.STEALABLE_PROC_TIMEOUT)
 		runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 		for _, runq := range runqs {
 			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
 			_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
-				// XXX Based on how we stuf Mtime into np.Stat (at a second
+				// XXX Based on how we stuff Mtime into np.Stat (at a second
 				// granularity), but this should be changed, perhaps.
 				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), st.Name)
@@ -108,6 +105,7 @@ func (pd *Procd) offerStealableProcs() {
 					target := path.Join(runqPath, st.Name) + "/"
 					link := path.Join(np.PROCD_WS, runq, st.Name)
 					if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !fcall.IsErrExists(err) {
+						pd.perf.Done()
 						db.DFatalf("Error Symlink: %v", err)
 						return false, err
 					}

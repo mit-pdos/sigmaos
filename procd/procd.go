@@ -234,6 +234,11 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 		path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE),
 	}
 	for i, runq := range runqs {
+		// If this is a BE queue, and we couldn't possibly claim a BE proc, skip
+		// scanning the queue.
+		if isBE := i > 1; isBE && !pd.canClaimBEProc() {
+			continue
+		}
 		// Odd indices are remote queues.
 		isRemote := i%2 == 1
 		if isRemote {

@@ -221,6 +221,7 @@ realm_balance() {
   hotel_dur="20s,20s,20s"
   hotel_max_rps="1000,2000,1000"
   n_vm=8
+  driver_vm=14
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
@@ -230,7 +231,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 14
 }
 
 #mr_overlap() {

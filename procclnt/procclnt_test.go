@@ -135,6 +135,7 @@ func TestWaitExitN(t *testing.T) {
 			status, err := ts.WaitExit(pid)
 			assert.Nil(t, err, "WaitExit error")
 			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
+			db.DPrintf("TEST", "Exited %v", pid)
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)

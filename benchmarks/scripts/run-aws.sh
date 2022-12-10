@@ -216,6 +216,23 @@ hotel_tail() {
   done
 }
 
+realm_balance() {
+  mrapp=mr-wc-wiki4G.yml
+  hotel_dur="20s,20s,20s"
+  hotel_max_rps="1000,2000,1000"
+  n_vm=8
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  cmd="
+    export SIGMADEBUG=\"TEST;\"; \
+    $PRIVILEGED_BIN/realm/create $REALM2; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 0
+}
+
 #mr_overlap() {
 #  mrapp=mr-wc-wiki4G.yml
 #  n_vm=16
@@ -278,30 +295,13 @@ realm_burst() {
   run_benchmark $VPC $n_vm $perf_dir "$cmd" 0
 }
 
-realm_balance() {
-  mrapp=mr-wc-wiki4G.yml
-  hotel_dur="60s"
-  hotel_max_rps=1000
-  n_vm=8
-  run=${FUNCNAME[0]}
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  cmd="
-    export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
-    go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
-  "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 0
-}
-
 # ========== Make Graphs ==========
 
 graph_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --tpt_unit "MB" --title "MapReduce Aggregate Throughput"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --tpt_unit "MB" --title "MapReduce Aggregate Throughput" --total_ncore 64
 }
 
 graph_mr_scalability() {
@@ -324,6 +324,22 @@ graph_hotel_tail() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/tail_latency.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf 
+}
+
+scrape_realm_burst() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##scrape_}"
+  echo "========== Scraping $graph =========="
+  dir=$OUT_DIR/$graph
+  res=$(grep "PASS:" $dir/bench.out)
+  echo -e "Result: $res"
+}
+
+graph_realm_balance() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --tpt_unit "Req,MB" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
 }
 
 #graph_mr_overlap() {
@@ -354,22 +370,6 @@ graph_hotel_tail() {
 #  echo "========== Graphing $graph =========="
 #  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Throughput of a Dynamically-Scaled KV Service with 16 Clerks"
 #}
-
-scrape_realm_burst() {
-  fname=${FUNCNAME[0]}
-  graph="${fname##scrape_}"
-  echo "========== Scraping $graph =========="
-  dir=$OUT_DIR/$graph
-  res=$(grep "PASS:" $dir/bench.out)
-  echo -e "Result: $res"
-}
-
-graph_realm_balance() {
-  fname=${FUNCNAME[0]}
-  graph="${fname##graph_}"
-  echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --tpt_unit "MB" --title "Aggregate Throughput Balancing 2 Realms' Applications"
-}
 
 # ========== Preamble ==========
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

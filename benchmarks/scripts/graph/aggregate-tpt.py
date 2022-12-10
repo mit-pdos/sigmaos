@@ -58,9 +58,10 @@ def fit_times_to_range(tpts, time_range):
 def find_bucket(time, step_size):
   return int(time - time % step_size)
 
+# XXX correct terminology is "window" not "bucket"
 # Fit into 10ms buckets.
 def bucketize(tpts, time_range):
-  step_size = 500
+  step_size = 1000
   buckets = {}
   for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
     buckets[i] = 0.0
@@ -99,26 +100,36 @@ def add_data_to_graph(ax, x, y, label, color, linestyle, normalize=True):
   return ax.plot(x, y, label=label, color=color, linestyle=linestyle)
 
 def finalize_graph(fig, ax, plots, title, out):
-  plt.title(title)
   lns = plots[0]
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  plt.legend(lns, labels)
+  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
+#  plt.legend(lns, labels)
   fig.savefig(out)
 
-def setup_graph(tpt_unit, normalized):
-  fig, ax = plt.subplots()
-  ax.set_xlabel("Time (sec)")
-  ylabel = "Aggregate Throughput (" + tpt_unit + "/sec)"
-  if normalized:
-    ylabel = "Normalized " + ylabel
-  ax.set_ylabel(ylabel)
-  ax2 = ax.twinx()
-  ax2.set_ylabel("Cores Assigned")
-  return fig, ax, ax2
+def setup_graph(nplots, tpt_units, total_ncore, normalized):
+  fig, tptax = plt.subplots(nplots)
+  if nplots == 1:
+    tptax = [ tptax ]
+  ylabels = []
+  for tpt_unit in tpt_units.split(","):
+    ylabel = "Throughput (" + tpt_unit + "/sec)"
+    if normalized:
+      ylabel = "Normalized " + ylabel
+    ylabels.append(ylabel)
+  plt.xlabel("Time (sec)")
+  for idx in range(len(tptax)):
+    tptax[idx].set_ylabel(ylabels[idx])
+  coresax = []
+  for ax in tptax:
+    ax2 = ax.twinx()
+    ax2.set_ylim((0, total_ncore + 2))
+    ax2.set_ylabel("Cores Assigned")
+    coresax.append(ax2)
+  return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, normalize):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_ncore, normalize):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -140,35 +151,40 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, normalize
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   hotel_buckets = bucketize(hotel_tpts, time_range)
-  fig, ax, ax2 = setup_graph(tpt_unit, normalize)
+  if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
+    fig, tptax, coresax = setup_graph(2, tpt_unit, total_ncore, normalize)
+  else:
+    fig, tptax, coresax = setup_graph(1, tpt_unit, total_ncore, normalize)
+  tptax_idx = 0
   plots = []
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
     y = moving_avg(y)
-    p = add_data_to_graph(ax, x, y, "Hotel Throughput", "blue", "-", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", normalize)
     plots.append(p)
+    tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range)
   if len(mr_tpts) > 0:
     x, y = buckets_to_lists(mr_buckets)
     y = moving_avg(y)
-    if tpt_unit == "MB":
+    if "MB" in tpt_unit:
       y = y / 1000000
-    p = add_data_to_graph(ax, x, y, "MR Throughput", "orange", "-", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", normalize)
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "Hotel Realm Cores Assigned", "green", "--", normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores Assigned", "green", "--", normalize)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(ax2, x, y, "MR Realm Cores Assigned", "green", "-", normalize)
+      p = add_data_to_graph(coresax[1], x, y, "MR Realm Cores Assigned", "green", "-", normalize)
       plots.append(p)
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(ax2, x, y, "Cores Assigned", "green", "--", normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Cores Assigned", "green", "--", normalize)
       plots.append(p)
-  finalize_graph(fig, ax, plots, title, out)
+  finalize_graph(fig, tptax, plots, title, out)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -177,8 +193,9 @@ if __name__ == "__main__":
   parser.add_argument("--hotel_realm", type=str, default=None)
   parser.add_argument("--mr_realm", type=str, default=None)
   parser.add_argument("--tpt_unit", type=str, required=True)
+  parser.add_argument("--total_ncore", type=int, required=True)
   parser.add_argument("--normalize", action='store_true', default=False)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.tpt_unit, args.normalize)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.tpt_unit, args.total_ncore, args.normalize)

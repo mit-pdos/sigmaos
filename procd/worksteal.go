@@ -13,6 +13,9 @@ import (
 	np "sigmaos/sigmap"
 )
 
+var WS_LC_QUEUE_PATH = path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC)
+var WS_BE_QUEUE_PATH = path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE)
+
 // Thread in charge of stealing procs.
 func (pd *Procd) startWorkStealingMonitors() {
 	go pd.monitorWSQueue(np.PROCD_RUNQ_LC)
@@ -41,7 +44,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 				// See if this proc was spawned on this procd or has been stolen. If
 				// so, discount it from the count of stealable procs.
 				b, err := pd.GetFile(path.Join(wsQueuePath, st.Name))
-				if err != nil {
+				if err == nil {
 					if !strings.Contains(string(b), pd.memfssrv.MyAddr()) {
 						nremote++
 					}

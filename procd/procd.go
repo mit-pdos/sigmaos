@@ -135,6 +135,7 @@ func (pd *Procd) wakeWorker() {
 func (pd *Procd) wakeWorkerL() {
 	pd.nToWake++
 	pd.Signal()
+	db.DPrintf("PROCD", "Wake worker cnt %v", pd.nToWake)
 }
 
 func (pd *Procd) wsQueuePop(runq string) (string, bool) {
@@ -383,14 +384,14 @@ func (pd *Procd) waitSpawnOrSteal() {
 		// If there is an LC proc available to work-steal, and this procd has cores
 		// to spare, release the worker thread.
 		db.DPrintf("PROCD", "Worker woke, check for stealable LC procs.")
-		if len(pd.wsQueues[np.PROCD_RUNQ_LC]) > 0 && pd.coresAvail > 0 {
+		if len(pd.wsQueues[WS_LC_QUEUE_PATH]) > 0 && pd.coresAvail > 0 {
 			db.DPrintf("PROCD", "done waiting, an LC proc can be stolen")
 			return
 		}
 		// If there is a BE proc available to work-steal, and this procd can run
 		// another one, release the worker thread.
 		db.DPrintf("PROCD", "Worker woke, check for stealable BE procs.")
-		if len(pd.wsQueues[np.PROCD_RUNQ_BE]) > 0 {
+		if len(pd.wsQueues[WS_BE_QUEUE_PATH]) > 0 {
 			_, _, ok := pd.canClaimBEProcL()
 			if ok {
 				return
@@ -399,7 +400,7 @@ func (pd *Procd) waitSpawnOrSteal() {
 		// Only release nToWake worker threads.
 		if pd.nToWake > 0 {
 			pd.nToWake--
-			db.DPrintf("PROCD", "done waiting, worker woken")
+			db.DPrintf("PROCD", "done waiting, worker woken. %v left to wake", pd.nToWake)
 			return
 		}
 		db.DPrintf("PROCD", "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[np.PROCD_RUNQ_LC]), len(pd.wsQueues[np.PROCD_RUNQ_BE]))

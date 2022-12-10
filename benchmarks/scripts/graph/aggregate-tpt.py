@@ -110,13 +110,9 @@ def buckets_to_lists(buckets):
   y = np.array([ buckets[x1] for x1 in x ])
   return (x, y)
 
-def add_data_to_graph(ax, x, y, label, color, linestyle, marker, normalize=False):
-  if normalize:
-    n = max(y)
-    y = y / n
+def add_data_to_graph(ax, x, y, label, color, linestyle, marker):
   # Convert X indices to seconds.
   x = x / 1000.0
-  # normalize by max
   return ax.plot(x, y, label=label, color=color, linestyle=linestyle, marker=marker, markevery=25, markerfacecolor=colo.to_rgba(color, 0.0), markeredgecolor=color)
 
 def finalize_graph(fig, ax, plots, title, out):
@@ -132,7 +128,7 @@ def finalize_graph(fig, ax, plots, title, out):
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 
-def setup_graph(nplots, units, total_ncore, normalized):
+def setup_graph(nplots, units, total_ncore):
   figsize=(6.4, 4.8)
   if nplots == 1:
     figsize=(6.4, 2.4)
@@ -150,8 +146,6 @@ def setup_graph(nplots, units, total_ncore, normalized):
   ylabels = []
   for unit in units.split(","):
     ylabel = unit
-    if normalized:
-      ylabel = "Normalized " + ylabel
     ylabels.append(ylabel)
   plt.xlabel("Time (sec)")
   for idx in range(len(tptax)):
@@ -166,7 +160,7 @@ def setup_graph(nplots, units, total_ncore, normalized):
     ax.set_ylabel("Cores Assigned")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, normalize):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -192,21 +186,21 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   hotel_buckets = bucketize(hotel_tpts, time_range, step_size=1000)
   if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
-    fig, tptax, coresax = setup_graph(3, units, total_ncore, normalize)
+    fig, tptax, coresax = setup_graph(3, units, total_ncore)
   else:
-    fig, tptax, coresax = setup_graph(1, units, total_ncore, normalize)
+    fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, step_size=50)
   hotel_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
   if len(hotel_lats) > 0:
     x, y = buckets_to_lists(hotel_lat_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel " + str(percentile) + "% Latency", "red", "-", "", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range, step_size=1000)
@@ -214,7 +208,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     x, y = buckets_to_lists(mr_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", "", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
@@ -222,10 +216,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores", "blue", line_style, marker, normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores", "orange", line_style, marker, normalize)
+      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
@@ -248,8 +242,7 @@ if __name__ == "__main__":
   parser.add_argument("--units", type=str, required=True)
   parser.add_argument("--total_ncore", type=int, required=True)
   parser.add_argument("--percentile", type=float, default=99.0)
-  parser.add_argument("--normalize", action='store_true', default=False)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.normalize)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile)

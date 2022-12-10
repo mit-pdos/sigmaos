@@ -109,7 +109,7 @@ def finalize_graph(fig, ax, plots, title, out):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
   # plt.legend(lns, labels)
-  fig.savefig(out)
+  fig.savefig(out, bbox_inches="tight")
 
 def setup_graph(nplots, tpt_units, total_ncore, normalized):
   figsize=(6.4, 4.8)

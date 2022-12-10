@@ -102,10 +102,10 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
+		go func(lg *loadgen.LoadGenerator, wg *sync.WaitGroup) {
 			defer wg.Done()
 			lg.Calibrate()
-		}(&wg)
+		}(lg, &wg)
 	}
 	wg.Wait()
 	for _, lg := range ji.lgs {

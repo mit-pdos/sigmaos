@@ -92,13 +92,13 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 			// Run a single request.
 			ji.fn(wc, r)
 		}))
-		ji.lgs[i].Calibrate()
 	}
 	return ji
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
 	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
+	ji.lgs[0].Calibrate()
 	for _, lg := range ji.lgs {
 		lg.Run()
 	}

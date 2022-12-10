@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -98,7 +99,15 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 
 func (ji *HotelJobInstance) StartHotelJob() {
 	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
-	ji.lgs[0].Calibrate()
+	var wg sync.WaitGroup
+	for _, lg := range ji.lgs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			lg.Calibrate()
+		}()
+	}
+	wg.Wait()
 	for _, lg := range ji.lgs {
 		lg.Run()
 	}

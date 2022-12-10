@@ -83,6 +83,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			pd.nToWake++
 			pd.Signal()
 		}
+		db.DPrintf("PROCD", "Done work stealing pass, nToWake = %v", pd.nToWake)
 		pd.Unlock()
 	}
 }

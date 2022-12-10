@@ -109,7 +109,10 @@ def finalize_graph(fig, ax, plots, title, out):
   fig.savefig(out)
 
 def setup_graph(nplots, tpt_units, total_ncore, normalized):
-  fig, tptax = plt.subplots(nplots)
+  figsize=(6.4, 4.8)
+  if nplots == 1:
+    figsize=(6.4, 2.4)
+  fig, tptax = plt.subplots(nplots, figsize=figsize)
   if nplots == 1:
     tptax = [ tptax ]
   ylabels = []

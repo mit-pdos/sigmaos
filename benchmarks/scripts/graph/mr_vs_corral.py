@@ -36,7 +36,7 @@ def finalize_graph(fig, ax, plots, title, out):
   fig.savefig(out)
 
 def setup_graph():
-  fig, ax = plt.subplots(figsize=(6.4, 3.2))
+  fig, ax = plt.subplots(figsize=(6.4, 2.4))
   ax.set_ylabel("Execution Time (seconds)")
   return fig, ax
 

@@ -3,6 +3,7 @@
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.colors as colo
 import numpy as np
 import argparse
 import os
@@ -90,14 +91,14 @@ def moving_avg(y):
     moving_avgs.append(window_avg)
   return np.array(moving_avgs)
 
-def add_data_to_graph(ax, x, y, label, color, linestyle, normalize=True):
+def add_data_to_graph(ax, x, y, label, color, linestyle, marker, normalize=False):
   if normalize:
     n = max(y)
     y = y / n
   # Convert X indices to seconds.
   x = x / 1000.0
   # normalize by max
-  return ax.plot(x, y, label=label, color=color, linestyle=linestyle)
+  return ax.plot(x, y, label=label, color=color, linestyle=linestyle, marker=marker, markevery=25, markerfacecolor=colo.to_rgba(color, 0.0), markeredgecolor=color)
 
 def finalize_graph(fig, ax, plots, title, out):
   lns = plots[0]
@@ -115,24 +116,34 @@ def setup_graph(nplots, tpt_units, total_ncore, normalized):
   figsize=(6.4, 4.8)
   if nplots == 1:
     figsize=(6.4, 2.4)
-  fig, tptax = plt.subplots(nplots, figsize=figsize)
   if nplots == 1:
+    np = 1
+  else:
+    np = nplots + 1
+  fig, tptax = plt.subplots(np, figsize=figsize, sharex=True)
+  if nplots == 1:
+    coresax = []
     tptax = [ tptax ]
+  else:
+    coresax = [ tptax[-1] ]
+    tptax = tptax[:-1]
   ylabels = []
   for tpt_unit in tpt_units.split(","):
-    ylabel = "Throughput (" + tpt_unit + "/sec)"
+    ylabel = "Tpt (" + tpt_unit + "/sec)"
     if normalized:
       ylabel = "Normalized " + ylabel
     ylabels.append(ylabel)
   plt.xlabel("Time (sec)")
   for idx in range(len(tptax)):
     tptax[idx].set_ylabel(ylabels[idx])
-  coresax = []
-  for ax in tptax:
-    ax2 = ax.twinx()
-    ax2.set_ylim((0, total_ncore + 5))
-    ax2.set_ylabel("Cores Assigned")
-    coresax.append(ax2)
+  if nplots == 1:
+    # Only put cores on the same graph for mr aggr tpt graph.
+    for ax in tptax:
+      ax2 = ax.twinx()
+      coresax.append(ax2)
+  for ax in coresax:
+    ax.set_ylim((0, total_ncore + 5))
+    ax.set_ylabel("Cores Assigned")
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_ncore, normalize):
@@ -166,7 +177,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_nco
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
     y = moving_avg(y)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "", normalize)
     plots.append(p)
     tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range)
@@ -175,21 +186,29 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, tpt_unit, total_nco
     y = moving_avg(y)
     if "MB" in tpt_unit:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", normalize)
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", "", normalize)
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
+      line_style = "solid"
+      marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores Assigned", "green", "--", normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores Assigned", "blue", line_style, marker, normalize)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[1], x, y, "MR Realm Cores Assigned", "green", "-", normalize)
+      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores Assigned", "orange", line_style, marker, normalize)
       plots.append(p)
+      ta = [ ax for ax in tptax ]
+      ta.append(coresax[0])
+      tptax = ta
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Cores Assigned", "green", "--", normalize)
+      p = add_data_to_graph(coresax[0], x, y, "Cores Assigned", "green", "--", False)
       plots.append(p)
+      ta = [ ax for ax in tptax ]
+      ta.append(coresax[0])
+      tptax = ta
   finalize_graph(fig, tptax, plots, title, out)
 
 if __name__ == "__main__":

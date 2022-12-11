@@ -515,11 +515,11 @@ func TestWorkStealing(t *testing.T) {
 	// Check that work-stealing symlinks were cleaned up.
 	sts, _, err := ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), sts)
 
 	sts, _, err = ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), sts)
 
 	ts.Shutdown()
 }

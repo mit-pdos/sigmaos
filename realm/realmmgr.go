@@ -98,6 +98,17 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	defer unlockRealm(m.lock, m.realmId)
 	res.OK = true
 
+	// Get the realm's config
+	realmCfg, err := m.getRealmConfig()
+	if err != nil {
+		db.DFatalf("Error getRealmConfig: %v", err)
+	}
+
+	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL && !req.HardReq {
+		db.DPrintf("REALMMGR", "[%v] Soft core revocation request failed, resize too soon", m.realmId)
+		return nil
+	}
+
 	db.DPrintf("REALMMGR", "[%v] resource.Tcore revoked", m.realmId)
 
 	nodedId, ok := m.getLeastUtilizedNoded()
@@ -120,7 +131,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	nreq := &proto.NodedRequest{
 		Cores: cores,
 	}
-	err := m.nclnts[nodedId].RPC("Noded.RevokeCores", nreq, nres)
+	err = m.nclnts[nodedId].RPC("Noded.RevokeCores", nreq, nres)
 	if err != nil || !nres.OK {
 		db.DFatalf("Error RPC: %v %v", err, nres.OK)
 	}

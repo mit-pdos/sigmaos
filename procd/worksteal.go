@@ -86,7 +86,6 @@ func (pd *Procd) offerStealableProcs() {
 	// Store the procs this procd has already offered, and the runq they were
 	// stored in.
 	alreadyOffered := make(map[string]string)
-	alreadyOfferedP := make(map[string]string)
 	for !pd.readDone() {
 		toOffer := make(map[string]string)
 		present := make(map[string]string)
@@ -102,14 +101,10 @@ func (pd *Procd) offerStealableProcs() {
 				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					// Don't re-offer procs which have already been offered.
 					if _, ok := alreadyOffered[st.Name]; !ok {
-						if _, ok := alreadyOfferedP[st.Name]; ok {
-							db.DFatalf("Didn't detect a proc which has already been offered as offered: %v %v", alreadyOffered, alreadyOfferedP)
-						}
 						toOffer[st.Name] = runq
 					}
 					present[st.Name] = runq
 					alreadyOffered[st.Name] = runq
-					alreadyOfferedP[st.Name] = runq
 				}
 				return false, nil
 			})

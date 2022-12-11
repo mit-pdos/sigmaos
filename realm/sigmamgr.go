@@ -178,10 +178,10 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 	var ok bool
 	// No cores were available, so try to find a realm with spare resources.
 	if len(machines) == 0 || !hardReq {
-		db.DPrintf("SIGMAMGR", "[%v] search for cores across overprovisioned realms", realmId)
+		db.DPrintf("SIGMAMGR", "[%v] search for cores across without machine preference", realmId)
 		opRealmId, _, ok = m.findOverProvisionedRealm(realmId, "")
 	} else {
-		db.DPrintf("SIGMAMGR", "[%v] search for cores on preferred machines %v", realmId, machines)
+		db.DPrintf("SIGMAMGR", "[%v] search for cores with machine preference %v", realmId, machines)
 		for _, machine := range machines {
 			db.DPrintf("SIGMAMGR", "[%v] search for cores on %v", realmId, machine)
 			opRealmId, nodedId, ok = m.findOverProvisionedRealm(realmId, machine)

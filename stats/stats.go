@@ -345,6 +345,8 @@ func (st *Stats) stats() []byte {
 	stcp.Paths = st.sti.Paths
 	stcp.Util = st.sti.Util
 	stcp.Load = st.sti.Load
+	stcp.CustomUtil = st.sti.CustomUtil
+	stcp.CustomLoad = st.sti.CustomLoad
 
 	data, err := json.Marshal(*stcp)
 	if err != nil {

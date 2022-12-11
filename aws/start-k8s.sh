@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--n N] " 1>&2
+  echo "Usage: $0 --vpc VPC [--n N] [--taint]" 1>&2
 }
 
-N_VM=""
 VPC=""
+N_VM=""
+TAINT=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -13,6 +14,10 @@ while [[ $# -gt 0 ]]; do
     shift
     VPC=$1
     shift
+    ;;
+  --taint)
+    shift
+    TAINT="TRUE"
     ;;
   --n)
     shift
@@ -75,8 +80,11 @@ for vm in $vms; do
     kubectl apply -f /tmp/kube-flannel.yml
     kubectl apply -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
 
-    # Un-taint all nodes, so the control-plane node can run pods too
-    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    if [ -z "$TAINT" ]; then
+      # If desired, un-taint all nodes, so the control-plane node can run pods
+      # too
+      kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    fi
 
     # Install dashboard
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml

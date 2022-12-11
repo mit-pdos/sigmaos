@@ -55,7 +55,8 @@ func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
 		cfgPath := realm.RealmConfPath(ts.RealmId())
 		cfg := &realm.RealmConfig{}
 		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
-			db.DFatalf("Read config err: %v", err)
+			b, _ := cc.GetFile(cfgPath)
+			db.DFatalf("Read config err: %v [%v]", err, string(b))
 		}
 		p.TptTick(float64(cfg.NCores))
 		for {

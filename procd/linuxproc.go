@@ -164,6 +164,7 @@ func (p *LinuxProc) setPriority() {
 	case proc.T_LC:
 		err = linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
 	default:
+		p.pd.perf.Done()
 		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
 	}
 	if err != nil {

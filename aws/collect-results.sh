@@ -48,6 +48,7 @@ MAIN="${vma[0]}"
 LOG_DIR=/tmp
 mkdir -p $PERF_DIR
 
+idx=0
 for vm in $vms; do
   echo "scp: $vm"
   if [ $vm == $MAIN ]; then
@@ -60,20 +61,17 @@ for vm in $vms; do
   # scp performance files.
   cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* $PERF_DIR"
   # scp the bench.out file.
-  cmd3="scp -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out"
+  cmd3="scp -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
+  idx=$((idx+1)) 
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
     eval "$cmd2"
-    if [ $vm == $MAIN ]; then
-      eval "$cmd3"
-    fi
+    eval "$cmd3"
   else
     (
       eval "$cmd1"
       eval "$cmd2"
-      if [ $vm == $MAIN ]; then
-        eval "$cmd3"
-      fi
+      eval "$cmd3"
     ) &
   fi
 done

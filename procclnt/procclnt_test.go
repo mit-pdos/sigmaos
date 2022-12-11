@@ -36,15 +36,15 @@ func procd(ts *test.Tstate) string {
 }
 
 func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
-	return spawnSpinnerNcore(t, ts, proc.C_DEF)
+	return spawnSpinnerNcore(ts, proc.C_DEF)
 }
 
-func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
+func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
 	a.SetNcore(ncore)
 	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
+	assert.Nil(ts.T, err, "Spawn")
 	return pid
 }
 
@@ -135,6 +135,7 @@ func TestWaitExitN(t *testing.T) {
 			status, err := ts.WaitExit(pid)
 			assert.Nil(t, err, "WaitExit error")
 			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
+			db.DPrintf("TEST", "Exited %v", pid)
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
@@ -487,36 +488,38 @@ func TestWorkStealing(t *testing.T) {
 
 	ts.BootProcd()
 
-	start := time.Now()
-	pid := proc.GenPid()
-	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
 
-	pid1 := proc.GenPid()
-	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
+
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart")
+
+	err = ts.WaitStart(pid1)
+	assert.Nil(t, err, "WaitStart")
+
+	err = ts.Evict(pid)
+	assert.Nil(t, err, "Evict")
+
+	err = ts.Evict(pid1)
+	assert.Nil(t, err, "Evict")
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusOK(), "WaitExit status")
+	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 
 	status, err = ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
-	end := time.Now()
-
-	// Make sure both procs finished
-	checkSleeperResult(t, ts, pid)
-	checkSleeperResult(t, ts, pid1)
-
-	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized: took too long (%v msec)", end.Sub(start).Milliseconds())
+	assert.True(t, status.IsStatusEvicted(), "WaitExit status 2")
 
 	// Check that work-stealing symlinks were cleaned up.
 	sts, _, err := ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), sts)
 
 	sts, _, err = ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir: %v", sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), sts)
 
 	ts.Shutdown()
 }
@@ -585,7 +588,7 @@ func TestSpawnProcdCrash(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Spawn a proc which can't possibly be run by any procd.
-	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores*2))
+	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores*2))
 
 	err := ts.KillOne(np.PROCD)
 	assert.Nil(t, err, "KillOne: %v", err)
@@ -777,7 +780,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}
 	for i := 0; i < int(linuxsched.NCores)/2; i++ {
-		pid := spawnSpinnerNcore(t, ts, proc.Tcore(2))
+		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
 		err := ts.WaitStart(pid)
 		assert.Nil(t, err, "WaitStart")
 		pids = append(pids, pid)
@@ -872,7 +875,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 	// Spawn NCores/2 spinners, each claiming two cores.
 	pids := []proc.Tpid{}
 	for i := 0; i < int(linuxsched.NCores)/2; i++ {
-		pid := spawnSpinnerNcore(t, ts, proc.Tcore(2))
+		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
 		err := ts.WaitStart(pid)
 		assert.Nil(t, err, "WaitStart")
 		pids = append(pids, pid)

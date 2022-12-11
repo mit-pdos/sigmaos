@@ -21,8 +21,6 @@ const (
 
 	UXBIN = UX + "~ip/bin/"
 
-	SIGMAMGR = NAMED + "sigmamgr"
-
 	MEMFS = NAMED + "memfsd/"
 
 	CACHEREL = "cache"
@@ -70,7 +68,7 @@ const (
 
 // SIGMA
 const (
-	SIGMACTL = SIGMAMGR + "/" + RESOURCE_CTL
+	SIGMAMGR = NAMED + "sigmamgr"
 )
 
 var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,

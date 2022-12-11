@@ -22,6 +22,7 @@ const (
 type Results struct {
 	dur  []time.Duration // Duration.
 	amt  []float64       // Amount (e.g. bytes read/written).
+	ts   []time.Time     // Timestamp at which data point was recorded
 	unit Tunit           // Unit for throughput
 	lat  []float64       // To avoid converting to float slices many times for the stats library.
 	tpt  []float64       // To avoid converting to float slices many times for the stats library.
@@ -31,6 +32,7 @@ func MakeResults(n int, u Tunit) *Results {
 	r := &Results{}
 	r.dur = make([]time.Duration, 0, n)
 	r.amt = make([]float64, 0, n)
+	r.ts = make([]time.Time, 0, n)
 	r.unit = u
 	r.lat = nil
 	r.tpt = nil
@@ -42,6 +44,7 @@ func (r *Results) Append(d time.Duration, amt float64) int {
 	i := len(r.dur)
 	r.dur = append(r.dur, d)
 	r.amt = append(r.amt, amt)
+	r.ts = append(r.ts, time.Now())
 	// Kill cache
 	r.lat = nil
 	r.tpt = nil
@@ -52,6 +55,7 @@ func (r *Results) Append(d time.Duration, amt float64) int {
 func (r *Results) Set(i int, d time.Duration, amt float64) {
 	r.dur[i] = d
 	r.amt[i] = amt
+	r.ts[i] = time.Now()
 	// Kill cache
 	r.lat = nil
 	r.tpt = nil
@@ -177,7 +181,7 @@ func (r *Results) String() string {
 	}
 	s := ""
 	for i := 0; i < len(r.dur); i++ {
-		s += fmt.Sprintf("&{ Lat %v Tpt %f %v/sec }\n", r.dur[i], r.amt[i]/r.dur[i].Seconds(), r.unit)
+		s += fmt.Sprintf("&{ Time %vus Lat %v Tpt %f %v/sec }\n", r.ts[i].UnixMicro(), r.dur[i], r.amt[i]/r.dur[i].Seconds(), r.unit)
 	}
 	return s
 }

@@ -204,13 +204,13 @@ func makeWwwJobs(ts *test.Tstate, sigmaos bool, n int, wwwncore proc.Tcore, reqt
 
 // ========== Hotel Helpers ========
 
-func makeHotelJobs(ts *test.Tstate, sigmaos bool, ncore proc.Tcore, dur time.Duration, maxrps int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, ncore, dur, maxrps, fn)
+		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

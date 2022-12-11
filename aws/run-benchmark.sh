@@ -1,10 +1,11 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --command COMMAND" 1>&2
+  echo "Usage: $0 --vpc VPC --command COMMAND [--vm VM]" 1>&2
 }
 
 VPC=""
+VM=0
 COMMAND=""
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -16,6 +17,11 @@ while [[ $# -gt 0 ]]; do
   --command)
     shift
     COMMAND=$1
+    shift
+    ;;
+  --vm)
+    shift
+    VM=$1
     shift
     ;;
   -help)
@@ -41,10 +47,12 @@ vms_privaddr=(`./lsvpc.py $VPC --privaddr | grep -w VMInstance | cut -d " " -f 6
 MAIN="${vms[0]}"
 MAIN_PRIVADDR="${vms_privaddr[0]}"
 
-echo "Run [$MAIN]: $COMMAND"
-ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
+SSHVM="${vms[$VM]}"
+
+echo "Run [$SSHVM]: $COMMAND"
+ssh -i key-$VPC.pem ubuntu@$SSHVM /bin/bash <<ENDSSH
 cd ulambda
 export NAMED=$MAIN_PRIVADDR:1111
-export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;TEST_TPT;"
+export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;"
 $COMMAND
 ENDSSH

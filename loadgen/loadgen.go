@@ -1,6 +1,7 @@
 package loadgen
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	db "sigmaos/debug"
 )
 
-type Req func()
+type Req func(*rand.Rand)
 
 type LoadGenerator struct {
 	sync.Mutex
@@ -62,26 +63,31 @@ func (lg *LoadGenerator) setupInitThreads() {
 	}
 }
 
-func (lg *LoadGenerator) runReq(i int, store bool) {
+func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
 	defer lg.wg.Done()
 	start := time.Now()
-	lg.req()
+	lg.req(r)
 	if store {
 		lg.res.Set(i, time.Since(start), 1.0)
 	}
 }
 
 // Find the base latency on which to base future measurements.
-func (lg *LoadGenerator) calibrate() {
+func (lg *LoadGenerator) Calibrate() {
 	const N = 1000
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for i := 0; i < N; i++ {
 		lg.wg.Add(1)
-		lg.runReq(i, false)
+		lg.runReq(i, r, false)
 	}
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries.
-	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat)), benchmarks.REQ)
+	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat))+N, benchmarks.REQ)
+	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
+	for i := 0; i < N; i++ {
+		lg.res.Append(lg.avgReqLat, 1)
+	}
 }
 
 func (lg *LoadGenerator) warmup() {
@@ -91,6 +97,7 @@ func (lg *LoadGenerator) warmup() {
 func (lg *LoadGenerator) initiatorThread(tid int) {
 	t := time.NewTicker(lg.sleepdurs[tid])
 	var nreq int64
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	start := time.Now()
 	for time.Since(start) < lg.totaldur {
 		<-t.C
@@ -102,9 +109,13 @@ func (lg *LoadGenerator) initiatorThread(tid int) {
 		lg.Unlock()
 		// Run request in a separate thread.
 		lg.wg.Add(1)
-		go lg.runReq(idx, true)
+		go lg.runReq(idx, r, true)
 	}
 	lg.initC <- nreq
+}
+
+func (lg *LoadGenerator) StatsDataString() string {
+	return lg.res.String()
 }
 
 func (lg *LoadGenerator) Stats() {
@@ -116,9 +127,6 @@ func (lg *LoadGenerator) Stats() {
 
 func (lg *LoadGenerator) Run() {
 	db.DPrintf("TEST", "Start load generator")
-	// Calibrate.
-	lg.calibrate()
-	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	lg.warmup()
 	// Start initiator threads.
 	start := time.Now()

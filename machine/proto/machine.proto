@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "ulambda/machine/proto";
+
+service Machine {
+  rpc BootNoded(MachineRequest) returns (MachineResponse);
+  rpc ShutdownNoded(MachineRequest) returns (MachineResponse);
+}
+
+message MachineRequest {
+	string nodedId = 1;
+  int64 ncores = 2;
+}
+
+message MachineResponse {
+  bool oK = 1;
+}

@@ -40,11 +40,15 @@ type ProtDevSrv struct {
 }
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
-	psd := &ProtDevSrv{}
 	mfs, _, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
+	return MakeProtDevSrvMemFs(mfs, svci)
+}
+
+func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
+	psd := &ProtDevSrv{}
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)

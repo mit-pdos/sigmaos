@@ -1,9 +1,11 @@
 package mr
 
 import (
+	"bufio"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -29,7 +31,7 @@ type ReduceT func(string, []string, EmitT) error
 // The mr library calls the map function for each line of input, which
 // is passed in as an io.Reader.  The map function outputs its values
 // by calling an emit function and passing it a KeyValue.
-type MapT func(string, io.Reader, EmitT) error
+type MapT func(string, io.Reader, bufio.SplitFunc, EmitT) error
 
 // for sorting by key.
 type ByKey []*KeyValue
@@ -97,7 +99,8 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, 
 	binsz := uint64(0)
 	bin := Bin{}
 
-	sts, err := fsl.GetDir(dir)
+	anydir := strings.ReplaceAll(dir, "~ip", "~any")
+	sts, err := fsl.GetDir(anydir)
 	if err != nil {
 		return nil, err
 	}

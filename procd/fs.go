@@ -7,14 +7,14 @@ import (
 	"path"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
+	np "sigmaos/sigmap"
 )
 
 type ProcdFs struct {
@@ -60,6 +60,7 @@ func (pfs *ProcdFs) running(p *LinuxProc) *fcall.Err {
 	}
 	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
+		pfs.pd.perf.Done()
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
 		// TODO: return an fcall.Err return err
 	}
@@ -85,6 +86,8 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	default:
 		runq = np.PROCD_RUNQ_BE
 	}
+	// This procd will likely claim this proc, so cache it.
+	pfs.pd.pcache.Set(a.Pid, a)
 	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)

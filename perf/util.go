@@ -61,6 +61,8 @@ func init() {
 	labels = proc.GetLabels(proc.SIGMAPERF)
 }
 
+var loadfile *os.File
+
 // XXX make into multiple structs
 // Tracks performance statistics for any cores on which the current process is
 // able to run.
@@ -235,7 +237,20 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 }
 
 func GetLinuxLoad() Tload {
-	b, err := ioutil.ReadFile("/proc/loadavg")
+	// If load file isn't open, open it. Otherwise, seek to the beginning.
+	if loadfile == nil {
+		var err error
+		loadfile, err = os.Open("/proc/loadavg")
+		if err != nil {
+			db.DFatalf("Couldn't open load file: %v", err)
+		}
+	} else {
+		off, err := loadfile.Seek(0, 0)
+		if err != nil || off != 0 {
+			db.DFatalf("Error seeking in file: off %v err %v", off, err)
+		}
+	}
+	b, err := ioutil.ReadAll(loadfile)
 	if err != nil {
 		db.DFatalf("Couldn't read load file: %v", err)
 	}

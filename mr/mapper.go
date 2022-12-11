@@ -17,11 +17,11 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/rand"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -29,6 +29,7 @@ type Mapper struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	mapf        MapT
+	sbc         *ScanByteCounter
 	job         string
 	nreducetask int
 	linesz      int
@@ -51,6 +52,7 @@ func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *M
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.perf = p
+	m.sbc = MakeScanByteCounter(p)
 	return m
 }
 
@@ -164,7 +166,9 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	return encodeKV(m.wrts[r], kv.Key, kv.Value, r)
+	n, err := encodeKV(m.wrts[r], kv.Key, kv.Value, r)
+	m.perf.TptTick(float64(n))
+	return err
 	//	b, err := json.Marshal(kv)
 	//	if err != nil {
 	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
@@ -210,11 +214,10 @@ func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
 		if len(l) > 0 {
-			if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
+			if err := m.mapf(m.input, strings.NewReader(l), m.sbc.ScanWords, m.emit); err != nil {
 				return 0, err
 			}
 		}
-		m.perf.TptTick(float64(len(l)))
 		if np.Tlength(n) >= s.Length {
 			break
 		}

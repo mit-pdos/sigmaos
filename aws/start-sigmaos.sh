@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM [--n N] " 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM [--n N] [--ncores NCORES]" 1>&2
 }
 
-N_VM=""
 VPC=""
 REALM=""
+N_VM=""
+NCORES=4
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -25,6 +26,11 @@ while [[ $# -gt 0 ]]; do
     N_VM=$1
     shift
     ;;
+  --ncores)
+    shift
+    NCORES=$1
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -40,6 +46,11 @@ done
 if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
+fi
+
+if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
+  echo "Bad ncores $NCORES"
+  exit 1
 fi
 
 DIR=$(dirname $0)
@@ -60,7 +71,16 @@ for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   export SIGMADBADDR="10.0.102.10:3306"
   export NAMED="${NAMED}"
-  # export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;"
+#  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
+  if [ $NCORES -eq 2 ]; then
+    ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
+    echo "ncores:"
+    nproc
+  else
+    ./ulambda/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
+    echo "ncores:"
+    nproc
+  fi
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
     (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)

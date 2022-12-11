@@ -9,11 +9,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
+	"sigmaos/machine/proto"
 	"sigmaos/memfssrv"
 	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/resource"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
 	np "sigmaos/sigmap"
 )
 
@@ -33,7 +35,8 @@ type Machined struct {
 	*Config
 	*procclnt.ProcClnt
 	*fslib.FsLib
-	memfssrv *memfssrv.MemFs
+	pds *protdevsrv.ProtDevSrv
+	pdc *protdevclnt.ProtDevClnt
 }
 
 func MakeMachined(args []string) *Machined {
@@ -46,9 +49,16 @@ func MakeMachined(args []string) *Machined {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	m.memfssrv = mfs
-	m.path = path.Join(MACHINES, m.memfssrv.MyAddr())
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfssrv.Root(), np.RESOURCE_CTL)
+	m.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, m)
+	if err != nil {
+		db.DFatalf("Error MakeMemFs: %v", err)
+	}
+	m.pdc, err = protdevclnt.MkProtDevClnt(m.pds.FsLib(), np.SIGMAMGR)
+	if err != nil {
+		db.DFatalf("Error MkProtDevClnt: %v", err)
+	}
+
+	m.path = path.Join(MACHINES, m.pds.MyAddr())
 	m.initFS()
 	//	m.memfssrv.GetStats().MonitorCPUUtil(nil)
 	m.cleanLinuxFS()
@@ -69,33 +79,15 @@ func (m *Machined) cleanLinuxFS() {
 	}
 }
 
-func (m *Machined) receiveResourceGrant(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Tnode:
-		m.shutdownNoded(proc.Tpid(msg.Name))
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
-	}
-}
-
-func (m *Machined) handleResourceRequest(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Tnode:
-		db.DPrintf("MACHINED", "Request to boot noded with name %v", msg.Name)
-		m.bootNoded(proc.Tpid(msg.Name))
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
-	}
-}
-
 // Boot a fresh noded.
-func (m *Machined) bootNoded(pid proc.Tpid) {
+func (m *Machined) BootNoded(req proto.MachineRequest, res *proto.MachineResponse) error {
 	m.Lock()
 	defer m.Unlock()
 
+	pid := proc.Tpid(req.NodedId)
 	db.DPrintf("MACHINED", "Booting noded %v", pid)
 
-	p := proc.MakeProcPid(pid, "realm/noded", []string{m.memfssrv.MyAddr()})
+	p := proc.MakeProcPid(pid, "realm/noded", []string{m.pds.MyAddr()})
 	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", false)
 	if err != nil {
 		db.DFatalf("RunKernelProc: %v", err)
@@ -106,12 +98,16 @@ func (m *Machined) bootNoded(pid proc.Tpid) {
 	}
 
 	db.DPrintf("MACHINED", "Finished booting noded %v", pid)
+	res.OK = true
+	return nil
 }
 
 // Shut down a noded.
-func (m *Machined) shutdownNoded(pid proc.Tpid) {
+func (m *Machined) ShutdownNoded(req proto.MachineRequest, res *proto.MachineResponse) error {
 	m.Lock()
 	defer m.Unlock()
+
+	pid := proc.Tpid(req.NodedId)
 
 	if err := m.Evict(pid); err != nil {
 		db.DFatalf("Error evict: %v", err)
@@ -120,6 +116,8 @@ func (m *Machined) shutdownNoded(pid proc.Tpid) {
 		db.DFatalf("Error WaitExit: s %v e %v", status, err)
 	}
 	delete(m.nodeds, pid)
+	res.OK = true
+	return nil
 }
 
 func (m *Machined) initFS() {
@@ -132,7 +130,7 @@ func (m *Machined) initFS() {
 }
 
 func (m *Machined) postCores() {
-	coreGroupSize := uint64(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	coreGroupSize := NodedNCores()
 	if coreGroupSize == 0 {
 		db.DFatalf("Core group size 0")
 	}
@@ -141,13 +139,13 @@ func (m *Machined) postCores() {
 		if uint(iv.End) > linuxsched.NCores+1 {
 			iv.End = uint64(linuxsched.NCores + 1)
 		}
-		PostCores(m.FsLib, m.memfssrv.MyAddr(), iv)
+		PostCores(m.pdc, m.pds.MyAddr(), iv)
 	}
 }
 
 func (m *Machined) postConfig() {
 	// Post config in local fs.
-	if err := m.PutFileJson(path.Join(MACHINES, m.memfssrv.MyAddr(), CONFIG), 0777, m.Config); err != nil {
+	if err := m.PutFileJson(path.Join(MACHINES, m.pds.MyAddr(), CONFIG), 0777, m.Config); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 }

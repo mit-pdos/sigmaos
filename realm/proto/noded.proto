@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "ulambda/realm/proto";
+import "sigmap/sigmap.proto";
+
+service Noded {
+  rpc GrantCores(NodedRequest) returns (NodedResponse);
+  rpc RevokeCores(NodedRequest) returns (NodedResponse);
+}
+
+message NodedRequest {
+	Tinterval cores = 1;
+  bool allCores = 2;
+}
+
+message NodedResponse {
+  bool oK = 1;
+}

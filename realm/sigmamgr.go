@@ -11,10 +11,13 @@ import (
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
 	"sigmaos/machine"
+	mproto "sigmaos/machine/proto"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/resource"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	"sigmaos/realm/proto"
 	np "sigmaos/sigmap"
 	"sigmaos/stats"
 )
@@ -26,10 +29,11 @@ type SigmaResourceMgr struct {
 	realmDestroy   chan string
 	realmmgrs      map[string]proc.Tpid
 	realmLocks     map[string]*electclnt.ElectClnt
+	rclnts         map[string]*protdevclnt.ProtDevClnt
+	pds            *protdevsrv.ProtDevSrv
 	*procclnt.ProcClnt
 	*config.ConfigClnt
 	*fslib.FsLib
-	*memfssrv.MemFs
 }
 
 func MakeSigmaResourceMgr() *SigmaResourceMgr {
@@ -37,18 +41,25 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, m.ProcClnt, err = memfssrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
+	var mfs *memfssrv.MemFs
+	mfs, m.FsLib, m.ProcClnt, err = memfssrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
+
+	m.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, m)
+	if err != nil {
+		db.DFatalf("Error PDS: %v", err)
+	}
+
 	// Mount the KPIDS dir.
 	if err := procclnt.MountPids(m.FsLib, fslib.Named()); err != nil {
 		db.DFatalf("Error mountpids: %v", err)
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.initFS()
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.realmLocks = make(map[string]*electclnt.ElectClnt)
+	m.rclnts = make(map[string]*protdevclnt.ProtDevClnt)
 	m.realmmgrs = make(map[string]proc.Tpid)
 
 	return m
@@ -71,39 +82,42 @@ func (m *SigmaResourceMgr) initFS() {
 	}
 }
 
-func (m *SigmaResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Trealm:
-		m.destroyRealm(msg.Name)
-	case resource.Tnode:
-		db.DPrintf("SIGMAMGR", "free noded %v", msg.Name)
-	case resource.Tcore:
-		m.freeCores(1)
-		db.DPrintf("SIGMAMGR", "free cores %v", msg.Name)
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
-	}
+func (m *SigmaResourceMgr) FreeCores(req mproto.MachineRequest, res *mproto.MachineResponse) error {
+	m.freeCores(req.Ncores)
+	db.DPrintf("SIGMAMGR", "free cores %v", req.Ncores)
+	res.OK = true
+	return nil
 }
 
-// Handle a resource request.
-func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Trealm:
-		m.createRealm(msg.Name)
-	case resource.Tcore:
-		m.Lock()
-		defer m.Unlock()
+func (m *SigmaResourceMgr) FreeNode(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
+	db.DFatalf("Free noded")
+	return nil
+}
 
-		realmId := msg.Name
-		for i := 0; i < msg.Amount; i++ {
-			// If realm still exists, try to grow it.
-			if _, ok := m.realmLocks[realmId]; ok {
-				m.growRealmL(realmId)
-			}
-		}
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+func (m *SigmaResourceMgr) CreateRealm(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
+	db.DPrintf("SIGMAMGR", "Create realm %v", req.RealmId)
+	m.createRealm(req.RealmId)
+	res.OK = true
+	return nil
+}
+
+func (m *SigmaResourceMgr) DestroyRealm(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
+	db.DPrintf("SIGMAMGR", "Destroy realm %v", req.RealmId)
+	m.destroyRealm(req.RealmId)
+	res.OK = true
+	return nil
+}
+
+func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
+	m.Lock()
+	defer m.Unlock()
+
+	// If realm still exists, try to grow it.
+	if _, ok := m.realmLocks[req.RealmId]; ok {
+		m.growRealmL(req.RealmId, int(req.Qlen))
 	}
+	res.OK = true
+	return nil
 }
 
 // TODO: should probably release lock in this loop.
@@ -122,8 +136,14 @@ func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 
 func (m *SigmaResourceMgr) allocCores(realmId string, i int64) {
 	atomic.AddInt64(&m.freeCoreGroups, -1*i)
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, "", 1)
-	resource.SendMsg(m.FsLib, path.Join(realmMgrPath(realmId), np.RESOURCE_CTL), msg)
+	res := &proto.RealmMgrResponse{}
+	req := &proto.RealmMgrRequest{
+		Ncores: i,
+	}
+	err := m.rclnts[realmId].RPC("RealmMgr.GrantCores", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 }
 
 func (m *SigmaResourceMgr) freeCores(i int64) {
@@ -133,12 +153,24 @@ func (m *SigmaResourceMgr) freeCores(i int64) {
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
 // then retry. Caller holds lock.
-func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
+func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
 	// See if any cores are available.
 	if m.tryGetFreeCores(1) {
+		// Try to alloc qlen cores, or as many as are currently free otherwise.
+		nallocd := int64(qlen)
+		if nallocd == 0 {
+			nallocd = 1
+		}
+		nfree := atomic.LoadInt64(&m.freeCoreGroups)
+		if nfree < nallocd {
+			nallocd = nfree
+		}
+		db.DPrintf("SIGMAMGR", "Allocate %v free cores", nallocd)
 		// Allocate cores to this realm.
-		m.allocCores(realmId, 1)
-		return true
+		if nallocd > 0 {
+			m.allocCores(realmId, nallocd)
+			return true
+		}
 	}
 	// No cores were available, so try to find a realm with spare resources.
 	opRealmId, ok := m.findOverProvisionedRealm(realmId)
@@ -150,7 +182,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 	m.requestCores(opRealmId)
 	// Wait for the over-provisioned realm to cede its cores.
 	if m.tryGetFreeCores(100) {
-		// Allocate cores to this realm.
+		// Allocate core to this realm.
 		m.allocCores(realmId, 1)
 		return true
 	}
@@ -305,8 +337,14 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestCores(realmId string) {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, "", 1)
-	resource.SendMsg(m.FsLib, path.Join(realmMgrPath(realmId), np.RESOURCE_CTL), msg)
+	res := &proto.RealmMgrResponse{}
+	req := &proto.RealmMgrRequest{
+		Ncores: 1,
+	}
+	err := m.rclnts[realmId].RPC("RealmMgr.RevokeCores", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 	db.DPrintf("SIGMAMGR", "Sigmamgr done requesting cores from %v", realmId)
 }
 
@@ -328,9 +366,14 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	unlockRealm(m.realmLocks[realmId], realmId)
 	delete(m.realmLocks, realmId)
 
-	// Send a message to the realmmmgr telling it to kill its realm.
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, "", 1)
-	resource.SendMsg(m.FsLib, path.Join(realmMgrPath(realmId), np.RESOURCE_CTL), msg)
+	res := &proto.RealmMgrResponse{}
+	req := &proto.RealmMgrRequest{
+		AllCores: true,
+	}
+	err := m.rclnts[realmId].RPC("RealmMgr.ShutdownRealm", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 
 	m.evictRealmMgr(realmId)
 	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
@@ -347,6 +390,11 @@ func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 	}
 	db.DPrintf("SIGMAMGR", "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)
 	m.realmmgrs[realmId] = pid
+	var err error
+	m.rclnts[realmId], err = protdevclnt.MkProtDevClnt(m.FsLib, realmMgrPath(realmId))
+	if err != nil {
+		db.DFatalf("Error MkProtDevClnt: %v", err)
+	}
 }
 
 func (m *SigmaResourceMgr) evictRealmMgr(realmId string) {
@@ -359,9 +407,10 @@ func (m *SigmaResourceMgr) evictRealmMgr(realmId string) {
 		db.DFatalf("Error bad status evict realmmgr %v for realm %v: status %v err %v", pid, realmId, status, err)
 	}
 	delete(m.realmmgrs, realmId)
+	delete(m.rclnts, realmId)
 }
 
 func (m *SigmaResourceMgr) Work() {
-	m.Serve()
-	m.Done()
+	m.pds.Serve()
+	m.pds.Done()
 }

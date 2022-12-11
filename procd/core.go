@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
 	np "sigmaos/sigmap"
@@ -52,8 +51,7 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_AVAILABLE)
 	for i := 0; i < msg.Amount; i++ {
-		pd.nToWake++
-		pd.Signal()
+		pd.wakeWorkerL()
 	}
 }
 
@@ -83,47 +81,23 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	}
 	// Sanity check
 	if pd.coresAvail != oldNCoresOwned {
+		pd.perf.Done()
 		db.DFatalf("Mismatched num cores avail during rebalance: %v != %v", pd.coresAvail, oldNCoresOwned)
 	}
 	// Update the number of cores owned/available.
 	pd.coresOwned = newNCoresOwned
 	pd.coresAvail = newNCoresOwned
-	frac := map[proc.Tpid]*LinuxProc{} // Map of procs which would get a fractional core.
-	// Calculate new (proportional) core allocation for each proc, and track the
+	// Calculate new core allocation for each proc, and track the
 	// allocation. Rather than evict procs that don't fit, give them "0" cores.
-	for pid, p := range pd.runningProcs {
-		newNCore := p.attr.Ncore * newNCoresOwned / oldNCoresOwned
-		// Don't allocate more than the number of cores this proc initially asked
-		// for.
-		if newNCore > p.attr.Ncore {
-			// XXX This seems to me like it could lead to some fishiness when
-			// growing back after a shrink. One proc may not get all of its desired
-			// cores back, while some of those cores may sit idle. It is simple,
-			// though, so keep it for now.
-			newNCore = p.attr.Ncore
+	for _, p := range pd.runningProcs {
+		newNCore := p.attr.Ncore
+		// Make sure we don't overflow allocated cores.
+		if newNCore > pd.coresAvail {
+			newNCore = pd.coresAvail
 		}
-		// If this proc would be allocated less than one core, slate it for
-		// eviction, and don't alloc any cores.
-		if newNCore < 1 {
-			frac[pid] = p
-		} else {
-			// Resize the proc's core allocation.
-			// Allocate cores to the proc.
-			pd.allocCoresL(p, newNCore)
-			// Set the CPU affinity for this proc to match procd.
-			p.setCpuAffinityL()
-		}
-	}
-	// Give the fractional procs a remaining core each, until we run out of
-	// cores. Give the remaining ones 0 cores.
-	for _, p := range frac {
-		var ncore proc.Tcore
-		// If the proc fits...
-		if p.attr.Ncore <= pd.coresAvail {
-			ncore = p.attr.Ncore
-		}
+		// Resize the proc's core allocation.
 		// Allocate cores to the proc.
-		pd.allocCoresL(p, ncore)
+		pd.allocCoresL(p, newNCore)
 		// Set the CPU affinity for this proc to match procd.
 		p.setCpuAffinityL()
 	}
@@ -136,7 +110,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 // We claim a maximum of BE_PROC_OVERSUBSCRIPTION_RATE
 // procs per underutilized core core per claim interval, where a claim interval
 // is the length of ten CPU util samples.
-func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
+func (pd *Procd) procClaimRateLimitCheck(util float64) bool {
 	timeBetweenUtilSamples := time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond
 	// Check if we have moved onto the next interval (interval is currently 10 *
 	// utilization sample rate).
@@ -158,8 +132,30 @@ func (pd *Procd) procClaimRateLimitCheck(util float64, p *proc.Proc) bool {
 	if pd.netProcsClaimed < maxOversub {
 		return true
 	}
-	db.DPrintf("PROCD", "Failed proc claim rate limit check: %v > %v for proc %v", pd.netProcsClaimed, maxOversub, p)
+	db.DPrintf("PROCD", "Failed proc claim rate limit check: %v > %v", pd.netProcsClaimed, maxOversub)
 	return false
+}
+
+func (pd *Procd) canClaimBEProc() bool {
+	pd.Lock()
+	defer pd.Unlock()
+
+	_, _, ok := pd.canClaimBEProcL()
+	return ok
+}
+
+func (pd *Procd) canClaimBEProcL() (float64, bool, bool) {
+	// Determine whether or not we can run the proc based on
+	// utilization and rate-limiting. If utilization is below a certain threshold,
+	// take the proc.
+	util, _ := pd.memfssrv.GetStats().GetUtil()
+	rlc := pd.procClaimRateLimitCheck(util)
+	if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
+		db.DPrintf("PROCD", "Have enough cores for BE proc: util %v rate-limit check %v", util, rlc)
+		return util, rlc, true
+	}
+	db.DPrintf("PROCD", "Can't claim BE proc: util %v rate-limit check %v", util, rlc)
+	return util, rlc, false
 }
 
 // Check if this procd has enough cores to run proc p. Caller holds lock.
@@ -172,23 +168,22 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		}
 		db.DPrintf("PROCD", "Don't have enough LC cores (%v) for %v", pd.coresAvail, p)
 	} else {
-		// Otherwise, determine whether or not we can run the proc based on
-		// utilization. If utilization is below a certain threshold, take the proc.
-		util, _ := pd.memfssrv.GetStats().GetUtil()
-		load := perf.GetLinuxLoad()
-		cload := pd.memfssrv.GetStats().GetLoad()
-		rlc := pd.procClaimRateLimitCheck(util, p)
-		if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-			db.DPrintf("PROCD", "Have enough cores for BE proc: util %v Linux load %v Custom load %v rate-limit check %v proc %v", util, load, cload, rlc, p.Program)
+		if util, rlc, ok := pd.canClaimBEProcL(); ok {
 			return true
+		} else {
+			db.DPrintf("PROCD", "Not enough cores for BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 		}
-		db.DPrintf("PROCD", "Couldn't claim BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 	}
 	return false
 }
 
 // Allocate cores to a proc. Caller holds lock.
 func (pd *Procd) allocCoresL(p *LinuxProc, n proc.Tcore) {
+	if n > pd.coresAvail {
+		debug.PrintStack()
+		pd.perf.Done()
+		db.DFatalf("Alloc too many cores %v %v", p, n)
+	}
 	p.coresAlloced = n
 	pd.coresAvail -= n
 	pd.netProcsClaimed++
@@ -201,6 +196,7 @@ func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
 		// If we are double-setting a core's status, it's probably a bug.
 		if pd.coreBitmap[i] == status {
 			debug.PrintStack()
+			pd.perf.Done()
 			db.DFatalf("Error (noded:%v): Double-marked cores %v == %v", proc.GetNodedId(), pd.coreBitmap[i], status)
 		}
 		pd.coreBitmap[i] = status
@@ -244,16 +240,20 @@ func parseCoreInterval(ivStr string) []uint {
 // Run a sanity check for our core resource accounting. Caller holds lock.
 func (pd *Procd) sanityCheckCoreCountsL() {
 	if pd.coresOwned > proc.Tcore(linuxsched.NCores) {
+		pd.perf.Done()
 		db.DFatalf("Own more procd cores than there are cores on this machine: %v > %v", pd.coresOwned, linuxsched.NCores)
 	}
 	if pd.coresOwned < 0 {
+		pd.perf.Done()
 		db.DFatalf("Own too few cores: %v <= 0", pd.coresOwned)
 	}
 	if pd.coresAvail < 0 {
+		pd.perf.Done()
 		db.DFatalf("Too few cores available: %v < 0", pd.coresAvail)
 	}
 	if pd.coresAvail > pd.coresOwned {
 		debug.PrintStack()
+		pd.perf.Done()
 		db.DFatalf("More cores available than cores owned: %v > %v", pd.coresAvail, pd.coresOwned)
 	}
 }

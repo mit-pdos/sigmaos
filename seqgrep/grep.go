@@ -2,30 +2,29 @@ package seqgrep
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
-	"regexp"
 	"strings"
 
 	"github.com/klauspost/readahead"
 
 	"sigmaos/mr"
+	"sigmaos/perf"
 )
 
-func grepline1(n int, line string) {
-	re := regexp.MustCompile("[^a-zA-Z0-9_\\s]+")
-	sanitized := strings.ToLower(re.ReplaceAllString(line, " "))
-	for _, word := range strings.Fields(sanitized) {
-		if word == "scala" {
-			fmt.Printf("%d:%s\n", n, word)
-		}
-	}
-}
+//func grepline1(n int, line string) {
+//	re := regexp.MustCompile("[^a-zA-Z0-9_\\s]+")
+//	sanitized := strings.ToLower(re.ReplaceAllString(line, " "))
+//	for _, word := range strings.Fields(sanitized) {
+//		if word == "scala" {
+//			fmt.Printf("%d:%s\n", n, word)
+//		}
+//	}
+//}
 
-func grepline(n int, line string) int {
+func grepline(n int, line string, sbc *mr.ScanByteCounter) int {
 	scanner := bufio.NewScanner(strings.NewReader(line))
-	scanner.Split(mr.ScanWords)
+	scanner.Split(sbc.ScanWords)
 	cnt := 0
 	for scanner.Scan() {
 		w := scanner.Text()
@@ -41,6 +40,8 @@ func grepline(n int, line string) int {
 }
 
 func Grep(rdr io.Reader) int {
+	p := perf.MakePerf("SEQGREP")
+	sbc := mr.MakeScanByteCounter(p)
 	sz := 8 * (1 << 20)
 	ra, err := readahead.NewReaderSize(rdr, 4, sz)
 	if err != nil {
@@ -53,7 +54,7 @@ func Grep(rdr io.Reader) int {
 	cnt := 0
 	for scanner.Scan() {
 		l := scanner.Text()
-		cnt += grepline(n, l)
+		cnt += grepline(n, l, sbc)
 		n += 1
 	}
 	return cnt

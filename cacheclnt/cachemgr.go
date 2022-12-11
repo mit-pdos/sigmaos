@@ -7,6 +7,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	CACHE_NCORE = 2
+)
+
 type CacheMgr struct {
 	*shardsvcmgr.ShardMgr
 	job string

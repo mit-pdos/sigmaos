@@ -27,6 +27,7 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
+	p        *perf.Perf
 }
 
 // Run starts the server
@@ -94,8 +95,8 @@ func RunWww(job string) error {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 
-	pf := perf.MakePerf("HOTEL_WWW")
-	defer pf.Done()
+	www.p = perf.MakePerf("HOTEL_WWW")
+	defer www.p.Done()
 
 	if err := www.Started(); err != nil {
 		return err
@@ -119,6 +120,7 @@ func (s *Www) done() error {
 }
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	username, password := r.URL.Query().Get("username"), r.URL.Query().Get("password")
@@ -155,6 +157,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	//	headerContentTtype := r.Header.Get("Content-Type")
@@ -235,6 +238,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// lan/lon from query params
@@ -292,6 +296,7 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	inDate, outDate := r.URL.Query().Get("inDate"), r.URL.Query().Get("outDate")
@@ -379,6 +384,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	//XXX

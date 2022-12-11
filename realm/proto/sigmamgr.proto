@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option go_package = "ulambda/realm/proto";
+
+service SigmaMgr {
+  rpc FreeCores(SigmaMgrRequest) returns (SigmaMgrResponse);
+  rpc FreeNode(SigmaMgrRequest) returns (SigmaMgrResponse);
+  rpc CreateRealm(SigmaMgrRequest) returns (SigmaMgrResponse);
+  rpc DestroyRealm(SigmaMgrRequest) returns (SigmaMgrResponse);
+  rpc RequestCores(SigmaMgrRequest) returns (SigmaMgrResponse);
+}
+
+message SigmaMgrRequest {
+  string realmId = 1;
+	int64 qlen = 2;
+	int64 ncores = 3;
+}
+
+message SigmaMgrResponse {
+  bool oK = 1;
+}

@@ -19,12 +19,14 @@ type FdState struct {
 
 type FdTable struct {
 	sync.Mutex
-	fds []FdState
+	fds     []FdState
+	freefds map[int]bool
 }
 
 func mkFdTable() *FdTable {
 	fdt := &FdTable{}
 	fdt.fds = make([]FdState, 0, MAXFD)
+	fdt.freefds = make(map[int]bool)
 	return fdt
 }
 
@@ -32,14 +34,16 @@ func (fdt *FdTable) allocFd(nfid np.Tfid, m np.Tmode) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
-	for fd, fdst := range fdt.fds {
-		if fdst.fid == np.NoFid {
-			fdt.fds[fd].offset = 0
-			fdt.fds[fd].fid = nfid
-			fdt.fds[fd].mode = m
-			return fd
+	if len(fdt.freefds) > 0 {
+		for i, _ := range fdt.freefds {
+			delete(fdt.freefds, i)
+			fdt.fds[i].offset = 0
+			fdt.fds[i].fid = nfid
+			fdt.fds[i].mode = m
+			return i
 		}
 	}
+
 	// no free one
 	fdt.fds = append(fdt.fds, FdState{0, nfid, m})
 	return len(fdt.fds) - 1
@@ -50,6 +54,7 @@ func (fdt *FdTable) closefd(fd int) {
 	defer fdt.Unlock()
 
 	fdt.fds[fd].fid = np.NoFid
+	fdt.freefds[fd] = true
 }
 
 // Caller must have locked fdt

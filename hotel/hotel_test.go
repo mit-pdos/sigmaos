@@ -55,11 +55,11 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	// procds.
 	if !ts.RunningInRealm() {
 		// Start enough procds to run all of the srvs and the caches.
-		for i := 1; int(linuxsched.NCores)*i < len(srvs)+ncache; i++ {
+		for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
 			ts.BootProcd()
 		}
 	}
-	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, 1, ncache)
+	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, ncache)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -372,10 +372,10 @@ func TestBenchSearch(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
@@ -401,10 +401,10 @@ func TestBenchSearchK8s(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runSearch(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.Shutdown()
 }
@@ -414,10 +414,10 @@ func TestBenchGeo(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p := perf.MakePerf("TEST")
 	defer p.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
@@ -435,10 +435,10 @@ func TestBenchGeoK8s(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	pf := perf.MakePerf("TEST")
 	defer pf.Done()
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func() {
+	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
 		runGeo(ts.T, wc, r)
 	})
+	lg.Calibrate()
 	lg.Run()
 	ts.Shutdown()
 }

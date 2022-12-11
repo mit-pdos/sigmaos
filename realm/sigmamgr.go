@@ -198,7 +198,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bo
 func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug string) bool {
 	ndCfg := MakeNodedConfig()
 	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	db.DPrintf(debug, "Check if noded %v realm %v is overprovisioned", nodedId, realmId)
+	db.DPrintf(debug, "[%v] Check if noded %v is overprovisioned", realmId, nodedId)
 	s := &stats.StatInfo{}
 	err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
@@ -217,11 +217,11 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if totalCores-coresToRevoke < nLCCoresUsed {
-		db.DPrintf(debug, "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
+		db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v >= %v", realmId, totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
-	db.DPrintf(debug, "Noded is underutilizing LC: %v - %v >= %v, util:%v cutil:%v, cload:%v", totalCores, coresToRevoke, nLCCoresUsed, s.Util, s.CustomUtil, s.CustomLoad)
-	db.DPrintf(debug, "Noded %v has %v cores remaining.", nodedId, len(ndCfg.Cores))
+	db.DPrintf(debug, "[%v] Noded is underutilizing LC: %v - %v >= %v, util:%v cutil:%v, cload:%v", realmId, totalCores, coresToRevoke, nLCCoresUsed, s.Util, s.CustomUtil, s.CustomLoad)
+	db.DPrintf(debug, "[%v] Noded %v has %v cores remaining.", realmId, nodedId, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
 		qs := []string{np.PROCD_RUNQ_LC}
@@ -245,7 +245,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		// If this is the last core group for this noded, and its utilization is over
 		// a certain threshold (and it is running procs), don't evict.
 		if s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
-			db.DPrintf(debug, "Can't evict noded, util: %v runningProcs: %v", s.Util, len(runningProcs))
+			db.DPrintf(debug, "[%v] Can't evict noded, util: %v runningProcs: %v", realmId, s.Util, len(runningProcs))
 			return false
 		}
 		for _, st := range runningProcs {
@@ -262,7 +262,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 				db.DPrintf(debug, "Noded %v's proc %v, is not LC", nodedId, p)
 			}
 		}
-		db.DPrintf(debug, "Evicting noded %v realm %v", nodedId, realmId)
+		db.DPrintf(debug, "[%v] Evicting noded %v realm %v", realmId, nodedId, realmId)
 	}
 	return true
 }

@@ -97,7 +97,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
-	db.DPrintf("REALMMGR", "[%v] resource.Tcore requested", m.realmId)
+	db.DPrintf("REALMMGR", "[%v] resource.Tcore revoked", m.realmId)
 
 	nodedId, ok := m.getLeastUtilizedNoded()
 

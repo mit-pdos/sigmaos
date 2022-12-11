@@ -526,6 +526,8 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 		// Hard request if there are any LC procs.
 		if anyLC {
+			// Filter machines to request more cores on by utilization, and sort in
+			// order of importance.
 			nodeds := sortNodedsByAscendingProcdUtil(utils)
 			machineIds = make([]string, 0, len(nodeds))
 			for i := len(nodeds) - 1; i >= 0; i-- {

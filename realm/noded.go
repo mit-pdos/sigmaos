@@ -77,6 +77,7 @@ func MakeNoded(machineId string) *Noded {
 
 	// Set up the noded config
 	nd.cfg = MakeNodedConfig()
+	db.DPrintf("NODED", "Boot on machine %v", machineId)
 	nd.cfg.MachineId = machineId
 
 	return nd

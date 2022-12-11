@@ -3,8 +3,8 @@ syntax = "proto3";
 option go_package = "ulambda/machine/proto";
 
 service User {
-  rpc BootMachine(MachineRequest) returns (MachineResponse);
-  rpc CheckAvailability(MachineRequest) returns (MachineResponse);
+  rpc BootNoded(MachineRequest) returns (MachineResponse);
+  rpc ShutdownNoded(MachineRequest) returns (MachineResponse);
 }
 
 message MachineRequest {

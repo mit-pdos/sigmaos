@@ -115,7 +115,7 @@ func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.Si
 
 	// If realm still exists, try to grow it.
 	if _, ok := m.realmLocks[req.RealmId]; ok {
-		m.growRealmL(req.RealmId, int(req.Qlen), req.Machines, req.HardReq)
+		m.growRealmL(req.RealmId, int(req.Qlen), req.MachineIds, req.HardReq)
 	}
 	res.OK = true
 	return nil

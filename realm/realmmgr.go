@@ -381,8 +381,9 @@ func (m *RealmResourceMgr) getRealmConfig() (*RealmConfig, error) {
 }
 
 // Get all a realm's procd's stats
-func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) map[string]*stats.StatInfo {
-	stat := make(map[string]*stats.StatInfo)
+func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]*stats.StatInfo, mIdMap map[string]string) {
+	stat = make(map[string]*stats.StatInfo)
+	mIdMap = make(map[string]string)
 	for _, nodedId := range nodeds {
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
@@ -393,14 +394,17 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) map[string]*stats
 			continue
 		}
 		stat[nodedId] = s
+		// Map fron nodedId to machineId
+		mIdMap[nodedId] = ndCfg.MachineId
 	}
-	return stat
+	return stat, mIdMap
 }
 
-func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, utilMap map[string]float64, anyLC bool) {
+func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, utilMap map[string]float64, mIdMap map[string]string, anyLC bool) {
 	// Get stats
 	utilMap = make(map[string]float64)
-	procdStats := m.getRealmProcdStats(cfg.NodedsActive)
+	var procdStats map[string]*stats.StatInfo
+	procdStats, mIdMap = m.getRealmProcdStats(cfg.NodedsActive)
 	avgUtil = 0.0
 	anyLC = false
 	for nodedId, stat := range procdStats {
@@ -412,13 +416,25 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, util
 	if len(procdStats) > 0 {
 		avgUtil /= float64(len(procdStats))
 	}
-	return avgUtil, utilMap, anyLC
+	return avgUtil, utilMap, mIdMap, anyLC
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() (lcqlen int, beqlen int) {
 	stslc, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
 	stsbe, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
 	return len(stslc), len(stsbe)
+}
+
+func sortNodedsByAscendingProcdUtil(procdUtils map[string]float64) []string {
+	nodeds := make([]string, 0, len(procdUtils))
+	for nodedId, _ := range procdUtils {
+		nodeds = append(nodeds, nodedId)
+	}
+	// Sort nodeds in order of ascending utilization.
+	sort.Slice(nodeds, func(i, j int) bool {
+		return procdUtils[nodeds[i]] < procdUtils[nodeds[j]]
+	})
+	return nodeds
 }
 
 func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
@@ -432,17 +448,10 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 		return "", false
 	}
 
-	_, procdUtils, _ := m.getRealmUtil(realmCfg)
+	_, procdUtils, _, _ := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] searching for least utilized node, procd utils: %v", m.realmId, procdUtils)
 
-	nodeds := make([]string, 0, len(procdUtils))
-	for nodedId, _ := range procdUtils {
-		nodeds = append(nodeds, nodedId)
-	}
-	// Sort nodeds in order of ascending utilization.
-	sort.Slice(nodeds, func(i, j int) bool {
-		return procdUtils[nodeds[i]] < procdUtils[nodeds[j]]
-	})
+	nodeds := sortNodedsByAscendingProcdUtil(procdUtils)
 	// Find a noded which can be shrunk.
 	for _, nodedId := range nodeds {
 		if nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR") {
@@ -453,7 +462,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 }
 
 // Returns true if the realm should grow, and returns the queue length.
-func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, shouldGrow bool) {
+func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds []string, shouldGrow bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
@@ -461,24 +470,24 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, shouldGrow
 	realmCfg, err := m.getRealmConfig()
 	if err != nil {
 		db.DPrintf("REALMMGR", "Error getRealmConfig: %v", err)
-		return 0, false, false
+		return 0, false, machineIds, false
 	}
 
 	// If the realm is shutting down, return
 	if realmCfg.Shutdown {
-		return 0, false, false
+		return 0, false, machineIds, false
 	}
 
 	// If we don't have enough noded replicas to start the realm yet, we need to
 	// grow the realm.
 	if len(realmCfg.NodedsAssigned) < nReplicas() {
-		return 1, true, true
+		return 1, true, machineIds, true
 	}
 
 	// If we haven't finished booting, we aren't ready to start scanning/growing
 	// the realm.
 	if len(realmCfg.NodedsActive) < nReplicas() {
-		return 0, false, false
+		return 0, false, machineIds, false
 	} else {
 		// If the realm just finished booting, finish initialization.
 		if m.FsLib == nil {
@@ -488,7 +497,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, shouldGrow
 
 	// If we have resized too recently, return
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
-		return 0, false, false
+		return 0, false, machineIds, false
 	}
 
 	// If there are a lot of procs waiting to be run/stolen...
@@ -497,16 +506,26 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, shouldGrow
 	if qlen >= int(machine.NodedNCores()) {
 		// This is a hard reservation request (highest priority) if there are LC
 		// procs queued.
-		return qlen, lcqlen > 0, true
+		return qlen, lcqlen > 0, machineIds, true
 	}
-
-	avgUtil, utils, anyLC := m.getRealmUtil(realmCfg)
+	var avgUtil float64
+	var utils map[string]float64
+	var machineIdMap map[string]string
+	var anyLC bool
+	avgUtil, utils, machineIdMap, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
 	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD && qlen >= 0 {
 		// Hard request if there are any LC procs.
-		return qlen, anyLC, true
+		if anyLC {
+			nodeds := sortNodedsByAscendingProcdUtil(utils)
+			machineIds = make([]string, len(nodeds))
+			for i := len(nodeds); i >= 0; i-- {
+				machineIds = append(machineIds, machineIdMap[nodeds[i]])
+			}
+		}
+		return qlen, anyLC, machineIds, true
 	}
-	return 0, false, false
+	return 0, false, machineIds, false
 }
 
 func (m *RealmResourceMgr) Work() {
@@ -522,13 +541,14 @@ func (m *RealmResourceMgr) Work() {
 	}()
 
 	for {
-		if qlen, hardReq, ok := m.realmShouldGrow(); ok {
+		if qlen, hardReq, machineIds, ok := m.realmShouldGrow(); ok {
 			db.DPrintf("REALMMGR", "[%v] Try to grow realm qlen %v", m.realmId, qlen)
 			res := &proto.SigmaMgrResponse{}
 			req := &proto.SigmaMgrRequest{
-				RealmId: m.realmId,
-				Qlen:    int64(qlen),
-				HardReq: hardReq,
+				RealmId:    m.realmId,
+				Qlen:       int64(qlen),
+				HardReq:    hardReq,
+				MachineIds: machineIds,
 			}
 			err := m.sclnt.RPC("SigmaMgr.RequestCores", req, res)
 			if err != nil || !res.OK {

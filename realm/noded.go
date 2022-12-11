@@ -77,6 +77,7 @@ func MakeNoded(machineId string) *Noded {
 
 	// Set up the noded config
 	nd.cfg = MakeNodedConfig()
+	nd.cfg.MachineId = machineId
 
 	return nd
 }

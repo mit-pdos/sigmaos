@@ -527,7 +527,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 		// Hard request if there are any LC procs.
 		if anyLC {
 			nodeds := sortNodedsByAscendingProcdUtil(utils)
-			machineIds = make([]string, len(nodeds))
+			machineIds = make([]string, 0, len(nodeds))
 			for i := len(nodeds) - 1; i >= 0; i-- {
 				// Only grow allocations on highly-utilized machines.
 				if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
@@ -537,7 +537,6 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 					machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 				}
 			}
-			db.DPrintf(db.ALWAYS, "noded to machined noded %v machined %v, got machineIds %v", nodeds, m.nodedToMachined, machineIds)
 		}
 		return qlen, anyLC, machineIds, true
 	}

@@ -531,9 +531,6 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 			for i := len(nodeds) - 1; i >= 0; i-- {
 				// Only grow allocations on highly-utilized machines.
 				if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
-					if _, ok := m.nodedToMachined[nodeds[i]]; !ok {
-						db.DFatalf("Try to convert noded on unknown machined: %v", nodeds[i])
-					}
 					machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 				}
 			}

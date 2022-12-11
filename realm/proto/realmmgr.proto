@@ -11,6 +11,7 @@ service RealmMgr {
 message RealmMgrRequest {
 	int64 ncores = 1;
   bool allCores = 2;
+  bool hardReq = 3;
 }
 
 message RealmMgrResponse {

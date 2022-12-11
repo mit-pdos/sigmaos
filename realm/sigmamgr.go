@@ -114,7 +114,7 @@ func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.Si
 
 	// If realm still exists, try to grow it.
 	if _, ok := m.realmLocks[req.RealmId]; ok {
-		m.growRealmL(req.RealmId, int(req.Qlen))
+		m.growRealmL(req.RealmId, int(req.Qlen), req.HardReq)
 	}
 	res.OK = true
 	return nil
@@ -153,7 +153,7 @@ func (m *SigmaResourceMgr) freeCores(i int64) {
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
 // then retry. Caller holds lock.
-func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
+func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bool {
 	// See if any cores are available.
 	if m.tryGetFreeCores(1) {
 		// Try to alloc qlen cores, or as many as are currently free otherwise.
@@ -179,7 +179,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int) bool {
 		return false
 	}
 	// Ask the over-provisioned realm to give up some cores.
-	m.requestCores(opRealmId)
+	m.requestCores(opRealmId, hardReq)
 	// Wait for the over-provisioned realm to cede its cores.
 	if m.tryGetFreeCores(100) {
 		// Allocate core to this realm.
@@ -219,6 +219,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		db.DPrintf(debug, "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
+	db.DPrintf(debug, "Noded is underutilizing LC: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 	db.DPrintf(debug, "Noded %v has %v cores remaining.", nodedId, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
@@ -335,11 +336,12 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 }
 
 // Request a Noded from realm realmId.
-func (m *SigmaResourceMgr) requestCores(realmId string) {
+func (m *SigmaResourceMgr) requestCores(realmId string, hardReq bool) {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	res := &proto.RealmMgrResponse{}
 	req := &proto.RealmMgrRequest{
-		Ncores: 1,
+		Ncores:  1,
+		HardReq: hardReq,
 	}
 	err := m.rclnts[realmId].RPC("RealmMgr.RevokeCores", req, res)
 	if err != nil || !res.OK {

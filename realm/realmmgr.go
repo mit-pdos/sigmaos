@@ -19,6 +19,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
+	"sigmaos/realm/proto"
 	"sigmaos/resource"
 	np "sigmaos/sigmap"
 	"sigmaos/stats"
@@ -38,6 +39,7 @@ type RealmResourceMgr struct {
 	memfs *memfssrv.MemFs
 	*procclnt.ProcClnt
 	mclnts map[string]*protdevclnt.ProtDevClnt
+	nclnts map[string]*protdevclnt.ProtDevClnt
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
 }
@@ -51,6 +53,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 	m.mclnts = make(map[string]*protdevclnt.ProtDevClnt)
+	m.nclnts = make(map[string]*protdevclnt.ProtDevClnt)
 
 	var err error
 	m.memfs, err = memfssrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
@@ -96,9 +99,14 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 			db.DFatalf("Error get realm config.")
 		}
 		for _, nodedId := range realmCfg.NodedsAssigned {
-			// Otherwise, take some cores away.
-			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, machine.ALL_CORES, 0)
-			resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
+			res := &proto.NodedResponse{}
+			req := &proto.NodedRequest{
+				AllCores: true,
+			}
+			err := m.nclnts[nodedId].RPC("Noded.RevokeCores", req, res)
+			if err != nil || !res.OK {
+				db.DFatalf("Error RPC: %v %v", err, res.OK)
+			}
 			db.DPrintf("REALMMGR", "[%v] Deallocating noded %v", m.realmId, nodedId)
 		}
 	case resource.Tcore:
@@ -126,8 +134,14 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		cores := ndCfg.Cores[len(ndCfg.Cores)-1]
 		db.DPrintf("REALMMGR", "[%v] Revoking cores %v from noded %v", m.realmId, cores, nodedId)
 		// Otherwise, take some cores away.
-		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.Marshal(), int(cores.Size()))
-		resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedId), msg)
+		res := &proto.NodedResponse{}
+		req := &proto.NodedRequest{
+			Cores: cores,
+		}
+		err := m.nclnts[nodedId].RPC("Noded.RevokeCores", req, res)
+		if err != nil || !res.OK {
+			db.DFatalf("Error RPC: %v %v", err, res.OK)
+		}
 		db.DPrintf("REALMMGR", "[%v] Revoked cores %v from noded %v", m.realmId, cores, nodedId)
 		m.updateResizeTimeL(m.realmId)
 	default:
@@ -162,11 +176,22 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 				m.requestNoded(nodedIds[i], machineIds[i])
 				db.DPrintf("REALMMGR", "[%v] Started noded %v on %v", m.realmId, nodedIds[i], machineIds[i])
 				db.DPrintf("REALMMGR", "[%v] Allocated %v", m.realmId, nodedIds[i])
+				var err error
+				m.nclnts[nodedIds[i]], err = protdevclnt.MkProtDevClnt(m.sigmaFsl, nodedPath(m.realmId, nodedIds[i]))
+				if err != nil {
+					db.DFatalf("Error MkProtDevClnt: %v", err)
+				}
+
 			} else {
 				db.DPrintf("REALMMGR", "[%v] Growing noded %v core allocation on machine %v by %v", m.realmId, nodedIds[i], machineIds[i], cores)
-				// Otherwise, grant new cores to this noded.
-				msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, c.Marshal(), int(c.Size()))
-				resource.SendMsg(m.sigmaFsl, nodedCtlPath(m.realmId, nodedIds[i]), msg)
+				res := &proto.NodedResponse{}
+				req := &proto.NodedRequest{
+					Cores: c,
+				}
+				err := m.nclnts[nodedIds[i]].RPC("Noded.GrantCores", req, res)
+				if err != nil || !res.OK {
+					db.DFatalf("Error RPC: %v %v", err, res.OK)
+				}
 			}
 			m.updateResizeTime(m.realmId)
 		}
@@ -274,7 +299,6 @@ func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 	req := &mproto.MachineRequest{
 		NodedId: nodedId,
 	}
-
 	err := clnt.RPC("Machined.BootNoded", req, res)
 	if err != nil || !res.OK {
 		db.DFatalf("Error RPC: %v %v", err, res.OK)

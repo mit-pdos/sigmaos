@@ -14,6 +14,8 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/protdevsrv"
+	"sigmaos/realm/proto"
 	"sigmaos/resource"
 	"sigmaos/semclnt"
 	np "sigmaos/sigmap"
@@ -22,7 +24,6 @@ import (
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	mfs       *memfssrv.MemFs
 	id        string
 	machineId string
 	localIP   string
@@ -31,6 +32,7 @@ type Noded struct {
 	cfg       *NodedConfig
 	s         *kernel.System
 	ec        *electclnt.ElectClnt
+	pds       *protdevsrv.ProtDevSrv
 	*config.ConfigClnt
 }
 
@@ -43,14 +45,15 @@ func MakeNoded(machineId string) *Noded {
 	nd.FsLib = fslib.MakeFsLib(nd.id)
 	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
 	nd.ConfigClnt = config.MakeConfigClnt(nd.FsLib)
-	var err error
-	nd.mfs, err = memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFsFsl: %v", err)
 	}
 
-	// Make a control file
-	resource.MakeCtlFile(nd.receiveResourceGrant, nd.handleResourceRequest, nd.mfs.Root(), np.RESOURCE_CTL)
+	nd.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, nd)
+	if err != nil {
+		db.DFatalf("Error MakeMemFs: %v", err)
+	}
 
 	// Mount the KPIDS dir.
 	if err := procclnt.MountPids(nd.FsLib, fslib.Named()); err != nil {
@@ -72,77 +75,112 @@ func MakeNoded(machineId string) *Noded {
 	return nd
 }
 
-func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Tcore:
-		db.DPrintf("NODED", "Noded %v granted cores %v", nd.id, msg.Name)
+func (nd *Noded) GrantCores(req proto.NodedRequest, res *proto.NodedResponse) error {
+	db.DPrintf("NODED", "Noded %v granted cores %v", nd.id, req.Cores)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
+	nd.forwardResourceMsgToProcd(msg)
+
+	nd.cfg.Cores = append(nd.cfg.Cores, req.Cores)
+	nd.WriteConfig(nd.cfgPath, nd.cfg)
+
+	lockRealm(nd.ec, nd.cfg.RealmId)
+	defer unlockRealm(nd.ec, nd.cfg.RealmId)
+
+	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+	realmCfg.NCores += proc.Tcore(req.Cores.Size())
+	nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
+	res.OK = true
+	return nil
+}
+
+func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) error {
+	db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, req.Cores)
+
+	// If all cores were requested, shut down.
+	if req.AllCores || len(nd.cfg.Cores) == 1 {
+		db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
+		// Leave the realm and prepare to shut down.
+		nd.leaveRealm()
+		nd.done <- true
+		close(nd.done)
+	} else {
+		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
 		nd.forwardResourceMsgToProcd(msg)
 
-		cores := np.MkInterval(0, 0)
-		cores.Unmarshal(msg.Name)
+		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
 
-		nd.cfg.Cores = append(nd.cfg.Cores, cores)
+		// Sanity check: should be at least 2 core groups when removing one.
+		// Otherwise, we should have shut down.
+		if len(nd.cfg.Cores) < 2 {
+			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+		}
+		// Sanity check: we always take the last cores allocated.
+		if cores.Start != req.Cores.Start || cores.End != req.Cores.End {
+			db.DFatalf("Removed unexpected core group: %v from %v", req.Cores.Marshal(), nd.cfg)
+		}
+
+		// Update the core allocations for this noded.
+		var rmCores *np.Tinterval
+		nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
-
-		lockRealm(nd.ec, nd.cfg.RealmId)
-		defer unlockRealm(nd.ec, nd.cfg.RealmId)
 
 		// Update the realm's total core count. The Realmmgr holds the realm
 		// lock.
 		realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
-		realmCfg.NCores += proc.Tcore(cores.Size())
+		realmCfg.NCores -= proc.Tcore(rmCores.Size())
 		nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
 
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+		machine.PostCores(nd.FsLib, nd.machineId, cores)
 	}
+	res.OK = true
+	return nil
 }
 
-func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
-	switch msg.ResourceType {
-	case resource.Tcore:
-		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
-
-		// If all cores were requested, shut down.
-		if msg.Name == machine.ALL_CORES || len(nd.cfg.Cores) == 1 {
-			db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
-			// Leave the realm and prepare to shut down.
-			nd.leaveRealm()
-			nd.done <- true
-			close(nd.done)
-		} else {
-			nd.forwardResourceMsgToProcd(msg)
-
-			cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
-
-			// Sanity check: should be at least 2 core groups when removing one.
-			// Otherwise, we should have shut down.
-			if len(nd.cfg.Cores) < 2 {
-				db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
-			}
-			// Sanity check: we always take the last cores allocated.
-			if cores.Marshal() != msg.Name {
-				db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
-			}
-
-			// Update the core allocations for this noded.
-			var rmCores *np.Tinterval
-			nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
-			nd.WriteConfig(nd.cfgPath, nd.cfg)
-
-			// Update the realm's total core count. The Realmmgr holds the realm
-			// lock.
-			realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
-			realmCfg.NCores -= proc.Tcore(rmCores.Size())
-			nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
-
-			machine.PostCores(nd.FsLib, nd.machineId, cores)
-		}
-
-	default:
-		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
-	}
-}
+//func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
+//	switch msg.ResourceType {
+//	case resource.Tcore:
+//		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
+//
+//		// If all cores were requested, shut down.
+//		if msg.Name == machine.ALL_CORES || len(nd.cfg.Cores) == 1 {
+//			db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
+//			// Leave the realm and prepare to shut down.
+//			nd.leaveRealm()
+//			nd.done <- true
+//			close(nd.done)
+//		} else {
+//			nd.forwardResourceMsgToProcd(msg)
+//
+//			cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
+//
+//			// Sanity check: should be at least 2 core groups when removing one.
+//			// Otherwise, we should have shut down.
+//			if len(nd.cfg.Cores) < 2 {
+//				db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+//			}
+//			// Sanity check: we always take the last cores allocated.
+//			if cores.Marshal() != msg.Name {
+//				db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
+//			}
+//
+//			// Update the core allocations for this noded.
+//			var rmCores *np.Tinterval
+//			nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
+//			nd.WriteConfig(nd.cfgPath, nd.cfg)
+//
+//			// Update the realm's total core count. The Realmmgr holds the realm
+//			// lock.
+//			realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+//			realmCfg.NCores -= proc.Tcore(rmCores.Size())
+//			nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
+//
+//			machine.PostCores(nd.FsLib, nd.machineId, cores)
+//		}
+//
+//	default:
+//		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+//	}
+//}
 
 func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 	procdIp := nd.s.GetProcdIp()
@@ -208,7 +246,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NCores += nd.countNCores()
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.mfs.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
+	if err := nd.Symlink(fslib.MakeTarget([]string{nd.pds.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }

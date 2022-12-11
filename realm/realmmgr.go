@@ -6,6 +6,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"sigmaos/config"
@@ -31,6 +32,7 @@ import (
  */
 
 type RealmResourceMgr struct {
+	sync.Mutex
 	realmId string
 	// ===== Relative to the sigma named =====
 	sigmaFsl *fslib.FsLib
@@ -88,6 +90,9 @@ func (m *RealmResourceMgr) initFS() {
 }
 
 func (m *RealmResourceMgr) GrantCores(req proto.RealmMgrRequest, res *proto.RealmMgrResponse) error {
+	m.Lock()
+	defer m.Unlock()
+
 	db.DPrintf("REALMMGR", "[%v] resource.Tcore granted %v", m.realmId, req.Ncores)
 	m.growRealm(int(req.Ncores))
 	res.OK = true
@@ -96,8 +101,11 @@ func (m *RealmResourceMgr) GrantCores(req proto.RealmMgrRequest, res *proto.Real
 
 // XXX Should we prioritize defragmentation, or try to avoid evictions?
 func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.RealmMgrResponse) error {
+	m.Lock()
+	defer m.Unlock()
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
+
 	res.OK = true
 
 	// Get the realm's config
@@ -549,7 +557,10 @@ func (m *RealmResourceMgr) Work() {
 	}()
 
 	for {
-		if qlen, hardReq, machineIds, ok := m.realmShouldGrow(); ok {
+		m.Lock()
+		qlen, hardReq, machineIds, ok := m.realmShouldGrow()
+		m.Unlock()
+		if ok {
 			db.DPrintf("REALMMGR", "[%v] Try to grow realm qlen %v", m.realmId, qlen)
 			res := &proto.SigmaMgrResponse{}
 			req := &proto.SigmaMgrRequest{

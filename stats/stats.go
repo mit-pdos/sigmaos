@@ -203,7 +203,6 @@ func setLoad(load *perf.Tload, x float64) {
 // Caller holds lock
 func (st *Stats) loadCPUUtilL(idle, total uint64, customUtil float64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
-	db.DPrintf("PROCD_UTIL_AAA", "Loading custom util %v", customUtil)
 
 	setLoad(&st.sti.Load, util)
 	setLoad(&st.sti.CustomLoad, customUtil)

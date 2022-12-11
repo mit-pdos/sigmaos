@@ -100,10 +100,10 @@ func (pd *Procd) offerStealableProcs() {
 				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					// Don't re-offer procs which have already been offered.
 					if _, ok := alreadyOffered[st.Name]; !ok {
-						toOffer[st.Name] = runqPath
+						toOffer[st.Name] = runq
 					}
-					present[st.Name] = runqPath
-					alreadyOffered[st.Name] = runqPath
+					present[st.Name] = runq
+					alreadyOffered[st.Name] = runq
 				}
 				return false, nil
 			})
@@ -111,24 +111,26 @@ func (pd *Procd) offerStealableProcs() {
 				pd.perf.Done()
 				db.DFatalf("Error ProcessDir: p %v err %v myIP %v", runqPath, err, pd.memfssrv.MyAddr())
 			}
-			for pid, runqPath := range toOffer {
-				db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
-				// If proc has been haning in the runq for too long...
-				target := path.Join(runqPath, pid) + "/"
-				link := path.Join(np.PROCD_WS, runq, pid)
-				if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !fcall.IsErrExists(err) {
-					pd.perf.Done()
-					db.DFatalf("Error Symlink: %v", err)
-				}
-			}
-			// Clean up procs which are no longer in the queue.
-			for pid := range alreadyOffered {
-				// Proc is no longer in the queue, so forget about it.
-				if _, ok := present[pid]; !ok {
-					delete(alreadyOffered, pid)
-				}
+		}
+		//		db.DPrintf("PROCD", "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
+		for pid, runq := range toOffer {
+			db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
+			// If proc has been haning in the runq for too long...
+			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
+			target := path.Join(runqPath, pid) + "/"
+			link := path.Join(np.PROCD_WS, runq, pid)
+			if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil {
+				pd.perf.Done()
+				db.DFatalf("Error Symlink: %v", err)
 			}
 		}
+		//		// Clean up procs which are no longer in the queue.
+		//		for pid := range alreadyOffered {
+		//			// Proc is no longer in the queue, so forget about it.
+		//			if _, ok := present[pid]; !ok {
+		//				delete(alreadyOffered, pid)
+		//			}
+		//		}
 	}
 }
 
@@ -137,7 +139,8 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 	// If this proc is remote, remove the symlink.
 	if isRemote {
 		// Remove the symlink (don't follow).
-		pd.Remove(procPath[:len(procPath)-1])
+		link := procPath[:len(procPath)-1]
+		pd.Remove(link)
 	} else {
 		// If proc was offered up for work stealing...
 		if time.Since(p.attr.SpawnTime) >= np.Conf.Procd.STEALABLE_PROC_TIMEOUT {

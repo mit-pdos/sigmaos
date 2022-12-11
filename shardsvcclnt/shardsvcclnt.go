@@ -12,7 +12,6 @@ import (
 	"sigmaos/protdevsrv"
 	"sigmaos/reader"
 	"sigmaos/shardsvcmgr"
-	sp "sigmaos/sigmap"
 )
 
 type ShardWatch func(string, int, error)
@@ -63,7 +62,6 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 		return err
 	}
 	ssc.clnts = append(ssc.clnts, pdc)
-	log.Printf("%v: addClnt %d\n", proc.GetName(), len(ssc.clnts))
 	return nil
 }
 
@@ -74,7 +72,6 @@ func (ssc *ShardSvcClnt) Watch(path string, err error) {
 		return
 	}
 	sts, err := ssc.GetDir(path)
-	log.Printf("%v: sts %v\n", proc.GetName(), sp.Names(sts))
 	if len(sts) > len(ssc.clnts) {
 		if err := ssc.addClnt(len(sts) - 1); err != nil {
 			log.Printf("%v: addClnt err %v\n", proc.GetName(), err)

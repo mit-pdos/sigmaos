@@ -471,7 +471,7 @@ func (pd *Procd) Work() {
 		pd.memfssrv.Serve()
 		pd.memfssrv.Done()
 	}()
-	go pd.offerStealableProcs()
+	//	go pd.offerStealableProcs()
 	pd.startWorkStealingMonitors()
 	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
 	// procd is full

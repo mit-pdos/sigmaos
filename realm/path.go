@@ -2,8 +2,6 @@ package realm
 
 import (
 	"path"
-
-	np "sigmaos/sigmap"
 )
 
 const (
@@ -43,8 +41,4 @@ func realmMgrPath(realmId string) string {
 // Path to this noded's fs.
 func nodedPath(realmId string, nodedId string) string {
 	return path.Join(realmMgrPath(realmId), NODEDS, nodedId)
-}
-
-func nodedCtlPath(realmId string, nodedId string) string {
-	return path.Join(nodedPath(realmId, nodedId), np.RESOURCE_CTL)
 }

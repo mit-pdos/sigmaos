@@ -33,7 +33,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	cm, err := cacheclnt.MkCacheMgr(ts.FsLib, ts.ProcClnt, ts.job, n)
 	assert.Nil(t, err)
 	ts.cm = cm
-	ts.sempn = cm.Path() + "-cacheclerk-sem"
+	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
 	ts.sem = semclnt.MakeSemClnt(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t, err)

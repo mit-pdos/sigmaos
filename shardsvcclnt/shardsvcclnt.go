@@ -41,12 +41,13 @@ func MkShardSvcClnt(fsl *fslib.FsLib, pn string, n int, sw ShardWatch) (*ShardSv
 }
 
 func (ssc *ShardSvcClnt) setWatch() error {
-	_, rdr, err := ssc.ReadDir(ssc.pn)
+	dir := ssc.pn + shardsvcmgr.SHRDDIR
+	_, rdr, err := ssc.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	ssc.rdr = rdr
-	if err := ssc.SetDirWatch(ssc.rdr.Fid(), ssc.pn, ssc.Watch); err != nil {
+	if err := ssc.SetDirWatch(ssc.rdr.Fid(), dir, ssc.Watch); err != nil {
 		return err
 	}
 	return nil

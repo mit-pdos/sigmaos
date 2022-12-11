@@ -5,6 +5,7 @@ option go_package = "ulambda/realm/proto";
 service RealmMgr {
   rpc GrantCores(RealmMgrRequest) returns (RealmMgrResponse);
   rpc RevokeCores(RealmMgrRequest) returns (RealmMgrResponse);
+  rpc ShutdownRealm(RealmMgrRequest) returns (RealmMgrResponse);
 }
 
 message RealmMgrRequest {

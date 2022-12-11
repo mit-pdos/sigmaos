@@ -14,9 +14,11 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/machine"
+	mproto "sigmaos/machine/proto"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/protdevclnt"
 	"sigmaos/resource"
 	np "sigmaos/sigmap"
 	"sigmaos/stats"
@@ -35,6 +37,7 @@ type RealmResourceMgr struct {
 	*config.ConfigClnt
 	memfs *memfssrv.MemFs
 	*procclnt.ProcClnt
+	mclnts map[string]*protdevclnt.ProtDevClnt
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
 }
@@ -47,6 +50,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
+	m.mclnts = make(map[string]*protdevclnt.ProtDevClnt)
 
 	var err error
 	m.memfs, err = memfssrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
@@ -255,8 +259,26 @@ func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Ti
 
 // Request a machine to create a new Noded)
 func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, nodedId, 1)
-	resource.SendMsg(m.sigmaFsl, path.Join(machine.MACHINES, machineId, np.RESOURCE_CTL), msg)
+	var clnt *protdevclnt.ProtDevClnt
+	var ok bool
+	if clnt, ok = m.mclnts[machineId]; !ok {
+		var err error
+		clnt, err = protdevclnt.MkProtDevClnt(m.sigmaFsl, path.Join(machine.MACHINES, machineId))
+		if err != nil {
+			db.DFatalf("Error MkProtDevClnt: %v", err)
+		}
+		m.mclnts[machineId] = clnt
+	}
+
+	res := &mproto.MachineResponse{}
+	req := &mproto.MachineRequest{
+		NodedId: nodedId,
+	}
+
+	err := clnt.RPC("Machined.BootNoded", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 }
 
 // Alloc a Noded to this realm.

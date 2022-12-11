@@ -15,6 +15,7 @@ message SigmaMgrRequest {
 	int64 qlen = 2;
 	int64 ncores = 3;
   bool hardReq = 4;
+  repeated string machines = 5;
 }
 
 message SigmaMgrResponse {

@@ -115,7 +115,7 @@ func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.Si
 
 	// If realm still exists, try to grow it.
 	if _, ok := m.realmLocks[req.RealmId]; ok {
-		m.growRealmL(req.RealmId, int(req.Qlen), req.HardReq)
+		m.growRealmL(req.RealmId, int(req.Qlen), req.Machines, req.HardReq)
 	}
 	res.OK = true
 	return nil
@@ -154,7 +154,7 @@ func (m *SigmaResourceMgr) freeCores(i int64) {
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
 // then retry. Caller holds lock.
-func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bool {
+func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []string, hardReq bool) bool {
 	// See if any cores are available.
 	if m.tryGetFreeCores(1) {
 		// Try to alloc qlen cores, or as many as are currently free otherwise.
@@ -173,14 +173,31 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bo
 			return true
 		}
 	}
+	var opRealmId string
+	var nodedId string
+	var ok bool
 	// No cores were available, so try to find a realm with spare resources.
-	opRealmId, ok := m.findOverProvisionedRealm(realmId)
+	if len(machines) == 0 || !hardReq {
+		db.DPrintf("SIGMAMGR", "[%v] search for cores across overprovisioned realms", realmId)
+		opRealmId, _, ok = m.findOverProvisionedRealm(realmId, "")
+	} else {
+		db.DPrintf("SIGMAMGR", "[%v] search for cores on preferred machines %v", realmId, machines)
+		for _, machine := range machines {
+			db.DPrintf("SIGMAMGR", "[%v] search for cores on %v", realmId, machine)
+			opRealmId, nodedId, ok = m.findOverProvisionedRealm(realmId, machine)
+			if ok {
+				break
+			}
+		}
+		db.DFatalf("Not implemented")
+	}
 	if !ok {
-		db.DPrintf("SIGMAMGR", "No overprovisioned realms available")
+		db.DPrintf("SIGMAMGR", "[%v] No overprovisioned realms available", realmId)
 		return false
 	}
 	// Ask the over-provisioned realm to give up some cores.
-	m.requestCores(opRealmId, hardReq)
+	db.DPrintf("SIGMAMGR", "[%v] Requesting cores from %v noded %v", realmId, opRealmId, nodedId)
+	m.requestCores(opRealmId, nodedId, hardReq)
 	// Wait for the over-provisioned realm to cede its cores.
 	if m.tryGetFreeCores(100) {
 		// Allocate core to this realm.
@@ -188,6 +205,58 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bo
 		return true
 	}
 	return false
+}
+
+// Find an over-provisioned realm (a realm with resources to spare),
+// specifically for a certain machine. Returns true if an overprovisioned realm
+// was found, false otherwise.
+func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineId string) (opRealmId string, nodedId string, ok bool) {
+	opRealmId = ""
+	nodedId = ""
+	ok = false
+	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
+		realmId := st.Name
+
+		// Don't steal a noded from the requesting realm.
+		if realmId == ignoreRealm {
+			return false, nil
+		}
+
+		lock, exists := m.realmLocks[realmId]
+		// If the realm we are looking at has been deleted, move on.
+		if !exists {
+			return false, nil
+		}
+
+		lockRealm(lock, realmId)
+		defer unlockRealm(lock, realmId)
+
+		rCfg := &RealmConfig{}
+		m.ReadConfig(RealmConfPath(realmId), rCfg)
+
+		// See if any nodeds have cores to spare.
+		overprovisioned := false
+		for _, nodedId = range rCfg.NodedsAssigned {
+			ndCfg := MakeNodedConfig()
+			m.ReadConfig(NodedConfPath(nodedId), ndCfg)
+			// If this machined is running on the node we care about, or the
+			// requester has no preference
+			if machineId == ndCfg.MachineId || machineId == "" {
+				if nodedOverprovisioned(m.FsLib, m.ConfigClnt, realmId, nodedId, "SIGMAMGR") {
+					overprovisioned = true
+					break
+				}
+			}
+		}
+		// If there are more than the minimum number of required Nodeds available...
+		if len(rCfg.NodedsAssigned) > nReplicas() && overprovisioned {
+			opRealmId = realmId
+			ok = true
+			return true, nil
+		}
+		return false, nil
+	})
+	return opRealmId, nodedId, ok
 }
 
 // Ascertain whether or not a noded is overprovisioned.
@@ -267,50 +336,6 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	return true
 }
 
-// Find an over-provisioned realm (a realm with resources to spare). Returns
-// true if an overprovisioned realm was found, false otherwise.
-func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
-	opRealmId := ""
-	ok := false
-	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
-		realmId := st.Name
-
-		// Don't steal a noded from the requesting realm.
-		if realmId == ignoreRealm {
-			return false, nil
-		}
-
-		lock, exists := m.realmLocks[realmId]
-		// If the realm we are looking at has been deleted, move on.
-		if !exists {
-			return false, nil
-		}
-
-		lockRealm(lock, realmId)
-		defer unlockRealm(lock, realmId)
-
-		rCfg := &RealmConfig{}
-		m.ReadConfig(RealmConfPath(realmId), rCfg)
-
-		// See if any nodeds have cores to spare.
-		overprovisioned := false
-		for _, nd := range rCfg.NodedsAssigned {
-			if nodedOverprovisioned(m.FsLib, m.ConfigClnt, realmId, nd, "SIGMAMGR") {
-				overprovisioned = true
-				break
-			}
-		}
-		// If there are more than the minimum number of required Nodeds available...
-		if len(rCfg.NodedsAssigned) > nReplicas() && overprovisioned {
-			opRealmId = realmId
-			ok = true
-			return true, nil
-		}
-		return false, nil
-	})
-	return opRealmId, ok
-}
-
 // Create a realm.
 func (m *SigmaResourceMgr) createRealm(realmId string) {
 	m.Lock()
@@ -337,12 +362,13 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 }
 
 // Request a Noded from realm realmId.
-func (m *SigmaResourceMgr) requestCores(realmId string, hardReq bool) {
+func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq bool) {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	res := &proto.RealmMgrResponse{}
 	req := &proto.RealmMgrRequest{
 		Ncores:  1,
 		HardReq: hardReq,
+		NodedId: nodedId,
 	}
 	err := m.rclnts[realmId].RPC("RealmMgr.RevokeCores", req, res)
 	if err != nil || !res.OK {

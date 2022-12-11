@@ -104,21 +104,29 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 		db.DFatalf("Error getRealmConfig: %v", err)
 	}
 
+	// Don't revoke cores too quickly unless this is a hard request.
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL && !req.HardReq {
 		db.DPrintf("REALMMGR", "[%v] Soft core revocation request failed, resize too soon", m.realmId)
 		return nil
 	}
 
-	db.DPrintf("REALMMGR", "[%v] resource.Tcore revoked", m.realmId)
-
-	nodedId, ok := m.getLeastUtilizedNoded()
+	nodedId := req.NodedId
+	db.DPrintf("REALMMGR", "[%v] Core revoke request: %v hardReq %v", m.realmId, req.NodedId, req.HardReq)
+	var ok bool
+	if nodedId == "" {
+		// If no requester preference, find the least utilized noded.
+		nodedId, ok = m.getLeastUtilizedNoded()
+	} else {
+		// If requester has a preference, check if this noded is overprovisioned.
+		ok = nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR")
+		db.DPrintf("REALMMGR", "[%v] Tried to satisfy (hard:%v) req for %v, result: %v ", m.realmId, req.HardReq, nodedId, ok)
+	}
 
 	// If no Nodeds are underutilized...
 	if !ok {
 		return nil
 	}
-
-	db.DPrintf("REALMMGR", "[%v] least utilized node: %v", m.realmId, nodedId)
+	db.DPrintf("REALMMGR", "[%v] core revoked from least utilized node %v", m.realmId, nodedId)
 
 	// Read this noded's config.
 	ndCfg := &NodedConfig{}

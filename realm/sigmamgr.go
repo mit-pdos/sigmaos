@@ -238,9 +238,6 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 		for _, nodedId = range rCfg.NodedsAssigned {
 			ndCfg := MakeNodedConfig()
 			m.ReadConfig(NodedConfPath(nodedId), ndCfg)
-			if ndCfg.MachineId == "" {
-				db.DFatalf("Nil machineid config noded %v", nodedId)
-			}
 			// If this machined is running on the node we care about, or the
 			// requester has no preference
 			if machineId == ndCfg.MachineId || machineId == "" {
@@ -269,9 +266,6 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug string) bool {
 	ndCfg := MakeNodedConfig()
 	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	if ndCfg.MachineId == "" {
-		db.DFatalf("Nil machineid config noded %v", nodedId)
-	}
 	db.DPrintf(debug, "[%v] Check if noded %v is overprovisioned", realmId, nodedId)
 	s := &stats.StatInfo{}
 	err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)

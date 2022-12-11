@@ -133,9 +133,6 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	// Read this noded's config.
 	ndCfg := &NodedConfig{}
 	m.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	if ndCfg.MachineId == "" {
-		db.DFatalf("Nil machineid config noded %v", nodedId)
-	}
 
 	cores := ndCfg.Cores[len(ndCfg.Cores)-1]
 	db.DPrintf("REALMMGR", "[%v] Revoking cores %v from noded %v", m.realmId, cores, nodedId)
@@ -277,9 +274,6 @@ func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Ti
 	_, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
-		if ndCfg.MachineId == "" {
-			db.DFatalf("Nil machineid config noded %v", nd.Name)
-		}
 		// Try to claim additional cores on the machine this noded lives on.
 		if c, ok := m.tryClaimCores(ndCfg.MachineId, amt); ok {
 			cores = append(cores, c)
@@ -396,9 +390,6 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]
 	for _, nodedId := range nodeds {
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
-		if ndCfg.MachineId == "" {
-			db.DFatalf("Nil machineid config noded %v", nodedId)
-		}
 		s := &stats.StatInfo{}
 		err := m.GetFileJson(path.Join(np.PROCD, ndCfg.ProcdIp, np.STATSD), s)
 		if err != nil {

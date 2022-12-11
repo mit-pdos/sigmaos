@@ -165,7 +165,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, hardReq bool) bo
 		if nfree < nallocd {
 			nallocd = nfree
 		}
-		db.DPrintf("SIGMAMGR", "Allocate %v free cores", nallocd)
+		db.DPrintf("SIGMAMGR", "Allocate %v free cores to realm %v", nallocd, realmId)
 		// Allocate cores to this realm.
 		if nallocd > 0 {
 			m.allocCores(realmId, nallocd)

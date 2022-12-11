@@ -526,6 +526,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 					if _, ok := m.nodedToMachined[nodeds[i]]; !ok {
 						db.DFatalf("Try to convert noded on unknown machined: %v", nodeds[i])
 					}
+					db.DPrintf(db.ALWAYS, "noded to machined noded %v machined %v", nodeds, m.nodedToMachined)
 					machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 				}
 			}

@@ -1,6 +1,7 @@
 package fcall
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -235,4 +236,12 @@ func IsMaybeSpecialElem(error error) bool {
 
 func IsErrUnionElem(error error) bool {
 	return IsErrNotfound(error) && path.IsUnionElem(ErrPath(error))
+}
+
+func IsErrCode(error error, code Terror) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.Code() == code
+	}
+	return false
 }

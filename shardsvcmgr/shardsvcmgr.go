@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"sync"
 
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -41,7 +42,9 @@ func (sm *ShardMgr) addShard(i int) error {
 
 func MkShardMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, job, bin, pn string) (*ShardMgr, error) {
 	if _, err := fsl.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
-		return nil, err
+		if !fcall.IsErrCode(err, fcall.TErrExists) {
+			return nil, err
+		}
 	}
 	sm := &ShardMgr{FsLib: fsl, ProcClnt: pclnt, bin: bin, job: job, shards: make([]proc.Tpid, 0), nshard: n, pn: pn}
 	for i := 0; i < n; i++ {

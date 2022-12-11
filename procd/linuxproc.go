@@ -32,9 +32,10 @@ type LinuxProc struct {
 	stolen       bool
 	pd           *Procd
 	UtilInfo     struct {
-		utime0 uint64
-		stime0 uint64
-		t0     time.Time
+		lastUtil float64
+		utime0   uint64
+		stime0   uint64
+		t0       time.Time
 	}
 }
 
@@ -142,9 +143,13 @@ func (p *LinuxProc) getUtilL() float64 {
 	t1 := time.Now()
 	utime1, stime1 := perf.GetCPUTimePid(p.syspidstr)
 	util := perf.UtilFromCPUTimeSample(p.UtilInfo.utime0, p.UtilInfo.stime0, utime1, stime1, t1.Sub(p.UtilInfo.t0).Seconds())
+	if util == 0 {
+		return p.UtilInfo.lastUtil
+	}
 	p.UtilInfo.utime0 = utime1
 	p.UtilInfo.stime0 = stime1
 	p.UtilInfo.t0 = t1
+	p.UtilInfo.lastUtil = util
 	return util
 }
 

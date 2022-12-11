@@ -108,7 +108,8 @@ func (ji *HotelJobInstance) StartHotelJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
-	for _, lg := range ji.lgs {
+	for i, lg := range ji.lgs {
+		db.DPrintf("TEST", "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
 	}
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")

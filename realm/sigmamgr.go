@@ -219,7 +219,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		db.DPrintf(debug, "Noded is using LC cores well, not overprovisioned: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
 		return false
 	}
-	db.DPrintf(debug, "Noded is underutilizing LC: %v - %v >= %v", totalCores, coresToRevoke, nLCCoresUsed)
+	db.DPrintf(debug, "Noded is underutilizing LC: %v - %v >= %v, util:%v cutil:%v", totalCores, coresToRevoke, nLCCoresUsed, s.Util, s.CustomUtil)
 	db.DPrintf(debug, "Noded %v has %v cores remaining.", nodedId, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {

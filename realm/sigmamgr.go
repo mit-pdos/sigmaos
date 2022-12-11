@@ -189,7 +189,6 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 				break
 			}
 		}
-		db.DFatalf("Not implemented")
 	}
 	if !ok {
 		db.DPrintf("SIGMAMGR", "[%v] No overprovisioned realms available", realmId)

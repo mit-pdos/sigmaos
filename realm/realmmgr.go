@@ -38,9 +38,10 @@ type RealmResourceMgr struct {
 	*config.ConfigClnt
 	pds *protdevsrv.ProtDevSrv
 	*procclnt.ProcClnt
-	mclnts map[string]*protdevclnt.ProtDevClnt
-	nclnts map[string]*protdevclnt.ProtDevClnt
-	sclnt  *protdevclnt.ProtDevClnt
+	nodedToMachined map[string]string
+	mclnts          map[string]*protdevclnt.ProtDevClnt
+	nclnts          map[string]*protdevclnt.ProtDevClnt
+	sclnt           *protdevclnt.ProtDevClnt
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
 }
@@ -55,6 +56,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
 	m.mclnts = make(map[string]*protdevclnt.ProtDevClnt)
 	m.nclnts = make(map[string]*protdevclnt.ProtDevClnt)
+	m.nodedToMachined = make(map[string]string, 0)
 
 	mfs, err := memfssrv.MakeMemFsFsl(realmMgrPath(m.realmId), m.sigmaFsl, m.ProcClnt)
 	if err != nil {
@@ -329,6 +331,8 @@ func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 		m.mclnts[machineId] = clnt
 	}
 
+	m.nodedToMachined[nodedId] = machineId
+
 	res := &mproto.MachineResponse{}
 	req := &mproto.MachineRequest{
 		NodedId: nodedId,
@@ -387,9 +391,8 @@ func (m *RealmResourceMgr) getRealmConfig() (*RealmConfig, error) {
 }
 
 // Get all a realm's procd's stats
-func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]*stats.StatInfo, mIdMap map[string]string) {
+func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]*stats.StatInfo) {
 	stat = make(map[string]*stats.StatInfo)
-	mIdMap = make(map[string]string)
 	for _, nodedId := range nodeds {
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
@@ -404,16 +407,15 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]
 		}
 		stat[nodedId] = s
 		// Map fron nodedId to machineId
-		mIdMap[nodedId] = ndCfg.MachineId
 	}
-	return stat, mIdMap
+	return stat
 }
 
-func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, utilMap map[string]float64, mIdMap map[string]string, anyLC bool) {
+func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, utilMap map[string]float64, anyLC bool) {
 	// Get stats
 	utilMap = make(map[string]float64)
 	var procdStats map[string]*stats.StatInfo
-	procdStats, mIdMap = m.getRealmProcdStats(cfg.NodedsActive)
+	procdStats = m.getRealmProcdStats(cfg.NodedsActive)
 	avgUtil = 0.0
 	anyLC = false
 	for nodedId, stat := range procdStats {
@@ -425,7 +427,7 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, util
 	if len(procdStats) > 0 {
 		avgUtil /= float64(len(procdStats))
 	}
-	return avgUtil, utilMap, mIdMap, anyLC
+	return avgUtil, utilMap, anyLC
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() (lcqlen int, beqlen int) {
@@ -457,7 +459,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 		return "", false
 	}
 
-	_, procdUtils, _, _ := m.getRealmUtil(realmCfg)
+	_, procdUtils, _ := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] searching for least utilized node, procd utils: %v", m.realmId, procdUtils)
 
 	nodeds := sortNodedsByAscendingProcdUtil(procdUtils)
@@ -519,9 +521,8 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	}
 	var avgUtil float64
 	var utils map[string]float64
-	var machineIdMap map[string]string
 	var anyLC bool
-	avgUtil, utils, machineIdMap, anyLC = m.getRealmUtil(realmCfg)
+	avgUtil, utils, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
 	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 		// Hard request if there are any LC procs.
@@ -531,7 +532,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 			for i := len(nodeds) - 1; i >= 0; i-- {
 				// Only grow allocations on highly-utilized machines.
 				if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
-					machineIds = append(machineIds, machineIdMap[nodeds[i]])
+					machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 				}
 			}
 		}

@@ -18,7 +18,8 @@ def get_y_axes(systems, input_dir, x_vals):
   for system in systems:
     y = []
     for x in x_vals:
-      with open(os.path.join(input_dir, system, str(x), "bench.out")) as f:
+      benchout = [ fn for fn in os.listdir(os.path.join(input_dir, system, str(x))) if "bench.out" in fn ]
+      with open(os.path.join(input_dir, system, str(x), benchout[0] )) as f:
         b = f.read()
       lines = b.split("\n")
       lines = [ l for l in lines if "Mean:" in l ]

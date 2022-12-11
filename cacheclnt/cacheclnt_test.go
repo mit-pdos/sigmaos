@@ -200,7 +200,7 @@ func TestElasticCache(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		args := []string{strconv.Itoa(NKEYS), DUR, strconv.Itoa(i * NKEYS), ts.sempn}
-		ts.StartClerk(args, 0)
+		ts.StartClerk(args, 2)
 	}
 
 	ts.sem.Up()

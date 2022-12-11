@@ -15,6 +15,7 @@ import (
 
 const (
 	SHRDDIR = "shard/"
+	NCORE   = 2
 )
 
 type ShardMgr struct {
@@ -31,6 +32,7 @@ type ShardMgr struct {
 func (sm *ShardMgr) addShard(i int) error {
 	// SpawnBurst to spread shards across procds.
 	p := proc.MakeProc(sm.bin, []string{sm.job, SHRDDIR + strconv.Itoa(i)})
+	p.SetNcore(proc.Tcore(NCORE))
 	_, errs := sm.SpawnBurst([]*proc.Proc{p})
 	if len(errs) > 0 {
 		return errs[0]

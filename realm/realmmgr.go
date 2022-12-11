@@ -519,7 +519,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 		if anyLC {
 			nodeds := sortNodedsByAscendingProcdUtil(utils)
 			machineIds = make([]string, len(nodeds))
-			for i := len(nodeds); i >= 0; i-- {
+			for i := len(nodeds) - 1; i >= 0; i-- {
 				machineIds = append(machineIds, machineIdMap[nodeds[i]])
 			}
 		}

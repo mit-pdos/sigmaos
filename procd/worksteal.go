@@ -103,6 +103,7 @@ func (pd *Procd) offerStealableProcs() {
 						toOffer[st.Name] = runqPath
 					}
 					present[st.Name] = runqPath
+					alreadyOffered[st.Name] = runqPath
 				}
 				return false, nil
 			})

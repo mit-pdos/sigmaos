@@ -14,6 +14,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
 	"sigmaos/resource"
@@ -33,6 +34,7 @@ type Noded struct {
 	s         *kernel.System
 	ec        *electclnt.ElectClnt
 	pds       *protdevsrv.ProtDevSrv
+	sclnt     *protdevclnt.ProtDevClnt
 	*config.ConfigClnt
 }
 
@@ -53,6 +55,10 @@ func MakeNoded(machineId string) *Noded {
 	nd.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, nd)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
+	}
+	nd.sclnt, err = protdevclnt.MkProtDevClnt(nd.pds.FsLib(), np.SIGMAMGR)
+	if err != nil {
+		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
 
 	// Mount the KPIDS dir.
@@ -130,57 +136,11 @@ func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) e
 		realmCfg.NCores -= proc.Tcore(rmCores.Size())
 		nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
 
-		machine.PostCores(nd.FsLib, nd.machineId, cores)
+		machine.PostCores(nd.sclnt, nd.machineId, cores)
 	}
 	res.OK = true
 	return nil
 }
-
-//func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
-//	switch msg.ResourceType {
-//	case resource.Tcore:
-//		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
-//
-//		// If all cores were requested, shut down.
-//		if msg.Name == machine.ALL_CORES || len(nd.cfg.Cores) == 1 {
-//			db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
-//			// Leave the realm and prepare to shut down.
-//			nd.leaveRealm()
-//			nd.done <- true
-//			close(nd.done)
-//		} else {
-//			nd.forwardResourceMsgToProcd(msg)
-//
-//			cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
-//
-//			// Sanity check: should be at least 2 core groups when removing one.
-//			// Otherwise, we should have shut down.
-//			if len(nd.cfg.Cores) < 2 {
-//				db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
-//			}
-//			// Sanity check: we always take the last cores allocated.
-//			if cores.Marshal() != msg.Name {
-//				db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
-//			}
-//
-//			// Update the core allocations for this noded.
-//			var rmCores *np.Tinterval
-//			nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
-//			nd.WriteConfig(nd.cfgPath, nd.cfg)
-//
-//			// Update the realm's total core count. The Realmmgr holds the realm
-//			// lock.
-//			realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
-//			realmCfg.NCores -= proc.Tcore(rmCores.Size())
-//			nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
-//
-//			machine.PostCores(nd.FsLib, nd.machineId, cores)
-//		}
-//
-//	default:
-//		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
-//	}
-//}
 
 func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 	procdIp := nd.s.GetProcdIp()
@@ -311,7 +271,7 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 	nd.Remove(nodedPath(cfg.Rid, nd.id))
 
 	for _, c := range nd.cfg.Cores {
-		machine.PostCores(nd.FsLib, nd.machineId, c)
+		machine.PostCores(nd.sclnt, nd.machineId, c)
 	}
 }
 

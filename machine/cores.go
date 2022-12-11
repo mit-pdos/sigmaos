@@ -4,9 +4,9 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/resource"
+	mproto "sigmaos/machine/proto"
+	"sigmaos/protdevclnt"
 	np "sigmaos/sigmap"
 )
 
@@ -20,11 +20,17 @@ func NodedNCores() uint64 {
 }
 
 // Post chunks of available cores.
-func PostCores(fsl *fslib.FsLib, machineId string, cores *np.Tinterval) {
+func PostCores(pdc *protdevclnt.ProtDevClnt, machineId string, cores *np.Tinterval) {
 	// Post cores in local fs.
-	if _, err := fsl.PutFile(path.Join(MACHINES, machineId, CORES, cores.Marshal()), 0777, np.OWRITE, []byte(cores.Marshal())); err != nil {
+	if _, err := pdc.PutFile(path.Join(MACHINES, machineId, CORES, cores.Marshal()), 0777, np.OWRITE, []byte(cores.Marshal())); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.Marshal(), 1)
-	resource.SendMsg(fsl, np.SIGMACTL, msg)
+	res := &mproto.MachineResponse{}
+	req := &mproto.MachineRequest{
+		Ncores: 1,
+	}
+	err := pdc.RPC("SigmaMgr.FreeCores", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 }

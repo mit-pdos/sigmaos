@@ -21,7 +21,6 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
-	"sigmaos/resource"
 	np "sigmaos/sigmap"
 	"sigmaos/stats"
 )
@@ -41,6 +40,7 @@ type RealmResourceMgr struct {
 	*procclnt.ProcClnt
 	mclnts map[string]*protdevclnt.ProtDevClnt
 	nclnts map[string]*protdevclnt.ProtDevClnt
+	sclnt  *protdevclnt.ProtDevClnt
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
 }
@@ -64,6 +64,11 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, m)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
+	}
+
+	m.sclnt, err = protdevclnt.MkProtDevClnt(m.sigmaFsl, np.SIGMAMGR)
+	if err != nil {
+		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
 
 	m.initFS()
@@ -493,8 +498,15 @@ func (m *RealmResourceMgr) Work() {
 	for {
 		if qlen, ok := m.realmShouldGrow(); ok {
 			db.DPrintf("REALMMGR", "[%v] Try to grow realm qlen %v", m.realmId, qlen)
-			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, m.realmId, qlen)
-			resource.SendMsg(m.sigmaFsl, np.SIGMACTL, msg)
+			res := &proto.SigmaMgrResponse{}
+			req := &proto.SigmaMgrRequest{
+				RealmId: m.realmId,
+				Qlen:    int64(qlen),
+			}
+			err := m.sclnt.RPC("SigmaMgr.RequestCores", req, res)
+			if err != nil || !res.OK {
+				db.DFatalf("Error RPC: %v %v", err, res.OK)
+			}
 		}
 		// Sleep for a bit.
 		time.Sleep(np.Conf.Realm.SCAN_INTERVAL)

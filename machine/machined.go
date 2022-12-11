@@ -14,6 +14,7 @@ import (
 	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	np "sigmaos/sigmap"
 )
@@ -35,6 +36,7 @@ type Machined struct {
 	*procclnt.ProcClnt
 	*fslib.FsLib
 	pds *protdevsrv.ProtDevSrv
+	pdc *protdevclnt.ProtDevClnt
 }
 
 func MakeMachined(args []string) *Machined {
@@ -50,6 +52,10 @@ func MakeMachined(args []string) *Machined {
 	m.pds, err = protdevsrv.MakeProtDevSrvMemFs(mfs, m)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
+	}
+	m.pdc, err = protdevclnt.MkProtDevClnt(m.pds.FsLib(), np.SIGMAMGR)
+	if err != nil {
+		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
 
 	m.path = path.Join(MACHINES, m.pds.MyAddr())
@@ -133,7 +139,7 @@ func (m *Machined) postCores() {
 		if uint(iv.End) > linuxsched.NCores+1 {
 			iv.End = uint64(linuxsched.NCores + 1)
 		}
-		PostCores(m.FsLib, m.pds.MyAddr(), iv)
+		PostCores(m.pdc, m.pds.MyAddr(), iv)
 	}
 }
 

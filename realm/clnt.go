@@ -6,11 +6,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/resource"
+	"sigmaos/protdevclnt"
+	"sigmaos/realm/proto"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 )
 
 type RealmClnt struct {
+	sclnt *protdevclnt.ProtDevClnt
 	*procclnt.ProcClnt
 	*fslib.FsLib
 }
@@ -32,18 +34,31 @@ func MakeRealmClnt() *RealmClnt {
 }
 
 func MakeRealmClntFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *RealmClnt {
-	return &RealmClnt{pclnt, fsl}
+	return &RealmClnt{nil, pclnt, fsl}
 }
 
 // Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
+	if clnt.sclnt == nil {
+		var err error
+		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, np.SIGMAMGR)
+		if err != nil {
+			db.DFatalf("Error MkProtDevClnt: %v", err)
+		}
+	}
 	// Create semaphore to wait on realm creation/initialization.
 	rStartSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rStartSem.Init(0)
 
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, rid, 1)
-	resource.SendMsg(clnt.FsLib, np.SIGMACTL, msg)
+	res := &proto.SigmaMgrResponse{}
+	req := &proto.SigmaMgrRequest{
+		RealmId: rid,
+	}
+	err := clnt.sclnt.RPC("SigmaMgr.CreateRealm", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 
 	// Wait for the realm to be initialized
 	rStartSem.Down()
@@ -53,9 +68,23 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 
 // Artificially grow a realm. Mainly used for testing purposes.
 func (clnt *RealmClnt) GrowRealm(rid string) {
+	if clnt.sclnt == nil {
+		var err error
+		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, np.SIGMAMGR)
+		if err != nil {
+			db.DFatalf("Error MkProtDevClnt: %v", err)
+		}
+	}
 	db.DPrintf("REALMCLNT", "Artificially grow realm %v", rid)
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, rid, 1)
-	resource.SendMsg(clnt.FsLib, np.SIGMACTL, msg)
+	res := &proto.SigmaMgrResponse{}
+	req := &proto.SigmaMgrRequest{
+		RealmId: rid,
+		Qlen:    1,
+	}
+	err := clnt.sclnt.RPC("SigmaMgr.RequestCores", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
@@ -63,9 +92,14 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 	rExitSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rExitSem.Init(0)
 
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Trealm, rid, 1)
-
-	resource.SendMsg(clnt.FsLib, np.SIGMACTL, msg)
+	res := &proto.SigmaMgrResponse{}
+	req := &proto.SigmaMgrRequest{
+		RealmId: rid,
+	}
+	err := clnt.sclnt.RPC("SigmaMgr.DestroyRealm", req, res)
+	if err != nil || !res.OK {
+		db.DFatalf("Error RPC: %v %v", err, res.OK)
+	}
 
 	rExitSem.Down()
 }

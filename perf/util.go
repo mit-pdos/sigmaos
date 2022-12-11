@@ -281,6 +281,7 @@ func UtilFromCPUTimeSample(utime0, stime0, utime1, stime1 uint64, secs float64) 
 	total0 = utime0 + stime0
 	total1 = utime1 + stime1
 	delta = float64(total1 - total0)
+	db.DPrintf("PROCD_UTIL_AAA", "Util from CPU sample delta %v", delta)
 	ticks = float64(Hz()) * secs
 	util = 100.0 * delta / ticks
 	return util

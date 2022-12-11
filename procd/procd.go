@@ -107,6 +107,7 @@ func (pd *Procd) getLCProcUtil() float64 {
 		}
 		total += p.getUtilL()
 	}
+	db.DPrintf("PROCD_UTIL_AAA", "LC proc util %v", total)
 	return total
 }
 

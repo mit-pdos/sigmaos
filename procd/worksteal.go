@@ -34,7 +34,6 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 			db.DPrintf("PROCD", "Skip monitoring BE WS queue because we can't claim another BE proc")
 			continue
 		}
-
 		var nremote int
 		stealable := make([]string, 0)
 		// Wait until there is a proc to steal.

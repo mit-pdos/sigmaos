@@ -111,7 +111,7 @@ func (m *SigmaResourceMgr) DestroyRealm(req proto.SigmaMgrRequest, res *proto.Si
 func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
 	m.Lock()
 	defer m.Unlock()
-	db.DPrintf("SIGMAMGR", "[%v] Request cores", req.RealmId)
+	db.DPrintf("SIGMAMGR", "[%v] Request cores hardreq %v", req.RealmId, req.HardReq)
 
 	// If realm still exists, try to grow it.
 	if _, ok := m.realmLocks[req.RealmId]; ok {

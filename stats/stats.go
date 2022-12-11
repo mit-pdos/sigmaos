@@ -75,9 +75,11 @@ type StatInfo struct {
 
 	Paths map[string]int
 
-	Load       perf.Tload
 	Util       float64
 	CustomUtil float64
+
+	Load       perf.Tload
+	CustomLoad perf.Tload
 }
 
 func MkStatInfo() *StatInfo {
@@ -189,16 +191,21 @@ const (
 	SEC   = 1000   // 1s
 )
 
+func setLoad(load *perf.Tload, x float64) {
+	load[0] *= EXP_0
+	load[0] += (1 - EXP_0) * x
+	load[1] *= EXP_1
+	load[1] += (1 - EXP_1) * x
+	load[2] *= EXP_2
+	load[2] += (1 - EXP_2) * x
+}
+
 // Caller holds lock
 func (st *Stats) loadCPUUtilL(idle, total uint64, customUtil float64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
-	st.sti.Load[0] *= EXP_0
-	st.sti.Load[0] += (1 - EXP_0) * util
-	st.sti.Load[1] *= EXP_1
-	st.sti.Load[1] += (1 - EXP_1) * util
-	st.sti.Load[2] *= EXP_2
-	st.sti.Load[2] += (1 - EXP_2) * util
+	setLoad(&st.sti.Load, util)
+	setLoad(&st.sti.CustomLoad, customUtil)
 
 	st.sti.Util = util
 	st.sti.CustomUtil = customUtil

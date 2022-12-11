@@ -86,6 +86,7 @@ func (pd *Procd) offerStealableProcs() {
 	// Store the procs this procd has already offered, and the runq they were
 	// stored in.
 	alreadyOffered := make(map[string]string)
+	alreadyOfferedP := make(map[string]string)
 	for !pd.readDone() {
 		toOffer := make(map[string]string)
 		present := make(map[string]string)
@@ -97,13 +98,18 @@ func (pd *Procd) offerStealableProcs() {
 			_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
 				// XXX Based on how we stuff Mtime into np.Stat (at a second
 				// granularity), but this should be changed, perhaps.
+				// If proc has been hanging in the runq for too long, it is a candidate for work-stealing.
 				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					// Don't re-offer procs which have already been offered.
 					if _, ok := alreadyOffered[st.Name]; !ok {
+						if _, ok := alreadyOfferedP[st.Name]; ok {
+							db.DFatalf("Didn't detect a proc which has already been offered as offered: %v %v", alreadyOffered, alreadyOfferedP)
+						}
 						toOffer[st.Name] = runq
 					}
 					present[st.Name] = runq
 					alreadyOffered[st.Name] = runq
+					alreadyOfferedP[st.Name] = runq
 				}
 				return false, nil
 			})
@@ -115,7 +121,6 @@ func (pd *Procd) offerStealableProcs() {
 		//		db.DPrintf("PROCD", "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
 		for pid, runq := range toOffer {
 			db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
-			// If proc has been haning in the runq for too long...
 			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
 			target := path.Join(runqPath, pid) + "/"
 			link := path.Join(np.PROCD_WS, runq, pid)
@@ -124,13 +129,13 @@ func (pd *Procd) offerStealableProcs() {
 				db.DFatalf("Error Symlink: %v", err)
 			}
 		}
-		//		// Clean up procs which are no longer in the queue.
-		//		for pid := range alreadyOffered {
-		//			// Proc is no longer in the queue, so forget about it.
-		//			if _, ok := present[pid]; !ok {
-		//				delete(alreadyOffered, pid)
-		//			}
-		//		}
+		// Clean up procs which are no longer in the queue.
+		for pid := range alreadyOffered {
+			// Proc is no longer in the queue, so forget about it.
+			if _, ok := present[pid]; !ok {
+				delete(alreadyOffered, pid)
+			}
+		}
 	}
 }
 

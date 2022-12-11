@@ -96,6 +96,7 @@ func (m *RealmResourceMgr) GrantCores(req proto.RealmMgrRequest, res *proto.Real
 func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.RealmMgrResponse) error {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
+	res.OK = true
 
 	db.DPrintf("REALMMGR", "[%v] resource.Tcore revoked", m.realmId)
 
@@ -125,7 +126,6 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	}
 	db.DPrintf("REALMMGR", "[%v] Revoked cores %v from noded %v", m.realmId, cores, nodedId)
 	m.updateResizeTimeL(m.realmId)
-	res.OK = true
 	return nil
 }
 

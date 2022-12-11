@@ -514,13 +514,16 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	var anyLC bool
 	avgUtil, utils, machineIdMap, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
-	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD && qlen >= 0 {
+	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 		// Hard request if there are any LC procs.
 		if anyLC {
 			nodeds := sortNodedsByAscendingProcdUtil(utils)
 			machineIds = make([]string, len(nodeds))
 			for i := len(nodeds) - 1; i >= 0; i-- {
-				machineIds = append(machineIds, machineIdMap[nodeds[i]])
+				// Only grow allocations on highly-utilized machines.
+				if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+					machineIds = append(machineIds, machineIdMap[nodeds[i]])
+				}
 			}
 		}
 		return qlen, anyLC, machineIds, true

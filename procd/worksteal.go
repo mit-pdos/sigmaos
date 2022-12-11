@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
+	_ "sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	np "sigmaos/sigmap"
@@ -117,11 +118,16 @@ func (pd *Procd) offerStealableProcs() {
 		for pid, runq := range toOffer {
 			db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
 			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
-			target := path.Join(runqPath, pid) + "/"
+			target := []byte(path.Join(runqPath, pid) + "/")
+			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
 			link := path.Join(np.PROCD_WS, runq, pid)
-			if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil {
-				pd.perf.Done()
-				db.DFatalf("Error Symlink: %v", err)
+			if err := pd.Symlink(target, link, 0777|np.DMTMP); err != nil {
+				if fcall.IsErrExists(err) {
+					db.DPrintf("PROCD", "Re-advertise symlink %v", target)
+				} else {
+					pd.perf.Done()
+					db.DFatalf("Error Symlink: %v", err)
+				}
 			}
 		}
 		// Clean up procs which are no longer in the queue.

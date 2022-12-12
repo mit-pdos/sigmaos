@@ -296,6 +296,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
+	thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD / 100.0
 	if nLCCoresUsed > 0 {
 		const buffer float64 = 0.2
 		proposedNCores := totalCores - coresToRevoke
@@ -304,10 +305,9 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		// cload is additive CPU usage of LC procs.
 		cload := math.Max(s.CustomUtil, s.CustomLoad[0]) / 100.0 / totalCores
 		// util is the % of all CPUs being used.
-		util := s.Util / 100.0
+		util := math.Max(s.Util, s.Load[0]) / 100.0
 		// If we push above this threshold, we'll just have to re-grow again.
 		// So, avoid doing so unnecessarily.
-		thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
 		// 1/2 core buffer.
 		db.DPrintf(debug, "[%v] noded %v stats Util:%v Load: %v, CustomUtil:%v, CustomLoad:%v", realmId, nodedId, s.Util, s.Load, s.CustomUtil, s.CustomLoad)
 		db.DPrintf(debug, "[%v] noded %v derived stats util:%v cload:%v, lir:%v", realmId, nodedId, util, cload, loadIncRatio)
@@ -316,7 +316,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 			return false
 		}
 	}
-	db.DPrintf(debug, "[%v] Noded %v is underutilized, had %v cores remaining.", realmId, nodedId, len(ndCfg.Cores))
+	db.DPrintf(debug, "[%v] Noded %v is underutilized threshold %v, had %v cores remaining.", realmId, nodedId, thresh, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
 		qs := []string{np.PROCD_RUNQ_LC}

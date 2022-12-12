@@ -173,18 +173,24 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 			return true
 		}
 	}
-	var opRealmId string
-	var nodedId string
 	var ok bool
+	var victimRealm string
+	var nodedId string
+	victimRealms := make([]string, 0)
+	nodedIds := make([]string, 0)
 	// No cores were available, so try to find a realm with spare resources.
 	if len(machines) == 0 || !hardReq {
 		db.DPrintf("SIGMAMGR", "[%v] search for cores across without machine preference", realmId)
-		opRealmId, _, ok = m.findOverProvisionedRealm(realmId, "")
+		victimRealm, _, ok = m.findOverProvisionedRealm(realmId, "")
+		victimRealms = append(victimRealms, victimRealm)
+		nodedIds = append(nodedIds, nodedId)
 	} else {
 		db.DPrintf("SIGMAMGR", "[%v] search for cores with machine preference %v", realmId, machines)
 		for _, machine := range machines {
 			db.DPrintf("SIGMAMGR", "[%v] search for cores on %v", realmId, machine)
-			opRealmId, nodedId, ok = m.findOverProvisionedRealm(realmId, machine)
+			victimRealm, nodedId, ok = m.findOverProvisionedRealm(realmId, machine)
+			victimRealms = append(victimRealms, victimRealm)
+			nodedIds = append(nodedIds, nodedId)
 			if ok {
 				break
 			}
@@ -194,16 +200,19 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 		db.DPrintf("SIGMAMGR", "[%v] No overprovisioned realms available", realmId)
 		return false
 	}
-	// Ask the over-provisioned realm to give up some cores.
-	db.DPrintf("SIGMAMGR", "[%v] Requesting cores from %v noded %v", realmId, opRealmId, nodedId)
-	m.requestCores(opRealmId, nodedId, hardReq)
-	// Wait for the over-provisioned realm to cede its cores.
-	if m.tryGetFreeCores(100) {
-		// Allocate core to this realm.
-		m.allocCores(realmId, 1)
-		return true
+	// Ask the over-provisioned realms to give up some cores.
+	db.DPrintf("SIGMAMGR", "[%v] Requesting cores from realms %v nodeds %v", realmId, victimRealms, nodedIds)
+	ok = false
+	for i := range nodedIds {
+		m.requestCores(victimRealms[i], nodedIds[i], hardReq)
+		// Wait for the over-provisioned realm to cede its cores.
+		if m.tryGetFreeCores(100) {
+			// Allocate core to this realm.
+			m.allocCores(realmId, 1)
+			ok = true
+		}
 	}
-	return false
+	return ok
 }
 
 // Find an over-provisioned realm (a realm with resources to spare),

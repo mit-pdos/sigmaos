@@ -219,7 +219,7 @@ hotel_tail() {
 realm_balance() {
 #  mrapp=mr-wc-wiki4G-balance.yml
   mrapp=mr-grep-wiki20G.yml
-  hotel_dur="20s,20s,20s"
+  hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
   n_vm=8
   driver_vm=14

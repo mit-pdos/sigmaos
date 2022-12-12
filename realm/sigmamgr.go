@@ -290,22 +290,28 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	for _, cores := range ndCfg.Cores {
 		totalCores += float64(cores.Size())
 	}
-	nLCCoresUsed := totalCores * s.CustomUtil / 100.0
+	nLCCoresUsed := s.CustomUtil / 100.0
 	//	nLCCoresUsed := s.CustomUtil / 100.0
 	// Count how many cores we would revoke.
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if nLCCoresUsed > 0 {
-		const buffer float64 = 0.5
 		proposedNCores := totalCores - coresToRevoke
-		maxLCLoad := math.Max(math.Max(s.CustomLoad[0], s.CustomLoad[1]), s.CustomLoad[1])
-		maxLCLoadNCores := maxLCLoad / 100.0 * totalCores
-		utilNCores := s.Util / 100.0 * totalCores
+		// Ratio by which load will increase if the proposed revocation happens.
+		loadIncRatio := totalCores / proposedNCores
+		// cload is additive CPU usage of LC procs.
+		cload := math.Max(s.CustomLoad[0], s.CustomLoad[0]) / 100.0 / totalCores
+		// util is the % of all CPUs being used.
+		util := s.Util / 100.0
+		// If we push above this threshold, we'll just have to re-grow again.
+		// So, avoid doing so unnecessarily.
+		thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
 		// 1/2 core buffer.
-		db.DPrintf(debug, "[%v] noded %v stats util:%v cutil:%v, cload:%v", realmId, nodedId, s.Util, s.CustomUtil, s.CustomLoad)
-		if proposedNCores < nLCCoresUsed+buffer || proposedNCores < maxLCLoadNCores+buffer || proposedNCores < utilNCores+buffer {
-			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v < (%v or %v or %v) + %v", realmId, totalCores, coresToRevoke, nLCCoresUsed, maxLCLoadNCores, utilNCores, buffer)
+		db.DPrintf(debug, "[%v] noded %v stats Util:%v CustomUtil:%v, CustomLoad:%v", realmId, nodedId, s.Util, s.CustomUtil, s.CustomLoad)
+		db.DPrintf(debug, "[%v] noded %v derived stats util:%v cload:%v, lir:%v", realmId, nodedId, util, cload, loadIncRatio)
+		if cload*loadIncRatio >= thresh || util*loadIncRatio >= thresh {
+			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: tc %v ctr %v ncl %v nu %v", realmId, totalCores, coresToRevoke, cload*loadIncRatio >= thresh, util*loadIncRatio >= thresh)
 			return false
 		}
 	}

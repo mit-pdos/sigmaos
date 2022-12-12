@@ -287,13 +287,13 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	for _, cores := range ndCfg.Cores {
 		totalCores += float64(cores.Size())
 	}
-	nLCCoresUsed := s.CustomUtil / 100.0
+	nLCCoresUsed := totalCores * s.CustomUtil / 100.0
 	// Count how many cores we would revoke.
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if nLCCoresUsed > 0 {
-		if totalCores-coresToRevoke < nLCCoresUsed && totalCores-coresToRevoke < s.Util/100.0 {
+		if totalCores-coresToRevoke < nLCCoresUsed {
 			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v < %v", realmId, totalCores, coresToRevoke, nLCCoresUsed)
 			return false
 		}

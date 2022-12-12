@@ -1,6 +1,7 @@
 package realm
 
 import (
+	"math"
 	"path"
 	"sync"
 	"sync/atomic"
@@ -295,9 +296,13 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if nLCCoresUsed > 0 {
+		const buffer float64 = 0.5
+		proposedNCores := totalCores - coresToRevoke
+		maxLCLoad := math.Max(math.Max(s.CustomLoad[0], s.CustomLoad[1]), s.CustomLoad[1])
+		maxLCLoadNCores := maxLCLoad * totalCores
 		// 1/2 core buffer.
-		if totalCores-coresToRevoke < nLCCoresUsed+0.5 {
-			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v < %v", realmId, totalCores, coresToRevoke, nLCCoresUsed)
+		if proposedNCores < nLCCoresUsed+buffer || proposedNCores < maxLCLoadNCores+buffer {
+			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v < (%v or %v) + %v", realmId, totalCores, coresToRevoke, nLCCoresUsed, maxLCLoadNCores, buffer)
 			return false
 		}
 	}

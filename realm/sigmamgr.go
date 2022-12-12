@@ -303,6 +303,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		maxLCLoadNCores := maxLCLoad / 100.0 * totalCores
 		utilNCores := s.Util / 100.0 * totalCores
 		// 1/2 core buffer.
+		db.DPrintf(debug, "[%v] noded %v stats util:%v cutil:%v, cload:%v", realmId, nodedId, s.Util, s.CustomUtil, s.CustomLoad)
 		if proposedNCores < nLCCoresUsed+buffer || proposedNCores < maxLCLoadNCores+buffer || proposedNCores < utilNCores+buffer {
 			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: %v - %v < (%v or %v or %v) + %v", realmId, totalCores, coresToRevoke, nLCCoresUsed, maxLCLoadNCores, utilNCores, buffer)
 			return false

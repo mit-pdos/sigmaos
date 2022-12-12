@@ -35,15 +35,13 @@ func key2shard(key string, nshard int) int {
 
 type CacheClnt struct {
 	*shardsvcclnt.ShardSvcClnt
-	fsl    *fslib.FsLib
-	nshard int
+	fsl *fslib.FsLib
 }
 
-func MkCacheClnt(fsl *fslib.FsLib, job string, n int) (*CacheClnt, error) {
+func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
 	cc := &CacheClnt{}
-	cc.nshard = n
 	cc.fsl = fsl
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.CACHE, n, cc.Watch)
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, np.CACHE, cc.Watch)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +51,6 @@ func MkCacheClnt(fsl *fslib.FsLib, job string, n int) (*CacheClnt, error) {
 
 func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 	log.Printf("%v: CacheClnt watch %v %d err %v\n", proc.GetName(), path, nshard, err)
-	cc.nshard = nshard
 }
 
 func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
@@ -110,8 +107,9 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 }
 
 func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
-	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
-	for i := 0; i < cc.nshard; i++ {
+	n := cc.Nshard()
+	stats := make([]*protdevsrv.Stats, 0, n)
+	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
 			return nil, err
@@ -122,8 +120,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
 }
 
 func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
-	stats := make([]*protdevsrv.Stats, 0, cc.nshard)
-	for i := 0; i < cc.nshard; i++ {
+	n := cc.Nshard()
+	stats := make([]*protdevsrv.Stats, 0, n)
+	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}
 	return stats

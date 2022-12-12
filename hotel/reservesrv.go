@@ -87,7 +87,7 @@ func RunReserveSrv(job string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job, NCACHE)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job)
 	if err != nil {
 		return err
 	}

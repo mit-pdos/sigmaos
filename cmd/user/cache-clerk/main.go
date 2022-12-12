@@ -24,23 +24,23 @@ var done = int32(0)
 var ctx = context.Background()
 
 func main() {
-	if len(os.Args) < 6 {
-		db.DFatalf("Usage: %v job nshard nkeys duration keyOffset sempath [redisaddr]", os.Args[0])
+	if len(os.Args) < 5 {
+		db.DFatalf("Usage: %v job keys duration keyOffset sempath [redisaddr]", os.Args[0])
 	}
 	var dur time.Duration
 	var nkeys int
 	var keyOffset int
 	var sempath string
 	var err error
-	nkeys, err = strconv.Atoi(os.Args[3])
+	nkeys, err = strconv.Atoi(os.Args[2])
 	if err != nil {
 		db.DFatalf("Bad nkeys %v", err)
 	}
-	dur, err = time.ParseDuration(os.Args[4])
+	dur, err = time.ParseDuration(os.Args[3])
 	if err != nil {
 		db.DFatalf("Bad dur %v", err)
 	}
-	keyOffset, err = strconv.Atoi(os.Args[5])
+	keyOffset, err = strconv.Atoi(os.Args[4])
 	if err != nil {
 		db.DFatalf("Bad offset %v", err)
 	}
@@ -49,20 +49,15 @@ func main() {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	var rcli *redis.Client
 	var cc *cacheclnt.CacheClnt
-	if len(os.Args) > 7 {
+	if len(os.Args) > 6 {
 		rcli = redis.NewClient(&redis.Options{
-			Addr:     os.Args[7],
+			Addr:     os.Args[6],
 			Password: "",
 			DB:       0,
 		})
 	} else {
 		var err error
-		var ncache int
-		ncache, err = strconv.Atoi(os.Args[2])
-		if err != nil {
-			db.DFatalf("Bad ncache %v", err)
-		}
-		cc, err = cacheclnt.MkCacheClnt(fsl, os.Args[1], ncache)
+		cc, err = cacheclnt.MkCacheClnt(fsl, os.Args[1])
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}

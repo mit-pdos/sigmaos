@@ -52,7 +52,7 @@ func (ts *Tstate) stop() {
 }
 
 func (ts *Tstate) StartClerk(args []string, ncore proc.Tcore) {
-	args = append([]string{ts.job, strconv.Itoa(ts.cm.Nshard())}, args...)
+	args = append([]string{ts.job}, args...)
 	p := proc.MakeProc("user/cache-clerk", args)
 	p.SetNcore(ncore)
 	// SpawnBurst to spread clerks across procds.
@@ -71,7 +71,7 @@ func TestCacheSingle(t *testing.T) {
 	)
 
 	ts := mkTstate(t, NSHARD)
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -103,7 +103,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		N = 10
 	)
 	ts := mkTstate(t, nshard)
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, nshard)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -145,7 +145,7 @@ func TestCacheConcur(t *testing.T) {
 	)
 	ts := mkTstate(t, NSHARD)
 	v := "hello"
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
 	err = cc.Set("x", v)
 	assert.Nil(t, err)
@@ -205,7 +205,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job, NSHARD)
+	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	for i := 0; i < 5; i++ {

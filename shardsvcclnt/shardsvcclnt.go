@@ -25,8 +25,13 @@ type ShardSvcClnt struct {
 	rdr   *reader.Reader
 }
 
-func MkShardSvcClnt(fsl *fslib.FsLib, pn string, n int, sw ShardWatch) (*ShardSvcClnt, error) {
+func MkShardSvcClnt(fsl *fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcClnt, error) {
 	ssc := &ShardSvcClnt{FsLib: fsl, pn: pn, sw: sw}
+	sts, err := ssc.GetDir(ssc.shardDir())
+	if err != nil {
+		return nil, err
+	}
+	n := len(sts)
 	ssc.clnts = make([]*protdevclnt.ProtDevClnt, 0)
 	for i := 0; i < n; i++ {
 		if err := ssc.addClnt(i); err != nil {
@@ -39,8 +44,12 @@ func MkShardSvcClnt(fsl *fslib.FsLib, pn string, n int, sw ShardWatch) (*ShardSv
 	return ssc, nil
 }
 
+func (ssc *ShardSvcClnt) shardDir() string {
+	return ssc.pn + shardsvcmgr.SHRDDIR
+}
+
 func (ssc *ShardSvcClnt) setWatch() error {
-	dir := ssc.pn + shardsvcmgr.SHRDDIR
+	dir := ssc.shardDir()
 	_, rdr, err := ssc.ReadDir(dir)
 	if err != nil {
 		return err
@@ -89,6 +98,8 @@ func (ssc *ShardSvcClnt) Server(i int) string {
 }
 
 func (ssc *ShardSvcClnt) Nshard() int {
+	ssc.Lock()
+	defer ssc.Unlock()
 	return len(ssc.clnts)
 }
 

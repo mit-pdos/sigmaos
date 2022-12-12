@@ -192,7 +192,6 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 			if ok {
 				victimRealms = append(victimRealms, victimRealm)
 				nodedIds = append(nodedIds, nodedId)
-				break
 			}
 		}
 	}

@@ -217,9 +217,10 @@ hotel_tail() {
 }
 
 realm_balance() {
-  mrapp=mr-wc-wiki4G.yml
+#  mrapp=mr-wc-wiki4G-balance.yml
+  mrapp=mr-grep-wiki20G.yml
   hotel_dur="20s,20s,20s"
-  hotel_max_rps="1000,2000,1000"
+  hotel_max_rps="1000,3000,1000"
   n_vm=8
   driver_vm=14
   run=${FUNCNAME[0]}
@@ -378,7 +379,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-mr_scalability
+#mr_scalability
 #mr_vs_corral
 #realm_burst
 realm_balance

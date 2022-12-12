@@ -44,6 +44,7 @@ type RealmResourceMgr struct {
 	mclnts          map[string]*protdevclnt.ProtDevClnt
 	nclnts          map[string]*protdevclnt.ProtDevClnt
 	sclnt           *protdevclnt.ProtDevClnt
+	lastGrow        time.Time
 	// ===== Relative to the realm named =====
 	*fslib.FsLib
 }
@@ -98,8 +99,6 @@ func (m *RealmResourceMgr) GrantCores(req proto.RealmMgrRequest, res *proto.Real
 
 // XXX Should we prioritize defragmentation, or try to avoid evictions?
 func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.RealmMgrResponse) error {
-	m.Lock()
-	defer m.Unlock()
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
@@ -193,7 +192,10 @@ func (m *RealmResourceMgr) ShutdownRealm(req proto.RealmMgrRequest, res *proto.R
 
 // This realm has been granted cores. Now grow it. Sigmamgr must hold lock.
 func (m *RealmResourceMgr) growRealm(amt int) {
-	m.updateResizeTime(m.realmId)
+	defer func() {
+		m.lastGrow = time.Now()
+	}()
+	defer m.updateResizeTime(m.realmId)
 	// Find a machine with free cores and claim them
 	machineIds, nodedIds, cores, ok := m.getFreeCores(amt)
 	if !ok {
@@ -518,7 +520,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	}
 
 	// If we have resized too recently, return
-	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
+	if time.Since(m.lastGrow) < np.Conf.Realm.RESIZE_INTERVAL {
 		return 0, false, machineIds, false
 	}
 

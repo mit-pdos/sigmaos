@@ -540,7 +540,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	var anyLC bool
 	avgUtil, utils, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
-	if avgUtil > np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+	if avgUtil >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 		// Hard request if there are any LC procs.
 		if anyLC {
 			// Filter machines to request more cores on by utilization, and sort in

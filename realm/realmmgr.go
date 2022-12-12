@@ -113,6 +113,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	// Don't revoke cores too quickly unless this is a hard request.
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL*2 && !req.HardReq {
 		db.DPrintf("REALMMGR", "[%v] Soft core revocation request failed, resize too soon", m.realmId)
+		res.OK = false
 		return nil
 	}
 
@@ -130,6 +131,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 
 	// If no Nodeds are underutilized...
 	if !ok {
+		res.OK = false
 		return nil
 	}
 	db.DPrintf("REALMMGR", "[%v] core revoked from least utilized node %v", m.realmId, nodedId)
@@ -539,25 +541,23 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	var anyLC bool
 	_, utils, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
-	// Hard request if there are any LC procs.
-	if anyLC {
-		// Filter machines to request more cores on by utilization, and sort in
-		// order of importance.
-		nodeds := sortNodedsByAscendingProcdUtil(utils)
-		machineIds = make([]string, 0, len(nodeds))
-		m.Lock()
-		for i := len(nodeds) - 1; i >= 0; i-- {
-			// Only grow allocations on highly-utilized machines.
-			if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+	// Filter machines to request more cores on by utilization, and sort in
+	// order of importance.
+	nodeds := sortNodedsByAscendingProcdUtil(utils)
+	machineIds = make([]string, 0, len(nodeds))
+	m.Lock()
+	for i := len(nodeds) - 1; i >= 0; i-- {
+		// Only grow allocations on highly-utilized machines.
+		if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+			shouldGrow = true
+			// Only request specific machines if there are LC procs running on them..
+			if anyLC {
 				machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 			}
 		}
-		m.Unlock()
-		if len(machineIds) > 0 {
-			return qlen, anyLC, machineIds, true
-		}
 	}
-	return 0, false, machineIds, false
+	m.Unlock()
+	return qlen, anyLC, machineIds, shouldGrow
 }
 
 func (m *RealmResourceMgr) Work() {

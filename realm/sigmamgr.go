@@ -206,12 +206,12 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 	db.DPrintf("SIGMAMGR", "[%v] Requesting cores from realms %v nodeds %v", realmId, victimRealms, nodedIds)
 	ok = false
 	for i := range nodedIds {
-		m.requestCores(victimRealms[i], nodedIds[i], hardReq)
-		// Wait for the over-provisioned realm to cede its cores.
-		if m.tryGetFreeCores(100) {
-			// Allocate core to this realm.
-			m.allocCores(realmId, 1)
-			ok = true
+		if ok = m.requestCores(victimRealms[i], nodedIds[i], hardReq); ok {
+			// Wait for the over-provisioned realm to cede its cores.
+			if m.tryGetFreeCores(50) {
+				// Allocate core to this realm.
+				m.allocCores(realmId, 1)
+			}
 		}
 	}
 	return ok
@@ -382,7 +382,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 }
 
 // Request a Noded from realm realmId.
-func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq bool) {
+func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq bool) bool {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	res := &proto.RealmMgrResponse{}
 	req := &proto.RealmMgrRequest{
@@ -391,10 +391,11 @@ func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq 
 		NodedId: nodedId,
 	}
 	err := m.rclnts[realmId].RPC("RealmMgr.RevokeCores", req, res)
-	if err != nil || !res.OK {
+	if err != nil {
 		db.DFatalf("Error RPC: %v %v", err, res.OK)
 	}
 	db.DPrintf("SIGMAMGR", "Sigmamgr done requesting cores from %v", realmId)
+	return res.OK
 }
 
 // Destroy a realm.

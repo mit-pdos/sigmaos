@@ -277,7 +277,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug string) bool {
 	ndCfg := MakeNodedConfig()
 	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
-	db.DPrintf(debug, "[%v] Check if noded %v is overprovisioned", realmId, nodedId)
+	db.DPrintf(debug, "[%v] Check noded %v utilization", realmId, nodedId)
 	s := &stats.StatInfo{}
 	err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
@@ -297,7 +297,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if nLCCoresUsed > 0 {
-		const buffer float64 = 0.1
+		const buffer float64 = 0.2
 		proposedNCores := totalCores - coresToRevoke
 		// Ratio by which load will increase if the proposed revocation happens.
 		loadIncRatio := totalCores / proposedNCores
@@ -309,15 +309,14 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		// So, avoid doing so unnecessarily.
 		thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
 		// 1/2 core buffer.
-		db.DPrintf(debug, "[%v] noded %v stats Util:%v CustomUtil:%v, CustomLoad:%v", realmId, nodedId, s.Util, s.CustomUtil, s.CustomLoad)
+		db.DPrintf(debug, "[%v] noded %v stats Util:%v Load: %v, CustomUtil:%v, CustomLoad:%v", realmId, nodedId, s.Util, s.Load, s.CustomUtil, s.CustomLoad)
 		db.DPrintf(debug, "[%v] noded %v derived stats util:%v cload:%v, lir:%v", realmId, nodedId, util, cload, loadIncRatio)
 		if cload*loadIncRatio+buffer >= thresh || util*loadIncRatio+buffer >= thresh {
 			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: tc %v ctr %v ncl %v nu %v", realmId, totalCores, coresToRevoke, cload*loadIncRatio >= thresh, util*loadIncRatio >= thresh)
 			return false
 		}
 	}
-	db.DPrintf(debug, "[%v] Noded is underutilizing LC: %v - %v >= %v, util:%v cutil:%v, cload:%v", realmId, totalCores, coresToRevoke, nLCCoresUsed, s.Util, s.CustomUtil, s.CustomLoad)
-	db.DPrintf(debug, "[%v] Noded %v has %v cores remaining.", realmId, nodedId, len(ndCfg.Cores))
+	db.DPrintf(debug, "[%v] Noded %v is underutilized, had %v cores remaining.", realmId, nodedId, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
 		qs := []string{np.PROCD_RUNQ_LC}

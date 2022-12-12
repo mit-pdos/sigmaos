@@ -155,7 +155,7 @@ func makeNMRJobs(ts *test.Tstate, n int, app string) ([]*MRJobInstance, []interf
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16))
+		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16)+"-"+ts.RealmId())
 		ms = append(ms, i)
 		is = append(is, i)
 	}

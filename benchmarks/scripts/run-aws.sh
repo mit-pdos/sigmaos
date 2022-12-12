@@ -217,7 +217,8 @@ hotel_tail() {
 }
 
 realm_balance() {
-#  mrapp=mr-wc-wiki4G-balance.yml
+#  mrapp=mr-wc-wiki4G.yml
+#  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
@@ -230,7 +231,7 @@ realm_balance() {
     export SIGMADEBUG=\"TEST;\"; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalance --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" 14
 }
@@ -379,7 +380,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#mr_scalability
+mr_scalability
 #mr_vs_corral
 #realm_burst
 realm_balance

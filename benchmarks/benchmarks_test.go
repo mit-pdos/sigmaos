@@ -34,6 +34,7 @@ var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var SLEEP time.Duration
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -63,6 +64,7 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
+	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
@@ -349,8 +351,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		hotel.RandSearchReq(wc, r)
 	})
 	p1 := monitorCoresAssigned(ts1)
-	defer p1.Done()
 	p2 := monitorCoresAssigned(ts2)
+	defer p1.Done()
 	defer p2.Done()
 	// Run Hotel job
 	go func() {
@@ -372,6 +374,56 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	//	time.Sleep(70 * time.Second)
 	// Kick off hotel jobs
 	hotelJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	printResultSummary(rs1)
+	ts1.Shutdown()
+	ts2.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceMRMR(t *testing.T) {
+	done := make(chan bool)
+	// Find the total number of cores available for spinners across all machines.
+	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	// Structure for kv
+	ts2 := test.MakeTstateRealm(t, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	// Prep MR job
+	mrjobs1, mrapps1 := makeNMRJobs(ts1, 1, MR_APP)
+	// Prep MR job
+	mrjobs2, mrapps2 := makeNMRJobs(ts2, 1, MR_APP)
+	p1 := monitorCoresAssigned(ts1)
+	p2 := monitorCoresAssigned(ts2)
+	defer p1.Done()
+	defer p2.Done()
+	// Run MR job
+	go func() {
+		runOps(ts2, mrapps2, runMR, rs2)
+		done <- true
+	}()
+	// Wait for MR jobs to set up.
+	<-mrjobs2[0].ready
+	// Run MR job
+	go func() {
+		runOps(ts1, mrapps1, runMR, rs1)
+		done <- true
+	}()
+	// Wait for MR jobs to set up.
+	<-mrjobs1[0].ready
+	// Kick off MR jobs.
+	mrjobs2[0].ready <- true
+	//	// Sleep for a bit
+	time.Sleep(SLEEP)
+	// Kick off hotel jobs
+	mrjobs1[0].ready <- true
 	// Wait for both jobs to finish.
 	<-done
 	<-done

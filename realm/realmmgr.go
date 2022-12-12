@@ -115,7 +115,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	}
 
 	// Don't revoke cores too quickly unless this is a hard request.
-	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL*2 && !req.HardReq {
+	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL && !req.HardReq {
 		db.DPrintf("REALMMGR", "[%v] Soft core revocation request failed, resize too soon", m.realmId)
 		return nil
 	}

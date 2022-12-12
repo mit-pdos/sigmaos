@@ -189,9 +189,9 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 		for _, machine := range machines {
 			db.DPrintf("SIGMAMGR", "[%v] search for cores on %v", realmId, machine)
 			victimRealm, nodedId, ok = m.findOverProvisionedRealm(realmId, machine)
-			victimRealms = append(victimRealms, victimRealm)
-			nodedIds = append(nodedIds, nodedId)
 			if ok {
+				victimRealms = append(victimRealms, victimRealm)
+				nodedIds = append(nodedIds, nodedId)
 				break
 			}
 		}

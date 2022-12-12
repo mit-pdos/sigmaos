@@ -298,7 +298,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// overprovisioned
 	thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD / 100.0
 	if nLCCoresUsed > 0 {
-		const buffer float64 = 0.1
+		const buffer float64 = 0.2
 		proposedNCores := totalCores - coresToRevoke
 		// Ratio by which load will increase if the proposed revocation happens.
 		loadIncRatio := totalCores / proposedNCores

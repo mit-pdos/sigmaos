@@ -290,6 +290,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	for _, cores := range ndCfg.Cores {
 		totalCores += float64(cores.Size())
 	}
+	//	nLCCoresUsed := totalCores * s.CustomUtil / 100.0
 	nLCCoresUsed := s.CustomUtil / 100.0
 	// Count how many cores we would revoke.
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())

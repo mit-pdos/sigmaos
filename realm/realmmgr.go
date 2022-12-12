@@ -90,9 +90,6 @@ func (m *RealmResourceMgr) initFS() {
 }
 
 func (m *RealmResourceMgr) GrantCores(req proto.RealmMgrRequest, res *proto.RealmMgrResponse) error {
-	m.Lock()
-	defer m.Unlock()
-
 	db.DPrintf("REALMMGR", "[%v] resource.Tcore granted %v", m.realmId, req.Ncores)
 	m.growRealm(int(req.Ncores))
 	res.OK = true
@@ -149,7 +146,10 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	nreq := &proto.NodedRequest{
 		Cores: cores,
 	}
-	err = m.nclnts[nodedId].RPC("Noded.RevokeCores", nreq, nres)
+	m.Lock()
+	clnt := m.nclnts[nodedId]
+	m.Unlock()
+	err = clnt.RPC("Noded.RevokeCores", nreq, nres)
 	if err != nil || !nres.OK {
 		db.DFatalf("Error RPC: %v %v", err, nres.OK)
 	}
@@ -178,7 +178,10 @@ func (m *RealmResourceMgr) ShutdownRealm(req proto.RealmMgrRequest, res *proto.R
 		nreq := &proto.NodedRequest{
 			AllCores: true,
 		}
-		err := m.nclnts[nodedId].RPC("Noded.RevokeCores", nreq, nres)
+		m.Lock()
+		clnt := m.nclnts[nodedId]
+		m.Unlock()
+		err := clnt.RPC("Noded.RevokeCores", nreq, nres)
 		if err != nil || !nres.OK {
 			db.DFatalf("Error RPC: %v %v", err, nres.OK)
 		}
@@ -216,8 +219,10 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 				m.requestNoded(nodedIds[i], machineIds[i])
 				db.DPrintf("REALMMGR", "[%v] Started noded %v on %v", m.realmId, nodedIds[i], machineIds[i])
 				db.DPrintf("REALMMGR", "[%v] Allocated %v", m.realmId, nodedIds[i])
-				var err error
-				m.nclnts[nodedIds[i]], err = protdevclnt.MkProtDevClnt(m.sigmaFsl, nodedPath(m.realmId, nodedIds[i]))
+				clnt, err := protdevclnt.MkProtDevClnt(m.sigmaFsl, nodedPath(m.realmId, nodedIds[i]))
+				m.Lock()
+				m.nclnts[nodedIds[i]] = clnt
+				m.Unlock()
 				if err != nil {
 					db.DFatalf("Error MkProtDevClnt: %v", err)
 				}
@@ -227,7 +232,10 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 				req := &proto.NodedRequest{
 					Cores: c,
 				}
-				err := m.nclnts[nodedIds[i]].RPC("Noded.GrantCores", req, res)
+				m.Lock()
+				clnt := m.nclnts[nodedIds[i]]
+				m.Unlock()
+				err := clnt.RPC("Noded.GrantCores", req, res)
 				if err != nil || !res.OK {
 					db.DFatalf("Error RPC: %v %v", err, res.OK)
 				}
@@ -324,6 +332,7 @@ func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Ti
 func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 	var clnt *protdevclnt.ProtDevClnt
 	var ok bool
+	m.Lock()
 	if clnt, ok = m.mclnts[machineId]; !ok {
 		var err error
 		clnt, err = protdevclnt.MkProtDevClnt(m.sigmaFsl, path.Join(machine.MACHINES, machineId))
@@ -332,8 +341,11 @@ func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 		}
 		m.mclnts[machineId] = clnt
 	}
+	m.Unlock()
 
+	m.Lock()
 	m.nodedToMachined[nodedId] = machineId
+	m.Unlock()
 
 	res := &mproto.MachineResponse{}
 	req := &mproto.MachineRequest{
@@ -530,12 +542,14 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 			// order of importance.
 			nodeds := sortNodedsByAscendingProcdUtil(utils)
 			machineIds = make([]string, 0, len(nodeds))
+			m.Lock()
 			for i := len(nodeds) - 1; i >= 0; i-- {
 				// Only grow allocations on highly-utilized machines.
 				if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 					machineIds = append(machineIds, m.nodedToMachined[nodeds[i]])
 				}
 			}
+			m.Unlock()
 		}
 		return qlen, anyLC, machineIds, true
 	}
@@ -555,9 +569,7 @@ func (m *RealmResourceMgr) Work() {
 	}()
 
 	for {
-		m.Lock()
 		qlen, hardReq, machineIds, ok := m.realmShouldGrow()
-		m.Unlock()
 		if ok {
 			db.DPrintf("REALMMGR", "[%v] Try to grow realm qlen %v", m.realmId, qlen)
 			res := &proto.SigmaMgrResponse{}

@@ -190,6 +190,7 @@ func (m *RealmResourceMgr) ShutdownRealm(req proto.RealmMgrRequest, res *proto.R
 
 // This realm has been granted cores. Now grow it. Sigmamgr must hold lock.
 func (m *RealmResourceMgr) growRealm(amt int) {
+	m.updateResizeTime(m.realmId)
 	// Find a machine with free cores and claim them
 	machineIds, nodedIds, cores, ok := m.getFreeCores(amt)
 	if !ok {
@@ -231,7 +232,6 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 					db.DFatalf("Error RPC: %v %v", err, res.OK)
 				}
 			}
-			m.updateResizeTime(m.realmId)
 		}
 	}
 	if amt > 0 {

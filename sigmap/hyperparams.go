@@ -58,7 +58,7 @@ session:
 realm:
   scan_interval: 100ms
   resize_interval: 100ms
-  grow_cpu_util_threshold: 50
+  grow_cpu_util_threshold: 70
   shrink_cpu_util_threshold: 10
 
 machine:

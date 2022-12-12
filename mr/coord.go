@@ -83,9 +83,10 @@ func MakeCoord(args []string) (*Coord, error) {
 		return nil, errors.New("MakeCoord: wrong number of arguments")
 	}
 	c := &Coord{}
+	c.job = args[0]
+	db.DPrintf("MR", "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
 	c.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
 
-	c.job = args[0]
 	m, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])
@@ -371,6 +372,7 @@ func (c *Coord) monitorProcds() {
 }
 
 func (c *Coord) Work() {
+	db.DPrintf("MR", "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
 	// so need to set a fence.

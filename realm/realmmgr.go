@@ -553,7 +553,9 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 			}
 		}
 		m.Unlock()
-		return qlen, anyLC, machineIds, true
+		if len(machineIds) > 0 {
+			return qlen, anyLC, machineIds, true
+		}
 	}
 	return 0, false, machineIds, false
 }

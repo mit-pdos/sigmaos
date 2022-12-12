@@ -129,12 +129,6 @@ func (ji *HotelJobInstance) printStats() {
 			fmt.Printf("= cache-%v: %v\n", i, cstat)
 		}
 	}
-	for _, lg := range ji.lgs {
-		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
-	}
-	for _, lg := range ji.lgs {
-		lg.Stats()
-	}
 }
 
 func (ji *HotelJobInstance) Wait() {
@@ -148,5 +142,11 @@ func (ji *HotelJobInstance) Wait() {
 			assert.Nil(ji.T, err)
 		}
 		ji.cm.StopCache()
+	}
+	for _, lg := range ji.lgs {
+		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
+	}
+	for _, lg := range ji.lgs {
+		lg.Stats()
 	}
 }

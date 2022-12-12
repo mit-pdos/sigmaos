@@ -195,7 +195,7 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 	m.Lock()
 	m.lastGrow = time.Now()
 	m.Unlock()
-	defer m.updateResizeTime(m.realmId)
+	m.updateResizeTime(m.realmId)
 	// Find a machine with free cores and claim them
 	machineIds, nodedIds, cores, ok := m.getFreeCores(amt)
 	if !ok {

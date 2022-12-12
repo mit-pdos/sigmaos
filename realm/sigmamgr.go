@@ -297,11 +297,12 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
 	if nLCCoresUsed > 0 {
+		const buffer float64 = 0.1
 		proposedNCores := totalCores - coresToRevoke
 		// Ratio by which load will increase if the proposed revocation happens.
 		loadIncRatio := totalCores / proposedNCores
 		// cload is additive CPU usage of LC procs.
-		cload := math.Max(s.CustomLoad[0], s.CustomLoad[0]) / 100.0 / totalCores
+		cload := math.Max(s.CustomUtil, s.CustomLoad[0]) / 100.0 / totalCores
 		// util is the % of all CPUs being used.
 		util := s.Util / 100.0
 		// If we push above this threshold, we'll just have to re-grow again.
@@ -310,7 +311,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		// 1/2 core buffer.
 		db.DPrintf(debug, "[%v] noded %v stats Util:%v CustomUtil:%v, CustomLoad:%v", realmId, nodedId, s.Util, s.CustomUtil, s.CustomLoad)
 		db.DPrintf(debug, "[%v] noded %v derived stats util:%v cload:%v, lir:%v", realmId, nodedId, util, cload, loadIncRatio)
-		if cload*loadIncRatio >= thresh || util*loadIncRatio >= thresh {
+		if cload*loadIncRatio+buffer >= thresh || util*loadIncRatio+buffer >= thresh {
 			db.DPrintf(debug, "[%v] Noded is using LC cores well, not overprovisioned: tc %v ctr %v ncl %v nu %v", realmId, totalCores, coresToRevoke, cload*loadIncRatio >= thresh, util*loadIncRatio >= thresh)
 			return false
 		}

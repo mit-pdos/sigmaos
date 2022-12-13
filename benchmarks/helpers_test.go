@@ -1,6 +1,8 @@
 package benchmarks_test
 
 import (
+	"io"
+	"os"
 	"path"
 	"time"
 
@@ -215,4 +217,22 @@ func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn 
 		is = append(is, i)
 	}
 	return ws, is
+}
+
+// ========== Download Results Helpers ==========
+
+func downloadS3Results(ts *test.Tstate, src string, dst string) {
+	// Make the destination directory.
+	os.MkdirAll(dst, 0777)
+	_, err := ts.ProcessDir(src, func(st *np.Stat) (bool, error) {
+		rdr, err := ts.OpenReader(path.Join(src, st.Name))
+		defer rdr.Close()
+		assert.Nil(ts.T, err, "Error open reader %v", err)
+		b, err := io.ReadAll(rdr)
+		assert.Nil(ts.T, err, "Error read all %v", err)
+		err = os.WriteFile(path.Join(dst, st.Name), b, 0777)
+		assert.Nil(ts.T, err, "Error write file %v", err)
+		return false, nil
+	})
+	assert.Nil(ts.T, err, "Error process dir %v", err)
 }

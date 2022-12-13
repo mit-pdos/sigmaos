@@ -15,7 +15,7 @@ const (
 	HOTELDIR   = "name/hotel/"
 	MEMFS      = "memfs"
 	HTTP_ADDRS = "http-addr"
-	NCACHE     = 3
+	NCACHE     = 6
 )
 
 func JobDir(job string) string {

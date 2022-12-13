@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"io"
+	"net/rpc"
 	"os"
 	"path"
 	"time"
@@ -221,6 +222,7 @@ func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn 
 
 // ========== Download Results Helpers ==========
 
+// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), "/tmp/sigmaos/perf-output")
 func downloadS3Results(ts *test.Tstate, src string, dst string) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
@@ -235,4 +237,24 @@ func downloadS3Results(ts *test.Tstate, src string, dst string) {
 		return false, nil
 	})
 	assert.Nil(ts.T, err, "Error process dir %v", err)
+}
+
+// ========== Start/Wait K8s MR Helpers ==========
+
+func startK8sMR(ts *test.Tstate, coordaddr string) *rpc.Client {
+	c, err := rpc.DialHTTP("tcp", coordaddr)
+	assert.Nil(ts.T, err, "Error dial coord: %v", err)
+	var req bool
+	var res bool
+	err = c.Call("K8sCoord.Start", &req, &res)
+	assert.Nil(ts.T, err, "Error Start coord: %v", err)
+	return c
+}
+
+func waitK8sMR(ts *test.Tstate, c *rpc.Client) {
+	var req bool
+	var res bool
+	err := c.Call("K8sCoord.WaitDone", &req, &res)
+	assert.Nil(ts.T, err, "Error WaitDone coord: %v", err)
+	time.Sleep(10 * time.Second)
 }

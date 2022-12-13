@@ -3,11 +3,13 @@ package benchmarks_test
 import (
 	"flag"
 	"math/rand"
+	"path"
 	"testing"
 	"time"
 
 	// XXX Used for matrix tests before.
 	//	"fmt"
+	"github.com/stretchr/testify/assert"
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
@@ -44,6 +46,8 @@ var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
 var K8S_ADDR string
+var K8S_LEADER_NODE_IP string
+var S3_RES_DIR string
 
 // XXX REMOVE EVENTUALLY
 var AAA int
@@ -68,6 +72,8 @@ func init() {
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
+	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
+	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -576,4 +582,17 @@ func TestHotelK8sAll(t *testing.T) {
 	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(ts.T, 1, wc, r)
 	})
+}
+
+func TestMRK8s(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	assert.NotEqual(ts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(ts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
+	waitK8sMR(ts, c)
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
 }

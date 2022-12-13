@@ -229,9 +229,9 @@ hotel_tail() {
 
 hotel_tail_multi() {
   # Make sure to fill in new k8s addr.
-  k8saddr="10.108.117.18:5000"
-  rps=4000
-  sys="Sigmaos"
+  k8saddr="10.100.220.158:5000"
+  rps=6000
+  sys="K8s"
 #  sys="K8s"
   run=${FUNCNAME[0]}/$sys/$rps
   echo "========== Running $run =========="

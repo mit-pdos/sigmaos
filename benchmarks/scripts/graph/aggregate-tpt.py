@@ -153,14 +153,20 @@ def setup_graph(nplots, units, total_ncore):
   if nplots == 1:
     np = 1
   else:
-    np = nplots + 1
+    if total_ncore > 0:
+      np = nplots + 1
+    else:
+      np = nplots
   fig, tptax = plt.subplots(np, figsize=figsize, sharex=True)
   if nplots == 1:
     coresax = []
     tptax = [ tptax ]
   else:
-    coresax = [ tptax[-1] ]
-    tptax = tptax[:-1]
+    if total_ncore > 0:
+      coresax = [ tptax[-1] ]
+      tptax = tptax[:-1]
+    else:
+      coresax = []
   ylabels = []
   for unit in units.split(","):
     ylabel = unit

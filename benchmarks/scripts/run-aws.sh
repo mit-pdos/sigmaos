@@ -205,7 +205,7 @@ mr_vs_corral() {
 
 hotel_tail() {
   # Make sure to fill in new k8s addr.
-  k8saddr="10.111.131.148:5000"
+  k8saddr="10.108.117.18:5000"
   for sys in Sigmaos K8s ; do
     for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
@@ -256,7 +256,7 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="10.103.120.18:5000"
+  k8saddr="10.108.117.18:5000"
   k8sleaderip="10.0.134.163"
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
@@ -425,7 +425,7 @@ graph_k8s_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s --xmin 200000 --xmax 400000
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 0 --k8s --xmin 200000 --xmax 400000
 }
 
 #graph_mr_overlap() {
@@ -466,17 +466,17 @@ echo "Running benchmarks with version: $VERSION"
 #mr_scalability
 #mr_vs_corral
 #realm_burst
-realm_balance
-#realm_balance_be
+#realm_balance
+realm_balance_be
 #hotel_tail
 mr_k8s
 k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_realm_balance
 graph_realm_balance_be
-#graph_k8s_balance
+#graph_realm_balance
+graph_k8s_balance
 #graph_mr_aggregate_tpt
 #graph_mr_scalability
 #graph_mr_vs_corral

@@ -215,6 +215,7 @@ mr_k8s() {
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     aws s3 rm --recursive s3://9ps3/$s3dir; \
+    aws s3 rm --recursive s3://9ps3/output; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
@@ -432,7 +433,7 @@ graph_mr_scalability
 graph_mr_vs_corral
 #scrape_realm_burst
 graph_realm_balance
-graph_hotel_tail
+#graph_hotel_tail
 
 echo -e "\n\n\n\n===================="
 echo "Results in $OUT_DIR"

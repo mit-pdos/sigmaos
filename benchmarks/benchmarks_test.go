@@ -596,3 +596,26 @@ func TestMRK8s(t *testing.T) {
 	waitK8sMR(ts, c)
 	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
 }
+
+func TestK8sBalanceHotelMR(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	assert.NotEqual(ts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(ts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	done := make(chan bool)
+	go func() {
+		testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+			hotel.RandSearchReq(wc, r)
+		})
+		done <- true
+	}()
+
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
+	waitK8sMR(ts, c)
+	<-done
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), "/tmp/sigmaos/perf-output")
+}

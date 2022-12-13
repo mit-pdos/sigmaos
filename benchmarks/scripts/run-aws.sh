@@ -275,6 +275,25 @@ realm_balance_be() {
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
 
+k8s_balance() {
+  k8saddr="10.111.59.246:5000"
+  k8sleaderip="10.0.134.163"
+  hotel_dur="40s,20s,50s"
+  hotel_max_rps="1000,3000,1000"
+  n_vm=1
+  driver_vm=0
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  cmd="
+    export SIGMADEBUG=\"TEST;\"; \
+    $PRIVILEGED_BIN/realm/create $REALM2; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+}
+
 #mr_overlap() {
 #  mrapp=mr-wc-wiki4G.yml
 #  n_vm=16

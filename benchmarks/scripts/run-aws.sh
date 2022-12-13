@@ -206,7 +206,7 @@ mr_vs_corral() {
 mr_k8s() {
   n_vm=1
   k8saddr="10.0.134.163"
-  s3dir="k8sperf/mr"
+  s3dir="corralperf/k8s"
   app="mr-k8s-grep"
   run=${FUNCNAME[0]}/$app
   echo "========== Running $run =========="
@@ -214,8 +214,9 @@ mr_k8s() {
   driver_vm=0
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    aws s3 rm --recursive s3://9ps3/$s3dir; \
-    aws s3 rm --recursive s3://9ps3/output; \
+    aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
+    aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
+    aws s3 rm --recursive s3://9ps3/output > /dev/null; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
@@ -383,6 +384,13 @@ graph_realm_balance() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
 }
 
+graph_k8s_mr_aggregate_tpt() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_k8s/mr-k8s-grep/ --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -431,6 +439,7 @@ source ~/env/3.10/bin/activate
 graph_mr_aggregate_tpt
 graph_mr_scalability
 graph_mr_vs_corral
+graph_k8s_mr_aggregate_tpt
 #scrape_realm_burst
 graph_realm_balance
 #graph_hotel_tail

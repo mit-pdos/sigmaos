@@ -79,22 +79,38 @@ def find_bucket(time, step_size):
 
 # XXX correct terminology is "window" not "bucket"
 # Fit into step_size ms buckets.
-def bucketize(tpts, time_range, step_size=1000):
+def bucketize(tpts, time_range, xmin, xmax, step_size=1000):
   buckets = {}
-  for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
+  if xmin > -1 and xmax > -1:
+    r = range(0, find_bucket(xmax - xmin, step_size) + step_size * 2, step_size)
+  else:
+    r = range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size)
+  for i in r:
     buckets[i] = 0.0
   for tpt in tpts:
     for t in tpt:
-      buckets[find_bucket(t[0], step_size)] += t[1]
+      sub = max(0, xmin)
+      if xmin != -1 and xmax != -1:
+        if t[0] < xmin or t[0] > xmax:
+          continue
+      buckets[find_bucket(t[0] - sub, step_size)] += t[1]
   return buckets
 
-def bucketize_latency(tpts, time_range, step_size=1000):
+def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
   buckets = {}
+  if xmin > -1 and xmax > -1:
+    r = range(0, find_bucket(xmax - xmin, step_size) + step_size * 2, step_size)
+  else:
+    r = range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size)
   for i in range(0, find_bucket(time_range[1], step_size) + step_size * 2, step_size):
     buckets[i] = []
   for tpt in tpts:
     for t in tpt:
-      buckets[find_bucket(t[0], step_size)].append(t[1])
+      sub = max(0, xmin)
+      if xmin != -1 and xmax != -1:
+        if t[0] < xmin or t[0] > xmax:
+          continue
+      buckets[find_bucket(t[0] - sub, step_size)].append(t[1])
   return buckets
 
 def buckets_to_percentile(buckets, percentile):
@@ -115,7 +131,7 @@ def add_data_to_graph(ax, x, y, label, color, linestyle, marker):
   x = x / 1000.0
   return ax.plot(x, y, label=label, color=color, linestyle=linestyle, marker=marker, markevery=25, markerfacecolor=colo.to_rgba(color, 0.0), markeredgecolor=color)
 
-def finalize_graph(fig, ax, plots, title, out):
+def finalize_graph(fig, ax, plots, title, out, maxval):
   lns = plots[0]
   for p in plots[1:]:
     lns += p
@@ -124,6 +140,8 @@ def finalize_graph(fig, ax, plots, title, out):
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
+    if maxval > 0:
+      ax[idx].set_xlim(right=maxval)
   # plt.legend(lns, labels)
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
@@ -160,17 +178,19 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_ylabel("Cores Assigned")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, hotel_realm)
-    procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
-    assert(len(procd_tpts) == 2)
-  procd_range = get_time_range(procd_tpts)
+    if not k8s:
+      procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
+      assert(len(procd_tpts) == 2)
+  print(procd_tpts)
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
+  procd_range = get_time_range(procd_tpts)
   hotel_tpts = read_tpts(input_dir, "hotel")
   hotel_range = get_time_range(hotel_tpts)
   hotel_lats = read_latencies(input_dir, "bench.out")
@@ -184,14 +204,14 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  hotel_buckets = bucketize(hotel_tpts, time_range, step_size=1000)
+  hotel_buckets = bucketize(hotel_tpts, time_range, xmin, xmax, step_size=1000)
   if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
     fig, tptax, coresax = setup_graph(3, units, total_ncore)
   else:
     fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
   plots = []
-  hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, step_size=50)
+  hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
   hotel_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
   if len(hotel_lats) > 0:
     x, y = buckets_to_lists(hotel_lat_buckets)
@@ -203,7 +223,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
-  mr_buckets = bucketize(mr_tpts, time_range, step_size=1000)
+  mr_buckets = bucketize(mr_tpts, time_range, xmin, xmax, step_size=1000)
   if len(mr_tpts) > 0:
     x, y = buckets_to_lists(mr_buckets)
     if "MB" in units:
@@ -231,7 +251,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
       tptax = ta
-  finalize_graph(fig, tptax, plots, title, out)
+  finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -242,7 +262,10 @@ if __name__ == "__main__":
   parser.add_argument("--units", type=str, required=True)
   parser.add_argument("--total_ncore", type=int, required=True)
   parser.add_argument("--percentile", type=float, default=99.0)
+  parser.add_argument("--k8s", action="store_true", default=False)
   parser.add_argument("--out", type=str, required=True)
+  parser.add_argument("--xmin", type=int, default=-1)
+  parser.add_argument("--xmax", type=int, default=-1)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax)

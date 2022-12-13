@@ -80,7 +80,14 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 		// Read job name
 		sts, err := ji.GetDir("name/hotel/")
 		assert.Nil(ji.T, err, "Err Get hotel dir %v", err)
-		ji.job = sts[0].Name
+		var l int
+		for _, st := range sts {
+			// Dumb heuristic, but will always be the longest name....
+			if len(st.Name) > l {
+				ji.job = st.Name
+				l = len(st.Name)
+			}
+		}
 	}
 
 	if !ji.justCli {

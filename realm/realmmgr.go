@@ -539,9 +539,10 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 		// procs queued.
 		return qlen, lcqlen > 0, machineIds, true
 	}
-	var utils map[string]float64
 	var anyLC bool
-	_, utils, anyLC = m.getRealmUtil(realmCfg)
+	var utils map[string]float64
+	var avgUtil float64
+	avgUtil, utils, anyLC = m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
 	// Filter machines to request more cores on by utilization, and sort in
 	// order of importance.
@@ -559,6 +560,10 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 		}
 	}
 	m.Unlock()
+	// If no LC procs, and avg util is low, and no procs queued, don't grow.
+	if !anyLC {
+		shouldGrow = avgUtil >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
+	}
 	return qlen, anyLC, machineIds, shouldGrow
 }
 

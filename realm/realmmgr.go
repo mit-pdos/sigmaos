@@ -125,7 +125,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 		nodedId, ok = m.getLeastUtilizedNoded()
 	} else {
 		// If requester has a preference, check if this noded is overprovisioned.
-		_, ok = nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR")
+		_, _, ok = nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR")
 		db.DPrintf("REALMMGR", "[%v] Tried to satisfy (hard:%v) req for %v, result: %v ", m.realmId, req.HardReq, nodedId, ok)
 	}
 
@@ -482,7 +482,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	nodeds := sortNodedsByAscendingProcdUtil(procdUtils)
 	// Find a noded which can be shrunk.
 	for _, nodedId := range nodeds {
-		if _, ok := nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR"); ok {
+		if _, _, ok := nodedOverprovisioned(m.sigmaFsl, m.ConfigClnt, m.realmId, nodedId, "REALMMGR"); ok {
 			return nodedId, true
 		}
 	}

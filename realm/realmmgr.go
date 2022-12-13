@@ -543,7 +543,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	var utils map[string]float64
 	var avgUtil float64
 	avgUtil, utils, anyLC = m.getRealmUtil(realmCfg)
-	db.DPrintf("REALMMGR", "[%v] Realm utils: %v", m.realmId, utils)
+	db.DPrintf("REALMMGR", "[%v] Realm utils (avg:%v): %v", avgUtil, m.realmId, utils)
 	// Filter machines to request more cores on by utilization, and sort in
 	// order of importance.
 	nodeds := sortNodedsByAscendingProcdUtil(utils)

@@ -190,6 +190,15 @@ mr_scalability() {
   done
 }
 
+mr_replicated_named() {
+  mrapp=mr-grep-wiki120G.yml
+  n_vm=16
+  run=${FUNCNAME[0]}/sigmaOS
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_mr 4 $n_vm $mrapp $perf_dir
+}
+
 mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
@@ -240,7 +249,7 @@ realm_balance_be() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki10G.yml
-  sl="30s"
+  sl="40s"
   n_vm=8
   driver_vm=0
   run=${FUNCNAME[0]}
@@ -369,6 +378,13 @@ graph_mr_aggregate_tpt() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_scalability/sigmaOS/16 --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64
 }
 
+graph_mr_replicated_named() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_replicated_named/sigmaOS --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64
+}
+
 graph_mr_scalability() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
@@ -463,20 +479,22 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+mr_replicated_named
 #mr_scalability
 #mr_vs_corral
 #realm_burst
 #realm_balance
-realm_balance_be
+#realm_balance_be
 #hotel_tail
-mr_k8s
-k8s_balance
+#mr_k8s
+#k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_realm_balance_be
+graph_mr_replicated_named
+#graph_realm_balance_be
 #graph_realm_balance
-graph_k8s_balance
+#graph_k8s_balance
 #graph_mr_aggregate_tpt
 #graph_mr_scalability
 #graph_mr_vs_corral

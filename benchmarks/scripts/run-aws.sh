@@ -411,7 +411,7 @@ graph_realm_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --realm1 $REALM1 --realm2 $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' BE Applications" --total_ncore 32
 }
 
 graph_k8s_mr_aggregate_tpt() {

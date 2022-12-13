@@ -611,7 +611,6 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 		})
 		done <- true
 	}()
-
 	db.DPrintf("TEST", "Starting mr")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")

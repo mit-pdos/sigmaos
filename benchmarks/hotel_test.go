@@ -98,9 +98,11 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 	if !sigmaos {
 		ji.k8ssrvaddr = K8S_ADDR
 		// Write a file for clients to discover the server's address.
-		p := hotel.JobHTTPAddrsPath(ji.job)
-		if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
-			db.DFatalf("Error PutFileJson addrs %v", err)
+		if !ji.justCli {
+			p := hotel.JobHTTPAddrsPath(ji.job)
+			if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
+				db.DFatalf("Error PutFileJson addrs %v", err)
+			}
 		}
 	}
 

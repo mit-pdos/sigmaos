@@ -141,7 +141,10 @@ run_hotel() {
   cmd="
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out 2>&1 ; \
+    echo done 1 ; \
+    sleep 20
+    echo done 2 ; \
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -224,6 +227,18 @@ hotel_tail() {
       run_hotel $sys $rps $k8saddr $perf_dir
     done
   done
+}
+
+hotel_tail_multi() {
+  # Make sure to fill in new k8s addr.
+  k8saddr="10.108.117.18:5000"
+  rps=4000
+  sys="Sigmaos"
+#  sys="K8s"
+  run=${FUNCNAME[0]}/$sys/$rps
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_hotel $sys $rps $k8saddr $perf_dir
 }
 
 realm_balance() {
@@ -489,6 +504,7 @@ realm_balance_be
 #hotel_tail
 #mr_k8s
 #k8s_balance
+hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

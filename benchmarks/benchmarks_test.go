@@ -565,6 +565,26 @@ func TestHotelSigmaosSearch(t *testing.T) {
 	})
 }
 
+func TestHotelSigmaosJustCliSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	jobs, ji := makeHotelJobsCli(ts, true, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
 func TestHotelK8sSearch(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {

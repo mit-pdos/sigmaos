@@ -553,6 +553,8 @@ func testHotel(ts *test.Tstate, sigmaos bool, fn hotelFn) {
 	//	printResultSummary(rs)
 	if sigmaos {
 		ts.Shutdown()
+	} else {
+		jobs[0].requestK8sStats()
 	}
 }
 
@@ -601,6 +603,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	assert.NotEqual(ts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(ts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	db.DPrintf("TEST", "Starting hotel")
 	done := make(chan bool)
 	go func() {
 		testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
@@ -609,6 +612,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 		done <- true
 	}()
 
+	db.DPrintf("TEST", "Starting mr")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
@@ -616,6 +620,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
 	waitK8sMR(ts, c)
 	<-done
+	db.DPrintf("TEST", "Downloading results")
 	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
 	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), "/tmp/sigmaos/perf-output")
 }

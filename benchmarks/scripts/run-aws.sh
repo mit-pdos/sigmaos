@@ -280,6 +280,7 @@ k8s_balance() {
   k8sleaderip="10.0.134.163"
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
+  s3dir="corralperf/k8s"
   n_vm=1
   driver_vm=0
   run=${FUNCNAME[0]}
@@ -287,6 +288,10 @@ k8s_balance() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
+    aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
+    aws s3 rm --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
+    aws s3 rm --recursive s3://9ps3/output > /dev/null; \
     $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr > /tmp/bench.out 2>&1
@@ -452,6 +457,7 @@ echo "Running benchmarks with version: $VERSION"
 #realm_balance_be
 #hotel_tail
 mr_k8s
+k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

@@ -150,3 +150,10 @@ func (ji *HotelJobInstance) Wait() {
 		lg.Stats()
 	}
 }
+
+func (ji *HotelJobInstance) requestK8sStats() {
+	wc := hotel.MakeWebClnt(ji.FsLib, ji.job)
+	rep, err := wc.SaveResults()
+	assert.Nil(ji.T, err, "Save results: %v", err)
+	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
+}

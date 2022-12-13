@@ -137,6 +137,8 @@ func (ji *HotelJobInstance) printStats() {
 }
 
 func (ji *HotelJobInstance) Wait() {
+	db.DPrintf("TEST", "extra sleep")
+	time.Sleep(10 * time.Second)
 	db.DPrintf("TEST", "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()

@@ -73,7 +73,8 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 	var svcs []string
 	if sigmaos {
 		svcs = hotel.HotelSvcs
-		ncache = hotel.NCACHE
+		//		ncache = hotel.NCACHE
+		ncache = 6
 	}
 
 	if ji.justCli {

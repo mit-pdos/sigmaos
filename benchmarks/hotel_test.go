@@ -138,8 +138,8 @@ func (ji *HotelJobInstance) printStats() {
 
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf("TEST", "Evicting hotel procs")
-	ji.printStats()
 	if ji.sigmaos && !ji.justCli {
+		ji.printStats()
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
 			assert.Nil(ji.T, err, "Evict: %v", err)
@@ -148,6 +148,7 @@ func (ji *HotelJobInstance) Wait() {
 		}
 		ji.cm.StopCache()
 	}
+	db.DPrintf("TEST", "Done evicting hotel procs")
 	for _, lg := range ji.lgs {
 		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
 	}

@@ -17,8 +17,8 @@ def read_tpt(fpath):
   tpt = [ (float(l[0]), float(l[1])) for l in lines ]
   return tpt
 
-def read_tpts(input_dir, substr):
-  fnames = [ f for f in os.listdir(input_dir) if substr in f ]
+def read_tpts(input_dir, substr, ignore="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"):
+  fnames = [ f for f in os.listdir(input_dir) if substr in f and ignore not in f ]
   tpts = [ read_tpt(os.path.join(input_dir, f)) for f in fnames ]
   return tpts
 
@@ -183,11 +183,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
   else:
-    procd_tpts = read_tpts(input_dir, hotel_realm)
+    procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
     if not k8s:
-      procd_tpts.append(read_tpts(input_dir, mr_realm)[0])
+      procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
       assert(len(procd_tpts) == 2)
-  print(procd_tpts)
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
   procd_range = get_time_range(procd_tpts)

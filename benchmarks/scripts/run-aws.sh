@@ -256,7 +256,7 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="10.111.59.246:5000"
+  k8saddr="10.103.120.18:5000"
   k8sleaderip="10.0.134.163"
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
@@ -271,10 +271,9 @@ k8s_balance() {
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
-    aws s3 rm --recursive s3://9ps3/output > /dev/null; \
     echo done removing ; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
+    echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
@@ -293,7 +292,6 @@ mr_k8s() {
     export SIGMADEBUG=\"TEST;\"; \
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
-    aws s3 rm --recursive s3://9ps3/output > /dev/null; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
@@ -409,11 +407,25 @@ graph_realm_balance() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
 }
 
+graph_realm_balance_be() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+}
+
 graph_k8s_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_k8s/mr-k8s-grep/ --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64
+}
+
+graph_k8s_balance() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s --xmin 200000 --xmax 400000
 }
 
 #graph_mr_overlap() {
@@ -454,7 +466,7 @@ echo "Running benchmarks with version: $VERSION"
 #mr_scalability
 #mr_vs_corral
 #realm_burst
-#realm_balance
+realm_balance
 #realm_balance_be
 #hotel_tail
 mr_k8s
@@ -462,12 +474,14 @@ k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_aggregate_tpt
-graph_mr_scalability
-graph_mr_vs_corral
-graph_k8s_mr_aggregate_tpt
-#scrape_realm_burst
 graph_realm_balance
+graph_realm_balance_be
+#graph_k8s_balance
+#graph_mr_aggregate_tpt
+#graph_mr_scalability
+#graph_mr_vs_corral
+#graph_k8s_mr_aggregate_tpt
+#scrape_realm_burst
 #graph_hotel_tail
 
 echo -e "\n\n\n\n===================="

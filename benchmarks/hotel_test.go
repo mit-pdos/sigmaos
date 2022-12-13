@@ -29,6 +29,7 @@ type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
 	sigmaos    bool
+	justCli    bool
 	k8ssrvaddr string
 	job        string
 	dur        []time.Duration
@@ -42,13 +43,14 @@ type HotelJobInstance struct {
 	*test.Tstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn) *HotelJobInstance {
+func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.Tstate = ts
+	ji.justCli = justCli
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -73,8 +75,11 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 		svcs = hotel.HotelSvcs
 		ncache = hotel.NCACHE
 	}
-	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
-	assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+
+	if !ji.justCli {
+		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
+		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+	}
 
 	if !sigmaos {
 		ji.k8ssrvaddr = K8S_ADDR
@@ -116,7 +121,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 }
 
 func (ji *HotelJobInstance) printStats() {
-	if ji.sigmaos {
+	if ji.sigmaos && !ji.justCli {
 		for _, s := range sp.HOTELSVC {
 			stats := &protdevsrv.Stats{}
 			err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
@@ -134,7 +139,7 @@ func (ji *HotelJobInstance) printStats() {
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf("TEST", "Evicting hotel procs")
 	ji.printStats()
-	if ji.sigmaos {
+	if ji.sigmaos && !ji.justCli {
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
 			assert.Nil(ji.T, err, "Evict: %v", err)

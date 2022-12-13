@@ -572,6 +572,13 @@ func TestHotelK8sSearch(t *testing.T) {
 	})
 }
 
+func TestHotelK8sSearchCli(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+}
+
 func TestHotelSigmaosAll(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testHotel(ts, true, func(wc *hotel.WebClnt, r *rand.Rand) {

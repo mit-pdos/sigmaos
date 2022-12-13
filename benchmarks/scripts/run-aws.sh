@@ -113,14 +113,15 @@ run_benchmark() {
 }
 
 run_mr() {
-  if [ $# -ne 4 ]; then
-    echo "run_mr args: n_cores n_vm app perf_dir" 1>&2
+  if [ $# -ne 5 ]; then
+    echo "run_mr args: n_cores n_vm repl app perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
-  mrapp=$3
-  perf_dir=$4
+  repl=$3
+  mrapp=$4
+  perf_dir=$5
   cmd="
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
@@ -186,7 +187,7 @@ mr_scalability() {
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 4 $n_vm $mrapp $perf_dir
+    run_mr 4 $n_vm "" $mrapp $perf_dir
   done
 }
 
@@ -196,7 +197,7 @@ mr_replicated_named() {
   run=${FUNCNAME[0]}/sigmaOS
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_mr 4 $n_vm $mrapp $perf_dir
+  run_mr 4 $n_vm "" $mrapp $perf_dir
 }
 
 mr_vs_corral() {
@@ -208,7 +209,7 @@ mr_vs_corral() {
     run=${FUNCNAME[0]}/$mrapp
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm $mrapp $perf_dir
+    run_mr 2 $n_vm "" $mrapp $perf_dir
   done
 }
 
@@ -248,7 +249,7 @@ realm_balance() {
 realm_balance_be() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
-  mrapp=mr-grep-wiki10G.yml
+  mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
   driver_vm=0
@@ -479,20 +480,20 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-mr_replicated_named
+#mr_replicated_named
 #mr_scalability
 #mr_vs_corral
 #realm_burst
 #realm_balance
-#realm_balance_be
+realm_balance_be
 #hotel_tail
 #mr_k8s
 #k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_mr_replicated_named
-#graph_realm_balance_be
+#graph_mr_replicated_named
+graph_realm_balance_be
 #graph_realm_balance
 #graph_k8s_balance
 #graph_mr_aggregate_tpt

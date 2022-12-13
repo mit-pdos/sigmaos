@@ -213,7 +213,20 @@ func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn 
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn)
+		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, false)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+func makeHotelJobsCli(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*HotelJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, true)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

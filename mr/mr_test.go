@@ -326,7 +326,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 		<-crashchan
 	}
 
-	//ts.checkJob()
+	ts.checkJob()
 
 	// stat := stats.StatInfo{}
 	// err = ts.GetFileJson(np.NAMED+np.STATSD, &stat)

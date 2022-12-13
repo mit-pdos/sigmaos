@@ -240,7 +240,7 @@ realm_balance_be() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki10G.yml
-  sl="40s"
+  sl="30s"
   n_vm=8
   driver_vm=0
   run=${FUNCNAME[0]}

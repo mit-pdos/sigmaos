@@ -76,6 +76,13 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 		ncache = hotel.NCACHE
 	}
 
+	if ji.justCli {
+		// Read job name
+		sts, err := ji.GetDir("name/hotel/")
+		assert.Nil(ji.T, err, "Err Get hotel dir %v", err)
+		ji.job = sts[0].Name
+	}
+
 	if !ji.justCli {
 		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)

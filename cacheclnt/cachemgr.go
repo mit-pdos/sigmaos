@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CACHE_NCORE = 2
+	CACHE_NCORE = 1
 )
 
 type CacheMgr struct {

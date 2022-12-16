@@ -15,7 +15,7 @@ const (
 	HOTELDIR   = "name/hotel/"
 	MEMFS      = "memfs"
 	HTTP_ADDRS = "http-addr"
-	NCACHE     = 3
+	NCACHE     = 6
 )
 
 func JobDir(job string) string {
@@ -48,9 +48,9 @@ var HotelSvcs = []string{"user/hotel-userd", "user/hotel-rated",
 	"user/hotel-geod", "user/hotel-profd", "user/hotel-searchd",
 	"user/hotel-reserved", "user/hotel-recd", "user/hotel-wwwd"}
 
-var ncores = []int{1, 2,
+var ncores = []int{0, 2,
 	2, 2, 3,
-	3, 1, 2}
+	3, 0, 2}
 
 func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt

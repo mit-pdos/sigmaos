@@ -29,6 +29,7 @@ type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
 	sigmaos    bool
+	justCli    bool
 	k8ssrvaddr string
 	job        string
 	dur        []time.Duration
@@ -42,13 +43,14 @@ type HotelJobInstance struct {
 	*test.Tstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn) *HotelJobInstance {
+func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.Tstate = ts
+	ji.justCli = justCli
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -73,15 +75,34 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 		svcs = hotel.HotelSvcs
 		ncache = hotel.NCACHE
 	}
-	ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
-	assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+
+	if ji.justCli {
+		// Read job name
+		sts, err := ji.GetDir("name/hotel/")
+		assert.Nil(ji.T, err, "Err Get hotel dir %v", err)
+		var l int
+		for _, st := range sts {
+			// Dumb heuristic, but will always be the longest name....
+			if len(st.Name) > l {
+				ji.job = st.Name
+				l = len(st.Name)
+			}
+		}
+	}
+
+	if !ji.justCli {
+		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
+		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+	}
 
 	if !sigmaos {
 		ji.k8ssrvaddr = K8S_ADDR
 		// Write a file for clients to discover the server's address.
-		p := hotel.JobHTTPAddrsPath(ji.job)
-		if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
-			db.DFatalf("Error PutFileJson addrs %v", err)
+		if !ji.justCli {
+			p := hotel.JobHTTPAddrsPath(ji.job)
+			if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
+				db.DFatalf("Error PutFileJson addrs %v", err)
+			}
 		}
 	}
 
@@ -116,7 +137,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 }
 
 func (ji *HotelJobInstance) printStats() {
-	if ji.sigmaos {
+	if ji.sigmaos && !ji.justCli {
 		for _, s := range sp.HOTELSVC {
 			stats := &protdevsrv.Stats{}
 			err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
@@ -129,18 +150,14 @@ func (ji *HotelJobInstance) printStats() {
 			fmt.Printf("= cache-%v: %v\n", i, cstat)
 		}
 	}
-	for _, lg := range ji.lgs {
-		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
-	}
-	for _, lg := range ji.lgs {
-		lg.Stats()
-	}
 }
 
 func (ji *HotelJobInstance) Wait() {
+	db.DPrintf("TEST", "extra sleep")
+	time.Sleep(10 * time.Second)
 	db.DPrintf("TEST", "Evicting hotel procs")
-	ji.printStats()
-	if ji.sigmaos {
+	if ji.sigmaos && !ji.justCli {
+		ji.printStats()
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
 			assert.Nil(ji.T, err, "Evict: %v", err)
@@ -149,4 +166,18 @@ func (ji *HotelJobInstance) Wait() {
 		}
 		ji.cm.StopCache()
 	}
+	db.DPrintf("TEST", "Done evicting hotel procs")
+	for _, lg := range ji.lgs {
+		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
+	}
+	for _, lg := range ji.lgs {
+		lg.Stats()
+	}
+}
+
+func (ji *HotelJobInstance) requestK8sStats() {
+	wc := hotel.MakeWebClnt(ji.FsLib, ji.job)
+	rep, err := wc.SaveResults()
+	assert.Nil(ji.T, err, "Save results: %v", err)
+	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
 }

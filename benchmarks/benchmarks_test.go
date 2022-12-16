@@ -3,11 +3,13 @@ package benchmarks_test
 import (
 	"flag"
 	"math/rand"
+	"path"
 	"testing"
 	"time"
 
 	// XXX Used for matrix tests before.
 	//	"fmt"
+	"github.com/stretchr/testify/assert"
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
@@ -34,6 +36,7 @@ var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var SLEEP time.Duration
 var REALM2 string
 var REDIS_ADDR string
 var N_PROC int
@@ -43,6 +46,8 @@ var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
 var K8S_ADDR string
+var K8S_LEADER_NODE_IP string
+var S3_RES_DIR string
 
 // XXX REMOVE EVENTUALLY
 var AAA int
@@ -63,9 +68,12 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
+	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
+	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
+	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
 	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -349,8 +357,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		hotel.RandSearchReq(wc, r)
 	})
 	p1 := monitorCoresAssigned(ts1)
-	defer p1.Done()
 	p2 := monitorCoresAssigned(ts2)
+	defer p1.Done()
 	defer p2.Done()
 	// Run Hotel job
 	go func() {
@@ -372,6 +380,56 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	//	time.Sleep(70 * time.Second)
 	// Kick off hotel jobs
 	hotelJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	printResultSummary(rs1)
+	ts1.Shutdown()
+	ts2.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceMRMR(t *testing.T) {
+	done := make(chan bool)
+	// Find the total number of cores available for spinners across all machines.
+	ts := test.MakeTstateAll(t)
+	countNClusterCores(ts)
+	// Structures for mr
+	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	// Structure for kv
+	ts2 := test.MakeTstateRealm(t, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	// Prep MR job
+	mrjobs1, mrapps1 := makeNMRJobs(ts1, 1, MR_APP)
+	// Prep MR job
+	mrjobs2, mrapps2 := makeNMRJobs(ts2, 1, MR_APP)
+	p1 := monitorCoresAssigned(ts1)
+	p2 := monitorCoresAssigned(ts2)
+	defer p1.Done()
+	defer p2.Done()
+	// Run MR job
+	go func() {
+		runOps(ts2, mrapps2, runMR, rs2)
+		done <- true
+	}()
+	// Wait for MR jobs to set up.
+	<-mrjobs2[0].ready
+	// Run MR job
+	go func() {
+		runOps(ts1, mrapps1, runMR, rs1)
+		done <- true
+	}()
+	// Wait for MR jobs to set up.
+	<-mrjobs1[0].ready
+	// Kick off MR jobs.
+	mrjobs2[0].ready <- true
+	//	// Sleep for a bit
+	time.Sleep(SLEEP)
+	// Kick off hotel jobs
+	mrjobs1[0].ready <- true
 	// Wait for both jobs to finish.
 	<-done
 	<-done
@@ -495,6 +553,8 @@ func testHotel(ts *test.Tstate, sigmaos bool, fn hotelFn) {
 	//	printResultSummary(rs)
 	if sigmaos {
 		ts.Shutdown()
+	} else {
+		jobs[0].requestK8sStats()
 	}
 }
 
@@ -505,7 +565,54 @@ func TestHotelSigmaosSearch(t *testing.T) {
 	})
 }
 
+func TestHotelSigmaosJustCliSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	jobs, ji := makeHotelJobsCli(ts, true, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
+func TestHotelK8sJustCliSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	jobs, ji := makeHotelJobsCli(ts, false, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+	// XXX Clean this up/hide this somehow.
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
 func TestHotelK8sSearch(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RandSearchReq(wc, r)
+	})
+}
+
+func TestHotelK8sSearchCli(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
@@ -524,4 +631,42 @@ func TestHotelK8sAll(t *testing.T) {
 	testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(ts.T, 1, wc, r)
 	})
+}
+
+func TestMRK8s(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	assert.NotEqual(ts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(ts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
+	waitK8sMR(ts, c)
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
+}
+
+func TestK8sBalanceHotelMR(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	assert.NotEqual(ts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(ts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	db.DPrintf("TEST", "Starting hotel")
+	done := make(chan bool)
+	go func() {
+		testHotel(ts, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+			hotel.RandSearchReq(wc, r)
+		})
+		done <- true
+	}()
+	db.DPrintf("TEST", "Starting mr")
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
+	waitK8sMR(ts, c)
+	<-done
+	db.DPrintf("TEST", "Downloading results")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), "/tmp/sigmaos/perf-output")
 }

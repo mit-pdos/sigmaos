@@ -1,6 +1,9 @@
 package benchmarks_test
 
 import (
+	"io"
+	"net/rpc"
+	"os"
 	"path"
 	"time"
 
@@ -155,7 +158,7 @@ func makeNMRJobs(ts *test.Tstate, n int, app string) ([]*MRJobInstance, []interf
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16))
+		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16)+"-"+ts.RealmId())
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -210,9 +213,61 @@ func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn 
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn)
+		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, false)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
+}
+
+func makeHotelJobsCli(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*HotelJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, true)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+// ========== Download Results Helpers ==========
+
+// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), "/tmp/sigmaos/perf-output")
+func downloadS3Results(ts *test.Tstate, src string, dst string) {
+	// Make the destination directory.
+	os.MkdirAll(dst, 0777)
+	_, err := ts.ProcessDir(src, func(st *np.Stat) (bool, error) {
+		rdr, err := ts.OpenReader(path.Join(src, st.Name))
+		defer rdr.Close()
+		assert.Nil(ts.T, err, "Error open reader %v", err)
+		b, err := io.ReadAll(rdr)
+		assert.Nil(ts.T, err, "Error read all %v", err)
+		err = os.WriteFile(path.Join(dst, st.Name), b, 0777)
+		assert.Nil(ts.T, err, "Error write file %v", err)
+		return false, nil
+	})
+	assert.Nil(ts.T, err, "Error process dir %v", err)
+}
+
+// ========== Start/Wait K8s MR Helpers ==========
+
+func startK8sMR(ts *test.Tstate, coordaddr string) *rpc.Client {
+	c, err := rpc.DialHTTP("tcp", coordaddr)
+	assert.Nil(ts.T, err, "Error dial coord: %v", err)
+	var req bool
+	var res bool
+	err = c.Call("K8sCoord.Start", &req, &res)
+	assert.Nil(ts.T, err, "Error Start coord: %v", err)
+	return c
+}
+
+func waitK8sMR(ts *test.Tstate, c *rpc.Client) {
+	var req bool
+	var res bool
+	err := c.Call("K8sCoord.WaitDone", &req, &res)
+	assert.Nil(ts.T, err, "Error WaitDone coord: %v", err)
+	time.Sleep(10 * time.Second)
 }

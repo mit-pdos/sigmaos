@@ -138,6 +138,7 @@ func (lg *LoadGenerator) Run() {
 	for tid := 0; tid < len(lg.rpss); tid++ {
 		nreq += <-lg.initC
 	}
-	db.DPrintf(db.ALWAYS, "Avg req/sec: %v", float64(nreq)/time.Since(start).Seconds())
+	db.DPrintf(db.ALWAYS, "Avg req/sec client-side: %v", float64(nreq)/time.Since(start).Seconds())
 	lg.wg.Wait()
+	db.DPrintf(db.ALWAYS, "Avg req/sec server-side: %v", float64(nreq)/time.Since(start).Seconds())
 }

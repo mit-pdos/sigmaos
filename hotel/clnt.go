@@ -149,3 +149,17 @@ func (wc *WebClnt) Geo(lat, lon float64) (string, error) {
 	}
 	return repl["message"].(string), nil
 }
+
+func (wc *WebClnt) SaveResults() (string, error) {
+	vals := url.Values{}
+	body, err := wc.request("/saveresults", vals)
+	if err != nil {
+		return "", err
+	}
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	if err != nil {
+		return "", err
+	}
+	return repl["message"].(string), nil
+}

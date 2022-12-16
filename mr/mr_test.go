@@ -57,8 +57,12 @@ func TestHash(t *testing.T) {
 }
 
 func TestMakeWordCount(t *testing.T) {
-	const INPUT = "enwiki-1G"
-	file, err := os.Open("/home/kaashoek/Downloads/" + INPUT)
+	const (
+		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
+		INPUT = "/home/kaashoek/hack/sigmaos/input/gutenberg.txt"
+	)
+
+	file, err := os.Open(INPUT)
 	assert.Nil(t, err)
 	defer file.Close()
 	rdr := bufio.NewReader(file)
@@ -77,7 +81,7 @@ func TestMakeWordCount(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	file, err = os.Create("/home/kaashoek/tmp/sigmaos/" + INPUT + ".out")
+	file, err = os.Create("/home/kaashoek/tmp/sigmaos/" + path.Base(INPUT) + ".out")
 	assert.Nil(t, err)
 	defer file.Close()
 	for k, v := range data {
@@ -239,7 +243,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) compare() {
-	cmd := exec.Command("sort", "seq-mr.out")
+	cmd := exec.Command("sort", "gutenberg.txt.out")
 	var out1 bytes.Buffer
 	cmd.Stdout = &out1
 	err := cmd.Run()
@@ -327,16 +331,6 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	}
 
 	ts.checkJob()
-
-	// stat := stats.StatInfo{}
-	// err = ts.GetFileJson(np.NAMED+np.STATSD, &stat)
-	// assert.Nil(t, err, "statsd")
-	// fmt.Printf("stats named %v\n", stat)
-
-	// stat = stats.StatInfo{}
-	// err = ts.GetFileJson(np.UX+"~ip/"+np.STATSD, &stat)
-	// assert.Nil(t, err, "statsd")
-	// fmt.Printf("stats ux %v\n", stat)
 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)

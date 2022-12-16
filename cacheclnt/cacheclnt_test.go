@@ -134,8 +134,8 @@ func TestCacheShardedTwo(t *testing.T) {
 	testCacheSharded(t, 2)
 }
 
-func TestCacheShardedFive(t *testing.T) {
-	testCacheSharded(t, 5)
+func TestCacheShardedThree(t *testing.T) {
+	testCacheSharded(t, 3)
 }
 
 func TestCacheConcur(t *testing.T) {

@@ -221,10 +221,11 @@ func (pathc *PathClnt) umountFree(path []string) *fcall.Err {
 func (pathc *PathClnt) Remove(name string) error {
 	db.DPrintf("PATHCLNT", "Remove %v\n", name)
 	pn := path.Split(name)
-	fid, rest, err := pathc.mnt.resolve(pn)
+	fid, rest, err := pathc.mnt.resolve(pn, path.EndSlash(name))
 	if err != nil {
 		return err
 	}
+
 	// Optimistcally remove obj without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
@@ -249,7 +250,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	db.DPrintf("PATHCLNT", "Stat %v\n", name)
 	pn := path.Split(name)
 	// XXX ignore err?
-	target, rest, _ := pathc.mnt.resolve(pn)
+	target, rest, _ := pathc.mnt.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := np.MkStatNull()
 		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
@@ -326,7 +327,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 func (pathc *PathClnt) GetFile(pn string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DPrintf("PATHCLNT", "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p)
+	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +357,7 @@ func (pathc *PathClnt) GetFile(pn string, mode np.Tmode, off np.Toffset, cnt np.
 func (pathc *PathClnt) SetFile(pn string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DPrintf("PATHCLNT", "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p)
+	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
 		return 0, err
 	}
@@ -386,7 +387,7 @@ func (pathc *PathClnt) SetFile(pn string, mode np.Tmode, data []byte, off np.Tof
 func (pathc *PathClnt) PutFile(pn string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DPrintf("PATHCLNT", "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p)
+	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
 		return 0, err
 	}
@@ -421,7 +422,7 @@ func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
 		return "", nil, err
 	}
 	p := path.Split(pn)
-	_, left, err := pathc.mnt.resolve(p)
+	_, left, err := pathc.mnt.resolve(p, true)
 	if err != nil {
 		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
 		return "", nil, err

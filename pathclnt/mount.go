@@ -6,8 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
+	"sigmaos/path"
 	np "sigmaos/sigmap"
-    "sigmaos/path"
 )
 
 type Point struct {
@@ -79,7 +79,7 @@ func matchexact(mp path.Path, path path.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
+func (mnt *MntTable) resolve(path path.Path, resolve bool) (np.Tfid, path.Path, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -88,8 +88,12 @@ func (mnt *MntTable) resolve(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
 	}
 
 	for _, p := range mnt.mounts {
+		// db.DPrintf("MOUNT", "mnt %v path %v\n", p.path, path)
 		ok, left := match(p.path, path)
 		if ok {
+			if len(left) == 0 && !resolve {
+				continue
+			}
 			return p.fid, left, nil
 		}
 	}

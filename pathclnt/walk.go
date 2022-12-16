@@ -62,10 +62,15 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (np.Tfid,
 // clunking it.
 func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (np.Tfid, path.Path, path.Path, *fcall.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
-		fid, left, err := pathc.walkMount(path)
+		db.DPrintf("WALK", "walkPath: %v resolve %v\n", path, resolve)
+		fid, left, err := pathc.walkMount(path, resolve)
 		if err != nil {
-			return np.NoFid, path, left, err
+			db.DPrintf("WALK", "walkPath: %v resolve %v\n", len(left), resolve)
+			if len(left) != 0 || resolve {
+				return np.NoFid, path, left, err
+			}
 		}
+		db.DPrintf("WALK", "walkPath: walkOne %v left %v\n", fid, left)
 		fid, left, err = pathc.walkOne(fid, left, w)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
@@ -100,8 +105,8 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (np.Tfid,
 // Walk the mount table, and clone the found fid; the caller is
 // responsible for clunking it. Return the fid and the remaining part
 // of the path that must be walked.
-func (pathc *PathClnt) walkMount(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
-	fid, left, err := pathc.mnt.resolve(path)
+func (pathc *PathClnt) walkMount(path path.Path, resolve bool) (np.Tfid, path.Path, *fcall.Err) {
+	fid, left, err := pathc.mnt.resolve(path, resolve)
 	if err != nil {
 		return np.NoFid, left, err
 	}

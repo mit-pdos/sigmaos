@@ -137,47 +137,6 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRemoveSymlink(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-
-	d1 := gopath.Join(pathname, "d1")
-	db.DPrintf(db.ALWAYS, "path %v", pathname)
-	err := ts.MkDir(d1, 0777)
-	assert.Nil(t, err, "Mkdir %v", err)
-	fn := gopath.Join(d1, "f")
-	target := fslib.MakeTarget(fslib.Named())
-	err = ts.Symlink(target, fn, 0777)
-	assert.Nil(t, err, "Symlink: %v", err)
-
-	_, err = ts.GetDir(fn + "/")
-	assert.Nil(t, err, "GetDir: %v", err)
-
-	err = ts.Remove(fn)
-	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
-
-func TestRmDirWithSymlink(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-
-	d1 := gopath.Join(pathname, "d1")
-	err := ts.MkDir(d1, 0777)
-	assert.Nil(t, err, "Mkdir %v", err)
-	fn := gopath.Join(d1, "f")
-	target := fslib.MakeTarget(fslib.Named())
-	err = ts.Symlink(target, fn, 0777)
-	assert.Nil(t, err, "Symlink: %v", err)
-
-	_, err = ts.GetDir(fn + "/")
-	assert.Nil(t, err, "GetDir: %v", err)
-
-	err = ts.RmDir(d1)
-	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
-
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
@@ -1225,6 +1184,47 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
+
+	ts.Shutdown()
+}
+
+func TestRemoveSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	db.DPrintf(db.ALWAYS, "path %v", pathname)
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
+func TestRmDirWithSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+	target := fslib.MakeTarget(fslib.Named())
+	err = ts.Symlink(target, fn, 0777)
+	assert.Nil(t, err, "Symlink: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
 }

@@ -112,8 +112,7 @@ func TestSplits(t *testing.T) {
 
 func TestMapper(t *testing.T) {
 	const (
-		JOB       = "mr-ux-wiki1G.yml"
-		SPLITSZ   = 10 * np.MBYTE // 500
+		SPLITSZ   = 64 * np.KBYTE // 10 * np.MBYTE
 		REDUCEIN  = "name/ux/~ip/test-reducer-in.txt"
 		REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
 	)
@@ -122,8 +121,11 @@ func TestMapper(t *testing.T) {
 	p := perf.MakePerf("MRMAPPER")
 
 	ts.Remove(REDUCEIN)
+	ts.Remove(REDUCEOUT)
 
-	job = mr.ReadJobConfig(JOB)
+	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	job.Nreduce = 1
+
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err MkBins %v", err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
@@ -167,8 +169,7 @@ func TestMapper(t *testing.T) {
 	}
 
 	data1 := make(seqwc.Tdata)
-	pp := perf.MakePerf("SEQWC")
-	sbc := mr.MakeScanByteCounter(pp)
+	sbc := mr.MakeScanByteCounter(p)
 	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
 	assert.Nil(t, err)
 	assert.Equal(t, len(data1), len(data))

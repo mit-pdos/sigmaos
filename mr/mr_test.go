@@ -59,7 +59,7 @@ func TestHash(t *testing.T) {
 func TestMakeWordCount(t *testing.T) {
 	const (
 		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
-		INPUT = "/home/kaashoek/hack/sigmaos/input/gutenberg.txt"
+		INPUT = "../input/gutenberg.txt"
 	)
 
 	file, err := os.Open(INPUT)
@@ -81,7 +81,7 @@ func TestMakeWordCount(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	file, err = os.Create("/home/kaashoek/tmp/sigmaos/" + path.Base(INPUT) + ".out")
+	file, err = os.Create("/tmp/sigmaos/" + path.Base(INPUT) + ".out")
 	assert.Nil(t, err)
 	defer file.Close()
 	for k, v := range data {
@@ -111,16 +111,19 @@ func TestSplits(t *testing.T) {
 }
 
 func TestMapper(t *testing.T) {
-	const SPLITSZ = 10 * np.MBYTE // 500
-	const REDUCEIN = "name/ux/~ip/test-reducer-in.txt"
-	const REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
+	const (
+		JOB       = "mr-ux-wiki1G.yml"
+		SPLITSZ   = 10 * np.MBYTE // 500
+		REDUCEIN  = "name/ux/~ip/test-reducer-in.txt"
+		REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
+	)
 
 	ts := test.MakeTstateAll(t)
 	p := perf.MakePerf("MRMAPPER")
 
 	ts.Remove(REDUCEIN)
 
-	job = mr.ReadJobConfig("mr-ux-wiki1G.yml")
+	job = mr.ReadJobConfig(JOB)
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err MkBins %v", err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
@@ -163,13 +166,12 @@ func TestMapper(t *testing.T) {
 		wrt.Close()
 	}
 
-	// data1 := make(seqwc.Tdata)
-	// _, _, err = seqwc.WcData(ts.FsLib, job.Input, data1)
-	// assert.Nil(t, err)
-
-	// if len(data1) != len(data) {
-	// 	log.Printf("error: len not matching %d %d\n", len(data1), len(data))
-	// }
+	data1 := make(seqwc.Tdata)
+	pp := perf.MakePerf("SEQWC")
+	sbc := mr.MakeScanByteCounter(pp)
+	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
+	assert.Nil(t, err)
+	assert.Equal(t, len(data1), len(data))
 
 	// for k, v := range data1 {
 	// 	if v1, ok := data[k]; !ok {

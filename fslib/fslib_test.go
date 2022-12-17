@@ -25,7 +25,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string
+var pathname string // e.g., --path "name/ux/~ip/fslibtest
 
 func init() {
 	flag.StringVar(&pathname, "path", np.NAMED, "path for file system")
@@ -1072,13 +1072,9 @@ func TestSymlinkPath(t *testing.T) {
 }
 
 func target(t *testing.T, ts *test.Tstate, path string) []byte {
-	target := fslib.MakeTarget(fslib.Named())
-	if path != np.NAMED {
-		srv, left, err := ts.AbsPathServer(pathname)
-		assert.Nil(t, err)
-		target = fslib.MakeTargetTree(srv.Base(), left)
-	}
-	return target
+	b, left, err := ts.CopyMount(pathname)
+	assert.Nil(t, err)
+	return fslib.MakeMountTree(b, left)
 }
 
 func TestSymlinkRemote(t *testing.T) {
@@ -1122,10 +1118,7 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	pn, err := ts.ResolveUnion(gopath.Join(pathname, "d/~ip"))
-	p := path.Split(pn)
-	_, _, b := p.IsUnion()
-	assert.False(t, b)
+	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~ip"))
 	sts, err = ts.GetDir(pn)
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")

@@ -129,7 +129,7 @@ func (m *Mapper) closewrts() (np.Tlength, error) {
 
 // Inform reducer where to find map output
 func (m *Mapper) informReducer() error {
-	pn, err := m.ResolveUnion(MLOCALSRV)
+	pn, err := m.ResolveUnions(MLOCALSRV)
 	if err != nil {
 		return fmt.Errorf("%v: ResolveUnion %v err %v\n", proc.GetName(), MLOCALSRV, err)
 	}

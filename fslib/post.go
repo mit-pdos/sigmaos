@@ -23,6 +23,11 @@ func MakeTargetTree(srvaddr string, tree path.Path) []byte {
 	return []byte(strings.Join(target, ":"))
 }
 
+func MakeMountTree(mount []byte, tree string) []byte {
+	target := []string{string(mount), tree}
+	return []byte(strings.Join(target, ":"))
+}
+
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	err := fsl.Symlink(MakeTarget([]string{srvaddr}), srvname, 0777|np.DMTMP)
 	return err

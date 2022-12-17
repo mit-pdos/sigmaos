@@ -6,14 +6,14 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
+	np "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 )
 
@@ -28,21 +28,21 @@ type FsUx struct {
 	ot *ObjTable
 }
 
-func RunFsUx(mount string) {
+func RunFsUx(rootux string) {
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", np.UX, err)
 	}
-	fsux = MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
+	fsux = MakeReplicatedFsUx(rootux, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
 	fsux.Done()
 }
 
-func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
+func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux = &FsUx{}
 	fsux.ot = MkObjTable()
-	root, err := makeDir([]string{mount})
+	root, err := makeDir([]string{rootux})
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
 	}

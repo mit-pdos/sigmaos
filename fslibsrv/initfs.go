@@ -37,7 +37,8 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	srv := makeSrv(root, addr, fsl, pclnt, config)
 	if len(path) > 0 {
-		err := fsl.Post(srv.MyAddr(), path)
+		mnt := fslib.MkMountServer(srv.MyAddr())
+		err := fsl.MkMount(path, mnt)
 		if err != nil {
 			return nil, err
 		}

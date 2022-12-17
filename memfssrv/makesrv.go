@@ -69,17 +69,17 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 	return srv, nil
 }
 
-func MakeMemFs(path string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
+func MakeMemFs(pn string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)
-	fs, err := MakeMemFsFsl(path, fsl, pclnt)
+	fs, err := MakeMemFsFsl(pn, fsl, pclnt)
 	return fs, fsl, pclnt, err
 }
 
-func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
+func MakeMemFsFsl(pn string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
 	fs := &MemFs{}
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
-	srv, err := fslibsrv.MakeSrv(root, path, fsl, pclnt)
+	srv, err := fslibsrv.MakeSrv(root, pn, fsl, pclnt)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +88,6 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	fs.fsl = fsl
 	fs.procclnt = pclnt
 	fs.root = root
-	fs.ctx = ctx.MkCtx(path, 0, nil)
+	fs.ctx = ctx.MkCtx(pn, 0, nil)
 	return fs, err
 }

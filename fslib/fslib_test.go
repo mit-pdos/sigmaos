@@ -1071,22 +1071,21 @@ func TestSymlinkPath(t *testing.T) {
 	ts.Shutdown()
 }
 
-func target(t *testing.T, ts *test.Tstate, path string) []byte {
+func mkMount(t *testing.T, ts *test.Tstate, path string) []byte {
 	b, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
-	return fslib.MakeMountTree(b, left)
+	return fslib.MkMountTree(b, left)
 }
 
-func TestSymlinkRemote(t *testing.T) {
+func TestMount(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "namedself"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
-
+	err = ts.MountService(gopath.Join(pathname, "namedself"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
 	sts, err := ts.GetDir(gopath.Join(pathname, "namedself") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
@@ -1101,10 +1100,11 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "d/namedself0"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(path.Path{":2222"}), gopath.Join(pathname, "d/namedself1"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
+
+	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), fslib.MkMountServer(":2222"))
+	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
 	assert.Equal(t, nil, err)
@@ -1129,10 +1129,10 @@ func TestUnionDir(t *testing.T) {
 func TestUnionRoot(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	err := ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "namedself0"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
-	err = ts.Symlink(fslib.MakeTarget(path.Path{"xxx"}), gopath.Join(pathname, "namedself1"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	err := ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
+	err = ts.MountService(gopath.Join(pathname, "namedself1"), fslib.MkMountServer("xxx"))
+	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
 	assert.Equal(t, nil, err)
@@ -1144,14 +1144,16 @@ func TestUnionRoot(t *testing.T) {
 func TestUnionSymlinkRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	err := ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "namedself0"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	mnt := mkMount(t, ts, pathname)
+	err := ts.MountService(gopath.Join(pathname, "namedself0"), mnt)
+	assert.Nil(ts.T, err, "MountService")
 
 	dn := gopath.Join(pathname, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-	err = ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "d/namedself1"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+
+	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), mnt)
+	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any/d/namedself1") + "/")
 	assert.Equal(t, nil, err)
@@ -1159,7 +1161,6 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	sts, err = ts.GetDir(gopath.Join(pathname, "~any/d/namedself1/d") + "/")
 	assert.Equal(t, nil, err)
-	db.DPrintf(db.ALWAYS, "sts %v", sts)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself1"}), "d wrong")
 
 	ts.Shutdown()
@@ -1168,8 +1169,8 @@ func TestUnionSymlinkRead(t *testing.T) {
 func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	err := ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "namedself0"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	err := ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
 
 	b := []byte("hello")
 	fn := gopath.Join(pathname, "~any/namedself0/f")
@@ -1203,8 +1204,8 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	ts.Symlink(target(t, ts, pathname), gopath.Join(pathname, "namedself0"), 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	err = ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
 
 	st := stats.StatInfo{}
 	err = ts.GetFileJson(gopath.Join("name", np.STATSD), &st)

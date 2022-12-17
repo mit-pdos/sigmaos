@@ -92,11 +92,11 @@ func IsUnionElem(elem string) bool {
 	return strings.HasPrefix(elem, "~")
 }
 
-func (path Path) IsUnion() (Path, bool) {
+func (path Path) IsUnion() (string, Path, bool) {
 	for i, c := range path {
 		if IsUnionElem(c) {
-			return path[:i], true
+			return path[:i].String(), path[i:], true
 		}
 	}
-	return nil, false
+	return "", nil, false
 }

@@ -1118,6 +1118,18 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
+	sts, err = ts.GetDir(gopath.Join(pathname, "d/~ip") + "/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
+
+	pn, err := ts.ResolveMount(gopath.Join(pathname, "d/~ip"))
+	p := path.Split(pn)
+	_, _, b := p.IsUnion()
+	assert.False(t, b)
+	sts, err = ts.GetDir(pn)
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
+
 	ts.Shutdown()
 }
 

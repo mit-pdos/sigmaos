@@ -12,7 +12,7 @@ import (
 	"sigmaos/spcodec"
 )
 
-func (pathc *PathClnt) unionMatch(q, name string) bool {
+func (pathc *PathClnt) UnionMatch(q, name string) bool {
 	switch q {
 	case "~any":
 		return true
@@ -21,7 +21,11 @@ func (pathc *PathClnt) unionMatch(q, name string) bool {
 		if err != nil {
 			return false
 		}
-		if ok := IsRemoteTarget(name); ok && TargetIp(name) == ip {
+		tip := TargetIp(name)
+		if tip == "" {
+			tip = ip
+		}
+		if ok := IsRemoteTarget(name); ok && tip == ip {
 			return true
 		}
 		return false
@@ -42,7 +46,7 @@ func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *fcall.E
 		return np.NoFid, err
 	}
 	db.DPrintf("WALK", "unionScan: target: %v\n", target)
-	if pathc.unionMatch(q, target) {
+	if pathc.UnionMatch(q, target) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			return np.NoFid, err

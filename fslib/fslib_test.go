@@ -83,7 +83,7 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	srv, _, err := ts.PathServer(pathname)
+	srv, _, err := ts.PathLastSymlink(pathname)
 	assert.Nil(t, err)
 
 	err = ts.Disconnect(srv)
@@ -665,7 +665,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	srv, _, err := ts.PathServer(pathname)
+	srv, _, err := ts.PathLastSymlink(pathname)
 	assert.Nil(t, err)
 
 	db.DPrintf("TEST", "Disconnect fsl")
@@ -996,7 +996,7 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		srv, _, err := ts.PathServer(pathname)
+		srv, _, err := ts.PathLastSymlink(pathname)
 		assert.Nil(t, err)
 		err = fsl.Disconnect(srv)
 		assert.Nil(ts.T, err, "Disconnect")
@@ -1027,7 +1027,7 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	srv, _, err := ts.PathServer(pathname)
+	srv, _, err := ts.PathLastSymlink(pathname)
 	assert.Nil(t, err)
 	err = fsl1.Disconnect(srv)
 	assert.Nil(ts.T, err, "Disconnect")

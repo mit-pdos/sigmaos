@@ -129,9 +129,9 @@ func (m *Mapper) closewrts() (np.Tlength, error) {
 
 // Inform reducer where to find map output
 func (m *Mapper) informReducer() error {
-	st, err := m.Stat(MLOCALSRV)
+	pn, err := m.ResolveUnion(MLOCALSRV)
 	if err != nil {
-		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), MLOCALSRV, err)
+		return fmt.Errorf("%v: ResolveUnion %v err %v\n", proc.GetName(), MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(m.job, m.bin, r)
@@ -152,7 +152,7 @@ func (m *Mapper) informReducer() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := shardtarget(m.job, st.Name, m.bin, r)
+		target := shardtarget(m.job, pn, m.bin, r)
 
 		db.DPrintf("MR", "name %s target %s\n", name, target)
 

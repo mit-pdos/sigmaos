@@ -1122,7 +1122,7 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	pn, err := ts.ResolveMount(gopath.Join(pathname, "d/~ip"))
+	pn, err := ts.ResolveUnion(gopath.Join(pathname, "d/~ip"))
 	p := path.Split(pn)
 	_, _, b := p.IsUnion()
 	assert.False(t, b)

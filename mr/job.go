@@ -56,8 +56,8 @@ func mshardfile(job, name string, r int) string {
 	return Moutdir(job, name) + "/r-" + strconv.Itoa(r)
 }
 
-func shardtarget(job, server, name string, r int) string {
-	return np.UX + "/" + server + MR + job + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
+func shardtarget(job, pn, name string, r int) string {
+	return pn + MR + job + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
 }
 
 func symname(job, r, name string) string {

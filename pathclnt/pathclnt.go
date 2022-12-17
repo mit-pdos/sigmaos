@@ -2,7 +2,6 @@ package pathclnt
 
 import (
 	"fmt"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
@@ -247,25 +246,16 @@ func (pathc *PathClnt) Remove(name string) error {
 
 func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	db.DPrintf("PATHCLNT", "Stat %v\n", name)
-	pn := path.Split(name)
-	// XXX ignore err?
-	target, rest, _ := pathc.mnt.resolve(pn)
-	if len(rest) == 0 && !path.EndSlash(name) {
-		st := np.MkStatNull()
-		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
-		return st, nil
-	} else {
-		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pathc.FidClnt.Clunk(fid)
-		st, err := pathc.FidClnt.Stat(fid)
-		if err != nil {
-			return nil, err
-		}
-		return st, nil
+	fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)
+	if err != nil {
+		return nil, err
 	}
+	defer pathc.FidClnt.Clunk(fid)
+	st, err := pathc.FidClnt.Stat(fid)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func (pathc *PathClnt) OpenWatch(pn string, mode np.Tmode, w Watch) (np.Tfid, error) {

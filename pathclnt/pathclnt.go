@@ -429,21 +429,3 @@ func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
 	p = p[0 : len(p)-len(left)]
 	return p.String(), left, nil
 }
-
-// Return path to server, replacing ~ip with the IP address of the mounted server
-func (pathc *PathClnt) AbsPathServer(pn string) (path.Path, path.Path, error) {
-	srv, left, err := pathc.PathServer(pn)
-	if err != nil {
-		return nil, nil, err
-	}
-	p := path.Split(srv)
-	if path.IsUnionElem(p.Base()) {
-		st, err := pathc.Stat(srv)
-		if err != nil {
-			return path.Path{}, left, err
-		}
-		p[len(p)-1] = st.Name
-		return p, left, nil
-	}
-	return p, left, nil
-}

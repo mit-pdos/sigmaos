@@ -1,22 +1,17 @@
 package fslib
 
 import (
-	"errors"
 	"fmt"
-	"io"
 
 	"sigmaos/fcall"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
 	"sigmaos/union"
 )
 
 //
 // Client side
 //
-
-// XXX remove duplication with pathclnt
 
 // Return pn, replacing first ~ip/~any with a symlink for a specific
 // server.
@@ -78,29 +73,25 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 }
 
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
-	rdr, err := fsl.OpenReader(d)
-	if err != nil {
-		return "", sp.Tmount{}, err
-	}
-	drdr := rdr.NewDirReader()
-	for {
-		st, error := spcodec.UnmarshalDirEnt(drdr)
-		if error != nil && errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return "", sp.Tmount{}, err
-		}
+	rmnt := sp.Tmount{}
+	rname := ""
+	_, err := fsl.ProcessDir(d, func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
-			continue
+			return false, nil
 		}
 		mnt := sp.Tmount{string(b)}
 		if ok := union.UnionMatch(q, mnt.Mnt); ok {
-			return st.Name, mnt, nil
+			rname = st.Name
+			rmnt = mnt
+			return true, nil
 		}
+		return false, nil
+	})
+	if err == nil && rname != "" {
+		return rname, rmnt, nil
 	}
-	return "", sp.Tmount{}, fcall.MkErr(fcall.TErrNotfound, d)
+	return rname, rmnt, fcall.MkErr(fcall.TErrNotfound, d)
 }
 
 //

@@ -55,11 +55,11 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if ok {
 		_, mnt, err := fsl.resolveUnion(d, left[0])
 		if err != nil {
-			return sp.Tmount{}, "", err
+			return sp.NullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
 	}
-	return sp.Tmount{}, "", fcall.MkErr(fcall.TErrInval, pn)
+	return sp.NullMount(), "", fcall.MkErr(fcall.TErrInval, pn)
 }
 
 // Return path to the symlink for the last server on this path and the
@@ -73,14 +73,14 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 }
 
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
-	rmnt := sp.Tmount{}
+	rmnt := sp.NullMount()
 	rname := ""
 	_, err := fsl.ProcessDir(d, func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			return false, nil
 		}
-		mnt := sp.Tmount{string(b)}
+		mnt := sp.MkMount(b)
 		if ok := union.UnionMatch(q, mnt.Mnt); ok {
 			rname = st.Name
 			rmnt = mnt

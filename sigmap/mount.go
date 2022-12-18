@@ -10,6 +10,15 @@ type Tmount struct {
 	Mnt string
 }
 
+func NullMount() Tmount {
+	return Tmount{}
+}
+
+func MkMount(b []byte) Tmount {
+	return Tmount{string(b)}
+
+}
+
 func Address(mnt Tmount) string {
 	targets := strings.Split(string(mnt.Mnt), "\n")
 	if strings.HasPrefix(targets[0], "[") {

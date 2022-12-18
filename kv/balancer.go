@@ -109,7 +109,8 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		ch <- true
 	}()
 
-	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), []string{})
+	mnt := fslib.MkMountServer(mfs.MyAddr())
+	epoch, err := bl.lc.AcquireFencedEpoch(mnt, []string{})
 	if err != nil {
 		db.DFatalf("%v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}

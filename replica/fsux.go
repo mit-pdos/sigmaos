@@ -31,9 +31,10 @@ func MakeFsUxReplica(args []string, srvAddr string, unionDirPath string, config 
 	r.ux = fsux.MakeReplicatedFsUx(r.mount, srvAddr, "", config)
 	r.name = path.Join(unionDirPath, config.ReplAddr())
 	// Post in union dir
-	err := r.PostService(srvAddr, r.name)
+	mnt := fslib.MkMountServer(srvAddr)
+	err := r.MountService(r.name, mnt)
 	if err != nil {
-		db.DFatalf("PostService %v error: %v", r.name, err)
+		db.DFatalf("MountService %v error: %v", r.name, err)
 	}
 	return r
 }

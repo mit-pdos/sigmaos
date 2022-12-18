@@ -57,6 +57,17 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
+func (pathc *PathClnt) LastMount(pn string) (string, path.Path, error) {
+	p := path.Split(pn)
+	_, left, err := pathc.mnt.resolve(p)
+	if err != nil {
+		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
+		return "", nil, err
+	}
+	p = p[0 : len(p)-len(left)]
+	return p.String(), left, nil
+}
+
 // Exit the path client, closing all sessions
 func (pathc *PathClnt) Exit() error {
 	return pathc.FidClnt.Exit()
@@ -402,20 +413,4 @@ func (pathc *PathClnt) PutFile(pn string, mode np.Tmode, perm np.Tperm, data []b
 		}
 	}
 	return cnt, nil
-}
-
-// Return path to the root directory for last server on path
-func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
-	if _, err := pathc.Stat(pn + "/"); err != nil {
-		db.DPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", pn, err)
-		return "", nil, err
-	}
-	p := path.Split(pn)
-	_, left, err := pathc.mnt.resolve(p)
-	if err != nil {
-		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
-		return "", nil, err
-	}
-	p = p[0 : len(p)-len(left)]
-	return p.String(), left, nil
 }

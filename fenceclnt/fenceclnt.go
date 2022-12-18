@@ -72,9 +72,9 @@ func (fc *FenceClnt) registerFence(path string, fence np.Tfence) error {
 }
 
 func (fc *FenceClnt) GetFences(p string) ([]*np.Stat, error) {
-	srv, _, err := fc.PathServer(p)
+	srv, _, err := fc.PathLastSymlink(p)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", p, err)
+		db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", p, err)
 		return nil, err
 	}
 	dn := srv + "/" + np.FENCEDIR
@@ -97,9 +97,9 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 		return err
 	}
 	for _, d := range dirs {
-		srv, _, err := fc.PathServer(d)
+		srv, _, err := fc.PathLastSymlink(d)
 		if err != nil {
-			db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
+			db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", d, err)
 			return err
 		}
 		fn := srv + "/" + np.FENCEDIR + "/" + f.Fenceid.Tpath().String()

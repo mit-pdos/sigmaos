@@ -9,11 +9,13 @@ import (
 )
 
 //
-// Client-side
+// Client side
 //
 
+// XXX remove duplication with pathclnt
+
 // Return pn, replacing first ~ip/~any with a symlink for a specific
-// server. XXX remove duplication with pathclnt
+// server.
 func (fsl *FsLib) ResolveUnion(pn string) (string, bool, error) {
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
@@ -90,7 +92,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 }
 
 //
-// Server-side
+// Server side
 //
 
 func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {

@@ -24,7 +24,7 @@ func initTest(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	// start named
-	ts.Tstate = test.MakTestatePath(t, np.NAMED)
+	ts.Tstate = test.MakeTstatePath(t, np.NAMED)
 	sts, err := ts.GetDir(np.NAMED)
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitDir))
@@ -111,13 +111,13 @@ func TestSymlinkPath(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	mnt := fslib.MkMountService(fslib.Named())
-	err = ts.MkMountSymlink("named/namedself", mnt)
+	err = ts.MkMountSymlink9P("name/namedself", mnt)
 	assert.Nil(ts.T, err, "MkMountSymlink")
 
 	out, err := run("ls /mnt/9p/namedself")
 	assert.Equal(t, nil, err)
 
-	log.Printf("Out: %v\n", out)
+	log.Printf("Out: %v\n", string(out))
 
 	ts.cleanup()
 }

@@ -41,7 +41,7 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return MkMountService(Named()), "", nil
+		return sp.MkMountService(Named()), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()

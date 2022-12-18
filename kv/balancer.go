@@ -34,7 +34,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Balancer struct {
@@ -89,7 +89,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.MkDir(KVDIR, 07)
 	bl.MkDir(JobDir(bl.job), 0777)
 
-	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), np.DMSYMLINK|077)
+	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
 	// start server but don't publish its existence
 	mfs, err := memfssrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
@@ -109,7 +109,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		ch <- true
 	}()
 
-	mnt := fslib.MkMountServer(mfs.MyAddr())
+	mnt := sp.MkMountServer(mfs.MyAddr())
 	epoch, err := bl.lc.AcquireFencedEpoch([]byte(mnt.Mnt), []string{})
 	if err != nil {
 		db.DFatalf("%v: AcquireFenceEpoch %v\n", proc.GetName(), err)
@@ -155,7 +155,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {
 	s := opcode + " " + mfs
-	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), np.OWRITE, 0)
+	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), sp.OWRITE, 0)
 	return err
 }
 
@@ -183,13 +183,13 @@ type Ctl struct {
 }
 
 func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
-	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
+	i := inode.MakeInode(ctx, sp.DMDEVICE, parent)
 	return &Ctl{i, bl}
 }
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
 		return 0, fcall.MkErr(fcall.TErrInval, words)
@@ -198,10 +198,10 @@ func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 	if err != nil {
 		return 0, err
 	}
-	return np.Tsize(len(b)), nil
+	return sp.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
@@ -242,7 +242,7 @@ func (bl *Balancer) PostConfig() {
 }
 
 // Post new epoch, and finish moving sharddirs.
-func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
+func (bl *Balancer) restore(conf *Config, epoch sp.Tepoch) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
@@ -252,7 +252,7 @@ func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	bl.doMoves(bl.conf.Moves)
 }
 
-func (bl *Balancer) recover(epoch np.Tepoch) {
+func (bl *Balancer) recover(epoch sp.Tepoch) {
 	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
 		bl.restore(conf, epoch)

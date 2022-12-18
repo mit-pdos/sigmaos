@@ -241,10 +241,6 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-type Tmount struct {
-	Mnt string
-}
-
 func MkInterval(start, end uint64) *Tinterval {
 	return &Tinterval{
 		Start: start,

@@ -8,6 +8,7 @@ import (
 	"sigmaos/protsrv"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -37,7 +38,7 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	srv := makeSrv(root, addr, fsl, pclnt, config)
 	if len(path) > 0 {
-		mnt := fslib.MkMountServer(srv.MyAddr())
+		mnt := sp.MkMountServer(srv.MyAddr())
 		err := fsl.MkMountSymlink(path, mnt)
 		if err != nil {
 			return nil, err

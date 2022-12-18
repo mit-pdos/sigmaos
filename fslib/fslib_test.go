@@ -146,7 +146,7 @@ func TestRemoveSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := fslib.MkMountService(fslib.Named())
+	mnt := sp.MkMountService(fslib.Named())
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
@@ -167,7 +167,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := fslib.MkMountService(fslib.Named())
+	mnt := sp.MkMountService(fslib.Named())
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
@@ -1076,7 +1076,7 @@ func TestSymlinkPath(t *testing.T) {
 func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	b, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
-	return fslib.MkMountTree(b, left)
+	return sp.MkMountTree(b, left)
 }
 
 func TestMount(t *testing.T) {
@@ -1105,7 +1105,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), fslib.MkMountServer(":2222"))
+	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), sp.MkMountServer(":2222"))
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
@@ -1133,7 +1133,7 @@ func TestUnionRoot(t *testing.T) {
 
 	err := ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
-	err = ts.MountService(gopath.Join(pathname, "namedself1"), fslib.MkMountServer("xxx"))
+	err = ts.MountService(gopath.Join(pathname, "namedself1"), sp.MkMountServer("xxx"))
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")

@@ -189,7 +189,7 @@ func (g *Group) writeSymlink(sigmaAddrs []string) {
 		}
 	}
 
-	mnt := fslib.MkMountService(srvAddrs)
+	mnt := sp.MkMountService(srvAddrs)
 	if err := g.MkMountSymlink(GrpSym(g.jobdir, g.grp), mnt); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}

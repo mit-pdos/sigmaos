@@ -5,7 +5,6 @@ import (
 	"path"
 	"strings"
 
-	"sigmaos/atomic"
 	"sigmaos/fslib"
 	np "sigmaos/sigmap"
 )
@@ -52,7 +51,7 @@ func (tx *Tx) Commit() error {
 	}
 	// Write a status file which marks this transaction as committed. This is the
 	// linearization point.
-	atomic.MakeFileAtomic(tx.fsl, path.Join(tx.stateDir, tx.id), 0777, []byte(COMMIT))
+	tx.MakeFileAtomic(path.Join(tx.stateDir, tx.id), 0777, []byte(COMMIT))
 	// Commit all writes.
 	for origPath, tmpPath := range tx.files {
 		err := tx.fsl.Rename(tmpPath, origPath)

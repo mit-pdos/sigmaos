@@ -12,9 +12,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	np "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -64,7 +64,8 @@ func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 		addrs = append(addrs, addr)
 	}
 	db.DPrintf(db.ALWAYS, "Replica addrs: %v", addrs)
-	err := ts.Symlink(fslib.MakeTarget(addrs), REPLICA_SYMLINK, 0777)
+	mnt := fslib.MkMountService(addrs)
+	err := ts.MkMountSymlink(REPLICA_SYMLINK, mnt)
 	assert.Nil(ts.T, err, "Symlink")
 }
 

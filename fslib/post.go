@@ -7,7 +7,7 @@ import (
 
 	// db "sigmaos/debug"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -22,13 +22,8 @@ func MakeTarget(srvaddrs []string) []byte {
 	return []byte(strings.Join(targets, "\n"))
 }
 
-func MakeTargetTree(srvaddr string, tree path.Path) []byte {
-	target := []string{srvaddr, "pubkey", tree.String()}
-	return []byte(strings.Join(target, ":"))
-}
-
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
-	err := fsl.Symlink(MakeTarget([]string{srvaddr}), srvname, 0777|np.DMTMP)
+	err := fsl.Symlink(MakeTarget([]string{srvaddr}), srvname, 0777|sp.DMTMP)
 	return err
 }
 
@@ -41,7 +36,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvpath, server string) error {
 	if !dir {
 		return fmt.Errorf("Not a directory")
 	}
-	err = fsl.Symlink(MakeTarget([]string{srvaddr}), p, 0777|np.DMTMP)
+	err = fsl.Symlink(MakeTarget([]string{srvaddr}), p, 0777|sp.DMTMP)
 	return err
 }
 
@@ -87,8 +82,7 @@ func MkMountTree(mount []byte, tree string) []byte {
 }
 
 func (fsl *FsLib) MountService(pn string, mount []byte) error {
-	err := fsl.Symlink(mount, pn, 0777|np.DMTMP)
-	return err
+	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, mount)
 }
 
 func (fsl *FsLib) MountServiceUnion(pn string, mnt []byte, name string) error {
@@ -100,11 +94,11 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt []byte, name string) error {
 	if !dir {
 		return fmt.Errorf("Not a directory")
 	}
-	err = fsl.Symlink(mnt, p, 0777|np.DMTMP)
+	err = fsl.Symlink(mnt, p, 0777|sp.DMTMP)
 	return err
 }
 
-func (fsl *FsLib) MkMount(pn string, mount []byte) error {
+func (fsl *FsLib) MkMountSymlink(pn string, mount []byte) error {
 	if path.EndSlash(pn) {
 		return fsl.MountServiceUnion(pn, mount, address(mount))
 	} else {

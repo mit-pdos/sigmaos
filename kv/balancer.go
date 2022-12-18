@@ -22,20 +22,19 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/atomic"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	np "sigmaos/sigmap"
 )
 
 type Balancer struct {
@@ -235,7 +234,7 @@ func (bl *Balancer) monitorMyself() {
 
 // Post config atomically
 func (bl *Balancer) PostConfig() {
-	err := atomic.PutFileJsonAtomic(bl.FsLib, KVConfig(bl.job), 0777, *bl.conf)
+	err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf)
 	if err != nil {
 		db.DFatalf("%v: MakeFile %v err %v\n", proc.GetName(), KVConfig(bl.job), err)
 	}

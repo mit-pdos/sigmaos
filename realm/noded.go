@@ -208,7 +208,8 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NCores += nd.countNCores()
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.pds.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
+	mnt := fslib.MkMountServer(nd.pds.MyAddr())
+	if err := nd.MkMountSymlink(nodedPath(cfg.Rid, nd.id), mnt); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }

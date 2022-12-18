@@ -1,7 +1,6 @@
 package config
 
 import (
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 )
@@ -47,7 +46,7 @@ func (clnt *ConfigClnt) ReadConfig(path string, cfg interface{}) error {
 // Write cfg into path
 func (clnt *ConfigClnt) WriteConfig(path string, cfg interface{}) error {
 	// Make the realm config file.
-	if err := atomic.PutFileJsonAtomic(clnt.FsLib, path, 0777, cfg); err != nil {
+	if err := clnt.PutFileJsonAtomic(path, 0777, cfg); err != nil {
 		db.DPrintf(db.ALWAYS, "Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
 		return err
 	}

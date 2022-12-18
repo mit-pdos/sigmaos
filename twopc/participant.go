@@ -5,14 +5,13 @@ import (
 	"os"
 	"sync"
 
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	//	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	np "sigmaos/sigmap"
 )
 
 type Participant struct {
@@ -81,7 +80,7 @@ func (p *Participant) readTwopcWatch(conffile string, f pathclnt.Watch) (*Twopc,
 func (p *Participant) prepared(status string) {
 	fn := prepareName(p.me)
 	db.DPrintf("PART", "Prepared %v\n", fn)
-	err := atomic.PutFileAtomic(p.FsLib, fn, 0777, []byte(status))
+	err := p.PutFileAtomic(fn, 0777, []byte(status))
 	if err != nil {
 		db.DPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
 	}

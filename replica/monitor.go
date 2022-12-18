@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	//	np "sigmaos/sigmap"
@@ -49,7 +48,7 @@ func (m *ReplicaMonitor) updateConfig() {
 		new += r.Name + "\n"
 	}
 	m.Remove(m.configPath)
-	err = atomic.PutFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
+	err = m.PutFileAtomic(m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
 		db.DFatalf("Error writing new config file: %v", err)
 	}

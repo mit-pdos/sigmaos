@@ -38,7 +38,7 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, 
 	srv := makeSrv(root, addr, fsl, pclnt, config)
 	if len(path) > 0 {
 		mnt := fslib.MkMountServer(srv.MyAddr())
-		err := fsl.MkMount(path, mnt)
+		err := fsl.MkMountSymlink(path, mnt)
 		if err != nil {
 			return nil, err
 		}

@@ -3,7 +3,7 @@ package electclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -13,11 +13,11 @@ import (
 type ElectClnt struct {
 	*fslib.FsLib
 	path string // pathname for the leader-election file
-	perm np.Tperm
-	mode np.Tmode
+	perm sp.Tperm
+	mode sp.Tmode
 }
 
-func MakeElectClnt(fsl *fslib.FsLib, path string, perm np.Tperm) *ElectClnt {
+func MakeElectClnt(fsl *fslib.FsLib, path string, perm sp.Tperm) *ElectClnt {
 	e := &ElectClnt{}
 	e.path = path
 	e.FsLib = fsl
@@ -25,13 +25,13 @@ func MakeElectClnt(fsl *fslib.FsLib, path string, perm np.Tperm) *ElectClnt {
 	return e
 }
 
-func (e *ElectClnt) AcquireLeadership(leader []byte) error {
-	fd, err := e.Create(e.path, e.perm|np.DMTMP, np.OWRITE|np.OWATCH)
+func (e *ElectClnt) AcquireLeadership(b []byte) error {
+	fd, err := e.Create(e.path, e.perm|sp.DMTMP, sp.OWRITE|sp.OWATCH)
 	if err != nil {
 		db.DPrintf("LEADER_ERR", "Create %v err %v", e.path, err)
 		return err
 	}
-	if _, err := e.WriteV(fd, leader); err != nil {
+	if _, err := e.WriteV(fd, b); err != nil {
 		return err
 	}
 	e.Close(fd)

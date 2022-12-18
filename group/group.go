@@ -23,7 +23,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/replraft"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -207,7 +207,7 @@ func (g *Group) op(opcode, kv string) *fcall.Err {
 
 func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	s := opcode + " " + kv
-	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), np.OWRITE, 0)
+	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), sp.OWRITE, 0)
 	return err
 }
 

@@ -39,20 +39,20 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 
 // Make copy of root mount or first union mount in pn. Return the
 // content of symlink and the symlink's name.
-func (fsl *FsLib) CopyMount(pn string) ([]byte, string, error) {
+func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
 		return MkMountService(Named()), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
 	if ok {
-		_, b, err := fsl.resolveUnion(d, left[0])
+		_, mnt, err := fsl.resolveUnion(d, left[0])
 		if err != nil {
-			return nil, "", err
+			return sp.Tmount{}, "", err
 		}
-		return b, left[1:].String(), nil
+		return mnt, left[1:].String(), nil
 	}
-	return nil, "", fcall.MkErr(fcall.TErrInval, pn)
+	return sp.Tmount{}, "", fcall.MkErr(fcall.TErrInval, pn)
 }
 
 // Return path to the symlink for the last server on this path and the
@@ -65,19 +65,20 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 	return fsl.LastMount(pn)
 }
 
-func (fsl *FsLib) resolveUnion(d string, q string) (string, []byte, error) {
+func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	sts, err := fsl.GetDir(d)
 	if err != nil {
-		return "", nil, err
+		return "", sp.Tmount{}, err
 	}
 	for _, st := range sts {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			continue
 		}
-		if ok := fsl.UnionMatch(q, string(b)); ok {
-			return st.Name, b, nil
+		mnt := sp.Tmount{string(b)}
+		if ok := fsl.UnionMatch(q, mnt.Mnt); ok {
+			return st.Name, mnt, nil
 		}
 	}
-	return "", nil, fcall.MkErr(fcall.TErrNotfound, d)
+	return "", sp.Tmount{}, fcall.MkErr(fcall.TErrNotfound, d)
 }

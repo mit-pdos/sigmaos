@@ -1,11 +1,14 @@
 package fslib
 
 import (
+	"errors"
 	"fmt"
+	"io"
 
 	"sigmaos/fcall"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/union"
 )
 
@@ -75,11 +78,19 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 }
 
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
-	sts, err := fsl.GetDir(d)
+	rdr, err := fsl.OpenReader(d)
 	if err != nil {
 		return "", sp.Tmount{}, err
 	}
-	for _, st := range sts {
+	drdr := rdr.NewDirReader()
+	for {
+		st, error := spcodec.UnmarshalDirEnt(drdr)
+		if error != nil && errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return "", sp.Tmount{}, err
+		}
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			continue

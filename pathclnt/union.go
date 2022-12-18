@@ -1,14 +1,10 @@
 package pathclnt
 
 import (
-	"errors"
-	"io"
-
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
 	"sigmaos/union"
 )
 
@@ -41,22 +37,22 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *fcall.Err) 
 	}
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	drdr := rdr.NewDirReader()
-	for {
-		de, err := spcodec.UnmarshalDirEnt(drdr)
-		if err != nil && errors.Is(err, io.EOF) {
-			break
-		}
+	rfid := sp.NoFid
+	_, error := reader.ReadDir(drdr, func(st *sp.Stat) (bool, error) {
+		fid1, err := pathc.unionScan(fid, st.Name, q)
 		if err != nil {
-			return sp.NoFid, err
-		}
-		fid1, err := pathc.unionScan(fid, de.Name, q)
-		if err != nil {
-			db.DPrintf("unionScan %v err %v\n", de.Name, err)
-			continue
+			db.DPrintf("WALK", "unionScan %v err %v\n", st.Name, err)
+			// ignore error; keep going
+			return false, nil
 		}
 		if fid1 != sp.NoFid { // success
-			return fid1, nil
+			rfid = fid1
+			return true, nil
 		}
+		return false, nil
+	})
+	if error == nil && rfid != sp.NoFid {
+		return rfid, nil
 	}
-	return sp.NoFid, fcall.MkErr(fcall.TErrNotfound, q)
+	return rfid, fcall.MkErr(fcall.TErrNotfound, q)
 }

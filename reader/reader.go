@@ -1,7 +1,6 @@
 package reader
 
 import (
-	"bufio"
 	"io"
 
 	db "sigmaos/debug"
@@ -78,14 +77,6 @@ func (rdr *Reader) GetDataErr() ([]byte, *fcall.Err) {
 func (rdr *Reader) Lseek(o np.Toffset) error {
 	rdr.off = o
 	return nil
-}
-
-// Making rdr a bufio is important because the first read must be >=
-// sizeof(st), because memfs and fsux try to avoid materializing
-// directories as an array of bytes.
-func (rdr *Reader) NewDirReader() *bufio.Reader {
-	brdr := bufio.NewReader(rdr)
-	return brdr
 }
 
 func (rdr *Reader) Close() error {

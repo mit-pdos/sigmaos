@@ -6,6 +6,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
+	"sigmaos/union"
 )
 
 //
@@ -84,7 +85,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 			continue
 		}
 		mnt := sp.Tmount{string(b)}
-		if ok := fsl.UnionMatch(q, mnt.Mnt); ok {
+		if ok := union.UnionMatch(q, mnt.Mnt); ok {
 			return st.Name, mnt, nil
 		}
 	}

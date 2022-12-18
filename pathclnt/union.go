@@ -6,34 +6,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	"sigmaos/fidclnt"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
+	"sigmaos/union"
 )
-
-func (pathc *PathClnt) UnionMatch(q, name string) bool {
-	switch q {
-	case "~any":
-		return true
-	case "~ip":
-		ip, err := fidclnt.LocalIP()
-		if err != nil {
-			return false
-		}
-		tip := sp.TargetIp(name)
-		if tip == "" {
-			tip = ip
-		}
-		if ok := sp.IsRemoteTarget(name); ok && tip == ip {
-			return true
-		}
-		return false
-	default:
-		return true
-	}
-	return true
-}
 
 func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
@@ -46,7 +23,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.E
 		return sp.NoFid, err
 	}
 	db.DPrintf("WALK", "unionScan: target: %v\n", target)
-	if pathc.UnionMatch(q, target) {
+	if union.UnionMatch(q, target) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			return sp.NoFid, err

@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"fmt"
-	"log"
 
 	"sigmaos/fcall"
 	"sigmaos/path"
@@ -85,7 +84,6 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if error != nil {
 			return false, nil
 		}
-		log.Printf("mnt %v\n", mnt)
 		if ok := union.UnionMatch(q, mnt); ok {
 			rname = st.Name
 			rmnt = mnt

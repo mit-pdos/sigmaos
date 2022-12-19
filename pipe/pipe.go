@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/sesscond"
 )
@@ -42,11 +42,11 @@ func MakePipe(ctx fs.CtxI) *Pipe {
 	return pipe
 }
 
-func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *fcall.Err) {
+func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	if mode == np.OREAD {
+	if mode == sp.OREAD {
 		if pipe.rclosed || pipe.nlink <= 0 {
 			return nil, fcall.MkErr(fcall.TErrClosed, "pipe reading")
 		}
@@ -67,7 +67,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *fcall.Err) {
 				return nil, fcall.MkErr(fcall.TErrNotfound, "pipe")
 			}
 		}
-	} else if mode == np.OWRITE {
+	} else if mode == sp.OWRITE {
 		if pipe.wclosed || pipe.nlink <= 0 {
 			return nil, fcall.MkErr(fcall.TErrClosed, "pipe writing")
 		}
@@ -96,12 +96,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *fcall.Err) {
 	return nil, nil
 }
 
-func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
+func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	db.DPrintf("PIPE", "%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
-	if mode == np.OREAD {
+	if mode == sp.OREAD {
 		pipe.nreader -= 1
 		if pipe.nreader == 0 {
 			pipe.rclosed = true
@@ -110,7 +110,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
 			fcall.MkErr(fcall.TErrClosed, "pipe reading")
 		}
 		pipe.condw.Signal()
-	} else if mode == np.OWRITE {
+	} else if mode == sp.OWRITE {
 		pipe.nwriter -= 1
 		if pipe.nwriter == 0 {
 			pipe.wclosed = true
@@ -125,7 +125,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -148,10 +148,10 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 		d = d[max:]
 		pipe.condr.Signal()
 	}
-	return np.Tsize(n), nil
+	return sp.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -192,6 +192,6 @@ func (pipe *Pipe) Unlink() {
 	}
 }
 
-func (pipe *Pipe) Size() np.Tlength {
-	return np.Tlength(len(pipe.buf))
+func (pipe *Pipe) Size() sp.Tlength {
+	return sp.Tlength(len(pipe.buf))
 }

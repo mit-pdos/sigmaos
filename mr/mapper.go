@@ -21,7 +21,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/rand"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -77,7 +77,7 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	return m, nil
 }
 
-func (m *Mapper) CloseWrt() (np.Tlength, error) {
+func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 	nout, err := m.closewrts()
 	if err != nil {
 		return 0, err
@@ -86,7 +86,7 @@ func (m *Mapper) CloseWrt() (np.Tlength, error) {
 }
 
 func (m *Mapper) InitWrt(r int, name string) error {
-	if wrt, err := m.CreateAsyncWriter(name, 0777, np.OWRITE); err != nil {
+	if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
 		return err
 	} else {
 		m.wrts[r] = wrt
@@ -113,8 +113,8 @@ func (m *Mapper) initMapper() error {
 	return nil
 }
 
-func (m *Mapper) closewrts() (np.Tlength, error) {
-	n := np.Tlength(0)
+func (m *Mapper) closewrts() (sp.Tlength, error) {
+	n := sp.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
 		if m.wrts[r] != nil {
 			if err := m.wrts[r].Close(); err != nil {
@@ -183,7 +183,7 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	//	}
 }
 
-func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
+func (m *Mapper) DoSplit(s *Split) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
@@ -218,24 +218,24 @@ func (m *Mapper) DoSplit(s *Split) (np.Tlength, error) {
 				return 0, err
 			}
 		}
-		if np.Tlength(n) >= s.Length {
+		if sp.Tlength(n) >= s.Length {
 			break
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return np.Tlength(n), err
+		return sp.Tlength(n), err
 	}
-	return np.Tlength(n), nil
+	return sp.Tlength(n), nil
 }
 
-func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
+func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err
 	}
 	dec := json.NewDecoder(rdr)
-	ni := np.Tlength(0)
+	ni := sp.Tlength(0)
 	for {
 		var s Split
 		if err := dec.Decode(&s); err == io.EOF {

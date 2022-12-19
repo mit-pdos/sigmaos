@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	//"sigmaos/proc"
 )
 
@@ -26,7 +26,7 @@ func (t Tload) String() string {
 }
 
 // -1 for ws directory
-func nprocd(sts []*np.Stat) int {
+func nprocd(sts []*sp.Stat) int {
 	if len(sts) == 0 {
 		return 0
 	}
@@ -58,7 +58,7 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
-	sts, err := pdc.GetDir(np.PROCD)
+	sts, err := pdc.GetDir(sp.PROCD)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -68,15 +68,15 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		if st.Name == "ws" {
 			continue
 		}
-		nproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNNING))
+		nproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNNING))
 		if err != nil {
 			return r, nil, err
 		}
-		beproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNQ_BE))
+		beproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_BE))
 		if err != nil {
 			return r, nil, err
 		}
-		lcproc, err := pdc.Nprocs(path.Join(np.PROCD, st.Name, np.PROCD_RUNQ_LC))
+		lcproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_LC))
 		if err != nil {
 			return r, nil, err
 		}
@@ -86,7 +86,7 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 }
 
 func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
-	sts, err := pdc.ReadDirWatch(np.PROCD, func(sts []*np.Stat) bool {
+	sts, err := pdc.ReadDirWatch(sp.PROCD, func(sts []*sp.Stat) bool {
 		return nprocd(sts) == n
 	})
 	if err != nil {

@@ -11,34 +11,34 @@ import (
 	_ "sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
-var WS_LC_QUEUE_PATH = path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC)
-var WS_BE_QUEUE_PATH = path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE)
+var WS_LC_QUEUE_PATH = path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC)
+var WS_BE_QUEUE_PATH = path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE)
 
 // Thread in charge of stealing procs.
 func (pd *Procd) startWorkStealingMonitors() {
-	go pd.monitorWSQueue(np.PROCD_RUNQ_LC)
-	go pd.monitorWSQueue(np.PROCD_RUNQ_BE)
+	go pd.monitorWSQueue(sp.PROCD_RUNQ_LC)
+	go pd.monitorWSQueue(sp.PROCD_RUNQ_BE)
 }
 
 // Monitor a Work-Stealing queue.
 func (pd *Procd) monitorWSQueue(wsQueue string) {
-	wsQueuePath := path.Join(np.PROCD_WS, wsQueue)
+	wsQueuePath := path.Join(sp.PROCD_WS, wsQueue)
 	for !pd.readDone() {
 		// Wait for a bit to avoid overwhelming named.
-		time.Sleep(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
+		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 		// Don't bother reading the BE queue if we couldn't possibly claim the
 		// proc.
-		if wsQueue == np.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
+		if wsQueue == sp.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
 			db.DPrintf("PROCD", "Skip monitoring BE WS queue because we can't claim another BE proc")
 			continue
 		}
 		var nremote int
 		stealable := make([]string, 0)
 		// Wait until there is a proc to steal.
-		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*np.Stat) bool {
+		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*sp.Stat) bool {
 			// Discount procs already on this procd
 			for _, st := range sts {
 				// See if this proc was spawned on this procd or has been stolen. If
@@ -91,15 +91,15 @@ func (pd *Procd) offerStealableProcs() {
 		toOffer := make(map[string]string)
 		present := make(map[string]string)
 		// Wait for a bit.
-		time.Sleep(np.Conf.Procd.STEALABLE_PROC_TIMEOUT)
-		runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
+		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
+		runqs := []string{sp.PROCD_RUNQ_LC, sp.PROCD_RUNQ_BE}
 		for _, runq := range runqs {
-			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
-			_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
-				// XXX Based on how we stuff Mtime into np.Stat (at a second
+			runqPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), runq)
+			_, err := pd.ProcessDir(runqPath, func(st *sp.Stat) (bool, error) {
+				// XXX Based on how we stuff Mtime into sp.Stat (at a second
 				// granularity), but this should be changed, perhaps.
 				// If proc has been hanging in the runq for too long, it is a candidate for work-stealing.
-				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
+				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					// Don't re-offer procs which have already been offered.
 					if _, ok := alreadyOffered[st.Name]; !ok {
 						toOffer[st.Name] = runq
@@ -117,11 +117,11 @@ func (pd *Procd) offerStealableProcs() {
 		//		db.DPrintf("PROCD", "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
 		for pid, runq := range toOffer {
 			db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
-			runqPath := path.Join(np.PROCD, pd.memfssrv.MyAddr(), runq)
+			runqPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), runq)
 			target := []byte(path.Join(runqPath, pid) + "/")
 			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
-			link := path.Join(np.PROCD_WS, runq, pid)
-			if err := pd.Symlink(target, link, 0777|np.DMTMP); err != nil {
+			link := path.Join(sp.PROCD_WS, runq, pid)
+			if err := pd.Symlink(target, link, 0777|sp.DMTMP); err != nil {
 				if fcall.IsErrExists(err) {
 					db.DPrintf("PROCD", "Re-advertise symlink %v", target)
 				} else {
@@ -149,14 +149,14 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 		pd.Remove(link)
 	} else {
 		// If proc was offered up for work stealing...
-		if time.Since(p.attr.SpawnTime) >= np.Conf.Procd.STEALABLE_PROC_TIMEOUT {
+		if time.Since(p.attr.SpawnTime) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
 			var runq string
 			if p.attr.Type == proc.T_LC {
-				runq = np.PROCD_RUNQ_LC
+				runq = sp.PROCD_RUNQ_LC
 			} else {
-				runq = np.PROCD_RUNQ_BE
+				runq = sp.PROCD_RUNQ_BE
 			}
-			link := path.Join(np.PROCD_WS, runq, p.attr.Pid.String())
+			link := path.Join(sp.PROCD_WS, runq, p.attr.Pid.String())
 			pd.Remove(link)
 		}
 	}
@@ -182,7 +182,7 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 	// optimistically, since it must already be there when we actually do the
 	// claiming.
 	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
-	err1 := semStart.Init(np.DMTMP)
+	err1 := semStart.Init(sp.DMTMP)
 	// If someone beat us to the semaphore creation, we can't have possibly
 	// claimed the proc, so bail out. If the procd that created the semaphore
 	// crashed, its semaphore will be automatically removed (since the semaphore

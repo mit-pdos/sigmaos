@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -100,7 +100,7 @@ func (tx *Tx) WriteFile(fpath string, b []byte) error {
 	// Atomically write the file
 	tmpPath := tx.origToTmpPath(fpath)
 	tx.files[fpath] = tmpPath
-	return tx.fsl.MakeFile(tmpPath, 0777, np.OWRITE, b)
+	return tx.fsl.MakeFile(tmpPath, 0777, sp.OWRITE, b)
 }
 
 func (tx *Tx) checkActive() error {
@@ -155,7 +155,7 @@ func (tx *Tx) cleanup() error {
 func (tx *Tx) tryCommitCrashedTx(fpath string) {
 	// XXX There is probably a better/more efficient way of doing this.
 	var tmpPath string
-	matched, err := tx.fsl.ProcessDir(path.Dir(fpath), func(st *np.Stat) (bool, error) {
+	matched, err := tx.fsl.ProcessDir(path.Dir(fpath), func(st *sp.Stat) (bool, error) {
 		if tmpFileMatch(path.Base(fpath), st.Name) {
 			tmpPath = st.Name
 			return true, nil

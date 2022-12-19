@@ -17,7 +17,7 @@ import (
 	"sigmaos/repldummy"
 	"sigmaos/replraft"
 	"sigmaos/sesssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 )
 
@@ -69,12 +69,12 @@ func Run(args []string) {
 	ss.Done()
 }
 
-var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL, np.UXREL, np.S3REL, np.DBREL, np.HOTELREL, np.CACHEREL}
+var InitDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
 
 func initfs(ss *sesssrv.SessSrv) error {
 	r := ss.Root()
 	for _, n := range InitDir {
-		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|np.DMDIR, np.OREAD)
+		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
 		if err != nil {
 			return err
 		}

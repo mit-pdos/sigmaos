@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/fcall"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -12,9 +12,9 @@ const (
 )
 
 type FdState struct {
-	offset np.Toffset
-	fid    np.Tfid
-	mode   np.Tmode
+	offset sp.Toffset
+	fid    sp.Tfid
+	mode   sp.Tmode
 }
 
 type FdTable struct {
@@ -30,7 +30,7 @@ func mkFdTable() *FdTable {
 	return fdt
 }
 
-func (fdt *FdTable) allocFd(nfid np.Tfid, m np.Tmode) int {
+func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -53,7 +53,7 @@ func (fdt *FdTable) closefd(fd int) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
-	fdt.fds[fd].fid = np.NoFid
+	fdt.fds[fd].fid = sp.NoFid
 	fdt.freefds[fd] = true
 }
 
@@ -62,35 +62,35 @@ func (fdt *FdTable) lookupL(fd int) (*FdState, *fcall.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
 		return nil, fcall.MkErr(fcall.TErrBadFd, fd)
 	}
-	if fdt.fds[fd].fid == np.NoFid {
+	if fdt.fds[fd].fid == sp.NoFid {
 		return nil, fcall.MkErr(fcall.TErrBadFd, fd)
 	}
 	return &fdt.fds[fd], nil
 }
 
-func (fdt *FdTable) lookup(fd int) (np.Tfid, *fcall.Err) {
+func (fdt *FdTable) lookup(fd int) (sp.Tfid, *fcall.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
 	st, err := fdt.lookupL(fd)
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	return st.fid, nil
 }
 
-func (fdt *FdTable) lookupOff(fd int) (np.Tfid, np.Toffset, *fcall.Err) {
+func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, *fcall.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
 	st, err := fdt.lookupL(fd)
 	if err != nil {
-		return np.NoFid, 0, err
+		return sp.NoFid, 0, err
 	}
 	return st.fid, st.offset, nil
 }
 
-func (fdt *FdTable) setOffset(fd int, off np.Toffset) *fcall.Err {
+func (fdt *FdTable) setOffset(fd int, off sp.Toffset) *fcall.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -102,7 +102,7 @@ func (fdt *FdTable) setOffset(fd int, off np.Toffset) *fcall.Err {
 	return nil
 }
 
-func (fdt *FdTable) incOff(fd int, off np.Toffset) *fcall.Err {
+func (fdt *FdTable) incOff(fd int, off sp.Toffset) *fcall.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 

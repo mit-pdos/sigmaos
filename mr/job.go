@@ -13,7 +13,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func JobDir(job string) string {
@@ -97,7 +97,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	// Make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
-		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
+		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
 			db.DFatalf("Putfile %v err %v\n", n, err)
 		}
 		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
@@ -107,23 +107,23 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	}
 
 	// Create empty stats file
-	if _, err := fsl.PutFile(MRstats(jobname), 0777, np.OWRITE, []byte{}); err != nil {
+	if _, err := fsl.PutFile(MRstats(jobname), 0777, sp.OWRITE, []byte{}); err != nil {
 		db.DFatalf("Putfile %v err %v\n", MRstats(jobname), err)
 	}
 }
 
 // Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
-	splitsz := np.Tlength(10 * np.MBYTE)
-	// splitsz := maxbinsz >> 3 //np.Tlength(10 * 1024 * 1024)
+	splitsz := sp.Tlength(10 * sp.MBYTE)
+	// splitsz := maxbinsz >> 3 //sp.Tlength(10 * 1024 * 1024)
 
-	bins, err := MkBins(fsl, job.Input, np.Tlength(job.Binsz), splitsz)
+	bins, err := MkBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}
 	for i, b := range bins {
 		n := MapTask(jobName) + "/" + BinName(i)
-		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
+		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
 			return len(bins), err
 		}
 		for _, s := range b {

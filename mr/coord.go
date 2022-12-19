@@ -16,7 +16,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 
 	NCOORD = 3
 
-	MLOCALSRV = np.UX + "/~ip" // must end without /
+	MLOCALSRV = sp.UX + "/~ip" // must end without /
 	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer
@@ -144,7 +144,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, MEM_REQ)
 }
 
-func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
+func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := c.Rename(from, dir+TIP+"/"+st.Name); err != nil {
 		if fcall.IsErrUnreachable(err) { // partitioned?
@@ -158,7 +158,7 @@ func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 
 func (c *Coord) getTask(dir string) (string, error) {
 	t := ""
-	stopped, err := c.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+	stopped, err := c.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
 		t1, err := c.claimEntry(dir, st)
 		if err != nil {
 			return false, err
@@ -297,7 +297,7 @@ func (c *Coord) restart(files []string, task string) {
 	}
 	// Record that we have to rerun reducer t
 	n := ReduceTask(c.job) + NEXT + "/" + task
-	if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
+	if _, err := c.PutFile(n, 0777, sp.OWRITE, []byte(n)); err != nil {
 		db.DPrintf(db.ALWAYS, "PutFile %v err %v\n", n, err)
 	}
 }

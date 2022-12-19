@@ -14,34 +14,34 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) *np.Tqid {
-	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
+func mkQid(mode sp.Tperm, v sp.TQversion, path sp.Tpath) *sp.Tqid {
+	return sp.MakeQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
 }
 
-func umode2Perm(umode uint16) np.Tperm {
-	perm := np.Tperm(umode & 0777)
+func umode2Perm(umode uint16) sp.Tperm {
+	perm := sp.Tperm(umode & 0777)
 	switch umode & syscall.S_IFMT {
 	case syscall.S_IFREG:
 		// file
 	case syscall.S_IFDIR:
-		perm |= np.DMDIR
+		perm |= sp.DMDIR
 	case syscall.S_IFIFO:
-		perm |= np.DMNAMEDPIPE
+		perm |= sp.DMNAMEDPIPE
 	case syscall.S_IFLNK:
-		perm |= np.DMSYMLINK
+		perm |= sp.DMSYMLINK
 	}
 	db.DPrintf("UXD0", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
 }
 
-func ustat(path path.Path) (*np.Stat, *fcall.Err) {
+func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 	var statx unix.Statx_t
 	db.DPrintf("UXD", "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -49,7 +49,7 @@ func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 		return nil, UxTo9PError(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
-	st := np.MkStat(np.MakeQidPerm(umode2Perm(statx.Mode), 0, np.Tpath(statx.Ino)),
+	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	st.Length = statx.Size
 	return st, nil
@@ -57,8 +57,8 @@ func ustat(path path.Path) (*np.Stat, *fcall.Err) {
 
 type Obj struct {
 	pathName path.Path
-	path     np.Tpath
-	perm     np.Tperm // XXX kill, but requires changing Perm() API
+	path     sp.Tpath
+	perm     sp.Tperm // XXX kill, but requires changing Perm() API
 }
 
 func (o *Obj) String() string {
@@ -67,13 +67,13 @@ func (o *Obj) String() string {
 
 func makeObj(path path.Path) (*Obj, *fcall.Err) {
 	if st, err := ustat(path); err != nil {
-		return &Obj{path, 0, np.DMSYMLINK}, err
+		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
 		return &Obj{path, st.Qid.Tpath(), st.Tmode()}, nil
 	}
 }
 
-func (o *Obj) Perm() np.Tperm {
+func (o *Obj) Perm() sp.Tperm {
 	return o.perm
 	// st, err := ustat(o.pathName)
 	// if err != nil {
@@ -84,7 +84,7 @@ func (o *Obj) Perm() np.Tperm {
 	//return st.Mode, nil
 }
 
-func (o *Obj) Path() np.Tpath {
+func (o *Obj) Path() sp.Tpath {
 	return o.path
 }
 
@@ -96,7 +96,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -105,22 +105,22 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	return st, nil
 }
 
-func uxFlags(m np.Tmode) int {
+func uxFlags(m sp.Tmode) int {
 	f := syscall.O_NOFOLLOW
 	switch m & 3 {
-	case np.OREAD:
+	case sp.OREAD:
 		f |= syscall.O_RDONLY
-	case np.ORDWR:
+	case sp.ORDWR:
 		f |= syscall.O_RDWR
-	case np.OWRITE:
+	case sp.OWRITE:
 		f |= syscall.O_WRONLY
-	case np.OEXEC:
+	case sp.OEXEC:
 		f |= syscall.O_RDONLY
 	}
-	if m&np.OTRUNC == np.OTRUNC {
+	if m&sp.OTRUNC == sp.OTRUNC {
 		f |= syscall.O_TRUNC
 	}
-	if m&np.OAPPEND == np.OAPPEND {
+	if m&sp.OAPPEND == sp.OAPPEND {
 		f |= syscall.O_APPEND
 		f |= syscall.O_WRONLY
 	}
@@ -153,7 +153,7 @@ func (o *Obj) SetParent(p fs.Dir) {
 func (o *Obj) Unlink() {
 }
 
-func (o *Obj) Size() (np.Tlength, *fcall.Err) {
+func (o *Obj) Size() (sp.Tlength, *fcall.Err) {
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return 0, err

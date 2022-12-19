@@ -15,7 +15,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -58,7 +58,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	db.DPrintf("COORD", "New coord %v", args)
 
-	if _, err := cd.PutFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := cd.PutFile(COORD, 0777|sp.DMTMP, sp.OWRITE, nil); err != nil {
 		db.DFatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 

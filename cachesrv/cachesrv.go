@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/sessdev"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -43,7 +43,7 @@ func RunCacheSrv(args []string) error {
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
 	db.DPrintf("CACHESRV", "%v: Run %v\n", proc.GetName(), s.shrd)
-	pds, err := protdevsrv.MakeProtDevSrv(np.CACHE+s.shrd, s)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.CACHE+s.shrd, s)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inode,
 }
 
 // XXX incremental read
-func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}
@@ -100,11 +100,11 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQv
 	return b, nil
 }
 
-func (cs *cacheSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 
-func (cs *cacheSession) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
+func (cs *cacheSession) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
 	db.DPrintf("CACHESRV", "%v: Close %v\n", proc.GetName(), cs.sid)
 	return nil
 }

@@ -11,12 +11,12 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
-	fn = np.UX + "/~ip/"
+	fn = sp.UX + "/~ip/"
 )
 
 func TestRoot(t *testing.T) {
@@ -34,7 +34,7 @@ func TestFile(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	d := []byte("hello")
-	_, err := ts.PutFile(fn+"f", 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn+"f", 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	d1, err := ts.GetFile(fn + "f")
@@ -58,7 +58,7 @@ func TestDir(t *testing.T) {
 
 	assert.Equal(t, 0, len(dirents))
 
-	_, err = ts.PutFile(fn+"d1/f", 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn+"d1/f", 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	d1, err := ts.GetFile(fn + "d1/f")
@@ -75,20 +75,20 @@ func TestDir(t *testing.T) {
 
 func mkfile(t *testing.T, name string) {
 	CNT := 500
-	buf := test.MkBuf(np.BUFSZ)
+	buf := test.MkBuf(sp.BUFSZ)
 	start := time.Now()
 	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0666)
 	assert.Nil(t, err)
 	for i := 0; i < CNT; i++ {
-		n, err := syscall.Pwrite(fd, buf, int64(i*np.BUFSZ))
+		n, err := syscall.Pwrite(fd, buf, int64(i*sp.BUFSZ))
 		assert.Nil(t, err)
-		assert.Equal(t, np.BUFSZ, n)
+		assert.Equal(t, sp.BUFSZ, n)
 	}
 	syscall.Fsync(fd)
 	syscall.Close(fd)
 	ms := time.Since(start).Milliseconds()
 	sz := uint64(CNT * len(buf))
-	fmt.Printf("%s took %vms (%s)\n", humanize.Bytes(sz), ms, test.TputStr(np.Tlength(sz), ms))
+	fmt.Printf("%s took %vms (%s)\n", humanize.Bytes(sz), ms, test.TputStr(sp.Tlength(sz), ms))
 	os.Remove(name)
 }
 

@@ -7,11 +7,11 @@ import (
 	"sigmaos/linuxsched"
 	mproto "sigmaos/machine/proto"
 	"sigmaos/protdevclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func NodedNCores() uint64 {
-	n := uint64(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	n := uint64(sp.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
 	// Make sure the minimum noded size is 1.
 	if n < 1 {
 		n = 1
@@ -20,9 +20,9 @@ func NodedNCores() uint64 {
 }
 
 // Post chunks of available cores.
-func PostCores(pdc *protdevclnt.ProtDevClnt, machineId string, cores *np.Tinterval) {
+func PostCores(pdc *protdevclnt.ProtDevClnt, machineId string, cores *sp.Tinterval) {
 	// Post cores in local fs.
-	if _, err := pdc.PutFile(path.Join(MACHINES, machineId, CORES, cores.Marshal()), 0777, np.OWRITE, []byte(cores.Marshal())); err != nil {
+	if _, err := pdc.PutFile(path.Join(MACHINES, machineId, CORES, cores.Marshal()), 0777, sp.OWRITE, []byte(cores.Marshal())); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 	res := &mproto.MachineResponse{}

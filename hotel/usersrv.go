@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/dbclnt"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 )
 
@@ -35,11 +35,11 @@ type Users struct {
 
 func RunUserSrv(n string) error {
 	u := &Users{}
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELUSER, u)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELUSER, u)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), np.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
 	if err != nil {
 		return err
 	}

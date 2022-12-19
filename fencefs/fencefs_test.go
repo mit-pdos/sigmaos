@@ -7,17 +7,17 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/fencefs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func TestMakeFenceFs(t *testing.T) {
-	fence := np.Tfence1{}
+	fence := sp.Tfence1{}
 	fence.Epoch = 10
 
 	ctx := ctx.MkCtx("", 0, nil)
 	root := fencefs.MakeRoot()
 	assert.NotNil(t, root)
-	i, err := root.Create(ctx, fence.FenceId.Path.String(), 0777, np.OWRITE)
+	i, err := root.Create(ctx, fence.FenceId.Path.String(), 0777, sp.OWRITE)
 	assert.Nil(t, err)
 	assert.NotNil(t, i)
 }

@@ -12,7 +12,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/realm"
 )
@@ -46,7 +46,7 @@ func makeTstate(t *testing.T, realmid string) *Tstate {
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
-	if path == np.NAMED {
+	if path == sp.NAMED {
 		return MakeTstate(t)
 	} else {
 		ts := MakeTstateAll(t)
@@ -68,7 +68,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	// XXX make fslib exit?
 	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
 	ts.namedAddr = rconfig.NamedAddrs
-	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, np.MkInterval(0, uint64(linuxsched.NCores)))
+	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sp.MkInterval(0, uint64(linuxsched.NCores)))
 	return ts
 }
 
@@ -109,7 +109,7 @@ func (ts *Tstate) Shutdown() {
 
 func (ts *Tstate) addNamedReplica(i int) {
 	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", np.TEST_RID, i, np.MkInterval(0, uint64(linuxsched.NCores)))
+	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sp.MkInterval(0, uint64(linuxsched.NCores)))
 	ts.Lock()
 	defer ts.Unlock()
 	ts.replicas = append(ts.replicas, r)
@@ -124,12 +124,12 @@ func (ts *Tstate) startReplicas() {
 	}
 }
 
-func (ts *Tstate) makeSystem(mkSys func(string, string, int, *np.Tinterval) *kernel.System) {
+func (ts *Tstate) makeSystem(mkSys func(string, string, int, *sp.Tinterval) *kernel.System) {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	go func() {
 		defer ts.wg.Done()
-		ts.System = mkSys("test", np.TEST_RID, 0, np.MkInterval(0, uint64(linuxsched.NCores)))
+		ts.System = mkSys("test", sp.TEST_RID, 0, sp.MkInterval(0, uint64(linuxsched.NCores)))
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()
@@ -142,16 +142,16 @@ func setVersion() {
 	proc.Version = version
 }
 
-func Mbyte(sz np.Tlength) float64 {
-	return float64(sz) / float64(np.MBYTE)
+func Mbyte(sz sp.Tlength) float64 {
+	return float64(sz) / float64(sp.MBYTE)
 }
 
-func TputStr(sz np.Tlength, ms int64) string {
+func TputStr(sz sp.Tlength, ms int64) string {
 	s := float64(ms) / 1000
 	return fmt.Sprintf("%.2fMB/s", Mbyte(sz)/s)
 }
 
-func Tput(sz np.Tlength, ms int64) float64 {
+func Tput(sz sp.Tlength, ms int64) float64 {
 	t := float64(ms) / 1000
 	return Mbyte(sz) / t
 }

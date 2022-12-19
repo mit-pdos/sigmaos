@@ -7,7 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 )
 
@@ -23,7 +23,7 @@ type fileSession struct {
 }
 
 // XXX wait on close before processing data?
-func (fs *fileSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	debug.DPrintf("DBSRV", "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
@@ -39,11 +39,11 @@ func (fs *fileSession) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversi
 		return 0, fcall.MkErrError(err)
 	}
 
-	return np.Tsize(len(b)), nil
+	return sp.Tsize(len(b)), nil
 }
 
 // XXX incremental read
-func (fs *fileSession) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}

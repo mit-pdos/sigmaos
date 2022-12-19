@@ -21,7 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
@@ -62,8 +62,8 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener,
 	node.storage = raft.NewMemoryStorage()
 	node.config = &raft.Config{
 		ID:                        uint64(id),
-		ElectionTick:              np.Conf.Raft.ELECT_NTICKS,
-		HeartbeatTick:             np.Conf.Raft.HEARTBEAT_TICKS,
+		ElectionTick:              sp.Conf.Raft.ELECT_NTICKS,
+		HeartbeatTick:             sp.Conf.Raft.HEARTBEAT_TICKS,
 		Storage:                   node.storage,
 		MaxSizePerMsg:             4096,
 		MaxInflightMsgs:           256,
@@ -131,7 +131,7 @@ func (n *RaftNode) serveChannels() {
 	n.snapshotIndex = snap.Metadata.Index
 	n.appliedIndex = snap.Metadata.Index
 
-	ticker := time.NewTicker(np.Conf.Raft.TICK_INTERVAL)
+	ticker := time.NewTicker(sp.Conf.Raft.TICK_INTERVAL)
 	defer ticker.Stop()
 
 	go n.sendProposals()

@@ -11,7 +11,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/replies"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -26,19 +26,19 @@ import (
 type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
-	conn          np.Conn
+	conn          sp.Conn
 	rt            *replies.ReplyTable
-	protsrv       np.Protsrv
+	protsrv       sp.Protsrv
 	lastHeartbeat time.Time
 	Sid           fcall.Tsession
 	ClientId      fcall.Tclient
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
-	detach        np.DetachF
+	detach        sp.DetachF
 }
 
-func makeSession(protsrv np.Protsrv, cid fcall.Tclient, sid fcall.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv sp.Protsrv, cid fcall.Tclient, sid fcall.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.rt = replies.MakeReplyTable()
@@ -58,7 +58,7 @@ func (sess *Session) GetReplyTable() *replies.ReplyTable {
 	return sess.rt
 }
 
-func (sess *Session) GetConn() np.Conn {
+func (sess *Session) GetConn() sp.Conn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -72,7 +72,7 @@ func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 // sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
 	sess.Lock()
-	var conn np.Conn
+	var conn sp.Conn
 	if sess.conn != nil {
 		conn = sess.conn
 	}
@@ -99,8 +99,8 @@ func (sess *Session) Close() {
 // The conn may be nil if this is a replicated op which came through
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
-func (sess *Session) SendConn(fm *np.FcallMsg) {
-	var replies chan *np.FcallMsg = nil
+func (sess *Session) SendConn(fm *sp.FcallMsg) {
+	var replies chan *sp.FcallMsg = nil
 
 	sess.Lock()
 	if sess.conn != nil {
@@ -125,7 +125,7 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts talking to a new replica or a client reconnects quickly.
-func (sess *Session) SetConn(conn np.Conn) *fcall.Err {
+func (sess *Session) SetConn(conn sp.Conn) *fcall.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
@@ -136,7 +136,7 @@ func (sess *Session) SetConn(conn np.Conn) *fcall.Err {
 	return nil
 }
 
-func (sess *Session) UnsetConn(conn np.Conn) {
+func (sess *Session) UnsetConn(conn sp.Conn) {
 	sess.Lock()
 	defer sess.Unlock()
 
@@ -145,7 +145,7 @@ func (sess *Session) UnsetConn(conn np.Conn) {
 
 // Disassociate a connection with this session, and safely close the
 // connection.
-func (sess *Session) unsetConnL(conn np.Conn) {
+func (sess *Session) unsetConnL(conn sp.Conn) {
 	if sess.conn == conn {
 		db.DPrintf("SESSION", "%v close connection", sess.Sid)
 		sess.conn = nil
@@ -187,16 +187,16 @@ func (sess *Session) timedOut() (bool, time.Time) {
 	if sess.timedout {
 		return true, sess.lastHeartbeat
 	}
-	return sess.timedout || time.Since(sess.lastHeartbeat) > np.Conf.Session.TIMEOUT, sess.lastHeartbeat
+	return sess.timedout || time.Since(sess.lastHeartbeat) > sp.Conf.Session.TIMEOUT, sess.lastHeartbeat
 }
 
-func (sess *Session) RegisterDetach(f np.DetachF) {
+func (sess *Session) RegisterDetach(f sp.DetachF) {
 	sess.Lock()
 	defer sess.Unlock()
 	sess.detach = f
 }
 
-func (sess *Session) GetDetach() np.DetachF {
+func (sess *Session) GetDetach() sp.DetachF {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.detach

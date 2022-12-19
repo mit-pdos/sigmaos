@@ -5,7 +5,7 @@ import (
 	//"time"
 
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 )
 
@@ -20,25 +20,25 @@ func MakeFile() *File {
 	return f
 }
 
-func (f *File) Size() (np.Tlength, *fcall.Err) {
+func (f *File) Size() (sp.Tlength, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return np.Tlength(len(f.data)), nil
+	return sp.Tlength(len(f.data)), nil
 }
 
-func (f *File) LenOff() np.Toffset {
-	return np.Toffset(len(f.data))
+func (f *File) LenOff() sp.Toffset {
+	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	// f.SetMtime(time.Now().Unix())
 
-	cnt := np.Tsize(len(data))
-	sz := np.Toffset(len(data))
-	if offset == np.NoOffset { // OAPPEND
+	cnt := sp.Tsize(len(data))
+	sz := sp.Toffset(len(data))
+	if offset == sp.NoOffset { // OAPPEND
 		offset = f.LenOff()
 	}
 
@@ -60,7 +60,7 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -68,7 +68,7 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 		return nil, nil
 	} else {
 		// XXX overflow?
-		end := offset + np.Toffset(n)
+		end := offset + sp.Toffset(n)
 		if end >= f.LenOff() {
 			end = f.LenOff()
 		}

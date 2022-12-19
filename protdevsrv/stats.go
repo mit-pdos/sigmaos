@@ -9,7 +9,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 )
 
@@ -101,7 +101,7 @@ func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *fcall.Err) {
 	return std.si, nil
 }
 
-func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}
@@ -118,11 +118,11 @@ func (std *statsDev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQvers
 	return b, nil
 }
 
-func (std *statsDev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 
-func (std *statsDev) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
+func (std *statsDev) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
 	db.DPrintf("PROTDEVSRV", "Close stats\n")
 	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -25,7 +25,7 @@ func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bo
 	}
 	if isKernelProc {
 		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
-		if _, err := clnt.PutFile(kprocFPath, 0777, np.OWRITE, []byte{}); err != nil {
+		if _, err := clnt.PutFile(kprocFPath, 0777, sp.OWRITE, []byte{}); err != nil {
 			db.DPrintf("PROCCLNT_ERR", "MakeProcDir MakeFile %v err %v", kprocFPath, err)
 			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
@@ -130,20 +130,20 @@ func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string
 	var q string
 	switch p.Type {
 	case proc.T_LC:
-		q = np.PROCD_RUNQ_LC
+		q = sp.PROCD_RUNQ_LC
 	case proc.T_BE:
-		q = np.PROCD_RUNQ_BE
+		q = sp.PROCD_RUNQ_BE
 	default:
 		db.DFatalf("Unknown proc type %v", p.Type)
 	}
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
 	if viaProcd {
-		procfileLink = path.Join(np.PROCD, procdIp, q, p.Pid.String())
+		procfileLink = path.Join(sp.PROCD, procdIp, q, p.Pid.String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in
 	// this procd's runq.
-	if _, err := clnt.PutFile(path.Join(childDir, proc.PROCFILE_LINK), 0777, np.OWRITE|np.OREAD, []byte(procfileLink)); err != nil {
+	if _, err := clnt.PutFile(path.Join(childDir, proc.PROCFILE_LINK), 0777, sp.OWRITE|sp.OREAD, []byte(procfileLink)); err != nil {
 		db.DFatalf("Error PutFile addChild %v", err)
 	}
 	// Link in shared state from parent, if desired.

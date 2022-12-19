@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
@@ -46,7 +46,7 @@ func RunLeader(dir, last, child string) {
 	if err != nil {
 		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
-	_, err = fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
+	_, err = fsl.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 	if err != nil {
 		db.DFatalf("%v SetFile b %v failed %v\n", proc.GetName(), fn, err)
 	}
@@ -68,16 +68,16 @@ func RunLeader(dir, last, child string) {
 		// allow others to write for a while
 		time.Sleep(500 * time.Millisecond)
 	} else {
-		if err := fsl.Disconnect(np.NAMED); err != nil {
+		if err := fsl.Disconnect(sp.NAMED); err != nil {
 			db.DFatalf("disconnect failed %v\n", err)
 		}
 
 		// wait a little before starting to write
-		time.Sleep(2 * np.Conf.Session.TIMEOUT)
+		time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {
-			_, err := fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
+			_, err := fsl.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 			if err != nil {
 				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			}

@@ -1,12 +1,12 @@
 package fslib
 
 import (
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) Symlink(target []byte, link string, lperm np.Tperm) error {
-	lperm = lperm | np.DMSYMLINK
-	fd, err := fl.Create(link, lperm, np.OWRITE)
+func (fl *FsLib) Symlink(target []byte, link string, lperm sp.Tperm) error {
+	lperm = lperm | sp.DMSYMLINK
+	fd, err := fl.Create(link, lperm, sp.OWRITE)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 var rootP = path.Path{""}
@@ -24,7 +24,7 @@ func (fs *MemFs) FsLib() *fslib.FsLib {
 
 // Note: MkDev() sets parent
 func (mfs *MemFs) MakeDevInode() *inode.Inode {
-	return inode.MakeInode(mfs.ctx, np.DMDEVICE, nil)
+	return inode.MakeInode(mfs.ctx, sp.DMDEVICE, nil)
 }
 
 func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *fcall.Err) {
@@ -57,7 +57,7 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *fcall.Err {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	// i := inode.MakeInode(mfs.ctx, np.DMDEVICE, d)
+	// i := inode.MakeInode(mfs.ctx, sp.DMDEVICE, d)
 	dev.SetParent(d)
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
@@ -72,7 +72,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *fcall.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), i)
 }
 
-func (mfs *MemFs) Create(pn string, p np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -92,7 +92,7 @@ func (mfs *MemFs) Remove(pn string) *fcall.Err {
 	return d.Remove(mfs.ctx, path.Base())
 }
 
-func (mfs *MemFs) Open(pn string, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	path := path.Split(pn)
 	lo, lk, err := mfs.lookup(path)
 	if err != nil {

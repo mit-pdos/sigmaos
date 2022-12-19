@@ -11,11 +11,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/reader"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
-func (fl *FsLib) ReadSeqNo() np.Tseqno {
+func (fl *FsLib) ReadSeqNo() sp.Tseqno {
 	return fl.FidClnt.ReadSeqNo()
 }
 
@@ -24,15 +24,15 @@ func (fl *FsLib) ReadSeqNo() np.Tseqno {
 //
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FdClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
+	return fl.FdClient.GetFile(fname, sp.OREAD, 0, sp.MAXGETSET)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, m np.Tmode, off np.Toffset) (np.Tsize, error) {
+func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
 	return fl.FdClient.SetFile(fname, m, data, off)
 }
 
-func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {
-	return fl.FdClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
+func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
+	return fl.FdClient.PutFile(fname, mode|sp.OWRITE, perm, data, 0)
 }
 
 //
@@ -40,7 +40,7 @@ func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte
 //
 
 func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
-	fd, err := fl.Open(path, np.OREAD)
+	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +67,11 @@ func (rdr *Rdr) Read(p []byte) (n int, err error) {
 	return rdr.ardr.Read(p)
 }
 
-func (rdr *Rdr) Nbytes() np.Tlength {
+func (rdr *Rdr) Nbytes() sp.Tlength {
 	return rdr.rdr.Nbytes()
 }
 
-func (fl *FsLib) OpenAsyncReader(path string, offset np.Toffset) (*Rdr, error) {
+func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 	rdr, err := fl.OpenReader(path)
 	if err != nil {
 		return nil, err
@@ -81,8 +81,8 @@ func (fl *FsLib) OpenAsyncReader(path string, offset np.Toffset) (*Rdr, error) {
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr, np.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, np.BUFSZ)
+	r.brdr = bufio.NewReaderSize(rdr, sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
-		fd1, err := fl.OpenWatch(path, np.OREAD, func(path string, err error) {
+		fd1, err := fl.OpenWatch(path, sp.OREAD, func(path string, err error) {
 			ch <- err
 		})
 		db.DPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
@@ -131,7 +131,7 @@ func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 // Writers
 //
 
-func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writer.Writer, error) {
+func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writer.Writer, error) {
 	fd, err := fl.Create(fname, perm, mode)
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writ
 	return wrt, nil
 }
 
-func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error) {
+func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error) {
 	fd, err := fl.Open(fname, mode)
 	if err != nil {
 		return nil, err
@@ -155,13 +155,13 @@ type Wrt struct {
 	bwrt *bufio.Writer
 }
 
-func (fl *FsLib) CreateAsyncWriter(fname string, perm np.Tperm, mode np.Tmode) (*Wrt, error) {
+func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*Wrt, error) {
 	w, err := fl.CreateWriter(fname, perm, mode)
 	if err != nil {
 		return nil, err
 	}
-	aw := awriter.NewWriterSize(w, np.BUFSZ)
-	bw := bufio.NewWriterSize(aw, np.BUFSZ)
+	aw := awriter.NewWriterSize(w, sp.BUFSZ)
+	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
 	return &Wrt{w, aw, bw}, nil
 }
 
@@ -182,7 +182,7 @@ func (wrt *Wrt) Write(b []byte) (int, error) {
 	return wrt.bwrt.Write(b)
 }
 
-func (wrt *Wrt) Nbytes() np.Tlength {
+func (wrt *Wrt) Nbytes() sp.Tlength {
 	return wrt.wrt.Nbytes()
 }
 
@@ -196,12 +196,12 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	fdsrc, err := fl.Open(src, np.OREAD)
+	fdsrc, err := fl.Open(src, sp.OREAD)
 	if err != nil {
 		return err
 	}
 	defer fl.Close(fdsrc)
-	fddst, err := fl.Create(dst, st.Tmode(), np.OWRITE)
+	fddst, err := fl.Create(dst, st.Tmode(), sp.OWRITE)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if err != nil {
 			return err
 		}
-		if n != np.Tsize(len(b)) {
+		if n != sp.Tsize(len(b)) {
 			return fmt.Errorf("short write")
 		}
 	}

@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/file"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/path"
     "sigmaos/fcall"
 )
@@ -28,15 +28,15 @@ func makeSymlink(path path.Path, iscreate bool) (*Symlink, *fcall.Err) {
 	return s, nil
 }
 
-func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("UXD", "%v: SymOpen %v m %x\n", ctx, s, m)
-	if m&np.OWRITE == np.OWRITE {
+	if m&sp.OWRITE == sp.OWRITE {
 		// no calls to update target of an existing symlink,
 		// so remove it.  close() will make the symlink with
 		// the new target.
 		os.Remove(s.Obj.pathName.String())
 	}
-	if m&0x1 == np.OREAD {
+	if m&0x1 == sp.OREAD {
 		// read the target and write it to the in-memory file,
 		// so that Read() can read it.
 		target, error := os.Readlink(s.Obj.pathName.String())
@@ -45,7 +45,7 @@ func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 		}
 		db.DPrintf("UXD", "Readlink target='%s'\n", target)
 		d := []byte(target)
-		_, err := s.File.Write(ctx, 0, d, np.NoV)
+		_, err := s.File.Write(ctx, 0, d, sp.NoV)
 		if err != nil {
 			db.DPrintf("UXD", "Write %v err %v\n", s, err)
 			return nil, err
@@ -54,10 +54,10 @@ func (s *Symlink) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	return nil, nil
 }
 
-func (s *Symlink) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
+func (s *Symlink) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	db.DPrintf("UXD", "%v: SymClose %v %x\n", ctx, s, mode)
-	if mode&np.OWRITE == np.OWRITE {
-		d, err := s.File.Read(ctx, 0, np.MAXGETSET, np.NoV)
+	if mode&sp.OWRITE == sp.OWRITE {
+		d, err := s.File.Read(ctx, 0, sp.MAXGETSET, sp.NoV)
 		if err != nil {
 			return err
 		}

@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -26,11 +26,11 @@ type ProfSrv struct {
 
 func RunProfSrv(job string) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELPROF, ps)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELPROF, ps)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), np.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/pipe"
 	"sigmaos/proc"
@@ -91,7 +91,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !fcall.IsErrExists(err) {
+	if _, err := www.PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !fcall.IsErrExists(err) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
@@ -149,7 +149,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
 	db.DPrintf("WWW", "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
-	fd, err := www.Open(pipePath, np.OREAD)
+	fd, err := www.Open(pipePath, sp.OREAD)
 	if err != nil {
 		db.DPrintf("WWW_ERR", "pipe open %v failed %v", pipePath, err)
 		return
@@ -214,7 +214,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
-	file := path.Join(np.TMP, args)
+	file := path.Join(sp.TMP, args)
 	return www.spawnApp("user/fsreader", w, r, true, []string{file}, nil, 0)
 }
 

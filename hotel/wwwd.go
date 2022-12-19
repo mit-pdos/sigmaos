@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Www struct {
@@ -36,34 +36,34 @@ func RunWww(job string) error {
 	www.job = job
 	www.FsLib = fslib.MakeFsLib("hotel-wwwd-" + job)
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
-	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELUSER)
+	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELSEARCH)
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELPROF)
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELRESERVE)
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = pdc
 
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELREC)
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = pdc
 
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, np.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELGEO)
 	if err != nil {
 		return err
 	}

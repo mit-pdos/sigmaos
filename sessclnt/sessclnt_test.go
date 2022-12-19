@@ -13,7 +13,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -210,13 +210,13 @@ func TestServerPartitionBlocking(t *testing.T) {
 }
 
 const (
-	FILESZ  = 50 * np.MBYTE
+	FILESZ  = 50 * sp.MBYTE
 	WRITESZ = 4096
 )
 
 func writer(t *testing.T, ch chan error, name string) {
 	fsl := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
-	fn := np.UX + "~ip/file-" + name
+	fn := sp.UX + "~ip/file-" + name
 	stop := false
 	nfile := 0
 	for !stop {
@@ -227,7 +227,7 @@ func writer(t *testing.T, ch chan error, name string) {
 			if err := fsl.Remove(fn); err != nil && fcall.IsErrUnreachable(err) {
 				break
 			}
-			w, err := fsl.CreateAsyncWriter(fn, 0777, np.OWRITE)
+			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
 			if err != nil {
 				assert.True(t, fcall.IsErrUnreachable(err))
 				break
@@ -264,7 +264,7 @@ func TestWriteCrash(t *testing.T) {
 	crashchan := make(chan bool)
 	l := &sync.Mutex{}
 	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(np.UX, (i+1)*CRASHSRV, l, crashchan)
+		go ts.CrashServer(sp.UX, (i+1)*CRASHSRV, l, crashchan)
 	}
 
 	for i := 0; i < NCRASH; i++ {

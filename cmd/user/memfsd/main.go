@@ -8,11 +8,11 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/repldummy"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
-	name := np.MEMFS + "/" + proc.GetPid().String()
+	name := sp.MEMFS + "/" + proc.GetPid().String()
 	if len(os.Args) > 1 {
 		ip, err := fidclnt.LocalIP()
 		if err != nil {

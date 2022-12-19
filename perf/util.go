@@ -18,7 +18,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = np.UXROOT + "perf-output/"
+	OUTPUT_PATH = sp.UXROOT + "perf-output/"
 	PPROF       = "_PPROF"
 	PPROF_MEM   = "_PPROF_MEM"
 	CPU         = "_CPU"
@@ -127,11 +127,11 @@ func MakePerfMulti(name string, name2 string) *Perf {
 	}
 	// Set up cpu util capture
 	if ok := labels[name+CPU]; ok {
-		p.setupCPUUtil(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
+		p.setupCPUUtil(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
 	}
 	// Set up throughput caputre
 	if ok := labels[name+TPT]; ok {
-		p.setupTpt(np.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
+		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
 	return p
 }
@@ -153,7 +153,7 @@ func (p *Perf) tptTickL(tpt float64) {
 	// If it has been long enough since we started incrementing this slot, seal
 	// it and move to the next slot. In this way, we always expect
 	// len(p.times) == len(p.tpts) - 1
-	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) {
+	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) {
 		p.tpts = append(p.tpts, 0.0)
 		p.times = append(p.times, time.Now())
 	}

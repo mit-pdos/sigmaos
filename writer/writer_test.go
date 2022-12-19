@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -14,7 +14,7 @@ func TestWriter1(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("abcdefg")
-	wrt, err := ts.CreateWriter(fn, 0777, np.OWRITE)
+	wrt, err := ts.CreateWriter(fn, 0777, sp.OWRITE)
 	assert.Nil(ts.T, err)
 
 	for _, b := range d {

@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func MkBuf(n int) []byte {
@@ -16,9 +16,9 @@ func MkBuf(n int) []byte {
 	return buf
 }
 
-func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz np.Tlength) error {
-	for n := np.Tlength(0); n < fsz; {
-		w := np.Tlength(len(buf))
+func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz sp.Tlength) error {
+	for n := sp.Tlength(0); n < fsz; {
+		w := sp.Tlength(len(buf))
 		if fsz-n < w {
 			w = fsz - n
 		}
@@ -26,15 +26,15 @@ func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz np.Tlength) error {
 		if err != nil {
 			return err
 		}
-		if w != np.Tlength(m) {
+		if w != sp.Tlength(m) {
 			return fmt.Errorf("short write %d %d", w, m)
 		}
-		n += np.Tlength(m)
+		n += sp.Tlength(m)
 	}
 	return nil
 }
 
-func Reader(t *testing.T, rdr io.Reader, buf []byte, sz np.Tlength) (np.Tlength, error) {
+func Reader(t *testing.T, rdr io.Reader, buf []byte, sz sp.Tlength) (sp.Tlength, error) {
 	s := 0
 	for {
 		m, err := rdr.Read(buf)
@@ -46,7 +46,7 @@ func Reader(t *testing.T, rdr io.Reader, buf []byte, sz np.Tlength) (np.Tlength,
 			return 0, err
 		}
 	}
-	if np.Tlength(s) != sz {
+	if sp.Tlength(s) != sz {
 		return 0, fmt.Errorf("short read %d %d", s, sz)
 	}
 	return sz, nil

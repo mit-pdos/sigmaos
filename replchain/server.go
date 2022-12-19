@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fid"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protclnt"
@@ -33,7 +33,7 @@ type ChainReplServer struct {
 	NextChan   *RelayNetConn
 	ops        chan *RelayOp
 	inFlight   *RelayOpSet
-	fids       map[np.Tfid]*fid.Fid
+	fids       map[sp.Tfid]*fid.Fid
 	replyCache *ReplyCache
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -50,7 +50,7 @@ func MakeChainReplServer(cfg repl.Config, fssrv protsrv.FsServer) *ChainReplServ
 		nil, nil, nil, nil,
 		ops,
 		MakeRelayOpSet(),
-		map[np.Tfid]*fid.Fid{},
+		map[sp.Tfid]*fid.Fid{},
 		MakeReplyCache(),
 		fsl,
 		procclnt.MakeProcClnt(fsl),
@@ -70,7 +70,7 @@ func (rs *ChainReplServer) Init() {
 
 	// Set up op logging if necessary
 	if rs.config.LogOps {
-		err := rs.MakeFile("name/"+rs.config.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
+		err := rs.MakeFile("name/"+rs.config.RelayAddr+"-log.txt", 0777, sp.OWRITE, []byte(""))
 		if err != nil {
 			db.DFatalf("Error making log file: %v", err)
 		}
@@ -269,7 +269,7 @@ func (rs *ChainReplServer) runReplConfigUpdater() {
 			targets := rs.getReplicaTargets()
 			db.DPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", rs.config.RelayAddr, rs.config.SymlinkPath, targets)
 			rs.Remove(rs.config.SymlinkPath)
-			rs.SymlinkReplica(targets, rs.config.SymlinkPath, 0777|np.DMTMP|np.DMREPL)
+			rs.SymlinkReplica(targets, rs.config.SymlinkPath, 0777|sp.DMTMP|sp.DMREPL)
 		}
 		// Resend any in-flight messages. Do this asynchronously in case the sends
 		// fail.

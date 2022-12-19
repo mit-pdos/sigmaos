@@ -11,7 +11,7 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Reservation struct {
@@ -78,11 +78,11 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELRESERVE, r)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELRESERVE, r)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), np.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/reader"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
@@ -24,10 +24,10 @@ type Watch func(string, error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
-	chunkSz np.Tsize
+	chunkSz sp.Tsize
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, sz np.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
 	pathc := &PathClnt{}
 	pathc.mnt = makeMntTable()
 	pathc.chunkSz = sz
@@ -45,11 +45,11 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) SetChunkSz(sz np.Tsize) {
+func (pathc *PathClnt) SetChunkSz(sz sp.Tsize) {
 	pathc.chunkSz = sz
 }
 
-func (pathc *PathClnt) GetChunkSz() np.Tsize {
+func (pathc *PathClnt) GetChunkSz() sp.Tsize {
 	return pathc.chunkSz
 }
 
@@ -101,20 +101,20 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid np.Tfid, path string, chunksz np.Tsize) *reader.Reader {
+func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
-func (pathc *PathClnt) MakeWriter(fid np.Tfid) *writer.Writer {
+func (pathc *PathClnt) MakeWriter(fid sp.Tfid) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
-func (pathc *PathClnt) readlink(fid np.Tfid) ([]byte, *fcall.Err) {
+func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *fcall.Err) {
 	qid := pathc.Qid(fid)
-	if qid.Ttype()&np.QTSYMLINK == 0 {
+	if qid.Ttype()&sp.QTSYMLINK == 0 {
 		return nil, fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
 	}
-	_, err := pathc.FidClnt.Open(fid, np.OREAD)
+	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (pathc *PathClnt) readlink(fid np.Tfid) ([]byte, *fcall.Err) {
 	return b, nil
 }
 
-func (pathc *PathClnt) mount(fid np.Tfid, pn string) *fcall.Err {
+func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *fcall.Err {
 	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
 		if err.Code() == fcall.TErrExists {
 			// Another thread may already have mounted
@@ -141,25 +141,25 @@ func (pathc *PathClnt) mount(fid np.Tfid, pn string) *fcall.Err {
 	return nil
 }
 
-func (pathc *PathClnt) Mount(fid np.Tfid, path string) error {
+func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 	if err := pathc.mount(fid, path); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (pathc *PathClnt) Create(p string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
+func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, error) {
 	db.DPrintf("PATHCLNT", "Create %v perm %v\n", p, perm)
 	path := path.Split(p)
 	dir := path.Dir()
 	base := path.Base()
 	fid, err := pathc.WalkPath(dir, true, nil)
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode)
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	return fid, nil
 }
@@ -190,7 +190,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	st := np.MkStatNull()
+	st := sp.MkStatNull()
 	st.Name = npath[len(npath)-1]
 	err = pathc.FidClnt.Wstat(fid, st)
 	if err != nil {
@@ -255,7 +255,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
+func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	db.DPrintf("PATHCLNT", "Stat %v\n", name)
 	fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)
 	if err != nil {
@@ -269,25 +269,25 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	return st, nil
 }
 
-func (pathc *PathClnt) OpenWatch(pn string, mode np.Tmode, w Watch) (np.Tfid, error) {
+func (pathc *PathClnt) OpenWatch(pn string, mode sp.Tmode, w Watch) (sp.Tfid, error) {
 	db.DPrintf("PATHCLNT", "Open %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, err := pathc.WalkPath(p, path.EndSlash(pn), w)
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	_, err = pathc.FidClnt.Open(fid, mode)
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	return fid, nil
 }
 
-func (pathc *PathClnt) Open(path string, mode np.Tmode) (np.Tfid, error) {
+func (pathc *PathClnt) Open(path string, mode sp.Tmode) (sp.Tfid, error) {
 	return pathc.OpenWatch(path, mode, nil)
 }
 
-func (pathc *PathClnt) SetDirWatch(fid np.Tfid, path string, w Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
 	db.DPrintf("PATHCLNT", "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -324,7 +324,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
 	db.DPrintf("PATHCLNT", "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)
@@ -354,7 +354,7 @@ func (pathc *PathClnt) GetFile(pn string, mode np.Tmode, off np.Toffset, cnt np.
 }
 
 // Write file
-func (pathc *PathClnt) SetFile(pn string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
+func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sp.Tsize, error) {
 	db.DPrintf("PATHCLNT", "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)
@@ -384,7 +384,7 @@ func (pathc *PathClnt) SetFile(pn string, mode np.Tmode, data []byte, off np.Tof
 }
 
 // Create file
-func (pathc *PathClnt) PutFile(pn string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sp.Tsize, error) {
 	db.DPrintf("PATHCLNT", "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p)

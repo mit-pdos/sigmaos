@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/twopc"
 )
 
@@ -52,7 +52,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}
-	err := p.GetFileJson(np.MEMFS+"/txni", p.ti)
+	err := p.GetFileJson(sp.MEMFS+"/txni", p.ti)
 	if err != nil {
 		db.DFatalf("Failed to read txni %v\n", err)
 	}
@@ -73,7 +73,7 @@ func (p *Part2pc) copyFile(fn1, fn2 string) error {
 	if err != nil {
 		db.DFatalf("ReadFile %v err %v\n", fn1, err)
 	}
-	_, err = p.PutFile(fn2, 0777, np.OWRITE, b)
+	_, err = p.PutFile(fn2, 0777, sp.OWRITE, b)
 	if err != nil {
 		db.DFatalf("MakeFile %v err %v\n", fn2, err)
 	}

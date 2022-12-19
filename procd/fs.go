@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/resource"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type ProcdFs struct {
@@ -28,7 +28,7 @@ func (pd *Procd) makeFs() {
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
 	var err error
-	pd.memfssrv, pd.FsLib, pd.procclnt, err = memfssrv.MakeMemFs(np.PROCD, np.PROCDREL)
+	pd.memfssrv, pd.FsLib, pd.procclnt, err = memfssrv.MakeMemFs(sp.PROCD, sp.PROCDREL)
 	if err != nil {
 		db.DFatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
@@ -40,12 +40,12 @@ func (pd *Procd) makeFs() {
 	}
 
 	// Set up ctl file
-	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.memfssrv.Root(), np.RESOURCE_CTL)
+	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.memfssrv.Root(), sp.RESOURCE_CTL)
 
 	// Set up runq dir
-	dirs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE, np.PROCD_RUNNING, proc.PIDS}
+	dirs := []string{sp.PROCD_RUNQ_LC, sp.PROCD_RUNQ_BE, sp.PROCD_RUNNING, proc.PIDS}
 	for _, d := range dirs {
-		if err := pd.MkDir(path.Join(np.PROCD, pd.memfssrv.MyAddr(), d), 0777); err != nil {
+		if err := pd.MkDir(path.Join(sp.PROCD, pd.memfssrv.MyAddr(), d), 0777); err != nil {
 			db.DFatalf("Error creating dir: %v", err)
 		}
 	}
@@ -58,7 +58,7 @@ func (pfs *ProcdFs) running(p *LinuxProc) *fcall.Err {
 	if error != nil {
 		return fcall.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
-	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.Pid.String()), 0777, sp.OREAD|sp.OWRITE, b)
 	if err != nil {
 		pfs.pd.perf.Done()
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
@@ -69,7 +69,7 @@ func (pfs *ProcdFs) running(p *LinuxProc) *fcall.Err {
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *LinuxProc) error {
-	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()))
+	err := pfs.pd.Remove(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.Pid.String()))
 	if err != nil {
 		log.Printf("%v: Error ProcdFs.finish: %v", proc.GetName(), err)
 		return err
@@ -82,18 +82,18 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	var runq string
 	switch {
 	case a.Type == proc.T_LC:
-		runq = np.PROCD_RUNQ_LC
+		runq = sp.PROCD_RUNQ_LC
 	default:
-		runq = np.PROCD_RUNQ_BE
+		runq = sp.PROCD_RUNQ_BE
 	}
 	// This procd will likely claim this proc, so cache it.
 	pfs.pd.pcache.Set(a.Pid, a)
-	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()), 0777, sp.OREAD|sp.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
-	db.DPrintf("PROCD", "Procd created q file %v", path.Join(np.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()))
+	db.DPrintf("PROCD", "Procd created q file %v", path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()))
 	pfs.pd.spawnProc(a)
 	return nil
 }

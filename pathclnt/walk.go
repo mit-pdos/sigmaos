@@ -4,17 +4,17 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
 	MAXSYMLINK = 8
 )
 
-func (pathc *PathClnt) Walk(fid np.Tfid, path path.Path) (np.Tfid, *fcall.Err) {
+func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *fcall.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
-		return np.NoFid, fcall.MkErr(fcall.TErrNotfound, fid)
+		return sp.NoFid, fcall.MkErr(fcall.TErrNotfound, fid)
 	}
 	p := ch.Path().AppendPath(path)
 	db.DPrintf("WALK", "Walk %v (ch %v)", p, ch.Path())
@@ -26,7 +26,7 @@ func (pathc *PathClnt) Walk(fid np.Tfid, path path.Path) (np.Tfid, *fcall.Err) {
 // unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (np.Tfid, *fcall.Err) {
+func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid, *fcall.Err) {
 	for {
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf("WALK", "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
@@ -34,14 +34,14 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (np.Tfid,
 			done := len(path1) - len(left)
 			db.DPrintf("WALK", "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
 			if e := pathc.umountFree(path1[0:done]); e != nil {
-				return np.NoFid, e
+				return sp.NoFid, e
 			}
 			// try again
 			db.DPrintf("WALK", "walkPathUmount: try again p %v r %v\n", path, resolve)
 			continue
 		}
 		if err != nil {
-			return np.NoFid, err
+			return sp.NoFid, err
 		}
 		return fid, nil
 	}
@@ -60,26 +60,26 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (np.Tfid,
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
 // clunking it.
-func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (np.Tfid, path.Path, path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (sp.Tfid, path.Path, path.Path, *fcall.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, left, err := pathc.walkMount(path)
 		if err != nil {
-			return np.NoFid, path, left, err
+			return sp.NoFid, path, left, err
 		}
 		fid, left, err = pathc.walkOne(fid, left, w)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, path, left, err
+			return sp.NoFid, path, left, err
 		}
 		fid, left, err = pathc.walkUnion(fid, left)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, path, left, err
+			return sp.NoFid, path, left, err
 		}
 		retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, path, left, err
+			return sp.NoFid, path, left, err
 		}
 		db.DPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
 		if retry {
@@ -92,24 +92,24 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (np.Tfid,
 			// Note: fid can be the one returned by walkMount
 			return fid, path, nil, nil
 		}
-		return np.NoFid, path, left, fcall.MkErr(fcall.TErrNotfound, left)
+		return sp.NoFid, path, left, fcall.MkErr(fcall.TErrNotfound, left)
 	}
-	return np.NoFid, path, path, fcall.MkErr(fcall.TErrUnreachable, "too many symlink cycles")
+	return sp.NoFid, path, path, fcall.MkErr(fcall.TErrUnreachable, "too many symlink cycles")
 }
 
 // Walk the mount table, and clone the found fid; the caller is
 // responsible for clunking it. Return the fid and the remaining part
 // of the path that must be walked.
-func (pathc *PathClnt) walkMount(path path.Path) (np.Tfid, path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkMount(path path.Path) (sp.Tfid, path.Path, *fcall.Err) {
 	fid, left, err := pathc.mnt.resolve(path)
 	if err != nil {
-		return np.NoFid, left, err
+		return sp.NoFid, left, err
 	}
 	db.DPrintf("WALK", "walkMount: resolve %v %v %v\n", fid, left, err)
 	// Obtain a private copy of fid that this thread walks
 	fid1, err := pathc.FidClnt.Clone(fid)
 	if err != nil {
-		return np.NoFid, left, err
+		return sp.NoFid, left, err
 	}
 	return fid1, left, nil
 }
@@ -118,7 +118,7 @@ func (pathc *PathClnt) walkMount(path path.Path) (np.Tfid, path.Path, *fcall.Err
 // union element, or an error. walkOne returns the fid walked too.  If
 // file is not found, set watch on the directory, waiting until the
 // file is created.
-func (pathc *PathClnt) walkOne(fid np.Tfid, path path.Path, w Watch) (np.Tfid, path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Path, w Watch) (sp.Tfid, path.Path, *fcall.Err) {
 	db.DPrintf("WALK", "walkOne %v left %v\n", fid, path)
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
@@ -129,7 +129,7 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path path.Path, w Watch) (np.Tfid, p
 				// couldn't walk to parent dir
 				return fid, path, err1
 			}
-			if err1 == nil && fid1 == np.NoFid {
+			if err1 == nil && fid1 == sp.NoFid {
 				// entry is still not in parent dir
 				return fid, path, err
 			}
@@ -149,7 +149,7 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path path.Path, w Watch) (np.Tfid, p
 
 // Does fid point to a directory that contains ~?  If so, resolve ~
 // and return fid for result.
-func (pathc *PathClnt) walkUnion(fid np.Tfid, p path.Path) (np.Tfid, path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Path) (sp.Tfid, path.Path, *fcall.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
 		db.DPrintf("WALK", "walkUnion %v path %v\n", fid, p)
 		fid1, err := pathc.unionLookup(fid, p[0])
@@ -165,12 +165,12 @@ func (pathc *PathClnt) walkUnion(fid np.Tfid, p path.Path) (np.Tfid, path.Path, 
 
 // Is fid a symlink?  If so, walk it (incl. automounting) and return
 // whether caller should retry.
-func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left path.Path, resolve bool) (bool, path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkSymlink(fid sp.Tfid, path, left path.Path, resolve bool) (bool, path.Path, *fcall.Err) {
 	qid := pathc.FidClnt.Lookup(fid).Lastqid()
 
 	// if len(left) == 0 and !resolve, don't resolve
 	// symlinks, so that the client can remove a symlink
-	if qid.Ttype()&np.QTSYMLINK == np.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
+	if qid.Ttype()&sp.QTSYMLINK == sp.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
 		done := len(path) - len(left)
 		resolved := path[0:done]
 		db.DPrintf("WALK", "walkSymlink %v resolved %v left %v\n", fid, resolved, left)
@@ -188,10 +188,10 @@ func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left path.Path, resolve bo
 // return entry.  Otherwise, set watch based on directory's version
 // number If the directory is modified between Walk and Watch(), the
 // versions numbers won't match and Watch will return an error.
-func (pathc *PathClnt) setWatch(fid np.Tfid, p path.Path, r path.Path, w Watch) (np.Tfid, *fcall.Err) {
+func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Path, r path.Path, w Watch) (sp.Tfid, *fcall.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, r.Dir())
 	if err != nil {
-		return np.NoFid, err
+		return sp.NoFid, err
 	}
 	fid2, _, err := pathc.FidClnt.Walk(fid1, path.Path{r.Base()})
 	if err == nil {
@@ -207,5 +207,5 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p path.Path, r path.Path, w Watch) 
 		db.DPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(p.String(), err)
 	}()
-	return np.NoFid, nil
+	return sp.NoFid, nil
 }

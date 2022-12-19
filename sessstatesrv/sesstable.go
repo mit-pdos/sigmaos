@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -16,13 +16,13 @@ type SessionTable struct {
 	c *sync.Cond
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
-	mkps     np.MkProtServer
-	sesssrv  np.SessServer
+	mkps     sp.MkProtServer
+	sesssrv  sp.SessServer
 	sessions map[fcall.Tsession]*Session
 	last     *Session // for tests
 }
 
-func MakeSessionTable(mkps np.MkProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps sp.MkProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[fcall.Tsession]*Session)
 	st.sesssrv = sesssrv
@@ -71,7 +71,7 @@ func (st *SessionTable) allocL(cid fcall.Tclient, sid fcall.Tsession) *Session {
 	return sess
 }
 
-func (st *SessionTable) ProcessHeartbeats(hbs *np.Theartbeat) {
+func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	st.Lock()
 	defer st.Unlock()
 

@@ -6,19 +6,19 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
 type FidMap struct {
 	sync.Mutex
-	next np.Tfid
-	fids map[np.Tfid]*Channel
+	next sp.Tfid
+	fids map[sp.Tfid]*Channel
 }
 
 func mkFidMap() *FidMap {
 	fm := &FidMap{}
-	fm.fids = make(map[np.Tfid]*Channel)
+	fm.fids = make(map[sp.Tfid]*Channel)
 	return fm
 }
 
@@ -30,7 +30,7 @@ func (fm *FidMap) String() string {
 	return str
 }
 
-func (fm *FidMap) allocFid() np.Tfid {
+func (fm *FidMap) allocFid() sp.Tfid {
 	fm.Lock()
 	defer fm.Unlock()
 
@@ -39,7 +39,7 @@ func (fm *FidMap) allocFid() np.Tfid {
 	return fid
 }
 
-func (fm *FidMap) lookup(fid np.Tfid) *Channel {
+func (fm *FidMap) lookup(fid sp.Tfid) *Channel {
 	fm.Lock()
 	defer fm.Unlock()
 
@@ -49,14 +49,14 @@ func (fm *FidMap) lookup(fid np.Tfid) *Channel {
 	return nil
 }
 
-func (fm *FidMap) insert(fid np.Tfid, path *Channel) {
+func (fm *FidMap) insert(fid sp.Tfid, path *Channel) {
 	fm.Lock()
 	defer fm.Unlock()
 
 	fm.fids[fid] = path
 }
 
-func (fm *FidMap) free(fid np.Tfid) {
+func (fm *FidMap) free(fid sp.Tfid) {
 	fm.Lock()
 	defer fm.Unlock()
 

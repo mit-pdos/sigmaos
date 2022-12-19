@@ -5,21 +5,21 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fid"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/sesssrv"
 )
 
 type ProtSrvSnapshot struct {
-	Fid       map[np.Tfid][]byte
-	Ephemeral map[np.Tpath][]byte
+	Fid       map[sp.Tfid][]byte
+	Ephemeral map[sp.Tpath][]byte
 	Sid       fcall.Tsession
 }
 
 func MakeProtSrvSnapshot() *ProtSrvSnapshot {
 	foss := &ProtSrvSnapshot{}
-	foss.Fid = make(map[np.Tfid][]byte)
-	foss.Ephemeral = make(map[np.Tpath][]byte)
+	foss.Fid = make(map[sp.Tfid][]byte)
+	foss.Ephemeral = make(map[sp.Tpath][]byte)
 	return foss
 }
 
@@ -41,7 +41,7 @@ func (fos *ProtSrv) snapshot() []byte {
 	return b
 }
 
-func Restore(srv np.SessServer, b []byte) np.Protsrv {
+func Restore(srv sp.SessServer, b []byte) sp.Protsrv {
 	ssrv := srv.(*sesssrv.SessSrv)
 	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)

@@ -6,14 +6,14 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/fidclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Reader struct {
 	fc     *fidclnt.FidClnt
 	path   string
-	fid    np.Tfid
-	off    np.Toffset
+	fid    sp.Tfid
+	off    sp.Toffset
 	eof    bool
 	fenced bool
 }
@@ -22,12 +22,12 @@ func (rdr *Reader) Path() string {
 	return rdr.path
 }
 
-func (rdr *Reader) Fid() np.Tfid {
+func (rdr *Reader) Fid() sp.Tfid {
 	return rdr.fid
 }
 
-func (rdr *Reader) Nbytes() np.Tlength {
-	return np.Tlength(rdr.off)
+func (rdr *Reader) Nbytes() sp.Tlength {
+	return sp.Tlength(rdr.off)
 }
 
 func (rdr *Reader) Read(p []byte) (int, error) {
@@ -39,11 +39,11 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	var b []byte
 	var err *fcall.Err
-	sz := np.Tsize(len(p))
+	sz := sp.Tsize(len(p))
 	if rdr.fenced {
-		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, np.NoV)
+		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, sp.NoV)
 	} else {
-		b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, sz, np.NoV)
+		b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, sz, sp.NoV)
 	}
 	if err != nil {
 		db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
@@ -58,7 +58,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	// XXX change rdr.Read to avoid copy
 	copy(p, b)
-	rdr.off += np.Toffset(len(b))
+	rdr.off += sp.Toffset(len(b))
 	return len(b), nil
 }
 
@@ -71,10 +71,10 @@ func (rdr *Reader) GetData() ([]byte, error) {
 }
 
 func (rdr *Reader) GetDataErr() ([]byte, *fcall.Err) {
-	return rdr.fc.ReadV(rdr.fid, 0, np.MAXGETSET, np.NoV)
+	return rdr.fc.ReadV(rdr.fid, 0, sp.MAXGETSET, sp.NoV)
 }
 
-func (rdr *Reader) Lseek(o np.Toffset) error {
+func (rdr *Reader) Lseek(o sp.Toffset) error {
 	rdr.off = o
 	return nil
 }
@@ -91,6 +91,6 @@ func (rdr *Reader) Unfence() {
 	rdr.fenced = false
 }
 
-func MakeReader(fc *fidclnt.FidClnt, path string, fid np.Tfid, chunksz np.Tsize) *Reader {
+func MakeReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz sp.Tsize) *Reader {
 	return &Reader{fc, path, fid, 0, false, true}
 }

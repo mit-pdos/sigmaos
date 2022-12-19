@@ -3,7 +3,7 @@ package fsux
 import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/path"
     "sigmaos/fcall"
 	"sigmaos/pipe"
@@ -25,7 +25,7 @@ func makePipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *fcall.Err) {
 	return p, nil
 }
 
-func (p *Pipe) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (p *Pipe) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("UXD", "%v: PipeOpen %v %v path %v flags %v\n", ctx, p, m, p.Path(), uxFlags(m))
 	pr := fsux.ot.AllocRef(p.Obj.path, p).(*Pipe)
 	if _, err := pr.Pipe.Open(ctx, m); err != nil {
@@ -34,7 +34,7 @@ func (p *Pipe) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	return pr, nil
 }
 
-func (p *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
+func (p *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	db.DPrintf("UXD", "%v: PipeClose path %v\n", ctx, p.Path())
 	pr := fsux.ot.AllocRef(p.Obj.path, p).(*Pipe)
 	fsux.ot.Clunk(p.Obj.path)

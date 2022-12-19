@@ -3,7 +3,7 @@ package semclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 )
 
@@ -25,9 +25,9 @@ func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
-func (c *SemClnt) Init(perm np.Tperm) error {
+func (c *SemClnt) Init(perm sp.Tperm) error {
 	db.DPrintf("SEMCLNT", "Semaphore init %v\n", c.path)
-	_, err := c.PutFile(c.path, 0777|perm, np.OWRITE, []byte{})
+	_, err := c.PutFile(c.path, 0777|perm, sp.OWRITE, []byte{})
 	return err
 }
 

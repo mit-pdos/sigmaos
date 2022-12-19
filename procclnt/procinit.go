@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
@@ -45,7 +45,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount parentdir. May fail if parent already exited.
 	mountDir(fsl, fslib.Named(), proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
+	if err := fsl.MountTree(fslib.Named(), sp.PROCDREL, sp.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -59,7 +59,7 @@ func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, uname string, namedAddr [
 	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid.String()), "")
 	MountPids(fsl, namedAddr)
 
-	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
+	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -84,7 +84,7 @@ func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 // XXX REMOVE THIS AFTER DEADLINE PUSH
 func MakeProcClntTmp(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
 	MountPids(fsl, namedAddr)
-	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
+	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}

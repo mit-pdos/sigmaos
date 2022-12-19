@@ -11,7 +11,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -33,7 +33,7 @@ type Sleeper struct {
 	native      bool
 	sleepLength time.Duration
 	outdir      string
-	startSeqno  np.Tseqno
+	startSeqno  sp.Tseqno
 	time.Time
 }
 
@@ -80,7 +80,7 @@ func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
 	if s.outdir != "" {
 		fpath := path.Join(s.outdir, proc.GetPid().String()+"_out")
-		_, err := s.PutFile(fpath, 0777, np.OWRITE, []byte("hello"))
+		_, err := s.PutFile(fpath, 0777, sp.OWRITE, []byte("hello"))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error: Makefile %v in Sleeper.Work: %v\n", fpath, err)
 		}

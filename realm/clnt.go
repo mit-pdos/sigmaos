@@ -11,7 +11,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/realm/proto"
 	"sigmaos/semclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -42,13 +42,13 @@ func MakeRealmClntFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *RealmClnt {
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	if clnt.sclnt == nil {
 		var err error
-		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, np.SIGMAMGR)
+		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, sp.SIGMAMGR)
 		if err != nil {
 			db.DFatalf("Error MkProtDevClnt: %v", err)
 		}
 	}
 	// Create semaphore to wait on realm creation/initialization.
-	rStartSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
+	rStartSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(sp.BOOT, rid))
 	rStartSem.Init(0)
 
 	res := &proto.SigmaMgrResponse{}
@@ -70,7 +70,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 func (clnt *RealmClnt) GrowRealm(rid string) {
 	if clnt.sclnt == nil {
 		var err error
-		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, np.SIGMAMGR)
+		clnt.sclnt, err = protdevclnt.MkProtDevClnt(clnt.FsLib, sp.SIGMAMGR)
 		if err != nil {
 			db.DFatalf("Error MkProtDevClnt: %v", err)
 		}
@@ -89,7 +89,7 @@ func (clnt *RealmClnt) GrowRealm(rid string) {
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
 	// Create cond var to wait on realm creation/initialization.
-	rExitSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
+	rExitSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(sp.BOOT, rid))
 	rExitSem.Init(0)
 
 	res := &proto.SigmaMgrResponse{}

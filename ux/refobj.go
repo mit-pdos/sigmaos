@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/refmap"
 )
 
@@ -13,16 +13,16 @@ import (
 // references.
 type ObjTable struct {
 	sync.Mutex
-	*refmap.RefTable[np.Tpath, fs.FsObj]
+	*refmap.RefTable[sp.Tpath, fs.FsObj]
 }
 
 func MkObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable[np.Tpath, fs.FsObj]("UX")
+	ot.RefTable = refmap.MkRefTable[sp.Tpath, fs.FsObj]("UX")
 	return ot
 }
 
-func (ot *ObjTable) GetRef(path np.Tpath) fs.FsObj {
+func (ot *ObjTable) GetRef(path sp.Tpath) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
 
@@ -32,14 +32,14 @@ func (ot *ObjTable) GetRef(path np.Tpath) fs.FsObj {
 	return nil
 }
 
-func (ot *ObjTable) AllocRef(path np.Tpath, o fs.FsObj) fs.FsObj {
+func (ot *ObjTable) AllocRef(path sp.Tpath, o fs.FsObj) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
 	e, _ := ot.RefTable.Insert(path, func() fs.FsObj { return o })
 	return e.(fs.FsObj)
 }
 
-func (ot *ObjTable) Clunk(p np.Tpath) {
+func (ot *ObjTable) Clunk(p sp.Tpath) {
 	ot.Lock()
 	defer ot.Unlock()
 

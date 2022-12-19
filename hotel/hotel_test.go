@@ -24,7 +24,7 @@ import (
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	"sigmaos/sessdev"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -68,7 +68,7 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 	if lg != nil {
 		lg.Stats()
 	}
-	for _, s := range np.HOTELSVC {
+	for _, s := range sp.HOTELSVC {
 		ts.statsSrv(s)
 	}
 	cs, err := ts.cc.StatsSrv()
@@ -95,14 +95,14 @@ func (ts *Tstate) stop() {
 	if ts.cm != nil {
 		ts.cm.Stop()
 	}
-	sts, err := ts.GetDir(np.DBD)
+	sts, err := ts.GetDir(sp.DBD)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, 5, len(sts))
 }
 
 func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod"}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELGEO)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
@@ -119,7 +119,7 @@ func TestGeoSingle(t *testing.T) {
 
 func TestRateSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-rated"}, hotel.NCACHE)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRATE)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
@@ -139,7 +139,7 @@ func TestRateSingle(t *testing.T) {
 
 func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-recd"}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELREC)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
 		Require: "dis",
@@ -157,7 +157,7 @@ func TestRecSingle(t *testing.T) {
 
 func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-userd"}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELUSER)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
@@ -173,7 +173,7 @@ func TestUserSingle(t *testing.T) {
 
 func TestProfile(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-profd"}, hotel.NCACHE)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELPROF)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
@@ -194,7 +194,7 @@ func TestProfile(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-reserved"}, hotel.NCACHE)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -216,7 +216,7 @@ func TestCheck(t *testing.T) {
 
 func TestReserve(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-reserved"}, hotel.NCACHE)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELRESERVE)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -242,12 +242,12 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	b, err := ts.GetFile(np.DBD + clonedev.CloneName(dbd.QDEV))
+	b, err := ts.GetFile(sp.DBD + clonedev.CloneName(dbd.QDEV))
 	assert.Nil(t, err)
 	q := fmt.Sprintf("select * from reservation")
 	sidn := clonedev.SidName(string(b), dbd.QDEV)
-	fn := np.DBD + sidn + "/" + sessdev.DataName(dbd.QDEV)
-	_, err = ts.SetFile(fn, []byte(q), np.OWRITE, 0)
+	fn := sp.DBD + sidn + "/" + sessdev.DataName(dbd.QDEV)
+	_, err = ts.SetFile(fn, []byte(q), sp.OWRITE, 0)
 	assert.Nil(t, err)
 	b, err = ts.GetFile(fn)
 	assert.Nil(t, err)
@@ -262,7 +262,7 @@ func TestQueryDev(t *testing.T) {
 
 func TestSingleSearch(t *testing.T) {
 	ts := makeTstate(t, []string{"user/hotel-geod", "user/hotel-rated", "user/hotel-searchd"}, hotel.NCACHE)
-	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, np.HOTELSEARCH)
+	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,

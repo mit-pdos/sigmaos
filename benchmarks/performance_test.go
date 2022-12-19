@@ -11,7 +11,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/realm"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -65,7 +65,7 @@ func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
 				return
 			}
 			// Make sure changes don't get put in the same tpt bucket.
-			time.Sleep(time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
+			time.Sleep(time.Duration(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
 			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
 				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
 				return

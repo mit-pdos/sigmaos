@@ -8,7 +8,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Pobj struct {
@@ -45,12 +45,12 @@ type Fid struct {
 	mu     sync.Mutex
 	isOpen bool
 	po     *Pobj
-	m      np.Tmode
-	qid    *np.Tqid // the qid of obj at the time of invoking MakeFidPath
+	m      sp.Tmode
+	qid    *sp.Tqid // the qid of obj at the time of invoking MakeFidPath
 	cursor int      // for directories
 }
 
-func MakeFidPath(pobj *Pobj, m np.Tmode, qid *np.Tqid) *Fid {
+func MakeFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
@@ -58,11 +58,11 @@ func (f *Fid) String() string {
 	return fmt.Sprintf("po %v o? %v %v v %v", f.po, f.isOpen, f.m, f.qid)
 }
 
-func (f *Fid) Mode() np.Tmode {
+func (f *Fid) Mode() sp.Tmode {
 	return f.m
 }
 
-func (f *Fid) SetMode(m np.Tmode) {
+func (f *Fid) SetMode(m sp.Tmode) {
 	f.isOpen = true
 	f.m = m
 }
@@ -75,7 +75,7 @@ func (f *Fid) IsOpen() bool {
 	return f.isOpen
 }
 
-func (f *Fid) Qid() *np.Tqid {
+func (f *Fid) Qid() *sp.Tqid {
 	return f.qid
 }
 
@@ -85,10 +85,10 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	o := f.Pobj().Obj()
 	var err *fcall.Err
-	sz := np.Tsize(0)
+	sz := sp.Tsize(0)
 
 	switch i := o.(type) {
 	case fs.File:
@@ -114,7 +114,7 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
@@ -128,7 +128,7 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	return b, nil
 }
 
-func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) Read(off sp.Toffset, count sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:

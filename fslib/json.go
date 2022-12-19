@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
@@ -22,7 +22,7 @@ func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, np.OWRITE, 0)
+	_, err = fl.SetFile(fname, data, sp.OWRITE, 0)
 	return err
 }
 
@@ -31,16 +31,16 @@ func (fl *FsLib) AppendFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, np.OAPPEND, np.NoOffset)
+	_, err = fl.SetFile(fname, data, sp.OAPPEND, sp.NoOffset)
 	return err
 }
 
-func (fl *FsLib) PutFileJson(fname string, perm np.Tperm, i interface{}) error {
+func (fl *FsLib) PutFileJson(fname string, perm sp.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.PutFile(fname, perm, np.OWRITE, data)
+	_, err = fl.PutFile(fname, perm, sp.OWRITE, data)
 	return err
 }
 

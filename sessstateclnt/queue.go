@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 // A Request Queue which guarantees:
@@ -25,7 +25,7 @@ type RequestQueue struct {
 	*sync.Cond
 	addrs       []string // Purely for debugging purposes.
 	queue       []*netclnt.Rpc
-	outstanding map[np.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
+	outstanding map[sp.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
 	closed      bool
 }
 
@@ -34,7 +34,7 @@ func MakeRequestQueue(addrs []string) *RequestQueue {
 	rq.Cond = sync.NewCond(&rq.Mutex)
 	rq.addrs = addrs
 	rq.queue = []*netclnt.Rpc{}
-	rq.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	rq.outstanding = make(map[sp.Tseqno]*netclnt.Rpc)
 	return rq
 }
 
@@ -81,7 +81,7 @@ func (rq *RequestQueue) Next() *netclnt.Rpc {
 // Remove a request and return it. If it doesn't exist in the
 // request queue, someone else has removed it already, so we return
 // nil & false.
-func (rq *RequestQueue) Remove(seqno np.Tseqno) (*netclnt.Rpc, bool) {
+func (rq *RequestQueue) Remove(seqno sp.Tseqno) (*netclnt.Rpc, bool) {
 	rq.Lock()
 	defer rq.Unlock()
 
@@ -114,7 +114,7 @@ func (rq *RequestQueue) Reset() {
 }
 
 // Close the request queue, and return any outstanding requests
-func (rq *RequestQueue) Close() map[np.Tseqno]*netclnt.Rpc {
+func (rq *RequestQueue) Close() map[sp.Tseqno]*netclnt.Rpc {
 	rq.Lock()
 	defer rq.Unlock()
 
@@ -125,7 +125,7 @@ func (rq *RequestQueue) Close() map[np.Tseqno]*netclnt.Rpc {
 	// Save the old map of outstanding requests, and return it
 	o := rq.outstanding
 	// Empty the map of outstanding requests and the request queue.
-	rq.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	rq.outstanding = make(map[sp.Tseqno]*netclnt.Rpc)
 	rq.queue = []*netclnt.Rpc{}
 	return o
 }

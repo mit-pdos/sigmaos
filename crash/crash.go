@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sesssrv"
@@ -87,7 +87,7 @@ func Crash(fsl *fslib.FsLib) {
 
 func Partition(fsl *fslib.FsLib) {
 	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", os.Args)
-	if error := fsl.Disconnect(np.NAMED); error != nil {
+	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
 	}
 }

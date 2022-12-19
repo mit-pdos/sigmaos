@@ -10,7 +10,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 	db.DPrintf("SPINNER", "MakeSpinner: %v\n", args)
 
-	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
+	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|sp.DMTMP, sp.OWRITE, []byte{}); err != nil {
 		db.DFatalf("MakeFile error: %v", err)
 	}
 

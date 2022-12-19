@@ -18,7 +18,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
 )
@@ -111,7 +111,7 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 	end := time.Now()
@@ -139,7 +139,7 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+			_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
@@ -163,8 +163,8 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
-	assert.NotNil(t, err, "Stat %v", path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -191,7 +191,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -217,7 +217,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.GetDir(path.Join("name/procd", procd(ts), np.PROCD_RUNNING))
+	sts, err := ts.GetDir(path.Join("name/procd", procd(ts), sp.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
 	assert.True(t, fslib.Present(sts, []string{pid.String()}), "pid")
 
@@ -339,7 +339,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -371,7 +371,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1.String()))
+			_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}(i)
@@ -421,7 +421,7 @@ func TestConcurrentProcs(t *testing.T) {
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+			_, err := ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
@@ -513,13 +513,13 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status 2")
 
 	// Check that work-stealing symlinks were cleaned up.
-	sts, _, err := ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
+	sts, _, err := ts.ReadDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC), sts)
 
-	sts, _, err = ts.ReadDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+	sts, _, err = ts.ReadDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE))
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE), sts)
 
 	ts.Shutdown()
 }
@@ -590,7 +590,7 @@ func TestSpawnProcdCrash(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any procd.
 	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores*2))
 
-	err := ts.KillOne(np.PROCD)
+	err := ts.KillOne(sp.PROCD)
 	assert.Nil(t, err, "KillOne: %v", err)
 
 	err = ts.WaitStart(pid)
@@ -633,7 +633,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
-	err = ts.KillOne(np.PROCD)
+	err = ts.KillOne(sp.PROCD)
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.
@@ -644,7 +644,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
 
-	err = ts.KillOne(np.PROCD)
+	err = ts.KillOne(sp.PROCD)
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.
@@ -672,14 +672,14 @@ func TestProcdResize1(t *testing.T) {
 	checkSleeperResult(t, ts, pid)
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
 	// Run a proc which shouldn't fit on the newly resized procd.
@@ -703,7 +703,7 @@ func TestProcdResize1(t *testing.T) {
 	// Grant the procd back its cores.
 	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
 
 	// Make sure the proc ran.
@@ -721,9 +721,9 @@ func TestProcdResizeN(t *testing.T) {
 	N := 5
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
 		db.DPrintf("TEST", "Resize i=%v", i)
 		// Run a proc that claims all cores.
@@ -737,7 +737,7 @@ func TestProcdResizeN(t *testing.T) {
 		// Remove some cores from the procd.
 		db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 		assert.Nil(t, err, "SetFile revoke: %v", err)
 
 		// Run a proc which shouldn't fit on the newly resized procd.
@@ -761,7 +761,7 @@ func TestProcdResizeN(t *testing.T) {
 		// Grant the procd back its cores.
 		db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 		assert.Nil(t, err, "SetFile grant: %v", err)
 
 		// Make sure the proc ran.
@@ -788,14 +788,14 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
 	// Sleep for a bit
@@ -803,7 +803,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Get the procd's utilization.
 	st := stats.StatInfo{}
-	err = ts.GetFileJson(path.Join(np.PROCD, "~ip", np.STATSD), &st)
+	err = ts.GetFileJson(path.Join(sp.PROCD, "~ip", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd: %v", err)
 
 	// Ensure that the procd is accurately representing the utilization (it
@@ -814,14 +814,14 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	// Grant the procd back its cores.
 	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
 
 	// Sleep for a bit
 	time.Sleep(SLEEP_MSECS * time.Millisecond)
 
 	// Get the procd's utilization again.
-	err = ts.GetFileJson(path.Join(np.PROCD, "~ip", np.STATSD), &st)
+	err = ts.GetFileJson(path.Join(sp.PROCD, "~ip", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd: %v", err)
 
 	// Ensure that the procd's utilization has been adjusted again (it
@@ -883,9 +883,9 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := np.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
 	// Create a map to sample core utilization levels on the cores which will be
 	// revoked.
@@ -902,7 +902,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
 	// Sleep for a bit

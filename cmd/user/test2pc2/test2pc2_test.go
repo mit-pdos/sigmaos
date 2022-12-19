@@ -12,7 +12,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/proc"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/twopc"
 )
 
@@ -58,7 +58,7 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.Mkdir(np.MEMFS, 07)
+	err = ts.Mkdir(sp.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -79,7 +79,7 @@ func (ts *Tstate) shutdown() {
 }
 
 func (ts *Tstate) cleanup() {
-	err := ts.Remove(np.MEMFS + "/txni")
+	err := ts.Remove(sp.MEMFS + "/txni")
 	assert.Nil(ts.t, err, "Remove txni")
 }
 
@@ -136,7 +136,7 @@ func (ts *Tstate) stopMemFSs() {
 }
 
 func fn(mfs, f string) string {
-	return np.MEMFS + "/" + mfs + "/" + f
+	return sp.MEMFS + "/" + mfs + "/" + f
 }
 
 func (ts *Tstate) setUpMemFSs(N int) {
@@ -146,7 +146,7 @@ func (ts *Tstate) setUpMemFSs(N int) {
 func (ts *Tstate) setUpFiles(nPart int) {
 	for i := 0; i < nPart; i++ {
 		iStr := strconv.Itoa(i)
-		err := ts.MakeFile(fn(ts.mfss[0], iStr), 0777, np.OWRITE, []byte(iStr))
+		err := ts.MakeFile(fn(ts.mfss[0], iStr), 0777, sp.OWRITE, []byte(iStr))
 		assert.Nil(ts.t, err, "MakeFile")
 	}
 }
@@ -159,7 +159,7 @@ func (ts *Tstate) setUpParticipants(opcode string, val string, delays []string, 
 		ti.Vals = append(ti.Vals, val)
 	}
 
-	err := ts.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
+	err := ts.MakeFileJson(sp.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
 	fws := ts.startParticipants(N, opcode, delays)

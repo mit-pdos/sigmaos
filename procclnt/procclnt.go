@@ -10,11 +10,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/namespace"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
+	np "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 	"sigmaos/semclnt"
 )
@@ -397,9 +397,9 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	}
 
 	// clean myself up
-	r := clnt.removeProc(procdir)
+	r := clnt.removeProc(procdir + "/")
 	if r != nil {
-		return fmt.Errorf("Exited error %v", r)
+		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}
 
 	return nil

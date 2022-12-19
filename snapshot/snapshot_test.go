@@ -3,7 +3,6 @@ package snapshot_test
 import (
 	"path"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -59,9 +58,10 @@ func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 	for _, pid := range pids {
 		p := path.Join(sp.MEMFS, pid.String())
 		b, err := ts.GetFile(p)
-		addr := strings.TrimSuffix(string(b), ":pubkey")
-		assert.Nil(ts.T, err, "Get addr")
-		addrs = append(addrs, addr)
+		assert.Nil(ts.T, err, "Getfile")
+		mnt, error := sp.MkMount(b)
+		assert.Nil(ts.T, error, "MkMount")
+		addrs = append(addrs, mnt.Address())
 	}
 	db.DPrintf(db.ALWAYS, "Replica addrs: %v", addrs)
 	mnt := sp.MkMountService(addrs)

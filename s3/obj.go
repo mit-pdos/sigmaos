@@ -14,37 +14,37 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
-func mkTpath(key path.Path) np.Tpath {
+func mkTpath(key path.Path) sp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
-	return np.Tpath(h.Sum64())
+	return sp.Tpath(h.Sum64())
 }
 
 type Obj struct {
 	bucket string
-	perm   np.Tperm
+	perm   sp.Tperm
 	key    path.Path
 
 	// set by fill()
-	sz    np.Tlength
+	sz    sp.Tlength
 	mtime int64
 
 	// for writing
 	ch  chan error
 	r   *io.PipeReader
 	w   *io.PipeWriter
-	off np.Toffset
+	off sp.Toffset
 }
 
-func makeObj(bucket string, key path.Path, perm np.Tperm) *Obj {
+func makeObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
 	if o.key.Base() == "." {
-		o.perm = np.DMDIR | perm
+		o.perm = sp.DMDIR | perm
 	} else {
 		o.perm = perm
 	}
@@ -55,11 +55,11 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
 }
 
-func (o *Obj) Size() (np.Tlength, *fcall.Err) {
+func (o *Obj) Size() (sp.Tlength, *fcall.Err) {
 	return o.sz, nil
 }
 
-func (o *Obj) SetSize(sz np.Tlength) {
+func (o *Obj) SetSize(sz sp.Tlength) {
 	o.sz = sz
 }
 
@@ -76,14 +76,14 @@ func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
 	}
 
 	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
-	o.sz = np.Tlength(result.ContentLength)
+	o.sz = sp.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
 	}
 	return nil
 }
 
-func makeFsObj(bucket string, perm np.Tperm, key path.Path) fs.FsObj {
+func makeFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
 	if perm.IsDir() {
 		return makeDir(bucket, key.Copy(), perm)
 	} else {
@@ -99,30 +99,30 @@ func (o *Obj) fill() *fcall.Err {
 }
 
 // stat without filling
-func (o *Obj) stat() *np.Stat {
+func (o *Obj) stat() *sp.Stat {
 	db.DPrintf("FSS3", "stat: %v\n", o)
 	name := ""
 	if len(o.key) > 0 {
 		name = o.key.Base()
 	}
-	return np.MkStat(np.MakeQidPerm(o.perm, 0, o.Path()), o.perm|np.Tperm(0777), uint32(o.mtime), name, "")
+	return sp.MkStat(sp.MakeQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
-func (o *Obj) Path() np.Tpath {
+func (o *Obj) Path() sp.Tpath {
 	return mkTpath(o.key)
 }
 
 // convert ux perms into np perm; maybe symlink?
-func (o *Obj) Perm() np.Tperm {
+func (o *Obj) Perm() sp.Tperm {
 	return o.perm
 }
 
 func (o *Obj) Parent() fs.Dir {
 	dir := o.key.Dir()
-	return makeDir(o.bucket, dir, np.DMDIR)
+	return makeDir(o.bucket, dir, sp.DMDIR)
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	db.DPrintf("FSS3", "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
@@ -133,20 +133,20 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	if m == np.OWRITE {
+	if m == sp.OWRITE {
 		o.setupWriter()
 	}
 	return o, nil
 }
 
-func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
+func (o *Obj) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
 	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
-	if m == np.OWRITE {
+	if m == sp.OWRITE {
 		o.w.Close()
 		// wait for uploader to finish
 		err := <-o.ch
@@ -157,10 +157,10 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
 	return nil
 }
 
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *fcall.Err) {
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
 	key := o.key.String()
 	region := ""
-	if off != 0 || np.Tlength(cnt) < o.sz {
+	if off != 0 || sp.Tlength(cnt) < o.sz {
 		n := off + cnt
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
 	}
@@ -178,12 +178,12 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *fcall.Err) {
 		region1 = *result.ContentRange
 	}
 	db.DPrintf("FSS3", "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
-	return result.Body, np.Tlength(result.ContentLength), nil
+	return result.Body, sp.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
-	if np.Tlength(off) >= o.sz {
+	if sp.Tlength(off) >= o.sz {
 		return nil, nil
 	}
 	rdr, n, err := o.s3Read(int(off), int(cnt))
@@ -225,7 +225,7 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
 		db.DPrintf("FSS3", "Write %v err\n", o.off)
@@ -235,8 +235,8 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 		db.DPrintf("FSS3", "Write %v %v err %v\n", off, len(b), err)
 		return 0, fcall.MkErrError(err)
 	} else {
-		o.off += np.Toffset(n)
-		o.SetSize(np.Tlength(o.off))
-		return np.Tsize(n), nil
+		o.off += sp.Toffset(n)
+		o.SetSize(sp.Tlength(o.off))
+		return sp.Tsize(n), nil
 	}
 }

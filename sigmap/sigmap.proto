@@ -41,8 +41,7 @@ message Tinterval {
 };
 
 message Tmount {
-        repeated string addrIP4 = 1;
-        repeated string addrIP6 = 2;
+        repeated string addr = 1;
         string root = 3;
         bytes pubKey = 4;
 }

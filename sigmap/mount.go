@@ -28,19 +28,21 @@ func (mnt Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(&mnt)
 }
 
-func (mnt Tmount) AddressIP4() string {
-	return mnt.AddrIP4[0]
+func (mnt Tmount) Address() string {
+	return mnt.Addr[0]
 }
 
 func MkMountService(srvaddrs []string) Tmount {
-	return Tmount{AddrIP4: srvaddrs}
+	return Tmount{Addr: srvaddrs}
 }
 
 func MkMountServer(addr string) Tmount {
 	return MkMountService([]string{addr})
 }
 
+// IPv6: [::]:port
+// IPv4: host:port
 func (mnt Tmount) TargetIp() string {
-	parts := strings.Split(mnt.AddrIP4[0], ":")
+	parts := strings.Split(mnt.Addr[0], ":")
 	return parts[0]
 }

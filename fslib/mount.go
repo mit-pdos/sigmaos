@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"fmt"
+	"log"
 
 	"sigmaos/fcall"
 	"sigmaos/path"
@@ -80,8 +81,12 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if err != nil {
 			return false, nil
 		}
-		mnt := sp.MkMount(b)
-		if ok := union.UnionMatch(q, mnt.Mnt); ok {
+		mnt, error := sp.MkMount(b)
+		if error != nil {
+			return false, nil
+		}
+		log.Printf("mnt %v\n", mnt)
+		if ok := union.UnionMatch(q, mnt); ok {
 			rname = st.Name
 			rmnt = mnt
 			return true, nil
@@ -99,12 +104,20 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 //
 
 func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
-	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, []byte(mnt.Mnt))
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
 func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
-	return fsl.Symlink([]byte(mnt.Mnt), pn, 0777|sp.DMTMP)
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
 }
 
 func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
@@ -117,13 +130,16 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error
 	if !dir {
 		return fmt.Errorf("Not a directory")
 	}
-	err = fsl.Symlink([]byte(mnt.Mnt), p, 0777|sp.DMTMP)
-	return err
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.Symlink(b, p, 0777|sp.DMTMP)
 }
 
 func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, sp.Address(mnt))
+		return fsl.MountServiceUnion(pn, mnt, mnt.AddressIP4())
 	} else {
 		return fsl.MountService(pn, mnt)
 	}

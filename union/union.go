@@ -5,7 +5,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func UnionMatch(q, name string) bool {
+func UnionMatch(q string, mnt sp.Tmount) bool {
 	switch q {
 	case "~any":
 		return true
@@ -14,11 +14,11 @@ func UnionMatch(q, name string) bool {
 		if err != nil {
 			return false
 		}
-		tip := sp.TargetIp(name)
+		tip := mnt.TargetIp()
 		if tip == "" {
 			tip = ip
 		}
-		if ok := sp.IsRemoteTarget(name); ok && tip == ip {
+		if tip == ip {
 			return true
 		}
 		return false

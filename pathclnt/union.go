@@ -14,12 +14,17 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.E
 		return sp.NoFid, err
 	}
 	defer pathc.FidClnt.Clunk(fid1)
+
 	target, err := pathc.readlink(fid1)
 	if err != nil {
 		return sp.NoFid, err
 	}
-	db.DPrintf("WALK", "unionScan: target: %v\n", target)
-	if union.UnionMatch(q, target) {
+	mnt, err := sp.MkMount(target)
+	if err != nil {
+		return sp.NoFid, nil
+	}
+	db.DPrintf("WALK", "unionScan: mnt: %v\n", mnt)
+	if union.UnionMatch(q, mnt) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			return sp.NoFid, err

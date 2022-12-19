@@ -40,6 +40,13 @@ message Tinterval {
         uint64 end = 2;
 };
 
+message Tmount {
+        repeated string addrIP4 = 1;
+        repeated string addrIP6 = 2;
+        string root = 3;
+        bytes pubKey = 4;
+}
+
 message Fcall {
         uint32 type = 1;
         uint32 tag = 2;

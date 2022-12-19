@@ -25,7 +25,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~ip/fslibtest
+var pathname string // e.g., --path "name/ux/~ip/fslibtest"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
@@ -1074,9 +1074,10 @@ func TestSymlinkPath(t *testing.T) {
 }
 
 func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
-	b, left, err := ts.CopyMount(pathname)
+	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
-	return sp.MkMountTree(b, left)
+	mnt.SetTree(left)
+	return mnt
 }
 
 func TestMount(t *testing.T) {
@@ -1121,6 +1122,7 @@ func TestUnionDir(t *testing.T) {
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
 	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~ip"))
+	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")

@@ -109,21 +109,21 @@ func (pathc *PathClnt) MakeWriter(fid np.Tfid) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
-func (pathc *PathClnt) readlink(fid np.Tfid) (string, *fcall.Err) {
+func (pathc *PathClnt) readlink(fid np.Tfid) ([]byte, *fcall.Err) {
 	qid := pathc.Qid(fid)
 	if qid.Ttype()&np.QTSYMLINK == 0 {
-		return "", fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
+		return nil, fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, np.OREAD)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	b, err := rdr.GetDataErr()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(b), nil
+	return b, nil
 }
 
 func (pathc *PathClnt) mount(fid np.Tfid, pn string) *fcall.Err {

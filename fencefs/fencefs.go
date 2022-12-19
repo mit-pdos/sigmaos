@@ -9,7 +9,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -21,7 +21,7 @@ import (
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
-	epoch np.Tepoch
+	epoch sp.Tepoch
 }
 
 func makeFence(i fs.Inode) *Fence {
@@ -30,11 +30,11 @@ func makeFence(i fs.Inode) *Fence {
 	return e
 }
 
-func (f *Fence) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, "Write")
 }
 
-func (f *Fence) Read(ctx fs.CtxI, off np.Toffset, sz np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
@@ -46,7 +46,7 @@ func RestoreFence(fn fs.RestoreF, b []byte) fs.Inode {
 	return restoreFence(fn, b)
 }
 
-func makeInode(ctx fs.CtxI, p np.Tperm, mode np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *fcall.Err) {
+func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *fcall.Err) {
 	db.DPrintf("FENCEFS", "makeInode %v dir %v\n", p, parent)
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
@@ -65,7 +65,7 @@ func MakeRoot(ctx fs.CtxI) fs.Dir {
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *fcall.Err) {
-	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, np.OWRITE)
+	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, sp.OWRITE)
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()
@@ -86,7 +86,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *fcall.Err) {
 // id exists, return the locked fence in read mode so that no one can
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
-func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *fcall.Err) {
+func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *fcall.Err) {
 	if new.Fenceid.Path == 0 {
 		return nil, nil
 	}

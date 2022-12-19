@@ -10,9 +10,9 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v root", os.Args[0])
+		db.DFatalf("Usage: %v rootux", os.Args[0])
 	}
-	root := os.Args[1]
-	os.MkdirAll(path.Join(root, "bin", "user"), 0755)
-	fsux.RunFsUx(root)
+	rootux := os.Args[1]
+	os.MkdirAll(path.Join(rootux, "bin", "user"), 0755)
+	fsux.RunFsUx(rootux)
 }

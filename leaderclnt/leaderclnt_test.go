@@ -11,14 +11,14 @@ import (
 	"sigmaos/crash"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
 	leadername = "name/leader"
 	epochname  = leadername + "-epoch"
-	dirux      = np.UX + "/~ip/outdir"
+	dirux      = sp.UX + "/~ip/outdir"
 )
 
 // Test if a leader cannot write to a fenced server after leader fails
@@ -29,7 +29,7 @@ func TestOldLeaderFail(t *testing.T) {
 	ts.Remove(dirux + "/f")
 	ts.Remove(dirux + "/g")
 
-	_, err := ts.PutFile(epochname, 0777, np.OWRITE, []byte{})
+	_, err := ts.PutFile(epochname, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "PutFile")
 
 	fsl := fslib.MakeFsLibAddr("leader", fslib.Named())
@@ -40,7 +40,7 @@ func TestOldLeaderFail(t *testing.T) {
 		_, err := l.AcquireFencedEpoch(nil, []string{dirux})
 		assert.Nil(t, err, "BecomeLeaderEpoch")
 
-		fd, err := fsl.Create(dirux+"/f", 0777, np.OWRITE)
+		fd, err := fsl.Create(dirux+"/f", 0777, sp.OWRITE)
 		assert.Nil(t, err, "Create")
 
 		ch <- true
@@ -49,7 +49,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 		crash.Partition(fsl)
 
-		time.Sleep(2 * np.Conf.Session.TIMEOUT)
+		time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 		// fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail
@@ -70,7 +70,7 @@ func TestOldLeaderFail(t *testing.T) {
 	assert.Nil(t, err, "BecomeLeaderEpoch")
 
 	// Do some op so that server becomes aware of new epoch
-	_, err = ts.PutFile(dirux+"/g", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(dirux+"/g", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "PutFile")
 
 	sts, err := l.GetFences(dirux)
@@ -78,7 +78,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 	<-ch
 
-	fd, err := ts.Open(dirux+"/f", np.OREAD)
+	fd, err := ts.Open(dirux+"/f", sp.OREAD)
 	assert.Nil(t, err, "Open")
 	b, err := ts.Read(fd, 100)
 	assert.Equal(ts.T, 0, len(b))

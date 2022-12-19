@@ -12,7 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 // Map and reduce functions produce and consume KeyValue pairs
@@ -52,8 +52,8 @@ func Khash(key string) int {
 // An input split
 type Split struct {
 	File   string     `json:"File"`
-	Offset np.Toffset `json:"Offset"`
-	Length np.Tlength `json:"Length"`
+	Offset sp.Toffset `json:"Offset"`
+	Length sp.Tlength `json:"Length"`
 }
 
 func (s Split) String() string {
@@ -64,7 +64,7 @@ type Bin []Split
 
 func (b Bin) String() string {
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
-	sum := np.Tlength(b[0].Length)
+	sum := sp.Tlength(b[0].Length)
 	for i, s := range b[1:] {
 		if s.File == b[i].File {
 			r += fmt.Sprintf("_ o %v l %v,", humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
@@ -81,8 +81,8 @@ func (b Bin) String() string {
 type Result struct {
 	IsM  bool       `json:"IsM"`
 	Task string     `json:"Task"`
-	In   np.Tlength `json:"In"`
-	Out  np.Tlength `json:"Out"`
+	In   sp.Tlength `json:"In"`
+	Out  sp.Tlength `json:"Out"`
 	Ms   int64      `json:"Ms"`
 }
 
@@ -94,7 +94,7 @@ func mkResult(data interface{}) *Result {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, error) {
+func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := uint64(0)
 	bin := Bin{}
@@ -110,7 +110,7 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz np.Tlength) ([]Bin, 
 			if i+n > st.Length {
 				n = st.Length - i
 			}
-			split := Split{dir + "/" + st.Name, np.Toffset(i), np.Tlength(n)}
+			split := Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
 			bin = append(bin, split)
 			binsz += n
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?

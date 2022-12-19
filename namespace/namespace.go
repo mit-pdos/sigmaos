@@ -8,11 +8,11 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
-	NAMESPACE_DIR = np.UXROOT + "isolation"
+	NAMESPACE_DIR = sp.UXROOT + "isolation"
 )
 
 func SetupProc(cmd *exec.Cmd) {

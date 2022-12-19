@@ -16,7 +16,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -53,7 +53,7 @@ func MakeMachined(args []string) *Machined {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	m.pdc, err = protdevclnt.MkProtDevClnt(m.pds.FsLib(), np.SIGMAMGR)
+	m.pdc, err = protdevclnt.MkProtDevClnt(m.pds.FsLib(), sp.SIGMAMGR)
 	if err != nil {
 		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
@@ -135,7 +135,7 @@ func (m *Machined) postCores() {
 		db.DFatalf("Core group size 0")
 	}
 	for i := uint64(0); i < uint64(linuxsched.NCores); i += coreGroupSize {
-		iv := np.MkInterval(i, i+coreGroupSize)
+		iv := sp.MkInterval(i, i+coreGroupSize)
 		if uint(iv.End) > linuxsched.NCores+1 {
 			iv.End = uint64(linuxsched.NCores + 1)
 		}

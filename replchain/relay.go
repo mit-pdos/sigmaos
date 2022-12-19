@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/npcodec"
 	"sigmaos/protsrv"
 	"sigmaos/repl"
@@ -26,9 +26,9 @@ const (
 )
 
 type RelayOp struct {
-	request      *np.Fcall
+	request      *sp.Fcall
 	requestFrame []byte
-	reply        *np.Fcall
+	reply        *sp.Fcall
 	replyFrame   []byte
 	r            *RelayConn
 	replies      chan *RelayOp
@@ -70,7 +70,7 @@ func (r *RelayConn) reader() {
 			return
 		}
 		db.DPrintf("RSRV", "%v relay reader read frame from %v\n", r.Dst(), r.Src())
-		fcall := &np.Fcall{}
+		fcall := &sp.Fcall{}
 		if fcall, err := npcodec.UnmarshalFcall(frame); err != nil {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.Dst(), err)
 			// TODO: enqueue op with empty reply
@@ -81,17 +81,17 @@ func (r *RelayConn) reader() {
 	}
 }
 
-func (r *RelayConn) serve(fc *np.Fcall) *np.Fcall {
+func (r *RelayConn) serve(fc *sp.Fcall) *sp.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
 
 	// XXX fix me
-	var reply np.Tmsg
+	var reply sp.Tmsg
 	//reply, rerror := r.fssrv.Process(fc.Session, fc.Msg)
 	//if rerror != nil {
 	//	reply = *rerror
 	//}
-	fcall := &np.Fcall{}
+	fcall := &sp.Fcall{}
 	fcall.Type = reply.Type()
 	fcall.Msg = reply
 	fcall.Tag = t
@@ -125,7 +125,7 @@ func (rs *ChainReplServer) setupRelay() {
 	go rs.relayWriter()
 }
 
-func (rs *ChainReplServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
+func (rs *ChainReplServer) cacheReply(request *sp.Fcall, reply *sp.Fcall) {
 	var replyFrame []byte
 	var replyBuffer bytes.Buffer
 	bw := bufio.NewWriter(&replyBuffer)
@@ -251,7 +251,7 @@ func (rs *ChainReplServer) relayWriter() {
 			continue
 		}
 
-		ack := &np.Fcall{}
+		ack := &sp.Fcall{}
 		if ack, err := npcodec.UnmarshalFcall(frame); err != nil {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
 			log.Printf("Frame: %v, len: %v", frame, len(frame))
@@ -364,7 +364,7 @@ func relayOnce(rs *ChainReplServer, ch *RelayNetConn, op *RelayOp) bool {
 
 // Log an op & the type of the reply. Logging the exact reply is not useful,
 // since contents may vary between replicas (e.g. time)
-func (rs *ChainReplServer) logOp(request *np.Fcall, reply *np.Fcall) {
+func (rs *ChainReplServer) logOp(request *sp.Fcall, reply *sp.Fcall) {
 	config := rs.config
 
 	if config.LogOps {

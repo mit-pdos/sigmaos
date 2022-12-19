@@ -1,10 +1,10 @@
 package threadmgr
 
 import (
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
-type ProcessFn func(fc *np.FcallMsg)
+type ProcessFn func(fc *sp.FcallMsg)
 
 type ThreadMgrTable struct {
 	pfn        ProcessFn

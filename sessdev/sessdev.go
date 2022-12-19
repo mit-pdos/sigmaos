@@ -5,7 +5,7 @@ import (
 	"sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/proc"
 )
@@ -58,7 +58,7 @@ func (fd *SessDev) detachSession(sid fcall.Tsession) {
 	}
 }
 
-func (fd *SessDev) Close(ctx fs.CtxI, m np.Tmode) *fcall.Err {
+func (fd *SessDev) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
 	fn := clonedev.SidName(ctx.SessionId().String(), fd.fn) + "/" + DataName(fd.fn)
 	debug.DPrintf("SESSDEV", "%v: Close %v\n", proc.GetName(), fn)
 	return nil

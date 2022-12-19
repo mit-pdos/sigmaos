@@ -20,7 +20,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -87,9 +87,9 @@ func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	os.MkdirAll(namespace.NAMESPACE_DIR, 0777)
 
 	// Make a directory in which to put stealable procs.
-	pd.MkDir(np.PROCD_WS, 0777)
-	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC), 0777)
-	pd.MkDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE), 0777)
+	pd.MkDir(sp.PROCD_WS, 0777)
+	pd.MkDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC), 0777)
+	pd.MkDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE), 0777)
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
@@ -264,17 +264,17 @@ func (pd *Procd) tryGetProc(procPath string, isRemote bool) (*LinuxProc, bool) {
 func (pd *Procd) getProc() (*LinuxProc, error) {
 	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
-	localPath := path.Join(np.PROCD, pd.memfssrv.MyAddr())
+	localPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr())
 	// Claim order:
 	// 1. local LC queue
 	// 2. remote LC queue
 	// 3. local BE queue
 	// 4. remote BE queue
 	runqs := []string{
-		path.Join(localPath, np.PROCD_RUNQ_LC),
-		path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC),
-		path.Join(localPath, np.PROCD_RUNQ_BE),
-		path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE),
+		path.Join(localPath, sp.PROCD_RUNQ_LC),
+		path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC),
+		path.Join(localPath, sp.PROCD_RUNQ_BE),
+		path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE),
 	}
 	for i, runq := range runqs {
 		// If this is a BE queue, and we couldn't possibly claim a BE proc, skip
@@ -324,7 +324,7 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 				break
 			}
 		} else {
-			_, err := pd.ProcessDir(runq, func(st *np.Stat) (bool, error) {
+			_, err := pd.ProcessDir(runq, func(st *sp.Stat) (bool, error) {
 				procPath := path.Join(runq, st.Name)
 				p, _ = pd.tryGetProc(procPath, isRemote)
 				// If a proc was not claimed, keep processing.
@@ -408,7 +408,7 @@ func (pd *Procd) waitSpawnOrSteal() {
 			db.DPrintf("PROCD", "done waiting, worker woken. %v left to wake", pd.nToWake)
 			return
 		}
-		db.DPrintf("PROCD", "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[np.PROCD_RUNQ_LC]), len(pd.wsQueues[np.PROCD_RUNQ_BE]))
+		db.DPrintf("PROCD", "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[sp.PROCD_RUNQ_LC]), len(pd.wsQueues[sp.PROCD_RUNQ_BE]))
 		pd.Wait()
 	}
 }

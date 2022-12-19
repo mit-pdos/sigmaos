@@ -10,13 +10,12 @@ import (
 	"log"
 	"os"
 
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	//	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -59,7 +58,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	db.DPrintf("COORD", "New coord %v", args)
 
-	if _, err := cd.PutFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := cd.PutFile(COORD, 0777|sp.DMTMP, sp.OWRITE, nil); err != nil {
 		db.DFatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
@@ -140,7 +139,7 @@ func (cd *Coord) watchFlw(p string, err error) {
 func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 	nextFws.setStatusWatches(TWOPCPREPARED, cd.watchStatus)
 
-	err := atomic.PutFileJsonAtomic(cd.FsLib, TWOPCPREP, 0777, *cd.twopc)
+	err := cd.PutFileJsonAtomic(TWOPCPREP, 0777, *cd.twopc)
 	if err != nil {
 		db.DPrintf("COORD", "COORD: MakeFileJsonAtomic %v err %v\n",
 			TWOPCCOMMIT, err)

@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/path"
 	"sigmaos/perf"
 )
@@ -24,7 +24,7 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	mfs, _, _, err := memfssrv.MakeMemFs(np.S3, np.S3REL)
+	mfs, _, _, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
@@ -35,7 +35,7 @@ func RunFss3(buckets []string) {
 	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
-		d := makeDir(bucket, path.Path{}, np.DMDIR)
+		d := makeDir(bucket, path.Path{}, sp.DMDIR)
 		if err := mfs.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}

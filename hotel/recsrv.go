@@ -11,7 +11,7 @@ import (
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
 )
 
@@ -41,7 +41,7 @@ type Rec struct {
 func RunRecSrv(n string) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELREC, r)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELREC, r)
 	if err != nil {
 		return err
 	}

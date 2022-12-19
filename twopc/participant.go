@@ -5,14 +5,13 @@ import (
 	"os"
 	"sync"
 
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	//	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 type Participant struct {
@@ -44,7 +43,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me proc.Tpid, t
 	p.txn = txn
 	p.opcode = opcode
 
-	if _, err := p.PutFile(DIR2PC+"/"+p.me.String(), 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := p.PutFile(DIR2PC+"/"+p.me.String(), 0777|sp.DMTMP, sp.OWRITE, nil); err != nil {
 		db.DFatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
@@ -81,7 +80,7 @@ func (p *Participant) readTwopcWatch(conffile string, f pathclnt.Watch) (*Twopc,
 func (p *Participant) prepared(status string) {
 	fn := prepareName(p.me)
 	db.DPrintf("PART", "Prepared %v\n", fn)
-	err := atomic.PutFileAtomic(p.FsLib, fn, 0777, []byte(status))
+	err := p.PutFileAtomic(fn, 0777, []byte(status))
 	if err != nil {
 		db.DPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
 	}
@@ -90,7 +89,7 @@ func (p *Participant) prepared(status string) {
 func (p *Participant) committed() {
 	fn := commitName(p.me)
 	db.DPrintf("PART", "Committed %v\n", fn)
-	_, err := p.PutFile(fn, 0777, np.OWRITE, []byte("OK"))
+	_, err := p.PutFile(fn, 0777, sp.OWRITE, []byte("OK"))
 	if err != nil {
 		db.DPrintf("PART", "Committed: make file %v failed %v\n", fn, err)
 	}

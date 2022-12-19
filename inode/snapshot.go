@@ -5,13 +5,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type InodeSnapshot struct {
-	Perm   np.Tperm
+	Perm   sp.Tperm
 	Mtime  int64
-	Parent np.Tpath
+	Parent sp.Tpath
 	Owner  string
 	Nlink  int
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/pathclnt"
 	"sigmaos/test"
@@ -23,10 +23,10 @@ func TestSymlink1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Make a target file
-	targetPath := np.UX + "/~ip/symlink-test-file"
+	targetPath := sp.UX + "/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
-	_, err := ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err := ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -46,7 +46,7 @@ func TestSymlink1(t *testing.T) {
 
 	// Write symlink contents
 	w := []byte("overwritten!!")
-	_, err = ts.SetFile(linkPath+"/", w, np.OWRITE, 0)
+	_, err = ts.SetFile(linkPath+"/", w, sp.OWRITE, 0)
 	assert.Nil(t, err, "Writing linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -69,14 +69,14 @@ func TestSymlink2(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Make a target file
-	targetDirPath := np.UX + "/~ip/dir1"
+	targetDirPath := sp.UX + "/~ip/dir1"
 	targetPath := targetDirPath + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
 	err := ts.MkDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -103,20 +103,20 @@ func TestSymlink2(t *testing.T) {
 func TestSymlink3(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	uxs, err := ts.GetDir(np.UX)
+	uxs, err := ts.GetDir(sp.UX)
 	assert.Nil(t, err, "Error reading ux dir")
 
 	uxip := uxs[0].Name
 
 	// Make a target file
-	targetDirPath := np.UX + "/" + uxip + "/tdir"
+	targetDirPath := sp.UX + "/" + uxip + "/tdir"
 	targetPath := targetDirPath + "/target"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
 	err = ts.MkDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -133,9 +133,9 @@ func TestSymlink3(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	fsl := fslib.MakeFsLibAddr("abcd", fslib.Named())
-	fsl.ProcessDir(linkDir, func(st *np.Stat) (bool, error) {
+	fsl.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
-		fd, err := fsl.Open(linkPath+"/", np.OREAD)
+		fd, err := fsl.Open(linkPath+"/", sp.OREAD)
 		assert.Nil(t, err, "Opening")
 		// Read symlink contents again
 		b, err = fsl.GetFile(linkPath + "/")
@@ -152,29 +152,29 @@ func TestSymlink3(t *testing.T) {
 }
 
 func procdName(ts *test.Tstate, exclude map[string]bool) string {
-	sts, err := ts.GetDir(np.PROCD)
-	stsExcluded := []*np.Stat{}
+	sts, err := ts.GetDir(sp.PROCD)
+	stsExcluded := []*sp.Stat{}
 	for _, s := range sts {
-		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
+		if ok := exclude[path.Join(sp.PROCD, s.Name)]; !ok {
 			stsExcluded = append(stsExcluded, s)
 		}
 	}
-	assert.Nil(ts.T, err, np.PROCD)
+	assert.Nil(ts.T, err, sp.PROCD)
 	assert.Equal(ts.T, 1, len(stsExcluded))
-	name := path.Join(np.PROCD, stsExcluded[0].Name)
+	name := path.Join(sp.PROCD, stsExcluded[0].Name)
 	return name
 }
 
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name1 := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true})
+	name1 := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true})
 
 	var err error
 	err = ts.BootProcd()
 	assert.Nil(t, err, "kernel/procd")
 
-	name := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true, name1: true})
+	name := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true, name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
@@ -183,14 +183,14 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 8, len(sts)) // .statsd, .fences and ctl and running and runqs
 
-	ts.KillOne(np.PROCD)
+	ts.KillOne(sp.PROCD)
 
 	start := time.Now()
 	for {
-		if time.Since(start) > 3*np.Conf.Session.TIMEOUT {
+		if time.Since(start) > 3*sp.Conf.Session.TIMEOUT {
 			break
 		}
-		time.Sleep(np.Conf.Session.TIMEOUT / 10)
+		time.Sleep(sp.Conf.Session.TIMEOUT / 10)
 		_, err = ts.GetFile(name1)
 		if err == nil {
 			log.Printf("retry\n")
@@ -199,7 +199,7 @@ func TestEphemeral(t *testing.T) {
 		assert.True(t, fcall.IsErrNotfound(err) || fcall.IsErrUnreachable(err), "Wrong err %v", err)
 		break
 	}
-	assert.Greater(t, 3*np.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")
+	assert.Greater(t, 3*sp.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")
 
 	ts.Shutdown()
 }

@@ -15,7 +15,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/mr"
 	"sigmaos/perf"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -46,7 +46,7 @@ func Wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) int {
 
 func wcFile(rdr io.Reader, data Tdata, sbc *mr.ScanByteCounter) int {
 	scanner := bufio.NewScanner(rdr)
-	buf := make([]byte, 0, 8*np.MBYTE)
+	buf := make([]byte, 0, 8*sp.MBYTE)
 	scanner.Buffer(buf, cap(buf))
 	n := 1
 	cnt := 0
@@ -58,13 +58,13 @@ func wcFile(rdr io.Reader, data Tdata, sbc *mr.ScanByteCounter) int {
 	return cnt
 }
 
-func WcData(fsl *fslib.FsLib, dir string, data Tdata, sbc *mr.ScanByteCounter) (int, np.Tlength, error) {
+func WcData(fsl *fslib.FsLib, dir string, data Tdata, sbc *mr.ScanByteCounter) (int, sp.Tlength, error) {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return 0, 0, err
 	}
 	n := 0
-	nbytes := np.Tlength(0)
+	nbytes := sp.Tlength(0)
 	for _, st := range sts {
 		nbytes += st.Tlength()
 		rdr, err := fsl.OpenAsyncReader(dir+"/"+st.Name, 0)
@@ -84,7 +84,7 @@ func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
 	data := make(Tdata)
 	start := time.Now()
 	n, nbytes, err := WcData(fsl, dir, data, sbc)
-	wrt, err := fsl.CreateAsyncWriter(out, 0777, np.OWRITE|np.OTRUNC)
+	wrt, err := fsl.CreateAsyncWriter(out, 0777, sp.OWRITE|sp.OTRUNC)
 	if err != nil {
 		return 0, err
 	}

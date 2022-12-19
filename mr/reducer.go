@@ -19,7 +19,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -60,12 +60,12 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	}
 	r.nmaptask = m
 
-	w, err := r.CreateWriter(r.tmp, 0777, np.OWRITE)
+	w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
 	if err != nil {
 		return nil, err
 	}
 	r.wrt = w
-	r.bwrt = bufio.NewWriterSize(w, np.BUFSZ)
+	r.bwrt = bufio.NewWriterSize(w, sp.BUFSZ)
 
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
@@ -79,7 +79,7 @@ type result struct {
 	kvs  []*KeyValue
 	name string
 	ok   bool
-	n    np.Tlength
+	n    sp.Tlength
 }
 
 func ReadKVs(rdr io.Reader, data Tdata) error {
@@ -103,7 +103,7 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 }
 
 // XXX cut new fslib?
-func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, bool) {
+func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
 	defer fsl.Exit()
@@ -130,14 +130,14 @@ func (r *Reducer) readFile(file string, data Tdata) (np.Tlength, time.Duration, 
 
 type Tdata map[string][]string
 
-func (r *Reducer) readFiles(input string) (np.Tlength, time.Duration, Tdata, []string, error) {
+func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []string, error) {
 	data := make(map[string][]string, 0)
 	lostMaps := []string{}
 	files := make(map[string]bool)
-	nbytes := np.Tlength(0)
+	nbytes := sp.Tlength(0)
 	duration := time.Duration(0)
 	for len(files) < r.nmaptask {
-		sts, err := r.ReadDirWatch(input, func(sts []*np.Stat) bool {
+		sts, err := r.ReadDirWatch(input, func(sts []*sp.Stat) bool {
 			return len(sts) == len(files)
 		})
 		if err != nil {

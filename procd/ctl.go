@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type SpawnFile struct {
@@ -17,21 +17,21 @@ type SpawnFile struct {
 }
 
 func makeSpawnFile(pd *Procd) *fcall.Err {
-	sp := &SpawnFile{}
-	sp.pd = pd
-	sp.Inode = pd.memfssrv.MakeDevInode()
-	err := pd.memfssrv.MkDev(np.PROCD_SPAWN_FILE, sp)
+	sf := &SpawnFile{}
+	sf.pd = pd
+	sf.Inode = pd.memfssrv.MakeDevInode()
+	err := pd.memfssrv.MkDev(sp.PROCD_SPAWN_FILE, sf)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ctl *SpawnFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (ctl *SpawnFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
-func (ctl *SpawnFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {
@@ -44,5 +44,5 @@ func (ctl *SpawnFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversio
 
 	db.DPrintf("PROCD", "fs spawn done: %v", p)
 
-	return np.Tsize(len(b)), nil
+	return sp.Tsize(len(b)), nil
 }

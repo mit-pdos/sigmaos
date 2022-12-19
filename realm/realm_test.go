@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/realm"
@@ -43,7 +43,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	setVersion()
 	ts := &Tstate{}
-	e := realm.MakeTestEnv(np.TEST_RID)
+	e := realm.MakeTestEnv(sp.TEST_RID)
 	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -64,7 +64,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, program, cfg.NamedAddrs)
 
 	ts.t = t
-	ts.coreGroupsPerMachine = int(1.0 / np.Conf.Machine.CORE_GROUP_FRACTION)
+	ts.coreGroupsPerMachine = int(1.0 / sp.Conf.Machine.CORE_GROUP_FRACTION)
 
 	return ts
 }
@@ -93,7 +93,7 @@ func (ts *Tstate) spawnSpinner(ncore proc.Tcore) proc.Tpid {
 // Check that the test realm has min <= nCoreGroups <= max core groups assigned to it
 func (ts *Tstate) checkNCoreGroups(min int, max int) {
 	db.DPrintf("TEST", "Checking num nodeds")
-	cfg := realm.GetRealmConfig(ts.realmFsl, np.TEST_RID)
+	cfg := realm.GetRealmConfig(ts.realmFsl, sp.TEST_RID)
 	nCoreGroups := 0
 	for _, nd := range cfg.NodedsActive {
 		ndCfg := realm.MakeNodedConfig()
@@ -116,8 +116,8 @@ func TestStartStop(t *testing.T) {
 func TestRealmGrowArtificial(t *testing.T) {
 	ts := makeTstate(t)
 	rclnt := realm.MakeRealmClnt()
-	for realm.GetRealmConfig(rclnt.FsLib, np.TEST_RID).NCores < proc.Tcore(linuxsched.NCores)*2 {
-		rclnt.GrowRealm(np.TEST_RID)
+	for realm.GetRealmConfig(rclnt.FsLib, sp.TEST_RID).NCores < proc.Tcore(linuxsched.NCores)*2 {
+		rclnt.GrowRealm(sp.TEST_RID)
 	}
 	ts.checkNCoreGroups(ts.coreGroupsPerMachine*2, ts.coreGroupsPerMachine*2)
 	ts.e.Shutdown()

@@ -14,7 +14,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/namespace"
 	"sigmaos/proc"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
+
 	// "sigmaos/seccomp"
 	"sigmaos/semclnt"
 )
@@ -104,7 +105,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 			lastUpdate := time.Now()
 			for x, p := range pslice {
 				// Update the list of procds periodically, but not too often
-				if time.Since(lastUpdate) >= np.Conf.Realm.RESIZE_INTERVAL {
+				if time.Since(lastUpdate) >= sp.Conf.Realm.RESIZE_INTERVAL {
 					clnt.updateProcds()
 					lastUpdate = time.Now()
 				}
@@ -164,8 +165,8 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v", err)
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
-		fn := path.Join(np.PROCDREL, procdIp, np.PROCD_SPAWN_FILE)
-		_, err = clnt.SetFile(fn, b, np.OWRITE, 0)
+		fn := path.Join(sp.PROCDREL, procdIp, sp.PROCD_SPAWN_FILE)
+		_, err = clnt.SetFile(fn, b, sp.OWRITE, 0)
 		if err != nil {
 			db.DPrintf("PROCCLNT_ERR", "SetFile %v err %v", fn, err)
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
@@ -193,19 +194,19 @@ func (clnt *ProcClnt) updateProcds() {
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(clnt.lastProcdUpdate) < np.Conf.Realm.RESIZE_INTERVAL {
+	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL {
 		return
 	}
 	clnt.lastProcdUpdate = time.Now()
 	// Read the procd union dir.
-	procds, _, err := clnt.ReadDir(np.PROCDREL + "/")
+	procds, _, err := clnt.ReadDir(sp.PROCDREL + "/")
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
 	// Alloc enough space for the list of procds, excluding the ws queue.
 	clnt.procds = make([]string, 0, len(procds)-1)
 	for _, procd := range procds {
-		if procd.Name != path.Base(path.Dir(np.PROCD_WS)) {
+		if procd.Name != path.Base(path.Dir(sp.PROCD_WS)) {
 			clnt.procds = append(clnt.procds, procd.Name)
 		}
 	}
@@ -387,7 +388,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	}
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := clnt.PutFile(fn, 0777, np.OWRITE, b); err != nil {
+	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
 		db.DPrintf("PROCCLNT_ERR", "exited error (parent already exited) MakeFile %v err %v", fn, err)
 	}
 
@@ -454,7 +455,7 @@ func (clnt *ProcClnt) EvictKernelProc(pid string) error {
 
 // Called by procd.
 func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
-	procdir := path.Join(np.PROCD, procdIp, proc.PIDS, pid.String())
+	procdir := path.Join(sp.PROCD, procdIp, proc.PIDS, pid.String())
 	return clnt.evict(procdir)
 }
 

@@ -9,7 +9,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
 )
@@ -47,7 +47,7 @@ func (dir *DirImpl) String() string {
 }
 
 func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
-	i, _ := mi(ctx, np.DMDIR, 0, nil, MakeDirF)
+	i, _ := mi(ctx, sp.DMDIR, 0, nil, MakeDirF)
 	return i.(fs.Dir)
 }
 
@@ -95,7 +95,7 @@ func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsOb
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	st, err := dir.Inode.Stat(ctx)
@@ -114,7 +114,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
 	return st, nil
 }
 
-func (dir *DirImpl) Size() (np.Tlength, *fcall.Err) {
+func (dir *DirImpl) Size() (sp.Tlength, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	sts, err := dir.lsL(0)
@@ -124,8 +124,8 @@ func (dir *DirImpl) Size() (np.Tlength, *fcall.Err) {
 	return spcodec.MarshalSizeDir(sts)
 }
 
-func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *fcall.Err) {
-	entries := []*np.Stat{}
+func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *fcall.Err) {
+	entries := []*sp.Stat{}
 	var r *fcall.Err
 	dir.dents.Iter(func(n string, e interface{}) bool {
 		if n == "." {
@@ -178,7 +178,7 @@ func (dir *DirImpl) remove(name string) *fcall.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -187,13 +187,13 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 }
 
 // XXX ax WriteDir from fs.Dir
-func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	return 0, fcall.MkErr(fcall.TErrIsdir, dir)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

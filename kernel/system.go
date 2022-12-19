@@ -12,7 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
@@ -33,7 +33,7 @@ type System struct {
 	namedAddr   []string
 	procdIp     string
 	named       *Subsystem
-	cores       *np.Tinterval
+	cores       *sp.Tinterval
 	fss3d       []*Subsystem
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
@@ -41,7 +41,7 @@ type System struct {
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeSystemBase(realmId string, namedAddr []string, cores *np.Tinterval) *System {
+func makeSystemBase(realmId string, namedAddr []string, cores *sp.Tinterval) *System {
 	s := &System{}
 	s.realmId = realmId
 	s.namedAddr = namedAddr
@@ -56,7 +56,7 @@ func makeSystemBase(realmId string, namedAddr []string, cores *np.Tinterval) *Sy
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int, cores *np.Tinterval) *System {
+func MakeSystemNamed(uname, realmId string, replicaId int, cores *sp.Tinterval) *System {
 	s := makeSystemBase(realmId, fslib.Named(), cores)
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
@@ -73,7 +73,7 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *np.Tinterval) 
 }
 
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int, cores *np.Tinterval) *System {
+func MakeSystemAll(uname, realmId string, replicaId int, cores *sp.Tinterval) *System {
 	s := MakeSystemNamed(uname, realmId, replicaId, cores)
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
@@ -84,7 +84,7 @@ func MakeSystemAll(uname, realmId string, replicaId int, cores *np.Tinterval) *S
 	return s
 }
 
-func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) *System {
+func MakeSystem(uname, realmId string, namedAddr []string, cores *sp.Tinterval) *System {
 	s := makeSystemBase(realmId, namedAddr, cores)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
@@ -139,7 +139,7 @@ func (s *System) bootProcd(spawningSys bool) error {
 }
 
 func (s *System) BootFsUxd() error {
-	return s.BootSubsystem("kernel/fsuxd", []string{path.Join(np.UXROOT, s.realmId)}, s.procdIp, true, &s.fsuxd)
+	return s.BootSubsystem("kernel/fsuxd", []string{path.Join(sp.UXROOT, s.realmId)}, s.procdIp, true, &s.fsuxd)
 }
 
 func (s *System) BootFss3d() error {
@@ -164,7 +164,7 @@ func (s *System) GetProcdIp() string {
 	if len(s.procd) != 1 {
 		db.DFatalf("Error unexpexted num procds: %v", s.procd)
 	}
-	return GetSubsystemInfo(s.FsLib, np.KPIDS, s.procd[0].p.Pid.String()).Ip
+	return GetSubsystemInfo(s.FsLib, sp.KPIDS, s.procd[0].p.Pid.String()).Ip
 }
 
 func (s *System) KillOne(srv string) error {
@@ -174,14 +174,14 @@ func (s *System) KillOne(srv string) error {
 	var err error
 	var ss *Subsystem
 	switch srv {
-	case np.PROCD:
+	case sp.PROCD:
 		if len(s.procd) > 0 {
 			ss = s.procd[0]
 			s.procd = s.procd[1:]
 		} else {
 			db.DPrintf(db.ALWAYS, "Tried to kill procd, nothing to kill")
 		}
-	case np.UX:
+	case sp.UX:
 		if len(s.fsuxd) > 0 {
 			ss = s.fsuxd[0]
 			s.fsuxd = s.fsuxd[1:]

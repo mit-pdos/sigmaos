@@ -1,18 +1,17 @@
-package atomic
+package fslib
 
 import (
 	"encoding/json"
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	np "sigmaos/sigmap"
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 )
 
-func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) error {
+func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error {
 	tmpName := fname + rand.String(16)
-	_, err := fsl.PutFile(tmpName, perm, np.OWRITE, data)
+	_, err := fsl.PutFile(tmpName, perm, sp.OWRITE, data)
 	if err != nil {
 		db.DFatalf("MakeFileAtomic %v: %v", tmpName, err)
 		return err
@@ -25,10 +24,10 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 	return nil
 }
 
-func PutFileJsonAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, i interface{}) error {
+func (fsl *FsLib) PutFileJsonAtomic(fname string, perm sp.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("PutFileJsonAtomic marshal err %v", err)
 	}
-	return PutFileAtomic(fsl, fname, perm, data)
+	return fsl.PutFileAtomic(fname, perm, data)
 }

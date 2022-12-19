@@ -4,15 +4,15 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/epochclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type FenceClnt struct {
 	*fslib.FsLib
 	*epochclnt.EpochClnt
-	perm    np.Tperm
-	mode    np.Tmode
-	lastSeq np.Tseqno
+	perm    sp.Tperm
+	mode    sp.Tmode
+	lastSeq sp.Tseqno
 	paths   map[string]bool
 }
 
@@ -32,7 +32,7 @@ func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 
 // Future operations on files in a tree rooted at a path in paths will
 // include a fence at epoch <epoch>.
-func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
+func (fc *FenceClnt) FenceAtEpoch(epoch sp.Tepoch, paths []string) error {
 	f, err := fc.GetFence(epoch)
 	if err != nil {
 		db.DPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
@@ -41,7 +41,7 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence *np.Tfence, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence *sp.Tfence, paths []string) error {
 	db.DPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, *fence)
@@ -55,7 +55,7 @@ func (fc *FenceClnt) fencePaths(fence *np.Tfence, paths []string) error {
 
 // Register fence with fidclnt so that ops on files in the tree rooted
 // at path will include fence.
-func (fc *FenceClnt) registerFence(path string, fence np.Tfence) error {
+func (fc *FenceClnt) registerFence(path string, fence sp.Tfence) error {
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}
@@ -71,13 +71,13 @@ func (fc *FenceClnt) registerFence(path string, fence np.Tfence) error {
 	return nil
 }
 
-func (fc *FenceClnt) GetFences(p string) ([]*np.Stat, error) {
-	srv, _, err := fc.PathServer(p)
+func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
+	srv, _, err := fc.PathLastSymlink(p)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", p, err)
+		db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", p, err)
 		return nil, err
 	}
-	dn := srv + "/" + np.FENCEDIR
+	dn := srv + "/" + sp.FENCEDIR
 	sts, err := fc.GetDir(dn)
 	if err != nil {
 		db.DPrintf("FENCECLNT_ERR", "GetDir %v err %v", dn, err)
@@ -97,12 +97,12 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 		return err
 	}
 	for _, d := range dirs {
-		srv, _, err := fc.PathServer(d)
+		srv, _, err := fc.PathLastSymlink(d)
 		if err != nil {
-			db.DPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
+			db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", d, err)
 			return err
 		}
-		fn := srv + "/" + np.FENCEDIR + "/" + f.Fenceid.Tpath().String()
+		fn := srv + "/" + sp.FENCEDIR + "/" + f.Fenceid.Tpath().String()
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf("FENCECLNT_ERR", "Remove %v err %v", fn, err)
 			return err

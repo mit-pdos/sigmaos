@@ -19,7 +19,7 @@ import (
 	"sigmaos/realm/proto"
 	"sigmaos/resource"
 	"sigmaos/semclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Noded struct {
@@ -56,7 +56,7 @@ func MakeNoded(machineId string) *Noded {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	nd.sclnt, err = protdevclnt.MkProtDevClnt(nd.pds.FsLib(), np.SIGMAMGR)
+	nd.sclnt, err = protdevclnt.MkProtDevClnt(nd.pds.FsLib(), sp.SIGMAMGR)
 	if err != nil {
 		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
@@ -128,7 +128,7 @@ func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) e
 		}
 
 		// Update the core allocations for this noded.
-		var rmCores *np.Tinterval
+		var rmCores *sp.Tinterval
 		nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
 
@@ -147,7 +147,7 @@ func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) e
 func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 	procdIp := nd.s.GetProcdIp()
 	// Pass the resource message on to this noded's procd.
-	resource.SendMsg(nd.FsLib, path.Join(RealmPath(nd.cfg.RealmId), np.PROCDREL, procdIp, np.RESOURCE_CTL), msg)
+	resource.SendMsg(nd.FsLib, path.Join(RealmPath(nd.cfg.RealmId), sp.PROCDREL, procdIp, sp.RESOURCE_CTL), msg)
 }
 
 // Update configuration.
@@ -208,7 +208,8 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NCores += nd.countNCores()
 	nd.WriteConfig(RealmConfPath(cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.pds.MyAddr()}), nodedPath(cfg.Rid, nd.id), 0777); err != nil {
+	mnt := sp.MkMountServer(nd.pds.MyAddr())
+	if err := nd.MkMountSymlink(nodedPath(cfg.Rid, nd.id), mnt); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }
@@ -238,7 +239,7 @@ func (nd *Noded) joinRealm() {
 	nd.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(np.BOOT, nd.cfg.RealmId))
+		rStartSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(sp.BOOT, nd.cfg.RealmId))
 		rStartSem.Up()
 	}
 	db.DPrintf("NODED", "Noded %v joined Realm %v", nd.id, nd.cfg.RealmId)
@@ -295,7 +296,7 @@ func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(np.BOOT, realmCfg.Rid))
+		rExitSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(sp.BOOT, realmCfg.Rid))
 		rExitSem.Up()
 	}
 }

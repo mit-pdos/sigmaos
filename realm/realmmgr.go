@@ -22,7 +22,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
 
@@ -71,7 +71,7 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 		db.DFatalf("Error PDS: %v", err)
 	}
 
-	m.sclnt, err = protdevclnt.MkProtDevClnt(m.sigmaFsl, np.SIGMAMGR)
+	m.sclnt, err = protdevclnt.MkProtDevClnt(m.sigmaFsl, sp.SIGMAMGR)
 	if err != nil {
 		db.DFatalf("Error MkProtDevClnt: %v", err)
 	}
@@ -111,7 +111,7 @@ func (m *RealmResourceMgr) RevokeCores(req proto.RealmMgrRequest, res *proto.Rea
 	}
 
 	// Don't revoke cores too quickly unless this is a hard request.
-	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL*3 && !req.HardReq {
+	if time.Now().Sub(realmCfg.LastResize) < sp.Conf.Realm.RESIZE_INTERVAL*3 && !req.HardReq {
 		db.DPrintf("REALMMGR", "[%v] Soft core revocation request failed, resize too soon", m.realmId)
 		res.OK = false
 		return nil
@@ -253,13 +253,13 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 	}
 }
 
-func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*np.Tinterval, bool) {
+func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*sp.Tinterval, bool) {
 	cdir := path.Join(machine.MACHINES, machineId, machine.CORES)
 	coreGroups, err := m.sigmaFsl.GetDir(cdir)
 	if err != nil {
 		db.DFatalf("Error GetDir: %v", err)
 	}
-	cores := make([]*np.Tinterval, 0)
+	cores := make([]*sp.Tinterval, 0)
 	// Try to steal a core group
 	for i := 0; i < len(coreGroups) && amt > 0; i++ {
 		// Read the core file.
@@ -268,7 +268,7 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*np.Tinte
 		err = m.sigmaFsl.Remove(coreFile)
 		if err == nil {
 			// Cores successfully claimed.
-			c := np.MkInterval(0, 0)
+			c := sp.MkInterval(0, 0)
 			c.Unmarshal(string(coreGroups[i].Name))
 			cores = append(cores, c)
 			amt--
@@ -282,18 +282,18 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*np.Tinte
 	return cores, len(cores) > 0
 }
 
-func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Tinterval, bool) {
+func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*sp.Tinterval, bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
 	machineIds := make([]string, 0)
 	nodedIds := make([]string, 0)
-	cores := make([][]*np.Tinterval, 0)
+	cores := make([][]*sp.Tinterval, 0)
 	var err error
 
 	// First, try to get cores on a machine already running a noded from this
 	// realm.
-	_, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *np.Stat) (bool, error) {
+	_, err = m.sigmaFsl.ProcessDir(path.Join(realmMgrPath(m.realmId), NODEDS), func(nd *sp.Stat) (bool, error) {
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nd.Name), ndCfg)
 		// Try to claim additional cores on the machine this noded lives on.
@@ -316,7 +316,7 @@ func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*np.Ti
 		return machineIds, nodedIds, cores, true
 	}
 	// Otherwise, Try to get cores on any machine.
-	_, err = m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
+	_, err = m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
 		if c, ok := m.tryClaimCores(st.Name, amt); ok {
 			cores = append(cores, c)
 			machineIds = append(machineIds, st.Name)
@@ -364,7 +364,7 @@ func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 }
 
 // Alloc a Noded to this realm.
-func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
+func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *sp.Tinterval) {
 	// Update the noded's config
 	ndCfg := MakeNodedConfig()
 	ndCfg.Id = nodedId
@@ -417,7 +417,7 @@ func (m *RealmResourceMgr) getRealmProcdStats(nodeds []string) (stat map[string]
 		ndCfg := MakeNodedConfig()
 		m.ReadConfig(NodedConfPath(nodedId), ndCfg)
 		s := &stats.StatInfo{}
-		err := m.GetFileJson(path.Join(np.PROCD, ndCfg.ProcdIp, np.STATSD), s)
+		err := m.GetFileJson(path.Join(sp.PROCD, ndCfg.ProcdIp, sp.STATSD), s)
 		if err != nil {
 			db.DPrintf("REALMMGR_ERR", "[%v] Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", m.realmId, err)
 			continue
@@ -448,8 +448,8 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, util
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() (lcqlen int, beqlen int) {
-	stslc, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_LC))
-	stsbe, _ := m.GetDir(path.Join(np.PROCD_WS, np.PROCD_RUNQ_BE))
+	stslc, _ := m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC))
+	stsbe, _ := m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE))
 	return len(stslc), len(stsbe)
 }
 
@@ -527,7 +527,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	d := time.Since(m.lastGrow)
 	m.Unlock()
 	// If we have resized too recently, return
-	if d < np.Conf.Realm.RESIZE_INTERVAL {
+	if d < sp.Conf.Realm.RESIZE_INTERVAL {
 		return 0, false, machineIds, false
 	}
 
@@ -551,7 +551,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	m.Lock()
 	for i := len(nodeds) - 1; i >= 0; i-- {
 		// Only grow allocations on highly-utilized machines.
-		if utils[nodeds[i]] >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
+		if utils[nodeds[i]] >= sp.Conf.Realm.GROW_CPU_UTIL_THRESHOLD {
 			shouldGrow = true
 			// Only request specific machines if there are LC procs running on them..
 			if anyLC {
@@ -562,7 +562,7 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	m.Unlock()
 	// If no LC procs, and avg util is low, and no procs queued, don't grow.
 	if !anyLC {
-		shouldGrow = avgUtil >= np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
+		shouldGrow = avgUtil >= sp.Conf.Realm.GROW_CPU_UTIL_THRESHOLD
 	}
 	return qlen, anyLC, machineIds, shouldGrow
 }
@@ -596,6 +596,6 @@ func (m *RealmResourceMgr) Work() {
 			}
 		}
 		// Sleep for a bit.
-		time.Sleep(np.Conf.Realm.SCAN_INTERVAL)
+		time.Sleep(sp.Conf.Realm.SCAN_INTERVAL)
 	}
 }

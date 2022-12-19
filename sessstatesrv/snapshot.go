@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
@@ -21,7 +21,7 @@ func (st *SessionTable) Snapshot() []byte {
 	return b
 }
 
-func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
+func RestoreTable(oldSt *SessionTable, mkps sp.MkProtServer, rps sp.RestoreProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
 	sessions := make(map[fcall.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
@@ -60,7 +60,7 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid fcall.Tsession, sesssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid fcall.Tsession, sesssrv sp.SessServer, rps sp.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {

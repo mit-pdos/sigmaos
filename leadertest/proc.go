@@ -8,7 +8,7 @@ import (
 	"sigmaos/delay"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
@@ -20,7 +20,7 @@ func RunProc(epochstr, dir string) {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started()
 
-	epoch, err := np.String2Epoch(epochstr)
+	epoch, err := sp.String2Epoch(epochstr)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
@@ -51,7 +51,7 @@ func RunProc(epochstr, dir string) {
 	}
 
 	for i := 0; i < NWRITE; i++ {
-		_, err := fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
+		_, err := fsl.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 		if err != nil {
 			log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			break

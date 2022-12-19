@@ -11,7 +11,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 )
 
@@ -52,11 +52,11 @@ func (d *Dir) uxReadDir() *fcall.Err {
 	return nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
-	dents := make([]*np.Stat, 0, d.sd.Len())
+	dents := make([]*sp.Stat, 0, d.sd.Len())
 	d.sd.Iter(func(n string, e interface{}) bool {
-		dents = append(dents, e.(*np.Stat))
+		dents = append(dents, e.(*sp.Stat))
 		return true
 	})
 	if cursor > len(dents) {
@@ -66,20 +66,20 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	if err := d.uxReadDir(); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
+func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	d.sd = sorteddir.MkSortedDir()
 	return nil
 }
 
 // XXX O_CREATE/O_EXCL
-func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, *fcall.Err) {
+func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, *fcall.Err) {
 	p := d.pathName.Append(name).String()
 	error := os.Mkdir(p, os.FileMode(perm&0777))
 	if error != nil {
@@ -92,7 +92,7 @@ func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, 
 	return d1, nil
 }
 
-func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	p := d.pathName.Append(name).String()
 	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
@@ -106,7 +106,7 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	return f, nil
 }
 
-func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
@@ -119,7 +119,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	return f, nil
 }
 
-func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	p := d.pathName.Append(name)
 	log.Printf("mkSym %s\n", p)
 	s, err := makeSymlink(p, true)
@@ -130,7 +130,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsO
 }
 
 // XXX how to delete ephemeral files after crash
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
@@ -177,7 +177,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 

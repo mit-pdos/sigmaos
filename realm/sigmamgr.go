@@ -19,7 +19,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
 
@@ -44,7 +44,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmDestroy = make(chan string)
 	var err error
 	var mfs *memfssrv.MemFs
-	mfs, m.FsLib, m.ProcClnt, err = memfssrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
+	mfs, m.FsLib, m.ProcClnt, err = memfssrv.MakeMemFs(sp.SIGMAMGR, "sigmamgr")
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
@@ -226,7 +226,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 	opRealmId = ""
 	nodedId = ""
 	ok = false
-	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
+	m.ProcessDir(REALM_CONFIG, func(st *sp.Stat) (bool, error) {
 		realmId := st.Name
 
 		// Don't steal a noded from the requesting realm.
@@ -296,7 +296,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
 	db.DPrintf(debug, "[%v] Check noded %v utilization", realmId, nodedId)
 	s := &stats.StatInfo{}
-	err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.STATSD), s)
+	err := fsl.GetFileJson(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
 	if err != nil {
 		db.DPrintf(debug+"_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
@@ -313,7 +313,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	coresToRevoke := float64(ndCfg.Cores[len(ndCfg.Cores)-1].Size())
 	// If we don't have >= 1 core group to spare for LC procs, we aren't
 	// overprovisioned
-	thresh := np.Conf.Realm.GROW_CPU_UTIL_THRESHOLD / 100.0
+	thresh := sp.Conf.Realm.GROW_CPU_UTIL_THRESHOLD / 100.0
 	if nLCCoresUsed > 0 {
 		const buffer float64 = 0.2
 		proposedNCores := totalCores - coresToRevoke
@@ -336,9 +336,9 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	db.DPrintf(debug, "[%v] Noded %v is underutilized threshold %v, had %v cores remaining.", realmId, nodedId, thresh, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
-		qs := []string{np.PROCD_RUNQ_LC}
+		qs := []string{sp.PROCD_RUNQ_LC}
 		for _, q := range qs {
-			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, q))
+			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, q))
 			if err != nil {
 				db.DPrintf(debug+"_ERR", "Couldn't get queue dir %v: %v", q, err)
 				return false, false, false
@@ -349,20 +349,20 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 				return true, true, false
 			}
 		}
-		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
+		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.PROCD_RUNNING))
 		if err != nil {
 			db.DPrintf(debug+"_ERR", "Couldn't get procs running dir: %v", err)
 			return false, false, false
 		}
 		// If this is the last core group for this noded, and its utilization is over
 		// a certain threshold (and it is running procs), don't evict.
-		if s.Util >= np.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
+		if s.Util >= sp.Conf.Realm.SHRINK_CPU_UTIL_THRESHOLD && len(runningProcs) > 0 {
 			db.DPrintf(debug, "[%v] Can't evict noded, util: %v runningProcs: %v", realmId, s.Util, len(runningProcs))
 			return false, true, false
 		}
 		for _, st := range runningProcs {
 			p := proc.MakeEmptyProc()
-			err := fsl.GetFileJson(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING, st.Name), p)
+			err := fsl.GetFileJson(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.PROCD_RUNNING, st.Name), p)
 			if err != nil {
 				continue
 			}
@@ -376,7 +376,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		}
 		db.DPrintf(debug, "[%v] Evicting noded %v realm %v", realmId, nodedId, realmId)
 	} else {
-		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), np.PROCDREL, ndCfg.ProcdIp, np.PROCD_RUNNING))
+		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.PROCD_RUNNING))
 		if err != nil {
 			db.DPrintf(debug+"_ERR", "Couldn't get procs running dir: %v", err)
 			return false, false, false

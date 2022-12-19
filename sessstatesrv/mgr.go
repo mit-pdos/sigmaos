@@ -4,16 +4,16 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type SessionMgr struct {
 	st       *SessionTable
-	srvfcall np.Fsrvfcall
+	srvfcall sp.Fsrvfcall
 	done     bool
 }
 
-func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
+func MakeSessionMgr(st *SessionTable, pfn sp.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
@@ -73,24 +73,24 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 
 // Scan for live/connected sessions, and send heartbeats on their behalf.
 func (sm *SessionMgr) runHeartbeats() {
-	sessHeartbeatT := time.NewTicker(np.Conf.Session.HEARTBEAT_INTERVAL)
+	sessHeartbeatT := time.NewTicker(sp.Conf.Session.HEARTBEAT_INTERVAL)
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := np.MakeFcallMsg(np.MkTheartbeat(sess), nil, 0, 0, nil, nil, np.MakeFenceNull())
+		hbs := sp.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil, nil, sp.MakeFenceNull())
 		sm.srvfcall(hbs)
 	}
 }
 
 // Scan for detachable sessions, and request that they be detached.
 func (sm *SessionMgr) runDetaches() {
-	sessTimeoutT := time.NewTicker(np.Conf.Session.TIMEOUT)
+	sessTimeoutT := time.NewTicker(sp.Conf.Session.TIMEOUT)
 
 	for !sm.Done() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := np.MakeFcallMsg(&np.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, np.MakeFenceNull())
+			detach := sp.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, sp.MakeFenceNull())
 			sm.srvfcall(detach)
 		}
 	}

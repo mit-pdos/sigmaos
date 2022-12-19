@@ -14,7 +14,7 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/procclnt"
 	"sigmaos/reader"
@@ -194,8 +194,8 @@ type op struct {
 	kind opT
 	b    []byte
 	k    Tkey
-	off  np.Toffset
-	m    np.Tmode
+	off  sp.Toffset
+	m    sp.Tmode
 	rdr  *reader.Reader
 	err  error
 }
@@ -207,39 +207,39 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case GETRD:
 		o.rdr, o.err = fsl.OpenReader(fn)
 	case PUT:
-		_, o.err = fsl.PutFile(fn, 0777, np.OWRITE, o.b)
+		_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
 	db.DPrintf("KVCLERK", "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k Tkey, off np.Toffset) ([]byte, error) {
-	op := &op{GETVAL, []byte{}, k, off, np.OREAD, nil, nil}
+func (kc *KvClerk) Get(k Tkey, off sp.Toffset) ([]byte, error) {
+	op := &op{GETVAL, []byte{}, k, off, sp.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
 }
 
 func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
-	op := &op{GETRD, []byte{}, k, 0, np.OREAD, nil, nil}
+	op := &op{GETRD, []byte{}, k, 0, sp.OREAD, nil, nil}
 	kc.doop(op)
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k Tkey, b []byte, off np.Toffset) error {
-	op := &op{SET, b, k, off, np.OWRITE, nil, nil}
+func (kc *KvClerk) Set(k Tkey, b []byte, off sp.Toffset) error {
+	op := &op{SET, b, k, off, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Append(k Tkey, b []byte) error {
-	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
+	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Put(k Tkey, b []byte) error {
-	op := &op{PUT, b, k, 0, np.OWRITE, nil, nil}
+	op := &op{PUT, b, k, 0, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -249,7 +249,7 @@ func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
+	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }

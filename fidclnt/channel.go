@@ -6,7 +6,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/path"
 	"sigmaos/protclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 // The channel associated with an fid, which connects to an object at
@@ -14,11 +14,11 @@ import (
 type Channel struct {
 	pc    *protclnt.ProtClnt
 	path  path.Path
-	qids  []*np.Tqid
+	qids  []*sp.Tqid
 	uname string
 }
 
-func makeChannel(pc *protclnt.ProtClnt, uname string, path path.Path, qs []*np.Tqid) *Channel {
+func makeChannel(pc *protclnt.ProtClnt, uname string, path path.Path, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -43,23 +43,23 @@ func (c *Channel) SetPath(p path.Path) {
 	c.path = p
 }
 
-func (c *Channel) Version() np.TQversion {
+func (c *Channel) Version() sp.TQversion {
 	return c.Lastqid().Tversion()
 }
 
 func (c *Channel) Copy() *Channel {
-	qids := make([]*np.Tqid, len(c.qids))
+	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
 	return makeChannel(c.pc, c.uname, c.path.Copy(), qids)
 }
 
-func (c *Channel) add(name string, q *np.Tqid) {
+func (c *Channel) add(name string, q *sp.Tqid) {
 	c.path = append(c.path, name)
 	c.qids = append(c.qids, q)
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []*np.Tqid, path path.Path) {
+func (c *Channel) AddN(qs []*sp.Tqid, path path.Path) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}
@@ -68,7 +68,7 @@ func (c *Channel) AddN(qs []*np.Tqid, path path.Path) {
 	}
 }
 
-func (c *Channel) Lastqid() *np.Tqid {
+func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
 }
 

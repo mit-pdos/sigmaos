@@ -17,7 +17,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 
 	"sigmaos/perf"
 )
@@ -146,7 +146,7 @@ type Stats struct {
 
 func MkStatsDev(parent fs.Dir) *Stats {
 	st := &Stats{}
-	st.Inode = inode.MakeInode(nil, np.DMDEVICE, parent)
+	st.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
 	st.sti = MkStatInfo()
 	st.pid = os.Getpid()
 	st.pathCnts = true
@@ -251,11 +251,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *fcall.Err) {
+func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if st == nil {
 		return nil, nil
 	}

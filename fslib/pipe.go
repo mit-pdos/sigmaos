@@ -1,13 +1,13 @@
 package fslib
 
 import (
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) MakePipe(name string, lperm np.Tperm) error {
-	lperm = lperm | np.DMNAMEDPIPE
+func (fl *FsLib) MakePipe(name string, lperm sp.Tperm) error {
+	lperm = lperm | sp.DMNAMEDPIPE
 	// ORDWR so that close doesn't do anything to the pipe state
-	fd, err := fl.Create(name, lperm, np.ORDWR)
+	fd, err := fl.Create(name, lperm, sp.ORDWR)
 	if err != nil {
 		return err
 	}

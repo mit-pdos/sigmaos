@@ -4,10 +4,9 @@ import (
 	"sort"
 	"strings"
 
-	"sigmaos/atomic"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	//	np "sigmaos/sigmap"
+	//	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
@@ -30,7 +29,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	//	m.configLock = sync.MakeLock(fsl, np.LOCKS, m.configPath, true)
+	//	m.configLock = sync.MakeLock(fsl, sp.LOCKS, m.configPath, true)
 	m.ProcClnt = procclnt.MakeProcClnt(fsl)
 	db.DPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
@@ -49,7 +48,7 @@ func (m *ReplicaMonitor) updateConfig() {
 		new += r.Name + "\n"
 	}
 	m.Remove(m.configPath)
-	err = atomic.PutFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
+	err = m.PutFileAtomic(m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
 		db.DFatalf("Error writing new config file: %v", err)
 	}

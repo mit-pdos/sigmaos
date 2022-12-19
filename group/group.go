@@ -11,20 +11,19 @@ import (
 	"strconv"
 	"sync"
 
-	"sigmaos/atomic"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/replraft"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -174,7 +173,7 @@ func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
 }
 
 func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
-	err := atomic.PutFileJsonAtomic(g.FsLib, path, 0777, cfg)
+	err := g.PutFileJsonAtomic(path, 0777, cfg)
 	if err != nil {
 		return err
 	}
@@ -190,7 +189,8 @@ func (g *Group) writeSymlink(sigmaAddrs []string) {
 		}
 	}
 
-	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.jobdir, g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs)); err != nil {
+	mnt := sp.MkMountService(srvAddrs)
+	if err := g.MkMountSymlink(GrpSym(g.jobdir, g.grp), mnt); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -207,7 +207,7 @@ func (g *Group) op(opcode, kv string) *fcall.Err {
 
 func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	s := opcode + " " + kv
-	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), np.OWRITE, 0)
+	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), sp.OWRITE, 0)
 	return err
 }
 

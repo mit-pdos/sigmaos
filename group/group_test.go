@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -39,7 +39,7 @@ func (ts *Tstate) setupKeys(nkeys int) {
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
 		fname := path.Join(GRP_PATH, i_str)
-		_, err := ts.PutFile(fname, 0777, np.OWRITE|np.OREAD, []byte(i_str))
+		_, err := ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
 		assert.Nil(ts.T, err, "Put %v", err)
 	}
 	db.DPrintf("TEST", "done setupKeys")
@@ -53,9 +53,9 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 		b, err := ts.GetFile(fname)
 		assert.Nil(ts.T, err, "Get %v", err)
 		assert.Equal(ts.T, i_str, string(b), "Didn't read expected")
-		_, err = ts.PutFile(fname, 0777, np.OWRITE|np.OREAD, []byte(i_str))
+		_, err = ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
 		assert.NotNil(ts.T, err, "Put nil")
-		_, err = ts.SetFile(fname, []byte(i_str+i_str), np.OWRITE|np.OREAD, 0)
+		_, err = ts.SetFile(fname, []byte(i_str+i_str), sp.OWRITE|sp.OREAD, 0)
 		assert.Nil(ts.T, err, "Set %v", err)
 	}
 	db.DPrintf("TEST", "done testGetPutSet")
@@ -112,7 +112,7 @@ func TestGetPutSetFail1(t *testing.T) {
 // func follower(t *testing.T, i int, N int, fn string) {
 // 	I := strconv.Itoa(i)
 // 	fsl := fslib.MakeFsLibAddr("fsl"+I, fslib.Named())
-// 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{np.NAMED})
+// 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for n := 0; n < N; {
 // 		b, err := f.AcquireFenceR()
 // 		assert.Nil(t, err, "AcquireFenceR")
@@ -131,7 +131,7 @@ func TestGetPutSetFail1(t *testing.T) {
 // 		go follower(t, i, N, fn)
 // 	}
 // 	fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
-// 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{np.NAMED})
+// 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for i := 0; i < N; i++ {
 // 		err := f.AcquireFenceW([]byte(strconv.Itoa(i)))
 // 		assert.Nil(t, err, "AcquireFenceW")

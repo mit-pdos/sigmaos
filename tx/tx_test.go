@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/named"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/realm"
@@ -63,10 +63,10 @@ func setupEnv(ts *Tstate) string {
 	assert.Nil(ts.t, err, "mkdir memfs")
 	pid1 := runMemfs(ts)
 
-	err = ts.MakeFile(path.Join(named.MEMFS, pid1, "x"), 0777, np.OWRITE, []byte("100"))
+	err = ts.MakeFile(path.Join(named.MEMFS, pid1, "x"), 0777, sp.OWRITE, []byte("100"))
 	assert.Nil(ts.t, err, "MakeFile 1")
 
-	err = ts.MakeFile(path.Join(named.MEMFS, pid1, "y"), 0777, np.OWRITE, []byte("100"))
+	err = ts.MakeFile(path.Join(named.MEMFS, pid1, "y"), 0777, sp.OWRITE, []byte("100"))
 	assert.Nil(ts.t, err, "MakeFile 2")
 
 	// Set up tx state

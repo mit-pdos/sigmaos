@@ -7,12 +7,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/sesscond"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type PobjSnapshot struct {
 	Path    []string
-	Obj     np.Tpath
+	Obj     sp.Tpath
 	CtxSnap []byte
 }
 
@@ -44,8 +44,8 @@ func RestorePobj(fn fs.RestoreF, sct *sesscond.SessCondTable, b []byte) *Pobj {
 
 type FidSnapshot struct {
 	IsOpen   bool
-	M        np.Tmode
-	Qid      np.Tqid
+	M        sp.Tmode
+	Qid      sp.Tqid
 	PobjSnap []byte
 	Cursor   int // for directories
 }

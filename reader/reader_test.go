@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -15,7 +15,7 @@ func TestReader1(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("abcdefg")
-	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)
@@ -39,7 +39,7 @@ func TestReader2(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("a")
-	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)
@@ -66,7 +66,7 @@ func TestReaderLarge(t *testing.T) {
 	for i := 0; i < sz; i++ {
 		d[i] = byte(i)
 	}
-	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)

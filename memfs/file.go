@@ -6,7 +6,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/file"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type File struct {
@@ -21,11 +21,11 @@ func MakeFile(i fs.Inode) *File {
 	return f
 }
 
-func (f *File) Size() (np.Tlength, *fcall.Err) {
+func (f *File) Size() (sp.Tlength, *fcall.Err) {
 	return f.File.Size()
 }
 
-func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	st, err := f.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err

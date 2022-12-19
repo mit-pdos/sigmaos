@@ -13,7 +13,7 @@ import (
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -56,12 +56,12 @@ func MakeReader(args []string) (*Reader, error) {
 func (r *Reader) Work() *proc.Status {
 	db.DPrintf("FSREADER", "Reader: %v\n", r.input)
 	// Open the pipe.
-	pipefd, err := r.Open(r.output, np.OWRITE)
+	pipefd, err := r.Open(r.output, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("%v: Open error: %v", proc.GetProgram(), err)
 	}
 	defer r.Close(pipefd)
-	fd, err := r.Open(r.input, np.OREAD)
+	fd, err := r.Open(r.input, sp.OREAD)
 	if err != nil {
 		return proc.MakeStatusErr("File not found", nil)
 	}

@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 )
@@ -42,7 +42,7 @@ type Geo struct {
 func RunGeoSrv(n string) error {
 	geo := &Geo{}
 	geo.geoidx = newGeoIndex("data/geo.json")
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELGEO, geo)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELGEO, geo)
 	if err != nil {
 		return err
 	}

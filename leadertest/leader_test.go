@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/test"
 )
@@ -19,13 +19,13 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 	pids := []proc.Tpid{}
 
 	// XXX use the same dir independent of machine running proc
-	ts.RmDir(np.UX + "/" + np.FENCEDIR)
+	ts.RmDir(sp.UX + "/" + sp.FENCEDIR)
 
-	dir := np.UX + "/~ip/outdir/"
+	dir := sp.UX + "/~ip/outdir/"
 	fn := dir + "out"
 	ts.RmDir(dir)
 	err := ts.MkDir(dir, 0777)
-	_, err = ts.PutFile(fn, 0777, np.OWRITE, []byte{})
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "putfile")
 
 	for i := 0; i < N; i++ {
@@ -57,7 +57,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
-	e := np.Tepoch(0)
+	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)

@@ -10,7 +10,7 @@ import (
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
@@ -36,7 +36,7 @@ func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
 	}
 	sid := string(b)
 	pdc.sid = "/" + clonedev.SidName(sid, protdevsrv.RPC)
-	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.DataName(protdevsrv.RPC), np.ORDWR)
+	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.DataName(protdevsrv.RPC), sp.ORDWR)
 	if err != nil {
 		return nil, err
 	}

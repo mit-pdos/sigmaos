@@ -7,7 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
@@ -21,12 +21,12 @@ func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	// want >= 1 server to be up).
 	l.Lock()
 	switch srv {
-	case np.PROCD:
+	case sp.PROCD:
 		err := ts.BootProcd()
 		if err != nil {
 			db.DFatalf("Error spawn procd")
 		}
-	case np.UX:
+	case sp.UX:
 		err := ts.BootFsUxd()
 		if err != nil {
 			db.DFatalf("Error spawn uxd")

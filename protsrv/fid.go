@@ -4,22 +4,22 @@ import (
 	"sync"
 
 	"sigmaos/fid"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 )
 
 type fidTable struct {
 	sync.Mutex
-	fids map[np.Tfid]*fid.Fid
+	fids map[sp.Tfid]*fid.Fid
 }
 
 func makeFidTable() *fidTable {
 	ft := &fidTable{}
-	ft.fids = make(map[np.Tfid]*fid.Fid)
+	ft.fids = make(map[sp.Tfid]*fid.Fid)
 	return ft
 }
 
-func (ft *fidTable) Lookup(fid np.Tfid) (*fid.Fid, *fcall.Err) {
+func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *fcall.Err) {
 	ft.Lock()
 	defer ft.Unlock()
 	f, ok := ft.fids[fid]
@@ -29,14 +29,14 @@ func (ft *fidTable) Lookup(fid np.Tfid) (*fid.Fid, *fcall.Err) {
 	return f, nil
 }
 
-func (ft *fidTable) Add(fid np.Tfid, f *fid.Fid) {
+func (ft *fidTable) Add(fid sp.Tfid, f *fid.Fid) {
 	ft.Lock()
 	defer ft.Unlock()
 
 	ft.fids[fid] = f
 }
 
-func (ft *fidTable) Del(fid np.Tfid) {
+func (ft *fidTable) Del(fid sp.Tfid) {
 	ft.Lock()
 	defer ft.Unlock()
 	delete(ft.fids, fid)

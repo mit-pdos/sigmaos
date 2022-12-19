@@ -8,13 +8,13 @@ import (
 
 	"sigmaos/fcall"
 	"sigmaos/fs"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Inode struct {
 	mu     sync.Mutex
-	inum   np.Tpath
-	perm   np.Tperm
+	inum   sp.Tpath
+	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
 	owner  string
@@ -22,9 +22,9 @@ type Inode struct {
 
 var NextInum = uint64(0)
 
-func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
+func MakeInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
-	i.inum = np.Tpath(atomic.AddUint64(&NextInum, 1))
+	i.inum = sp.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -41,11 +41,11 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Path() np.Tpath {
+func (inode *Inode) Path() sp.Tpath {
 	return inode.inum
 }
 
-func (inode *Inode) Perm() np.Tperm {
+func (inode *Inode) Perm() sp.Tperm {
 	return inode.perm
 }
 
@@ -73,34 +73,34 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() (np.Tlength, *fcall.Err) {
+func (i *Inode) Size() (sp.Tlength, *fcall.Err) {
 	return 0, nil
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *fcall.Err) {
+func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 	return nil, nil
 }
 
-func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *fcall.Err {
+func (i *Inode) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	return nil
 }
 
 func (i *Inode) Unlink() {
 }
 
-func (inode *Inode) Mode() np.Tperm {
-	perm := np.Tperm(0777)
+func (inode *Inode) Mode() sp.Tperm {
+	perm := sp.Tperm(0777)
 	if inode.perm.IsDir() {
-		perm |= np.DMDIR
+		perm |= sp.DMDIR
 	}
 	return perm
 }
 
-func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
-	st := np.MkStat(np.MakeQidPerm(inode.perm, 0, inode.inum),
+	st := sp.MkStat(sp.MakeQidPerm(inode.perm, 0, inode.inum),
 		inode.Mode(), uint32(inode.mtime), "", inode.owner)
 	return st, nil
 }

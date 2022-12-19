@@ -8,13 +8,13 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type DirOverlaySnapshot struct {
-	Root      np.Tpath
+	Root      sp.Tpath
 	InodeSnap []byte
-	Entries   map[string]np.Tpath
+	Entries   map[string]sp.Tpath
 }
 
 func makeDirOverlaySnapshot(fn fs.SnapshotF, d *DirOverlay) []byte {
@@ -22,9 +22,9 @@ func makeDirOverlaySnapshot(fn fs.SnapshotF, d *DirOverlay) []byte {
 	// Snapshot the underlying fs tree.
 	ds.Root = fn(d.underlay.(*dir.DirImpl))
 	ds.InodeSnap = d.Inode.Snapshot(fn)
-	ds.Entries = make(map[string]np.Tpath)
+	ds.Entries = make(map[string]sp.Tpath)
 	for e, obj := range d.entries {
-		if e != np.STATSD && e != np.FENCEDIR && e != np.SNAPDEV {
+		if e != sp.STATSD && e != sp.FENCEDIR && e != sp.SNAPDEV {
 			db.DFatalf("Unknown mount type in overlay dir: %v", e)
 		}
 		// Snapshot underlying entries

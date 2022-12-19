@@ -7,12 +7,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Point struct {
 	path path.Path
-	fid  np.Tfid
+	fid  sp.Tfid
 }
 
 func (p *Point) String() string {
@@ -33,7 +33,7 @@ func makeMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path path.Path, fid np.Tfid) *fcall.Err {
+func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *fcall.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -79,12 +79,12 @@ func matchexact(mp path.Path, path path.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path path.Path, resolve bool) (np.Tfid, path.Path, *fcall.Err) {
+func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, path)
+		return sp.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, path)
 	}
 
 	for _, p := range mnt.mounts {
@@ -97,11 +97,11 @@ func (mnt *MntTable) resolve(path path.Path, resolve bool) (np.Tfid, path.Path, 
 			return p.fid, left, nil
 		}
 	}
-	return np.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path path.Path) (np.Tfid, *fcall.Err) {
+func (mnt *MntTable) umount(path path.Path) (sp.Tfid, *fcall.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -113,7 +113,7 @@ func (mnt *MntTable) umount(path path.Path) (np.Tfid, *fcall.Err) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

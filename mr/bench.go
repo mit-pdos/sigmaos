@@ -9,7 +9,7 @@ import (
 	"github.com/dustin/go-humanize"
 
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -20,10 +20,10 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 	}
 	dec := json.NewDecoder(rdr)
 	fmt.Println("=== STATS:")
-	totIn := np.Tlength(0)
-	totOut := np.Tlength(0)
-	totWTmp := np.Tlength(0)
-	totRTmp := np.Tlength(0)
+	totIn := sp.Tlength(0)
+	totOut := sp.Tlength(0)
+	totWTmp := sp.Tlength(0)
+	totRTmp := sp.Tlength(0)
 	results := []*Result{}
 	for {
 		r := &Result{}

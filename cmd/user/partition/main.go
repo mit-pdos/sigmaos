@@ -8,7 +8,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	if error := fsl.Disconnect(np.NAMED); error != nil {
+	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DFatalf("Disconnect %v name fails err %v\n", os.Args, error)
 	}
 

@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -27,7 +27,7 @@ type Mover struct {
 }
 
 func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
-	epoch, err := np.String2Epoch(epochstr)
+	epoch, err := sp.String2Epoch(epochstr)
 	if err != nil {
 		return err
 	}

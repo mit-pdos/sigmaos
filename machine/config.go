@@ -4,16 +4,16 @@ import (
 	"fmt"
 
 	"sigmaos/linuxsched"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Config struct {
-	Cores *np.Tinterval
+	Cores *sp.Tinterval
 }
 
 func makeMachineConfig() *Config {
 	cfg := MakeEmptyConfig()
-	cfg.Cores = np.MkInterval(0, uint64(linuxsched.NCores))
+	cfg.Cores = sp.MkInterval(0, uint64(linuxsched.NCores))
 	return cfg
 }
 

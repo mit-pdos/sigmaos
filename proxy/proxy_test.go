@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/fslib"
 	"sigmaos/named"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -24,8 +24,8 @@ func initTest(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	// start named
-	ts.Tstate = test.MakeTstatePath(t, np.NAMED)
-	sts, err := ts.GetDir(np.NAMED)
+	ts.Tstate = test.MakeTstatePath(t, sp.NAMED)
+	sts, err := ts.GetDir(sp.NAMED)
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitDir))
 
@@ -110,13 +110,14 @@ func TestSymlinkPath(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), "name/namedself", 0777|np.DMTMP)
-	assert.Nil(ts.T, err, "Symlink")
+	mnt := sp.MkMountService(fslib.Named())
+	err = ts.MkMountSymlink9P("name/namedself", mnt)
+	assert.Nil(ts.T, err, "MkMountSymlink")
 
 	out, err := run("ls /mnt/9p/namedself")
 	assert.Equal(t, nil, err)
 
-	log.Printf("Out: %v\n", out)
+	log.Printf("Out: %v\n", string(out))
 
 	ts.cleanup()
 }

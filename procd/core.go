@@ -9,7 +9,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/resource"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Tcorestatus uint8
@@ -32,10 +32,10 @@ func (st Tcorestatus) String() string {
 }
 
 func (pd *Procd) initCores(grantedCoresIv string) {
-	grantedCores := np.MkInterval(0, 0)
+	grantedCores := sp.MkInterval(0, 0)
 	grantedCores.Unmarshal(grantedCoresIv)
 	// First, revoke access to all cores.
-	allCoresIv := np.MkInterval(0, uint64(linuxsched.NCores))
+	allCoresIv := sp.MkInterval(0, uint64(linuxsched.NCores))
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, allCoresIv.Marshal(), int(linuxsched.NCores))
 	pd.removeCores(revokeMsg)
 
@@ -111,7 +111,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 // procs per underutilized core core per claim interval, where a claim interval
 // is the length of ten CPU util samples.
 func (pd *Procd) procClaimRateLimitCheck(util float64) bool {
-	timeBetweenUtilSamples := time.Duration(1000/np.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond
+	timeBetweenUtilSamples := time.Duration(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond
 	// Check if we have moved onto the next interval (interval is currently 10 *
 	// utilization sample rate).
 	if time.Since(pd.procClaimTime) > 10*timeBetweenUtilSamples {
@@ -128,7 +128,7 @@ func (pd *Procd) procClaimRateLimitCheck(util float64) bool {
 	// If we have claimed < BE_PROC_OVERSUBSCRIPTION_RATE
 	// procs per core during the last claim interval, the rate limit check
 	// passes.
-	maxOversub := proc.Tcore(np.Conf.Procd.BE_PROC_OVERSUBSCRIPTION_RATE * float64(pd.coresOwned))
+	maxOversub := proc.Tcore(sp.Conf.Procd.BE_PROC_OVERSUBSCRIPTION_RATE * float64(pd.coresOwned))
 	if pd.netProcsClaimed < maxOversub {
 		return true
 	}
@@ -150,7 +150,7 @@ func (pd *Procd) canClaimBEProcL() (float64, bool, bool) {
 	// take the proc.
 	util, _ := pd.memfssrv.GetStats().GetUtil()
 	rlc := pd.procClaimRateLimitCheck(util)
-	if util < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
+	if util < sp.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
 		db.DPrintf("PROCD", "Have enough cores for BE proc: util %v rate-limit check %v", util, rlc)
 		return util, rlc, true
 	}
@@ -228,7 +228,7 @@ func (pd *Procd) freeCoresL(p *LinuxProc) {
 }
 
 func parseCoreInterval(ivStr string) []uint {
-	iv := np.MkInterval(0, 0)
+	iv := sp.MkInterval(0, 0)
 	iv.Unmarshal(ivStr)
 	cores := make([]uint, iv.Size())
 	for i := uint(0); i < uint(iv.Size()); i++ {

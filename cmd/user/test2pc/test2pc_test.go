@@ -13,7 +13,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/kernel"
 	"sigmaos/proc"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/twopc"
 )
 
@@ -63,7 +63,7 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.MkDir(np.MEMFS, 07)
+	err = ts.MkDir(sp.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -81,7 +81,7 @@ func (ts *Tstate) shutdown(fws []string) {
 }
 
 func (ts *Tstate) cleanup() {
-	err := ts.Remove(np.MEMFS + "/txni")
+	err := ts.Remove(sp.MEMFS + "/txni")
 	assert.Nil(ts.t, err, "Remove txni")
 }
 
@@ -137,7 +137,7 @@ func (ts *Tstate) stopMemFSs() {
 }
 
 func fn(mfs, f string) string {
-	return np.MEMFS + "/" + mfs + "/" + f
+	return sp.MEMFS + "/" + mfs + "/" + f
 }
 
 func (ts *Tstate) setUpMemFSs(N int) {
@@ -145,9 +145,9 @@ func (ts *Tstate) setUpMemFSs(N int) {
 }
 
 func (ts *Tstate) setUpFiles(mfs0 string, mfs1 string) {
-	err := ts.MakeFile(fn(mfs0, "x"), 0777, np.OWRITE, []byte("x"))
+	err := ts.MakeFile(fn(mfs0, "x"), 0777, sp.OWRITE, []byte("x"))
 	assert.Nil(ts.t, err, "MakeFile")
-	err = ts.MakeFile(fn(mfs1, "y"), 0777, np.OWRITE, []byte("y"))
+	err = ts.MakeFile(fn(mfs1, "y"), 0777, sp.OWRITE, []byte("y"))
 	assert.Nil(ts.t, err, "MakeFile")
 }
 
@@ -159,7 +159,7 @@ func (ts *Tstate) setUpParticipants(opcode string, N int) []string {
 		fn(ts.mfss[2], ""),
 	}
 
-	err := ts.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
+	err := ts.MakeFileJson(sp.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
 	fws := ts.startParticipants(N, opcode)

@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Mgr struct {
@@ -53,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *fcall.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *np.Tfence) (*np.FcallMsg, *fcall.Err) {
+func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *sp.Tfence) (*sp.FcallMsg, *fcall.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {

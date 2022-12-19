@@ -14,7 +14,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -76,7 +76,7 @@ func (p *LinuxProc) run() error {
 	db.DPrintf("PROCD_PERF", "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
-		cmd = exec.Command(path.Join(np.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(path.Join(sp.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
 		// If this is a privileged proc, wait for it to start & then mark it as
 		// started.
 		go func() {
@@ -98,7 +98,7 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(path.Join(sp.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 		namespace.SetupProc(cmd)
 	}
 	cmd.Env = p.Env

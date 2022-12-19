@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type RatePlans []*proto.RatePlan
@@ -38,11 +38,11 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string) error {
 	r := &Rate{}
-	pds, err := protdevsrv.MakeProtDevSrv(np.HOTELRATE, r)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELRATE, r)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), np.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
 	if err != nil {
 		return err
 	}

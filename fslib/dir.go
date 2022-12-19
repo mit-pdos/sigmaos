@@ -1,20 +1,17 @@
 package fslib
 
 import (
-	"errors"
 	"fmt"
-	"io"
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/reader"
-	np "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) MkDir(path string, perm np.Tperm) error {
-	perm = perm | np.DMDIR
-	fd, err := fl.Create(path, perm, np.OREAD)
+func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
+	perm = perm | sp.DMDIR
+	fd, err := fl.Create(path, perm, sp.OREAD)
 	if err != nil {
 		return err
 	}
@@ -31,30 +28,16 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.
-func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, error) {
+func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
 	}
 	defer rdr.Close()
-	drdr := rdr.NewDirReader()
-	for {
-		st, err := spcodec.UnmarshalDirEnt(drdr)
-		if err != nil && errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return false, err
-		}
-		stop, error := f(st)
-		if stop {
-			return true, error
-		}
-	}
-	return false, nil
+	return reader.ReadDir(rdr.NewDirReader(), f)
 }
 
-func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
+func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 	st, rdr, err := fl.ReadDir(dir)
 	if rdr != nil {
 		rdr.Close()
@@ -62,29 +45,23 @@ func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
 	return st, err
 }
 
-func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, *reader.Reader, error) {
+// Also returns reader.Reader for ReadDirWatch
+func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *reader.Reader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return nil, nil, err
 	}
-	dirents := []*np.Stat{}
-	drdr := rdr.NewDirReader()
-	for {
-		st, err := spcodec.UnmarshalDirEnt(drdr)
-		if err != nil && errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, rdr, err
-		}
+	dirents := []*sp.Stat{}
+	_, error := reader.ReadDir(rdr.NewDirReader(), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
-	}
-	return dirents, rdr, nil
+		return false, nil
+	})
+	return dirents, rdr, error
 }
 
 // XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
-	_, err := fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
+	_, err := fl.ProcessDir(src, func(st *sp.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
 		db.DPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
@@ -92,7 +69,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 		if err != nil {
 			return true, err
 		}
-		_, err = fl.PutFile(d, 0777, np.OWRITE, b)
+		_, err = fl.PutFile(d, 0777, sp.OWRITE, b)
 		if err != nil {
 			return true, err
 		}
@@ -167,7 +144,7 @@ func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 	return s, nil
 }
 
-func Present(sts []*np.Stat, names []string) bool {
+func Present(sts []*sp.Stat, names []string) bool {
 	n := 0
 	m := make(map[string]bool)
 	for _, n := range names {
@@ -181,11 +158,11 @@ func Present(sts []*np.Stat, names []string) bool {
 	return n == len(names)
 }
 
-type Fwait func([]*np.Stat) bool
+type Fwait func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir)
-func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*np.Stat, error) {
+func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {

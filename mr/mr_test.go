@@ -24,7 +24,7 @@ import (
 	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
 	"sigmaos/seqwc"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
 	"sigmaos/test"
 	"sigmaos/wc"
@@ -92,14 +92,14 @@ func TestMakeWordCount(t *testing.T) {
 }
 
 func TestSplits(t *testing.T) {
-	const SPLITSZ = 10 * np.MBYTE
+	const SPLITSZ = 10 * sp.MBYTE
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
-	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
-	sum := np.Tlength(0)
+	sum := sp.Tlength(0)
 	for _, b := range bins {
-		n := np.Tlength(0)
+		n := sp.Tlength(0)
 		for _, s := range b {
 			n += s.Length
 		}
@@ -112,7 +112,7 @@ func TestSplits(t *testing.T) {
 
 func TestMapper(t *testing.T) {
 	const (
-		SPLITSZ   = 64 * np.KBYTE // 10 * np.MBYTE
+		SPLITSZ   = 64 * sp.KBYTE // 10 * sp.MBYTE
 		REDUCEIN  = "name/ux/~ip/test-reducer-in.txt"
 		REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
 	)
@@ -126,7 +126,7 @@ func TestMapper(t *testing.T) {
 	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
 	job.Nreduce = 1
 
-	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err MkBins %v", err)
 	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
 
@@ -157,7 +157,7 @@ func TestMapper(t *testing.T) {
 		data[kv.Key] += 1
 	}
 
-	wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, np.OWRITE)
+	wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, sp.OWRITE)
 	assert.Nil(t, err, "Err createAsynchWriter: %v", err)
 	for k, v := range data {
 		b := fmt.Sprintf("%s\t%d\n", k, v)
@@ -236,7 +236,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll(path.Join(np.UXROOT, "mr"))
+	os.RemoveAll(path.Join(sp.UXROOT, "mr"))
 
 	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 
@@ -284,10 +284,10 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	// want >= 1 server to be up).
 	l.Lock()
 	switch srv {
-	case np.PROCD:
+	case sp.PROCD:
 		err := ts.BootProcd()
 		assert.Nil(ts.T, err, "Spawn procd %v", err)
-	case np.UX:
+	case sp.UX:
 		err := ts.BootFsUxd()
 		assert.Nil(ts.T, err, "Spawn uxd %v", err)
 	default:
@@ -319,12 +319,12 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashprocd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(np.PROCD, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.crashServer(sp.PROCD, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(np.UX, (i+1)*CRASHSRV, l2, crashchan)
+		go ts.crashServer(sp.UX, (i+1)*CRASHSRV, l2, crashchan)
 	}
 
 	cm.Wait()

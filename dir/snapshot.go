@@ -7,18 +7,18 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type DirSnapshot struct {
 	InodeSnap []byte
-	Entries   map[string]np.Tpath
+	Entries   map[string]sp.Tpath
 }
 
 func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
 	ds.InodeSnap = d.Inode.Snapshot(fn)
-	ds.Entries = make(map[string]np.Tpath)
+	ds.Entries = make(map[string]sp.Tpath)
 	d.dents.Iter(func(n string, e interface{}) bool {
 		if n == "." {
 			return true

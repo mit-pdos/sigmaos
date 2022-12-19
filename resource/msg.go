@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type ResourceGrantHandler func(*ResourceMsg)
@@ -42,7 +42,7 @@ func (r *ResourceMsg) String() string {
 }
 
 func SendMsg(fsl *fslib.FsLib, path string, msg *ResourceMsg) {
-	if _, err := fsl.SetFile(path, msg.Marshal(), np.OWRITE, 0); err != nil {
+	if _, err := fsl.SetFile(path, msg.Marshal(), sp.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile: %v", err)
 	}
 }

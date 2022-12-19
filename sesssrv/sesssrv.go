@@ -20,7 +20,7 @@ import (
 	"sigmaos/repl"
 	"sigmaos/sesscond"
 	"sigmaos/sessstatesrv"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/snapshot"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
@@ -42,8 +42,8 @@ import (
 type SessSrv struct {
 	addr       string
 	root       fs.Dir
-	mkps       np.MkProtServer
-	rps        np.RestoreProtServer
+	mkps       sp.MkProtServer
+	rps        sp.RestoreProtServer
 	stats      *stats.Stats
 	st         *sessstatesrv.SessionTable
 	sm         *sessstatesrv.SessionMgr
@@ -65,7 +65,7 @@ type SessSrv struct {
 }
 
 func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps np.MkProtServer, rps np.RestoreProtServer, pclnt *procclnt.ProcClnt,
+	mkps sp.MkProtServer, rps sp.RestoreProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
@@ -85,14 +85,14 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 
 	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
-	dirover.Mount(np.STATSD, ssrv.stats)
-	dirover.Mount(np.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
+	dirover.Mount(sp.STATSD, ssrv.stats)
+	dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
 
 	if !ssrv.replicated {
 		ssrv.replSrv = nil
 	} else {
 		snapDev := snapshot.MakeDev(ssrv, nil, ssrv.root)
-		dirover.Mount(np.SNAPDEV, snapDev)
+		dirover.Mount(sp.SNAPDEV, snapDev)
 
 		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
 		ssrv.replSrv.Start()
@@ -123,7 +123,7 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f np.DetachF, sid fcall.Tsession) *fcall.Err {
+func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid fcall.Tsession) *fcall.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
 		return fcall.MkErr(fcall.TErrNotfound, sid)
@@ -230,14 +230,14 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid fcall.Tsessio
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) *fcall.Err {
+func (ssrv *SessSrv) Register(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) *fcall.Err {
 	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.Conn) {
+func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == fcall.NoSession {
 		return
@@ -246,7 +246,7 @@ func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn np.C
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
+func (ssrv *SessSrv) SrvFcall(fc *sp.FcallMsg) {
 	s := fcall.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
@@ -272,7 +272,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply *np.FcallMsg, sess *sessstatesrv.Session) {
+func (ssrv *SessSrv) sendReply(request *sp.FcallMsg, reply *sp.FcallMsg, sess *sessstatesrv.Session) {
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, reply)
 
@@ -285,13 +285,13 @@ func (ssrv *SessSrv) sendReply(request *np.FcallMsg, reply *np.FcallMsg, sess *s
 	}
 }
 
-func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
+func (ssrv *SessSrv) srvfcall(fc *sp.FcallMsg) {
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
 	s := fcall.Tsession(fc.Fc.Session)
 	if s == 0 {
-		ssrv.st.ProcessHeartbeats(fc.Msg.(*np.Theartbeat))
+		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
 	}
 	// If this is a replicated op received through raft (not
@@ -339,11 +339,11 @@ func (ssrv *SessSrv) srvfcall(fc *np.FcallMsg) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
-		msg := np.MkRerror(err)
-		reply := np.MakeFcallMsgReply(fc, msg)
+		msg := sp.MkRerror(err)
+		reply := sp.MakeFcallMsgReply(fc, msg)
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {
@@ -356,7 +356,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.FcallMsg) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
@@ -365,7 +365,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.FcallMsg) {
 		msg = rerror
 	}
 
-	reply := np.MakeFcallMsgReply(fc, msg)
+	reply := sp.MakeFcallMsgReply(fc, msg)
 	reply.Data = data
 
 	ssrv.sendReply(fc, reply, sess)

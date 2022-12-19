@@ -3,7 +3,6 @@ package snapshot_test
 import (
 	"path"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,9 +11,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	np "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -39,7 +38,7 @@ func killMemfs(ts *test.Tstate, pid proc.Tpid) {
 }
 
 func takeSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) []byte {
-	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
+	p := path.Join(sp.MEMFS, pid.String(), sp.SNAPDEV)
 	// Read its snapshot file.
 	b, err := fsl.GetFile(p)
 	assert.Nil(ts.T, err, "Read Snapshot")
@@ -48,30 +47,32 @@ func takeSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) []byte {
 }
 
 func restoreSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid, b []byte) {
-	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
-	sz, err := fsl.SetFile(p, b, np.OWRITE, 0)
+	p := path.Join(sp.MEMFS, pid.String(), sp.SNAPDEV)
+	sz, err := fsl.SetFile(p, b, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "Write snapshot")
-	assert.Equal(ts.T, sz, np.Tsize(len(b)), "Snapshot write wrong size")
+	assert.Equal(ts.T, sz, sp.Tsize(len(b)), "Snapshot write wrong size")
 }
 
 func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 	addrs := []string{}
 	for _, pid := range pids {
-		p := path.Join(np.MEMFS, pid.String())
+		p := path.Join(sp.MEMFS, pid.String())
 		b, err := ts.GetFile(p)
-		addr := strings.TrimSuffix(string(b), ":pubkey")
-		assert.Nil(ts.T, err, "Get addr")
-		addrs = append(addrs, addr)
+		assert.Nil(ts.T, err, "Getfile")
+		mnt, error := sp.MkMount(b)
+		assert.Nil(ts.T, error, "MkMount")
+		addrs = append(addrs, mnt.Address())
 	}
 	db.DPrintf(db.ALWAYS, "Replica addrs: %v", addrs)
-	err := ts.Symlink(fslib.MakeTarget(addrs), REPLICA_SYMLINK, 0777)
+	mnt := sp.MkMountService(addrs)
+	err := ts.MkMountSymlink(REPLICA_SYMLINK, mnt)
 	assert.Nil(ts.T, err, "Symlink")
 }
 
 func putFiles(ts *test.Tstate, n int) {
 	for i := 0; i < n; i++ {
 		i_str := strconv.Itoa(i)
-		_, err := ts.PutFile(path.Join(REPLICA_SYMLINK, i_str), 0777, np.ORDWR, []byte(i_str))
+		_, err := ts.PutFile(path.Join(REPLICA_SYMLINK, i_str), 0777, sp.ORDWR, []byte(i_str))
 		assert.Nil(ts.T, err, "Putfile")
 	}
 }
@@ -89,15 +90,15 @@ func checkFiles(ts *test.Tstate, n int) {
 }
 
 func fenceMemfs(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) {
-	lc := leaderclnt.MakeLeaderClnt(fsl, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
-	_, err := lc.AcquireFencedEpoch(nil, []string{path.Join(np.MEMFS, pid.String())})
+	lc := leaderclnt.MakeLeaderClnt(fsl, path.Join(sp.MEMFS, pid.String(), "leader"), 0777)
+	_, err := lc.AcquireFencedEpoch(nil, []string{path.Join(sp.MEMFS, pid.String())})
 	assert.Nil(ts.T, err, "acquire")
 }
 
 func TestMakeSnapshotSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -113,7 +114,7 @@ func TestMakeSnapshotSimple(t *testing.T) {
 func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -133,7 +134,7 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 func TestRestoreSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -154,7 +155,7 @@ func TestRestoreSimple(t *testing.T) {
 func TestRestoreSimpleWithFence(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -177,7 +178,7 @@ func TestRestoreStateSimple(t *testing.T) {
 
 	N_FILES := 100
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -197,7 +198,7 @@ func TestRestoreStateSimple(t *testing.T) {
 	checkFiles(ts, N_FILES)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
-	_, err = fsl1.Stat(path.Join(np.MEMFS, pid2.String(), np.SNAPDEV) + "/")
+	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
 
 	// Read the snapshot from replica a
@@ -224,7 +225,7 @@ func TestRestoreStateSimple(t *testing.T) {
 func TestRestoreBlockingOpSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.MkDir(np.MEMFS, 0777)
+	err := ts.MkDir(sp.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -254,7 +255,7 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
-	_, err = fsl1.Stat(path.Join(np.MEMFS, pid2.String(), np.SNAPDEV) + "/")
+	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
 	// Read the snapshot from replica a
 	b := takeSnapshot(ts, fsl1, pid1)

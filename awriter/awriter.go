@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	// np "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 

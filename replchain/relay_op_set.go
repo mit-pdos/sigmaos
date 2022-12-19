@@ -3,17 +3,17 @@ package replchain
 import (
 	"sync"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type RelayOpSet struct {
 	mu      sync.Mutex
-	entries map[fcall.Tsession]map[np.Tseqno][]*RelayOp
+	entries map[fcall.Tsession]map[sp.Tseqno][]*RelayOp
 }
 
 func MakeRelayOpSet() *RelayOpSet {
 	s := &RelayOpSet{}
-	s.entries = map[fcall.Tsession]map[np.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[sp.Tseqno][]*RelayOp{}
 	return s
 }
 
@@ -21,7 +21,7 @@ func (s *RelayOpSet) Add(op *RelayOp) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.entries[op.request.Session]; !ok {
-		s.entries[op.request.Session] = map[np.Tseqno][]*RelayOp{}
+		s.entries[op.request.Session] = map[sp.Tseqno][]*RelayOp{}
 	}
 	if _, ok := s.entries[op.request.Session][op.request.Seqno]; !ok {
 		s.entries[op.request.Session][op.request.Seqno] = []*RelayOp{}
@@ -45,7 +45,7 @@ func (s *RelayOpSet) AddIfDuplicate(op *RelayOp) bool {
 }
 
 // Remove & return all ops corresponding to this reply
-func (s *RelayOpSet) Remove(reply *np.Fcall) []*RelayOp {
+func (s *RelayOpSet) Remove(reply *sp.Fcall) []*RelayOp {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ops := []*RelayOp{}
@@ -63,7 +63,7 @@ func (s *RelayOpSet) RemoveAll() []*RelayOp {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ops := s.getOpsL()
-	s.entries = map[fcall.Tsession]map[np.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[sp.Tseqno][]*RelayOp{}
 	return ops
 }
 

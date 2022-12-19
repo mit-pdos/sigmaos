@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -16,17 +16,17 @@ import (
 
 type FenceTable struct {
 	sync.Mutex
-	fencedDirs map[string]np.Tfence
+	fencedDirs map[string]sp.Tfence
 }
 
 func MakeFenceTable() *FenceTable {
 	ft := &FenceTable{}
-	ft.fencedDirs = make(map[string]np.Tfence)
+	ft.fencedDirs = make(map[string]sp.Tfence)
 	return ft
 }
 
 // If already exist, just update
-func (ft *FenceTable) Insert(p string, f np.Tfence) *fcall.Err {
+func (ft *FenceTable) Insert(p string, f sp.Tfence) *fcall.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
@@ -37,7 +37,7 @@ func (ft *FenceTable) Insert(p string, f np.Tfence) *fcall.Err {
 	return nil
 }
 
-func (ft *FenceTable) Lookup(p path.Path) *np.Tfence {
+func (ft *FenceTable) Lookup(p path.Path) *sp.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
@@ -48,6 +48,6 @@ func (ft *FenceTable) Lookup(p path.Path) *np.Tfence {
 		}
 	}
 	db.DPrintf("FIDCLNT", "Lookup fence %v: no fence\n", p)
-	return np.MakeFenceNull()
+	return sp.MakeFenceNull()
 
 }

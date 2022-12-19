@@ -19,7 +19,7 @@ import (
 	"sigmaos/rand"
 	"sigmaos/realm"
 	"sigmaos/semclnt"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -90,7 +90,7 @@ func countNClusterCores(ts *test.Tstate) {
 		N_CLUSTER_CORES = 0
 		db.DPrintf("TEST", "Running with realms")
 		fsl := fslib.MakeFsLib("test")
-		_, err := fsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
+		_, err := fsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
 			cfg := machine.MakeEmptyConfig()
 			err := fsl.GetFileJson(path.Join(machine.MACHINES, st.Name, machine.CONFIG), cfg)
 			if err != nil {
@@ -118,7 +118,7 @@ func maybePregrowRealm(ts *test.Tstate) {
 			rclnt.GrowRealm(ts.RealmId())
 		}
 		// Sleep for a bit, so procclnts will take note of the change.
-		time.Sleep(2 * np.Conf.Realm.RESIZE_INTERVAL)
+		time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
 		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 		n, _, err := pdc.Nprocd()
 		assert.Nil(ts.T, err, "Err %v", err)
@@ -239,7 +239,7 @@ func makeHotelJobsCli(ts *test.Tstate, sigmaos bool, dur string, maxrps string, 
 func downloadS3Results(ts *test.Tstate, src string, dst string) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
-	_, err := ts.ProcessDir(src, func(st *np.Stat) (bool, error) {
+	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
 		rdr, err := ts.OpenReader(path.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)

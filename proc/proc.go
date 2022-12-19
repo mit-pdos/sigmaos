@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"sigmaos/namespace"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type Tpid string
@@ -118,7 +118,7 @@ func (p *Proc) setProcDir(procdIp string) {
 		p.ProcDir = path.Join(KPIDS, p.Pid.String())
 	} else {
 		if procdIp != "" {
-			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid.String())
+			p.ProcDir = path.Join(sp.PROCD, procdIp, PIDS, p.Pid.String())
 		}
 	}
 }

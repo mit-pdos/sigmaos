@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
     "sigmaos/path"
     "sigmaos/fcall"
 )
@@ -27,7 +27,7 @@ type DirOverlay struct {
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Inode = inode.MakeInode(nil, np.DMDIR, nil)
+	d.Inode = inode.MakeInode(nil, sp.DMDIR, nil)
 	d.underlay = dir
 	d.entries = make(map[string]fs.Inode)
 	return d
@@ -54,11 +54,11 @@ func (dir *DirOverlay) lookupMount(name string) fs.FsObj {
 	return nil
 }
 
-func (dir *DirOverlay) ls() []*np.Stat {
+func (dir *DirOverlay) ls() []*sp.Stat {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	entries := make([]*np.Stat, 0, len(dir.entries))
+	entries := make([]*sp.Stat, 0, len(dir.entries))
 	for k, i := range dir.entries {
 		st, _ := i.Stat(nil)
 		st.Name = k
@@ -95,13 +95,13 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	return dir.underlay.Create(ctx, name, perm, m)
 }
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignoressy size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversi
 	return sts, nil
 }
 
-func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return dir.underlay.WriteDir(ctx, offset, b, v)
 }
 

@@ -13,7 +13,7 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/path"
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
 )
@@ -36,7 +36,7 @@ type Dir struct {
 	*Obj
 	sync.Mutex
 	dents *sorteddir.SortedDir
-	sts   []*np.Stat
+	sts   []*sp.Stat
 }
 
 func (d *Dir) String() string {
@@ -44,7 +44,7 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func makeDir(bucket string, key path.Path, perm np.Tperm) *Dir {
+func makeDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
 	o := makeObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
@@ -82,18 +82,18 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *fcall.Err {
 			db.DPrintf("FSS30", "key %v\n", *obj.Key)
 			n := strings.TrimPrefix(*obj.Key, key)
 			if n == DOT {
-				d.dents.Insert(".", np.DMDIR)
+				d.dents.Insert(".", sp.DMDIR)
 			} else {
-				d.dents.Insert(n, np.Tperm(0777))
+				d.dents.Insert(n, sp.Tperm(0777))
 			}
 		}
 		for _, obj := range page.CommonPrefixes {
 			db.DPrintf("FSS30", "prefix %v\n", *obj.Prefix)
 			n := strings.TrimPrefix(*obj.Prefix, key)
-			d.dents.Insert(strings.TrimRight(n, "/"), np.DMDIR)
+			d.dents.Insert(strings.TrimRight(n, "/"), sp.DMDIR)
 		}
 	}
-	d.sz = np.Tlength(d.dents.Len()) // makeup size
+	d.sz = sp.Tlength(d.dents.Len()) // makeup size
 	db.DPrintf("FSS3", "s3ReadDirL: dir %v key %v\n", d, key)
 	return nil
 }
@@ -114,14 +114,14 @@ func (d *Dir) dirents() []*Obj {
 	dents := make([]*Obj, 0, d.dents.Len())
 	d.dents.Iter(func(n string, e interface{}) bool {
 		if n != "." {
-			dents = append(dents, makeObj(d.bucket, d.key.Copy().Append(n), e.(np.Tperm)))
+			dents = append(dents, makeObj(d.bucket, d.key.Copy().Append(n), e.(sp.Tperm)))
 		}
 		return true
 	})
 	return dents
 }
 
-func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *fcall.Err) {
+func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 	d.Lock()
 	defer d.Unlock()
 	db.DPrintf("FSS3", "Stat dir %v\n", d)
@@ -139,13 +139,13 @@ func mkObjs(base *Obj) []fs.FsObj {
 		if i+1 >= len(base.key) {
 			break
 		}
-		os = append(os, makeFsObj(base.bucket, np.DMDIR, base.key[0:i+1]))
+		os = append(os, makeFsObj(base.bucket, sp.DMDIR, base.key[0:i+1]))
 	}
 	return os
 }
 
 func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
-	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), np.Tperm(0777))
+	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), sp.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
 		// name is a file; done
 		db.DPrintf("FSS3", "%v: Lookup %v o %v\n", ctx, path, o)
@@ -153,7 +153,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 		return os, o, nil, nil
 	}
 	// maybe path names a dir
-	d1 := makeDir(d.bucket, d.key.Copy().AppendPath(path), np.DMDIR|np.Tperm(0777))
+	d1 := makeDir(d.bucket, d.key.Copy().AppendPath(path), sp.DMDIR|sp.Tperm(0777))
 	if err := d1.fill(); err != nil {
 		db.DPrintf("FSS3", "%v: Lookup %v err %v\n", ctx, path, err)
 		return nil, nil, path, err
@@ -167,14 +167,14 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	return append(mkObjs(d1.Obj), d1), d1, nil, nil
 }
 
-func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "open dir %v (%T) %v\n", d, d, m)
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	d.sts = make([]*np.Stat, 0, d.dents.Len())
+	d.sts = make([]*sp.Stat, 0, d.dents.Len())
 	for _, o := range d.dirents() {
-		var st *np.Stat
+		var st *sp.Stat
 		var err *fcall.Err
 		if o.perm.IsDir() {
 			st = o.stat()
@@ -196,7 +196,7 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *fcall.Err) {
 	return d, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *fcall.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	db.DPrintf("FSS3", "ReadDir %v\n", d)
 
 	if cursor > len(d.sts) {
@@ -206,12 +206,12 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrIsdir, d)
 }
 
 // Create a fake file in dir to materialize dir
-func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *fcall.Err) {
+func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *fcall.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()
 	db.DPrintf("FSS3", "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
@@ -226,7 +226,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *fca
 	return o, nil
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *fcall.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
 	o := makeObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
@@ -241,7 +241,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		return obj, err
 	}
 	d.dents.Insert(name, perm)
-	if perm.IsFile() && m == np.OWRITE {
+	if perm.IsFile() && m == sp.OWRITE {
 		o.setupWriter()
 	}
 	return o, nil
@@ -262,7 +262,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *fcall.Err {
 		db.DPrintf("FSS3", "Delete %v err %v\n", key, name)
 		return fcall.MkErr(fcall.TErrNotfound, name)
 	}
-	perm := e.(np.Tperm)
+	perm := e.(sp.Tperm)
 	if perm.IsDir() {
 		d1 := makeDir(d.bucket, d.key.Copy().Append(name), perm)
 		if err := d1.s3ReadDir(fss3); err != nil {

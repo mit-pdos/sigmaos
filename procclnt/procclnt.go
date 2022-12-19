@@ -198,7 +198,7 @@ func (clnt *ProcClnt) updateProcds() {
 	}
 	clnt.lastProcdUpdate = time.Now()
 	// Read the procd union dir.
-	procds, _, err := clnt.ReadDir(np.PROCDREL)
+	procds, _, err := clnt.ReadDir(np.PROCDREL + "/")
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"reflect"
-	"time"
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
@@ -52,8 +51,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, sessp.Tseqno, sessp.Tsession, sessp.Tfcall, sessp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sessp.Tsize, sessp.Tpath, sessp.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
-			*bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sessp.Tsize, *sessp.Tpath, *sessp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
+		case bool, uint8, uint16, uint32, uint64, sessp.Tfcall, sessp.Ttag, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
+			*bool, *uint8, *uint16, *uint32, *uint64:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -101,14 +100,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case time.Time:
-			if err := e.encode(uint32(v.Unix())); err != nil {
-				return err
-			}
-		case *time.Time:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
 		case np.Tqid9P:
 			if err := e.encode(v.Type, v.Version, v.Path); err != nil {
 				return err
@@ -140,19 +131,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case *[]sessp.Tsession:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case []sessp.Tsession:
-			if err := e.encode(uint16(len(v))); err != nil {
-				return err
-			}
-			for _, m := range v {
-				if err := e.encode(m); err != nil {
-					return err
-				}
-			}
 		case np.Stat9P:
 			elements, err := fields9p(v)
 			if err != nil {
@@ -166,13 +144,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case *np.Stat9P:
-			if err := e.encode(*v); err != nil {
-				return err
-			}
-		case *sp.Stat:
-			npst := Sp2NpStat(v)
-			e.encode(*npst)
-		case **sp.Stat:
 			if err := e.encode(*v); err != nil {
 				return err
 			}

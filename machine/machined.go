@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/machine/proto"
@@ -135,7 +136,7 @@ func (m *Machined) postCores() {
 		db.DFatalf("Core group size 0")
 	}
 	for i := uint64(0); i < uint64(linuxsched.NCores); i += coreGroupSize {
-		iv := sp.MkInterval(i, i+coreGroupSize)
+		iv := fcall.MkInterval(i, i+coreGroupSize)
 		if uint(iv.End) > linuxsched.NCores+1 {
 			iv.End = uint64(linuxsched.NCores + 1)
 		}

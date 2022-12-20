@@ -8,7 +8,7 @@ import (
 
 type Fcall9P struct {
 	Type fcall.Tfcall
-	Tag  sp.Ttag
+	Tag  fcall.Ttag
 	Msg  fcall.Tmsg
 }
 
@@ -60,29 +60,29 @@ func Np2SpStat(npst np.Stat9P) *sp.Stat {
 	return spst
 }
 
-func to9P(fm *sp.FcallMsg) *Fcall9P {
+func to9P(fm *fcall.FcallMsg) *Fcall9P {
 	fcall9P := &Fcall9P{}
 	fcall9P.Type = fcall.Tfcall(fm.Fc.Type)
-	fcall9P.Tag = sp.Ttag(fm.Fc.Tag)
+	fcall9P.Tag = fcall.Ttag(fm.Fc.Tag)
 	fcall9P.Msg = fm.Msg
 	return fcall9P
 }
 
-func toSP(fcall9P *Fcall9P) *sp.FcallMsg {
-	fm := sp.MakeFcallMsgNull()
+func toSP(fcall9P *Fcall9P) *fcall.FcallMsg {
+	fm := fcall.MakeFcallMsgNull()
 	fm.Fc.Type = uint32(fcall9P.Type)
 	fm.Fc.Tag = uint32(fcall9P.Tag)
 	fm.Fc.Session = uint64(fcall.NoSession)
-	fm.Fc.Seqno = uint64(sp.NoSeqno)
+	fm.Fc.Seqno = uint64(fcall.NoSeqno)
 	fm.Msg = fcall9P.Msg
 	return fm
 }
 
-func np2SpMsg(fcm *sp.FcallMsg) {
+func np2SpMsg(fcm *fcall.FcallMsg) {
 	switch fcm.Type() {
 	case fcall.TTread:
 		m := fcm.Msg.(*np.Tread)
-		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), 0)
+		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), fcall.Tsize(m.Count), 0)
 		fcm.Msg = r
 	case fcall.TTwrite:
 		m := fcm.Msg.(*np.Twrite)
@@ -104,7 +104,7 @@ func np2SpMsg(fcm *sp.FcallMsg) {
 	}
 }
 
-func sp2NpMsg(fcm *sp.FcallMsg) {
+func sp2NpMsg(fcm *fcall.FcallMsg) {
 	switch fcm.Type() {
 	case fcall.TRread:
 		fcm.Fc.Type = uint32(fcall.TRread9P)

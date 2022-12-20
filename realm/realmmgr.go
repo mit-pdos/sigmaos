@@ -253,13 +253,13 @@ func (m *RealmResourceMgr) growRealm(amt int) {
 	}
 }
 
-func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*sp.Tinterval, bool) {
+func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*fcall.Tinterval, bool) {
 	cdir := path.Join(machine.MACHINES, machineId, machine.CORES)
 	coreGroups, err := m.sigmaFsl.GetDir(cdir)
 	if err != nil {
 		db.DFatalf("Error GetDir: %v", err)
 	}
-	cores := make([]*sp.Tinterval, 0)
+	cores := make([]*fcall.Tinterval, 0)
 	// Try to steal a core group
 	for i := 0; i < len(coreGroups) && amt > 0; i++ {
 		// Read the core file.
@@ -268,7 +268,7 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*sp.Tinte
 		err = m.sigmaFsl.Remove(coreFile)
 		if err == nil {
 			// Cores successfully claimed.
-			c := sp.MkInterval(0, 0)
+			c := fcall.MkInterval(0, 0)
 			c.Unmarshal(string(coreGroups[i].Name))
 			cores = append(cores, c)
 			amt--
@@ -282,13 +282,13 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*sp.Tinte
 	return cores, len(cores) > 0
 }
 
-func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*sp.Tinterval, bool) {
+func (m *RealmResourceMgr) getFreeCores(amt int) ([]string, []string, [][]*fcall.Tinterval, bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
 	machineIds := make([]string, 0)
 	nodedIds := make([]string, 0)
-	cores := make([][]*sp.Tinterval, 0)
+	cores := make([][]*fcall.Tinterval, 0)
 	var err error
 
 	// First, try to get cores on a machine already running a noded from this
@@ -364,7 +364,7 @@ func (m *RealmResourceMgr) requestNoded(nodedId string, machineId string) {
 }
 
 // Alloc a Noded to this realm.
-func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *sp.Tinterval) {
+func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *fcall.Tinterval) {
 	// Update the noded's config
 	ndCfg := MakeNodedConfig()
 	ndCfg.Id = nodedId

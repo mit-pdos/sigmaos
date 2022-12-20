@@ -8,12 +8,12 @@ import (
 
 type RelayOpSet struct {
 	mu      sync.Mutex
-	entries map[fcall.Tsession]map[sp.Tseqno][]*RelayOp
+	entries map[fcall.Tsession]map[fcall.Tseqno][]*RelayOp
 }
 
 func MakeRelayOpSet() *RelayOpSet {
 	s := &RelayOpSet{}
-	s.entries = map[fcall.Tsession]map[sp.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[fcall.Tseqno][]*RelayOp{}
 	return s
 }
 
@@ -21,7 +21,7 @@ func (s *RelayOpSet) Add(op *RelayOp) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.entries[op.request.Session]; !ok {
-		s.entries[op.request.Session] = map[sp.Tseqno][]*RelayOp{}
+		s.entries[op.request.Session] = map[fcall.Tseqno][]*RelayOp{}
 	}
 	if _, ok := s.entries[op.request.Session][op.request.Seqno]; !ok {
 		s.entries[op.request.Session][op.request.Seqno] = []*RelayOp{}
@@ -63,7 +63,7 @@ func (s *RelayOpSet) RemoveAll() []*RelayOp {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ops := s.getOpsL()
-	s.entries = map[fcall.Tsession]map[sp.Tseqno][]*RelayOp{}
+	s.entries = map[fcall.Tsession]map[fcall.Tseqno][]*RelayOp{}
 	return ops
 }
 

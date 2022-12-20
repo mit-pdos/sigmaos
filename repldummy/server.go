@@ -1,7 +1,7 @@
 package repldummy
 
 import (
-	sp "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/threadmgr"
 )
 
@@ -18,6 +18,6 @@ func MakeDummyReplServer(tm *threadmgr.ThreadMgr) *DummyReplServer {
 func (srv *DummyReplServer) Start() {
 }
 
-func (srv *DummyReplServer) Process(fc *sp.FcallMsg) {
+func (srv *DummyReplServer) Process(fc *fcall.FcallMsg) {
 	srv.tm.Process(fc)
 }

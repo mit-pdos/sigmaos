@@ -48,7 +48,7 @@ func MakeProtServer(s sp.SessServer, sid fcall.Tsession) sp.Protsrv {
 	return ps
 }
 
-func (ps *ProtSrv) mkQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
+func (ps *ProtSrv) mkQid(perm sp.Tperm, path fcall.Tpath) *sp.Tqid {
 	return sp.MakeQidPerm(perm, ps.vt.GetVersion(path), path)
 }
 
@@ -571,7 +571,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 }
 
 func (ps *ProtSrv) SetFile(args *sp.Tsetfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	if sp.Tsize(len(data)) > sp.MAXGETSET {
+	if fcall.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
@@ -601,7 +601,7 @@ func (ps *ProtSrv) SetFile(args *sp.Tsetfile, data []byte, rets *sp.Rwrite) *sp.
 }
 
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	if sp.Tsize(len(data)) > sp.MAXGETSET {
+	if fcall.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.MkRerror(fcall.MkErr(fcall.TErrInval, "too large"))
 	}
 	// walk to directory

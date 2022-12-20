@@ -6,18 +6,11 @@ package sigmap
 
 import (
 	"fmt"
-	"log"
-	"runtime/debug"
-	"strconv"
-	"strings"
-	"sync/atomic"
 
 	"sigmaos/fcall"
 	"sigmaos/path"
 )
 
-type Tsize uint32
-type Ttag uint16
 type Tfid uint32
 type Tiounit uint32
 type Tperm uint32
@@ -32,44 +25,6 @@ func (fid Tfid) String() string {
 	return fmt.Sprintf("fid %d", fid)
 }
 
-//
-// Augmentated types for sigmaOS
-//
-
-type Tseqno uint64
-
-// NoSeqno signifies the fcall came from a wire-compatible peer
-const NoSeqno Tseqno = ^Tseqno(0)
-
-// Atomically increment pointer and return result
-func (n *Tseqno) Next() Tseqno {
-	next := atomic.AddUint64((*uint64)(n), 1)
-	return Tseqno(next)
-}
-
-type Tepoch uint64
-
-const NoEpoch Tepoch = ^Tepoch(0)
-
-func (e Tepoch) String() string {
-	return strconv.FormatUint(uint64(e), 16)
-}
-
-func String2Epoch(epoch string) (Tepoch, error) {
-	e, err := strconv.ParseUint(epoch, 16, 64)
-	if err != nil {
-		return Tepoch(0), err
-	}
-	return Tepoch(e), nil
-}
-
-//
-//  End augmentated types
-//
-
-// NoTag is the tag for Tversion and Rversion requests.
-const NoTag Ttag = ^Ttag(0)
-
 // NoFid is a reserved fid used in a Tattach request for the afid
 // field, that indicates that the client does not wish to authenticate
 // this session.
@@ -77,26 +32,11 @@ const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
 
 // If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET Tsize = 1_000_000
-
-type Tpath uint64
-
-func (p Tpath) String() string {
-	return strconv.FormatUint(uint64(p), 16)
-}
-
-func String2Path(path string) (Tpath, error) {
-	p, err := strconv.ParseUint(path, 16, 64)
-	if err != nil {
-		return Tpath(p), err
-	}
-	return Tpath(p), nil
-}
+const MAXGETSET fcall.Tsize = 1_000_000
 
 type Qtype uint32
 type TQversion uint32
 
-const NoPath Tpath = ^Tpath(0)
 const NoV TQversion = ^TQversion(0)
 
 func VEq(v1, v2 TQversion) bool {
@@ -145,11 +85,11 @@ func (qt Qtype) String() string {
 	return s
 }
 
-func MakeQid(t Qtype, v TQversion, p Tpath) *Tqid {
+func MakeQid(t Qtype, v TQversion, p fcall.Tpath) *Tqid {
 	return &Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
+func MakeQidPerm(perm Tperm, v TQversion, p fcall.Tpath) *Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
@@ -157,8 +97,8 @@ func (qid *Tqid) Tversion() TQversion {
 	return TQversion(qid.Version)
 }
 
-func (qid *Tqid) Tpath() Tpath {
-	return Tpath(qid.Path)
+func (qid *Tqid) Tpath() fcall.Tpath {
+	return fcall.Tpath(qid.Path)
 }
 
 func (qid *Tqid) Ttype() Qtype {
@@ -241,123 +181,6 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-func MkInterval(start, end uint64) *Tinterval {
-	return &Tinterval{
-		Start: start,
-		End:   end,
-	}
-}
-
-func (iv *Tinterval) Size() Tsize {
-	return Tsize(iv.End - iv.Start)
-}
-
-// XXX should atoi be uint64?
-func (iv *Tinterval) Unmarshal(s string) {
-	idxs := strings.Split(s[1:len(s)-1], ", ")
-	start, err := strconv.Atoi(idxs[0])
-	if err != nil {
-		debug.PrintStack()
-		log.Fatalf("FATAL unmarshal interval: %v", err)
-	}
-	iv.Start = uint64(start)
-	end, err := strconv.Atoi(idxs[1])
-	if err != nil {
-		debug.PrintStack()
-		log.Fatalf("FATAL unmarshal interval: %v", err)
-	}
-	iv.End = uint64(end)
-}
-
-func (iv *Tinterval) Marshal() string {
-	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
-}
-
-type FcallMsg struct {
-	Fc   *Fcall
-	Msg  fcall.Tmsg
-	Data []byte
-}
-
-func (fcm *FcallMsg) Session() fcall.Tsession {
-	return fcall.Tsession(fcm.Fc.Session)
-}
-
-func (fcm *FcallMsg) Client() fcall.Tclient {
-	return fcall.Tclient(fcm.Fc.Client)
-}
-
-func (fcm *FcallMsg) Type() fcall.Tfcall {
-	return fcall.Tfcall(fcm.Fc.Type)
-}
-
-func (fc *Fcall) Tseqno() Tseqno {
-	return Tseqno(fc.Seqno)
-}
-
-func (fcm *FcallMsg) Seqno() Tseqno {
-	return fcm.Fc.Tseqno()
-}
-
-func (fcm *FcallMsg) Tag() Ttag {
-	return Ttag(fcm.Fc.Tag)
-}
-
-func MakeFenceNull() *Tfence {
-	return &Tfence{Fenceid: &Tfenceid{}}
-}
-
-func MakeFcallMsgNull() *FcallMsg {
-	fc := &Fcall{Received: &Tinterval{}, Fence: MakeFenceNull()}
-	return &FcallMsg{fc, nil, nil}
-}
-
-func (fi *Tfenceid) Tpath() Tpath {
-	return Tpath(fi.Path)
-}
-
-func (f *Tfence) Tepoch() Tepoch {
-	return Tepoch(f.Epoch)
-}
-
-func MakeFcallMsg(msg fcall.Tmsg, data []byte, cli fcall.Tclient, sess fcall.Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
-	if rcv == nil {
-		rcv = &Tinterval{}
-	}
-	fcall := &Fcall{
-		Type:     uint32(msg.Type()),
-		Tag:      0,
-		Client:   uint64(cli),
-		Session:  uint64(sess),
-		Received: rcv,
-		Fence:    f,
-	}
-	if seqno != nil {
-		fcall.Seqno = uint64(seqno.Next())
-	}
-	return &FcallMsg{fcall, msg, data}
-}
-
-func MakeFcallMsgReply(req *FcallMsg, reply fcall.Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, fcall.Tclient(req.Fc.Client), fcall.Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
-	fm.Fc.Seqno = req.Fc.Seqno
-	fm.Fc.Received = req.Fc.Received
-	fm.Fc.Tag = req.Fc.Tag
-	return fm
-}
-
-func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg, fm.Fc.Fence)
-}
-
-func (fm *FcallMsg) GetType() fcall.Tfcall {
-	return fcall.Tfcall(fm.Fc.Type)
-}
-
-func (fm *FcallMsg) GetMsg() fcall.Tmsg {
-	return fm.Msg
-}
-
 func MkErr(msg *Rerror) *fcall.Err {
 	return &fcall.Err{fcall.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }
@@ -418,7 +241,7 @@ func (c *Tcreate) Tmode() Tmode {
 	return Tmode(c.Mode)
 }
 
-func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion) *TreadV {
+func MkReadV(fid Tfid, o Toffset, c fcall.Tsize, v TQversion) *TreadV {
 	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v)}
 }
 
@@ -434,8 +257,8 @@ func (r *TreadV) Toffset() Toffset {
 	return Toffset(r.Offset)
 }
 
-func (r *TreadV) Tcount() Tsize {
-	return Tsize(r.Count)
+func (r *TreadV) Tcount() fcall.Tsize {
+	return fcall.Tsize(r.Count)
 }
 
 func MkTwriteV(fid Tfid, o Toffset, v TQversion) *TwriteV {
@@ -454,8 +277,8 @@ func (w *TwriteV) Tversion() TQversion {
 	return TQversion(w.Version)
 }
 
-func (wr *Rwrite) Tcount() Tsize {
-	return Tsize(wr.Count)
+func (wr *Rwrite) Tcount() fcall.Tsize {
+	return fcall.Tsize(wr.Count)
 }
 
 func MkTwatch(fid Tfid) *Twatch {
@@ -549,7 +372,7 @@ func (r *Trenameat) Toldfid() Tfid {
 	return Tfid(r.OldFid)
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool) *Tgetfile {
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt fcall.Tsize, path path.Path, resolve bool) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve}
 }
 
@@ -565,8 +388,8 @@ func (g *Tgetfile) Toffset() Toffset {
 	return Toffset(g.Offset)
 }
 
-func (g *Tgetfile) Tcount() Tsize {
-	return Tsize(g.Count)
+func (g *Tgetfile) Tcount() fcall.Tsize {
+	return fcall.Tsize(g.Count)
 }
 
 func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool) *Tsetfile {

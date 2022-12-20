@@ -17,10 +17,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func mkTpath(key path.Path) sp.Tpath {
+func mkTpath(key path.Path) fcall.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
-	return sp.Tpath(h.Sum64())
+	return fcall.Tpath(h.Sum64())
 }
 
 type Obj struct {
@@ -108,7 +108,7 @@ func (o *Obj) stat() *sp.Stat {
 	return sp.MkStat(sp.MakeQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
-func (o *Obj) Path() sp.Tpath {
+func (o *Obj) Path() fcall.Tpath {
 	return mkTpath(o.key)
 }
 
@@ -181,7 +181,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
 	return result.Body, sp.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
 	if sp.Tlength(off) >= o.sz {
 		return nil, nil
@@ -225,7 +225,7 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
 		db.DPrintf("FSS3", "Write %v err\n", o.off)
@@ -237,6 +237,6 @@ func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.T
 	} else {
 		o.off += sp.Toffset(n)
 		o.SetSize(sp.Tlength(o.off))
-		return sp.Tsize(n), nil
+		return fcall.Tsize(n), nil
 	}
 }

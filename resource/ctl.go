@@ -25,11 +25,11 @@ func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir
 	}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	msg := &ResourceMsg{}
 	msg.Unmarshal(b)
 	switch msg.MsgType {
@@ -40,5 +40,5 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion)
 	default:
 		db.DFatalf("Unknown message type")
 	}
-	return sp.Tsize(len(b)), nil
+	return fcall.Tsize(len(b)), nil
 }

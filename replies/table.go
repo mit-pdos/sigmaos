@@ -7,14 +7,13 @@ import (
 
 	"sigmaos/fcall"
 	"sigmaos/intervals"
-	sp "sigmaos/sigmap"
 )
 
 // Reply table for a given session.
 type ReplyTable struct {
 	sync.Mutex
 	closed  bool
-	entries map[sp.Tseqno]*ReplyFuture
+	entries map[fcall.Tseqno]*ReplyFuture
 	// pruned has seqnos pruned from entries; client has received
 	// the response for those.
 	pruned *intervals.Intervals
@@ -22,14 +21,14 @@ type ReplyTable struct {
 
 func MakeReplyTable() *ReplyTable {
 	rt := &ReplyTable{}
-	rt.entries = make(map[sp.Tseqno]*ReplyFuture)
+	rt.entries = make(map[fcall.Tseqno]*ReplyFuture)
 	rt.pruned = intervals.MkIntervals()
 	return rt
 }
 
 func (rt *ReplyTable) String() string {
 	s := fmt.Sprintf("RT %d: ", len(rt.entries))
-	keys := make([]sp.Tseqno, 0, len(rt.entries))
+	keys := make([]fcall.Tseqno, 0, len(rt.entries))
 	for k, _ := range rt.entries {
 		keys = append(keys, k)
 	}
@@ -54,7 +53,7 @@ func (rt *ReplyTable) String() string {
 	return s
 }
 
-func (rt *ReplyTable) Register(request *sp.FcallMsg) bool {
+func (rt *ReplyTable) Register(request *fcall.FcallMsg) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
@@ -62,7 +61,7 @@ func (rt *ReplyTable) Register(request *sp.FcallMsg) bool {
 		return false
 	}
 	for s := request.Fc.Received.Start; s < request.Fc.Received.End; s++ {
-		delete(rt.entries, sp.Tseqno(s))
+		delete(rt.entries, fcall.Tseqno(s))
 	}
 	rt.pruned.Insert(request.Fc.Received)
 	// if seqno in pruned, then drop
@@ -74,7 +73,7 @@ func (rt *ReplyTable) Register(request *sp.FcallMsg) bool {
 }
 
 // Expects that the request has already been registered.
-func (rt *ReplyTable) Put(request *sp.FcallMsg, reply *sp.FcallMsg) bool {
+func (rt *ReplyTable) Put(request *fcall.FcallMsg, reply *fcall.FcallMsg) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
@@ -89,7 +88,7 @@ func (rt *ReplyTable) Put(request *sp.FcallMsg, reply *sp.FcallMsg) bool {
 	return ok
 }
 
-func (rt *ReplyTable) Get(request *sp.Fcall) (*ReplyFuture, bool) {
+func (rt *ReplyTable) Get(request *fcall.Fcall) (*ReplyFuture, bool) {
 	rt.Lock()
 	defer rt.Unlock()
 	rf, ok := rt.entries[request.Tseqno()]
@@ -105,7 +104,7 @@ func (rt *ReplyTable) Close(cli fcall.Tclient, sid fcall.Tsession) {
 	for _, rf := range rt.entries {
 		rf.Abort(cli, sid)
 	}
-	rt.entries = make(map[sp.Tseqno]*ReplyFuture)
+	rt.entries = make(map[fcall.Tseqno]*ReplyFuture)
 	rt.closed = true
 }
 

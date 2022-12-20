@@ -18,7 +18,7 @@ type SrvConn struct {
 	sesssrv        sp.SessServer
 	br             *bufio.Reader
 	bw             *bufio.Writer
-	replies        chan *sp.FcallMsg
+	replies        chan *fcall.FcallMsg
 	marshalframe   MarshalF
 	unmarshalframe UnmarshalF
 	clid           fcall.Tclient
@@ -34,7 +34,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		make(chan *sp.FcallMsg),
+		make(chan *fcall.FcallMsg),
 		srv.marshal,
 		srv.unmarshal,
 		0,
@@ -94,7 +94,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyC() chan *sp.FcallMsg {
+func (c *SrvConn) GetReplyC() chan *fcall.FcallMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -116,7 +116,7 @@ func (c *SrvConn) reader() {
 				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fm := sp.MakeFcallMsgReply(fc, sp.MkRerror(err))
+				fm := fcall.MakeFcallMsgReply(fc, sp.MkRerror(err))
 				c.GetReplyC() <- fm
 				close(c.replies)
 				return

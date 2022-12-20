@@ -21,7 +21,7 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode sp.Tperm, v sp.TQversion, path sp.Tpath) *sp.Tqid {
+func mkQid(mode sp.Tperm, v sp.TQversion, path fcall.Tpath) *sp.Tqid {
 	return sp.MakeQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
 }
 
@@ -49,7 +49,7 @@ func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 		return nil, UxTo9PError(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
-	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
+	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, fcall.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	st.Length = statx.Size
 	return st, nil
@@ -57,7 +57,7 @@ func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 
 type Obj struct {
 	pathName path.Path
-	path     sp.Tpath
+	path     fcall.Tpath
 	perm     sp.Tperm // XXX kill, but requires changing Perm() API
 }
 
@@ -84,7 +84,7 @@ func (o *Obj) Perm() sp.Tperm {
 	//return st.Mode, nil
 }
 
-func (o *Obj) Path() sp.Tpath {
+func (o *Obj) Path() fcall.Tpath {
 	return o.path
 }
 

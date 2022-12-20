@@ -32,14 +32,14 @@ func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid fcall.Tsession) sp.Prots
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fm *sp.FcallMsg) {
+func (npd *Npd) serve(fm *fcall.FcallMsg) {
 	s := fcall.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
 	msg, data, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
 		msg = rerror
 	}
-	reply := sp.MakeFcallMsg(msg, nil, fcall.Tclient(fm.Fc.Client), s, nil, nil, sp.MakeFenceNull())
+	reply := fcall.MakeFcallMsg(msg, nil, fcall.Tclient(fm.Fc.Client), s, nil, nil, fcall.MakeFenceNull())
 	reply.Data = data
 	reply.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(reply)
@@ -61,7 +61,7 @@ func (npd *Npd) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) 
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fc *sp.FcallMsg) {
+func (npd *Npd) SrvFcall(fc *fcall.FcallMsg) {
 	go npd.serve(fc)
 }
 
@@ -88,7 +88,7 @@ func makeNpConn(named []string) *NpConn {
 	npc.clnt = protclnt.MakeClnt()
 	npc.named = named
 	npc.fidc = fidclnt.MakeFidClnt()
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.Tsize(1_000_000))
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, fcall.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }

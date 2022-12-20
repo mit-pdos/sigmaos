@@ -251,11 +251,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if st == nil {
 		return nil, nil
 	}

@@ -1,7 +1,7 @@
 package repl
 
 import (
-	sp "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/threadmgr"
 )
 
@@ -17,5 +17,5 @@ type Config interface {
 
 type Server interface {
 	Start()
-	Process(fc *sp.FcallMsg)
+	Process(fc *fcall.FcallMsg)
 }

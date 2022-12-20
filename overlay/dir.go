@@ -101,7 +101,7 @@ func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmod
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignoressy size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n fcall.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversi
 	return sts, nil
 }
 
-func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	return dir.underlay.WriteDir(ctx, offset, b, v)
 }
 

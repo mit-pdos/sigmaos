@@ -15,7 +15,7 @@ import (
 	"sigmaos/writer"
 )
 
-func (fl *FsLib) ReadSeqNo() sp.Tseqno {
+func (fl *FsLib) ReadSeqNo() fcall.Tseqno {
 	return fl.FidClnt.ReadSeqNo()
 }
 
@@ -27,11 +27,11 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FdClient.GetFile(fname, sp.OREAD, 0, sp.MAXGETSET)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
+func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (fcall.Tsize, error) {
 	return fl.FdClient.SetFile(fname, m, data, off)
 }
 
-func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
+func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (fcall.Tsize, error) {
 	return fl.FdClient.PutFile(fname, mode|sp.OWRITE, perm, data, 0)
 }
 
@@ -218,7 +218,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if err != nil {
 			return err
 		}
-		if n != sp.Tsize(len(b)) {
+		if n != fcall.Tsize(len(b)) {
 			return fmt.Errorf("short write")
 		}
 	}

@@ -246,7 +246,7 @@ func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.C
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *sp.FcallMsg) {
+func (ssrv *SessSrv) SrvFcall(fc *fcall.FcallMsg) {
 	s := fcall.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
@@ -272,7 +272,7 @@ func (ssrv *SessSrv) SrvFcall(fc *sp.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *sp.FcallMsg, reply *sp.FcallMsg, sess *sessstatesrv.Session) {
+func (ssrv *SessSrv) sendReply(request *fcall.FcallMsg, reply *fcall.FcallMsg, sess *sessstatesrv.Session) {
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, reply)
 
@@ -285,7 +285,7 @@ func (ssrv *SessSrv) sendReply(request *sp.FcallMsg, reply *sp.FcallMsg, sess *s
 	}
 }
 
-func (ssrv *SessSrv) srvfcall(fc *sp.FcallMsg) {
+func (ssrv *SessSrv) srvfcall(fc *fcall.FcallMsg) {
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
@@ -339,11 +339,11 @@ func (ssrv *SessSrv) srvfcall(fc *sp.FcallMsg) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		msg := sp.MkRerror(err)
-		reply := sp.MakeFcallMsgReply(fc, msg)
+		reply := fcall.MakeFcallMsgReply(fc, msg)
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {
@@ -356,7 +356,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
@@ -365,7 +365,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 		msg = rerror
 	}
 
-	reply := sp.MakeFcallMsgReply(fc, msg)
+	reply := fcall.MakeFcallMsgReply(fc, msg)
 	reply.Data = data
 
 	ssrv.sendReply(fc, reply, sess)

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"sigmaos/config"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
@@ -15,12 +15,12 @@ type NodedConfig struct {
 	MachineId string
 	RealmId   string
 	ProcdIp   string
-	Cores     []*sp.Tinterval
+	Cores     []*fcall.Tinterval
 }
 
 func MakeNodedConfig() *NodedConfig {
 	cfg := &NodedConfig{}
-	cfg.Cores = []*sp.Tinterval{}
+	cfg.Cores = []*fcall.Tinterval{}
 	return cfg
 }
 

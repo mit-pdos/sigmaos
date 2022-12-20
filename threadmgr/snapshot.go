@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/spcodec"
 )
 
@@ -15,7 +15,7 @@ type OpSnapshot struct {
 	N  uint64
 }
 
-func MakeOpSnapshot(fc *sp.FcallMsg, n uint64) *OpSnapshot {
+func MakeOpSnapshot(fc *fcall.FcallMsg, n uint64) *OpSnapshot {
 	b, err := spcodec.MarshalFrameByte(fc)
 	if err != nil {
 		db.DFatalf("error marshalling fcall in MakeOpSnapshot: %v", err)

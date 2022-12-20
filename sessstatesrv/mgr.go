@@ -4,6 +4,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	sp "sigmaos/sigmap"
 )
 
@@ -77,7 +78,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := sp.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil, nil, sp.MakeFenceNull())
+		hbs := fcall.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil, nil, fcall.MakeFenceNull())
 		sm.srvfcall(hbs)
 	}
 }
@@ -90,7 +91,7 @@ func (sm *SessionMgr) runDetaches() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := sp.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, sp.MakeFenceNull())
+			detach := fcall.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, fcall.MakeFenceNull())
 			sm.srvfcall(detach)
 		}
 	}

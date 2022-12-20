@@ -10,11 +10,10 @@ import (
 	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
-	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
 
-func Sp2NpDir(d []byte, cnt sp.Tsize) ([]byte, *fcall.Err) {
+func Sp2NpDir(d []byte, cnt fcall.Tsize) ([]byte, *fcall.Err) {
 	rdr := bytes.NewReader(d)
 	brdr := bufio.NewReader(rdr)
 	npsts := make([]*np.Stat9P, 0)

@@ -20,7 +20,7 @@ type SessClnt struct {
 	*sync.Cond
 	cli    fcall.Tclient
 	sid    fcall.Tsession
-	seqno  sp.Tseqno
+	seqno  fcall.Tseqno
 	closed bool
 	addrs  []string
 	nc     *netclnt.NetClnt
@@ -48,7 +48,7 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *sp.Tfence) (*sp.FcallMsg, *fcall.Err) {
+func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *fcall.Tfence) (*fcall.FcallMsg, *fcall.Err) {
 	rpc, err := c.send(req, data, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -66,7 +66,7 @@ func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *sp.Tfence) (*sp.FcallMsg,
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat([]uint64{uint64(c.sid)}), nil, sp.MakeFenceNull())
+	_, err := c.RPC(sp.MkTheartbeat([]uint64{uint64(c.sid)}), nil, fcall.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -89,7 +89,7 @@ func (c *SessClnt) Reset() {
 }
 
 // Complete an RPC and pass the response up the stack.
-func (c *SessClnt) CompleteRPC(reply *sp.FcallMsg, err *fcall.Err) {
+func (c *SessClnt) CompleteRPC(reply *fcall.FcallMsg, err *fcall.Err) {
 	s := reply.Seqno()
 	rpc, ok := c.queue.Remove(s)
 	// the outstanding request may have been cleared if the conn is closing, or
@@ -97,7 +97,7 @@ func (c *SessClnt) CompleteRPC(reply *sp.FcallMsg, err *fcall.Err) {
 	// rpc == nil and ok == false.
 	if ok {
 		o := reply.Fc.Seqno
-		c.ivs.Insert(sp.MkInterval(o, o+1))
+		c.ivs.Insert(fcall.MkInterval(o, o+1))
 		c.ivs.Delete(reply.Fc.Received)
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
@@ -114,7 +114,7 @@ func (c *SessClnt) CompleteRPC(reply *sp.FcallMsg, err *fcall.Err) {
 
 // Send a detach.
 func (c *SessClnt) Detach() *fcall.Err {
-	rep, err := c.RPC(sp.MkTdetach(0, 0), nil, sp.MakeFenceNull())
+	rep, err := c.RPC(sp.MkTdetach(0, 0), nil, fcall.MakeFenceNull())
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
 		return err
@@ -143,14 +143,14 @@ func srvClosedSess(msg fcall.Tmsg, err *fcall.Err) bool {
 	return false
 }
 
-func (c *SessClnt) send(req fcall.Tmsg, data []byte, f *sp.Tfence) (*netclnt.Rpc, *fcall.Err) {
+func (c *SessClnt) send(req fcall.Tmsg, data []byte, f *fcall.Tfence) (*netclnt.Rpc, *fcall.Err) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, sp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
+	rpc := netclnt.MakeRpc(c.addrs, fcall.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil
@@ -158,7 +158,7 @@ func (c *SessClnt) send(req fcall.Tmsg, data []byte, f *sp.Tfence) (*netclnt.Rpc
 
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sp.FcallMsg, *fcall.Err) {
+func (c *SessClnt) recv(rpc *netclnt.Rpc) (*fcall.FcallMsg, *fcall.Err) {
 	return rpc.Await()
 }
 

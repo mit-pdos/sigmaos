@@ -3,8 +3,8 @@ package kv
 import (
 	"fmt"
 
+	"sigmaos/fcall"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 )
 
 type Move struct {
@@ -28,7 +28,7 @@ func (mvs Moves) String() string {
 }
 
 type Config struct {
-	Epoch  sp.Tepoch
+	Epoch  fcall.Tepoch
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
 }
@@ -37,7 +37,7 @@ func (cf *Config) String() string {
 	return fmt.Sprintf("{Epoch %v, Shards %v, Moves %v}", cf.Epoch, cf.Shards, cf.Moves)
 }
 
-func MakeConfig(e sp.Tepoch) *Config {
+func MakeConfig(e fcall.Tepoch) *Config {
 	cf := &Config{e, make([]string, NSHARD), Moves{}}
 	return cf
 }

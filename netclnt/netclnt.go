@@ -120,7 +120,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
+func (nc *NetClnt) recv() (*fcall.FcallMsg, *fcall.Err) {
 	fm, err := spcodec.UnmarshalFrame(nc.br)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)

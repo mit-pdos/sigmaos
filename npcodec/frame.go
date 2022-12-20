@@ -7,10 +7,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/frame"
-	sp "sigmaos/sigmap"
 )
 
-func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
+func MarshalFrame(fcm *fcall.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	sp2NpMsg(fcm)
 	fc9P := to9P(fcm)
 	db.DPrintf("NPCODEC", "MarshalFrame %v\n", fc9P)
@@ -28,7 +27,7 @@ func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	return nil
 }
 
-func UnmarshalFrame(rdr io.Reader) (*sp.FcallMsg, *fcall.Err) {
+func UnmarshalFrame(rdr io.Reader) (*fcall.FcallMsg, *fcall.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf("NPCODEC", "ReadFrame err %v\n", err)

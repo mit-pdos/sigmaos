@@ -7,6 +7,7 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
@@ -128,7 +129,7 @@ func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) e
 		}
 
 		// Update the core allocations for this noded.
-		var rmCores *sp.Tinterval
+		var rmCores *fcall.Tinterval
 		nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
 

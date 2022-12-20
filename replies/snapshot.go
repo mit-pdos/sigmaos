@@ -6,12 +6,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fcall"
-	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
 
 func (rt *ReplyTable) Snapshot() []byte {
-	entries := make(map[sp.Tseqno][]byte)
+	entries := make(map[fcall.Tseqno][]byte)
 	for seqno, rf := range rt.entries {
 		var b []byte
 		var err1 *fcall.Err
@@ -31,7 +30,7 @@ func (rt *ReplyTable) Snapshot() []byte {
 }
 
 func Restore(b []byte) *ReplyTable {
-	entries := make(map[sp.Tseqno][]byte)
+	entries := make(map[fcall.Tseqno][]byte)
 	err := json.Unmarshal(b, &entries)
 	if err != nil {
 		db.DFatalf("error unmarshal ReplyTable in restore: %v", err)

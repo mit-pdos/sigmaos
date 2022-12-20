@@ -5,14 +5,14 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	sp "sigmaos/sigmap"
 )
 
 type FenceSnapshot struct {
 	InodeSnap []byte
-	Epoch     sp.Tepoch
+	Epoch     fcall.Tepoch
 }
 
 func makeFenceSnapshot(fn fs.SnapshotF, f *Fence) []byte {

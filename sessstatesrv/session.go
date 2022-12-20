@@ -99,8 +99,8 @@ func (sess *Session) Close() {
 // The conn may be nil if this is a replicated op which came through
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
-func (sess *Session) SendConn(fm *sp.FcallMsg) {
-	var replies chan *sp.FcallMsg = nil
+func (sess *Session) SendConn(fm *fcall.FcallMsg) {
+	var replies chan *fcall.FcallMsg = nil
 
 	sess.Lock()
 	if sess.conn != nil {

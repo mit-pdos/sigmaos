@@ -11,10 +11,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -33,7 +34,7 @@ type System struct {
 	namedAddr   []string
 	procdIp     string
 	named       *Subsystem
-	cores       *sp.Tinterval
+	cores       *fcall.Tinterval
 	fss3d       []*Subsystem
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
@@ -41,7 +42,7 @@ type System struct {
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeSystemBase(realmId string, namedAddr []string, cores *sp.Tinterval) *System {
+func makeSystemBase(realmId string, namedAddr []string, cores *fcall.Tinterval) *System {
 	s := &System{}
 	s.realmId = realmId
 	s.namedAddr = namedAddr
@@ -56,7 +57,7 @@ func makeSystemBase(realmId string, namedAddr []string, cores *sp.Tinterval) *Sy
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int, cores *sp.Tinterval) *System {
+func MakeSystemNamed(uname, realmId string, replicaId int, cores *fcall.Tinterval) *System {
 	s := makeSystemBase(realmId, fslib.Named(), cores)
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
@@ -73,7 +74,7 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *sp.Tinterval) 
 }
 
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int, cores *sp.Tinterval) *System {
+func MakeSystemAll(uname, realmId string, replicaId int, cores *fcall.Tinterval) *System {
 	s := MakeSystemNamed(uname, realmId, replicaId, cores)
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
@@ -84,7 +85,7 @@ func MakeSystemAll(uname, realmId string, replicaId int, cores *sp.Tinterval) *S
 	return s
 }
 
-func MakeSystem(uname, realmId string, namedAddr []string, cores *sp.Tinterval) *System {
+func MakeSystem(uname, realmId string, namedAddr []string, cores *fcall.Tinterval) *System {
 	s := makeSystemBase(realmId, namedAddr, cores)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)

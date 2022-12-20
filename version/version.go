@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	sp "sigmaos/sigmap"
+	"sigmaos/fcall"
 	"sigmaos/refmap"
+	sp "sigmaos/sigmap"
 )
 
 type version struct {
@@ -24,16 +25,16 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, *version]
+	*refmap.RefTable[fcall.Tpath, *version]
 }
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version]("VERSION")
+	vt.RefTable = refmap.MkRefTable[fcall.Tpath, *version]("VERSION")
 	return vt
 }
 
-func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
+func (vt *VersionTable) GetVersion(path fcall.Tpath) sp.TQversion {
 	vt.Lock()
 	defer vt.Unlock()
 
@@ -43,20 +44,20 @@ func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 	return 0
 }
 
-func (vt *VersionTable) Insert(path sp.Tpath) {
+func (vt *VersionTable) Insert(path fcall.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 	vt.RefTable.Insert(path, mkVersion)
 }
 
-func (vt *VersionTable) Delete(p sp.Tpath) {
+func (vt *VersionTable) Delete(p fcall.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 
 	vt.RefTable.Delete(p)
 }
 
-func (vt *VersionTable) IncVersion(path sp.Tpath) {
+func (vt *VersionTable) IncVersion(path fcall.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 

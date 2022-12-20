@@ -30,13 +30,13 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	// f.SetMtime(time.Now().Unix())
 
-	cnt := sp.Tsize(len(data))
+	cnt := fcall.Tsize(len(data))
 	sz := sp.Toffset(len(data))
 	if offset == sp.NoOffset { // OAPPEND
 		offset = f.LenOff()
@@ -60,7 +60,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

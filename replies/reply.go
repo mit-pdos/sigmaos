@@ -11,7 +11,7 @@ import (
 type ReplyFuture struct {
 	sync.Mutex
 	*sync.Cond
-	reply *sp.FcallMsg
+	reply *fcall.FcallMsg
 }
 
 func MakeReplyFuture() *ReplyFuture {
@@ -21,7 +21,7 @@ func MakeReplyFuture() *ReplyFuture {
 }
 
 // Wait for a reply.
-func (f *ReplyFuture) Await() *sp.FcallMsg {
+func (f *ReplyFuture) Await() *fcall.FcallMsg {
 	f.Lock()
 	defer f.Unlock()
 	// Potentially wait for a blocked op to complete.
@@ -32,7 +32,7 @@ func (f *ReplyFuture) Await() *sp.FcallMsg {
 }
 
 // Wake waiters for a reply.
-func (f *ReplyFuture) Complete(fc *sp.FcallMsg) {
+func (f *ReplyFuture) Complete(fc *fcall.FcallMsg) {
 	f.Lock()
 	defer f.Unlock()
 	f.reply = fc
@@ -49,7 +49,7 @@ func (f *ReplyFuture) Abort(cli fcall.Tclient, sid fcall.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = sp.MakeFcallMsg(sp.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), nil, cli, sid, nil, nil, sp.MakeFenceNull())
+		f.reply = fcall.MakeFcallMsg(sp.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), nil, cli, sid, nil, nil, fcall.MakeFenceNull())
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

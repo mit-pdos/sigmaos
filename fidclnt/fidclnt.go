@@ -36,11 +36,11 @@ func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
 }
 
-func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *fcall.Err {
+func (fidc *FidClnt) FenceDir(path string, f fcall.Tfence) *fcall.Err {
 	return fidc.ft.Insert(path, f)
 }
 
-func (fidc *FidClnt) ReadSeqNo() sp.Tseqno {
+func (fidc *FidClnt) ReadSeqNo() fcall.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }
 
@@ -204,7 +204,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *fcall.Err) {
 	return reply.Stat, nil
 }
 
-func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
 	if err != nil {
@@ -214,15 +214,15 @@ func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQver
 }
 
 // Unfenced read
-func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, sp.MakeFenceNull(), v)
+func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, fcall.MakeFenceNull(), v)
 	if err != nil {
 		return nil, err
 	}
 	return data, nil
 }
 
-func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
 	if err != nil {
@@ -243,7 +243,7 @@ func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *fcall.Err) {
 	return data, nil
 }
 
-func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, resolve bool) ([]byte, *fcall.Err) {
+func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt fcall.Tsize, resolve bool) ([]byte, *fcall.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, "getfile")
@@ -256,7 +256,7 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, data []byte, resolve bool) (sp.Tsize, *fcall.Err) {
+func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, data []byte, resolve bool) (fcall.Tsize, *fcall.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, fcall.MkErr(fcall.TErrUnreachable, "getfile")
@@ -269,7 +269,7 @@ func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte) (sp.Tsize, *fcall.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte) (fcall.Tsize, *fcall.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, fcall.MkErr(fcall.TErrUnreachable, "putfile")

@@ -33,7 +33,7 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(fc *sp.FcallMsg) {
+func (srv *RaftReplServer) Process(fc *fcall.FcallMsg) {
 	if fc.GetType() == fcall.TTdetach {
 		msg := fc.Msg.(*sp.Tdetach)
 		msg.PropId = uint32(srv.node.id)

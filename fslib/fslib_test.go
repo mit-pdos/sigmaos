@@ -286,7 +286,7 @@ func TestSetAppend(t *testing.T) {
 	assert.Equal(t, nil, err)
 	l, err := ts.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, sp.Tsize(len(d)), l)
+	assert.Equal(t, fcall.Tsize(len(d)), l)
 	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
@@ -359,7 +359,7 @@ func TestPageDir(t *testing.T) {
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
-	ts.SetChunkSz(sp.Tsize(512))
+	ts.SetChunkSz(fcall.Tsize(512))
 	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
@@ -1219,7 +1219,7 @@ func TestSetFileSymlink(t *testing.T) {
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
-	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
+	assert.Equal(ts.T, fcall.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(gopath.Join(pathname, sp.STATSD), &st)
 	assert.Nil(t, err, "statsd")

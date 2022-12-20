@@ -9,10 +9,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fcall"
 	"sigmaos/frame"
-	sp "sigmaos/sigmap"
 )
 
-func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
+func MarshalFrame(fcm *fcall.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
 		return fcall.MkErr(fcall.TErrBadFcall, error.Error())
@@ -35,7 +34,7 @@ func MarshalFrame(fcm *sp.FcallMsg, bwr *bufio.Writer) *fcall.Err {
 	return nil
 }
 
-func MarshalFrameByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
+func MarshalFrameByte(fcm *fcall.FcallMsg) ([]byte, *fcall.Err) {
 	var f bytes.Buffer
 	wr := bufio.NewWriter(&f)
 
@@ -45,13 +44,13 @@ func MarshalFrameByte(fcm *sp.FcallMsg) ([]byte, *fcall.Err) {
 	return f.Bytes(), nil
 }
 
-func UnmarshalFrame(rdr io.Reader) (*sp.FcallMsg, *fcall.Err) {
+func UnmarshalFrame(rdr io.Reader) (*fcall.FcallMsg, *fcall.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf("SPCODEC", "ReadFrame err %v\n", err)
 		return nil, err
 	}
-	fm := sp.MakeFcallMsgNull()
+	fm := fcall.MakeFcallMsgNull()
 	if err := decode(bytes.NewReader(f), fm); err != nil {
 		db.DPrintf("SPCODEC", "Decode err %v\n", err)
 		return nil, fcall.MkErr(fcall.TErrBadFcall, err)

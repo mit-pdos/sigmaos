@@ -3,6 +3,7 @@ package leaderclnt
 import (
 	"sigmaos/electclnt"
 	"sigmaos/epochclnt"
+	"sigmaos/fcall"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
@@ -37,22 +38,22 @@ func (l *LeaderClnt) EpochPath() string {
 // proc may steal our leadership (e.g., after we are partioned) and
 // start a higher epoch.  Note epoch doesn't take effect until we
 // perform a fenced operation (e.g., a read/write).
-func (l *LeaderClnt) AcquireFencedEpoch(b []byte, dirs []string) (sp.Tepoch, error) {
+func (l *LeaderClnt) AcquireFencedEpoch(b []byte, dirs []string) (fcall.Tepoch, error) {
 	if err := l.e.AcquireLeadership(b); err != nil {
-		return sp.NoEpoch, err
+		return fcall.NoEpoch, err
 	}
 	return l.EnterNextEpoch(dirs)
 }
 
 // Enter next epoch.  If the leader is partitioned and another leader
 // has taken over, this fails.
-func (l *LeaderClnt) EnterNextEpoch(dirs []string) (sp.Tepoch, error) {
+func (l *LeaderClnt) EnterNextEpoch(dirs []string) (fcall.Tepoch, error) {
 	epoch, err := l.AdvanceEpoch()
 	if err != nil {
-		return sp.NoEpoch, err
+		return fcall.NoEpoch, err
 	}
 	if err := l.FenceAtEpoch(epoch, dirs); err != nil {
-		return sp.NoEpoch, err
+		return fcall.NoEpoch, err
 	}
 	return epoch, nil
 }

@@ -51,8 +51,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, sp.Tseqno, fcall.Tsession, fcall.Tfcall, sp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sp.Tsize, sp.Tpath, sp.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
-			*bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
+		case bool, uint8, uint16, uint32, uint64, fcall.Tseqno, fcall.Tsession, fcall.Tfcall, fcall.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, fcall.Tsize, fcall.Tpath, fcall.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
+			*bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *fcall.Tsize, *fcall.Tpath, *fcall.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -213,7 +213,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sp.Tsize, *sp.Tpath, *sp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *fcall.Tsize, *fcall.Tpath, *fcall.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -418,8 +418,8 @@ func sizeNp(vs ...interface{}) uint64 {
 		}
 
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, sp.Tseqno, fcall.Tsession, fcall.Tfcall, sp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sp.Tsize, np.Tpath, sp.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
-			*bool, *uint8, *uint16, *uint32, *uint64, *sp.Tseqno, *fcall.Tsession, *fcall.Tfcall, *sp.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *sp.Tsize, *np.Tpath, *sp.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
+		case bool, uint8, uint16, uint32, uint64, fcall.Tseqno, fcall.Tsession, fcall.Tfcall, fcall.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, fcall.Tsize, np.Tpath, fcall.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
+			*bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *fcall.Tsize, *np.Tpath, *fcall.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
 			s += uint64(binary.Size(v))
 		case []byte:
 			s += uint64(binary.Size(uint64(0)) + len(v))
@@ -466,9 +466,9 @@ func sizeNp(vs ...interface{}) uint64 {
 			s += sizeNp(v.Type, v.Tag, v.Msg)
 		case *Fcall9P:
 			s += sizeNp(*v)
-		case sp.Fcall:
+		case fcall.Fcall:
 			s += sizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
-		case *sp.Fcall:
+		case *fcall.Fcall:
 			s += sizeNp(*v)
 		case fcall.Tmsg:
 			// walk the fields of the message to get the total size. we just

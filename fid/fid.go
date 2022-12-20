@@ -85,10 +85,10 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	o := f.Pobj().Obj()
 	var err *fcall.Err
-	sz := sp.Tsize(0)
+	sz := fcall.Tsize(0)
 
 	switch i := o.(type) {
 	case fs.File:
@@ -114,7 +114,7 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
@@ -128,7 +128,7 @@ func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize, v sp.TQversion
 	return b, nil
 }
 
-func (f *Fid) Read(off sp.Toffset, count sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) Read(off sp.Toffset, count fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:

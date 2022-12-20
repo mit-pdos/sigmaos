@@ -13,14 +13,14 @@ type session struct {
 	id fcall.Tsession
 }
 
-func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	if off > 0 {
 		return nil, nil
 	}
 	return []byte(s.id.String()), nil
 }
 
-func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, nil)
 }
 

@@ -12,14 +12,14 @@ import (
 
 type ProtSrvSnapshot struct {
 	Fid       map[sp.Tfid][]byte
-	Ephemeral map[sp.Tpath][]byte
+	Ephemeral map[fcall.Tpath][]byte
 	Sid       fcall.Tsession
 }
 
 func MakeProtSrvSnapshot() *ProtSrvSnapshot {
 	foss := &ProtSrvSnapshot{}
 	foss.Fid = make(map[sp.Tfid][]byte)
-	foss.Ephemeral = make(map[sp.Tpath][]byte)
+	foss.Ephemeral = make(map[fcall.Tpath][]byte)
 	return foss
 }
 

@@ -178,7 +178,7 @@ func (dir *DirImpl) remove(name string) *fcall.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n fcall.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -187,7 +187,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion)
 }
 
 // XXX ax WriteDir from fs.Dir
-func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	return 0, fcall.MkErr(fcall.TErrIsdir, dir)

@@ -44,7 +44,7 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	return nil
 }
 
-func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b := make([]byte, cnt)
 	n, err := syscall.Pread(f.fd, b, int64(off))
@@ -55,7 +55,7 @@ func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) (
 	return b[:n], nil
 }
 
-func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	db.DPrintf("UXD", "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
 	if off == sp.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
@@ -67,5 +67,5 @@ func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.
 		db.DPrintf("UXD", "Pwrite %v err %v\n", f, err)
 		return 0, fcall.MkErr(fcall.TErrError, err)
 	}
-	return sp.Tsize(n), nil
+	return fcall.Tsize(n), nil
 }

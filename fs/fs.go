@@ -25,16 +25,16 @@ type Dir interface {
 	FsObj
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *fcall.Err)
 	Create(CtxI, string, sp.Tperm, sp.Tmode) (FsObj, *fcall.Err)
-	ReadDir(CtxI, int, sp.Tsize, sp.TQversion) ([]*sp.Stat, *fcall.Err)
-	WriteDir(CtxI, sp.Toffset, []byte, sp.TQversion) (sp.Tsize, *fcall.Err)
+	ReadDir(CtxI, int, fcall.Tsize, sp.TQversion) ([]*sp.Stat, *fcall.Err)
+	WriteDir(CtxI, sp.Toffset, []byte, sp.TQversion) (fcall.Tsize, *fcall.Err)
 	Remove(CtxI, string) *fcall.Err
 	Rename(CtxI, string, string) *fcall.Err
 	Renameat(CtxI, string, Dir, string) *fcall.Err
 }
 
 type File interface {
-	Read(CtxI, sp.Toffset, sp.Tsize, sp.TQversion) ([]byte, *fcall.Err)
-	Write(CtxI, sp.Toffset, []byte, sp.TQversion) (sp.Tsize, *fcall.Err)
+	Read(CtxI, sp.Toffset, fcall.Tsize, sp.TQversion) ([]byte, *fcall.Err)
+	Write(CtxI, sp.Toffset, []byte, sp.TQversion) (fcall.Tsize, *fcall.Err)
 }
 
 type RPC interface {
@@ -42,7 +42,7 @@ type RPC interface {
 }
 
 type FsObj interface {
-	Path() sp.Tpath
+	Path() fcall.Tpath
 	Perm() sp.Tperm
 	Parent() Dir
 	Open(CtxI, sp.Tmode) (FsObj, *fcall.Err)
@@ -63,7 +63,7 @@ func Obj2File(o FsObj, fname path.Path) (File, *fcall.Err) {
 	return nil, nil
 }
 
-func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, *fcall.Err) {
+func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt fcall.Tsize, dir []Dir) ([]byte, int, *fcall.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -89,7 +89,7 @@ func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int
 		}
 
 		buf = append(buf, b...)
-		cnt -= sp.Tsize(len(b))
+		cnt -= fcall.Tsize(len(b))
 		n += 1
 	}
 	return buf, n, nil

@@ -5,8 +5,8 @@ import (
     "sigmaos/fcall"
 )
 
-type SnapshotF func(Inode) sp.Tpath
-type RestoreF func(sp.Tpath) Inode
+type SnapshotF func(Inode) fcall.Tpath
+type RestoreF func(fcall.Tpath) Inode
 
 // Inode interface for directories
 

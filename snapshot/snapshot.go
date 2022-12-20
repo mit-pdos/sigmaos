@@ -7,32 +7,33 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fcall"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfs"
-	np "sigmaos/sigmap"
 	"sigmaos/overlay"
 	"sigmaos/sessstatesrv"
+	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/threadmgr"
 )
 
 type Snapshot struct {
-	sesssrv      np.SessServer
-	Imap         map[np.Tpath]ObjSnapshot
-	DirOverlay   np.Tpath
+	sesssrv      sp.SessServer
+	Imap         map[fcall.Tpath]ObjSnapshot
+	DirOverlay   fcall.Tpath
 	St           []byte
 	Tmt          []byte
 	NextInum     uint64
-	restoreCache map[np.Tpath]fs.Inode
+	restoreCache map[fcall.Tpath]fs.Inode
 }
 
-func MakeSnapshot(sesssrv np.SessServer) *Snapshot {
+func MakeSnapshot(sesssrv sp.SessServer) *Snapshot {
 	s := &Snapshot{}
 	s.sesssrv = sesssrv
-	s.Imap = make(map[np.Tpath]ObjSnapshot)
-	s.restoreCache = make(map[np.Tpath]fs.Inode)
+	s.Imap = make(map[fcall.Tpath]ObjSnapshot)
+	s.restoreCache = make(map[fcall.Tpath]fs.Inode)
 	return s
 }
 
@@ -52,7 +53,7 @@ func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *sessstatesrv.SessionTa
 	return b
 }
 
-func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
+func (s *Snapshot) snapshotFsTree(i fs.Inode) fcall.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
 	case *overlay.DirOverlay:
@@ -75,7 +76,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Path()
 }
 
-func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
+func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
@@ -86,10 +87,10 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesss
 	// Restore the fs tree
 	dirover := s.RestoreFsTree(s.DirOverlay).(*overlay.DirOverlay) //overlay.Restore(s.RestoreFsTree, s.DirOverlay)
 	// Get the ffs & stats
-	ffs, _ := dirover.Lookup(nil, np.FENCEDIR)
-	stat, _ := dirover.Lookup(nil, np.STATSD)
+	ffs, _ := dirover.Lookup(nil, sp.FENCEDIR)
+	stat, _ := dirover.Lookup(nil, sp.STATSD)
 	// Fix up the sesssrv pointer in snapshotdev
-	dev, _ := dirover.Lookup(nil, np.SNAPDEV)
+	dev, _ := dirover.Lookup(nil, sp.SNAPDEV)
 	dev.(*Dev).srv = sesssrv
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
@@ -98,7 +99,7 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesss
 	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt
 }
 
-func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
+func (s *Snapshot) RestoreFsTree(inum fcall.Tpath) fs.Inode {
 	if obj, ok := s.restoreCache[inum]; ok {
 		return obj
 	}

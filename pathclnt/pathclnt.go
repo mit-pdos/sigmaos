@@ -25,10 +25,10 @@ type Watch func(string, error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
-	chunkSz sp.Tsize
+	chunkSz fcall.Tsize
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, sz fcall.Tsize) *PathClnt {
 	pathc := &PathClnt{}
 	pathc.mnt = makeMntTable()
 	pathc.chunkSz = sz
@@ -46,11 +46,11 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) SetChunkSz(sz sp.Tsize) {
+func (pathc *PathClnt) SetChunkSz(sz fcall.Tsize) {
 	pathc.chunkSz = sz
 }
 
-func (pathc *PathClnt) GetChunkSz() sp.Tsize {
+func (pathc *PathClnt) GetChunkSz() fcall.Tsize {
 	return pathc.chunkSz
 }
 
@@ -102,7 +102,7 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
+func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz fcall.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
@@ -335,7 +335,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fcall.Tsize) ([]byte, error) {
 	db.DPrintf("PATHCLNT", "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
@@ -365,7 +365,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sp.
 }
 
 // Write file
-func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sp.Tsize, error) {
+func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (fcall.Tsize, error) {
 	db.DPrintf("PATHCLNT", "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
@@ -395,7 +395,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 }
 
 // Create file
-func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (fcall.Tsize, error) {
 	db.DPrintf("PATHCLNT", "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)

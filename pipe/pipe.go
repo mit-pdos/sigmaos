@@ -125,7 +125,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -148,10 +148,10 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (sp
 		d = d[max:]
 		pipe.condr.Signal()
 	}
-	return sp.Tsize(n), nil
+	return fcall.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

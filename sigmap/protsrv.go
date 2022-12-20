@@ -11,15 +11,15 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyC() chan *FcallMsg
+	GetReplyC() chan *fcall.FcallMsg
 }
 
-type Fsrvfcall func(*FcallMsg)
+type Fsrvfcall func(*fcall.FcallMsg)
 
 type SessServer interface {
 	Register(fcall.Tclient, fcall.Tsession, Conn) *fcall.Err
 	Unregister(fcall.Tclient, fcall.Tsession, Conn)
-	SrvFcall(*FcallMsg)
+	SrvFcall(*fcall.FcallMsg)
 	Snapshot() []byte
 	Restore([]byte)
 }

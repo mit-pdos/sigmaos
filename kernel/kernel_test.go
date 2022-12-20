@@ -8,10 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
-	"sigmaos/pathclnt"
 	"sigmaos/test"
 )
 
@@ -177,7 +176,8 @@ func TestEphemeral(t *testing.T) {
 	name := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true, name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
-	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
+	_, error := sp.MkMount(b)
+	assert.Nil(t, error, "MkMount")
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")

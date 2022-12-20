@@ -3,17 +3,17 @@ package machine
 import (
 	"fmt"
 
+	"sigmaos/fcall"
 	"sigmaos/linuxsched"
-	sp "sigmaos/sigmap"
 )
 
 type Config struct {
-	Cores *sp.Tinterval
+	Cores *fcall.Tinterval
 }
 
 func makeMachineConfig() *Config {
 	cfg := MakeEmptyConfig()
-	cfg.Cores = sp.MkInterval(0, uint64(linuxsched.NCores))
+	cfg.Cores = fcall.MkInterval(0, uint64(linuxsched.NCores))
 	return cfg
 }
 

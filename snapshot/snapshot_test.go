@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
@@ -50,7 +51,7 @@ func restoreSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid, b []byte)
 	p := path.Join(sp.MEMFS, pid.String(), sp.SNAPDEV)
 	sz, err := fsl.SetFile(p, b, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "Write snapshot")
-	assert.Equal(ts.T, sz, sp.Tsize(len(b)), "Snapshot write wrong size")
+	assert.Equal(ts.T, sz, fcall.Tsize(len(b)), "Snapshot write wrong size")
 }
 
 func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {

@@ -12,8 +12,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type MarshalF func(*sp.FcallMsg, *bufio.Writer) *fcall.Err
-type UnmarshalF func(rdr io.Reader) (*sp.FcallMsg, *fcall.Err)
+type MarshalF func(*fcall.FcallMsg, *bufio.Writer) *fcall.Err
+type UnmarshalF func(rdr io.Reader) (*fcall.FcallMsg, *fcall.Err)
 
 type NetServer struct {
 	addr      string

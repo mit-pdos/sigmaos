@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/resource"
@@ -32,10 +33,10 @@ func (st Tcorestatus) String() string {
 }
 
 func (pd *Procd) initCores(grantedCoresIv string) {
-	grantedCores := sp.MkInterval(0, 0)
+	grantedCores := fcall.MkInterval(0, 0)
 	grantedCores.Unmarshal(grantedCoresIv)
 	// First, revoke access to all cores.
-	allCoresIv := sp.MkInterval(0, uint64(linuxsched.NCores))
+	allCoresIv := fcall.MkInterval(0, uint64(linuxsched.NCores))
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, allCoresIv.Marshal(), int(linuxsched.NCores))
 	pd.removeCores(revokeMsg)
 
@@ -228,7 +229,7 @@ func (pd *Procd) freeCoresL(p *LinuxProc) {
 }
 
 func parseCoreInterval(ivStr string) []uint {
-	iv := sp.MkInterval(0, 0)
+	iv := fcall.MkInterval(0, 0)
 	iv.Unmarshal(ivStr)
 	cores := make([]uint, iv.Size())
 	for i := uint(0); i < uint(iv.Size()); i++ {

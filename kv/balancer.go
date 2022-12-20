@@ -194,7 +194,7 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
 		return 0, fcall.MkErr(fcall.TErrInval, words)
@@ -203,10 +203,10 @@ func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.T
 	if err != nil {
 		return 0, err
 	}
-	return sp.Tsize(len(b)), nil
+	return fcall.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
@@ -247,7 +247,7 @@ func (bl *Balancer) PostConfig() {
 }
 
 // Post new epoch, and finish moving sharddirs.
-func (bl *Balancer) restore(conf *Config, epoch sp.Tepoch) {
+func (bl *Balancer) restore(conf *Config, epoch fcall.Tepoch) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
@@ -257,7 +257,7 @@ func (bl *Balancer) restore(conf *Config, epoch sp.Tepoch) {
 	bl.doMoves(bl.conf.Moves)
 }
 
-func (bl *Balancer) recover(epoch sp.Tepoch) {
+func (bl *Balancer) recover(epoch fcall.Tepoch) {
 	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
 		bl.restore(conf, epoch)

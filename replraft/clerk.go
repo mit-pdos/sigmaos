@@ -15,8 +15,8 @@ import (
 )
 
 type Op struct {
-	request   *sp.FcallMsg
-	reply     *sp.FcallMsg
+	request   *fcall.FcallMsg
+	reply     *fcall.FcallMsg
 	frame     []byte
 	startTime time.Time
 }
@@ -25,7 +25,7 @@ type Clerk struct {
 	mu       *sync.Mutex
 	id       int
 	tm       *threadmgr.ThreadMgr
-	opmap    map[fcall.Tsession]map[sp.Tseqno]*Op
+	opmap    map[fcall.Tsession]map[fcall.Tseqno]*Op
 	requests chan *Op
 	commit   <-chan *committedEntries
 	proposeC chan<- []byte
@@ -36,7 +36,7 @@ func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan *committedEntries,
 	c.mu = &sync.Mutex{}
 	c.id = id
 	c.tm = tm
-	c.opmap = make(map[fcall.Tsession]map[sp.Tseqno]*Op)
+	c.opmap = make(map[fcall.Tsession]map[fcall.Tseqno]*Op)
 	c.requests = make(chan *Op)
 	c.commit = commit
 	c.proposeC = propose
@@ -95,7 +95,7 @@ func (c *Clerk) reproposeOps() {
 	}
 }
 
-func (c *Clerk) apply(fc *sp.FcallMsg, leader uint64) {
+func (c *Clerk) apply(fc *fcall.FcallMsg, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
 	op := c.getOp(fc)
 	if op != nil {
@@ -119,7 +119,7 @@ func (c *Clerk) registerOp(op *Op) {
 	seq := op.request.Seqno()
 	m, ok := c.opmap[s]
 	if !ok {
-		m = make(map[sp.Tseqno]*Op)
+		m = make(map[fcall.Tseqno]*Op)
 		c.opmap[s] = m
 	}
 	if _, ok := m[seq]; ok {
@@ -132,7 +132,7 @@ func (c *Clerk) registerOp(op *Op) {
 }
 
 // Get the full op struct associated with an fcall.
-func (c *Clerk) getOp(fc *sp.FcallMsg) *Op {
+func (c *Clerk) getOp(fc *fcall.FcallMsg) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -152,7 +152,7 @@ func (c *Clerk) getOp(fc *sp.FcallMsg) *Op {
 }
 
 // Print how much time an op spent in raft.
-func (c *Clerk) printOpTiming(rep *sp.FcallMsg, frame []byte) {
+func (c *Clerk) printOpTiming(rep *fcall.FcallMsg, frame []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

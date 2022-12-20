@@ -21,7 +21,7 @@ import (
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
-	epoch sp.Tepoch
+	epoch fcall.Tepoch
 }
 
 func makeFence(i fs.Inode) *Fence {
@@ -30,11 +30,11 @@ func makeFence(i fs.Inode) *Fence {
 	return e
 }
 
-func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	return 0, fcall.MkErr(fcall.TErrNotSupported, "Write")
 }
 
-func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
@@ -86,7 +86,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *fcall.Err) {
 // id exists, return the locked fence in read mode so that no one can
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
-func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *fcall.Err) {
+func CheckFence(root fs.Dir, new fcall.Tfence) (*Fence, *fcall.Err) {
 	if new.Fenceid.Path == 0 {
 		return nil, nil
 	}

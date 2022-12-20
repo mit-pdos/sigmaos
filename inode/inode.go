@@ -13,7 +13,7 @@ import (
 
 type Inode struct {
 	mu     sync.Mutex
-	inum   sp.Tpath
+	inum   fcall.Tpath
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
@@ -24,7 +24,7 @@ var NextInum = uint64(0)
 
 func MakeInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
-	i.inum = sp.Tpath(atomic.AddUint64(&NextInum, 1))
+	i.inum = fcall.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -41,7 +41,7 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Path() sp.Tpath {
+func (inode *Inode) Path() fcall.Tpath {
 	return inode.inum
 }
 

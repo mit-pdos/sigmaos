@@ -27,11 +27,11 @@ func makeSpawnFile(pd *Procd) *fcall.Err {
 	return nil
 }
 
-func (ctl *SpawnFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (ctl *SpawnFile) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
 	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
 }
 
-func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {
@@ -44,5 +44,5 @@ func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversio
 
 	db.DPrintf("PROCD", "fs spawn done: %v", p)
 
-	return sp.Tsize(len(b)), nil
+	return fcall.Tsize(len(b)), nil
 }

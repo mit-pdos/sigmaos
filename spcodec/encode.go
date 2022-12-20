@@ -5,11 +5,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/fcall"
 	"sigmaos/frame"
-	sp "sigmaos/sigmap"
 )
 
-func encode(wr io.Writer, fcm *sp.FcallMsg) error {
+func encode(wr io.Writer, fcm *fcall.FcallMsg) error {
 	b, err := proto.Marshal(fcm.Fc)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func encode(wr io.Writer, fcm *sp.FcallMsg) error {
 	return nil
 }
 
-func decode(rdr io.Reader, fcm *sp.FcallMsg) error {
+func decode(rdr io.Reader, fcm *fcall.FcallMsg) error {
 	b, err := frame.PopFromFrame(rdr)
 	if err != nil {
 		return err

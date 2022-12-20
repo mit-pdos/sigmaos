@@ -21,9 +21,8 @@ func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	labelstr := proc.GetLabels(proc.SIGMADEBUG)
 	labels = make(map[Tselector]bool, len(labelstr))
-	for _, v := range labelstr {
-		//		labels[Tselector(k)] = v
-		labels[0] = v
+	for k, v := range labelstr {
+		labels[Tselector(k)] = v
 	}
 }
 

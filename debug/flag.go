@@ -1,168 +1,170 @@
 package debug
 
-type Tselector int
-
-//type Tselectorstr string
+type Tselector string
 
 // ALWAYS
 const (
-	ALWAYS Tselector = 0
+	ALWAYS Tselector = "ALWAYS"
 )
 
 // ERR
 const (
-	ERR Tselector = 0
+	ERR Tselector = "_ERR"
 )
 
 // Benchmarks
 const (
-	LOADGEN Tselector = 0
-	BENCH             = 0
+	LOADGEN Tselector = "LOADGEN"
+	BENCH             = "BENCH"
 )
 
 // Tests
 const (
-	TEST  Tselector = 0 //"TEST"
-	TEST1           = 0
-	DELAY           = 0
+	TEST  Tselector = "TEST"
+	TEST1           = "TEST1"
+	DELAY           = "DELAY"
 )
 
 // Apps
 const (
-	WWW             Tselector = 0 //"WWW"
-	WWW_ERR                   = 0
-	WWW_CLNT                  = 0
-	MATMUL                    = 0
-	CACHESRV                  = 0
-	CACHECLERK                = 0
-	HOTEL_CLNT                = 0
-	HOTEL_GEO                 = 0
-	HOTEL_PROF                = 0
-	HOTEL_RATE                = 0
-	HOTEL_RESERVE             = 0
-	HOTEL_SEARCH              = 0
-	HOTEL_WWW                 = 0
-	HOTEL_WWW_STATS           = 0
-	SLEEPER                   = 0
-	SPINNER                   = 0
-	FSREADER                  = 0
-	SLEEPER_TIMING            = 0
-	MR                        = 0
-	MR_TPT                    = 0
-	KVBAL                     = 0
-	KVBAL_ERR                 = 0
-	KVCLERK                   = 0
-	KVCLERK_ERR               = 0
-	KVMON                     = 0
-	KVMV                      = 0
-	KVMV_ERR                  = 0
+	WWW             Tselector = "WWW"
+	WWW_ERR                   = WWW + ERR
+	WWW_CLNT                  = WWW + "_CLNT"
+	MATMUL                    = "MATMUL"
+	CACHESRV                  = "CACHESRV"
+	CACHECLERK                = "CACHECLERK"
+	HOTEL_CLNT                = "HOTEL_CLNT"
+	HOTEL_GEO                 = "HOTEL_GEO"
+	HOTEL_PROF                = "HOTEL_PROF"
+	HOTEL_RATE                = "HOTEL_RATE"
+	HOTEL_RESERVE             = "HOTEL_RESERVE"
+	HOTEL_SEARCH              = "HOTEL_SEARCH"
+	HOTEL_WWW                 = "HOTEL_WWW"
+	HOTEL_WWW_STATS           = "HOTEL_WWW_STATS"
+	SLEEPER                   = "SLEEPER"
+	SPINNER                   = "SPINNER"
+	FSREADER                  = "FSREADER"
+	SLEEPER_TIMING            = "SLEEPER_TIMING"
+	MR                        = "MR"
+	MR_TPT                    = "MR_TPT"
+	KVBAL                     = "KVBAL"
+	KVBAL_ERR                 = KVBAL + ERR
+	KVCLERK                   = "KVCLERK"
+	KVCLERK_ERR               = KVCLERK + ERR
+	KVMON                     = "KVMON"
+	KVMV                      = "KVMV"
+	KVMV_ERR                  = KVMV + ERR
 )
 
 // Kernel
 const (
-	KERNEL     Tselector = 0
-	NAMED                = 0
-	PROCD                = 0
-	PROCD_ERR            = 0
-	PROCD_PERF           = 0
-	PROCCACHE            = 0
-	S3                   = 0
-	UX                   = 0
-	DB                   = 0
-	PROXY                = 0
+	KERNEL     Tselector = "KERNEL"
+	NAMED                = "NAMED"
+	PROCD                = "PROCD"
+	PROCD_ERR            = PROCD + ERR
+	PROCD_PERF           = PROCD + "_PERF"
+	PROCCACHE            = "PROCCACHE"
+	S3                   = "S3"
+	UX                   = "UX"
+	DB                   = "DB"
+	PROXY                = "PROXY"
 )
 
 // Realm
 const (
-	SIGMAMGR     Tselector = 0 //"SIGMAMGR"
-	SIGMAMGR_ERR           = 0 //"SIGMAMGR_ERR"
-	REALMMGR               = 0
-	REALMMGR_ERR           = 0
-	REALMCLNT              = 0
-	NODED                  = 0
-	NODED_ERR              = 0
-	MACHINED               = 0
-	REALM_LOCK             = 0
+	SIGMAMGR     Tselector = "SIGMAMGR"
+	SIGMAMGR_ERR           = SIGMAMGR + ERR
+	REALMMGR               = "REALMMGR"
+	REALMMGR_ERR           = REALMMGR + ERR
+	REALMCLNT              = "REALMCLNT"
+	NODED                  = "NODED"
+	NODED_ERR              = NODED + ERR
+	MACHINED               = "MACHINED"
+	REALM_LOCK             = "REALM_LOCK"
 )
 
 // Client Libraries
 const (
-	WRITER_ERR    Tselector = 0
-	READER_ERR              = 0
-	AWRITER                 = 0
-	FDCLNT_ERR              = 0
-	FSLIB                   = 0
-	SEMCLNT                 = 0
-	SEMCLNT_ERR             = 0
-	EPOCHCLNT               = 0
-	EPOCHCLNT_ERR           = 0
-	LEADER_ERR              = 0
-	GROUPMGR                = 0
-	GROUPMGR_ERR            = 0
-	PROCCLNT                = 0
-	PROCCLNT_ERR            = 0
-	FENCECLNT               = 0
-	FENCECLNT_ERR           = 0
-	GROUP                   = 0
-	GROUP_ERR               = 0
+	WRITER_ERR    Tselector = "WRITER" + ERR
+	READER_ERR              = "READER" + ERR
+	AWRITER                 = "AWRITER"
+	FDCLNT_ERR              = "FDCLNT" + ERR
+	FSLIB                   = "FSLIB"
+	SEMCLNT                 = "SEMCLNT"
+	SEMCLNT_ERR             = SEMCLNT + ERR
+	EPOCHCLNT               = "EPOCHCLNT"
+	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
+	LEADER_ERR              = "LEADER" + ERR
+	GROUPMGR                = "GROUPMGR"
+	GROUPMGR_ERR            = GROUPMGR + ERR
+	PROCCLNT                = "PROCCLNT"
+	PROCCLNT_ERR            = PROCCLNT + ERR
+	FENCECLNT               = "FENCECLNT"
+	FENCECLNT_ERR           = FENCECLNT + ERR
+	GROUP                   = "GROUP"
+	GROUP_ERR               = GROUP + ERR
 )
 
 // Server Libraries
 const (
-	MEMFS      Tselector = 0
-	PIPE                 = 0
-	OVERLAYDIR           = 0
-	CLONEDEV             = 0
-	SESSDEV              = 0
-	PROTDEVSRV           = 0
+	MEMFS      Tselector = "MEMFS"
+	PIPE                 = "PIPE"
+	OVERLAYDIR           = "OVERLAYDIR"
+	CLONEDEV             = "CLONEDEV"
+	SESSDEV              = "SESSDEV"
+	PROTDEVSRV           = "PROTDEVSRV"
 )
 
 // Client-side Infrastructure
 const (
-	NETCLNT             Tselector = 0
-	NETCLNT_ERR                   = 0
-	SESS_CLNT_Q                   = 0
-	SESS_STATE_CLNT               = 0
-	SESS_STATE_CLNT_ERR           = 0
-	FIDCLNT                       = 0
-	MOUNT                         = 0
-	PATHCLNT                      = 0
-	PATHCLNT_ERR                  = 0
-	WALK                          = 0
+	NETCLNT             Tselector = "NETCLNT"
+	NETCLNT_ERR                   = NETCLNT + ERR
+	SESS_CLNT_Q                   = "SESS_CLNT_Q"
+	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
+	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
+	FIDCLNT                       = "FIDCLNT"
+	MOUNT                         = "MOUNT"
+	PATHCLNT                      = "PATHCLNT"
+	PATHCLNT_ERR                  = PATHCLNT + ERR
+	WALK                          = "WALK"
 )
 
 // Server-side Infrastructure
 const (
-	NETSRV             Tselector = 0 //"_REFMAP"
-	NETSRV_ERR                   = 0
-	REPLRAFT                     = 0
-	REPLY_TABLE                  = 0
-	SESSSRV                      = 0
-	WATCH                        = 0
-	WATCH_ERR                    = 0
-	RAFT_TIMING                  = 0
-	LOCKMAP                      = 0
-	SNAP                         = 0
-	NAMEI                        = 0
-	FENCE_SRV                    = 0
-	FENCEFS                      = 0
-	FENCEFS_ERR                  = 0
-	THREADMGR                    = 0
-	PROTSRV                      = 0
-	REFMAP_SUFFIX                = 0
-	VERSION                      = 0
-	SESSCOND                     = 0
-	SESS_STATE_SRV               = 0
-	SESS_STATE_SRV_ERR           = 0
-	FRAME                        = 0
+	NETSRV             Tselector = "NETSRV"
+	NETSRV_ERR                   = NETSRV + ERR
+	REPLRAFT                     = "REPLRAFT"
+	RAFT_TIMING                  = "RAFT_TIMING"
+	REPLY_TABLE                  = "REPLY_TABLE"
+	SESSSRV                      = "SESSSRV"
+	WATCH                        = "WATCH"
+	WATCH_ERR                    = WATCH + ERR
+	LOCKMAP                      = "LOCKMAP"
+	SNAP                         = "SNAP"
+	NAMEI                        = "NAMEI"
+	FENCE_SRV                    = "FENCE_SRV"
+	FENCEFS                      = "FENCEFS"
+	FENCEFS_ERR                  = FENCEFS + ERR
+	THREADMGR                    = "THREADMGR"
+	PROTSRV                      = "PROTSRV"
+	REFMAP_SUFFIX                = "_REFMAP"
+	VERSION                      = "VERSION"
+	SESSCOND                     = "SESSCOND"
+	SESS_STATE_SRV               = "SESS_STATE_SRV"
+	SESS_STATE_SRV_ERR           = SESS_STATE_SRV + ERR
 )
 
 // 9P
 const (
-	NPCODEC Tselector = 0
+	NPCODEC Tselector = "NPCODEC"
 )
 
 // SigmaP
 const (
-	SPCODEC Tselector = 0
+	SPCODEC Tselector = "SPCODEC"
+)
+
+// Transport
+const (
+	FRAME Tselector = "FRAME"
 )

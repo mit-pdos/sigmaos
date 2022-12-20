@@ -6,7 +6,7 @@ import (
 
 	"sigmaos/fs"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 )
 
 type File struct {
@@ -20,7 +20,7 @@ func MakeFile() *File {
 	return f
 }
 
-func (f *File) Size() (sp.Tlength, *fcall.Err) {
+func (f *File) Size() (sp.Tlength, *sessp.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return sp.Tlength(len(f.data)), nil
@@ -30,13 +30,13 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	// f.SetMtime(time.Now().Unix())
 
-	cnt := fcall.Tsize(len(data))
+	cnt := sessp.Tsize(len(data))
 	sz := sp.Toffset(len(data))
 	if offset == sp.NoOffset { // OAPPEND
 		offset = f.LenOff()
@@ -60,7 +60,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

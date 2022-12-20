@@ -2,13 +2,13 @@ package pathclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/union"
 )
 
-func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.Err) {
+func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *sessp.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
 	if err != nil {
 		return sp.NoFid, err
@@ -35,7 +35,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.E
 }
 
 // Caller is responsible for clunking fid
-func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *fcall.Err) {
+func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *sessp.Err) {
 	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
 	if err != nil {
 		return sp.NoFid, err
@@ -59,5 +59,5 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *fcall.Err) 
 	if error == nil && rfid != sp.NoFid {
 		return rfid, nil
 	}
-	return rfid, fcall.MkErr(fcall.TErrNotfound, q)
+	return rfid, sessp.MkErr(sessp.TErrNotfound, q)
 }

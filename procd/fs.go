@@ -7,7 +7,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
@@ -52,17 +52,17 @@ func (pd *Procd) makeFs() {
 }
 
 // Publishes a proc as running
-func (pfs *ProcdFs) running(p *LinuxProc) *fcall.Err {
+func (pfs *ProcdFs) running(p *LinuxProc) *sessp.Err {
 	// Make sure we write the proc description before we publish it.
 	b, error := json.Marshal(p.attr)
 	if error != nil {
-		return fcall.MkErrError(fmt.Errorf("running marshal err %v", error))
+		return sessp.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
 	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.Pid.String()), 0777, sp.OREAD|sp.OWRITE, b)
 	if err != nil {
 		pfs.pd.perf.Done()
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
-		// TODO: return an fcall.Err return err
+		// TODO: return an sessp.Err return err
 	}
 	return nil
 }

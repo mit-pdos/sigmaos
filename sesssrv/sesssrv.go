@@ -7,7 +7,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -123,10 +123,10 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid fcall.Tsession) *fcall.Err {
+func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid sessp.Tsession) *sessp.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
-		return fcall.MkErr(fcall.TErrNotfound, sid)
+		return sessp.MkErr(sessp.TErrNotfound, sid)
 	}
 	sess.RegisterDetach(f)
 	return nil
@@ -156,7 +156,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
-func (ssrv *SessSrv) Sess(sid fcall.Tsession) *sessstatesrv.Session {
+func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
 		db.DFatalf("%v: no sess %v\n", proc.GetName(), sid)
@@ -225,29 +225,29 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 	return ssrv.snap
 }
 
-func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid fcall.Tsession) (fs.Dir, fs.CtxI) {
+func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid sessp.Tsession) (fs.Dir, fs.CtxI) {
 	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) *fcall.Err {
+func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *sessp.Err {
 	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) {
+func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
-	if sid == fcall.NoSession {
+	if sid == sessp.NoSession {
 		return
 	}
 	sess := ssrv.st.Alloc(cid, sid)
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *fcall.FcallMsg) {
-	s := fcall.Tsession(fc.Fc.Session)
+func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
+	s := sessp.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
@@ -258,7 +258,7 @@ func (ssrv *SessSrv) SrvFcall(fc *fcall.FcallMsg) {
 		// processing it sequentially on the session's thread.
 		if s == 0 {
 			ssrv.srvfcall(fc)
-		} else if fcall.Tfcall(fc.Fc.Type) == fcall.TTwriteread {
+		} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
 			ssrv.cnt.Inc()
 			go func() {
 				ssrv.srvfcall(fc)
@@ -272,7 +272,7 @@ func (ssrv *SessSrv) SrvFcall(fc *fcall.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *fcall.FcallMsg, reply *fcall.FcallMsg, sess *sessstatesrv.Session) {
+func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *sessstatesrv.Session) {
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, reply)
 
@@ -285,11 +285,11 @@ func (ssrv *SessSrv) sendReply(request *fcall.FcallMsg, reply *fcall.FcallMsg, s
 	}
 }
 
-func (ssrv *SessSrv) srvfcall(fc *fcall.FcallMsg) {
+func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
-	s := fcall.Tsession(fc.Fc.Session)
+	s := sessp.Tsession(fc.Fc.Session)
 	if s == 0 {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
@@ -299,7 +299,7 @@ func (ssrv *SessSrv) srvfcall(fc *fcall.FcallMsg) {
 	// will be in this function, so the conn will be set to
 	// nil. If it came from the client, the conn will already be
 	// set.
-	sess := ssrv.st.Alloc(fcall.Tclient(fc.Fc.Client), s)
+	sess := ssrv.st.Alloc(sessp.Tclient(fc.Fc.Client), s)
 	// Reply cache needs to live under the replication layer in order to
 	// handle duplicate requests. These may occur if, for example:
 	//
@@ -339,11 +339,11 @@ func (ssrv *SessSrv) srvfcall(fc *fcall.FcallMsg) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.FENCE_SRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		msg := sp.MkRerror(err)
-		reply := fcall.MakeFcallMsgReply(fc, msg)
+		reply := sessp.MakeFcallMsgReply(fc, msg)
 		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {
@@ -356,7 +356,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *fcall.FcallMsg) 
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v close? %v", fc, close)
@@ -365,7 +365,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
 		msg = rerror
 	}
 
-	reply := fcall.MakeFcallMsgReply(fc, msg)
+	reply := sessp.MakeFcallMsgReply(fc, msg)
 	reply.Data = data
 
 	ssrv.sendReply(fc, reply, sess)

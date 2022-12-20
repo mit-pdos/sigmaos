@@ -6,7 +6,7 @@ import (
 	raft "go.etcd.io/etcd/raft/v3"
 
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 	"sigmaos/threadmgr"
 )
 
@@ -33,8 +33,8 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(fc *fcall.FcallMsg) {
-	if fc.GetType() == fcall.TTdetach {
+func (srv *RaftReplServer) Process(fc *sessp.FcallMsg) {
+	if fc.GetType() == sessp.TTdetach {
 		msg := fc.Msg.(*sp.Tdetach)
 		msg.PropId = uint32(srv.node.id)
 		fc.Msg = msg

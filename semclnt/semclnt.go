@@ -2,7 +2,7 @@ package semclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -44,7 +44,7 @@ func (c *SemClnt) Down() error {
 		})
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
-		if err != nil && fcall.IsErrNotfound(err) {
+		if err != nil && sessp.IsErrNotfound(err) {
 			db.DPrintf(db.SEMCLNT, "down %v ok err %v\n", c.path, err)
 			break
 		}
@@ -55,7 +55,7 @@ func (c *SemClnt) Down() error {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v err %v\n", c.path, err)
 			return err
 		}
-		if err != nil && fcall.IsErrVersion(err) {
+		if err != nil && sessp.IsErrVersion(err) {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v retry err %v\n", c.path, err)
 			continue
 		}

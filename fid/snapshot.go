@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/sesscond"
 	sp "sigmaos/sigmap"
@@ -13,7 +13,7 @@ import (
 
 type PobjSnapshot struct {
 	Path    []string
-	Obj     fcall.Tpath
+	Obj     sessp.Tpath
 	CtxSnap []byte
 }
 

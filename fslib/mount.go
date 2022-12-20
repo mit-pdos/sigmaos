@@ -3,7 +3,7 @@ package fslib
 import (
 	"fmt"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/union"
@@ -59,7 +59,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 		}
 		return mnt, left[1:].String(), nil
 	}
-	return sp.NullMount(), "", fcall.MkErr(fcall.TErrInval, pn)
+	return sp.NullMount(), "", sessp.MkErr(sessp.TErrInval, pn)
 }
 
 // Return path to the symlink for the last server on this path and the
@@ -94,7 +94,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	if err == nil && rname != "" {
 		return rname, rmnt, nil
 	}
-	return rname, rmnt, fcall.MkErr(fcall.TErrNotfound, d)
+	return rname, rmnt, sessp.MkErr(sessp.TErrNotfound, d)
 }
 
 //

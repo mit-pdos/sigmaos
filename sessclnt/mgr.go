@@ -6,16 +6,16 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Mgr struct {
 	mu       sync.Mutex
-	cli      fcall.Tclient
+	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 }
 
-func MakeMgr(cli fcall.Tclient) *Mgr {
+func MakeMgr(cli sessp.Tclient) *Mgr {
 	sc := &Mgr{}
 	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
@@ -36,7 +36,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *fcall.Err) {
+func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *sessp.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -52,7 +52,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *fcall.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *fcall.Tfence) (*fcall.FcallMsg, *fcall.Err) {
+func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *sessp.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
@@ -65,14 +65,14 @@ func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *fcall.Tfence) 
 }
 
 // For testing
-func (sc *Mgr) Disconnect(addrs []string) *fcall.Err {
+func (sc *Mgr) Disconnect(addrs []string) *sessp.Err {
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect cli %v addr %v", sc.cli, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
-		return fcall.MkErr(fcall.TErrUnreachable, "disconnect: "+sessKey(addrs))
+		return sessp.MkErr(sessp.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)

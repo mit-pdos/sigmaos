@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -18,11 +18,11 @@ type SrvConn struct {
 	sesssrv        sp.SessServer
 	br             *bufio.Reader
 	bw             *bufio.Writer
-	replies        chan *fcall.FcallMsg
+	replies        chan *sessp.FcallMsg
 	marshalframe   MarshalF
 	unmarshalframe UnmarshalF
-	clid           fcall.Tclient
-	sessid         fcall.Tsession
+	clid           sessp.Tclient
+	sessid         sessp.Tsession
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
@@ -34,7 +34,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		make(chan *fcall.FcallMsg),
+		make(chan *sessp.FcallMsg),
 		srv.marshal,
 		srv.unmarshal,
 		0,
@@ -90,11 +90,11 @@ func (c *SrvConn) Dst() string {
 	return c.conn.LocalAddr().String()
 }
 
-// Get the reply channel in order to send an fcall. If this function is called,
+// Get the reply channel in order to send an sessp. If this function is called,
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyC() chan *fcall.FcallMsg {
+func (c *SrvConn) GetReplyC() chan *sessp.FcallMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -110,13 +110,13 @@ func (c *SrvConn) reader() {
 		}
 		db.DPrintf(db.NETSRV, "srv req %v data %d\n", fc, len(fc.Data))
 		if c.sessid == 0 {
-			c.sessid = fcall.Tsession(fc.Session())
+			c.sessid = sessp.Tsession(fc.Session())
 			c.clid = fc.Client()
 			if err := c.sesssrv.Register(c.clid, c.sessid, c); err != nil {
 				db.DPrintf(db.NETSRV_ERR, "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fm := fcall.MakeFcallMsgReply(fc, sp.MkRerror(err))
+				fm := sessp.MakeFcallMsgReply(fc, sp.MkRerror(err))
 				c.GetReplyC() <- fm
 				close(c.replies)
 				return
@@ -126,7 +126,7 @@ func (c *SrvConn) reader() {
 				// the connection has broken.
 				defer c.sesssrv.Unregister(c.clid, c.sessid, c)
 			}
-		} else if c.sessid != fcall.Tsession(fc.Session()) {
+		} else if c.sessid != sessp.Tsession(fc.Session()) {
 			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fc.Session())
 		}
 		c.sesssrv.SrvFcall(fc)

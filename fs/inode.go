@@ -2,11 +2,11 @@ package fs
 
 import (
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 )
 
-type SnapshotF func(Inode) fcall.Tpath
-type RestoreF func(fcall.Tpath) Inode
+type SnapshotF func(Inode) sessp.Tpath
+type RestoreF func(sessp.Tpath) Inode
 
 // Inode interface for directories
 
@@ -14,7 +14,7 @@ type Inode interface {
 	FsObj
 	SetMtime(int64)
 	Mtime() int64
-	Size() (sp.Tlength, *fcall.Err)
+	Size() (sp.Tlength, *sessp.Err)
 	SetParent(Dir)
 	Unlink()
 	Snapshot(SnapshotF) []byte

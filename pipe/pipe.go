@@ -7,7 +7,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/sesscond"
 	sp "sigmaos/sigmap"
@@ -42,13 +42,13 @@ func MakePipe(ctx fs.CtxI) *Pipe {
 	return pipe
 }
 
-func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
+func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *sessp.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	if mode == sp.OREAD {
 		if pipe.rclosed || pipe.nlink <= 0 {
-			return nil, fcall.MkErr(fcall.TErrClosed, "pipe reading")
+			return nil, sessp.MkErr(sessp.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
 		db.DPrintf(db.PIPE, "%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
@@ -64,12 +64,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 				return nil, err
 			}
 			if pipe.nlink == 0 {
-				return nil, fcall.MkErr(fcall.TErrNotfound, "pipe")
+				return nil, sessp.MkErr(sessp.TErrNotfound, "pipe")
 			}
 		}
 	} else if mode == sp.OWRITE {
 		if pipe.wclosed || pipe.nlink <= 0 {
-			return nil, fcall.MkErr(fcall.TErrClosed, "pipe writing")
+			return nil, sessp.MkErr(sessp.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
 		db.DPrintf(db.PIPE, "%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
@@ -86,17 +86,17 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 				return nil, err
 			}
 			if pipe.nlink == 0 {
-				return nil, fcall.MkErr(fcall.TErrNotfound, "pipe")
+				return nil, sessp.MkErr(sessp.TErrNotfound, "pipe")
 			}
 
 		}
 	} else {
-		return nil, fcall.MkErr(fcall.TErrInval, fmt.Sprintf("mode %v", mode))
+		return nil, sessp.MkErr(sessp.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil, nil
 }
 
-func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
+func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -107,7 +107,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 			pipe.rclosed = true
 		}
 		if pipe.nreader < 0 {
-			fcall.MkErr(fcall.TErrClosed, "pipe reading")
+			sessp.MkErr(sessp.TErrClosed, "pipe reading")
 		}
 		pipe.condw.Signal()
 	} else if mode == sp.OWRITE {
@@ -116,16 +116,16 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 			pipe.wclosed = true
 		}
 		if pipe.nwriter < 0 {
-			fcall.MkErr(fcall.TErrClosed, "pipe writing")
+			sessp.MkErr(sessp.TErrClosed, "pipe writing")
 		}
 		pipe.condr.Signal()
 	} else {
-		return fcall.MkErr(fcall.TErrInval, fmt.Sprintf("mode %v", mode))
+		return sessp.MkErr(sessp.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -133,7 +133,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (fc
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
-				return 0, fcall.MkErr(fcall.TErrClosed, "pipe")
+				return 0, sessp.MkErr(sessp.TErrClosed, "pipe")
 			}
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
@@ -148,16 +148,16 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (fc
 		d = d[max:]
 		pipe.condr.Signal()
 	}
-	return fcall.Tsize(n), nil
+	return sessp.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
-			return nil, fcall.MkErr(fcall.TErrClosed, "pipe")
+			return nil, sessp.MkErr(sessp.TErrClosed, "pipe")
 		}
 		err := pipe.condr.Wait(ctx.SessionId())
 		if err != nil {

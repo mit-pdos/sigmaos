@@ -4,7 +4,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/linuxsched"
 	mproto "sigmaos/machine/proto"
 	"sigmaos/protdevclnt"
@@ -21,7 +21,7 @@ func NodedNCores() uint64 {
 }
 
 // Post chunks of available cores.
-func PostCores(pdc *protdevclnt.ProtDevClnt, machineId string, cores *fcall.Tinterval) {
+func PostCores(pdc *protdevclnt.ProtDevClnt, machineId string, cores *sessp.Tinterval) {
 	// Post cores in local fs.
 	if _, err := pdc.PutFile(path.Join(MACHINES, machineId, CORES, cores.Marshal()), 0777, sp.OWRITE, []byte(cores.Marshal())); err != nil {
 		db.DFatalf("Error PutFile: %v", err)

@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/kernel"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
@@ -36,7 +36,7 @@ func Run(args []string) {
 	}
 
 	var ss *sesssrv.SessSrv
-	var err *fcall.Err
+	var err *sessp.Err
 	// Replicate?
 	if len(args) >= 4 {
 		var config repl.Config = nil

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
@@ -17,33 +17,33 @@ type queryDev struct {
 
 type fileSession struct {
 	*inode.Inode
-	id     fcall.Tsession
+	id     sessp.Tsession
 	dbaddr string
 	res    []byte
 }
 
 // XXX wait on close before processing data?
-func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	debug.DPrintf(debug.DB, "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
-		return 0, fcall.MkErrError(error)
+		return 0, sessp.MkErrError(error)
 	}
 	res, err := doQuery(db, string(b))
 	if err != nil {
-		return 0, fcall.MkErrError(err)
+		return 0, sessp.MkErrError(err)
 	}
 	fs.res = res
 
 	if err := db.Close(); err != nil {
-		return 0, fcall.MkErrError(err)
+		return 0, sessp.MkErrError(err)
 	}
 
-	return fcall.Tsize(len(b)), nil
+	return sessp.Tsize(len(b)), nil
 }
 
 // XXX incremental read
-func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	if off > 0 {
 		return nil, nil
 	}
@@ -51,7 +51,7 @@ func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.T
 }
 
 // XXX clean up in case of error
-func (qd *queryDev) mkSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inode, *fcall.Err) {
+func (qd *queryDev) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *sessp.Err) {
 	fs := &fileSession{}
 	fs.Inode = mfs.MakeDevInode()
 	fs.id = sid

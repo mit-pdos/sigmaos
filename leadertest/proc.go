@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"sigmaos/delay"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -21,7 +21,7 @@ func RunProc(epochstr, dir string) {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started()
 
-	epoch, err := fcall.String2Epoch(epochstr)
+	epoch, err := sessp.String2Epoch(epochstr)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}

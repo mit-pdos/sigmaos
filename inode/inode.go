@@ -6,14 +6,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	sp "sigmaos/sigmap"
 )
 
 type Inode struct {
 	mu     sync.Mutex
-	inum   fcall.Tpath
+	inum   sessp.Tpath
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
@@ -24,7 +24,7 @@ var NextInum = uint64(0)
 
 func MakeInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
-	i.inum = fcall.Tpath(atomic.AddUint64(&NextInum, 1))
+	i.inum = sessp.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -41,7 +41,7 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Path() fcall.Tpath {
+func (inode *Inode) Path() sessp.Tpath {
 	return inode.inum
 }
 
@@ -73,15 +73,15 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() (sp.Tlength, *fcall.Err) {
+func (i *Inode) Size() (sp.Tlength, *sessp.Err) {
 	return 0, nil
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
+func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *sessp.Err) {
 	return nil, nil
 }
 
-func (i *Inode) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
+func (i *Inode) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
 	return nil
 }
 
@@ -96,7 +96,7 @@ func (inode *Inode) Mode() sp.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
+func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 

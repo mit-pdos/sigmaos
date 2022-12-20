@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -85,10 +85,10 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	o := f.Pobj().Obj()
-	var err *fcall.Err
-	sz := fcall.Tsize(0)
+	var err *sessp.Err
+	sz := sessp.Tsize(0)
 
 	switch i := o.(type) {
 	case fs.File:
@@ -101,9 +101,9 @@ func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fca
 	return sz, err
 }
 
-func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
+func (f *Fid) WriteRead(req []byte) ([]byte, *sessp.Err) {
 	o := f.Pobj().Obj()
-	var err *fcall.Err
+	var err *sessp.Err
 	var b []byte
 	switch i := o.(type) {
 	case fs.RPC:
@@ -114,7 +114,7 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *fcall.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
@@ -128,7 +128,7 @@ func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count fcall.Tsize, v sp.TQvers
 	return b, nil
 }
 
-func (f *Fid) Read(off sp.Toffset, count fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (f *Fid) Read(off sp.Toffset, count sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:

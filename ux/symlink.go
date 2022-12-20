@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/file"
 	"sigmaos/fs"
 	"sigmaos/path"
@@ -17,18 +17,18 @@ type Symlink struct {
 	*file.File
 }
 
-func makeSymlink(path path.Path, iscreate bool) (*Symlink, *fcall.Err) {
+func makeSymlink(path path.Path, iscreate bool) (*Symlink, *sessp.Err) {
 	s := &Symlink{}
 	o, err := makeObj(path)
 	if err == nil && iscreate {
-		return nil, fcall.MkErr(fcall.TErrExists, path)
+		return nil, sessp.MkErr(sessp.TErrExists, path)
 	}
 	s.Obj = o
 	s.File = file.MakeFile()
 	return s, nil
 }
 
-func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
+func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
 	db.DPrintf(db.UX, "%v: SymOpen %v m %x\n", ctx, s, m)
 	if m&sp.OWRITE == sp.OWRITE {
 		// no calls to update target of an existing symlink,
@@ -54,7 +54,7 @@ func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	return nil, nil
 }
 
-func (s *Symlink) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
+func (s *Symlink) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
 	db.DPrintf(db.UX, "%v: SymClose %v %x\n", ctx, s, mode)
 	if mode&sp.OWRITE == sp.OWRITE {
 		d, err := s.File.Read(ctx, 0, sp.MAXGETSET, sp.NoV)

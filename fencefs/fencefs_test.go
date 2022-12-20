@@ -11,7 +11,7 @@ import (
 )
 
 func TestMakeFenceFs(t *testing.T) {
-	fence := fcall.Tfence1{}
+	fence := sessp.Tfence1{}
 	fence.Epoch = 10
 
 	ctx := ctx.MkCtx("", 0, nil)

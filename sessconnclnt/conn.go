@@ -1,10 +1,10 @@
 package sessconnclnt
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Conn interface {
 	Reset()                                  // Indicates that an error has occurred, and the connection has been reset.
-	CompleteRPC(*fcall.FcallMsg, *fcall.Err) // Complete an RPC
+	CompleteRPC(*sessp.FcallMsg, *sessp.Err) // Complete an RPC
 }

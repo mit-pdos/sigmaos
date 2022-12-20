@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -56,7 +56,7 @@ func (ts *TestState) testRename(t int) {
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
 		if err != nil {
-			assert.True(ts.t, fcall.IsErrNotfound(err))
+			assert.True(ts.t, sessp.IsErrNotfound(err))
 		}
 	}
 }

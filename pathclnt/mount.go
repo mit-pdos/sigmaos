@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
 )
@@ -33,14 +33,14 @@ func makeMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *fcall.Err {
+func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *sessp.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if path.Eq(p.path) {
-			return fcall.MkErr(fcall.TErrExists, fmt.Sprintf("%v (mount)", p.path))
+			return sessp.MkErr(sessp.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
@@ -79,12 +79,12 @@ func matchexact(mp path.Path, path path.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, *fcall.Err) {
+func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, *sessp.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return sp.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, path)
+		return sp.NoFid, path, sessp.MkErr(sessp.TErrUnreachable, path)
 	}
 
 	for _, p := range mnt.mounts {
@@ -97,11 +97,11 @@ func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, 
 			return p.fid, left, nil
 		}
 	}
-	return sp.NoFid, path, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, path, sessp.MkErr(sessp.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path path.Path) (sp.Tfid, *fcall.Err) {
+func (mnt *MntTable) umount(path path.Path) (sp.Tfid, *sessp.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -113,7 +113,7 @@ func (mnt *MntTable) umount(path path.Path) (sp.Tfid, *fcall.Err) {
 			return p.fid, nil
 		}
 	}
-	return sp.NoFid, fcall.MkErr(fcall.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, sessp.MkErr(sessp.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

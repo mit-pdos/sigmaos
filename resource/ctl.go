@@ -4,7 +4,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
@@ -25,11 +25,11 @@ func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir
 	}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
+func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+	return nil, sessp.MkErr(sessp.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	msg := &ResourceMsg{}
 	msg.Unmarshal(b)
 	switch msg.MsgType {
@@ -40,5 +40,5 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion)
 	default:
 		db.DFatalf("Unknown message type")
 	}
-	return fcall.Tsize(len(b)), nil
+	return sessp.Tsize(len(b)), nil
 }

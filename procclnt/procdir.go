@@ -5,7 +5,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -57,7 +57,7 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 		procdir = clnt.procdir
 	}
 	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil && !fcall.IsErrUnavailable(err) {
+	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil && !sessp.IsErrUnavailable(err) {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn Symlink child %v err %v\n", link, err)
 		return clnt.cleanupError(clnt.pid, clnt.procdir, err)
 	}

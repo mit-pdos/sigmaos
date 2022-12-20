@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/sessdev"
@@ -51,7 +51,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, fcall.MkErrError(err)
+		return nil, sessp.MkErrError(err)
 	}
 
 	start := time.Now()
@@ -64,7 +64,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
-		return nil, fcall.MkErrError(err)
+		return nil, sessp.MkErrError(err)
 	}
 
 	return rep, nil

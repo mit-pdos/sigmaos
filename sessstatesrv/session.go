@@ -8,7 +8,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/replies"
 	sp "sigmaos/sigmap"
@@ -30,15 +30,15 @@ type Session struct {
 	rt            *replies.ReplyTable
 	protsrv       sp.Protsrv
 	lastHeartbeat time.Time
-	Sid           fcall.Tsession
-	ClientId      fcall.Tclient
+	Sid           sessp.Tsession
+	ClientId      sessp.Tclient
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
 	detach        sp.DetachF
 }
 
-func makeSession(protsrv sp.Protsrv, cid fcall.Tclient, sid fcall.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv sp.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.rt = replies.MakeReplyTable()
@@ -99,8 +99,8 @@ func (sess *Session) Close() {
 // The conn may be nil if this is a replicated op which came through
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
-func (sess *Session) SendConn(fm *fcall.FcallMsg) {
-	var replies chan *fcall.FcallMsg = nil
+func (sess *Session) SendConn(fm *sessp.FcallMsg) {
+	var replies chan *sessp.FcallMsg = nil
 
 	sess.Lock()
 	if sess.conn != nil {
@@ -125,11 +125,11 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts talking to a new replica or a client reconnects quickly.
-func (sess *Session) SetConn(conn sp.Conn) *fcall.Err {
+func (sess *Session) SetConn(conn sp.Conn) *sessp.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+		return sessp.MkErr(sessp.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
 	}
 	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
@@ -154,7 +154,7 @@ func (sess *Session) unsetConnL(conn sp.Conn) {
 }
 
 // Caller holds lock.
-func (sess *Session) heartbeatL(msg fcall.Tmsg) {
+func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 	db.DPrintf(db.SESS_STATE_SRV, "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
 		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)

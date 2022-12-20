@@ -1,15 +1,15 @@
 package npcodec
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	np "sigmaos/ninep"
 	sp "sigmaos/sigmap"
 )
 
 type Fcall9P struct {
-	Type fcall.Tfcall
-	Tag  fcall.Ttag
-	Msg  fcall.Tmsg
+	Type sessp.Tfcall
+	Tag  sessp.Ttag
+	Msg  sessp.Tmsg
 }
 
 func sp2NpQid(spqid sp.Tqid) np.Tqid9P {
@@ -60,60 +60,60 @@ func Np2SpStat(npst np.Stat9P) *sp.Stat {
 	return spst
 }
 
-func to9P(fm *fcall.FcallMsg) *Fcall9P {
+func to9P(fm *sessp.FcallMsg) *Fcall9P {
 	fcall9P := &Fcall9P{}
-	fcall9P.Type = fcall.Tfcall(fm.Fc.Type)
-	fcall9P.Tag = fcall.Ttag(fm.Fc.Tag)
+	fcall9P.Type = sessp.Tfcall(fm.Fc.Type)
+	fcall9P.Tag = sessp.Ttag(fm.Fc.Tag)
 	fcall9P.Msg = fm.Msg
 	return fcall9P
 }
 
-func toSP(fcall9P *Fcall9P) *fcall.FcallMsg {
-	fm := fcall.MakeFcallMsgNull()
+func toSP(fcall9P *Fcall9P) *sessp.FcallMsg {
+	fm := sessp.MakeFcallMsgNull()
 	fm.Fc.Type = uint32(fcall9P.Type)
 	fm.Fc.Tag = uint32(fcall9P.Tag)
-	fm.Fc.Session = uint64(fcall.NoSession)
-	fm.Fc.Seqno = uint64(fcall.NoSeqno)
+	fm.Fc.Session = uint64(sessp.NoSession)
+	fm.Fc.Seqno = uint64(sessp.NoSeqno)
 	fm.Msg = fcall9P.Msg
 	return fm
 }
 
-func np2SpMsg(fcm *fcall.FcallMsg) {
+func np2SpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
-	case fcall.TTread:
+	case sessp.TTread:
 		m := fcm.Msg.(*np.Tread)
-		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), fcall.Tsize(m.Count), 0)
+		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sessp.Tsize(m.Count), 0)
 		fcm.Msg = r
-	case fcall.TTwrite:
+	case sessp.TTwrite:
 		m := fcm.Msg.(*np.Twrite)
 		r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0)
 		fcm.Msg = r
 		fcm.Data = m.Data
-	case fcall.TTopen9P:
+	case sessp.TTopen9P:
 		m := fcm.Msg.(*np.Topen9P)
 		r := sp.MkTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
 		fcm.Msg = r
-	case fcall.TTcreate9P:
+	case sessp.TTcreate9P:
 		m := fcm.Msg.(*np.Tcreate9P)
 		r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode))
 		fcm.Msg = r
-	case fcall.TTwstat9P:
+	case sessp.TTwstat9P:
 		m := fcm.Msg.(*np.Twstat9P)
 		r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat))
 		fcm.Msg = r
 	}
 }
 
-func sp2NpMsg(fcm *fcall.FcallMsg) {
+func sp2NpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
-	case fcall.TRread:
-		fcm.Fc.Type = uint32(fcall.TRread9P)
+	case sessp.TRread:
+		fcm.Fc.Type = uint32(sessp.TRread9P)
 		fcm.Msg = np.Rread9P{Data: fcm.Data}
 		fcm.Data = nil
-	case fcall.TRerror:
-		fcm.Fc.Type = uint32(fcall.TRerror9P)
+	case sessp.TRerror:
+		fcm.Fc.Type = uint32(sessp.TRerror9P)
 		m := fcm.Msg.(*sp.Rerror)
-		fcm.Msg = np.Rerror9P{Ename: fcall.Terror(m.ErrCode).String()}
+		fcm.Msg = np.Rerror9P{Ename: sessp.Terror(m.ErrCode).String()}
 	}
 
 }

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	np "sigmaos/ninep"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -51,8 +51,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, fcall.Tseqno, fcall.Tsession, fcall.Tfcall, fcall.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, fcall.Tsize, fcall.Tpath, fcall.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
-			*bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *fcall.Tsize, *fcall.Tpath, *fcall.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
+		case bool, uint8, uint16, uint32, uint64, sessp.Tseqno, sessp.Tsession, sessp.Tfcall, sessp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sessp.Tsize, sessp.Tpath, sessp.Tepoch, sp.TQversion, sp.Tperm, sp.Tiounit, sp.Toffset, sp.Tlength, sp.Tgid, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
+			*bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sessp.Tsize, *sessp.Tpath, *sessp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Qtype9P:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -139,11 +139,11 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case *[]fcall.Tsession:
+		case *[]sessp.Tsession:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case []fcall.Tsession:
+		case []sessp.Tsession:
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
@@ -177,7 +177,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			}
 		case Fcall9P:
 			msg := v.Msg
-			if v.Type == fcall.TRstat {
+			if v.Type == sessp.TRstat {
 				sprstat := msg.(*sp.Rstat)
 				npst := Sp2NpStat(sprstat.Stat)
 				msg = &np.Rstat9P{0, *npst}
@@ -189,7 +189,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case fcall.Tmsg:
+		case sessp.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -213,7 +213,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *fcall.Tsize, *fcall.Tpath, *fcall.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sessp.Tsize, *sessp.Tpath, *sessp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -302,14 +302,14 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
-		case *[]fcall.Tsession:
+		case *[]sessp.Tsession:
 			var l uint16
 
 			if err := d.decode(&l); err != nil {
 				return err
 			}
 			elements := make([]interface{}, int(l))
-			*v = make([]fcall.Tsession, int(l))
+			*v = make([]sessp.Tsession, int(l))
 			for i := range elements {
 				elements[i] = &(*v)[i]
 			}
@@ -365,17 +365,17 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
 			}
-			var msg fcall.Tmsg
+			var msg sessp.Tmsg
 			// XXX maybe also TTflush
-			if v.Type == fcall.TTread {
+			if v.Type == sessp.TTread {
 				msg = &np.Tread{}
-			} else if v.Type == fcall.TTwrite {
+			} else if v.Type == sessp.TTwrite {
 				msg = &np.Twrite{}
-			} else if v.Type == fcall.TTopen9P {
+			} else if v.Type == sessp.TTopen9P {
 				msg = &np.Topen9P{}
-			} else if v.Type == fcall.TTcreate9P {
+			} else if v.Type == sessp.TTcreate9P {
 				msg = &np.Tcreate9P{}
-			} else if v.Type == fcall.TTwstat9P {
+			} else if v.Type == sessp.TTwstat9P {
 				msg = &np.Twstat9P{}
 			} else {
 				m, err := spcodec.NewMsg(v.Type)
@@ -388,7 +388,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 			v.Msg = msg
-		case fcall.Tmsg:
+		case sessp.Tmsg:
 			elements, err := fields9p(v)
 			if err != nil {
 				return err
@@ -418,8 +418,8 @@ func sizeNp(vs ...interface{}) uint64 {
 		}
 
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, fcall.Tseqno, fcall.Tsession, fcall.Tfcall, fcall.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, fcall.Tsize, np.Tpath, fcall.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
-			*bool, *uint8, *uint16, *uint32, *uint64, *fcall.Tseqno, *fcall.Tsession, *fcall.Tfcall, *fcall.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *fcall.Tsize, *np.Tpath, *fcall.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
+		case bool, uint8, uint16, uint32, uint64, sessp.Tseqno, sessp.Tsession, sessp.Tfcall, sessp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sessp.Tsize, np.Tpath, sessp.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
+			*bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *sessp.Tsize, *np.Tpath, *sessp.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
 			s += uint64(binary.Size(v))
 		case []byte:
 			s += uint64(binary.Size(uint64(0)) + len(v))
@@ -466,11 +466,11 @@ func sizeNp(vs ...interface{}) uint64 {
 			s += sizeNp(v.Type, v.Tag, v.Msg)
 		case *Fcall9P:
 			s += sizeNp(*v)
-		case fcall.Fcall:
+		case sessp.Fcall:
 			s += sizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
-		case *fcall.Fcall:
+		case *sessp.Fcall:
 			s += sizeNp(*v)
-		case fcall.Tmsg:
+		case sessp.Tmsg:
 			// walk the fields of the message to get the total size. we just
 			// use the field order from the message struct. We may add tag
 			// ignoring if needed.
@@ -492,11 +492,11 @@ func sizeNp(vs ...interface{}) uint64 {
 // writing. We are using a lot of reflection here for fairly static
 // serialization but we can replace this in the future with generated code if
 // performance is an issue.
-func fields9p(v interface{}) ([]interface{}, *fcall.Err) {
+func fields9p(v interface{}) ([]interface{}, *sessp.Err) {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		return nil, fcall.MkErr(fcall.TErrBadFcall, "cannot extract fields from non-struct")
+		return nil, sessp.MkErr(sessp.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
 	elements := make([]interface{}, 0, rv.NumField())

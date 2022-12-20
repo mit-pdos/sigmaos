@@ -9,13 +9,13 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
-func (fl *FsLib) ReadSeqNo() fcall.Tseqno {
+func (fl *FsLib) ReadSeqNo() sessp.Tseqno {
 	return fl.FidClnt.ReadSeqNo()
 }
 
@@ -27,11 +27,11 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FdClient.GetFile(fname, sp.OREAD, 0, sp.MAXGETSET)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (fcall.Tsize, error) {
+func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sessp.Tsize, error) {
 	return fl.FdClient.SetFile(fname, m, data, off)
 }
 
-func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (fcall.Tsize, error) {
+func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sessp.Tsize, error) {
 	return fl.FdClient.PutFile(fname, mode|sp.OWRITE, perm, data, 0)
 }
 
@@ -97,7 +97,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			ch <- err
 		})
 		db.DPrintf(db.FSLIB, "OpenWatch %v err %v\n", path, err)
-		if err != nil && fcall.IsErrNotfound(err) {
+		if err != nil && sessp.IsErrNotfound(err) {
 			r := <-ch
 			if r != nil {
 				db.DPrintf(db.FSLIB, "OpenWatch watch %v err %v\n", path, err)
@@ -218,7 +218,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if err != nil {
 			return err
 		}
-		if n != fcall.Tsize(len(b)) {
+		if n != sessp.Tsize(len(b)) {
 			return fmt.Errorf("short write")
 		}
 	}

@@ -2,12 +2,12 @@ package pathclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *fcall.Err) {
+func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *sessp.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
 	if err != nil {
@@ -31,10 +31,10 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 	return p, nil
 }
 
-func (pathc *PathClnt) autoMount(uname string, mnt sp.Tmount, path path.Path) *fcall.Err {
+func (pathc *PathClnt) autoMount(uname string, mnt sp.Tmount, path path.Path) *sessp.Err {
 	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
 	var fid sp.Tfid
-	var err *fcall.Err
+	var err *sessp.Err
 	fid, err = pathc.Attach(uname, mnt.Addr, path.String(), mnt.Root)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT, "Attach error: %v", err)

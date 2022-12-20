@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
@@ -32,7 +32,7 @@ type FdClient struct {
 	uname string // the principal associated with this FdClient
 }
 
-func MakeFdClient(fsc *fidclnt.FidClnt, uname string, sz fcall.Tsize) *FdClient {
+func MakeFdClient(fsc *fidclnt.FidClnt, uname string, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{}
 	fdc.PathClnt = pathclnt.MakePathClnt(fsc, sz)
 	fdc.fds = mkFdTable()
@@ -95,7 +95,7 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
 
 func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
 	fd, err := fdc.Create(path, perm, mode)
-	if err != nil && !fcall.IsErrExists(err) {
+	if err != nil && !sessp.IsErrExists(err) {
 		db.DPrintf(db.FDCLNT_ERR, "Create %v err %v", path, err)
 		return -1, err
 	}
@@ -109,7 +109,7 @@ func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int,
 	return fd, nil
 }
 
-func (fdc *FdClient) MakeReader(fd int, path string, chunksz fcall.Tsize) *reader.Reader {
+func (fdc *FdClient) MakeReader(fd int, path string, chunksz sessp.Tsize) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
@@ -125,7 +125,7 @@ func (fdc *FdClient) MakeWriter(fd int) *writer.Writer {
 	return fdc.PathClnt.MakeWriter(fid)
 }
 
-func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, error) {
+func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, error) {
 	data, err := fdc.PathClnt.ReadV(fid, off, cnt, v)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt fcall.Tsiz
 	return data, nil
 }
 
-func (fdc *FdClient) ReadV(fd int, cnt fcall.Tsize) ([]byte, error) {
+func (fdc *FdClient) ReadV(fd int, cnt sessp.Tsize) ([]byte, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return nil, error
@@ -143,7 +143,7 @@ func (fdc *FdClient) ReadV(fd int, cnt fcall.Tsize) ([]byte, error) {
 	return fdc.readFid(fd, fid, off, cnt, qid.Tversion())
 }
 
-func (fdc *FdClient) Read(fd int, cnt fcall.Tsize) ([]byte, error) {
+func (fdc *FdClient) Read(fd int, cnt sessp.Tsize) ([]byte, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return nil, error
@@ -151,7 +151,7 @@ func (fdc *FdClient) Read(fd int, cnt fcall.Tsize) ([]byte, error) {
 	return fdc.readFid(fd, fid, off, cnt, sp.NoV)
 }
 
-func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, error) {
+func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, error) {
 	sz, err := fdc.PathClnt.WriteV(fid, off, data, v)
 	if err != nil {
 		return 0, err
@@ -160,7 +160,7 @@ func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, 
 	return sz, nil
 }
 
-func (fdc *FdClient) WriteV(fd int, data []byte) (fcall.Tsize, error) {
+func (fdc *FdClient) WriteV(fd int, data []byte) (sessp.Tsize, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return 0, error
@@ -169,7 +169,7 @@ func (fdc *FdClient) WriteV(fd int, data []byte) (fcall.Tsize, error) {
 	return fdc.writeFid(fd, fid, off, data, qid.Tversion())
 }
 
-func (fdc *FdClient) Write(fd int, data []byte) (fcall.Tsize, error) {
+func (fdc *FdClient) Write(fd int, data []byte) (sessp.Tsize, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return 0, error

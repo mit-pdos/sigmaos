@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"sync"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Intervals struct {
 	sync.Mutex
-	ivs []*fcall.Tinterval
+	ivs []*sessp.Tinterval
 }
 
 func (ivs *Intervals) String() string {
@@ -22,18 +22,18 @@ func (ivs *Intervals) String() string {
 
 func MkIntervals() *Intervals {
 	ivs := &Intervals{}
-	ivs.ivs = make([]*fcall.Tinterval, 0)
+	ivs.ivs = make([]*sessp.Tinterval, 0)
 	return ivs
 }
 
-func (ivs *Intervals) First() *fcall.Tinterval {
+func (ivs *Intervals) First() *sessp.Tinterval {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	if len(ivs.ivs) == 0 {
 		return nil
 	}
-	return fcall.MkInterval(ivs.ivs[0].Start, ivs.ivs[0].End)
+	return sessp.MkInterval(ivs.ivs[0].Start, ivs.ivs[0].End)
 }
 
 func (ivs *Intervals) Len() int {
@@ -58,7 +58,7 @@ func (ivs *Intervals) merge(i int) {
 	}
 }
 
-func (ivs *Intervals) Insert(n *fcall.Tinterval) {
+func (ivs *Intervals) Insert(n *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
@@ -89,7 +89,7 @@ func (ivs *Intervals) Insert(n *fcall.Tinterval) {
 // what the caller has seen sofar.  XXX split insert from prune
 // and use a better name for Prune
 func (ivs *Intervals) Prune(lb, start, end uint64) uint64 {
-	ivs.Insert(fcall.MkInterval(start, end))
+	ivs.Insert(sessp.MkInterval(start, end))
 	iv0 := ivs.ivs[0]
 	if iv0.Start > lb { // out of order
 		return 0
@@ -116,7 +116,7 @@ func (ivs *Intervals) Contains(e uint64) bool {
 	return false
 }
 
-func (ivs *Intervals) Delete(ivd *fcall.Tinterval) {
+func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
@@ -143,7 +143,7 @@ func (ivs *Intervals) Delete(ivd *fcall.Tinterval) {
 			i++
 		} else { // split iv
 			ivs.ivs = append(ivs.ivs[:i+1], ivs.ivs[i:]...)
-			ivs.ivs[i] = fcall.MkInterval(iv.Start, ivd.Start)
+			ivs.ivs[i] = sessp.MkInterval(iv.Start, ivd.Start)
 			ivs.ivs[i+1].Start = ivd.End
 			i += 2
 		}

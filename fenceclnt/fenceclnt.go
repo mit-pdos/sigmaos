@@ -3,7 +3,7 @@ package fenceclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/epochclnt"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -13,7 +13,7 @@ type FenceClnt struct {
 	*epochclnt.EpochClnt
 	perm    sp.Tperm
 	mode    sp.Tmode
-	lastSeq fcall.Tseqno
+	lastSeq sessp.Tseqno
 	paths   map[string]bool
 }
 
@@ -33,7 +33,7 @@ func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 
 // Future operations on files in a tree rooted at a path in paths will
 // include a fence at epoch <epoch>.
-func (fc *FenceClnt) FenceAtEpoch(epoch fcall.Tepoch, paths []string) error {
+func (fc *FenceClnt) FenceAtEpoch(epoch sessp.Tepoch, paths []string) error {
 	f, err := fc.GetFence(epoch)
 	if err != nil {
 		db.DPrintf(db.FENCECLNT_ERR, "GetFence %v err %v", fc.Name(), err)
@@ -42,7 +42,7 @@ func (fc *FenceClnt) FenceAtEpoch(epoch fcall.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence *fcall.Tfence, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence *sessp.Tfence, paths []string) error {
 	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, *fence)
@@ -56,7 +56,7 @@ func (fc *FenceClnt) fencePaths(fence *fcall.Tfence, paths []string) error {
 
 // Register fence with fidclnt so that ops on files in the tree rooted
 // at path will include fence.
-func (fc *FenceClnt) registerFence(path string, fence fcall.Tfence) error {
+func (fc *FenceClnt) registerFence(path string, fence sessp.Tfence) error {
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}

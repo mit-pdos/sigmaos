@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -26,7 +26,7 @@ type Mover struct {
 }
 
 func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
-	epoch, err := fcall.String2Epoch(epochstr)
+	epoch, err := sessp.String2Epoch(epochstr)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (mv *Mover) delShard(sharddir string) {
 
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.
-	if _, err := mv.Stat(sharddir); err != nil && fcall.IsErrNotfound(err) {
+	if _, err := mv.Stat(sharddir); err != nil && sessp.IsErrNotfound(err) {
 		db.DPrintf(db.KVMV_ERR, "Delete conf %v not found %v\n", mv.epochstr, sharddir)
 		mv.Exited(proc.MakeStatus(proc.StatusOK))
 		return

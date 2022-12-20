@@ -14,7 +14,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
@@ -120,7 +120,7 @@ func (g *Group) waitForClusterConfig() {
 // Find out if the initial cluster has started by looking for the group config.
 func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
-	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); fcall.IsErrNotfound(err) {
+	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); sessp.IsErrNotfound(err) {
 		db.DPrintf(db.GROUP, "found conf path %v", grpConfPath(g.jobdir, g.grp))
 		return false
 	} else {
@@ -195,9 +195,9 @@ func (g *Group) writeSymlink(sigmaAddrs []string) {
 	}
 }
 
-func (g *Group) op(opcode, kv string) *fcall.Err {
+func (g *Group) op(opcode, kv string) *sessp.Err {
 	if g.testAndSetBusy() {
-		return fcall.MkErr(fcall.TErrRetry, "busy")
+		return sessp.MkErr(sessp.TErrRetry, "busy")
 	}
 	defer g.clearBusy()
 

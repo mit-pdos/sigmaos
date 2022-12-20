@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -58,7 +58,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
-	e := fcall.Tepoch(0)
+	e := sessp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)

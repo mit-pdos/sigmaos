@@ -2,7 +2,7 @@ package memfs
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/pipe"
 	sp "sigmaos/sigmap"
@@ -20,15 +20,15 @@ func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	return &p
 }
 
-func (p *Pipe) Size() (sp.Tlength, *fcall.Err) {
+func (p *Pipe) Size() (sp.Tlength, *sessp.Err) {
 	return p.Pipe.Size(), nil
 }
 
-func (p *Pipe) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
+func (p *Pipe) Close(ctx fs.CtxI, m sp.Tmode) *sessp.Err {
 	return p.Pipe.Close(ctx, m)
 }
 
-func (p *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
+func (p *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *sessp.Err) {
 	return p.Pipe.Open(ctx, mode)
 }
 
@@ -41,7 +41,7 @@ func (p *Pipe) Snapshot(fn fs.SnapshotF) []byte {
 	return nil
 }
 
-func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
+func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
 	st, err := p.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err

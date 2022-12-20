@@ -6,14 +6,14 @@ import (
 	"errors"
 	"io"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
 	"sigmaos/spcodec"
 )
 
-func Sp2NpDir(d []byte, cnt fcall.Tsize) ([]byte, *fcall.Err) {
+func Sp2NpDir(d []byte, cnt sessp.Tsize) ([]byte, *sessp.Err) {
 	rdr := bytes.NewReader(d)
 	brdr := bufio.NewReader(rdr)
 	npsts := make([]*np.Stat9P, 0)

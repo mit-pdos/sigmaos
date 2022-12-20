@@ -14,7 +14,7 @@ import (
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/test"
@@ -224,12 +224,12 @@ func writer(t *testing.T, ch chan error, name string) {
 		case <-ch:
 			stop = true
 		default:
-			if err := fsl.Remove(fn); err != nil && fcall.IsErrUnreachable(err) {
+			if err := fsl.Remove(fn); err != nil && sessp.IsErrUnreachable(err) {
 				break
 			}
 			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
 			if err != nil {
-				assert.True(t, fcall.IsErrUnreachable(err))
+				assert.True(t, sessp.IsErrUnreachable(err))
 				break
 			}
 			nfile += 1
@@ -238,7 +238,7 @@ func writer(t *testing.T, ch chan error, name string) {
 				break
 			}
 			if err := w.Close(); err != nil {
-				assert.True(t, fcall.IsErrUnreachable(err))
+				assert.True(t, sessp.IsErrUnreachable(err))
 				break
 			}
 		}

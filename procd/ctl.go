@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -16,7 +16,7 @@ type SpawnFile struct {
 	fs.Inode
 }
 
-func makeSpawnFile(pd *Procd) *fcall.Err {
+func makeSpawnFile(pd *Procd) *sessp.Err {
 	sf := &SpawnFile{}
 	sf.pd = pd
 	sf.Inode = pd.memfssrv.MakeDevInode()
@@ -27,15 +27,15 @@ func makeSpawnFile(pd *Procd) *fcall.Err {
 	return nil
 }
 
-func (ctl *SpawnFile) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
+func (ctl *SpawnFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+	return nil, sessp.MkErr(sessp.TErrNotSupported, "Read")
 }
 
-func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {
-		fcall.MkErr(fcall.TErrInval, fmt.Sprintf("Unmarshal %v", err))
+		sessp.MkErr(sessp.TErrInval, fmt.Sprintf("Unmarshal %v", err))
 	}
 
 	db.DPrintf(db.PROCD, "Control file write: %v", p)
@@ -44,5 +44,5 @@ func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversio
 
 	db.DPrintf(db.PROCD, "fs spawn done: %v", p)
 
-	return fcall.Tsize(len(b)), nil
+	return sessp.Tsize(len(b)), nil
 }

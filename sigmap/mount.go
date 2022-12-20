@@ -5,17 +5,17 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 func NullMount() Tmount {
 	return Tmount{}
 }
 
-func MkMount(b []byte) (Tmount, *fcall.Err) {
+func MkMount(b []byte) (Tmount, *sessp.Err) {
 	mnt := NullMount()
 	if err := proto.Unmarshal(b, &mnt); err != nil {
-		return mnt, fcall.MkErrError(err)
+		return mnt, sessp.MkErrError(err)
 	}
 	return mnt, nil
 }

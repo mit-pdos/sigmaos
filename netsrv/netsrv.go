@@ -7,13 +7,13 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
-type MarshalF func(*fcall.FcallMsg, *bufio.Writer) *fcall.Err
-type UnmarshalF func(rdr io.Reader) (*fcall.FcallMsg, *fcall.Err)
+type MarshalF func(*sessp.FcallMsg, *bufio.Writer) *sessp.Err
+type UnmarshalF func(rdr io.Reader) (*sessp.FcallMsg, *sessp.Err)
 
 type NetServer struct {
 	addr      string

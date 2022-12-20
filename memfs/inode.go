@@ -4,10 +4,10 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 )
 
-func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *fcall.Err) {
+func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *sessp.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return mk(i, MakeInode), nil
@@ -18,6 +18,6 @@ func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDir
 	} else if p.IsFile() || p.IsEphemeral() {
 		return MakeFile(i), nil
 	} else {
-		return nil, fcall.MkErr(fcall.TErrInval, p)
+		return nil, sessp.MkErr(sessp.TErrInval, p)
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -21,7 +21,7 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode sp.Tperm, v sp.TQversion, path fcall.Tpath) *sp.Tqid {
+func mkQid(mode sp.Tperm, v sp.TQversion, path sessp.Tpath) *sp.Tqid {
 	return sp.MakeQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
 }
 
@@ -41,7 +41,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	return perm
 }
 
-func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
+func ustat(path path.Path) (*sp.Stat, *sessp.Err) {
 	var statx unix.Statx_t
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -49,7 +49,7 @@ func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 		return nil, UxTo9PError(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
-	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, fcall.Tpath(statx.Ino)),
+	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, sessp.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	st.Length = statx.Size
 	return st, nil
@@ -57,7 +57,7 @@ func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 
 type Obj struct {
 	pathName path.Path
-	path     fcall.Tpath
+	path     sessp.Tpath
 	perm     sp.Tperm // XXX kill, but requires changing Perm() API
 }
 
@@ -65,7 +65,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path path.Path) (*Obj, *fcall.Err) {
+func makeObj(path path.Path) (*Obj, *sessp.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
@@ -84,7 +84,7 @@ func (o *Obj) Perm() sp.Tperm {
 	//return st.Mode, nil
 }
 
-func (o *Obj) Path() fcall.Tpath {
+func (o *Obj) Path() sessp.Tpath {
 	return o.path
 }
 
@@ -96,7 +96,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
 	db.DPrintf(db.UX, "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -153,7 +153,7 @@ func (o *Obj) SetParent(p fs.Dir) {
 func (o *Obj) Unlink() {
 }
 
-func (o *Obj) Size() (sp.Tlength, *fcall.Err) {
+func (o *Obj) Size() (sp.Tlength, *sessp.Err) {
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return 0, err

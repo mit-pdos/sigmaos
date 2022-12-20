@@ -11,7 +11,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -130,7 +130,7 @@ func (kc *KvClerk) switchConfig() error {
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
-			if fcall.IsErrVersion(err) || fcall.IsErrStale(err) {
+			if sessp.IsErrVersion(err) || sessp.IsErrStale(err) {
 				db.DPrintf(db.KVCLERK_ERR, "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
@@ -148,15 +148,15 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	if fcall.IsErrNotfound(err) && strings.HasPrefix(fcall.ErrPath(err), "shard") {
+	if sessp.IsErrNotfound(err) && strings.HasPrefix(sessp.ErrPath(err), "shard") {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", fcall.ErrPath(err))
+		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", sessp.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if fcall.IsErrStale(err) {
+	if sessp.IsErrStale(err) {
 		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -196,7 +196,7 @@ func TestEphemeral(t *testing.T) {
 			log.Printf("retry\n")
 			continue
 		}
-		assert.True(t, fcall.IsErrNotfound(err) || fcall.IsErrUnreachable(err), "Wrong err %v", err)
+		assert.True(t, sessp.IsErrNotfound(err) || sessp.IsErrUnreachable(err), "Wrong err %v", err)
 		break
 	}
 	assert.Greater(t, 3*sp.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")

@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
@@ -28,7 +28,7 @@ type rpcSession struct {
 	pds *ProtDevSrv
 }
 
-func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inode, *fcall.Err) {
+func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *sessp.Err) {
 	rpc := &rpcSession{}
 	rpc.pds = rd.pds
 	rpc.Inode = mfs.MakeDevInode()
@@ -36,11 +36,11 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inod
 }
 
 // XXX wait on close before processing data?
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *fcall.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *sessp.Err) {
 	req := rpcproto.Request{}
 	var rep *rpcproto.Reply
 	if err := proto.Unmarshal(b, &req); err != nil {
-		return nil, fcall.MkErrError(err)
+		return nil, sessp.MkErrError(err)
 	}
 
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
@@ -53,7 +53,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *fcall.Err) {
 
 	b, err := proto.Marshal(rep)
 	if err != nil {
-		return nil, fcall.MkErrError(err)
+		return nil, sessp.MkErrError(err)
 	}
 	return b, nil
 }

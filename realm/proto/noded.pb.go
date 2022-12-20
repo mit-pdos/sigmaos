@@ -10,7 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
-	fcall "sigmaos/fcall"
+	sessp "sigmaos/sessp"
 	sync "sync"
 )
 
@@ -26,7 +26,7 @@ type NodedRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Cores    *fcall.Tinterval `protobuf:"bytes,1,opt,name=cores,proto3" json:"cores,omitempty"`
+	Cores    *sessp.Tinterval `protobuf:"bytes,1,opt,name=cores,proto3" json:"cores,omitempty"`
 	AllCores bool             `protobuf:"varint,2,opt,name=allCores,proto3" json:"allCores,omitempty"`
 }
 
@@ -62,7 +62,7 @@ func (*NodedRequest) Descriptor() ([]byte, []int) {
 	return file_realm_proto_noded_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *NodedRequest) GetCores() *fcall.Tinterval {
+func (x *NodedRequest) GetCores() *sessp.Tinterval {
 	if x != nil {
 		return x.Cores
 	}
@@ -127,7 +127,7 @@ var File_realm_proto_noded_proto protoreflect.FileDescriptor
 
 var file_realm_proto_noded_proto_rawDesc = []byte{
 	0x0a, 0x17, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x6e, 0x6f,
-	0x64, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x11, 0x66, 0x63, 0x61, 0x6c, 0x6c,
+	0x64, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x11, 0x73, 0x65, 0x73, 0x73, 0x70,
 	0x2f, 0x73, 0x65, 0x73, 0x73, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x4c, 0x0a, 0x0c,
 	0x4e, 0x6f, 0x64, 0x65, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x20, 0x0a, 0x05,
 	0x63, 0x6f, 0x72, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x54, 0x69,
@@ -162,7 +162,7 @@ var file_realm_proto_noded_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_realm_proto_noded_proto_goTypes = []interface{}{
 	(*NodedRequest)(nil),    // 0: NodedRequest
 	(*NodedResponse)(nil),   // 1: NodedResponse
-	(*fcall.Tinterval)(nil), // 2: Tinterval
+	(*sessp.Tinterval)(nil), // 2: Tinterval
 }
 var file_realm_proto_noded_proto_depIdxs = []int32{
 	2, // 0: NodedRequest.cores:type_name -> Tinterval

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/reader"
@@ -25,10 +25,10 @@ type Watch func(string, error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
-	chunkSz fcall.Tsize
+	chunkSz sessp.Tsize
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, sz fcall.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
 	pathc := &PathClnt{}
 	pathc.mnt = makeMntTable()
 	pathc.chunkSz = sz
@@ -46,11 +46,11 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) SetChunkSz(sz fcall.Tsize) {
+func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
 	pathc.chunkSz = sz
 }
 
-func (pathc *PathClnt) GetChunkSz() fcall.Tsize {
+func (pathc *PathClnt) GetChunkSz() sessp.Tsize {
 	return pathc.chunkSz
 }
 
@@ -102,7 +102,7 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz fcall.Tsize) *reader.Reader {
+func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sessp.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
@@ -110,10 +110,10 @@ func (pathc *PathClnt) MakeWriter(fid sp.Tfid) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
-func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *fcall.Err) {
+func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *sessp.Err) {
 	qid := pathc.Qid(fid)
 	if qid.Ttype()&sp.QTSYMLINK == 0 {
-		return nil, fcall.MkErr(fcall.TErrNotSymlink, qid.Type)
+		return nil, sessp.MkErr(sessp.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
 	if err != nil {
@@ -127,9 +127,9 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *fcall.Err) {
 	return b, nil
 }
 
-func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *fcall.Err {
+func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *sessp.Err {
 	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
-		if err.Code() == fcall.TErrExists {
+		if err.Code() == sessp.TErrExists {
 			// Another thread may already have mounted
 			// path; clunk the fid and don't return an
 			// error.
@@ -201,7 +201,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string) *fcall.Err {
+func (pathc *PathClnt) renameat(old, new string) *sessp.Err {
 	db.DPrintf(db.PATHCLNT, "Renameat %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
@@ -220,7 +220,7 @@ func (pathc *PathClnt) renameat(old, new string) *fcall.Err {
 	return pathc.FidClnt.Renameat(fid, o, fid1, n)
 }
 
-func (pathc *PathClnt) umountFree(path []string) *fcall.Err {
+func (pathc *PathClnt) umountFree(path []string) *sessp.Err {
 	if fid, err := pathc.mnt.umount(path); err != nil {
 		return err
 	} else {
@@ -242,7 +242,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
 	if err != nil {
-		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
+		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(pn, path.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -320,7 +320,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 		return err
 	}
 	if w == nil {
-		return fcall.MkErr(fcall.TErrInval, "watch")
+		return sessp.MkErr(sessp.TErrInval, "watch")
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -335,7 +335,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fcall.Tsize) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
@@ -347,7 +347,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fca
 	// symlink.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
-		if fcall.IsMaybeSpecialElem(err) {
+		if sessp.IsMaybeSpecialElem(err) {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err
@@ -365,7 +365,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fca
 }
 
 // Write file
-func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (fcall.Tsize, error) {
+func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
@@ -377,7 +377,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, path.EndSlash(pn))
 	if err != nil {
-		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
+		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return 0, err
@@ -395,7 +395,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 }
 
 // Create file
-func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (fcall.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
@@ -407,7 +407,7 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if fcall.IsMaybeSpecialElem(err) || fcall.IsErrUnreachable(err) {
+		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
 			fid, err = pathc.WalkPath(dir, true, nil)

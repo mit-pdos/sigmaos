@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Tsize uint32
@@ -383,13 +383,13 @@ type Twstat9P struct {
 
 type Rwstat struct{}
 
-func (Rerror9P) Type() fcall.Tfcall  { return fcall.TRerror9P }
-func (Tflush) Type() fcall.Tfcall    { return fcall.TTflush }
-func (Rflush) Type() fcall.Tfcall    { return fcall.TRflush }
-func (Tcreate9P) Type() fcall.Tfcall { return fcall.TTcreate }
-func (Topen9P) Type() fcall.Tfcall   { return fcall.TTopen }
-func (Tread) Type() fcall.Tfcall     { return fcall.TTread }
-func (Rread9P) Type() fcall.Tfcall   { return fcall.TRread9P }
-func (Twrite) Type() fcall.Tfcall    { return fcall.TTwrite }
-func (Rstat9P) Type() fcall.Tfcall   { return fcall.TRstat9P }
-func (Twstat9P) Type() fcall.Tfcall  { return fcall.TTwstat }
+func (Rerror9P) Type() sessp.Tfcall  { return sessp.TRerror9P }
+func (Tflush) Type() sessp.Tfcall    { return sessp.TTflush }
+func (Rflush) Type() sessp.Tfcall    { return sessp.TRflush }
+func (Tcreate9P) Type() sessp.Tfcall { return sessp.TTcreate }
+func (Topen9P) Type() sessp.Tfcall   { return sessp.TTopen }
+func (Tread) Type() sessp.Tfcall     { return sessp.TTread }
+func (Rread9P) Type() sessp.Tfcall   { return sessp.TRread9P }
+func (Twrite) Type() sessp.Tfcall    { return sessp.TTwrite }
+func (Rstat9P) Type() sessp.Tfcall   { return sessp.TRstat9P }
+func (Twstat9P) Type() sessp.Tfcall  { return sessp.TTwstat }

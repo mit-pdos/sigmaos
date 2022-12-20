@@ -3,7 +3,7 @@ package replies
 import (
 	"sync"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -11,7 +11,7 @@ import (
 type ReplyFuture struct {
 	sync.Mutex
 	*sync.Cond
-	reply *fcall.FcallMsg
+	reply *sessp.FcallMsg
 }
 
 func MakeReplyFuture() *ReplyFuture {
@@ -21,7 +21,7 @@ func MakeReplyFuture() *ReplyFuture {
 }
 
 // Wait for a reply.
-func (f *ReplyFuture) Await() *fcall.FcallMsg {
+func (f *ReplyFuture) Await() *sessp.FcallMsg {
 	f.Lock()
 	defer f.Unlock()
 	// Potentially wait for a blocked op to complete.
@@ -32,7 +32,7 @@ func (f *ReplyFuture) Await() *fcall.FcallMsg {
 }
 
 // Wake waiters for a reply.
-func (f *ReplyFuture) Complete(fc *fcall.FcallMsg) {
+func (f *ReplyFuture) Complete(fc *sessp.FcallMsg) {
 	f.Lock()
 	defer f.Unlock()
 	f.reply = fc
@@ -45,11 +45,11 @@ func (f *ReplyFuture) Complete(fc *fcall.FcallMsg) {
 }
 
 // Abort waiting for a reply.
-func (f *ReplyFuture) Abort(cli fcall.Tclient, sid fcall.Tsession) {
+func (f *ReplyFuture) Abort(cli sessp.Tclient, sid sessp.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = fcall.MakeFcallMsg(sp.MkRerror(fcall.MkErr(fcall.TErrClosed, nil)), nil, cli, sid, nil, nil, fcall.MakeFenceNull())
+		f.reply = sessp.MakeFcallMsg(sp.MkRerror(sessp.MkErr(sessp.TErrClosed, nil)), nil, cli, sid, nil, nil, sessp.MakeFenceNull())
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

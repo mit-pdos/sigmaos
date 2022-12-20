@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -21,19 +21,19 @@ import (
 
 type Snapshot struct {
 	sesssrv      sp.SessServer
-	Imap         map[fcall.Tpath]ObjSnapshot
-	DirOverlay   fcall.Tpath
+	Imap         map[sessp.Tpath]ObjSnapshot
+	DirOverlay   sessp.Tpath
 	St           []byte
 	Tmt          []byte
 	NextInum     uint64
-	restoreCache map[fcall.Tpath]fs.Inode
+	restoreCache map[sessp.Tpath]fs.Inode
 }
 
 func MakeSnapshot(sesssrv sp.SessServer) *Snapshot {
 	s := &Snapshot{}
 	s.sesssrv = sesssrv
-	s.Imap = make(map[fcall.Tpath]ObjSnapshot)
-	s.restoreCache = make(map[fcall.Tpath]fs.Inode)
+	s.Imap = make(map[sessp.Tpath]ObjSnapshot)
+	s.restoreCache = make(map[sessp.Tpath]fs.Inode)
 	return s
 }
 
@@ -53,7 +53,7 @@ func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *sessstatesrv.SessionTa
 	return b
 }
 
-func (s *Snapshot) snapshotFsTree(i fs.Inode) fcall.Tpath {
+func (s *Snapshot) snapshotFsTree(i fs.Inode) sessp.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
 	case *overlay.DirOverlay:
@@ -99,7 +99,7 @@ func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesss
 	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt
 }
 
-func (s *Snapshot) RestoreFsTree(inum fcall.Tpath) fs.Inode {
+func (s *Snapshot) RestoreFsTree(inum sessp.Tpath) fs.Inode {
 	if obj, ok := s.restoreCache[inum]; ok {
 		return obj
 	}

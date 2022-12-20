@@ -26,7 +26,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
@@ -171,7 +171,7 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, mfs string) error {
 		if err == nil {
 			return nil
 		}
-		if fcall.IsErrUnavailable(err) || fcall.IsErrRetry(err) {
+		if sessp.IsErrUnavailable(err) || sessp.IsErrRetry(err) {
 			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
@@ -194,20 +194,20 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
-		return 0, fcall.MkErr(fcall.TErrInval, words)
+		return 0, sessp.MkErr(sessp.TErrInval, words)
 	}
 	err := c.bl.balance(words[0], words[1])
 	if err != nil {
 		return 0, err
 	}
-	return fcall.Tsize(len(b)), nil
+	return sessp.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
+func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+	return nil, sessp.MkErr(sessp.TErrNotSupported, "Read")
 }
 
 func (bl *Balancer) monitor() {
@@ -231,7 +231,7 @@ func (bl *Balancer) monitorMyself() {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if err != nil {
-			if fcall.IsErrUnreachable(err) {
+			if sessp.IsErrUnreachable(err) {
 				db.DFatalf("disconnected\n")
 			}
 		}
@@ -247,7 +247,7 @@ func (bl *Balancer) PostConfig() {
 }
 
 // Post new epoch, and finish moving sharddirs.
-func (bl *Balancer) restore(conf *Config, epoch fcall.Tepoch) {
+func (bl *Balancer) restore(conf *Config, epoch sessp.Tepoch) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
@@ -257,7 +257,7 @@ func (bl *Balancer) restore(conf *Config, epoch fcall.Tepoch) {
 	bl.doMoves(bl.conf.Moves)
 }
 
-func (bl *Balancer) recover(epoch fcall.Tepoch) {
+func (bl *Balancer) recover(epoch sessp.Tepoch) {
 	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
 		bl.restore(conf, epoch)
@@ -311,7 +311,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			fcall.IsErrUnreachable(err)) {
+			sessp.IsErrUnreachable(err)) {
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
@@ -375,9 +375,9 @@ func (bl *Balancer) doMoves(moves Moves) {
 	db.DPrintf(db.ALWAYS, "%v: all moves done\n", bl.conf)
 }
 
-func (bl *Balancer) balance(opcode, mfs string) *fcall.Err {
+func (bl *Balancer) balance(opcode, mfs string) *sessp.Err {
 	if bl.testAndSetIsBusy() {
-		return fcall.MkErr(fcall.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
+		return sessp.MkErr(sessp.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
 	}
 	defer bl.clearIsBusy()
 
@@ -408,11 +408,11 @@ func (bl *Balancer) balance(opcode, mfs string) *fcall.Err {
 	epoch, err := bl.lc.EnterNextEpoch([]string{})
 	if err != nil {
 		db.DPrintf(db.KVBAL_ERR, "EnterNextEpoch fail %v\n", err)
-		var nperr *fcall.Err
+		var nperr *sessp.Err
 		if errors.As(err, &nperr) {
 			return nperr
 		}
-		return fcall.MkErr(fcall.TErrError, err)
+		return sessp.MkErr(sessp.TErrError, err)
 	}
 
 	bl.conf.Epoch = epoch

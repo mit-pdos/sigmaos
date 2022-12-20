@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
 )
@@ -30,7 +30,7 @@ func Named() []string {
 
 func MakeFsLibBase(uname string) *FsLib {
 	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname, fcall.Tsize(10_000_000))}
+	return &FsLib{fdclnt.MakeFdClient(nil, uname, sessp.Tsize(10_000_000))}
 }
 
 func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {

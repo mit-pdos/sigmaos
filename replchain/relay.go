@@ -92,9 +92,9 @@ func (r *RelayConn) serve(fc *sp.Fcall) *sp.Fcall {
 	//	reply = *rerror
 	//}
 	fcall := &sp.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
-	fcall.Tag = t
+	sessp.Type = reply.Type()
+	sessp.Msg = reply
+	sessp.Tag = t
 	return fcall
 }
 

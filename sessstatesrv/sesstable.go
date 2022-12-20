@@ -6,7 +6,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
@@ -18,13 +18,13 @@ type SessionTable struct {
 	tm       *threadmgr.ThreadMgrTable
 	mkps     sp.MkProtServer
 	sesssrv  sp.SessServer
-	sessions map[fcall.Tsession]*Session
+	sessions map[sessp.Tsession]*Session
 	last     *Session // for tests
 }
 
 func MakeSessionTable(mkps sp.MkProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
-	st.sessions = make(map[fcall.Tsession]*Session)
+	st.sessions = make(map[sessp.Tsession]*Session)
 	st.sesssrv = sesssrv
 	st.mkps = mkps
 	st.tm = tm
@@ -42,21 +42,21 @@ func (st *SessionTable) QueueLen() int {
 	return len
 }
 
-func (st *SessionTable) Lookup(sid fcall.Tsession) (*Session, bool) {
+func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	st.Lock()
 	defer st.Unlock()
 	sess, ok := st.sessions[sid]
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(cid fcall.Tclient, sid fcall.Tsession) *Session {
+func (st *SessionTable) Alloc(cid sessp.Tclient, sid sessp.Tsession) *Session {
 	st.Lock()
 	defer st.Unlock()
 
 	return st.allocL(cid, sid)
 }
 
-func (st *SessionTable) allocL(cid fcall.Tclient, sid fcall.Tsession) *Session {
+func (st *SessionTable) allocL(cid sessp.Tclient, sid sessp.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		sess.Lock()
 		defer sess.Unlock()
@@ -76,7 +76,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	defer st.Unlock()
 
 	for _, sid := range hbs.Sids {
-		sess := st.allocL(0, fcall.Tsession(sid))
+		sess := st.allocL(0, sessp.Tsession(sid))
 		sess.Lock()
 		if !sess.closed {
 			sess.heartbeatL(hbs)
@@ -85,7 +85,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	}
 }
 
-func (st *SessionTable) SessThread(sid fcall.Tsession) *threadmgr.ThreadMgr {
+func (st *SessionTable) SessThread(sid sessp.Tsession) *threadmgr.ThreadMgr {
 	if sess, ok := st.Lookup(sid); ok {
 		return sess.threadmgr
 	} else {
@@ -94,7 +94,7 @@ func (st *SessionTable) SessThread(sid fcall.Tsession) *threadmgr.ThreadMgr {
 	return nil
 }
 
-func (st *SessionTable) KillSessThread(sid fcall.Tsession) {
+func (st *SessionTable) KillSessThread(sid sessp.Tsession) {
 	t := st.SessThread(sid)
 	st.Lock()
 	defer st.Unlock()

@@ -18,7 +18,7 @@ do
   #
 
   go test $@ sigmaos/path
-  go test $@ sigmaos/fcall
+  go test $@ sigmaos/sessp
   go test $@ sigmaos/linuxsched
   go test $@ sigmaos/perf
   

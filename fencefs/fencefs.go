@@ -6,7 +6,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
@@ -21,7 +21,7 @@ import (
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
-	epoch fcall.Tepoch
+	epoch sessp.Tepoch
 }
 
 func makeFence(i fs.Inode) *Fence {
@@ -30,12 +30,12 @@ func makeFence(i fs.Inode) *Fence {
 	return e
 }
 
-func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
-	return 0, fcall.MkErr(fcall.TErrNotSupported, "Write")
+func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+	return 0, sessp.MkErr(sessp.TErrNotSupported, "Write")
 }
 
-func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	return nil, fcall.MkErr(fcall.TErrNotSupported, "Read")
+func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+	return nil, sessp.MkErr(sessp.TErrNotSupported, "Read")
 }
 
 func (f *Fence) Snapshot(fn fs.SnapshotF) []byte {
@@ -46,7 +46,7 @@ func RestoreFence(fn fs.RestoreF, b []byte) fs.Inode {
 	return restoreFence(fn, b)
 }
 
-func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *fcall.Err) {
+func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *sessp.Err) {
 	db.DPrintf(db.FENCEFS, "makeInode %v dir %v\n", p, parent)
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
@@ -54,7 +54,7 @@ func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.Make
 	} else if p.IsFile() {
 		return makeFence(i), nil
 	} else {
-		return nil, fcall.MkErr(fcall.TErrInval, p)
+		return nil, sessp.MkErr(sessp.TErrInval, p)
 	}
 }
 
@@ -64,14 +64,14 @@ func MakeRoot(ctx fs.CtxI) fs.Dir {
 }
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
-func allocFence(root fs.Dir, name string) (*Fence, *fcall.Err) {
+func allocFence(root fs.Dir, name string) (*Fence, *sessp.Err) {
 	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, sp.OWRITE)
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()
 		return f, nil
 	}
-	if err != nil && err.Code() != fcall.TErrExists {
+	if err != nil && err.Code() != sessp.TErrExists {
 		db.DFatalf("allocFence create %v err %v\n", name, err)
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *fcall.Err) {
 // id exists, return the locked fence in read mode so that no one can
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
-func CheckFence(root fs.Dir, new fcall.Tfence) (*Fence, *fcall.Err) {
+func CheckFence(root fs.Dir, new sessp.Tfence) (*Fence, *sessp.Err) {
 	if new.Fenceid.Path == 0 {
 		return nil, nil
 	}
@@ -98,7 +98,7 @@ func CheckFence(root fs.Dir, new fcall.Tfence) (*Fence, *fcall.Err) {
 	if e < f.epoch {
 		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
 		f.RUnlock()
-		return nil, fcall.MkErr(fcall.TErrStale, new)
+		return nil, sessp.MkErr(sessp.TErrStale, new)
 	}
 	if e == f.epoch {
 		return f, nil
@@ -122,5 +122,5 @@ func CheckFence(root fs.Dir, new fcall.Tfence) (*Fence, *fcall.Err) {
 		return f, nil
 	}
 	db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
-	return nil, fcall.MkErr(fcall.TErrStale, new)
+	return nil, sessp.MkErr(sessp.TErrStale, new)
 }

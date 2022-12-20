@@ -3,86 +3,86 @@ package spcodec
 import (
 	"fmt"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func NewMsg(typ fcall.Tfcall) (fcall.Tmsg, *fcall.Err) {
+func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *sessp.Err) {
 	switch typ {
-	case fcall.TTversion:
+	case sessp.TTversion:
 		return &sp.Tversion{}, nil
-	case fcall.TRversion:
+	case sessp.TRversion:
 		return &sp.Rversion{}, nil
-	case fcall.TTauth:
+	case sessp.TTauth:
 		return &sp.Tauth{}, nil
-	case fcall.TRauth:
+	case sessp.TRauth:
 		return &sp.Rauth{}, nil
-	case fcall.TTattach:
+	case sessp.TTattach:
 		return &sp.Tattach{}, nil
-	case fcall.TRattach:
+	case sessp.TRattach:
 		return &sp.Rattach{}, nil
-	case fcall.TRerror:
+	case sessp.TRerror:
 		return &sp.Rerror{}, nil
-	case fcall.TTwalk:
+	case sessp.TTwalk:
 		return &sp.Twalk{}, nil
-	case fcall.TRwalk:
+	case sessp.TRwalk:
 		return &sp.Rwalk{}, nil
-	case fcall.TTopen:
+	case sessp.TTopen:
 		return &sp.Topen{}, nil
-	case fcall.TRopen:
+	case sessp.TRopen:
 		return &sp.Ropen{}, nil
-	case fcall.TTcreate:
+	case sessp.TTcreate:
 		return &sp.Tcreate{}, nil
-	case fcall.TRcreate:
+	case sessp.TRcreate:
 		return &sp.Rcreate{}, nil
-	case fcall.TRread:
+	case sessp.TRread:
 		return &sp.Rread{}, nil
-	case fcall.TRwrite:
+	case sessp.TRwrite:
 		return &sp.Rwrite{}, nil
-	case fcall.TTclunk:
+	case sessp.TTclunk:
 		return &sp.Tclunk{}, nil
-	case fcall.TRclunk:
+	case sessp.TRclunk:
 		return &sp.Rclunk{}, nil // no response body
-	case fcall.TTremove:
+	case sessp.TTremove:
 		return &sp.Tremove{}, nil
-	case fcall.TRremove:
+	case sessp.TRremove:
 		return &sp.Rremove{}, nil
-	case fcall.TTstat:
+	case sessp.TTstat:
 		return &sp.Tstat{}, nil
-	case fcall.TRstat:
+	case sessp.TRstat:
 		return &sp.Rstat{}, nil
-	case fcall.TTwstat:
+	case sessp.TTwstat:
 		return &sp.Twstat{}, nil
-	case fcall.TRwstat:
+	case sessp.TRwstat:
 		return &sp.Rwstat{}, nil
-	case fcall.TTwatch:
+	case sessp.TTwatch:
 		return &sp.Twatch{}, nil
-	case fcall.TTreadV:
+	case sessp.TTreadV:
 		return &sp.TreadV{}, nil
-	case fcall.TTwriteV:
+	case sessp.TTwriteV:
 		return &sp.TwriteV{}, nil
-	case fcall.TTrenameat:
+	case sessp.TTrenameat:
 		return &sp.Trenameat{}, nil
-	case fcall.TRrenameat:
+	case sessp.TRrenameat:
 		return &sp.Rrenameat{}, nil
-	case fcall.TTremovefile:
+	case sessp.TTremovefile:
 		return &sp.Tremovefile{}, nil
-	case fcall.TTgetfile:
+	case sessp.TTgetfile:
 		return &sp.Tgetfile{}, nil
-	case fcall.TTsetfile:
+	case sessp.TTsetfile:
 		return &sp.Tsetfile{}, nil
-	case fcall.TTputfile:
+	case sessp.TTputfile:
 		return &sp.Tputfile{}, nil
-	case fcall.TTdetach:
+	case sessp.TTdetach:
 		return &sp.Tdetach{}, nil
-	case fcall.TRdetach:
+	case sessp.TRdetach:
 		return &sp.Rdetach{}, nil
-	case fcall.TTheartbeat:
+	case sessp.TTheartbeat:
 		return &sp.Theartbeat{}, nil
-	case fcall.TRheartbeat:
+	case sessp.TRheartbeat:
 		return &sp.Rheartbeat{}, nil
-	case fcall.TTwriteread:
+	case sessp.TTwriteread:
 		return &sp.Twriteread{}, nil
 	}
-	return nil, fcall.MkErr(fcall.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
+	return nil, sessp.MkErr(sessp.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

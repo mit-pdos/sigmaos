@@ -1,7 +1,7 @@
 package sigmap
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Isrvconn interface {
@@ -11,15 +11,15 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyC() chan *fcall.FcallMsg
+	GetReplyC() chan *sessp.FcallMsg
 }
 
-type Fsrvfcall func(*fcall.FcallMsg)
+type Fsrvfcall func(*sessp.FcallMsg)
 
 type SessServer interface {
-	Register(fcall.Tclient, fcall.Tsession, Conn) *fcall.Err
-	Unregister(fcall.Tclient, fcall.Tsession, Conn)
-	SrvFcall(*fcall.FcallMsg)
+	Register(sessp.Tclient, sessp.Tsession, Conn) *sessp.Err
+	Unregister(sessp.Tclient, sessp.Tsession, Conn)
+	SrvFcall(*sessp.FcallMsg)
 	Snapshot() []byte
 	Restore([]byte)
 }
@@ -48,7 +48,7 @@ type Protsrv interface {
 	Snapshot() []byte
 }
 
-type MkProtServer func(SessServer, fcall.Tsession) Protsrv
+type MkProtServer func(SessServer, sessp.Tsession) Protsrv
 type RestoreProtServer func(SessServer, []byte) Protsrv
 
-type DetachF func(fcall.Tsession)
+type DetachF func(sessp.Tsession)

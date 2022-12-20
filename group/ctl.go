@@ -6,7 +6,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 )
 
 type GroupCtl struct {
@@ -19,15 +19,15 @@ func makeGroupCtl(ctx fs.CtxI, parent fs.Dir, kv *Group) fs.FsObj {
 	return &GroupCtl{i, kv}
 }
 
-func (c *GroupCtl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (c *GroupCtl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
-		return 0, fcall.MkErr(fcall.TErrInval, words)
+		return 0, sessp.MkErr(sessp.TErrInval, words)
 	}
 	err := c.g.op(words[0], words[1])
-	return fcall.Tsize(len(b)), err
+	return sessp.Tsize(len(b)), err
 }
 
-func (c *GroupCtl) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (c *GroupCtl) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	return nil, nil
 }

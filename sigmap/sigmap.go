@@ -7,7 +7,7 @@ package sigmap
 import (
 	"fmt"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/path"
 )
 
@@ -32,7 +32,7 @@ const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
 
 // If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET fcall.Tsize = 1_000_000
+const MAXGETSET sessp.Tsize = 1_000_000
 
 type Qtype uint32
 type TQversion uint32
@@ -85,11 +85,11 @@ func (qt Qtype) String() string {
 	return s
 }
 
-func MakeQid(t Qtype, v TQversion, p fcall.Tpath) *Tqid {
+func MakeQid(t Qtype, v TQversion, p sessp.Tpath) *Tqid {
 	return &Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p fcall.Tpath) *Tqid {
+func MakeQidPerm(perm Tperm, v TQversion, p sessp.Tpath) *Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
@@ -97,8 +97,8 @@ func (qid *Tqid) Tversion() TQversion {
 	return TQversion(qid.Version)
 }
 
-func (qid *Tqid) Tpath() fcall.Tpath {
-	return fcall.Tpath(qid.Path)
+func (qid *Tqid) Tpath() sessp.Tpath {
+	return sessp.Tpath(qid.Path)
 }
 
 func (qid *Tqid) Ttype() Qtype {
@@ -181,15 +181,15 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-func MkErr(msg *Rerror) *fcall.Err {
-	return &fcall.Err{fcall.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
+func MkErr(msg *Rerror) *sessp.Err {
+	return &sessp.Err{sessp.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }
 
-func MkRerror(err *fcall.Err) *Rerror {
+func MkRerror(err *sessp.Err) *Rerror {
 	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
 }
 
-func MkRerrorCode(ec fcall.Terror) *Rerror {
+func MkRerrorCode(ec sessp.Terror) *Rerror {
 	return &Rerror{ErrCode: uint32(ec)}
 }
 
@@ -241,7 +241,7 @@ func (c *Tcreate) Tmode() Tmode {
 	return Tmode(c.Mode)
 }
 
-func MkReadV(fid Tfid, o Toffset, c fcall.Tsize, v TQversion) *TreadV {
+func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion) *TreadV {
 	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v)}
 }
 
@@ -257,8 +257,8 @@ func (r *TreadV) Toffset() Toffset {
 	return Toffset(r.Offset)
 }
 
-func (r *TreadV) Tcount() fcall.Tsize {
-	return fcall.Tsize(r.Count)
+func (r *TreadV) Tcount() sessp.Tsize {
+	return sessp.Tsize(r.Count)
 }
 
 func MkTwriteV(fid Tfid, o Toffset, v TQversion) *TwriteV {
@@ -277,8 +277,8 @@ func (w *TwriteV) Tversion() TQversion {
 	return TQversion(w.Version)
 }
 
-func (wr *Rwrite) Tcount() fcall.Tsize {
-	return fcall.Tsize(wr.Count)
+func (wr *Rwrite) Tcount() sessp.Tsize {
+	return sessp.Tsize(wr.Count)
 }
 
 func MkTwatch(fid Tfid) *Twatch {
@@ -372,7 +372,7 @@ func (r *Trenameat) Toldfid() Tfid {
 	return Tfid(r.OldFid)
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt fcall.Tsize, path path.Path, resolve bool) *Tgetfile {
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve}
 }
 
@@ -388,8 +388,8 @@ func (g *Tgetfile) Toffset() Toffset {
 	return Toffset(g.Offset)
 }
 
-func (g *Tgetfile) Tcount() fcall.Tsize {
-	return fcall.Tsize(g.Count)
+func (g *Tgetfile) Tcount() sessp.Tsize {
+	return sessp.Tsize(g.Count)
 }
 
 func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool) *Tsetfile {
@@ -452,45 +452,45 @@ func (wr *Twriteread) Tfid() Tfid {
 	return Tfid(wr.Fid)
 }
 
-func (Tversion) Type() fcall.Tfcall { return fcall.TTversion }
-func (Rversion) Type() fcall.Tfcall { return fcall.TRversion }
-func (Tauth) Type() fcall.Tfcall    { return fcall.TTauth }
-func (Rauth) Type() fcall.Tfcall    { return fcall.TRauth }
-func (Tattach) Type() fcall.Tfcall  { return fcall.TTattach }
-func (Rattach) Type() fcall.Tfcall  { return fcall.TRattach }
-func (Rerror) Type() fcall.Tfcall   { return fcall.TRerror }
-func (Twalk) Type() fcall.Tfcall    { return fcall.TTwalk }
-func (Rwalk) Type() fcall.Tfcall    { return fcall.TRwalk }
-func (Topen) Type() fcall.Tfcall    { return fcall.TTopen }
-func (Twatch) Type() fcall.Tfcall   { return fcall.TTwatch }
-func (Ropen) Type() fcall.Tfcall    { return fcall.TRopen }
-func (Tcreate) Type() fcall.Tfcall  { return fcall.TTcreate }
-func (Rcreate) Type() fcall.Tfcall  { return fcall.TRcreate }
-func (Rread) Type() fcall.Tfcall    { return fcall.TRread }
-func (Rwrite) Type() fcall.Tfcall   { return fcall.TRwrite }
-func (Tclunk) Type() fcall.Tfcall   { return fcall.TTclunk }
-func (Rclunk) Type() fcall.Tfcall   { return fcall.TRclunk }
-func (Tremove) Type() fcall.Tfcall  { return fcall.TTremove }
-func (Rremove) Type() fcall.Tfcall  { return fcall.TRremove }
-func (Tstat) Type() fcall.Tfcall    { return fcall.TTstat }
-func (Twstat) Type() fcall.Tfcall   { return fcall.TTwstat }
-func (Rwstat) Type() fcall.Tfcall   { return fcall.TRwstat }
+func (Tversion) Type() sessp.Tfcall { return sessp.TTversion }
+func (Rversion) Type() sessp.Tfcall { return sessp.TRversion }
+func (Tauth) Type() sessp.Tfcall    { return sessp.TTauth }
+func (Rauth) Type() sessp.Tfcall    { return sessp.TRauth }
+func (Tattach) Type() sessp.Tfcall  { return sessp.TTattach }
+func (Rattach) Type() sessp.Tfcall  { return sessp.TRattach }
+func (Rerror) Type() sessp.Tfcall   { return sessp.TRerror }
+func (Twalk) Type() sessp.Tfcall    { return sessp.TTwalk }
+func (Rwalk) Type() sessp.Tfcall    { return sessp.TRwalk }
+func (Topen) Type() sessp.Tfcall    { return sessp.TTopen }
+func (Twatch) Type() sessp.Tfcall   { return sessp.TTwatch }
+func (Ropen) Type() sessp.Tfcall    { return sessp.TRopen }
+func (Tcreate) Type() sessp.Tfcall  { return sessp.TTcreate }
+func (Rcreate) Type() sessp.Tfcall  { return sessp.TRcreate }
+func (Rread) Type() sessp.Tfcall    { return sessp.TRread }
+func (Rwrite) Type() sessp.Tfcall   { return sessp.TRwrite }
+func (Tclunk) Type() sessp.Tfcall   { return sessp.TTclunk }
+func (Rclunk) Type() sessp.Tfcall   { return sessp.TRclunk }
+func (Tremove) Type() sessp.Tfcall  { return sessp.TTremove }
+func (Rremove) Type() sessp.Tfcall  { return sessp.TRremove }
+func (Tstat) Type() sessp.Tfcall    { return sessp.TTstat }
+func (Twstat) Type() sessp.Tfcall   { return sessp.TTwstat }
+func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
 //
 // sigmaP
 //
 
-func (Rstat) Type() fcall.Tfcall       { return fcall.TRstat }
-func (TreadV) Type() fcall.Tfcall      { return fcall.TTreadV }
-func (TwriteV) Type() fcall.Tfcall     { return fcall.TTwriteV }
-func (Trenameat) Type() fcall.Tfcall   { return fcall.TTrenameat }
-func (Rrenameat) Type() fcall.Tfcall   { return fcall.TRrenameat }
-func (Tremovefile) Type() fcall.Tfcall { return fcall.TTremovefile }
-func (Tgetfile) Type() fcall.Tfcall    { return fcall.TTgetfile }
-func (Tsetfile) Type() fcall.Tfcall    { return fcall.TTsetfile }
-func (Tputfile) Type() fcall.Tfcall    { return fcall.TTputfile }
-func (Tdetach) Type() fcall.Tfcall     { return fcall.TTdetach }
-func (Rdetach) Type() fcall.Tfcall     { return fcall.TRdetach }
-func (Theartbeat) Type() fcall.Tfcall  { return fcall.TTheartbeat }
-func (Rheartbeat) Type() fcall.Tfcall  { return fcall.TRheartbeat }
-func (Twriteread) Type() fcall.Tfcall  { return fcall.TTwriteread }
+func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
+func (TreadV) Type() sessp.Tfcall      { return sessp.TTreadV }
+func (TwriteV) Type() sessp.Tfcall     { return sessp.TTwriteV }
+func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
+func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
+func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }
+func (Tgetfile) Type() sessp.Tfcall    { return sessp.TTgetfile }
+func (Tsetfile) Type() sessp.Tfcall    { return sessp.TTsetfile }
+func (Tputfile) Type() sessp.Tfcall    { return sessp.TTputfile }
+func (Tdetach) Type() sessp.Tfcall     { return sessp.TTdetach }
+func (Rdetach) Type() sessp.Tfcall     { return sessp.TRdetach }
+func (Theartbeat) Type() sessp.Tfcall  { return sessp.TTheartbeat }
+func (Rheartbeat) Type() sessp.Tfcall  { return sessp.TRheartbeat }
+func (Twriteread) Type() sessp.Tfcall  { return sessp.TTwriteread }

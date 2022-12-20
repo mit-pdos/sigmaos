@@ -5,56 +5,56 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
-func ReadFrame(rd io.Reader) ([]byte, *fcall.Err) {
+func ReadFrame(rd io.Reader) ([]byte, *sessp.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, fcall.MkErr(fcall.TErrUnreachable, err)
+		return nil, sessp.MkErr(sessp.TErrUnreachable, err)
 	}
 	db.DPrintf(db.FRAME, "ReadFrame %d\n", len)
 	len = len - 4
 	if len <= 0 {
-		return nil, fcall.MkErr(fcall.TErrUnreachable, "readMsg too short")
+		return nil, sessp.MkErr(sessp.TErrUnreachable, "readMsg too short")
 	}
 	frame := make([]byte, len)
 	n, e := io.ReadFull(rd, frame)
 	if n != int(len) {
-		return nil, fcall.MkErr(fcall.TErrUnreachable, e)
+		return nil, sessp.MkErr(sessp.TErrUnreachable, e)
 	}
 	return frame, nil
 }
 
-func ReadBuf(rd io.Reader) ([]byte, *fcall.Err) {
+func ReadBuf(rd io.Reader) ([]byte, *sessp.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, fcall.MkErr(fcall.TErrUnreachable, err)
+		return nil, sessp.MkErr(sessp.TErrUnreachable, err)
 	}
 	var buf []byte
 	if len > 0 {
 		buf = make([]byte, len)
 		n, e := io.ReadFull(rd, buf)
 		if n != int(len) {
-			return nil, fcall.MkErr(fcall.TErrUnreachable, e)
+			return nil, sessp.MkErr(sessp.TErrUnreachable, e)
 		}
 	}
 	return buf, nil
 }
 
-func WriteFrame(wr io.Writer, frame []byte) *fcall.Err {
+func WriteFrame(wr io.Writer, frame []byte) *sessp.Err {
 	l := uint32(len(frame) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
-		return fcall.MkErr(fcall.TErrUnreachable, err.Error())
+		return sessp.MkErr(sessp.TErrUnreachable, err.Error())
 	}
 	return WriteRawBuffer(wr, frame)
 }
 
-func WriteRawBuffer(wr io.Writer, buf []byte) *fcall.Err {
+func WriteRawBuffer(wr io.Writer, buf []byte) *sessp.Err {
 	if n, err := wr.Write(buf); err != nil {
-		return fcall.MkErr(fcall.TErrUnreachable, err.Error())
+		return sessp.MkErr(sessp.TErrUnreachable, err.Error())
 	} else if n < len(buf) {
-		return fcall.MkErr(fcall.TErrUnreachable, "writeRawBuffer too short")
+		return sessp.MkErr(sessp.TErrUnreachable, "writeRawBuffer too short")
 	}
 	return nil
 }

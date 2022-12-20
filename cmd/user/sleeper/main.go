@@ -8,10 +8,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -34,7 +34,7 @@ type Sleeper struct {
 	native      bool
 	sleepLength time.Duration
 	outdir      string
-	startSeqno  fcall.Tseqno
+	startSeqno  sessp.Tseqno
 	time.Time
 }
 

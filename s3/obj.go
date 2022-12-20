@@ -11,16 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
 )
 
-func mkTpath(key path.Path) fcall.Tpath {
+func mkTpath(key path.Path) sessp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
-	return fcall.Tpath(h.Sum64())
+	return sessp.Tpath(h.Sum64())
 }
 
 type Obj struct {
@@ -55,7 +55,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
 }
 
-func (o *Obj) Size() (sp.Tlength, *fcall.Err) {
+func (o *Obj) Size() (sp.Tlength, *sessp.Err) {
 	return o.sz, nil
 }
 
@@ -63,7 +63,7 @@ func (o *Obj) SetSize(sz sp.Tlength) {
 	o.sz = sz
 }
 
-func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
+func (o *Obj) readHead(fss3 *Fss3) *sessp.Err {
 	key := o.key.String()
 	key = toDot(key)
 	input := &s3.HeadObjectInput{
@@ -72,7 +72,7 @@ func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
 	}
 	result, err := fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
-		return fcall.MkErrError(err)
+		return sessp.MkErrError(err)
 	}
 
 	db.DPrintf(db.S3, "readHead: %v %v\n", key, result.ContentLength)
@@ -91,7 +91,7 @@ func makeFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
 	}
 }
 
-func (o *Obj) fill() *fcall.Err {
+func (o *Obj) fill() *sessp.Err {
 	if err := o.readHead(fss3); err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (o *Obj) stat() *sp.Stat {
 	return sp.MkStat(sp.MakeQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
-func (o *Obj) Path() fcall.Tpath {
+func (o *Obj) Path() sessp.Tpath {
 	return mkTpath(o.key)
 }
 
@@ -122,7 +122,7 @@ func (o *Obj) Parent() fs.Dir {
 	return makeDir(o.bucket, dir, sp.DMDIR)
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
 	db.DPrintf(db.S3, "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
+func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
 	db.DPrintf(db.S3, "open %v (%T) %v\n", o, o, m)
 	if err := o.fill(); err != nil {
 		return nil, err
@@ -144,20 +144,20 @@ func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	return o, nil
 }
 
-func (o *Obj) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
+func (o *Obj) Close(ctx fs.CtxI, m sp.Tmode) *sessp.Err {
 	db.DPrintf(db.S3, "%p: Close %v\n", o, m)
 	if m == sp.OWRITE {
 		o.w.Close()
 		// wait for uploader to finish
 		err := <-o.ch
 		if err != nil {
-			return fcall.MkErrError(err)
+			return sessp.MkErrError(err)
 		}
 	}
 	return nil
 }
 
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *sessp.Err) {
 	key := o.key.String()
 	region := ""
 	if off != 0 || sp.Tlength(cnt) < o.sz {
@@ -171,7 +171,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
 	}
 	result, err := fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, 0, fcall.MkErrError(err)
+		return nil, 0, sessp.MkErrError(err)
 	}
 	region1 := ""
 	if result.ContentRange != nil {
@@ -181,7 +181,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
 	return result.Body, sp.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	db.DPrintf(db.S3, "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
 	if sp.Tlength(off) >= o.sz {
 		return nil, nil
@@ -194,7 +194,7 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion)
 	b, error := io.ReadAll(rdr)
 	if error != nil {
 		db.DPrintf(db.S3, "Read: Read %d err %v\n", n, error)
-		return nil, fcall.MkErrError(error)
+		return nil, sessp.MkErrError(error)
 	}
 	return b, nil
 }
@@ -225,18 +225,18 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	db.DPrintf(db.S3, "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
 		db.DPrintf(db.S3, "Write %v err\n", o.off)
-		return 0, fcall.MkErr(fcall.TErrInval, off)
+		return 0, sessp.MkErr(sessp.TErrInval, off)
 	}
 	if n, err := o.w.Write(b); err != nil {
 		db.DPrintf(db.S3, "Write %v %v err %v\n", off, len(b), err)
-		return 0, fcall.MkErrError(err)
+		return 0, sessp.MkErrError(err)
 	} else {
 		o.off += sp.Toffset(n)
 		o.SetSize(sp.Tlength(o.off))
-		return fcall.Tsize(n), nil
+		return sessp.Tsize(n), nil
 	}
 }

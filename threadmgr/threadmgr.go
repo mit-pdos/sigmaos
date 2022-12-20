@@ -6,7 +6,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 /*
@@ -66,7 +66,7 @@ func (t *ThreadMgr) replayOps(ops []*Op) {
 }
 
 // Enqueue a new op to be processed.
-func (t *ThreadMgr) Process(fc *fcall.FcallMsg) {
+func (t *ThreadMgr) Process(fc *sessp.FcallMsg) {
 	t.Lock()
 	defer t.Unlock()
 

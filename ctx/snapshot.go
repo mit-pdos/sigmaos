@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/sesscond"
 )
 
 type CtxSnapshot struct {
 	Uname  string
-	Sessid fcall.Tsession
+	Sessid sessp.Tsession
 }
 
 func MakeCtxSnapshot() *CtxSnapshot {

@@ -3,7 +3,7 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/path"
 	"sigmaos/protclnt"
 	sp "sigmaos/sigmap"
@@ -73,7 +73,7 @@ func (c *Channel) Lastqid() *sp.Tqid {
 }
 
 // Simulate network partition to server that exports path
-func (c *Channel) Disconnect() *fcall.Err {
+func (c *Channel) Disconnect() *sessp.Err {
 	return c.pc.Disconnect()
 }
 

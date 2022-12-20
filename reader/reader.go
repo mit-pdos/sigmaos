@@ -4,7 +4,7 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	sp "sigmaos/sigmap"
 )
@@ -38,8 +38,8 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	var b []byte
-	var err *fcall.Err
-	sz := fcall.Tsize(len(p))
+	var err *sessp.Err
+	sz := sessp.Tsize(len(p))
 	if rdr.fenced {
 		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, sp.NoV)
 	} else {
@@ -70,7 +70,7 @@ func (rdr *Reader) GetData() ([]byte, error) {
 	return b, nil
 }
 
-func (rdr *Reader) GetDataErr() ([]byte, *fcall.Err) {
+func (rdr *Reader) GetDataErr() ([]byte, *sessp.Err) {
 	return rdr.fc.ReadV(rdr.fid, 0, sp.MAXGETSET, sp.NoV)
 }
 
@@ -91,6 +91,6 @@ func (rdr *Reader) Unfence() {
 	rdr.fenced = false
 }
 
-func MakeReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz fcall.Tsize) *Reader {
+func MakeReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz sessp.Tsize) *Reader {
 	return &Reader{fc, path, fid, 0, false, true}
 }

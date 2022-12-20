@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/fid"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+    "sigmaos/sessp"
 )
 
 type fidTable struct {
@@ -19,12 +19,12 @@ func makeFidTable() *fidTable {
 	return ft
 }
 
-func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *fcall.Err) {
+func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *sessp.Err) {
 	ft.Lock()
 	defer ft.Unlock()
 	f, ok := ft.fids[fid]
 	if !ok {
-		return nil, fcall.MkErr(fcall.TErrUnknownfid, f)
+		return nil, sessp.MkErr(sessp.TErrUnknownfid, f)
 	}
 	return f, nil
 }

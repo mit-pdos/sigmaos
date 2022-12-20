@@ -1,7 +1,7 @@
 package repldummy
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/threadmgr"
 )
 
@@ -18,6 +18,6 @@ func MakeDummyReplServer(tm *threadmgr.ThreadMgr) *DummyReplServer {
 func (srv *DummyReplServer) Start() {
 }
 
-func (srv *DummyReplServer) Process(fc *fcall.FcallMsg) {
+func (srv *DummyReplServer) Process(fc *sessp.FcallMsg) {
 	srv.tm.Process(fc)
 }

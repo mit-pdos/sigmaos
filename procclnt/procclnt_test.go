@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
@@ -673,7 +673,7 @@ func TestProcdResize1(t *testing.T) {
 	checkSleeperResult(t, ts, pid)
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := fcall.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
@@ -722,7 +722,7 @@ func TestProcdResizeN(t *testing.T) {
 	N := 5
 
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := fcall.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
@@ -789,7 +789,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := fcall.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
@@ -884,7 +884,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 
 	// Revoke half of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := fcall.MkInterval(0, uint64(nCoresToRevoke))
+	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 

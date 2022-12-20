@@ -1,21 +1,21 @@
 package netclnt
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 )
 
 type Reply struct {
-	fm  *fcall.FcallMsg
-	err *fcall.Err
+	fm  *sessp.FcallMsg
+	err *sessp.Err
 }
 
 type Rpc struct {
 	addrs  []string
-	Req    *fcall.FcallMsg
+	Req    *sessp.FcallMsg
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs []string, fc *fcall.FcallMsg) *Rpc {
+func MakeRpc(addrs []string, fc *sessp.FcallMsg) *Rpc {
 	rpc := &Rpc{}
 	rpc.addrs = addrs
 	rpc.Req = fc
@@ -24,16 +24,16 @@ func MakeRpc(addrs []string, fc *fcall.FcallMsg) *Rpc {
 }
 
 // Wait for a reply
-func (rpc *Rpc) Await() (*fcall.FcallMsg, *fcall.Err) {
+func (rpc *Rpc) Await() (*sessp.FcallMsg, *sessp.Err) {
 	reply, ok := <-rpc.ReplyC
 	if !ok {
-		return nil, fcall.MkErr(fcall.TErrUnreachable, rpc.addrs)
+		return nil, sessp.MkErr(sessp.TErrUnreachable, rpc.addrs)
 	}
 	return reply.fm, reply.err
 }
 
 // Complete a reply
-func (rpc *Rpc) Complete(reply *fcall.FcallMsg, err *fcall.Err) {
+func (rpc *Rpc) Complete(reply *sessp.FcallMsg, err *sessp.Err) {
 	rpc.ReplyC <- &Reply{reply, err}
 	close(rpc.ReplyC)
 }

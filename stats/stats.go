@@ -13,7 +13,7 @@ import (
 	"unsafe"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
@@ -88,45 +88,45 @@ func MkStatInfo() *StatInfo {
 	return sti
 }
 
-func (si *StatInfo) Inc(fct fcall.Tfcall) {
+func (si *StatInfo) Inc(fct sessp.Tfcall) {
 	switch fct {
-	case fcall.TTversion:
+	case sessp.TTversion:
 		si.Nversion.Inc()
-	case fcall.TTauth:
+	case sessp.TTauth:
 		si.Nauth.Inc()
-	case fcall.TTattach:
+	case sessp.TTattach:
 		si.Nattach.Inc()
-	case fcall.TTflush:
+	case sessp.TTflush:
 		si.Nflush.Inc()
-	case fcall.TTwalk:
+	case sessp.TTwalk:
 		si.Nwalk.Inc()
-	case fcall.TTopen:
+	case sessp.TTopen:
 		si.Nopen.Inc()
-	case fcall.TTcreate:
+	case sessp.TTcreate:
 		si.Ncreate.Inc()
-	case fcall.TTread, fcall.TTreadV:
+	case sessp.TTread, sessp.TTreadV:
 		si.Nread.Inc()
-	case fcall.TTwrite, fcall.TTwriteV:
+	case sessp.TTwrite, sessp.TTwriteV:
 		si.Nwrite.Inc()
-	case fcall.TTclunk:
+	case sessp.TTclunk:
 		si.Nclunk.Inc()
-	case fcall.TTremove:
+	case sessp.TTremove:
 		si.Nremove.Inc()
-	case fcall.TTremovefile:
+	case sessp.TTremovefile:
 		si.Nremovefile.Inc()
-	case fcall.TTstat:
+	case sessp.TTstat:
 		si.Nstat.Inc()
-	case fcall.TTwstat:
+	case sessp.TTwstat:
 		si.Nwstat.Inc()
-	case fcall.TTwatch:
+	case sessp.TTwatch:
 		si.Nwatch.Inc()
-	case fcall.TTrenameat:
+	case sessp.TTrenameat:
 		si.Nrenameat.Inc()
-	case fcall.TTgetfile:
+	case sessp.TTgetfile:
 		si.Nget.Inc()
-	case fcall.TTsetfile:
+	case sessp.TTsetfile:
 		si.Nset.Inc()
-	case fcall.TTputfile:
+	case sessp.TTputfile:
 		si.Nput.Inc()
 	default:
 	}
@@ -251,11 +251,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
+func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
 	if st == nil {
 		return nil, nil
 	}

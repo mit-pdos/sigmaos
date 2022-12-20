@@ -7,7 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -15,8 +15,8 @@ import (
 )
 
 type Op struct {
-	request   *fcall.FcallMsg
-	reply     *fcall.FcallMsg
+	request   *sessp.FcallMsg
+	reply     *sessp.FcallMsg
 	frame     []byte
 	startTime time.Time
 }
@@ -25,7 +25,7 @@ type Clerk struct {
 	mu       *sync.Mutex
 	id       int
 	tm       *threadmgr.ThreadMgr
-	opmap    map[fcall.Tsession]map[fcall.Tseqno]*Op
+	opmap    map[sessp.Tsession]map[sessp.Tseqno]*Op
 	requests chan *Op
 	commit   <-chan *committedEntries
 	proposeC chan<- []byte
@@ -36,7 +36,7 @@ func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan *committedEntries,
 	c.mu = &sync.Mutex{}
 	c.id = id
 	c.tm = tm
-	c.opmap = make(map[fcall.Tsession]map[fcall.Tseqno]*Op)
+	c.opmap = make(map[sessp.Tsession]map[sessp.Tseqno]*Op)
 	c.requests = make(chan *Op)
 	c.commit = commit
 	c.proposeC = propose
@@ -95,14 +95,14 @@ func (c *Clerk) reproposeOps() {
 	}
 }
 
-func (c *Clerk) apply(fc *fcall.FcallMsg, leader uint64) {
+func (c *Clerk) apply(fc *sessp.FcallMsg, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
 	op := c.getOp(fc)
 	if op != nil {
 		db.DPrintf(db.RAFT_TIMING, "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), fc)
 	}
 	// For now, every node can cause a detach to happen
-	if fc.GetType() == fcall.TTdetach {
+	if fc.GetType() == sessp.TTdetach {
 		msg := fc.Msg.(*sp.Tdetach)
 		msg.LeadId = uint32(leader)
 		fc.Msg = msg
@@ -115,24 +115,24 @@ func (c *Clerk) registerOp(op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	s := fcall.Tsession(op.request.Fc.Session)
+	s := sessp.Tsession(op.request.Fc.Session)
 	seq := op.request.Seqno()
 	m, ok := c.opmap[s]
 	if !ok {
-		m = make(map[fcall.Tseqno]*Op)
+		m = make(map[sessp.Tseqno]*Op)
 		c.opmap[s] = m
 	}
 	if _, ok := m[seq]; ok {
 		// Detaches and server-driven heartbeats may be re-executed many times.
-		if op.request.GetType() != fcall.TTdetach && op.request.GetType() != fcall.TTheartbeat {
+		if op.request.GetType() != sessp.TTdetach && op.request.GetType() != sessp.TTheartbeat {
 			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[seq].request)
 		}
 	}
 	m[seq] = op
 }
 
-// Get the full op struct associated with an fcall.
-func (c *Clerk) getOp(fc *fcall.FcallMsg) *Op {
+// Get the full op struct associated with an sessp.
+func (c *Clerk) getOp(fc *sessp.FcallMsg) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -152,11 +152,11 @@ func (c *Clerk) getOp(fc *fcall.FcallMsg) *Op {
 }
 
 // Print how much time an op spent in raft.
-func (c *Clerk) printOpTiming(rep *fcall.FcallMsg, frame []byte) {
+func (c *Clerk) printOpTiming(rep *sessp.FcallMsg, frame []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	s := fcall.Tsession(rep.Fc.Session)
+	s := sessp.Tsession(rep.Fc.Session)
 	seqno := rep.Seqno()
 	if m, ok := c.opmap[s]; ok {
 		if op, ok := m[seqno]; ok {

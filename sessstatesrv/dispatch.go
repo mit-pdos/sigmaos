@@ -4,17 +4,17 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, bool, *sp.Rerror) {
+func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, bool, *sp.Rerror) {
 	// If another replica detached a session, and the client sent their request
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
-		err := fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", s.Sid))
+		err := sessp.MkErr(sessp.TErrClosed, fmt.Sprintf("session %v", s.Sid))
 		return nil, nil, true, sp.MkRerror(err)
 	}
 	switch req := msg.(type) {
@@ -109,6 +109,6 @@ func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, boo
 		return reply, data, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
-		return nil, nil, false, sp.MkRerror(fcall.MkErr(fcall.TErrUnknownMsg, msg))
+		return nil, nil, false, sp.MkRerror(sessp.MkErr(sessp.TErrUnknownMsg, msg))
 	}
 }

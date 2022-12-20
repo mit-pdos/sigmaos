@@ -1,7 +1,7 @@
 package protsrv
 
 import (
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
@@ -11,7 +11,7 @@ import (
 
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *fcall.Err) {
+func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *sessp.Err) {
 	src := po.Path()
 	lk := ps.plt.Acquire(ctx, src)
 	o := po.Obj()
@@ -21,7 +21,7 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.
 	}
 	if !o.Perm().IsDir() {
 		ps.stats.IncPath(src)
-		return nil, o, lk, nil, fcall.MkErr(fcall.TErrNotDir, src.Base())
+		return nil, o, lk, nil, sessp.MkErr(sessp.TErrNotDir, src.Base())
 	}
 	ps.stats.IncPathString(lk.Path())
 	return namei.Walk(ps.plt, ctx, o, lk, src, target, nil)

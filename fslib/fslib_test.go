@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
@@ -69,7 +69,7 @@ func TestCreateTwice(t *testing.T) {
 	assert.Equal(t, nil, err)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.NotNil(t, err)
-	assert.True(t, fcall.IsErrExists(err))
+	assert.True(t, sessp.IsErrExists(err))
 	ts.Shutdown()
 }
 
@@ -92,13 +92,13 @@ func TestConnect(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "disconnected")
 
 	_, err = ts.Write(fd, d)
-	assert.True(t, fcall.IsErrUnreachable(err))
+	assert.True(t, sessp.IsErrUnreachable(err))
 
 	err = ts.Close(fd)
-	assert.True(t, fcall.IsErrUnreachable(err))
+	assert.True(t, sessp.IsErrUnreachable(err))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, fcall.IsErrUnreachable(err))
+	assert.True(t, sessp.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }
@@ -286,7 +286,7 @@ func TestSetAppend(t *testing.T) {
 	assert.Equal(t, nil, err)
 	l, err := ts.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, fcall.Tsize(len(d)), l)
+	assert.Equal(t, sessp.Tsize(len(d)), l)
 	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
@@ -359,7 +359,7 @@ func TestPageDir(t *testing.T) {
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
-	ts.SetChunkSz(fcall.Tsize(512))
+	ts.SetChunkSz(sessp.Tsize(512))
 	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
@@ -461,7 +461,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	defer fsl.Close(fd)
 
 	b, err := fsl.ReadV(fd, 1000)
-	if err != nil && fcall.IsErrVersion(err) {
+	if err != nil && sessp.IsErrVersion(err) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -475,7 +475,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 
 	b = []byte(strconv.Itoa(n))
 	_, err = fsl.WriteV(fd, b)
-	if err != nil && fcall.IsErrVersion(err) {
+	if err != nil && sessp.IsErrVersion(err) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -531,7 +531,7 @@ func TestWatchCreate(t *testing.T) {
 	})
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, -1, fd, err)
-	assert.True(t, fcall.IsErrNotfound(err))
+	assert.True(t, sessp.IsErrNotfound(err))
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
@@ -757,7 +757,7 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 				ch <- r
 			})
 			// Either no error, or remove already happened.
-			assert.True(ts.T, err == nil || fcall.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
+			assert.True(ts.T, err == nil || sessp.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {
@@ -823,7 +823,7 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 				i = i + 1
 				ok = true
 			} else {
-				assert.True(ts.T, fcall.IsErrNotfound(err))
+				assert.True(ts.T, sessp.IsErrNotfound(err))
 			}
 		}
 	}
@@ -1219,7 +1219,7 @@ func TestSetFileSymlink(t *testing.T) {
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
-	assert.Equal(ts.T, fcall.Tsize(len(d)), n, "SetFile")
+	assert.Equal(ts.T, sessp.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(gopath.Join(pathname, sp.STATSD), &st)
 	assert.Nil(t, err, "statsd")
@@ -1280,7 +1280,7 @@ func TestFslibExit(t *testing.T) {
 
 	_, err = ts.Stat(dot)
 	assert.NotNil(t, err)
-	assert.True(t, fcall.IsErrUnreachable(err))
+	assert.True(t, sessp.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }

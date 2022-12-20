@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/fcall"
+	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
@@ -55,18 +55,18 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	return fsux
 }
 
-func ErrnoToNp(errno syscall.Errno, err error, name string) *fcall.Err {
+func ErrnoToNp(errno syscall.Errno, err error, name string) *sessp.Err {
 	switch errno {
 	case syscall.ENOENT:
-		return fcall.MkErr(fcall.TErrNotfound, name)
+		return sessp.MkErr(sessp.TErrNotfound, name)
 	case syscall.EEXIST:
-		return fcall.MkErr(fcall.TErrExists, name)
+		return sessp.MkErr(sessp.TErrExists, name)
 	default:
-		return fcall.MkErrError(err)
+		return sessp.MkErrError(err)
 	}
 }
 
-func UxTo9PError(err error, name string) *fcall.Err {
+func UxTo9PError(err error, name string) *sessp.Err {
 	switch e := err.(type) {
 	case *os.LinkError:
 		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
@@ -75,6 +75,6 @@ func UxTo9PError(err error, name string) *fcall.Err {
 	case syscall.Errno:
 		return ErrnoToNp(e, err, name)
 	default:
-		return fcall.MkErrError(err)
+		return sessp.MkErrError(err)
 	}
 }

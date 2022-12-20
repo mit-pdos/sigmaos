@@ -19,8 +19,6 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
-// XXX clean up after split sigmap from ninep
-
 func marshal(v interface{}) ([]byte, error) {
 	return marshal1(false, v)
 }
@@ -316,84 +314,33 @@ func (d *decoder) decode(vs ...interface{}) error {
 }
 
 // SizeNp calculates the projected size of the values in vs when encoded into
-// 9p binary protocol. If an element or elements are not valid for 9p encoded,
-// the value 0 will be used for the size. The error will be detected when
-// encoding.  XXX just used for Stat
+// 9p binary protocol.  Used only for Stat
+// encoding.
 func sizeNp(vs ...interface{}) uint64 {
 	var s uint64
 	for _, v := range vs {
 		if v == nil {
 			continue
 		}
-
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, sessp.Tseqno, sessp.Tsession, sessp.Tfcall, sessp.Ttag, sp.Tfid, sp.Tmode, sp.Qtype, sessp.Tsize, np.Tpath, sessp.Tepoch, np.TQversion, np.Tperm, sp.Tiounit, sp.Toffset, np.Tlength, sp.Tgid, np.Qtype9P,
-			*bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *np.Qtype9P, *sessp.Tsize, *np.Tpath, *sessp.Tepoch, *np.TQversion, *np.Tperm, *sp.Tiounit, *sp.Toffset, *np.Tlength, *sp.Tgid:
+		case uint16, uint32, np.Tpath, np.TQversion, np.Tperm, np.Tlength, np.Qtype9P:
 			s += uint64(binary.Size(v))
-		case []byte:
-			s += uint64(binary.Size(uint64(0)) + len(v))
-		case *[]byte:
-			s += sizeNp(uint64(0), *v)
-		case string:
-			s += uint64(binary.Size(uint16(0)) + len(v))
-		case *string:
-			s += sizeNp(*v)
-		case []string:
-			s += sizeNp(uint16(0))
-
-			for _, sv := range v {
-				s += sizeNp(sv)
-			}
-		case *[]string:
-			s += sizeNp(*v)
 		case sp.Tqid:
 			s += sizeNp(v.Type, v.Version, v.Path)
-		case *sp.Tqid:
-			s += sizeNp(*v)
 		case np.Tqid9P:
 			s += sizeNp(v.Type, v.Version, v.Path)
-		case *np.Tqid9P:
-			s += sizeNp(*v)
-		case []sp.Tqid:
-			s += sizeNp(uint16(0))
-			elements := make([]interface{}, len(v))
-			for i := range elements {
-				elements[i] = &v[i]
-			}
-			s += sizeNp(elements...)
-		case *[]sp.Tqid:
-			s += sizeNp(*v)
+		case string:
+			s += uint64(binary.Size(uint16(0)) + len(v))
 		case np.Stat9P:
 			elements, err := fields9p(v)
 			if err != nil {
 				db.DFatalf("Stat %v", err)
 			}
 			s += sizeNp(elements...) + sizeNp(uint16(0))
-		case *np.Stat9P:
-			s += sizeNp(*v)
-		case Fcall9P:
-			s += sizeNp(v.Type, v.Tag, v.Msg)
-		case *Fcall9P:
-			s += sizeNp(*v)
-		case sessp.Fcall:
-			s += sizeNp(v.Type, v.Tag, v.Session, v.Seqno, *v.Received, *v.Fence)
-		case *sessp.Fcall:
-			s += sizeNp(*v)
-		case sessp.Tmsg:
-			// walk the fields of the message to get the total size. we just
-			// use the field order from the message struct. We may add tag
-			// ignoring if needed.
-			elements, err := fields9p(v)
-			if err != nil {
-				db.DFatalf("Tmsg %v", err)
-			}
-
-			s += sizeNp(elements...)
 		default:
 			db.DFatalf("sizeNp: Unknown type %T", v)
 		}
 	}
-
 	return s
 }
 

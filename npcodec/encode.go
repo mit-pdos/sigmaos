@@ -11,9 +11,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	np "sigmaos/ninep"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -214,10 +214,11 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tseqno, *sessp.Tsession, *sessp.Tfcall, *sessp.Ttag, *sp.Tfid, *sp.Tmode, *sp.Qtype, *sessp.Tsize, *sessp.Tpath, *sessp.Tepoch, *sp.TQversion, *sp.Tperm, *sp.Tiounit, *sp.Toffset, *sp.Tlength, *sp.Tgid, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P, *np.Ttag:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tfcall, *sessp.Ttag, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
+
 		case *[]byte:
 			var l uint32
 
@@ -272,72 +273,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
-		case *time.Time:
-			var epoch uint32
-			if err := d.decode(&epoch); err != nil {
-				return err
-			}
-
-			*v = time.Unix(int64(epoch), 0).UTC()
-		case *sp.Tqid:
-			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
-				return err
-			}
 		case *np.Tqid9P:
 			if err := d.decode(&v.Type, &v.Version, &v.Path); err != nil {
-				return err
-			}
-		case *[]sp.Tqid:
-			var l uint16
-
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-
-			elements := make([]interface{}, int(l))
-			*v = make([]sp.Tqid, int(l))
-			for i := range elements {
-				elements[i] = &(*v)[i]
-			}
-
-			if err := d.decode(elements...); err != nil {
-				return err
-			}
-		case *[]sessp.Tsession:
-			var l uint16
-
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-			elements := make([]interface{}, int(l))
-			*v = make([]sessp.Tsession, int(l))
-			for i := range elements {
-				elements[i] = &(*v)[i]
-			}
-
-			if err := d.decode(elements...); err != nil {
-				return err
-			}
-		case *sp.Stat:
-			var l uint16
-
-			if err := d.decode(&l); err != nil {
-				return err
-			}
-
-			b := make([]byte, l)
-			if _, err := io.ReadFull(d.rd, b); err != nil {
-				return err
-			}
-
-			elements, err := fields9p(v)
-			if err != nil {
-				return err
-			}
-
-			dec := &decoder{bytes.NewReader(b)}
-
-			if err := dec.decode(elements...); err != nil {
 				return err
 			}
 		case *np.Stat9P:

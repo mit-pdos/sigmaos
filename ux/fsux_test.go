@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	fn = sp.UX + "/~ip/"
+	fn = sp.UX + "/~local/"
 )
 
 func TestRoot(t *testing.T) {

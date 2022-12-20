@@ -39,7 +39,7 @@ func TestOne(t *testing.T) {
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~ip/9ps3/gutenberg/pg-being_ernest.txt"))
+	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
 	assert.Equal(t, nil, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
@@ -80,7 +80,7 @@ func TestUnionSimple(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~ip/9ps3/"))
+	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/"))
 	assert.Nil(t, err, "GetDir: %v", err)
 
 	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
@@ -94,7 +94,7 @@ func TestUnionDir(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~ip/9ps3/gutenberg"))
+	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 8, len(dirents))
@@ -111,7 +111,7 @@ func TestUnionFile(t *testing.T) {
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := path.Join(sp.S3, "~ip/9ps3/gutenberg/pg-being_ernest.txt")
+	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
@@ -183,7 +183,7 @@ func TestReadSplit(t *testing.T) {
 
 	ts := test.MakeTstateAll(t)
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~ip/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
+	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)

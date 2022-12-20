@@ -112,7 +112,7 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 	end := time.Now()
@@ -140,7 +140,7 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+			_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
@@ -164,8 +164,8 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
-	assert.NotNil(t, err, "Stat %v", path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -192,7 +192,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -340,7 +340,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid1.String()))
+	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -372,7 +372,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid1.String()))
+			_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}(i)
@@ -422,7 +422,7 @@ func TestConcurrentProcs(t *testing.T) {
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(path.Join(sp.PROCD, "~ip", proc.PIDS, pid.String()))
+			_, err := ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
@@ -675,7 +675,7 @@ func TestProcdResize1(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
@@ -724,7 +724,7 @@ func TestProcdResizeN(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
 		db.DPrintf(db.TEST, "Resize i=%v", i)
 		// Run a proc that claims all cores.
@@ -791,7 +791,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
 	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
@@ -804,7 +804,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Get the procd's utilization.
 	st := stats.StatInfo{}
-	err = ts.GetFileJson(path.Join(sp.PROCD, "~ip", sp.STATSD), &st)
+	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd: %v", err)
 
 	// Ensure that the procd is accurately representing the utilization (it
@@ -822,7 +822,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	time.Sleep(SLEEP_MSECS * time.Millisecond)
 
 	// Get the procd's utilization again.
-	err = ts.GetFileJson(path.Join(sp.PROCD, "~ip", sp.STATSD), &st)
+	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd: %v", err)
 
 	// Ensure that the procd's utilization has been adjusted again (it
@@ -886,7 +886,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
 	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
 
-	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
+	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
 
 	// Create a map to sample core utilization levels on the cores which will be
 	// revoked.

@@ -18,7 +18,7 @@ import (
 const (
 	leadername = "name/leader"
 	epochname  = leadername + "-epoch"
-	dirux      = sp.UX + "/~ip/outdir"
+	dirux      = sp.UX + "/~local/outdir"
 )
 
 // Test if a leader cannot write to a fenced server after leader fails

@@ -29,7 +29,7 @@ const (
 
 	NCOORD = 3
 
-	MLOCALSRV = sp.UX + "/~ip" // must end without /
+	MLOCALSRV = sp.UX + "/~local" // must end without /
 	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer

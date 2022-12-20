@@ -9,7 +9,7 @@ func UnionMatch(q string, mnt sp.Tmount) bool {
 	switch q {
 	case "~any":
 		return true
-	case "~ip":
+	case "~local":
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
 			return false

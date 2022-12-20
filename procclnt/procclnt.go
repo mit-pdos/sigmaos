@@ -132,7 +132,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~ip", true, p)
+	return clnt.spawn("~local", true, p)
 }
 
 // Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up

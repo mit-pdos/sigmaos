@@ -216,7 +216,7 @@ const (
 
 func writer(t *testing.T, ch chan error, name string) {
 	fsl := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
-	fn := sp.UX + "~ip/file-" + name
+	fn := sp.UX + "~local/file-" + name
 	stop := false
 	nfile := 0
 	for !stop {

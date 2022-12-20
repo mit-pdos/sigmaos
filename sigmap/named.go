@@ -17,9 +17,9 @@ const (
 
 	DBREL = "db"
 	DB    = NAMED + DBREL + "/"
-	DBD   = DB + "~ip/"
+	DBD   = DB + "~local/"
 
-	UXBIN = UX + "~ip/bin/"
+	UXBIN = UX + "~local/bin/"
 
 	MEMFS = NAMED + "memfsd/"
 

@@ -60,7 +60,7 @@ func (pd *Procd) downloadProcBin(program string) {
 	defer pd.Unlock()
 
 	uxBinPath := path.Join(sp.UXBIN, program)
-	s3BinPath := path.Join(sp.S3, "~ip", pd.realmbin, program)
+	s3BinPath := path.Join(sp.S3, "~local", pd.realmbin, program)
 
 	// If we already downloaded the program & it is up-to-date, return.
 	if !pd.needToDownload(uxBinPath, s3BinPath) {

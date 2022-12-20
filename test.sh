@@ -51,10 +51,10 @@ do
   go test $@ sigmaos/procclnt --version=$VERSION
 
   go test $@ sigmaos/ux --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/ux/~ip/fslibtest/" -run ReadPerf
+  go test -v sigmaos/fslib --version=$VERSION -path "name/ux/~local/fslibtest/" -run ReadPerf
   
   go test $@ sigmaos/s3 --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/s3/~ip/9ps3/fslibtest/" -run ReadPerf
+  go test -v sigmaos/fslib --version=$VERSION -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
   
   go test $@ sigmaos/kernel --version=$VERSION
   go test $@ sigmaos/leaderclnt --version=$VERSION

@@ -443,7 +443,7 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 //	return p.String(), left, nil
 //}
 //
-//// Return path to server, replacing ~ip with the IP address of the mounted server
+//// Return path to server, replacing ~local with the IP address of the mounted server
 //func (pathc *PathClnt) AbsPathServer(pn string) (path.Path, path.Path, error) {
 //	srv, left, err := pathc.PathServer(pn)
 //	if err != nil {

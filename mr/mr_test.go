@@ -113,8 +113,8 @@ func TestSplits(t *testing.T) {
 func TestMapper(t *testing.T) {
 	const (
 		SPLITSZ   = 64 * sp.KBYTE // 10 * sp.MBYTE
-		REDUCEIN  = "name/ux/~ip/test-reducer-in.txt"
-		REDUCEOUT = "name/ux/~ip/test-reducer-out.txt"
+		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"
+		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
 
 	ts := test.MakeTstateAll(t)
@@ -203,7 +203,7 @@ func TestSeqGrep(t *testing.T) {
 }
 
 func TestSeqWc(t *testing.T) {
-	const OUT = "name/ux/~ip/seqout.txt"
+	const OUT = "name/ux/~local/seqout.txt"
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 

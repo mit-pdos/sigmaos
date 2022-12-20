@@ -99,7 +99,7 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, 
 	binsz := uint64(0)
 	bin := Bin{}
 
-	anydir := strings.ReplaceAll(dir, "~ip", "~any")
+	anydir := strings.ReplaceAll(dir, "~local", "~any")
 	sts, err := fsl.GetDir(anydir)
 	if err != nil {
 		return nil, err

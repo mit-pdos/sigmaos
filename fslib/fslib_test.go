@@ -26,7 +26,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~ip/fslibtest"
+var pathname string // e.g., --path "name/ux/~local/fslibtest"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
@@ -1118,11 +1118,11 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "d/~ip") + "/")
+	sts, err = ts.GetDir(gopath.Join(pathname, "d/~local") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~ip"))
+	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~local"))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Equal(t, nil, err)

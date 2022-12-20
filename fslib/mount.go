@@ -13,7 +13,7 @@ import (
 // Client side
 //
 
-// Return pn, replacing first ~ip/~any with a symlink for a specific
+// Return pn, replacing first ~local/~any with a symlink for a specific
 // server.
 func (fsl *FsLib) ResolveUnion(pn string) (string, bool, error) {
 	p := path.Split(pn)
@@ -29,7 +29,7 @@ func (fsl *FsLib) ResolveUnion(pn string) (string, bool, error) {
 	return "", ok, nil
 }
 
-// Return pn but with all ~ip and ~any's replaced with symlinks for a
+// Return pn but with all ~local and ~any's replaced with symlinks for a
 // specific server.
 func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 	for {

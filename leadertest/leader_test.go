@@ -22,7 +22,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 	// XXX use the same dir independent of machine running proc
 	ts.RmDir(sp.UX + "/" + sp.FENCEDIR)
 
-	dir := sp.UX + "/~ip/outdir/"
+	dir := sp.UX + "/~local/outdir/"
 	fn := dir + "out"
 	ts.RmDir(dir)
 	err := ts.MkDir(dir, 0777)

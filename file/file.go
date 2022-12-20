@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	sp "sigmaos/sigmap"
     "sigmaos/sessp"
+    "sigmaos/serr"
 )
 
 type File struct {
@@ -20,7 +21,7 @@ func MakeFile() *File {
 	return f
 }
 
-func (f *File) Size() (sp.Tlength, *sessp.Err) {
+func (f *File) Size() (sp.Tlength, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return sp.Tlength(len(f.data)), nil
@@ -30,7 +31,7 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -60,7 +61,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

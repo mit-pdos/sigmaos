@@ -1,4 +1,4 @@
-package sessp
+package serr
 
 import (
 	"errors"

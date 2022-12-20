@@ -1,8 +1,9 @@
 package npcodec
 
 import (
-	"sigmaos/sessp"
 	np "sigmaos/ninep"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -113,7 +114,7 @@ func sp2NpMsg(fcm *sessp.FcallMsg) {
 	case sessp.TRerror:
 		fcm.Fc.Type = uint32(sessp.TRerror9P)
 		m := fcm.Msg.(*sp.Rerror)
-		fcm.Msg = np.Rerror9P{Ename: sessp.Terror(m.ErrCode).String()}
+		fcm.Msg = np.Rerror9P{Ename: serr.Terror(m.ErrCode).String()}
 	}
 
 }

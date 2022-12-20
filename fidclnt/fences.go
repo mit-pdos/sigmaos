@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/path"
 )
 
@@ -25,7 +26,7 @@ func MakeFenceTable() *FenceTable {
 }
 
 // If already exist, just update
-func (ft *FenceTable) Insert(p string, f sessp.Tfence) *sessp.Err {
+func (ft *FenceTable) Insert(p string, f sessp.Tfence) *serr.Err {
 	ft.Lock()
 	defer ft.Unlock()
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/path"
 )
 
@@ -181,15 +182,15 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-func MkErr(msg *Rerror) *sessp.Err {
-	return &sessp.Err{sessp.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
+func MkErr(msg *Rerror) *serr.Err {
+	return &serr.Err{serr.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }
 
-func MkRerror(err *sessp.Err) *Rerror {
+func MkRerror(err *serr.Err) *Rerror {
 	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
 }
 
-func MkRerrorCode(ec sessp.Terror) *Rerror {
+func MkRerrorCode(ec serr.Terror) *Rerror {
 	return &Rerror{ErrCode: uint32(ec)}
 }
 

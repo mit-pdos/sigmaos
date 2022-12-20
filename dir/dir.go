@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -51,7 +52,7 @@ func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
 	return i.(fs.Dir)
 }
 
-func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *sessp.Err {
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
 	err := dir.(*DirImpl).CreateDev(ctx, name, i)
 	if err != nil {
 		return err
@@ -59,33 +60,33 @@ func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *sessp.Err {
 	return nil
 }
 
-func (dir *DirImpl) unlinkL(name string) *sessp.Err {
+func (dir *DirImpl) unlinkL(name string) *serr.Err {
 	_, ok := dir.dents.Lookup(name)
 	if ok {
 		dir.dents.Delete(name)
 		return nil
 	}
-	return sessp.MkErr(sessp.TErrNotfound, name)
+	return serr.MkErr(serr.TErrNotfound, name)
 }
 
-func (dir *DirImpl) createL(ino fs.Inode, name string) *sessp.Err {
+func (dir *DirImpl) createL(ino fs.Inode, name string) *serr.Err {
 	ok := dir.dents.Insert(name, ino)
 	if !ok {
-		return sessp.MkErr(sessp.TErrExists, name)
+		return serr.MkErr(serr.TErrExists, name)
 	}
 	return nil
 }
 
-func (dir *DirImpl) lookup(name string) (fs.Inode, *sessp.Err) {
+func (dir *DirImpl) lookup(name string) (fs.Inode, *serr.Err) {
 	v, ok := dir.dents.Lookup(name)
 	if ok {
 		return v.(fs.Inode), nil
 	} else {
-		return nil, sessp.MkErr(sessp.TErrNotfound, name)
+		return nil, serr.MkErr(serr.TErrNotfound, name)
 	}
 }
 
-func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *sessp.Err) {
+func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	o, err := dir.lookup(path[0])
@@ -95,7 +96,7 @@ func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsOb
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
+func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	st, err := dir.Inode.Stat(ctx)
@@ -114,7 +115,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
 	return st, nil
 }
 
-func (dir *DirImpl) Size() (sp.Tlength, *sessp.Err) {
+func (dir *DirImpl) Size() (sp.Tlength, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	sts, err := dir.lsL(0)
@@ -124,9 +125,9 @@ func (dir *DirImpl) Size() (sp.Tlength, *sessp.Err) {
 	return spcodec.MarshalSizeDir(sts)
 }
 
-func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *sessp.Err) {
+func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
 	entries := []*sp.Stat{}
-	var r *sessp.Err
+	var r *serr.Err
 	dir.dents.Iter(func(n string, e interface{}) bool {
 		if n == "." {
 			return true
@@ -163,14 +164,14 @@ func nonemptydir(inode fs.FsObj) bool {
 	}
 }
 
-func (dir *DirImpl) remove(name string) *sessp.Err {
+func (dir *DirImpl) remove(name string) *serr.Err {
 	inode, err := dir.lookup(name)
 	if err != nil {
 		db.DPrintf(db.MEMFS, "remove %v file not found %v", dir, name)
 		return err
 	}
 	if nonemptydir(inode) {
-		return sessp.MkErr(sessp.TErrNotEmpty, name)
+		return serr.MkErr(serr.TErrNotEmpty, name)
 	}
 	dir.SetMtime(time.Now().Unix())
 	return dir.unlinkL(name)
@@ -178,7 +179,7 @@ func (dir *DirImpl) remove(name string) *sessp.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *sessp.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -187,19 +188,19 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversi
 }
 
 // XXX ax WriteDir from fs.Dir
-func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return 0, sessp.MkErr(sessp.TErrIsdir, dir)
+	return 0, serr.MkErr(serr.TErrIsdir, dir)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	if v, ok := dir.dents.Lookup(name); ok {
 		i := v.(fs.Inode)
-		return i, sessp.MkErr(sessp.TErrExists, name)
+		return i, serr.MkErr(serr.TErrExists, name)
 	}
 	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)
 	if err != nil {
@@ -210,7 +211,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) 
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *sessp.Err {
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *serr.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -248,7 +249,7 @@ func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
 }
 
 // Rename inode within directory
-func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
+func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -261,7 +262,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
 	// check if to is non-existing, or, if a dir, non-empty
 	inoto, terr := dir.lookup(to)
 	if terr == nil && nonemptydir(inoto) {
-		return sessp.MkErr(sessp.TErrNotEmpty, to)
+		return serr.MkErr(serr.TErrNotEmpty, to)
 	}
 
 	err = dir.unlinkL(from)
@@ -286,7 +287,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
 
 }
 
-func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *sessp.Err {
+func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *serr.Err {
 	newdir := nd.(*DirImpl)
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)
@@ -294,7 +295,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *se
 	db.DPrintf(db.MEMFS, "Renameat %v %v to %v %v\n", dir, old, newdir, new)
 	ino, err := dir.lookup(old)
 	if err != nil {
-		return sessp.MkErr(sessp.TErrNotfound, old)
+		return serr.MkErr(serr.TErrNotfound, old)
 	}
 	err = dir.unlinkL(old)
 	if err != nil {
@@ -313,7 +314,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *se
 	return nil
 }
 
-func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *sessp.Err {
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *serr.Err {
 	db.DPrintf(db.MEMFS, "Remove: %v %v\n", dir, n)
 
 	dir.mu.Lock()

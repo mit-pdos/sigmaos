@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"sync"
 
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -46,7 +46,7 @@ func (sm *ShardMgr) addShard(i int) error {
 
 func MkShardMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, job, bin, pn string) (*ShardMgr, error) {
 	if _, err := fsl.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
-		if !sessp.IsErrCode(err, sessp.TErrExists) {
+		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
 	}

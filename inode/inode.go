@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	sp "sigmaos/sigmap"
 )
@@ -73,15 +74,15 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() (sp.Tlength, *sessp.Err) {
+func (i *Inode) Size() (sp.Tlength, *serr.Err) {
 	return 0, nil
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 	return nil, nil
 }
 
-func (i *Inode) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
+func (i *Inode) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
@@ -96,7 +97,7 @@ func (inode *Inode) Mode() sp.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
+func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 

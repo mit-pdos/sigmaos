@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fslib"
 	"sigmaos/machine"
 	mproto "sigmaos/machine/proto"
@@ -274,7 +275,7 @@ func (m *RealmResourceMgr) tryClaimCores(machineId string, amt int) ([]*sessp.Ti
 			amt--
 		} else {
 			// Unexpected error
-			if !sessp.IsErrNotfound(err) {
+			if !serr.IsErrNotfound(err) {
 				db.DFatalf("Error Remove %v", err)
 			}
 		}

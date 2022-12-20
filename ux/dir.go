@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -24,7 +25,7 @@ func (d *Dir) String() string {
 	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
 }
 
-func makeDir(path path.Path) (*Dir, *sessp.Err) {
+func makeDir(path path.Path) (*Dir, *serr.Err) {
 	d := &Dir{}
 	o, err := makeObj(path)
 	if err != nil {
@@ -35,7 +36,7 @@ func makeDir(path path.Path) (*Dir, *sessp.Err) {
 	return d, nil
 }
 
-func (d *Dir) uxReadDir() *sessp.Err {
+func (d *Dir) uxReadDir() *serr.Err {
 	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
 		return UxTo9PError(err, d.pathName.Base())
@@ -52,7 +53,7 @@ func (d *Dir) uxReadDir() *sessp.Err {
 	return nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *sessp.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dents := make([]*sp.Stat, 0, d.sd.Len())
 	d.sd.Iter(func(n string, e interface{}) bool {
@@ -66,20 +67,20 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 	}
 }
 
-func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	if err := d.uxReadDir(); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
+func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	d.sd = sorteddir.MkSortedDir()
 	return nil
 }
 
 // XXX O_CREATE/O_EXCL
-func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, *sessp.Err) {
+func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	error := os.Mkdir(p, os.FileMode(perm&0777))
 	if error != nil {
@@ -92,7 +93,7 @@ func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, 
 	return d1, nil
 }
 
-func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
@@ -106,7 +107,7 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	return f, nil
 }
 
-func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
@@ -119,7 +120,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	return f, nil
 }
 
-func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name)
 	log.Printf("mkSym %s\n", p)
 	s, err := makeSymlink(p, true)
@@ -130,7 +131,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsO
 }
 
 // XXX how to delete ephemeral files after crash
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
@@ -143,7 +144,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *sessp.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	name := path[0]
 	db.DPrintf(db.UX, "%v: Lookup %v %v\n", ctx, d, name)
 	st, err := ustat(d.pathName.Append(name))
@@ -177,11 +178,11 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
-	return 0, sessp.MkErr(sessp.TErrNotSupported, nil)
+func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+	return 0, serr.MkErr(serr.TErrNotSupported, nil)
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *sessp.Err {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *serr.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := dd.(*Dir).PathName() + "/" + to
 	db.DPrintf(db.UX, "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
@@ -192,7 +193,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *sessp.Er
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	db.DPrintf(db.UX, "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
 	o, err := makeObj(p)
@@ -212,7 +213,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
 	return nil
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := d.PathName() + "/" + to
 	db.DPrintf(db.UX, "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)

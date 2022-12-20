@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/kernel"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
@@ -16,6 +15,7 @@ import (
 	"sigmaos/repl"
 	"sigmaos/repldummy"
 	"sigmaos/replraft"
+	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
@@ -36,7 +36,7 @@ func Run(args []string) {
 	}
 
 	var ss *sesssrv.SessSrv
-	var err *sessp.Err
+	var err *serr.Err
 	// Replicate?
 	if len(args) >= 4 {
 		var config repl.Config = nil

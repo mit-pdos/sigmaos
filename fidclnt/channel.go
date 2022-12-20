@@ -3,9 +3,9 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/sessp"
 	"sigmaos/path"
 	"sigmaos/protclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -73,7 +73,7 @@ func (c *Channel) Lastqid() *sp.Tqid {
 }
 
 // Simulate network partition to server that exports path
-func (c *Channel) Disconnect() *sessp.Err {
+func (c *Channel) Disconnect() *serr.Err {
 	return c.pc.Disconnect()
 }
 

@@ -2,10 +2,10 @@ package namei
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/path"
+	"sigmaos/serr"
 )
 
 func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {
@@ -17,7 +17,7 @@ func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {
 // Walk traverses target element by element or in one LookupPath call,
 // depending if the underlying file system can do a lookup for the
 // complete path.  Caller provides locked dir.
-func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, dn, target path.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *sessp.Err) {
+func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, dn, target path.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *serr.Err) {
 	// ps.stats.IncPathString(dlk.Path())
 	fn := dn.AppendPath(target)
 	var plk *lockmap.PathLock
@@ -47,6 +47,6 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 		return Walk(plt, ctx, e, dlk, dn.Append(target[0]), target[1:], os)
 	default: // an error or perhaps a symlink
 		db.DPrintf(db.NAMEI, "%v: error not dir namei %T %v %v %v %v", ctx.Uname(), e, target, d, os, target[1:])
-		return os, e, dlk, target, sessp.MkErr(sessp.TErrNotDir, target[0])
+		return os, e, dlk, target, serr.MkErr(serr.TErrNotDir, target[0])
 	}
 }

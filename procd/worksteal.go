@@ -7,10 +7,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	_ "sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -56,7 +56,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		})
 		// Version error may occur if another procd has modified the ws dir, and
 		// unreachable err may occur if the other procd is shutting down.
-		if err != nil && (sessp.IsErrVersion(err) || sessp.IsErrUnreachable(err)) {
+		if err != nil && (serr.IsErrVersion(err) || serr.IsErrUnreachable(err)) {
 			db.DPrintf(db.PROCD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
 			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
@@ -122,7 +122,7 @@ func (pd *Procd) offerStealableProcs() {
 			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
 			link := path.Join(sp.PROCD_WS, runq, pid)
 			if err := pd.Symlink(target, link, 0777|sp.DMTMP); err != nil {
-				if sessp.IsErrExists(err) {
+				if serr.IsErrExists(err) {
 					db.DPrintf(db.PROCD, "Re-advertise symlink %v", target)
 				} else {
 					pd.perf.Done()
@@ -187,7 +187,7 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 	// claimed the proc, so bail out. If the procd that created the semaphore
 	// crashed, its semaphore will be automatically removed (since the semaphore
 	// is ephemeral) and another procd will eventually re-try the claim.
-	if err1 != nil && sessp.IsErrExists(err1) {
+	if err1 != nil && serr.IsErrExists(err1) {
 		return false
 	}
 	// Try to claim the proc by removing it from the runq. If the remove is

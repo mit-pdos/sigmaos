@@ -3,11 +3,12 @@ package spcodec
 import (
 	"fmt"
 
+	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *sessp.Err) {
+func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 	switch typ {
 	case sessp.TTversion:
 		return &sp.Tversion{}, nil
@@ -84,5 +85,5 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *sessp.Err) {
 	case sessp.TTwriteread:
 		return &sp.Twriteread{}, nil
 	}
-	return nil, sessp.MkErr(sessp.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
+	return nil, serr.MkErr(serr.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

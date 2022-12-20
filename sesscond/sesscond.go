@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/threadmgr"
 )
 
@@ -58,7 +59,7 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 // Caller should hold sc lock and will receive it back on return. Wait releases
 // sess lock, so that other threads on the session can run. sc.lock ensures
 // atomicity of releasing sc lock and going to sleep.
-func (sc *SessCond) Wait(sessid sessp.Tsession) *sessp.Err {
+func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 	c := sc.alloc(sessid)
 
 	c.threadmgr.Sleep(c.c)
@@ -69,7 +70,7 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *sessp.Err {
 
 	if closed {
 		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
-		return sessp.MkErr(sessp.TErrClosed, fmt.Sprintf("session %v", sessid))
+		return serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", sessid))
 	}
 	return nil
 }

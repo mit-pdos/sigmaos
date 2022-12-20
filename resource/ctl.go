@@ -5,6 +5,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
@@ -25,11 +26,11 @@ func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir
 	}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
-	return nil, sessp.MkErr(sessp.TErrNotSupported, "Read")
+func (ctl *CtlFile) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (ctl *CtlFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	msg := &ResourceMsg{}
 	msg.Unmarshal(b)
 	switch msg.MsgType {

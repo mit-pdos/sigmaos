@@ -14,6 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
@@ -251,11 +252,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}

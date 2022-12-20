@@ -6,12 +6,12 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
+	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
@@ -55,18 +55,18 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	return fsux
 }
 
-func ErrnoToNp(errno syscall.Errno, err error, name string) *sessp.Err {
+func ErrnoToNp(errno syscall.Errno, err error, name string) *serr.Err {
 	switch errno {
 	case syscall.ENOENT:
-		return sessp.MkErr(sessp.TErrNotfound, name)
+		return serr.MkErr(serr.TErrNotfound, name)
 	case syscall.EEXIST:
-		return sessp.MkErr(sessp.TErrExists, name)
+		return serr.MkErr(serr.TErrExists, name)
 	default:
-		return sessp.MkErrError(err)
+		return serr.MkErrError(err)
 	}
 }
 
-func UxTo9PError(err error, name string) *sessp.Err {
+func UxTo9PError(err error, name string) *serr.Err {
 	switch e := err.(type) {
 	case *os.LinkError:
 		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
@@ -75,6 +75,6 @@ func UxTo9PError(err error, name string) *sessp.Err {
 	case syscall.Errno:
 		return ErrnoToNp(e, err, name)
 	default:
-		return sessp.MkErrError(err)
+		return serr.MkErrError(err)
 	}
 }

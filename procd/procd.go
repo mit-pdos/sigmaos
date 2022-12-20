@@ -12,7 +12,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/memfssrv"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -427,11 +427,11 @@ func (pd *Procd) worker() {
 			pd.waitSpawnOrSteal()
 			continue
 		}
-		if error != nil && (errors.Is(error, io.EOF) || sessp.IsErrUnreachable(error)) {
+		if error != nil && (errors.Is(error, io.EOF) || serr.IsErrUnreachable(error)) {
 			continue
 		}
 		if error != nil {
-			if sessp.IsErrNotfound(error) {
+			if serr.IsErrNotfound(error) {
 				db.DPrintf(db.PROCD_ERR, "cond file not found: %v", error)
 				return
 			}

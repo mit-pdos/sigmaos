@@ -2,13 +2,13 @@ package memfssrv
 
 import (
 	"sigmaos/dir"
-	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -27,7 +27,7 @@ func (mfs *MemFs) MakeDevInode() *inode.Inode {
 	return inode.MakeInode(mfs.ctx, sp.DMDEVICE, nil)
 }
 
-func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *sessp.Err) {
+func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	d := mfs.root
 	lk := mfs.plt.Acquire(mfs.ctx, rootP)
 	if len(path) == 0 {
@@ -41,7 +41,7 @@ func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *sessp.Er
 	return lo, lk, nil
 }
 
-func (mfs *MemFs) lookupParent(path path.Path) (fs.Dir, *lockmap.PathLock, *sessp.Err) {
+func (mfs *MemFs) lookupParent(path path.Path) (fs.Dir, *lockmap.PathLock, *serr.Err) {
 	lo, lk, err := mfs.lookup(path)
 	if err != nil {
 		return nil, nil, err
@@ -50,7 +50,7 @@ func (mfs *MemFs) lookupParent(path path.Path) (fs.Dir, *lockmap.PathLock, *sess
 	return d, lk, nil
 }
 
-func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *sessp.Err {
+func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -62,7 +62,7 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *sessp.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
-func (mfs *MemFs) MkNod(pn string, i fs.Inode) *sessp.Err {
+func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -72,7 +72,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *sessp.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), i)
 }
 
-func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -82,7 +82,7 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Er
 	return d.Create(mfs.ctx, path.Base(), p, m)
 }
 
-func (mfs *MemFs) Remove(pn string) *sessp.Err {
+func (mfs *MemFs) Remove(pn string) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -92,7 +92,7 @@ func (mfs *MemFs) Remove(pn string) *sessp.Err {
 	return d.Remove(mfs.ctx, path.Base())
 }
 
-func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	path := path.Split(pn)
 	lo, lk, err := mfs.lookup(path)
 	if err != nil {

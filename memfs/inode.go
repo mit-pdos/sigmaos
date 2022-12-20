@@ -3,11 +3,11 @@ package memfs
 import (
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
 )
 
-func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *sessp.Err) {
+func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *serr.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return mk(i, MakeInode), nil
@@ -18,6 +18,6 @@ func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDir
 	} else if p.IsFile() || p.IsEphemeral() {
 		return MakeFile(i), nil
 	} else {
-		return nil, sessp.MkErr(sessp.TErrInval, p)
+		return nil, serr.MkErr(serr.TErrInval, p)
 	}
 }

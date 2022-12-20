@@ -12,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -41,7 +42,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	return perm
 }
 
-func ustat(path path.Path) (*sp.Stat, *sessp.Err) {
+func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 	var statx unix.Statx_t
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -65,7 +66,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path path.Path) (*Obj, *sessp.Err) {
+func makeObj(path path.Path) (*Obj, *serr.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
@@ -96,7 +97,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -153,7 +154,7 @@ func (o *Obj) SetParent(p fs.Dir) {
 func (o *Obj) Unlink() {
 }
 
-func (o *Obj) Size() (sp.Tlength, *sessp.Err) {
+func (o *Obj) Size() (sp.Tlength, *serr.Err) {
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return 0, err

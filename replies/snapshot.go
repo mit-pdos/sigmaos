@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/spcodec"
 )
 
@@ -13,7 +14,7 @@ func (rt *ReplyTable) Snapshot() []byte {
 	entries := make(map[sessp.Tseqno][]byte)
 	for seqno, rf := range rt.entries {
 		var b []byte
-		var err1 *sessp.Err
+		var err1 *serr.Err
 		if rf.reply != nil {
 			b, err1 = spcodec.MarshalFrameByte(rf.reply)
 			if err1 != nil {

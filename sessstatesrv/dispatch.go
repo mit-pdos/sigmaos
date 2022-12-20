@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -14,7 +15,7 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
-		err := sessp.MkErr(sessp.TErrClosed, fmt.Sprintf("session %v", s.Sid))
+		err := serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
 		return nil, nil, true, sp.MkRerror(err)
 	}
 	switch req := msg.(type) {
@@ -109,6 +110,6 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		return reply, data, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
-		return nil, nil, false, sp.MkRerror(sessp.MkErr(sessp.TErrUnknownMsg, msg))
+		return nil, nil, false, sp.MkRerror(serr.MkErr(serr.TErrUnknownMsg, msg))
 	}
 }

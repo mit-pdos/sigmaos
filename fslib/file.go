@@ -10,6 +10,7 @@ import (
 	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
@@ -97,7 +98,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			ch <- err
 		})
 		db.DPrintf(db.FSLIB, "OpenWatch %v err %v\n", path, err)
-		if err != nil && sessp.IsErrNotfound(err) {
+		if err != nil && serr.IsErrNotfound(err) {
 			r := <-ch
 			if r != nil {
 				db.DPrintf(db.FSLIB, "OpenWatch watch %v err %v\n", path, err)

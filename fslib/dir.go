@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/reader"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -174,7 +174,7 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 				ch <- r
 			}); err != nil {
 				rdr.Close()
-				if sessp.IsErrVersion(err) {
+				if serr.IsErrVersion(err) {
 					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
 					continue
 				}

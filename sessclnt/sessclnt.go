@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
@@ -28,7 +29,7 @@ type SessClnt struct {
 	ivs    *intervals.Intervals
 }
 
-func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *sessp.Err) {
+func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())
@@ -48,7 +49,7 @@ func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *sessp.Err) {
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *sessp.Err) {
+func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	rpc, err := c.send(req, data, f)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -89,7 +90,7 @@ func (c *SessClnt) Reset() {
 }
 
 // Complete an RPC and pass the response up the stack.
-func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *sessp.Err) {
+func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *serr.Err) {
 	s := reply.Seqno()
 	rpc, ok := c.queue.Remove(s)
 	// the outstanding request may have been cleared if the conn is closing, or
@@ -113,7 +114,7 @@ func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *sessp.Err) {
 }
 
 // Send a detach.
-func (c *SessClnt) Detach() *sessp.Err {
+func (c *SessClnt) Detach() *serr.Err {
 	rep, err := c.RPC(sp.MkTdetach(0, 0), nil, sessp.MakeFenceNull())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
@@ -129,26 +130,26 @@ func (c *SessClnt) Detach() *sessp.Err {
 // Check if the session needs to be closed, either because the server killed
 // it, or because the client called detach. Close will be called in CompleteRPC
 // once the Rdetach is received.
-func srvClosedSess(msg sessp.Tmsg, err *sessp.Err) bool {
+func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 	if msg.Type() == sessp.TRdetach {
 		return true
 	}
 	rerr, ok := msg.(*sp.Rerror)
 	if ok {
 		err := sp.MkErr(rerr)
-		if sessp.IsErrSessClosed(err) {
+		if serr.IsErrSessClosed(err) {
 			return true
 		}
 	}
 	return false
 }
 
-func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *sessp.Err) {
+func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *serr.Err) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
-		return nil, sessp.MkErr(sessp.TErrUnreachable, c.addrs)
+		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
 	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
 	// Enqueue a request
@@ -158,18 +159,18 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *sessp.Err) {
+func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *serr.Err) {
 	return rpc.Await()
 }
 
 // Get a connection to the server. If it isn't possible to make a connection,
 // return an error.
-func (c *SessClnt) getConn() (*netclnt.NetClnt, *sessp.Err) {
+func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
-		return nil, sessp.MkErr(sessp.TErrUnreachable, c.addrs)
+		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
 
 	if c.nc == nil {

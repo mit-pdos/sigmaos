@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -52,7 +53,7 @@ func makeDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
 	return dir
 }
 
-func (d *Dir) s3ReadDir(fss3 *Fss3) *sessp.Err {
+func (d *Dir) s3ReadDir(fss3 *Fss3) *serr.Err {
 	maxKeys := 0
 
 	key := d.key.String()
@@ -76,7 +77,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *sessp.Err {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return sessp.MkErr(sessp.TErrInval, err)
+			return serr.MkErr(serr.TErrInval, err)
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf(db.S3, "key %v\n", *obj.Key)
@@ -98,7 +99,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *sessp.Err {
 	return nil
 }
 
-func (d *Dir) fill() *sessp.Err {
+func (d *Dir) fill() *serr.Err {
 	if d.sz > 0 { // already filled?
 		return nil
 	}
@@ -121,7 +122,7 @@ func (d *Dir) dirents() []*Obj {
 	return dents
 }
 
-func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *sessp.Err) {
+func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	d.Lock()
 	defer d.Unlock()
 	db.DPrintf(db.S3, "Stat dir %v\n", d)
@@ -144,7 +145,7 @@ func mkObjs(base *Obj) []fs.FsObj {
 	return os
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *sessp.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), sp.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
 		// name is a file; done
@@ -161,13 +162,13 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	if d1.dents.Len() == 0 {
 		// not a directory either
 		db.DPrintf(db.S3, "%v: Lookup %v not found\n", ctx, path)
-		return nil, nil, path, sessp.MkErr(sessp.TErrNotfound, path)
+		return nil, nil, path, serr.MkErr(serr.TErrNotfound, path)
 	}
 	db.DPrintf(db.S3, "%v: Lookup return %v %v\n", ctx, path, d1)
 	return append(mkObjs(d1.Obj), d1), d1, nil, nil
 }
 
-func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.S3, "open dir %v (%T) %v\n", d, d, m)
 	if err := d.fill(); err != nil {
 		return nil, err
@@ -175,7 +176,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
 	d.sts = make([]*sp.Stat, 0, d.dents.Len())
 	for _, o := range d.dirents() {
 		var st *sp.Stat
-		var err *sessp.Err
+		var err *serr.Err
 		if o.perm.IsDir() {
 			st = o.stat()
 		} else {
@@ -196,7 +197,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
 	return d, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *sessp.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.S3, "ReadDir %v\n", d)
 
 	if cursor > len(d.sts) {
@@ -206,12 +207,12 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 	}
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
-	return 0, sessp.MkErr(sessp.TErrIsdir, d)
+func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+	return 0, serr.MkErr(serr.TErrIsdir, d)
 }
 
 // Create a fake file in dir to materialize dir
-func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *sessp.Err) {
+func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *serr.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()
 	db.DPrintf(db.S3, "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
@@ -220,18 +221,18 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ses
 	}
 	_, err := fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
-		return nil, sessp.MkErrError(err)
+		return nil, serr.MkErrError(err)
 	}
 	o := makeFsObj(d.bucket, perm, d.key.Copy().Append(name))
 	return o, nil
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.S3, "Create %v name: %v\n", d, name)
 	o := makeObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
 	if err == nil {
-		return nil, sessp.MkErr(sessp.TErrExists, name)
+		return nil, serr.MkErr(serr.TErrExists, name)
 	}
 	if perm.IsDir() {
 		obj, err := d.CreateDir(ctx, name, perm)
@@ -247,11 +248,11 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	return o, nil
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *sessp.Err {
-	return sessp.MkErr(sessp.TErrNotSupported, "Renameat")
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
+	return serr.MkErr(serr.TErrNotSupported, "Renameat")
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	key := d.key.Copy().Append(name)
 	if err := d.fill(); err != nil {
 		return err
@@ -260,7 +261,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
 	e, ok := d.dents.Lookup(name)
 	if !ok {
 		db.DPrintf(db.S3, "Delete %v err %v\n", key, name)
-		return sessp.MkErr(sessp.TErrNotfound, name)
+		return serr.MkErr(serr.TErrNotfound, name)
 	}
 	perm := e.(sp.Tperm)
 	if perm.IsDir() {
@@ -269,7 +270,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
 			return err
 		}
 		if d1.dents.Len() > 1 {
-			return sessp.MkErr(sessp.TErrNotEmpty, name)
+			return serr.MkErr(serr.TErrNotEmpty, name)
 		}
 		key = key.Append(DOT)
 	}
@@ -280,14 +281,14 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *sessp.Err {
 	}
 	if _, err := fss3.client.DeleteObject(context.TODO(), input); err != nil {
 		db.DPrintf(db.S3, "DeleteObject %v err %v\n", k, err)
-		return sessp.MkErrError(err)
+		return serr.MkErrError(err)
 	}
 	d.dents.Delete(name)
 	return nil
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
-	return sessp.MkErr(sessp.TErrNotSupported, "Rename")
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+	return serr.MkErr(serr.TErrNotSupported, "Rename")
 }
 
 // ===== The following functions are needed to make an s3 dir of type fs.Inode

@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
@@ -68,11 +69,11 @@ func (dir *DirOverlay) ls() []*sp.Stat {
 }
 
 // lookup in overlay
-func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *sessp.Err) {
+func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, nil
 	}
-	return nil, sessp.MkErr(sessp.TErrNotfound, name)
+	return nil, serr.MkErr(serr.TErrNotfound, name)
 	// else {
 	// 	db.DPrintf(db.OVERLAYDIR, "Lookup underlay %v\n", name)
 	// 	o, err := dir.underlay.Lookup(ctx, name)
@@ -83,7 +84,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *sessp.Err) {
 	// }
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *sessp.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
@@ -95,13 +96,13 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return dir.underlay.Create(ctx, name, perm, m)
 }
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignoressy size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *sessp.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err
@@ -114,19 +115,19 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQve
 	return sts, nil
 }
 
-func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	return dir.underlay.WriteDir(ctx, offset, b, v)
 }
 
-func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *sessp.Err {
+func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	return dir.underlay.Rename(ctx, from, to)
 }
 
-func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *sessp.Err {
+func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *serr.Err {
 	return dir.underlay.Renameat(ctx, old, nd, new)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *sessp.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *serr.Err {
 	return dir.underlay.Remove(ctx, n)
 }
 

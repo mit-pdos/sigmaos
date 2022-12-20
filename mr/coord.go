@@ -11,11 +11,11 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -147,7 +147,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := c.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		if sessp.IsErrUnreachable(err) { // partitioned?
+		if serr.IsErrUnreachable(err) { // partitioned?
 			return "", err
 		}
 		// another thread claimed the task before us

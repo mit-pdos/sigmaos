@@ -7,9 +7,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -26,7 +26,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 		// If another procd (or another thread on this procd) already completed the
 		// download, then we consider the download successful. Any other error
 		// (e.g. ux crashed) is unexpected.
-		if !sessp.IsErrExists(err) {
+		if !serr.IsErrExists(err) {
 			return err
 		}
 		// If someone else completed the download before us, remove the temp file.
@@ -45,7 +45,7 @@ func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
 		// for them.
 		versionDir := path.Dir(uxBinPath)
 		version := path.Base(versionDir)
-		if sessp.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
+		if serr.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
 			db.DPrintf(db.PROCD_ERR, "Error first download for version %v: %v", version, err)
 			pd.MkDir(versionDir, 0777)
 		}

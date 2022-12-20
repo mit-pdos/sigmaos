@@ -3,6 +3,7 @@ package fs
 import (
 	sp "sigmaos/sigmap"
     "sigmaos/sessp"
+    "sigmaos/serr"
 )
 
 type SnapshotF func(Inode) sessp.Tpath
@@ -14,7 +15,7 @@ type Inode interface {
 	FsObj
 	SetMtime(int64)
 	Mtime() int64
-	Size() (sp.Tlength, *sessp.Err)
+	Size() (sp.Tlength, *serr.Err)
 	SetParent(Dir)
 	Unlink()
 	Snapshot(SnapshotF) []byte

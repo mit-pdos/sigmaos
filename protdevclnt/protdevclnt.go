@@ -10,11 +10,11 @@ import (
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
+	"sigmaos/serr"
 	"sigmaos/sessdev"
+	sp "sigmaos/sigmap"
 )
 
 type ProtDevClnt struct {
@@ -51,7 +51,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, sessp.MkErrError(err)
+		return nil, serr.MkErrError(err)
 	}
 
 	start := time.Now()
@@ -64,7 +64,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
-		return nil, sessp.MkErrError(err)
+		return nil, serr.MkErrError(err)
 	}
 
 	return rep, nil

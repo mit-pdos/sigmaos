@@ -3,6 +3,7 @@ package snapshot
 import (
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
@@ -18,7 +19,7 @@ func MakeDev(srv sp.SessServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	return &Dev{i, srv}
 }
 
-func (dev *Dev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+func (dev *Dev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	b := dev.srv.Snapshot()
 	if len(b) > int(sp.MAXGETSET) {
 		db.DFatalf("snapshot too big: %v bytes", len(b))
@@ -26,7 +27,7 @@ func (dev *Dev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversio
 	return b, nil
 }
 
-func (dev *Dev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (dev *Dev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	db.DPrintf(db.SNAP, "Received snapshot of length %v", len(b))
 	dev.srv.Restore(b)
 	return sessp.Tsize(len(b)), nil

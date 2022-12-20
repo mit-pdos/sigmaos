@@ -3,7 +3,7 @@ package fdclnt
 import (
 	"sync"
 
-	"sigmaos/sessp"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -58,17 +58,17 @@ func (fdt *FdTable) closefd(fd int) {
 }
 
 // Caller must have locked fdt
-func (fdt *FdTable) lookupL(fd int) (*FdState, *sessp.Err) {
+func (fdt *FdTable) lookupL(fd int) (*FdState, *serr.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
-		return nil, sessp.MkErr(sessp.TErrBadFd, fd)
+		return nil, serr.MkErr(serr.TErrBadFd, fd)
 	}
 	if fdt.fds[fd].fid == sp.NoFid {
-		return nil, sessp.MkErr(sessp.TErrBadFd, fd)
+		return nil, serr.MkErr(serr.TErrBadFd, fd)
 	}
 	return &fdt.fds[fd], nil
 }
 
-func (fdt *FdTable) lookup(fd int) (sp.Tfid, *sessp.Err) {
+func (fdt *FdTable) lookup(fd int) (sp.Tfid, *serr.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -79,7 +79,7 @@ func (fdt *FdTable) lookup(fd int) (sp.Tfid, *sessp.Err) {
 	return st.fid, nil
 }
 
-func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, *sessp.Err) {
+func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, *serr.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -90,7 +90,7 @@ func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, *sessp.Err) {
 	return st.fid, st.offset, nil
 }
 
-func (fdt *FdTable) setOffset(fd int, off sp.Toffset) *sessp.Err {
+func (fdt *FdTable) setOffset(fd int, off sp.Toffset) *serr.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -102,7 +102,7 @@ func (fdt *FdTable) setOffset(fd int, off sp.Toffset) *sessp.Err {
 	return nil
 }
 
-func (fdt *FdTable) incOff(fd int, off sp.Toffset) *sessp.Err {
+func (fdt *FdTable) incOff(fd int, off sp.Toffset) *serr.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 

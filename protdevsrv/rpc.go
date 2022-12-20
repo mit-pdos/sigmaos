@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
@@ -28,7 +29,7 @@ type rpcSession struct {
 	pds *ProtDevSrv
 }
 
-func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *sessp.Err) {
+func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
 	rpc := &rpcSession{}
 	rpc.pds = rd.pds
 	rpc.Inode = mfs.MakeDevInode()
@@ -36,11 +37,11 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inod
 }
 
 // XXX wait on close before processing data?
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *sessp.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	req := rpcproto.Request{}
 	var rep *rpcproto.Reply
 	if err := proto.Unmarshal(b, &req); err != nil {
-		return nil, sessp.MkErrError(err)
+		return nil, serr.MkErrError(err)
 	}
 
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
@@ -53,7 +54,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *sessp.Err) {
 
 	b, err := proto.Marshal(rep)
 	if err != nil {
-		return nil, sessp.MkErrError(err)
+		return nil, serr.MkErrError(err)
 	}
 	return b, nil
 }

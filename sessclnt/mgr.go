@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 )
 
 type Mgr struct {
@@ -36,7 +37,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *sessp.Err) {
+func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -52,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *sessp.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *sessp.Err) {
+func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
@@ -65,14 +66,14 @@ func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) 
 }
 
 // For testing
-func (sc *Mgr) Disconnect(addrs []string) *sessp.Err {
+func (sc *Mgr) Disconnect(addrs []string) *serr.Err {
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect cli %v addr %v", sc.cli, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
-		return sessp.MkErr(sessp.TErrUnreachable, "disconnect: "+sessKey(addrs))
+		return serr.MkErr(serr.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)

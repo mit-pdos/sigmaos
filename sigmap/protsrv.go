@@ -2,6 +2,7 @@ package sigmap
 
 import (
 	"sigmaos/sessp"
+    "sigmaos/serr"
 )
 
 type Isrvconn interface {
@@ -17,7 +18,7 @@ type Conn interface {
 type Fsrvfcall func(*sessp.FcallMsg)
 
 type SessServer interface {
-	Register(sessp.Tclient, sessp.Tsession, Conn) *sessp.Err
+	Register(sessp.Tclient, sessp.Tsession, Conn) *serr.Err
 	Unregister(sessp.Tclient, sessp.Tsession, Conn)
 	SrvFcall(*sessp.FcallMsg)
 	Snapshot() []byte

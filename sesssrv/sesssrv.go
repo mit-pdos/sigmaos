@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -123,10 +124,10 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid sessp.Tsession) *sessp.Err {
+func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid sessp.Tsession) *serr.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
-		return sessp.MkErr(sessp.TErrNotfound, sid)
+		return serr.MkErr(serr.TErrNotfound, sid)
 	}
 	sess.RegisterDetach(f)
 	return nil
@@ -230,7 +231,7 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid sessp.Tsessio
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *sessp.Err {
+func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *serr.Err {
 	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)

@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/reader"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -110,10 +111,10 @@ func (pathc *PathClnt) MakeWriter(fid sp.Tfid) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
-func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *sessp.Err) {
+func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	qid := pathc.Qid(fid)
 	if qid.Ttype()&sp.QTSYMLINK == 0 {
-		return nil, sessp.MkErr(sessp.TErrNotSymlink, qid.Type)
+		return nil, serr.MkErr(serr.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
 	if err != nil {
@@ -127,9 +128,9 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *sessp.Err) {
 	return b, nil
 }
 
-func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *sessp.Err {
+func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *serr.Err {
 	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
-		if err.Code() == sessp.TErrExists {
+		if err.Code() == serr.TErrExists {
 			// Another thread may already have mounted
 			// path; clunk the fid and don't return an
 			// error.
@@ -201,7 +202,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string) *sessp.Err {
+func (pathc *PathClnt) renameat(old, new string) *serr.Err {
 	db.DPrintf(db.PATHCLNT, "Renameat %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
@@ -220,7 +221,7 @@ func (pathc *PathClnt) renameat(old, new string) *sessp.Err {
 	return pathc.FidClnt.Renameat(fid, o, fid1, n)
 }
 
-func (pathc *PathClnt) umountFree(path []string) *sessp.Err {
+func (pathc *PathClnt) umountFree(path []string) *serr.Err {
 	if fid, err := pathc.mnt.umount(path); err != nil {
 		return err
 	} else {
@@ -242,7 +243,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
 	if err != nil {
-		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
+		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(pn, path.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -320,7 +321,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 		return err
 	}
 	if w == nil {
-		return sessp.MkErr(sessp.TErrInval, "watch")
+		return serr.MkErr(serr.TErrInval, "watch")
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -347,7 +348,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	// symlink.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
-		if sessp.IsMaybeSpecialElem(err) {
+		if serr.IsMaybeSpecialElem(err) {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err
@@ -377,7 +378,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, path.EndSlash(pn))
 	if err != nil {
-		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
+		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return 0, err
@@ -407,7 +408,7 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if sessp.IsMaybeSpecialElem(err) || sessp.IsErrUnreachable(err) {
+		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
 			fid, err = pathc.WalkPath(dir, true, nil)

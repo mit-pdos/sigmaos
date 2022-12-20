@@ -5,8 +5,8 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	np "sigmaos/ninep"
+	"sigmaos/serr"
 )
 
 func MarshalSizeDir(dir []*np.Stat9P) np.Tlength {
@@ -17,14 +17,14 @@ func MarshalSizeDir(dir []*np.Stat9P) np.Tlength {
 	return np.Tlength(sz)
 }
 
-func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *sessp.Err) {
+func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *serr.Err) {
 	sz := sizeNp(*st)
 	if cnt < sz {
 		return nil, nil
 	}
 	b, e := marshal(*st)
 	if e != nil {
-		return nil, sessp.MkErrError(e)
+		return nil, serr.MkErrError(e)
 	}
 	if sz != uint64(len(b)) {
 		db.DFatalf("MarshalDirEnt %v %v\n", sz, len(b))
@@ -32,14 +32,14 @@ func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *sessp.Err) {
 	return b, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*np.Stat9P, *sessp.Err) {
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat9P, *serr.Err) {
 	st := np.Stat9P{}
 	if error := unmarshalReader(rdr, &st); error != nil {
-		var nperr *sessp.Err
+		var nperr *serr.Err
 		if errors.As(error, &nperr) {
 			return nil, nperr
 		}
-		return nil, sessp.MkErrError(error)
+		return nil, serr.MkErrError(error)
 	}
 	return &st, nil
 }

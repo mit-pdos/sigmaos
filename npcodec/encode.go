@@ -12,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	np "sigmaos/ninep"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -492,11 +493,11 @@ func sizeNp(vs ...interface{}) uint64 {
 // writing. We are using a lot of reflection here for fairly static
 // serialization but we can replace this in the future with generated code if
 // performance is an issue.
-func fields9p(v interface{}) ([]interface{}, *sessp.Err) {
+func fields9p(v interface{}) ([]interface{}, *serr.Err) {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		return nil, sessp.MkErr(sessp.TErrBadFcall, "cannot extract fields from non-struct")
+		return nil, serr.MkErr(serr.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
 	elements := make([]interface{}, 0, rv.NumField())

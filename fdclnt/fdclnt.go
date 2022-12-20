@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fidclnt"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
@@ -95,7 +96,7 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
 
 func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
 	fd, err := fdc.Create(path, perm, mode)
-	if err != nil && !sessp.IsErrExists(err) {
+	if err != nil && !serr.IsErrExists(err) {
 		db.DPrintf(db.FDCLNT_ERR, "Create %v err %v", path, err)
 		return -1, err
 	}

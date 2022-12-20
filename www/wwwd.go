@@ -11,7 +11,6 @@ import (
 	"net/http/pprof"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
@@ -19,6 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/rand"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -91,7 +91,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !sessp.IsErrExists(err) {
+	if _, err := www.PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrExists(err) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 

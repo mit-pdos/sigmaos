@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -15,7 +16,7 @@ type File struct {
 	fd int
 }
 
-func makeFile(path path.Path) (*File, *sessp.Err) {
+func makeFile(path path.Path) (*File, *serr.Err) {
 	f := &File{}
 	o, err := makeObj(path)
 	if err != nil {
@@ -25,37 +26,37 @@ func makeFile(path path.Path) (*File, *sessp.Err) {
 	return f, nil
 }
 
-func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *sessp.Err) {
+func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: FileOpen %v m 0x%x path %v flags 0x%x\n", ctx, f, m, f.Path(), uxFlags(m))
 	fd, err := syscall.Open(f.PathName(), uxFlags(m), 0)
 	if err != nil {
-		return nil, sessp.MkErr(sessp.TErrError, err)
+		return nil, serr.MkErr(serr.TErrError, err)
 	}
 	f.fd = fd
 	return nil, nil
 }
 
-func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *sessp.Err {
+func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	db.DPrintf(db.UX, "%v: FileClose %v\n", ctx, f)
 	err := syscall.Close(f.fd)
 	if err != nil {
-		return sessp.MkErr(sessp.TErrError, err)
+		return serr.MkErr(serr.TErrError, err)
 	}
 	return nil
 }
 
-func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *sessp.Err) {
+func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b := make([]byte, cnt)
 	n, err := syscall.Pread(f.fd, b, int64(off))
 	if err != nil {
 		db.DPrintf(db.UX, "Pread %v err %v\n", f, err)
-		return nil, sessp.MkErr(sessp.TErrError, err)
+		return nil, serr.MkErr(serr.TErrError, err)
 	}
 	return b[:n], nil
 }
 
-func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *sessp.Err) {
+func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
 	if off == sp.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
@@ -65,7 +66,7 @@ func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (ses
 	n, err := syscall.Pwrite(f.fd, b, int64(off))
 	if err != nil {
 		db.DPrintf(db.UX, "Pwrite %v err %v\n", f, err)
-		return 0, sessp.MkErr(sessp.TErrError, err)
+		return 0, serr.MkErr(serr.TErrError, err)
 	}
 	return sessp.Tsize(n), nil
 }

@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/proc"
 	"sigmaos/replies"
 	sp "sigmaos/sigmap"
@@ -125,11 +126,11 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts talking to a new replica or a client reconnects quickly.
-func (sess *Session) SetConn(conn sp.Conn) *sessp.Err {
+func (sess *Session) SetConn(conn sp.Conn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return sessp.MkErr(sessp.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+		return serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
 	}
 	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn

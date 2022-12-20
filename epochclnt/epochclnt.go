@@ -3,6 +3,7 @@ package epochclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -94,7 +95,7 @@ func (ec *EpochClnt) GetFence(epoch sessp.Tepoch) (*sessp.Tfence, error) {
 	}
 	if string(b) != epoch.String() {
 		db.DPrintf(db.EPOCHCLNT_ERR, "Epoch mismatch %v err %v", ec.path, err)
-		return f, sessp.MkErr(sessp.TErrStale, "newer epoch: "+string(b))
+		return f, serr.MkErr(serr.TErrStale, "newer epoch: "+string(b))
 	}
 	qid, err := ec.Qid(fd)
 	if err != nil {

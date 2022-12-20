@@ -8,24 +8,25 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/frame"
 )
 
-func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *sessp.Err {
+func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
-		return sessp.MkErr(sessp.TErrBadFcall, error.Error())
+		return serr.MkErr(serr.TErrBadFcall, error.Error())
 	}
 	if err := frame.WriteFrame(bwr, f.Bytes()); err != nil {
 		return err
 	}
 	if error := binary.Write(bwr, binary.LittleEndian, uint32(len(fcm.Data))); error != nil {
-		return sessp.MkErr(sessp.TErrUnreachable, error.Error())
+		return serr.MkErr(serr.TErrUnreachable, error.Error())
 	}
 	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(f.Bytes()), len(fcm.Data))
 	if len(fcm.Data) > 0 {
 		if err := frame.WriteRawBuffer(bwr, fcm.Data); err != nil {
-			return sessp.MkErr(sessp.TErrUnreachable, err.Error())
+			return serr.MkErr(serr.TErrUnreachable, err.Error())
 		}
 	}
 	if error := bwr.Flush(); error != nil {
@@ -34,7 +35,7 @@ func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *sessp.Err {
 	return nil
 }
 
-func MarshalFrameByte(fcm *sessp.FcallMsg) ([]byte, *sessp.Err) {
+func MarshalFrameByte(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	var f bytes.Buffer
 	wr := bufio.NewWriter(&f)
 
@@ -44,7 +45,7 @@ func MarshalFrameByte(fcm *sessp.FcallMsg) ([]byte, *sessp.Err) {
 	return f.Bytes(), nil
 }
 
-func UnmarshalFrame(rdr io.Reader) (*sessp.FcallMsg, *sessp.Err) {
+func UnmarshalFrame(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadFrame err %v\n", err)
@@ -53,7 +54,7 @@ func UnmarshalFrame(rdr io.Reader) (*sessp.FcallMsg, *sessp.Err) {
 	fm := sessp.MakeFcallMsgNull()
 	if err := decode(bytes.NewReader(f), fm); err != nil {
 		db.DPrintf(db.SPCODEC, "Decode err %v\n", err)
-		return nil, sessp.MkErr(sessp.TErrBadFcall, err)
+		return nil, serr.MkErr(serr.TErrBadFcall, err)
 	}
 	db.DPrintf(db.SPCODEC, "Decode %v\n", fm)
 	buf, err := frame.ReadBuf(rdr)

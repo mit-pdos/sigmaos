@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sessp"
+    "sigmaos/serr"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/path"
@@ -45,7 +46,7 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	sess.SendConn(reply)
 }
 
-func (npd *Npd) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *sessp.Err {
+func (npd *Npd) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *serr.Err {
 	sess := npd.st.Alloc(cid, sid)
 	sess.SetConn(conn)
 	return nil
@@ -100,13 +101,13 @@ func (npc *NpConn) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 }
 
 func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
-	return sp.MkRerrorCode(sessp.TErrNotSupported)
+	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
 func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	u, error := user.Current()
 	if error != nil {
-		return sp.MkRerror(sessp.MkErrError(error))
+		return sp.MkRerror(serr.MkErrError(error))
 	}
 	npc.uname = u.Uid
 
@@ -117,7 +118,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	}
 	if err := npc.pc.Mount(fid, sp.NAMED); err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v mount err %v\n", args, err)
-		return sp.MkRerror(sessp.MkErrError(err))
+		return sp.MkRerror(serr.MkErrError(err))
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Tfid(), fid)
@@ -134,7 +135,7 @@ func (npc *NpConn) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
 func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
@@ -150,7 +151,7 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	qid, err := npc.fidc.Open(fid, args.Tmode())
 	if err != nil {
@@ -169,7 +170,7 @@ func (npc *NpConn) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode())
 	if err != nil {
@@ -187,7 +188,7 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
@@ -201,7 +202,7 @@ func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	err := npc.fidc.Remove(fid)
 	if err != nil {
@@ -219,7 +220,7 @@ func (npc *NpConn) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
@@ -234,7 +235,7 @@ func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	err := npc.fidc.Wstat(fid, args.Stat)
 	if err != nil {
@@ -246,13 +247,13 @@ func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 }
 
 func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
-	return sp.MkRerrorCode(sessp.TErrNotSupported)
+	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
 func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return nil, sp.MkRerrorCode(sessp.TErrNotfound)
+		return nil, sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
 	if err != nil {
@@ -274,7 +275,7 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
-		return sp.MkRerrorCode(sessp.TErrNotfound)
+		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
 	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV)
 	if err != nil {

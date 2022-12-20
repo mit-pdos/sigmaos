@@ -53,7 +53,7 @@ func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
-	db.DPrintf("TEST1", "Spawned %v", p)
+	db.DPrintf(db.TEST1, "Spawned %v", p)
 	status, err2 := ts.WaitExit(p.Pid)
 	assert.Nil(ts.T, err1, "Failed to Spawn %v", err1)
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
@@ -139,7 +139,7 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	// Start some balancers
 	start := time.Now()
 	ji.StartKVJob()
-	db.DPrintf("TEST", "Made KV job")
+	db.DPrintf(db.TEST, "Made KV job")
 	// Add more kvd groups.
 	for i := 0; i < ji.nkvd-1; i++ {
 		ji.AddKVDGroup()
@@ -153,14 +153,14 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	// Wait for an ack.
 	<-ji.ready
-	db.DPrintf("TEST", "Added KV groups")
-	db.DPrintf("TEST", "Running clerks")
+	db.DPrintf(db.TEST, "Added KV groups")
+	db.DPrintf(db.TEST, "Running clerks")
 	// Run through the job phases.
 	for !ji.IsDone() {
 		ji.NextPhase()
 	}
 	ji.Stop()
-	db.DPrintf("TEST", "Stopped KV")
+	db.DPrintf(db.TEST, "Stopped KV")
 	return time.Since(start), 1.0
 }
 

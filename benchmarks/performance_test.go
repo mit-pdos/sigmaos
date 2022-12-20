@@ -26,10 +26,10 @@ func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.Results
 
 		// Optional counter
 		if i%100 == 0 {
-			db.DPrintf("TEST", "i = %v", i)
+			db.DPrintf(db.TEST, "i = %v", i)
 		}
 
-		db.DPrintf("TEST2", "lat %v amt %v", elapsed, amt)
+		db.DPrintf(db.BENCH, "lat %v amt %v", elapsed, amt)
 		rs.Append(elapsed, amt)
 	}
 }

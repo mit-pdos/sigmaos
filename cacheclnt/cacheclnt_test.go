@@ -158,7 +158,7 @@ func TestCacheConcur(t *testing.T) {
 			s := string("")
 			err = cc.Get("x", &s)
 			assert.Equal(t, v, s)
-			db.DPrintf("TEST", "Done get")
+			db.DPrintf(db.TEST, "Done get")
 		}()
 	}
 	wg.Wait()

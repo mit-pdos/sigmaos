@@ -152,7 +152,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		ts.clrks = append(ts.clrks, pid)
 	}
 
-	db.DPrintf("TEST", "Done startClerks")
+	db.DPrintf(db.TEST, "Done startClerks")
 
 	for s := 0; s < kv.NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
@@ -164,7 +164,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		time.Sleep(TIME * time.Millisecond)
 	}
 
-	db.DPrintf("TEST", "Done adds")
+	db.DPrintf(db.TEST, "Done adds")
 
 	for s := 0; s < kv.NKV; s++ {
 		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
@@ -176,11 +176,11 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		time.Sleep(TIME * time.Millisecond)
 	}
 
-	db.DPrintf("TEST", "Done dels")
+	db.DPrintf(db.TEST, "Done dels")
 
 	ts.stopClerks()
 
-	db.DPrintf("TEST", "Done stopClerks")
+	db.DPrintf(db.TEST, "Done stopClerks")
 
 	time.Sleep(100 * time.Millisecond)
 

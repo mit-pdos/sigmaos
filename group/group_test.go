@@ -35,18 +35,18 @@ func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 }
 
 func (ts *Tstate) setupKeys(nkeys int) {
-	db.DPrintf("TEST", "setupKeys")
+	db.DPrintf(db.TEST, "setupKeys")
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
 		fname := path.Join(GRP_PATH, i_str)
 		_, err := ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
 		assert.Nil(ts.T, err, "Put %v", err)
 	}
-	db.DPrintf("TEST", "done setupKeys")
+	db.DPrintf(db.TEST, "done setupKeys")
 }
 
 func (ts *Tstate) testGetPutSet(nkeys int) {
-	db.DPrintf("TEST", "testGetPutSet")
+	db.DPrintf(db.TEST, "testGetPutSet")
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
 		fname := path.Join(GRP_PATH, i_str)
@@ -58,7 +58,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 		_, err = ts.SetFile(fname, []byte(i_str+i_str), sp.OWRITE|sp.OREAD, 0)
 		assert.Nil(ts.T, err, "Set %v", err)
 	}
-	db.DPrintf("TEST", "done testGetPutSet")
+	db.DPrintf(db.TEST, "done testGetPutSet")
 }
 
 func TestStartStop(t *testing.T) {
@@ -95,10 +95,10 @@ func TestGetPutSetFail1(t *testing.T) {
 	ts := makeTstate(t, N_REPL, 1)
 	ts.setupKeys(N_KEYS)
 	ts.testGetPutSet(N_KEYS)
-	db.DPrintf("TEST", "Pre stop")
+	db.DPrintf(db.TEST, "Pre stop")
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
-	db.DPrintf("TEST", "Post stop")
+	db.DPrintf(db.TEST, "Post stop")
 	ts.Shutdown()
 }
 

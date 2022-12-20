@@ -670,7 +670,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	srv, _, err := ts.PathLastSymlink(pathname)
 	assert.Nil(t, err)
 
-	db.DPrintf("TEST", "Disconnect fsl")
+	db.DPrintf(db.TEST, "Disconnect fsl")
 	err = fsl1.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 
@@ -1302,7 +1302,7 @@ func measure(p *perf.Perf, msg string, f func() sp.Tlength) sp.Tlength {
 		tot += sz
 		p.TptTick(float64(sz))
 		ms := time.Since(start).Milliseconds()
-		db.DPrintf("TEST", "%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
+		db.DPrintf(db.TEST, "%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.TputStr(sz, ms))
 	}
 	ms := time.Since(totStart).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Average %v: %s took %vms (%s)", msg, humanize.Bytes(uint64(tot)), ms, test.TputStr(tot, ms))
@@ -1319,7 +1319,7 @@ func measuredir(msg string, nruns int, f func() int) {
 		tot += float64(ms)
 	}
 	s := tot / 1000
-	db.DPrintf("TEST", "%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
+	db.DPrintf(db.TEST, "%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
 }
 
 type Thow uint8

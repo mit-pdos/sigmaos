@@ -14,6 +14,12 @@ const (
 	ERR Tselector = 0
 )
 
+// Benchmarks
+const (
+	LOADGEN Tselector = 0
+	BENCH             = 0
+)
+
 // Tests
 const (
 	TEST  Tselector = 0 //"TEST"

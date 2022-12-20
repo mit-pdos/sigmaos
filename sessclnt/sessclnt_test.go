@@ -56,7 +56,7 @@ func TestServerCrash(t *testing.T) {
 	err := sem.Init(0)
 	assert.Nil(t, err)
 
-	db.DPrintf("TEST", "Sem %v", DIRGRP0+"sem")
+	db.DPrintf(db.TEST, "Sem %v", DIRGRP0+"sem")
 
 	ch := make(chan error)
 	go func() {
@@ -172,14 +172,14 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 					break
 				}
 			}
-			db.DPrintf("TEST", "Client %v done", i)
+			db.DPrintf(db.TEST, "Client %v done", i)
 			fsl.Exit()
 		}(i)
 
 		err := <-ch
 		assert.NotNil(ts.T, err, "stat")
 	}
-	db.DPrintf("TEST", "Stopping group")
+	db.DPrintf(db.TEST, "Stopping group")
 	grp.Stop()
 	ts.Shutdown()
 }

@@ -130,7 +130,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	}
 	wg.Wait()
 	for i, lg := range ji.lgs {
-		db.DPrintf("TEST", "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
 	}
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")
@@ -153,9 +153,9 @@ func (ji *HotelJobInstance) printStats() {
 }
 
 func (ji *HotelJobInstance) Wait() {
-	db.DPrintf("TEST", "extra sleep")
+	db.DPrintf(db.TEST, "extra sleep")
 	time.Sleep(10 * time.Second)
-	db.DPrintf("TEST", "Evicting hotel procs")
+	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()
 		for _, pid := range ji.pids {
@@ -166,7 +166,7 @@ func (ji *HotelJobInstance) Wait() {
 		}
 		ji.cm.StopCache()
 	}
-	db.DPrintf("TEST", "Done evicting hotel procs")
+	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {
 		db.DPrintf(db.ALWAYS, "Data:\n%v", lg.StatsDataString())
 	}

@@ -92,7 +92,7 @@ func (ts *Tstate) spawnSpinner(ncore proc.Tcore) proc.Tpid {
 
 // Check that the test realm has min <= nCoreGroups <= max core groups assigned to it
 func (ts *Tstate) checkNCoreGroups(min int, max int) {
-	db.DPrintf("TEST", "Checking num nodeds")
+	db.DPrintf(db.TEST, "Checking num nodeds")
 	cfg := realm.GetRealmConfig(ts.realmFsl, sp.TEST_RID)
 	nCoreGroups := 0
 	for _, nd := range cfg.NodedsActive {
@@ -100,7 +100,7 @@ func (ts *Tstate) checkNCoreGroups(min int, max int) {
 		ts.ReadConfig(realm.NodedConfPath(nd), ndCfg)
 		nCoreGroups += len(ndCfg.Cores)
 	}
-	db.DPrintf("TEST", "Done Checking num nodeds")
+	db.DPrintf(db.TEST, "Done Checking num nodeds")
 	ok := assert.True(ts.t, nCoreGroups >= min && nCoreGroups <= max, "Wrong number of core groups (x=%v), expected %v <= x <= %v", nCoreGroups, min, max)
 	if !ok {
 		debug.PrintStack()
@@ -130,21 +130,21 @@ func TestRealmGrowAuto(t *testing.T) {
 
 	N := int(linuxsched.NCores) / 2
 
-	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
+	db.DPrintf(db.TEST, "Starting %v spinning lambdas", N)
 	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner(0))
 	}
 
-	db.DPrintf("TEST", "Sleeping for a bit")
+	db.DPrintf(db.TEST, "Sleeping for a bit")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
+	db.DPrintf(db.TEST, "Starting %v more spinning lambdas", N)
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner(0))
 	}
 
-	db.DPrintf("TEST", "Sleeping again")
+	db.DPrintf(db.TEST, "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)
@@ -162,43 +162,43 @@ func TestRealmShrink(t *testing.T) {
 
 	N := int(linuxsched.NCores) / 2
 
-	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
+	db.DPrintf(db.TEST, "Starting %v spinning lambdas", N)
 	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner(0))
 	}
 
-	db.DPrintf("TEST", "Sleeping for a bit")
+	db.DPrintf(db.TEST, "Sleeping for a bit")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
+	db.DPrintf(db.TEST, "Starting %v more spinning lambdas", N)
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner(0))
 	}
 
-	db.DPrintf("TEST", "Sleeping again")
+	db.DPrintf(db.TEST, "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)
 
-	db.DPrintf("TEST", "Creating a new realm to contend with the old one")
+	db.DPrintf(db.TEST, "Creating a new realm to contend with the old one")
 	// Create another realm to contend with this one.
 	ts.e.CreateRealm("2000")
 
-	db.DPrintf("TEST", "Sleeping yet again")
+	db.DPrintf(db.TEST, "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2-1)
 
-	db.DPrintf("TEST", "Destroying the new, contending realm")
+	db.DPrintf(db.TEST, "Destroying the new, contending realm")
 	ts.e.DestroyRealm("2000")
 
-	db.DPrintf("TEST", "Starting %v more spinning lambdas", N/2)
+	db.DPrintf(db.TEST, "Starting %v more spinning lambdas", N/2)
 	for i := 0; i < int(N); i++ {
 		pids = append(pids, ts.spawnSpinner(0))
 	}
 
-	db.DPrintf("TEST", "Sleeping yet again")
+	db.DPrintf(db.TEST, "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)

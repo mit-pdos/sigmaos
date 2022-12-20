@@ -133,7 +133,7 @@ func (pd *Procd) procClaimRateLimitCheck(util float64) bool {
 	if pd.netProcsClaimed < maxOversub {
 		return true
 	}
-	db.DPrintf("PROCD", "Failed proc claim rate limit check: %v > %v", pd.netProcsClaimed, maxOversub)
+	db.DPrintf(db.PROCD, "Failed proc claim rate limit check: %v > %v", pd.netProcsClaimed, maxOversub)
 	return false
 }
 
@@ -152,10 +152,10 @@ func (pd *Procd) canClaimBEProcL() (float64, bool, bool) {
 	util, _ := pd.memfssrv.GetStats().GetUtil()
 	rlc := pd.procClaimRateLimitCheck(util)
 	if util < sp.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && rlc {
-		db.DPrintf("PROCD", "Have enough cores for BE proc: util %v rate-limit check %v", util, rlc)
+		db.DPrintf(db.PROCD, "Have enough cores for BE proc: util %v rate-limit check %v", util, rlc)
 		return util, rlc, true
 	}
-	db.DPrintf("PROCD", "Can't claim BE proc: util %v rate-limit check %v", util, rlc)
+	db.DPrintf(db.PROCD, "Can't claim BE proc: util %v rate-limit check %v", util, rlc)
 	return util, rlc, false
 }
 
@@ -167,12 +167,12 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		if pd.coresAvail >= p.Ncore {
 			return true
 		}
-		db.DPrintf("PROCD", "Don't have enough LC cores (%v) for %v", pd.coresAvail, p)
+		db.DPrintf(db.PROCD, "Don't have enough LC cores (%v) for %v", pd.coresAvail, p)
 	} else {
 		if util, rlc, ok := pd.canClaimBEProcL(); ok {
 			return true
 		} else {
-			db.DPrintf("PROCD", "Not enough cores for BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
+			db.DPrintf(db.PROCD, "Not enough cores for BE proc: util %v rate-limit check %v proc %v", util, rlc, p)
 		}
 	}
 	return false

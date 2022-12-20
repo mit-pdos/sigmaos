@@ -74,9 +74,9 @@ func main() {
 func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
 	err := pclnt.WaitEvict(proc.GetPid())
 	if err != nil {
-		db.DPrintf("CACHECLERK", "Error WaitEvict: %v", err)
+		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
 	}
-	db.DPrintf("CACHECLERK", "Evict\n")
+	db.DPrintf(db.CACHECLERK, "Evict\n")
 	atomic.StoreInt32(&done, 1)
 }
 

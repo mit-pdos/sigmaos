@@ -35,7 +35,7 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 		db.DFatalf("Listen error: %v", err)
 	}
 	srv.addr = l.Addr().String()
-	db.DPrintf("NETSRV", "listen %v myaddr %v\n", address, srv.addr)
+	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }

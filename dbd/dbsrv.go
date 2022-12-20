@@ -28,7 +28,7 @@ func mkServer(dbdaddr string) (*Server, error) {
 }
 
 func (s *Server) doQuery(arg string, rep *[]byte) error {
-	debug.DPrintf("DBSRV", "doQuery: %v\n", arg)
+	debug.DPrintf(debug.DB, "doQuery: %v\n", arg)
 	rb, err := doQuery(s.db, arg)
 	if err != nil {
 		return err

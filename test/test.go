@@ -98,14 +98,14 @@ func (ts *Tstate) NamedAddr() []string {
 }
 
 func (ts *Tstate) Shutdown() {
-	db.DPrintf("TEST", "Shutting down")
+	db.DPrintf(db.TEST, "Shutting down")
 	ts.System.Shutdown()
 	for _, r := range ts.replicas {
 		r.Shutdown()
 	}
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
 	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, "Too many FIDs open (%v): %v", ts.PathClnt.FidClnt.Len(), ts.PathClnt.FidClnt)
-	db.DPrintf("TEST", "Done shutting down")
+	db.DPrintf(db.TEST, "Done shutting down")
 }
 
 func (ts *Tstate) addNamedReplica(i int) {

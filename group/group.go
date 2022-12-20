@@ -96,18 +96,18 @@ func (g *Group) clearBusy() {
 }
 
 func (g *Group) AcquireLeadership() {
-	db.DPrintf("GROUP", "%v Try acquire leadership", g.grp)
+	db.DPrintf(db.GROUP, "%v Try acquire leadership", g.grp)
 	if err := g.ec.AcquireLeadership(nil); err != nil {
 		db.DFatalf("AcquireLeadership in group.RunMember: %v", err)
 	}
-	db.DPrintf("GROUP", "%v Acquire leadership", g.grp)
+	db.DPrintf(db.GROUP, "%v Acquire leadership", g.grp)
 }
 
 func (g *Group) ReleaseLeadership() {
 	if err := g.ec.ReleaseLeadership(); err != nil {
 		db.DFatalf("release leadership: %v", err)
 	}
-	db.DPrintf("GROUP", "%v Release leadership", g.grp)
+	db.DPrintf(db.GROUP, "%v Release leadership", g.grp)
 }
 
 func (g *Group) waitForClusterConfig() {
@@ -121,10 +121,10 @@ func (g *Group) waitForClusterConfig() {
 func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
 	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); fcall.IsErrNotfound(err) {
-		db.DPrintf("GROUP", "found conf path %v", grpConfPath(g.jobdir, g.grp))
+		db.DPrintf(db.GROUP, "found conf path %v", grpConfPath(g.jobdir, g.grp))
 		return false
 	} else {
-		db.DPrintf("GROUP", "didn't find conf path %v: %v", grpConfPath(g.jobdir, g.grp), err)
+		db.DPrintf(db.GROUP, "didn't find conf path %v: %v", grpConfPath(g.jobdir, g.grp), err)
 		// We don't expect any other errors
 		if err != nil {
 			db.DFatalf("Unexpected cluster config error: %v", err)
@@ -166,7 +166,7 @@ func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
 	cfg := &GroupConfig{}
 	err := g.GetFileJson(path, cfg)
 	if err != nil {
-		db.DPrintf("GRP_ERR", "Error GetFileJson: %v", err)
+		db.DPrintf(db.GROUP_ERR, "Error GetFileJson: %v", err)
 		return cfg, err
 	}
 	return cfg, nil
@@ -237,7 +237,7 @@ func RunMember(jobdir, grp string) {
 		db.DFatalf("invalid sigmarepl: %v", err)
 	}
 
-	db.DPrintf("GROUP", "Starting replica with replication level %v", nReplicas)
+	db.DPrintf(db.GROUP, "Starting replica with replication level %v", nReplicas)
 
 	g.AcquireLeadership()
 
@@ -253,12 +253,12 @@ func RunMember(jobdir, grp string) {
 		// in the temporary cluster config, and wait for nReplicas to register
 		// themselves as well.
 		if !g.clusterStarted() {
-			db.DPrintf("GROUP", "Cluster hasn't started, reading temp config")
+			db.DPrintf(db.GROUP, "Cluster hasn't started, reading temp config")
 			id, clusterCfg, raftCfg = g.registerInTmpConfig()
 			// If we don't yet have enough replicas to start the cluster, wait for them
 			// to register themselves.
 			if id < nReplicas {
-				db.DPrintf("GROUP", "%v < %v: Wait for more replicas", id, nReplicas)
+				db.DPrintf(db.GROUP, "%v < %v: Wait for more replicas", id, nReplicas)
 				g.ReleaseLeadership()
 				// Wait for enough memebers of the original cluster to register
 				// themselves, and get the updated config.
@@ -270,16 +270,16 @@ func RunMember(jobdir, grp string) {
 					db.DFatalf("Error read group config: %v", err)
 				}
 				raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
-				db.DPrintf("GROUP", "%v done waiting for replicas, config: %v", id, clusterCfg)
+				db.DPrintf(db.GROUP, "%v done waiting for replicas, config: %v", id, clusterCfg)
 			}
 		} else {
 			// Register self in the cluster config.
 			id, clusterCfg, raftCfg = g.registerInClusterConfig()
-			db.DPrintf("GROUP", "%v cluster already started: %v", id, clusterCfg)
+			db.DPrintf(db.GROUP, "%v cluster already started: %v", id, clusterCfg)
 		}
 	}
 
-	db.DPrintf("GROUP", "Starting replica with cluster config %v", clusterCfg)
+	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	// start server but don't publish its existence
 	mfs, err1 := memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg)
@@ -296,7 +296,7 @@ func RunMember(jobdir, grp string) {
 	if nReplicas > 0 {
 		// Get the final sigma addr
 		clusterCfg.SigmaAddrs[id-1] = mfs.MyAddr()
-		db.DPrintf("GROUP", "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
+		db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
 
 		if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
 			db.DFatalf("Write final group config: %v", err)

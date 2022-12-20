@@ -67,7 +67,7 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 // close those.
 func (sct *SessCondTable) DeleteSess(sessid fcall.Tsession) {
 	t := sct.toSlice()
-	db.DPrintf("SESSCOND", "%v: delete sess %v\n", sessid, t)
+	db.DPrintf(db.SESSCOND, "%v: delete sess %v\n", sessid, t)
 	for _, sc := range t {
 		sc.closed(sessid)
 	}

@@ -74,12 +74,12 @@ func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, don
 	clnt := www.MakeWWWClnt(ts.FsLib, ts.job)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
-		db.DPrintf("TEST", "[%v] iteration %v Random sleep %v", clntid, i, slp)
+		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)
 		time.Sleep(slp)
 		err := clnt.MatMul(matsize)
 		assert.Nil(ts.T, err, "Error matmul: %v", err)
 	}
-	db.DPrintf("TEST", "[%v] done", clntid)
+	db.DPrintf(db.TEST, "[%v] done", clntid)
 	done <- true
 }
 

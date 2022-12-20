@@ -62,7 +62,7 @@ func (pathc *PathClnt) LastMount(pn string) (string, path.Path, error) {
 	p := path.Split(pn)
 	_, left, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
-		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
+		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
 		return "", nil, err
 	}
 	p = p[0 : len(p)-len(left)]
@@ -150,7 +150,7 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 }
 
 func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, error) {
-	db.DPrintf("PATHCLNT", "Create %v perm %v\n", p, perm)
+	db.DPrintf(db.PATHCLNT, "Create %v perm %v\n", p, perm)
 	path := path.Split(p)
 	dir := path.Dir()
 	base := path.Base()
@@ -168,7 +168,7 @@ func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, 
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
 func (pathc *PathClnt) Rename(old string, new string) error {
-	db.DPrintf("PATHCLNT", "Rename %v %v\n", old, new)
+	db.DPrintf(db.PATHCLNT, "Rename %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
 
@@ -202,7 +202,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 
 // Rename across directories of a single server using Renameat
 func (pathc *PathClnt) renameat(old, new string) *fcall.Err {
-	db.DPrintf("PATHCLNT", "Renameat %v %v\n", old, new)
+	db.DPrintf(db.PATHCLNT, "Renameat %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
 	o := opath[len(opath)-1]
@@ -230,7 +230,7 @@ func (pathc *PathClnt) umountFree(path []string) *fcall.Err {
 }
 
 func (pathc *PathClnt) Remove(name string) error {
-	db.DPrintf("PATHCLNT", "Remove %v\n", name)
+	db.DPrintf(db.PATHCLNT, "Remove %v\n", name)
 	pn := path.Split(name)
 	fid, rest, err := pathc.mnt.resolve(pn, path.EndSlash(name))
 	if err != nil {
@@ -258,7 +258,7 @@ func (pathc *PathClnt) Remove(name string) error {
 }
 
 func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
-	db.DPrintf("PATHCLNT", "Stat %v\n", name)
+	db.DPrintf(db.PATHCLNT, "Stat %v\n", name)
 	pn := path.Split(name)
 	// XXX ignore err?
 	target, rest, _ := pathc.mnt.resolve(pn, true)
@@ -281,7 +281,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 }
 
 func (pathc *PathClnt) OpenWatch(pn string, mode sp.Tmode, w Watch) (sp.Tfid, error) {
-	db.DPrintf("PATHCLNT", "Open %v %v\n", pn, mode)
+	db.DPrintf(db.PATHCLNT, "Open %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, err := pathc.WalkPath(p, path.EndSlash(pn), w)
 	if err != nil {
@@ -299,10 +299,10 @@ func (pathc *PathClnt) Open(path string, mode sp.Tmode) (sp.Tfid, error) {
 }
 
 func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
-	db.DPrintf("PATHCLNT", "SetDirWatch %v\n", fid)
+	db.DPrintf(db.PATHCLNT, "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", fid, err)
+		db.DPrintf(db.PATHCLNT, "SetDirWatch: Watch returns %v %v\n", fid, err)
 		if err == nil {
 			w(path, nil)
 		} else {
@@ -313,7 +313,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
 }
 
 func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
-	db.DPrintf("PATHCLNT", "SetRemoveWatch %v", pn)
+	db.DPrintf(db.PATHCLNT, "SetRemoveWatch %v", pn)
 	p := path.Split(pn)
 	fid, err := pathc.WalkPath(p, path.EndSlash(pn), nil)
 	if err != nil {
@@ -324,7 +324,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf("PATHCLNT", "SetRemoveWatch: Watch %v %v err %v\n", fid, pn, err)
+		db.DPrintf(db.PATHCLNT, "SetRemoveWatch: Watch %v %v err %v\n", fid, pn, err)
 		if err == nil {
 			w(pn, nil)
 		} else {
@@ -335,8 +335,8 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fcall.Tsize) ([]byte, error) {
-	db.DPrintf("PATHCLNT", "GetFile %v %v\n", pn, mode)
+func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
+	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
@@ -365,8 +365,8 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt fca
 }
 
 // Write file
-func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (fcall.Tsize, error) {
-	db.DPrintf("PATHCLNT", "SetFile %v %v\n", pn, mode)
+func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sp.Tsize, error) {
+	db.DPrintf(db.PATHCLNT, "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
@@ -395,8 +395,8 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 }
 
 // Create file
-func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (fcall.Tsize, error) {
-	db.DPrintf("PATHCLNT", "PutFile %v %v\n", pn, mode)
+func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sp.Tsize, error) {
+	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.mnt.resolve(p, true)
 	if err != nil {
@@ -429,13 +429,13 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 //// Return path to the root directory for last server on path
 //func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
 //	if _, err := pathc.Stat(pn + "/"); err != nil {
-//		db.DPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", pn, err)
+//		db.DPrintf(db.PATHCLNT_ERR, "PathServer: stat %v err %v\n", pn, err)
 //		return "", nil, err
 //	}
 //	p := path.Split(pn)
 //	_, left, err := pathc.mnt.resolve(p, true)
 //	if err != nil {
-//		db.DPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", pn, err)
+//		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
 //		return "", nil, err
 //	}
 //	p = p[0 : len(p)-len(left)]

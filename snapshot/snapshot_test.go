@@ -143,12 +143,12 @@ func TestRestoreSimple(t *testing.T) {
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
-	db.DPrintf("TEST", "About to take snapshot")
+	db.DPrintf(db.TEST, "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid)
-	db.DPrintf("TEST", "Done take snapshot")
-	db.DPrintf("TEST", "About to restore snapshot")
+	db.DPrintf(db.TEST, "Done take snapshot")
+	db.DPrintf(db.TEST, "About to restore snapshot")
 	restoreSnapshot(ts, fsl1, pid, b)
-	db.DPrintf("TEST", "Done restore snapshot")
+	db.DPrintf(db.TEST, "Done restore snapshot")
 
 	ts.Shutdown()
 }
@@ -203,19 +203,19 @@ func TestRestoreStateSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
 
 	// Read the snapshot from replica a
-	db.DPrintf("TEST", "About to take snapshot")
+	db.DPrintf(db.TEST, "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid1)
-	db.DPrintf("TEST", "Done take snapshot")
+	db.DPrintf(db.TEST, "Done take snapshot")
 
 	// Kill the first replica (so future requests hit the second replica).
 	killMemfs(ts, pid1)
 
-	db.DPrintf("TEST", "Restoring snapshot")
+	db.DPrintf(db.TEST, "Restoring snapshot")
 
 	// Write the snapshot to replica b
 	restoreSnapshot(ts, fsl1, pid2, b)
 
-	db.DPrintf("TEST", "Done restoring snapshot")
+	db.DPrintf(db.TEST, "Done restoring snapshot")
 
 	// Check that the files exist on replica b
 	checkFiles(ts, N_FILES)

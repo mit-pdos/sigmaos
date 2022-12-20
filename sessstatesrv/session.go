@@ -86,7 +86,7 @@ func (sess *Session) CloseConn() {
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf("SESSION", "Close session %v\n", sess.Sid)
+	db.DPrintf(db.SESS_STATE_SRV, "Close session %v\n", sess.Sid)
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
@@ -131,7 +131,7 @@ func (sess *Session) SetConn(conn sp.Conn) *fcall.Err {
 	if sess.closed {
 		return fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
 	}
-	db.DPrintf("SESSION", "%v SetConn new %v\n", sess.Sid, conn)
+	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
 	return nil
 }
@@ -147,7 +147,7 @@ func (sess *Session) UnsetConn(conn sp.Conn) {
 // connection.
 func (sess *Session) unsetConnL(conn sp.Conn) {
 	if sess.conn == conn {
-		db.DPrintf("SESSION", "%v close connection", sess.Sid)
+		db.DPrintf(db.SESS_STATE_SRV, "%v close connection", sess.Sid)
 		sess.conn = nil
 	}
 	conn.Close()
@@ -155,7 +155,7 @@ func (sess *Session) unsetConnL(conn sp.Conn) {
 
 // Caller holds lock.
 func (sess *Session) heartbeatL(msg fcall.Tmsg) {
-	db.DPrintf("SESSION", "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
+	db.DPrintf(db.SESS_STATE_SRV, "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
 		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}
@@ -166,7 +166,7 @@ func (sess *Session) heartbeatL(msg fcall.Tmsg) {
 func (sess *Session) timeout() {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf("SESSION", "timeout %v", sess.Sid)
+	db.DPrintf(db.SESS_STATE_SRV, "timeout %v", sess.Sid)
 	sess.timedout = true
 }
 

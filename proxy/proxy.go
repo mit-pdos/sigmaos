@@ -112,22 +112,22 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 
 	fid, err := npc.fidc.Attach(npc.uname, npc.named, "", "")
 	if err != nil {
-		db.DPrintf("PROXY", "Attach args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	if err := npc.pc.Mount(fid, sp.NAMED); err != nil {
-		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Attach args %v mount err %v\n", args, err)
 		return sp.MkRerror(fcall.MkErrError(err))
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Tfid(), fid)
 	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
-	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
+	db.DPrintf(db.PROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return nil
 }
 
 func (npc *NpConn) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
-	db.DPrintf("PROXY", "Detach\n")
+	db.DPrintf(db.PROXY, "Detach\n")
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
-		db.DPrintf("PROXY", "Walk args %v err: %v\n", args, err)
+		db.DPrintf(db.PROXY, "Walk args %v err: %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	qids := npc.pc.Qids(fid1)
@@ -154,11 +154,11 @@ func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	}
 	qid, err := npc.fidc.Open(fid, args.Tmode())
 	if err != nil {
-		db.DPrintf("PROXY", "Open args %v err: %v\n", args, err)
+		db.DPrintf(db.PROXY, "Open args %v err: %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	rets.Qid = qid
-	db.DPrintf("PROXY", "Open args %v rets: %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Open args %v rets: %v\n", args, rets)
 	return nil
 }
 
@@ -173,14 +173,14 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode())
 	if err != nil {
-		db.DPrintf("PROXY", "Create args %v err: %v\n", args, err)
+		db.DPrintf(db.PROXY, "Create args %v err: %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
 	}
 	rets.Qid = npc.pc.Qid(fid1)
-	db.DPrintf("PROXY", "Create args %v rets: %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Create args %v rets: %v\n", args, rets)
 	return nil
 }
 
@@ -191,10 +191,10 @@ func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	}
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
-		db.DPrintf("PROXY", "Clunk: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Clunk: args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
-	db.DPrintf("PROXY", "Clunk: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Clunk: args %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -205,10 +205,10 @@ func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	}
 	err := npc.fidc.Remove(fid)
 	if err != nil {
-		db.DPrintf("PROXY", "Remove: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Remove: args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
-	db.DPrintf("PROXY", "Remove: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Remove: args %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -223,11 +223,11 @@ func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	}
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
-		db.DPrintf("PROXY", "Stats: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Stats: args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	rets.Stat = st
-	db.DPrintf("PROXY", "Stat: req %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Stat: req %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -238,10 +238,10 @@ func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	}
 	err := npc.fidc.Wstat(fid, args.Stat)
 	if err != nil {
-		db.DPrintf("PROXY", "Wstats: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Wstats: args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
-	db.DPrintf("PROXY", "Wstat: req %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Wstat: req %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -256,10 +256,10 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	}
 	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
 	if err != nil {
-		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.MkRerror(err)
 	}
-	db.DPrintf("PROXY0", "ReadUV: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v\n", args, rets)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d, err = Sp2NpDir(d, args.Tcount())
@@ -267,7 +267,7 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 			return nil, sp.MkRerror(err)
 		}
 	}
-	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Read: args %v rets %v\n", args, rets)
 	return d, nil
 }
 
@@ -278,11 +278,11 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	}
 	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV)
 	if err != nil {
-		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
+		db.DPrintf(db.PROXY, "Write: args %v err %v\n", args, err)
 		return sp.MkRerror(err)
 	}
 	rets.Count = uint32(n)
-	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Write: args %v rets %v\n", args, rets)
 	return nil
 }
 

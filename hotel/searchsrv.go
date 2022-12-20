@@ -5,10 +5,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 )
 
 type Search struct {
@@ -53,7 +53,7 @@ func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error 
 		log.Fatalf("nearby error: %v", err)
 	}
 
-	db.DPrintf("HOTELSEARCH", "Search Nearby: %v %v\n", greq, gres)
+	db.DPrintf(db.HOTEL_SEARCH, "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
 	var rres proto.RateResult
@@ -67,7 +67,7 @@ func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error 
 		log.Fatalf("rates error: %v", err)
 	}
 
-	db.DPrintf("HOTELSEARCH", "Search Getrates: %v %v\n", rreq, rres)
+	db.DPrintf(db.HOTEL_SEARCH, "Search Getrates: %v %v\n", rreq, rres)
 
 	for _, ratePlan := range rres.RatePlans {
 		res.HotelIds = append(res.HotelIds, ratePlan.HotelId)

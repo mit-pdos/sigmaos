@@ -43,7 +43,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *fcall.Err) {
 		return nil, fcall.MkErrError(err)
 	}
 
-	db.DPrintf("PROTDEVSRV", "WriteRead req %v\n", req)
+	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
 
 	ql := rpc.pds.QueueLen()
 	start := time.Now()
@@ -72,7 +72,7 @@ func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.R
 			return r
 		}
 
-		db.DPrintf("PROTDEVSRV", "dispatchproto %v %v\n", name, reqmsg)
+		db.DPrintf(db.PROTDEVSRV, "dispatchproto %v %v\n", name, reqmsg)
 
 		// allocate space for the reply.
 		replyType := method.replyType

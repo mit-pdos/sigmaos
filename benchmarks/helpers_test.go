@@ -44,13 +44,13 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 }
 
 func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
-	db.DPrintf("TEST", "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
+	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
 	_, errs := ts.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 
 func spawnBurstProcs2(ts *test.Tstate, pclnt *procclnt.ProcClnt, ps []*proc.Proc) {
-	db.DPrintf("TEST", "Burst-spawning2 %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
+	db.DPrintf(db.TEST, "Burst-spawning2 %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
 	_, errs := pclnt.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
@@ -60,7 +60,7 @@ func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
 		err := ts.WaitStart(p.Pid)
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 	}
-	db.DPrintf("TEST", "%v burst-spawned procs have all started", len(ps))
+	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
 
 func waitExitProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -69,7 +69,7 @@ func waitExitProcs(ts *test.Tstate, ps []*proc.Proc) {
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 		assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
 	}
-	db.DPrintf("TEST", "%v burst-spawned procs have all started", len(ps))
+	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
 
 func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
@@ -88,7 +88,7 @@ func countNClusterCores(ts *test.Tstate) {
 	// machines.
 	if ts.RunningInRealm() {
 		N_CLUSTER_CORES = 0
-		db.DPrintf("TEST", "Running with realms")
+		db.DPrintf(db.TEST, "Running with realms")
 		fsl := fslib.MakeFsLib("test")
 		_, err := fsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
 			cfg := machine.MakeEmptyConfig()
@@ -101,10 +101,10 @@ func countNClusterCores(ts *test.Tstate) {
 		})
 		assert.Nil(ts.T, err, "Error counting sigma cores: %v", err)
 	} else {
-		db.DPrintf("TEST", "Running without realms")
+		db.DPrintf(db.TEST, "Running without realms")
 		N_CLUSTER_CORES = int(linuxsched.NCores)
 	}
-	db.DPrintf("TEST", "Aggregate number of cores in the cluster: %v", N_CLUSTER_CORES)
+	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", N_CLUSTER_CORES)
 }
 
 // Potentially pregrow a realm to encompass all cluster resources.
@@ -122,7 +122,7 @@ func maybePregrowRealm(ts *test.Tstate) {
 		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
 		n, _, err := pdc.Nprocd()
 		assert.Nil(ts.T, err, "Err %v", err)
-		db.DPrintf("TEST", "Pre-grew realm, now running with %v procds", n)
+		db.DPrintf(db.TEST, "Pre-grew realm, now running with %v procds", n)
 	}
 }
 

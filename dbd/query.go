@@ -12,7 +12,7 @@ import (
 )
 
 func doQuery(db *sql.DB, arg string) ([]byte, error) {
-	debug.DPrintf("DBSRV", "doQuery: %v\n", arg)
+	debug.DPrintf(debug.DB, "doQuery: %v\n", arg)
 	rows, err := db.Query(arg)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func doQuery(db *sql.DB, arg string) ([]byte, error) {
 		}
 		table = append(table, entry)
 	}
-	debug.DPrintf("DBSRV", "doQuery: table (%d) %v\n", len(table), table)
+	debug.DPrintf(debug.DB, "doQuery: table (%d) %v\n", len(table), table)
 	rb, err := json.Marshal(table)
 	if err != nil {
 		return nil, err

@@ -16,8 +16,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/realm"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -717,9 +717,9 @@ func symlinkWasMissing(ts *Tstate, err error) bool {
 
 func retryOp(ts *Tstate, f fn, a assertion) bool {
 	for n_retries := 0; n_retries < MAX_OPEN_RETRIES; n_retries++ {
-		db.DPrintf("TEST", "Pre-op: %v", n_retries)
+		db.DPrintf(db.TEST, "Pre-op: %v", n_retries)
 		res, err := f()
-		db.DPrintf("TEST", "Retry: %v, %v", n_retries, err)
+		db.DPrintf(db.TEST, "Retry: %v, %v", n_retries, err)
 		if symlinkWasMissing(ts, err) {
 			continue
 		}
@@ -743,22 +743,22 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 		new := id_str + "_" + strconv.Itoa(i+1)
 		oldpath := path.Join(ts.symlinkPath9p, old)
 		newpath := path.Join(ts.symlinkPath9p, new)
-		db.DPrintf("TEST", "%v Start rename %v -> %v", id, old, new)
+		db.DPrintf(db.TEST, "%v Start rename %v -> %v", id, old, new)
 		retryOp(ts,
 			func() (string, error) {
-				db.DPrintf("TEST", oldpath, newpath)
+				db.DPrintf(db.TEST, oldpath, newpath)
 				return "", fsl.Rename(oldpath, newpath)
 			},
 			func(res string, err error) bool {
 				return assert.Nil(ts.t, err, "Failed to rename: %v -> %v, %v", oldpath, newpath, err)
 			})
-		db.DPrintf("TEST", "%v Finish rename %v -> %v", id, oldpath, newpath)
+		db.DPrintf(db.TEST, "%v Finish rename %v -> %v", id, oldpath, newpath)
 	}
 
 	// Check the file contents remain unchanged
 	fname := id_str + "_" + strconv.Itoa(n_renames)
 	fpath := path.Join(ts.symlinkPath9p, fname)
-	db.DPrintf("TEST", "%v Start check file contents %v", id, fname)
+	db.DPrintf(db.TEST, "%v Start check file contents %v", id, fname)
 	success := retryOp(ts,
 		func() (string, error) {
 			b, err := fsl.GetFile(fpath)
@@ -767,10 +767,10 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 		func(res string, err error) bool {
 			return assert.Nil(ts.t, err, "Rename client failed to ReadFile: %v, %v", fpath, err) && assert.Equal(ts.t, id_str, res, "Renamed file contents not equal")
 		})
-	db.DPrintf("TEST", "%v Finish check file contents %v", id, fname)
+	db.DPrintf(db.TEST, "%v Finish check file contents %v", id, fname)
 
 	if success {
-		db.DPrintf("TEST", "%v Start final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+		db.DPrintf(db.TEST, "%v Start final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
 		retryOp(ts,
 			func() (string, error) {
 				// Rename the file to its final name for our consistency checks
@@ -779,7 +779,7 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 			func(res string, err error) bool {
 				return assert.Nil(ts.t, err, "Final rename: %v, %v", id_str, err)
 			})
-		db.DPrintf("TEST", "%v Finish final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+		db.DPrintf(db.TEST, "%v Finish final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
 	}
 }
 

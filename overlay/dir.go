@@ -4,11 +4,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 )
 
 //
@@ -37,7 +37,7 @@ func (dir *DirOverlay) Mount(name string, i fs.Inode) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("OVERLAYDIR", "Mount i %v as %v\n", i, name)
+	db.DPrintf(db.OVERLAYDIR, "Mount i %v as %v\n", i, name)
 
 	dir.entries[name] = i
 }
@@ -46,7 +46,7 @@ func (dir *DirOverlay) lookupMount(name string) fs.FsObj {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("OVERLAYDIR", "lookupMount %v %v\n", name, dir.entries)
+	db.DPrintf(db.OVERLAYDIR, "lookupMount %v %v\n", name, dir.entries)
 
 	if i, ok := dir.entries[name]; ok {
 		return i
@@ -74,7 +74,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *fcall.Err) {
 	}
 	return nil, fcall.MkErr(fcall.TErrNotfound, name)
 	// else {
-	// 	db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", name)
+	// 	db.DPrintf(db.OVERLAYDIR, "Lookup underlay %v\n", name)
 	// 	o, err := dir.underlay.Lookup(ctx, name)
 	// 	if o == dir.underlay {
 	// 		o = dir

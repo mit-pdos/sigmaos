@@ -136,7 +136,7 @@ func TestWaitExitN(t *testing.T) {
 			status, err := ts.WaitExit(pid)
 			assert.Nil(t, err, "WaitExit error")
 			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
-			db.DPrintf("TEST", "Exited %v", pid)
+			db.DPrintf(db.TEST, "Exited %v", pid)
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
@@ -270,20 +270,20 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 		go func(i int) {
 			for j := 0; j < N_SPAWNS; j++ {
 				pid := proc.GenPid()
-				db.DPrintf("TEST", "Prep spawn %v", pid)
+				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.MakeProcPid(pid, "user/sleeper", []string{"0ms", "name/"})
 				_, errs := ts.SpawnBurst([]*proc.Proc{a})
 				assert.True(t, len(errs) == 0, "Spawn err %v", errs)
-				db.DPrintf("TEST", "Done spawn %v", pid)
+				db.DPrintf(db.TEST, "Done spawn %v", pid)
 
-				db.DPrintf("TEST", "Prep WaitStart %v", pid)
+				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
 				err := ts.WaitStart(a.Pid)
-				db.DPrintf("TEST", "Done WaitStart %v", pid)
+				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
 				assert.Nil(t, err, "WaitStart error")
 
-				db.DPrintf("TEST", "Prep WaitExit %v", pid)
+				db.DPrintf(db.TEST, "Prep WaitExit %v", pid)
 				status, err := ts.WaitExit(a.Pid)
-				db.DPrintf("TEST", "Done WaitExit %v", pid)
+				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
 				assert.True(t, status.IsStatusOK(), "Status not OK")
 			}
@@ -292,7 +292,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 	}
 	for i := 0; i < N_CONCUR; i++ {
 		x := <-done
-		db.DPrintf("TEST", "Done %v", x)
+		db.DPrintf(db.TEST, "Done %v", x)
 	}
 
 	ts.Shutdown()
@@ -678,13 +678,13 @@ func TestProcdResize1(t *testing.T) {
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
-	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
 	// Run a proc which shouldn't fit on the newly resized procd.
-	db.DPrintf("TEST", "Spawning a proc which shouldn't fit.")
+	db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
 	pid1 := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
 
@@ -693,16 +693,16 @@ func TestProcdResize1(t *testing.T) {
 	checkSleeperResultFalse(t, ts, pid1)
 
 	pid2 := proc.GenPid()
-	db.DPrintf("TEST", "Spawning a proc which should fit.")
+	db.DPrintf(db.TEST, "Spawning a proc which should fit.")
 	spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
 	status, err = ts.WaitExit(pid2)
 	assert.Nil(t, err, "WaitExit 2")
 	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 	checkSleeperResult(t, ts, pid2)
-	db.DPrintf("TEST", "Proc which should fit ran")
+	db.DPrintf(db.TEST, "Proc which should fit ran")
 
 	// Grant the procd back its cores.
-	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
@@ -726,7 +726,7 @@ func TestProcdResizeN(t *testing.T) {
 
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
-		db.DPrintf("TEST", "Resize i=%v", i)
+		db.DPrintf(db.TEST, "Resize i=%v", i)
 		// Run a proc that claims all cores.
 		pid := proc.GenPid()
 		spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
@@ -736,13 +736,13 @@ func TestProcdResizeN(t *testing.T) {
 		checkSleeperResult(t, ts, pid)
 
 		// Remove some cores from the procd.
-		db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+		db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 		assert.Nil(t, err, "SetFile revoke: %v", err)
 
 		// Run a proc which shouldn't fit on the newly resized procd.
-		db.DPrintf("TEST", "Spawning a proc which shouldn't fit.")
+		db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
 		pid1 := proc.GenPid()
 		spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
 
@@ -751,16 +751,16 @@ func TestProcdResizeN(t *testing.T) {
 		checkSleeperResultFalse(t, ts, pid1)
 
 		pid2 := proc.GenPid()
-		db.DPrintf("TEST", "Spawning a proc which should fit.")
+		db.DPrintf(db.TEST, "Spawning a proc which should fit.")
 		spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
 		status, err = ts.WaitExit(pid2)
 		assert.Nil(t, err, "WaitExit 2")
 		assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 		checkSleeperResult(t, ts, pid2)
-		db.DPrintf("TEST", "Proc which should fit ran")
+		db.DPrintf(db.TEST, "Proc which should fit ran")
 
 		// Grant the procd back its cores.
-		db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+		db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 		assert.Nil(t, err, "SetFile grant: %v", err)
@@ -794,7 +794,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	ctlFilePath := path.Join(sp.PROCD, "~ip", sp.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
-	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
@@ -809,11 +809,11 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Ensure that the procd is accurately representing the utilization (it
 	// should show ~100% CPU utilization, not 50%).
-	db.DPrintf("TEST", "Stats after shrink: %v", st)
+	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
 	assert.True(t, st.Util > 90.0, "Util too low, %v < 90", st.Util)
 
 	// Grant the procd back its cores.
-	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
 	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
@@ -827,7 +827,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 
 	// Ensure that the procd's utilization has been adjusted again (it
 	// should show ~50% CPU utilization, not 100%).
-	db.DPrintf("TEST", "Stats after shrink: %v", st)
+	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
 	assert.True(t, st.Util < 60.0, "Util too high, %v > 60", st.Util)
 
 	// Evict all of the spinning procs.
@@ -862,7 +862,7 @@ func anyCoresOccupied(coresMaps []map[string]bool) bool {
 			total0 = total1
 		}
 		avgCoreUtil := 100.0 * ((float64(totalDelta) - float64(idleDelta)) / float64(totalDelta))
-		db.DPrintf("TEST", "Core %v utilization: %v", c, avgCoreUtil)
+		db.DPrintf(db.TEST, "Core %v utilization: %v", c, avgCoreUtil)
 		if avgCoreUtil > 50.0 {
 			coreOccupied = true
 		}
@@ -901,7 +901,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 	assert.True(t, coreOccupied, "No cores occupied")
 
 	// Remove some cores from the procd.
-	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
 	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
 	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)

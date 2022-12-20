@@ -13,7 +13,7 @@ func ReadFrame(rd io.Reader) ([]byte, *fcall.Err) {
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, err)
 	}
-	db.DPrintf("FRAME", "ReadFrame %d\n", len)
+	db.DPrintf(db.FRAME, "ReadFrame %d\n", len)
 	len = len - 4
 	if len <= 0 {
 		return nil, fcall.MkErr(fcall.TErrUnreachable, "readMsg too short")

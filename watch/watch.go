@@ -47,10 +47,10 @@ func mkWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
 
 // Caller should hold path lock. On return caller has path lock again
 func (ws *Watch) Watch(sessid fcall.Tsession) *fcall.Err {
-	db.DPrintf("WATCH", "Watch '%s'\n", ws.pl.Path())
+	db.DPrintf(db.WATCH, "Watch '%s'\n", ws.pl.Path())
 	err := ws.sc.Wait(sessid)
 	if err != nil {
-		db.DPrintf("WATCH_ERR", "Watch done waiting '%v' err %v\n", ws.pl.Path(), err)
+		db.DPrintf(db.WATCH_ERR, "Watch done waiting '%v' err %v\n", ws.pl.Path(), err)
 	}
 	return err
 }
@@ -81,11 +81,11 @@ func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
 
 	p := pl.Path()
 
-	db.DPrintf("WATCH", "allocWatch %s\n", p)
+	db.DPrintf(db.WATCH, "allocWatch %s\n", p)
 
 	ws, ok := wt.watches[p]
 	if !ok {
-		db.DPrintf("WATCH", "mkWatch '%s'\n", p)
+		db.DPrintf(db.WATCH, "mkWatch '%s'\n", p)
 		ws = mkWatch(wt.sct, pl)
 		wt.watches[p] = ws
 	}
@@ -122,7 +122,7 @@ func (wt *WatchTable) free(ws *Watch) bool {
 // using the watch anymore, free the sess cond associated with the
 // watch.
 func (wt *WatchTable) FreeWatch(ws *Watch) {
-	db.DPrintf("WATCH", "FreeWatch '%s'\n", ws.pl.Path())
+	db.DPrintf(db.WATCH, "FreeWatch '%s'\n", ws.pl.Path())
 	del := wt.free(ws)
 	if del {
 		wt.sct.FreeSessCond(ws.sc)
@@ -144,7 +144,7 @@ func (wt *WatchTable) WakeupWatch(pl *lockmap.PathLock) {
 
 	p := pl.Path()
 
-	db.DPrintf("WATCH", "WakeupWatch '%s'\n", p)
+	db.DPrintf(db.WATCH, "WakeupWatch '%s'\n", p)
 	ws, ok := wt.watches[p]
 	if !ok {
 		return

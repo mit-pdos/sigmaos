@@ -50,13 +50,13 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 	if _, ok := rq.outstanding[s]; ok {
 		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req)
 	}
-	if db.WillBePrinted("SESSCLNTQ") {
-		db.DPrintf("SESSCLNTQ", "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
+	if db.WillBePrinted(db.SESS_CLNT_Q) {
+		db.DPrintf(db.SESS_CLNT_Q, "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
 	}
 	rq.queue = append(rq.queue, rpc)
 	rq.outstanding[s] = rpc
-	if db.WillBePrinted("SESSCLNTQ") {
-		db.DPrintf("SESSCLNTQ", "Outstanding %v seq %v to %v", rpc.Req, s, rq.addrs)
+	if db.WillBePrinted(db.SESS_CLNT_Q) {
+		db.DPrintf(db.SESS_CLNT_Q, "Outstanding %v seq %v to %v", rpc.Req, s, rq.addrs)
 	}
 	rq.Signal()
 }
@@ -85,7 +85,7 @@ func (rq *RequestQueue) Remove(seqno fcall.Tseqno) (*netclnt.Rpc, bool) {
 	rq.Lock()
 	defer rq.Unlock()
 
-	db.DPrintf("SESSCLNTQ", "Try remove seqno %v to %v", seqno, rq.addrs)
+	db.DPrintf(db.SESS_CLNT_Q, "Try remove seqno %v to %v", seqno, rq.addrs)
 	if rpc, ok := rq.outstanding[seqno]; ok {
 		delete(rq.outstanding, seqno)
 		return rpc, true
@@ -118,7 +118,7 @@ func (rq *RequestQueue) Close() map[fcall.Tseqno]*netclnt.Rpc {
 	rq.Lock()
 	defer rq.Unlock()
 
-	db.DPrintf("SESSCLNTQ", "Closed queue to %v", rq.addrs)
+	db.DPrintf(db.SESS_CLNT_Q, "Closed queue to %v", rq.addrs)
 
 	// Mark the request queue as closed
 	rq.closed = true

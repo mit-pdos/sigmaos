@@ -4,10 +4,10 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
 )
 
 type File struct {
@@ -26,7 +26,7 @@ func makeFile(path path.Path) (*File, *fcall.Err) {
 }
 
 func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
-	db.DPrintf("UXD", "%v: FileOpen %v m 0x%x path %v flags 0x%x\n", ctx, f, m, f.Path(), uxFlags(m))
+	db.DPrintf(db.UX, "%v: FileOpen %v m 0x%x path %v flags 0x%x\n", ctx, f, m, f.Path(), uxFlags(m))
 	fd, err := syscall.Open(f.PathName(), uxFlags(m), 0)
 	if err != nil {
 		return nil, fcall.MkErr(fcall.TErrError, err)
@@ -36,7 +36,7 @@ func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 }
 
 func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
-	db.DPrintf("UXD", "%v: FileClose %v\n", ctx, f)
+	db.DPrintf(db.UX, "%v: FileClose %v\n", ctx, f)
 	err := syscall.Close(f.fd)
 	if err != nil {
 		return fcall.MkErr(fcall.TErrError, err)
@@ -44,19 +44,19 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	return nil
 }
 
-func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	db.DPrintf("UXD", "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
+func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
+	db.DPrintf(db.UX, "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b := make([]byte, cnt)
 	n, err := syscall.Pread(f.fd, b, int64(off))
 	if err != nil {
-		db.DPrintf("UXD", "Pread %v err %v\n", f, err)
+		db.DPrintf(db.UX, "Pread %v err %v\n", f, err)
 		return nil, fcall.MkErr(fcall.TErrError, err)
 	}
 	return b[:n], nil
 }
 
-func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
-	db.DPrintf("UXD", "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
+func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+	db.DPrintf(db.UX, "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
 	if off == sp.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
 		// doesn't fit in int64.
@@ -64,7 +64,7 @@ func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fca
 	}
 	n, err := syscall.Pwrite(f.fd, b, int64(off))
 	if err != nil {
-		db.DPrintf("UXD", "Pwrite %v err %v\n", f, err)
+		db.DPrintf(db.UX, "Pwrite %v err %v\n", f, err)
 		return 0, fcall.MkErr(fcall.TErrError, err)
 	}
 	return fcall.Tsize(n), nil

@@ -37,7 +37,7 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
 	c.queue = sessstateclnt.MakeRequestQueue(addrs)
-	db.DPrintf("SESSCLNT", "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
 	nc, err := netclnt.MakeNetClnt(c, addrs)
 	if err != nil {
 		return nil, err
@@ -51,16 +51,16 @@ func makeSessClnt(cli fcall.Tclient, addrs []string) (*SessClnt, *fcall.Err) {
 func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *fcall.Tfence) (*fcall.FcallMsg, *fcall.Err) {
 	rpc, err := c.send(req, data, f)
 	if err != nil {
-		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
 		return nil, err
 	}
 	rep, err1 := c.recv(rpc)
 	if err1 != nil {
-		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, err1, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
-	if db.WillBePrinted("SESSCLNT") {
-		db.DPrintf("SESSCLNT", "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
+	if db.WillBePrinted(db.SESS_STATE_CLNT) {
+		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
 	}
 	return rep, err1
 }
@@ -68,7 +68,7 @@ func (c *SessClnt) RPC(req fcall.Tmsg, data []byte, f *fcall.Tfence) (*fcall.Fca
 func (c *SessClnt) sendHeartbeat() {
 	_, err := c.RPC(sp.MkTheartbeat([]uint64{uint64(c.sid)}), nil, fcall.MakeFenceNull())
 	if err != nil {
-		db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
+		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
 }
 
@@ -82,7 +82,7 @@ func (c *SessClnt) Reset() {
 		c.nc = nil
 	}
 	// Reset outstanding request queue.
-	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v", c.sid, c.addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
@@ -99,15 +99,15 @@ func (c *SessClnt) CompleteRPC(reply *fcall.FcallMsg, err *fcall.Err) {
 		o := reply.Fc.Seqno
 		c.ivs.Insert(fcall.MkInterval(o, o+1))
 		c.ivs.Delete(reply.Fc.Received)
-		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
 	} else {
-		db.DPrintf("SESSCLNT", "%v Already completed rpc reply %v from %v; seqnos %v\n", c.sid, reply, c.addrs, c.ivs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc reply %v from %v; seqnos %v\n", c.sid, reply, c.addrs, c.ivs)
 	}
 	// If the server closed the session (this is a sessclosed error or an
 	// Rdetach), close the SessClnt.
 	if srvClosedSess(reply.Msg, err) {
-		db.DPrintf("SESSCLNT", "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, s)
+		db.DPrintf(db.SESS_STATE_CLNT, "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, s)
 		c.close()
 	}
 }
@@ -116,7 +116,7 @@ func (c *SessClnt) CompleteRPC(reply *fcall.FcallMsg, err *fcall.Err) {
 func (c *SessClnt) Detach() *fcall.Err {
 	rep, err := c.RPC(sp.MkTdetach(0, 0), nil, fcall.MakeFenceNull())
 	if err != nil {
-		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
+		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err
 	}
 	rmsg, ok := rep.Msg.(*sp.Rerror)
@@ -173,13 +173,13 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *fcall.Err) {
 	}
 
 	if c.nc == nil {
-		db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
 		nc, err := netclnt.MakeNetClnt(c, c.addrs)
 		if err != nil {
-			db.DPrintf("SESSCLNT", "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
+			db.DPrintf(db.SESS_STATE_CLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err
 		}
-		db.DPrintf("SESSCLNT", "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
 	}
 	return c.nc, nil
@@ -200,7 +200,7 @@ func (c *SessClnt) close() {
 		return
 	}
 	c.closed = true
-	db.DPrintf("SESSCLNT", "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	db.DPrintf(db.SESS_STATE_CLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
 	if c.nc != nil {
 		c.nc.Close()
 	}
@@ -230,5 +230,5 @@ func (c *SessClnt) writer() {
 
 		nc.Send(req)
 	}
-	db.DPrintf("SESSCLNT", "%v writer returns %v %v\n", c.sid, c.addrs, c.closed)
+	db.DPrintf(db.SESS_STATE_CLNT, "%v writer returns %v %v\n", c.sid, c.addrs, c.closed)
 }

@@ -13,7 +13,7 @@ func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, boo
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
-		db.DPrintf("SESSION_ERR", "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
+		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", s.Sid))
 		return nil, nil, true, sp.MkRerror(err)
 	}
@@ -92,7 +92,7 @@ func (s *Session) Dispatch(msg fcall.Tmsg, data []byte) (fcall.Tmsg, []byte, boo
 		return reply, nil, false, err
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}
-		db.DPrintf("SESSION", "Try to detach l %v p %v", req.LeadId, req.PropId)
+		db.DPrintf(db.SESS_STATE_SRV, "Try to detach l %v p %v", req.LeadId, req.PropId)
 		// If the leader proposed this detach message, accept it.
 		if req.LeadId == req.PropId {
 			err := s.protsrv.Detach(reply, s.detach)

@@ -2,10 +2,10 @@ package clonedev
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type session struct {
@@ -25,6 +25,6 @@ func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (
 }
 
 func (s *session) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
-	db.DPrintf("CLONEDEV", "Close session ctl %v\n", s.id)
+	db.DPrintf(db.CLONEDEV, "Close session ctl %v\n", s.id)
 	return nil
 }

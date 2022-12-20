@@ -73,14 +73,12 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
 		slp := ji.delay * 2 * time.Duration(rand.Uint64()%100) / 100
-		db.DPrintf("WWWD_TEST", "[%v] iteration %v Random sleep %v", j, i, slp)
 		time.Sleep(slp)
 		start := time.Now()
 		err := clnt.MatMul(MAT_SIZE)
 		assert.Nil(ji.T, err, "Error matmul %v", err)
 		latency += time.Since(start)
 	}
-	db.DPrintf("WWWD_TEST", "[%v] done", j)
 	ch <- latency
 }
 
@@ -98,13 +96,11 @@ func (ji *WwwJobInstance) StartWwwJob() {
 		for j := 0; j < ji.ntrials; j++ {
 			ch := make(chan time.Duration)
 			for c := 0; c < i; c++ {
-				db.DPrintf("WWWD_TEST", "Start client %v", c)
 				go ji.RunClient(c, ch)
 			}
 			var totalLatency time.Duration
 			for c := 0; c < i; c++ {
 				totalLatency += <-ch
-				db.DPrintf("WWWD_TEST", "Done client %v", c)
 			}
 			d := totalLatency.Milliseconds()
 			db.DPrintf(db.ALWAYS, "trial %v nclnt %d avg latency %vms", j, i, float64(d)/(float64(ji.nreq)*float64(i)))

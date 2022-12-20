@@ -84,7 +84,7 @@ func (lg *LoadGenerator) Calibrate() {
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries.
 	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat))+N, benchmarks.REQ)
-	db.DPrintf("TEST", "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
+	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	for i := 0; i < N; i++ {
 		lg.res.Append(lg.avgReqLat, 1)
 	}
@@ -120,13 +120,13 @@ func (lg *LoadGenerator) StatsDataString() string {
 
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
-	db.DPrintf("LOADGEN", "Load generator latencies:\n%v", lg.res)
+	db.DPrintf(db.LOADGEN, "Load generator latencies:\n%v", lg.res)
 	lsum, _ := lg.res.Summary()
 	db.DPrintf(db.ALWAYS, lsum)
 }
 
 func (lg *LoadGenerator) Run() {
-	db.DPrintf("TEST", "Start load generator")
+	db.DPrintf(db.TEST, "Start load generator")
 	lg.warmup()
 	// Start initiator threads.
 	start := time.Now()

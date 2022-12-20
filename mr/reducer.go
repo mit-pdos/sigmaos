@@ -19,11 +19,11 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/writer"
 )
@@ -109,10 +109,10 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 	defer fsl.Exit()
 
 	sym := r.input + "/" + file + "/"
-	db.DPrintf("MR", "readFile %v\n", sym)
+	db.DPrintf(db.MR, "readFile %v\n", sym)
 	rdr, err := fsl.OpenAsyncReader(sym, 0)
 	if err != nil {
-		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
+		db.DPrintf(db.MR, "MakeReader %v err %v", sym, err)
 		return 0, 0, false
 	}
 	defer rdr.Close()
@@ -120,9 +120,9 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 	start := time.Now()
 
 	err = ReadKVs(rdr, data)
-	db.DPrintf("MR0", "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
+	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
-		db.DPrintf("MR", "decodeKV %v err %v\n", sym, err)
+		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
 		return 0, 0, false
 	}
 	return rdr.Nbytes(), time.Since(start), true

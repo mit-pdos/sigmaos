@@ -9,9 +9,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
-	sp "sigmaos/sigmap"
-    "sigmaos/path"
+	"sigmaos/path"
 	"sigmaos/perf"
+	sp "sigmaos/sigmap"
 )
 
 var fss3 *Fss3
@@ -28,7 +28,7 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	p := perf.MakePerf("FSS3")
+	p := perf.MakePerf("S3")
 	defer p.Done()
 
 	commonBuckets := []string{"9ps3", "sigma-common"}

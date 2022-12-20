@@ -63,17 +63,17 @@ func (e *TestEnv) BootMachined() error {
 }
 
 func (e *TestEnv) Shutdown() {
-	db.DPrintf("TEST", "Shutting down")
+	db.DPrintf(db.TEST, "Shutting down")
 	// Destroy the realm
 	e.DestroyRealm(e.rid)
-	db.DPrintf("TEST", "Done destroying Realm")
+	db.DPrintf(db.TEST, "Done destroying Realm")
 
 	// Kill the machined
 	for _, machined := range e.machined {
 		kill(machined)
 	}
 	e.machined = []*exec.Cmd{}
-	db.DPrintf("TEST", "Done killing machineds")
+	db.DPrintf(db.TEST, "Done killing machineds")
 
 	// Kill the sigmamgr
 	kill(e.sigmamgr)
@@ -82,7 +82,7 @@ func (e *TestEnv) Shutdown() {
 	for _, namedCmd := range e.namedCmds {
 		kill(namedCmd)
 	}
-	db.DPrintf("TEST", "Done killing nameds")
+	db.DPrintf(db.TEST, "Done killing nameds")
 }
 
 func (e *TestEnv) bootNameds() error {

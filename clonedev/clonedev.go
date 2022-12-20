@@ -2,12 +2,12 @@ package clonedev
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -51,10 +51,10 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF) *fc
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 	sid := ctx.SessionId()
 	n := SidName(sid.String(), c.fn)
-	db.DPrintf("CLONEDEV", "%v: Clone create %v\n", proc.GetName(), n)
+	db.DPrintf(db.CLONEDEV, "%v: Clone create %v\n", proc.GetName(), n)
 	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR)
 	if err != nil && err.Code() != fcall.TErrExists {
-		db.DPrintf("CLONEDEV", "%v: MkDir %v err %v\n", proc.GetName(), n, err)
+		db.DPrintf(db.CLONEDEV, "%v: MkDir %v err %v\n", proc.GetName(), n, err)
 		return nil, err
 	}
 	var s *session
@@ -64,11 +64,11 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 		s.id = sid
 		s.Inode = c.mfs.MakeDevInode()
 		if err := c.mfs.MkDev(ctl, s); err != nil {
-			db.DPrintf("CLONEDEV", "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
+			db.DPrintf(db.CLONEDEV, "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
 			return nil, err
 		}
 		if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
-			db.DPrintf("CLONEDEV", "%v: RegisterDetach err %v\n", proc.GetName(), err)
+			db.DPrintf(db.CLONEDEV, "%v: RegisterDetach err %v\n", proc.GetName(), err)
 		}
 		if err := c.mksession(c.mfs, sid); err != nil {
 			return nil, err
@@ -77,7 +77,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 		lo, err := c.mfs.Open(ctl, sp.OREAD)
 		s = lo.(*session)
 		if err != nil {
-			db.DPrintf("CLONEDEV", "%v: open %v err %v\n", proc.GetName(), ctl, err)
+			db.DPrintf(db.CLONEDEV, "%v: open %v err %v\n", proc.GetName(), ctl, err)
 			return nil, err
 		}
 	}
@@ -86,22 +86,22 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 
 func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
 	sid := SidName(ctx.SessionId().String(), c.fn)
-	db.DPrintf("CLONEDEV", "%v: Close %v\n", proc.GetName(), sid)
+	db.DPrintf(db.CLONEDEV, "%v: Close %v\n", proc.GetName(), sid)
 	return nil
 }
 
 func (c *Clone) Detach(session fcall.Tsession) {
-	db.DPrintf("CLONEDEV", "Detach %v\n", session)
+	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
 	dir := SidName(session.String(), c.fn)
 	n := dir + "/" + CTL
 	if err := c.mfs.Remove(n); err != nil {
-		db.DPrintf("CLONEDEV", "Remove %v err %v\n", n, err)
+		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", n, err)
 	}
 	if c.detach != nil {
 		c.detach(session)
 	}
 	if err := c.mfs.Remove(dir); err != nil {
-		db.DPrintf("CLONEDEV", "Detach err %v\n", err)
+		db.DPrintf(db.CLONEDEV, "Detach err %v\n", err)
 	}
 }
 

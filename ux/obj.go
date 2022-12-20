@@ -37,15 +37,15 @@ func umode2Perm(umode uint16) sp.Tperm {
 	case syscall.S_IFLNK:
 		perm |= sp.DMSYMLINK
 	}
-	db.DPrintf("UXD0", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
+	db.DPrintf(db.UX, "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
 }
 
 func ustat(path path.Path) (*sp.Stat, *fcall.Err) {
 	var statx unix.Statx_t
-	db.DPrintf("UXD", "ustat %v\n", path)
+	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
-		db.DPrintf("UXD", "ustat %v err %v\n", path, error)
+		db.DPrintf(db.UX, "ustat %v err %v\n", path, error)
 		return nil, UxTo9PError(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
@@ -77,10 +77,10 @@ func (o *Obj) Perm() sp.Tperm {
 	return o.perm
 	// st, err := ustat(o.pathName)
 	// if err != nil {
-	// 	db.DPrintf("UXD", "Perm %v err %v\n", o.pathName, err)
+	// 	db.DPrintf(db.UX, "Perm %v err %v\n", o.pathName, err)
 	// 	return nil, err
 	// }
-	//db.DPrintf("UXD", "Perm %v st %v\n", o.pathName, st)
+	//db.DPrintf(db.UX, "Perm %v st %v\n", o.pathName, st)
 	//return st.Mode, nil
 }
 
@@ -97,7 +97,7 @@ func (o *Obj) PathName() string {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
-	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
+	db.DPrintf(db.UX, "%v: Stat %v\n", ctx, o)
 	st, err := ustat(o.pathName)
 	if err != nil {
 		return nil, err

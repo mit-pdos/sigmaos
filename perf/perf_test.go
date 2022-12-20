@@ -55,7 +55,7 @@ func TestGetCPUTimePid(t *testing.T) {
 	utime0, stime0, utime1, stime1 = tick(pid, &t0)
 	util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
 
-	db.DPrintf("TEST", "Util (sleep): %v", util)
+	db.DPrintf(db.TEST, "Util (sleep): %v", util)
 
 	assert.True(t, util >= 0.0, "Util negative: %v", util)
 	assert.True(t, util < 5.0, "Util too high: %v", util)
@@ -71,7 +71,7 @@ func TestGetCPUTimePid(t *testing.T) {
 		utime0, stime0, utime1, stime1 = tick(pid, &t0)
 		util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
 
-		db.DPrintf("TEST", "Util (%v spinner): %v", i, util)
+		db.DPrintf(db.TEST, "Util (%v spinner): %v", i, util)
 
 		assert.True(t, util >= 100.0*float64(i+1)-10.0, "Util too low (i=%v): %v", i, util)
 		assert.True(t, util < 100.0*float64(i+1)+10.0, "Util too high (i=%v): %v", i, util)

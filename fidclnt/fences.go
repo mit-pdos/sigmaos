@@ -31,7 +31,7 @@ func (ft *FenceTable) Insert(p string, f fcall.Tfence) *fcall.Err {
 
 	path := path.Split(p) // cleans up p
 
-	db.DPrintf("FIDCLNT", "Insert fence %v %v\n", path, f)
+	db.DPrintf(db.FIDCLNT, "Insert fence %v %v\n", path, f)
 	ft.fencedDirs[path.String()] = f
 	return nil
 }
@@ -41,12 +41,11 @@ func (ft *FenceTable) Lookup(p path.Path) *fcall.Tfence {
 	defer ft.Unlock()
 
 	for pn, f := range ft.fencedDirs {
-		db.DPrintf("FIDCLNT", "Lookup fence %v %v\n", p, f)
+		db.DPrintf(db.FIDCLNT, "Lookup fence %v %v\n", p, f)
 		if p.IsParent(path.Split(pn)) {
 			return &f
 		}
 	}
-	db.DPrintf("FIDCLNT", "Lookup fence %v: no fence\n", p)
-	return fcall.MakeFenceNull()
-
+	db.DPrintf(db.FIDCLNT, "Lookup fence %v: no fence\n", p)
+	return sp.MakeFenceNull()
 }

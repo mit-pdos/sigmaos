@@ -4,11 +4,11 @@ import (
 	"database/sql"
 
 	"sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type queryDev struct {
@@ -23,8 +23,8 @@ type fileSession struct {
 }
 
 // XXX wait on close before processing data?
-func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
-	debug.DPrintf("DBSRV", "doQuery: %v\n", string(b))
+func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+	debug.DPrintf(debug.DB, "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
 		return 0, fcall.MkErrError(error)

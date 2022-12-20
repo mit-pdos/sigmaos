@@ -45,7 +45,7 @@ func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
 	p.pd = pd
 	p.attr = a
 	p.stolen = stolen
-	db.DPrintf("PROCD", "Procd init: %v\n", p)
+	db.DPrintf(db.PROCD, "Procd init: %v\n", p)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	return p
 }
@@ -54,26 +54,26 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 	defer p.pd.fs.finish(p)
 	err := cmd.Wait()
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Proc %v finished with error: %v\n", p.attr, err)
+		db.DPrintf(db.PROCD_ERR, "Proc %v finished with error: %v\n", p.attr, err)
 		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
 	err = namespace.Destroy(p.attr.LinuxRoot)
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
+		db.DPrintf(db.PROCD_ERR, "Error namespace destroy: %v", err)
 	}
 }
 
 func (p *LinuxProc) run() error {
-	db.DPrintf("PROCD", "Procd run: %v\n", p.attr)
+	db.DPrintf(db.PROCD, "Procd run: %v\n", p.attr)
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.attr.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
-		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
+		db.DPrintf(db.PROCD_ERR, "Err procd MakeProcDir: %v\n", err)
 	}
 
-	db.DPrintf("PROCD_PERF", "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
+	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
 		cmd = exec.Command(path.Join(sp.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
@@ -106,7 +106,7 @@ func (p *LinuxProc) run() error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)
+		db.DPrintf(db.PROCD_ERR, "Procd run error: %v, %v\n", p.attr, err)
 		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
@@ -126,7 +126,7 @@ func (p *LinuxProc) run() error {
 	p.setPriority()
 
 	p.wait(cmd)
-	db.DPrintf("PROCD", "Procd ran: %v\n", p.attr)
+	db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)
 
 	return nil
 }
@@ -157,7 +157,7 @@ func (p *LinuxProc) getUtilL() float64 {
 func (p *LinuxProc) setCpuAffinityL() {
 	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Error setting CPU affinity for child lambda: %v", err)
+		db.DPrintf(db.PROCD_ERR, "Error setting CPU affinity for child lambda: %v", err)
 	}
 }
 

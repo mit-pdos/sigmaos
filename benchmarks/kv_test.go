@@ -110,7 +110,7 @@ func (ji *KVJobInstance) NextPhase() {
 	// Find out how far off we are from the desired number of clerks in this
 	// phase.
 	diff := len(ji.cpids) - ji.nclerks[ji.phase]
-	db.DPrintf("TEST", "Phase %v: diff %v", ji.phase, diff)
+	db.DPrintf(db.TEST, "Phase %v: diff %v", ji.phase, diff)
 	// While we have too many...
 	for ; diff > 0; diff-- {
 		ji.StopClerk()
@@ -124,7 +124,7 @@ func (ji *KVJobInstance) NextPhase() {
 	// Make sure we got the number of clerks right.
 	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
 	// Sleep for the duration of this phase.
-	db.DPrintf("TEST", "Phase %v: sleep", ji.phase)
+	db.DPrintf(db.TEST, "Phase %v: sleep", ji.phase)
 	// If running with unbounded clerks, sleep for a bit.
 	if len(ji.phases) > 0 {
 		time.Sleep(ji.phases[ji.phase])
@@ -132,7 +132,7 @@ func (ji *KVJobInstance) NextPhase() {
 		// Otherwise, wait for bounded clerks to finish.
 		ji.WaitForClerks()
 	}
-	db.DPrintf("TEST", "Phase %v: done", ji.phase)
+	db.DPrintf(db.TEST, "Phase %v: done", ji.phase)
 	// Move to the  next phase
 	ji.phase++
 }
@@ -196,7 +196,7 @@ func (ji *KVJobInstance) StartClerk() {
 			args = append(args, ji.redisaddr)
 		}
 	}
-	db.DPrintf("TEST", "Spawn clerk")
+	db.DPrintf(db.TEST, "Spawn clerk")
 	var pid proc.Tpid
 	var err error
 	for {
@@ -206,7 +206,7 @@ func (ji *KVJobInstance) StartClerk() {
 		}
 	}
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
-	db.DPrintf("TEST", "Done spawning clerk %v", pid)
+	db.DPrintf(db.TEST, "Done spawning clerk %v", pid)
 	ji.cpids = append(ji.cpids, pid)
 }
 

@@ -23,7 +23,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *fcall.E
 	if err != nil {
 		return sp.NoFid, nil
 	}
-	db.DPrintf("WALK", "unionScan: mnt: %v\n", mnt)
+	db.DPrintf(db.WALK, "unionScan: mnt: %v\n", mnt)
 	if union.UnionMatch(q, mnt) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
@@ -46,7 +46,7 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *fcall.Err) 
 	_, error := reader.ReadDir(drdr, func(st *sp.Stat) (bool, error) {
 		fid1, err := pathc.unionScan(fid, st.Name, q)
 		if err != nil {
-			db.DPrintf("WALK", "unionScan %v err %v\n", st.Name, err)
+			db.DPrintf(db.WALK, "unionScan %v err %v\n", st.Name, err)
 			// ignore error; keep going
 			return false, nil
 		}

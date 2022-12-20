@@ -31,7 +31,7 @@ func (w *Writer) writer() {
 		if w.len > 0 {
 			m := w.len
 			d := w.buf[0:m]
-			db.DPrintf("AWRITER", "%p writer %v\n", w.wrt, m)
+			db.DPrintf(db.AWRITER, "%p writer %v\n", w.wrt, m)
 			w.Unlock()
 
 			// write without holding lock
@@ -47,14 +47,14 @@ func (w *Writer) writer() {
 			w.producer.Broadcast()
 		}
 	}
-	db.DPrintf("AWRITER", "%p writer exit\n", w.wrt)
+	db.DPrintf(db.AWRITER, "%p writer exit\n", w.wrt)
 }
 
 func (w *Writer) Write(p []byte) (int, error) {
 	w.Lock()
 	defer w.Unlock()
 
-	db.DPrintf("AWRITER", "awrwite %p %v\n", w.wrt, len(p))
+	db.DPrintf(db.AWRITER, "awrwite %p %v\n", w.wrt, len(p))
 
 	if w.exit {
 		return 0, fmt.Errorf("Writer is closed")
@@ -76,7 +76,7 @@ func (w *Writer) Close() error {
 	w.Lock()
 	defer w.Unlock()
 
-	db.DPrintf("AWRITER", "close awrwite %p %v\n", w.wrt, w.exit)
+	db.DPrintf(db.AWRITER, "close awrwite %p %v\n", w.wrt, w.exit)
 	if w.exit {
 		return fmt.Errorf("Writer is closed")
 	}

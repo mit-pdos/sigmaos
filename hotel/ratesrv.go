@@ -74,7 +74,7 @@ func (s *Rate) GetRates(req proto.RateRequest, res *proto.RateResult) error {
 			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return err
 			}
-			db.DPrintf("HOTELRATE", "Cache miss: key %v\n", hotelId)
+			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
 			r, err = s.getRate(hotelId)
 			if err != nil {
 				return err

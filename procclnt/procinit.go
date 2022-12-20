@@ -7,8 +7,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 // Right now mounts don't resolve to find the server. So, get the server addr
@@ -28,7 +28,7 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, tree)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
-			db.DPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
+			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
 			db.DFatalf("error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)

@@ -109,12 +109,12 @@ func (s *Www) done() error {
 	if err := s.WaitEvict(proc.GetPid()); err != nil {
 		return err
 	}
-	db.DPrintf("HOTEL_WWW_STATS", "\nUserc %v", s.userc.StatsClnt())
-	db.DPrintf("HOTEL_WWW_STATS", "\nSearchc %v", s.searchc.StatsClnt())
-	db.DPrintf("HOTEL_WWW_STATS", "\nReservec %v", s.reservec.StatsClnt())
-	db.DPrintf("HOTEL_WWW_STATS", "\nProfc %v", s.profc.StatsClnt())
-	db.DPrintf("HOTEL_WWW_STATS", "\nRecc %v", s.recc.StatsClnt())
-	db.DPrintf("HOTEL_WWW", "Www %v evicted", proc.GetPid())
+	db.DPrintf(db.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
+	db.DPrintf(db.HOTEL_WWW_STATS, "\nSearchc %v", s.searchc.StatsClnt())
+	db.DPrintf(db.HOTEL_WWW_STATS, "\nReservec %v", s.reservec.StatsClnt())
+	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
+	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
+	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
@@ -203,7 +203,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db.DPrintf("HOTELWWWD", "Searchres %v %v\n", searchReq, searchRes)
+	db.DPrintf(db.HOTEL_WWW, "Searchres %v %v\n", searchReq, searchRes)
 	// grab locale from query params or default to en
 	locale := r.URL.Query().Get("locale")
 	//	locale := r.FormValue("locale")
@@ -415,7 +415,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db.DPrintf("HOTEL_WWW", "Geo Nearby: %v %v\n", greq, gres)
+	db.DPrintf(db.HOTEL_WWW, "Geo Nearby: %v %v\n", greq, gres)
 
 	str := "Geo!"
 

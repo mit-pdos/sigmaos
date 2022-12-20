@@ -166,7 +166,7 @@ func nonemptydir(inode fs.FsObj) bool {
 func (dir *DirImpl) remove(name string) *fcall.Err {
 	inode, err := dir.lookup(name)
 	if err != nil {
-		db.DPrintf("MEMFS", "remove %v file not found %v", dir, name)
+		db.DPrintf(db.MEMFS, "remove %v file not found %v", dir, name)
 		return err
 	}
 	if nonemptydir(inode) {
@@ -182,7 +182,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n fcall.Tsize, v sp.TQversi
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("MEMFS", "%v: ReadDir %v\n", ctx, dir)
+	db.DPrintf(db.MEMFS, "%v: ReadDir %v\n", ctx, dir)
 	return dir.lsL(cursor)
 }
 
@@ -205,7 +205,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) 
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf("MEMFS", "Create %v in %v -> %v\n", name, dir, newi)
+	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newi)
 	dir.SetMtime(time.Now().Unix())
 	return newi, dir.createL(newi, name)
 }
@@ -214,7 +214,7 @@ func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *fcall.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("MEMFS", "CreateDev %v in %v -> %v\n", name, dir, i)
+	db.DPrintf(db.MEMFS, "CreateDev %v in %v -> %v\n", name, dir, i)
 	dir.SetMtime(time.Now().Unix())
 	return dir.createL(i, name)
 }
@@ -252,7 +252,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *fcall.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
+	db.DPrintf(db.MEMFS, "%v: Rename %v -> %v\n", dir, from, to)
 	ino, err := dir.lookup(from)
 	if err != nil {
 		return err
@@ -291,7 +291,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *fc
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)
 
-	db.DPrintf("MEMFS", "Renameat %v %v to %v %v\n", dir, old, newdir, new)
+	db.DPrintf(db.MEMFS, "Renameat %v %v to %v %v\n", dir, old, newdir, new)
 	ino, err := dir.lookup(old)
 	if err != nil {
 		return fcall.MkErr(fcall.TErrNotfound, old)
@@ -314,7 +314,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *fc
 }
 
 func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *fcall.Err {
-	db.DPrintf("MEMFS", "Remove: %v %v\n", dir, n)
+	db.DPrintf(db.MEMFS, "Remove: %v %v\n", dir, n)
 
 	dir.mu.Lock()
 	defer dir.mu.Unlock()

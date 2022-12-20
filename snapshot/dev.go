@@ -26,8 +26,8 @@ func (dev *Dev) Read(ctx fs.CtxI, off sp.Toffset, cnt fcall.Tsize, v sp.TQversio
 	return b, nil
 }
 
-func (dev *Dev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
-	db.DPrintf("SNAP", "Received snapshot of length %v", len(b))
+func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
+	db.DPrintf(db.SNAP, "Received snapshot of length %v", len(b))
 	dev.srv.Restore(b)
 	return fcall.Tsize(len(b)), nil
 }

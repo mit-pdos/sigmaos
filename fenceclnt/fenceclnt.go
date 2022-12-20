@@ -36,18 +36,18 @@ func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 func (fc *FenceClnt) FenceAtEpoch(epoch fcall.Tepoch, paths []string) error {
 	f, err := fc.GetFence(epoch)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
+		db.DPrintf(db.FENCECLNT_ERR, "GetFence %v err %v", fc.Name(), err)
 		return err
 	}
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence *fcall.Tfence, paths []string) error {
-	db.DPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
+func (fc *FenceClnt) fencePaths(fence *sp.Tfence, paths []string) error {
+	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, *fence)
 		if err != nil {
-			db.DPrintf("FENCECLNT_ERR", "fencePath %v err %v", p, err)
+			db.DPrintf(db.FENCECLNT_ERR, "fencePath %v err %v", p, err)
 			return err
 		}
 	}
@@ -66,7 +66,7 @@ func (fc *FenceClnt) registerFence(path string, fence fcall.Tfence) error {
 	// times.
 	//
 	//if _, err := fc.GetDir(path + "/"); err != nil {
-	//	db.DPrintf("FENCECLNT_ERR", "WARNING getdir %v err %v\n", path, err)
+	//	db.DPrintf(db.FENCECLNT_ERR, "WARNING getdir %v err %v\n", path, err)
 	//	return err
 	//}
 	return nil
@@ -75,13 +75,13 @@ func (fc *FenceClnt) registerFence(path string, fence fcall.Tfence) error {
 func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
 	srv, _, err := fc.PathLastSymlink(p)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", p, err)
+		db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", p, err)
 		return nil, err
 	}
 	dn := srv + "/" + sp.FENCEDIR
 	sts, err := fc.GetDir(dn)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "GetDir %v err %v", dn, err)
+		db.DPrintf(db.FENCECLNT_ERR, "GetDir %v err %v", dn, err)
 	}
 	return sts, nil
 }
@@ -89,23 +89,23 @@ func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
 func (fc *FenceClnt) RemoveFence(dirs []string) error {
 	e, err := fc.ReadEpoch()
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "ReadEpoch %v err %v", fc.Name(), err)
+		db.DPrintf(db.FENCECLNT_ERR, "ReadEpoch %v err %v", fc.Name(), err)
 		return err
 	}
 	f, err := fc.GetFence(e)
 	if err != nil {
-		db.DPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
+		db.DPrintf(db.FENCECLNT_ERR, "GetFence %v err %v", fc.Name(), err)
 		return err
 	}
 	for _, d := range dirs {
 		srv, _, err := fc.PathLastSymlink(d)
 		if err != nil {
-			db.DPrintf("FENCECLNT_ERR", "PathLastSymlink %v err %v", d, err)
+			db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", d, err)
 			return err
 		}
 		fn := srv + "/" + sp.FENCEDIR + "/" + f.Fenceid.Tpath().String()
 		if err := fc.Remove(fn); err != nil {
-			db.DPrintf("FENCECLNT_ERR", "Remove %v err %v", fn, err)
+			db.DPrintf(db.FENCECLNT_ERR, "Remove %v err %v", fn, err)
 			return err
 		}
 	}

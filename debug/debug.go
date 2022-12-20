@@ -14,25 +14,27 @@ import (
 // can be a list of labels (e.g., "RPC;PATHCLNT").
 //
 
-const ALWAYS = "STATUS"
-
-var labels map[string]bool
+var labels map[Tselector]bool
 
 func init() {
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	labels = proc.GetLabels(proc.SIGMADEBUG)
+	labelstr := proc.GetLabels(proc.SIGMADEBUG)
+	labels = make(map[Tselector]bool, len(labelstr))
+	for k, v := range labelstr {
+		labels[Tselector(k)] = v
+	}
 }
 
 // Sometimes, converting pointers to call DPrintf is very expensive (and occurs
 // often, e.g., in the session layer). So, the function below can be called to
 // efficiently check if the DPrintf would succeed.
-func WillBePrinted(label string) bool {
+func WillBePrinted(label Tselector) bool {
 	_, ok := labels[label]
 	return ok || label == ALWAYS
 }
 
-func DPrintf(label string, format string, v ...interface{}) {
+func DPrintf(label Tselector, format string, v ...interface{}) {
 	if _, ok := labels[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}

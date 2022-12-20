@@ -59,7 +59,7 @@ func (c *Clerk) serve() {
 				if req, err := spcodec.UnmarshalFrame(bytes.NewReader(frame)); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
-					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
+					db.DPrintf(db.REPLRAFT, "Serve request %v\n", req)
 					//				c.printOpTiming(req, frame)
 					c.apply(req, committedReqs.leader)
 				}
@@ -69,7 +69,7 @@ func (c *Clerk) serve() {
 }
 
 func (c *Clerk) propose(op *Op) {
-	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
+	db.DPrintf(db.REPLRAFT, "Propose %v\n", op.request)
 	op.startTime = time.Now()
 	frame, err := spcodec.MarshalFrameByte(op.request)
 	if err != nil {
@@ -99,7 +99,7 @@ func (c *Clerk) apply(fc *fcall.FcallMsg, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
 	op := c.getOp(fc)
 	if op != nil {
-		db.DPrintf("TIMING", "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), fc)
+		db.DPrintf(db.RAFT_TIMING, "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), fc)
 	}
 	// For now, every node can cause a detach to happen
 	if fc.GetType() == fcall.TTdetach {

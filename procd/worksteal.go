@@ -32,7 +32,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		// Don't bother reading the BE queue if we couldn't possibly claim the
 		// proc.
 		if wsQueue == sp.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
-			db.DPrintf("PROCD", "Skip monitoring BE WS queue because we can't claim another BE proc")
+			db.DPrintf(db.PROCD, "Skip monitoring BE WS queue because we can't claim another BE proc")
 			continue
 		}
 		var nremote int
@@ -51,13 +51,13 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 					stealable = append(stealable, st.Name)
 				}
 			}
-			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(stealable), nremote)
+			db.DPrintf(db.PROCD, "Found %v stealable procs, of which %v belonged to other procds", len(stealable), nremote)
 			return len(stealable) == 0
 		})
 		// Version error may occur if another procd has modified the ws dir, and
 		// unreachable err may occur if the other procd is shutting down.
 		if err != nil && (fcall.IsErrVersion(err) || fcall.IsErrUnreachable(err)) {
-			db.DPrintf("PROCD_ERR", "Error ReadDirWatch: %v %v", err, len(sts))
+			db.DPrintf(db.PROCD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
 			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
 		}
@@ -71,7 +71,7 @@ func (pd *Procd) monitorWSQueue(wsQueue string) {
 		})
 		// Store the queue of stealable procs for worker threads to read.
 		pd.Lock()
-		db.DPrintf("PROCD", "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
+		db.DPrintf(db.PROCD, "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
 		pd.wsQueues[wsQueuePath] = stealable
 		// Wake up waiting workers to try to steal each proc.
 		for _ = range stealable {
@@ -114,16 +114,16 @@ func (pd *Procd) offerStealableProcs() {
 				db.DFatalf("Error ProcessDir: p %v err %v myIP %v", runqPath, err, pd.memfssrv.MyAddr())
 			}
 		}
-		//		db.DPrintf("PROCD", "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
+		//		db.DPrintf(db.PROCD, "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
 		for pid, runq := range toOffer {
-			db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
+			db.DPrintf(db.PROCD, "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
 			runqPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), runq)
 			target := []byte(path.Join(runqPath, pid) + "/")
 			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
 			link := path.Join(sp.PROCD_WS, runq, pid)
 			if err := pd.Symlink(target, link, 0777|sp.DMTMP); err != nil {
 				if fcall.IsErrExists(err) {
-					db.DPrintf("PROCD", "Re-advertise symlink %v", target)
+					db.DPrintf(db.PROCD, "Re-advertise symlink %v", target)
 				} else {
 					pd.perf.Done()
 					db.DFatalf("Error Symlink: %v", err)
@@ -193,7 +193,7 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 	// Try to claim the proc by removing it from the runq. If the remove is
 	// successful, then we claimed the proc.
 	if err := pd.Remove(procPath); err != nil {
-		db.DPrintf("PROCD", "Failed to claim: %v", err)
+		db.DPrintf(db.PROCD, "Failed to claim: %v", err)
 		// If we didn't successfully claim the proc, but we *did* successfully
 		// create the semaphore, then someone else must have created and then
 		// removed the original one already. Remove/clean up the semaphore.
@@ -202,6 +202,6 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 		}
 		return false
 	}
-	db.DPrintf("PROCD", "Sem init done: %v", p)
+	db.DPrintf(db.PROCD, "Sem init done: %v", p)
 	return true
 }

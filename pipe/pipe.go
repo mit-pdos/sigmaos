@@ -7,10 +7,10 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/sesscond"
+	sp "sigmaos/sigmap"
 )
 
 const PIPESZ = 8192
@@ -51,10 +51,10 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 			return nil, fcall.MkErr(fcall.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
-		db.DPrintf("PIPE", "%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
+		db.DPrintf(db.PIPE, "%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
-			db.DPrintf("PIPE", "Wait for writer %v\n", ctx.SessionId())
+			db.DPrintf(db.PIPE, "Wait for writer %v\n", ctx.SessionId())
 			err := pipe.condr.Wait(ctx.SessionId())
 			if err != nil {
 				pipe.nreader -= 1
@@ -72,13 +72,13 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *fcall.Err) {
 			return nil, fcall.MkErr(fcall.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
-		db.DPrintf("PIPE", "%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
+		db.DPrintf(db.PIPE, "%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
-			db.DPrintf("PIPE", "Wait for reader %v\n", ctx.SessionId())
+			db.DPrintf(db.PIPE, "Wait for reader %v\n", ctx.SessionId())
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
-				db.DPrintf("PIPE", "Wait reader err %v %v\n", err, ctx.SessionId())
+				db.DPrintf(db.PIPE, "Wait reader err %v %v\n", err, ctx.SessionId())
 				pipe.nwriter -= 1
 				if pipe.nwriter == 0 {
 					pipe.wclosed = true
@@ -100,7 +100,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	db.DPrintf("PIPE", "%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
+	db.DPrintf(db.PIPE, "%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
 	if mode == sp.OREAD {
 		pipe.nreader -= 1
 		if pipe.nreader == 0 {
@@ -178,7 +178,7 @@ func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	db.DPrintf("PIPE", "Unlink: %v\n", pipe)
+	db.DPrintf(db.PIPE, "Unlink: %v\n", pipe)
 
 	pipe.nlink -= 1
 	pipe.condw.Signal()

@@ -84,7 +84,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	db.DPrintf("MR", "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
+	db.DPrintf(db.MR, "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
 	c.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
 
 	m, err := strconv.Atoi(args[1])
@@ -216,7 +216,7 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 			c.restart(s, t)
 		} else { // if failure but not restart, rerun task immediately again
 			to := dir + "/" + t
-			db.DPrintf("MR", "task %v failed %v err %v\n", t, status, err)
+			db.DPrintf(db.MR, "task %v failed %v err %v\n", t, status, err)
 			if err := c.Rename(dir+TIP+"/"+t, to); err != nil {
 				db.DFatalf("rename to runnable %v err %v\n", to, err)
 			}
@@ -230,7 +230,7 @@ func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func
 	// Make task proc structures.
 	for i, tn := range taskNames {
 		tasks[i] = f(tn)
-		db.DPrintf("MR", "prep to burst-spawn task %v %v\n", tasks[i].Pid, tasks[i].Args)
+		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].Pid, tasks[i].Args)
 	}
 	start := time.Now()
 	// Burst-spawn procs.
@@ -343,7 +343,7 @@ func (c *Coord) Round(ttype string) {
 			break
 		}
 		res := <-ch
-		db.DPrintf("MR", "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
+		db.DPrintf(db.MR, "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
@@ -372,7 +372,7 @@ func (c *Coord) monitorProcds() {
 }
 
 func (c *Coord) Work() {
-	db.DPrintf("MR", "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
+	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
 	// so need to set a fence.

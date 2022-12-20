@@ -26,7 +26,7 @@ func MakeSessionMgr(st *SessionTable, pfn sp.Fsrvfcall) *SessionMgr {
 func (sm *SessionMgr) TimeoutSession() {
 	sess := sm.st.LastSession()
 	if sess != nil {
-		db.DPrintf("SESSION", "Test TimeoutSession %v", sess.Sid)
+		db.DPrintf(db.SESS_STATE_SRV, "Test TimeoutSession %v", sess.Sid)
 		sess.timeout()
 	}
 }
@@ -48,7 +48,7 @@ func (sm *SessionMgr) getConnectedSessions() []uint64 {
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.isConnected() {
-			db.DPrintf("SESSION", "Sess %v is connected, generating heartbeat.", sid)
+			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected, generating heartbeat.", sid)
 			sess = append(sess, uint64(s.Sid))
 		}
 	}
@@ -64,7 +64,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if timedout, lhb := s.timedOut(); timedout && !s.IsClosed() {
-			db.DPrintf("SESSION_ERR", "Sess %v timed out, last heartbeat: %v", sid, lhb)
+			db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v timed out, last heartbeat: %v", sid, lhb)
 			sess = append(sess, s)
 		}
 	}

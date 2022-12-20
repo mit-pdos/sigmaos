@@ -11,15 +11,15 @@ import (
 	"net/http/pprof"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
-	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 )
 
 // HTTP server paths
@@ -147,11 +147,11 @@ func (www *Wwwd) removePipe(pipeName string) {
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
-	db.DPrintf("WWW", "rwResponse: %v\n", pipePath)
+	db.DPrintf(db.WWW, "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
 	fd, err := www.Open(pipePath, sp.OREAD)
 	if err != nil {
-		db.DPrintf("WWW_ERR", "pipe open %v failed %v", pipePath, err)
+		db.DPrintf(db.WWW_ERR, "pipe open %v failed %v", pipePath, err)
 		return
 	}
 	defer www.Close(fd)
@@ -182,19 +182,19 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		// Set the shared link to point to the pipe
 		a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	}
-	db.DPrintf("WWW", "About to spawn %v", a)
+	db.DPrintf(db.WWW, "About to spawn %v", a)
 	_, errs := www.SpawnBurst([]*proc.Proc{a})
 	if len(errs) != 0 {
 		db.DFatalf("Error SpawnBurst %v", errs)
 		return nil, errs[0]
 	}
-	db.DPrintf("WWW", "About to WaitStart %v", a)
+	db.DPrintf(db.WWW, "About to WaitStart %v", a)
 	err := www.WaitStart(pid)
 	if err != nil {
 		db.DFatalf("Error WaitStart %v", err)
 		return nil, err
 	}
-	db.DPrintf("WWW", "Done WaitStart %v", a)
+	db.DPrintf(db.WWW, "Done WaitStart %v", a)
 	if pipe {
 		// Read from the pipe in another thread. This way, if the child crashes or
 		// terminates normally, we'll catch it with WaitExit and remove the pipe so
@@ -203,9 +203,9 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 			www.rwResponse(w, pipeName)
 		}()
 	}
-	db.DPrintf("WWW", "About to WaitExit %v", a)
+	db.DPrintf(db.WWW, "About to WaitExit %v", a)
 	status, err := www.WaitExit(pid)
-	db.DPrintf("WWW", "WaitExit done %v status %v err %v", pid, status, err)
+	db.DPrintf(db.WWW, "WaitExit done %v status %v err %v", pid, status, err)
 	if pipe {
 		www.removePipe(pipeName)
 	}

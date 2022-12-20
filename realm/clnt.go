@@ -75,7 +75,7 @@ func (clnt *RealmClnt) GrowRealm(rid string) {
 			db.DFatalf("Error MkProtDevClnt: %v", err)
 		}
 	}
-	db.DPrintf("REALMCLNT", "Artificially grow realm %v", rid)
+	db.DPrintf(db.REALMCLNT, "Artificially grow realm %v", rid)
 	res := &proto.SigmaMgrResponse{}
 	req := &proto.SigmaMgrRequest{
 		RealmId: rid,

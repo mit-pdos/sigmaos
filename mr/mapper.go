@@ -154,7 +154,7 @@ func (m *Mapper) informReducer() error {
 
 		target := shardtarget(m.job, pn, m.bin, r)
 
-		db.DPrintf("MR", "name %s target %s\n", name, target)
+		db.DPrintf(db.MR, "name %s target %s\n", name, target)
 
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
@@ -242,13 +242,13 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 			break
 		} else if err != nil {
 			c, _ := m.GetFile(m.input)
-			db.DPrintf("MR", "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
+			db.DPrintf(db.MR, "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
 			return 0, 0, err
 		}
-		db.DPrintf("MR", "Mapper %s: process split %v\n", m.bin, s)
+		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.DoSplit(&s)
 		if err != nil {
-			db.DPrintf("MR", "doSplit %v err %v\n", s, err)
+			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, err
 		}
 		if n < s.Length {
@@ -282,7 +282,7 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
-	db.DPrintf("MRTPT", "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	db.DPrintf(db.MR_TPT, "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))

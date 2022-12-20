@@ -38,11 +38,11 @@ func (ctl *SpawnFile) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversio
 		fcall.MkErr(fcall.TErrInval, fmt.Sprintf("Unmarshal %v", err))
 	}
 
-	db.DPrintf("PROCD", "Control file write: %v", p)
+	db.DPrintf(db.PROCD, "Control file write: %v", p)
 
 	ctl.pd.fs.spawn(p, b)
 
-	db.DPrintf("PROCD", "fs spawn done: %v", p)
+	db.DPrintf(db.PROCD, "fs spawn done: %v", p)
 
 	return sp.Tsize(len(b)), nil
 }

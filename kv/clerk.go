@@ -11,13 +11,13 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 	"sigmaos/procclnt"
 	"sigmaos/reader"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -102,7 +102,7 @@ func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 		if strings.HasPrefix(mnt, group.JobDir(JobDir(kc.job))) {
 			kvd := strings.TrimPrefix(mnt, group.JobDir(JobDir(kc.job))+"/")
 			if !kvs.present(kvd) {
-				db.DPrintf("KVCLERK0", "Detach kv %v", kvd)
+				db.DPrintf(db.KVCLERK, "Detach kv %v", kvd)
 				kc.Detach(group.GrpPath(JobDir(kc.job), kvd))
 			}
 		}
@@ -123,19 +123,19 @@ func (kc *KvClerk) switchConfig() error {
 	for {
 		err := kc.GetFileJsonWatch(KVConfig(kc.job), kc.conf)
 		if err != nil {
-			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v", KVConfig(kc.job), err)
+			db.DPrintf(db.KVCLERK_ERR, "GetFileJsonWatch %v err %v", KVConfig(kc.job), err)
 			return err
 		}
-		db.DPrintf("KVCLERK", "Conf %v", kc.conf)
+		db.DPrintf(db.KVCLERK, "Conf %v", kc.conf)
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if fcall.IsErrVersion(err) || fcall.IsErrStale(err) {
-				db.DPrintf("KVCLERK_ERR", "version mismatch; retry")
+				db.DPrintf(db.KVCLERK_ERR, "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
 			}
-			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v", dirs, err)
+			db.DPrintf(db.KVCLERK_ERR, "FenceAtEpoch %v failed %v", dirs, err)
 			return err
 		}
 
@@ -152,12 +152,12 @@ func (kc *KvClerk) fixRetry(err error) error {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf("KVCLERK_ERR", "Wait for shard %v", fcall.ErrPath(err))
+		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", fcall.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
 	if fcall.IsErrStale(err) {
-		db.DPrintf("KVCLERK_ERR", "fixRetry %v", err)
+		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}
 	return err
@@ -168,7 +168,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
-		db.DPrintf("KVCLERK", "o %v conf %v", o.kind, kc.conf)
+		db.DPrintf(db.KVCLERK, "o %v conf %v", o.kind, kc.conf)
 		fn := keyPath(kc.job, kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
@@ -211,7 +211,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
-	db.DPrintf("KVCLERK", "op %v fn %v err %v", o.kind, fn, o.err)
+	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k Tkey, off sp.Toffset) ([]byte, error) {

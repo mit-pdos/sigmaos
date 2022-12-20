@@ -126,7 +126,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return false, nil, err
 			}
-			db.DPrintf("HOTELRESERVE", "Check: cache miss res: key %v\n", key)
+			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
 			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
 			err := s.dbc.Query(q, &reserves)
 			if err != nil {
@@ -149,7 +149,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return false, nil, err
 			}
-			db.DPrintf("HOTELRESERVE", "Check: cache miss id: key %v\n", key)
+			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)
 			var nums []Number
 			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
 			err = s.dbc.Query(q, &nums)
@@ -186,7 +186,7 @@ func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveRe
 	}
 
 	// update reservation number
-	db.DPrintf("HOTELRESERVE", "Update cache %v\n", date_num)
+	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
 		if err := s.cachec.Set(key, &cnt); err != nil {
 			return err

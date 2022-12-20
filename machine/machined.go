@@ -85,7 +85,7 @@ func (m *Machined) BootNoded(req proto.MachineRequest, res *proto.MachineRespons
 	defer m.Unlock()
 
 	pid := proc.Tpid(req.NodedId)
-	db.DPrintf("MACHINED", "Booting noded %v", pid)
+	db.DPrintf(db.MACHINED, "Booting noded %v", pid)
 
 	p := proc.MakeProcPid(pid, "realm/noded", []string{m.pds.MyAddr()})
 	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", false)
@@ -97,7 +97,7 @@ func (m *Machined) BootNoded(req proto.MachineRequest, res *proto.MachineRespons
 		db.DFatalf("Error WaitStart(%v): %v", pid, err)
 	}
 
-	db.DPrintf("MACHINED", "Finished booting noded %v", pid)
+	db.DPrintf(db.MACHINED, "Finished booting noded %v", pid)
 	res.OK = true
 	return nil
 }

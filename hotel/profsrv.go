@@ -108,7 +108,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 }
 
 func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) error {
-	db.DPrintf("HOTELPROF", "Req %v\n", req)
+	db.DPrintf(db.HOTEL_PROF, "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
@@ -116,7 +116,7 @@ func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) err
 			if err.Error() != cacheclnt.ErrMiss.Error() {
 				return err
 			}
-			db.DPrintf("HOTELPROF", "Cache miss: key %v\n", id)
+			db.DPrintf(db.HOTEL_PROF, "Cache miss: key %v\n", id)
 			p, err = ps.getProf(id)
 			if err != nil {
 				return err

@@ -87,7 +87,7 @@ func (m *SigmaResourceMgr) initFS() {
 
 func (m *SigmaResourceMgr) FreeCores(req mproto.MachineRequest, res *mproto.MachineResponse) error {
 	m.freeCores(req.Ncores)
-	db.DPrintf("SIGMAMGR", "free cores %v", req.Ncores)
+	db.DPrintf(db.SIGMAMGR, "free cores %v", req.Ncores)
 	res.OK = true
 	return nil
 }
@@ -98,14 +98,14 @@ func (m *SigmaResourceMgr) FreeNode(req proto.SigmaMgrRequest, res *proto.SigmaM
 }
 
 func (m *SigmaResourceMgr) CreateRealm(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
-	db.DPrintf("SIGMAMGR", "Create realm %v", req.RealmId)
+	db.DPrintf(db.SIGMAMGR, "Create realm %v", req.RealmId)
 	m.createRealm(req.RealmId)
 	res.OK = true
 	return nil
 }
 
 func (m *SigmaResourceMgr) DestroyRealm(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
-	db.DPrintf("SIGMAMGR", "Destroy realm %v", req.RealmId)
+	db.DPrintf(db.SIGMAMGR, "Destroy realm %v", req.RealmId)
 	m.destroyRealm(req.RealmId)
 	res.OK = true
 	return nil
@@ -114,7 +114,7 @@ func (m *SigmaResourceMgr) DestroyRealm(req proto.SigmaMgrRequest, res *proto.Si
 func (m *SigmaResourceMgr) RequestCores(req proto.SigmaMgrRequest, res *proto.SigmaMgrResponse) error {
 	m.Lock()
 	defer m.Unlock()
-	db.DPrintf("SIGMAMGR", "[%v] Request cores hardreq %v", req.RealmId, req.HardReq)
+	db.DPrintf(db.SIGMAMGR, "[%v] Request cores hardreq %v", req.RealmId, req.HardReq)
 
 	// If realm still exists, try to grow it.
 	if _, ok := m.realmLocks[req.RealmId]; ok {
@@ -130,11 +130,11 @@ func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 		if atomic.LoadInt64(&m.freeCoreGroups) > 0 {
 			return true
 		}
-		db.DPrintf("SIGMAMGR", "Tried to get cores, but none free.")
+		db.DPrintf(db.SIGMAMGR, "Tried to get cores, but none free.")
 		// TODO: parametrize?
 		time.Sleep(10 * time.Millisecond)
 	}
-	db.DPrintf("SIGMAMGR", "Failed to find any free cores.")
+	db.DPrintf(db.SIGMAMGR, "Failed to find any free cores.")
 	return false
 }
 
@@ -169,7 +169,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 		if nfree < nallocd {
 			nallocd = nfree
 		}
-		db.DPrintf("SIGMAMGR", "Allocate %v free cores to realm %v", nallocd, realmId)
+		db.DPrintf(db.SIGMAMGR, "Allocate %v free cores to realm %v", nallocd, realmId)
 		// Allocate cores to this realm.
 		if nallocd > 0 {
 			m.allocCores(realmId, nallocd)
@@ -183,15 +183,15 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 	nodedIds := make([]string, 0)
 	// No cores were available, so try to find a realm with spare resources.
 	if len(machines) == 0 || !hardReq {
-		db.DPrintf("SIGMAMGR", "[%v] search for cores without machine preference", realmId)
+		db.DPrintf(db.SIGMAMGR, "[%v] search for cores without machine preference", realmId)
 		victimRealm, _, ok = m.findOverProvisionedRealm(realmId, "")
 		victimRealms = append(victimRealms, victimRealm)
 		nodedIds = append(nodedIds, nodedId)
 	} else {
-		db.DPrintf("SIGMAMGR", "[%v] search for cores with machine preference %v", realmId, machines)
+		db.DPrintf(db.SIGMAMGR, "[%v] search for cores with machine preference %v", realmId, machines)
 		var success bool
 		for _, machine := range machines {
-			db.DPrintf("SIGMAMGR", "[%v] search for cores on %v", realmId, machine)
+			db.DPrintf(db.SIGMAMGR, "[%v] search for cores on %v", realmId, machine)
 			victimRealm, nodedId, success = m.findOverProvisionedRealm(realmId, machine)
 			if success {
 				victimRealms = append(victimRealms, victimRealm)
@@ -201,11 +201,11 @@ func (m *SigmaResourceMgr) growRealmL(realmId string, qlen int, machines []strin
 		}
 	}
 	if !ok {
-		db.DPrintf("SIGMAMGR", "[%v] No overprovisioned realms available", realmId)
+		db.DPrintf(db.SIGMAMGR, "[%v] No overprovisioned realms available", realmId)
 		return false
 	}
 	// Ask the over-provisioned realms to give up some cores.
-	db.DPrintf("SIGMAMGR", "[%v] Requesting cores from realms %v nodeds %v", realmId, victimRealms, nodedIds)
+	db.DPrintf(db.SIGMAMGR, "[%v] Requesting cores from realms %v nodeds %v", realmId, victimRealms, nodedIds)
 	ok = false
 	for i := range nodedIds {
 		if ok = m.requestCores(victimRealms[i], nodedIds[i], hardReq); ok {
@@ -257,7 +257,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 			// requester has no preference
 			if machineId == ndCfg.MachineId || machineId == "" {
 				var op bool
-				if anyLC, runningProcs, op = nodedOverprovisioned(m.FsLib, m.ConfigClnt, realmId, nodedId, "SIGMAMGR"); op {
+				if anyLC, runningProcs, op = nodedOverprovisioned(m.FsLib, m.ConfigClnt, realmId, nodedId, db.SIGMAMGR); op {
 					m.anylc[realmId] = m.anylc[realmId] || anyLC
 					overprovisioned = true
 					break
@@ -291,7 +291,7 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string, machineI
 // XXX Eventually, we'll want to find overprovisioned realms according to
 // more nuanced metrics, e.g. how many Nodeds are running procs that hold
 // state, etc.
-func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug string) (anylc bool, runningprocs bool, overprov bool) {
+func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId string, nodedId string, debug db.Tselector) (anylc bool, runningprocs bool, overprov bool) {
 	ndCfg := MakeNodedConfig()
 	cc.ReadConfig(NodedConfPath(nodedId), ndCfg)
 	db.DPrintf(debug, "[%v] Check noded %v utilization", realmId, nodedId)
@@ -299,7 +299,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	err := fsl.GetFileJson(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.STATSD), s)
 	// Only overprovisioned if hasn't shut down/crashed.
 	if err != nil {
-		db.DPrintf(debug+"_ERR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+		db.DPrintf(debug+db.ERR, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 		return false, false, false
 	}
 	// Count the total number of cores assigned to this noded.
@@ -340,7 +340,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		for _, q := range qs {
 			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, q))
 			if err != nil {
-				db.DPrintf(debug+"_ERR", "Couldn't get queue dir %v: %v", q, err)
+				db.DPrintf(debug+db.ERR, "Couldn't get queue dir %v: %v", q, err)
 				return false, false, false
 			}
 			// If there are LC procs queued, don't shrink.
@@ -351,7 +351,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 		}
 		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.PROCD_RUNNING))
 		if err != nil {
-			db.DPrintf(debug+"_ERR", "Couldn't get procs running dir: %v", err)
+			db.DPrintf(debug+db.ERR, "Couldn't get procs running dir: %v", err)
 			return false, false, false
 		}
 		// If this is the last core group for this noded, and its utilization is over
@@ -378,7 +378,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	} else {
 		runningProcs, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, sp.PROCD_RUNNING))
 		if err != nil {
-			db.DPrintf(debug+"_ERR", "Couldn't get procs running dir: %v", err)
+			db.DPrintf(debug+db.ERR, "Couldn't get procs running dir: %v", err)
 			return false, false, false
 		}
 		if len(runningProcs) > 3 {
@@ -415,7 +415,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq bool) bool {
-	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
+	db.DPrintf(db.SIGMAMGR, "Sigmamgr requesting cores from %v", realmId)
 	res := &proto.RealmMgrResponse{}
 	req := &proto.RealmMgrRequest{
 		Ncores:  1,
@@ -426,7 +426,7 @@ func (m *SigmaResourceMgr) requestCores(realmId string, nodedId string, hardReq 
 	if err != nil {
 		db.DFatalf("Error RPC: %v %v", err, res.OK)
 	}
-	db.DPrintf("SIGMAMGR", "Sigmamgr done requesting cores from %v", realmId)
+	db.DPrintf(db.SIGMAMGR, "Sigmamgr done requesting cores from %v", realmId)
 	return res.OK
 }
 
@@ -435,7 +435,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	m.Lock()
 	defer m.Unlock()
 
-	db.DPrintf("SIGMAMGR", "Destroy realm %v", realmId)
+	db.DPrintf(db.SIGMAMGR, "Destroy realm %v", realmId)
 
 	lockRealm(m.realmLocks[realmId], realmId)
 
@@ -458,7 +458,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	}
 
 	m.evictRealmMgr(realmId)
-	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
+	db.DPrintf(db.SIGMAMGR, "Done destroying realm %v", realmId)
 }
 
 func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
@@ -470,7 +470,7 @@ func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 	if err := m.WaitStart(p.Pid); err != nil {
 		db.DFatalf("Error WaitStart realmmgr %v", err)
 	}
-	db.DPrintf("SIGMAMGR", "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)
+	db.DPrintf(db.SIGMAMGR, "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)
 	m.realmmgrs[realmId] = pid
 	var err error
 	m.rclnts[realmId], err = protdevclnt.MkProtDevClnt(m.FsLib, realmMgrPath(realmId))
@@ -481,7 +481,7 @@ func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 
 func (m *SigmaResourceMgr) evictRealmMgr(realmId string) {
 	pid := m.realmmgrs[realmId]
-	db.DPrintf("SIGMAMGR", "Sigmamgr evicting realmmgr %v in realm %v", pid.String(), realmId)
+	db.DPrintf(db.SIGMAMGR, "Sigmamgr evicting realmmgr %v in realm %v", pid.String(), realmId)
 	if err := m.Evict(pid); err != nil {
 		db.DFatalf("Error evict realmmgr %v for realm %v", pid, realmId)
 	}

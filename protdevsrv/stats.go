@@ -6,11 +6,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type MethodStat struct {
@@ -109,7 +109,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQvers
 	std.si.Lock()
 	defer std.si.Unlock()
 
-	db.DPrintf("PROTDEVSRV", "Read stats: %v\n", std.si)
+	db.DPrintf(db.PROTDEVSRV, "Read stats: %v\n", std.si)
 	std.si.Stats()
 	b, err := json.Marshal(std.si.st)
 	if err != nil {
@@ -123,6 +123,6 @@ func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion
 }
 
 func (std *statsDev) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
-	db.DPrintf("PROTDEVSRV", "Close stats\n")
+	db.DPrintf(db.PROTDEVSRV, "Close stats\n")
 	return nil
 }

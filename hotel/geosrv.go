@@ -11,9 +11,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -55,7 +55,7 @@ func RunGeoSrv(n string) error {
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(req proto.GeoRequest, rep *proto.GeoResult) error {
-	db.DPrintf("HOTELGEO", "Nearby %v\n", req)
+	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {
 		rep.HotelIds = append(rep.HotelIds, p.Id())

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
-    "sigmaos/fcall"
+	"sigmaos/fcall"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 )
 
 // Try to download a proc bin from s3.
@@ -32,7 +32,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 		// If someone else completed the download before us, remove the temp file.
 		pd.Remove(tmppath)
 	}
-	db.DPrintf("PROCD", "Took %v to download proc %v", time.Since(start), s3BinPath)
+	db.DPrintf(db.PROCD, "Took %v to download proc %v", time.Since(start), s3BinPath)
 	return nil
 }
 
@@ -46,7 +46,7 @@ func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
 		versionDir := path.Dir(uxBinPath)
 		version := path.Base(versionDir)
 		if fcall.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
-			db.DPrintf("PROCD_ERR", "Error first download for version %v: %v", version, err)
+			db.DPrintf(db.PROCD_ERR, "Error first download for version %v: %v", version, err)
 			pd.MkDir(versionDir, 0777)
 		}
 		return true
@@ -67,7 +67,7 @@ func (pd *Procd) downloadProcBin(program string) {
 		return
 	}
 
-	db.DPrintf("PROCD", "Need to download %v", program)
+	db.DPrintf(db.PROCD, "Need to download %v", program)
 
 	// Find the number of instances of this proc which have been claimed, and are
 	// waiting to be downloaded.
@@ -92,7 +92,7 @@ func (pd *Procd) downloadProcBin(program string) {
 		if err = pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
 			return
 		} else {
-			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
+			db.DPrintf(db.PROCD_ERR, "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
 		}
 	}
 	db.DFatalf("Couldn't download proc bin %v (s3 path: %v) in over %v retries err %v", program, s3BinPath, RETRIES, err)

@@ -35,7 +35,7 @@ type MatrixMult struct {
 
 func MakeMatrixMult(args []string) (*MatrixMult, error) {
 	var err error
-	db.DPrintf("MATMUL", "MakeMatrixMul: %v %v", proc.GetPid(), args)
+	db.DPrintf(db.MATMUL, "MakeMatrixMul: %v %v", proc.GetPid(), args)
 	m := &MatrixMult{}
 	m.FsLib = fslib.MakeFsLib("spinner")
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
@@ -69,9 +69,9 @@ func (m *MatrixMult) Work() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 	start := time.Now()
-	db.DPrintf("MATMUL", "doMM %v", proc.GetPid())
+	db.DPrintf(db.MATMUL, "doMM %v", proc.GetPid())
 	m.doMM()
-	db.DPrintf("MATMUL", "doMM done %v: %v", proc.GetPid(), time.Since(start))
+	db.DPrintf(db.MATMUL, "doMM done %v: %v", proc.GetPid(), time.Since(start))
 	m.Exited(proc.MakeStatusInfo(proc.StatusOK, "Latency (us)", time.Since(start).Microseconds()))
-	db.DPrintf("MATMUL", "Exited %v", proc.GetPid())
+	db.DPrintf(db.MATMUL, "Exited %v", proc.GetPid())
 }

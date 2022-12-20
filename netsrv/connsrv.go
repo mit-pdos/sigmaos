@@ -46,7 +46,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 }
 
 func (c *SrvConn) Close() {
-	db.DPrintf("NETSRV", "Cli %v Sess %v Prepare to close conn and replies %p", c.clid, c.sessid, c.replies)
+	db.DPrintf(db.NETSRV, "Cli %v Sess %v Prepare to close conn and replies %p", c.clid, c.sessid, c.replies)
 
 	c.Lock()
 	defer c.Unlock()
@@ -62,7 +62,7 @@ func (c *SrvConn) Close() {
 	// will then exit and close the TCP connection.
 	go func() {
 		c.wg.Wait()
-		db.DPrintf("NETSRV", "Cli %v Sess %v Close replies chan %p", c.clid, c.sessid, c.replies)
+		db.DPrintf(db.NETSRV, "Cli %v Sess %v Close replies chan %p", c.clid, c.sessid, c.replies)
 		close(c.replies)
 	}()
 }
@@ -101,19 +101,19 @@ func (c *SrvConn) GetReplyC() chan *sp.FcallMsg {
 }
 
 func (c *SrvConn) reader() {
-	db.DPrintf("NETSRV", "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
+	db.DPrintf(db.NETSRV, "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
 		fc, err := c.unmarshalframe(c.br)
 		if err != nil {
-			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad frame: %v", c.sessid, c.Src(), err)
+			db.DPrintf(db.NETSRV_ERR, "%v reader from %v: bad frame: %v", c.sessid, c.Src(), err)
 			return
 		}
-		db.DPrintf("NETSRV", "srv req %v data %d\n", fc, len(fc.Data))
+		db.DPrintf(db.NETSRV, "srv req %v data %d\n", fc, len(fc.Data))
 		if c.sessid == 0 {
 			c.sessid = fcall.Tsession(fc.Session())
 			c.clid = fc.Client()
 			if err := c.sesssrv.Register(c.clid, c.sessid, c); err != nil {
-				db.DPrintf("NETSRV_ERR", "Cli %v Sess %v closed\n", c.clid, c.sessid)
+				db.DPrintf(db.NETSRV_ERR, "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
 				fm := sp.MakeFcallMsgReply(fc, sp.MkRerror(err))
@@ -139,14 +139,14 @@ func (c *SrvConn) writer() {
 	for {
 		fm, ok := <-c.replies
 		if !ok {
-			db.DPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
+			db.DPrintf(db.NETSRV, "%v writer: close conn from %v\n", c.sessid, c.Src())
 			return
 		}
 		// Mark that the sender is no longer waiting to send on the replies channel.
 		c.wg.Done()
-		db.DPrintf("NETSRV", "rep %v\n", fm)
+		db.DPrintf(db.NETSRV, "rep %v\n", fm)
 		if err := c.marshalframe(fm, c.bw); err != nil {
-			db.DPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
+			db.DPrintf(db.NETSRV_ERR, "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
 	}

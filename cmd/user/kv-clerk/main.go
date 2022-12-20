@@ -73,9 +73,9 @@ func main() {
 func waitEvict(kc *kv.KvClerk) {
 	err := kc.WaitEvict(proc.GetPid())
 	if err != nil {
-		db.DPrintf("KVCLERK", "Error WaitEvict: %v", err)
+		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
-	db.DPrintf("KVCLERK", "Evict\n")
+	db.DPrintf(db.KVCLERK, "Evict\n")
 	atomic.StoreInt32(&done, 1)
 }
 

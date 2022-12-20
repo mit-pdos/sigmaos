@@ -96,7 +96,7 @@ func (psd *ProtDevSrv) mkService(svci any) {
 }
 
 func (psd *ProtDevSrv) RunServer() error {
-	db.DPrintf("PROTDEVSRV", "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
 	psd.MemFs.Serve()
 	psd.MemFs.Done()
 	return nil

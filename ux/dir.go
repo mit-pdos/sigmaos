@@ -48,12 +48,12 @@ func (d *Dir) uxReadDir() *fcall.Err {
 			d.sd.Insert(st.Name, st)
 		}
 	}
-	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.sd.Len())
+	db.DPrintf(db.UX, "%v: uxReadDir %v\n", d, d.sd.Len())
 	return nil
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize, v sp.TQversion) ([]*sp.Stat, *fcall.Err) {
-	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
+	db.DPrintf(db.UX, "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dents := make([]*sp.Stat, 0, d.sd.Len())
 	d.sd.Iter(func(n string, e interface{}) bool {
 		dents = append(dents, e.(*sp.Stat))
@@ -131,7 +131,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsO
 
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *fcall.Err) {
-	db.DPrintf("UXD", "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
+	db.DPrintf(db.UX, "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
 	} else if perm.IsPipe() {
@@ -145,13 +145,13 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 
 func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *fcall.Err) {
 	name := path[0]
-	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, name)
+	db.DPrintf(db.UX, "%v: Lookup %v %v\n", ctx, d, name)
 	st, err := ustat(d.pathName.Append(name))
 	if err != nil {
-		db.DPrintf("UXD", "%v: Lookup %v %v err %v\n", ctx, d, name, err)
+		db.DPrintf(db.UX, "%v: Lookup %v %v err %v\n", ctx, d, name, err)
 		return nil, nil, path, err
 	}
-	db.DPrintf("UXD", "%v: Lookup %v %v st %v\n", ctx, d, name, st)
+	db.DPrintf(db.UX, "%v: Lookup %v %v st %v\n", ctx, d, name, st)
 	var o fs.FsObj
 	if st.Tmode().IsDir() {
 		o, err = makeDir(append(d.pathName, name))
@@ -184,7 +184,7 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (s
 func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *fcall.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := dd.(*Dir).PathName() + "/" + to
-	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
+	db.DPrintf(db.UX, "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
 		return UxTo9PError(err, to)
@@ -193,7 +193,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *fcall.Er
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *fcall.Err {
-	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
+	db.DPrintf(db.UX, "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
 	o, err := makeObj(p)
 	if err != nil {
@@ -215,7 +215,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *fcall.Err {
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *fcall.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := d.PathName() + "/" + to
-	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
+	db.DPrintf(db.UX, "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {
 		return UxTo9PError(error, to)

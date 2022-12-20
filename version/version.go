@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	sp "sigmaos/sigmap"
+	db "sigmaos/debug"
 	"sigmaos/refmap"
+	sp "sigmaos/sigmap"
 )
 
 type version struct {
@@ -29,7 +30,7 @@ type VersionTable struct {
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version]("VERSION")
+	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version](db.VERSION)
 	return vt
 }
 

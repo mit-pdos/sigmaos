@@ -28,12 +28,12 @@ type NetClnt struct {
 }
 
 func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *fcall.Err) {
-	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
+	db.DPrintf(db.NETCLNT, "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
 	err := nc.connect(addrs)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "MakeNetClnt connect %v err %v\n", addrs, err)
+		db.DPrintf(db.NETCLNT_ERR, "MakeNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
 	go nc.reader()
@@ -60,7 +60,7 @@ func (nc *NetClnt) Close() {
 	defer nc.mu.Unlock()
 
 	if !nc.closed {
-		db.DPrintf("NETCLNT", "Close conn to %v\n", nc.Dst())
+		db.DPrintf(db.NETCLNT, "Close conn to %v\n", nc.Dst())
 		nc.conn.Close()
 	}
 	nc.closed = true
@@ -82,10 +82,10 @@ func (nc *NetClnt) connect(addrs []string) *fcall.Err {
 		nc.addr = addr
 		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
 		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
-		db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
+		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
 		return nil
 	}
-	db.DPrintf("NETCLNT_ERR", "NetClnt unable to connect to any of %v\n", addrs)
+	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", addrs)
 	return fcall.MkErr(fcall.TErrUnreachable, "no connection")
 }
 
@@ -96,18 +96,18 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
-	db.DPrintf("NETCLNT", "Send %v to %v\n", rpc.Req, nc.Dst())
+	db.DPrintf(db.NETCLNT, "Send %v to %v\n", rpc.Req, nc.Dst())
 
 	// If the connection has already been closed, return immediately.
 	if nc.isClosed() {
-		db.DPrintf("NETCLNT_ERR", "Error Send on closed channel to %v\n", nc.Dst())
+		db.DPrintf(db.NETCLNT_ERR, "Error Send on closed channel to %v\n", nc.Dst())
 		return
 	}
 
 	// Otherwise, marshall and write the fcall.
 	err := spcodec.MarshalFrame(rpc.Req, nc.bw)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
+		db.DPrintf(db.NETCLNT_ERR, "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
 		if err.Code() != fcall.TErrUnreachable {
 			db.DFatalf("Unexpected error in netclnt.writer: %v", err)
@@ -116,14 +116,14 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 	error := nc.bw.Flush()
 	if error != nil {
-		db.DPrintf("NETCLNT_ERR", "Flush error cli %v to srv %v err %v\n", nc.Src(), nc.Dst(), error)
+		db.DPrintf(db.NETCLNT_ERR, "Flush error cli %v to srv %v err %v\n", nc.Src(), nc.Dst(), error)
 	}
 }
 
 func (nc *NetClnt) recv() (*sp.FcallMsg, *fcall.Err) {
 	fm, err := spcodec.UnmarshalFrame(nc.br)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
+		db.DPrintf(db.NETCLNT_ERR, "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
 		return nil, err
 	}
@@ -137,13 +137,13 @@ func (nc *NetClnt) reader() {
 		// Receive the next reply.
 		reply, err := nc.recv()
 		if err != nil {
-			db.DPrintf("NETCLNT_ERR", "error %v reader RPC to %v, trying reconnect", err, nc.addr)
+			db.DPrintf(db.NETCLNT_ERR, "error %v reader RPC to %v, trying reconnect", err, nc.addr)
 			nc.reset()
 			break
 		}
 		nc.sconn.CompleteRPC(reply, err)
 		if nc.isClosed() {
-			db.DPrintf("NETCLNT_ERR", "reader from %v to %v, closed", nc.Src(), nc.Dst())
+			db.DPrintf(db.NETCLNT_ERR, "reader from %v to %v, closed", nc.Src(), nc.Dst())
 			break
 		}
 	}

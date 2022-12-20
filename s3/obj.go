@@ -75,7 +75,7 @@ func (o *Obj) readHead(fss3 *Fss3) *fcall.Err {
 		return fcall.MkErrError(err)
 	}
 
-	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
+	db.DPrintf(db.S3, "readHead: %v %v\n", key, result.ContentLength)
 	o.sz = sp.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
@@ -100,7 +100,7 @@ func (o *Obj) fill() *fcall.Err {
 
 // stat without filling
 func (o *Obj) stat() *sp.Stat {
-	db.DPrintf("FSS3", "stat: %v\n", o)
+	db.DPrintf(db.S3, "stat: %v\n", o)
 	name := ""
 	if len(o.key) > 0 {
 		name = o.key.Base()
@@ -123,7 +123,7 @@ func (o *Obj) Parent() fs.Dir {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
-	db.DPrintf("FSS3", "Stat: %v\n", o)
+	db.DPrintf(db.S3, "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *fcall.Err) {
 
 // XXX Check permissions?
 func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
-	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
+	db.DPrintf(db.S3, "open %v (%T) %v\n", o, o, m)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (o *Obj) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
-	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
+	db.DPrintf(db.S3, "%p: Close %v\n", o, m)
 	if m == sp.OWRITE {
 		o.w.Close()
 		// wait for uploader to finish
@@ -177,12 +177,12 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *fcall.Err) {
 	if result.ContentRange != nil {
 		region1 = *result.ContentRange
 	}
-	db.DPrintf("FSS3", "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
+	db.DPrintf(db.S3, "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
 	return result.Body, sp.Tlength(result.ContentLength), nil
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *fcall.Err) {
-	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
+	db.DPrintf(db.S3, "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
 	if sp.Tlength(off) >= o.sz {
 		return nil, nil
 	}
@@ -193,7 +193,7 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([
 	defer rdr.Close()
 	b, error := io.ReadAll(rdr)
 	if error != nil {
-		db.DPrintf("FSS3", "Read: Read %d err %v\n", n, error)
+		db.DPrintf(db.S3, "Read: Read %d err %v\n", n, error)
 		return nil, fcall.MkErrError(error)
 	}
 	return b, nil
@@ -204,7 +204,7 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([
 //
 
 func (o *Obj) setupWriter() {
-	db.DPrintf("FSS3", "%p: setupWriter\n", o)
+	db.DPrintf(db.S3, "%p: setupWriter\n", o)
 	o.off = 0
 	o.ch = make(chan error)
 	o.r, o.w = io.Pipe()
@@ -220,19 +220,19 @@ func (o *Obj) writer(ch chan error) {
 		Body:   o.r,
 	})
 	if err != nil {
-		db.DPrintf("FSS3", "Writer %v err %v\n", key, err)
+		db.DPrintf(db.S3, "Writer %v err %v\n", key, err)
 	}
 	ch <- err
 }
 
 func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
-	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+	db.DPrintf(db.S3, "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
-		db.DPrintf("FSS3", "Write %v err\n", o.off)
+		db.DPrintf(db.S3, "Write %v err\n", o.off)
 		return 0, fcall.MkErr(fcall.TErrInval, off)
 	}
 	if n, err := o.w.Write(b); err != nil {
-		db.DPrintf("FSS3", "Write %v %v err %v\n", off, len(b), err)
+		db.DPrintf(db.S3, "Write %v %v err %v\n", off, len(b), err)
 		return 0, fcall.MkErrError(err)
 	} else {
 		o.off += sp.Toffset(n)

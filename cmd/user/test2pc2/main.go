@@ -110,8 +110,6 @@ func (p *Part2pc) Done() {
 }
 
 func (p *Part2pc) Work() {
-	db.DPrintf("TEST2PC", "Work\n")
 	<-p.done
-	db.DPrintf("TEST2PC", "exit\n")
 	p.Exited(proc.MakeStatus(proc.StatusOK))
 }

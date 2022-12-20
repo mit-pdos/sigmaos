@@ -77,14 +77,14 @@ func MakeNoded(machineId string) *Noded {
 
 	// Set up the noded config
 	nd.cfg = MakeNodedConfig()
-	db.DPrintf("NODED", "Boot on machine %v", machineId)
+	db.DPrintf(db.NODED, "Boot on machine %v", machineId)
 	nd.cfg.MachineId = machineId
 
 	return nd
 }
 
 func (nd *Noded) GrantCores(req proto.NodedRequest, res *proto.NodedResponse) error {
-	db.DPrintf("NODED", "Noded %v granted cores %v", nd.id, req.Cores)
+	db.DPrintf(db.NODED, "Noded %v granted cores %v", nd.id, req.Cores)
 	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
 	nd.forwardResourceMsgToProcd(msg)
 
@@ -102,11 +102,11 @@ func (nd *Noded) GrantCores(req proto.NodedRequest, res *proto.NodedResponse) er
 }
 
 func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) error {
-	db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, req.Cores)
+	db.DPrintf(db.NODED, "Noded %v lost cores %v", nd.id, req.Cores)
 
 	// If all cores were requested, shut down.
 	if req.AllCores || len(nd.cfg.Cores) == 1 {
-		db.DPrintf("NODED", "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
+		db.DPrintf(db.NODED, "Noded %v evicted from Realm %v", nd.id, nd.cfg.RealmId)
 		// Leave the realm and prepare to shut down.
 		nd.leaveRealm()
 		nd.done <- true
@@ -197,7 +197,7 @@ func (nd *Noded) tryAddNamedReplicaL() bool {
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		nd.WriteConfig(RealmConfPath(realmCfg.Rid), realmCfg)
-		db.DPrintf("NODED", "Added named replica: %v", realmCfg)
+		db.DPrintf(db.NODED, "Added named replica: %v", realmCfg)
 	}
 	return initDone
 }
@@ -242,7 +242,7 @@ func (nd *Noded) joinRealm() {
 		rStartSem := semclnt.MakeSemClnt(nd.FsLib, path.Join(sp.BOOT, nd.cfg.RealmId))
 		rStartSem.Up()
 	}
-	db.DPrintf("NODED", "Noded %v joined Realm %v", nd.id, nd.cfg.RealmId)
+	db.DPrintf(db.NODED, "Noded %v joined Realm %v", nd.id, nd.cfg.RealmId)
 }
 
 func (nd *Noded) teardown() {
@@ -281,7 +281,7 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 	// If this is the last noded, destroy the noded's named
 	if len(realmCfg.NodedsActive) == 0 {
-		db.DPrintf("NODED", "Destroy realm %v", realmCfg.Rid)
+		db.DPrintf(db.NODED, "Destroy realm %v", realmCfg.Rid)
 
 		ShutdownNamedReplicas(nd.ProcClnt, realmCfg.NamedPids)
 
@@ -292,7 +292,7 @@ func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 
 		// Remove the realm's named directory
 		if err := nd.Remove(RealmPath(realmCfg.Rid)); err != nil {
-			db.DPrintf("NODED_ERR", "Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
+			db.DPrintf(db.NODED_ERR, "Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed
@@ -303,12 +303,12 @@ func (nd *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 
 // Leave a realm. Expects realmmgr to hold the realm lock.
 func (nd *Noded) leaveRealm() {
-	db.DPrintf("NODED", "Noded %v leaving Realm %v", nd.id, nd.cfg.RealmId)
+	db.DPrintf(db.NODED, "Noded %v leaving Realm %v", nd.id, nd.cfg.RealmId)
 
 	// Tear down resources
 	nd.teardown()
 
-	db.DPrintf("NODED", "Noded %v done with teardown", nd.id)
+	db.DPrintf(db.NODED, "Noded %v done with teardown", nd.id)
 
 	// Get the realm config
 	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
@@ -320,9 +320,9 @@ func (nd *Noded) leaveRealm() {
 
 func (nd *Noded) Work() {
 	// Get the next realm assignment.
-	db.DPrintf("NODED", "Noded %v started, waiting for config", nd.id)
+	db.DPrintf(db.NODED, "Noded %v started, waiting for config", nd.id)
 	nd.getNextConfig()
-	db.DPrintf("NODED", "Noded %v got config %v", nd.id, nd.cfg)
+	db.DPrintf(db.NODED, "Noded %v got config %v", nd.id, nd.cfg)
 
 	// Join a realm
 	nd.joinRealm()
@@ -330,7 +330,7 @@ func (nd *Noded) Work() {
 	if err := nd.Started(); err != nil {
 		db.DFatalf("Error Started: %v", err)
 	}
-	db.DPrintf("NODED", "Noded %v started", nd.id)
+	db.DPrintf(db.NODED, "Noded %v started", nd.id)
 
 	<-nd.done
 

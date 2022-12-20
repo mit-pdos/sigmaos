@@ -9,10 +9,10 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	sp "sigmaos/sigmap"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
 
@@ -94,7 +94,7 @@ func (mo *Monitor) nextGroup() string {
 
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
-	db.DPrintf("KVMON", "Add group %v\n", gn)
+	db.DPrintf(db.KVMON, "Add group %v\n", gn)
 	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
@@ -104,20 +104,20 @@ func (mo *Monitor) grow() {
 }
 
 func (mo *Monitor) shrink(gn string) {
-	db.DPrintf("KVMON", "Del group %v\n", gn)
+	db.DPrintf(db.KVMON, "Del group %v\n", gn)
 	grp, ok := mo.gm.delete(gn)
 	if !ok {
 		db.DFatalf("rmgrp %v failed\n", gn)
 	}
 	err := BalancerOp(mo.FsLib, mo.job, "del", gn)
 	if err != nil {
-		db.DPrintf("KVMON", "Del group %v failed\n", gn)
+		db.DPrintf(db.KVMON, "Del group %v failed\n", gn)
 	}
 	grp.Stop()
 }
 
 func (mo *Monitor) done() {
-	db.DPrintf("KVMON", "shutdown groups\n")
+	db.DPrintf(db.KVMON, "shutdown groups\n")
 	for _, grp := range mo.gm.groups() {
 		grp.Stop()
 	}
@@ -147,7 +147,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 			lowkv = gn
 			lowload = sti.Load
 		}
-		// db.DPrintf("KVMON", "path %v\n", sti.SortPath())
+		// db.DPrintf(db.KVMON, "path %v\n", sti.SortPath())
 	}
 	util = util / float64(n)
 	db.DPrintf(db.ALWAYS, "monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)

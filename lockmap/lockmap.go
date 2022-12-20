@@ -47,7 +47,7 @@ type PathLockTable struct {
 
 func MkPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.RefTable = refmap.MkRefTable[string, *PathLock]("LOCKMAP")
+	plt.RefTable = refmap.MkRefTable[string, *PathLock](db.LOCKMAP)
 	return plt
 }
 
@@ -75,7 +75,7 @@ func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path) *PathLock {
 	lk := plt.allocLock(path)
 	lk.Lock()
-	db.DPrintf("LOCKMAP", "%v: Lock '%s'", ctx.Uname(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Lock '%s'", ctx.Uname(), lk.path)
 	return lk
 }
 
@@ -88,7 +88,7 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 // Release lock for path. Caller should have watch locked through
 // Acquire().
 func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock) {
-	db.DPrintf("LOCKMAP", "%v: Release '%s'", ctx.Uname(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Release '%s'", ctx.Uname(), lk.path)
 	lk.Unlock()
 	plt.release(lk)
 }
@@ -97,7 +97,7 @@ func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock) {
 func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string) *PathLock {
 	flk := plt.allocLockString(dlk.path + "/" + name)
 
-	db.DPrintf("LOCKMAP", "%v: HandoverLock '%s' %s", ctx.Uname(), dlk.path, name)
+	db.DPrintf(db.LOCKMAP, "%v: HandoverLock '%s' %s", ctx.Uname(), dlk.path, name)
 
 	flk.Lock()
 	plt.Release(ctx, dlk)

@@ -20,7 +20,7 @@ func MakeMgr(cli fcall.Tclient) *Mgr {
 	sc := &Mgr{}
 	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
-	db.DPrintf("SESSCLNT", "Session Mgr for client %v", sc.cli)
+	db.DPrintf(db.SESS_STATE_CLNT, "Session Mgr for client %v", sc.cli)
 	return sc
 }
 
@@ -57,17 +57,17 @@ func (sc *Mgr) RPC(addr []string, req fcall.Tmsg, data []byte, f *sp.Tfence) (*s
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
-		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
+		db.DPrintf(db.SESS_STATE_CLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
-	db.DPrintf("SESSCLNT", "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
+	db.DPrintf(db.SESS_STATE_CLNT, "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
 	msg, err := sess.RPC(req, data, f)
 	return msg, err
 }
 
 // For testing
 func (sc *Mgr) Disconnect(addrs []string) *fcall.Err {
-	db.DPrintf("SESSCLNT", "Disconnect cli %v addr %v", sc.cli, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect cli %v addr %v", sc.cli, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]
@@ -76,7 +76,7 @@ func (sc *Mgr) Disconnect(addrs []string) *fcall.Err {
 		return fcall.MkErr(fcall.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
-	db.DPrintf("SESSCLNT", "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)
 	return nil
 }
 

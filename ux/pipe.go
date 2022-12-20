@@ -2,11 +2,11 @@ package fsux
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
-	sp "sigmaos/sigmap"
-    "sigmaos/path"
-    "sigmaos/fcall"
+	"sigmaos/path"
 	"sigmaos/pipe"
+	sp "sigmaos/sigmap"
 )
 
 type Pipe struct {
@@ -26,7 +26,7 @@ func makePipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *fcall.Err) {
 }
 
 func (p *Pipe) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
-	db.DPrintf("UXD", "%v: PipeOpen %v %v path %v flags %v\n", ctx, p, m, p.Path(), uxFlags(m))
+	db.DPrintf(db.UX, "%v: PipeOpen %v %v path %v flags %v\n", ctx, p, m, p.Path(), uxFlags(m))
 	pr := fsux.ot.AllocRef(p.Obj.path, p).(*Pipe)
 	if _, err := pr.Pipe.Open(ctx, m); err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (p *Pipe) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *fcall.Err) {
 }
 
 func (p *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *fcall.Err {
-	db.DPrintf("UXD", "%v: PipeClose path %v\n", ctx, p.Path())
+	db.DPrintf(db.UX, "%v: PipeClose path %v\n", ctx, p.Path())
 	pr := fsux.ot.AllocRef(p.Obj.path, p).(*Pipe)
 	fsux.ot.Clunk(p.Obj.path)
 	return pr.Pipe.Close(ctx, mode)

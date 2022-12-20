@@ -42,7 +42,7 @@ func RunCacheSrv(args []string) error {
 	}
 	s.c = &cache{}
 	s.c.cache = make(map[string][]byte)
-	db.DPrintf("CACHESRV", "%v: Run %v\n", proc.GetName(), s.shrd)
+	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
 	pds, err := protdevsrv.MakeProtDevSrv(sp.CACHE+s.shrd, s)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func RunCacheSrv(args []string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf("CACHESRV", "%v: Set %v\n", proc.GetName(), req)
+	db.DPrintf(db.CACHESRV, "%v: Set %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 	s.c.cache[req.Key] = req.Value
@@ -63,7 +63,7 @@ func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
 }
 
 func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf("CACHESRV", "%v: Get %v\n", proc.GetName(), req)
+	db.DPrintf(db.CACHESRV, "%v: Get %v\n", proc.GetName(), req)
 	s.c.Lock()
 	defer s.c.Unlock()
 
@@ -83,7 +83,7 @@ type cacheSession struct {
 
 func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid fcall.Tsession) (fs.Inode, *fcall.Err) {
 	cs := &cacheSession{mfs.MakeDevInode(), s.c, sid}
-	db.DPrintf("CACHESRV", "mkSession %v %p\n", cs.c, cs)
+	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.c, cs)
 	return cs, nil
 }
 
@@ -92,7 +92,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQv
 	if off > 0 {
 		return nil, nil
 	}
-	db.DPrintf("CACHESRV", "Dump cache %p %v\n", cs, cs.c)
+	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.c)
 	b, err := json.Marshal(cs.c.cache)
 	if err != nil {
 		return nil, fcall.MkErrError(err)
@@ -105,6 +105,6 @@ func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQvers
 }
 
 func (cs *cacheSession) Close(ctx fs.CtxI, m sp.Tmode) *fcall.Err {
-	db.DPrintf("CACHESRV", "%v: Close %v\n", proc.GetName(), cs.sid)
+	db.DPrintf(db.CACHESRV, "%v: Close %v\n", proc.GetName(), cs.sid)
 	return nil
 }

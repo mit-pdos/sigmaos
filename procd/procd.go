@@ -135,7 +135,7 @@ func (pd *Procd) wakeWorker() {
 func (pd *Procd) wakeWorkerL() {
 	pd.nToWake++
 	pd.Signal()
-	db.DPrintf("PROCD", "Wake worker cnt %v", pd.nToWake)
+	db.DPrintf(db.PROCD, "Wake worker cnt %v", pd.nToWake)
 }
 
 func (pd *Procd) wsQueuePop(runq string) (string, bool) {
@@ -207,13 +207,13 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 	pd.Lock()
 	defer pd.Unlock()
 
-	if db.WillBePrinted("PROCD") {
-		db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
+	if db.WillBePrinted(db.PROCD) {
+		db.DPrintf(db.PROCD, "Try get runnable proc %v", path.Base(procPath))
 	}
 	p, err := pd.readRunqProc(procPath)
 	// Proc may have been stolen
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
+		db.DPrintf(db.PROCD_ERR, "Error getting RunqProc: %v", err)
 		return nil, err
 	}
 	// Don't steal remote kernel procs.
@@ -230,8 +230,8 @@ func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error
 		linuxProc := pd.registerProcL(p, isRemote)
 		return linuxProc, nil
 	} else {
-		if db.WillBePrinted("PROCD") {
-			db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
+		if db.WillBePrinted(db.PROCD) {
+			db.DPrintf(db.PROCD, "RunqProc %v didn't satisfy constraints", procPath)
 		}
 	}
 	return nil, nil
@@ -245,7 +245,7 @@ func (pd *Procd) tryGetProc(procPath string, isRemote bool) (*LinuxProc, bool) {
 	}
 	newProc, err := pd.tryClaimProc(procPath, isRemote)
 	if err != nil {
-		db.DPrintf("PROCD_ERR", "Error getting runnable proc (remote:%v): %v", isRemote, err)
+		db.DPrintf(db.PROCD_ERR, "Error getting runnable proc (remote:%v): %v", isRemote, err)
 		// Remove the symlink, as it must have already been claimed.
 		if isRemote {
 			pd.deleteWSSymlink(procPath, newProc, isRemote)
@@ -387,14 +387,14 @@ func (pd *Procd) waitSpawnOrSteal() {
 	for !pd.done {
 		// If there is an LC proc available to work-steal, and this procd has cores
 		// to spare, release the worker thread.
-		db.DPrintf("PROCD", "Worker woke, check for stealable LC procs.")
+		db.DPrintf(db.PROCD, "Worker woke, check for stealable LC procs.")
 		if len(pd.wsQueues[WS_LC_QUEUE_PATH]) > 0 && pd.coresAvail > 0 {
-			db.DPrintf("PROCD", "done waiting, an LC proc can be stolen")
+			db.DPrintf(db.PROCD, "done waiting, an LC proc can be stolen")
 			return
 		}
 		// If there is a BE proc available to work-steal, and this procd can run
 		// another one, release the worker thread.
-		db.DPrintf("PROCD", "Worker woke, check for stealable BE procs.")
+		db.DPrintf(db.PROCD, "Worker woke, check for stealable BE procs.")
 		if len(pd.wsQueues[WS_BE_QUEUE_PATH]) > 0 {
 			_, _, ok := pd.canClaimBEProcL()
 			// XXX a bit hacky... should do something more principled.
@@ -405,10 +405,10 @@ func (pd *Procd) waitSpawnOrSteal() {
 		// Only release nToWake worker threads.
 		if pd.nToWake > 0 {
 			pd.nToWake--
-			db.DPrintf("PROCD", "done waiting, worker woken. %v left to wake", pd.nToWake)
+			db.DPrintf(db.PROCD, "done waiting, worker woken. %v left to wake", pd.nToWake)
 			return
 		}
-		db.DPrintf("PROCD", "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[sp.PROCD_RUNQ_LC]), len(pd.wsQueues[sp.PROCD_RUNQ_BE]))
+		db.DPrintf(db.PROCD, "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[sp.PROCD_RUNQ_LC]), len(pd.wsQueues[sp.PROCD_RUNQ_BE]))
 		pd.Wait()
 	}
 }
@@ -419,11 +419,11 @@ func (pd *Procd) waitSpawnOrSteal() {
 func (pd *Procd) worker() {
 	defer pd.group.Done()
 	for !pd.readDone() {
-		db.DPrintf("PROCD", "Try to get proc.")
+		db.DPrintf(db.PROCD, "Try to get proc.")
 		p, error := pd.getProc()
 		// If there were no runnable procs, wait and try again.
 		if error == nil && p == nil {
-			db.DPrintf("PROCD", "No procs found, waiting.")
+			db.DPrintf(db.PROCD, "No procs found, waiting.")
 			pd.waitSpawnOrSteal()
 			continue
 		}
@@ -432,13 +432,13 @@ func (pd *Procd) worker() {
 		}
 		if error != nil {
 			if fcall.IsErrNotfound(error) {
-				db.DPrintf("PROCD_ERR", "cond file not found: %v", error)
+				db.DPrintf(db.PROCD_ERR, "cond file not found: %v", error)
 				return
 			}
 			pd.perf.Done()
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
-		db.DPrintf("PROCD", "Got proc %v", p)
+		db.DPrintf(db.PROCD, "Got proc %v", p)
 		err := pd.fs.running(p)
 		if err != nil {
 			pd.perf.Done()
@@ -464,7 +464,7 @@ func (pd *Procd) worker() {
 }
 
 func (pd *Procd) Work() {
-	db.DPrintf("PROCD", "Work")
+	db.DPrintf(db.PROCD, "Work")
 	pd.group.Add(1)
 	go func() {
 		defer pd.group.Done()

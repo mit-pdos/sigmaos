@@ -2,10 +2,10 @@ package snapshot
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	np "sigmaos/sigmap"
-    "sigmaos/fcall"
 )
 
 type Dev struct {
@@ -27,7 +27,7 @@ func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 }
 
 func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *fcall.Err) {
-	db.DPrintf("SNAP", "Received snapshot of length %v", len(b))
+	db.DPrintf(db.SNAP, "Received snapshot of length %v", len(b))
 	dev.srv.Restore(b)
 	return np.Tsize(len(b)), nil
 }

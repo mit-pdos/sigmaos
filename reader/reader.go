@@ -46,7 +46,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, sz, sp.NoV)
 	}
 	if err != nil {
-		db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
+		db.DPrintf(db.READER_ERR, "Read %v err %v\n", rdr.path, err)
 		return 0, err
 	}
 	if len(b) == 0 {
@@ -54,7 +54,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	if len(p) != len(b) {
-		db.DPrintf("READER_ERR", "Read short %v %v %v\n", rdr.path, len(p), len(b))
+		db.DPrintf(db.READER_ERR, "Read short %v %v %v\n", rdr.path, len(p), len(b))
 	}
 	// XXX change rdr.Read to avoid copy
 	copy(p, b)

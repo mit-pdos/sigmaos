@@ -55,7 +55,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 
 	s.native = len(args) == 3 && args[2] == "native"
 
-	db.DPrintf("PROCD", "MakeSleeper: %v\n", args)
+	db.DPrintf(db.SLEEPER, "MakeSleeper: %v\n", args)
 
 	if !s.native {
 		err := s.Started()
@@ -97,6 +97,6 @@ func (s *Sleeper) Work() {
 	if !s.native {
 		start := time.Now()
 		s.Exited(status)
-		db.DPrintf("TIMING", "Elapsed %v us", time.Since(start).Microseconds())
+		db.DPrintf(db.SLEEPER_TIMING, "Elapsed %v us", time.Since(start).Microseconds())
 	}
 }

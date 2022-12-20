@@ -64,7 +64,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *sp.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
-		db.DPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
+		db.DPrintf(db.FSLIB, "CopyFile: %v %v\n", s, d)
 		b, err := fl.GetFile(s)
 		if err != nil {
 			return true, err

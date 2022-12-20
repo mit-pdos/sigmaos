@@ -12,9 +12,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -207,16 +207,16 @@ func (s *System) Shutdown() {
 		if err != nil {
 			db.DFatalf("GetChildren in System.Shutdown: %v", err)
 		}
-		db.DPrintf("KERNEL", "Shutdown children %v", cpids)
+		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			s.Evict(pid)
-			db.DPrintf("KERNEL", "Evicted %v", pid)
+			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 			if _, ok := s.crashedPids[pid]; !ok {
 				if status, err := s.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
-			db.DPrintf("KERNEL", "Done evicting %v", pid)
+			db.DPrintf(db.KERNEL, "Done evicting %v", pid)
 		}
 	}
 	// Make sure the procs actually exited

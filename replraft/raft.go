@@ -21,8 +21,8 @@ import (
 	"go.uber.org/zap"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -111,7 +111,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 }
 
 func (n *RaftNode) serveRaft(l net.Listener) {
-	db.DPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
+	db.DPrintf(db.REPLRAFT, "Serving raft, listener %v at %v", n.id, l.Addr().String())
 
 	srv := &http.Server{Handler: apiHandler(n)}
 	err := srv.Serve(l)
@@ -200,14 +200,14 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 			switch change.Type {
 			case raftpb.ConfChangeAddNode:
 				if len(change.Context) > 0 {
-					db.DPrintf("REPLRAFT", "Adding peer %v", string(change.Context))
+					db.DPrintf(db.REPLRAFT, "Adding peer %v", string(change.Context))
 					n.transport.AddPeer(types.ID(change.NodeID), []string{"http://" + string(change.Context)})
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if change.NodeID == uint64(n.id) {
 					db.DFatalf("Node removed")
 				}
-				db.DPrintf("REPLRAFT", "Removing peer %v", string(change.Context))
+				db.DPrintf(db.REPLRAFT, "Removing peer %v", string(change.Context))
 				n.transport.RemovePeer(types.ID(change.NodeID))
 			}
 		default:

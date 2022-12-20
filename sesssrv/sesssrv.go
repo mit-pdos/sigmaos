@@ -100,7 +100,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.MarshalFrame, spcodec.UnmarshalFrame)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
-	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
+	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl
@@ -185,7 +185,7 @@ func (ssrv *SessSrv) Serve() {
 	} else {
 		<-ssrv.ch
 	}
-	db.DPrintf("SESSSRV", "Done serving")
+	db.DPrintf(db.SESSSRV, "Done serving")
 }
 
 // The server using ssrv is done; exit.
@@ -231,7 +231,7 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid fcall.Tsessio
 
 // New session or new connection for existing session
 func (ssrv *SessSrv) Register(cid fcall.Tclient, sid fcall.Tsession, conn sp.Conn) *fcall.Err {
-	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
+	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
@@ -276,7 +276,7 @@ func (ssrv *SessSrv) sendReply(request *sp.FcallMsg, reply *sp.FcallMsg, sess *s
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, reply)
 
-	db.DPrintf("SESSSRV", "sendReply req %v rep %v ok %v", request, reply, ok)
+	db.DPrintf(db.SESSSRV, "sendReply req %v rep %v ok %v", request, reply, ok)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
@@ -321,26 +321,26 @@ func (ssrv *SessSrv) srvfcall(fc *sp.FcallMsg) {
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
 	if replyFuture, ok := sess.GetReplyTable().Get(fc.Fc); ok {
-		db.DPrintf("SESSSRV", "srvfcall %v reply in cache", fc)
+		db.DPrintf(db.SESSSRV, "srvfcall %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await(), sess)
 		}()
 		return
 	}
-	db.DPrintf("SESSSRV", "srvfcall %v reply not in cache", fc)
+	db.DPrintf(db.SESSSRV, "srvfcall %v reply not in cache", fc)
 	if ok := sess.GetReplyTable().Register(fc); ok {
-		db.DPrintf("RTABLE", "table: %v", sess.GetReplyTable())
+		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
 		ssrv.stats.StatInfo().Inc(fc.Msg.Type())
 		ssrv.fenceFcall(sess, fc)
 	} else {
-		db.DPrintf("SESSSRV", "srvfcall %v duplicate request dropped", fc)
+		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)
 	}
 }
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
-	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
+	db.DPrintf(db.FENCE_SRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		msg := sp.MkRerror(err)
 		reply := sp.MakeFcallMsgReply(fc, msg)
@@ -357,9 +357,9 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 }
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
-	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
+	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
-	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
+	db.DPrintf(db.SESSSRV, "Done dispatch request %v close? %v", fc, close)
 
 	if rerror != nil {
 		msg = rerror

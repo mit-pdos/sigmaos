@@ -148,7 +148,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		<-ch
 	}
 
-	db.DPrintf("KVBAL", "terminate\n")
+	db.DPrintf(db.KVBAL, "terminate\n")
 
 	if bl.mo != nil {
 		bl.ch <- true
@@ -252,7 +252,7 @@ func (bl *Balancer) restore(conf *Config, epoch sp.Tepoch) {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Epoch = epoch
-	db.DPrintf("KVBAL", "restore to %v with epoch %v\n", bl.conf, epoch)
+	db.DPrintf(db.KVBAL, "restore to %v with epoch %v\n", bl.conf, epoch)
 	bl.PostConfig()
 	bl.doMoves(bl.conf.Moves)
 }
@@ -277,7 +277,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.MkDir(dst, 0777); err != nil {
-			db.DPrintf("KVBAL_ERR", "warning mkdir %v err %v\n", dst, err)
+			db.DPrintf(db.KVBAL_ERR, "warning mkdir %v err %v\n", dst, err)
 		}
 	}
 }
@@ -287,7 +287,7 @@ func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	p.AppendEnv("SIGMACRASH", bl.crashChild)
 	err := bl.Spawn(p)
 	if err != nil {
-		db.DPrintf("KVBAL_ERR", "spawn pid %v err %v\n", p.Pid, err)
+		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.Pid, err)
 	}
 	return p.Pid, err
 }
@@ -307,7 +307,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 	for true {
 		status, err = bl.runProc(args)
 		if err != nil {
-			db.DPrintf("ALWAYS", "runProc %v err %v status %v\n", args, err, status)
+			db.DPrintf(db.ALWAYS, "runProc %v err %v status %v\n", args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
@@ -315,7 +315,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
-			db.DPrintf("KVBAL_ERR", "retry %v err %v status %v\n", args, err, status)
+			db.DPrintf(db.KVBAL_ERR, "retry %v err %v status %v\n", args, err, status)
 		} else {
 			break
 		}
@@ -348,7 +348,7 @@ func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
 		bl.runProcRetry([]string{"user/kv-mover", bl.job, bl.conf.Epoch.String(), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
-				db.DPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
+				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()
 			})
 	}
@@ -368,7 +368,7 @@ func (bl *Balancer) doMoves(moves Moves) {
 	for range moves {
 		i := <-ch
 		bl.conf.Moves[i] = nil
-		db.DPrintf("KVBAL", "Cleared move %v %v\n", i, bl.conf)
+		db.DPrintf(db.KVBAL, "Cleared move %v %v\n", i, bl.conf)
 		bl.PostConfig()
 		m += 1
 	}
@@ -407,7 +407,7 @@ func (bl *Balancer) balance(opcode, mfs string) *fcall.Err {
 
 	epoch, err := bl.lc.EnterNextEpoch([]string{})
 	if err != nil {
-		db.DPrintf("KVBAL_ERR", "EnterNextEpoch fail %v\n", err)
+		db.DPrintf(db.KVBAL_ERR, "EnterNextEpoch fail %v\n", err)
 		var nperr *fcall.Err
 		if errors.As(err, &nperr) {
 			return nperr

@@ -68,7 +68,7 @@ func (sc *SessCond) Wait(sessid fcall.Tsession) *fcall.Err {
 	closed := c.isClosed
 
 	if closed {
-		db.DPrintf("SESSCOND", "wait sess closed %v\n", sessid)
+		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
 		return fcall.MkErr(fcall.TErrClosed, fmt.Sprintf("session %v", sessid))
 	}
 	return nil
@@ -122,9 +122,9 @@ func (sc *SessCond) closed(sessid fcall.Tsession) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	db.DPrintf("SESSCOND", "cond %p: close %v %v\n", sc, sessid, sc.conds)
+	db.DPrintf(db.SESSCOND, "cond %p: close %v %v\n", sc, sessid, sc.conds)
 	if condlist, ok := sc.conds[sessid]; ok {
-		db.DPrintf("SESSCOND", "%p: sess %v closed\n", sc, sessid)
+		db.DPrintf(db.SESSCOND, "%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
 			c.threadmgr.Wake(c.c)
 			sc.addWakingCond(sessid, c)

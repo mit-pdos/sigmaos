@@ -127,6 +127,6 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, 
 	if binsz > 0 {
 		bins = append(bins, bin)
 	}
-	db.DPrintf("MR", "Bin sizes: %v", bins)
+	db.DPrintf(db.MR, "Bin sizes: %v", bins)
 	return bins, nil
 }

@@ -339,7 +339,7 @@ func (ssrv *SessSrv) srvfcall(fc *fcall.FcallMsg) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
 	db.DPrintf(db.FENCE_SRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		msg := sp.MkRerror(err)
@@ -356,7 +356,7 @@ func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sp.FcallMsg) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *fcall.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v close? %v", fc, close)

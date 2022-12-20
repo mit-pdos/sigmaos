@@ -31,7 +31,7 @@ type VersionTable struct {
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version](db.VERSION)
+	vt.RefTable = refmap.MkRefTable[fcall.Tpath, *version](db.VERSION)
 	return vt
 }
 

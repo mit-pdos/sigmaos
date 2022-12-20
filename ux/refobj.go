@@ -7,7 +7,6 @@ import (
 	"sigmaos/fcall"
 	"sigmaos/fs"
 	"sigmaos/refmap"
-	sp "sigmaos/sigmap"
 )
 
 // Objects for which a client has an fid. Several clients may have an
@@ -20,7 +19,7 @@ type ObjTable struct {
 
 func MkObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable[sp.Tpath, fs.FsObj](debug.UX)
+	ot.RefTable = refmap.MkRefTable[fcall.Tpath, fs.FsObj](debug.UX)
 	return ot
 }
 

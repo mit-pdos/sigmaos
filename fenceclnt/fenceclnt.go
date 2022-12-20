@@ -42,7 +42,7 @@ func (fc *FenceClnt) FenceAtEpoch(epoch fcall.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence *sp.Tfence, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence *fcall.Tfence, paths []string) error {
 	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, *fence)

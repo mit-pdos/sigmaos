@@ -23,7 +23,7 @@ type fileSession struct {
 }
 
 // XXX wait on close before processing data?
-func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sp.Tsize, *fcall.Err) {
+func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (fcall.Tsize, *fcall.Err) {
 	debug.DPrintf(debug.DB, "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {

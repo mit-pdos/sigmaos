@@ -47,5 +47,5 @@ func (ft *FenceTable) Lookup(p path.Path) *fcall.Tfence {
 		}
 	}
 	db.DPrintf(db.FIDCLNT, "Lookup fence %v: no fence\n", p)
-	return sp.MakeFenceNull()
+	return fcall.MakeFenceNull()
 }

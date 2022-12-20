@@ -12,7 +12,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	sp "sigmaos/sigmap"
 )
 
 // XXX cmd line utility cp

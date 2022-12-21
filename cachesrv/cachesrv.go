@@ -3,28 +3,37 @@ package cachesrv
 import (
 	"encoding/json"
 	"errors"
+	"hash/fnv"
 	"sync"
 
 	"sigmaos/cachesrv/proto"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
+	"sigmaos/serr"
 	"sigmaos/sessdev"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 const (
 	DUMP = "dump"
+	NBIN = 13
 )
 
 var (
 	ErrMiss = errors.New("cache miss")
 )
+
+func key2bin(key string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	bin := h.Sum32() % NBIN
+	return bin
+}
 
 type cache struct {
 	sync.Mutex
@@ -32,7 +41,7 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	c    *cache
+	bins []cache
 	shrd string
 }
 
@@ -41,8 +50,10 @@ func RunCacheSrv(args []string) error {
 	if len(args) > 2 {
 		s.shrd = args[2]
 	}
-	s.c = &cache{}
-	s.c.cache = make(map[string][]byte)
+	s.bins = make([]cache, NBIN)
+	for i := 0; i < NBIN; i++ {
+		s.bins[i].cache = make(map[string][]byte)
+	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
 	pds, err := protdevsrv.MakeProtDevSrv(sp.CACHE+s.shrd, s)
 	if err != nil {
@@ -57,20 +68,26 @@ func RunCacheSrv(args []string) error {
 // XXX support timeout
 func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
 	db.DPrintf(db.CACHESRV, "%v: Set %v\n", proc.GetName(), req)
-	s.c.Lock()
-	defer s.c.Unlock()
-	s.c.cache[req.Key] = req.Value
+
+	b := key2bin(req.Key)
+
+	s.bins[b].Lock()
+	defer s.bins[b].Unlock()
+
+	s.bins[b].cache[req.Key] = req.Value
 	return nil
 }
 
 func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
 	db.DPrintf(db.CACHESRV, "%v: Get %v\n", proc.GetName(), req)
-	s.c.Lock()
-	defer s.c.Unlock()
+	b := key2bin(req.Key)
 
-	b, ok := s.c.cache[req.Key]
+	s.bins[b].Lock()
+	defer s.bins[b].Unlock()
+
+	v, ok := s.bins[b].cache[req.Key]
 	if ok {
-		rep.Value = b
+		rep.Value = v
 		return nil
 	}
 	return ErrMiss
@@ -78,13 +95,13 @@ func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
 
 type cacheSession struct {
 	*inode.Inode
-	c   *cache
-	sid sessp.Tsession
+	bins []cache
+	sid  sessp.Tsession
 }
 
 func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
-	cs := &cacheSession{mfs.MakeDevInode(), s.c, sid}
-	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.c, cs)
+	cs := &cacheSession{mfs.MakeDevInode(), s.bins, sid}
+	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.bins, cs)
 	return cs, nil
 }
 
@@ -93,8 +110,17 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 	if off > 0 {
 		return nil, nil
 	}
-	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.c)
-	b, err := json.Marshal(cs.c.cache)
+	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.bins)
+	m := make(map[string][]byte)
+	for i, _ := range cs.bins {
+		cs.bins[i].Lock()
+		for k, v := range cs.bins[i].cache {
+			m[k] = v
+		}
+		cs.bins[i].Unlock()
+	}
+
+	b, err := json.Marshal(m)
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}

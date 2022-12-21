@@ -103,6 +103,7 @@ const (
 	FENCECLNT_ERR           = FENCECLNT + ERR
 	GROUP                   = "GROUP"
 	GROUP_ERR               = GROUP + ERR
+	SESSDEVCLNT             = "SESSDEVCLNT"
 )
 
 // Server Libraries

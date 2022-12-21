@@ -1,7 +1,6 @@
 package hotel_test
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -11,8 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/cacheclnt"
-	"sigmaos/clonedev"
-	"sigmaos/dbd"
+	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/hotel/proto"
@@ -23,7 +21,6 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
-	"sigmaos/sessdev"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -242,19 +239,11 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	b, err := ts.GetFile(sp.DBD + clonedev.CloneName(dbd.QDEV))
+	dbc, err := dbclnt.MkDbClnt(ts.FsLib, sp.DBD)
 	assert.Nil(t, err)
 	q := fmt.Sprintf("select * from reservation")
-	sidn := clonedev.SidName(string(b), dbd.QDEV)
-	fn := sp.DBD + sidn + "/" + sessdev.DataName(dbd.QDEV)
-	_, err = ts.SetFile(fn, []byte(q), sp.OWRITE, 0)
-	assert.Nil(t, err)
-	b, err = ts.GetFile(fn)
-	assert.Nil(t, err)
-
 	res := []hotel.Reservation{}
-	err = json.Unmarshal(b, &res)
-	assert.Nil(t, err)
+	dbc.Query(q, &res)
 	assert.Equal(t, "Alice", res[0].Customer)
 
 	ts.Shutdown()

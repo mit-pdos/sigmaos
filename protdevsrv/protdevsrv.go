@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/sessdev"
+	"sigmaos/sessdevsrv"
 )
 
 const (
@@ -52,7 +52,7 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := sessdev.MkSessDev(psd.MemFs, RPC, rd.mkRpcSession); err != nil {
+	if err := sessdevsrv.MkSessDev(psd.MemFs, RPC, rd.mkRpcSession, nil); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {

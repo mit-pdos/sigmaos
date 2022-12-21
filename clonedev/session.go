@@ -2,16 +2,17 @@ package clonedev
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type session struct {
 	*inode.Inode
-	id sessp.Tsession
+	id   sessp.Tsession
+	wctl WriteCtlF
 }
 
 func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
@@ -22,7 +23,10 @@ func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQvers
 }
 
 func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrNotSupported, nil)
+	if s.wctl == nil {
+		return 0, serr.MkErr(serr.TErrNotSupported, nil)
+	}
+	return s.wctl(s.id, ctx, off, b, v)
 }
 
 func (s *session) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {

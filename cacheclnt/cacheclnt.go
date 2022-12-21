@@ -13,7 +13,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/reader"
-	"sigmaos/sessdev"
+	"sigmaos/sessdevsrv"
 	"sigmaos/shardsvcclnt"
 	sp "sigmaos/sigmap"
 )
@@ -94,7 +94,7 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	}
 	sid := string(b)
 	sidn := clonedev.SidName(sid, cachesrv.DUMP)
-	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
+	fn := srv + "/" + sidn + "/" + sessdevsrv.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err

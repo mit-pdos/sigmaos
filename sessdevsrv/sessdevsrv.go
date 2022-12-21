@@ -1,13 +1,13 @@
-package sessdev
+package sessdevsrv
 
 import (
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -27,9 +27,9 @@ type SessDev struct {
 	mks MkSessionF
 }
 
-func MkSessDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF) error {
+func MkSessDev(mfs *memfssrv.MemFs, fn string, mks MkSessionF, wctl clonedev.WriteCtlF) error {
 	fd := &SessDev{mfs, fn, mks}
-	if err := clonedev.MkCloneDev(mfs, fn, fd.mkSession, fd.detachSession); err != nil {
+	if err := clonedev.MkCloneDev(mfs, fn, fd.mkSession, fd.detachSession, wctl); err != nil {
 		return err
 	}
 	return nil

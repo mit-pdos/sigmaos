@@ -8,12 +8,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	rpcproto "sigmaos/protdevsrv/proto"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type rpcDev struct {

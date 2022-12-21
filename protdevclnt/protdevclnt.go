@@ -7,36 +7,30 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/protdevsrv"
 	rpcproto "sigmaos/protdevsrv/proto"
 	"sigmaos/serr"
-	"sigmaos/sessdev"
+	"sigmaos/sessdevclnt"
 	sp "sigmaos/sigmap"
 )
 
 type ProtDevClnt struct {
 	*fslib.FsLib
-	sid string
-	fn  string
 	fd  int
 	si  *protdevsrv.StatInfo
+	sdc *sessdevclnt.SessDevClnt
+	pn  string
 }
 
-func MkProtDevClnt(fsl *fslib.FsLib, fn string) (*ProtDevClnt, error) {
-	pdc := &ProtDevClnt{}
-	pdc.si = protdevsrv.MakeStatInfo()
-	pdc.FsLib = fsl
-	pdc.fn = fn
-	b, err := pdc.GetFile(pdc.fn + "/" + clonedev.CloneName(protdevsrv.RPC))
+func MkProtDevClnt(fsl *fslib.FsLib, pn string) (*ProtDevClnt, error) {
+	pdc := &ProtDevClnt{FsLib: fsl, si: protdevsrv.MakeStatInfo(), pn: pn}
+	sdc, err := sessdevclnt.MkSessDevClnt(pdc.FsLib, pn, protdevsrv.RPC)
 	if err != nil {
-		return nil, fmt.Errorf("Clone err %v\n", err)
+		return nil, err
 	}
-	sid := string(b)
-	pdc.sid = "/" + clonedev.SidName(sid, protdevsrv.RPC)
-	n, err := pdc.Open(pdc.fn+pdc.sid+"/"+sessdev.DataName(protdevsrv.RPC), sp.ORDWR)
+	n, err := pdc.Open(sdc.DataPn(), sp.ORDWR)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +88,7 @@ func (pdc *ProtDevClnt) StatsClnt() *protdevsrv.Stats {
 
 func (pdc *ProtDevClnt) StatsSrv() (*protdevsrv.Stats, error) {
 	stats := &protdevsrv.Stats{}
-	if err := pdc.GetFileJson(path.Join(pdc.fn, protdevsrv.STATS), stats); err != nil {
+	if err := pdc.GetFileJson(path.Join(pdc.pn, protdevsrv.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

@@ -2,12 +2,12 @@ package clonedev
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,6 +17,7 @@ const (
 )
 
 type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
+type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.TQversion) (sessp.Tsize, *serr.Err)
 
 func SidName(sid string, fn string) string {
 	return sid + "-" + fn
@@ -32,9 +33,10 @@ type Clone struct {
 	mksession MkSessionF
 	detach    sp.DetachF
 	fn        string
+	wctl      WriteCtlF
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF) *serr.Err {
+func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF, w WriteCtlF) *serr.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
 	err := mfs.MkDev(CloneName(fn), cl) // put clone file into root dir
@@ -45,6 +47,7 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF) *se
 	cl.mksession = mks
 	cl.detach = d
 	cl.fn = fn
+	cl.wctl = w
 	return nil
 }
 
@@ -61,8 +64,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	var s *session
 	ctl := n + "/" + CTL
 	if err == nil {
-		s = &session{}
-		s.id = sid
+		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.MakeDevInode()
 		if err := c.mfs.MkDev(ctl, s); err != nil {
 			db.DPrintf(db.CLONEDEV, "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
@@ -106,8 +108,8 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sp.DetachF) error {
-	if err := makeClone(mfs, fn, f, d); err != nil {
+func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sp.DetachF, w WriteCtlF) error {
+	if err := makeClone(mfs, fn, f, d, w); err != nil {
 		return err
 	}
 	return nil

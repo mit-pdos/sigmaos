@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/serr"
-	"sigmaos/sessdev"
+	"sigmaos/sessdevsrv"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -59,7 +59,7 @@ func RunCacheSrv(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := sessdev.MkSessDev(pds.MemFs, DUMP, s.mkSession); err != nil {
+	if err := sessdevsrv.MkSessDev(pds.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}
 	return pds.RunServer()

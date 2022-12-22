@@ -19,6 +19,9 @@ const (
 	DB    = NAMED + DBREL + "/"
 	DBD   = DB + "~local/"
 
+	FWREL = "fw"
+	FW    = NAMED + FWREL
+
 	UXBIN = UX + "~local/bin/"
 
 	MEMFS = NAMED + "memfsd/"

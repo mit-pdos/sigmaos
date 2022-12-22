@@ -271,10 +271,7 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstate(t, []string{"user/hotel-userd",
-		"user/hotel-rated", "user/hotel-geod", "user/hotel-profd",
-		"user/hotel-searchd", "user/hotel-reserved", "user/hotel-recd",
-		"user/hotel-wwwd"}, hotel.NCACHE)
+	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 

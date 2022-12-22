@@ -68,6 +68,7 @@ const (
 	UX                   = "UX"
 	DB                   = "DB"
 	PROXY                = "PROXY"
+	FW                   = "FW"
 )
 
 // Realm
@@ -114,6 +115,7 @@ const (
 	CLONEDEV             = "CLONEDEV"
 	SESSDEV              = "SESSDEV"
 	PROTDEVSRV           = "PROTDEVSRV"
+	FWSSRV               = "FWSRV"
 )
 
 // Client-side Infrastructure

@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	fw "sigmaos/fwsrv/proto"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -27,6 +28,7 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
+	fwc      *protdevclnt.ProtDevClnt
 	p        *perf.Perf
 }
 
@@ -68,6 +70,20 @@ func RunWww(job string) error {
 		return err
 	}
 	www.geoc = pdc
+
+	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.FW)
+	if err != nil {
+		db.DFatalf("Error protdev %v", err)
+		return err
+	}
+	www.fwc = pdc
+
+	res := fw.AnnounceResult{}
+	err = www.fwc.RPC("FwSrv.Announce", &fw.AnnounceRequest{Address: ":80"}, &res)
+	if err != nil {
+		db.DFatalf("Error announce %v", err)
+		return err
+	}
 
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)

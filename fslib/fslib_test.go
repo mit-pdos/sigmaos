@@ -1110,22 +1110,22 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), sp.MkMountServer(":2222"))
 	assert.Nil(ts.T, err, "MountService")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
+	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any/"))
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "d/~any/d") + "/")
+	sts, err = ts.GetDir(gopath.Join(pathname, "d/~any/d/"))
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "d/~local") + "/")
+	sts, err = ts.GetDir(gopath.Join(pathname, "d/~local/"))
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
 	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~local"))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
 	ts.Shutdown()

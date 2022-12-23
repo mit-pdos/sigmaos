@@ -11,10 +11,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -265,7 +265,6 @@ func RunNamed(addr string, replicate bool, id int, peers []string, realmId strin
 		return nil, err
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)
-
 	return cmd, nil
 }
 

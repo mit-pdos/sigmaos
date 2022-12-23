@@ -9,3 +9,6 @@ for d in "realm" "kernel" "user"; do
     pgrep -x $p > /dev/null && killall $p
   done
 done
+
+sudo ip link del sigmab
+sudo ip link del `ip link list | grep -o "sb[0-9]*" | head -1`

@@ -3,6 +3,8 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
+	"fmt"
+	"net"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -15,12 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
 	"sigmaos/perf"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"

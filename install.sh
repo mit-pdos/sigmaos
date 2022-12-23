@@ -74,3 +74,9 @@ else
   echo "Unrecognized bin source: $FROM"
   exit 1
 fi
+
+SNET="$PRIVILEGED_BIN/kernel/scnet"
+sudo chown root:root $SNET
+sudo chmod u+s $SNET
+# Is there another way?
+sudo mv $SNET /usr/bin/scnet

@@ -3,8 +3,6 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"fmt"
-	"net"
 	gopath "path"
 	"path/filepath"
 	"sort"

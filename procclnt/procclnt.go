@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kproc"
 	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -59,7 +60,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp 
 	if !viaProcd {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// locally.
-		return proc.RunKernelProc(p, namedAddr)
+		return kproc.RunKernelProc(p, namedAddr)
 	}
 	return nil, nil
 }

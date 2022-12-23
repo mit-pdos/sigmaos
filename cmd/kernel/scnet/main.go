@@ -30,6 +30,7 @@ func init() {
 }
 
 func createBridge() error {
+	log.Printf("create bridge %v\n", bridgeName)
 	// try to get bridge by name, if it already exists then just exit
 	_, err := net.InterfaceByName(bridgeName)
 	if err == nil {
@@ -77,6 +78,9 @@ func createVethPair(pid int) error {
 	x1, x2 := rand.Intn(10000), rand.Intn(10000)
 	parentName := fmt.Sprintf("%s%d", vethPrefix, x1)
 	peerName := fmt.Sprintf("%s%d", vethPrefix, x2)
+
+	log.Printf("createVethPair parent %v peer %v\n", parentName, peerName)
+
 	// create *netlink.Veth
 	la := netlink.NewLinkAttrs()
 	la.Name = parentName

@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
+	"sigmaos/kproc"
 	"sigmaos/proc"
 )
 
@@ -54,7 +55,7 @@ func (e *TestEnv) BootMachined() error {
 	var err error
 	pid := proc.Tpid("machined-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "realm/machined", []string{})
-	machined, err := proc.RunKernelProc(p, fslib.Named())
+	machined, err := kproc.RunKernelProc(p, fslib.Named())
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err

@@ -12,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kproc"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sessp"
@@ -237,7 +238,7 @@ func (s *System) Shutdown() {
 		// kill it so that test terminates
 		s.named.Terminate()
 		s.named.Wait()
-		proc.DelScnet(s.named.cmd.Process.Pid)
+		kproc.DelScnet(s.named.cmd.Process.Pid)
 	}
 }
 
@@ -260,7 +261,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 // Run a named (but not as a proc)
 func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := proc.RunKernelProc(p, fslib.Named())
+	cmd, err := kproc.RunKernelProc(p, fslib.Named())
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err

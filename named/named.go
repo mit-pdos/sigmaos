@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
+	"sigmaos/kproc"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -29,7 +30,7 @@ func Run(args []string) {
 		db.DFatalf("Couldn't split host err %v\n", fslib.Named()[0])
 	}
 
-	if err := proc.SetupScnet(host); err != nil {
+	if err := kproc.SetupScnet(host); err != nil {
 		db.DFatalf("SetupScnet err %v", err)
 	}
 

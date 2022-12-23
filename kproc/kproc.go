@@ -1,4 +1,4 @@
-package proc
+package kproc
 
 import (
 	"fmt"
@@ -14,11 +14,13 @@ import (
 
 	"github.com/vishvananda/netlink"
 
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
-func RunKernelProc(p *Proc, namedAddr []string) (*exec.Cmd, error) {
+func RunKernelProc(p *proc.Proc, namedAddr []string) (*exec.Cmd, error) {
+	log.Printf("RunKernelProc %v %v\n", p, namedAddr)
 	p.FinalizeEnv("NONE")
 	env := p.GetEnv()
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
@@ -54,30 +56,13 @@ func RunKernelProc(p *Proc, namedAddr []string) (*exec.Cmd, error) {
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), env...)
 	if err := cmd.Start(); err != nil {
-		log.Printf("start failed err %v\n", err)
 		return nil, err
 	}
 	log.Printf("mkscnet %v\n", cmd.Process.Pid)
 	if err := mkScnet(cmd.Process.Pid); err != nil {
-		log.Printf("enter failed err %v\n", err)
 		return nil, err
 	}
 	return cmd, nil
-}
-
-func SetupScnet(ip string) error {
-	log.Printf("SetupScnet %v\n", ip)
-	lnk, err := waitScnet()
-	if err != nil {
-		log.Printf("wait failed err %v\n", err)
-		return err
-	}
-	log.Printf("wait link %v\n", lnk.Attrs().Name)
-	if err := setupScnet(lnk, ip); err != nil {
-		log.Printf("setup failed err %v\n", err)
-		return err
-	}
-	return nil
 }
 
 func mkScnet(pid int) error {
@@ -94,6 +79,25 @@ func DelScnet(pid int) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("scnet: out: %s, err: %v", out, err)
+	}
+	return nil
+}
+
+//
+// For process in new name space.  Maybe belongs in procinit.
+//
+
+func SetupScnet(ip string) error {
+	log.Printf("SetupScnet %v\n", ip)
+	lnk, err := waitScnet()
+	if err != nil {
+		log.Printf("wait failed err %v\n", err)
+		return err
+	}
+	log.Printf("wait link %v\n", lnk.Attrs().Name)
+	if err := setupScnet(lnk, ip); err != nil {
+		log.Printf("setup failed err %v\n", err)
+		return err
 	}
 	return nil
 }

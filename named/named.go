@@ -1,16 +1,13 @@
 package named
 
 import (
-	"net"
 	"path"
 	"strconv"
 	"strings"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/kernel"
-	"sigmaos/kproc"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -25,15 +22,6 @@ import (
 )
 
 func Run(args []string) {
-	host, _, error := net.SplitHostPort(fslib.Named()[0])
-	if error != nil {
-		db.DFatalf("Couldn't split host err %v\n", fslib.Named()[0])
-	}
-
-	if err := kproc.SetupScnet(host); err != nil {
-		db.DFatalf("SetupScnet err %v", err)
-	}
-
 	perf.Hz()
 	p := perf.MakePerf("NAMED")
 	defer p.Done()

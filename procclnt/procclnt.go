@@ -60,7 +60,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp 
 	if !viaProcd {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// locally.
-		return kproc.RunKernelProc(p, namedAddr)
+		return kproc.RunKernelProc(p, namedAddr, false)
 	}
 	return nil, nil
 }

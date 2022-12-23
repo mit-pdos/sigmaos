@@ -57,8 +57,8 @@ func RunKernelProc(p *Proc, namedAddr []string) (*exec.Cmd, error) {
 		log.Printf("start failed err %v\n", err)
 		return nil, err
 	}
-	log.Printf("enter %v\n", cmd.Process.Pid)
-	if err := enterScnet(cmd.Process.Pid); err != nil {
+	log.Printf("mkscnet %v\n", cmd.Process.Pid)
+	if err := mkScnet(cmd.Process.Pid); err != nil {
 		log.Printf("enter failed err %v\n", err)
 		return nil, err
 	}
@@ -80,8 +80,17 @@ func SetupScnet(ip string) error {
 	return nil
 }
 
-func enterScnet(pid int) error {
-	cmd := exec.Command("/usr/bin/scnet", strconv.Itoa(pid))
+func mkScnet(pid int) error {
+	cmd := exec.Command("/usr/bin/scnet", "up", strconv.Itoa(pid))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("scnet: out: %s, err: %v", out, err)
+	}
+	return nil
+}
+
+func DelScnet(pid int) error {
+	cmd := exec.Command("/usr/bin/scnet", "down", strconv.Itoa(pid))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("scnet: out: %s, err: %v", out, err)
@@ -144,7 +153,6 @@ func setupScnet(lnk netlink.Link, ip string) error {
 	gw := i.To4()
 	gw[3] = 1
 	dr := netlink.Route{Gw: gw, Dst: nil}
-	log.Printf("route gw %v %v\n", gw, dr)
 	if err := netlink.RouteAdd(&dr); err != nil {
 		return err
 	}

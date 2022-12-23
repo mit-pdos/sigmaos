@@ -237,6 +237,7 @@ func (s *System) Shutdown() {
 		// kill it so that test terminates
 		s.named.Terminate()
 		s.named.Wait()
+		proc.DelScnet(s.named.cmd.Process.Pid)
 	}
 }
 

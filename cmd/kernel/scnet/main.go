@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +57,13 @@ func createBridge() error {
 	if err := netlink.LinkSetUp(br); err != nil {
 		return err
 	}
+
+	// XXX add and delete fix iptables
+	// iptables --append FORWARD --in-interface sigmab --out-interface sigmab --jump ACCEPT
+	// iptables --append FORWARD --in-interface wlp2s0 --out-interface sigmab --jump ACCEPT
+	// iptables --append FORWARD --in-interface sigmab --out-interface wlp2s0 --jump ACCEPT
+	// iptables --append POSTROUTING --table nat --out-interface wlp2s0 --jump MASQUERADE
+
 	return nil
 }
 
@@ -92,19 +100,33 @@ func createVethPair(pid int) error {
 	return nil
 }
 
+func delBridge() error {
+	cmd := exec.Command("ip", "link", "delete", "dev", bridgeName)
+	if _, err := cmd.CombinedOutput(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
-	pid := 1
-	if len(os.Args) > 1 {
-		p, err := strconv.Atoi(os.Args[1])
-		if err != nil {
+	if len(os.Args) != 3 {
+		log.Fatalf("%s: too few arguments <up> <pid>\n", os.Args[0])
+	}
+	pid, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	switch os.Args[1] {
+	case "up":
+		if err := createBridge(); err != nil {
 			log.Fatal(err)
 		}
-		pid = p
-	}
-	if err := createBridge(); err != nil {
-		log.Fatal(err)
-	}
-	if err := createVethPair(pid); err != nil {
-		log.Fatal(err)
+		if err := createVethPair(pid); err != nil {
+			log.Fatal(err)
+		}
+	case "down":
+		if err := delBridge(); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

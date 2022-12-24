@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -41,6 +42,7 @@ type System struct {
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
 	dbd         []*Subsystem
+	replicas    []*System
 	crashedPids map[proc.Tpid]bool
 }
 
@@ -53,6 +55,7 @@ func makeSystemBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 	s.fsuxd = []*Subsystem{}
 	s.fss3d = []*Subsystem{}
 	s.dbd = []*Subsystem{}
+	s.replicas = []*System{}
 	s.crashedPids = make(map[proc.Tpid]bool)
 	return s
 }
@@ -64,24 +67,32 @@ func Boot(pn string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	return makeSystem(param, MakeSystemNamed)
+	return makeSystem(param, makeSystemNamed)
 }
 
 func (s *System) ShutDown() error {
 	db.DPrintf(db.KERNEL, "ShutDown\n")
 	s.Shutdown()
+	for _, r := range s.replicas {
+		r.Shutdown()
+	}
+	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
+	n := s.PathClnt.FidClnt.Len()
+	if n > N {
+		log.Printf("Too many FIDs open (%v): %v", n, s.PathClnt.FidClnt)
+	}
 	db.DPrintf(db.KERNEL, "ShutDown done\n")
 	return nil
 }
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
-	s := makeSystemBase(realmId, fslib.Named(), cores)
+func makeSystemNamed(s *System, uname string, replicaId int) error {
+	log.Printf("replicaid %d %v\n", replicaId, fslib.Named())
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// XXX It's a bit weird that we set program/pid here...
 	proc.SetProgram(uname)
@@ -89,42 +100,54 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterva
 	s.named = makeSubsystemCmd(nil, nil, "", false, cmd)
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
-	return s, err
+	return err
 }
 
-// func (ts *Tstate) addNamedReplica(i int) {
-// 	defer ts.wg.Done()
-// 	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
-// 	ts.Lock()
-// 	defer ts.Unlock()
-// 	ts.replicas = append(ts.replicas, r)
-// }
+func (s *System) addNamedReplica(p *Param, i int) error {
+	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
+	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
+	err := makeSystemNamed(sys, p.Uname, i)
+	if err != nil {
+		return err
+	}
+	s.Lock()
+	defer s.Unlock()
+	s.replicas = append(s.replicas, sys)
+	return nil
+}
 
-// func (ts *Tstate) startReplicas() {
-// 	ts.replicas = []*kernel.System{}
-// 	// Start additional replicas
-// 	for i := 0; i < len(fslib.Named())-1; i++ {
-// 		// Must happen in a separate thread because MakeSystemNamed
-// 		// will block until the replicas are able to process requests.
-// 		go ts.addNamedReplica(i + 1)
-// 	}
-// }
+func (s *System) startReplicas(ch chan error, r int, p *Param) {
+	// Start additional replicas
+	for i := 0; i < r; i++ {
+		// Must happen in a separate thread because MakeSystemNamed
+		// will block until the replicas are able to process requests.
+		go func(i int) {
+			ch <- s.addNamedReplica(p, i+1)
+		}(i)
+	}
+}
 
-func makeSystem(p *Param, mkSys func(string, string, int, *sessp.Tinterval) (*System, error)) (*System, error) {
-	wg := sync.WaitGroup{}
+// XXX should replicas start in their own boot/kernel process?
+func makeSystem(p *Param, mkSys func(*System, string, int) error) (*System, error) {
 	db.DPrintf(db.KERNEL, "param %v\n", p)
-	wg.Add(len(fslib.Named()))
+	n := len(fslib.Named())
+	ch := make(chan error)
+	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
+	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
 
-	var sys *System
-	var err error
 	go func() {
-		defer wg.Done()
 		// Must happen in a separate thread because mkSys will block until
 		// enough replicas have started (if named is replicated).
-		sys, err = mkSys(p.Uname, p.Realm, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+		ch <- mkSys(sys, p.Uname, 0)
 	}()
-	// startReplicas()
-	wg.Wait()
+	sys.startReplicas(ch, n-1, p)
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
 	return sys, err
 }
 
@@ -360,4 +383,24 @@ func addReplPortOffset(peerAddr string) string {
 	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
 
 	return host + ":" + newPort
+}
+
+// backward-compatability
+//
+// Make system with just named. replicaId is used to index into the
+// fslib.Named() slice and select an address for this named.
+func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
+	s := makeSystemBase(realmId, fslib.Named(), cores)
+	// replicaId needs to be 1-indexed for replication library.
+	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
+	if err != nil {
+		return nil, err
+	}
+	// XXX It's a bit weird that we set program/pid here...
+	proc.SetProgram(uname)
+	proc.SetPid(proc.GenPid())
+	s.named = makeSubsystemCmd(nil, nil, "", false, cmd)
+	time.Sleep(SLEEP_MS * time.Millisecond)
+	s.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
+	return s, err
 }

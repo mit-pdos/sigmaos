@@ -63,8 +63,8 @@ type Bstate struct {
 	T      *testing.T
 }
 
-func BootKernel(t *testing.T) (*Bstate, error) {
-	k, err := kernel.BootKernel()
+func BootKernel(t *testing.T, contain bool) (*Bstate, error) {
+	k, err := kernel.BootKernel(contain)
 	if err != nil {
 		return nil, err
 	}

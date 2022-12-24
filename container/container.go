@@ -21,7 +21,7 @@ const (
 	SCNETBIN = "/usr/bin/scnet"
 )
 
-func RunContainer(cmd *exec.Cmd) (*exec.Cmd, error) {
+func RunContainer(cmd *exec.Cmd) error {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 		Cloneflags: syscall.CLONE_NEWUTS |
@@ -52,14 +52,14 @@ func RunContainer(cmd *exec.Cmd) (*exec.Cmd, error) {
 	log.Printf("contain cmd  %v\n", cmd)
 
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return err
 	}
 
 	log.Printf("mkscnet %v\n", cmd.Process.Pid)
 	if err := mkScnet(cmd.Process.Pid); err != nil {
-		return nil, err
+		return err
 	}
-	return cmd, nil
+	return nil
 }
 
 func mkScnet(pid int) error {

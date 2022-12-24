@@ -85,7 +85,7 @@ type Kernel struct {
 	stdout io.ReadCloser
 }
 
-func BootKernel() (*Kernel, error) {
+func BootKernel(contain bool) (*Kernel, error) {
 	pn := path.Join(sp.PRIVILEGED_BIN, "kernel")
 	cmd := exec.Command(pn+"/boot", []string{pn + "/boot.yml"}...)
 	stdin, err := cmd.StdinPipe()
@@ -97,12 +97,18 @@ func BootKernel() (*Kernel, error) {
 		return nil, err
 	}
 	cmd.Stderr = os.Stderr
-	// Create a process group ID to kill all children if necessary.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	if err := cmd.Start(); err != nil {
-		db.DPrintf(db.KERNEL, "BootKernel: Start err %v\n", err)
-		return nil, err
+	if contain {
+		if err := container.RunContainer(cmd); err != nil {
+			return nil, err
+		}
+	} else {
+		// Create a process group ID to kill all children if necessary.
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := cmd.Start(); err != nil {
+			db.DPrintf(db.KERNEL, "BootKernel: Start err %v\n", err)
+			return nil, err
+		}
 	}
 
 	db.DPrintf(db.KERNEL, "Wait for kernel to be booted\n")
@@ -126,6 +132,7 @@ func (k *Kernel) Shutdown() error {
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}
+	container.DelScnet(k.cmd.Process.Pid)
 	return nil
 }
 
@@ -354,7 +361,6 @@ func (s *System) Shutdown() {
 		// kill it so that test terminates
 		s.named.Terminate()
 		s.named.Wait()
-		container.DelScnet(s.named.cmd.Process.Pid)
 	}
 }
 
@@ -377,7 +383,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 // Run a named (but not as a proc)
 func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := kproc.RunKernelProc(p, fslib.Named(), true)
+	cmd, err := kproc.RunKernelProc(p, fslib.Named(), false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err

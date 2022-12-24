@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/bootclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
@@ -59,12 +60,12 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 
 type Bstate struct {
 	*fslib.FsLib
-	kernel *kernel.Kernel
+	kernel *bootclnt.Kernel
 	T      *testing.T
 }
 
 func BootKernel(t *testing.T, contain bool) (*Bstate, error) {
-	k, err := kernel.BootKernel(contain)
+	k, err := bootclnt.BootKernel(contain)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,6 @@
 package kernel
 
 import (
-	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -10,10 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -61,6 +57,23 @@ func makeSystemBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 	return s
 }
 
+// The boot processes enters here
+func Boot(pn string) (*System, error) {
+	db.DPrintf(db.KERNEL, "Boot %s\n", pn)
+	param, err := readParam(pn)
+	if err != nil {
+		return nil, err
+	}
+	return makeSystem(param, MakeSystemNamed)
+}
+
+func (s *System) ShutDown() error {
+	db.DPrintf(db.KERNEL, "ShutDown\n")
+	s.Shutdown()
+	db.DPrintf(db.KERNEL, "ShutDown done\n")
+	return nil
+}
+
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
 func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
@@ -79,80 +92,6 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterva
 	return s, err
 }
 
-type Kernel struct {
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-}
-
-func BootKernel(contain bool) (*Kernel, error) {
-	pn := path.Join(sp.PRIVILEGED_BIN, "kernel")
-	cmd := exec.Command(pn+"/boot", []string{pn + "/boot.yml"}...)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	cmd.Stderr = os.Stderr
-
-	if contain {
-		if err := container.RunContainer(cmd); err != nil {
-			return nil, err
-		}
-	} else {
-		// Create a process group ID to kill all children if necessary.
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := cmd.Start(); err != nil {
-			db.DPrintf(db.KERNEL, "BootKernel: Start err %v\n", err)
-			return nil, err
-		}
-	}
-
-	db.DPrintf(db.KERNEL, "Wait for kernel to be booted\n")
-	// wait for kernel to be booted
-	s := ""
-	if _, err := fmt.Fscanf(stdout, "%s", &s); err != nil {
-		db.DPrintf(db.KERNEL, "Fscanf err %v %s\n", err, s)
-		return nil, err
-	}
-	db.DPrintf(db.KERNEL, "Kernel is running\n")
-	return &Kernel{cmd, stdin, stdout}, nil
-}
-
-func (k *Kernel) Shutdown() error {
-	defer k.stdout.Close()
-	if _, err := io.WriteString(k.stdin, "shutdown\n"); err != nil {
-		return err
-	}
-	defer k.stdin.Close()
-	db.DPrintf(db.KERNEL, "Wait for kernel to shutdown\n")
-	if err := k.cmd.Wait(); err != nil {
-		return err
-	}
-	container.DelScnet(k.cmd.Process.Pid)
-	return nil
-}
-
-// The boot processes enters here
-func Boot(pn string) (*System, error) {
-	db.DPrintf(db.KERNEL, "Boot %s\n", pn)
-	param, err := readParam(pn)
-	if err != nil {
-		return nil, err
-	}
-	return makeSystem(param, MakeSystemNamed)
-}
-
-func (s *System) ShutDown() error {
-	db.DPrintf(db.KERNEL, "ShutDown\n")
-	s.Shutdown()
-	db.DPrintf(db.KERNEL, "ShutDown done\n")
-	return nil
-}
-
 // func (ts *Tstate) addNamedReplica(i int) {
 // 	defer ts.wg.Done()
 // 	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
@@ -165,7 +104,8 @@ func (s *System) ShutDown() error {
 // 	ts.replicas = []*kernel.System{}
 // 	// Start additional replicas
 // 	for i := 0; i < len(fslib.Named())-1; i++ {
-// 		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
+// 		// Must happen in a separate thread because MakeSystemNamed
+// 		// will block until the replicas are able to process requests.
 // 		go ts.addNamedReplica(i + 1)
 // 	}
 // }
@@ -175,12 +115,12 @@ func makeSystem(p *Param, mkSys func(string, string, int, *sessp.Tinterval) (*Sy
 	db.DPrintf(db.KERNEL, "param %v\n", p)
 	wg.Add(len(fslib.Named()))
 
-	// Must happen in a separate thread because mkSys will block until
-	// enough replicas have started (if named is replicated).
 	var sys *System
 	var err error
 	go func() {
 		defer wg.Done()
+		// Must happen in a separate thread because mkSys will block until
+		// enough replicas have started (if named is replicated).
 		sys, err = mkSys(p.Uname, p.Realm, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
 	}()
 	// startReplicas()

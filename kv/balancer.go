@@ -73,16 +73,20 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("balancer-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib err %v", err)
+	}
+	bl.FsLib = fsl
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashChild = crashChild
 	var kvdnc int
-	var err error
-	kvdnc, err = strconv.Atoi(kvdncore)
-	if err != nil {
-		db.DFatalf("Bad kvdncore: %v", err)
+	var error error
+	kvdnc, error = strconv.Atoi(kvdncore)
+	if error != nil {
+		db.DFatalf("Bad kvdncore: %v", error)
 	}
 	bl.kvdncore = proc.Tcore(kvdnc)
 

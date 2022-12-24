@@ -35,7 +35,11 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
-	s.FsLib = fslib.MakeFsLib("spinner")
+	fsl, err := fslib.MakeFsLib("spinner")
+	if err != nil {
+		return nil, err
+	}
+	s.FsLib = fsl
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.outdir = args[0]
 
@@ -45,7 +49,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		db.DFatalf("MakeFile error: %v", err)
 	}
 
-	err := s.Started()
+	err = s.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}

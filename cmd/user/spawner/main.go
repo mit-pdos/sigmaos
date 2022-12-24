@@ -40,7 +40,11 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	}
 	// 	log.Printf("MakeSpawner %v", args)
 	s := &Spawner{}
-	s.FsLib = fslib.MakeFsLib("spawner-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("spawner-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	s.FsLib = fsl
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	b, err := strconv.ParseBool(args[0])
 	if err != nil {

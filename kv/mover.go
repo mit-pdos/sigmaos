@@ -49,7 +49,11 @@ func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) err
 func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	mv := &Mover{}
 	mv.epochstr = epochstr
-	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("mover-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	mv.FsLib = fsl
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 	mv.job = job
 

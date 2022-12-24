@@ -44,7 +44,11 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
-	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib: %v", err)
+	}
+	s.FsLib = fsl
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.startSeqno = s.ReadSeqNo()
 	s.outdir = args[1]

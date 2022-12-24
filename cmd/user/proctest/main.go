@@ -43,7 +43,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib: error %v\n", err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	err = pclnt.Started()
 	if err != nil {

@@ -26,11 +26,15 @@ type RealmClnt struct {
 	*fslib.FsLib
 }
 
-func MakeRealmClnt() *RealmClnt {
+func MakeRealmClnt() (*RealmClnt, error) {
 	clnt := &RealmClnt{}
-	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
+	fsl, err := fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
+	if err != nil {
+		return nil, err
+	}
+	clnt.FsLib = fsl
 	clnt.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), clnt.FsLib, "realm-clnt", fslib.Named())
-	return clnt
+	return clnt, nil
 }
 
 func MakeRealmClntFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *RealmClnt {

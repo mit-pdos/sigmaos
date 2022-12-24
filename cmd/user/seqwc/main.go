@@ -13,11 +13,14 @@ import (
 )
 
 func main() {
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib: error %v\n", err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	p := perf.MakePerf("SEQWC")
 	defer p.Done()
-	err := pclnt.Started()
+	err = pclnt.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}

@@ -44,7 +44,10 @@ func main() {
 		}
 		sempath = os.Args[4]
 	}
-	fsl := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib err %v", err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	var rcli *redis.Client
 	var clk *kv.KvClerk

@@ -8,9 +8,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -23,7 +23,10 @@ const (
 
 func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("leader-" + pid.String())
+	fsl, err := fslib.MakeFsLib("leader-" + pid.String())
+	if err != nil {
+		db.DFatalf("%v MakeFsLib %v failed %v\n", proc.GetName(), LEADERFN, err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 
 	pclnt.Started()

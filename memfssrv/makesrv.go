@@ -55,7 +55,11 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	if isInitNamed {
 		// Server is running, make an fslib for it, mounting itself, to ensure that
 		// srv can call checkLock
-		srv.SetFsl(fslib.MakeFsLib(name))
+		fsl, err := fslib.MakeFsLib(name)
+		if err != nil {
+			return nil, serr.MkErrError(err)
+		}
+		srv.SetFsl(fsl)
 	}
 	return srv, nil
 }
@@ -70,7 +74,10 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 }
 
 func MakeMemFs(pn string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl := fslib.MakeFsLib(name)
+	fsl, err := fslib.MakeFsLib(name)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	fs, err := MakeMemFsFsl(pn, fsl, pclnt)
 	return fs, fsl, pclnt, err

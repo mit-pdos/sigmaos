@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -18,12 +19,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage msec pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib err %v\n", err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started()
 	pid1 := proc.Tpid(os.Args[2])
 	a := proc.MakeProcPid(pid1, "user/sleeper", []string{os.Args[1], "name/"})
-	err := pclnt.Spawn(a)
+	err = pclnt.Spawn(a)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}

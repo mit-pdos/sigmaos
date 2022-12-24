@@ -215,7 +215,11 @@ func RunMember(jobdir, grp string) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("kv-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib %v\n", err)
+	}
+	g.FsLib = fsl
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
 	ip, err := fidclnt.LocalIP()

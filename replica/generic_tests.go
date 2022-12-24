@@ -438,7 +438,8 @@ func ChainCrashTail(ts *Tstate) {
 func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup) {
 	defer end.Done()
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_files; i++ {
@@ -621,7 +622,8 @@ func ConcurrentClientsCrashTail(ts *Tstate) {
 func pausedClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup, writes *sync.WaitGroup, reads *sync.WaitGroup) {
 	defer end.Done()
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_files; i++ {
@@ -735,7 +737,8 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 
 	id_str := strconv.Itoa(id)
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_renames; i++ {

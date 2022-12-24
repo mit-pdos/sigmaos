@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/machine/proto"
@@ -17,6 +16,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -44,7 +44,11 @@ func MakeMachined(args []string) *Machined {
 	m := &Machined{}
 	m.nodeds = map[proc.Tpid]*exec.Cmd{}
 	m.Config = makeMachineConfig()
-	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib(proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("Error MakeFsLib: %v", err)
+	}
+	m.FsLib = fsl
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
 	mfs, err := memfssrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
 	if err != nil {

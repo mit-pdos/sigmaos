@@ -47,12 +47,16 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.me = proc.GetPid()
 	p.index = args[0]
 	p.opcode = args[1]
-	p.FsLib = fslib.MakeFsLib(p.me.String())
+	fsl, err := fslib.MakeFsLib(p.me.String())
+	if err != nil {
+		db.DFatalf("MakeFsLib err %v\n", err)
+	}
+	p.FsLib = fsl
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}
-	err := p.GetFileJson(sp.MEMFS+"/txni", p.ti)
+	err = p.GetFileJson(sp.MEMFS+"/txni", p.ti)
 	if err != nil {
 		db.DFatalf("Failed to read txni %v\n", err)
 	}

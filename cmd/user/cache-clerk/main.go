@@ -45,7 +45,10 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	fsl := fslib.MakeFsLib("cacheclerk-" + proc.GetPid().String())
+	fsl, err := fslib.MakeFsLib("cacheclerk-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MakeFsLib err %v", err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	var rcli *redis.Client
 	var cc *cacheclnt.CacheClnt

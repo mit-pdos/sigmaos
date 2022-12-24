@@ -45,7 +45,11 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
-	r.FsLib = fslib.MakeFsLib("fsreader")
+	fsl, err := fslib.MakeFsLib("fsreader")
+	if err != nil {
+		return nil, err
+	}
+	r.FsLib = fsl
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.input = args[1]
 	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"

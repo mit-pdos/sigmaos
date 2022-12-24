@@ -13,7 +13,6 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -90,7 +89,7 @@ func ExecContainer() error {
 	log.Printf("execContainer: %v\n", os.Args)
 	host, _, error := net.SplitHostPort(fslib.Named()[0])
 	if error != nil {
-		db.DFatalf("Couldn't split host err %v\n", fslib.Named()[0])
+		return fmt.Errorf("SplitHostPort: %v", error)
 	}
 	if err := setupScnet(host); err != nil {
 		return err

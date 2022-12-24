@@ -85,8 +85,11 @@ func MakeCoord(args []string) (*Coord, error) {
 	c := &Coord{}
 	c.job = args[0]
 	db.DPrintf(db.MR, "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
-	c.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
-
+	fsl, err := fslib.MakeFsLib("coord-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	c.FsLib = fsl
 	m, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])

@@ -37,7 +37,11 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		log.Printf("nameds")
 		return nil, err
 	}
-	clnt := MakeRealmClnt()
+	clnt, err := MakeRealmClnt()
+	if err != nil {
+		log.Printf("makerealmclnt")
+		return nil, err
+	}
 	e.RealmClnt = clnt
 	if err := e.bootSigmaMgr(); err != nil {
 		log.Printf("sigmamgr")

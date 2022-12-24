@@ -34,8 +34,10 @@ func init() {
 
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
+	// ts, err := test.BootKernel(t)
+	// assert.Nil(t, err)
 	sts, err := ts.GetDir(pathname)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	if pathname == sp.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 	} else {
@@ -384,7 +386,8 @@ func TestPageDir(t *testing.T) {
 }
 
 func dirwriter(t *testing.T, dn string, name string, ch chan bool) {
-	fsl := fslib.MakeFsLibAddr("fslibtest-"+name, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("fslibtest-"+name, fslib.Named())
+	assert.Nil(t, err)
 	stop := false
 	for !stop {
 		select {
@@ -603,8 +606,9 @@ func TestCreateExcl1(t *testing.T) {
 
 	fn := gopath.Join(pathname, "exclusive")
 	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OCEXEC, []byte{})
-	assert.Equal(t, nil, err)
-	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
+	assert.Nil(t, err)
+	fsl, err := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
+	assert.Nil(t, err)
 	go func() {
 		_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 		assert.Nil(t, err, "Putfile")
@@ -632,8 +636,9 @@ func TestCreateExclN(t *testing.T) {
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
+			fsl, err := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
+			assert.Nil(t, err)
+			_, err = fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -654,9 +659,9 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 
 	fn := gopath.Join(pathname, "create-conn-close-test")
 
-	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
-
-	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
+	fsl1, err := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+	assert.Nil(t, err)
+	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 	assert.Nil(t, err, "Create 1")
 
 	go func() {
@@ -699,7 +704,8 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ch := make(chan error)
 	done := make(chan bool)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+		assert.Nil(t, err)
 		for i := 1; i < N; {
 			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
 			assert.Equal(t, nil, err)
@@ -744,7 +750,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 
 	ch := make(chan error)
 	done := make(chan bool)
-	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
 		_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
@@ -862,7 +869,8 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		fsl := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), fslib.Named())
+		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
 			for c := true; c; {
@@ -902,7 +910,8 @@ func TestPipeBasic(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("reader", fslib.Named())
+		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		b, err := fsl.Read(fd, 100)
@@ -935,7 +944,8 @@ func TestPipeClose(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("reader", fslib.Named())
+		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		for true {
@@ -973,8 +983,9 @@ func TestPipeRemove(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
-		_, err := fsl.Open(pipe, sp.OREAD)
+		fsl, err := fslib.MakeFsLibAddr("reader", fslib.Named())
+		assert.Nil(t, err)
+		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
 		ch <- true
 	}(ch)
@@ -994,8 +1005,9 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "MakePipe")
 
 	go func() {
-		fsl := fslib.MakeFsLibAddr("writer", fslib.Named())
-		_, err := fsl.Open(pipe, sp.OWRITE)
+		fsl, err := fslib.MakeFsLibAddr("writer", fslib.Named())
+		assert.Nil(t, err)
+		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
@@ -1020,7 +1032,8 @@ func TestPipeCrash1(t *testing.T) {
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
-	fsl1 := fslib.MakeFsLibAddr("w1", fslib.Named())
+	fsl1, err := fslib.MakeFsLibAddr("w1", fslib.Named())
+	assert.Nil(t, err)
 	go func() {
 		// blocks
 		_, err := fsl1.Open(pipe, sp.OWRITE)
@@ -1039,10 +1052,11 @@ func TestPipeCrash1(t *testing.T) {
 
 	// start up second write to pipe
 	go func() {
-		fsl2 := fslib.MakeFsLibAddr("w2", fslib.Named())
+		fsl2, err := fslib.MakeFsLibAddr("w2", fslib.Named())
+		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.
-		_, err := fsl2.Open(pipe, sp.OWRITE)
+		_, err = fsl2.Open(pipe, sp.OWRITE)
 		assert.NotNil(ts.T, err, "Open")
 	}()
 
@@ -1407,7 +1421,9 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr())
+		assert.Nil(t, err)
+		fsls = append(fsls, fsl)
 	}
 	// Remove just in case it was left over from a previous run.
 	for _, fn := range fns {
@@ -1531,7 +1547,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr())
+		assert.Nil(t, err)
+		fsls = append(fsls, fsl)
 	}
 	// Remove just in case it was left over from a previous run.
 	for _, fn := range fns {
@@ -1643,7 +1661,8 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
 	for c := 0; c < nclerk; c++ {
 		go func() {
 			cn := strconv.Itoa(c)
-			fsl := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
+			assert.Nil(t, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
 					_, err := fsl.Stat(gopath.Join(dir, "f"+strconv.Itoa(f)))

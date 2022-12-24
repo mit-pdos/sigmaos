@@ -51,7 +51,10 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, 
 }
 
 func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl := fslib.MakeFsLib(name)
+	fsl, err := fslib.MakeFsLib(name)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := MakeReplServerFsl(root, addr, path, fsl, pclnt, config)
 	if err != nil {

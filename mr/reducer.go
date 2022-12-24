@@ -50,7 +50,11 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
+	fsl, err := fslib.MakeFsLib("reducer-" + r.input)
+	if err != nil {
+		return nil, err
+	}
+	r.FsLib = fsl
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.perf = p
 
@@ -105,7 +109,11 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 // XXX cut new fslib?
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	if err != nil {
+		db.DPrintf(db.MR, "MakeFsLibAddr err %v", err)
+		return 0, 0, false
+	}
 	defer fsl.Exit()
 
 	sym := r.input + "/" + file + "/"

@@ -7,7 +7,6 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/sessp"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/realm/proto"
 	"sigmaos/resource"
 	"sigmaos/semclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -45,7 +45,11 @@ func MakeNoded(machineId string) *Noded {
 	nd.machineId = machineId
 	nd.cfgPath = NodedConfPath(nd.id)
 	nd.done = make(chan bool)
-	nd.FsLib = fslib.MakeFsLib(nd.id)
+	fsl, err := fslib.MakeFsLib(nd.id)
+	if err != nil {
+		db.DFatalf("Error MakeFsLib: %v", err)
+	}
+	nd.FsLib = fsl
 	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
 	nd.ConfigClnt = config.MakeConfigClnt(nd.FsLib)
 	mfs, err := memfssrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
@@ -216,7 +220,11 @@ func (nd *Noded) register(cfg *RealmConfig) {
 }
 
 func (nd *Noded) boot(realmCfg *RealmConfig) {
-	nd.s = kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
+	sys, err := kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
+	if err != nil {
+		db.DFatalf("Error MakeSystem in Noded.boot: %v", err)
+	}
+	nd.s = sys
 	if err := nd.s.Boot(); err != nil {
 		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}

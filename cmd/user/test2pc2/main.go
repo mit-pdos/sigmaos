@@ -64,7 +64,11 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 	}
 	p.delay = delay
 	p.randstr = randstr.Hex(16)
-	p.FsLib = fslib.MakeFsLib(p.me.String())
+	fsl, err := fslib.MakeFsLib(p.me.String())
+	if err != nil {
+		db.DFatalf("MakeFsLib %v\n", err)
+	}
+	p.FsLib = fsl
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v delay %v\n", p.me, p.index, p.opcode, p.delay)

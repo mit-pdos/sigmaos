@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
-	"sigmaos/proc"
 	"sigmaos/sessp"
 )
 
@@ -41,17 +40,17 @@ func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
 	}
 }
 
-func MakeFsLibAddr(uname string, addrs []string) *FsLib {
+func MakeFsLibAddr(uname string, addrs []string) (*FsLib, error) {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
 		debug.PrintStack()
-		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), addrs, err)
+		return nil, err
 	}
-	return fl
+	return fl, nil
 }
 
-func MakeFsLib(uname string) *FsLib {
+func MakeFsLib(uname string) (*FsLib, error) {
 	return MakeFsLibAddr(uname, Named())
 }
 

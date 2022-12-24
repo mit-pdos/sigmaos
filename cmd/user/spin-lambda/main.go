@@ -13,9 +13,12 @@ import (
 func spin(args []string) error {
 	addr := args[0]
 	sempath := args[1]
-	fsl := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), []string{addr})
+	fsl, err := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), []string{addr})
+	if err != nil {
+		return err
+	}
 	sem := semclnt.MakeSemClnt(fsl, sempath)
-	err := sem.Up()
+	err = sem.Up()
 	if err != nil {
 		return err
 	}

@@ -12,8 +12,6 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fslib"
 	"sigmaos/machine"
 	mproto "sigmaos/machine/proto"
@@ -23,6 +21,8 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
@@ -54,7 +54,11 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	db.DPrintf(db.REALMMGR, "MakeRealmResourceMgr %v", realmId)
 	m := &RealmResourceMgr{}
 	m.realmId = realmId
-	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
+	fsl, err := fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
+	if err != nil {
+		db.DFatalf("Error MakeFsLib in MakeSigmaResourceMgr: %v", err)
+	}
+	m.sigmaFsl = fsl
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, realmFencePath(realmId), 0777)
@@ -520,7 +524,12 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	} else {
 		// If the realm just finished booting, finish initialization.
 		if m.FsLib == nil {
-			m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
+			fsl, err := fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
+			if err != nil {
+				db.DPrintf(db.REALMMGR, "Error MakeFsLibAddr: %v", err)
+				return 0, false, machineIds, false
+			}
+			m.FsLib = fsl
 		}
 	}
 

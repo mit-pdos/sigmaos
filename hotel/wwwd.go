@@ -36,7 +36,11 @@ type Www struct {
 func RunWww(job string) error {
 	www := &Www{}
 	www.job = job
-	www.FsLib = fslib.MakeFsLib("hotel-wwwd-" + job)
+	fsl, err := fslib.MakeFsLib("hotel-wwwd-" + job)
+	if err != nil {
+		return err
+	}
+	www.FsLib = fsl
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELUSER)
 	if err != nil {

@@ -47,7 +47,11 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.opcode = args[0]
 	cd.args = args[1:]
 	cd.ch = make(chan Tstatus)
-	cd.FsLib = fslib.MakeFsLib("coord")
+	fsl, err := fslib.MakeFsLib("coord")
+	if err != nil {
+		db.DFatalf("MakeFsLib %v failed %v\n", COORD, err)
+	}
+	cd.FsLib = fsl
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
 	//	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
 

@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/realm"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -67,9 +67,17 @@ func MakeTstate(t *testing.T) *Tstate {
 func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	ts := makeTstate(t, realmid)
 	// XXX make fslib exit?
-	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
+	fsl, err := fslib.MakeFsLib("test")
+	if err != nil {
+		return nil
+	}
+	rconfig := realm.GetRealmConfig(fsl, realmid)
 	ts.namedAddr = rconfig.NamedAddrs
-	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	sys, err := kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	if err != nil {
+		return nil
+	}
+	ts.System = sys
 	return ts
 }
 
@@ -108,12 +116,16 @@ func (ts *Tstate) Shutdown() {
 	db.DPrintf(db.TEST, "Done shutting down")
 }
 
-func (ts *Tstate) addNamedReplica(i int) {
+func (ts *Tstate) addNamedReplica(i int) error {
 	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	r, err := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	if err != nil {
+		return err
+	}
 	ts.Lock()
 	defer ts.Unlock()
 	ts.replicas = append(ts.replicas, r)
+	return nil
 }
 
 func (ts *Tstate) startReplicas() {
@@ -125,15 +137,22 @@ func (ts *Tstate) startReplicas() {
 	}
 }
 
-func (ts *Tstate) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) *kernel.System) {
+func (ts *Tstate) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) (*kernel.System, error)) error {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
+	var err error
 	go func() {
 		defer ts.wg.Done()
-		ts.System = mkSys("test", sp.TEST_RID, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+		sys, r := mkSys("test", sp.TEST_RID, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+		if r != nil {
+			err = r
+		} else {
+			ts.System = sys
+		}
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()
+	return err
 }
 
 func setVersion() {

@@ -40,7 +40,7 @@ type Mapper struct {
 	perf        *perf.Perf
 }
 
-func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *Mapper {
+func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = job
@@ -50,10 +50,14 @@ func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *M
 	m.input = input
 	m.bin = path.Base(m.input)
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
-	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
+	fsl, err := fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
+	if err != nil {
+		return nil, err
+	}
+	m.FsLib = fsl
 	m.perf = p
 	m.sbc = MakeScanByteCounter(p)
-	return m
+	return m, nil
 }
 
 func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
@@ -68,7 +72,10 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	m := MkMapper(mapf, args[0], p, nr, lsz, args[2])
+	m, err := MkMapper(mapf, args[0], p, nr, lsz, args[2])
+	if err != nil {
+		return nil, fmt.Errorf("MakeMapper failed %v", err)
+	}
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)

@@ -2,7 +2,6 @@ package fss3
 
 import (
 	"context"
-	"log"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -37,7 +36,6 @@ func RunFss3(buckets []string) {
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, path.Path{}, sp.DMDIR)
-		log.Printf("bucket %v d %v\n", bucket, d)
 		if err := mfs.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}

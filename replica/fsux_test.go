@@ -22,7 +22,8 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 
 	replicaName := "fsux-chain-replica"
 	db.Name(replicaName + "-test")
-	ts.FsLib = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddrs)
+	ts.FsLib, err = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddrs)
+	assert.Nil(t, err)
 	ts.t = t
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName

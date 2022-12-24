@@ -10,10 +10,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/named"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/realm"
+	sp "sigmaos/sigmap"
 	"sigmaos/tx"
 )
 
@@ -42,7 +42,8 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	db.Name("tx_test")
-	ts.FsLib = fslib.MakeFsLibAddr("txtest", cfg.NamedAddrs)
+	ts.FsLib, err = fslib.MakeFsLibAddr("txtest", cfg.NamedAddrs)
+	assert.Nil(t, err)
 	ts.t = t
 
 	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, cfg.NamedAddrs)

@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/sessp"
 	"sigmaos/fslib"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -131,7 +131,8 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	fsl := fslib.MakeFsLibAddr("abcd", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("abcd", fslib.Named())
+	assert.Nil(t, err)
 	fsl.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
 		fd, err := fsl.Open(linkPath+"/", sp.OREAD)

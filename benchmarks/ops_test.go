@@ -69,7 +69,10 @@ func spawnBurstWaitStartProcs(ts *test.Tstate, i interface{}) (time.Duration, fl
 	pclnts := []*procclnt.ProcClnt{}
 	for i := 0; i < AAA; i++ {
 		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
-		fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
+		if err != nil {
+			db.DFatalf("MakeFsLib %v\n", err)
+		}
 		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
 	}
 	start := time.Now()

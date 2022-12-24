@@ -12,10 +12,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/realm"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -57,10 +57,11 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 
 	program := "realm_test"
-	ts.realmFsl = fslib.MakeFsLibAddr(program, fslib.Named())
+	ts.realmFsl, err = fslib.MakeFsLibAddr(program, fslib.Named())
+	assert.Nil(t, err)
 	ts.ConfigClnt = config.MakeConfigClnt(ts.realmFsl)
-	ts.FsLib = fslib.MakeFsLibAddr(program, cfg.NamedAddrs)
-
+	ts.FsLib, err = fslib.MakeFsLibAddr(program, cfg.NamedAddrs)
+	assert.Nil(t, err)
 	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, program, cfg.NamedAddrs)
 
 	ts.t = t

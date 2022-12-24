@@ -13,10 +13,10 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -60,9 +60,10 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
-		err := sem.Down()
+		err = sem.Down()
 		ch <- err
 	}()
 
@@ -136,7 +137,8 @@ func TestReconnectSimple(t *testing.T) {
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 0, 0, 0, NETFAIL)
 	ch := make(chan error)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(DIRGRP0)
 			if err != nil {
@@ -164,7 +166,8 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), fslib.Named())
+			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(DIRGRP0)
 				if err != nil {
@@ -193,10 +196,11 @@ func TestServerPartitionBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func() {
-			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr("fsl", fslib.Named())
+			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
 			sem.Init(0)
-			err := sem.Down()
+			err = sem.Down()
 			ch <- err
 			fsl.Exit()
 
@@ -215,7 +219,8 @@ const (
 )
 
 func writer(t *testing.T, ch chan error, name string) {
-	fsl := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
+	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + name
 	stop := false
 	nfile := 0

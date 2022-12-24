@@ -3,6 +3,7 @@ package test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"sync"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/realm"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -60,20 +62,49 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 
 type Bstate struct {
 	*fslib.FsLib
+	*procclnt.ProcClnt
 	kernel *bootclnt.Kernel
 	T      *testing.T
 }
 
-func BootKernel(t *testing.T, contain bool) (*Bstate, error) {
-	k, err := bootclnt.BootKernel(contain)
+func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
+	if path == sp.NAMED {
+		return BootKernel(t)
+	} else {
+		bs, err := BootKernelAll(t)
+		if err != nil {
+			return nil, err
+		}
+		bs.RmDir(path)
+		bs.MkDir(path, 0777)
+		return bs, nil
+	}
+}
+
+func BootKernel(t *testing.T) (*Bstate, error) {
+	k, err := bootclnt.BootKernel(false, "boot.yml")
 	if err != nil {
 		return nil, err
 	}
-	fslib, err := fslib.MakeFsLibAddr("test", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
 	if err != nil {
 		return nil, err
 	}
-	return &Bstate{fslib, k, t}, nil
+	return &Bstate{fsl, nil, k, t}, nil
+}
+
+func BootKernelAll(t *testing.T) (*Bstate, error) {
+	setVersion()
+	k, err := bootclnt.BootKernel(false, "bootall.yml")
+	if err != nil {
+		return nil, err
+	}
+	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
+	if err != nil {
+		return nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
+	return &Bstate{fsl, pclnt, k, t}, nil
 }
 
 func (bs *Bstate) Shutdown() error {
@@ -107,6 +138,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 func MakeTstateAll(t *testing.T) *Tstate {
 	var ts *Tstate
 	// If no realm is running (single-machine)
+	log.Printf("realmid %v\n", realmid)
 	if realmid == "" {
 		ts = makeTstate(t, realmid)
 		ts.makeSystem(kernel.MakeSystemAll)

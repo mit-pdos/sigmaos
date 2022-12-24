@@ -10,6 +10,7 @@ type Param struct {
 	Path  string `yalm:"path"`
 	Uname string `yalm:"uname"`
 	Realm string `yalm:"realm"`
+	All   bool   `yalm:"all"`
 }
 
 func readParam(pn string) (*Param, error) {

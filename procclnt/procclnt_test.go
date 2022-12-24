@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/resource"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
@@ -98,6 +98,21 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
+}
+
+func TestWaitExitSimple(t *testing.T) {
+	ts, err := test.BootKernelAll(t)
+	assert.Nil(t, err)
+
+	a := proc.MakeProc("user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	err = ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	status, err := ts.WaitExit(a.Pid)
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+
+	ts.Shutdown()
 }
 
 func TestWaitExitOne(t *testing.T) {

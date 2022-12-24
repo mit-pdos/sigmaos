@@ -35,7 +35,7 @@ func init() {
 
 func TestInitFs(t *testing.T) {
 	//ts := test.MakeTstatePath(t, pathname)
-	ts, err := test.BootKernel(t, false)
+	ts, err := test.BootKernel(t)
 	assert.Nil(t, err)
 	log.Printf("InitFs run\n")
 	sts, err := ts.GetDir(pathname)

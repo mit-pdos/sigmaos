@@ -67,7 +67,12 @@ func Boot(pn string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	return makeSystem(param, makeSystemNamed)
+	db.DPrintf(db.KERNEL, "Boot %s param %v\n", pn, param)
+	if param.All {
+		return makeSystem(param, makeSystemAll)
+	} else {
+		return makeSystem(param, makeSystemNamed)
+	}
 }
 
 func (s *System) ShutDown() error {
@@ -83,6 +88,29 @@ func (s *System) ShutDown() error {
 	}
 	db.DPrintf(db.KERNEL, "ShutDown done\n")
 	return nil
+}
+
+// XXX should replicas start in their own boot/kernel process?
+func makeSystem(p *Param, mkSys func(*System, string, int) error) (*System, error) {
+	n := len(fslib.Named())
+	ch := make(chan error)
+	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
+	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
+
+	go func() {
+		// Must happen in a separate thread because mkSys will block until
+		// enough replicas have started (if named is replicated).
+		ch <- mkSys(sys, p.Uname, 0)
+	}()
+	sys.startReplicas(ch, n-1, p)
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
+	return sys, err
 }
 
 // Make system with just named. replicaId is used to index into the
@@ -127,56 +155,21 @@ func (s *System) startReplicas(ch chan error, r int, p *Param) {
 	}
 }
 
-// XXX should replicas start in their own boot/kernel process?
-func makeSystem(p *Param, mkSys func(*System, string, int) error) (*System, error) {
-	db.DPrintf(db.KERNEL, "param %v\n", p)
-	n := len(fslib.Named())
-	ch := make(chan error)
-	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
-
-	go func() {
-		// Must happen in a separate thread because mkSys will block until
-		// enough replicas have started (if named is replicated).
-		ch <- mkSys(sys, p.Uname, 0)
-	}()
-	sys.startReplicas(ch, n-1, p)
-	var err error
-	for i := 0; i < n; i++ {
-		r := <-ch
-		if r != nil {
-			err = r
-		}
-	}
-	return sys, err
-}
-
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
-	s, err := MakeSystemNamed(uname, realmId, replicaId, cores)
+func makeSystemAll(s *System, uname string, replicaId int) error {
+	err := makeSystemNamed(s, uname, replicaId)
 	if err != nil {
-		db.DPrintf(db.KERNEL, "MakeSystemNamed err %v\n", err)
-		return nil, err
+		db.DPrintf(db.KERNEL, "makeSystemNamed err %v\n", err)
+		return err
 	}
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	err = s.Boot()
 	if err != nil {
 		db.DPrintf(db.KERNEL, "Start err %v\n", err)
-		return nil, err
+		return err
 	}
-	return s, nil
-}
-
-func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*System, error) {
-	s := makeSystemBase(realmId, namedAddr, cores)
-	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
-	if err != nil {
-		return nil, err
-	}
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
-	return s, nil
+	return nil
 }
 
 // Boot a "kernel" without named
@@ -385,8 +378,21 @@ func addReplPortOffset(peerAddr string) string {
 	return host + ":" + newPort
 }
 
+//
 // backward-compatability
 //
+
+func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*System, error) {
+	s := makeSystemBase(realmId, namedAddr, cores)
+	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	s.FsLib = fsl
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
+	return s, nil
+}
+
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
 func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
@@ -403,4 +409,21 @@ func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterva
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s, err
+}
+
+// Make a system with Named and other kernel services
+func MakeSystemAll(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
+	s, err := MakeSystemNamed(uname, realmId, replicaId, cores)
+	if err != nil {
+		db.DPrintf(db.KERNEL, "MakeSystemNamed err %v\n", err)
+		return nil, err
+	}
+	// XXX should this be GetPid?
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
+	err = s.Boot()
+	if err != nil {
+		db.DPrintf(db.KERNEL, "Start err %v\n", err)
+		return nil, err
+	}
+	return s, nil
 }

@@ -57,6 +57,28 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 	}
 }
 
+type Bstate struct {
+	*fslib.FsLib
+	kernel *kernel.Kernel
+	T      *testing.T
+}
+
+func BootKernel(t *testing.T) (*Bstate, error) {
+	k, err := kernel.BootKernel()
+	if err != nil {
+		return nil, err
+	}
+	fslib, err := fslib.MakeFsLibAddr("test", fslib.Named())
+	if err != nil {
+		return nil, err
+	}
+	return &Bstate{fslib, k, t}, nil
+}
+
+func (bs *Bstate) Shutdown() error {
+	return bs.kernel.Shutdown()
+}
+
 func MakeTstate(t *testing.T) *Tstate {
 	ts := makeTstate(t, "")
 	ts.makeSystem(kernel.MakeSystemNamed)

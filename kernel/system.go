@@ -1,6 +1,8 @@
 package kernel
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -8,12 +10,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
+	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sessp"
@@ -59,39 +63,150 @@ func makeSystemBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) *System {
+func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
 	s := makeSystemBase(realmId, fslib.Named(), cores)
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
-		db.DFatalf("RunNamed err %v\n", err)
+		return nil, err
 	}
 	// XXX It's a bit weird that we set program/pid here...
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
 	s.named = makeSubsystemCmd(nil, nil, "", false, cmd)
 	time.Sleep(SLEEP_MS * time.Millisecond)
-	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
-	return s
+	s.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
+	return s, err
+}
+
+type Kernel struct {
+	cmd    *exec.Cmd
+	stdin  io.WriteCloser
+	stdout io.ReadCloser
+}
+
+func BootKernel() (*Kernel, error) {
+	pn := path.Join(sp.PRIVILEGED_BIN, "kernel")
+	cmd := exec.Command(pn+"/boot", []string{pn + "/boot.yml"}...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr = os.Stderr
+	// Create a process group ID to kill all children if necessary.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	if err := cmd.Start(); err != nil {
+		db.DPrintf(db.KERNEL, "BootKernel: Start err %v\n", err)
+		return nil, err
+	}
+
+	db.DPrintf(db.KERNEL, "Wait for kernel to be booted\n")
+	// wait for kernel to be booted
+	s := ""
+	if _, err := fmt.Fscanf(stdout, "%s", &s); err != nil {
+		db.DPrintf(db.KERNEL, "Fscanf err %v %s\n", err, s)
+		return nil, err
+	}
+	db.DPrintf(db.KERNEL, "Kernel is running\n")
+	return &Kernel{cmd, stdin, stdout}, nil
+}
+
+func (k *Kernel) Shutdown() error {
+	defer k.stdout.Close()
+	if _, err := io.WriteString(k.stdin, "shutdown\n"); err != nil {
+		return err
+	}
+	defer k.stdin.Close()
+	db.DPrintf(db.KERNEL, "Wait for kernel to shutdown\n")
+	if err := k.cmd.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// The boot processes enters here
+func Boot(pn string) (*System, error) {
+	db.DPrintf(db.KERNEL, "Boot %s\n", pn)
+	param, err := readParam(pn)
+	if err != nil {
+		return nil, err
+	}
+	return makeSystem(param, MakeSystemNamed)
+}
+
+func (s *System) ShutDown() error {
+	db.DPrintf(db.KERNEL, "ShutDown\n")
+	s.Shutdown()
+	db.DPrintf(db.KERNEL, "ShutDown done\n")
+	return nil
+}
+
+// func (ts *Tstate) addNamedReplica(i int) {
+// 	defer ts.wg.Done()
+// 	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+// 	ts.Lock()
+// 	defer ts.Unlock()
+// 	ts.replicas = append(ts.replicas, r)
+// }
+
+// func (ts *Tstate) startReplicas() {
+// 	ts.replicas = []*kernel.System{}
+// 	// Start additional replicas
+// 	for i := 0; i < len(fslib.Named())-1; i++ {
+// 		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
+// 		go ts.addNamedReplica(i + 1)
+// 	}
+// }
+
+func makeSystem(p *Param, mkSys func(string, string, int, *sessp.Tinterval) (*System, error)) (*System, error) {
+	wg := sync.WaitGroup{}
+	db.DPrintf(db.KERNEL, "param %v\n", p)
+	wg.Add(len(fslib.Named()))
+
+	// Must happen in a separate thread because mkSys will block until
+	// enough replicas have started (if named is replicated).
+	var sys *System
+	var err error
+	go func() {
+		defer wg.Done()
+		sys, err = mkSys(p.Uname, p.Realm, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	}()
+	// startReplicas()
+	wg.Wait()
+	return sys, err
 }
 
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int, cores *sessp.Tinterval) *System {
-	s := MakeSystemNamed(uname, realmId, replicaId, cores)
+func MakeSystemAll(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
+	s, err := MakeSystemNamed(uname, realmId, replicaId, cores)
+	if err != nil {
+		db.DPrintf(db.KERNEL, "MakeSystemNamed err %v\n", err)
+		return nil, err
+	}
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
-	err := s.Boot()
+	err = s.Boot()
 	if err != nil {
-		db.DFatalf("Start err %v\n", err)
+		db.DPrintf(db.KERNEL, "Start err %v\n", err)
+		return nil, err
 	}
-	return s
+	return s, nil
 }
 
-func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) *System {
+func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*System, error) {
 	s := makeSystemBase(realmId, namedAddr, cores)
-	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
+	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	s.FsLib = fsl
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
-	return s
+	return s, nil
 }
 
 // Boot a "kernel" without named

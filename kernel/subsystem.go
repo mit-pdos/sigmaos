@@ -38,6 +38,7 @@ func (s *Subsystem) Run(namedAddr []string) error {
 
 // Send SIGTERM to a system.
 func (s *Subsystem) Terminate() error {
+	db.DPrintf(db.KERNEL, "Terminate %v\n", s.cmd.Process.Pid)
 	if s.viaProcd {
 		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}

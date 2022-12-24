@@ -75,6 +75,8 @@ else
   exit 1
 fi
 
+cp kernel/boot.yml $PRIVILEGED_BIN/kernel/
+
 SNET="$PRIVILEGED_BIN/kernel/scnet"
 sudo chown root:root $SNET
 sudo chmod u+s $SNET

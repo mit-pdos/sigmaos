@@ -233,6 +233,7 @@ func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
 }
 
 func BootKernel(t *testing.T, yml string) (*Bstate, error) {
+	setVersion()
 	b, err := bootclnt.BootKernel(false, yml)
 	if err != nil {
 		return nil, err

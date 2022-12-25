@@ -24,6 +24,7 @@ import (
 	"sigmaos/snapshot"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
+	"sigmaos/system"
 	"sigmaos/threadmgr"
 	"sigmaos/version"
 	"sigmaos/watch"
@@ -173,10 +174,9 @@ func (ssrv *SessSrv) Serve() {
 	// also kernelsrv?
 	if ssrv.pclnt != nil {
 		// If this is a kernel proc, register the subsystem info for the realmmgr
-		// XXX use kernelcnt
 		if proc.GetIsPrivilegedProc() {
-			//si := kernelclnt.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
-			//kernelclnt.RegisterSubsystemInfo(ssrv.fsl, si)
+			si := system.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
+			system.RegisterSubsystemInfo(ssrv.fsl, si)
 		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()

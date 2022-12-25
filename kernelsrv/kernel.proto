@@ -7,5 +7,15 @@ message BootRequest {
 }
 
 message BootResult {
-  bytes value = 1;
+  bool ok = 1;
 }
+
+message KillRequest {
+  string name = 1;
+}
+
+message KillResult {
+  bool ok = 1;
+}
+
+

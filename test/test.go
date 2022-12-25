@@ -11,6 +11,7 @@ import (
 	"sigmaos/bootclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kernelclnt"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -211,7 +212,8 @@ func MakeTstateAll(t *testing.T) *Bstate {
 type Bstate struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	kernel    *bootclnt.Kernel
+	boot      *bootclnt.Kernel
+	kernel    *kernelclnt.KernelClnt
 	T         *testing.T
 	namedAddr []string
 }
@@ -231,7 +233,7 @@ func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
 }
 
 func BootKernel(t *testing.T, yml string) (*Bstate, error) {
-	k, err := bootclnt.BootKernel(false, yml)
+	b, err := bootclnt.BootKernel(false, yml)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +242,11 @@ func BootKernel(t *testing.T, yml string) (*Bstate, error) {
 		return nil, err
 	}
 	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
-	return &Bstate{fsl, pclnt, k, t, fslib.Named()}, nil
+	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
+	if err != nil {
+		return nil, err
+	}
+	return &Bstate{fsl, pclnt, b, kclnt, t, fslib.Named()}, nil
 }
 
 func (bs *Bstate) NamedAddr() []string {
@@ -248,5 +254,13 @@ func (bs *Bstate) NamedAddr() []string {
 }
 
 func (bs *Bstate) Shutdown() error {
-	return bs.kernel.Shutdown()
+	return bs.boot.Shutdown()
+}
+
+func (bs *Bstate) BootProcd() error {
+	return bs.kernel.Boot("procd")
+}
+
+func (bs *Bstate) KillOne(s string) error {
+	return bs.kernel.Kill(s)
 }

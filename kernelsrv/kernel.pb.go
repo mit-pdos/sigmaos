@@ -72,7 +72,7 @@ type BootResult struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Value []byte `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
 }
 
 func (x *BootResult) Reset() {
@@ -107,11 +107,105 @@ func (*BootResult) Descriptor() ([]byte, []int) {
 	return file_kernelsrv_kernel_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *BootResult) GetValue() []byte {
+func (x *BootResult) GetOk() bool {
 	if x != nil {
-		return x.Value
+		return x.Ok
 	}
-	return nil
+	return false
+}
+
+type KillRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *KillRequest) Reset() {
+	*x = KillRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_kernelsrv_kernel_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *KillRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KillRequest) ProtoMessage() {}
+
+func (x *KillRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kernelsrv_kernel_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KillRequest.ProtoReflect.Descriptor instead.
+func (*KillRequest) Descriptor() ([]byte, []int) {
+	return file_kernelsrv_kernel_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *KillRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type KillResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+}
+
+func (x *KillResult) Reset() {
+	*x = KillResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_kernelsrv_kernel_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *KillResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KillResult) ProtoMessage() {}
+
+func (x *KillResult) ProtoReflect() protoreflect.Message {
+	mi := &file_kernelsrv_kernel_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KillResult.ProtoReflect.Descriptor instead.
+func (*KillResult) Descriptor() ([]byte, []int) {
+	return file_kernelsrv_kernel_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *KillResult) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
 }
 
 var File_kernelsrv_kernel_proto protoreflect.FileDescriptor
@@ -120,11 +214,15 @@ var file_kernelsrv_kernel_proto_rawDesc = []byte{
 	0x0a, 0x16, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x2f, 0x6b, 0x65, 0x72, 0x6e,
 	0x65, 0x6c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x21, 0x0a, 0x0b, 0x42, 0x6f, 0x6f, 0x74,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x22, 0x0a, 0x0a, 0x42,
-	0x6f, 0x6f, 0x74, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
-	0x75, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x42,
-	0x13, 0x5a, 0x11, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x6b, 0x65, 0x72, 0x6e, 0x65,
-	0x6c, 0x73, 0x72, 0x76, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x1c, 0x0a, 0x0a, 0x42,
+	0x6f, 0x6f, 0x74, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x21, 0x0a, 0x0b, 0x4b, 0x69, 0x6c,
+	0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x1c, 0x0a, 0x0a,
+	0x4b, 0x69, 0x6c, 0x6c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x42, 0x13, 0x5a, 0x11, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -139,10 +237,12 @@ func file_kernelsrv_kernel_proto_rawDescGZIP() []byte {
 	return file_kernelsrv_kernel_proto_rawDescData
 }
 
-var file_kernelsrv_kernel_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_kernelsrv_kernel_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_kernelsrv_kernel_proto_goTypes = []interface{}{
 	(*BootRequest)(nil), // 0: BootRequest
 	(*BootResult)(nil),  // 1: BootResult
+	(*KillRequest)(nil), // 2: KillRequest
+	(*KillResult)(nil),  // 3: KillResult
 }
 var file_kernelsrv_kernel_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -182,6 +282,30 @@ func file_kernelsrv_kernel_proto_init() {
 				return nil
 			}
 		}
+		file_kernelsrv_kernel_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*KillRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_kernelsrv_kernel_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*KillResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -189,7 +313,7 @@ func file_kernelsrv_kernel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kernelsrv_kernel_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

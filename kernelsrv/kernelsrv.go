@@ -24,3 +24,23 @@ func RunKernelSrv(s *system.System) error {
 	}()
 	return nil
 }
+
+func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
+	if req.Name == "procd" {
+		if err := ks.s.BootProcd(); err != nil {
+			return err
+		}
+		rep.Ok = true
+		return nil
+	}
+	rep.Ok = false
+	return nil
+}
+
+func (ks *KernelSrv) Kill(req KillRequest, rep *KillResult) error {
+	if err := ks.s.KillOne(req.Name); err != nil {
+		return err
+	}
+	rep.Ok = true
+	return nil
+}

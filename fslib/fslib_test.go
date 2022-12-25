@@ -3,7 +3,6 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"log"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -34,10 +33,7 @@ func init() {
 }
 
 func TestInitFs(t *testing.T) {
-	//ts := test.MakeTstatePath(t, pathname)
-	ts, err := test.BootKernel(t)
-	assert.Nil(t, err)
-	log.Printf("InitFs run\n")
+	ts := test.MakeTstatePath(t, pathname)
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
@@ -45,7 +41,6 @@ func TestInitFs(t *testing.T) {
 	} else {
 		assert.True(t, len(sts) == 0, "initfs")
 	}
-	log.Printf("InitFs Done\n")
 	ts.Shutdown()
 }
 

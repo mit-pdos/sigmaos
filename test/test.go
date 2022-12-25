@@ -3,7 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"log"
 	"sync"
 	"testing"
 
@@ -30,7 +29,7 @@ func init() {
 	flag.StringVar(&realmid, "realm", "", "realm id")
 }
 
-type Tstate struct {
+type Tstate1 struct {
 	sync.Mutex
 	realmid string
 	wg      sync.WaitGroup
@@ -40,85 +39,46 @@ type Tstate struct {
 	namedAddr []string
 }
 
-func makeTstate(t *testing.T, realmid string) *Tstate {
+func makeTstate(t *testing.T, realmid string) *Tstate1 {
 	setVersion()
-	ts := &Tstate{}
+	ts := &Tstate1{}
 	ts.T = t
 	ts.realmid = realmid
 	ts.namedAddr = fslib.Named()
 	return ts
 }
 
-func MakeTstatePath(t *testing.T, path string) *Tstate {
+func MakeTstatePath1(t *testing.T, path string) *Tstate1 {
 	if path == sp.NAMED {
-		return MakeTstate(t)
+		return MakeTstate1(t)
 	} else {
-		ts := MakeTstateAll(t)
+		ts := MakeTstateAll1(t)
 		ts.RmDir(path)
 		ts.MkDir(path, 0777)
 		return ts
 	}
 }
 
-type Bstate struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	kernel *bootclnt.Kernel
-	T      *testing.T
-}
-
-func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
-	if path == sp.NAMED {
-		return BootKernel(t)
-	} else {
-		bs, err := BootKernelAll(t)
-		if err != nil {
-			return nil, err
-		}
-		bs.RmDir(path)
-		bs.MkDir(path, 0777)
-		return bs, nil
-	}
-}
-
-func BootKernel(t *testing.T) (*Bstate, error) {
-	k, err := bootclnt.BootKernel(false, "boot.yml")
-	if err != nil {
-		return nil, err
-	}
-	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
-	if err != nil {
-		return nil, err
-	}
-	return &Bstate{fsl, nil, k, t}, nil
-}
-
-func BootKernelAll(t *testing.T) (*Bstate, error) {
-	setVersion()
-	k, err := bootclnt.BootKernel(false, "bootall.yml")
-	if err != nil {
-		return nil, err
-	}
-	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
-	if err != nil {
-		return nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
-	return &Bstate{fsl, pclnt, k, t}, nil
-}
-
-func (bs *Bstate) Shutdown() error {
-	return bs.kernel.Shutdown()
-}
-
-func MakeTstate(t *testing.T) *Tstate {
+func MakeTstate1(t *testing.T) *Tstate1 {
 	ts := makeTstate(t, "")
 	ts.makeSystem(kernel.MakeSystemNamed)
 	return ts
 }
 
+func MakeTstateAll1(t *testing.T) *Tstate1 {
+	var ts *Tstate1
+	// If no realm is running (single-machine)
+	if realmid == "" {
+		ts = makeTstate(t, realmid)
+		ts.makeSystem(kernel.MakeSystemAll)
+	} else {
+		ts = MakeTstateRealm(t, realmid)
+	}
+	return ts
+}
+
 // A realm/set of machines are already running
-func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
+func MakeTstateRealm(t *testing.T, realmid string) *Tstate1 {
 	ts := makeTstate(t, realmid)
 	// XXX make fslib exit?
 	fsl, err := fslib.MakeFsLib("test")
@@ -135,32 +95,19 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
 	return ts
 }
 
-func MakeTstateAll(t *testing.T) *Tstate {
-	var ts *Tstate
-	// If no realm is running (single-machine)
-	log.Printf("realmid %v\n", realmid)
-	if realmid == "" {
-		ts = makeTstate(t, realmid)
-		ts.makeSystem(kernel.MakeSystemAll)
-	} else {
-		ts = MakeTstateRealm(t, realmid)
-	}
-	return ts
-}
-
-func (ts *Tstate) RunningInRealm() bool {
+func (ts *Tstate1) RunningInRealm() bool {
 	return ts.realmid != ""
 }
 
-func (ts *Tstate) RealmId() string {
+func (ts *Tstate1) RealmId() string {
 	return ts.realmid
 }
 
-func (ts *Tstate) NamedAddr() []string {
+func (ts *Tstate1) NamedAddr() []string {
 	return ts.namedAddr
 }
 
-func (ts *Tstate) Shutdown() {
+func (ts *Tstate1) Shutdown() {
 	db.DPrintf(db.TEST, "Shutting down")
 	ts.System.Shutdown()
 	for _, r := range ts.replicas {
@@ -171,7 +118,7 @@ func (ts *Tstate) Shutdown() {
 	db.DPrintf(db.TEST, "Done shutting down")
 }
 
-func (ts *Tstate) addNamedReplica(i int) error {
+func (ts *Tstate1) addNamedReplica(i int) error {
 	defer ts.wg.Done()
 	r, err := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
 	if err != nil {
@@ -183,7 +130,7 @@ func (ts *Tstate) addNamedReplica(i int) error {
 	return nil
 }
 
-func (ts *Tstate) startReplicas() {
+func (ts *Tstate1) startReplicas() {
 	ts.replicas = []*kernel.System{}
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
@@ -192,7 +139,7 @@ func (ts *Tstate) startReplicas() {
 	}
 }
 
-func (ts *Tstate) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) (*kernel.System, error)) error {
+func (ts *Tstate1) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) (*kernel.System, error)) error {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	var err error
@@ -229,4 +176,69 @@ func TputStr(sz sp.Tlength, ms int64) string {
 func Tput(sz sp.Tlength, ms int64) float64 {
 	t := float64(ms) / 1000
 	return Mbyte(sz) / t
+}
+
+//
+// New implementation of API
+//
+
+type Tstate = Bstate
+
+func MakeTstatePath(t *testing.T, path string) *Bstate {
+	b, err := MakeBootPath(t, path)
+	if err != nil {
+		db.DFatalf("MakeTstatePath: %v\n", err)
+	}
+	return b
+}
+
+func MakeTstate(t *testing.T) *Bstate {
+	b, err := BootKernel(t, "boot.yml")
+	if err != nil {
+		db.DFatalf("MakeTstate: %v\n", err)
+	}
+	return b
+}
+
+type Bstate struct {
+	*fslib.FsLib
+	*procclnt.ProcClnt
+	kernel    *bootclnt.Kernel
+	T         *testing.T
+	namedAddr []string
+}
+
+func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
+	if path == sp.NAMED {
+		return BootKernel(t, "boot.yml")
+	} else {
+		bs, err := BootKernel(t, "bootall.yml")
+		if err != nil {
+			return nil, err
+		}
+		bs.RmDir(path)
+		bs.MkDir(path, 0777)
+		return bs, nil
+	}
+}
+
+func BootKernel(t *testing.T, yml string) (*Bstate, error) {
+	k, err := bootclnt.BootKernel(false, yml)
+	if err != nil {
+		return nil, err
+	}
+	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
+	if err != nil {
+		return nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
+	return &Bstate{fsl, pclnt, k, t, fslib.Named()}, nil
+}
+
+func (bs *Bstate) NamedAddr() []string {
+	return bs.namedAddr
+}
+
+func (bs *Bstate) Shutdown() error {
+	return bs.kernel.Shutdown()
 }

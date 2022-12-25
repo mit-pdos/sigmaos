@@ -9,6 +9,7 @@ import (
 	"sigmaos/electclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
+	"sigmaos/kernel"
 	"sigmaos/machine"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -20,7 +21,6 @@ import (
 	"sigmaos/semclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	"sigmaos/system"
 )
 
 type Noded struct {
@@ -32,7 +32,7 @@ type Noded struct {
 	cfgPath   string
 	done      chan bool
 	cfg       *NodedConfig
-	s         *system.System
+	s         *kernel.System
 	ec        *electclnt.ElectClnt
 	pds       *protdevsrv.ProtDevSrv
 	sclnt     *protdevclnt.ProtDevClnt
@@ -160,7 +160,7 @@ func (nd *Noded) getNextConfig() {
 	for {
 		nd.ReadConfig(nd.cfgPath, nd.cfg)
 		// Make sure we've been assigned to a realm
-		if nd.cfg.RealmId != system.NO_REALM {
+		if nd.cfg.RealmId != kernel.NO_REALM {
 			nd.ec = electclnt.MakeElectClnt(nd.FsLib, realmFencePath(nd.cfg.RealmId), 0777)
 			break
 		}
@@ -195,7 +195,7 @@ func (nd *Noded) tryAddNamedReplicaL() bool {
 		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
-		_, pid, err := system.BootNamed(nd.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, nd.cfg.RealmId)
+		_, pid, err := kernel.BootNamed(nd.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, nd.cfg.RealmId)
 		if err != nil {
 			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}
@@ -220,7 +220,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 }
 
 func (nd *Noded) boot(realmCfg *RealmConfig) {
-	sys, err := system.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
+	sys, err := kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
 	if err != nil {
 		db.DFatalf("Error MakeSystem in Noded.boot: %v", err)
 	}

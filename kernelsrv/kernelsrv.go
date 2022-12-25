@@ -2,17 +2,17 @@ package kernelsrv
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/kernel"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/system"
 )
 
 type KernelSrv struct {
-	s *system.System
+	s *kernel.System
 }
 
-func RunKernelSrv(s *system.System) error {
+func RunKernelSrv(s *kernel.System) error {
 	ks := &KernelSrv{s}
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
 	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, s.FsLib, ks)

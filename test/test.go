@@ -11,6 +11,7 @@ import (
 	"sigmaos/bootclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kernel"
 	"sigmaos/kernelclnt"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -18,7 +19,6 @@ import (
 	"sigmaos/realm"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	"sigmaos/system"
 )
 
 var version string
@@ -35,8 +35,8 @@ type Tstate1 struct {
 	realmid string
 	wg      sync.WaitGroup
 	T       *testing.T
-	*system.System
-	replicas  []*system.System
+	*kernel.System
+	replicas  []*kernel.System
 	namedAddr []string
 }
 
@@ -62,7 +62,7 @@ func MakeTstatePath1(t *testing.T, path string) *Tstate1 {
 
 func MakeTstate1(t *testing.T) *Tstate1 {
 	ts := makeTstate(t, "")
-	ts.makeSystem(system.MakeSystemNamed)
+	ts.makeSystem(kernel.MakeSystemNamed)
 	return ts
 }
 
@@ -71,7 +71,7 @@ func MakeTstateAll1(t *testing.T) *Tstate1 {
 	// If no realm is running (single-machine)
 	if realmid == "" {
 		ts = makeTstate(t, realmid)
-		ts.makeSystem(system.MakeSystemAll)
+		ts.makeSystem(kernel.MakeSystemAll)
 	} else {
 		ts = MakeTstateRealm(t, realmid)
 	}
@@ -88,7 +88,7 @@ func MakeTstateRealm(t *testing.T, realmid string) *Tstate1 {
 	}
 	rconfig := realm.GetRealmConfig(fsl, realmid)
 	ts.namedAddr = rconfig.NamedAddrs
-	sys, err := system.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	sys, err := kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
 	if err != nil {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (ts *Tstate1) Shutdown() {
 
 func (ts *Tstate1) addNamedReplica(i int) error {
 	defer ts.wg.Done()
-	r, err := system.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	r, err := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (ts *Tstate1) addNamedReplica(i int) error {
 }
 
 func (ts *Tstate1) startReplicas() {
-	ts.replicas = []*system.System{}
+	ts.replicas = []*kernel.System{}
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
 		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
@@ -140,7 +140,7 @@ func (ts *Tstate1) startReplicas() {
 	}
 }
 
-func (ts *Tstate1) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) (*system.System, error)) error {
+func (ts *Tstate1) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) (*kernel.System, error)) error {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	var err error

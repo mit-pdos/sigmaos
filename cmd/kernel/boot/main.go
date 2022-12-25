@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"sigmaos/kernel"
+	"sigmaos/boot"
 
 	db "sigmaos/debug"
 )

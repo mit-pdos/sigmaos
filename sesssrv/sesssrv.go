@@ -10,6 +10,7 @@ import (
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslib"
+	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
 	"sigmaos/overlay"
@@ -24,7 +25,6 @@ import (
 	"sigmaos/snapshot"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
-	"sigmaos/system"
 	"sigmaos/threadmgr"
 	"sigmaos/version"
 	"sigmaos/watch"
@@ -175,8 +175,8 @@ func (ssrv *SessSrv) Serve() {
 	if ssrv.pclnt != nil {
 		// If this is a kernel proc, register the subsystem info for the realmmgr
 		if proc.GetIsPrivilegedProc() {
-			si := system.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
-			system.RegisterSubsystemInfo(ssrv.fsl, si)
+			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
+			kernel.RegisterSubsystemInfo(ssrv.fsl, si)
 		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()

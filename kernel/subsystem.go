@@ -1,4 +1,4 @@
-package system
+package kernel
 
 import (
 	"os/exec"

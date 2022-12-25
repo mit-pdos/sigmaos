@@ -8,8 +8,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/kernel"
 	"sigmaos/procclnt"
-	"sigmaos/system"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 func BootNamedReplicas(addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, err := system.RunNamed(addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, err := kernel.RunNamed(addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			db.DFatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err

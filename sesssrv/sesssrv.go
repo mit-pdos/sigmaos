@@ -7,19 +7,18 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
 	"sigmaos/overlay"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
+	"sigmaos/serr"
 	"sigmaos/sesscond"
+	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/snapshot"
@@ -169,12 +168,15 @@ func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 // The server using ssrv is ready to take requests. Keep serving
 // until ssrv is told to stop using Done().
 func (ssrv *SessSrv) Serve() {
-	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
+	// Non-intial-named services wait on the pclnt
+	// infrastructure. Initial named waits on the channel. XXX maybe
+	// also kernelsrv?
 	if ssrv.pclnt != nil {
 		// If this is a kernel proc, register the subsystem info for the realmmgr
+		// XXX use kernelcnt
 		if proc.GetIsPrivilegedProc() {
-			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
-			kernel.RegisterSubsystemInfo(ssrv.fsl, si)
+			//si := kernelclnt.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
+			//kernelclnt.RegisterSubsystemInfo(ssrv.fsl, si)
 		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()

@@ -101,11 +101,10 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 }
 
 func TestWaitExitSimple(t *testing.T) {
-	ts, err := test.BootKernelAll(t)
-	assert.Nil(t, err)
+	ts := test.MakeTstateAll(t)
 
 	a := proc.MakeProc("user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	err = ts.Spawn(a)
+	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
 	status, err := ts.WaitExit(a.Pid)

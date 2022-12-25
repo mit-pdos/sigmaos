@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/kernel"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -18,6 +17,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/system"
 	// "sigmaos/seccomp"
 )
 
@@ -31,7 +31,7 @@ func Run(args []string) {
 	// A realm's named in the global namespace
 	realmId := args[2]
 	var pname string
-	if realmId != kernel.NO_REALM {
+	if realmId != system.NO_REALM {
 		pname = path.Join(realm.REALM_NAMEDS, realmId)
 	}
 

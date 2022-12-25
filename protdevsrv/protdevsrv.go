@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
@@ -41,6 +42,14 @@ type ProtDevSrv struct {
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	mfs, _, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
+	if error != nil {
+		db.DFatalf("protdevsrv.Run: %v\n", error)
+	}
+	return MakeProtDevSrvMemFs(mfs, svci)
+}
+
+func MakeProtDevSrvPriv(fn string, fsl *fslib.FsLib, svci any) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFsFsl(fn, fsl, nil)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

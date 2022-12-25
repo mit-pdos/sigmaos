@@ -12,7 +12,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("%v: usage param.yml\n", os.Args[0])
 	}
-	sys, err := kernel.Boot(os.Args[1])
+	sys, err := kernel.BootUp(os.Args[1])
 	if err != nil {
 		db.DFatalf("%v: boot %s err %v\n", os.Args[0], os.Args[1], err)
 	}

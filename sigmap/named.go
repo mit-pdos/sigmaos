@@ -1,10 +1,11 @@
 package sigmap
 
-// if name ends in "/", it is the root directory for that service
+// if name ends in "/", it is the root directory for that service (XXX
+// it is a union directory?)
 const (
 	NAMED    = "name/"
 	BOOTREL  = "boot"
-	BOOT     = NAMED + BOOTREL
+	BOOT     = NAMED + BOOTREL + "/"
 	TMPREL   = "tmp"
 	TMP      = NAMED + TMPREL
 	PROCDREL = "procd"

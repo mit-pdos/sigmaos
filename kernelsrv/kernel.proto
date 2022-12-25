@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/kernelsrv";
+
+message BootRequest {
+  string name = 1;
+}
+
+message BootResult {
+  bytes value = 1;
+}

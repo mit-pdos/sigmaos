@@ -1,4 +1,4 @@
-package kernel
+package system
 
 import (
 	"os"
@@ -13,7 +13,7 @@ type Param struct {
 	All   bool   `yalm:"all"`
 }
 
-func readParam(pn string) (*Param, error) {
+func ReadParam(pn string) (*Param, error) {
 	param := &Param{}
 	file, err := os.Open(pn)
 	if err != nil {

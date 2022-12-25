@@ -14,7 +14,9 @@ import (
 )
 
 //
-// Library to start a kernel boot process
+// Library to start a kernel boot process.  Because this library boots
+// the first named, it uses a pipe to talk to the boot process; we
+// cannot use named to connect to it.
 //
 
 type Kernel struct {

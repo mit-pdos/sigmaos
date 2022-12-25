@@ -8,9 +8,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kernel"
 	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/system"
 )
 
 type TestEnv struct {
@@ -91,7 +91,7 @@ func (e *TestEnv) Shutdown() {
 }
 
 func (e *TestEnv) bootNameds() error {
-	namedCmds, err := BootNamedReplicas(fslib.Named(), kernel.NO_REALM)
+	namedCmds, err := BootNamedReplicas(fslib.Named(), system.NO_REALM)
 	e.namedCmds = namedCmds
 	// Start a named instance.
 	if err != nil {

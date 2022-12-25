@@ -1,4 +1,4 @@
-package kernel
+package system
 
 import (
 	"log"
@@ -46,7 +46,7 @@ type System struct {
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeSystemBase(realmId string, namedAddr []string, cores *sessp.Tinterval) *System {
+func makeKernelBase(realmId string, namedAddr []string, cores *sessp.Tinterval) *System {
 	s := &System{}
 	s.realmId = realmId
 	s.namedAddr = namedAddr
@@ -60,42 +60,20 @@ func makeSystemBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 	return s
 }
 
-// The boot processes enters here
-func Boot(pn string) (*System, error) {
-	db.DPrintf(db.KERNEL, "Boot %s\n", pn)
-	param, err := readParam(pn)
-	if err != nil {
-		return nil, err
-	}
-	db.DPrintf(db.KERNEL, "Boot %s param %v\n", pn, param)
+func MakeKernel(param *Param) (*System, error) {
 	if param.All {
-		return makeSystem(param, makeSystemAll)
+		return makeKernel(param, makeSystemAll)
 	} else {
-		return makeSystem(param, makeSystemNamed)
+		return makeKernel(param, makeSystemNamed)
 	}
-}
-
-func (s *System) ShutDown() error {
-	db.DPrintf(db.KERNEL, "ShutDown\n")
-	s.Shutdown()
-	for _, r := range s.replicas {
-		r.Shutdown()
-	}
-	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
-	n := s.PathClnt.FidClnt.Len()
-	if n > N {
-		log.Printf("Too many FIDs open (%v): %v", n, s.PathClnt.FidClnt)
-	}
-	db.DPrintf(db.KERNEL, "ShutDown done\n")
-	return nil
 }
 
 // XXX should replicas start in their own boot/kernel process?
-func makeSystem(p *Param, mkSys func(*System, string, int) error) (*System, error) {
+func makeKernel(p *Param, mkSys func(*System, string, int) error) (*System, error) {
 	n := len(fslib.Named())
 	ch := make(chan error)
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
+	sys := makeKernelBase(p.Realm, fslib.Named(), cores)
 
 	go func() {
 		// Must happen in a separate thread because mkSys will block until
@@ -111,6 +89,21 @@ func makeSystem(p *Param, mkSys func(*System, string, int) error) (*System, erro
 		}
 	}
 	return sys, err
+}
+
+func (s *System) ShutDown() error {
+	db.DPrintf(db.KERNEL, "ShutDown\n")
+	s.Shutdown()
+	for _, r := range s.replicas {
+		r.Shutdown()
+	}
+	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
+	n := s.PathClnt.FidClnt.Len()
+	if n > N {
+		log.Printf("Too many FIDs open (%v): %v", n, s.PathClnt.FidClnt)
+	}
+	db.DPrintf(db.KERNEL, "ShutDown done\n")
+	return nil
 }
 
 // Make system with just named. replicaId is used to index into the
@@ -133,7 +126,7 @@ func makeSystemNamed(s *System, uname string, replicaId int) error {
 
 func (s *System) addNamedReplica(p *Param, i int) error {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	sys := makeSystemBase(p.Realm, fslib.Named(), cores)
+	sys := makeKernelBase(p.Realm, fslib.Named(), cores)
 	err := makeSystemNamed(sys, p.Uname, i)
 	if err != nil {
 		return err
@@ -379,11 +372,11 @@ func addReplPortOffset(peerAddr string) string {
 }
 
 //
-// backward-compatability
+// XXX kill backward-compatability
 //
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*System, error) {
-	s := makeSystemBase(realmId, namedAddr, cores)
+	s := makeKernelBase(realmId, namedAddr, cores)
 	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
 	if err != nil {
 		return nil, err
@@ -396,7 +389,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
 func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
-	s := makeSystemBase(realmId, fslib.Named(), cores)
+	s := makeKernelBase(realmId, fslib.Named(), cores)
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {

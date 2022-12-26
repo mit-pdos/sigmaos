@@ -266,6 +266,10 @@ func (bs *Bstate) BootFss3d() error {
 	return bs.kernel.Boot("fss3d")
 }
 
+func (bs *Bstate) BootFsUxd() error {
+	return bs.kernel.Boot("fsuxd")
+}
+
 func (bs *Bstate) KillOne(s string) error {
 	return bs.kernel.Kill(s)
 }

@@ -13,7 +13,7 @@ import (
 
 // Sleep for a random time, then crash a server.  Crash a server of a
 // certain type, then crash a server of that type.
-func (ts *Tstate1) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
+func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
 	log.Printf("Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)

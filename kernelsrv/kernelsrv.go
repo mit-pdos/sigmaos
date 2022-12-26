@@ -37,6 +37,11 @@ func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
 			return err
 		}
 		rep.Ok = true
+	case "fsuxd":
+		if err := ks.s.BootFsUxd(); err != nil {
+			return err
+		}
+		rep.Ok = true
 	default:
 		rep.Ok = false
 	}

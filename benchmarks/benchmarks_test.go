@@ -344,10 +344,12 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	countNClusterCores(ts)
 	// Structures for mr
-	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	ts1, err := test.JoinRealm(t, ts.RealmId())
+	assert.Nil(t, err)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Structure for kv
-	ts2 := test.MakeTstateRealm(t, REALM2)
+	ts2, err := test.JoinRealm(t, REALM2)
+	assert.Nil(t, err)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
@@ -397,10 +399,12 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	countNClusterCores(ts)
 	// Structures for mr
-	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	ts1, err := test.JoinRealm(t, ts.RealmId())
+	assert.Nil(t, err)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Structure for kv
-	ts2 := test.MakeTstateRealm(t, REALM2)
+	ts2, err := test.JoinRealm(t, REALM2)
+	assert.Nil(t, err)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job
 	mrjobs1, mrapps1 := makeNMRJobs(ts1, 1, MR_APP)
@@ -448,10 +452,12 @@ func TestKVMRRRB(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	countNClusterCores(ts)
 	// Structures for mr
-	ts1 := test.MakeTstateRealm(t, ts.RealmId())
+	ts1, err := test.JoinRealm(t, ts.RealmId())
+	assert.Nil(t, err)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Structure for kv
-	ts2 := test.MakeTstateRealm(t, REALM2)
+	ts2, err := test.JoinRealm(t, REALM2)
+	assert.Nil(t, err)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)

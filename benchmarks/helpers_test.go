@@ -89,7 +89,8 @@ func countNClusterCores(ts *test.Tstate) {
 	if ts.RunningInRealm() {
 		N_CLUSTER_CORES = 0
 		db.DPrintf(db.TEST, "Running with realms")
-		fsl := fslib.MakeFsLib("test")
+		fsl, err1 := fslib.MakeFsLib("test")
+		assert.Nil(ts.T, err1)
 		_, err := fsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
 			cfg := machine.MakeEmptyConfig()
 			err := fsl.GetFileJson(path.Join(machine.MACHINES, st.Name, machine.CONFIG), cfg)
@@ -112,7 +113,9 @@ func maybePregrowRealm(ts *test.Tstate) {
 	if PREGROW_REALM {
 		// Make sure we've counted the number of cores in the cluster.
 		countNClusterCores(ts)
-		rclnt := realm.MakeRealmClntFsl(fslib.MakeFsLib("test-rclnt"), ts.ProcClnt)
+		fsl, err := fslib.MakeFsLib("test-rclnt")
+		assert.Nil(ts.T, err)
+		rclnt := realm.MakeRealmClntFsl(fsl, ts.ProcClnt)
 		// While we are missing cores, try to grow.
 		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
 			rclnt.GrowRealm(ts.RealmId())

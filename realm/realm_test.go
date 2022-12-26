@@ -116,7 +116,8 @@ func TestStartStop(t *testing.T) {
 
 func TestRealmGrowArtificial(t *testing.T) {
 	ts := makeTstate(t)
-	rclnt := realm.MakeRealmClnt()
+	rclnt, err := realm.MakeRealmClnt()
+	assert.Nil(t, err)
 	for realm.GetRealmConfig(rclnt.FsLib, sp.TEST_RID).NCores < proc.Tcore(linuxsched.NCores)*2 {
 		rclnt.GrowRealm(sp.TEST_RID)
 	}

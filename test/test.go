@@ -233,22 +233,23 @@ func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
 	}
 }
 
-// A realm/set of machines are already running
-func MakeBootRealm(t *testing.T, realmid string) *Tstate1 {
-	ts := makeTstate(t, realmid)
-	// XXX make fslib exit?
-	fsl, err := fslib.MakeFsLib("test")
+func mkClient() (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
 	if err != nil {
-		return nil
+		return nil, nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
+	return fsl, pclnt, nil
+}
+
+// Join a realm/set of machines are already running
+func JoinRealm(t *testing.T, realmid string) (*Bstate, error) {
+	fsl, pclnt, err := mkClient()
+	if err != nil {
+		return nil, err
 	}
 	rconfig := realm.GetRealmConfig(fsl, realmid)
-	ts.namedAddr = rconfig.NamedAddrs
-	sys, err := kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
-	if err != nil {
-		return nil
-	}
-	ts.System = sys
-	return ts
+	return &Bstate{fsl, pclnt, nil, nil, t, rconfig.NamedAddrs, realmid}, nil
 }
 
 func BootKernel(t *testing.T, realmid, yml string) (*Bstate, error) {
@@ -257,11 +258,10 @@ func BootKernel(t *testing.T, realmid, yml string) (*Bstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
+	fsl, pclnt, err := mkClient()
 	if err != nil {
 		return nil, err
 	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
 	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
 	if err != nil {
 		return nil, err
@@ -283,7 +283,10 @@ func (bs *Bstate) NamedAddr() []string {
 }
 
 func (bs *Bstate) Shutdown() error {
-	return bs.boot.Shutdown()
+	if bs.boot != nil {
+		return bs.boot.Shutdown()
+	}
+	return nil
 }
 
 func (bs *Bstate) BootProcd() error {

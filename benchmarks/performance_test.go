@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"sigmaos/benchmarks"
 	"sigmaos/config"
 	db "sigmaos/debug"
@@ -51,7 +53,9 @@ func printResultSummary(rs *benchmarks.Results) {
 func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
 	p := perf.MakePerfMulti("TEST", ts.RealmId())
 	go func() {
-		cc := config.MakeConfigClnt(fslib.MakeFsLib("test"))
+		fsl, err := fslib.MakeFsLib("test")
+		assert.Nil(ts.T, err)
+		cc := config.MakeConfigClnt(fsl)
 		cfgPath := realm.RealmConfPath(ts.RealmId())
 		cfg := &realm.RealmConfig{}
 		if err := cc.ReadConfig(cfgPath, cfg); err != nil {

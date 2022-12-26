@@ -7,7 +7,7 @@ import (
 )
 
 type Boot struct {
-	s *kernel.System
+	k *kernel.Kernel
 }
 
 // The boot processes enters here
@@ -18,16 +18,16 @@ func BootUp(realm, pn string) (*Boot, error) {
 		return nil, err
 	}
 	db.DPrintf(db.KERNEL, "Boot %s param %v\n", pn, param)
-	s, err := kernel.MakeKernel(realm, param)
+	k, err := kernel.MakeKernel(realm, param)
 	if err != nil {
 		return nil, err
 	}
-	if err := kernelsrv.RunKernelSrv(s); err != nil {
+	if err := kernelsrv.RunKernelSrv(k); err != nil {
 		return nil, err
 	}
-	return &Boot{s}, nil
+	return &Boot{k}, nil
 }
 
 func (b *Boot) ShutDown() error {
-	return b.s.ShutDown()
+	return b.k.ShutDown()
 }

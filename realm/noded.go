@@ -32,7 +32,7 @@ type Noded struct {
 	cfgPath   string
 	done      chan bool
 	cfg       *NodedConfig
-	s         *kernel.System
+	s         *kernel.Kernel
 	ec        *electclnt.ElectClnt
 	pds       *protdevsrv.ProtDevSrv
 	sclnt     *protdevclnt.ProtDevClnt
@@ -225,7 +225,7 @@ func (nd *Noded) boot(realmCfg *RealmConfig) {
 		db.DFatalf("Error MakeSystem in Noded.boot: %v", err)
 	}
 	nd.s = sys
-	if err := nd.s.Boot(); err != nil {
+	if err := nd.s.BootSubs(); err != nil {
 		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}
 	// Update the config with the procd IP.

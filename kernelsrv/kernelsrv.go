@@ -9,10 +9,10 @@ import (
 )
 
 type KernelSrv struct {
-	s *kernel.System
+	s *kernel.Kernel
 }
 
-func RunKernelSrv(s *kernel.System) error {
+func RunKernelSrv(s *kernel.Kernel) error {
 	ks := &KernelSrv{s}
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
 	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, s.FsLib, ks)

@@ -4,6 +4,7 @@ package sigmap
 // it is a union directory?)
 const (
 	NAMED    = "name/"
+	NAMEDREL = "named"
 	BOOTREL  = "boot"
 	BOOT     = NAMED + BOOTREL + "/"
 	TMPREL   = "tmp"

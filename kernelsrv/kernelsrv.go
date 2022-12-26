@@ -9,13 +9,13 @@ import (
 )
 
 type KernelSrv struct {
-	s *kernel.Kernel
+	k *kernel.Kernel
 }
 
-func RunKernelSrv(s *kernel.Kernel) error {
-	ks := &KernelSrv{s}
+func RunKernelSrv(k *kernel.Kernel) error {
+	ks := &KernelSrv{k}
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
-	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, s.FsLib, ks)
+	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, k.FsLib, ks)
 	if err != nil {
 		return err
 	}
@@ -27,18 +27,18 @@ func RunKernelSrv(s *kernel.Kernel) error {
 
 func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
 	switch req.Name {
-	case "procd":
-		if err := ks.s.BootProcd(); err != nil {
+	case sp.PROCDREL:
+		if err := ks.k.BootProcd(); err != nil {
 			return err
 		}
 		rep.Ok = true
-	case "fss3d":
-		if err := ks.s.BootFss3d(); err != nil {
+	case sp.S3REL:
+		if err := ks.k.BootFss3d(); err != nil {
 			return err
 		}
 		rep.Ok = true
-	case "fsuxd":
-		if err := ks.s.BootFsUxd(); err != nil {
+	case sp.UXREL:
+		if err := ks.k.BootFsUxd(); err != nil {
 			return err
 		}
 		rep.Ok = true
@@ -49,7 +49,7 @@ func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
 }
 
 func (ks *KernelSrv) Kill(req KillRequest, rep *KillResult) error {
-	if err := ks.s.KillOne(req.Name); err != nil {
+	if err := ks.k.KillOne(req.Name); err != nil {
 		return err
 	}
 	rep.Ok = true

@@ -7,10 +7,8 @@ import (
 )
 
 type Param struct {
-	Path  string `yalm:"path"`
-	Uname string `yalm:"uname"`
-	Realm string `yalm:"realm"`
-	All   bool   `yalm:"all"`
+	Uname    string   `yalm:"uname"`
+	Services []string `yalm:"services"`
 }
 
 func ReadParam(pn string) (*Param, error) {

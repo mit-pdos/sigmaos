@@ -66,32 +66,20 @@ func (k *Kernel) addNamed(nd *Subsystem) {
 }
 
 func MakeKernel(realm string, p *Param) (*Kernel, error) {
-	n := len(fslib.Named())
-	ch := make(chan error)
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
 	k := mkKernel(realm, fslib.Named(), cores)
-
-	// start nameds and wait until they have started
-	k.startNameds(ch, n, p)
-	var err error
-	for i := 0; i < n; i++ {
-		r := <-ch
-		if r != nil {
-			err = r
-		}
-	}
-	if err != nil {
-		return nil, err
+	if p.Services[0] == sp.NAMEDREL {
+		k.makeNameds(p)
+		p.Services = p.Services[1:]
 	}
 	proc.SetProgram(p.Uname)
 	proc.SetPid(proc.GenPid())
-	k.FsLib, err = fslib.MakeFsLibAddr(p.Uname, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr(p.Uname, fslib.Named())
 	if err != nil {
 		return nil, err
 	}
-	if p.All {
-		makeAll(k, p.Uname)
-	}
+	k.FsLib = fsl
+	startSrvs(k, p)
 	return k, err
 }
 
@@ -105,6 +93,21 @@ func (k *Kernel) ShutDown() error {
 	}
 	db.DPrintf(db.KERNEL, "ShutDown done\n")
 	return nil
+}
+
+// Start nameds and wait until they have started
+func (k *Kernel) makeNameds(p *Param) error {
+	n := len(fslib.Named())
+	ch := make(chan error)
+	k.startNameds(ch, n, p)
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
+	return err
 }
 
 func (k *Kernel) startNameds(ch chan error, n int, p *Param) {
@@ -132,10 +135,13 @@ func bootNamed(k *Kernel, uname string, replicaId int) error {
 	return err
 }
 
-// Make a kernel with named and other kernel services
-func makeAll(k *Kernel, uname string) error {
+// Start kernel services listed in p
+func startSrvs(k *Kernel, p *Param) error {
 	// XXX should this be GetPid?
-	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, uname, k.namedAddr)
+	if len(p.Services) == 0 {
+		return nil
+	}
+	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, p.Uname, k.namedAddr)
 	err := k.BootSubs()
 	if err != nil {
 		db.DPrintf(db.KERNEL, "Start err %v\n", err)

@@ -71,7 +71,7 @@ func TestStatic(t *testing.T) {
 }
 
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
-	clnt := www.MakeWWWClnt(ts.FsLib, ts.job)
+	clnt := www.MakeWWWClnt(ts.Tstate.FsLib, ts.job)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
 		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)

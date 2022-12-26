@@ -30,7 +30,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, nrepl, "user/kvd", []string{group.GRP + "0"}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.FsLib, ts.ProcClnt, nrepl, "user/kvd", []string{group.GRP + "0"}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
 	return ts
 }
 

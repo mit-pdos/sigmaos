@@ -36,17 +36,16 @@ type Kernel struct {
 	realmId     string
 	namedAddr   []string
 	procdIp     string
-	named       *Subsystem
 	cores       *sessp.Tinterval
 	fss3d       []*Subsystem
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
 	dbd         []*Subsystem
-	replicas    []*Kernel
+	nameds      []*Subsystem // if > 1, then running with replicated named
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeKernelBase(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kernel {
+func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kernel {
 	k := &Kernel{}
 	k.realmId = realmId
 	k.namedAddr = namedAddr
@@ -55,9 +54,15 @@ func makeKernelBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 	k.fsuxd = []*Subsystem{}
 	k.fss3d = []*Subsystem{}
 	k.dbd = []*Subsystem{}
-	k.replicas = []*Kernel{}
+	k.nameds = []*Subsystem{}
 	k.crashedPids = make(map[proc.Tpid]bool)
 	return k
+}
+
+func (k *Kernel) addNamed(nd *Subsystem) {
+	k.Lock()
+	defer k.Unlock()
+	k.nameds = append(k.nameds, nd)
 }
 
 func MakeKernel(realm string, param *Param) (*Kernel, error) {
@@ -73,7 +78,7 @@ func makeKernel(realm string, p *Param, mkK func(*Kernel, string, int) error) (*
 	n := len(fslib.Named())
 	ch := make(chan error)
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	k := makeKernelBase(realm, fslib.Named(), cores)
+	k := mkKernel(realm, fslib.Named(), cores)
 
 	go func() {
 		// Must happen in a separate thread because mkK will block
@@ -95,9 +100,6 @@ func makeKernel(realm string, p *Param, mkK func(*Kernel, string, int) error) (*
 func (k *Kernel) ShutDown() error {
 	db.DPrintf(db.KERNEL, "ShutDown\n")
 	k.Shutdown()
-	for _, r := range k.replicas {
-		r.Shutdown()
-	}
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
 	n := k.PathClnt.FidClnt.Len()
 	if n > N {
@@ -107,9 +109,14 @@ func (k *Kernel) ShutDown() error {
 	return nil
 }
 
-// Make a kernel with just named. replicaId is used to index into the
-// fslib.Named() slice and select an address for this named.
+// Make a kernel with just named.
 func makeKernelNamed(k *Kernel, uname string, replicaId int) error {
+	return bootNamed(k, uname, replicaId)
+}
+
+// replicaId is used to index into the fslib.Named() slice and select
+// an address for this named.
+func bootNamed(k *Kernel, uname string, replicaId int) error {
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
@@ -118,22 +125,18 @@ func makeKernelNamed(k *Kernel, uname string, replicaId int) error {
 	// XXX It's a bit weird that we set program/pid here...
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
-	k.named = makeSubsystemCmd(nil, nil, "", false, cmd)
+	ss := makeSubsystemCmd(nil, nil, "", false, cmd)
+	k.addNamed(ss)
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	k.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return err
 }
 
 func (k *Kernel) addNamedReplica(p *Param, i int) error {
-	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	sys := makeKernelBase(p.Realm, fslib.Named(), cores)
-	err := makeKernelNamed(sys, p.Uname, i)
+	err := bootNamed(k, p.Uname, i)
 	if err != nil {
 		return err
 	}
-	k.Lock()
-	defer k.Unlock()
-	k.replicas = append(k.replicas, sys)
 	return nil
 }
 
@@ -150,7 +153,7 @@ func (k *Kernel) startReplicas(ch chan error, r int, p *Param) {
 
 // Make a kernel with named and other kernel services
 func makeKernelAll(k *Kernel, uname string, replicaId int) error {
-	err := makeKernelNamed(k, uname, replicaId)
+	err := bootNamed(k, uname, replicaId)
 	if err != nil {
 		db.DPrintf(db.KERNEL, "makeKernelNamed err %v\n", err)
 		return err
@@ -307,10 +310,10 @@ func (k *Kernel) Shutdown() {
 	for _, d := range k.dbd {
 		d.Wait()
 	}
-	if k.named != nil {
+	for _, d := range k.nameds {
 		// kill it so that test terminates
-		k.named.Terminate()
-		k.named.Wait()
+		d.Terminate()
+		d.Wait()
 	}
 }
 
@@ -362,7 +365,7 @@ func addReplPortOffset(peerAddr string) string {
 //
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*Kernel, error) {
-	s := makeKernelBase(realmId, namedAddr, cores)
+	s := mkKernel(realmId, namedAddr, cores)
 	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
 	if err != nil {
 		return nil, err

@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -106,7 +106,8 @@ func TestMakeSnapshotSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 	takeSnapshot(ts, fsl1, pid)
 
 	ts.Shutdown()
@@ -122,8 +123,8 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
-
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 	// Fence the memfs
 	fenceMemfs(ts, fsl1, pid)
 
@@ -142,7 +143,8 @@ func TestRestoreSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid)
 	db.DPrintf(db.TEST, "Done take snapshot")
@@ -163,7 +165,8 @@ func TestRestoreSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 
 	// Fence the memfs
 	fenceMemfs(ts, fsl1, pid)
@@ -198,7 +201,8 @@ func TestRestoreStateSimple(t *testing.T) {
 	// Check the state is there.
 	checkFiles(ts, N_FILES)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
 
@@ -242,7 +246,8 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	sem1 := semclnt.MakeSemClnt(ts.FsLib, MUTEX_PATH)
 	sem1.Init(0777)
 
-	fsl2 := fslib.MakeFsLib("blocking-cli-2")
+	fsl2, err := fslib.MakeFsLib("blocking-cli-2")
+	assert.Nil(t, err)
 	sem2 := semclnt.MakeSemClnt(fsl2, MUTEX_PATH)
 	done := make(chan bool)
 
@@ -255,7 +260,8 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	// Make sure to wait long enough for the other client to block server-side.
 	time.Sleep(1 * time.Second)
 
-	fsl1 := fslib.MakeFsLib("test-fsl1")
+	fsl1, err := fslib.MakeFsLib("test-fsl1")
+	assert.Nil(t, err)
 	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
 	// Read the snapshot from replica a

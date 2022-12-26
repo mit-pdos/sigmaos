@@ -271,7 +271,7 @@ func BootKernel(t *testing.T, realmid, yml string) (*Bstate, error) {
 }
 
 func (bs *Bstate) RunningInRealm() bool {
-	return bs.realmid != ""
+	return bs.realmid != "test-realm"
 }
 
 func (bs *Bstate) RealmId() string {

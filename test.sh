@@ -23,13 +23,13 @@ do
   go test $@ sigmaos/perf
   
   #
-  # tests without servers
+  # tests without kernel
   #
   go test $@ sigmaos/sigmap
   go test $@ sigmaos/memfs
   
   #
-  # test with just named
+  # test with a kernel with just named
   #
   go test $@ sigmaos/reader --version=$VERSION
   go test $@ sigmaos/writer --version=$VERSION
@@ -45,7 +45,7 @@ do
   go test $@ sigmaos/proxy --version=$VERSION
   
   #
-  # tests kernel (with 1 "fake" realm)
+  # tests a full kernel (one "fake" realm)
   #
   
   go test $@ sigmaos/procclnt --version=$VERSION

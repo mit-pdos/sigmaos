@@ -26,26 +26,9 @@ func RunKernelSrv(k *kernel.Kernel) error {
 }
 
 func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
-	switch req.Name {
-	case sp.PROCDREL:
-		if err := ks.k.BootProcd(); err != nil {
-			return err
-		}
-		rep.Ok = true
-	case sp.S3REL:
-		if err := ks.k.BootFss3d(); err != nil {
-			return err
-		}
-		rep.Ok = true
-	case sp.UXREL:
-		if err := ks.k.BootFsUxd(); err != nil {
-			return err
-		}
-		rep.Ok = true
-	default:
-		rep.Ok = false
-	}
-	return nil
+	err := ks.k.BootSub(req.Name)
+	rep.Ok = err == nil
+	return err
 }
 
 func (ks *KernelSrv) Kill(req KillRequest, rep *KillResult) error {

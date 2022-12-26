@@ -19,6 +19,18 @@ type Subsystem struct {
 	cmd      *exec.Cmd
 }
 
+func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool, list *[]*Subsystem) error {
+	k.Lock()
+	defer k.Unlock()
+
+	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, binpath, args)
+	ss := makeSubsystem(k.ProcClnt, p, procdIp, viaProcd)
+	// Lock appending to list
+	*list = append(*list, ss)
+	return ss.Run(k.namedAddr)
+}
+
 func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool) *Subsystem {
 	return makeSubsystemCmd(pclnt, p, procdIp, viaProcd, nil)
 }

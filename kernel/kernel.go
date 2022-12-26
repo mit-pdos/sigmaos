@@ -3,9 +3,7 @@ package kernel
 import (
 	"log"
 	"net"
-	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -138,93 +136,15 @@ func bootNamed(k *Kernel, uname string, replicaId int) error {
 // Start kernel services listed in p
 func startSrvs(k *Kernel, p *Param) error {
 	// XXX should this be GetPid?
-	if len(p.Services) == 0 {
-		return nil
-	}
 	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, p.Uname, k.namedAddr)
-	err := k.BootSubs()
-	if err != nil {
-		db.DPrintf(db.KERNEL, "Start err %v\n", err)
-		return err
+	for _, s := range p.Services {
+		err := k.BootSub(s)
+		if err != nil {
+			db.DPrintf(db.KERNEL, "Start %s err %v\n", p, err)
+			return err
+		}
 	}
 	return nil
-}
-
-// Boot subsystems other than named
-func (k *Kernel) BootSubs() error {
-	// Procd must boot first, since other services are spawned as
-	// procs.
-	if err := k.bootProcd(true); err != nil {
-		return err
-	}
-	if err := k.BootFsUxd(); err != nil {
-		return err
-	}
-	if err := k.BootFss3d(); err != nil {
-		return err
-	}
-	if err := k.BootDbd(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool, list *[]*Subsystem) error {
-	k.Lock()
-	defer k.Unlock()
-
-	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, binpath, args)
-	ss := makeSubsystem(k.ProcClnt, p, procdIp, viaProcd)
-	// Lock appending to list
-	*list = append(*list, ss)
-	return ss.Run(k.namedAddr)
-}
-
-func (k *Kernel) BootProcd() error {
-	return k.bootProcd(false)
-}
-
-// Boot a procd. If spawningSys is true, procd will wait for all kernel procs
-// to be spawned before claiming any procs.
-func (k *Kernel) bootProcd(spawningSys bool) error {
-	err := k.bootSubsystem("kernel/procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false, &k.procd)
-	if err != nil {
-		return err
-	}
-	if k.procdIp == "" {
-		k.procdIp = k.GetProcdIp()
-	}
-	return nil
-}
-
-func (k *Kernel) BootFsUxd() error {
-	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.UXROOT, k.realmId)}, k.procdIp, true, &k.fsuxd)
-}
-
-func (k *Kernel) BootFss3d() error {
-	return k.bootSubsystem("kernel/fss3d", []string{k.realmId}, k.procdIp, true, &k.fss3d)
-}
-
-func (k *Kernel) BootDbd() error {
-	var dbdaddr string
-	dbdaddr = os.Getenv("SIGMADBADDR")
-	// XXX don't pass dbd addr as an envvar, it's messy.
-	if dbdaddr == "" {
-		dbdaddr = "127.0.0.1:3306"
-	}
-	return k.bootSubsystem("kernel/dbd", []string{dbdaddr}, k.procdIp, true, &k.dbd)
-	return nil
-}
-
-func (k *Kernel) GetProcdIp() string {
-	k.Lock()
-	defer k.Unlock()
-
-	if len(k.procd) != 1 {
-		db.DFatalf("Error unexpexted num procds: %v", k.procd)
-	}
-	return GetSubsystemInfo(k.FsLib, sp.KPIDS, k.procd[0].p.Pid.String()).Ip
 }
 
 func (k *Kernel) KillOne(srv string) error {
@@ -370,4 +290,17 @@ func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, pe
 		return nil, "", err
 	}
 	return cmd, p.Pid, nil
+}
+
+// Boot subsystems other than named
+func (k *Kernel) BootSubs() error {
+	// Procd must boot first, since other services are spawned as
+	// procs.
+	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
+		err := k.BootSub(s)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

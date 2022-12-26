@@ -372,7 +372,7 @@ func addReplPortOffset(peerAddr string) string {
 }
 
 //
-// XXX kill backward-compatability
+// XXX kill backward-compatability, but keep for now for noded.go.
 //
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*System, error) {

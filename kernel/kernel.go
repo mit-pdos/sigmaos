@@ -65,34 +65,32 @@ func (k *Kernel) addNamed(nd *Subsystem) {
 	k.nameds = append(k.nameds, nd)
 }
 
-func MakeKernel(realm string, param *Param) (*Kernel, error) {
-	if param.All {
-		return makeKernel(realm, param, makeKernelAll)
-	} else {
-		return makeKernel(realm, param, makeKernelNamed)
-	}
-}
-
-// XXX should replicas start in their own boot/kernel process?
-func makeKernel(realm string, p *Param, mkK func(*Kernel, string, int) error) (*Kernel, error) {
+func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	n := len(fslib.Named())
 	ch := make(chan error)
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
 	k := mkKernel(realm, fslib.Named(), cores)
 
-	go func() {
-		// Must happen in a separate thread because mkK will block
-		// until enough replicas have started (if named is
-		// replicated).
-		ch <- mkK(k, p.Uname, 0)
-	}()
-	k.startReplicas(ch, n-1, p)
+	// start nameds and wait until they have started
+	k.startNameds(ch, n, p)
 	var err error
 	for i := 0; i < n; i++ {
 		r := <-ch
 		if r != nil {
 			err = r
 		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	proc.SetProgram(p.Uname)
+	proc.SetPid(proc.GenPid())
+	k.FsLib, err = fslib.MakeFsLibAddr(p.Uname, fslib.Named())
+	if err != nil {
+		return nil, err
+	}
+	if p.All {
+		makeAll(k, p.Uname)
 	}
 	return k, err
 }
@@ -109,9 +107,15 @@ func (k *Kernel) ShutDown() error {
 	return nil
 }
 
-// Make a kernel with just named.
-func makeKernelNamed(k *Kernel, uname string, replicaId int) error {
-	return bootNamed(k, uname, replicaId)
+func (k *Kernel) startNameds(ch chan error, n int, p *Param) {
+	for i := 0; i < n; i++ {
+		// Must happen in a separate thread because MakeKernelNamed
+		// will block until the replicas are able to process requests.
+		go func(i int) {
+			err := bootNamed(k, p.Uname, i)
+			ch <- err
+		}(i)
+	}
 }
 
 // replicaId is used to index into the fslib.Named() slice and select
@@ -122,45 +126,17 @@ func bootNamed(k *Kernel, uname string, replicaId int) error {
 	if err != nil {
 		return err
 	}
-	// XXX It's a bit weird that we set program/pid here...
-	proc.SetProgram(uname)
-	proc.SetPid(proc.GenPid())
 	ss := makeSubsystemCmd(nil, nil, "", false, cmd)
 	k.addNamed(ss)
 	time.Sleep(SLEEP_MS * time.Millisecond)
-	k.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return err
 }
 
-func (k *Kernel) addNamedReplica(p *Param, i int) error {
-	err := bootNamed(k, p.Uname, i)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (k *Kernel) startReplicas(ch chan error, r int, p *Param) {
-	// Start additional replicas
-	for i := 0; i < r; i++ {
-		// Must happen in a separate thread because MakeKernelNamed
-		// will block until the replicas are able to process requests.
-		go func(i int) {
-			ch <- k.addNamedReplica(p, i+1)
-		}(i)
-	}
-}
-
 // Make a kernel with named and other kernel services
-func makeKernelAll(k *Kernel, uname string, replicaId int) error {
-	err := bootNamed(k, uname, replicaId)
-	if err != nil {
-		db.DPrintf(db.KERNEL, "makeKernelNamed err %v\n", err)
-		return err
-	}
+func makeAll(k *Kernel, uname string) error {
 	// XXX should this be GetPid?
 	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, uname, k.namedAddr)
-	err = k.BootSubs()
+	err := k.BootSubs()
 	if err != nil {
 		db.DPrintf(db.KERNEL, "Start err %v\n", err)
 		return err

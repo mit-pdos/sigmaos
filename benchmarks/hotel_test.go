@@ -164,7 +164,7 @@ func (ji *HotelJobInstance) Wait() {
 			_, err = ji.WaitExit(pid)
 			assert.Nil(ji.T, err)
 		}
-		ji.cm.StopCache()
+		ji.cm.Stop()
 	}
 	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {

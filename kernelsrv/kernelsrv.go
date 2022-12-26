@@ -26,14 +26,20 @@ func RunKernelSrv(s *kernel.System) error {
 }
 
 func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
-	if req.Name == "procd" {
+	switch req.Name {
+	case "procd":
 		if err := ks.s.BootProcd(); err != nil {
 			return err
 		}
 		rep.Ok = true
-		return nil
+	case "fss3d":
+		if err := ks.s.BootFss3d(); err != nil {
+			return err
+		}
+		rep.Ok = true
+	default:
+		rep.Ok = false
 	}
-	rep.Ok = false
 	return nil
 }
 

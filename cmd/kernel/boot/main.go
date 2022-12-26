@@ -9,15 +9,15 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		db.DFatalf("%v: usage param.yml\n", os.Args[0])
+	if len(os.Args) < 3 {
+		db.DFatalf("%v: usage realmid param.yml\n", os.Args[0])
 	}
-	sys, err := kernel.BootUp(os.Args[1])
+	sys, err := kernel.BootUp(os.Args[1], os.Args[2])
 	if err != nil {
-		db.DFatalf("%v: boot %s err %v\n", os.Args[0], os.Args[1], err)
+		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
 
-	// let parent know what kernel has booted
+	// let parent/bootclnt know that kernel has booted
 	if _, err := fmt.Printf("running\n"); err != nil {
 		db.DFatalf("%v: Printf err %v\n", os.Args[0], err)
 	}

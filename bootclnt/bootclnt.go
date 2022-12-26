@@ -25,9 +25,9 @@ type Kernel struct {
 	stdout io.ReadCloser
 }
 
-func BootKernel(contain bool, yml string) (*Kernel, error) {
+func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 	pn := path.Join(sp.PRIVILEGED_BIN, "kernel")
-	cmd := exec.Command(pn+"/boot", []string{pn + "/" + yml}...)
+	cmd := exec.Command(pn+"/boot", []string{realmid, pn + "/" + yml}...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

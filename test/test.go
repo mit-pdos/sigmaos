@@ -27,7 +27,7 @@ var realmid string // Use this realm to run tests instead of starting a new one.
 // Read & set the proc version.
 func init() {
 	flag.StringVar(&version, "version", "none", "version")
-	flag.StringVar(&realmid, "realm", "", "realm id")
+	flag.StringVar(&realmid, "realm", "test-realm", "realm id")
 }
 
 type Tstate1 struct {
@@ -185,6 +185,16 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate = Bstate
 
+type Bstate struct {
+	*fslib.FsLib
+	*procclnt.ProcClnt
+	boot      *bootclnt.Kernel
+	kernel    *kernelclnt.KernelClnt
+	T         *testing.T
+	namedAddr []string
+	realmid   string
+}
+
 func MakeTstatePath(t *testing.T, path string) *Bstate {
 	b, err := MakeBootPath(t, path)
 	if err != nil {
@@ -194,7 +204,7 @@ func MakeTstatePath(t *testing.T, path string) *Bstate {
 }
 
 func MakeTstate(t *testing.T) *Bstate {
-	b, err := BootKernel(t, "boot.yml")
+	b, err := BootKernel(t, realmid, "boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -202,27 +212,18 @@ func MakeTstate(t *testing.T) *Bstate {
 }
 
 func MakeTstateAll(t *testing.T) *Bstate {
-	b, err := BootKernel(t, "bootall.yml")
+	b, err := BootKernel(t, realmid, "bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
 	return b
 }
 
-type Bstate struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	boot      *bootclnt.Kernel
-	kernel    *kernelclnt.KernelClnt
-	T         *testing.T
-	namedAddr []string
-}
-
 func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
 	if path == sp.NAMED {
-		return BootKernel(t, "boot.yml")
+		return BootKernel(t, realmid, "boot.yml")
 	} else {
-		bs, err := BootKernel(t, "bootall.yml")
+		bs, err := BootKernel(t, realmid, "bootall.yml")
 		if err != nil {
 			return nil, err
 		}
@@ -232,9 +233,27 @@ func MakeBootPath(t *testing.T, path string) (*Bstate, error) {
 	}
 }
 
-func BootKernel(t *testing.T, yml string) (*Bstate, error) {
+// A realm/set of machines are already running
+func MakeBootRealm(t *testing.T, realmid string) *Tstate1 {
+	ts := makeTstate(t, realmid)
+	// XXX make fslib exit?
+	fsl, err := fslib.MakeFsLib("test")
+	if err != nil {
+		return nil
+	}
+	rconfig := realm.GetRealmConfig(fsl, realmid)
+	ts.namedAddr = rconfig.NamedAddrs
+	sys, err := kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
+	if err != nil {
+		return nil
+	}
+	ts.System = sys
+	return ts
+}
+
+func BootKernel(t *testing.T, realmid, yml string) (*Bstate, error) {
 	setVersion()
-	b, err := bootclnt.BootKernel(false, yml)
+	b, err := bootclnt.BootKernel(realmid, false, yml)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +266,16 @@ func BootKernel(t *testing.T, yml string) (*Bstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Bstate{fsl, pclnt, b, kclnt, t, fslib.Named()}, nil
+
+	return &Bstate{fsl, pclnt, b, kclnt, t, fslib.Named(), realmid}, nil
+}
+
+func (bs *Bstate) RunningInRealm() bool {
+	return bs.realmid != ""
+}
+
+func (bs *Bstate) RealmId() string {
+	return bs.realmid
 }
 
 func (bs *Bstate) NamedAddr() []string {

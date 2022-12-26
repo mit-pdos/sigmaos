@@ -60,20 +60,20 @@ func makeKernelBase(realmId string, namedAddr []string, cores *sessp.Tinterval) 
 	return s
 }
 
-func MakeKernel(param *Param) (*System, error) {
+func MakeKernel(realm string, param *Param) (*System, error) {
 	if param.All {
-		return makeKernel(param, makeSystemAll)
+		return makeKernel(realm, param, makeSystemAll)
 	} else {
-		return makeKernel(param, makeSystemNamed)
+		return makeKernel(realm, param, makeSystemNamed)
 	}
 }
 
 // XXX should replicas start in their own boot/kernel process?
-func makeKernel(p *Param, mkSys func(*System, string, int) error) (*System, error) {
+func makeKernel(realm string, p *Param, mkSys func(*System, string, int) error) (*System, error) {
 	n := len(fslib.Named())
 	ch := make(chan error)
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	sys := makeKernelBase(p.Realm, fslib.Named(), cores)
+	sys := makeKernelBase(realm, fslib.Named(), cores)
 
 	go func() {
 		// Must happen in a separate thread because mkSys will block until

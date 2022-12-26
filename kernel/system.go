@@ -385,38 +385,3 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
 	return s, nil
 }
-
-// Make system with just named. replicaId is used to index into the
-// fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
-	s := makeKernelBase(realmId, fslib.Named(), cores)
-	// replicaId needs to be 1-indexed for replication library.
-	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
-	if err != nil {
-		return nil, err
-	}
-	// XXX It's a bit weird that we set program/pid here...
-	proc.SetProgram(uname)
-	proc.SetPid(proc.GenPid())
-	s.named = makeSubsystemCmd(nil, nil, "", false, cmd)
-	time.Sleep(SLEEP_MS * time.Millisecond)
-	s.FsLib, err = fslib.MakeFsLibAddr(uname, fslib.Named())
-	return s, err
-}
-
-// Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int, cores *sessp.Tinterval) (*System, error) {
-	s, err := MakeSystemNamed(uname, realmId, replicaId, cores)
-	if err != nil {
-		db.DPrintf(db.KERNEL, "MakeSystemNamed err %v\n", err)
-		return nil, err
-	}
-	// XXX should this be GetPid?
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
-	err = s.Boot()
-	if err != nil {
-		db.DPrintf(db.KERNEL, "Start err %v\n", err)
-		return nil, err
-	}
-	return s, nil
-}

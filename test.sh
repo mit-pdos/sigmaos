@@ -56,7 +56,7 @@ do
   go test $@ sigmaos/s3 --version=$VERSION
   go test -v sigmaos/fslib --version=$VERSION -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
   
-  go test $@ sigmaos/kernel --version=$VERSION
+  go test $@ sigmaos/bootclnt --version=$VERSION
   go test $@ sigmaos/leaderclnt --version=$VERSION
   go test $@ sigmaos/leadertest --version=$VERSION
   go test $@ sigmaos/snapshot --version=$VERSION

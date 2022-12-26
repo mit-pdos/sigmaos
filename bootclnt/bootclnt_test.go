@@ -1,4 +1,4 @@
-package kernel_test
+package bootclnt_test
 
 import (
 	"log"
@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fslib"
-	"sigmaos/sessp"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 //
-// Tests automounting and ephemeral files
+// Tests automounting and ephemeral files with a kernel with all services
 //
 
 func TestSymlink1(t *testing.T) {

@@ -26,9 +26,11 @@ func RunKernelSrv(k *kernel.Kernel) error {
 }
 
 func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
-	err := ks.k.BootSub(req.Name)
-	rep.Ok = err == nil
-	return err
+	if err := ks.k.BootSub(req.Name); err != nil {
+		return err
+	}
+	rep.Ok = true
+	return nil
 }
 
 func (ks *KernelSrv) Kill(req KillRequest, rep *KillResult) error {

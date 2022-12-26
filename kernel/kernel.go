@@ -119,20 +119,6 @@ func (k *Kernel) startNameds(ch chan error, n int, p *Param) {
 	}
 }
 
-// replicaId is used to index into the fslib.Named() slice and select
-// an address for this named.
-func bootNamed(k *Kernel, uname string, replicaId int) error {
-	// replicaId needs to be 1-indexed for replication library.
-	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
-	if err != nil {
-		return err
-	}
-	ss := makeSubsystemCmd(nil, nil, "", false, cmd)
-	k.addNamed(ss)
-	time.Sleep(SLEEP_MS * time.Millisecond)
-	return err
-}
-
 // Start kernel services listed in p
 func startSrvs(k *Kernel, p *Param) error {
 	// XXX should this be GetPid?
@@ -143,40 +129,6 @@ func startSrvs(k *Kernel, p *Param) error {
 			db.DPrintf(db.KERNEL, "Start %s err %v\n", p, err)
 			return err
 		}
-	}
-	return nil
-}
-
-func (k *Kernel) KillOne(srv string) error {
-	k.Lock()
-	defer k.Unlock()
-
-	var err error
-	var ss *Subsystem
-	switch srv {
-	case sp.PROCD:
-		if len(k.procd) > 0 {
-			ss = k.procd[0]
-			k.procd = k.procd[1:]
-		} else {
-			db.DPrintf(db.ALWAYS, "Tried to kill procd, nothing to kill")
-		}
-	case sp.UX:
-		if len(k.fsuxd) > 0 {
-			ss = k.fsuxd[0]
-			k.fsuxd = k.fsuxd[1:]
-		} else {
-			db.DPrintf(db.ALWAYS, "Tried to kill ux, nothing to kill")
-		}
-	default:
-		db.DFatalf("Unkown server type in Kernel.KillOne: %v", srv)
-	}
-	err = ss.Kill()
-	if err == nil {
-		ss.Wait()
-		k.crashedPids[ss.p.Pid] = true
-	} else {
-		db.DFatalf("%v kill failed %v\n", srv, err)
 	}
 	return nil
 }

@@ -11,4 +11,4 @@ for d in "realm" "kernel" "user"; do
 done
 
 sudo ip link del sigmab
-# sudo ip link del `ip link list | grep -o "sb[0-9]*" | head -1`
+sudo ip link del `ip link list | grep -o "sb[0-9]*" | head -1`

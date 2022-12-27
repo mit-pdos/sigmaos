@@ -23,7 +23,6 @@ const (
 
 func RunContainer(cmd *exec.Cmd) error {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
 		Cloneflags: syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWNS |
 			syscall.CLONE_NEWIPC |

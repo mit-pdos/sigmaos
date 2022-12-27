@@ -15,7 +15,7 @@ var defaultEnvironment = []string{
 }
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) < 2 {
 		log.Fatalf("%s: Usage <bin> [args]\n", os.Args[0])
 	}
 	cmd := &exec.Cmd{

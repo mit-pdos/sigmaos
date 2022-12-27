@@ -47,7 +47,7 @@ func RunContainer(cmd *exec.Cmd) error {
 	}
 
 	cmd.Args = append([]string{cmd.Path}, cmd.Args...)
-	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "kernel/exec-container")
+	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "linux/exec-container")
 
 	log.Printf("contain cmd  %v\n", cmd)
 

@@ -65,10 +65,12 @@ if [ $FROM == "local" ]; then
   cp -r bin/user/* $UXROOT/$REALM/bin/user/$VERSION/
   cp -r bin/realm $PRIVILEGED_BIN
   cp -r bin/kernel $PRIVILEGED_BIN
+  cp -r bin/linux $PRIVILEGED_BIN
 elif [ $FROM == "s3" ]; then
   # Copy kernel & realm dirs from s3
   aws s3 cp --recursive s3://$REALM/bin/realm $PRIVILEGED_BIN/realm $PROFILE
   aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/kernel $PROFILE
+  aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/linux $PROFILE
   chmod --recursive +x $PRIVILEGED_BIN
 else
   echo "Unrecognized bin source: $FROM"
@@ -77,7 +79,7 @@ fi
 
 cp bootclnt/boot*.yml $PRIVILEGED_BIN/kernel/
 
-SNET="$PRIVILEGED_BIN/kernel/scnet"
+SNET="$PRIVILEGED_BIN/linux/scnet"
 sudo chown root:root $SNET
 sudo chmod u+s $SNET
 # Is there another way?

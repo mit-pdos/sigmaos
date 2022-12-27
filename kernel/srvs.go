@@ -5,27 +5,53 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
+type Services struct {
+	sync.Mutex
+	svcs        map[string][]*Subsystem
+	crashedPids map[proc.Tpid]bool
+}
+
+func mkServices() *Services {
+	ss := &Services{}
+	ss.svcs = make(map[string][]*Subsystem)
+	ss.crashedPids = make(map[proc.Tpid]bool)
+	return ss
+}
+
+func (ss *Services) addSvc(s string, sub *Subsystem) {
+	ss.Lock()
+	defer ss.Unlock()
+	ss.svcs[s] = append(ss.svcs[s], sub)
+}
+
 func (k *Kernel) BootSub(s string) error {
 	var err error
+	var ss *Subsystem
 	switch s {
 	case sp.PROCDREL:
-		err = k.BootProcd()
+		ss, err = k.BootProcd()
 	case sp.S3REL:
-		err = k.BootFss3d()
+		ss, err = k.BootFss3d()
 	case sp.UXREL:
-		err = k.BootFsUxd()
+		ss, err = k.BootFsUxd()
 	case sp.DBREL:
-		err = k.BootDbd()
+		ss, err = k.BootDbd()
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
+	if err != nil {
+		return err
+	}
+	k.svcs.addSvc(s, ss)
 	return err
 }
 
@@ -33,30 +59,17 @@ func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()
 
-	var err error
 	var ss *Subsystem
-	switch srv {
-	case sp.PROCD:
-		if len(k.procd) > 0 {
-			ss = k.procd[0]
-			k.procd = k.procd[1:]
-		} else {
-			db.DPrintf(db.ALWAYS, "Tried to kill procd, nothing to kill")
-		}
-	case sp.UX:
-		if len(k.fsuxd) > 0 {
-			ss = k.fsuxd[0]
-			k.fsuxd = k.fsuxd[1:]
-		} else {
-			db.DPrintf(db.ALWAYS, "Tried to kill ux, nothing to kill")
-		}
-	default:
-		db.DFatalf("Unkown server type in Kernel.KillOne: %v", srv)
+	if len(k.svcs.svcs[srv]) > 0 {
+		ss = k.svcs.svcs[srv][0]
+		k.svcs.svcs[srv] = k.svcs.svcs[srv][1:]
+	} else {
+		db.DPrintf(db.ALWAYS, "Tried to kill %s, nothing to kill", srv)
 	}
-	err = ss.Kill()
+	err := ss.Kill()
 	if err == nil {
 		ss.Wait()
-		k.crashedPids[ss.p.Pid] = true
+		k.svcs.crashedPids[ss.p.Pid] = true
 	} else {
 		db.DFatalf("%v kill failed %v\n", srv, err)
 	}
@@ -72,53 +85,56 @@ func bootNamed(k *Kernel, uname string, replicaId int) error {
 		return err
 	}
 	ss := makeSubsystemCmd(nil, nil, "", false, cmd)
-	k.addNamed(ss)
+	k.svcs.Lock()
+	defer k.svcs.Unlock()
+	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
+
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	return err
 }
 
-func (k *Kernel) BootProcd() error {
+func (k *Kernel) BootProcd() (*Subsystem, error) {
 	return k.bootProcd(false)
 }
 
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
-func (k *Kernel) bootProcd(spawningSys bool) error {
-	err := k.bootSubsystem("kernel/procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false, &k.procd)
+func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
+	ss, err := k.bootSubsystem("kernel/procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if k.procdIp == "" {
-		k.procdIp = k.GetProcdIp()
+		k.procdIp = ss.GetIp(k.FsLib)
 	}
-	return nil
+	return ss, nil
 }
 
-func (k *Kernel) BootFsUxd() error {
-	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.UXROOT, k.realmId)}, k.procdIp, true, &k.fsuxd)
+func (k *Kernel) BootFsUxd() (*Subsystem, error) {
+	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.UXROOT, k.realmId)}, k.procdIp, true)
 }
 
-func (k *Kernel) BootFss3d() error {
-	return k.bootSubsystem("kernel/fss3d", []string{k.realmId}, k.procdIp, true, &k.fss3d)
+func (k *Kernel) BootFss3d() (*Subsystem, error) {
+	return k.bootSubsystem("kernel/fss3d", []string{k.realmId}, k.procdIp, true)
 }
 
-func (k *Kernel) BootDbd() error {
+func (k *Kernel) BootDbd() (*Subsystem, error) {
 	var dbdaddr string
 	dbdaddr = os.Getenv("SIGMADBADDR")
 	// XXX don't pass dbd addr as an envvar, it's messy.
 	if dbdaddr == "" {
 		dbdaddr = "127.0.0.1:3306"
 	}
-	return k.bootSubsystem("kernel/dbd", []string{dbdaddr}, k.procdIp, true, &k.dbd)
-	return nil
+	return k.bootSubsystem("kernel/dbd", []string{dbdaddr}, k.procdIp, true)
 }
 
 func (k *Kernel) GetProcdIp() string {
-	k.Lock()
-	defer k.Unlock()
+	k.svcs.Lock()
+	defer k.svcs.Unlock()
 
-	if len(k.procd) != 1 {
-		db.DFatalf("Error unexpexted num procds: %v", k.procd)
+	if len(k.svcs.svcs[sp.PROCDREL]) != 1 {
+		db.DFatalf("Error unexpexted num procds: %v", k.svcs.svcs[sp.PROCDREL])
 	}
-	return GetSubsystemInfo(k.FsLib, sp.KPIDS, k.procd[0].p.Pid.String()).Ip
+	procd := k.svcs.svcs[sp.PROCDREL][0]
+	return procd.GetIp(k.FsLib)
 }

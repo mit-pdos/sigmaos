@@ -269,7 +269,7 @@ func TestWriteCrash(t *testing.T) {
 	crashchan := make(chan bool)
 	l := &sync.Mutex{}
 	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(sp.UX, (i+1)*CRASHSRV, l, crashchan)
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
 	}
 
 	for i := 0; i < NCRASH; i++ {

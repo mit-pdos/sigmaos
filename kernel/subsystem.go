@@ -9,6 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 type Subsystem struct {
@@ -19,16 +20,11 @@ type Subsystem struct {
 	cmd      *exec.Cmd
 }
 
-func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool, list *[]*Subsystem) error {
-	k.Lock()
-	defer k.Unlock()
-
+func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool) (*Subsystem, error) {
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, binpath, args)
 	ss := makeSubsystem(k.ProcClnt, p, procdIp, viaProcd)
-	// Lock appending to list
-	*list = append(*list, ss)
-	return ss.Run(k.namedAddr)
+	return ss, ss.Run(k.namedAddr)
 }
 
 func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool) *Subsystem {
@@ -46,6 +42,10 @@ func (s *Subsystem) Run(namedAddr []string) error {
 	}
 	s.cmd = cmd
 	return s.WaitStart(s.p.Pid)
+}
+
+func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
+	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.Pid.String()).Ip
 }
 
 // Send SIGTERM to a system.

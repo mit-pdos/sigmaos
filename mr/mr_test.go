@@ -6,13 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
@@ -274,32 +272,6 @@ func (ts *Tstate) checkJob() {
 	}
 }
 
-// Sleep for a random time, then crash a server.  Crash a server of a
-// certain type, then crash a server of that type.
-func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
-	r := rand.Intn(randMax)
-	time.Sleep(time.Duration(r) * time.Microsecond)
-	db.DPrintf(db.ALWAYS, "Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)
-	// Make sure not too many crashes happen at once by taking a lock (we always
-	// want >= 1 server to be up).
-	l.Lock()
-	switch srv {
-	case sp.PROCD:
-		err := ts.BootProcd()
-		assert.Nil(ts.T, err, "Spawn procd %v", err)
-	case sp.UX:
-		err := ts.BootFsUxd()
-		assert.Nil(ts.T, err, "Spawn uxd %v", err)
-	default:
-		assert.False(ts.T, true, "%v: Unrecognized service type", proc.GetProgram())
-	}
-	db.DPrintf(db.ALWAYS, "Kill one %v", srv)
-	err := ts.KillOne(srv)
-	assert.Nil(ts.T, err, "Kill procd %v", err)
-	l.Unlock()
-	crashchan <- true
-}
-
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
@@ -319,12 +291,12 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashprocd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(sp.PROCD, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.CrashServer(sp.PROCDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(sp.UX, (i+1)*CRASHSRV, l2, crashchan)
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l2, crashchan)
 	}
 
 	cm.Wait()

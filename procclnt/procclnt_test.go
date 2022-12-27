@@ -605,7 +605,7 @@ func TestSpawnProcdCrash(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any procd.
 	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores*2))
 
-	err := ts.KillOne(sp.PROCD)
+	err := ts.KillOne(sp.PROCDREL)
 	assert.Nil(t, err, "KillOne: %v", err)
 
 	err = ts.WaitStart(pid)
@@ -648,7 +648,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
-	err = ts.KillOne(sp.PROCD)
+	err = ts.KillOne(sp.PROCDREL)
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.
@@ -659,7 +659,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
 
-	err = ts.KillOne(sp.PROCD)
+	err = ts.KillOne(sp.PROCDREL)
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.

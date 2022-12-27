@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -28,19 +27,13 @@ const (
 )
 
 type Kernel struct {
-	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	realmId     string
-	namedAddr   []string
-	procdIp     string
-	cores       *sessp.Tinterval
-	fss3d       []*Subsystem
-	fsuxd       []*Subsystem
-	procd       []*Subsystem
-	dbd         []*Subsystem
-	nameds      []*Subsystem // if > 1, then running with replicated named
-	crashedPids map[proc.Tpid]bool
+	realmId   string
+	namedAddr []string
+	procdIp   string
+	cores     *sessp.Tinterval
+	svcs      *Services
 }
 
 func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kernel {
@@ -48,19 +41,8 @@ func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kerne
 	k.realmId = realmId
 	k.namedAddr = namedAddr
 	k.cores = cores
-	k.procd = []*Subsystem{}
-	k.fsuxd = []*Subsystem{}
-	k.fss3d = []*Subsystem{}
-	k.dbd = []*Subsystem{}
-	k.nameds = []*Subsystem{}
-	k.crashedPids = make(map[proc.Tpid]bool)
+	k.svcs = mkServices()
 	return k
-}
-
-func (k *Kernel) addNamed(nd *Subsystem) {
-	k.Lock()
-	defer k.Unlock()
-	k.nameds = append(k.nameds, nd)
 }
 
 func MakeKernel(realm string, p *Param) (*Kernel, error) {
@@ -143,7 +125,7 @@ func (k *Kernel) Shutdown() {
 		for _, pid := range cpids {
 			k.Evict(pid)
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
-			if _, ok := k.crashedPids[pid]; !ok {
+			if _, ok := k.svcs.crashedPids[pid]; !ok {
 				if status, err := k.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
@@ -151,20 +133,14 @@ func (k *Kernel) Shutdown() {
 			db.DPrintf(db.KERNEL, "Done evicting %v", pid)
 		}
 	}
-	// Make sure the procs actually exited
-	for _, d := range k.fss3d {
-		d.Wait()
+	for key, val := range k.svcs.svcs {
+		if key != sp.NAMEDREL {
+			for _, d := range val {
+				d.Wait()
+			}
+		}
 	}
-	for _, d := range k.fsuxd {
-		d.Wait()
-	}
-	for _, d := range k.procd {
-		d.Wait()
-	}
-	for _, d := range k.dbd {
-		d.Wait()
-	}
-	for _, d := range k.nameds {
+	for _, d := range k.svcs.svcs[sp.NAMEDREL] {
 		// kill it so that test terminates
 		d.Terminate()
 		d.Wait()

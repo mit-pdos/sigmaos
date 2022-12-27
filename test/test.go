@@ -150,15 +150,19 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func (ts *Tstate) BootProcd() error {
-	return ts.kernel.Boot(sp.PROCDREL)
+	return ts.Boot(sp.PROCDREL)
 }
 
 func (ts *Tstate) BootFss3d() error {
-	return ts.kernel.Boot(sp.S3REL)
+	return ts.Boot(sp.S3REL)
 }
 
 func (ts *Tstate) BootFsUxd() error {
-	return ts.kernel.Boot(sp.UXREL)
+	return ts.Boot(sp.UXREL)
+}
+
+func (ts *Tstate) Boot(s string) error {
+	return ts.kernel.Boot(s)
 }
 
 func (ts *Tstate) KillOne(s string) error {

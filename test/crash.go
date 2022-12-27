@@ -7,8 +7,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 // Sleep for a random time, then crash a server.  Crash a server of a
@@ -20,22 +18,12 @@ func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	// Make sure not too many crashes happen at once by taking a lock (we always
 	// want >= 1 server to be up).
 	l.Lock()
-	switch srv {
-	case sp.PROCD:
-		err := ts.BootProcd()
-		if err != nil {
-			db.DFatalf("Error spawn procd")
-		}
-	case sp.UX:
-		err := ts.BootFsUxd()
-		if err != nil {
-			db.DFatalf("Error spawn uxd")
-		}
-	default:
-		db.DFatalf("%v: Unrecognized service type", proc.GetProgram())
+	err := ts.Boot(srv)
+	if err != nil {
+		db.DFatalf("Error spawn %v", srv)
 	}
 	log.Printf("Kill one %v", srv)
-	err := ts.KillOne(srv)
+	err = ts.KillOne(srv)
 	if err != nil {
 		db.DFatalf("Error non-nil kill procd: %v", err)
 	}

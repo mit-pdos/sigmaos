@@ -438,7 +438,7 @@ func (pd *Procd) worker() {
 			pd.perf.Done()
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
-		db.DPrintf(db.PROCD, "Got proc %v", p)
+		db.DPrintf(db.PROCD, "Got proc %v", p.SysPid)
 		err := pd.fs.running(p)
 		if err != nil {
 			pd.perf.Done()

@@ -184,7 +184,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 8, len(sts)) // .statsd, .fences and ctl and running and runqs
 
-	ts.KillOne(sp.PROCD)
+	ts.KillOne(sp.PROCDREL)
 
 	start := time.Now()
 	for {

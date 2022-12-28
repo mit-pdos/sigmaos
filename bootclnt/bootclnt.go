@@ -13,6 +13,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	RUNNING  = "running"
+	SHUTDOWN = "shutdown"
+)
+
 //
 // Library to start a kernel boot process.  Because this library boots
 // the first named, it uses a pipe to talk to the boot process; we
@@ -47,29 +52,32 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		// Create a process group ID to kill all children if necessary.
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		if err := cmd.Start(); err != nil {
-			db.DPrintf(db.KERNEL, "BootKernel: Start err %v\n", err)
+			db.DPrintf(db.BOOTCLNT, "BootKernel: Start err %v\n", err)
 			return nil, err
 		}
 	}
 
-	db.DPrintf(db.KERNEL, "Wait for kernel to be booted\n")
+	db.DPrintf(db.BOOTCLNT, "Wait for kernel to be booted\n")
 	// wait for kernel to be booted
 	s := ""
 	if _, err := fmt.Fscanf(stdout, "%s", &s); err != nil {
-		db.DPrintf(db.KERNEL, "Fscanf err %v %s\n", err, s)
+		db.DPrintf(db.BOOTCLNT, "Fscanf err %v %s\n", err, s)
 		return nil, err
 	}
-	db.DPrintf(db.KERNEL, "Kernel is running\n")
+	if s != RUNNING {
+		db.DFatalf("oops: kernel is printing to stdout %s\n", s)
+	}
+	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s\n", s)
 	return &Kernel{cmd, stdin, stdout}, nil
 }
 
 func (k *Kernel) Shutdown() error {
 	defer k.stdout.Close()
-	if _, err := io.WriteString(k.stdin, "shutdown\n"); err != nil {
+	if _, err := io.WriteString(k.stdin, SHUTDOWN+"\n"); err != nil {
 		return err
 	}
 	defer k.stdin.Close()
-	db.DPrintf(db.KERNEL, "Wait for kernel to shutdown\n")
+	db.DPrintf(db.BOOTCLNT, "Wait for kernel to shutdown\n")
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}

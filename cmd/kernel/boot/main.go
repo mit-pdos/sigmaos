@@ -5,6 +5,7 @@ import (
 	"os"
 	"sigmaos/boot"
 
+	"sigmaos/bootclnt"
 	db "sigmaos/debug"
 )
 
@@ -18,7 +19,7 @@ func main() {
 	}
 
 	// let parent/bootclnt know that kernel has booted
-	if _, err := fmt.Printf("running\n"); err != nil {
+	if _, err := fmt.Printf("%s\n", bootclnt.RUNNING); err != nil {
 		db.DFatalf("%v: Printf err %v\n", os.Args[0], err)
 	}
 
@@ -27,6 +28,9 @@ func main() {
 	_, err = fmt.Scanf("%s", &s)
 	if err != nil {
 		db.DFatalf("%v: Scanf err %v\n", os.Args[0], err)
+	}
+	if s != bootclnt.SHUTDOWN {
+		db.DFatalf("%v: oops wrong shutdown command %v\n", os.Args[0], s)
 	}
 
 	db.DPrintf(db.KERNEL, "%v: shutting down %s\n", os.Args[0], s)

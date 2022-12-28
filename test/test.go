@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"testing"
-	"time"
 
 	"sigmaos/bootclnt"
 	db "sigmaos/debug"
@@ -123,7 +122,6 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(10 * time.Millisecond)
 	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
 	if err != nil {
 		return nil, err

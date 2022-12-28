@@ -2,7 +2,6 @@ package container
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/vishvananda/netlink"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -48,13 +48,13 @@ func RunContainer(cmd *exec.Cmd) error {
 	cmd.Args = append([]string{cmd.Path}, cmd.Args...)
 	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "linux/exec-container")
 
-	log.Printf("contain cmd  %v\n", cmd)
+	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	log.Printf("mkscnet %v\n", cmd.Process.Pid)
+	db.DPrintf(db.CONTAINER, "mkscnet %v\n", cmd.Process.Pid)
 	if err := mkScnet(cmd.Process.Pid); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func ExecContainer() error {
 	root := sp.UXROOT
 
 	// XXX specialized for named for now
-	log.Printf("execContainer: %v\n", os.Args)
+	db.DPrintf(db.CONTAINER, "execContainer: %v\n", os.Args)
 
 	if err := syscall.Sethostname([]byte("sigmaos")); err != nil {
 		return err
@@ -96,14 +96,14 @@ func ExecContainer() error {
 	// /proc
 	//for _, dname := range dirs {
 	//	if err := os.Mkdir(path.Join(root, dname), 0777); err != nil {
-	//		log.Printf("Mkdir %v err %v", path.Join(root, dname), err)
+	//		db.DPrintf(db.CONTAINER, "Mkdir %v err %v", path.Join(root, dname), err)
 	//		return err
 	//	}
 	//}
 
 	// Make a new /proc (XXX should be per realm)
 	if err := syscall.Mount(path.Join(root, "proc"), "/proc", "proc", 0, ""); err != nil {
-		log.Printf("failed to mount /proc: %v", err)
+		db.DPrintf(db.CONTAINER, "failed to mount /proc: %v", err)
 		return err
 	}
 
@@ -118,20 +118,20 @@ func ExecContainer() error {
 	if err != nil {
 		return fmt.Errorf("LookPath: %v", err)
 	}
-	log.Printf("exec %s %v\n", pn, os.Args[1:])
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
 	return syscall.Exec(pn, os.Args[1:], os.Environ())
 }
 
 func setupScnet(ip string) error {
-	log.Printf("SetupScnet %v\n", ip)
+	db.DPrintf(db.CONTAINER, "SetupScnet %v\n", ip)
 	lnk, err := waitScnet()
 	if err != nil {
-		log.Printf("wait failed err %v\n", err)
+		db.DPrintf(db.CONTAINER, "wait failed err %v\n", err)
 		return err
 	}
-	log.Printf("wait link %v\n", lnk.Attrs().Name)
+	db.DPrintf(db.CONTAINER, "wait link %v\n", lnk.Attrs().Name)
 	if err := confScnet(lnk, ip); err != nil {
-		log.Printf("setup failed err %v\n", err)
+		db.DPrintf(db.CONTAINER, "setup failed err %v\n", err)
 		return err
 	}
 	return nil
@@ -139,7 +139,7 @@ func setupScnet(ip string) error {
 
 func waitScnet() (netlink.Link, error) {
 	const NSEC = 5
-	fmt.Printf("Wait for network interface\n")
+	db.DPrintf(db.CONTAINER, "Wait for network interface\n")
 	start := time.Now()
 	for {
 		if time.Since(start) > NSEC*time.Second {
@@ -160,7 +160,7 @@ func waitScnet() (netlink.Link, error) {
 }
 
 func confScnet(lnk netlink.Link, ip string) error {
-	fmt.Printf("Setup network interface\n")
+	db.DPrintf(db.CONTAINER, "Setup network interface\n")
 
 	cidr := ip + "/24"
 
@@ -181,7 +181,7 @@ func confScnet(lnk netlink.Link, ip string) error {
 	if err != nil {
 		return fmt.Errorf("ParseAddr: %v", err)
 	}
-	log.Printf("addr lnk %v %v\n", addr, lnk.Attrs().Name)
+	db.DPrintf(db.CONTAINER, "addr lnk %v %v\n", addr, lnk.Attrs().Name)
 	if err := netlink.AddrAdd(lnk, addr); err != nil {
 		return err
 	}
@@ -195,6 +195,6 @@ func confScnet(lnk netlink.Link, ip string) error {
 	if err := netlink.RouteAdd(&dr); err != nil {
 		return err
 	}
-	log.Printf("route gw %v %v\n", gw, dr)
+	db.DPrintf(db.CONTAINER, "route gw %v %v\n", gw, dr)
 	return nil
 }

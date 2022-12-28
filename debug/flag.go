@@ -59,6 +59,8 @@ const (
 // Kernel
 const (
 	KERNEL     Tselector = "KERNEL"
+	BOOTCLNT             = "BOOTCLNT"
+	CONTAINER            = "CONTAINER"
 	NAMED                = "NAMED"
 	PROCD                = "PROCD"
 	PROCD_ERR            = PROCD + ERR

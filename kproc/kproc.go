@@ -1,7 +1,6 @@
 package kproc
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -9,13 +8,14 @@ import (
 	"syscall"
 
 	"sigmaos/container"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
 func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, error) {
-	log.Printf("RunKernelProc %v %v\n", p, namedAddr)
+	db.DPrintf(db.KERNEL, "RunKernelProc %v %v\n", p, namedAddr)
 	p.FinalizeEnv("NONE")
 	env := p.GetEnv()
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))

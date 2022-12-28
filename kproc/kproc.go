@@ -28,7 +28,7 @@ func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, e
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), env...)
 	if contain {
-		if err := container.RunContainer(cmd); err != nil {
+		if err := container.RunKernelContainer(cmd); err != nil {
 			return nil, err
 		}
 	} else {

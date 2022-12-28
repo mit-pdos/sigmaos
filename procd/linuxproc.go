@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
-	"sigmaos/namespace"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -59,7 +59,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 		return
 	}
 
-	err = namespace.Destroy(p.attr.LinuxRoot)
+	err = container.Destroy(p.attr.LinuxRoot)
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Error namespace destroy: %v", err)
 	}
@@ -99,7 +99,7 @@ func (p *LinuxProc) run() error {
 		}()
 	} else {
 		cmd = exec.Command(path.Join(sp.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
-		namespace.SetupProc(cmd)
+		container.MakeProcContainer(cmd)
 	}
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

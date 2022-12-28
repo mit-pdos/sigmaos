@@ -45,7 +45,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 
 	if contain {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := container.RunContainer(cmd); err != nil {
+		if err := container.RunKernelContainer(cmd); err != nil {
 			return nil, err
 		}
 	} else {

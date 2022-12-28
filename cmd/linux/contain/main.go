@@ -26,10 +26,9 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = defaultEnvironment
-	if err := container.RunContainer(cmd); err != nil {
+	if err := container.RunKernelContainer(cmd); err != nil {
 		log.Fatalf("%s: run container err %v\n", os.Args[0], err)
 	}
-	log.Printf("container done\n")
 	if err := cmd.Wait(); err != nil {
 		log.Fatalf("%s: wait err %v\n", os.Args[0], err)
 	}

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
-	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -352,8 +352,10 @@ func (clnt *ProcClnt) Started() error {
 	// Only isolate non-kernel procs
 	if !proc.GetIsPrivilegedProc() {
 		// Isolate the process namespace
+		// XXX should be done in setupPContainer, but need fs image with
+		// binary.
 		newRoot := proc.GetNewRoot()
-		if err := namespace.Isolate(newRoot); err != nil {
+		if err := container.Isolate(newRoot); err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
 			return fmt.Errorf("Started error %v", err)
 		}

@@ -114,7 +114,7 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 
 func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	setVersion()
-	b, err := bootclnt.BootKernel(realmid, false, yml)
+	b, err := bootclnt.BootKernel(realmid, true, yml)
 	if err != nil {
 		return nil, err
 	}

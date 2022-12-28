@@ -84,8 +84,25 @@ func DelScnet(pid int) error {
 //
 
 func ExecContainer() error {
+	root := sp.UXROOT
+
 	// XXX specialized for named for now
 	log.Printf("execContainer: %v\n", os.Args)
+
+	// /proc
+	//for _, dname := range dirs {
+	//	if err := os.Mkdir(path.Join(root, dname), 0777); err != nil {
+	//		log.Printf("Mkdir %v err %v", path.Join(root, dname), err)
+	//		return err
+	//	}
+	//}
+
+	// Make a new /proc (XXX should be per realm)
+	if err := syscall.Mount(path.Join(root, "proc"), "/proc", "proc", 0, ""); err != nil {
+		log.Printf("failed to mount /proc: %v", err)
+		return err
+	}
+
 	host, _, error := net.SplitHostPort(fslib.Named()[0])
 	if error != nil {
 		return fmt.Errorf("SplitHostPort: %v", error)

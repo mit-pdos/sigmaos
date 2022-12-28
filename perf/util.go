@@ -188,7 +188,7 @@ func (p *Perf) Done() {
 }
 
 // Get the total cpu time usage for process with pid PID
-func GetCPUTimePid(pid string) (utime, stime uint64) {
+func GetCPUTimePid(pid string) (utime, stime uint64, err error) {
 	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't get CPU time: %v", err)
@@ -197,15 +197,18 @@ func GetCPUTimePid(pid string) (utime, stime uint64) {
 	fields := strings.Split(string(contents), " ")
 	if len(fields) != 52 {
 		db.DFatalf("Wrong num fields (%v): %v", len(fields), fields)
+		return
 	}
 	// From: https://man7.org/linux/man-pages/man5/proc.5.html
 	utime, err = strconv.ParseUint(fields[13], 10, 64)
 	if err != nil {
 		db.DFatalf("Error parse uint: %v", err)
+		return
 	}
 	stime, err = strconv.ParseUint(fields[14], 10, 64)
 	if err != nil {
 		db.DFatalf("Error parse uint: %v", err)
+		return
 	}
 	return
 }

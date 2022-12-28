@@ -79,21 +79,23 @@ func DelScnet(pid int) error {
 	return nil
 }
 
-func setupKContainer() error {
-	root := sp.UXROOT
+// XXX specialized for one kernel for now
+func setupKContainer(rootfs string) error {
+	db.DPrintf(db.CONTAINER, "execContainer: %v %s\n", os.Args, rootfs)
 
-	// XXX specialized for named for now
-	db.DPrintf(db.CONTAINER, "execContainer: %v\n", os.Args)
+	if err := setupFs(rootfs); err != nil {
+		return err
+	}
 
 	if err := syscall.Sethostname([]byte("sigmaos")); err != nil {
 		return err
 	}
 
-	// Make a new /proc (XXX should be per realm)
-	if err := syscall.Mount(path.Join(root, "proc"), "/proc", "proc", 0, ""); err != nil {
-		db.DPrintf(db.CONTAINER, "failed to mount /proc: %v", err)
-		return err
-	}
+	// // Make a new /proc (XXX should be per realm)
+	// if err := syscall.Mount(path.Join(root, "proc"), "/proc", "proc", 0, ""); err != nil {
+	// 	db.DPrintf(db.CONTAINER, "failed to mount /proc: %v", err)
+	// 	return err
+	// }
 
 	host, _, error := net.SplitHostPort(fslib.Named()[0])
 	if error != nil {

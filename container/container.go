@@ -18,13 +18,13 @@ const (
 	PROC   = "PROC"
 )
 
-func ExecContainer() error {
+func ExecContainer(rootfs string) error {
 	db.DPrintf(db.CONTAINER, "ExecContainer %v\n", os.Args)
 
 	var r error
 	switch os.Args[0] {
 	case KERNEL:
-		r = setupKContainer()
+		r = setupKContainer(rootfs)
 	case PROC:
 		r = setupPContainer()
 	default:

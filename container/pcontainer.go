@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	// "sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 

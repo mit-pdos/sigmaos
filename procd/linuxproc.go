@@ -116,9 +116,11 @@ func (p *LinuxProc) run() error {
 	p.SysPid = cmd.Process.Pid
 	p.syspidstr = strconv.Itoa(p.SysPid)
 	p.UtilInfo.t0 = time.Now()
-	p.UtilInfo.utime0, p.UtilInfo.stime0 = perf.GetCPUTimePid(p.syspidstr)
+	p.UtilInfo.utime0, p.UtilInfo.stime0, err = perf.GetCPUTimePid(p.syspidstr)
 	p.pd.Unlock()
-
+	if err != nil {
+		db.DPrintf(db.PROCD_ERR, "Procd GetCPUTimePid %v err %v\n", p.syspidstr, err)
+	}
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
 	p.setCpuAffinity()
@@ -139,18 +141,21 @@ func (p *LinuxProc) setCpuAffinity() {
 }
 
 // Caller holds lock.
-func (p *LinuxProc) getUtilL() float64 {
+func (p *LinuxProc) getUtilL() (float64, error) {
 	t1 := time.Now()
-	utime1, stime1 := perf.GetCPUTimePid(p.syspidstr)
+	utime1, stime1, err := perf.GetCPUTimePid(p.syspidstr)
+	if err != nil {
+		return 0, err
+	}
 	util := perf.UtilFromCPUTimeSample(p.UtilInfo.utime0, p.UtilInfo.stime0, utime1, stime1, t1.Sub(p.UtilInfo.t0).Seconds())
 	if util == 0 {
-		return p.UtilInfo.lastUtil
+		return p.UtilInfo.lastUtil, nil
 	}
 	p.UtilInfo.utime0 = utime1
 	p.UtilInfo.stime0 = stime1
 	p.UtilInfo.t0 = t1
 	p.UtilInfo.lastUtil = util
-	return util
+	return util, nil
 }
 
 // Set the Cpu affinity of this proc according to its procd's cpu mask.

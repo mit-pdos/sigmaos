@@ -105,7 +105,12 @@ func (pd *Procd) getLCProcUtil() float64 {
 		if p.SysPid == 0 || p.attr.Type != proc.T_LC || p.attr.IsPrivilegedProc() {
 			continue
 		}
-		total += p.getUtilL()
+		u, err := p.getUtilL()
+		if err != nil {
+			db.DPrintf(db.PROCD_ERR, "getUtilL err %v\n", err)
+			continue
+		}
+		total += u
 	}
 	return total
 }

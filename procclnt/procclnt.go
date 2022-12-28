@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
-	// "sigmaos/namespace"
+	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -352,11 +352,11 @@ func (clnt *ProcClnt) Started() error {
 	// Only isolate non-kernel procs
 	if !proc.GetIsPrivilegedProc() {
 		// Isolate the process namespace
-		//newRoot := proc.GetNewRoot()
-		//if err := namespace.Isolate(newRoot); err != nil {
-		//	db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
-		//	return fmt.Errorf("Started error %v", err)
-		//}
+		newRoot := proc.GetNewRoot()
+		if err := namespace.Isolate(newRoot); err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
+			return fmt.Errorf("Started error %v", err)
+		}
 		// Load a seccomp filter.
 		// seccomp.LoadFilter()
 	}

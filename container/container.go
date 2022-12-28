@@ -89,6 +89,10 @@ func ExecContainer() error {
 	// XXX specialized for named for now
 	log.Printf("execContainer: %v\n", os.Args)
 
+	if err := syscall.Sethostname([]byte("sigmaos")); err != nil {
+		return err
+	}
+
 	// /proc
 	//for _, dname := range dirs {
 	//	if err := os.Mkdir(path.Join(root, dname), 0777); err != nil {

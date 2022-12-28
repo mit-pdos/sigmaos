@@ -3,6 +3,7 @@ package hotel_test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -51,6 +52,7 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	// If running as a test (not in a realm), and too few cores, then start more
 	// procds.
 	if !ts.RunningInRealm() {
+		log.Printf("extra procds\n")
 		// Start enough procds to run all of the srvs and the caches.
 		for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
 			ts.BootProcd()

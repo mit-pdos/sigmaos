@@ -15,7 +15,7 @@
 
   $ sudo mysql_secure_installation
 
-* Create db
+* Create db for hotel
 
   sudo mysql -u root -p
   mysql> create database sigmaos;
@@ -28,5 +28,10 @@
   GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma'@'localhost';
   FLUSH PRIVILEGES;
 
-* Run db
+* Run db proxy
   $ go run .
+
+* For access from container:
+ CREATE USER 'sigma1'@'10.100.42.124' IDENTIFIED BY 'sigmaos1';
+ GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'10.100.42.124';
+ FLUSH PRIVILEGES;

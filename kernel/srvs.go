@@ -123,7 +123,8 @@ func (k *Kernel) BootDbd() (*Subsystem, error) {
 	dbdaddr = os.Getenv("SIGMADBADDR")
 	// XXX don't pass dbd addr as an envvar, it's messy.
 	if dbdaddr == "" {
-		dbdaddr = "127.0.0.1:3306"
+		// dbdaddr = "127.0.0.1:3306"
+		dbdaddr = "192.168.0.9:3306"
 	}
 	return k.bootSubsystem("kernel/dbd", []string{dbdaddr}, k.procdIp, true)
 }

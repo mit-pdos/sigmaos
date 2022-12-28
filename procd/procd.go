@@ -15,7 +15,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/memfssrv"
-	"sigmaos/namespace"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -84,7 +83,7 @@ func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	defer pd.perf.Done()
 
 	// Make namespace isolation dir.
-	os.MkdirAll(namespace.NAMESPACE_DIR, 0777)
+	os.MkdirAll(proc.NAMESPACE_DIR, 0777)
 
 	// Make a directory in which to put stealable procs.
 	pd.MkDir(sp.PROCD_WS, 0777)

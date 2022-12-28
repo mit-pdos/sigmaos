@@ -13,10 +13,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	NAMESPACE_DIR = sp.UXROOT + "isolation"
-)
-
 func MakeProcContainer(cmd *exec.Cmd) {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{

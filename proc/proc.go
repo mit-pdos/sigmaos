@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"sigmaos/namespace"
 	sp "sigmaos/sigmap"
 )
 
@@ -15,6 +14,10 @@ type Tpid string
 type Ttype uint32
 type Tcore uint32
 type Tmem uint32
+
+const (
+	NAMESPACE_DIR = sp.UXROOT + "isolation"
+)
 
 const (
 	T_BE Ttype = 0
@@ -70,7 +73,7 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = pid
 	p.Program = program
-	p.LinuxRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid.String())
+	p.LinuxRoot = path.Join(NAMESPACE_DIR, p.Pid.String())
 	p.Args = args
 	p.Type = T_BE
 	p.Ncore = C_DEF

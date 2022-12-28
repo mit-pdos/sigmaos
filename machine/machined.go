@@ -11,7 +11,6 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/machine/proto"
 	"sigmaos/memfssrv"
-	"sigmaos/namespace"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
@@ -72,13 +71,13 @@ func MakeMachined(args []string) *Machined {
 
 // Remove old files from previous runs.
 func (m *Machined) cleanLinuxFS() {
-	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
-	sts, err := os.ReadDir(namespace.NAMESPACE_DIR)
+	os.Mkdir(proc.NAMESPACE_DIR, 0777)
+	sts, err := os.ReadDir(proc.NAMESPACE_DIR)
 	if err != nil {
 		db.DFatalf("Error ReadDir: %v", err)
 	}
 	for _, st := range sts {
-		if err := os.RemoveAll(path.Join(namespace.NAMESPACE_DIR, st.Name())); err != nil {
+		if err := os.RemoveAll(path.Join(proc.NAMESPACE_DIR, st.Name())); err != nil {
 			db.DFatalf("Error RemoveAll: %v", err)
 		}
 	}

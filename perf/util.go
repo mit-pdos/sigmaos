@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = sp.SIGMAROOT + "perf-output/"
+	OUTPUT_PATH = sp.SIGMAHOME + "perf-output/"
 	PPROF       = "_PPROF"
 	PPROF_MEM   = "_PPROF_MEM"
 	CPU         = "_CPU"

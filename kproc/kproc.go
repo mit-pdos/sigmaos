@@ -10,7 +10,6 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
@@ -21,7 +20,7 @@ func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, e
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 
-	cmd := exec.Command(path.Join(sp.PRIVILEGED_BIN, p.Program), p.Args...)
+	cmd := exec.Command(path.Join(container.PRIVILEGED_BIN, p.Program), p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout

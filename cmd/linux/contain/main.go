@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
 	"sigmaos/container"
 )
 
 var defaultEnvironment = []string{
-	"HOME=/root",
 	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 	"TERM=xterm",
 	"NAMED=10.100.42.124:1111",
@@ -25,7 +25,11 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = defaultEnvironment
+	env := container.MakeEnv()
+	for _, s := range defaultEnvironment {
+		env = append(env, s)
+	}
+	cmd.Env = env
 	if err := container.RunKernelContainer(cmd); err != nil {
 		log.Fatalf("%s: run container err %v\n", os.Args[0], err)
 	}

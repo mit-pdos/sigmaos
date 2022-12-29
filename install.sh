@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Install the sigmaOS software, either from the local build or from s3.
+#
+# Install the sigmaOS software into root file system, either from the
+# local build or from s3.
+#
 
 usage() {
     echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE] [--version VERSION]" 1>&2
@@ -50,21 +53,21 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 echo $PRIVILEGED_BIN
 
 mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
-rm -rf $SIGMAOS/$REALM/bin/user/*
+rm -rf $SIGMAHOME/$REALM/bin/user/*
 if [ $FROM == "local" ]; then
   if [ -z "$VERSION" ]; then
     VERSION=$(cat "${VERSION_FILE}")
   fi
   # Make the user program dir
-  mkdir -p $SIGMAOS/$REALM/bin/user/$VERSION/
+  mkdir -p $SIGMAHOME/$REALM/bin/user/$VERSION/
   # Copy from local
-  cp -r bin/user/* $SIGMAOS/$REALM/bin/user/$VERSION/
+  cp -r bin/user/* $SIGMAHOME/$REALM/bin/user/$VERSION/
   cp -r bin/realm $PRIVILEGED_BIN
   cp -r bin/kernel $PRIVILEGED_BIN
   cp -r bin/linux $PRIVILEGED_BIN
@@ -79,11 +82,5 @@ else
   exit 1
 fi
 
-cp bootclnt/boot*.yml $SIGMAOS/$REALM/
+cp bootclnt/boot*.yml $SIGMAHOME/$REALM/
 
-SNET="$PRIVILEGED_BIN/linux/scnet"
-sudo chown root:root $SNET
-sudo chmod u+s $SNET
-# Is there another way?
-# sudo mv $SNET /home/kaashoek/Downloads/rootfs/usr/bin/scnet
-# sudo mv $SNET /usr/bin/scnet

@@ -16,10 +16,6 @@ type Tcore uint32
 type Tmem uint32
 
 const (
-	NAMESPACE_DIR = sp.SIGMAROOT + "isolation"
-)
-
-const (
 	T_BE Ttype = 0
 	T_LC Ttype = 1
 )
@@ -58,6 +54,10 @@ type Proc struct {
 	SpawnTime    time.Time // Time at which the proc was spawned
 	sharedTarget string    // Target of shared state
 }
+
+const (
+	NAMESPACE_DIR = sp.SIGMAHOME + "/isolation"
+)
 
 func MakeEmptyProc() *Proc {
 	p := &Proc{}

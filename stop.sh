@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 $DIR/umount.sh
 for d in "realm" "kernel" "user"; do

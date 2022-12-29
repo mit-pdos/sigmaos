@@ -30,7 +30,7 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 if [[ -z "${NAMED}" ]]; then
   export NAMED=":1111"

@@ -30,13 +30,6 @@ type Kernel struct {
 	stdout io.ReadCloser
 }
 
-var env = []string{
-	"HOME=" + HOME,
-	"PATH=" + HOME + "/bin/kernel:" + HOME + "/bin/linux:",
-	"SIGMADEBUG=CONTAINER;KERNEL;PROCD", // XXX don't hard code
-	"NAMED=10.100.42.124:1111",          // XXX don't hard code ip
-}
-
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 	cmd := exec.Command("boot", []string{realmid, realmid + "/" + yml}...)
 	stdin, err := cmd.StdinPipe()
@@ -48,7 +41,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		return nil, err
 	}
 	cmd.Stderr = os.Stderr
-	cmd.Env = env
+	cmd.Env = container.MakeEnv()
 
 	if contain {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

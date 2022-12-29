@@ -56,7 +56,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 echo $VERSION > $VERSION_FILE
 echo "Version $(cat $VERSION_FILE)"

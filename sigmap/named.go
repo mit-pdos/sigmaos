@@ -60,11 +60,9 @@ const (
 	RESOURCE_CTL = "resourcectl"
 )
 
-// Linux paths
+// Linux path
 const (
-	ROOTFS         = "/tmp/sigmaos/rootfs"
-	SIGMAROOT      = "/home/sigmaos/"
-	PRIVILEGED_BIN = SIGMAROOT + "/bin/"
+	SIGMAHOME = "/home/sigmaos"
 )
 
 // REALM

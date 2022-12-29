@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 VERSION=$(cat "${VERSION_FILE}")
 

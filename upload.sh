@@ -43,7 +43,7 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
 if [ -z "$VERSION" ]; then
   VERSION=$(cat $VERSION_FILE)

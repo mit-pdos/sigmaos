@@ -13,6 +13,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const PRIVILEGED_BIN = sp.SIGMAHOME + "/bin"
+
 func MakeProcContainer(cmd *exec.Cmd) {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -37,7 +39,7 @@ func MakeProcContainer(cmd *exec.Cmd) {
 		},
 	}
 	cmd.Args = append([]string{PROC}, cmd.Args...)
-	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "linux/exec-container")
+	cmd.Path = path.Join(PRIVILEGED_BIN, "linux/exec-container")
 	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 }
 

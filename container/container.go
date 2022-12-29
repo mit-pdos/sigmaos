@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -19,8 +20,33 @@ const (
 	PROC   = "PROC"
 )
 
-func ExecContainer(rootfs string) error {
-	log.Printf("ExecContainer %v %v\n", os.Args, os.Environ())
+var envvar = []string{"SIGMADEBUG", "SIGMAPERF", "SIGMAROOTFS"}
+
+func SIGMAROOTFS() (string, error) {
+	fs := os.Getenv("SIGMAROOTFS")
+	if fs == "" {
+		return "", fmt.Errorf("%v: ExecContainer: SIGMAROOTFS isn't set; `run source env/init.sh`\n", os.Args[0])
+	}
+	return fs, nil
+}
+
+func MakeEnv() []string {
+	env := []string{}
+	for _, s := range envvar {
+		if e := os.Getenv(s); e != "" {
+			env = append(env, fmt.Sprintf("%s=%s", s, e))
+		}
+	}
+	return env
+}
+
+func ExecContainer() error {
+	log.Printf("ExecContainer Args %v Env %v\n", os.Args, os.Environ())
+
+	rootfs, err := SIGMAROOTFS()
+	if err != nil {
+		return err
+	}
 
 	var r error
 	switch os.Args[0] {
@@ -35,14 +61,14 @@ func ExecContainer(rootfs string) error {
 		return r
 	}
 
-	if err := syscall.Chdir(os.Getenv("HOME")); err != nil {
-		log.Printf("failed to chdir to /: %v", err)
+	if err := syscall.Chdir(sp.SIGMAHOME); err != nil {
+		log.Printf("Chdir %s err %v", sp.SIGMAHOME, err)
 		return err
 	}
 
 	pn, err := exec.LookPath(os.Args[1])
 	if err != nil {
-		return fmt.Errorf("LookPath: %v", err)
+		return fmt.Errorf("LookPath err %v", err)
 	}
 	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
 	return syscall.Exec(pn, os.Args[1:], os.Environ())

@@ -13,6 +13,7 @@ type Boot struct {
 // The boot processes enters here
 func BootUp(realm, pn string) (*Boot, error) {
 	db.DPrintf(db.KERNEL, "Boot %s %s\n", realm, pn)
+
 	param, err := kernel.ReadParam(pn)
 	if err != nil {
 		return nil, err

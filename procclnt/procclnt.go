@@ -351,7 +351,6 @@ func (clnt *ProcClnt) Started() error {
 	}
 	// Only isolate non-kernel procs
 	if !proc.GetIsPrivilegedProc() {
-		// Isolate the process namespace
 		// XXX should be done in setupPContainer, but need fs image with
 		// binary.
 		newRoot := proc.GetNewRoot()

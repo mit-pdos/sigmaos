@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"syscall"
 	"time"
@@ -14,7 +13,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 )
 
 const (
@@ -44,9 +42,14 @@ func RunKernelContainer(cmd *exec.Cmd) error {
 			},
 		},
 	}
+	cmd.Args = append([]string{KERNEL}, cmd.Args...)
 
-	cmd.Args = append([]string{KERNEL, cmd.Path}, cmd.Args...)
-	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "linux/exec-container")
+	pn, err := exec.LookPath("exec-container")
+	if err != nil {
+		return fmt.Errorf("LookPath: %v", err)
+	}
+
+	cmd.Path = pn
 
 	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 
@@ -90,12 +93,6 @@ func setupKContainer(rootfs string) error {
 	if err := syscall.Sethostname([]byte("sigmaos")); err != nil {
 		return err
 	}
-
-	// // Make a new /proc (XXX should be per realm)
-	// if err := syscall.Mount(path.Join(root, "proc"), "/proc", "proc", 0, ""); err != nil {
-	// 	db.DPrintf(db.CONTAINER, "failed to mount /proc: %v", err)
-	// 	return err
-	// }
 
 	host, _, error := net.SplitHostPort(fslib.Named()[0])
 	if error != nil {

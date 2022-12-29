@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	// "sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -35,15 +36,15 @@ func MakeProcContainer(cmd *exec.Cmd) {
 			},
 		},
 	}
-	cmd.Args = append([]string{PROC, cmd.Path}, cmd.Args...)
+	cmd.Args = append([]string{PROC}, cmd.Args...)
 	cmd.Path = path.Join(sp.PRIVILEGED_BIN, "linux/exec-container")
 	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 }
 
 func setupPContainer() error {
-	// // Isolate the process namespace
+	// Isolate the process namespace
 	// newRoot := proc.GetNewRoot()
-	// if err := isolate(newRoot); err != nil {
+	// if err := Isolate(newRoot); err != nil {
 	// 	db.DPrintf(db.CONTAINER, "Isolate err %v", err)
 	// 	return err
 	// }

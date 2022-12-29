@@ -16,7 +16,7 @@ type Tcore uint32
 type Tmem uint32
 
 const (
-	NAMESPACE_DIR = sp.UXROOT + "isolation"
+	NAMESPACE_DIR = sp.SIGMAROOT + "isolation"
 )
 
 const (

@@ -62,8 +62,9 @@ const (
 
 // Linux paths
 const (
-	UXROOT         = "/tmp/sigmaos/"
-	PRIVILEGED_BIN = UXROOT + "bin/"
+	ROOTFS         = "/home/kaashoek/Downloads/rootfs"
+	SIGMAROOT      = "/home/sigmaos/"
+	PRIVILEGED_BIN = SIGMAROOT + "/bin/"
 )
 
 // REALM

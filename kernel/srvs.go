@@ -111,7 +111,7 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) BootFsUxd() (*Subsystem, error) {
-	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.UXROOT, k.realmId)}, k.procdIp, true)
+	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.SIGMAROOT, k.realmId)}, k.procdIp, true)
 }
 
 func (k *Kernel) BootFss3d() (*Subsystem, error) {

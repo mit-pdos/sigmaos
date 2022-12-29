@@ -10,22 +10,10 @@ import (
 	// "sigmaos/proc"
 )
 
-var dirs = []string{
-	"proc",
-	"dev",
-}
-
 func setupFs(rootfs string) error {
 	oldRootMnt := "old_root"
 
 	db.DPrintf(db.CONTAINER, "setupFs %s\n", rootfs)
-
-	for _, dname := range dirs {
-		if err := os.Mkdir(path.Join(rootfs, dname), 0777); err != nil {
-			log.Printf("MkDir %s err %v", path.Join(rootfs, dname), err)
-			return err
-		}
-	}
 
 	// Mount new file system as a mount point so we can pivot_root to it later
 	if err := syscall.Mount(rootfs, rootfs, "", syscall.MS_BIND, ""); err != nil {
@@ -36,6 +24,22 @@ func setupFs(rootfs string) error {
 	// Mount old file system
 	if err := syscall.Mkdir(path.Join(rootfs, oldRootMnt), 0700); err != nil {
 		log.Printf("failed to mkdir: %v", err)
+		return err
+	}
+
+	// Mount /sys; XXX exclude /sys/firmware; others?
+	if err := syscall.Mount("/sys", path.Join(rootfs, "sys"), "sysfs", 0, ""); err != nil {
+		log.Printf("failed to mount /sys err %v", err)
+		return err
+	}
+
+	// Mount /dev for urandom and null
+	if err := syscall.Mount("/dev/urandom", path.Join(rootfs, "dev/urandom"), "none", syscall.MS_BIND, ""); err != nil {
+		log.Printf("failed to mount /dev/urandom err %v", err)
+		return err
+	}
+	if err := syscall.Mount("/dev/null", path.Join(rootfs, "dev/null"), "none", syscall.MS_BIND, ""); err != nil {
+		log.Printf("failed to mount /dev/null err %v", err)
 		return err
 	}
 

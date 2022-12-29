@@ -5,17 +5,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"syscall"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
 )
 
 const (
 	RUNNING  = "running"
 	SHUTDOWN = "shutdown"
+
+	HOME = "/home/sigmaos"
 )
 
 //
@@ -30,9 +30,15 @@ type Kernel struct {
 	stdout io.ReadCloser
 }
 
+var env = []string{
+	"HOME=" + HOME,
+	"PATH=" + HOME + "/bin/kernel:" + HOME + "/bin/linux:",
+	"SIGMADEBUG=CONTAINER;KERNEL;PROCD", // XXX don't hard code
+	"NAMED=10.100.42.124:1111",          // XXX don't hard code ip
+}
+
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
-	pn := path.Join(sp.PRIVILEGED_BIN, "kernel")
-	cmd := exec.Command(pn+"/boot", []string{realmid, pn + "/" + yml}...)
+	cmd := exec.Command("boot", []string{realmid, realmid + "/" + yml}...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -42,6 +48,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		return nil, err
 	}
 	cmd.Stderr = os.Stderr
+	cmd.Env = env
 
 	if contain {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

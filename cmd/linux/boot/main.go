@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sigmaos/boot"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func main() {
+	log.Printf("args %v\n", os.Args)
 	if len(os.Args) < 3 {
 		db.DFatalf("%v: usage realmid param.yml\n", os.Args[0])
 	}

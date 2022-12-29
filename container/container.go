@@ -2,6 +2,7 @@ package container
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"syscall"
@@ -19,7 +20,7 @@ const (
 )
 
 func ExecContainer(rootfs string) error {
-	db.DPrintf(db.CONTAINER, "ExecContainer %v\n", os.Args)
+	log.Printf("ExecContainer %v %v\n", os.Args, os.Environ())
 
 	var r error
 	switch os.Args[0] {
@@ -33,10 +34,16 @@ func ExecContainer(rootfs string) error {
 	if r != nil {
 		return r
 	}
+
+	if err := syscall.Chdir(os.Getenv("HOME")); err != nil {
+		log.Printf("failed to chdir to /: %v", err)
+		return err
+	}
+
 	pn, err := exec.LookPath(os.Args[1])
 	if err != nil {
 		return fmt.Errorf("LookPath: %v", err)
 	}
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[2:])
-	return syscall.Exec(pn, os.Args[2:], os.Environ())
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
+	return syscall.Exec(pn, os.Args[1:], os.Environ())
 }

@@ -98,7 +98,7 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(path.Join(sp.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(path.Join(sp.SIGMAROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 		container.MakeProcContainer(cmd)
 	}
 	cmd.Env = p.Env

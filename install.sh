@@ -52,17 +52,19 @@ fi
 DIR=$(dirname $0)
 . $DIR/.env
 
+echo $PRIVILEGED_BIN
+
 mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
-rm -rf $UXROOT/$REALM/bin/user/*
+rm -rf $SIGMAOS/$REALM/bin/user/*
 if [ $FROM == "local" ]; then
   if [ -z "$VERSION" ]; then
     VERSION=$(cat "${VERSION_FILE}")
   fi
   # Make the user program dir
-  mkdir -p $UXROOT/$REALM/bin/user/$VERSION/
+  mkdir -p $SIGMAOS/$REALM/bin/user/$VERSION/
   # Copy from local
-  cp -r bin/user/* $UXROOT/$REALM/bin/user/$VERSION/
+  cp -r bin/user/* $SIGMAOS/$REALM/bin/user/$VERSION/
   cp -r bin/realm $PRIVILEGED_BIN
   cp -r bin/kernel $PRIVILEGED_BIN
   cp -r bin/linux $PRIVILEGED_BIN
@@ -77,10 +79,11 @@ else
   exit 1
 fi
 
-cp bootclnt/boot*.yml $PRIVILEGED_BIN/kernel/
+cp bootclnt/boot*.yml $SIGMAOS/$REALM/
 
 SNET="$PRIVILEGED_BIN/linux/scnet"
 sudo chown root:root $SNET
 sudo chmod u+s $SNET
 # Is there another way?
-sudo mv $SNET /usr/bin/scnet
+# sudo mv $SNET /home/kaashoek/Downloads/rootfs/usr/bin/scnet
+# sudo mv $SNET /usr/bin/scnet

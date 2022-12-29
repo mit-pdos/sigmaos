@@ -234,7 +234,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll(path.Join(sp.UXROOT, "mr"))
+	os.RemoveAll(path.Join(sp.SIGMAOS, "mr"))
 
 	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 

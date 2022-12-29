@@ -62,7 +62,7 @@ const (
 
 // Linux paths
 const (
-	ROOTFS         = "/home/kaashoek/Downloads/rootfs"
+	ROOTFS         = "/tmp/sigmaos/rootfs"
 	SIGMAROOT      = "/home/sigmaos/"
 	PRIVILEGED_BIN = SIGMAROOT + "/bin/"
 )

@@ -11,7 +11,6 @@ import (
 var defaultEnvironment = []string{
 	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 	"TERM=xterm",
-	"NAMED=10.100.42.124:1111",
 }
 
 func main() {

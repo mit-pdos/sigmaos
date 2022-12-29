@@ -17,12 +17,13 @@ import (
 	"time"
 
 	"github.com/vishvananda/netlink"
+
+	"sigmaos/container"
 )
 
 const (
 	bridgeName = "sigmab"
 	vethPrefix = "sb"
-	ipAddr     = "10.100.42.1/24"
 )
 
 func init() {
@@ -47,9 +48,9 @@ func createBridge() error {
 		return fmt.Errorf("bridge creation: %v", err)
 	}
 	// set up ip addres for bridge
-	addr, err := netlink.ParseAddr(ipAddr)
+	addr, err := netlink.ParseAddr(container.IPAddr)
 	if err != nil {
-		return fmt.Errorf("parse address %s: %v", ipAddr, err)
+		return fmt.Errorf("parse address %s: %v", container.IPAddr, err)
 	}
 	if err := netlink.AddrAdd(br, addr); err != nil {
 		return fmt.Errorf("add address %v to bridge: %v", addr, err)

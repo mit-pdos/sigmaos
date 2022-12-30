@@ -1,6 +1,8 @@
 package kernel
 
 import (
+	"os"
+
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv"
@@ -18,7 +20,7 @@ func BootUp(realm, pn string) (*Boot, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.KERNEL, "Boot %s param %v\n", pn, param)
+	db.DPrintf(db.KERNEL, "Boot %s param %v env %v\n", pn, param, os.Environ())
 	k, err := kernel.MakeKernel(realm, param)
 	if err != nil {
 		return nil, err
@@ -27,6 +29,10 @@ func BootUp(realm, pn string) (*Boot, error) {
 		return nil, err
 	}
 	return &Boot{k}, nil
+}
+
+func (b *Boot) Ip() string {
+	return b.k.Ip()
 }
 
 func (b *Boot) ShutDown() error {

@@ -79,18 +79,22 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p.Ncore = C_DEF
 	p.setProcDir("")
 	// If this isn't a user proc, version it.
-	if !p.IsPrivilegedProc() {
-		// Check the version has been set.
-		if Version == "none" {
-			log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
-		}
-		// Set the Program to user/VERSION/prog.bin
-		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
-	} else {
-		p.Type = T_LC
-	}
+	// if !p.IsPrivilegedProc() {
+	// 	// Check the version has been set.
+	// 	if Version == "none" {
+	// 		log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
+	// 	}
+	// 	// Set the Program to user/VERSION/prog.bin
+	// 	p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
+	// } else {
+	// 	p.Type = T_LC
+	// }
 	p.setBaseEnv()
 	return p
+}
+
+func (p *Proc) SetLC() {
+	p.Type = T_LC
 }
 
 // Called by procclnt to set the parent dir when spawning.

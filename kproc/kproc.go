@@ -1,9 +1,9 @@
 package kproc
 
 import (
+	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"syscall"
 
@@ -20,12 +20,13 @@ func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, e
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 
-	cmd := exec.Command(path.Join(container.PRIVILEGED_BIN, p.Program), p.Args...)
+	cmd := exec.Command(p.Program, p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), env...)
+	log.Printf("kernelproc env %v\n", env)
 	if contain {
 		if err := container.RunKernelContainer(cmd); err != nil {
 			return nil, err

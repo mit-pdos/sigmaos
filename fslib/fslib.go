@@ -17,6 +17,7 @@ type FsLib struct {
 func NamedAddrs() string {
 	addrs := os.Getenv("NAMED")
 	if addrs == "" {
+		debug.PrintStack()
 		db.DFatalf("Getenv error: missing NAMED")
 	}
 	return addrs

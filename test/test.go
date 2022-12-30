@@ -3,6 +3,7 @@ package test
 import (
 	"flag"
 	"fmt"
+	"os"
 	"testing"
 
 	"sigmaos/bootclnt"
@@ -114,10 +115,11 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 
 func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	setVersion()
-	b, err := bootclnt.BootKernel(realmid, true, yml)
+	k, err := bootclnt.BootKernel(realmid, true, yml)
 	if err != nil {
 		return nil, err
 	}
+	os.Setenv("NAMED", k.Ip()+":1111") // XXX
 	fsl, pclnt, err := mkClient()
 	if err != nil {
 		return nil, err
@@ -127,7 +129,7 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 		return nil, err
 	}
 
-	return &Tstate{fsl, pclnt, b, kclnt, t, fslib.Named(), realmid}, nil
+	return &Tstate{fsl, pclnt, k, kclnt, t, fslib.Named(), realmid}, nil
 }
 
 func (ts *Tstate) RunningInRealm() bool {

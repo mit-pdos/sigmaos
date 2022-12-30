@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	IPAddr   = "10.100.0.1/16"
-	IPFormat = "10.100.%d.%d"
+	IPAddr   = "10.100.42.1/24"
+	IPFormat = "10.100.42.%d"
 	SCNETBIN = "/usr/bin/scnet"
 )
 

@@ -3,12 +3,14 @@ package kernel
 import (
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/linuxsched"
@@ -34,6 +36,7 @@ type Kernel struct {
 	procdIp   string
 	cores     *sessp.Tinterval
 	svcs      *Services
+	ip        string
 }
 
 func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kernel {
@@ -47,6 +50,7 @@ func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kerne
 
 func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
+	os.Setenv("NAMED", ":1111") // XXX
 	k := mkKernel(realm, fslib.Named(), cores)
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds(p)
@@ -60,7 +64,16 @@ func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	}
 	k.FsLib = fsl
 	startSrvs(k, p)
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		return nil, err
+	}
+	k.ip = ip
 	return k, err
+}
+
+func (k *Kernel) Ip() string {
+	return k.ip
 }
 
 func (k *Kernel) ShutDown() error {
@@ -160,7 +173,9 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers, ","))
 	}
 
-	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "kernel/named", args)
+	p := proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args)
+	p.SetLC()
+	return p
 }
 
 // Run a named (but not as a proc)

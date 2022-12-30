@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sigmaos/boot"
 
@@ -11,7 +10,6 @@ import (
 )
 
 func main() {
-	log.Printf("args %v\n", os.Args)
 	if len(os.Args) < 3 {
 		db.DFatalf("%v: usage realmid param.yml\n", os.Args[0])
 	}
@@ -21,7 +19,7 @@ func main() {
 	}
 
 	// let parent/bootclnt know that kernel has booted
-	if _, err := fmt.Printf("%s\n", bootclnt.RUNNING); err != nil {
+	if _, err := fmt.Printf("%s %s\n", bootclnt.RUNNING, sys.Ip()); err != nil {
 		db.DFatalf("%v: Printf err %v\n", os.Args[0], err)
 	}
 

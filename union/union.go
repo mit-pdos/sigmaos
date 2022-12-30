@@ -1,6 +1,8 @@
 package union
 
 import (
+	"strings"
+
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	sp "sigmaos/sigmap"
@@ -22,7 +24,8 @@ func UnionMatch(q string, mnt sp.Tmount) bool {
 		db.DPrintf(db.MOUNT, "UnionMatch: %v ip %v tip %v\n", q, ip, tip)
 		if tip == ip ||
 			// XXX hack for ~local in tests when running with kernel in container
-			(ip == "10.100.42.1" && tip == "10.100.42.124") {
+			// XXX what if multiple containers locally?
+			(ip == "10.100.42.1" && strings.HasPrefix(tip, "10.100.42.")) {
 			return true
 		}
 		return false

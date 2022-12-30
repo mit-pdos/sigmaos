@@ -28,6 +28,7 @@ type Kernel struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
 	stdout io.ReadCloser
+	ip     string
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
@@ -60,15 +61,20 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 	db.DPrintf(db.BOOTCLNT, "Wait for kernel to be booted\n")
 	// wait for kernel to be booted
 	s := ""
-	if _, err := fmt.Fscanf(stdout, "%s", &s); err != nil {
+	ip := ""
+	if _, err := fmt.Fscanf(stdout, "%s %s", &s, &ip); err != nil {
 		db.DPrintf(db.BOOTCLNT, "Fscanf err %v %s\n", err, s)
 		return nil, err
 	}
 	if s != RUNNING {
 		db.DFatalf("oops: kernel is printing to stdout %s\n", s)
 	}
-	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s\n", s)
-	return &Kernel{cmd, stdin, stdout}, nil
+	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s at %s\n", s, ip)
+	return &Kernel{cmd, stdin, stdout, ip}, nil
+}
+
+func (k *Kernel) Ip() string {
+	return k.ip
 }
 
 func (k *Kernel) Shutdown() error {

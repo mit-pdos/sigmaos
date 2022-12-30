@@ -70,7 +70,7 @@ func setupKContainer(rootfs string) error {
 		return err
 	}
 
-	ip := fmt.Sprintf(IPFormat, rand.Intn(253)+2, rand.Intn(253)+2)
+	ip := fmt.Sprintf(IPFormat, rand.Intn(253)+2)
 	if err := setupScnet(ip); err != nil {
 		return err
 	}

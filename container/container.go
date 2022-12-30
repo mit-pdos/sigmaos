@@ -66,6 +66,12 @@ func ExecContainer() error {
 		return err
 	}
 
+	path := os.Getenv("PATH")
+	p := sp.SIGMAHOME + "/bin/linux/:" + sp.SIGMAHOME + "/bin/kernel"
+	os.Setenv("PATH", path+":"+p)
+
+	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
+
 	pn, err := exec.LookPath(os.Args[1])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)

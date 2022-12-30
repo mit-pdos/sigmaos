@@ -100,7 +100,7 @@ func (k *Kernel) BootProcd() (*Subsystem, error) {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("kernel/procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
+	ss, err := k.bootSubsystem("procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,11 +111,11 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) BootFsUxd() (*Subsystem, error) {
-	return k.bootSubsystem("kernel/fsuxd", []string{path.Join(sp.SIGMAHOME, k.realmId)}, k.procdIp, true)
+	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.realmId)}, k.procdIp, true)
 }
 
 func (k *Kernel) BootFss3d() (*Subsystem, error) {
-	return k.bootSubsystem("kernel/fss3d", []string{k.realmId}, k.procdIp, true)
+	return k.bootSubsystem("fss3d", []string{k.realmId}, k.procdIp, true)
 }
 
 func (k *Kernel) BootDbd() (*Subsystem, error) {
@@ -126,7 +126,7 @@ func (k *Kernel) BootDbd() (*Subsystem, error) {
 		// dbdaddr = "127.0.0.1:3306"
 		dbdaddr = "192.168.0.9:3306"
 	}
-	return k.bootSubsystem("kernel/dbd", []string{dbdaddr}, k.procdIp, true)
+	return k.bootSubsystem("dbd", []string{dbdaddr}, k.procdIp, true)
 }
 
 func (k *Kernel) GetProcdIp() string {

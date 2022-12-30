@@ -22,7 +22,7 @@ type Subsystem struct {
 
 func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool) (*Subsystem, error) {
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, binpath, args)
+	p := proc.MakePrivProcPid(pid, binpath, args, true)
 	ss := makeSubsystem(k.ProcClnt, p, procdIp, viaProcd)
 	return ss, ss.Run(k.namedAddr)
 }

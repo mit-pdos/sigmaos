@@ -3,6 +3,6 @@ services:
    # order is important
   - named
   - procd
-  - s3
   - ux
+  - s3
   - db

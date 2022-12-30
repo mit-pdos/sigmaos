@@ -33,12 +33,12 @@ func (ss *Services) addSvc(s string, sub *Subsystem) {
 	ss.svcs[s] = append(ss.svcs[s], sub)
 }
 
-func (k *Kernel) BootSub(s string) error {
+func (k *Kernel) BootSub(s string, full bool) error {
 	var err error
 	var ss *Subsystem
 	switch s {
 	case sp.PROCDREL:
-		ss, err = k.BootProcd()
+		ss, err = k.bootProcd(full)
 	case sp.S3REL:
 		ss, err = k.BootFss3d()
 	case sp.UXREL:

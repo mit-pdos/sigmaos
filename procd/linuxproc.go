@@ -76,7 +76,7 @@ func (p *LinuxProc) run() error {
 	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
-		cmd = exec.Command(path.Join(container.PRIVILEGED_BIN, p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(p.attr.Program, p.attr.Args...)
 		// If this is a privileged proc, wait for it to start & then mark it as
 		// started.
 		go func() {

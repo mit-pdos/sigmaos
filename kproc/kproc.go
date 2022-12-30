@@ -1,7 +1,6 @@
 package kproc
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,7 +11,7 @@ import (
 	"sigmaos/proc"
 )
 
-// To run kernel procs
+// To run kernel procs and mark them LC
 func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, error) {
 	db.DPrintf(db.KERNEL, "RunKernelProc %v %v\n", p, namedAddr)
 	p.FinalizeEnv("NONE")
@@ -26,7 +25,6 @@ func RunKernelProc(p *proc.Proc, namedAddr []string, contain bool) (*exec.Cmd, e
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), env...)
-	log.Printf("kernelproc env %v\n", env)
 	if contain {
 		if err := container.RunKernelContainer(cmd); err != nil {
 			return nil, err

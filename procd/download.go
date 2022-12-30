@@ -1,6 +1,7 @@
 package procd
 
 import (
+	"log"
 	"path"
 	"strings"
 
@@ -39,6 +40,7 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 // Check if we need to download the binary.
 func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
 	// If we can't stat the bin through ux, we try to download it.
+	log.Printf("unixPath %v\n", uxBinPath)
 	_, err := pd.Stat(uxBinPath)
 	if err != nil {
 		// If we haven't downloaded any procs in this version yet, make a local dir

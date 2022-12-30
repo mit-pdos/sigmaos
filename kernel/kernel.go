@@ -118,8 +118,9 @@ func (k *Kernel) startNameds(ch chan error, n int, p *Param) {
 func startSrvs(k *Kernel, p *Param) error {
 	// XXX should this be GetPid?
 	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, p.Uname, k.namedAddr)
+	n := len(p.Services)
 	for _, s := range p.Services {
-		err := k.BootSub(s)
+		err := k.BootSub(s, n > 1) // XXX  should kernel do the waiting instead of procd?
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Start %s err %v\n", p, err)
 			return err
@@ -173,8 +174,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers, ","))
 	}
 
-	p := proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args)
-	p.SetLC()
+	p := proc.MakePrivProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args, true)
 	return p
 }
 
@@ -240,7 +240,7 @@ func (k *Kernel) BootSubs() error {
 	// Procd must boot first, since other services are spawned as
 	// procs.
 	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
-		err := k.BootSub(s)
+		err := k.BootSub(s, true)
 		if err != nil {
 			return err
 		}

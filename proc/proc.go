@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"strings"
 	"time"
 
 	sp "sigmaos/sigmap"
@@ -42,6 +41,7 @@ func (pid Tpid) String() string {
 
 type Proc struct {
 	Pid          Tpid      // SigmaOS PID
+	Privileged   bool      // kernel proc?
 	ProcDir      string    // SigmaOS directory to store this proc's state
 	ParentDir    string    // SigmaOS parent proc directory
 	Program      string    // Program to run
@@ -69,7 +69,7 @@ func MakeProc(program string, args []string) *Proc {
 	return MakeProcPid(pid, program, args)
 }
 
-func MakeProcPid(pid Tpid, program string, args []string) *Proc {
+func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.Pid = pid
 	p.Program = program
@@ -77,24 +77,24 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p.Args = args
 	p.Type = T_BE
 	p.Ncore = C_DEF
+	p.Privileged = priv
 	p.setProcDir("")
-	// If this isn't a user proc, version it.
-	// if !p.IsPrivilegedProc() {
-	// 	// Check the version has been set.
-	// 	if Version == "none" {
-	// 		log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
-	// 	}
-	// 	// Set the Program to user/VERSION/prog.bin
-	// 	p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
-	// } else {
-	// 	p.Type = T_LC
-	// }
+	if !p.Privileged {
+		// Check the version has been set.
+		if Version == "none" {
+			log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
+		}
+		// Set the Program to user/VERSION/prog.bin
+		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
+	} else {
+		p.Type = T_LC
+	}
 	p.setBaseEnv()
 	return p
 }
 
-func (p *Proc) SetLC() {
-	p.Type = T_LC
+func MakeProcPid(pid Tpid, program string, args []string) *Proc {
+	return MakePrivProcPid(pid, program, args, false)
 }
 
 // Called by procclnt to set the parent dir when spawning.
@@ -136,7 +136,7 @@ func (p *Proc) AppendEnv(name, val string) {
 
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
-	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%v", p.IsPrivilegedProc()))
+	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.Pid.String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
 	p.AppendEnv(SIGMANEWROOT, p.LinuxRoot)
@@ -173,9 +173,9 @@ func (p *Proc) GetShared() string {
 }
 
 func (p *Proc) IsPrivilegedProc() bool {
-	return strings.Contains(p.Program, "kernel") || strings.Contains(p.Program, "realm")
+	return p.Privileged
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, "Abcd", p.Args, p.GetEnv(), p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Priv %t Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Privileged, p.Program, p.ProcDir, p.ParentDir, "Abcd", p.Args, p.GetEnv(), p.Type, p.Ncore)
 }

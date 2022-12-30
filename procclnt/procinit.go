@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"log"
 	"path"
 	"runtime/debug"
 	"strings"
@@ -27,7 +26,6 @@ func splitMountServerAddrPath(fsl *fslib.FsLib, namedAddrs []string, dpath strin
 func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint string) {
 	tree := strings.TrimPrefix(dpath, "name/")
 	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, tree)
-	log.Printf("mountDir %v %v\n", addr, splitPath)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
 			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)

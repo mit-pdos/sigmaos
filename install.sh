@@ -83,4 +83,5 @@ else
 fi
 
 cp bootclnt/boot*.yml $SIGMAHOME/$REALM/
+cp seccomp/whitelist.yml $SIGMAHOME/
 

@@ -17,15 +17,17 @@ require (
 	github.com/klauspost/readahead v1.4.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/montanaflynn/stats v0.6.6
-	github.com/seccomp/libseccomp-golang v0.9.1
+	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
+	github.com/vishvananda/netlink v1.1.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/raft/v3 v3.5.0
 	go.etcd.io/etcd/server/v3 v3.5.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/sys v0.0.0-20220627191245-f75cf1eec38b
 	gonum.org/v1/gonum v0.12.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v3 v3.0.0
 )
 
@@ -58,7 +60,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	github.com/vishvananda/netlink v1.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
@@ -67,5 +68,4 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
 )

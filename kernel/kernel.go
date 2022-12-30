@@ -28,6 +28,11 @@ const (
 	SUBSYSTEM_INFO   = "subsystem-info"
 )
 
+type Param struct {
+	Uname    string   `yalm:"uname"`
+	Services []string `yalm:"services"`
+}
+
 type Kernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt

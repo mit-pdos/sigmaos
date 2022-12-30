@@ -7,13 +7,12 @@ import (
 	"os"
 	"strconv"
 
-	"gopkg.in/yaml.v3"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/yaml"
 )
 
 func JobDir(job string) string {
@@ -74,14 +73,8 @@ type Job struct {
 
 func ReadJobConfig(app string) *Job {
 	job := &Job{}
-	file, err := os.Open(app)
-	if err != nil {
+	if err := yaml.ReadYaml(app, job); err != nil {
 		db.DFatalf("ReadConfig err %v\n", err)
-	}
-	defer file.Close()
-	d := yaml.NewDecoder(file)
-	if err := d.Decode(&job); err != nil {
-		db.DFatalf("Yalm decode %s err %v\n", app, err)
 	}
 	return job
 }

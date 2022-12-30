@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
 )
 
@@ -41,8 +42,6 @@ func MakeEnv() []string {
 }
 
 func ExecContainer() error {
-	log.Printf("ExecContainer Args %v Env %v\n", os.Args, os.Environ())
-
 	rootfs, err := SIGMAROOTFS()
 	if err != nil {
 		return err
@@ -66,16 +65,26 @@ func ExecContainer() error {
 		return err
 	}
 
+	wl, err := seccomp.ReadWhiteList("./whitelist.yml")
+	if err != nil {
+		return err
+	}
+
 	path := os.Getenv("PATH")
 	p := sp.SIGMAHOME + "/bin/linux/:" + sp.SIGMAHOME + "/bin/kernel"
 	os.Setenv("PATH", path+":"+p)
 
-	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
+	db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
 
 	pn, err := exec.LookPath(os.Args[1])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
 	}
+
+	if os.Args[0] == PROC {
+		seccomp.LoadFilter(wl)
+	}
+
 	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
 	return syscall.Exec(pn, os.Args[1:], os.Environ())
 }

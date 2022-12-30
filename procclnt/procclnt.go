@@ -17,7 +17,6 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 
-	// "sigmaos/seccomp"
 	"sigmaos/semclnt"
 )
 

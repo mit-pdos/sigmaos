@@ -357,8 +357,6 @@ func (clnt *ProcClnt) Started() error {
 			db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
 			return fmt.Errorf("Started error %v", err)
 		}
-		// Load a seccomp filter.
-		// seccomp.LoadFilter()
 	}
 	return nil
 }

@@ -1,11 +1,9 @@
 package fslibsrv
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protsrv"
 	"sigmaos/repl"
@@ -34,7 +32,6 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "%v: MakeSrv ip %v\n", proc.GetName(), ip)
 	return MakeReplServerFsl(root, ip+":0", path, fsl, pclnt, nil)
 }
 

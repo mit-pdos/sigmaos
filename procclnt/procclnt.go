@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -347,16 +346,6 @@ func (clnt *ProcClnt) Started() error {
 	// File may not be found if parent exited first or isn't reachable
 	if err != nil && !serr.IsErrUnavailable(err) {
 		return fmt.Errorf("Started error %v", err)
-	}
-	// Only isolate non-kernel procs
-	if !proc.GetIsPrivilegedProc() {
-		// XXX should be done in setupPContainer, but need fs image with
-		// binary.
-		newRoot := proc.GetNewRoot()
-		if err := container.Isolate(newRoot); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
-			return fmt.Errorf("Started error %v", err)
-		}
 	}
 	return nil
 }

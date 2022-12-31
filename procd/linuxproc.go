@@ -14,7 +14,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
 const (
@@ -58,11 +58,6 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
-
-	err = container.Destroy(p.attr.LinuxRoot)
-	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "Error namespace destroy: %v", err)
-	}
 }
 
 func (p *LinuxProc) run() error {
@@ -98,7 +93,7 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(path.Join(sp.SIGMAHOME, p.pd.realmbin, p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(path.Join("/", p.pd.realmbin, p.attr.Program), p.attr.Args...)
 		container.MakeProcContainer(cmd)
 	}
 	cmd.Env = p.Env

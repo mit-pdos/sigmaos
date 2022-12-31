@@ -30,7 +30,7 @@ type Procd struct {
 	sync.Mutex
 	*sync.Cond
 	fs               *ProcdFs
-	realmbin         string                   // realm path from which to pull/run bins.
+	realm            string                   // realm id of this procd
 	nToWake          int                      // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
 	wsQueues         map[string][]string      // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
 	done             bool                     // Finished running.
@@ -54,7 +54,7 @@ type Procd struct {
 	*fslib.FsLib
 }
 
-func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
+func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 	pd := &Procd{}
 	pd.pcache = MakeProcCache(PROC_CACHE_SIZE)
 	pd.Cond = sync.NewCond(&pd.Mutex)
@@ -65,7 +65,7 @@ func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 	if !spawningSys {
 		pd.kernelInitDone = true
 	}
-	pd.realmbin = realmbin
+	pd.realm = realm
 	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
 	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)

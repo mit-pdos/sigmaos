@@ -100,7 +100,7 @@ func (k *Kernel) BootProcd() (*Subsystem, error) {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{path.Join(k.realmId, "bin"), k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
+	ss, err := k.bootSubsystem("procd", []string{k.realmId, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
 	if err != nil {
 		return nil, err
 	}

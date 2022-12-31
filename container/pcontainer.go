@@ -18,7 +18,7 @@ import (
 
 const PRIVILEGED_BIN = sp.SIGMAHOME + "/bin"
 
-func MakeProcContainer(cmd *exec.Cmd) {
+func MakeProcContainer(cmd *exec.Cmd, realmid string) {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
@@ -41,7 +41,7 @@ func MakeProcContainer(cmd *exec.Cmd) {
 			},
 		},
 	}
-	cmd.Args = append([]string{PROC}, cmd.Args...)
+	cmd.Args = append([]string{PROC, realmid}, cmd.Args...)
 	cmd.Path = path.Join(PRIVILEGED_BIN, "linux/exec-container")
 	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 }
@@ -51,21 +51,22 @@ func execPContainer() error {
 	if err != nil {
 		return err
 	}
+
 	db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
 
-	if err := setupFs(sp.SIGMAHOME); err != nil {
+	if err := setupFs(path.Join(sp.SIGMAHOME, os.Args[1])); err != nil {
 		return err
 	}
 
 	seccomp.LoadFilter(wl)
 
-	pn, err := exec.LookPath(os.Args[1])
+	pn, err := exec.LookPath(os.Args[2])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
 	}
 
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
-	return syscall.Exec(pn, os.Args[1:], os.Environ())
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[2:])
+	return syscall.Exec(pn, os.Args[2:], os.Environ())
 }
 
 func Isolate(fsRoot string) error {
@@ -195,6 +196,8 @@ func ls(dir string) error {
 	return nil
 }
 
+// XXX pair down what is being mounted; exec needs a lot, but maybe
+// not all of it (e.g., usr? and only some subdirectories)
 func setupFs(newRoot string) error {
 	oldRootMnt := "old_root"
 

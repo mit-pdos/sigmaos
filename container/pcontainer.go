@@ -131,7 +131,7 @@ func setupFs(newRoot string) error {
 
 	// Mount /etc
 	if err := syscall.Mount("/etc", path.Join(newRoot, "etc"), "none", syscall.MS_BIND, ""); err != nil {
-		log.Printf("failed to mount /dev/etc: %v", err)
+		log.Printf("failed to mount /etc: %v", err)
 		return err
 	}
 

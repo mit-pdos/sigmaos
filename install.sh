@@ -55,7 +55,7 @@ fi
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-echo $PRIVILEGED_BIN
+echo "install sigmaos in $SIGMAHOME"
 
 mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
@@ -85,3 +85,11 @@ fi
 cp bootclnt/boot*.yml $SIGMAHOME/$REALM/
 cp seccomp/whitelist.yml $SIGMAHOME/
 
+for d in etc dev sys proc usr lib lib64
+do        
+    mkdir -p $SIGMAHOME/$REALM/$d
+done
+for f in urandom null
+do
+    echo -n > $SIGMAHOME/$REALM/dev/$f
+done

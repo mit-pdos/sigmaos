@@ -1,13 +1,14 @@
 #!/bin/bash
 
 #
-# Install the setuid scnet.
+# Install the setuid scnet to make ethernet bridge when running a
+# sigmaos kernel.
 #
 
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-SNET="$PRIVILEGED_BIN/linux/scnet"
+SNET="bin/linux/scnet"
 sudo chown root:root $SNET
 sudo chmod u+s $SNET
-sudo mv $SNET $SIGMAROOTFS/usr/bin/scnet
+sudo mv $SNET /usr/bin/scnet

@@ -8,11 +8,9 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/dir"
-	"sigmaos/sessp"
-    "sigmaos/serr"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 

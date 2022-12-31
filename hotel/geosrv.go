@@ -47,7 +47,10 @@ func RunGeoSrv(n string) error {
 		return err
 	}
 
-	p := perf.MakePerf("HOTEL_GEO")
+	p, err := perf.MakePerf("HOTEL_GEO")
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	return pds.RunServer()

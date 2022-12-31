@@ -274,7 +274,10 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p := perf.MakePerf("MRMAPPER")
+	p, err := perf.MakePerf("MRMAPPER")
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)

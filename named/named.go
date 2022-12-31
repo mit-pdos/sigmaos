@@ -1,6 +1,7 @@
 package named
 
 import (
+	"log"
 	"path"
 	"strconv"
 	"strings"
@@ -23,7 +24,10 @@ import (
 
 func Run(args []string) {
 	perf.Hz()
-	p := perf.MakePerf("NAMED")
+	p, r := perf.MakePerf("NAMED")
+	if r != nil {
+		log.Printf("MakePerf err %v\n", r)
+	}
 	defer p.Done()
 
 	addr := args[1]

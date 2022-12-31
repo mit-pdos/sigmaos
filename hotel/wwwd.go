@@ -21,6 +21,7 @@ import (
 type Www struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	p        *perf.Perf
 	job      string
 	userc    *protdevclnt.ProtDevClnt
 	searchc  *protdevclnt.ProtDevClnt
@@ -29,7 +30,6 @@ type Www struct {
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
 	fwc      *protdevclnt.ProtDevClnt
-	p        *perf.Perf
 }
 
 // Run starts the server
@@ -115,7 +115,11 @@ func RunWww(job string) error {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 
-	www.p = perf.MakePerf("HOTEL_WWW")
+	perf, err := perf.MakePerf("HOTEL_WWW")
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	www.p = perf
 	defer www.p.Done()
 
 	if err := www.Started(); err != nil {

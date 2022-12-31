@@ -88,13 +88,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(name string) *Perf {
+func MakePerf(name string) (*Perf, error) {
 	return MakePerfMulti(name, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(name string, name2 string) *Perf {
+func MakePerfMulti(name string, name2 string) (*Perf, error) {
 	p := &Perf{}
 	p.name = name
 	p.utilChan = make(chan bool, 1)
@@ -111,7 +111,8 @@ func MakePerfMulti(name string, name2 string) *Perf {
 	}
 	// Make the output dir
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
-		db.DFatalf("MkdirAll %s err %v", OUTPUT_PATH, err)
+		db.DPrintf("MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
+		return nil, err
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
 	if name2 != "" {
@@ -133,7 +134,7 @@ func MakePerfMulti(name string, name2 string) *Perf {
 	if ok := labels[name+TPT]; ok {
 		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
-	return p
+	return p, nil
 }
 
 // Register that an event has happened with a given instantaneous throughput.

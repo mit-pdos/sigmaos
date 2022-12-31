@@ -18,7 +18,10 @@ func main() {
 		db.DFatalf("MakeFsLib: error %v\n", err)
 	}
 	pclnt := procclnt.MakeProcClnt(fsl)
-	p := perf.MakePerf("SEQWC")
+	p, err := perf.MakePerf("SEQWC")
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 	err = pclnt.Started()
 	if err != nil {

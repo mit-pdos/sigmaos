@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"sync"
@@ -79,8 +80,13 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 
 	pd.initCores(grantedCoresIv)
 
-	pd.perf = perf.MakePerf("PROCD")
-	defer pd.perf.Done()
+	perf, err := perf.MakePerf("PROCD")
+	if err != nil {
+		log.Printf("MakePerf err %v\n", err)
+	} else {
+		pd.perf = perf
+		defer pd.perf.Done()
+	}
 
 	// Make a directory in which to put stealable procs.
 	pd.MkDir(sp.PROCD_WS, 0777)

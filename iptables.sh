@@ -1,5 +1,7 @@
 #!/bin/bash
 
+sudo iptables -nvL FORWARD | grep -c sigmab > /dev/null && exit 1
+
 echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
 
 sudo iptables --append FORWARD --in-interface sigmab --out-interface sigmab --jump ACCEPT

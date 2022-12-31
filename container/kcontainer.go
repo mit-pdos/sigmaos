@@ -2,6 +2,7 @@ package container
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 func RunKernelContainer(cmd *exec.Cmd) error {
@@ -57,12 +59,15 @@ func RunKernelContainer(cmd *exec.Cmd) error {
 }
 
 // XXX specialized for one kernel for now
-func setupKContainer(rootfs string) error {
-	db.DPrintf(db.CONTAINER, "execContainer: %v %s\n", os.Args, rootfs)
+func execKContainer() error {
+	rootfs, err := SIGMAROOTFS()
+	if err != nil {
+		return err
+	}
 
 	rand.Seed(time.Now().UnixNano())
 
-	if err := setupFs(rootfs); err != nil {
+	if err := pivotFs(rootfs); err != nil {
 		return err
 	}
 
@@ -74,5 +79,23 @@ func setupKContainer(rootfs string) error {
 	if err := setupScnet(ip); err != nil {
 		return err
 	}
-	return nil
+
+	if err := syscall.Chdir(sp.SIGMAHOME); err != nil {
+		log.Printf("Chdir %s err %v", sp.SIGMAHOME, err)
+		return err
+	}
+
+	path := os.Getenv("PATH")
+	p := sp.SIGMAHOME + "/bin/linux/:" + sp.SIGMAHOME + "/bin/kernel"
+	os.Setenv("PATH", path+":"+p)
+
+	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
+
+	pn, err := exec.LookPath(os.Args[1])
+	if err != nil {
+		return fmt.Errorf("LookPath err %v", err)
+	}
+
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
+	return syscall.Exec(pn, os.Args[1:], os.Environ())
 }

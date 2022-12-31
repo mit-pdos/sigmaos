@@ -2,14 +2,9 @@ package container
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/seccomp"
-	sp "sigmaos/sigmap"
 )
 
 //
@@ -42,49 +37,16 @@ func MakeEnv() []string {
 }
 
 func ExecContainer() error {
-	rootfs, err := SIGMAROOTFS()
-	if err != nil {
-		return err
-	}
+	db.DPrintf(db.CONTAINER, "execContainer: %v\n", os.Args)
 
 	var r error
 	switch os.Args[0] {
 	case KERNEL:
-		r = setupKContainer(rootfs)
+		r = execKContainer()
 	case PROC:
-		r = setupPContainer()
+		r = execPContainer()
 	default:
 		r = fmt.Errorf("ExecContainer: unknown container type: %s", os.Args[0])
 	}
-	if r != nil {
-		return r
-	}
-
-	if err := syscall.Chdir(sp.SIGMAHOME); err != nil {
-		log.Printf("Chdir %s err %v", sp.SIGMAHOME, err)
-		return err
-	}
-
-	wl, err := seccomp.ReadWhiteList("./whitelist.yml")
-	if err != nil {
-		return err
-	}
-
-	path := os.Getenv("PATH")
-	p := sp.SIGMAHOME + "/bin/linux/:" + sp.SIGMAHOME + "/bin/kernel"
-	os.Setenv("PATH", path+":"+p)
-
-	db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
-
-	pn, err := exec.LookPath(os.Args[1])
-	if err != nil {
-		return fmt.Errorf("LookPath err %v", err)
-	}
-
-	if os.Args[0] == PROC {
-		seccomp.LoadFilter(wl)
-	}
-
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
-	return syscall.Exec(pn, os.Args[1:], os.Environ())
+	return r
 }

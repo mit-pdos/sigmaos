@@ -7,10 +7,9 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	// "sigmaos/proc"
 )
 
-func setupFs(rootfs string) error {
+func pivotFs(rootfs string) error {
 	oldRootMnt := "old_root"
 
 	db.DPrintf(db.CONTAINER, "setupFs %s\n", rootfs)
@@ -27,13 +26,14 @@ func setupFs(rootfs string) error {
 		return err
 	}
 
-	// Mount /sys; XXX exclude /sys/firmware; others?
+	// Mount /sys for /sys/devices/system/cpu/online; XXX exclude
+	// /sys/firmware; others?
 	if err := syscall.Mount("/sys", path.Join(rootfs, "sys"), "sysfs", 0, ""); err != nil {
 		log.Printf("failed to mount /sys err %v", err)
 		return err
 	}
 
-	// Mount /dev for urandom and null
+	// Mount /dev for /dev/urandom and /dev/null
 	if err := syscall.Mount("/dev/urandom", path.Join(rootfs, "dev/urandom"), "none", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount /dev/urandom err %v", err)
 		return err

@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/seccomp"
 	// "sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -43,16 +45,22 @@ func MakeProcContainer(cmd *exec.Cmd) {
 	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
 }
 
-func setupPContainer() error {
-	// Isolate the process namespace
-	// newRoot := proc.GetNewRoot()
-	// if err := Isolate(newRoot); err != nil {
-	// 	db.DPrintf(db.CONTAINER, "Isolate err %v", err)
-	// 	return err
-	// }
-	// Load a seccomp filter.
-	// seccomp.LoadFilter()
-	return nil
+func execPContainer() error {
+	wl, err := seccomp.ReadWhiteList("./whitelist.yml")
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
+
+	seccomp.LoadFilter(wl)
+
+	pn, err := exec.LookPath(os.Args[1])
+	if err != nil {
+		return fmt.Errorf("LookPath err %v", err)
+	}
+
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
+	return syscall.Exec(pn, os.Args[1:], os.Environ())
 }
 
 func Isolate(fsRoot string) error {

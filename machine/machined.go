@@ -69,15 +69,19 @@ func MakeMachined(args []string) *Machined {
 	return m
 }
 
+const (
+	NAMESPACE_DIR = sp.SIGMAHOME + "/isolation"
+)
+
 // Remove old files from previous runs.
 func (m *Machined) cleanLinuxFS() {
-	os.Mkdir(proc.NAMESPACE_DIR, 0777)
-	sts, err := os.ReadDir(proc.NAMESPACE_DIR)
+	os.Mkdir(NAMESPACE_DIR, 0777)
+	sts, err := os.ReadDir(NAMESPACE_DIR)
 	if err != nil {
 		db.DFatalf("Error ReadDir: %v", err)
 	}
 	for _, st := range sts {
-		if err := os.RemoveAll(path.Join(proc.NAMESPACE_DIR, st.Name())); err != nil {
+		if err := os.RemoveAll(path.Join(NAMESPACE_DIR, st.Name())); err != nil {
 			db.DFatalf("Error RemoveAll: %v", err)
 		}
 	}

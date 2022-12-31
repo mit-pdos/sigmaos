@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = sp.SIGMAHOME + "perf-output/"
+	OUTPUT_PATH = "./perf-output/" // XXX needs to work inside and outside container
 	PPROF       = "_PPROF"
 	PPROF_MEM   = "_PPROF_MEM"
 	CPU         = "_CPU"
@@ -111,7 +111,7 @@ func MakePerfMulti(name string, name2 string) *Perf {
 	}
 	// Make the output dir
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
-		db.DFatalf("Error Mkdir: %v", err)
+		db.DFatalf("MkdirAll %s err %v", OUTPUT_PATH, err)
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
 	if name2 != "" {

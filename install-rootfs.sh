@@ -63,3 +63,4 @@ contain pacman -S go
 # sanity check
 go test -v sigmaos/fslib --version=$(cat VERSION.txt) -run InitFs
 
+./install-aws-cred.sh

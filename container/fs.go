@@ -7,10 +7,11 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/rand"
 )
 
 func pivotFs(rootfs string) error {
-	oldRootMnt := "old_root"
+	oldRootMnt := "old_root" + rand.String(8)
 
 	db.DPrintf(db.CONTAINER, "setupFs %s\n", rootfs)
 

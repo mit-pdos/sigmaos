@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/rand"
 	"sigmaos/seccomp"
-	// "sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -84,7 +84,7 @@ func ls(dir string) error {
 // XXX pair down what is being mounted; exec needs a lot, but maybe
 // not all of it (e.g., usr? and only some subdirectories)
 func setupFs(newRoot string) error {
-	oldRootMnt := "old_root"
+	oldRootMnt := "old_root" + rand.String(8)
 
 	// Mount new file system as a mount point so we can pivot_root to it later
 	if err := syscall.Mount(newRoot, newRoot, "", syscall.MS_BIND, ""); err != nil {

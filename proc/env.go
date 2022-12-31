@@ -10,7 +10,6 @@ import (
 // Environment variables which every proc expects to have.
 const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
-	SIGMANEWROOT        = "SIGMANEWROOT"
 	SIGMAPROCDIP        = "SIGMAPROCDIP"
 	SIGMANODEDID        = "SIGMANODEDID"
 	SIGMAPID            = "SIGMAPID"
@@ -79,10 +78,6 @@ func SetParentDir(procdir string) {
 
 func GetParentDir() string {
 	return os.Getenv(SIGMAPARENTDIR)
-}
-
-func GetNewRoot() string {
-	return os.Getenv(SIGMANEWROOT)
 }
 
 func GetIsPrivilegedProc() bool {

@@ -82,9 +82,6 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 	pd.perf = perf.MakePerf("PROCD")
 	defer pd.perf.Done()
 
-	// Make namespace isolation dir.
-	os.MkdirAll(proc.NAMESPACE_DIR, 0777)
-
 	// Make a directory in which to put stealable procs.
 	pd.MkDir(sp.PROCD_WS, 0777)
 	pd.MkDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC), 0777)

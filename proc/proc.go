@@ -45,7 +45,6 @@ type Proc struct {
 	ProcDir      string    // SigmaOS directory to store this proc's state
 	ParentDir    string    // SigmaOS parent proc directory
 	Program      string    // Program to run
-	LinuxRoot    string    // Path to which this proc will be chroot-ed
 	Args         []string  // Args
 	Env          []string  // Environment variables
 	Type         Ttype     // Type
@@ -54,10 +53,6 @@ type Proc struct {
 	SpawnTime    time.Time // Time at which the proc was spawned
 	sharedTarget string    // Target of shared state
 }
-
-const (
-	NAMESPACE_DIR = sp.SIGMAHOME + "/isolation"
-)
 
 func MakeEmptyProc() *Proc {
 	p := &Proc{}
@@ -73,7 +68,6 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.Pid = pid
 	p.Program = program
-	p.LinuxRoot = path.Join(NAMESPACE_DIR, p.Pid.String())
 	p.Args = args
 	p.Type = T_BE
 	p.Ncore = C_DEF
@@ -139,7 +133,6 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.Pid.String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
-	p.AppendEnv(SIGMANEWROOT, p.LinuxRoot)
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())

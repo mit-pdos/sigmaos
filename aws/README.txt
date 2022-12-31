@@ -72,4 +72,4 @@ updated lambda daemons on the VPC.
 
 add keys for recipients to gpg key ring
 
-$ gpg --recipient sigma-kaashoek --recipient arielck --recipient NEW_RECIPIENT --encrypt-files aws-credentials.txt
+$ gpg --recipient sigma-kaashoek --recipient arielck --encrypt-files credentials

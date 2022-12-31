@@ -1,5 +1,8 @@
 # Building, installing, and running sigmaos.
 
+To make root file system for sigmaos  (needs to be run only once)
+# ./install-rootfs.sh
+
 To build sigmaos (and generate a new build version), run:
 $ ./make.sh --norace
 

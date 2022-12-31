@@ -49,12 +49,15 @@ exit 1
 echo "install-scnet requires sudo to install into /usr/sbin/scnet"
 ./install-scnet.sh || exit 1
 
+# update hosts's routing tables
+./iptables.sh
+
 # set path to find contain
 source env/init.sh
 
 # install packages in rootfs
-contain pacman-db-upgrade
-contain pacman -Sy
+contain pacman-db-upgrade || exit 1
+contain pacman -Sy  || exit 1
 contain pacman -S go
 
 # sanity check

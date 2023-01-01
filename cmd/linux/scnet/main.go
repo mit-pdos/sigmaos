@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -110,9 +111,9 @@ func createBridge(realm string) error {
 	if err := netlink.LinkSetUp(br); err != nil {
 		return err
 	}
-	// if err := addIpTables(); err != nil {
-	// 	return err
-	// }
+	if err := addIpTables(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -157,9 +158,9 @@ func delBridge(realm string) error {
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return err
 	}
-	// if err := delIpTables(); err != nil {
-	// 	return err
-	// }
+	if err := delIpTables(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -169,6 +170,9 @@ func main() {
 	}
 	pid, err := strconv.Atoi(os.Args[2])
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := syscall.Setuid(0); err != nil {
 		log.Fatal(err)
 	}
 	switch os.Args[1] {

@@ -3,7 +3,6 @@ package kernel
 import (
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -55,7 +54,6 @@ func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kerne
 
 func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	os.Setenv("NAMED", ":1111") // XXX
 	k := mkKernel(realm, fslib.Named(), cores)
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds(p)

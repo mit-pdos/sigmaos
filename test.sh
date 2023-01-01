@@ -9,8 +9,8 @@ VERSION=$(cat "${VERSION_FILE}")
 
 for ND in :1111 :1111,:1112,:1113
 do
-  export NAMED=$ND
-  echo "============ RUN NAMED=$ND"
+  export SIGMANAMED=$ND
+  echo "============ RUN SIGMANAMED=$ND"
   go clean -testcache
   
   #

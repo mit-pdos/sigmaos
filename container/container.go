@@ -16,7 +16,7 @@ const (
 	PROC   = "PROC"
 )
 
-var envvar = []string{"SIGMADEBUG", "SIGMAPERF", "SIGMAROOTFS"}
+var envvar = []string{"SIGMADEBUG", "SIGMAPERF", "SIGMANAMED", "SIGMAROOTFS"}
 
 func SIGMAROOTFS() (string, error) {
 	fs := os.Getenv("SIGMAROOTFS")

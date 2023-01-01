@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"net"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -15,10 +16,10 @@ type FsLib struct {
 }
 
 func NamedAddrs() string {
-	addrs := os.Getenv("NAMED")
+	addrs := os.Getenv("SIGMANAMED")
 	if addrs == "" {
 		debug.PrintStack()
-		db.DFatalf("Getenv error: missing NAMED")
+		db.DFatalf("Getenv error: missing SIGMANAMED")
 	}
 	return addrs
 }
@@ -26,6 +27,18 @@ func NamedAddrs() string {
 func Named() []string {
 	addrs := strings.Split(NamedAddrs(), ",")
 	return addrs
+}
+
+func SetNamedIP(ip string) ([]string, error) {
+	nameds := Named()
+	for i, s := range nameds {
+		_, port, err := net.SplitHostPort(s)
+		if err != nil {
+			return nil, err
+		}
+		nameds[i] = net.JoinHostPort(ip, port)
+	}
+	return nameds, nil
 }
 
 func MakeFsLibBase(uname string) *FsLib {

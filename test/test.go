@@ -3,7 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"os"
 	"testing"
 
 	"sigmaos/bootclnt"
@@ -94,18 +93,22 @@ func BootPath(t *testing.T, path string) (*Tstate, error) {
 	}
 }
 
-func mkClient() (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr("test", fslib.Named())
+func mkClient(kip string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	nameds, err := fslib.SetNamedIP(kip)
 	if err != nil {
 		return nil, nil, err
 	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("test", nameds)
+	if err != nil {
+		return nil, nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", nameds)
 	return fsl, pclnt, nil
 }
 
 // Join a realm/set of machines are already running
 func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
-	fsl, pclnt, err := mkClient()
+	fsl, pclnt, err := mkClient("") // XXX get k.Ip()
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +122,7 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	os.Setenv("NAMED", k.Ip()+":1111") // XXX
-	fsl, pclnt, err := mkClient()
+	fsl, pclnt, err := mkClient(k.Ip())
 	if err != nil {
 		return nil, err
 	}

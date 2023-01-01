@@ -174,14 +174,14 @@ func main() {
 	switch os.Args[1] {
 	case "up":
 		if err := createBridge(os.Args[3]); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%s: create bridge err %v\n", os.Args[0], err)
 		}
 		if err := createVethPair(pid, os.Args[3]); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%s: pair err %v\n", os.Args[0], err)
 		}
 	case "down":
 		if err := delBridge(os.Args[3]); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%s: scnet down err %v\n", os.Args[0], err)
 		}
 	}
 }

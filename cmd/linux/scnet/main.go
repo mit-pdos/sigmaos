@@ -59,13 +59,6 @@ func createBridge() error {
 	if err := netlink.LinkSetUp(br); err != nil {
 		return err
 	}
-
-	// XXX add and delete fix iptables
-	// iptables --append FORWARD --in-interface sigmab --out-interface sigmab --jump ACCEPT
-	// iptables --append FORWARD --in-interface wlp2s0 --out-interface sigmab --jump ACCEPT
-	// iptables --append FORWARD --in-interface sigmab --out-interface wlp2s0 --jump ACCEPT
-	// iptables --append POSTROUTING --table nat --out-interface wlp2s0 --jump MASQUERADE
-
 	return nil
 }
 

@@ -13,22 +13,22 @@ then
   exit 1
 fi
 
-export ROOT_NAMED_ADDR=$2
+export ROOT_SIGMANAMED_ADDR=$2
 export IS_LEADER=0
 
-if [[ $ROOT_NAMED_ADDR == ":"* ]]; then
+if [[ $ROOT_SIGMANAMED_ADDR == ":"* ]]; then
   export IS_LEADER=1
 fi
 
 # Create the ssh command string, only evaluating some variables.
 CMD=$(
-envsubst '$ROOT_NAMED_ADDR:$IS_LEADER:$N_REPLICAS' <<'ENDSSH'
+envsubst '$ROOT_SIGMANAMED_ADDR:$IS_LEADER:$N_REPLICAS' <<'ENDSSH'
 ulimit -n 100000
-export NAMED=$ROOT_NAMED_ADDR
+export SIGMANAMED=$ROOT_SIGMANAMED_ADDR
 export N_REPLICAS=$N_REPLICAS
 cd ulambda
 
-echo "running with NAMED=$NAMED"
+echo "running with SIGMANAMED=$SIGMANAMED"
 
 if [[ $IS_LEADER -gt 0 ]]; then
   echo "each realm runs with $N_REPLICAS replicas"

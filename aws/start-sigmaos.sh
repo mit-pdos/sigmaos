@@ -60,8 +60,8 @@ vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
 MAIN="${vma[0]}"
-NAMED="${vma[0]}:1111"
-export NAMED="${NAMED}"
+SIGMANAMED="${vma[0]}:1111"
+export SIGMANAMED="${SIGMANAMED}"
 
 if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
@@ -70,7 +70,7 @@ fi
 for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   export SIGMADBADDR="10.0.102.10:3306"
-  export NAMED="${NAMED}"
+  export SIGMANAMED="${SIGMANAMED}"
 #  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
   if [ $NCORES -eq 2 ]; then
     ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
@@ -82,10 +82,10 @@ for vm in $vms; do
     nproc
   fi
   if [ "${vm}" = "${MAIN}" ]; then 
-    echo "START ${NAMED}"
+    echo "START ${SIGMANAMED}"
     (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)
   else
-    echo "JOIN ${NAMED}"
+    echo "JOIN ${SIGMANAMED}"
     (cd ulambda; SIGMAPID=machined-$vm nohup $PRIVILEGED_BIN/realm/machined > /tmp/machined.out 2>&1 < /dev/null &)
   fi
 ENDSSH

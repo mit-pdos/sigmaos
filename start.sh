@@ -32,15 +32,15 @@ fi
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-if [[ -z "${NAMED}" ]]; then
-  export NAMED=":1111"
+if [[ -z "${SIGMANAMED}" ]]; then
+  export SIGMANAMED=":1111"
 fi
 
 if [[ -z "${N_REPLICAS}" ]]; then
   export N_REPLICAS=1
 fi
 
-echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
+echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
 
 # Make the ux root dir.
 mkdir -p $UXROOT

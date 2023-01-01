@@ -48,7 +48,7 @@ func run(bin string, name string, args []string, namedAddr []string) (*exec.Cmd,
 	cmd := exec.Command(bin+"/"+name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "NAMED="+strings.Join(namedAddr, ","))
+	cmd.Env = append(os.Environ(), "SIGMANAMED="+strings.Join(namedAddr, ","))
 	return cmd, cmd.Start()
 }
 

@@ -16,13 +16,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
 
 	"sigmaos/container"
 )
 
 const (
-	bridgeName = "sigmab"
+	BRIDGENAME = "sigmab"
 	vethPrefix = "sb"
 )
 
@@ -30,10 +31,60 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func createBridge() error {
-	log.Printf("create bridge %v\n", bridgeName)
+func bridgeName(realm string) string {
+	return BRIDGENAME
+}
+
+func addIpTables() error {
+	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+	if err != nil {
+		return err
+	}
+	args := []string{"-i", BRIDGENAME, "-o", BRIDGENAME, "-j", "ACCEPT"}
+	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	log.Printf("add rule %v\n", args)
+	args = []string{"-i", "wlp2s0", "-o", BRIDGENAME, "-j", "ACCEPT"}
+	log.Printf("add rule %v\n", args)
+	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	args = []string{"-i", BRIDGENAME, "-o", "wlp2s0", "-j", "ACCEPT"}
+	log.Printf("add rule %v\n", args)
+	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	return nil
+}
+
+func delIpTables() error {
+	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+	if err != nil {
+		return err
+	}
+	args := []string{"-i", BRIDGENAME, "-o", BRIDGENAME, "-j", "ACCEPT"}
+	log.Printf("del rule %v\n", args)
+	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	args = []string{"-i", "wlp2s0", "-o", BRIDGENAME, "-j", "ACCEPT"}
+	log.Printf("del rule %v\n", args)
+	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	args = []string{"-i", BRIDGENAME, "-o", "wlp2s0", "-j", "ACCEPT"}
+	log.Printf("add rule %v\n", args)
+	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
+		return fmt.Errorf("iptables command err %s", err.Error())
+	}
+	return nil
+}
+
+func createBridge(realm string) error {
+	log.Printf("create bridge %v %s\n", bridgeName(realm), realm)
 	// try to get bridge by name, if it already exists then just exit
-	_, err := net.InterfaceByName(bridgeName)
+	_, err := net.InterfaceByName(bridgeName(realm))
 	if err == nil {
 		return nil
 	}
@@ -42,7 +93,7 @@ func createBridge() error {
 	}
 	// create *netlink.Bridge object
 	la := netlink.NewLinkAttrs()
-	la.Name = bridgeName
+	la.Name = bridgeName(realm)
 	br := &netlink.Bridge{LinkAttrs: la}
 	if err := netlink.LinkAdd(br); err != nil {
 		return fmt.Errorf("bridge creation: %v", err)
@@ -59,12 +110,15 @@ func createBridge() error {
 	if err := netlink.LinkSetUp(br); err != nil {
 		return err
 	}
+	// if err := addIpTables(); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
-func createVethPair(pid int) error {
+func createVethPair(pid int, realm string) error {
 	// get bridge to set as master for one side of veth-pair
-	br, err := netlink.LinkByName(bridgeName)
+	br, err := netlink.LinkByName(bridgeName(realm))
 	if err != nil {
 		return err
 	}
@@ -98,17 +152,20 @@ func createVethPair(pid int) error {
 	return nil
 }
 
-func delBridge() error {
-	cmd := exec.Command("ip", "link", "delete", "dev", bridgeName)
+func delBridge(realm string) error {
+	cmd := exec.Command("ip", "link", "delete", "dev", bridgeName(realm))
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return err
 	}
+	// if err := delIpTables(); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatalf("%s: too few arguments <up> <pid>\n", os.Args[0])
+	if len(os.Args) != 4 {
+		log.Fatalf("%s: too few arguments <up> <pid> <realm>\n", os.Args[0])
 	}
 	pid, err := strconv.Atoi(os.Args[2])
 	if err != nil {
@@ -116,14 +173,14 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "up":
-		if err := createBridge(); err != nil {
+		if err := createBridge(os.Args[3]); err != nil {
 			log.Fatal(err)
 		}
-		if err := createVethPair(pid); err != nil {
+		if err := createVethPair(pid, os.Args[3]); err != nil {
 			log.Fatal(err)
 		}
 	case "down":
-		if err := delBridge(); err != nil {
+		if err := delBridge(os.Args[3]); err != nil {
 			log.Fatal(err)
 		}
 	}

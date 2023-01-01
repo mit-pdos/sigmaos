@@ -56,7 +56,7 @@ func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
 	k := mkKernel(realm, fslib.Named(), cores)
 	if p.Services[0] == sp.NAMEDREL {
-		k.makeNameds(p)
+		k.makeNameds(p, realm)
 		p.Services = p.Services[1:]
 	}
 	proc.SetProgram(p.Uname)
@@ -92,10 +92,10 @@ func (k *Kernel) ShutDown() error {
 }
 
 // Start nameds and wait until they have started
-func (k *Kernel) makeNameds(p *Param) error {
+func (k *Kernel) makeNameds(p *Param, realmId string) error {
 	n := len(fslib.Named())
 	ch := make(chan error)
-	k.startNameds(ch, n, p)
+	k.startNameds(ch, n, p, realmId)
 	var err error
 	for i := 0; i < n; i++ {
 		r := <-ch
@@ -106,12 +106,12 @@ func (k *Kernel) makeNameds(p *Param) error {
 	return err
 }
 
-func (k *Kernel) startNameds(ch chan error, n int, p *Param) {
+func (k *Kernel) startNameds(ch chan error, n int, p *Param, realmId string) {
 	for i := 0; i < n; i++ {
 		// Must happen in a separate thread because MakeKernelNamed
 		// will block until the replicas are able to process requests.
 		go func(i int) {
-			err := bootNamed(k, p.Uname, i)
+			err := bootNamed(k, p.Uname, i, realmId)
 			ch <- err
 		}(i)
 	}
@@ -184,7 +184,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 // Run a named (but not as a proc)
 func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := kproc.RunKernelProc(p, fslib.Named(), false)
+	cmd, err := kproc.RunKernelProc(p, fslib.Named(), realmId, false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err
@@ -226,7 +226,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), "", false)
+	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), "", realmId, false)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err

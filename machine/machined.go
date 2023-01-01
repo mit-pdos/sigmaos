@@ -96,7 +96,8 @@ func (m *Machined) BootNoded(req proto.MachineRequest, res *proto.MachineRespons
 	db.DPrintf(db.MACHINED, "Booting noded %v", pid)
 
 	p := proc.MakeProcPid(pid, "realm/noded", []string{m.pds.MyAddr()})
-	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", false)
+	// XXX need realm name...
+	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", "", false)
 	if err != nil {
 		db.DFatalf("RunKernelProc: %v", err)
 	}

@@ -59,7 +59,7 @@ func (e *TestEnv) BootMachined() error {
 	var err error
 	pid := proc.Tpid("machined-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "realm/machined", []string{})
-	machined, err := kproc.RunKernelProc(p, fslib.Named(), false)
+	machined, err := kproc.RunKernelProc(p, fslib.Named(), "", false)
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (e *TestEnv) bootNameds() error {
 
 func (e *TestEnv) bootSigmaMgr() error {
 	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "realm/sigmamgr", []string{})
-	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named(), "", false)
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named(), "", "", false)
 	if err != nil {
 		return err
 	}

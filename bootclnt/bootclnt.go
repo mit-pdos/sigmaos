@@ -25,10 +25,11 @@ const (
 //
 
 type Kernel struct {
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	ip     string
+	cmd     *exec.Cmd
+	stdin   io.WriteCloser
+	stdout  io.ReadCloser
+	ip      string
+	realmid string
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
@@ -46,7 +47,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 
 	if contain {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := container.RunKernelContainer(cmd); err != nil {
+		if err := container.RunKernelContainer(cmd, realmid); err != nil {
 			return nil, err
 		}
 	} else {
@@ -70,7 +71,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		db.DFatalf("oops: kernel is printing to stdout %s\n", s)
 	}
 	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s at %s\n", s, ip)
-	return &Kernel{cmd, stdin, stdout, ip}, nil
+	return &Kernel{cmd, stdin, stdout, ip, realmid}, nil
 }
 
 func (k *Kernel) Ip() string {
@@ -87,6 +88,6 @@ func (k *Kernel) Shutdown() error {
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}
-	container.DelScnet(k.cmd.Process.Pid)
+	container.DelScnet(k.cmd.Process.Pid, k.realmid)
 	return nil
 }

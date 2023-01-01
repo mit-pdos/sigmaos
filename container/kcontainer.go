@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func RunKernelContainer(cmd *exec.Cmd) error {
+func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWNS |
@@ -52,7 +52,7 @@ func RunKernelContainer(cmd *exec.Cmd) error {
 	}
 
 	db.DPrintf(db.CONTAINER, "mkscnet %v\n", cmd.Process.Pid)
-	if err := mkScnet(cmd.Process.Pid); err != nil {
+	if err := mkScnet(cmd.Process.Pid, realm); err != nil {
 		return err
 	}
 	return nil

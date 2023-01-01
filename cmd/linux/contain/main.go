@@ -13,6 +13,10 @@ var defaultEnvironment = []string{
 	"TERM=xterm",
 }
 
+const (
+	REALM = "test-realm"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("%s: Usage <bin> [args]\n", os.Args[0])
@@ -29,7 +33,7 @@ func main() {
 		env = append(env, s)
 	}
 	cmd.Env = env
-	if err := container.RunKernelContainer(cmd); err != nil {
+	if err := container.RunKernelContainer(cmd, REALM); err != nil {
 		log.Fatalf("%s: run container err %v\n", os.Args[0], err)
 	}
 	if err := cmd.Wait(); err != nil {

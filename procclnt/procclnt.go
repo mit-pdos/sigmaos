@@ -40,7 +40,7 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp string, viaProcd bool) (*exec.Cmd, error) {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp, realm string, viaProcd bool) (*exec.Cmd, error) {
 	// Sanity checks
 	if viaProcd && procdIp == "" {
 		debug.PrintStack()
@@ -58,7 +58,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp 
 	if !viaProcd {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// locally.
-		return kproc.RunKernelProc(p, namedAddr, false)
+		return kproc.RunKernelProc(p, namedAddr, realm, false)
 	}
 	return nil, nil
 }

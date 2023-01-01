@@ -15,28 +15,29 @@ import (
 type Subsystem struct {
 	*procclnt.ProcClnt
 	p        *proc.Proc
+	realmId  string
 	procdIp  string
 	viaProcd bool
 	cmd      *exec.Cmd
 }
 
-func (k *Kernel) bootSubsystem(binpath string, args []string, procdIp string, viaProcd bool) (*Subsystem, error) {
+func (k *Kernel) bootSubsystem(binpath string, args []string, realmId, procdIp string, viaProcd bool) (*Subsystem, error) {
 	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, binpath, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, procdIp, viaProcd)
+	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, viaProcd)
 	return ss, ss.Run(k.namedAddr)
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, procdIp, viaProcd, nil)
+func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, viaProcd bool) *Subsystem {
+	return makeSubsystemCmd(pclnt, p, realmId, procdIp, viaProcd, nil)
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, procdIp string, viaProcd bool, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, procdIp, viaProcd, cmd}
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, viaProcd bool, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, p, realmId, procdIp, viaProcd, cmd}
 }
 
 func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.procdIp, s.viaProcd)
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.procdIp, s.realmId, s.viaProcd)
 	if err != nil {
 		return err
 	}

@@ -78,13 +78,13 @@ func (k *Kernel) KillOne(srv string) error {
 
 // replicaId is used to index into the fslib.Named() slice and select
 // an address for this named.
-func bootNamed(k *Kernel, uname string, replicaId int) error {
+func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, nil, "", false, cmd)
+	ss := makeSubsystemCmd(nil, nil, realmId, "", false, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
@@ -100,7 +100,7 @@ func (k *Kernel) BootProcd() (*Subsystem, error) {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.realmId, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, "", false)
+	ss, err := k.bootSubsystem("procd", []string{k.realmId, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, k.realmId, "", false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,11 +111,11 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) BootFsUxd() (*Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.realmId)}, k.procdIp, true)
+	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.realmId)}, k.realmId, k.procdIp, true)
 }
 
 func (k *Kernel) BootFss3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.realmId}, k.procdIp, true)
+	return k.bootSubsystem("fss3d", []string{k.realmId}, k.realmId, k.procdIp, true)
 }
 
 func (k *Kernel) BootDbd() (*Subsystem, error) {
@@ -126,7 +126,7 @@ func (k *Kernel) BootDbd() (*Subsystem, error) {
 		// dbdaddr = "127.0.0.1:3306"
 		dbdaddr = "192.168.0.9:3306"
 	}
-	return k.bootSubsystem("dbd", []string{dbdaddr}, k.procdIp, true)
+	return k.bootSubsystem("dbd", []string{dbdaddr}, k.realmId, k.procdIp, true)
 }
 
 func (k *Kernel) GetProcdIp() string {

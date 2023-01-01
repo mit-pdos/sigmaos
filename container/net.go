@@ -18,8 +18,8 @@ const (
 	SCNETBIN = "/usr/bin/scnet"
 )
 
-func mkScnet(pid int) error {
-	cmd := exec.Command(SCNETBIN, "up", strconv.Itoa(pid))
+func mkScnet(pid int, realm string) error {
+	cmd := exec.Command(SCNETBIN, "up", strconv.Itoa(pid), realm)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("scnet: out: %s, err: %v", out, err)
@@ -27,8 +27,8 @@ func mkScnet(pid int) error {
 	return nil
 }
 
-func DelScnet(pid int) error {
-	cmd := exec.Command(SCNETBIN, "down", strconv.Itoa(pid))
+func DelScnet(pid int, realm string) error {
+	cmd := exec.Command(SCNETBIN, "down", strconv.Itoa(pid), realm)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("scnet: out: %s, err: %v", out, err)

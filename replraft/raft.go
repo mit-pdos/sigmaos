@@ -81,8 +81,8 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 		n.node = raft.RestartNode(n.config)
 	}
 	// Make sure the logging dir exists
-	os.Mkdir("/tmp/raftlogs/", 0777)
-	logPath := "/tmp/raftlogs/" + proc.GetPid()
+	os.Mkdir("./raftlogs/", 0777)
+	logPath := "./raftlogs/" + proc.GetPid()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.OutputPaths = []string{string(logPath)}

@@ -24,7 +24,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, nil
 	}
 	db.DPrintf(db.WALK, "unionScan: mnt: %v\n", mnt)
-	if union.UnionMatch(q, mnt) {
+	if union.UnionMatch(pathc.lip, q, mnt) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			return sp.NoFid, err

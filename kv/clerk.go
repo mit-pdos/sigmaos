@@ -77,7 +77,7 @@ func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvCl
 }
 
 func MakeClerk(name, job string, namedAddr []string) (*KvClerk, error) {
-	fsl, err := fslib.MakeFsLibAddr(name, namedAddr)
+	fsl, err := fslib.MakeFsLibNamed(name, namedAddr)
 	if err != nil {
 		return nil, err
 	}

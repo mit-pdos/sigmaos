@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
+	"sigmaos/fidclnt"
 	"sigmaos/sessp"
 )
 
@@ -41,9 +42,9 @@ func SetNamedIP(ip string) ([]string, error) {
 	return nameds, nil
 }
 
-func MakeFsLibBase(uname string) *FsLib {
+func MakeFsLibBase(uname, lip string) *FsLib {
 	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname, sessp.Tsize(10_000_000))}
+	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000))}
 }
 
 func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
@@ -54,8 +55,8 @@ func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
 	}
 }
 
-func MakeFsLibAddr(uname string, addrs []string) (*FsLib, error) {
-	fl := MakeFsLibBase(uname)
+func MakeFsLibAddr(uname string, lip string, addrs []string) (*FsLib, error) {
+	fl := MakeFsLibBase(uname, lip)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
 		debug.PrintStack()
@@ -64,8 +65,16 @@ func MakeFsLibAddr(uname string, addrs []string) (*FsLib, error) {
 	return fl, nil
 }
 
+func MakeFsLibNamed(uname string, addrs []string) (*FsLib, error) {
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		return nil, err
+	}
+	return MakeFsLibAddr(uname, ip, addrs)
+}
+
 func MakeFsLib(uname string) (*FsLib, error) {
-	return MakeFsLibAddr(uname, Named())
+	return MakeFsLibNamed(uname, Named())
 }
 
 func (fl *FsLib) Exit() error {

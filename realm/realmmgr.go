@@ -524,7 +524,8 @@ func (m *RealmResourceMgr) realmShouldGrow() (qlen int, hardReq bool, machineIds
 	} else {
 		// If the realm just finished booting, finish initialization.
 		if m.FsLib == nil {
-			fsl, err := fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
+			// XXXX "" should be realm's ip
+			fsl, err := fslib.MakeFsLibAddr(proc.GetPid().String(), "", realmCfg.NamedAddrs)
 			if err != nil {
 				db.DPrintf(db.REALMMGR, "Error MakeFsLibAddr: %v", err)
 				return 0, false, machineIds, false

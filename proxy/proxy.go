@@ -17,19 +17,20 @@ import (
 )
 
 type Npd struct {
+	lip   string
 	named []string
 	st    *sessstatesrv.SessionTable
 }
 
-func MakeNpd(nds []string) *Npd {
-	npd := &Npd{nds, nil}
+func MakeNpd(lip string, nds []string) *Npd {
+	npd := &Npd{lip, nds, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
 	return npd
 }
 
 func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid sessp.Tsession) sp.Protsrv {
-	return makeNpConn(npd.named)
+	return makeNpConn(npd.lip, npd.named)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -83,12 +84,12 @@ type NpConn struct {
 	fm    *fidMap
 }
 
-func makeNpConn(named []string) *NpConn {
+func makeNpConn(lip string, named []string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt()
 	npc.named = named
 	npc.fidc = fidclnt.MakeFidClnt()
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, sessp.Tsize(1_000_000))
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }

@@ -27,12 +27,11 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	chunkSz sessp.Tsize
+	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{}
-	pathc.mnt = makeMntTable()
-	pathc.chunkSz = sz
+func MakePathClnt(fidc *fidclnt.FidClnt, lip string, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, lip: lip}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt()
 	} else {
@@ -45,6 +44,10 @@ func (pathc *PathClnt) String() string {
 	str := fmt.Sprintf("Pathclnt mount table:\n")
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
+}
+
+func (pathc *PathClnt) GetLocalIP() string {
+	return pathc.lip
 }
 
 func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
@@ -426,37 +429,3 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	}
 	return cnt, nil
 }
-
-//// Return path to the root directory for last server on path
-//func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
-//	if _, err := pathc.Stat(pn + "/"); err != nil {
-//		db.DPrintf(db.PATHCLNT_ERR, "PathServer: stat %v err %v\n", pn, err)
-//		return "", nil, err
-//	}
-//	p := path.Split(pn)
-//	_, left, err := pathc.mnt.resolve(p, true)
-//	if err != nil {
-//		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
-//		return "", nil, err
-//	}
-//	p = p[0 : len(p)-len(left)]
-//	return p.String(), left, nil
-//}
-//
-//// Return path to server, replacing ~local with the IP address of the mounted server
-//func (pathc *PathClnt) AbsPathServer(pn string) (path.Path, path.Path, error) {
-//	srv, left, err := pathc.PathServer(pn)
-//	if err != nil {
-//		return nil, nil, err
-//	}
-//	p := path.Split(srv)
-//	if path.IsUnionElem(p.Base()) {
-//		st, err := pathc.Stat(srv)
-//		if err != nil {
-//			return path.Path{}, left, err
-//		}
-//		p[len(p)-1] = st.Name
-//		return p, left, nil
-//	}
-//	return p, left, nil
-//}

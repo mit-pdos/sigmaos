@@ -41,7 +41,7 @@ func mkScnet(pid int, rip, realm string) error {
 }
 
 func DelScnet(pid int, realm string) error {
-	cmd := exec.Command(SCNETBIN, "down", strconv.Itoa(pid), realm)
+	cmd := exec.Command(SCNETBIN, "down", strconv.Itoa(pid), "", realm)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("scnet: out: %s, err: %v", out, err)

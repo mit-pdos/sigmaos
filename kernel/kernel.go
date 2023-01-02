@@ -61,17 +61,17 @@ func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	}
 	proc.SetProgram(p.Uname)
 	proc.SetPid(proc.GenPid())
-	fsl, err := fslib.MakeFsLibAddr(p.Uname, fslib.Named())
-	if err != nil {
-		return nil, err
-	}
-	k.FsLib = fsl
-	startSrvs(k, p)
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	k.ip = ip
+	fsl, err := fslib.MakeFsLibAddr(p.Uname, ip, fslib.Named())
+	if err != nil {
+		return nil, err
+	}
+	k.FsLib = fsl
+	startSrvs(k, p)
 	return k, err
 }
 
@@ -214,7 +214,7 @@ func addReplPortOffset(peerAddr string) string {
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*Kernel, error) {
 	s := mkKernel(realmId, namedAddr, cores)
-	fsl, err := fslib.MakeFsLibAddr(uname, namedAddr)
+	fsl, err := fslib.MakeFsLibAddr(uname, s.ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}

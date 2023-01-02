@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"sigmaos/config"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 )
 
 type NodedConfig struct {
@@ -29,13 +29,14 @@ func (cfg *NodedConfig) String() string {
 }
 
 type RealmConfig struct {
-	Rid            string     // Realm id.
-	NodedsAssigned []string   // Slice of noded IDs which have been assigned to this realm.
-	NodedsActive   []string   // Slice of noded IDs which are currently actively part of this realm.
-	LastResize     time.Time  // Timestamp from the last time this realm was resized
-	Shutdown       bool       // True if this realm is in the process of being destroyed.
-	NamedAddrs     []string   // IP addresses of this realm's nameds.
-	NamedPids      []string   // PIDs of this realm's nameds.
+	Rid            string    // Realm id.
+	NodedsAssigned []string  // Slice of noded IDs which have been assigned to this realm.
+	NodedsActive   []string  // Slice of noded IDs which are currently actively part of this realm.
+	LastResize     time.Time // Timestamp from the last time this realm was resized
+	Shutdown       bool      // True if this realm is in the process of being destroyed.
+	NamedAddrs     []string  // IP addresses of this realm's nameds.
+	NamedPids      []string  // PIDs of this realm's nameds.
+	RealmIP        string
 	NCores         proc.Tcore // Number of cores assigned to this realm.
 }
 

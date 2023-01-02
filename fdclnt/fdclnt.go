@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fidclnt"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -33,9 +33,9 @@ type FdClient struct {
 	uname string // the principal associated with this FdClient
 }
 
-func MakeFdClient(fsc *fidclnt.FidClnt, uname string, sz sessp.Tsize) *FdClient {
+func MakeFdClient(fsc *fidclnt.FidClnt, uname, lip string, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{}
-	fdc.PathClnt = pathclnt.MakePathClnt(fsc, sz)
+	fdc.PathClnt = pathclnt.MakePathClnt(fsc, lip, sz)
 	fdc.fds = mkFdTable()
 	fdc.uname = uname
 	return fdc

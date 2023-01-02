@@ -13,7 +13,7 @@ import (
 func spin(args []string) error {
 	addr := args[0]
 	sempath := args[1]
-	fsl, err := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), []string{addr})
+	fsl, err := fslib.MakeFsLibNamed("spin-"+path.Base(sempath), []string{addr})
 	if err != nil {
 		return err
 	}

@@ -88,6 +88,8 @@ func (k *Kernel) Shutdown() error {
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}
-	container.DelScnet(k.cmd.Process.Pid, k.realmid)
+	if err := container.DelScnet(k.cmd.Process.Pid, k.realmid); err != nil {
+		return err
+	}
 	return nil
 }

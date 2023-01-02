@@ -174,7 +174,7 @@ func delBridge(realm string) error {
 
 func main() {
 	if len(os.Args) != 4 {
-		log.Fatalf("%s: too few arguments <up> <pid> <realm>\n", os.Args[0])
+		log.Fatalf("%s: Usage <up> <pid> <realm>\n", os.Args[0])
 	}
 	pid, err := strconv.Atoi(os.Args[2])
 	if err != nil {

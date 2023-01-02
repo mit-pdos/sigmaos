@@ -5,13 +5,12 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
@@ -22,8 +21,8 @@ type Npd struct {
 	st    *sessstatesrv.SessionTable
 }
 
-func MakeNpd() *Npd {
-	npd := &Npd{fslib.Named(), nil}
+func MakeNpd(nds []string) *Npd {
+	npd := &Npd{nds, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
 	return npd

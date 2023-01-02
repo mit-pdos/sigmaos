@@ -93,22 +93,9 @@ func BootPath(t *testing.T, path string) (*Tstate, error) {
 	}
 }
 
-func mkClient(kip string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	nameds, err := fslib.SetNamedIP(kip)
-	if err != nil {
-		return nil, nil, err
-	}
-	fsl, err := fslib.MakeFsLibAddr("test", nameds)
-	if err != nil {
-		return nil, nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", nameds)
-	return fsl, pclnt, nil
-}
-
 // Join a realm/set of machines are already running
 func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
-	fsl, pclnt, err := mkClient("") // XXX get k.Ip()
+	fsl, pclnt, err := mkClient([]string{""}) // XXX get it from rconfig
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +109,11 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	fsl, pclnt, err := mkClient(k.Ip())
+	nameds, err := fslib.SetNamedIP(k.Ip())
+	if err != nil {
+		return nil, err
+	}
+	fsl, pclnt, err := mkClient(nameds)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +121,16 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
+	return &Tstate{fsl, pclnt, k, kclnt, t, nameds, realmid}, nil
+}
 
-	return &Tstate{fsl, pclnt, k, kclnt, t, fslib.Named(), realmid}, nil
+func mkClient(namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	fsl, err := fslib.MakeFsLibAddr("test", namedAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", namedAddr)
+	return fsl, pclnt, nil
 }
 
 func (ts *Tstate) RunningInRealm() bool {

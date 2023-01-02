@@ -21,7 +21,7 @@ func TestSemClntSimple(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0, err := fslib.MakeFsLibAddr("sem0", fslib.Named())
+	fsl0, err := fslib.MakeFsLibAddr("sem0", ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -55,9 +55,9 @@ func TestSemClntConcur(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0, err := fslib.MakeFsLibAddr("sem0", fslib.Named())
+	fsl0, err := fslib.MakeFsLibAddr("sem0", ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl0")
-	fsl1, err := fslib.MakeFsLibAddr("semd1", fslib.Named())
+	fsl1, err := fslib.MakeFsLibAddr("semd1", ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 1000; i++ {

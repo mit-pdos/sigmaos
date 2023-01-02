@@ -32,7 +32,7 @@ func TestOldLeaderFail(t *testing.T) {
 	_, err := ts.PutFile(epochname, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "PutFile")
 
-	fsl, err := fslib.MakeFsLibAddr("leader", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("leader", ts.NamedAddr())
 	assert.Nil(t, err, "MakeFsLib")
 	ch := make(chan bool)
 	go func() {

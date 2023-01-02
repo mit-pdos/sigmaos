@@ -121,9 +121,9 @@ func TestLeaderInTurn(t *testing.T) {
 func TestEphemeralLeader(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	fsl1, err := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
+	fsl1, err := fslib.MakeFsLibAddr("fslib-1", ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl1")
-	fsl2, err := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
+	fsl2, err := fslib.MakeFsLibAddr("fslib-2", ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl1")
 	leader1 := electclnt.MakeElectClnt(fsl1, LEADERNAME, 0)
 

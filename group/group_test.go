@@ -111,7 +111,7 @@ func TestGetPutSetFail1(t *testing.T) {
 
 // func follower(t *testing.T, i int, N int, fn string) {
 // 	I := strconv.Itoa(i)
-// 	fsl := fslib.MakeFsLibAddr("fsl"+I, fslib.Named())
+// 	fsl := fslib.MakeFsLibAddr("fsl"+I, ts.NamedAddr())
 // 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for n := 0; n < N; {
 // 		b, err := f.AcquireFenceR()
@@ -130,7 +130,7 @@ func TestGetPutSetFail1(t *testing.T) {
 // 	for i := 0; i < W; i++ {
 // 		go follower(t, i, N, fn)
 // 	}
-// 	fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+// 	fsl := fslib.MakeFsLibAddr("fsl", ts.NamedAddr())
 // 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for i := 0; i < N; i++ {
 // 		err := f.AcquireFenceW([]byte(strconv.Itoa(i)))

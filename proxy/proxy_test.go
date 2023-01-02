@@ -110,7 +110,7 @@ func TestSymlinkPath(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	mnt := sp.MkMountService(fslib.Named())
+	mnt := sp.MkMountService(ts.NamedAddr())
 	err = ts.MkMountSymlink9P("name/namedself", mnt)
 	assert.Nil(ts.T, err, "MkMountSymlink")
 

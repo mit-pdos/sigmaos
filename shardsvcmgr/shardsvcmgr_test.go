@@ -42,7 +42,7 @@ func (ts *Tstate) stop() {
 
 func (ts *Tstate) hit(t int) {
 	s := strconv.Itoa(t)
-	fsl, err := fslib.MakeFsLibAddr("montest"+s, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("montest"+s, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	cc, err := cacheclnt.MkCacheClnt(fsl, 1)
 	assert.Nil(ts.T, err)

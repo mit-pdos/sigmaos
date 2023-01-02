@@ -60,7 +60,7 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
 		err = sem.Down()
@@ -137,7 +137,7 @@ func TestReconnectSimple(t *testing.T) {
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 0, 0, 0, NETFAIL)
 	ch := make(chan error)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(DIRGRP0)
@@ -166,7 +166,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), ts.NamedAddr())
+			fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(DIRGRP0)
@@ -196,7 +196,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func() {
-			fsl, err := fslib.MakeFsLibAddr("fsl", ts.NamedAddr())
+			fsl, err := fslib.MakeFsLibAddr("fsl", ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
 			sem.Init(0)
@@ -263,7 +263,7 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		go writer(ts.T, ch, strconv.Itoa(i), ts.NamedAddr())
+		go writer(ts.T, ch, strconv.Itoa(i), ts.GetLocalIP(), ts.NamedAddr())
 	}
 
 	crashchan := make(chan bool)

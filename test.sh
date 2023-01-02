@@ -63,13 +63,15 @@ do
   
   go test $@ sigmaos/group --version=$VERSION
   go test $@ sigmaos/sessclnt --version=$VERSION
-  
+
+  go test $@ sigmaos/shardsvcmgr --version=$bVERSION
+  go test $@ sigmaos/cacheclnt --version=$VERSION
+
   # dbd_test and wwwd_test requires mariadb running
   pgrep mariadb >/dev/null && go test $@ sigmaos/www
   
   go test $@ sigmaos/mr --version=$VERSION
   go test $@ sigmaos/kv --version=$VERSION
-  go test $@ sigmaos/cacheclnt --version=$VERSION
   go test $@ sigmaos/hotel --version=$VERSION
   
   # XXX broken

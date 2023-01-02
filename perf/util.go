@@ -111,7 +111,7 @@ func MakePerfMulti(name string, name2 string) (*Perf, error) {
 	}
 	// Make the output dir
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
-		db.DPrintf("MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
+		db.DPrintf(db.ALWAYS, "MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))

@@ -33,7 +33,7 @@ func init() {
 }
 
 func bridgeName(realm string) string {
-	return BRIDGENAME // + realm
+	return BRIDGENAME + realm
 }
 
 func insertRule(ipt *iptables.IPTables, rule []string) error {

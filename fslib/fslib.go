@@ -6,9 +6,9 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
-	"sigmaos/fidclnt"
 	"sigmaos/sessp"
 )
 
@@ -66,7 +66,7 @@ func MakeFsLibAddr(uname string, lip string, addrs []string) (*FsLib, error) {
 }
 
 func MakeFsLibNamed(uname string, addrs []string) (*FsLib, error) {
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}

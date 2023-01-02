@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	fw "sigmaos/fwsrv/proto"
 	"sigmaos/hotel/proto"
@@ -95,7 +95,7 @@ func RunWww(job string) error {
 	http.HandleFunc("/reservation", www.reservationHandler)
 	http.HandleFunc("/geo", www.geoHandler)
 
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

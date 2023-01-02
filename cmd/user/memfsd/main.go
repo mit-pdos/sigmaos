@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/repldummy"
@@ -14,7 +14,7 @@ import (
 func main() {
 	name := sp.MEMFS + "/" + proc.GetPid().String()
 	if len(os.Args) > 1 {
-		ip, err := fidclnt.LocalIP()
+		ip, err := container.LocalIP()
 		if err != nil {
 			db.DFatalf("Error get local ip: %v", err)
 		}

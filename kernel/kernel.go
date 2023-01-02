@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/linuxsched"
@@ -61,7 +61,7 @@ func MakeKernel(realm string, p *Param) (*Kernel, error) {
 	}
 	proc.SetProgram(p.Uname)
 	proc.SetPid(proc.GenPid())
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}

@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"sync"
 
+	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
@@ -222,7 +222,7 @@ func RunMember(jobdir, grp string) {
 	g.FsLib = fsl
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("group ip %v\n", err)
 	}

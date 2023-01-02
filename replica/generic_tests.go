@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/realm"
 	sp "sigmaos/sigmap"
@@ -81,7 +81,7 @@ func killReplica(ts *Tstate, replica *Replica) {
 
 func allocReplicas(ts *Tstate, n int) []*Replica {
 	replicas := make([]*Replica, n)
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	assert.Nil(ts.t, err, "Failed to get local ip")
 	for i, _ := range replicas {
 		portstr := strconv.Itoa(PORT_OFFSET + i)

@@ -10,8 +10,8 @@ import (
 
 	"net/http/pprof"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/pipe"
@@ -46,7 +46,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"sigmaos/config"
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/machine"
@@ -71,7 +71,7 @@ func MakeNoded(machineId string) *Noded {
 		db.DFatalf("Error mountpids: %v", err)
 	}
 
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

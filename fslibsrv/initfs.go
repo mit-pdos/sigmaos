@@ -1,7 +1,7 @@
 package fslibsrv
 
 import (
-	"sigmaos/fidclnt"
+	"sigmaos/container"
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/procclnt"
@@ -28,7 +28,7 @@ func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 }
 
 func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*sesssrv.SessSrv, error) {
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}

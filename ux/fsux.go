@@ -5,8 +5,8 @@ import (
 	"sync"
 	"syscall"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
@@ -29,7 +29,7 @@ type FsUx struct {
 }
 
 func RunFsUx(rootux string) {
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}

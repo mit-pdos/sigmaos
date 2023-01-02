@@ -3,6 +3,7 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
+	"net"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -1090,6 +1091,12 @@ func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
+	h, p, err := mnt.TargetHostPort()
+	assert.Nil(t, err)
+	if h == "" {
+		a := net.JoinHostPort(ts.GetLocalIP(), p)
+		mnt.SetAddr([]string{a})
+	}
 	return mnt
 }
 

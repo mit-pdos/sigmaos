@@ -1,7 +1,7 @@
 package sigmap
 
 import (
-	"strings"
+	"net"
 
 	"google.golang.org/protobuf/proto"
 
@@ -24,6 +24,10 @@ func (mnt *Tmount) SetTree(tree string) {
 	mnt.Root = tree
 }
 
+func (mnt *Tmount) SetAddr(addr []string) {
+	mnt.Addr = addr
+}
+
 func (mnt Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(&mnt)
 }
@@ -40,9 +44,6 @@ func MkMountServer(addr string) Tmount {
 	return MkMountService([]string{addr})
 }
 
-// IPv6: [::]:port
-// IPv4: host:port
-func (mnt Tmount) TargetIp() string {
-	parts := strings.Split(mnt.Addr[0], ":")
-	return parts[0]
+func (mnt Tmount) TargetHostPort() (string, string, error) {
+	return net.SplitHostPort(mnt.Addr[0])
 }

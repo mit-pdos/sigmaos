@@ -10,7 +10,10 @@ func UnionMatch(lip string, q string, mnt sp.Tmount) bool {
 	case "~any":
 		return true
 	case "~local":
-		tip := mnt.TargetIp()
+		tip, _, err := mnt.TargetHostPort()
+		if err != nil {
+			return false
+		}
 		if tip == "" {
 			tip = lip
 		}

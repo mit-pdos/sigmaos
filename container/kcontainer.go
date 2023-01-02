@@ -3,11 +3,9 @@ package container
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"os/exec"
 	"syscall"
-	"time"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
@@ -36,7 +34,9 @@ func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 			},
 		},
 	}
-	cmd.Args = append([]string{KERNEL}, cmd.Args...)
+
+	ip, rip := mkIpNet()
+	cmd.Args = append([]string{KERNEL, ip}, cmd.Args...)
 
 	pn, err := exec.LookPath("exec-container")
 	if err != nil {
@@ -51,21 +51,18 @@ func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 		return err
 	}
 
-	db.DPrintf(db.CONTAINER, "mkscnet %v\n", cmd.Process.Pid)
-	if err := mkScnet(cmd.Process.Pid, realm); err != nil {
+	db.DPrintf(db.CONTAINER, "mkscnet %v %s %s\n", cmd.Process.Pid, rip, realm)
+	if err := mkScnet(cmd.Process.Pid, rip, realm); err != nil {
 		return err
 	}
 	return nil
 }
 
-// XXX specialized for one kernel for now
 func execKContainer() error {
 	rootfs, err := SIGMAROOTFS()
 	if err != nil {
 		return err
 	}
-
-	rand.Seed(time.Now().UnixNano())
 
 	if err := pivotFs(rootfs); err != nil {
 		return err
@@ -75,8 +72,7 @@ func execKContainer() error {
 		return err
 	}
 
-	ip := fmt.Sprintf(IPFormat, rand.Intn(253)+2)
-	if err := setupScnet(ip); err != nil {
+	if err := setupScnet(os.Args[1]); err != nil {
 		return err
 	}
 
@@ -91,11 +87,11 @@ func execKContainer() error {
 
 	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
 
-	pn, err := exec.LookPath(os.Args[1])
+	pn, err := exec.LookPath(os.Args[2])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
 	}
 
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[1:])
-	return syscall.Exec(pn, os.Args[1:], os.Environ())
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[2:])
+	return syscall.Exec(pn, os.Args[2:], os.Environ())
 }

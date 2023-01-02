@@ -56,9 +56,9 @@ echo "install-scnet requires sudo to install into /usr/sbin/scnet"
 source env/init.sh
 
 # install packages in rootfs
-contain pacman-db-upgrade || exit 1
-contain pacman -Sy  || exit 1
-contain pacman -S go
+contain $REALM pacman-db-upgrade || exit 1
+contain $REALM pacman -Sy  || exit 1
+contain $REALM pacman -S go
 
 # sanity check
 go test -v sigmaos/fslib --version=$(cat VERSION.txt) -run InitFs

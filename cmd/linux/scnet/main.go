@@ -19,8 +19,6 @@ import (
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
-
-	"sigmaos/container"
 )
 
 const (
@@ -90,7 +88,7 @@ func delIpTables(realm string) error {
 	return nil
 }
 
-func createBridge(realm string) error {
+func createBridge(ip string, realm string) error {
 	log.Printf("create bridge %v %s\n", bridgeName(realm), realm)
 	// try to get bridge by name, if it already exists then just exit
 	_, err := net.InterfaceByName(bridgeName(realm))
@@ -108,9 +106,9 @@ func createBridge(realm string) error {
 		return fmt.Errorf("bridge creation: %v", err)
 	}
 	// set up ip addres for bridge
-	addr, err := netlink.ParseAddr(container.IPAddr)
+	addr, err := netlink.ParseAddr(ip)
 	if err != nil {
-		return fmt.Errorf("parse address %s: %v", container.IPAddr, err)
+		return fmt.Errorf("parse address %s: %v", ip, err)
 	}
 	if err := netlink.AddrAdd(br, addr); err != nil {
 		return fmt.Errorf("add address %v to bridge: %v", addr, err)
@@ -173,8 +171,8 @@ func delBridge(realm string) error {
 }
 
 func main() {
-	if len(os.Args) != 4 {
-		log.Fatalf("%s: Usage <up> <pid> <realm>\n", os.Args[0])
+	if len(os.Args) != 5 {
+		log.Fatalf("%s: Usage <up> <pid> <ip> <realm>\n", os.Args[0])
 	}
 	pid, err := strconv.Atoi(os.Args[2])
 	if err != nil {
@@ -185,14 +183,14 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "up":
-		if err := createBridge(os.Args[3]); err != nil {
+		if err := createBridge(os.Args[3], os.Args[4]); err != nil {
 			log.Fatalf("%s: create bridge err %v\n", os.Args[0], err)
 		}
-		if err := createVethPair(pid, os.Args[3]); err != nil {
+		if err := createVethPair(pid, os.Args[4]); err != nil {
 			log.Fatalf("%s: pair err %v\n", os.Args[0], err)
 		}
 	case "down":
-		if err := delBridge(os.Args[3]); err != nil {
+		if err := delBridge(os.Args[4]); err != nil {
 			log.Fatalf("%s: scnet down err %v\n", os.Args[0], err)
 		}
 	}

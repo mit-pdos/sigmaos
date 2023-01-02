@@ -10,5 +10,6 @@ for d in "realm" "kernel" "user"; do
   done
 done
 
-sudo ip link del sb
-sudo ip link del `ip link list | grep -o "sb[0-9]+" | head -1`
+sudo ip link del `ip link list | grep -o "sb[a-z]*" | head -1`
+sudo ip link del `ip link list | grep -o "sp[0-9]+" | head -1`
+sudo iptables -S | ./delroute.sh

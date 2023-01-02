@@ -21,7 +21,7 @@ var realmid string // Use this realm to run tests instead of starting a new one.
 // Read & set the proc version.
 func init() {
 	flag.StringVar(&version, "version", "none", "version")
-	flag.StringVar(&realmid, "realm", "test-realm", "realm id")
+	flag.StringVar(&realmid, "realm", "testrealm", "realm id")
 }
 
 func setVersion() {
@@ -135,7 +135,7 @@ func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
 }
 
 func (ts *Tstate) RunningInRealm() bool {
-	return ts.realmid != "test-realm"
+	return ts.realmid != "testrealm"
 }
 
 func (ts *Tstate) RealmId() string {

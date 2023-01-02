@@ -16,6 +16,7 @@ import (
 	"sigmaos/hotel"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -74,7 +75,7 @@ func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
-	flag.StringVar(&REALM2, "realm2", "test-realm", "Second realm")
+	flag.StringVar(&REALM2, "realm2", sp.TEST_RID, "Second realm")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
 	flag.IntVar(&N_CORE, "ncore", 1, "Generic proc test Ncore")

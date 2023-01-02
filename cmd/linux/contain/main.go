@@ -6,16 +6,13 @@ import (
 	"os/exec"
 
 	"sigmaos/container"
+	sp "sigmaos/sigmap"
 )
 
 var defaultEnvironment = []string{
 	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 	"TERM=xterm",
 }
-
-const (
-	REALM = "test-realm"
-)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -33,7 +30,7 @@ func main() {
 		env = append(env, s)
 	}
 	cmd.Env = env
-	if err := container.RunKernelContainer(cmd, REALM); err != nil {
+	if err := container.RunKernelContainer(cmd, sp.TEST_RID); err != nil {
 		log.Fatalf("%s: run container err %v\n", os.Args[0], err)
 	}
 	if err := cmd.Wait(); err != nil {

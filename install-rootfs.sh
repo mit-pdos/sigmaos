@@ -15,7 +15,7 @@ if [ -z "$SIGMAROOTFS" ] ; then
 fi
 
 TAR=rootfs.tar.zst
-REALM=test-realm
+REALM=testrealm
 
 mkdir -p rootfs
 

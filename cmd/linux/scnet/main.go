@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	BRIDGENAME = "sigmab"
-	vethPrefix = "sb"
+	BRIDGENAME = "sb"
+	vethPrefix = "sp"
 )
 
 func init() {
@@ -33,51 +33,59 @@ func init() {
 }
 
 func bridgeName(realm string) string {
-	return BRIDGENAME
+	return BRIDGENAME // + realm
 }
 
-func addIpTables() error {
-	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
-	if err != nil {
-		return err
-	}
-	args := []string{"-i", BRIDGENAME, "-o", BRIDGENAME, "-j", "ACCEPT"}
-	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
-	}
-	log.Printf("add rule %v\n", args)
-	args = []string{"-i", "wlp2s0", "-o", BRIDGENAME, "-j", "ACCEPT"}
-	log.Printf("add rule %v\n", args)
-	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
-	}
-	args = []string{"-i", BRIDGENAME, "-o", "wlp2s0", "-j", "ACCEPT"}
-	log.Printf("add rule %v\n", args)
-	if err := ipt.Insert("filter", "FORWARD", 1, args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
+func insertRule(ipt *iptables.IPTables, rule []string) error {
+	log.Printf("add rule %v\n", rule)
+	if err := ipt.Insert("filter", "FORWARD", 1, rule...); err != nil {
+		return fmt.Errorf("iptables insert err %s", err.Error())
 	}
 	return nil
 }
 
-func delIpTables() error {
+func deleteRule(ipt *iptables.IPTables, rule []string) error {
+	log.Printf("del rule %v\n", rule)
+	if err := ipt.Delete("filter", "FORWARD", rule...); err != nil {
+		return fmt.Errorf("iptables delete err %s", err.Error())
+	}
+	return nil
+}
+
+// XXX don't hard code wlp20
+func addIpTables(realm string) error {
 	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		return err
 	}
-	args := []string{"-i", BRIDGENAME, "-o", BRIDGENAME, "-j", "ACCEPT"}
-	log.Printf("del rule %v\n", args)
-	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
+	rules := [][]string{
+		[]string{"-i", bridgeName(realm), "-o", bridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", "wlp2s0", "-o", bridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", bridgeName(realm), "-o", "wlp2s0", "-j", "ACCEPT"},
 	}
-	args = []string{"-i", "wlp2s0", "-o", BRIDGENAME, "-j", "ACCEPT"}
-	log.Printf("del rule %v\n", args)
-	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
+	for _, r := range rules {
+		if err := insertRule(ipt, r); err != nil {
+			return err
+		}
 	}
-	args = []string{"-i", BRIDGENAME, "-o", "wlp2s0", "-j", "ACCEPT"}
-	log.Printf("add rule %v\n", args)
-	if err := ipt.Delete("filter", "FORWARD", args...); err != nil {
-		return fmt.Errorf("iptables command err %s", err.Error())
+
+	return nil
+}
+
+func delIpTables(realm string) error {
+	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+	if err != nil {
+		return err
+	}
+	rules := [][]string{
+		[]string{"-i", bridgeName(realm), "-o", bridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", "wlp2s0", "-o", bridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", bridgeName(realm), "-o", "wlp2s0", "-j", "ACCEPT"},
+	}
+	for _, r := range rules {
+		if err := deleteRule(ipt, r); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -111,7 +119,7 @@ func createBridge(realm string) error {
 	if err := netlink.LinkSetUp(br); err != nil {
 		return err
 	}
-	if err := addIpTables(); err != nil {
+	if err := addIpTables(realm); err != nil {
 		return err
 	}
 	return nil
@@ -158,7 +166,7 @@ func delBridge(realm string) error {
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return err
 	}
-	if err := delIpTables(); err != nil {
+	if err := delIpTables(realm); err != nil {
 		return err
 	}
 	return nil

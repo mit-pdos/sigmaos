@@ -15,7 +15,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func MakeProcContainer(cmd *exec.Cmd, realmid string) {
+func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
@@ -38,9 +38,15 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) {
 			},
 		},
 	}
+	pn, err := exec.LookPath("exec-container")
+	if err != nil {
+		return fmt.Errorf("LookPath: %v", err)
+	}
+	cmd.Path = pn
 	cmd.Args = append([]string{PROC, realmid}, cmd.Args...)
-	cmd.Path = sp.SIGMAHOME + "/" + realmid + "/bin/linux/exec-container"
+
 	db.DPrintf(db.CONTAINER, "Contain proc cmd %v %v\n", cmd, os.Environ())
+	return nil
 }
 
 func execPContainer() error {

@@ -94,7 +94,11 @@ func (p *LinuxProc) run() error {
 		}()
 	} else {
 		cmd = exec.Command(path.Join("/bin/", path.Base(p.attr.Program)), p.attr.Args...)
-		container.MakeProcContainer(cmd, p.pd.realm)
+		if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
+			db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
+			p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+			return err
+		}
 	}
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

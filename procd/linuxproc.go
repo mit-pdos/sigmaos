@@ -93,7 +93,7 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(path.Join("/bin", p.attr.Program), p.attr.Args...)
+		cmd = exec.Command(path.Join("/bin/", path.Base(p.attr.Program)), p.attr.Args...)
 		container.MakeProcContainer(cmd, p.pd.realm)
 	}
 	cmd.Env = p.Env
@@ -105,6 +105,9 @@ func (p *LinuxProc) run() error {
 		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
+
+	// XXX GetCPUTimePid fails because proc isn't running yet; seems
+	// worse now with an extra mount.
 
 	// Take this lock to ensure we don't race with a thread rebalancing cores.
 	p.pd.Lock()

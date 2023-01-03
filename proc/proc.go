@@ -74,13 +74,6 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p.Privileged = priv
 	p.setProcDir("")
 	if !p.Privileged {
-		// Check the version has been set.
-		if Version == "none" {
-			log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
-		}
-		// Set the Program to user/VERSION/prog.bin
-		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
-	} else {
 		p.Type = T_LC
 	}
 	p.setBaseEnv()

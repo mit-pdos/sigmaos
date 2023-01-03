@@ -4,7 +4,7 @@ DIR=$(dirname $0)
 . $DIR/env/env.sh
 
 export SIGMAROOTFS=$SIGMAROOTFS
-PATH=$PATH:$SIGMAHOME/bin/linux/
+PATH=$PATH:$PWD/bin/linux/
 
 # default port number for named
 export SIGMANAMED=":1111"

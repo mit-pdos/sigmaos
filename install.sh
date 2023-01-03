@@ -55,23 +55,20 @@ fi
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-echo "install sigmaos in $SIGMAHOME"
+echo "install sigmaos in $SIGMAHOME/$REALM"
 
-mkdir -p $PRIVILEGED_BIN
-rm -rf $PRIVILEGED_BIN/*
-rm -rf $SIGMAHOME/$REALM/bin/user/*
+rm -rf $SIGMAHOME/$REALM/bin/*/*
 if [ $FROM == "local" ]; then
   if [ -z "$VERSION" ]; then
     VERSION=$(cat "${VERSION_FILE}")
   fi
-  # Make the user program dir
-  mkdir -p $SIGMAHOME/$REALM/bin/user/$VERSION/
-  # Copy from local
-  cp -r bin/user/* $SIGMAHOME/$REALM/bin/user/$VERSION/
-  cp -r bin/realm $PRIVILEGED_BIN
-  cp -r bin/kernel $PRIVILEGED_BIN
-  cp -r bin/linux $PRIVILEGED_BIN
+  mkdir -p $SIGMAHOME/$REALM/bin/
+  for d in "linux" "kernel" "user"; do
+      mkdir -p $SIGMAHOME/$REALM/bin/$d
+      cp -r ./bin/$d/* $SIGMAHOME/$REALM/bin/$d/
+  done
 elif [ $FROM == "s3" ]; then
+  # XXX needs updating
   # Copy kernel & realm dirs from s3
   aws s3 cp --recursive s3://$REALM/bin/realm $PRIVILEGED_BIN/realm $PROFILE
   aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/kernel $PROFILE
@@ -83,7 +80,7 @@ else
 fi
 
 cp bootclnt/boot*.yml $SIGMAHOME/$REALM/
-cp seccomp/whitelist.yml $SIGMAHOME/
+cp seccomp/whitelist.yml $SIGMAHOME/$REALM/
 
 for d in etc dev sys proc usr lib lib64
 do        
@@ -93,3 +90,5 @@ for f in urandom null
 do
     echo -n > $SIGMAHOME/$REALM/dev/$f
 done
+
+cp -r $SIGMAHOME/.aws $SIGMAHOME/$REALM/

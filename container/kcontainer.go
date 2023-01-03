@@ -36,7 +36,7 @@ func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 	}
 
 	ip, rip := mkIpNet()
-	cmd.Args = append([]string{KERNEL, ip}, cmd.Args...)
+	cmd.Args = append([]string{KERNEL, ip, realm}, cmd.Args...)
 
 	pn, err := exec.LookPath("exec-container")
 	if err != nil {
@@ -45,7 +45,7 @@ func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 
 	cmd.Path = pn
 
-	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
+	db.DPrintf(db.CONTAINER, "Contain kernel cmd  %v\n", cmd)
 
 	if err := cmd.Start(); err != nil {
 		return err
@@ -68,7 +68,9 @@ func execKContainer() error {
 		return err
 	}
 
-	if err := syscall.Sethostname([]byte("sigmaos")); err != nil {
+	realm := os.Args[2]
+	dir := sp.SIGMAHOME + "/" + realm
+	if err := syscall.Sethostname([]byte(realm)); err != nil {
 		return err
 	}
 
@@ -76,22 +78,22 @@ func execKContainer() error {
 		return err
 	}
 
-	if err := syscall.Chdir(sp.SIGMAHOME); err != nil {
+	if err := syscall.Chdir(dir); err != nil {
 		log.Printf("Chdir %s err %v", sp.SIGMAHOME, err)
 		return err
 	}
 
 	path := os.Getenv("PATH")
-	p := sp.SIGMAHOME + "/bin/linux/:" + sp.SIGMAHOME + "/bin/kernel"
+	p := dir + "/bin/linux/:" + dir + "/bin/kernel"
 	os.Setenv("PATH", path+":"+p)
 
 	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
 
-	pn, err := exec.LookPath(os.Args[2])
+	pn, err := exec.LookPath(os.Args[3])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
 	}
 
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[2:])
-	return syscall.Exec(pn, os.Args[2:], os.Environ())
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[3:])
+	return syscall.Exec(pn, os.Args[3:], os.Environ())
 }

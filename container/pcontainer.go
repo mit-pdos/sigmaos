@@ -15,8 +15,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const PRIVILEGED_BIN = sp.SIGMAHOME + "/bin"
-
 func MakeProcContainer(cmd *exec.Cmd, realmid string) {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -41,8 +39,8 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) {
 		},
 	}
 	cmd.Args = append([]string{PROC, realmid}, cmd.Args...)
-	cmd.Path = path.Join(PRIVILEGED_BIN, "linux/exec-container")
-	db.DPrintf(db.CONTAINER, "contain cmd  %v\n", cmd)
+	cmd.Path = sp.SIGMAHOME + "/" + realmid + "/bin/linux/exec-container"
+	db.DPrintf(db.CONTAINER, "Contain proc cmd %v %v\n", cmd, os.Environ())
 }
 
 func execPContainer() error {
@@ -68,6 +66,7 @@ func execPContainer() error {
 	return syscall.Exec(pn, os.Args[2:], os.Environ())
 }
 
+// For debugging
 func ls(dir string) error {
 	log.Printf("== ls %s\n", dir)
 	files, err := ioutil.ReadDir(dir)
@@ -135,6 +134,12 @@ func setupFs(newRoot string) error {
 		return err
 	}
 
+	// Mount /bin
+	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, "/bin"), "none", syscall.MS_BIND, ""); err != nil {
+		log.Printf("failed to mount /bin: %v", err)
+		return err
+	}
+
 	// pivot_root
 	if err := syscall.PivotRoot(newRoot, path.Join(newRoot, oldRootMnt)); err != nil {
 		log.Printf("failed to pivot root: %v", err)
@@ -160,7 +165,7 @@ func setupFs(newRoot string) error {
 	}
 
 	// Remove the old root filesystem
-	if err := os.RemoveAll(oldRootMnt); err != nil {
+	if err := os.Remove(oldRootMnt); err != nil {
 		log.Printf("failed to remove old root filesystem: %v", err)
 		return err
 	}

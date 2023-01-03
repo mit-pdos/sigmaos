@@ -1,19 +1,35 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
-	"sigmaos/boot"
 
+	"sigmaos/boot"
 	"sigmaos/bootclnt"
 	db "sigmaos/debug"
+	"sigmaos/frame"
+	"sigmaos/kernel"
+	"sigmaos/yaml"
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		db.DFatalf("%v: usage realmid param.yml\n", os.Args[0])
+	if len(os.Args) < 1 {
+		db.DFatalf("%v: usage\n", os.Args[0])
 	}
-	sys, err := kernel.BootUp(os.Args[1], os.Args[2])
+
+	b, serr := frame.ReadFrame(os.Stdin)
+	if serr != nil {
+		db.DFatalf("%v: Scanf err %v\n", os.Args[0], serr)
+	}
+
+	param := kernel.Param{}
+	err := yaml.ReadYamlRdr(bytes.NewReader(b), &param)
+	if err != nil {
+		db.DFatalf("%v: ReadYaml err %v\n", os.Args[0], err)
+	}
+
+	sys, err := boot.BootUp(&param)
 	if err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
@@ -24,6 +40,7 @@ func main() {
 	}
 
 	db.DPrintf(db.KERNEL, "%v: wait for shutdown\n", os.Args[0])
+
 	s := ""
 	_, err = fmt.Scanf("%s", &s)
 	if err != nil {

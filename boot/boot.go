@@ -1,4 +1,4 @@
-package kernel
+package boot
 
 import (
 	"os"
@@ -6,7 +6,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv"
-	"sigmaos/yaml"
 )
 
 type Boot struct {
@@ -14,16 +13,9 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(realm, pn string) (*Boot, error) {
-	db.DPrintf(db.KERNEL, "Boot %s %s\n", realm, pn)
-
-	param := kernel.Param{}
-	err := yaml.ReadYaml(pn, &param)
-	if err != nil {
-		return nil, err
-	}
-	db.DPrintf(db.KERNEL, "Boot %s param %v env %v\n", pn, param, os.Environ())
-	k, err := kernel.MakeKernel(realm, &param)
+func BootUp(param *kernel.Param) (*Boot, error) {
+	db.DPrintf(db.KERNEL, "Boot param %v env %v\n", param, os.Environ())
+	k, err := kernel.MakeKernel(param)
 	if err != nil {
 		return nil, err
 	}

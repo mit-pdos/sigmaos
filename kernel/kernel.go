@@ -28,14 +28,15 @@ const (
 )
 
 type Param struct {
-	Uname    string   `yalm:"uname"`
+	Realm    string   `yalm:"realm, omitempty"`
+	Hostip   string   `yalm:"ip, omitempty"`
 	Services []string `yalm:"services"`
 }
 
 type Kernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	realmId   string
+	Param     *Param
 	namedAddr []string
 	procdIp   string
 	cores     *sessp.Tinterval
@@ -43,35 +44,35 @@ type Kernel struct {
 	ip        string
 }
 
-func mkKernel(realmId string, namedAddr []string, cores *sessp.Tinterval) *Kernel {
+func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel {
 	k := &Kernel{}
-	k.realmId = realmId
+	k.Param = param
 	k.namedAddr = namedAddr
 	k.cores = cores
 	k.svcs = mkServices()
 	return k
 }
 
-func MakeKernel(realm string, p *Param) (*Kernel, error) {
+func MakeKernel(p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	k := mkKernel(realm, fslib.Named(), cores)
+	k := mkKernel(p, fslib.Named(), cores)
 	if p.Services[0] == sp.NAMEDREL {
-		k.makeNameds(p, realm)
+		k.makeNameds()
 		p.Services = p.Services[1:]
 	}
-	proc.SetProgram(p.Uname)
+	proc.SetProgram(p.Realm)
 	proc.SetPid(proc.GenPid())
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	k.ip = ip
-	fsl, err := fslib.MakeFsLibAddr(p.Uname, ip, fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, fslib.Named())
 	if err != nil {
 		return nil, err
 	}
 	k.FsLib = fsl
-	startSrvs(k, p)
+	startSrvs(k)
 	return k, err
 }
 
@@ -92,10 +93,10 @@ func (k *Kernel) ShutDown() error {
 }
 
 // Start nameds and wait until they have started
-func (k *Kernel) makeNameds(p *Param, realmId string) error {
+func (k *Kernel) makeNameds() error {
 	n := len(fslib.Named())
 	ch := make(chan error)
-	k.startNameds(ch, n, p, realmId)
+	k.startNameds(ch, n)
 	var err error
 	for i := 0; i < n; i++ {
 		r := <-ch
@@ -106,26 +107,26 @@ func (k *Kernel) makeNameds(p *Param, realmId string) error {
 	return err
 }
 
-func (k *Kernel) startNameds(ch chan error, n int, p *Param, realmId string) {
+func (k *Kernel) startNameds(ch chan error, n int) {
 	for i := 0; i < n; i++ {
 		// Must happen in a separate thread because MakeKernelNamed
 		// will block until the replicas are able to process requests.
 		go func(i int) {
-			err := bootNamed(k, p.Uname, i, realmId)
+			err := bootNamed(k, k.Param.Realm, i, k.Param.Realm)
 			ch <- err
 		}(i)
 	}
 }
 
 // Start kernel services listed in p
-func startSrvs(k *Kernel, p *Param) error {
+func startSrvs(k *Kernel) error {
 	// XXX should this be GetPid?
-	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, p.Uname, k.namedAddr)
-	n := len(p.Services)
-	for _, s := range p.Services {
-		err := k.BootSub(s, n > 1) // XXX  should kernel do the waiting instead of procd?
+	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, k.Param.Realm, k.namedAddr)
+	n := len(k.Param.Services)
+	for _, s := range k.Param.Services {
+		err := k.BootSub(s, k.Param, n > 1) // XXX kernel should wait instead of procd?
 		if err != nil {
-			db.DPrintf(db.KERNEL, "Start %s err %v\n", p, err)
+			db.DPrintf(db.KERNEL, "Start %s err %v\n", k.Param, err)
 			return err
 		}
 	}
@@ -213,13 +214,14 @@ func addReplPortOffset(peerAddr string) string {
 //
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*Kernel, error) {
-	s := mkKernel(realmId, namedAddr, cores)
-	fsl, err := fslib.MakeFsLibAddr(uname, s.ip, namedAddr)
+	p := &Param{Realm: realmId}
+	s := mkKernel(p, namedAddr, cores)
+	fsl, err := fslib.MakeFsLibAddr(p.Realm, s.ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}
 	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm, namedAddr)
 	return s, nil
 }
 
@@ -243,7 +245,7 @@ func (k *Kernel) BootSubs() error {
 	// Procd must boot first, since other services are spawned as
 	// procs.
 	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
-		err := k.BootSub(s, true)
+		err := k.BootSub(s, nil, true)
 		if err != nil {
 			return err
 		}

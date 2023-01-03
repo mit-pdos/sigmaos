@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"io"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -12,7 +13,15 @@ func ReadYaml(pn string, v interface{}) error {
 		return err
 	}
 	defer file.Close()
-	d := yaml.NewDecoder(file)
+	return ReadYamlRdr(file, v)
+}
+
+func Marshal(v interface{}) ([]byte, error) {
+	return yaml.Marshal(v)
+}
+
+func ReadYamlRdr(rdr io.Reader, v interface{}) error {
+	d := yaml.NewDecoder(rdr)
 	if err := d.Decode(v); err != nil {
 		return err
 	}

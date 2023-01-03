@@ -1,3 +1,2 @@
-uname: "kernel"
 services:
   - named

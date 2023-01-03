@@ -2,7 +2,6 @@ package kernel
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strconv"
 	"sync"
@@ -33,7 +32,7 @@ func (ss *Services) addSvc(s string, sub *Subsystem) {
 	ss.svcs[s] = append(ss.svcs[s], sub)
 }
 
-func (k *Kernel) BootSub(s string, full bool) error {
+func (k *Kernel) BootSub(s string, p *Param, full bool) error {
 	var err error
 	var ss *Subsystem
 	switch s {
@@ -44,7 +43,7 @@ func (k *Kernel) BootSub(s string, full bool) error {
 	case sp.UXREL:
 		ss, err = k.BootFsUxd()
 	case sp.DBREL:
-		ss, err = k.BootDbd()
+		ss, err = k.BootDbd(p.Hostip)
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -100,7 +99,7 @@ func (k *Kernel) BootProcd() (*Subsystem, error) {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.realmId, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, k.realmId, "", false)
+	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, k.Param.Realm, "", false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,22 +110,15 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) BootFsUxd() (*Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.realmId)}, k.realmId, k.procdIp, true)
+	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.Param.Realm)}, k.Param.Realm, k.procdIp, true)
 }
 
 func (k *Kernel) BootFss3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.realmId}, k.realmId, k.procdIp, true)
+	return k.bootSubsystem("fss3d", []string{k.Param.Realm}, k.Param.Realm, k.procdIp, true)
 }
 
-func (k *Kernel) BootDbd() (*Subsystem, error) {
-	var dbdaddr string
-	dbdaddr = os.Getenv("SIGMADBADDR")
-	// XXX don't pass dbd addr as an envvar, it's messy.
-	if dbdaddr == "" {
-		// dbdaddr = "127.0.0.1:3306"
-		dbdaddr = "192.168.0.9:3306"
-	}
-	return k.bootSubsystem("dbd", []string{dbdaddr}, k.realmId, k.procdIp, true)
+func (k *Kernel) BootDbd(hostip string) (*Subsystem, error) {
+	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, k.Param.Realm, k.procdIp, true)
 }
 
 func (k *Kernel) GetProcdIp() string {

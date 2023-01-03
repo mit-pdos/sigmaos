@@ -1,4 +1,3 @@
-uname: "kernel"
 services:
    # order is important
   - named

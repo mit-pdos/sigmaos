@@ -9,6 +9,9 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/frame"
+	"sigmaos/kernel"
+	"sigmaos/yaml"
 )
 
 const (
@@ -33,7 +36,7 @@ type Kernel struct {
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
-	cmd := exec.Command("boot", []string{realmid, realmid + "/" + yml}...)
+	cmd := exec.Command("boot")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -59,10 +62,34 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		}
 	}
 
+	db.DPrintf(db.BOOTCLNT, "Yaml %v\n", yml)
+	param := kernel.Param{}
+	err = yaml.ReadYaml(yml, &param)
+	if err != nil {
+		return nil, err
+	}
+
+	db.DPrintf(db.BOOTCLNT, "Yaml %v\n", param)
+	param.Realm = realmid
+	ip, err := container.LocalIP()
+	if err != nil {
+		return nil, err
+	}
+	param.Hostip = ip
+	b, err := yaml.Marshal(param)
+	if err != nil {
+		return nil, err
+	}
+
+	db.DPrintf(db.BOOTCLNT, "Yaml:%d\n", len(b))
+
+	if err := frame.WriteFrame(stdin, b); err != nil {
+		return nil, err
+	}
+
 	db.DPrintf(db.BOOTCLNT, "Wait for kernel to be booted\n")
 	// wait for kernel to be booted
 	s := ""
-	ip := ""
 	if _, err := fmt.Fscanf(stdout, "%s %s", &s, &ip); err != nil {
 		db.DPrintf(db.BOOTCLNT, "Fscanf err %v %s\n", err, s)
 		return nil, err

@@ -64,7 +64,6 @@ do
   go test $@ sigmaos/group --version=$VERSION
   go test $@ sigmaos/sessclnt --version=$VERSION
 
-  go test $@ sigmaos/shardsvcmgr --version=$bVERSION
   go test $@ sigmaos/cacheclnt --version=$VERSION
 
   # dbd_test and wwwd_test requires mariadb running

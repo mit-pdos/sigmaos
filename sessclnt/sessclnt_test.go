@@ -218,8 +218,8 @@ const (
 	WRITESZ = 4096
 )
 
-func writer(t *testing.T, ch chan error, name string, nds []string) {
-	fsl, err := fslib.MakeFsLibAddr("writer-"+name, nds)
+func writer(t *testing.T, ch chan error, name, lip string, nds []string) {
+	fsl, err := fslib.MakeFsLibAddr("writer-"+name, lip, nds)
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + name
 	stop := false

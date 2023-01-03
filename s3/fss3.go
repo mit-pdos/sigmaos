@@ -28,7 +28,7 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	p := perf.MakePerf("S3")
+	p := perf.MakePerf(perf.S3)
 	defer p.Done()
 
 	commonBuckets := []string{"9ps3", "sigma-common"}

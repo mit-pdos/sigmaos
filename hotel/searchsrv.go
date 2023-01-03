@@ -35,7 +35,7 @@ func RunSearchSrv(n string) error {
 	}
 	s.geoc = pdc
 
-	p := perf.MakePerf("HOTEL_SEARCH")
+	p := perf.MakePerf(perf.HOTEL_SEARCH)
 	defer p.Done()
 
 	return pds.RunServer()

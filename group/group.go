@@ -312,7 +312,7 @@ func RunMember(jobdir, grp string) {
 	g.ReleaseLeadership()
 
 	// Record performance.
-	p := perf.MakePerf("GROUP")
+	p := perf.MakePerf(perf.GROUP)
 	defer p.Done()
 
 	mfs.GetStats().MonitorCPUUtil(nil)

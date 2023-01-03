@@ -23,7 +23,7 @@ import (
 
 func Run(args []string) {
 	perf.Hz()
-	p := perf.MakePerf("NAMED")
+	p := perf.MakePerf(perf.NAMED)
 	defer p.Done()
 
 	addr := args[1]

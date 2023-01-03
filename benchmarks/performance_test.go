@@ -49,7 +49,7 @@ func printResultSummary(rs *benchmarks.Results) {
 
 // Monitor how many cores have been assigned to a realm.
 func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
-	p := perf.MakePerfMulti("TEST", ts.RealmId())
+	p := perf.MakePerfMulti(perf.BENCH, ts.RealmId())
 	go func() {
 		cc := config.MakeConfigClnt(fslib.MakeFsLib("test"))
 		cfgPath := realm.RealmConfPath(ts.RealmId())

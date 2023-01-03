@@ -95,7 +95,7 @@ func RunWww(job string) error {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 
-	www.p = perf.MakePerf("HOTEL_WWW")
+	www.p = perf.MakePerf(perf.HOTEL_WWW)
 	defer www.p.Done()
 
 	if err := www.Started(); err != nil {

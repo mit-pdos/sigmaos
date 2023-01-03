@@ -16,7 +16,7 @@ import (
 func main() {
 	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
-	p := perf.MakePerf("SEQGREP")
+	p := perf.MakePerf(perf.SEQGREP)
 	err := pclnt.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)

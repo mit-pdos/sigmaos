@@ -15,7 +15,7 @@ import (
 func main() {
 	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
-	p := perf.MakePerf("SEQWC")
+	p := perf.MakePerf(perf.SEQWC)
 	defer p.Done()
 	err := pclnt.Started()
 	if err != nil {

@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Record performance.
-	p := perf.MakePerf("CACHECLERK")
+	p := perf.MakePerf(perf.CACHECLERK)
 	defer p.Done()
 
 	pclnt.Started()

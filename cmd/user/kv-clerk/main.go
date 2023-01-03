@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// Record performance.
-	p := perf.MakePerf("KVCLERK")
+	p := perf.MakePerf(perf.KVCLERK)
 	defer p.Done()
 
 	pclnt.Started()

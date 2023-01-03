@@ -79,7 +79,7 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata, sbc *mr.ScanByteCounter) (
 }
 
 func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
-	p := perf.MakePerf("SEQWC")
+	p := perf.MakePerf(perf.SEQWC)
 	sbc := mr.MakeScanByteCounter(p)
 	data := make(Tdata)
 	start := time.Now()

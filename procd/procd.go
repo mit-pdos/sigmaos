@@ -80,7 +80,7 @@ func RunProcd(realmbin string, grantedCoresIv string, spawningSys bool) {
 
 	pd.initCores(grantedCoresIv)
 
-	pd.perf = perf.MakePerf("PROCD")
+	pd.perf = perf.MakePerf(perf.PROCD)
 	defer pd.perf.Done()
 
 	// Make namespace isolation dir.

@@ -96,7 +96,7 @@ func RunReserveSrv(job string) error {
 	if err != nil {
 		return err
 	}
-	p := perf.MakePerf("HOTEL_RESERVE")
+	p := perf.MakePerf(perf.HOTEL_RESERVE)
 	defer p.Done()
 	return pds.RunServer()
 }

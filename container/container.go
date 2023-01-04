@@ -5,6 +5,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 )
 
 //
@@ -16,10 +17,10 @@ const (
 	PROC   = "PROC"
 )
 
-var envvar = []string{"SIGMADEBUG", "SIGMAPERF", "SIGMANAMED", "SIGMAROOTFS"}
+var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED, proc.SIGMAROOTFS}
 
-func SIGMAROOTFS() (string, error) {
-	fs := os.Getenv("SIGMAROOTFS")
+func SigmaRootFs() (string, error) {
+	fs := proc.GetSigmaRootFs()
 	if fs == "" {
 		return "", fmt.Errorf("%v: ExecContainer: SIGMAROOTFS isn't set; `run source env/init.sh`\n", os.Args[0])
 	}

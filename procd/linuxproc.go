@@ -46,8 +46,8 @@ func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
 	p.attr = a
 	p.stolen = stolen
 	p.Env = p.attr.GetEnv()
-	db.DPrintf(db.PROCD, "Procd init: %v %v\n", p.SysPid, p.Env)
 	// p.Env = append(os.Environ(), p.attr.GetEnv()...)
+	db.DPrintf(db.PROCD, "Procd init: %v %v\n", p.SysPid, p.Env)
 	return p
 }
 

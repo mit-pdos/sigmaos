@@ -3,6 +3,7 @@ package kernel
 import (
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -56,12 +57,12 @@ func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel 
 func MakeKernel(p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
 	k := mkKernel(p, fslib.Named(), cores)
+	proc.SetProgram(os.Args[0])
+	proc.SetPid(proc.GenPid())
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds()
 		p.Services = p.Services[1:]
 	}
-	proc.SetProgram(p.Realm)
-	proc.SetPid(proc.GenPid())
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 // Start kernel services listed in p
 func startSrvs(k *Kernel) error {
 	// XXX should this be GetPid?
-	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, k.Param.Realm, k.namedAddr)
+	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, os.Args[0], k.namedAddr)
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
 		err := k.BootSub(s, k.Param, n > 1) // XXX kernel should wait instead of procd?

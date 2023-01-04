@@ -59,7 +59,7 @@ func RunKernelContainer(cmd *exec.Cmd, realm string) error {
 }
 
 func execKContainer() error {
-	rootfs, err := SIGMAROOTFS()
+	rootfs, err := SigmaRootFs()
 	if err != nil {
 		return err
 	}

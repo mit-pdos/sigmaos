@@ -21,6 +21,11 @@ const (
 	SIGMANETFAIL        = "SIGMANETFAIL"
 	SIGMAPERF           = "SIGMAPERF"
 	SIGMADEBUG          = "SIGMADEBUG"
+	SIGMANAMED          = "SIGMANAMED"
+	SIGMAROOTFS         = "SIGMAROOTFS"
+
+	PATH = "PATH" // for finding binaries in rootfs
+	UBIN = "/bin" // for user binaries in rootfs
 )
 
 func GenPid() Tpid {
@@ -90,6 +95,18 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
+}
+
+func GetSigmaNamed() string {
+	return os.Getenv(SIGMANAMED)
+}
+
+func GetPath() string {
+	return os.Getenv(PATH)
+}
+
+func GetSigmaRootFs() string {
+	return os.Getenv(SIGMAROOTFS)
 }
 
 func GetLabels(envvar string) map[string]bool {

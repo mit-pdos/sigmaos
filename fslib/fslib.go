@@ -2,13 +2,13 @@ package fslib
 
 import (
 	"net"
-	"os"
 	"runtime/debug"
 	"strings"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
+	"sigmaos/proc"
 	"sigmaos/sessp"
 )
 
@@ -17,7 +17,7 @@ type FsLib struct {
 }
 
 func NamedAddrs() string {
-	addrs := os.Getenv("SIGMANAMED")
+	addrs := proc.GetSigmaNamed()
 	if addrs == "" {
 		debug.PrintStack()
 		db.DFatalf("Getenv error: missing SIGMANAMED")

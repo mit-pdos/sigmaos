@@ -129,6 +129,12 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
+	if p.Privileged {
+		p.AppendEnv(PATH, GetPath()) // inherit from kernel/boot
+	} else {
+		p.AppendEnv(PATH, UBIN)
+	}
 }
 
 // Finalize env details which can only be set once a physical machine has been

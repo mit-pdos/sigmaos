@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
@@ -45,7 +46,7 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	cmd.Path = pn
 	cmd.Args = append([]string{PROC, realmid}, cmd.Args...)
 
-	db.DPrintf(db.CONTAINER, "Contain proc cmd %v %v\n", cmd, os.Environ())
+	db.DPrintf(db.CONTAINER, "Contain proc cmd %v os env %v p\n", cmd, os.Environ())
 	return nil
 }
 
@@ -141,7 +142,7 @@ func setupFs(newRoot string) error {
 	}
 
 	// Mount /bin
-	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, "/bin"), "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, proc.UBIN), "none", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount /bin: %v", err)
 		return err
 	}

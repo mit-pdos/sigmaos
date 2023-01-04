@@ -45,8 +45,9 @@ func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
 	p.pd = pd
 	p.attr = a
 	p.stolen = stolen
-	db.DPrintf(db.PROCD, "Procd init: %v\n", p.SysPid)
-	p.Env = append(os.Environ(), p.attr.GetEnv()...)
+	p.Env = p.attr.GetEnv()
+	db.DPrintf(db.PROCD, "Procd init: %v %v\n", p.SysPid, p.Env)
+	// p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	return p
 }
 
@@ -61,7 +62,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 }
 
 func (p *LinuxProc) run() error {
-	db.DPrintf(db.PROCD, "Procd run: %v\n", p.attr)
+	db.DPrintf(db.PROCD, "Procd run: %v env %v\n", p.attr, p.Env)
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.attr.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {

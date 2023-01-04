@@ -37,8 +37,9 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 }
 
 // Check if we need to download the binary.
-func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
+func (pd *Procd) needToDownload(uxBinPath string) bool {
 	// If we can't stat the bin through ux, we try to download it.
+	db.DPrintf(db.PROCD, "uxp %s\n", uxBinPath)
 	_, err := pd.Stat(uxBinPath)
 	if err != nil {
 		// If we haven't downloaded any procs in this version yet, make a local dir
@@ -63,7 +64,7 @@ func (pd *Procd) downloadProcBin(program string) {
 	s3BinPath := path.Join(sp.S3, "~local", pd.realm, "/bin/", program)
 
 	// If we already downloaded the program & it is up-to-date, return.
-	if !pd.needToDownload(uxBinPath, s3BinPath) {
+	if !pd.needToDownload(uxBinPath) {
 		return
 	}
 

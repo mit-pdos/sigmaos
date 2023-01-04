@@ -9,7 +9,7 @@ DIR=$(dirname $0)
 
 # install aws credentials
 mkdir -p $SIGMAHOME/.aws
-SECRETS="aws/.aws/fk-credentials"
+SECRETS="aws/.aws/credentials"
 for f in $SECRETS
 do
   yes | gpg --output $f --decrypt ${f}.gpg || exit 1

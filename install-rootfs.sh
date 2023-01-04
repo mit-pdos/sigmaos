@@ -36,11 +36,13 @@ echo -n > rootfs/dev/null
 
 # put rootfs in place
 mkdir -p $SIGMAROOTFS || exit 1
-rmdir $SIGMAROOTFS || exit 1
+rm -rf $SIGMAROOTFS || exit 1
 mv rootfs $SIGMAROOTFS || exit 1
 
 # build sigmaos
-./make.sh --norace   || exit 1
+./make.sh --norace || exit 1
+
+./install-aws-cred.sh
 
 # install sigmaos in rootfs
 ./install.sh --realm $REALM  || exit 1
@@ -62,7 +64,5 @@ contain $REALM pacman -S go
 
 # sanity check
 go test -v sigmaos/fslib --version=$(cat VERSION.txt) -run InitFs
-
-./install-aws-cred.sh
 
 echo "run `source env/init.sh` to set SIGMAPATH"

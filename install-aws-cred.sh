@@ -14,6 +14,6 @@ for f in $SECRETS
 do
   yes | gpg --output $f --decrypt ${f}.gpg || exit 1
 done
-cp aws/.aws/fk-credentials $SIGMAHOME/.aws/credentials 
+cp aws/.aws/credentials $SIGMAHOME/.aws/credentials 
 chmod 600 $SIGMAHOME/.aws/credentials
 rm $SECRETS

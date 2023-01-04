@@ -128,7 +128,7 @@ func TestMapper(t *testing.T) {
 
 	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err MkBins %v", err)
-	m, err := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
+	m, err := mr.MkMapper(ts.FsLib, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
 	assert.Nil(t, err, "MkMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)

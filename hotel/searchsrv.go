@@ -35,7 +35,7 @@ func RunSearchSrv(n string) error {
 	}
 	s.geoc = pdc
 
-	p, err := perf.MakePerf("HOTEL_SEARCH")
+	p, err := perf.MakePerf(perf.HOTEL_SEARCH)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

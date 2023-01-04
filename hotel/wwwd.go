@@ -115,7 +115,7 @@ func RunWww(job string) error {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}
 
-	perf, err := perf.MakePerf("HOTEL_WWW")
+	perf, err := perf.MakePerf(perf.HOTEL_WWW)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

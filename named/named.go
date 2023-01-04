@@ -24,7 +24,7 @@ import (
 
 func Run(args []string) {
 	perf.Hz()
-	p, r := perf.MakePerf("NAMED")
+	p, r := perf.MakePerf(perf.NAMED)
 	if r != nil {
 		log.Printf("MakePerf err %v\n", r)
 	}

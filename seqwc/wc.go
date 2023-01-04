@@ -79,7 +79,7 @@ func WcData(fsl *fslib.FsLib, dir string, data Tdata, sbc *mr.ScanByteCounter) (
 }
 
 func Wc(fsl *fslib.FsLib, dir string, out string) (int, error) {
-	p, err := perf.MakePerf("SEQWC")
+	p, err := perf.MakePerf(perf.SEQWC)
 	if err != nil {
 		return 0, err
 	}

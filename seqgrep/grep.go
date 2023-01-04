@@ -40,7 +40,7 @@ func grepline(n int, line string, sbc *mr.ScanByteCounter) int {
 }
 
 func Grep(rdr io.Reader) int {
-	p, err := perf.MakePerf("SEQGREP")
+	p, err := perf.MakePerf(perf.SEQGREP)
 	if err != nil {
 		log.Fatalf("MakePerf err %v\n", err)
 	}

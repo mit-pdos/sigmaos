@@ -225,7 +225,7 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p, err := perf.MakePerf("MRREDUCER")
+	p, err := perf.MakePerf(perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -274,7 +274,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p, err := perf.MakePerf("MRMAPPER")
+	p, err := perf.MakePerf(perf.MRMAPPER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

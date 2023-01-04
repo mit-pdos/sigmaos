@@ -356,7 +356,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 func TestBenchSearch(t *testing.T) {
 	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	p, err := perf.MakePerf("TEST")
+	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -386,7 +386,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	pf, err := perf.MakePerf("TEST")
+	pf, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -400,7 +400,7 @@ func TestBenchSearchK8s(t *testing.T) {
 func TestBenchGeo(t *testing.T) {
 	ts := makeTstate(t, hotel.HotelSvcs, hotel.NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	p, err := perf.MakePerf("TEST")
+	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -422,7 +422,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	pf, err := perf.MakePerf("TEST")
+	pf, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {

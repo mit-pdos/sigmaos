@@ -80,7 +80,7 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 
 	pd.initCores(grantedCoresIv)
 
-	perf, err := perf.MakePerf("PROCD")
+	perf, err := perf.MakePerf(perf.PROCD)
 	if err != nil {
 		log.Printf("MakePerf err %v\n", err)
 	} else {

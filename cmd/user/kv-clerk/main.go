@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf("KVCLERK")
+	p, err := perf.MakePerf(perf.KVCLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -42,11 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = "./perf-output/" // XXX needs to work inside and outside container
-	PPROF       = "_PPROF"
-	PPROF_MEM   = "_PPROF_MEM"
-	CPU         = "_CPU"
-	TPT         = "_TPT"
+	OUTPUT_PATH = sp.UXROOT + "perf-output/"
 )
 
 type Tload [3]float64
@@ -55,10 +51,14 @@ func (t Tload) String() string {
 	return fmt.Sprintf("[%.1f %.1f %.1f]", t[0], t[1], t[2])
 }
 
-var labels map[string]bool
+var labels map[Tselector]bool
 
 func init() {
-	labels = proc.GetLabels(proc.SIGMAPERF)
+	labelstr := proc.GetLabels(proc.SIGMAPERF)
+	labels = make(map[Tselector]bool, len(labelstr))
+	for k, v := range labelstr {
+		labels[Tselector(k)] = v
+	}
 }
 
 var loadfile *os.File
@@ -68,7 +68,7 @@ var loadfile *os.File
 // able to run.
 type Perf struct {
 	mu             sync.Mutex
-	name           string
+	selector       Tselector
 	done           uint32
 	util           bool
 	pprof          bool
@@ -88,15 +88,15 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(name string) (*Perf, error) {
-	return MakePerfMulti(name, "")
+func MakePerf(s Tselector) (*Perf, error) {
+	return MakePerfMulti(s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(name string, name2 string) (*Perf, error) {
+func MakePerfMulti(s Tselector, s2 Tselector) (*Perf, error) {
 	p := &Perf{}
-	p.name = name
+	p.selector = s
 	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
@@ -115,23 +115,23 @@ func MakePerfMulti(name string, name2 string) (*Perf, error) {
 		return nil, err
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
-	if name2 != "" {
-		basePath += "-" + name2
+	if s2 != "" {
+		basePath += "-" + string(s2)
 	}
 	// Set up pprof caputre
-	if ok := labels[name+PPROF]; ok {
+	if ok := labels[s+PPROF]; ok {
 		p.setupPprof(basePath + "-pprof.out")
 	}
 	// Set up pprof caputre
-	if ok := labels[name+PPROF_MEM]; ok {
+	if ok := labels[s+PPROF_MEM]; ok {
 		p.setupPprofMem(basePath + "-pprof-mem.out")
 	}
 	// Set up cpu util capture
-	if ok := labels[name+CPU]; ok {
+	if ok := labels[s+CPU]; ok {
 		p.setupCPUUtil(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
 	}
 	// Set up throughput caputre
-	if ok := labels[name+TPT]; ok {
+	if ok := labels[s+TPT]; ok {
 		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
 	return p, nil

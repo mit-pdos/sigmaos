@@ -96,7 +96,7 @@ func RunReserveSrv(job string) error {
 	if err != nil {
 		return err
 	}
-	p, err := perf.MakePerf("HOTEL_RESERVE")
+	p, err := perf.MakePerf(perf.HOTEL_RESERVE)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -28,7 +28,7 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	p, err := perf.MakePerf("S3")
+	p, err := perf.MakePerf(perf.S3)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}

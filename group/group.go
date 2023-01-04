@@ -316,7 +316,7 @@ func RunMember(jobdir, grp string) {
 	g.ReleaseLeadership()
 
 	// Record performance.
-	p, err := perf.MakePerf("GROUP")
+	p, err := perf.MakePerf(perf.GROUP)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

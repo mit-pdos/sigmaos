@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf("CACHECLERK")
+	p, err := perf.MakePerf(perf.CACHECLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

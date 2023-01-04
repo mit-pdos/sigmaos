@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = sp.UXROOT + "perf-output/"
+	OUTPUT_PATH = "./perf-output/"
 )
 
 type Tload [3]float64

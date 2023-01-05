@@ -13,6 +13,16 @@ import (
 	db "sigmaos/debug"
 )
 
+// Bridge names and veth names
+const (
+	BRIDGENAME = "sb"
+	VethPrefix = "sp"
+)
+
+func BridgeName(realm string) string {
+	return BRIDGENAME + realm
+}
+
 //
 // Network setup for a kernel container.  Each kernel gets its own
 // network address.

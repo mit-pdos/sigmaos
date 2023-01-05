@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"os"
 	"os/exec"
 
@@ -29,13 +30,22 @@ func main() {
 		env = append(env, s)
 	}
 	cmd.Env = env
+
+	mybridge := true
+	_, err := net.InterfaceByName(container.BridgeName(os.Args[1]))
+	if err == nil {
+		mybridge = false
+	}
+
 	if err := container.RunKernelContainer(cmd, os.Args[1]); err != nil {
 		log.Fatalf("%s: run container err %v\n", os.Args[0], err)
 	}
 	if err := cmd.Wait(); err != nil {
 		log.Fatalf("%s: wait err %v\n", os.Args[0], err)
 	}
-	if err := container.DelScnet(cmd.Process.Pid, os.Args[1]); err != nil {
-		log.Fatalf("%s: failed to delete bridge %v\n", os.Args[0], err)
+	if mybridge {
+		if err := container.DelScnet(cmd.Process.Pid, os.Args[1]); err != nil {
+			log.Fatalf("%s: failed to delete bridge %v\n", os.Args[0], err)
+		}
 	}
 }

@@ -1,8 +1,3 @@
-//
-// Code from https://lk4d4.darth.io/posts/unpriv4/
-//
-
-// You should run this binary with suid set.
 package main
 
 import (
@@ -20,20 +15,16 @@ import (
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
 
-	"sigmaos/container"
+	c "sigmaos/container"
 )
 
-const (
-	BRIDGENAME = "sb"
-	vethPrefix = "sp"
-)
+//
+// Helper program to create and delete bridge, which must run with
+// suid set.  Uses code from https://lk4d4.darth.io/posts/unpriv4/
+//
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-}
-
-func bridgeName(realm string) string {
-	return BRIDGENAME + realm
 }
 
 func insertRule(ipt *iptables.IPTables, rule []string) error {
@@ -58,9 +49,9 @@ func addIpTables(iface, realm string) error {
 		return err
 	}
 	rules := [][]string{
-		[]string{"-i", bridgeName(realm), "-o", bridgeName(realm), "-j", "ACCEPT"},
-		[]string{"-i", iface, "-o", bridgeName(realm), "-j", "ACCEPT"},
-		[]string{"-i", bridgeName(realm), "-o", iface, "-j", "ACCEPT"},
+		[]string{"-i", c.BridgeName(realm), "-o", c.BridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", iface, "-o", c.BridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", c.BridgeName(realm), "-o", iface, "-j", "ACCEPT"},
 	}
 	for _, r := range rules {
 		if err := insertRule(ipt, r); err != nil {
@@ -77,9 +68,9 @@ func delIpTables(iface, realm string) error {
 		return err
 	}
 	rules := [][]string{
-		[]string{"-i", bridgeName(realm), "-o", bridgeName(realm), "-j", "ACCEPT"},
-		[]string{"-i", iface, "-o", bridgeName(realm), "-j", "ACCEPT"},
-		[]string{"-i", bridgeName(realm), "-o", iface, "-j", "ACCEPT"},
+		[]string{"-i", c.BridgeName(realm), "-o", c.BridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", iface, "-o", c.BridgeName(realm), "-j", "ACCEPT"},
+		[]string{"-i", c.BridgeName(realm), "-o", iface, "-j", "ACCEPT"},
 	}
 	for _, r := range rules {
 		if err := deleteRule(ipt, r); err != nil {
@@ -90,9 +81,9 @@ func delIpTables(iface, realm string) error {
 }
 
 func createBridge(iface, ip string, realm string) error {
-	log.Printf("create bridge %v %s\n", bridgeName(realm), realm)
+	log.Printf("create bridge %v %s\n", c.BridgeName(realm), realm)
 	// try to get bridge by name, if it already exists then just exit
-	_, err := net.InterfaceByName(bridgeName(realm))
+	_, err := net.InterfaceByName(c.BridgeName(realm))
 	if err == nil {
 		return nil
 	}
@@ -101,7 +92,7 @@ func createBridge(iface, ip string, realm string) error {
 	}
 	// create *netlink.Bridge object
 	la := netlink.NewLinkAttrs()
-	la.Name = bridgeName(realm)
+	la.Name = c.BridgeName(realm)
 	br := &netlink.Bridge{LinkAttrs: la}
 	if err := netlink.LinkAdd(br); err != nil {
 		return fmt.Errorf("bridge creation: %v", err)
@@ -126,14 +117,14 @@ func createBridge(iface, ip string, realm string) error {
 
 func createVethPair(pid int, realm string) error {
 	// get bridge to set as master for one side of veth-pair
-	br, err := netlink.LinkByName(bridgeName(realm))
+	br, err := netlink.LinkByName(c.BridgeName(realm))
 	if err != nil {
 		return err
 	}
 	// generate names for interfaces
 	x1, x2 := rand.Intn(10000), rand.Intn(10000)
-	parentName := fmt.Sprintf("%s%d", vethPrefix, x1)
-	peerName := fmt.Sprintf("%s%d", vethPrefix, x2)
+	parentName := fmt.Sprintf("%s%d", c.VethPrefix, x1)
+	peerName := fmt.Sprintf("%s%d", c.VethPrefix, x2)
 
 	log.Printf("createVethPair parent %v peer %v\n", parentName, peerName)
 
@@ -161,7 +152,7 @@ func createVethPair(pid int, realm string) error {
 }
 
 func delBridge(iface, realm string) error {
-	cmd := exec.Command("ip", "link", "delete", "dev", bridgeName(realm))
+	cmd := exec.Command("ip", "link", "delete", "dev", c.BridgeName(realm))
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return err
 	}
@@ -175,7 +166,7 @@ func main() {
 	if len(os.Args) != 5 {
 		log.Fatalf("%s: Usage <up> <pid> <ip> <realm>\n", os.Args[0])
 	}
-	iface, err := container.LocalInterface()
+	iface, err := c.LocalInterface()
 	if err != nil {
 		log.Fatalf("%s: LocalInterface err %v\n", os.Args[0], err)
 	}

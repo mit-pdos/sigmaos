@@ -3,8 +3,6 @@
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-VERSION=$(cat "${VERSION_FILE}")
-
 ./install.sh --realm testrealm # --from s3
 
 for ND in :1111 :1111,:1112,:1113

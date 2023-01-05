@@ -6,12 +6,11 @@
 #
 
 usage() {
-    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE] [--version VERSION]" 1>&2
+    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE]" 1>&2
 }
 
 FROM="local"
 REALM=""
-VERSION=""
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -23,11 +22,6 @@ while [[ "$#" -gt 0 ]]; do
   --realm)
     shift
     REALM=$1
-    shift
-    ;;
-  --version)
-    shift
-    VERSION=$1
     shift
     ;;
   --profile)
@@ -59,9 +53,6 @@ echo "install sigmaos in $SIGMAHOME/$REALM"
 
 rm -rf $SIGMAHOME/$REALM/bin/*/*
 if [ $FROM == "local" ]; then
-  if [ -z "$VERSION" ]; then
-    VERSION=$(cat "${VERSION_FILE}")
-  fi
   mkdir -p $SIGMAHOME/$REALM/bin/
   for d in "linux" "kernel" "user"; do
       mkdir -p $SIGMAHOME/$REALM/bin/$d

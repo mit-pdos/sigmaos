@@ -10,4 +10,3 @@ mr/par-mr.out
 perf/perf.test
 *.err
 *.pdf
-VERSION.txt

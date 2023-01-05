@@ -63,6 +63,6 @@ contain $REALM pacman -Sy  || exit 1
 contain $REALM pacman -S go
 
 # sanity check
-go test -v sigmaos/fslib --version=$(cat VERSION.txt) -run InitFs
+go test -v sigmaos/fslib --run InitFs
 
 echo "run `source env/init.sh` to set SIGMAPATH"

@@ -1,13 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target TARGET] [--version VERSION]" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target TARGET]" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
-VERSION=""
 PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -22,11 +21,6 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
-    shift
-    ;;
-  --version)
-    shift
-    VERSION=$1
     shift
     ;;
   --parallel)
@@ -50,16 +44,8 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-# If no explicit version is passed in, set the version.
-if [ -z "$VERSION" ]; then
-  VERSION=$(date +%s)
-fi
-
 DIR=$(dirname $0)
 . $DIR/env/env.sh
-
-echo $VERSION > $VERSION_FILE
-echo "Version $(cat $VERSION_FILE)"
 
 mkdir -p bin/kernel
 mkdir -p bin/user

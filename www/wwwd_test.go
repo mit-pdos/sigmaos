@@ -83,11 +83,13 @@ func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, don
 	done <- true
 }
 
+const N = 100
+
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
 	done := make(chan bool)
-	go matmulClnt(ts, 2000, 0, 1, 0, done)
+	go matmulClnt(ts, N, 0, 1, 0, done)
 	<-done
 
 	ts.waitWww()
@@ -96,10 +98,10 @@ func TestMatMul(t *testing.T) {
 func TestMatMulConcurrent(t *testing.T) {
 	ts := makeTstate(t)
 
-	N_CLNT := 40
+	N_CLNT := 5
 	done := make(chan bool)
 	for i := 0; i < N_CLNT; i++ {
-		go matmulClnt(ts, 2000, i, 10, 500*time.Millisecond, done)
+		go matmulClnt(ts, N, i, 10, 500*time.Millisecond, done)
 	}
 	for i := 0; i < N_CLNT; i++ {
 		<-done

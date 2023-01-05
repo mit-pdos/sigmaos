@@ -132,8 +132,6 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
 	if p.Privileged {
 		p.AppendEnv(PATH, GetPath()) // inherit from boot
-	} else {
-		p.AppendEnv(PATH, UBIN)
 	}
 }
 

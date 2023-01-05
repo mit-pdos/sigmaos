@@ -25,7 +25,6 @@ const (
 	SIGMAROOTFS         = "SIGMAROOTFS"
 
 	PATH = "PATH" // for finding binaries in rootfs
-	UBIN = "/bin" // for user binaries in rootfs
 )
 
 func GenPid() Tpid {

@@ -10,10 +10,13 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
+)
+
+const (
+	UBIN = "/bin"
 )
 
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
@@ -141,8 +144,8 @@ func setupFs(newRoot string) error {
 		return err
 	}
 
-	// Mount /bin
-	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, proc.UBIN), "none", syscall.MS_BIND, ""); err != nil {
+	// Mount bin/user on /bin so that user procs can run only programs from /bin/user
+	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, UBIN), "none", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount /bin: %v", err)
 		return err
 	}

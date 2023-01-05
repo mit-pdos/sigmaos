@@ -14,7 +14,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	// sp "sigmaos/sigmap"
 )
 
 const (
@@ -46,7 +45,6 @@ func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
 	p.attr = a
 	p.stolen = stolen
 	p.Env = p.attr.GetEnv()
-	// p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	db.DPrintf(db.PROCD, "Procd init: %v %v\n", p.SysPid, p.Env)
 	return p
 }
@@ -62,7 +60,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 }
 
 func (p *LinuxProc) run() error {
-	db.DPrintf(db.PROCD, "Procd run: %v env %v\n", p.attr, p.Env)
+	db.DPrintf(db.PROCD, "Procd run: %v\n", p.attr)
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.attr.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
@@ -94,7 +92,9 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(path.Join("/bin/", path.Base(p.attr.Program)), p.attr.Args...)
+		// procd downloads user programs into bin/user and container
+		// mounts dir as /bin.
+		cmd = exec.Command(path.Join(container.UBIN, path.Base(p.attr.Program)), p.attr.Args...)
 		if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
 			db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
 			p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))

@@ -15,20 +15,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var version string
 var realmid string // Use this realm to run tests instead of starting a new one. This is used for multi-machine tests.
 
 // Read & set the proc version.
 func init() {
-	flag.StringVar(&version, "version", "none", "version")
 	flag.StringVar(&realmid, "realm", "testrealm", "realm id")
-}
-
-func setVersion() {
-	if version == "" || version == "none" || !flag.Parsed() {
-		db.DFatalf("Version not set in test")
-	}
-	proc.Version = version
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -104,7 +95,6 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 }
 
 func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
-	setVersion()
 	k, err := bootclnt.BootKernel(realmid, true, yml)
 	if err != nil {
 		return nil, err

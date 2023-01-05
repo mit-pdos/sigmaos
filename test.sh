@@ -31,47 +31,47 @@ do
   #
   # test with a kernel with just named
   #
-  go test $@ sigmaos/reader --version=$VERSION
-  go test $@ sigmaos/writer --version=$VERSION
-  go test $@ sigmaos/stats --version=$VERSION
-  go test $@ sigmaos/fslib --version=$VERSION
-  go test $@ sigmaos/semclnt --version=$VERSION
-  go test $@ sigmaos/electclnt --version=$VERSION
+  go test $@ sigmaos/reader
+  go test $@ sigmaos/writer
+  go test $@ sigmaos/stats
+  go test $@ sigmaos/fslib
+  go test $@ sigmaos/semclnt
+  go test $@ sigmaos/electclnt
   
   #
   # test proxy
   #
   
-  go test $@ sigmaos/proxy --version=$VERSION
+  go test $@ sigmaos/proxy
   
   #
   # tests a full kernel (one "fake" realm)
   #
   
-  go test $@ sigmaos/procclnt --version=$VERSION
+  go test $@ sigmaos/procclnt
 
-  go test $@ sigmaos/ux --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/ux/~local/fslibtest/" -run ReadPerf
+  go test $@ sigmaos/ux
+  go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
   
-  go test $@ sigmaos/s3 --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+  go test $@ sigmaos/s3
+  go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
   
-  go test $@ sigmaos/bootclnt --version=$VERSION
-  go test $@ sigmaos/leaderclnt --version=$VERSION
-  go test $@ sigmaos/leadertest --version=$VERSION
-  go test $@ sigmaos/snapshot --version=$VERSION
+  go test $@ sigmaos/bootclnt
+  go test $@ sigmaos/leaderclnt
+  go test $@ sigmaos/leadertest
+  go test $@ sigmaos/snapshot
   
-  go test $@ sigmaos/group --version=$VERSION
-  go test $@ sigmaos/sessclnt --version=$VERSION
+  go test $@ sigmaos/group
+  go test $@ sigmaos/sessclnt
 
-  go test $@ sigmaos/cacheclnt --version=$VERSION
+  go test $@ sigmaos/cacheclnt
 
   # dbd_test and wwwd_test requires mariadb running
-  pgrep mariadb >/dev/null && go test $@ sigmaos/www --version=$VERSION
+  pgrep mariadb >/dev/null && go test $@ sigmaos/www
   
-  go test $@ sigmaos/mr --version=$VERSION
-  go test $@ sigmaos/kv --version=$VERSION
-  go test $@ sigmaos/hotel --version=$VERSION
+  go test $@ sigmaos/mr
+  go test $@ sigmaos/kv
+  go test $@ sigmaos/hotel
   
   # XXX broken
   # go test $@ sigmaos/cmd/user/test2pc
@@ -81,7 +81,7 @@ do
   # test with realms
   #
   
-  go test $@ sigmaos/realm --version=$VERSION
+  go test $@ sigmaos/realm
   
   # run without realm?
   # XXX needs fixing

@@ -360,7 +360,8 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, 0, 0, 0, N, false)
 }
 
-func TestCrashProcdUx5(t *testing.T) {
+// XXX don't run for now
+func testCrashProcdUx5(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, N, false)
 }

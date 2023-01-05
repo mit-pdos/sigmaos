@@ -1420,7 +1420,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-// XXX disable for now
+// XXX don't run for now
 func testWriteFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	N_CLI := 10
@@ -1553,7 +1553,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-// XXX disable for now
+// XXX don't run for now
 func testReadFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	N_CLI := 10

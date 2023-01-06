@@ -14,18 +14,25 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+// Procd caches binary locally at the sigma patname cacheDir().  When
+// running ./install.sh locally, it will copy binaries in the cache
+// and no downloads are necessary.  XXX make cache searchpath aware
+func cacheDir(pn string) string {
+	return path.Join(sp.UXBIN, "user", path.Base(pn))
+}
+
 // Try to download a proc at pn to local Ux dir.
 func (pd *Procd) tryDownloadProcBin(pn string) error {
 	start := time.Now()
-	db.DPrintf(db.ALWAYS, "tryDownloadProcBin %s\n", pn)
-	uxBinPath := path.Join(sp.UXBIN, path.Base(pn))
+	db.DPrintf(db.PROCD, "tryDownloadProcBin %s\n", pn)
+	cachePn := cacheDir(pn)
 	// Copy the binary from s3 to a temporary file.
-	tmppath := path.Join(uxBinPath + "-tmp-" + rand.String(16))
+	tmppath := path.Join(cachePn + "-tmp-" + rand.String(16))
 	if err := pd.CopyFile(pn, tmppath); err != nil {
 		return err
 	}
 	// Rename the temporary file.
-	if err := pd.Rename(tmppath, uxBinPath); err != nil {
+	if err := pd.Rename(tmppath, cachePn); err != nil {
 		// If another procd (or another thread on this procd) already completed the
 		// download, then we consider the download successful. Any other error
 		// (e.g. ux crashed) is unexpected.
@@ -39,11 +46,13 @@ func (pd *Procd) tryDownloadProcBin(pn string) error {
 	return nil
 }
 
-// Check if we need to download the binary.
+// Check if we need to download the binary.  XXX check that
+// pn isn't newer than cached version.
 func (pd *Procd) needToDownload(pn string) bool {
 	// If we can't stat the bin through ux, we try to download it.
-	db.DPrintf(db.PROCD, "uxp %s\n", pn)
-	_, err := pd.Stat(pn)
+	cachePn := cacheDir(pn)
+	_, err := pd.Stat(cachePn)
+	db.DPrintf(db.PROCD, "uxp %s err %v\n", cachePn, err)
 	if err != nil {
 		return true
 	}
@@ -72,14 +81,10 @@ func (pd *Procd) downloadProcBin(p *proc.Proc) error {
 }
 
 func (pd *Procd) downloadProcPath(pn string) error {
-	// If we already downloaded or it was installed locally pn and it
-	// is up-to-date, return.
 	if !pd.needToDownload(pn) {
-		db.DPrintf(db.PROCD, "Program at %v", pn)
+		db.DPrintf(db.PROCD, "Program cached at %v", cacheDir(pn))
 		return nil
 	}
-
-	db.DPrintf(db.ALWAYS, "Need to download %v", pn)
 
 	// Find the number of instances of this proc which have been claimed, and are
 	// waiting to be downloaded.

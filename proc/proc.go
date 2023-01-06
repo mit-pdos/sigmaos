@@ -144,11 +144,10 @@ func (p *Proc) setBaseEnv() {
 		if p.Privileged {
 			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/kernel")
 		} else {
-			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/user")
+			// XXX add user after removing user from program names
+			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/")
 		}
-		spath = sp.UXBIN + ":" + spath
 	}
-	p.AppendEnv(SIGMAPATH, spath)
 	p.AppendEnv(SIGMAPATH, spath)
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.Pid.String())
@@ -157,6 +156,7 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
+	p.AppendEnv(SIGMAREALM, GetRealm())
 	if p.Privileged {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
 	}

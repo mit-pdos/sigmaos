@@ -3,6 +3,7 @@ package proc
 import (
 	"fmt"
 	"log"
+	"os"
 	"path"
 	"time"
 
@@ -40,18 +41,18 @@ func (pid Tpid) String() string {
 }
 
 type Proc struct {
-	Pid          Tpid      // SigmaOS PID
-	Privileged   bool      // kernel proc?
-	ProcDir      string    // SigmaOS directory to store this proc's state
-	ParentDir    string    // SigmaOS parent proc directory
-	Program      string    // Program to run
-	Args         []string  // Args
-	Env          []string  // Environment variables
-	Type         Ttype     // Type
-	Ncore        Tcore     // Number of cores requested
-	Mem          Tmem      // Amount of memory required in MB
-	SpawnTime    time.Time // Time at which the proc was spawned
-	sharedTarget string    // Target of shared state
+	Pid          Tpid              // SigmaOS PID
+	Privileged   bool              // kernel proc?
+	ProcDir      string            // SigmaOS directory to store this proc's state
+	ParentDir    string            // SigmaOS parent proc directory
+	Program      string            // Program to run
+	Args         []string          // Args
+	Env          map[string]string // Environment variables
+	Type         Ttype             // Type
+	Ncore        Tcore             // Number of cores requested
+	Mem          Tmem              // Amount of memory required in MB
+	SpawnTime    time.Time         // Time at which the proc was spawned
+	sharedTarget string            // Target of shared state
 }
 
 func MakeEmptyProc() *Proc {
@@ -72,6 +73,7 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p.Type = T_BE
 	p.Ncore = C_DEF
 	p.Privileged = priv
+	p.Env = make(map[string]string)
 	p.setProcDir("")
 	if !p.Privileged {
 		p.Type = T_LC
@@ -118,11 +120,36 @@ func (p *Proc) setProcDir(procdIp string) {
 }
 
 func (p *Proc) AppendEnv(name, val string) {
-	p.Env = append(p.Env, name+"="+val)
+	p.Env[name] = val
+}
+
+func (p *Proc) LookupEnv(name string) (string, bool) {
+	s, ok := p.Env[name]
+	return s, ok
+}
+
+// Return Env map as a []string
+func (p *Proc) GetEnv() []string {
+	env := []string{}
+	for key, envvar := range p.Env {
+		env = append(env, key+"="+envvar)
+	}
+	return env
 }
 
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
+	spath := GetSigmaPath()
+	if spath == "" {
+		if p.Privileged {
+			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/kernel")
+		} else {
+			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/user")
+		}
+		spath = sp.UXBIN + ":" + spath
+	}
+	p.AppendEnv(SIGMAPATH, spath)
+	p.AppendEnv(SIGMAPATH, spath)
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.Pid.String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
@@ -131,7 +158,7 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
 	if p.Privileged {
-		p.AppendEnv(PATH, GetPath()) // inherit from boot
+		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
 	}
 }
 
@@ -144,14 +171,6 @@ func (p *Proc) FinalizeEnv(procdIp string) {
 	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
-}
-
-func (p *Proc) GetEnv() []string {
-	env := []string{}
-	for _, envvar := range p.Env {
-		env = append(env, envvar)
-	}
-	return env
 }
 
 func (p *Proc) SetShared(target string) {

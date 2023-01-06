@@ -23,8 +23,8 @@ const (
 	SIGMADEBUG          = "SIGMADEBUG"
 	SIGMANAMED          = "SIGMANAMED"
 	SIGMAROOTFS         = "SIGMAROOTFS"
-
-	PATH = "PATH" // for finding binaries in rootfs
+	SIGMAPATH           = "SIGMAPATH"
+	SIGMAREALM          = "SIGMAREALM"
 )
 
 func GenPid() Tpid {
@@ -100,12 +100,20 @@ func GetSigmaNamed() string {
 	return os.Getenv(SIGMANAMED)
 }
 
-func GetPath() string {
-	return os.Getenv(PATH)
-}
-
 func GetSigmaRootFs() string {
 	return os.Getenv(SIGMAROOTFS)
+}
+
+func SetRealm(realm string) {
+	os.Setenv(SIGMAREALM, realm)
+}
+
+func GetRealm() string {
+	return os.Getenv(SIGMAREALM)
+}
+
+func GetSigmaPath() string {
+	return os.Getenv(SIGMAPATH)
 }
 
 func GetLabels(envvar string) map[string]bool {

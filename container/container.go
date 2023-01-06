@@ -17,7 +17,7 @@ const (
 	PROC   = "PROC"
 )
 
-var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED, proc.SIGMAROOTFS}
+var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED, proc.SIGMAROOTFS, proc.SIGMAREALM}
 
 func SigmaRootFs() (string, error) {
 	fs := proc.GetSigmaRootFs()

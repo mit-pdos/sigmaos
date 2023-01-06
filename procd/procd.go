@@ -352,10 +352,13 @@ func (pd *Procd) getProc() (*LinuxProc, error) {
 	return p, nil
 }
 
-func (pd *Procd) runProc(p *LinuxProc) {
+func (pd *Procd) runProc(p *LinuxProc) error {
 	if !p.attr.IsPrivilegedProc() {
 		// Download the bin from s3, if it isn't already cached locally.
-		pd.downloadProcBin(p.attr.Program)
+		if err := pd.downloadProcBin(p.attr); err != nil {
+			db.DFatalf("runProc: failed to download proc %v\n", p)
+			return err
+		}
 	}
 
 	// Run the proc.
@@ -367,6 +370,7 @@ func (pd *Procd) runProc(p *LinuxProc) {
 
 	// Deregister running procs
 	pd.deleteProc(p)
+	return nil
 }
 
 // Set the core affinity for procd, according to what cores it owns. Caller

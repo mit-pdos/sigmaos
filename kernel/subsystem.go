@@ -21,9 +21,10 @@ type Subsystem struct {
 	cmd      *exec.Cmd
 }
 
-func (k *Kernel) bootSubsystem(binpath string, args []string, realmId, procdIp string, viaProcd bool) (*Subsystem, error) {
-	pid := proc.Tpid(path.Base(binpath) + "-" + proc.GenPid().String())
-	p := proc.MakePrivProcPid(pid, binpath, args, true)
+func (k *Kernel) bootSubsystem(program string, args []string, realmId, procdIp string, viaProcd bool) (*Subsystem, error) {
+	pid := proc.Tpid(path.Base(program) + "-" + proc.GenPid().String())
+	// XXX set SIGMAPATH for kernel procs
+	p := proc.MakePrivProcPid(pid, program, args, true)
 	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, viaProcd)
 	return ss, ss.Run(k.namedAddr)
 }

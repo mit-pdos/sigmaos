@@ -26,7 +26,7 @@ func RunKernelProc(p *proc.Proc, namedAddr []string, realm string, contain bool)
 	cmd.Stderr = os.Stderr
 	cmd.Env = env
 
-	db.DPrintf(db.KERNEL, "RunKernelProc %v %v %v\n", p, namedAddr)
+	db.DPrintf(db.KERNEL, "RunKernelProc %v %v env %v\n", p, namedAddr, env)
 
 	if contain {
 		if err := container.RunKernelContainer(cmd, realm); err != nil {

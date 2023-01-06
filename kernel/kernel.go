@@ -59,6 +59,7 @@ func MakeKernel(p *Param) (*Kernel, error) {
 	k := mkKernel(p, fslib.Named(), cores)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
+	proc.SetRealm(p.Realm)
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds()
 		p.Services = p.Services[1:]

@@ -1,4 +1,4 @@
-package bootclnt
+package bootkernelclnt
 
 import (
 	"fmt"

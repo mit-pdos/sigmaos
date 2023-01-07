@@ -70,7 +70,7 @@ else
   exit 1
 fi
 
-cp bootclnt/boot*.yml $SIGMAHOME/$REALM/
+cp bootkernelclnt/boot*.yml $SIGMAHOME/$REALM/
 cp seccomp/whitelist.yml $SIGMAHOME/$REALM/
 
 for d in etc dev sys proc usr lib lib64

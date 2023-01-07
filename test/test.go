@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"sigmaos/bootclnt"
+	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
@@ -40,7 +40,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 type Tstate struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	boot      *bootclnt.Kernel
+	boot      *bootkernelclnt.Kernel
 	kernel    *kernelclnt.KernelClnt
 	T         *testing.T
 	namedAddr []string
@@ -56,7 +56,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootKernel(t, realmid, "../bootclnt/boot.yml")
+	b, err := BootKernel(t, realmid, "../bootkernelclnt/boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,7 +64,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootKernel(t, realmid, "../bootclnt/bootall.yml")
+	b, err := BootKernel(t, realmid, "../bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -73,9 +73,9 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootKernel(t, realmid, "../bootclnt/boot.yml")
+		return BootKernel(t, realmid, "../bootkernelclnt/boot.yml")
 	} else {
-		ts, err := BootKernel(t, realmid, "../bootclnt/bootall.yml")
+		ts, err := BootKernel(t, realmid, "../bootkernelclnt/bootall.yml")
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +96,7 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 }
 
 func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
-	k, err := bootclnt.BootKernel(realmid, true, yml)
+	k, err := bootkernelclnt.BootKernel(realmid, true, yml)
 	if err != nil {
 		return nil, err
 	}

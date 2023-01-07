@@ -192,7 +192,7 @@ func TestSeqGrep(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
-	p := proc.MakeProc("user/seqgrep", []string{job.Input})
+	p := proc.MakeProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.Pid)
@@ -209,7 +209,7 @@ func TestSeqWc(t *testing.T) {
 
 	ts.Remove(OUT)
 
-	p := proc.MakeProc("user/seqwc", []string{job.Input, OUT})
+	p := proc.MakeProc("seqwc", []string{job.Input, OUT})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.Pid)

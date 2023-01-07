@@ -56,7 +56,7 @@ func RunLeader(dir, last, child string) {
 
 	if child == "child" {
 		// Create a proc running in the same epoch as leader
-		p := proc.MakeProc("user/leadertest-proc", []string{epoch.String(), dir})
+		p := proc.MakeProc("leadertest-proc", []string{epoch.String(), dir})
 		if err := pclnt.Spawn(p); err != nil {
 			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return

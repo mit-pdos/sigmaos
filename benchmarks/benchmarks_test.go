@@ -99,7 +99,7 @@ var N_CLUSTER_CORES = 0
 //func TestNiceMatMulBaseline(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
 //	rs := benchmarks.MakeResults(N_TRIALS)
-//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
 //	runOps(ts, ps, runProc, rs)
 //	printResultSummary(rs)
 //	ts.Shutdown()
@@ -113,13 +113,13 @@ var N_CLUSTER_CORES = 0
 //	makeOutDir(ts)
 //	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 //	// Make some spinning procs to take up nContenders cores.
-//	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
+//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
 //	// Burst-spawn BE procs
 //	spawnBurstProcs(ts, psSpin)
 //	// Wait for the procs to start
 //	waitStartProcs(ts, psSpin)
 //	// Make the LC proc.
-//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
+//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
 //	// Spawn the LC procs
 //	runOps(ts, ps, runProc, rs)
 //	printResultSummary(rs)
@@ -138,13 +138,13 @@ var N_CLUSTER_CORES = 0
 //	makeOutDir(ts)
 //	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
 //	// Make some spinning procs to take up nContenders cores. (AS LC)
-//	psSpin, _ := makeNProcs(nContenders, "user/spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
+//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
 //	// Burst-spawn spinning procs
 //	spawnBurstProcs(ts, psSpin)
 //	// Wait for the procs to start
 //	waitStartProcs(ts, psSpin)
 //	// Make the matmul procs.
-//	_, ps := makeNProcs(N_TRIALS, "user/matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
+//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
 //	// Spawn the matmul procs
 //	runOps(ts, ps, runProc, rs)
 //	printResultSummary(rs)
@@ -203,7 +203,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts)
-	_, ps := makeNProcs(N_TRIALS, "user/sleeper", []string{"5000us", OUT_DIR}, []string{}, 1)
+	_, ps := makeNProcs(N_TRIALS, "sleeper", []string{"5000us", OUT_DIR}, []string{}, 1)
 	runOps(ts, ps, runProc, rs)
 	printResultSummary(rs)
 	rmOutDir(ts)
@@ -216,7 +216,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	maybePregrowRealm(ts)
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, N_CORE, MAX_PARALLEL)
-	ps, _ := makeNProcs(N_PROC, "user/sleeper", []string{"0s", ""}, []string{}, proc.Tcore(N_CORE))
+	ps, _ := makeNProcs(N_PROC, "sleeper", []string{"0s", ""}, []string{}, proc.Tcore(N_CORE))
 	runOps(ts, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	waitExitProcs(ts, ps)
@@ -288,7 +288,7 @@ func TestRealmBurst(t *testing.T) {
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", N_CLUSTER_CORES)
-	ps, _ := makeNProcs(N_CLUSTER_CORES, "user/spinner", []string{OUT_DIR}, []string{}, 1)
+	ps, _ := makeNProcs(N_CLUSTER_CORES, "spinner", []string{OUT_DIR}, []string{}, 1)
 	p := monitorCoresAssigned(ts)
 	defer p.Done()
 	runOps(ts, []interface{}{p}, spawnBurstWaitStartProcs, rs)

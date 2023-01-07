@@ -144,8 +144,7 @@ func (p *Proc) setBaseEnv() {
 		if p.Privileged {
 			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/kernel")
 		} else {
-			// XXX add user after removing user from program names
-			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/")
+			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/user")
 		}
 	}
 	p.AppendEnv(SIGMAPATH, spath)

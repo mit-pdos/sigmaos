@@ -53,7 +53,7 @@ func (ts *Tstate) stop() {
 
 func (ts *Tstate) StartClerk(args []string, ncore proc.Tcore) {
 	args = append([]string{ts.job}, args...)
-	p := proc.MakeProc("user/cache-clerk", args)
+	p := proc.MakeProc("cache-clerk", args)
 	p.SetNcore(ncore)
 	// SpawnBurst to spread clerks across procds.
 	_, errs := ts.SpawnBurst([]*proc.Proc{p})

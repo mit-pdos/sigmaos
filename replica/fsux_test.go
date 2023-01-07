@@ -28,7 +28,7 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName
 	ts.symlinkPath9p = "name/" + replicaName + "-HEAD"
-	ts.replicaBin = "user/" + replicaName
+	ts.replicaBin = replicaName
 	return ts
 }
 

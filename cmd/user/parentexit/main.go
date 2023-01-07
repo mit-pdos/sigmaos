@@ -26,7 +26,7 @@ func main() {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started()
 	pid1 := proc.Tpid(os.Args[2])
-	a := proc.MakeProcPid(pid1, "user/sleeper", []string{os.Args[1], "name/"})
+	a := proc.MakeProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
 	err = pclnt.Spawn(a)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))

@@ -79,7 +79,7 @@ func setVersion() {
 
 func (ts *Tstate) spawnSpinner(ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
+	a := proc.MakeProcPid(pid, "spinner", []string{"name/"})
 	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	if err != nil {

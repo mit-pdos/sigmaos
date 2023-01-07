@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -34,7 +34,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("user/leadertest-leader", []string{dir, last, sec})
+		p := proc.MakeProc("leadertest-leader", []string{dir, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 

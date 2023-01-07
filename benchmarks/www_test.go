@@ -84,7 +84,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 
 func (ji *WwwJobInstance) StartWwwJob() {
 	if ji.sigmaos {
-		a := proc.MakeProc("user/wwwd", []string{ji.job, ""})
+		a := proc.MakeProc("wwwd", []string{ji.job, ""})
 		err := ji.Spawn(a)
 		assert.Nil(ji.T, err, "Spawn")
 		err = ji.WaitStart(a.Pid)

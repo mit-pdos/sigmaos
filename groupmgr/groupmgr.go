@@ -133,7 +133,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 
 func (gm *GroupMgr) restart(i int, done chan *procret) {
 	// XXX hack
-	if gm.members[i].bin == "user/kvd" {
+	if gm.members[i].bin == "kvd" {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		go func() {

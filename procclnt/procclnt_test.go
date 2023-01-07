@@ -42,7 +42,7 @@ func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
 
 func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
+	a := proc.MakeProcPid(pid, "spinner", []string{"name/"})
 	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	assert.Nil(ts.T, err, "Spawn")
@@ -52,7 +52,7 @@ func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
 func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
-		p := proc.MakeProc("user/spinner", []string{"name/"})
+		p := proc.MakeProc("spinner", []string{"name/"})
 		p.SetNcore(1)
 		ps = append(ps, p)
 	}
@@ -72,14 +72,14 @@ func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 }
 
 func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
-	a := proc.MakeProcPid(pid, "user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
+	a := proc.MakeProcPid(pid, "sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
 	a.SetNcore(ncore)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {
-	p := proc.MakeProc("user/spawner", []string{"false", childPid.String(), "user/sleeper", fmt.Sprintf("%dms", msecs), "name/"})
+	p := proc.MakeProc("spawner", []string{"false", childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.Pid
@@ -103,7 +103,7 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 func TestWaitExitSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	a := proc.MakeProc("user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -285,7 +285,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 			for j := 0; j < N_SPAWNS; j++ {
 				pid := proc.GenPid()
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
-				a := proc.MakeProcPid(pid, "user/sleeper", []string{"0ms", "name/"})
+				a := proc.MakeProcPid(pid, "sleeper", []string{"0ms", "name/"})
 				_, errs := ts.SpawnBurst([]*proc.Proc{a})
 				assert.True(t, len(errs) == 0, "Spawn err %v", errs)
 				db.DPrintf(db.TEST, "Done spawn %v", pid)
@@ -315,7 +315,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 func TestCrashProcOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	a := proc.MakeProc("user/crash", []string{})
+	a := proc.MakeProc("crash", []string{})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -334,7 +334,7 @@ func TestEarlyExit1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	pid1 := proc.GenPid()
-	a := proc.MakeProc("user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
+	a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -369,7 +369,7 @@ func TestEarlyExitN(t *testing.T) {
 	for i := 0; i < nProcs; i++ {
 		go func(i int) {
 			pid1 := proc.GenPid()
-			a := proc.MakeProc("user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
+			a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
 			err := ts.Spawn(a)
 			assert.Nil(t, err, "Spawn")
 
@@ -636,7 +636,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Start a bunch of replicated spinner procs.
-	sm := groupmgr.Start(ts.FsLib, ts.ProcClnt, N_REPL, "user/spinner", []string{}, OUTDIR, 0, N_REPL, 0, 0, 0)
+	sm := groupmgr.Start(ts.FsLib, ts.ProcClnt, N_REPL, "spinner", []string{}, OUTDIR, 0, N_REPL, 0, 0, 0)
 	nChildren += N_REPL
 
 	// Wait for them to spawn.

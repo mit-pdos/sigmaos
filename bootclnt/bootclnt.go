@@ -36,7 +36,7 @@ type Kernel struct {
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
-	cmd := exec.Command("boot")
+	cmd := exec.Command("bootkernel")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

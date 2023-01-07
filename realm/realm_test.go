@@ -57,7 +57,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 
 	program := "realm_test"
-	ts.realmFsl, err = fslib.MakeFsLibAddr(program, ts.NamedAddr())
+	ts.realmFsl, err = fslib.MakeFsLibAddr(program, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	ts.ConfigClnt = config.MakeConfigClnt(ts.realmFsl)
 	ts.FsLib, err = fslib.MakeFsLibAddr(program, cfg.NamedAddrs)

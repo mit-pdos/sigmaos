@@ -1420,8 +1420,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-// XXX don't run for now
-func testWriteFilePerfMultiClient(t *testing.T) {
+func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)
@@ -1553,8 +1552,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-// XXX don't run for now
-func testReadFilePerfMultiClient(t *testing.T) {
+func TestReadFilePerfMultiClient(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)

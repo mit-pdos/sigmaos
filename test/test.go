@@ -6,13 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
-	"sigmaos/realm"
+	"sigmaos/realmv1"
 	sp "sigmaos/sigmap"
 )
 
@@ -38,13 +34,8 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 }
 
 type Tstate struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	boot      *bootkernelclnt.Kernel
-	kernel    *kernelclnt.KernelClnt
-	T         *testing.T
-	namedAddr []string
-	realmid   string
+	*realmv1.Realm
+	T *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -56,7 +47,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootKernel(t, realmid, "../bootkernelclnt/boot.yml")
+	b, err := BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,7 +55,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootKernel(t, realmid, "../bootkernelclnt/bootall.yml")
+	b, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -73,9 +64,9 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootKernel(t, realmid, "../bootkernelclnt/boot.yml")
+		return BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
 	} else {
-		ts, err := BootKernel(t, realmid, "../bootkernelclnt/bootall.yml")
+		ts, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
 		if err != nil {
 			return nil, err
 		}
@@ -87,63 +78,42 @@ func BootPath(t *testing.T, path string) (*Tstate, error) {
 
 // Join a realm/set of machines are already running
 func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
-	fsl, pclnt, err := mkClient("", realmid, []string{""}) // XXX get it from rconfig
-	if err != nil {
-		return nil, err
-	}
-	rconfig := realm.GetRealmConfig(fsl, realmid)
-	return &Tstate{fsl, pclnt, nil, nil, t, rconfig.NamedAddrs, realmid}, nil
+	//fsl, pclnt, err := mkClient("", realmid, []string{""}) // XXX get it from rconfig
+	//if err != nil {
+	//	return nil, err
+	//}
+	//rconfig := realm.GetRealmConfig(fsl, realmid)
+	return nil, nil
 }
 
-func BootKernel(t *testing.T, realmid, yml string) (*Tstate, error) {
-	k, err := bootkernelclnt.BootKernel(realmid, true, yml)
+func BootRealm(t *testing.T, realmid, yml string) (*Tstate, error) {
+	r, err := realmv1.BootRealm(realmid, yml)
 	if err != nil {
 		return nil, err
 	}
-	nameds, err := fslib.SetNamedIP(k.Ip())
-	if err != nil {
-		return nil, err
-	}
-	fsl, pclnt, err := mkClient(k.Ip(), realmid, nameds)
-	if err != nil {
-		return nil, err
-	}
-	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
-	if err != nil {
-		return nil, err
-	}
-	return &Tstate{fsl, pclnt, k, kclnt, t, nameds, realmid}, nil
-}
-
-func mkClient(kip string, realmid string, namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
 	os.Setenv(proc.SIGMAREALM, realmid)
-	fsl, err := fslib.MakeFsLibAddr("test", kip, namedAddr)
-	if err != nil {
-		return nil, nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", namedAddr)
-	return fsl, pclnt, nil
+	return &Tstate{r, t}, nil
 }
 
 func (ts *Tstate) RunningInRealm() bool {
-	return ts.realmid != "testrealm"
+	return ts.Realmid != "testrealm"
 }
 
 func (ts *Tstate) RealmId() string {
-	return ts.realmid
+	return ts.Realmid
 }
 
 func (ts *Tstate) NamedAddr() []string {
-	return ts.namedAddr
+	return ts.NamedAddr()
 }
 
 func (ts *Tstate) GetLocalIP() string {
-	return ts.boot.Ip()
+	return ts.GetIP()
 }
 
 func (ts *Tstate) Shutdown() error {
-	if ts.boot != nil {
-		return ts.boot.Shutdown()
+	if ts.Realm != nil {
+		return ts.Realm.Shutdown()
 	}
 	return nil
 }
@@ -158,12 +128,4 @@ func (ts *Tstate) BootFss3d() error {
 
 func (ts *Tstate) BootFsUxd() error {
 	return ts.Boot(sp.UXREL)
-}
-
-func (ts *Tstate) Boot(s string) error {
-	return ts.kernel.Boot(s)
-}
-
-func (ts *Tstate) KillOne(s string) error {
-	return ts.kernel.Kill(s)
 }

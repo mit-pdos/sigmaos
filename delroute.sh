@@ -1,5 +1,7 @@
 #!/bin/bash
 
 while read -r line; do
-    sudo iptables -D $line
+    if [ ! -z "$line" ]; then
+	sudo iptables -D $line
+    fi
 done <<< $(grep "sb" $1 | cut -d' ' -f2-)

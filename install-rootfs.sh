@@ -25,7 +25,7 @@ wget -O rootfs/$TAR  https://gitlab.archlinux.org/archlinux/archlinux-docker/-/p
 (cd rootfs && tar --use-compress-program=unzstd -xf $TAR && rm $TAR) || exit 1
 
 # for DNS
-echo "8.8.8.8" > rootfs/etc/resolv.conf || exit 1
+echo "nameserver 8.8.8.8" > rootfs/etc/resolv.conf || exit 1
 
 # for containers
 mkdir -p rootfs/proc

@@ -3,11 +3,14 @@ package system
 import (
 	"os"
 	"os/exec"
+	"path"
 	"syscall"
 
 	// db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/realm"
 	"sigmaos/realmv1"
+	sp "sigmaos/sigmap"
 )
 
 type System struct {
@@ -28,11 +31,21 @@ func Boot(realmid string) (*System, error) {
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
-	//r, err = realmv1.BootRealm(realmid, "bootkernelclnt/bootall.yml")
-	//if err != nil {
-	//return nil, err
-	//}
+	r, err = realmv1.BootRealm(realmid, "bootkernelclnt/bootall.yml")
+	if err != nil {
+		return nil, err
+	}
 	sys.realm = r
+	pn := path.Join(realm.REALM_NAMEDS, realmid)
+	nameds, err := fslib.SetNamedIP(r.GetIP())
+	if err != nil {
+		return nil, err
+	}
+	mnt := sp.MkMountService(nameds)
+	if err := sys.root.MkMountSymlink(pn, mnt); err != nil {
+		return nil, err
+	}
+
 	//cfg := e.CreateRealm(e.rid)
 	// return cfg, nil
 	return sys, nil

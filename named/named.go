@@ -2,7 +2,6 @@ package named
 
 import (
 	"log"
-	"path"
 	"strconv"
 	"strings"
 
@@ -11,8 +10,6 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/realm"
-	"sigmaos/realmv1"
 	"sigmaos/repl"
 	"sigmaos/repldummy"
 	"sigmaos/replraft"
@@ -31,15 +28,7 @@ func Run(args []string) {
 	defer p.Done()
 
 	addr := args[1]
-
-	// A realm's named in the global namespace
 	realmId := args[2]
-	var pname string
-	if realmId != realmv1.ROOTREALM {
-		// XXX move REALM_NAMEDS into sigmap?
-		pname = path.Join(realm.REALM_NAMEDS, realmId)
-	}
-
 	var ss *sesssrv.SessSrv
 	var err *serr.Err
 	// Replicate?
@@ -55,9 +44,9 @@ func Run(args []string) {
 			peers := strings.Split(args[4], ",")
 			config = replraft.MakeRaftConfig(id, peers, true)
 		}
-		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", config)
+		ss, err = memfssrv.MakeReplMemFs(addr, "", "named", config)
 	} else {
-		ss, err = memfssrv.MakeReplMemFs(addr, pname, "named", nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, "", "named", nil)
 	}
 
 	if err != nil {

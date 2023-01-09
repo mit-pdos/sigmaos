@@ -42,8 +42,11 @@ fi
 
 echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
 
+./install.sh --realm rootrealm
+./install.sh --realm $REALM
+
 bootsys $REALM &
 
 sleep 1
 
-/mount.sh
+./mount.sh

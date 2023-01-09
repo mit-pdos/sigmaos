@@ -96,7 +96,7 @@ func BootRealm(t *testing.T, realmid, yml string) (*Tstate, error) {
 }
 
 func (ts *Tstate) RunningInRealm() bool {
-	return ts.Realmid != "testrealm"
+	return ts.Realmid != "rootrealm"
 }
 
 func (ts *Tstate) RealmId() string {

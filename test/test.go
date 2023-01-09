@@ -16,7 +16,7 @@ var realmid string // Use this realm to run tests instead of starting a new one.
 
 // Read & set the proc version.
 func init() {
-	flag.StringVar(&realmid, "realm", "testrealm", "realm id")
+	flag.StringVar(&realmid, "realm", "rootrealm", "realm id")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -104,11 +104,11 @@ func (ts *Tstate) RealmId() string {
 }
 
 func (ts *Tstate) NamedAddr() []string {
-	return ts.NamedAddr()
+	return ts.Realm.NamedAddr()
 }
 
 func (ts *Tstate) GetLocalIP() string {
-	return ts.GetIP()
+	return ts.Realm.GetIP()
 }
 
 func (ts *Tstate) Shutdown() error {

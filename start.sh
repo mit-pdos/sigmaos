@@ -46,4 +46,4 @@ bootsys $REALM &
 
 sleep 1
 
-# ./mount.sh
+/mount.sh

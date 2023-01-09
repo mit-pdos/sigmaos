@@ -3,6 +3,7 @@ package system
 import (
 	"os"
 	"os/exec"
+	"syscall"
 
 	// db "sigmaos/debug"
 	"sigmaos/realm"
@@ -11,21 +12,27 @@ import (
 
 type System struct {
 	*realm.RealmClnt
-	realm *realmv1.Realm // the sigma root realm
+	root  *realmv1.Realm // the sigma root realm
+	realm *realmv1.Realm // XXX should be slice of realms
 	proxy *exec.Cmd
 }
 
-func Boot() (*System, error) {
+func Boot(realmid string) (*System, error) {
 	sys := &System{}
 	r, err := realmv1.BootRealm(realmv1.ROOTREALM, "bootkernelclnt/bootsys.yml")
 	if err != nil {
 		return nil, err
 	}
-	sys.realm = r
-	sys.proxy = startProxy(r.GetIP(), r.NamedAddr())
+	sys.root = r
+	sys.proxy = startProxy(sys.root.GetIP(), sys.root.NamedAddr())
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
+	//r, err = realmv1.BootRealm(realmid, "bootkernelclnt/bootall.yml")
+	//if err != nil {
+	//return nil, err
+	//}
+	sys.realm = r
 	//cfg := e.CreateRealm(e.rid)
 	// return cfg, nil
 	return sys, nil

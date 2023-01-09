@@ -81,7 +81,7 @@ func (k *Kernel) KillOne(srv string) error {
 // an address for this named.
 func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	// replicaId needs to be 1-indexed for replication library.
-	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
+	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), realmId)
 	if err != nil {
 		return err
 	}

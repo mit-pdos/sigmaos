@@ -8,11 +8,11 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/kernel"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/realm"
+	"sigmaos/realmv1"
 	"sigmaos/repl"
 	"sigmaos/repldummy"
 	"sigmaos/replraft"
@@ -35,7 +35,8 @@ func Run(args []string) {
 	// A realm's named in the global namespace
 	realmId := args[2]
 	var pname string
-	if realmId != kernel.NO_REALM {
+	if realmId != realmv1.ROOTREALM {
+		// XXX move REALM_NAMEDS into sigmap?
 		pname = path.Join(realm.REALM_NAMEDS, realmId)
 	}
 

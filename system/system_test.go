@@ -1,7 +1,6 @@
 package system_test
 
 import (
-	"log"
 	"path"
 	"testing"
 
@@ -10,7 +9,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/realm"
-	sp "sigmaos/sigmap"
 	"sigmaos/system"
 )
 
@@ -20,7 +18,7 @@ type Tstate struct {
 }
 
 func mkTstate(t *testing.T) *Tstate {
-	sys, err := system.Boot("testrealm")
+	sys, err := system.Boot("testrealm", "../bootkernelclnt")
 	assert.Nil(t, err)
 	return &Tstate{sys, t}
 }

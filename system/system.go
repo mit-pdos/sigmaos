@@ -19,18 +19,18 @@ type System struct {
 	proxy *exec.Cmd
 }
 
-func Boot(realmid string) (*System, error) {
+func Boot(realmid, ymldir string) (*System, error) {
 	sys := &System{}
-	r, err := realmv1.BootRealm(realmv1.ROOTREALM, "../bootkernelclnt/bootsys.yml")
+	r, err := realmv1.BootRealm(realmv1.ROOTREALM, path.Join(ymldir, "bootsys.yml"))
 	if err != nil {
 		return nil, err
 	}
 	sys.Root = r
-	//sys.proxy = startProxy(sys.Root.GetIP(), sys.Root.NamedAddr())
-	//if err := sys.proxy.Start(); err != nil {
-	//	return nil, err
-	//}
-	r, err = realmv1.BootRealm(realmid, "../bootkernelclnt/bootall.yml")
+	sys.proxy = startProxy(sys.Root.GetIP(), sys.Root.NamedAddr())
+	if err := sys.proxy.Start(); err != nil {
+		return nil, err
+	}
+	r, err = realmv1.BootRealm(realmid, path.Join(ymldir, "bootall.yml"))
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +55,9 @@ func (sys *System) Shutdown() error {
 		return err
 	}
 	if err := sys.Root.Shutdown(); err != nil {
+		return err
+	}
+	if err := sys.proxy.Process.Kill(); err != nil {
 		return err
 	}
 	return nil

@@ -22,7 +22,7 @@ import (
 
 const (
 	NO_PID           = "no-realm"
-	NO_REALM         = "no-realm"
+	NO_REALM         = "norealm"
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
 	SUBSYSTEM_INFO   = "subsystem-info"

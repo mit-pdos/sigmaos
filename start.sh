@@ -42,9 +42,8 @@ fi
 
 echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
 
-# Make the ux root dir.
-mkdir -p $UXROOT
+bootsys $REALM &
 
-$PRIVILEGED_BIN/realm/boot $REALM
+sleep 1
 
-./mount.sh
+# ./mount.sh

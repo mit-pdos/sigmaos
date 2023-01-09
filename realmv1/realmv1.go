@@ -9,6 +9,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	ROOTREALM = "rootrealm"
+)
+
 type Realm struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt

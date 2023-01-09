@@ -4,16 +4,17 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/realm"
+	"sigmaos/system"
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v realmid", os.Args[0])
 	}
-	e := realm.MakeTestEnv(os.Args[1])
-	_, err := e.Boot()
+	_, err := system.Boot()
 	if err != nil {
-		db.DFatalf("Boot %v\n", err)
+		db.DFatalf("%v: Boot %v\n", err, os.Args[0])
+	}
+	for {
 	}
 }

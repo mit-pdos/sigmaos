@@ -9,6 +9,7 @@ if mount | grep 9p; then
 fi
 
 pgrep -x bootkernel > /dev/null && killall bootkernel
+pgrep -x bootsys > /dev/null && killall bootsys
 
 b=$(ip link list | grep -o "[0-9]*: sb[a-z]*")
 if [ ! -z "$b" ]; then

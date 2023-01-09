@@ -3,23 +3,24 @@ package sigmap
 // if name ends in "/", it is the root directory for that service (XXX
 // it is a union directory?)
 const (
-	NAMED    = "name/"
-	NAMEDREL = "named"
-	BOOTREL  = "boot"
-	BOOT     = NAMED + BOOTREL + "/"
-	TMPREL   = "tmp"
-	TMP      = NAMED + TMPREL
-	PROCDREL = "procd"
-	PROCD    = NAMED + PROCDREL + "/"
-	PROCD_WS = PROCD + "ws" + "/"
-	S3REL    = "s3"
-	S3       = NAMED + S3REL + "/"
-	UXREL    = "ux"
-	UX       = NAMED + UXREL + "/"
-
-	DBREL = "db"
-	DB    = NAMED + DBREL + "/"
-	DBD   = DB + "~local/"
+	NAMED       = "name/"
+	NAMEDREL    = "named"
+	BOOTREL     = "boot"
+	BOOT        = NAMED + BOOTREL + "/"
+	TMPREL      = "tmp"
+	TMP         = NAMED + TMPREL
+	PROCDREL    = "procd"
+	PROCD       = NAMED + PROCDREL + "/"
+	PROCD_WS    = PROCD + "ws" + "/"
+	S3REL       = "s3"
+	S3          = NAMED + S3REL + "/"
+	UXREL       = "ux"
+	UX          = NAMED + UXREL + "/"
+	SIGMAMGRREL = "sigmamgr"
+	SIGMAMGR    = NAMED + SIGMAMGRREL + "/"
+	DBREL       = "db"
+	DB          = NAMED + DBREL + "/"
+	DBD         = DB + "~local/"
 
 	FWREL = "fw"
 	FW    = NAMED + FWREL
@@ -68,11 +69,6 @@ const (
 // REALM
 const (
 	TEST_RID = "testrealm"
-)
-
-// SIGMA
-const (
-	SIGMAMGR = NAMED + "sigmamgr"
 )
 
 var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,

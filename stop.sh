@@ -11,17 +11,12 @@ fi
 pgrep -x bootkernel > /dev/null && killall bootkernel
 pgrep -x bootsys > /dev/null && killall bootsys
 
-b=$(ip link list | grep -o "[0-9]*: sb[a-z]*")
-if [ ! -z "$b" ]; then
-   b=$(echo $b | cut -f 2 -d ' ')
-   echo "delete bridge $b"
-   sudo ip link del $b
-fi
-b=$(ip link list | grep -o "[0-9]*: sp[0-9]+]*")
-if [ ! -z "$b" ]; then
-   b=$(echo $b | cut -f 2 -d ' ')
-   echo "delete veth $b"
-   sudo ip link del $b
-fi
+while read -r line; do
+    if [ ! -z "$line" ]; then
+        b=$(echo $line | cut -f 2 -d ' ')
+        echo "delete bridge $b"
+        sudo ip link del $b
+    fi
+done <<< $(ip link list | grep -o "[0-9]*: sb[a-z]*")
 
 sudo iptables -S | ./delroute.sh

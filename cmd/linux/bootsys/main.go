@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/system"
@@ -16,5 +17,6 @@ func main() {
 		db.DFatalf("%v: Boot %v\n", err, os.Args[0])
 	}
 	for {
+		time.Sleep(100 * time.Second)
 	}
 }

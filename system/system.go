@@ -14,24 +14,23 @@ import (
 )
 
 type System struct {
-	*realm.RealmClnt
-	root  *realmv1.Realm // the sigma root realm
+	Root  *realmv1.Realm // the sigma root realm
 	realm *realmv1.Realm // XXX should be slice of realms
 	proxy *exec.Cmd
 }
 
 func Boot(realmid string) (*System, error) {
 	sys := &System{}
-	r, err := realmv1.BootRealm(realmv1.ROOTREALM, "bootkernelclnt/bootsys.yml")
+	r, err := realmv1.BootRealm(realmv1.ROOTREALM, "../bootkernelclnt/bootsys.yml")
 	if err != nil {
 		return nil, err
 	}
-	sys.root = r
-	sys.proxy = startProxy(sys.root.GetIP(), sys.root.NamedAddr())
-	if err := sys.proxy.Start(); err != nil {
-		return nil, err
-	}
-	r, err = realmv1.BootRealm(realmid, "bootkernelclnt/bootall.yml")
+	sys.Root = r
+	//sys.proxy = startProxy(sys.Root.GetIP(), sys.Root.NamedAddr())
+	//if err := sys.proxy.Start(); err != nil {
+	//	return nil, err
+	//}
+	r, err = realmv1.BootRealm(realmid, "../bootkernelclnt/bootall.yml")
 	if err != nil {
 		return nil, err
 	}
@@ -42,13 +41,23 @@ func Boot(realmid string) (*System, error) {
 		return nil, err
 	}
 	mnt := sp.MkMountService(nameds)
-	if err := sys.root.MkMountSymlink(pn, mnt); err != nil {
+	if err := sys.Root.MkMountSymlink(pn, mnt); err != nil {
 		return nil, err
 	}
 
 	//cfg := e.CreateRealm(e.rid)
 	// return cfg, nil
 	return sys, nil
+}
+
+func (sys *System) Shutdown() error {
+	if err := sys.realm.Shutdown(); err != nil {
+		return err
+	}
+	if err := sys.Root.Shutdown(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func startProxy(IP string, nds []string) *exec.Cmd {

@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s: Atoi err %v\n", os.Args[0], err)
 	}
-	_, err := system.Boot(n, "bootkernelclnt")
+	_, err = system.Boot(n, "bootkernelclnt")
 	if err != nil {
 		log.Fatalf("%v: Boot %v\n", err, os.Args[0])
 	}

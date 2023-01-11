@@ -1,0 +1,6 @@
+services:
+  - sigmamgr
+  - procd
+  - ux
+  - s3
+  - db

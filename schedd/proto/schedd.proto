@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "ulambda/schedd/proto";
+
+service Schedd {
+  rpc Spawn(SpawnRequest) returns (SpawnResponse);
+}
+
+// TODO: make proc proto
+message SpawnRequest {
+  string realm = 1;
+  string procStr = 2;
+}
+
+message SpawnResponse {
+  bool oK = 1;
+}

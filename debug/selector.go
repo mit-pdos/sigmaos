@@ -63,6 +63,7 @@ const (
 	CONTAINER            = "CONTAINER"
 	NAMED                = "NAMED"
 	PROCD                = "PROCD"
+	SCHEDD               = "SCHEDD"
 	PROCD_ERR            = PROCD + ERR
 	PROCD_PERF           = PROCD + "_PERF"
 	PROCCACHE            = "PROCCACHE"

@@ -47,6 +47,9 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
+	// Schedd
+	QUEUE = "queue"
+
 	// Procd spawn file
 	PROCD_SPAWN_FILE = "spawn"
 

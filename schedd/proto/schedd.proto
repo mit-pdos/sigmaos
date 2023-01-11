@@ -4,6 +4,7 @@ option go_package = "ulambda/schedd/proto";
 
 service Schedd {
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
+  rpc GetProc(GetProcRequest) returns (GetProcResponse);
 }
 
 // TODO: make proc proto
@@ -13,5 +14,12 @@ message SpawnRequest {
 }
 
 message SpawnResponse {
-  bool oK = 1;
+}
+
+message GetProcRequest {
+  string realm = 1;
+  string procStr = 2;
+}
+
+message GetProcResponse {
 }

@@ -33,7 +33,11 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 
 	sd.qs[req.Realm].Enqueue(req.ProcStr)
 
-	res.OK = true
+	return nil
+}
+
+func (sd *Schedd) GetProc(req proto.GetProcRequest, res *proto.GetProcResponse) error {
+	db.DFatalf("TODO")
 	return nil
 }
 

@@ -12,7 +12,7 @@ while [[ "$#" -gt 0 ]]; do
     REALM=$1
     shift
     ;;
-  --realm)
+  --machine)
     shift
     MACHINE=$1
     shift

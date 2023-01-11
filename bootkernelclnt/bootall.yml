@@ -1,6 +1,7 @@
 services:
    # order is important
   - named
+  - sigmamgr
   - procd
   - ux
   - s3

@@ -16,11 +16,11 @@ func main() {
 	}
 	n, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		log.Fatalf("%s: Atoi err %v\n", os.Args[0], err)
+		log.Fatalf("%s: Atoi err %v", os.Args[0], err)
 	}
 	_, err := system.Boot(n, "bootkernelclnt")
 	if err != nil {
-		log.Fatalf("%v: Boot %v\n", err, os.Args[0])
+		log.Fatalf("%v: Boot %v", os.Args[0], err)
 	}
 	for {
 		time.Sleep(100 * time.Second)

@@ -34,3 +34,21 @@ func (q *Queue) Enqueue(pstr string) {
 		db.DFatalf("Unrecognized proc type: %v", p.Type)
 	}
 }
+
+// LC procs have absolute priority.
+func (q *Queue) Dequeue() (string, bool) {
+	var p *proc.Proc
+	if len(q.lc) > 0 {
+		p, q.lc = q.lc[0], q.lc[1:]
+	} else if len(q.be) > 0 {
+		p, q.be = q.be[0], q.be[1:]
+	}
+	if p == nil {
+		return "", false
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		db.DFatalf("Error marshal proc: %v", err)
+	}
+	return string(b), true
+}

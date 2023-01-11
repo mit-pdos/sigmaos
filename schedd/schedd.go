@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	//	"path"
 	"sync"
 
 	db "sigmaos/debug"
@@ -13,12 +14,14 @@ import (
 
 type Schedd struct {
 	sync.Mutex
-	qs map[string]*Queue
+	mfs *memfssrv.MemFs
+	qs  map[string]*Queue
 }
 
-func MakeSchedd() *Schedd {
+func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	return &Schedd{
-		qs: make(map[string]*Queue),
+		mfs: mfs,
+		qs:  make(map[string]*Queue),
 	}
 }
 
@@ -32,21 +35,43 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	}
 
 	sd.qs[req.Realm].Enqueue(req.ProcStr)
+	//	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, req.Proc.Pid), 0777, sp.OWRITE); err != nil {
+	//		db.DFatalf("Error create %v: %v", req.Proc.Pid, err)
+	//	}
 
 	return nil
 }
 
 func (sd *Schedd) GetProc(req proto.GetProcRequest, res *proto.GetProcResponse) error {
-	db.DFatalf("TODO")
+	// TODO: choose a realm in a more sensible way.
+	for _, q := range sd.qs {
+		// TODO: check capacity
+		if res.ProcStr, res.OK = q.Dequeue(); res.OK {
+			break
+		}
+	}
 	return nil
 }
 
+// Setup schedd's fs.
+func setupFs(mfs *memfssrv.MemFs) {
+	dirs := []string{
+		sp.QUEUE,
+	}
+	for _, d := range dirs {
+		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE); err != nil {
+			db.DFatalf("Error create %v: %v", d, err)
+		}
+	}
+}
+
 func RunSchedd() error {
-	sd := MakeSchedd()
 	mfs, _, _, err := memfssrv.MakeMemFs(sp.SCHEDD, sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
+	setupFs(mfs)
+	sd := MakeSchedd(mfs)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)
 	if err != nil {

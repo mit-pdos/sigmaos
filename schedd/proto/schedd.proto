@@ -17,9 +17,11 @@ message SpawnResponse {
 }
 
 message GetProcRequest {
-  string realm = 1;
-  string procStr = 2;
+  int64 freeCores = 1;  
+  int64 mem = 2;
 }
 
 message GetProcResponse {
+  string procStr = 1;
+  bool oK = 2;
 }

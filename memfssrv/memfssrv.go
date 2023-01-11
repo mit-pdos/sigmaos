@@ -57,7 +57,6 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	// i := inode.MakeInode(mfs.ctx, sp.DMDEVICE, d)
 	dev.SetParent(d)
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }

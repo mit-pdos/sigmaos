@@ -149,14 +149,14 @@ func (pd *Procd) deleteWSSymlink(procPath string, p *LinuxProc, isRemote bool) {
 		pd.Remove(link)
 	} else {
 		// If proc was offered up for work stealing...
-		if time.Since(p.attr.SpawnTime) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
+		if time.Since(p.attr.SpawnTime.AsTime()) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
 			var runq string
-			if p.attr.Type == proc.T_LC {
+			if p.attr.GetType() == proc.T_LC {
 				runq = sp.PROCD_RUNQ_LC
 			} else {
 				runq = sp.PROCD_RUNQ_BE
 			}
-			link := path.Join(sp.PROCD_WS, runq, p.attr.Pid.String())
+			link := path.Join(sp.PROCD_WS, runq, p.attr.GetPid().String())
 			pd.Remove(link)
 		}
 	}
@@ -173,7 +173,7 @@ func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, error) {
 		pd.pcache.Remove(pid)
 		return nil, err
 	}
-	pd.pcache.Set(p.Pid, p)
+	pd.pcache.Set(p.GetPid(), p)
 	return p, nil
 }
 

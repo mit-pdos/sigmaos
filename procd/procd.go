@@ -104,7 +104,7 @@ func (pd *Procd) getLCProcUtil() float64 {
 	var total float64 = 0.0
 	for _, p := range pd.runningProcs {
 		// If proc has not been initialized, or it isn't LC, move on
-		if p.SysPid == 0 || p.attr.Type != proc.T_LC || p.attr.IsPrivilegedProc() {
+		if p.SysPid == 0 || p.attr.GetType() != proc.T_LC || p.attr.IsPrivilegedProc() {
 			continue
 		}
 		u, err := p.getUtilL()
@@ -119,13 +119,13 @@ func (pd *Procd) getLCProcUtil() float64 {
 
 // Caller holds lock.
 func (pd *Procd) putProcL(p *LinuxProc) {
-	pd.runningProcs[p.attr.Pid] = p
+	pd.runningProcs[p.attr.GetPid()] = p
 }
 
 func (pd *Procd) deleteProc(p *LinuxProc) {
 	pd.Lock()
 	defer pd.Unlock()
-	delete(pd.runningProcs, p.attr.Pid)
+	delete(pd.runningProcs, p.attr.GetPid())
 }
 
 func (pd *Procd) spawnProc(a *proc.Proc) {
@@ -201,7 +201,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// assigned cores to this proc & registered it in the procd in-mem data
 	// structures so that the proc's core allocations will be adjusted during the
 	// resize.
-	pd.allocCoresL(linuxProc, p.Ncore)
+	pd.allocCoresL(linuxProc, p.GetNcore())
 	pd.allocMemL(p)
 	// Register running proc in in-memory structures.
 	pd.putProcL(linuxProc)
@@ -458,7 +458,7 @@ func (pd *Procd) worker() {
 		// If this proc doesn't require cores, start another worker to take our
 		// place so user apps don't deadlock.
 		replaced := false
-		if p.attr.Ncore == 0 {
+		if p.attr.GetNcore() == 0 {
 			replaced = true
 			// Wake a new worker to take this worker's place.
 			pd.wakeWorker()

@@ -9,14 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-
-	"sigmaos/semclnt"
 )
 
 type ProcClnt struct {
@@ -138,7 +139,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // and the proc is not actually spawned on procd, since it will be started
 // later.
 func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
-	if p.Ncore > 0 && p.Type != proc.T_LC {
+	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
 	}
@@ -156,29 +157,29 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 		return err
 	}
 
-	p.SpawnTime = time.Now()
+	p.SpawnTime = timestamppb.New(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
 	if viaProcd {
 		b, err := json.Marshal(p)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Spawn marshal err %v", err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(sp.PROCDREL, procdIp, sp.PROCD_SPAWN_FILE)
 		_, err = clnt.SetFile(fn, b, sp.OWRITE, 0)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "SetFile %v err %v", fn, err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
+		err := clnt.MakeProcDir(p.GetPid(), p.ProcDir, p.IsPrivilegedProc())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, procd will create the semaphore.
-		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
+		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
 	}

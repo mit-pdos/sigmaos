@@ -6,10 +6,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/resource"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -91,7 +91,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	// Calculate new core allocation for each proc, and track the
 	// allocation. Rather than evict procs that don't fit, give them "0" cores.
 	for _, p := range pd.runningProcs {
-		newNCore := p.attr.Ncore
+		newNCore := p.attr.GetNcore()
 		// Make sure we don't overflow allocated cores.
 		if newNCore > pd.coresAvail {
 			newNCore = pd.coresAvail
@@ -162,9 +162,9 @@ func (pd *Procd) canClaimBEProcL() (float64, bool, bool) {
 // Check if this procd has enough cores to run proc p. Caller holds lock.
 func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	// If this is an LC proc, check that we have enough cores.
-	if p.Type == proc.T_LC {
+	if p.GetType() == proc.T_LC {
 		// If we have enough cores to run this job...
-		if pd.coresAvail >= p.Ncore {
+		if pd.coresAvail >= p.GetNcore() {
 			return true
 		}
 		db.DPrintf(db.PROCD, "Don't have enough LC cores (%v) for %v", pd.coresAvail, p)
@@ -209,7 +209,7 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 	defer pd.Unlock()
 
 	pd.freeCoresL(p)
-	if p.attr.Type != proc.T_LC {
+	if p.attr.GetType() != proc.T_LC {
 		if pd.netProcsClaimed > 0 {
 			pd.netProcsClaimed--
 		}
@@ -219,7 +219,7 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 // Free a set of cores which was being used by a proc.
 func (pd *Procd) freeCoresL(p *LinuxProc) {
 	// If no cores were exclusively allocated to this proc, return immediately.
-	if p.attr.Ncore == proc.C_DEF {
+	if p.attr.GetNcore() == proc.C_DEF {
 		return
 	}
 

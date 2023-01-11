@@ -70,7 +70,7 @@ func (k *Kernel) KillOne(srv string) error {
 	err := ss.Kill()
 	if err == nil {
 		ss.Wait()
-		k.svcs.crashedPids[ss.p.Pid] = true
+		k.svcs.crashedPids[ss.p.GetPid()] = true
 	} else {
 		db.DFatalf("%v kill failed %v\n", srv, err)
 	}

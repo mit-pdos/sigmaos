@@ -82,6 +82,6 @@ func (pc *ProcCache) gc() {
 	})
 	// Kill half of the entries.
 	for i := 0; i < len(ps)/2; i++ {
-		delete(pc.ps, ps[i].p.Pid)
+		delete(pc.ps, ps[i].p.GetPid())
 	}
 }

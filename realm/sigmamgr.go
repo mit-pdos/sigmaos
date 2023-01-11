@@ -367,7 +367,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 				continue
 			}
 			// If this is a LC proc, return false.
-			if p.Type == proc.T_LC {
+			if p.GetType() == proc.T_LC {
 				db.DPrintf(debug, "Can't evict noded, running LC proc")
 				return true, true, false
 			} else {
@@ -467,7 +467,7 @@ func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 	if _, err := m.SpawnKernelProc(p, fslib.Named(), realmId, "", false); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}
-	if err := m.WaitStart(p.Pid); err != nil {
+	if err := m.WaitStart(p.GetPid()); err != nil {
 		db.DFatalf("Error WaitStart realmmgr %v", err)
 	}
 	db.DPrintf(db.SIGMAMGR, "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)

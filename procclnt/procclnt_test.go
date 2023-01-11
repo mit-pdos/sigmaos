@@ -82,7 +82,7 @@ func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) 
 	p := proc.MakeProc("spawner", []string{"false", childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
-	return p.Pid
+	return p.GetPid()
 }
 
 func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
@@ -103,11 +103,13 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 func TestWaitExitSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
+	time.Sleep(100 * time.Second)
+
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
@@ -291,12 +293,12 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				db.DPrintf(db.TEST, "Done spawn %v", pid)
 
 				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
-				err := ts.WaitStart(a.Pid)
+				err := ts.WaitStart(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
 				assert.Nil(t, err, "WaitStart error")
 
 				db.DPrintf(db.TEST, "Prep WaitExit %v", pid)
-				status, err := ts.WaitExit(a.Pid)
+				status, err := ts.WaitExit(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
 				assert.True(t, status.IsStatusOK(), "Status not OK")
@@ -319,10 +321,10 @@ func TestCrashProcOne(t *testing.T) {
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	err = ts.WaitStart(a.Pid)
+	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusErr(), "Status not err")
 	assert.Equal(t, "exit status 2", status.Msg(), "WaitExit")
@@ -339,7 +341,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Nil(t, err, "Spawn")
 
 	// Wait for parent to finish
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusOK(), "WaitExit")
 
@@ -374,7 +376,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Nil(t, err, "Spawn")
 
 			// Wait for parent to finish
-			status, err := ts.WaitExit(a.Pid)
+			status, err := ts.WaitExit(a.GetPid())
 			assert.Nil(t, err, "WaitExit err: %v", err)
 			assert.True(t, status.IsStatusOK(), "WaitExit: %v", status)
 
@@ -581,17 +583,17 @@ func TestBurstSpawn(t *testing.T) {
 	ps := burstSpawnSpinner(t, ts, N)
 
 	for _, p := range ps {
-		err := ts.WaitStart(p.Pid)
+		err := ts.WaitStart(p.GetPid())
 		assert.Nil(t, err, "WaitStart: %v", err)
 	}
 
 	for _, p := range ps {
-		err := ts.Evict(p.Pid)
+		err := ts.Evict(p.GetPid())
 		assert.Nil(t, err, "Evict: %v", err)
 	}
 
 	for _, p := range ps {
-		status, err := ts.WaitExit(p.Pid)
+		status, err := ts.WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit: %v", err)
 		assert.True(t, status.IsStatusEvicted(), "Wrong status: %v", status)
 	}

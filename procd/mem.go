@@ -31,16 +31,16 @@ func getMemTotal() proc.Tmem {
 }
 
 func (pd *Procd) hasEnoughMemL(p *proc.Proc) bool {
-	return pd.memAvail >= p.Mem
+	return pd.memAvail >= p.GetMem()
 }
 
 func (pd *Procd) allocMemL(p *proc.Proc) {
-	pd.memAvail -= p.Mem
+	pd.memAvail -= p.GetMem()
 }
 
 func (pd *Procd) freeMem(p *proc.Proc) {
 	pd.Lock()
 	defer pd.Unlock()
 
-	pd.memAvail += p.Mem
+	pd.memAvail += p.GetMem()
 }

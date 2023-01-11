@@ -61,7 +61,7 @@ func RunLeader(dir, last, child string) {
 			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
-		if err := pclnt.WaitStart(p.Pid); err != nil {
+		if err := pclnt.WaitStart(p.GetPid()); err != nil {
 			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}

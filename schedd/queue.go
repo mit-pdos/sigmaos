@@ -25,13 +25,13 @@ func (q *Queue) Enqueue(pstr string) {
 	if err := json.Unmarshal([]byte(pstr), p); err != nil {
 		db.DFatalf("Err unmarshal", err)
 	}
-	switch p.Type {
+	switch p.GetType() {
 	case proc.T_LC:
 		q.lc = append(q.lc, p)
 	case proc.T_BE:
 		q.be = append(q.be, p)
 	default:
-		db.DFatalf("Unrecognized proc type: %v", p.Type)
+		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
 }
 

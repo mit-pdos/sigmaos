@@ -108,7 +108,7 @@ func (e *TestEnv) bootSigmaMgr() error {
 		return err
 	}
 	e.sigmamgr = cmd
-	return e.RealmClnt.WaitStart(p.Pid)
+	return e.RealmClnt.WaitStart(p.GetPid())
 }
 
 func kill(cmd *exec.Cmd) {

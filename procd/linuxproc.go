@@ -54,7 +54,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Proc %v finished with error: %v\n", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 }
@@ -63,11 +63,11 @@ func (p *LinuxProc) run() error {
 	db.DPrintf(db.PROCD, "Procd run: %v\n", p.attr)
 
 	// Make the proc's procdir
-	if err := p.pd.procclnt.MakeProcDir(p.attr.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
+	if err := p.pd.procclnt.MakeProcDir(p.attr.GetPid(), p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
 		db.DPrintf(db.PROCD_ERR, "Err procd MakeProcDir: %v\n", err)
 	}
 
-	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.Pid, p.stolen, time.Since(p.attr.SpawnTime))
+	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.GetPid(), p.stolen, time.Since(p.attr.SpawnTime.AsTime()))
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
 		cmd = exec.Command(p.attr.Program, p.attr.Args...)
@@ -97,7 +97,7 @@ func (p *LinuxProc) run() error {
 		cmd = exec.Command(path.Join(container.UBIN, path.Base(p.attr.Program)), p.attr.Args...)
 		if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
 			db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
-			p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err
 		}
 	}
@@ -107,7 +107,7 @@ func (p *LinuxProc) run() error {
 	err := cmd.Start()
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Procd run error: %v, %v\n", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.attr.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
 
@@ -171,14 +171,14 @@ func (p *LinuxProc) setCpuAffinityL() {
 
 func (p *LinuxProc) setPriority() {
 	var err error
-	switch p.attr.Type {
+	switch p.attr.GetType() {
 	case proc.T_BE:
 		err = linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
 	case proc.T_LC:
 		err = linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
 	default:
 		p.pd.perf.Done()
-		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
+		db.DFatalf("Error unknown proc priority: %v", p.attr.GetType())
 	}
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't set priority for %v err %v", p.attr, err)

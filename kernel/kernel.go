@@ -235,11 +235,11 @@ func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, pe
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err
 	}
-	if err = pclnt.WaitStart(p.Pid); err != nil {
+	if err = pclnt.WaitStart(p.GetPid()); err != nil {
 		db.DFatalf("Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
-	return cmd, p.Pid, nil
+	return cmd, p.GetPid(), nil
 }
 
 // Boot subsystems other than named

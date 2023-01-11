@@ -58,7 +58,7 @@ func (pfs *ProcdFs) running(p *LinuxProc) *serr.Err {
 	if error != nil {
 		return serr.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
-	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.Pid.String()), 0777, sp.OREAD|sp.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, b)
 	if err != nil {
 		pfs.pd.perf.Done()
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
@@ -69,7 +69,7 @@ func (pfs *ProcdFs) running(p *LinuxProc) *serr.Err {
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *LinuxProc) error {
-	err := pfs.pd.Remove(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.Pid.String()))
+	err := pfs.pd.Remove(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), sp.PROCD_RUNNING, p.attr.GetPid().String()))
 	if err != nil {
 		log.Printf("%v: Error ProcdFs.finish: %v", proc.GetName(), err)
 		return err
@@ -81,19 +81,19 @@ func (pfs *ProcdFs) finish(p *LinuxProc) error {
 func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	var runq string
 	switch {
-	case a.Type == proc.T_LC:
+	case a.GetType() == proc.T_LC:
 		runq = sp.PROCD_RUNQ_LC
 	default:
 		runq = sp.PROCD_RUNQ_BE
 	}
 	// This procd will likely claim this proc, so cache it.
-	pfs.pd.pcache.Set(a.Pid, a)
-	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()), 0777, sp.OREAD|sp.OWRITE, b)
+	pfs.pd.pcache.Set(a.GetPid(), a)
+	_, err := pfs.pd.PutFile(path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
-	db.DPrintf(db.PROCD, "Procd created q file %v", path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.Pid.String()))
+	db.DPrintf(db.PROCD, "Procd created q file %v", path.Join(sp.PROCD, pfs.pd.memfssrv.MyAddr(), runq, a.GetPid().String()))
 	pfs.pd.spawnProc(a)
 	return nil
 }

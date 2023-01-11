@@ -9,7 +9,7 @@ import (
 	// db "sigmaos/debug"
 	"sigmaos/bootkernelclnt"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
 const (
@@ -42,11 +42,11 @@ func Boot(n int, ymldir string) (*System, error) {
 		if err != nil {
 			return nil, err
 		}
-		kaddr := []string{""}
-		mnt := sp.MkMountService(kaddr)
-		if err := sys.boot.MkMountSymlink(sp.BOOT, mnt); err != nil {
-			return nil, err
-		}
+		//kaddr := []string{""}
+		//mnt := sp.MkMountService(kaddr)
+		//if err := sys.boot.MkMountSymlink(sp.BOOT, mnt); err != nil {
+		//	return nil, err
+		//}
 	}
 	return sys, nil
 }

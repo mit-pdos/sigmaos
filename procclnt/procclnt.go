@@ -15,6 +15,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	schedd "sigmaos/schedd/proto"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -29,6 +31,7 @@ type ProcClnt struct {
 	procds          []string
 	lastProcdUpdate time.Time
 	burstOffset     int
+	pdc             *protdevclnt.ProtDevClnt
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -53,7 +56,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp,
 	}
 	// Spawn the proc, either through procd, or just by creating the named state
 	// the proc (and its parent) expects.
-	if err := clnt.spawn(procdIp, viaProcd, p); err != nil {
+	if err := clnt.spawn(procdIp, viaProcd, p, clnt.getScheddClnt()); err != nil {
 		return nil, err
 	}
 	if !viaProcd {
@@ -76,7 +79,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
-		err := clnt.spawn(clnt.nextProcd(), true, ps[i])
+		err := clnt.spawn(clnt.nextProcd(), true, ps[i], clnt.getScheddClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -111,7 +114,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 				}
 				// Update the list of active procds.
 				_ = x
-				err := clnt.spawn(clnt.nextProcd(), true, p)
+				err := clnt.spawn(clnt.nextProcd(), true, p, clnt.getScheddClnt())
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -132,13 +135,13 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", true, p)
+	return clnt.spawn("~local", true, p, clnt.getScheddClnt())
 }
 
 // Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
-func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
+func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
 	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
@@ -170,6 +173,16 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "SetFile %v err %v", fn, err)
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
+		}
+		req := &schedd.SpawnRequest{
+			Realm:     proc.GetRealm(),
+			ProcProto: p.GetProto(),
+		}
+		res := &schedd.SpawnResponse{}
+		err = pdc.RPC("Schedd.Spawn", req, res)
+		if err != nil {
+			db.DFatalf("Error spawn schedd: %v", err)
+			return err
 		}
 	} else {
 		// Make the proc's procdir
@@ -210,6 +223,17 @@ func (clnt *ProcClnt) updateProcds() {
 			clnt.procds = append(clnt.procds, procd.Name)
 		}
 	}
+}
+
+func (clnt *ProcClnt) getScheddClnt() *protdevclnt.ProtDevClnt {
+	if clnt.pdc == nil {
+		var err error
+		clnt.pdc, err = protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, "~local"))
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error make protdevclnt: %v", err)
+		}
+	}
+	return clnt.pdc
 }
 
 // Get the next procd to burst on.

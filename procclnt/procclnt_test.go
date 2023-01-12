@@ -104,10 +104,14 @@ func TestWaitExitSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)
+	db.DPrintf(db.TEST, "Post spawn")
 	assert.Nil(t, err, "Spawn")
 
+	db.DPrintf(db.TEST, "Pre waitexit")
 	status, err := ts.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 

@@ -1,9 +1,7 @@
 package procd
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -19,7 +17,8 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/serr"
+	"sigmaos/protdevclnt"
+	scheddproto "sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -53,6 +52,7 @@ type Procd struct {
 	procclnt         *procclnt.ProcClnt
 	memfssrv         *memfssrv.MemFs
 	*fslib.FsLib
+	schedd *protdevclnt.ProtDevClnt
 }
 
 func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
@@ -77,6 +77,11 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 	pd.makeFs()
 
 	pd.addr = pd.memfssrv.MyAddr()
+	var err error
+	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
+	if err != nil {
+		db.DFatalf("Error make schedd clnt: %v", err)
+	}
 
 	pd.initCores(grantedCoresIv)
 
@@ -427,27 +432,98 @@ func (pd *Procd) waitSpawnOrSteal() {
 // Worker runs one proc a time. If the proc it runs has Ncore == 0, then
 // another worker is spawned to take this one's place. This worker will then
 // exit once it finishes running the proc.
+//func (pd *Procd) worker() {
+//	defer pd.group.Done()
+//	for !pd.readDone() {
+//		db.DPrintf(db.PROCD, "Try to get proc.")
+//		p, error := pd.getProc()
+//		// If there were no runnable procs, wait and try again.
+//		if error == nil && p == nil {
+//			db.DPrintf(db.PROCD, "No procs found, waiting.")
+//			pd.waitSpawnOrSteal()
+//			continue
+//		}
+//		if error != nil && (errors.Is(error, io.EOF) || serr.IsErrUnreachable(error)) {
+//			continue
+//		}
+//		if error != nil {
+//			if serr.IsErrNotfound(error) {
+//				db.DPrintf(db.PROCD_ERR, "cond file not found: %v", error)
+//				return
+//			}
+//			pd.perf.Done()
+//			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
+//		}
+//		db.DPrintf(db.PROCD, "Got proc %v", p.SysPid)
+//		err := pd.fs.running(p)
+//		if err != nil {
+//			pd.perf.Done()
+//			db.DFatalf("Procd pub running error %v %T\n", err, err)
+//		}
+//		// If this proc doesn't require cores, start another worker to take our
+//		// place so user apps don't deadlock.
+//		replaced := false
+//		if p.attr.GetNcore() == 0 {
+//			replaced = true
+//			// Wake a new worker to take this worker's place.
+//			pd.wakeWorker()
+//			pd.group.Add(1)
+//			go pd.worker()
+//		}
+//		pd.runProc(p)
+//		// Wake a worker, since we may be able to run something else now.
+//		pd.wakeWorker()
+//		if replaced {
+//			return
+//		}
+//	}
+//}
+
+func (pd *Procd) getProc2() (*LinuxProc, bool) {
+	// TODO: get proc from schedd.
+	req := &scheddproto.GetProcRequest{
+		FreeCores: uint32(pd.coresAvail), // XXX fix race
+		Mem:       uint32(pd.memAvail),   // XXX fix race
+	}
+	res := &scheddproto.GetProcResponse{}
+	err := pd.schedd.RPC("Schedd.GetProc", req, res)
+	if err != nil {
+		db.DFatalf("Error getProc schedd: %v", err)
+		return nil, false
+	}
+	if !res.OK {
+		return nil, false
+	}
+	p := proc.MakeProcFromProto(res.ProcProto)
+
+	pd.Lock()
+	defer pd.Unlock()
+
+	// Expects Lock to be held, since it does some resource accounting.
+	var q string
+	if p.GetType() == proc.T_LC {
+		q = sp.PROCD_RUNQ_LC
+	} else {
+		q = sp.PROCD_RUNQ_BE
+	}
+	procPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), q, p.GetPid().String())
+	if ok := pd.claimProc(p, procPath); !ok {
+		db.DFatalf("Failed to claim proc: %v", err)
+	}
+	linuxProc := pd.registerProcL(p, false)
+
+	return linuxProc, true
+}
+
 func (pd *Procd) worker() {
+	var p *LinuxProc
+	var ok bool
 	defer pd.group.Done()
 	for !pd.readDone() {
 		db.DPrintf(db.PROCD, "Try to get proc.")
-		p, error := pd.getProc()
-		// If there were no runnable procs, wait and try again.
-		if error == nil && p == nil {
-			db.DPrintf(db.PROCD, "No procs found, waiting.")
-			pd.waitSpawnOrSteal()
+		if p, ok = pd.getProc2(); !ok {
+			db.DPrintf(db.PROCD, "No proc available.")
 			continue
-		}
-		if error != nil && (errors.Is(error, io.EOF) || serr.IsErrUnreachable(error)) {
-			continue
-		}
-		if error != nil {
-			if serr.IsErrNotfound(error) {
-				db.DPrintf(db.PROCD_ERR, "cond file not found: %v", error)
-				return
-			}
-			pd.perf.Done()
-			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		db.DPrintf(db.PROCD, "Got proc %v", p.SysPid)
 		err := pd.fs.running(p)
@@ -455,22 +531,10 @@ func (pd *Procd) worker() {
 			pd.perf.Done()
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
 		}
-		// If this proc doesn't require cores, start another worker to take our
-		// place so user apps don't deadlock.
-		replaced := false
-		if p.attr.GetNcore() == 0 {
-			replaced = true
-			// Wake a new worker to take this worker's place.
-			pd.wakeWorker()
-			pd.group.Add(1)
-			go pd.worker()
-		}
-		pd.runProc(p)
-		// Wake a worker, since we may be able to run something else now.
+		// Wake a new worker to take this worker's place.
 		pd.wakeWorker()
-		if replaced {
-			return
-		}
+		pd.group.Add(1)
+		go pd.runProc(p)
 	}
 }
 
@@ -482,8 +546,6 @@ func (pd *Procd) Work() {
 		pd.memfssrv.Serve()
 		pd.memfssrv.Done()
 	}()
-	go pd.offerStealableProcs()
-	pd.startWorkStealingMonitors()
 	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
 	// procd is full
 	NWorkers := linuxsched.NCores + 1

@@ -77,6 +77,10 @@ func MakeProc(program string, args []string) *Proc {
 	return MakeProcPid(pid, program, args)
 }
 
+func MakeProcFromProto(p *ProcProto) *Proc {
+	return &Proc{p}
+}
+
 func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}

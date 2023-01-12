@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "proc/proc.proto";
+
 option go_package = "ulambda/schedd/proto";
 
 service Schedd {
@@ -10,7 +12,7 @@ service Schedd {
 // TODO: make proc proto
 message SpawnRequest {
   string realm = 1;
-  string procStr = 2;
+  ProcProto procProto = 2;
 }
 
 message SpawnResponse {
@@ -22,6 +24,6 @@ message GetProcRequest {
 }
 
 message GetProcResponse {
-  string procStr = 1;
+  ProcProto procProto = 1;
   bool oK = 2;
 }

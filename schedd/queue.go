@@ -1,8 +1,6 @@
 package schedd
 
 import (
-	"encoding/json"
-
 	db "sigmaos/debug"
 	"sigmaos/proc"
 )
@@ -19,12 +17,7 @@ func makeQueue() *Queue {
 	}
 }
 
-func (q *Queue) Enqueue(pstr string) {
-	// TODO: make protobuf struct for proc so we don't have to unmarshal here.
-	p := proc.MakeEmptyProc()
-	if err := json.Unmarshal([]byte(pstr), p); err != nil {
-		db.DFatalf("Err unmarshal", err)
-	}
+func (q *Queue) Enqueue(p *proc.Proc) {
 	switch p.GetType() {
 	case proc.T_LC:
 		q.lc = append(q.lc, p)
@@ -36,7 +29,7 @@ func (q *Queue) Enqueue(pstr string) {
 }
 
 // LC procs have absolute priority.
-func (q *Queue) Dequeue() (string, bool) {
+func (q *Queue) Dequeue() (*proc.ProcProto, bool) {
 	var p *proc.Proc
 	if len(q.lc) > 0 {
 		p, q.lc = q.lc[0], q.lc[1:]
@@ -44,11 +37,7 @@ func (q *Queue) Dequeue() (string, bool) {
 		p, q.be = q.be[0], q.be[1:]
 	}
 	if p == nil {
-		return "", false
+		return nil, false
 	}
-	b, err := json.Marshal(p)
-	if err != nil {
-		db.DFatalf("Error marshal proc: %v", err)
-	}
-	return string(b), true
+	return p.ProcProto, true
 }

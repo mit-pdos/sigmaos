@@ -1,12 +1,13 @@
 package schedd
 
 import (
-	//	"path"
+	"path"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
@@ -29,15 +30,17 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	sd.Lock()
 	defer sd.Unlock()
 
-	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, req.ProcStr)
+	p := proc.MakeProcFromProto(req.ProcProto)
+
+	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
 	if _, ok := sd.qs[req.Realm]; !ok {
 		sd.qs[req.Realm] = makeQueue()
 	}
 
-	sd.qs[req.Realm].Enqueue(req.ProcStr)
-	//	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, req.Proc.Pid), 0777, sp.OWRITE); err != nil {
-	//		db.DFatalf("Error create %v: %v", req.Proc.Pid, err)
-	//	}
+	sd.qs[req.Realm].Enqueue(p)
+	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
+		db.DFatalf("Error create %v: %v", p.GetPid(), err)
+	}
 
 	return nil
 }
@@ -46,7 +49,7 @@ func (sd *Schedd) GetProc(req proto.GetProcRequest, res *proto.GetProcResponse) 
 	// TODO: choose a realm in a more sensible way.
 	for _, q := range sd.qs {
 		// TODO: check capacity
-		if res.ProcStr, res.OK = q.Dequeue(); res.OK {
+		if res.ProcProto, res.OK = q.Dequeue(); res.OK {
 			break
 		}
 	}

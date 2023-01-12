@@ -46,6 +46,8 @@ func (k *Kernel) BootSub(s string, p *Param, full bool) error {
 		ss, err = k.BootDbd(p.Hostip)
 	case sp.SIGMAMGRREL:
 		ss, err = k.BootSigmaMgr()
+	case sp.SCHEDDREL:
+		ss, err = k.BootSchedd()
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -125,6 +127,10 @@ func (k *Kernel) BootDbd(hostip string) (*Subsystem, error) {
 
 func (k *Kernel) BootSigmaMgr() (*Subsystem, error) {
 	return k.bootSubsystem("sigmamgr", []string{}, k.Param.Realm, k.procdIp, false)
+}
+
+func (k *Kernel) BootSchedd() (*Subsystem, error) {
+	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, false)
 }
 
 func (k *Kernel) GetProcdIp() string {

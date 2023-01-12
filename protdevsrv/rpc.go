@@ -11,7 +11,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	rpcproto "sigmaos/protdevsrv/proto"
+	rpcproto "sigmaos/protdev/proto"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )

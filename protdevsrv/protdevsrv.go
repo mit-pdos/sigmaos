@@ -11,11 +11,6 @@ import (
 	"sigmaos/sessdevsrv"
 )
 
-const (
-	STATS = "stats"
-	RPC   = "rpc"
-)
-
 //
 // RPC server, which borrows from go's RPC dispatch
 //

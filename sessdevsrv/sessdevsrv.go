@@ -11,14 +11,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	DATA = "data-"
-)
-
-func DataName(fn string) string {
-	return DATA + fn
-}
-
 type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
 
 type SessDev struct {

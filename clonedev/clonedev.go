@@ -11,21 +11,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	CLONE = "clone-"
-	CTL   = "ctl"
-)
-
 type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
 type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.TQversion) (sessp.Tsize, *serr.Err)
-
-func SidName(sid string, fn string) string {
-	return sid + "-" + fn
-}
-
-func CloneName(fn string) string {
-	return CLONE + fn
-}
 
 type Clone struct {
 	*inode.Inode

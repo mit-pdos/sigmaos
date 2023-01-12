@@ -7,7 +7,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	_ "sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -203,5 +202,8 @@ func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
 		return false
 	}
 	db.DPrintf(db.PROCD, "Sem init done: %v", p)
+	if err := pd.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+		db.DFatalf("Error remove schedd file: %v", err)
+	}
 	return true
 }

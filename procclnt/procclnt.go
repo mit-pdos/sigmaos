@@ -274,6 +274,20 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 		} else {
 			<-done
 		}
+		scheddLink := path.Join(sp.SCHEDD, "~local", sp.QUEUE, pid.String())
+		db.DPrintf(db.PROCCLNT, "%v set remove watch2: %v", pid, scheddLink)
+		done2 := make(chan bool)
+		err = clnt.SetRemoveWatch(scheddLink, func(string, error) {
+			done2 <- true
+		})
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch2 %v", err)
+			if serr.IsErrUnreachable(err) {
+				return err
+			}
+		} else {
+			<-done2
+		}
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))

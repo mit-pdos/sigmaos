@@ -35,32 +35,9 @@ func (t Ttype) String() string {
 	return ""
 }
 
-//func MakePid(pid string) *Tpid {
-//	return Tpid{Pid: pid}
-//}
-
-//func (pid *Tpid) String() string {
-//	return pid.Pid
-//}
-
 func (pid Tpid) String() string {
 	return string(pid)
 }
-
-//type Proc struct {
-//	Pid          string            // SigmaOS PID
-//	Privileged   bool              // kernel proc?
-//	ProcDir      string            // SigmaOS directory to store this proc's state
-//	ParentDir    string            // SigmaOS parent proc directory
-//	Program      string            // Program to run
-//	Args         []string          // Args
-//	Env          map[string]string // Environment variables
-//	Type         Ttype             // Type
-//	Ncore        Tcore             // Number of cores requested
-//	Mem          Tmem              // Amount of memory required in MB
-//	SpawnTime    time.Time         // Time at which the proc was spawned
-//	sharedTarget string            // Target of shared state
-//}
 
 type Proc struct {
 	*ProcProto

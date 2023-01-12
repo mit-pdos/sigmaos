@@ -8,8 +8,8 @@ import (
 
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
 	"sigmaos/reader"
 	"sigmaos/shardsvcmgr"
 )
@@ -107,10 +107,10 @@ func (ssc *ShardSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Messa
 	return ssc.clnts[i].RPC(m, arg, res)
 }
 
-func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdevsrv.Stats, error) {
+func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.Stats, error) {
 	return ssc.clnts[i].StatsSrv()
 }
 
-func (ssc *ShardSvcClnt) StatsClnt(i int) *protdevsrv.Stats {
+func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.Stats {
 	return ssc.clnts[i].StatsClnt()
 }

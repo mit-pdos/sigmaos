@@ -2,13 +2,12 @@ package protdevsrv
 
 import (
 	"encoding/json"
-	"fmt"
-	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
+	"sigmaos/protdev"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -16,16 +15,16 @@ import (
 
 type statsDev struct {
 	*inode.Inode
-	si *StatInfo
+	si *protdev.StatInfo
 }
 
-func makeStatsDev(mfs *memfssrv.MemFs) (*StatInfo, *serr.Err) {
+func makeStatsDev(mfs *memfssrv.MemFs) (*protdev.StatInfo, *serr.Err) {
 	std := &statsDev{}
 	std.Inode = mfs.MakeDevInode()
-	if err := mfs.MkDev(STATS, std); err != nil {
+	if err := mfs.MkDev(protdev.STATS, std); err != nil {
 		return nil, err
 	}
-	std.si = MakeStatInfo()
+	std.si = protdev.MakeStatInfo()
 	return std.si, nil
 }
 
@@ -38,8 +37,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQv
 	defer std.si.Unlock()
 
 	db.DPrintf(db.PROTDEVSRV, "Read stats: %v\n", std.si)
-	std.si.Stats()
-	b, err := json.Marshal(std.si.st)
+	b, err := json.Marshal(std.si.Stats())
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}

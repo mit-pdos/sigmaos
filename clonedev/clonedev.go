@@ -7,6 +7,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sessdev"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -26,7 +27,7 @@ type Clone struct {
 func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF, w WriteCtlF) *serr.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
-	err := mfs.MkDev(CloneName(fn), cl) // put clone file into root dir
+	err := mfs.MkDev(sessdev.CloneName(fn), cl) // put clone file into root dir
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,7 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF, w W
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	sid := ctx.SessionId()
-	n := SidName(sid.String(), c.fn)
+	n := sessdev.SidName(sid.String(), c.fn)
 	db.DPrintf(db.CLONEDEV, "%v: Clone create %v\n", proc.GetName(), n)
 	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR)
 	if err != nil && err.Code() != serr.TErrExists {
@@ -49,7 +50,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		return nil, err
 	}
 	var s *session
-	ctl := n + "/" + CTL
+	ctl := n + "/" + sessdev.CTL
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.MakeDevInode()
@@ -75,15 +76,15 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	sid := SidName(ctx.SessionId().String(), c.fn)
+	sid := sessdev.SidName(ctx.SessionId().String(), c.fn)
 	db.DPrintf(db.CLONEDEV, "%v: Close %v\n", proc.GetName(), sid)
 	return nil
 }
 
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
-	dir := SidName(session.String(), c.fn)
-	n := dir + "/" + CTL
+	dir := sessdev.SidName(session.String(), c.fn)
+	n := dir + "/" + sessdev.CTL
 	if err := c.mfs.Remove(n); err != nil {
 		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", n, err)
 	}

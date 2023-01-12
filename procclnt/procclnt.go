@@ -225,15 +225,6 @@ func (clnt *ProcClnt) nextProcd() string {
 	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
 }
 
-// XXX For short-term benchmarking only.
-func (clnt *ProcClnt) nextProcdUnsafe(i int) string {
-	if len(clnt.procds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
-	}
-
-	return clnt.procds[i%len(clnt.procds)]
-}
-
 // ========== WAIT ==========
 
 func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {

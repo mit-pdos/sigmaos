@@ -74,7 +74,7 @@ func MakeKernel(p *Param) (*Kernel, error) {
 		return nil, err
 	}
 	k.FsLib = fsl
-	startSrvs(k)
+	err = startSrvs(k)
 	return k, err
 }
 

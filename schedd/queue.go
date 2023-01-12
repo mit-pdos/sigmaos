@@ -39,5 +39,5 @@ func (q *Queue) Dequeue() (*proc.ProcProto, bool) {
 	if p == nil {
 		return nil, false
 	}
-	return p.ProcProto, true
+	return p.GetProto(), true
 }

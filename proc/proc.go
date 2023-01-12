@@ -77,10 +77,6 @@ func MakeProc(program string, args []string) *Proc {
 	return MakeProcPid(pid, program, args)
 }
 
-func MakeProcFromProto(p *ProcProto) *Proc {
-	return &Proc{p}
-}
-
 func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
@@ -101,6 +97,14 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 
 func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	return MakePrivProcPid(pid, program, args, false)
+}
+
+func MakeProcFromProto(p *ProcProto) *Proc {
+	return &Proc{p}
+}
+
+func (p *Proc) GetProto() *ProcProto {
+	return p.ProcProto
 }
 
 // Called by procclnt to set the parent dir when spawning.

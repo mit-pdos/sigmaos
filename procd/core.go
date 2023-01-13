@@ -9,17 +9,17 @@ import (
 )
 
 // Allocate cores to a proc. Caller holds lock.
-func (pd *Procd) allocCoresL(n proc.Tcore) {
-	if n > pd.coresAvail {
+func (pd *Procd) allocCoresL(p *proc.Proc) {
+	if p.GetNcore() > pd.coresAvail {
 		debug.PrintStack()
 		pd.perf.Done()
-		db.DFatalf("Alloc too many cores %v > %v", n, pd.coresAvail)
+		db.DFatalf("Alloc too many cores %v > %v", p.GetNcore(), pd.coresAvail)
 	}
-	pd.coresAvail -= n
+	pd.coresAvail -= p.GetNcore()
 	pd.sanityCheckCoreCountsL()
 }
 
-func (pd *Procd) freeCores(p *LinuxProc) {
+func (pd *Procd) freeCores(p *proc.Proc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
@@ -27,9 +27,9 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 }
 
 // Free a set of cores which was being used by a proc.
-func (pd *Procd) freeCoresL(p *LinuxProc) {
+func (pd *Procd) freeCoresL(p *proc.Proc) {
 	// If no cores were exclusively allocated to this proc, return immediately.
-	if p.attr.GetNcore() == proc.C_DEF {
+	if p.GetNcore() == proc.C_DEF {
 		return
 	}
 

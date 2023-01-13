@@ -200,7 +200,7 @@ func (c *Coord) doneTasks(dir string) int {
 
 func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *proc.Proc, t string) {
 	// Wait for the task to exit.
-	status, err := c.WaitExit(p.Pid)
+	status, err := c.WaitExit(p.GetPid())
 	// Record end time.
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
@@ -233,7 +233,7 @@ func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func
 	// Make task proc structures.
 	for i, tn := range taskNames {
 		tasks[i] = f(tn)
-		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].Pid, tasks[i].Args)
+		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].GetPid(), tasks[i].Args)
 	}
 	start := time.Now()
 	// Burst-spawn procs.

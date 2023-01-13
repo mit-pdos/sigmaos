@@ -32,7 +32,7 @@ func GenPid() Tpid {
 }
 
 func SetPid(pid Tpid) {
-	os.Setenv(SIGMAPID, string(pid))
+	os.Setenv(SIGMAPID, pid.String())
 }
 
 // Can return "" for test programs that make a procclnt

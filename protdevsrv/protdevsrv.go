@@ -8,12 +8,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/sessdevsrv"
-)
-
-const (
-	STATS = "stats"
-	RPC   = "rpc"
 )
 
 //
@@ -36,7 +32,7 @@ type service struct {
 
 type ProtDevSrv struct {
 	*memfssrv.MemFs
-	sti *StatInfo
+	sti *protdev.StatInfo
 	svc *service
 }
 
@@ -61,7 +57,7 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := sessdevsrv.MkSessDev(psd.MemFs, RPC, rd.mkRpcSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(psd.MemFs, protdev.RPC, rd.mkRpcSession, nil); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {

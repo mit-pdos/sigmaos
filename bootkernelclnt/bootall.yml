@@ -1,6 +1,7 @@
 services:
    # order is important
   - named
+  - schedd
   - procd
   - ux
   - s3

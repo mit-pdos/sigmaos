@@ -16,6 +16,8 @@ const (
 	S3          = NAMED + S3REL + "/"
 	UXREL       = "ux"
 	UX          = NAMED + UXREL + "/"
+	SCHEDDREL   = "schedd"
+	SCHEDD      = NAMED + SCHEDDREL + "/"
 	SIGMAMGRREL = "sigmamgr"
 	SIGMAMGR    = NAMED + SIGMAMGRREL + "/"
 	DBREL       = "db"
@@ -44,6 +46,9 @@ const (
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
+
+	// Schedd
+	QUEUE = "queue"
 
 	// Procd spawn file
 	PROCD_SPAWN_FILE = "spawn"

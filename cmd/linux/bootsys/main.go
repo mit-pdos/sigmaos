@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"os"
+	"strconv"
 	"time"
 
 	db "sigmaos/debug"
@@ -10,11 +12,15 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v realmid", os.Args[0])
+		db.DFatalf("Usage: %v <nmachine>", os.Args[0])
 	}
-	_, err := system.Boot(os.Args[1], "bootkernelclnt")
+	n, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		db.DFatalf("%v: Boot %v\n", err, os.Args[0])
+		log.Fatalf("%s: Atoi err %v", os.Args[0], err)
+	}
+	_, err = system.Boot(n, "bootkernelclnt")
+	if err != nil {
+		log.Fatalf("%v: Boot %v", os.Args[0], err)
 	}
 	for {
 		time.Sleep(100 * time.Second)

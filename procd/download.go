@@ -94,13 +94,6 @@ func (pd *Procd) downloadProcPath(pn string) error {
 			procCopies++
 		}
 	}
-	// Note that a proc is downloading, so we don't pull procs too aggressively.
-	// It's utilization won't have been measured yet.
-	pd.procsDownloading += procCopies
-	defer func() {
-		pd.procsDownloading -= procCopies
-	}()
-
 	// May need to retry if ux crashes.
 	var err error
 	RETRIES := 100

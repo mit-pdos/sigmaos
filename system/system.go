@@ -7,56 +7,57 @@ import (
 	"syscall"
 
 	// db "sigmaos/debug"
+	"sigmaos/bootkernelclnt"
 	"sigmaos/fslib"
-	"sigmaos/realm"
-	"sigmaos/realmv1"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
+)
+
+const (
+	ROOTREALM = "rootrealm"
 )
 
 type System struct {
-	Root  *realmv1.Realm // the sigma root realm
-	realm *realmv1.Realm // XXX should be slice of realms
-	proxy *exec.Cmd
+	boot    *bootkernelclnt.Kernel
+	kernels []*bootkernelclnt.Kernel
+	proxy   *exec.Cmd
 }
 
-func Boot(realmid, ymldir string) (*System, error) {
+func Boot(n int, ymldir string) (*System, error) {
 	sys := &System{}
 	r, err := realmv1.BootRealmOld(realmv1.ROOTREALM, path.Join(ymldir, "bootsys.yml"))
 	if err != nil {
 		return nil, err
 	}
-	sys.Root = r
-	sys.proxy = startProxy(sys.Root.GetIP(), sys.Root.NamedAddr())
+	sys.boot = k
+	nameds, err := fslib.SetNamedIP(k.Ip())
+	if err != nil {
+		return nil, err
+	}
+	sys.proxy = startProxy(sys.boot.Ip(), nameds)
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
-	r, err = realmv1.BootRealmOld(realmid, path.Join(ymldir, "bootall.yml"))
-	if err != nil {
-		return nil, err
+	for i := 1; i < n; i++ {
+		_, err := bootkernelclnt.BootKernelOld(ROOTREALM, true, path.Join(ymldir, "bootmach.yml"))
+		if err != nil {
+			return nil, err
+		}
+		//kaddr := []string{""}
+		//mnt := sp.MkMountService(kaddr)
+		//if err := sys.boot.MkMountSymlink(sp.BOOT, mnt); err != nil {
+		//	return nil, err
+		//}
 	}
-	sys.realm = r
-	pn := path.Join(realm.REALM_NAMEDS, realmid)
-	nameds, err := fslib.SetNamedIP(r.GetIP())
-	if err != nil {
-		return nil, err
-	}
-	mnt := sp.MkMountService(nameds)
-	if err := sys.Root.MkMountSymlink(pn, mnt); err != nil {
-		return nil, err
-	}
-
-	//cfg := e.CreateRealm(e.rid)
-	// return cfg, nil
 	return sys, nil
 }
 
 func (sys *System) Shutdown() error {
-	if err := sys.realm.Shutdown(); err != nil {
+	if err := sys.boot.Shutdown(); err != nil {
 		return err
 	}
-	if err := sys.Root.Shutdown(); err != nil {
-		return err
-	}
+	//if err := sys.Root.Shutdown(); err != nil {
+	//	return err
+	//}
 	if err := sys.proxy.Process.Kill(); err != nil {
 		return err
 	}

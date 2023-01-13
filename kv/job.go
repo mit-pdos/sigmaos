@@ -73,10 +73,10 @@ func StartClerk(pclnt *procclnt.ProcClnt, job string, args []string, ncore proc.
 	// SpawnBurst to spread clerks across procds.
 	_, errs := pclnt.SpawnBurst([]*proc.Proc{p})
 	if len(errs) > 0 {
-		return p.Pid, errs[0]
+		return p.GetPid(), errs[0]
 	}
-	err := pclnt.WaitStart(p.Pid)
-	return p.Pid, err
+	err := pclnt.WaitStart(p.GetPid())
+	return p.GetPid(), err
 }
 
 func StopClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {

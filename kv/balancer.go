@@ -292,9 +292,9 @@ func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	p.AppendEnv("SIGMACRASH", bl.crashChild)
 	err := bl.Spawn(p)
 	if err != nil {
-		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.Pid, err)
+		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)
 	}
-	return p.Pid, err
+	return p.GetPid(), err
 }
 
 func (bl *Balancer) runProc(args []string) (*proc.Status, error) {

@@ -46,6 +46,8 @@ func (k *Kernel) BootSub(s string, p *Param, full bool) error {
 		ss, err = k.BootDbd(p.Hostip)
 	case sp.SIGMAMGRREL:
 		ss, err = k.BootSigmaMgr()
+	case sp.SCHEDDREL:
+		ss, err = k.BootSchedd()
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -70,7 +72,7 @@ func (k *Kernel) KillOne(srv string) error {
 	err := ss.Kill()
 	if err == nil {
 		ss.Wait()
-		k.svcs.crashedPids[ss.p.Pid] = true
+		k.svcs.crashedPids[ss.p.GetPid()] = true
 	} else {
 		db.DFatalf("%v kill failed %v\n", srv, err)
 	}
@@ -101,7 +103,7 @@ func (k *Kernel) BootProcd() (*Subsystem, error) {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, k.cores.Marshal(), strconv.FormatBool(spawningSys)}, k.Param.Realm, "", false)
+	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, strconv.FormatBool(spawningSys)}, k.Param.Realm, "", false)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +127,10 @@ func (k *Kernel) BootDbd(hostip string) (*Subsystem, error) {
 
 func (k *Kernel) BootSigmaMgr() (*Subsystem, error) {
 	return k.bootSubsystem("sigmamgr", []string{}, k.Param.Realm, k.procdIp, false)
+}
+
+func (k *Kernel) BootSchedd() (*Subsystem, error) {
+	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, false)
 }
 
 func (k *Kernel) GetProcdIp() string {

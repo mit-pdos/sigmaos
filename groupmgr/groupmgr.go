@@ -67,15 +67,15 @@ func (m *member) spawn() error {
 	if m.ncore == 1 && strings.Contains(m.bin, "kvd") {
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
 	}
-	db.DPrintf(db.GROUPMGR, "SpawnBurst pid %v", p.Pid)
+	db.DPrintf(db.GROUPMGR, "SpawnBurst pid %v", p.GetPid())
 	if _, errs := m.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
-		db.DPrintf(db.GROUPMGR, "Error SpawnBurst pid %v err %v", p.Pid, errs[0])
+		db.DPrintf(db.GROUPMGR, "Error SpawnBurst pid %v err %v", p.GetPid(), errs[0])
 		return errs[0]
 	}
-	if err := m.WaitStart(p.Pid); err != nil {
+	if err := m.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	m.pid = p.Pid
+	m.pid = p.GetPid()
 	return nil
 }
 

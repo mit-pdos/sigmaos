@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "ulambda/proc";
+import "google/protobuf/timestamp.proto";
+
+
+//service Noded {
+//  rpc GrantCores(NodedRequest) returns (NodedResponse);
+//  rpc RevokeCores(NodedRequest) returns (NodedResponse);
+//}
+
+message ProcProto {
+  string pidStr = 1;
+  bool privileged = 2;
+  string procDir = 3;
+  string parentDir = 4;
+  string program = 5;
+  repeated string args = 6;
+  map<string, string> env = 7;
+  uint32 typeInt = 8;
+  uint32 ncoreInt = 9;
+  uint32 memInt = 10;
+  google.protobuf.Timestamp spawnTime = 11;
+  string sharedTarget = 12;
+}

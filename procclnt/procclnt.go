@@ -9,14 +9,17 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	schedd "sigmaos/schedd/proto"
+	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-
-	"sigmaos/semclnt"
 )
 
 type ProcClnt struct {
@@ -28,6 +31,7 @@ type ProcClnt struct {
 	procds          []string
 	lastProcdUpdate time.Time
 	burstOffset     int
+	pdc             *protdevclnt.ProtDevClnt
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -52,7 +56,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp,
 	}
 	// Spawn the proc, either through procd, or just by creating the named state
 	// the proc (and its parent) expects.
-	if err := clnt.spawn(procdIp, viaProcd, p); err != nil {
+	if err := clnt.spawn(procdIp, viaProcd, p, clnt.getScheddClnt()); err != nil {
 		return nil, err
 	}
 	if !viaProcd {
@@ -75,7 +79,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateProcds()
-		err := clnt.spawn(clnt.nextProcd(), true, ps[i])
+		err := clnt.spawn(clnt.nextProcd(), true, ps[i], clnt.getScheddClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -110,7 +114,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 				}
 				// Update the list of active procds.
 				_ = x
-				err := clnt.spawn(clnt.nextProcd(), true, p)
+				err := clnt.spawn(clnt.nextProcd(), true, p, clnt.getScheddClnt())
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -131,14 +135,14 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", true, p)
+	return clnt.spawn("~local", true, p, clnt.getScheddClnt())
 }
 
 // Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
-func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
-	if p.Ncore > 0 && p.Type != proc.T_LC {
+func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
+	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
 	}
@@ -156,29 +160,28 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 		return err
 	}
 
-	p.SpawnTime = time.Now()
+	p.SpawnTime = timestamppb.New(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
 	if viaProcd {
-		b, err := json.Marshal(p)
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Spawn marshal err %v", err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+		req := &schedd.SpawnRequest{
+			Realm:     proc.GetRealm(),
+			ProcProto: p.GetProto(),
 		}
-		fn := path.Join(sp.PROCDREL, procdIp, sp.PROCD_SPAWN_FILE)
-		_, err = clnt.SetFile(fn, b, sp.OWRITE, 0)
+		res := &schedd.SpawnResponse{}
+		err := pdc.RPC("Schedd.Spawn", req, res)
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "SetFile %v err %v", fn, err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+			db.DFatalf("Error spawn schedd: %v", err)
+			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
+		err := clnt.MakeProcDir(p.GetPid(), p.ProcDir, p.IsPrivilegedProc())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, procd will create the semaphore.
-		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
+		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
 	}
@@ -211,6 +214,17 @@ func (clnt *ProcClnt) updateProcds() {
 	}
 }
 
+func (clnt *ProcClnt) getScheddClnt() *protdevclnt.ProtDevClnt {
+	if clnt.pdc == nil {
+		var err error
+		clnt.pdc, err = protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, "~local"))
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error make protdevclnt: %v", err)
+		}
+	}
+	return clnt.pdc
+}
+
 // Get the next procd to burst on.
 func (clnt *ProcClnt) nextProcd() string {
 	clnt.Lock()
@@ -222,15 +236,6 @@ func (clnt *ProcClnt) nextProcd() string {
 
 	clnt.burstOffset++
 	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
-}
-
-// XXX For short-term benchmarking only.
-func (clnt *ProcClnt) nextProcdUnsafe(i int) string {
-	if len(clnt.procds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
-	}
-
-	return clnt.procds[i%len(clnt.procds)]
 }
 
 // ========== WAIT ==========
@@ -245,9 +250,10 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
-		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, procfileLink)
+		scheddLink := path.Join(sp.SCHEDD, "~local", sp.QUEUE, pid.String())
+		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, scheddLink)
 		done := make(chan bool)
-		err := clnt.SetRemoveWatch(procfileLink, func(string, error) {
+		err = clnt.SetRemoveWatch(scheddLink, func(string, error) {
 			done <- true
 		})
 		if err != nil {

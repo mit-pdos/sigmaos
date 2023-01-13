@@ -37,10 +37,10 @@ func (sm *ShardMgr) addShard(i int) error {
 	if len(errs) > 0 {
 		return errs[0]
 	}
-	if err := sm.WaitStart(p.Pid); err != nil {
+	if err := sm.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	sm.shards = append(sm.shards, p.Pid)
+	sm.shards = append(sm.shards, p.GetPid())
 	return nil
 }
 

@@ -83,11 +83,11 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, nil, nil, err
 		}
-		if err = pclnt.WaitStart(p.Pid); err != nil {
+		if err = pclnt.WaitStart(p.GetPid()); err != nil {
 			db.DFatalf("Error spawn proc %v: %v", p, err)
 			return nil, nil, nil, err
 		}
-		pids = append(pids, p.Pid)
+		pids = append(pids, p.GetPid())
 	}
 
 	return cc, cm, pids, nil

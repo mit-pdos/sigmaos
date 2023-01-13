@@ -42,11 +42,11 @@ func (s *Subsystem) Run(namedAddr []string) error {
 		return err
 	}
 	s.cmd = cmd
-	return s.WaitStart(s.p.Pid)
+	return s.WaitStart(s.p.GetPid())
 }
 
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
-	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.Pid.String()).Ip
+	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }
 
 // Send SIGTERM to a system.
@@ -62,19 +62,19 @@ func (s *Subsystem) Terminate() error {
 func (s *Subsystem) Kill() error {
 	if s.viaProcd {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through procd: %v", s.p)
-		err := s.Evict(s.p.Pid)
+		err := s.Evict(s.p.GetPid())
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error killing procd-spawned kernel proc: %v err %v", s.p.Pid, err)
+			db.DPrintf(db.ALWAYS, "Error killing procd-spawned kernel proc: %v err %v", s.p.GetPid(), err)
 		}
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "kill %v %v", s.cmd.Process.Pid, s.p.Pid)
+	db.DPrintf(db.ALWAYS, "kill %v %v", s.cmd.Process.Pid, s.p.GetPid())
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
 }
 
 func (s *Subsystem) Wait() {
 	if s.viaProcd {
-		status, err := s.WaitExit(s.p.Pid)
+		status, err := s.WaitExit(s.p.GetPid())
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
 		}

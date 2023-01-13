@@ -8,12 +8,11 @@ import (
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
-	"sigmaos/clonedev"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/protdev"
 	"sigmaos/reader"
-	"sigmaos/sessdevsrv"
+	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
 	sp "sigmaos/sigmap"
 )
@@ -88,13 +87,13 @@ func (c *CacheClnt) Get(key string, val any) error {
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
-	b, err := cc.fsl.GetFile(srv + "/" + clonedev.CloneName(cachesrv.DUMP))
+	b, err := cc.fsl.GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
-	sidn := clonedev.SidName(sid, cachesrv.DUMP)
-	fn := srv + "/" + sidn + "/" + sessdevsrv.DataName(cachesrv.DUMP)
+	sidn := sessdev.SidName(sid, cachesrv.DUMP)
+	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err
@@ -106,9 +105,9 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	return m, nil
 }
 
-func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
+func (cc *CacheClnt) StatsSrv() ([]*protdev.Stats, error) {
 	n := cc.Nshard()
-	stats := make([]*protdevsrv.Stats, 0, n)
+	stats := make([]*protdev.Stats, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
@@ -119,9 +118,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
+func (cc *CacheClnt) StatsClnt() []*protdev.Stats {
 	n := cc.Nshard()
-	stats := make([]*protdevsrv.Stats, 0, n)
+	stats := make([]*protdev.Stats, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

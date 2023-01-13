@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --realm REALM" 1>&2
+  echo "Usage: $0 --machine N --realm REALM" 1>&2
 }
 
 REALM=""
@@ -10,6 +10,11 @@ while [[ "$#" -gt 0 ]]; do
   --realm)
     shift
     REALM=$1
+    shift
+    ;;
+  --machine)
+    shift
+    MACHINE=$1
     shift
     ;;
   -help)
@@ -23,6 +28,11 @@ while [[ "$#" -gt 0 ]]; do
     ;;
   esac
 done
+
+if [ -z "$MACHINE" ] || [ $# -gt 0 ]; then
+    usage
+    exit 1
+fi
 
 if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
@@ -43,9 +53,9 @@ fi
 echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
 
 ./install.sh --realm rootrealm
-./install.sh --realm $REALM
+# ./install.sh --realm $REALM
 
-bootsys $REALM &
+bootsys $MACHINE &
 
 sleep 1
 

@@ -13,6 +13,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/procd/proto"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	scheddproto "sigmaos/schedd/proto"
@@ -35,7 +36,7 @@ type Procd struct {
 	workers        sync.WaitGroup
 	procclnt       *procclnt.ProcClnt
 	memfssrv       *memfssrv.MemFs
-	pdc            *protdevclnt.ProtDevClnt
+	schedd         *protdevclnt.ProtDevClnt
 	pds            *protdevsrv.ProtDevSrv
 	*fslib.FsLib
 }
@@ -58,7 +59,7 @@ func RunProcd(realm string, spawningSys bool) {
 
 	pd.addr = pd.memfssrv.MyAddr()
 	var err error
-	pd.pdc, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
+	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
 	if err != nil {
 		db.DFatalf("Error make schedd clnt: %v", err)
 	}
@@ -79,6 +80,16 @@ func RunProcd(realm string, spawningSys bool) {
 	// Make a directory in which to put stealable procs.
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
+
+	// Notify schedd that the proc is done running.
+	req := &scheddproto.RegisterRequest{
+		ProcdIp: pd.memfssrv.MyAddr(),
+	}
+	res := &scheddproto.RegisterResponse{}
+	err = pd.schedd.RPC("Schedd.RegisterProcd", req, res)
+	if err != nil {
+		db.DFatalf("Error RegisterProcd schedd: %v", err)
+	}
 
 	pd.Work()
 }
@@ -136,6 +147,15 @@ func (pd *Procd) readDone() bool {
 }
 
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
+	// Create an ephemeral semaphore for the parent proc to wait on.
+	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
+	if err := semStart.Init(sp.DMTMP); err != nil {
+		db.DFatalf("Error creating start semaphore: %v", err)
+	}
+	db.DPrintf(db.PROCD, "Sem init done: %v", p)
+	if err := pd.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+		db.DFatalf("Error remove schedd file: %v", err)
+	}
 	if p.IsPrivilegedProc() && pd.kernelInitDone {
 		db.DPrintf(db.ALWAYS, "Spawned privileged proc %v on fully initialized procd", p)
 	}
@@ -143,11 +163,8 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	linuxProc := makeLinuxProc(pd, p, stolen)
 	// Allocate dedicated cores for this proc to run on, if it requires them.
 	// Core allocation & resource accounting has to happen at this point, while
-	// we still hold the lock we used to claim the proc, since this procd may be
-	// resized at any time. When the resize happens, we *must* have already
-	// assigned cores to this proc & registered it in the procd in-mem data
-	// structures so that the proc's core allocations will be adjusted during the
-	// resize.
+	// we still hold the lock we used to claim the proc, since more spawns may
+	// happen at any time.
 	pd.allocCoresL(p.GetNcore())
 	pd.allocMemL(p)
 	// Register running proc in in-memory structures.
@@ -165,79 +182,43 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 			return err
 		}
 	}
-
 	// Run the proc.
 	p.run()
-
 	// Free any dedicated cores.
 	pd.freeCores(p)
 	pd.freeMem(p.attr)
-
 	// Deregister running procs
 	pd.deleteProc(p)
+	// Notify schedd that the proc is done running.
+	req := &scheddproto.ProcDoneRequest{
+		ProcProto: p.attr.GetProto(),
+	}
+	res := &scheddproto.ProcDoneResponse{}
+	err := pd.schedd.RPC("Schedd.ProcDone", req, res)
+	if err != nil {
+		db.DFatalf("Error ProcDone schedd: %v", err)
+		return err
+	}
 	return nil
 }
 
-func (pd *Procd) claimProc(p *proc.Proc) bool {
-	// Create an ephemeral semaphore for the parent proc to wait on.
-	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
-	if err := semStart.Init(sp.DMTMP); err != nil {
-		db.DFatalf("Error creating start semaphore: %v", err)
-	}
-	db.DPrintf(db.PROCD, "Sem init done: %v", p)
-	if err := pd.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
-		db.DFatalf("Error remove schedd file: %v", err)
-	}
-	return true
-}
-
-func (pd *Procd) getProc() (*LinuxProc, bool) {
-	req := &scheddproto.GetProcRequest{
-		FreeCores: uint32(pd.coresAvail), // XXX fix race
-		Mem:       uint32(pd.memAvail),   // XXX fix race
-	}
-	res := &scheddproto.GetProcResponse{}
-	err := pd.pdc.RPC("Schedd.GetProc", req, res)
-	if err != nil {
-		db.DFatalf("Error getProc schedd: %v", err)
-		return nil, false
-	}
-	if !res.OK {
-		return nil, false
-	}
-	p := proc.MakeProcFromProto(res.ProcProto)
-
+// Run a proc.
+func (pd *Procd) RunProc(req proto.RunProcRequest, res *proto.RunProcResponse) error {
 	pd.Lock()
 	defer pd.Unlock()
 
-	if ok := pd.claimProc(p); !ok {
-		db.DFatalf("Failed to claim proc: %v", err)
-	}
+	p := proc.MakeProcFromProto(req.ProcProto)
+	db.DPrintf(db.PROCD, "Got proc %v", p)
 	linuxProc := pd.registerProcL(p, false)
-
-	return linuxProc, true
-}
-
-func (pd *Procd) worker() {
-	var p *LinuxProc
-	var ok bool
-	defer pd.workers.Done()
-	for !pd.readDone() {
-		db.DPrintf(db.PROCD, "Try to get proc.")
-		if p, ok = pd.getProc(); !ok {
-			db.DPrintf(db.PROCD, "No proc available.")
-			continue
-		}
-		db.DPrintf(db.PROCD, "Got proc %v", p.SysPid)
-		err := pd.fs.running(p)
-		if err != nil {
-			pd.perf.Done()
-			db.DFatalf("Procd pub running error %v %T\n", err, err)
-		}
-		// Wake a new worker to take this worker's place.
-		pd.workers.Add(1)
-		go pd.runProc(p)
+	err := pd.fs.running(linuxProc)
+	if err != nil {
+		pd.perf.Done()
+		db.DFatalf("Procd pub running error %v %T\n", err, err)
 	}
+	// Run this proc in a separate thread.
+	pd.workers.Add(1)
+	go pd.runProc(linuxProc)
+	return nil
 }
 
 func (pd *Procd) Work() {
@@ -248,7 +229,5 @@ func (pd *Procd) Work() {
 		pd.memfssrv.Serve()
 		pd.memfssrv.Done()
 	}()
-	pd.workers.Add(1)
-	go pd.worker()
 	pd.workers.Wait()
 }

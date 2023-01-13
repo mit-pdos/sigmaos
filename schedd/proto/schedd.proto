@@ -2,12 +2,12 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "ulambda/schedd/proto";
+option go_package = "sigmaos/schedd/proto";
 
 service Schedd {
   rpc RegisterProcd(RegisterRequest) returns (RegisterResponse);
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
-  rpc GetProc(GetProcRequest) returns (GetProcResponse);
+  rpc ProcDone(ProcDoneRequest) returns (ProcDoneResponse);
 }
 
 message RegisterRequest {
@@ -25,12 +25,10 @@ message SpawnRequest {
 message SpawnResponse {
 }
 
-message GetProcRequest {
-  uint32 freeCores = 1;  
-  uint32 mem = 2;
+message ProcDoneRequest {
+  ProcProto procProto = 1;
 }
 
-message GetProcResponse {
-  ProcProto procProto = 1;
-  bool oK = 2;
+message ProcDoneResponse {
+  bool oK = 1;
 }

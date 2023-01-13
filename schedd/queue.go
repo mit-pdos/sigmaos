@@ -1,8 +1,14 @@
 package schedd
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
+)
+
+const (
+	DEF_Q_SZ = 10
 )
 
 type Queue struct {
@@ -12,8 +18,8 @@ type Queue struct {
 
 func makeQueue() *Queue {
 	return &Queue{
-		lc: make([]*proc.Proc, 10),
-		be: make([]*proc.Proc, 10),
+		lc: make([]*proc.Proc, 0, DEF_Q_SZ),
+		be: make([]*proc.Proc, 0, DEF_Q_SZ),
 	}
 }
 
@@ -29,7 +35,7 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 }
 
 // LC procs have absolute priority.
-func (q *Queue) Dequeue() (*proc.ProcProto, bool) {
+func (q *Queue) Dequeue() (*proc.Proc, bool) {
 	var p *proc.Proc
 	if len(q.lc) > 0 {
 		p, q.lc = q.lc[0], q.lc[1:]
@@ -39,5 +45,9 @@ func (q *Queue) Dequeue() (*proc.ProcProto, bool) {
 	if p == nil {
 		return nil, false
 	}
-	return p.GetProto(), true
+	return p, true
+}
+
+func (q *Queue) String() string {
+	return fmt.Sprintf("{ lc:%v be:%v }", q.lc, q.be)
 }

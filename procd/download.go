@@ -28,11 +28,11 @@ func (pd *Procd) tryDownloadProcBin(pn string) error {
 	cachePn := cacheDir(pn)
 	// Copy the binary from s3 to a temporary file.
 	tmppath := path.Join(cachePn + "-tmp-" + rand.String(16))
-	if err := pd.CopyFile(pn, tmppath); err != nil {
+	if err := pd.fsl.CopyFile(pn, tmppath); err != nil {
 		return err
 	}
 	// Rename the temporary file.
-	if err := pd.Rename(tmppath, cachePn); err != nil {
+	if err := pd.fsl.Rename(tmppath, cachePn); err != nil {
 		// If another procd (or another thread on this procd) already completed the
 		// download, then we consider the download successful. Any other error
 		// (e.g. ux crashed) is unexpected.
@@ -40,7 +40,7 @@ func (pd *Procd) tryDownloadProcBin(pn string) error {
 			return err
 		}
 		// If someone else completed the download before us, remove the temp file.
-		pd.Remove(tmppath)
+		pd.fsl.Remove(tmppath)
 	}
 	db.DPrintf(db.PROCD, "Took %v to download proc %v", time.Since(start), pn)
 	return nil
@@ -51,7 +51,7 @@ func (pd *Procd) tryDownloadProcBin(pn string) error {
 func (pd *Procd) needToDownload(pn string) bool {
 	// If we can't stat the bin through ux, we try to download it.
 	cachePn := cacheDir(pn)
-	_, err := pd.Stat(cachePn)
+	_, err := pd.fsl.Stat(cachePn)
 	db.DPrintf(db.PROCD, "uxp %s err %v\n", cachePn, err)
 	if err != nil {
 		return true
@@ -61,8 +61,8 @@ func (pd *Procd) needToDownload(pn string) bool {
 
 // XXX Cleanup on procd crashes?
 func (pd *Procd) downloadProcBin(p *proc.Proc) error {
-	pd.Lock()
-	defer pd.Unlock()
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 
 	searchpath, ok := p.LookupEnv(proc.SIGMAPATH)
 	if !ok {
@@ -97,7 +97,7 @@ func (pd *Procd) downloadProcPath(pn string) error {
 	// May need to retry if ux crashes.
 	var err error
 	RETRIES := 100
-	for i := 0; i < RETRIES && !pd.done; i++ {
+	for i := 0; i < RETRIES; i++ {
 		// Return if successful. Else, retry
 		if err = pd.tryDownloadProcBin(pn); err == nil {
 			return nil

@@ -73,11 +73,11 @@ func (p *LinuxProc) run() error {
 		// If this is a privileged proc, wait for it to start & then mark it as
 		// started.
 		go func() {
-			semStart := semclnt.MakeSemClnt(p.pd.FsLib, path.Join(p.attr.ProcDir, proc.START_SEM))
+			semStart := semclnt.MakeSemClnt(p.pd.fsl, path.Join(p.attr.ProcDir, proc.START_SEM))
 			semStart.Down()
 
-			p.pd.Lock()
-			defer p.pd.Unlock()
+			p.pd.mu.Lock()
+			defer p.pd.mu.Unlock()
 			// Sanity check that we don't start 2 of the same kernel proc on the same
 			// procd.
 			if _, ok := p.pd.kernelProcs[p.attr.Program]; ok && p.attr.Program != "kernel/dbd" {
@@ -114,12 +114,12 @@ func (p *LinuxProc) run() error {
 	// worse now with an extra mount.
 
 	// Take this lock to ensure we don't race with a thread rebalancing cores.
-	p.pd.Lock()
+	p.pd.mu.Lock()
 	p.SysPid = cmd.Process.Pid
 	p.syspidstr = strconv.Itoa(p.SysPid)
 	p.UtilInfo.t0 = time.Now()
 	p.UtilInfo.utime0, p.UtilInfo.stime0, err = perf.GetCPUTimePid(p.syspidstr)
-	p.pd.Unlock()
+	p.pd.mu.Unlock()
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Procd GetCPUTimePid %v err %v\n", p.syspidstr, err)
 	}

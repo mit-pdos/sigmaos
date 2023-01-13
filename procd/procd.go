@@ -22,10 +22,9 @@ import (
 )
 
 type Procd struct {
-	sync.Mutex
+	mu             sync.Mutex
 	fs             *ProcdFs
 	realm          string                   // realm id of this procd
-	done           bool                     // Finished running.
 	kernelInitDone bool                     // True if kernel init has finished (this procd has spawned ux & s3).
 	kernelProcs    map[string]bool          // Map of kernel procs spawned on this procd.
 	addr           string                   // Address of this procd.
@@ -38,7 +37,7 @@ type Procd struct {
 	memfssrv       *memfssrv.MemFs
 	schedd         *protdevclnt.ProtDevClnt
 	pds            *protdevsrv.ProtDevSrv
-	*fslib.FsLib
+	fsl            *fslib.FsLib
 }
 
 func RunProcd(realm string, spawningSys bool) {
@@ -59,7 +58,7 @@ func RunProcd(realm string, spawningSys bool) {
 
 	pd.addr = pd.memfssrv.MyAddr()
 	var err error
-	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
+	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.fsl, path.Join(sp.SCHEDD, "~local"))
 	if err != nil {
 		db.DFatalf("Error make schedd clnt: %v", err)
 	}
@@ -91,12 +90,12 @@ func RunProcd(realm string, spawningSys bool) {
 		db.DFatalf("Error RegisterProcd schedd: %v", err)
 	}
 
-	pd.Work()
+	pd.work()
 }
 
 func (pd *Procd) getLCProcUtil() float64 {
-	pd.Lock()
-	defer pd.Unlock()
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 	var total float64 = 0.0
 	for _, p := range pd.runningProcs {
 		// If proc has not been initialized, or it isn't LC, move on
@@ -119,8 +118,8 @@ func (pd *Procd) putProcL(p *LinuxProc) {
 }
 
 func (pd *Procd) deleteProc(p *LinuxProc) {
-	pd.Lock()
-	defer pd.Unlock()
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 	delete(pd.runningProcs, p.attr.GetPid())
 }
 
@@ -131,29 +130,14 @@ func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
 	}
 }
 
-func (pd *Procd) Done() {
-	pd.Lock()
-	defer pd.Unlock()
-
-	pd.done = true
-	pd.perf.Done()
-	pd.evictProcsL(pd.runningProcs)
-}
-
-func (pd *Procd) readDone() bool {
-	pd.Lock()
-	defer pd.Unlock()
-	return pd.done
-}
-
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// Create an ephemeral semaphore for the parent proc to wait on.
-	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
+	semStart := semclnt.MakeSemClnt(pd.fsl, path.Join(p.ParentDir, proc.START_SEM))
 	if err := semStart.Init(sp.DMTMP); err != nil {
 		db.DFatalf("Error creating start semaphore: %v", err)
 	}
 	db.DPrintf(db.PROCD, "Sem init done: %v", p)
-	if err := pd.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+	if err := pd.fsl.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
 		db.DFatalf("Error remove schedd file: %v", err)
 	}
 	if p.IsPrivilegedProc() && pd.kernelInitDone {
@@ -204,8 +188,8 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 
 // Run a proc.
 func (pd *Procd) RunProc(req proto.RunProcRequest, res *proto.RunProcResponse) error {
-	pd.Lock()
-	defer pd.Unlock()
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Got proc %v", p)
@@ -221,7 +205,7 @@ func (pd *Procd) RunProc(req proto.RunProcRequest, res *proto.RunProcResponse) e
 	return nil
 }
 
-func (pd *Procd) Work() {
+func (pd *Procd) work() {
 	db.DPrintf(db.PROCD, "Work")
 	pd.workers.Add(1)
 	go func() {

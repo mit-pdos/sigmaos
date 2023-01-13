@@ -9,6 +9,7 @@ import (
 	// db "sigmaos/debug"
 	"sigmaos/bootkernelclnt"
 	"sigmaos/fslib"
+	"sigmaos/realmv1"
 	// sp "sigmaos/sigmap"
 )
 
@@ -24,7 +25,7 @@ type System struct {
 
 func Boot(n int, ymldir string) (*System, error) {
 	sys := &System{}
-	r, err := realmv1.BootRealmOld(realmv1.ROOTREALM, path.Join(ymldir, "bootsys.yml"))
+	k, err := bootkernelclnt.BootKernelOld(realmv1.ROOTREALM, true, path.Join(ymldir, "bootsys.yml"))
 	if err != nil {
 		return nil, err
 	}

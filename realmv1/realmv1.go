@@ -1,7 +1,6 @@
 package realmv1
 
 import (
-	"flag"
 	"log"
 
 	"sigmaos/bootkernelclnt"
@@ -12,12 +11,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var image string
-
-func init() {
-	flag.StringVar(&image, "image", "", "docker image")
-}
-
+// XXX remove without realmv1
 const (
 	ROOTREALM = "rootrealm"
 )
@@ -32,7 +26,7 @@ type Realm struct {
 }
 
 func BootRealm1(yml string) (*Realm, error) {
-	k, err := bootkernelclnt.BootKernel1(image, yml)
+	k, err := bootkernelclnt.BootKernel1(yml)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +39,11 @@ func BootRealm1(yml string) (*Realm, error) {
 	if err != nil {
 		return nil, err
 	}
-	//kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
-	//if err != nil {
-	//	return nil, err
-	//}
-	return &Realm{fsl, pclnt, k, nil, nameds, ROOTREALM}, nil
+	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
+	if err != nil {
+		return nil, err
+	}
+	return &Realm{fsl, pclnt, k, kclnt, nameds, ROOTREALM}, nil
 }
 
 func BootRealm(realmid, yml string) (*Realm, error) {

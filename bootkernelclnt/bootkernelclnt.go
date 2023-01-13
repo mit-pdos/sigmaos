@@ -2,23 +2,25 @@ package bootkernelclnt
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
-	// "time"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	// "github.com/docker/docker/pkg/stdcopy"
+	"github.com/docker/docker/pkg/stdcopy"
 
 	sc "sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/kernel"
+	"sigmaos/proc"
 	"sigmaos/yaml"
 )
 
@@ -35,6 +37,10 @@ const (
 // cannot use named to connect to it.
 //
 
+const (
+	ROOTREALM = "rootrealm"
+)
+
 type Kernel struct {
 	cmd         *exec.Cmd
 	stdin       io.WriteCloser
@@ -45,19 +51,40 @@ type Kernel struct {
 	containerid string
 }
 
-func BootKernel1(image string, yml string) (*Kernel, error) {
+var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED}
+var image string
+
+func init() {
+	flag.StringVar(&image, "image", "", "docker image")
+}
+
+func MakeEnv() []string {
+	env := []string{}
+	for _, s := range envvar {
+		if e := os.Getenv(s); e != "" {
+			env = append(env, fmt.Sprintf("%s=%s", s, e))
+		}
+	}
+	env = append(env, fmt.Sprintf("%s=%s", proc.SIGMAREALM, ROOTREALM))
+	return env
+}
+
+func BootKernel1(yml string) (*Kernel, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("create container from image %v\n", image)
+
+	env := MakeEnv()
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
 		Cmd:   []string{"bin/linux/bootkernel", "bootkernelclnt/boot.yml"},
 		//AttachStdout: true,
 		// AttachStderr: true,
-		// Tty:          false,
+		Tty: true,
+		Env: env,
 	}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err
@@ -67,7 +94,8 @@ func BootKernel1(image string, yml string) (*Kernel, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	log.Printf("json %v\n", ip)
+	log.Printf("container running %v %v\n", resp.ID[:10], ip)
+	time.Sleep(1 * time.Second) // XXX fix
 	return &Kernel{nil, nil, nil, ip, "", cli, resp.ID}, nil
 }
 
@@ -143,6 +171,11 @@ func (k *Kernel) Ip() string {
 
 func (k *Kernel) Shutdown1() error {
 	ctx := context.Background()
+	out, err := k.cli.ContainerLogs(ctx, k.containerid, types.ContainerLogsOptions{ShowStderr: true})
+	if err != nil {
+		panic(err)
+	}
+	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 	return k.cli.ContainerKill(ctx, k.containerid, "SIGTERM")
 }
 

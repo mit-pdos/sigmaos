@@ -1,23 +1,13 @@
 package main
 
 import (
-	//"bytes"
-	//"fmt"
-	"log"
 	"os"
 
 	"sigmaos/boot"
-	//"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	//"sigmaos/frame"
 	"sigmaos/kernel"
-	"sigmaos/proc"
 	"sigmaos/yaml"
 )
-
-const yml = "/home/sigmaos/bootkernelclnt/boot.yml"
-
-var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED, proc.SIGMAROOTFS, proc.SIGMAREALM}
 
 func main() {
 	if len(os.Args) < 1 {
@@ -25,29 +15,19 @@ func main() {
 	}
 
 	param := kernel.Param{}
-	err := yaml.ReadYaml(yml, &param)
+	err := yaml.ReadYaml(os.Args[1], &param)
 	if err != nil {
-		db.DFatalf("%v: ReadYaml %s\n", os.Args[0], yml)
+		db.DFatalf("%v: ReadYaml %s\n", os.Args[0], os.Args[1])
 	}
 
-	os.Setenv(proc.SIGMADEBUG, "KERNEL;")
-	os.Setenv(proc.SIGMANAMED, ":1111")
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":/home/sigmaos/bin/kernel:/home/sigmaos/bin/user")
-	// os.Setenv(proc.SIGMAROOTFS, "")
-	os.Setenv(proc.SIGMAREALM, "rootrealm")
-
-	log.Printf("yaml %v env %v\n", param, os.Environ())
 
 	_, err = boot.BootUp(&param)
 	if err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
 
-	// db.DPrintf(db.KERNEL, "%v: shutting down %s\n", os.Args[0], s)
-	//if err := sys.ShutDown(); err != nil {
-	//	db.DFatalf("%v: Shutdown err %v\n", os.Args[0], err)
-	//}
 	os.Exit(0)
 }
 

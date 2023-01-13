@@ -1,12 +1,8 @@
 package procd
 
 import (
-	"fmt"
-	"log"
-	"os"
 	"path"
 	"sync"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -19,46 +15,31 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 	scheddproto "sigmaos/schedd/proto"
+	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	PROC_CACHE_SIZE = 500
 )
 
 type Procd struct {
 	sync.Mutex
-	*sync.Cond
-	fs               *ProcdFs
-	realm            string                   // realm id of this procd
-	nToWake          int                      // Number of worker threads to wake. This is incremented on proc spawn and when this procd is granted more cores.
-	wsQueues         map[string][]string      // Map containing queues of procs which may be available to steal. Periodically updated by one thread.
-	done             bool                     // Finished running.
-	kernelInitDone   bool                     // True if kernel init has finished (this procd has spawned ux & s3).
-	kernelProcs      map[string]bool          // Map of kernel procs spawned on this procd.
-	addr             string                   // Address of this procd.
-	procClaimTime    time.Time                // Time used to rate-limit claiming of BE procs.
-	netProcsClaimed  proc.Tcore               // Number of BE procs claimed in the last time interval.
-	procsDownloading proc.Tcore               // Number of procs currently being downloaded.
-	runningProcs     map[proc.Tpid]*LinuxProc // Map of currently running procs.
-	coreBitmap       []Tcorestatus            // Bitmap of cores owned by this proc
-	cpuMask          linuxsched.CPUMask       // Mask of CPUs available for this procd to use.
-	coresOwned       proc.Tcore               // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail       proc.Tcore               // Current number of cores available to run procs on.
-	memAvail         proc.Tmem                // Available memory for this procd and its procs to use.
-	pcache           *ProcCache
-	perf             *perf.Perf
-	group            sync.WaitGroup
-	procclnt         *procclnt.ProcClnt
-	memfssrv         *memfssrv.MemFs
+	fs             *ProcdFs
+	realm          string                   // realm id of this procd
+	done           bool                     // Finished running.
+	kernelInitDone bool                     // True if kernel init has finished (this procd has spawned ux & s3).
+	kernelProcs    map[string]bool          // Map of kernel procs spawned on this procd.
+	addr           string                   // Address of this procd.
+	runningProcs   map[proc.Tpid]*LinuxProc // Map of currently running procs.
+	coresAvail     proc.Tcore               // Current number of cores available to run procs on.
+	memAvail       proc.Tmem                // Available memory for this procd and its procs to use.
+	perf           *perf.Perf
+	workers        sync.WaitGroup
+	procclnt       *procclnt.ProcClnt
+	memfssrv       *memfssrv.MemFs
+	schedd         *protdevclnt.ProtDevClnt
 	*fslib.FsLib
-	schedd *protdevclnt.ProtDevClnt
 }
 
-func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
+func RunProcd(realm string, spawningSys bool) {
 	pd := &Procd{}
-	pd.pcache = MakeProcCache(PROC_CACHE_SIZE)
-	pd.Cond = sync.NewCond(&pd.Mutex)
 	pd.kernelProcs = make(map[string]bool)
 	pd.kernelProcs["kernel/dbd"] = true
 	// If we aren't spawning a full system on this procd, then kernel init is
@@ -67,11 +48,8 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 		pd.kernelInitDone = true
 	}
 	pd.realm = realm
-	pd.wsQueues = make(map[string][]string)
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
-	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
-	pd.coresOwned = proc.Tcore(linuxsched.NCores)
 	pd.memAvail = getMemTotal()
 
 	pd.makeFs()
@@ -83,20 +61,15 @@ func RunProcd(realm string, grantedCoresIv string, spawningSys bool) {
 		db.DFatalf("Error make schedd clnt: %v", err)
 	}
 
-	pd.initCores(grantedCoresIv)
-
 	perf, err := perf.MakePerf(perf.PROCD)
 	if err != nil {
-		log.Printf("MakePerf err %v\n", err)
+		db.DFatalf("MakePerf err %v", err)
 	} else {
 		pd.perf = perf
 		defer pd.perf.Done()
 	}
 
 	// Make a directory in which to put stealable procs.
-	pd.MkDir(sp.PROCD_WS, 0777)
-	pd.MkDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC), 0777)
-	pd.MkDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE), 0777)
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 
@@ -133,43 +106,6 @@ func (pd *Procd) deleteProc(p *LinuxProc) {
 	delete(pd.runningProcs, p.attr.GetPid())
 }
 
-func (pd *Procd) spawnProc(a *proc.Proc) {
-	pd.wakeWorker()
-}
-
-func (pd *Procd) wakeWorker() {
-	pd.Lock()
-	defer pd.Unlock()
-
-	pd.wakeWorkerL()
-}
-
-func (pd *Procd) wakeWorkerL() {
-	pd.nToWake++
-	pd.Signal()
-	db.DPrintf(db.PROCD, "Wake worker cnt %v", pd.nToWake)
-}
-
-func (pd *Procd) wsQueuePop(runq string) (string, bool) {
-	pd.Lock()
-	defer pd.Unlock()
-
-	var pid string
-	var ok bool
-	if len(pd.wsQueues[runq]) > 0 {
-		// Pop a proc from the ws queue
-		pid, pd.wsQueues[runq] = pd.wsQueues[runq][0], pd.wsQueues[runq][1:]
-		ok = true
-	}
-	return pid, ok
-}
-
-func (pd *Procd) wsQueuePush(pid string, runq string) {
-	pd.Lock()
-	defer pd.Unlock()
-	pd.wsQueues[runq] = append(pd.wsQueues[runq], pid)
-}
-
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
 	for pid, _ := range procs {
@@ -184,7 +120,6 @@ func (pd *Procd) Done() {
 	pd.done = true
 	pd.perf.Done()
 	pd.evictProcsL(pd.runningProcs)
-	pd.Broadcast()
 }
 
 func (pd *Procd) readDone() bool {
@@ -206,158 +141,16 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// assigned cores to this proc & registered it in the procd in-mem data
 	// structures so that the proc's core allocations will be adjusted during the
 	// resize.
-	pd.allocCoresL(linuxProc, p.GetNcore())
+	pd.allocCoresL(p.GetNcore())
 	pd.allocMemL(p)
 	// Register running proc in in-memory structures.
 	pd.putProcL(linuxProc)
 	return linuxProc
 }
 
-// Tries to claim a runnable proc if it fits on this procd.
-func (pd *Procd) tryClaimProc(procPath string, isRemote bool) (*LinuxProc, error) {
-	// XXX shouldn't I just lock after reading the proc?
-	pd.Lock()
-	defer pd.Unlock()
-
-	if db.WillBePrinted(db.PROCD) {
-		db.DPrintf(db.PROCD, "Try get runnable proc %v", path.Base(procPath))
-	}
-	p, err := pd.readRunqProc(procPath)
-	// Proc may have been stolen
-	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "Error getting RunqProc: %v", err)
-		return nil, err
-	}
-	// Don't steal remote kernel procs.
-	if isRemote && p.IsPrivilegedProc() {
-		return nil, fmt.Errorf("Try steal remote kernel proc")
-	}
-	// See if the proc fits on this procd. Also, make sure that we spawn all
-	// kernel procs before any user procs.
-	if pd.hasEnoughCores(p) && pd.hasEnoughMemL(p) && (pd.kernelInitDone || p.IsPrivilegedProc()) {
-		// Proc may have been stolen
-		if ok := pd.claimProc(p, procPath); !ok {
-			return nil, nil
-		}
-		linuxProc := pd.registerProcL(p, isRemote)
-		return linuxProc, nil
-	} else {
-		if db.WillBePrinted(db.PROCD) {
-			db.DPrintf(db.PROCD, "RunqProc %v didn't satisfy constraints", procPath)
-		}
-	}
-	return nil, nil
-}
-
 // Returns true if the proc was there, but there was a capacity issue.
-func (pd *Procd) tryGetProc(procPath string, isRemote bool) (*LinuxProc, bool) {
-	// We need to add "/" to follow the symlink for remote queues.
-	if isRemote {
-		procPath += "/"
-	}
-	newProc, err := pd.tryClaimProc(procPath, isRemote)
-	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "Error getting runnable proc (remote:%v): %v", isRemote, err)
-		// Remove the symlink, as it must have already been claimed.
-		if isRemote {
-			pd.deleteWSSymlink(procPath, newProc, isRemote)
-		}
-	}
-	// We claimed a proc successfully, so delete the work stealing symlink for
-	// this proc.
-	if newProc != nil {
-		pd.deleteWSSymlink(procPath, newProc, isRemote)
-	}
-	// If newProc and err are both nil, then the reason we couldn't claim this
-	// proc is that we don't have enough capacity. Note this to higher layers.
-	return newProc, newProc == nil && err == nil
-}
-
-func (pd *Procd) getProc() (*LinuxProc, error) {
-	var p *LinuxProc
-	// First try and get any LC procs, else get a BE proc.
-	localPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr())
-	// Claim order:
-	// 1. local LC queue
-	// 2. remote LC queue
-	// 3. local BE queue
-	// 4. remote BE queue
-	runqs := []string{
-		path.Join(localPath, sp.PROCD_RUNQ_LC),
-		path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC),
-		path.Join(localPath, sp.PROCD_RUNQ_BE),
-		path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE),
-	}
-	for i, runq := range runqs {
-		// If this is a BE queue, and we couldn't possibly claim a BE proc, skip
-		// scanning the queue.
-		if isBE := i > 1; isBE && !pd.canClaimBEProc() {
-			continue
-		}
-		// Odd indices are remote queues.
-		isRemote := i%2 == 1
-		if isRemote {
-			// Instead of having every worker thread bang on named to try to steal
-			// procs, one procd thread (the Work Stealing Monitor) periodically scans
-			// the work stealing queues and caches names of stealable procs in a
-			// local slice. Worker threads iterate through this slice when trying to
-			// steal procs.
-			pd.Lock()
-			// Find number of procs in this queue.
-			n := len(pd.wsQueues[runq])
-			pd.Unlock()
-			// Iterate through (up to) n items in the queue, or until we've claimed a
-			// proc.
-			for j := 0; j < n && p == nil; j++ {
-				// If the queue was empty, we're done scanning this queue. This may
-				// occur before the loop naturally terminates because:
-				//
-				// 1. Other worker threads on this procd popped off the remaining queue
-				// elements.
-				// 2. The monitor thread updated the queue, and it now
-				// contains fewer elements.
-				pid, ok := pd.wsQueuePop(runq)
-				if !ok {
-					break
-				}
-				procPath := path.Join(runq, pid)
-				// Try to get the proc.
-				var noCapacity bool
-				p, noCapacity = pd.tryGetProc(procPath, isRemote)
-				// If the reason we couldn't claim this proc is that there wasn't
-				// enough capacity, then add it back to the queue so we can try and
-				// claim it later.
-				if p == nil && noCapacity {
-					//					pd.wsQueuePush(pid, runq)
-				}
-			}
-			// If the proc was successfully claimed, we're done
-			if p != nil {
-				break
-			}
-		} else {
-			_, err := pd.ProcessDir(runq, func(st *sp.Stat) (bool, error) {
-				procPath := path.Join(runq, st.Name)
-				p, _ = pd.tryGetProc(procPath, isRemote)
-				// If a proc was not claimed, keep processing.
-				if p == nil {
-					return false, nil
-				}
-				return true, nil
-			})
-			if err != nil {
-				return nil, err
-			}
-			// If the proc was successfully claimed, we're done
-			if p != nil {
-				break
-			}
-		}
-	}
-	return p, nil
-}
-
 func (pd *Procd) runProc(p *LinuxProc) error {
+	defer pd.workers.Done()
 	if !p.attr.IsPrivilegedProc() {
 		// Download the bin from s3, if it isn't already cached locally.
 		if err := pd.downloadProcBin(p.attr); err != nil {
@@ -378,108 +171,20 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 	return nil
 }
 
-// Set the core affinity for procd, according to what cores it owns. Caller
-// holds lock.
-func (pd *Procd) setCoreAffinityL() {
-	for i := uint(0); i < linuxsched.NCores; i++ {
-		// Clear all cores from the CPU mask.
-		pd.cpuMask.Clear(i)
-		// If we own this core, set it in the CPU mask.
-		if pd.coreBitmap[i] != CORE_BLOCKED {
-			pd.cpuMask.Set(i)
-		}
+func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
+	// Create an ephemeral semaphore for the parent proc to wait on.
+	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
+	if err := semStart.Init(sp.DMTMP); err != nil {
+		db.DFatalf("Error creating start semaphore: %v", err)
 	}
-	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), &pd.cpuMask)
-	// Update the set of cores whose CPU utilization we're monitoring.
-	pd.memfssrv.GetStats().UpdateCores()
+	db.DPrintf(db.PROCD, "Sem init done: %v", p)
+	if err := pd.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+		db.DFatalf("Error remove schedd file: %v", err)
+	}
+	return true
 }
 
-// Wait for a new proc to be spawned at this procd, or for a stealing
-// opportunity to present itself.
-func (pd *Procd) waitSpawnOrSteal() {
-	pd.Lock()
-	defer pd.Unlock()
-
-	for !pd.done {
-		// If there is an LC proc available to work-steal, and this procd has cores
-		// to spare, release the worker thread.
-		db.DPrintf(db.PROCD, "Worker woke, check for stealable LC procs.")
-		if len(pd.wsQueues[WS_LC_QUEUE_PATH]) > 0 && pd.coresAvail > 0 {
-			db.DPrintf(db.PROCD, "done waiting, an LC proc can be stolen")
-			return
-		}
-		// If there is a BE proc available to work-steal, and this procd can run
-		// another one, release the worker thread.
-		db.DPrintf(db.PROCD, "Worker woke, check for stealable BE procs.")
-		if len(pd.wsQueues[WS_BE_QUEUE_PATH]) > 0 {
-			_, _, ok := pd.canClaimBEProcL()
-			// XXX a bit hacky... should do something more principled.
-			if ok && pd.memAvail > 500 {
-				return
-			}
-		}
-		// Only release nToWake worker threads.
-		if pd.nToWake > 0 {
-			pd.nToWake--
-			db.DPrintf(db.PROCD, "done waiting, worker woken. %v left to wake", pd.nToWake)
-			return
-		}
-		db.DPrintf(db.PROCD, "Worker wait %v %v %v", pd.nToWake, len(pd.wsQueues[sp.PROCD_RUNQ_LC]), len(pd.wsQueues[sp.PROCD_RUNQ_BE]))
-		pd.Wait()
-	}
-}
-
-// Worker runs one proc a time. If the proc it runs has Ncore == 0, then
-// another worker is spawned to take this one's place. This worker will then
-// exit once it finishes running the proc.
-//func (pd *Procd) worker() {
-//	defer pd.group.Done()
-//	for !pd.readDone() {
-//		db.DPrintf(db.PROCD, "Try to get proc.")
-//		p, error := pd.getProc()
-//		// If there were no runnable procs, wait and try again.
-//		if error == nil && p == nil {
-//			db.DPrintf(db.PROCD, "No procs found, waiting.")
-//			pd.waitSpawnOrSteal()
-//			continue
-//		}
-//		if error != nil && (errors.Is(error, io.EOF) || serr.IsErrUnreachable(error)) {
-//			continue
-//		}
-//		if error != nil {
-//			if serr.IsErrNotfound(error) {
-//				db.DPrintf(db.PROCD_ERR, "cond file not found: %v", error)
-//				return
-//			}
-//			pd.perf.Done()
-//			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
-//		}
-//		db.DPrintf(db.PROCD, "Got proc %v", p.SysPid)
-//		err := pd.fs.running(p)
-//		if err != nil {
-//			pd.perf.Done()
-//			db.DFatalf("Procd pub running error %v %T\n", err, err)
-//		}
-//		// If this proc doesn't require cores, start another worker to take our
-//		// place so user apps don't deadlock.
-//		replaced := false
-//		if p.attr.GetNcore() == 0 {
-//			replaced = true
-//			// Wake a new worker to take this worker's place.
-//			pd.wakeWorker()
-//			pd.group.Add(1)
-//			go pd.worker()
-//		}
-//		pd.runProc(p)
-//		// Wake a worker, since we may be able to run something else now.
-//		pd.wakeWorker()
-//		if replaced {
-//			return
-//		}
-//	}
-//}
-
-func (pd *Procd) getProc2() (*LinuxProc, bool) {
+func (pd *Procd) getProc() (*LinuxProc, bool) {
 	// TODO: get proc from schedd.
 	req := &scheddproto.GetProcRequest{
 		FreeCores: uint32(pd.coresAvail), // XXX fix race
@@ -518,10 +223,10 @@ func (pd *Procd) getProc2() (*LinuxProc, bool) {
 func (pd *Procd) worker() {
 	var p *LinuxProc
 	var ok bool
-	defer pd.group.Done()
+	defer pd.workers.Done()
 	for !pd.readDone() {
 		db.DPrintf(db.PROCD, "Try to get proc.")
-		if p, ok = pd.getProc2(); !ok {
+		if p, ok = pd.getProc(); !ok {
 			db.DPrintf(db.PROCD, "No proc available.")
 			continue
 		}
@@ -532,26 +237,20 @@ func (pd *Procd) worker() {
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
 		}
 		// Wake a new worker to take this worker's place.
-		pd.wakeWorker()
-		pd.group.Add(1)
+		pd.workers.Add(1)
 		go pd.runProc(p)
 	}
 }
 
 func (pd *Procd) Work() {
 	db.DPrintf(db.PROCD, "Work")
-	pd.group.Add(1)
+	pd.workers.Add(1)
 	go func() {
-		defer pd.group.Done()
+		defer pd.workers.Done()
 		pd.memfssrv.Serve()
 		pd.memfssrv.Done()
 	}()
-	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
-	// procd is full
-	NWorkers := linuxsched.NCores + 1
-	for i := uint(0); i < NWorkers; i++ {
-		pd.group.Add(1)
-		go pd.worker()
-	}
-	pd.group.Wait()
+	pd.workers.Add(1)
+	go pd.worker()
+	pd.workers.Wait()
 }

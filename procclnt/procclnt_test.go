@@ -2,9 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
-	"math"
 	"path"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -17,10 +15,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/resource"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
 	"sigmaos/test"
 )
 
@@ -679,186 +674,186 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestProcdResize1(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	// Run a proc that claims all cores.
-	pid := proc.GenPid()
-	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
-	status, err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusOK(), "WaitExit status")
-	checkSleeperResult(t, ts, pid)
-
-	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
-
-	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
-
-	// Remove some cores from the procd.
-	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
-	assert.Nil(t, err, "SetFile revoke: %v", err)
-
-	// Run a proc which shouldn't fit on the newly resized procd.
-	db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
-	pid1 := proc.GenPid()
-	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
-
-	time.Sleep(3 * SLEEP_MSECS)
-	// Proc should not have run.
-	checkSleeperResultFalse(t, ts, pid1)
-
-	pid2 := proc.GenPid()
-	db.DPrintf(db.TEST, "Spawning a proc which should fit.")
-	spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
-	status, err = ts.WaitExit(pid2)
-	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
-	checkSleeperResult(t, ts, pid2)
-	db.DPrintf(db.TEST, "Proc which should fit ran")
-
-	// Grant the procd back its cores.
-	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
-	assert.Nil(t, err, "SetFile grant: %v", err)
-
-	// Make sure the proc ran.
-	status, err = ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit 3")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 3")
-	checkSleeperResult(t, ts, pid1)
-
-	ts.Shutdown()
-}
-
-func TestProcdResizeN(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	N := 5
-
-	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
-
-	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
-	for i := 0; i < N; i++ {
-		db.DPrintf(db.TEST, "Resize i=%v", i)
-		// Run a proc that claims all cores.
-		pid := proc.GenPid()
-		spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
-		status, err := ts.WaitExit(pid)
-		assert.Nil(t, err, "WaitExit")
-		assert.True(t, status.IsStatusOK(), "WaitExit status")
-		checkSleeperResult(t, ts, pid)
-
-		// Remove some cores from the procd.
-		db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
-		assert.Nil(t, err, "SetFile revoke: %v", err)
-
-		// Run a proc which shouldn't fit on the newly resized procd.
-		db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
-		pid1 := proc.GenPid()
-		spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
-
-		time.Sleep(3 * SLEEP_MSECS)
-		// Proc should not have run.
-		checkSleeperResultFalse(t, ts, pid1)
-
-		pid2 := proc.GenPid()
-		db.DPrintf(db.TEST, "Spawning a proc which should fit.")
-		spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
-		status, err = ts.WaitExit(pid2)
-		assert.Nil(t, err, "WaitExit 2")
-		assert.True(t, status.IsStatusOK(), "WaitExit status 2")
-		checkSleeperResult(t, ts, pid2)
-		db.DPrintf(db.TEST, "Proc which should fit ran")
-
-		// Grant the procd back its cores.
-		db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
-		assert.Nil(t, err, "SetFile grant: %v", err)
-
-		// Make sure the proc ran.
-		status, err = ts.WaitExit(pid1)
-		assert.Nil(t, err, "WaitExit 3")
-		assert.True(t, status.IsStatusOK(), "WaitExit status 3")
-		checkSleeperResult(t, ts, pid1)
-	}
-
-	ts.Shutdown()
-}
-
-func TestProcdResizeAccurateStats(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	// Spawn NCores/2 spinners, each claiming two cores.
-	pids := []proc.Tpid{}
-	for i := 0; i < int(linuxsched.NCores)/2; i++ {
-		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
-		err := ts.WaitStart(pid)
-		assert.Nil(t, err, "WaitStart")
-		pids = append(pids, pid)
-	}
-
-	// Revoke half of the procd's cores.
-	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
-
-	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
-
-	// Remove some cores from the procd.
-	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
-	assert.Nil(t, err, "SetFile revoke: %v", err)
-
-	// Sleep for a bit
-	time.Sleep(SLEEP_MSECS * time.Millisecond)
-
-	// Get the procd's utilization.
-	st := stats.StatInfo{}
-	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
-	assert.Nil(t, err, "statsd: %v", err)
-
-	// Ensure that the procd is accurately representing the utilization (it
-	// should show ~100% CPU utilization, not 50%).
-	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
-	assert.True(t, st.Util > 90.0, "Util too low, %v < 90", st.Util)
-
-	// Grant the procd back its cores.
-	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
-	assert.Nil(t, err, "SetFile grant: %v", err)
-
-	// Sleep for a bit
-	time.Sleep(SLEEP_MSECS * time.Millisecond)
-
-	// Get the procd's utilization again.
-	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
-	assert.Nil(t, err, "statsd: %v", err)
-
-	// Ensure that the procd's utilization has been adjusted again (it
-	// should show ~50% CPU utilization, not 100%).
-	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
-	assert.True(t, st.Util < 60.0, "Util too high, %v > 60", st.Util)
-
-	// Evict all of the spinning procs.
-	for _, pid := range pids {
-		err := ts.Evict(pid)
-		assert.Nil(ts.T, err, "Evict")
-		status, err := ts.WaitExit(pid)
-		assert.Nil(t, err, "WaitExit")
-		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-	}
-
-	ts.Shutdown()
-}
+//func TestProcdResize1(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	// Run a proc that claims all cores.
+//	pid := proc.GenPid()
+//	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+//	status, err := ts.WaitExit(pid)
+//	assert.Nil(t, err, "WaitExit")
+//	assert.True(t, status.IsStatusOK(), "WaitExit status")
+//	checkSleeperResult(t, ts, pid)
+//
+//	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+//	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
+//
+//	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
+//
+//	// Remove some cores from the procd.
+//	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+//	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
+//	assert.Nil(t, err, "SetFile revoke: %v", err)
+//
+//	// Run a proc which shouldn't fit on the newly resized procd.
+//	db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
+//	pid1 := proc.GenPid()
+//	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+//
+//	time.Sleep(3 * SLEEP_MSECS)
+//	// Proc should not have run.
+//	checkSleeperResultFalse(t, ts, pid1)
+//
+//	pid2 := proc.GenPid()
+//	db.DPrintf(db.TEST, "Spawning a proc which should fit.")
+//	spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
+//	status, err = ts.WaitExit(pid2)
+//	assert.Nil(t, err, "WaitExit 2")
+//	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+//	checkSleeperResult(t, ts, pid2)
+//	db.DPrintf(db.TEST, "Proc which should fit ran")
+//
+//	// Grant the procd back its cores.
+//	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+//	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
+//	assert.Nil(t, err, "SetFile grant: %v", err)
+//
+//	// Make sure the proc ran.
+//	status, err = ts.WaitExit(pid1)
+//	assert.Nil(t, err, "WaitExit 3")
+//	assert.True(t, status.IsStatusOK(), "WaitExit status 3")
+//	checkSleeperResult(t, ts, pid1)
+//
+//	ts.Shutdown()
+//}
+//
+//func TestProcdResizeN(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	N := 5
+//
+//	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+//	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
+//
+//	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
+//	for i := 0; i < N; i++ {
+//		db.DPrintf(db.TEST, "Resize i=%v", i)
+//		// Run a proc that claims all cores.
+//		pid := proc.GenPid()
+//		spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+//		status, err := ts.WaitExit(pid)
+//		assert.Nil(t, err, "WaitExit")
+//		assert.True(t, status.IsStatusOK(), "WaitExit status")
+//		checkSleeperResult(t, ts, pid)
+//
+//		// Remove some cores from the procd.
+//		db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+//		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
+//		assert.Nil(t, err, "SetFile revoke: %v", err)
+//
+//		// Run a proc which shouldn't fit on the newly resized procd.
+//		db.DPrintf(db.TEST, "Spawning a proc which shouldn't fit.")
+//		pid1 := proc.GenPid()
+//		spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+//
+//		time.Sleep(3 * SLEEP_MSECS)
+//		// Proc should not have run.
+//		checkSleeperResultFalse(t, ts, pid1)
+//
+//		pid2 := proc.GenPid()
+//		db.DPrintf(db.TEST, "Spawning a proc which should fit.")
+//		spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
+//		status, err = ts.WaitExit(pid2)
+//		assert.Nil(t, err, "WaitExit 2")
+//		assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+//		checkSleeperResult(t, ts, pid2)
+//		db.DPrintf(db.TEST, "Proc which should fit ran")
+//
+//		// Grant the procd back its cores.
+//		db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+//		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
+//		assert.Nil(t, err, "SetFile grant: %v", err)
+//
+//		// Make sure the proc ran.
+//		status, err = ts.WaitExit(pid1)
+//		assert.Nil(t, err, "WaitExit 3")
+//		assert.True(t, status.IsStatusOK(), "WaitExit status 3")
+//		checkSleeperResult(t, ts, pid1)
+//	}
+//
+//	ts.Shutdown()
+//}
+//
+//func TestProcdResizeAccurateStats(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	// Spawn NCores/2 spinners, each claiming two cores.
+//	pids := []proc.Tpid{}
+//	for i := 0; i < int(linuxsched.NCores)/2; i++ {
+//		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
+//		err := ts.WaitStart(pid)
+//		assert.Nil(t, err, "WaitStart")
+//		pids = append(pids, pid)
+//	}
+//
+//	// Revoke half of the procd's cores.
+//	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
+//	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
+//
+//	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
+//
+//	// Remove some cores from the procd.
+//	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+//	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
+//	assert.Nil(t, err, "SetFile revoke: %v", err)
+//
+//	// Sleep for a bit
+//	time.Sleep(SLEEP_MSECS * time.Millisecond)
+//
+//	// Get the procd's utilization.
+//	st := stats.StatInfo{}
+//	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
+//	assert.Nil(t, err, "statsd: %v", err)
+//
+//	// Ensure that the procd is accurately representing the utilization (it
+//	// should show ~100% CPU utilization, not 50%).
+//	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
+//	assert.True(t, st.Util > 90.0, "Util too low, %v < 90", st.Util)
+//
+//	// Grant the procd back its cores.
+//	db.DPrintf(db.TEST, "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+//	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), sp.OWRITE, 0)
+//	assert.Nil(t, err, "SetFile grant: %v", err)
+//
+//	// Sleep for a bit
+//	time.Sleep(SLEEP_MSECS * time.Millisecond)
+//
+//	// Get the procd's utilization again.
+//	err = ts.GetFileJson(path.Join(sp.PROCD, "~local", sp.STATSD), &st)
+//	assert.Nil(t, err, "statsd: %v", err)
+//
+//	// Ensure that the procd's utilization has been adjusted again (it
+//	// should show ~50% CPU utilization, not 100%).
+//	db.DPrintf(db.TEST, "Stats after shrink: %v", st)
+//	assert.True(t, st.Util < 60.0, "Util too high, %v > 60", st.Util)
+//
+//	// Evict all of the spinning procs.
+//	for _, pid := range pids {
+//		err := ts.Evict(pid)
+//		assert.Nil(ts.T, err, "Evict")
+//		status, err := ts.WaitExit(pid)
+//		assert.Nil(t, err, "WaitExit")
+//		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+//	}
+//
+//	ts.Shutdown()
+//}
 
 // Test to see if any core has a spinner running on it (high utilization).
 func anyCoresOccupied(coresMaps []map[string]bool) bool {
@@ -888,57 +883,57 @@ func anyCoresOccupied(coresMaps []map[string]bool) bool {
 	return coreOccupied
 }
 
-func TestProcdResizeCoreRepinning(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	// Spawn NCores/2 spinners, each claiming two cores.
-	pids := []proc.Tpid{}
-	for i := 0; i < int(linuxsched.NCores)/2; i++ {
-		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
-		err := ts.WaitStart(pid)
-		assert.Nil(t, err, "WaitStart")
-		pids = append(pids, pid)
-	}
-
-	// Revoke half of the procd's cores.
-	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
-	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
-
-	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
-
-	// Create a map to sample core utilization levels on the cores which will be
-	// revoked.
-	coresMaps := []map[string]bool{}
-	for i := coreIv.Start; i < coreIv.End; i++ {
-		coresMaps = append(coresMaps, map[string]bool{"cpu" + strconv.Itoa(int(i)): true})
-	}
-
-	coreOccupied := anyCoresOccupied(coresMaps)
-	// Make sure that at least some of the cores to be revoked has a spinning
-	// proc on it.
-	assert.True(t, coreOccupied, "No cores occupied")
-
-	// Remove some cores from the procd.
-	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
-	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
-	assert.Nil(t, err, "SetFile revoke: %v", err)
-
-	// Sleep for a bit
-	time.Sleep(SLEEP_MSECS * time.Millisecond)
-
-	coreOccupied = anyCoresOccupied(coresMaps)
-	// Ensure that none of the revoked cores have spinning procs running on them.
-	assert.False(t, coreOccupied, "Core still occupied")
-
-	// Evict all of the spinning procs.
-	for _, pid := range pids {
-		err := ts.Evict(pid)
-		assert.Nil(ts.T, err, "Evict")
-		status, err := ts.WaitExit(pid)
-		assert.Nil(t, err, "WaitExit")
-		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-	}
-
-	ts.Shutdown()
-}
+//func TestProcdResizeCoreRepinning(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	// Spawn NCores/2 spinners, each claiming two cores.
+//	pids := []proc.Tpid{}
+//	for i := 0; i < int(linuxsched.NCores)/2; i++ {
+//		pid := spawnSpinnerNcore(ts, proc.Tcore(2))
+//		err := ts.WaitStart(pid)
+//		assert.Nil(t, err, "WaitStart")
+//		pids = append(pids, pid)
+//	}
+//
+//	// Revoke half of the procd's cores.
+//	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
+//	coreIv := sessp.MkInterval(0, uint64(nCoresToRevoke))
+//
+//	ctlFilePath := path.Join(sp.PROCD, "~local", sp.RESOURCE_CTL)
+//
+//	// Create a map to sample core utilization levels on the cores which will be
+//	// revoked.
+//	coresMaps := []map[string]bool{}
+//	for i := coreIv.Start; i < coreIv.End; i++ {
+//		coresMaps = append(coresMaps, map[string]bool{"cpu" + strconv.Itoa(int(i)): true})
+//	}
+//
+//	coreOccupied := anyCoresOccupied(coresMaps)
+//	// Make sure that at least some of the cores to be revoked has a spinning
+//	// proc on it.
+//	assert.True(t, coreOccupied, "No cores occupied")
+//
+//	// Remove some cores from the procd.
+//	db.DPrintf(db.TEST, "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+//	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.Marshal(), nCoresToRevoke)
+//	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), sp.OWRITE, 0)
+//	assert.Nil(t, err, "SetFile revoke: %v", err)
+//
+//	// Sleep for a bit
+//	time.Sleep(SLEEP_MSECS * time.Millisecond)
+//
+//	coreOccupied = anyCoresOccupied(coresMaps)
+//	// Ensure that none of the revoked cores have spinning procs running on them.
+//	assert.False(t, coreOccupied, "Core still occupied")
+//
+//	// Evict all of the spinning procs.
+//	for _, pid := range pids {
+//		err := ts.Evict(pid)
+//		assert.Nil(ts.T, err, "Evict")
+//		status, err := ts.WaitExit(pid)
+//		assert.Nil(t, err, "WaitExit")
+//		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+//	}
+//
+//	ts.Shutdown()
+//}

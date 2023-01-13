@@ -23,14 +23,13 @@ const (
 
 type LinuxProc struct {
 	fs.Inode
-	SysPid       int
-	syspidstr    string
-	Env          []string
-	coresAlloced proc.Tcore
-	attr         *proc.Proc
-	stolen       bool
-	pd           *Procd
-	UtilInfo     struct {
+	SysPid    int
+	syspidstr string
+	Env       []string
+	attr      *proc.Proc
+	stolen    bool
+	pd        *Procd
+	UtilInfo  struct {
 		lastUtil float64
 		utime0   uint64
 		stime0   uint64
@@ -124,9 +123,6 @@ func (p *LinuxProc) run() error {
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Procd GetCPUTimePid %v err %v\n", p.syspidstr, err)
 	}
-	// XXX May want to start the process with a certain affinity (using taskset)
-	// instead of setting the affinity after it starts
-	p.setCpuAffinity()
 	// Nice the process.
 	p.setPriority()
 
@@ -134,13 +130,6 @@ func (p *LinuxProc) run() error {
 	db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)
 
 	return nil
-}
-
-func (p *LinuxProc) setCpuAffinity() {
-	p.pd.Lock()
-	defer p.pd.Unlock()
-
-	p.setCpuAffinityL()
 }
 
 // Caller holds lock.
@@ -159,14 +148,6 @@ func (p *LinuxProc) getUtilL() (float64, error) {
 	p.UtilInfo.t0 = t1
 	p.UtilInfo.lastUtil = util
 	return util, nil
-}
-
-// Set the Cpu affinity of this proc according to its procd's cpu mask.
-func (p *LinuxProc) setCpuAffinityL() {
-	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
-	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "Error setting CPU affinity for child lambda: %v", err)
-	}
 }
 
 func (p *LinuxProc) setPriority() {

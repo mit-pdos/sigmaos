@@ -163,26 +163,15 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *pr
 	p.SpawnTime = timestamppb.New(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
 	if viaProcd {
-		b, err := json.Marshal(p)
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Spawn marshal err %v", err)
-			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
-		}
-		fn := path.Join(sp.PROCDREL, procdIp, sp.PROCD_SPAWN_FILE)
-		_, err = clnt.SetFile(fn, b, sp.OWRITE, 0)
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "SetFile %v err %v", fn, err)
-			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
-		}
 		req := &schedd.SpawnRequest{
 			Realm:     proc.GetRealm(),
 			ProcProto: p.GetProto(),
 		}
 		res := &schedd.SpawnResponse{}
-		err = pdc.RPC("Schedd.Spawn", req, res)
+		err := pdc.RPC("Schedd.Spawn", req, res)
 		if err != nil {
 			db.DFatalf("Error spawn schedd: %v", err)
-			return err
+			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		// Make the proc's procdir

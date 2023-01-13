@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/realmv1"
 	sp "sigmaos/sigmap"
 )
 
@@ -34,8 +34,9 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 }
 
 type Tstate struct {
-	*realmv1.Realm
-	T *testing.T
+	*bootkernelclnt.Kernel
+	T       *testing.T
+	realmid string
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -47,15 +48,15 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootRealm(t, "bootkernelclnt/boot.yml")
+	ts, err := BootKernel(t, "bootkernelclnt/boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
-	return b
+	return ts
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootRealm(t, "bootkernelclnt/bootall.yml")
+	b, err := BootKernel(t, "bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,9 +65,9 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootRealm(t, "bootkernelclnt/boot.yml")
+		return BootKernel(t, "bootkernelclnt/boot.yml")
 	} else {
-		ts, err := BootRealm(t, "bootkernelclnt/bootall.yml")
+		ts, err := BootKernel(t, "bootkernelclnt/bootall.yml")
 		if err != nil {
 			return nil, err
 		}
@@ -86,50 +87,34 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	return nil, nil
 }
 
-func BootRealm(t *testing.T, yml string) (*Tstate, error) {
-	r, err := realmv1.BootRealm(yml)
+func BootKernel(t *testing.T, yml string) (*Tstate, error) {
+	k, err := bootkernelclnt.BootKernel(yml)
 	if err != nil {
 		return nil, err
 	}
 	os.Setenv(proc.SIGMAREALM, realmid)
-	return &Tstate{r, t}, nil
-}
-
-func BootRealmOld(t *testing.T, realmid, yml string) (*Tstate, error) {
-	r, err := realmv1.BootRealmOld(realmid, yml)
-	if err != nil {
-		return nil, err
-	}
-	os.Setenv(proc.SIGMAREALM, realmid)
-	return &Tstate{r, t}, nil
+	return &Tstate{k, t, realmid}, nil
 }
 
 func (ts *Tstate) RunningInRealm() bool {
-	return ts.Realmid != "rootrealm"
+	return ts.realmid != "rootrealm"
 }
 
 func (ts *Tstate) RealmId() string {
-	return ts.Realmid
+	return ts.realmid
 }
 
 func (ts *Tstate) NamedAddr() []string {
-	return ts.Realm.NamedAddr()
+	return ts.Kernel.NamedAddr()
 }
 
 func (ts *Tstate) GetLocalIP() string {
-	return ts.Realm.GetIP()
-}
-
-func (ts *Tstate) ShutdownOld() error {
-	if ts.Realm != nil {
-		return ts.Realm.ShutdownOld()
-	}
-	return nil
+	return ts.GetIP()
 }
 
 func (ts *Tstate) Shutdown() error {
-	if ts.Realm != nil {
-		return ts.Realm.Shutdown()
+	if ts.Kernel != nil {
+		return ts.Kernel.Shutdown()
 	}
 	return nil
 }

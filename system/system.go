@@ -3,13 +3,11 @@ package system
 import (
 	"os"
 	"os/exec"
-	"path"
 	"syscall"
 
 	// db "sigmaos/debug"
 	"sigmaos/bootkernelclnt"
 	"sigmaos/fslib"
-	"sigmaos/realmv1"
 	// sp "sigmaos/sigmap"
 )
 
@@ -25,21 +23,21 @@ type System struct {
 
 func Boot(n int, ymldir string) (*System, error) {
 	sys := &System{}
-	k, err := bootkernelclnt.BootKernelOld(realmv1.ROOTREALM, true, path.Join(ymldir, "bootsys.yml"))
+	k, err := bootkernelclnt.BootKernel("bootkernelclnt/bootsys.yml")
 	if err != nil {
 		return nil, err
 	}
 	sys.boot = k
-	nameds, err := fslib.SetNamedIP(k.Ip())
+	nameds, err := fslib.SetNamedIP(k.GetIP())
 	if err != nil {
 		return nil, err
 	}
-	sys.proxy = startProxy(sys.boot.Ip(), nameds)
+	sys.proxy = startProxy(sys.boot.GetIP(), nameds)
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
 	for i := 1; i < n; i++ {
-		_, err := bootkernelclnt.BootKernelOld(ROOTREALM, true, path.Join(ymldir, "bootmach.yml"))
+		_, err := bootkernelclnt.BootKernel("bootkernelclnt/bootmach.yml")
 		if err != nil {
 			return nil, err
 		}

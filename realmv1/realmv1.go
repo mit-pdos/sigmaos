@@ -25,8 +25,8 @@ type Realm struct {
 	Realmid   string
 }
 
-func BootRealm1(yml string) (*Realm, error) {
-	k, err := bootkernelclnt.BootKernel1(yml)
+func BootRealm(yml string) (*Realm, error) {
+	k, err := bootkernelclnt.BootKernel(yml)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func BootRealm1(yml string) (*Realm, error) {
 	return &Realm{fsl, pclnt, k, kclnt, nameds, ROOTREALM}, nil
 }
 
-func BootRealm(realmid, yml string) (*Realm, error) {
-	k, err := bootkernelclnt.BootKernel(realmid, true, yml)
+func BootRealmOld(realmid, yml string) (*Realm, error) {
+	k, err := bootkernelclnt.BootKernelOld(realmid, true, yml)
 	if err != nil {
 		return nil, err
 	}
@@ -66,12 +66,12 @@ func BootRealm(realmid, yml string) (*Realm, error) {
 	return &Realm{fsl, pclnt, k, kclnt, nameds, realmid}, nil
 }
 
-func (r *Realm) Shutdown() error {
-	return r.boot.Shutdown()
+func (r *Realm) ShutdownOld() error {
+	return r.boot.ShutdownOld()
 }
 
-func (r *Realm) Shutdown1() error {
-	return r.boot.Shutdown1()
+func (r *Realm) Shutdown() error {
+	return r.boot.Shutdown()
 }
 
 func (r *Realm) Boot(s string) error {

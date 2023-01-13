@@ -21,7 +21,7 @@ type System struct {
 
 func Boot(realmid, ymldir string) (*System, error) {
 	sys := &System{}
-	r, err := realmv1.BootRealm(realmv1.ROOTREALM, path.Join(ymldir, "bootsys.yml"))
+	r, err := realmv1.BootRealmOld(realmv1.ROOTREALM, path.Join(ymldir, "bootsys.yml"))
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func Boot(realmid, ymldir string) (*System, error) {
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
-	r, err = realmv1.BootRealm(realmid, path.Join(ymldir, "bootall.yml"))
+	r, err = realmv1.BootRealmOld(realmid, path.Join(ymldir, "bootall.yml"))
 	if err != nil {
 		return nil, err
 	}

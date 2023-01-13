@@ -47,7 +47,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
+	b, err := BootRealm(t, "../bootkernelclnt/boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -55,7 +55,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
+	b, err := BootRealmOld(t, realmid, "../bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,9 +64,9 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootRealm1(t, "../bootkernelclnt/boot.yml")
+		return BootRealm(t, "../bootkernelclnt/boot.yml")
 	} else {
-		ts, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
+		ts, err := BootRealmOld(t, realmid, "../bootkernelclnt/bootall.yml")
 		if err != nil {
 			return nil, err
 		}
@@ -86,8 +86,8 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	return nil, nil
 }
 
-func BootRealm1(t *testing.T, yml string) (*Tstate, error) {
-	r, err := realmv1.BootRealm1(yml)
+func BootRealm(t *testing.T, yml string) (*Tstate, error) {
+	r, err := realmv1.BootRealm(yml)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +95,8 @@ func BootRealm1(t *testing.T, yml string) (*Tstate, error) {
 	return &Tstate{r, t}, nil
 }
 
-func BootRealm(t *testing.T, realmid, yml string) (*Tstate, error) {
-	r, err := realmv1.BootRealm(realmid, yml)
+func BootRealmOld(t *testing.T, realmid, yml string) (*Tstate, error) {
+	r, err := realmv1.BootRealmOld(realmid, yml)
 	if err != nil {
 		return nil, err
 	}
@@ -120,16 +120,16 @@ func (ts *Tstate) GetLocalIP() string {
 	return ts.Realm.GetIP()
 }
 
-func (ts *Tstate) Shutdown() error {
+func (ts *Tstate) ShutdownOld() error {
 	if ts.Realm != nil {
-		return ts.Realm.Shutdown()
+		return ts.Realm.ShutdownOld()
 	}
 	return nil
 }
 
-func (ts *Tstate) Shutdown1() error {
+func (ts *Tstate) Shutdown() error {
 	if ts.Realm != nil {
-		return ts.Realm.Shutdown1()
+		return ts.Realm.Shutdown()
 	}
 	return nil
 }

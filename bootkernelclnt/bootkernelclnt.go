@@ -69,7 +69,7 @@ func MakeEnv() []string {
 	return env
 }
 
-func BootKernel1(yml string) (*Kernel, error) {
+func BootKernel(yml string) (*Kernel, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -99,7 +99,7 @@ func BootKernel1(yml string) (*Kernel, error) {
 	return &Kernel{nil, nil, nil, ip, "", cli, resp.ID}, nil
 }
 
-func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
+func BootKernelOld(realmid string, contain bool, yml string) (*Kernel, error) {
 	cmd := exec.Command("bootkernel")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -169,7 +169,7 @@ func (k *Kernel) Ip() string {
 	return k.ip
 }
 
-func (k *Kernel) Shutdown1() error {
+func (k *Kernel) Shutdown() error {
 	ctx := context.Background()
 	out, err := k.cli.ContainerLogs(ctx, k.containerid, types.ContainerLogsOptions{ShowStderr: true})
 	if err != nil {
@@ -179,7 +179,7 @@ func (k *Kernel) Shutdown1() error {
 	return k.cli.ContainerKill(ctx, k.containerid, "SIGTERM")
 }
 
-func (k *Kernel) Shutdown() error {
+func (k *Kernel) ShutdownOld() error {
 	defer k.stdout.Close()
 	if _, err := io.WriteString(k.stdin, SHUTDOWN+"\n"); err != nil {
 		return err

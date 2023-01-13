@@ -46,7 +46,7 @@ func TestInitFs(t *testing.T) {
 	sts, err = ts.GetDir(pathname + "/boot")
 	assert.Nil(t, err)
 	log.Printf("boot %v\n", sp.Names(sts))
-	ts.Shutdown1()
+	ts.Shutdown()
 }
 
 func TestRemoveBasic(t *testing.T) {

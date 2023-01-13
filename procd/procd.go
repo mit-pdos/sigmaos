@@ -149,7 +149,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// Core allocation & resource accounting has to happen at this point, while
 	// we still hold the lock we used to claim the proc, since more spawns may
 	// happen at any time.
-	pd.allocCoresL(p.GetNcore())
+	pd.allocCoresL(p)
 	pd.allocMemL(p)
 	// Register running proc in in-memory structures.
 	pd.putProcL(linuxProc)
@@ -169,7 +169,7 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 	// Run the proc.
 	p.run()
 	// Free any dedicated cores.
-	pd.freeCores(p)
+	pd.freeCores(p.attr)
 	pd.freeMem(p.attr)
 	// Deregister running procs
 	pd.deleteProc(p)

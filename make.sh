@@ -53,7 +53,7 @@ mkdir -p bin/realm
 
 LDF="-X sigmaos/sigmap.Target=$TARGET"
 
-for k in `ls cmd`; do
+for k in kernel linux; do
   echo "Building $k components"
   for f in `ls cmd/$k`;  do
     if [ $CMD == "vet" ]; then

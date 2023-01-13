@@ -19,10 +19,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	if err != nil {
 		return err
 	}
-	go func() {
-		pds.RunServer()
-	}()
-	return nil
+	return pds.RunServer()
 }
 
 func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {

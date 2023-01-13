@@ -1,6 +1,9 @@
 package realmv1
 
 import (
+	"flag"
+	"log"
+
 	"sigmaos/bootkernelclnt"
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
@@ -8,6 +11,12 @@ import (
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
+
+var image string
+
+func init() {
+	flag.StringVar(&image, "image", "", "docker image")
+}
 
 const (
 	ROOTREALM = "rootrealm"
@@ -20,6 +29,27 @@ type Realm struct {
 	kernel    *kernelclnt.KernelClnt
 	namedAddr []string
 	Realmid   string
+}
+
+func BootRealm1(yml string) (*Realm, error) {
+	k, err := bootkernelclnt.BootKernel1(image, yml)
+	if err != nil {
+		return nil, err
+	}
+	nameds, err := fslib.SetNamedIP(k.Ip())
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("nameds %v\n", nameds)
+	fsl, pclnt, err := mkClient(k.Ip(), ROOTREALM, nameds)
+	if err != nil {
+		return nil, err
+	}
+	//kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
+	//if err != nil {
+	//	return nil, err
+	//}
+	return &Realm{fsl, pclnt, k, nil, nameds, ROOTREALM}, nil
 }
 
 func BootRealm(realmid, yml string) (*Realm, error) {

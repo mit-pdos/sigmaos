@@ -8,3 +8,4 @@ COPY go.sum ./
 RUN go mod download
 COPY . .
 RUN ./make.sh --norace
+CMD ["bin/linux/bootkernel", "bootkernelclnt/boot.yml"]

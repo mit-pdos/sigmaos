@@ -64,7 +64,7 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
+		return BootRealm1(t, "../bootkernelclnt/boot.yml")
 	} else {
 		ts, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
 		if err != nil {
@@ -84,6 +84,15 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	//}
 	//rconfig := realm.GetRealmConfig(fsl, realmid)
 	return nil, nil
+}
+
+func BootRealm1(t *testing.T, yml string) (*Tstate, error) {
+	r, err := realmv1.BootRealm1(yml)
+	if err != nil {
+		return nil, err
+	}
+	os.Setenv(proc.SIGMAREALM, realmid)
+	return &Tstate{r, t}, nil
 }
 
 func BootRealm(t *testing.T, realmid, yml string) (*Tstate, error) {

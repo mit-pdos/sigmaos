@@ -1,13 +1,21 @@
 package bootkernelclnt
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"syscall"
+	// "time"
 
-	"sigmaos/container"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
+	// "github.com/docker/docker/pkg/stdcopy"
+
+	sc "sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/kernel"
@@ -33,6 +41,34 @@ type Kernel struct {
 	stdout  io.ReadCloser
 	ip      string
 	realmid string
+	cli     *client.Client
+}
+
+func BootKernel1(image string, yml string) (*Kernel, error) {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("create container from image %v\n", image)
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: image,
+		Cmd:   []string{"bin/linux/bootkernel", "bootkernelclnt/boot.yml"},
+		//AttachStdout: true,
+		// AttachStderr: true,
+		// Tty:          false,
+	}, nil, nil, nil, "")
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+	// time.Sleep(1 * time.Second)
+	json, err1 := cli.ContainerInspect(ctx, resp.ID)
+	if err1 != nil {
+		return nil, err
+	}
+	ip := json.NetworkSettings.IPAddress
+	log.Printf("json %v\n", ip)
+	return &Kernel{nil, nil, nil, ip, "", cli}, nil
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
@@ -46,11 +82,11 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		return nil, err
 	}
 	cmd.Stderr = os.Stderr
-	cmd.Env = container.MakeEnv()
+	cmd.Env = sc.MakeEnv()
 
 	if contain {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := container.RunKernelContainer(cmd, realmid); err != nil {
+		if err := sc.RunKernelContainer(cmd, realmid); err != nil {
 			return nil, err
 		}
 	} else {
@@ -71,7 +107,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 
 	db.DPrintf(db.BOOTCLNT, "Yaml %v\n", param)
 	param.Realm = realmid
-	ip, err := container.LocalIP()
+	ip, err := sc.LocalIP()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +134,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		db.DFatalf("oops: kernel is printing to stdout %s\n", s)
 	}
 	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s at %s\n", s, ip)
-	return &Kernel{cmd, stdin, stdout, ip, realmid}, nil
+	return &Kernel{cmd, stdin, stdout, ip, realmid, nil}, nil
 }
 
 func (k *Kernel) Ip() string {
@@ -115,7 +151,7 @@ func (k *Kernel) Shutdown() error {
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}
-	if err := container.DelScnet(k.cmd.Process.Pid, k.realmid); err != nil {
+	if err := sc.DelScnet(k.cmd.Process.Pid, k.realmid); err != nil {
 		return err
 	}
 	return nil

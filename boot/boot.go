@@ -1,6 +1,7 @@
 package boot
 
 import (
+	"log"
 	"os"
 
 	db "sigmaos/debug"
@@ -19,6 +20,9 @@ func BootUp(param *kernel.Param) (*Boot, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("container %s booted %v\n", os.Args[1], k.Ip())
+
 	if err := kernelsrv.RunKernelSrv(k); err != nil {
 		return nil, err
 	}

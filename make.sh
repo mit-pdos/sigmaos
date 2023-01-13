@@ -53,13 +53,16 @@ mkdir -p bin/realm
 
 LDF="-X sigmaos/sigmap.Target=$TARGET"
 
-for k in kernel linux; do
+for k in kernel linux user; do
   echo "Building $k components"
   for f in `ls cmd/$k`;  do
     if [ $CMD == "vet" ]; then
       echo "go vet cmd/$k/$f/main.go"
       go vet cmd/$k/$f/main.go
-    else 
+    else
+      if [ $k == "user" ] && [ $f != "sleeper" ]; then
+            continue
+      fi
       GO="go"
 #      GO="~/go-custom/bin/go"
       build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"

@@ -47,7 +47,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootRealm(t, "../bootkernelclnt/boot.yml")
+	b, err := BootRealm(t, "bootkernelclnt/boot.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -55,7 +55,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootRealmOld(t, realmid, "../bootkernelclnt/bootall.yml")
+	b, err := BootRealm(t, "bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,9 +64,9 @@ func MakeTstateAll(t *testing.T) *Tstate {
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootRealm(t, "../bootkernelclnt/boot.yml")
+		return BootRealm(t, "bootkernelclnt/boot.yml")
 	} else {
-		ts, err := BootRealmOld(t, realmid, "../bootkernelclnt/bootall.yml")
+		ts, err := BootRealm(t, "bootkernelclnt/bootall.yml")
 		if err != nil {
 			return nil, err
 		}

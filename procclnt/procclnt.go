@@ -219,7 +219,7 @@ func (clnt *ProcClnt) getScheddClnt() *protdevclnt.ProtDevClnt {
 		var err error
 		clnt.pdc, err = protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, "~local"))
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error make protdevclnt: %v", err)
+			db.DPrintf(db.ALWAYS, "getScheddClnt: Error make protdevclnt: %v", err)
 		}
 	}
 	return clnt.pdc

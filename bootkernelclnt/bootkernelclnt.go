@@ -75,12 +75,12 @@ func BootKernel(yml string) (*Kernel, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("create container from image %v\n", image)
+	log.Printf("create container from image %v %v\n", image, yml)
 
 	env := MakeEnv()
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
-		Cmd:   []string{"bin/linux/bootkernel", "bootkernelclnt/boot.yml"},
+		Cmd:   []string{"bin/linux/bootkernel", yml},
 		//AttachStdout: true,
 		// AttachStderr: true,
 		Tty: true,
@@ -94,8 +94,8 @@ func BootKernel(yml string) (*Kernel, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	log.Printf("container running %v %v\n", resp.ID[:10], ip)
-	time.Sleep(1 * time.Second) // XXX fix
+	log.Printf("container %v  running at %v\n", resp.ID[:10], ip)
+	time.Sleep(10 * time.Second) // XXX fix
 	return &Kernel{nil, nil, nil, ip, "", cli, resp.ID}, nil
 }
 

@@ -4,5 +4,3 @@ services:
   - schedd
   - procd
   - ux
-  - s3
-  - db

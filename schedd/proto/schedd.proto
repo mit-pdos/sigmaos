@@ -5,11 +5,18 @@ import "proc/proc.proto";
 option go_package = "ulambda/schedd/proto";
 
 service Schedd {
+  rpc RegisterProcd(RegisterRequest) returns (RegisterResponse);
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
   rpc GetProc(GetProcRequest) returns (GetProcResponse);
 }
 
-// TODO: make proc proto
+message RegisterRequest {
+  string procdIp = 1;
+}
+
+message RegisterResponse {
+}
+
 message SpawnRequest {
   string realm = 1;
   ProcProto procProto = 2;

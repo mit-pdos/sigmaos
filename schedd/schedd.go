@@ -8,6 +8,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
@@ -15,8 +16,10 @@ import (
 
 type Schedd struct {
 	sync.Mutex
-	mfs *memfssrv.MemFs
-	qs  map[string]*Queue
+	procdIp string
+	procd   *protdevclnt.ProtDevClnt
+	mfs     *memfssrv.MemFs
+	qs      map[string]*Queue
 }
 
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
@@ -24,6 +27,19 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 		mfs: mfs,
 		qs:  make(map[string]*Queue),
 	}
+}
+
+func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterResponse) error {
+	if sd.procdIp != "" {
+		db.DFatalf("Register procd on schedd with procd already registered")
+	}
+	sd.procdIp = req.ProcdIp
+	var err error
+	sd.procd, err = protdevclnt.MkProtDevClnt(sd.mfs.FsLib(), path.Join(sp.PROCD, sd.procdIp))
+	if err != nil {
+		db.DFatalf("Error make procd clnt: %v", err)
+	}
+	return nil
 }
 
 func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error {
@@ -41,6 +57,17 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
 		db.DFatalf("Error create %v: %v", p.GetPid(), err)
 	}
+
+	//	// XXX For now, immediately dequeue the proc and spawn it. Of course, this
+	//	// will be done according to heuristics and resource utilization in future.
+	//	var ok bool
+	//	var pproto *proc.ProcProto
+	//	if pproto, ok = sd.qs[req.Realm].Dequeue(); !ok {
+	//		db.DFatalf("Couldn't dequeue enqueued proc")
+	//	}
+	//	p = proc.MakeProcFromProto(pproto)
+
+	// TODO: RPC to procd.
 
 	return nil
 }

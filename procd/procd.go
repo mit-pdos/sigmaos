@@ -14,6 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
 	scheddproto "sigmaos/schedd/proto"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -34,7 +35,8 @@ type Procd struct {
 	workers        sync.WaitGroup
 	procclnt       *procclnt.ProcClnt
 	memfssrv       *memfssrv.MemFs
-	schedd         *protdevclnt.ProtDevClnt
+	pdc            *protdevclnt.ProtDevClnt
+	pds            *protdevsrv.ProtDevSrv
 	*fslib.FsLib
 }
 
@@ -56,9 +58,14 @@ func RunProcd(realm string, spawningSys bool) {
 
 	pd.addr = pd.memfssrv.MyAddr()
 	var err error
-	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
+	pd.pdc, err = protdevclnt.MkProtDevClnt(pd.FsLib, path.Join(sp.SCHEDD, "~local"))
 	if err != nil {
 		db.DFatalf("Error make schedd clnt: %v", err)
+	}
+
+	pd.pds, err = protdevsrv.MakeProtDevSrvMemFs(pd.memfssrv, pd)
+	if err != nil {
+		db.DFatalf("Error PDS: %v", err)
 	}
 
 	perf, err := perf.MakePerf(perf.PROCD)
@@ -185,13 +192,12 @@ func (pd *Procd) claimProc(p *proc.Proc) bool {
 }
 
 func (pd *Procd) getProc() (*LinuxProc, bool) {
-	// TODO: get proc from schedd.
 	req := &scheddproto.GetProcRequest{
 		FreeCores: uint32(pd.coresAvail), // XXX fix race
 		Mem:       uint32(pd.memAvail),   // XXX fix race
 	}
 	res := &scheddproto.GetProcResponse{}
-	err := pd.schedd.RPC("Schedd.GetProc", req, res)
+	err := pd.pdc.RPC("Schedd.GetProc", req, res)
 	if err != nil {
 		db.DFatalf("Error getProc schedd: %v", err)
 		return nil, false

@@ -20,8 +20,8 @@ func (pd *Procd) allocCoresL(n proc.Tcore) {
 }
 
 func (pd *Procd) freeCores(p *LinuxProc) {
-	pd.Lock()
-	defer pd.Unlock()
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 
 	pd.freeCoresL(p)
 }

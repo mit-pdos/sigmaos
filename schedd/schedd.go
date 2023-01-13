@@ -16,7 +16,7 @@ import (
 )
 
 type Schedd struct {
-	sync.Mutex
+	mu      sync.Mutex
 	procdIp string
 	procd   *protdevclnt.ProtDevClnt
 	mfs     *memfssrv.MemFs
@@ -31,8 +31,8 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 }
 
 func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterResponse) error {
-	sd.Lock()
-	defer sd.Unlock()
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
 
 	if sd.procdIp != "" {
 		db.DFatalf("Register procd on schedd with procd already registered")
@@ -48,8 +48,8 @@ func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterRe
 }
 
 func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error {
-	sd.Lock()
-	defer sd.Unlock()
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)

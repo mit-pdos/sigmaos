@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
-	"sigmaos/seccomp"
+	// "sigmaos/seccomp"
 	sp "sigmaos/sigmap"
 )
 
@@ -54,18 +54,18 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 }
 
 func execPContainer() error {
-	wl, err := seccomp.ReadWhiteList("./whitelist.yml")
-	if err != nil {
-		return err
-	}
+	// wl, err := seccomp.ReadWhiteList("./whitelist.yml")
+	// if err != nil {
+	// 	return err
+	// }
 
-	db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
+	// db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
 
 	if err := setupFs(path.Join(sp.SIGMAHOME, os.Args[1])); err != nil {
 		return err
 	}
 
-	seccomp.LoadFilter(wl)
+	// seccomp.LoadFilter(wl)
 
 	pn, err := exec.LookPath(os.Args[2])
 	if err != nil {

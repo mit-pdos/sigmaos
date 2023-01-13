@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"sigmaos/container"
+	// "sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
@@ -93,12 +93,12 @@ func (p *LinuxProc) run() error {
 	} else {
 		// procd downloads user programs into bin/user and container
 		// mounts dir as /bin.
-		cmd = exec.Command(path.Join(container.UBIN, path.Base(p.attr.Program)), p.attr.Args...)
-		if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
-			db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
-			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
-			return err
-		}
+		cmd = exec.Command(p.attr.Program, p.attr.Args...)
+		//if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
+		//	db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
+		//	p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		//	return err
+		//}
 	}
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

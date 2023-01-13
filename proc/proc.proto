@@ -1,13 +1,7 @@
 syntax = "proto3";
 
-option go_package = "ulambda/proc";
+option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
-
-
-//service Noded {
-//  rpc GrantCores(NodedRequest) returns (NodedResponse);
-//  rpc RevokeCores(NodedRequest) returns (NodedResponse);
-//}
 
 message ProcProto {
   string pidStr = 1;

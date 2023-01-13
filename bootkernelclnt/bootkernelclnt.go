@@ -19,6 +19,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -58,19 +59,7 @@ func BootKernel(yml string) (*Kernel, error) {
 		return nil, err
 	}
 	k.namedAddr = nameds
-	log.Printf("nameds %v\n", nameds)
-	fsl, pclnt, err := mkClient(k.ip, ROOTREALM, nameds)
-	if err != nil {
-		return nil, err
-	}
-	k.FsLib = fsl
-	k.ProcClnt = pclnt
-	kclnt, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+"~local/")
-	if err != nil {
-		return nil, err
-	}
-	k.kclnt = kclnt
-	return k, nil
+	return k.waitUntilBooted()
 }
 
 func (k *Kernel) KillOne(s string) error {
@@ -105,8 +94,6 @@ func bootKernel(yml string) (*Kernel, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("create container from image %v %v\n", image, yml)
-
 	env := makeEnv()
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
@@ -124,9 +111,43 @@ func bootKernel(yml string) (*Kernel, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	log.Printf("container %v  running at %v\n", resp.ID[:10], ip)
-	time.Sleep(10 * time.Second) // XXX fix
+	fmt.Printf("container %s with image %s booting at %s...\n", resp.ID[:10], image, ip)
 	return &Kernel{ip: ip, cli: cli, container: resp.ID}, nil
+}
+
+func (k *Kernel) waitUntilBooted() (*Kernel, error) {
+	const N = 100
+	for i := 0; i < N; i++ {
+		time.Sleep(10 * time.Millisecond)
+		fsl, pclnt, err := mkClient(k.ip, ROOTREALM, k.namedAddr)
+		if err == nil {
+			k.FsLib = fsl
+			k.ProcClnt = pclnt
+			break
+		} else if serr.IsErrUnavailable(err) {
+			fmt.Printf(".")
+			continue
+		} else {
+			return nil, err
+		}
+	}
+	for i := 0; i < N; i++ {
+		time.Sleep(10 * time.Millisecond)
+		kclnt, err := kernelclnt.MakeKernelClnt(k.FsLib, sp.BOOT+"~local/")
+		if err == nil {
+			k.kclnt = kclnt
+			fmt.Printf("running\n")
+			break
+		} else if serr.IsErrUnavailable(err) {
+			fmt.Printf(".")
+		} else {
+			return nil, err
+		}
+	}
+	if k.kclnt == nil {
+		return nil, fmt.Errorf("BootKernel: timeded out")
+	}
+	return k, nil
 }
 
 func makeEnv() []string {

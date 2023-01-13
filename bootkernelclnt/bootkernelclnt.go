@@ -36,12 +36,13 @@ const (
 //
 
 type Kernel struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  io.ReadCloser
-	ip      string
-	realmid string
-	cli     *client.Client
+	cmd         *exec.Cmd
+	stdin       io.WriteCloser
+	stdout      io.ReadCloser
+	ip          string
+	realmid     string
+	cli         *client.Client
+	containerid string
 }
 
 func BootKernel1(image string, yml string) (*Kernel, error) {
@@ -61,14 +62,13 @@ func BootKernel1(image string, yml string) (*Kernel, error) {
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
-	// time.Sleep(1 * time.Second)
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	if err1 != nil {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
 	log.Printf("json %v\n", ip)
-	return &Kernel{nil, nil, nil, ip, "", cli}, nil
+	return &Kernel{nil, nil, nil, ip, "", cli, resp.ID}, nil
 }
 
 func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
@@ -134,11 +134,16 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 		db.DFatalf("oops: kernel is printing to stdout %s\n", s)
 	}
 	db.DPrintf(db.BOOTCLNT, "Kernel is running: %s at %s\n", s, ip)
-	return &Kernel{cmd, stdin, stdout, ip, realmid, nil}, nil
+	return &Kernel{cmd, stdin, stdout, ip, realmid, nil, ""}, nil
 }
 
 func (k *Kernel) Ip() string {
 	return k.ip
+}
+
+func (k *Kernel) Shutdown1() error {
+	ctx := context.Background()
+	return k.cli.ContainerKill(ctx, k.containerid, "SIGTERM")
 }
 
 func (k *Kernel) Shutdown() error {

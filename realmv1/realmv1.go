@@ -76,6 +76,10 @@ func (r *Realm) Shutdown() error {
 	return r.boot.Shutdown()
 }
 
+func (r *Realm) Shutdown1() error {
+	return r.boot.Shutdown1()
+}
+
 func (r *Realm) Boot(s string) error {
 	return r.kernel.Boot(s)
 }

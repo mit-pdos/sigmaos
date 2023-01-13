@@ -127,6 +127,13 @@ func (ts *Tstate) Shutdown() error {
 	return nil
 }
 
+func (ts *Tstate) Shutdown1() error {
+	if ts.Realm != nil {
+		return ts.Realm.Shutdown1()
+	}
+	return nil
+}
+
 func (ts *Tstate) BootProcd() error {
 	return ts.Boot(sp.PROCDREL)
 }

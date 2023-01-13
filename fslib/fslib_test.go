@@ -38,16 +38,15 @@ func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
-	log.Printf("named %v\n", sp.Names(sts))
-	sts, err = ts.GetDir(pathname + "/boot")
-	assert.Nil(t, err)
-	log.Printf("boot %v\n", sp.Names(sts))
 	if pathname == sp.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 	} else {
 		assert.True(t, len(sts) == 0, "initfs")
 	}
-	ts.Shutdown()
+	sts, err = ts.GetDir(pathname + "/boot")
+	assert.Nil(t, err)
+	log.Printf("boot %v\n", sp.Names(sts))
+	ts.Shutdown1()
 }
 
 func TestRemoveBasic(t *testing.T) {

@@ -52,7 +52,6 @@ func (pfs *ProcdFs) running(p *LinuxProc) *serr.Err {
 	if err != nil {
 		pfs.pd.perf.Done()
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
-		// TODO: return an serr.Err return err
 	}
 	return nil
 }

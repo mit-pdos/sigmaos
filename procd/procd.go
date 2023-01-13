@@ -171,7 +171,7 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 	return nil
 }
 
-func (pd *Procd) claimProc(p *proc.Proc, procPath string) bool {
+func (pd *Procd) claimProc(p *proc.Proc) bool {
 	// Create an ephemeral semaphore for the parent proc to wait on.
 	semStart := semclnt.MakeSemClnt(pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
 	if err := semStart.Init(sp.DMTMP); err != nil {
@@ -204,15 +204,7 @@ func (pd *Procd) getProc() (*LinuxProc, bool) {
 	pd.Lock()
 	defer pd.Unlock()
 
-	// Expects Lock to be held, since it does some resource accounting.
-	var q string
-	if p.GetType() == proc.T_LC {
-		q = sp.PROCD_RUNQ_LC
-	} else {
-		q = sp.PROCD_RUNQ_BE
-	}
-	procPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), q, p.GetPid().String())
-	if ok := pd.claimProc(p, procPath); !ok {
+	if ok := pd.claimProc(p); !ok {
 		db.DFatalf("Failed to claim proc: %v", err)
 	}
 	linuxProc := pd.registerProcL(p, false)

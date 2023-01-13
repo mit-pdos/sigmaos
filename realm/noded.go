@@ -17,9 +17,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realm/proto"
-	"sigmaos/resource"
 	"sigmaos/semclnt"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -90,19 +88,19 @@ func MakeNoded(machineId string) *Noded {
 
 func (nd *Noded) GrantCores(req proto.NodedRequest, res *proto.NodedResponse) error {
 	db.DPrintf(db.NODED, "Noded %v granted cores %v", nd.id, req.Cores)
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
-	nd.forwardResourceMsgToProcd(msg)
-
-	nd.cfg.Cores = append(nd.cfg.Cores, req.Cores)
-	nd.WriteConfig(nd.cfgPath, nd.cfg)
-
-	lockRealm(nd.ec, nd.cfg.RealmId)
-	defer unlockRealm(nd.ec, nd.cfg.RealmId)
-
-	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
-	realmCfg.NCores += proc.Tcore(req.Cores.Size())
-	nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
-	res.OK = true
+	//	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
+	//	nd.forwardResourceMsgToProcd(msg)
+	//
+	//	nd.cfg.Cores = append(nd.cfg.Cores, req.Cores)
+	//	nd.WriteConfig(nd.cfgPath, nd.cfg)
+	//
+	//	lockRealm(nd.ec, nd.cfg.RealmId)
+	//	defer unlockRealm(nd.ec, nd.cfg.RealmId)
+	//
+	//	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+	//	realmCfg.NCores += proc.Tcore(req.Cores.Size())
+	//	nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
+	//	res.OK = true
 	return nil
 }
 
@@ -117,43 +115,43 @@ func (nd *Noded) RevokeCores(req proto.NodedRequest, res *proto.NodedResponse) e
 		nd.done <- true
 		close(nd.done)
 	} else {
-		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
-		nd.forwardResourceMsgToProcd(msg)
-
-		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
-
-		// Sanity check: should be at least 2 core groups when removing one.
-		// Otherwise, we should have shut down.
-		if len(nd.cfg.Cores) < 2 {
-			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
-		}
-		// Sanity check: we always take the last cores allocated.
-		if cores.Start != req.Cores.Start || cores.End != req.Cores.End {
-			db.DFatalf("Removed unexpected core group: %v from %v", req.Cores.Marshal(), nd.cfg)
-		}
-
-		// Update the core allocations for this noded.
-		var rmCores *sessp.Tinterval
-		nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
-		nd.WriteConfig(nd.cfgPath, nd.cfg)
-
-		// Update the realm's total core count. The Realmmgr holds the realm
-		// lock.
-		realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
-		realmCfg.NCores -= proc.Tcore(rmCores.Size())
-		nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
-
-		machine.PostCores(nd.sclnt, nd.machineId, cores)
+		//		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, req.Cores.Marshal(), int(req.Cores.Size()))
+		//		nd.forwardResourceMsgToProcd(msg)
+		//
+		//		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
+		//
+		//		// Sanity check: should be at least 2 core groups when removing one.
+		//		// Otherwise, we should have shut down.
+		//		if len(nd.cfg.Cores) < 2 {
+		//			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+		//		}
+		//		// Sanity check: we always take the last cores allocated.
+		//		if cores.Start != req.Cores.Start || cores.End != req.Cores.End {
+		//			db.DFatalf("Removed unexpected core group: %v from %v", req.Cores.Marshal(), nd.cfg)
+		//		}
+		//
+		//		// Update the core allocations for this noded.
+		//		var rmCores *sessp.Tinterval
+		//		nd.cfg.Cores, rmCores = nd.cfg.Cores[:len(nd.cfg.Cores)-1], nd.cfg.Cores[len(nd.cfg.Cores)-1]
+		//		nd.WriteConfig(nd.cfgPath, nd.cfg)
+		//
+		//		// Update the realm's total core count. The Realmmgr holds the realm
+		//		// lock.
+		//		realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
+		//		realmCfg.NCores -= proc.Tcore(rmCores.Size())
+		//		nd.WriteConfig(RealmConfPath(nd.cfg.RealmId), realmCfg)
+		//
+		//		machine.PostCores(nd.sclnt, nd.machineId, cores)
 	}
 	res.OK = true
 	return nil
 }
 
-func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
-	procdIp := nd.s.GetProcdIp()
-	// Pass the resource message on to this noded's procd.
-	resource.SendMsg(nd.FsLib, path.Join(RealmPath(nd.cfg.RealmId), sp.PROCDREL, procdIp, sp.RESOURCE_CTL), msg)
-}
+//func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
+//	procdIp := nd.s.GetProcdIp()
+//	// Pass the resource message on to this noded's procd.
+//	resource.SendMsg(nd.FsLib, path.Join(RealmPath(nd.cfg.RealmId), sp.PROCDREL, procdIp, sp.RESOURCE_CTL), msg)
+//}
 
 // Update configuration.
 func (nd *Noded) getNextConfig() {

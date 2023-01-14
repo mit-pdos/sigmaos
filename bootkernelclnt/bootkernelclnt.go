@@ -101,7 +101,10 @@ func bootKernel(yml string) (*Kernel, error) {
 		// AttachStderr: true,
 		Tty: true,
 		Env: env,
-	}, nil, nil, nil, "")
+	}, &container.HostConfig{
+		CapAdd:      []string{"SYS_ADMIN"},
+		SecurityOpt: []string{"seccomp=unconfined"},
+	}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}

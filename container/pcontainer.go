@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/rand"
 	// "sigmaos/seccomp"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
 const (
@@ -42,6 +42,7 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 			},
 		},
 	}
+
 	pn, err := exec.LookPath("exec-container")
 	if err != nil {
 		return fmt.Errorf("LookPath: %v", err)
@@ -54,19 +55,20 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 }
 
 func execPContainer() error {
-	// wl, err := seccomp.ReadWhiteList("./whitelist.yml")
-	// if err != nil {
-	// 	return err
-	// }
+	//wl, err := seccomp.ReadWhiteList("./whitelist.yml")
+	//if err != nil {
+	//	return err
+	//}
 
-	// db.DPrintf(db.CONTAINER, "wl %v env: %v\n", wl, os.Environ())
+	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
 
-	if err := setupFs(path.Join(sp.SIGMAHOME, os.Args[1])); err != nil {
-		return err
-	}
+	//if err := setupFs(path.Join(sp.SIGMAHOME, os.Args[1])); err != nil {
+	//	return err
+	//}
 
 	// seccomp.LoadFilter(wl)
 
+	os.Setenv("PATH", "/home/sigmaos/bin/user")
 	pn, err := exec.LookPath(os.Args[2])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
@@ -95,6 +97,11 @@ func ls(dir string) error {
 func setupFs(newRoot string) error {
 	oldRootMnt := "old_root" + rand.String(8)
 
+	xnewRoot := newRoot
+	newRoot = newRoot + "/rootrealm"
+
+	log.Printf("new root %v\n", newRoot)
+
 	// Mount new file system as a mount point so we can pivot_root to it later
 	if err := syscall.Mount(newRoot, newRoot, "", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount new root filesystem: %v", err)
@@ -107,18 +114,20 @@ func setupFs(newRoot string) error {
 		return err
 	}
 
-	// Mount /sys for /sys/devices/system/cpu/online; XXX exclude
-	// /sys/firmware; others?
-	if err := syscall.Mount("/sys", path.Join(newRoot, "sys"), "sysfs", syscall.MS_BIND, ""); err != nil {
-		log.Printf("failed to mount /sys err %v", err)
-		return err
-	}
+	ls(newRoot)
 
-	// Mount /dev/urandom
-	if err := syscall.Mount("/dev/urandom", path.Join(newRoot, "dev/urandom"), "none", syscall.MS_BIND, ""); err != nil {
-		log.Printf("failed to mount /dev/urandom: %v", err)
-		return err
-	}
+	// // Mount /sys for /sys/devices/system/cpu/online; XXX exclude
+	// // /sys/firmware; others?
+	// if err := syscall.Mount("/sys", path.Join(newRoot, "sys"), "sysfs", syscall.MS_BIND, ""); err != nil {
+	// 	log.Printf("failed to mount /sys err %v", err)
+	// 	return err
+	// }
+
+	// // Mount /dev/urandom
+	// if err := syscall.Mount("/dev/urandom", path.Join(newRoot, "dev/urandom"), "none", syscall.MS_BIND, ""); err != nil {
+	// 	log.Printf("failed to mount /dev/urandom: %v", err)
+	// 	return err
+	// }
 
 	// Mount /usr
 	if err := syscall.Mount("/usr", path.Join(newRoot, "usr"), "none", syscall.MS_BIND, ""); err != nil {
@@ -138,14 +147,14 @@ func setupFs(newRoot string) error {
 		return err
 	}
 
-	// Mount /etc
-	if err := syscall.Mount("/etc", path.Join(newRoot, "etc"), "none", syscall.MS_BIND, ""); err != nil {
-		log.Printf("failed to mount /etc: %v", err)
-		return err
-	}
+	// // Mount /etc
+	// if err := syscall.Mount("/etc", path.Join(newRoot, "etc"), "none", syscall.MS_BIND, ""); err != nil {
+	// 	log.Printf("failed to mount /etc: %v", err)
+	// 	return err
+	// }
 
 	// Mount bin/user on /bin so that user procs can run only programs from /bin/user
-	if err := syscall.Mount(path.Join(newRoot)+"/bin/user", path.Join(newRoot, UBIN), "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount(path.Join(xnewRoot)+"/bin/user", path.Join(newRoot, UBIN), "none", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount /bin: %v", err)
 		return err
 	}

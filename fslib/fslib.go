@@ -59,7 +59,6 @@ func MakeFsLibAddr(uname string, lip string, addrs []string) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, lip)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
-		debug.PrintStack()
 		return nil, err
 	}
 	return fl, nil

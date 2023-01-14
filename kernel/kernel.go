@@ -60,15 +60,20 @@ func MakeKernel(p *Param) (*Kernel, error) {
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
 	proc.SetRealm(p.Realm)
-	if p.Services[0] == sp.NAMEDREL {
-		k.makeNameds()
-		p.Services = p.Services[1:]
-	}
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	k.ip = ip
+	if p.Services[0] == sp.NAMEDREL {
+		k.makeNameds()
+		nameds, err := fslib.SetNamedIP(k.ip)
+		if err != nil {
+			return nil, err
+		}
+		fslib.SetSigmaNamed(nameds)
+		p.Services = p.Services[1:]
+	}
 	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, fslib.Named())
 	if err != nil {
 		return nil, err

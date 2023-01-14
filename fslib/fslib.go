@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"net"
+	"os"
 	"runtime/debug"
 	"strings"
 
@@ -28,6 +29,12 @@ func NamedAddrs() string {
 func Named() []string {
 	addrs := strings.Split(NamedAddrs(), ",")
 	return addrs
+}
+
+// XXX move to proc/env.go?
+func SetSigmaNamed(nds []string) {
+	s := strings.Join(nds, ",")
+	os.Setenv(proc.SIGMANAMED, s)
 }
 
 func SetNamedIP(ip string) ([]string, error) {

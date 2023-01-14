@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -49,7 +50,7 @@ func init() {
 }
 
 func BootKernel(yml string) (*Kernel, error) {
-	k, err := bootKernel(yml)
+	k, err := startContainer(yml)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,8 @@ func BootKernel(yml string) (*Kernel, error) {
 		return nil, err
 	}
 	k.namedAddr = nameds
+	log.Printf("named %v\n", nameds)
+	fslib.SetSigmaNamed(nameds)
 	return k.waitUntilBooted()
 }
 
@@ -87,7 +90,7 @@ func (k *Kernel) Shutdown() error {
 	return k.cli.ContainerKill(ctx, k.container, "SIGTERM")
 }
 
-func bootKernel(yml string) (*Kernel, error) {
+func startContainer(yml string) (*Kernel, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -104,6 +107,13 @@ func bootKernel(yml string) (*Kernel, error) {
 	}, &container.HostConfig{
 		CapAdd:      []string{"SYS_ADMIN"},
 		SecurityOpt: []string{"seccomp=unconfined"},
+		// This is bad idea in general because it requires to give rw
+		// permission on host to privileged daemon.  But maybe ok in
+		// our case where kernel is trusted as is. XXX Use different
+		// image for user procs.
+		Binds: []string{
+			"/var/run/docker.sock:/var/run/docker.sock",
+		},
 	}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err

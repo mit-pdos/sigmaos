@@ -1,6 +1,7 @@
 package container
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,6 +9,10 @@ import (
 	"os/exec"
 	//"path"
 	"syscall"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
@@ -20,28 +25,28 @@ const (
 )
 
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
-	// Set up new namespaces
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWNS |
-			syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWUSER,
-		UidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getuid(),
-				Size:        1,
-			},
-		},
-		GidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getgid(),
-				Size:        1,
-			},
-		},
-	}
+	// // Set up new namespaces
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	Cloneflags: syscall.CLONE_NEWUTS |
+	// 		syscall.CLONE_NEWNS |
+	// 		syscall.CLONE_NEWIPC |
+	// 		syscall.CLONE_NEWPID |
+	// 		syscall.CLONE_NEWUSER,
+	// 	UidMappings: []syscall.SysProcIDMap{
+	// 		{
+	// 			ContainerID: 0,
+	// 			HostID:      os.Getuid(),
+	// 			Size:        1,
+	// 		},
+	// 	},
+	// 	GidMappings: []syscall.SysProcIDMap{
+	// 		{
+	// 			ContainerID: 0,
+	// 			HostID:      os.Getgid(),
+	// 			Size:        1,
+	// 		},
+	// 	},
+	// }
 
 	pn, err := exec.LookPath("exec-container")
 	if err != nil {
@@ -54,7 +59,42 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
+func dockerContainer(cmd []string, env []string) error {
+	db.DPrintf(db.CONTAINER, "dockerContainer %v %v\n", cmd, env)
+	image := "sigmaos"
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: image,
+		Cmd:   cmd,
+		//AttachStdout: true,
+		// AttachStderr: true,
+		Tty: true,
+		Env: env,
+	}, nil, nil, nil, "")
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		return err
+	}
+	json, err1 := cli.ContainerInspect(ctx, resp.ID)
+	if err1 != nil {
+		return err
+	}
+	ip := json.NetworkSettings.IPAddress
+	db.DPrintf(db.CONTAINER, "container %s with image %s booting at %s...\n", resp.ID[:10], image, ip)
+	return nil
+}
+
 func execPContainer() error {
+	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
+
+	os.Setenv("PATH", "/home/sigmaos/bin/user")
+	return dockerContainer(os.Args[2:], os.Environ())
+}
+
+func execPContainer1() error {
 	//wl, err := seccomp.ReadWhiteList("./whitelist.yml")
 	//if err != nil {
 	//	return err

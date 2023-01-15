@@ -61,7 +61,7 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 
 func dockerContainer(cmd []string, env []string) error {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v %v\n", cmd, env)
-	image := "sigmaos"
+	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {

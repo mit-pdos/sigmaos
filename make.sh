@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target TARGET]" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target TARGET] kernel|user" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
 PARALLEL=""
+WHAT=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --norace)
@@ -31,11 +32,14 @@ while [[ "$#" -gt 0 ]]; do
     usage
     exit 0
     ;;
-  *)
-    echo "unexpected argument $1"
-    usage
-    exit 1
+  kernel|user)
+    WHAT=$1
+    shift
     ;;
+  *)
+   echo "unexpected argument $1"
+   usage
+   exit 1
   esac
 done
 
@@ -43,26 +47,31 @@ if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+echo $WHAT
+
 
 DIR=$(dirname $0)
 . $DIR/env/env.sh
 
-mkdir -p bin/kernel
-mkdir -p bin/user
-mkdir -p bin/realm
+if [ $WHAT == "kernel" ]; then
+    mkdir -p bin/kernel
+    WHAT="kernel linux"
+else
+    mkdir -p bin/user
+fi
 
 LDF="-X sigmaos/sigmap.Target=$TARGET"
 
-for k in kernel linux user; do
+for k in $WHAT; do
   echo "Building $k components"
   for f in `ls cmd/$k`;  do
     if [ $CMD == "vet" ]; then
       echo "go vet cmd/$k/$f/main.go"
       go vet cmd/$k/$f/main.go
     else
-      if [ $k == "user" ] && [ $f != "sleeper" ]; then
-            continue
-      fi
+      # if [ $k == "user" ] && [ $f != "sleeper" ]; then
+      #      continue
+      # fi
       GO="go"
 #      GO="~/go-custom/bin/go"
       build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"

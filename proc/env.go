@@ -22,6 +22,7 @@ const (
 	SIGMAPERF           = "SIGMAPERF"
 	SIGMADEBUG          = "SIGMADEBUG"
 	SIGMANAMED          = "SIGMANAMED"
+	SIGMALOCAL          = "SIGMALOCAL"
 	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMAPATH           = "SIGMAPATH"
 	SIGMAREALM          = "SIGMAREALM"
@@ -98,6 +99,14 @@ func GetSigmaDebug() string {
 
 func GetSigmaNamed() string {
 	return os.Getenv(SIGMANAMED)
+}
+
+func GetSigmaLocal() string {
+	return os.Getenv(SIGMALOCAL)
+}
+
+func SetSigmaLocal(ip string) {
+	os.Setenv(SIGMALOCAL, ip)
 }
 
 func GetSigmaRootFs() string {

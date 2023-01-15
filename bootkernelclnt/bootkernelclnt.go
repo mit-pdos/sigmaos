@@ -61,6 +61,7 @@ func BootKernel(yml string) (*Kernel, error) {
 	k.namedAddr = nameds
 	log.Printf("named %v\n", nameds)
 	fslib.SetSigmaNamed(nameds)
+	proc.SetSigmaLocal(k.ip)
 	return k.waitUntilBooted()
 }
 

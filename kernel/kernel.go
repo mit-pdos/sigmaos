@@ -65,6 +65,7 @@ func MakeKernel(p *Param) (*Kernel, error) {
 		return nil, err
 	}
 	k.ip = ip
+	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds()
 		nameds, err := fslib.SetNamedIP(k.ip, k.namedAddr)

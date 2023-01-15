@@ -130,6 +130,8 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
+	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
+
 	p.AppendEnv(SIGMAREALM, GetRealm())
 	if p.Privileged {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot

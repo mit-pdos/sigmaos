@@ -105,8 +105,10 @@ func startContainer(yml string) (*Kernel, error) {
 		Tty: true,
 		Env: env,
 	}, &container.HostConfig{
-		CapAdd:      []string{"SYS_ADMIN"},
-		SecurityOpt: []string{"seccomp=unconfined"},
+		//Unnecessary with using docker for user containers.
+		//CapAdd:      []string{"SYS_ADMIN"},
+		//SecurityOpt: []string{"seccomp=unconfined"},
+		//
 		// This is bad idea in general because it requires to give rw
 		// permission on host to privileged daemon.  But maybe ok in
 		// our case where kernel is trusted as is. XXX Use different

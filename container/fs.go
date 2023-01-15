@@ -29,7 +29,7 @@ func pivotFs(rootfs string) error {
 	// Mount /sys for /sys/devices/system/cpu/online; XXX exclude
 	// /sys/firmware; others?
 	if err := syscall.Mount("/sys", path.Join(rootfs, "sys"), "sysfs", 0, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /sys err %v", err)
+		db.DPrintf(db.ALWAYS, "failed to mount /sys onto %v err %v", path.Join(rootfs, "sys"), err)
 		return err
 	}
 

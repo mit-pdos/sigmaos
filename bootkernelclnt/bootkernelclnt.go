@@ -54,7 +54,7 @@ func BootKernel(yml string) (*Kernel, error) {
 	if err != nil {
 		return nil, err
 	}
-	nameds, err := fslib.SetNamedIP(k.ip)
+	nameds, err := fslib.SetNamedIP(k.ip, []string{":1111"})
 	if err != nil {
 		return nil, err
 	}

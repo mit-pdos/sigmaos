@@ -48,7 +48,7 @@ type Kernel struct {
 func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.namedAddr = namedAddr
+	k.namedAddr = namedAddr // XXX not Addr but Port?
 	k.cores = cores
 	k.svcs = mkServices()
 	return k
@@ -56,7 +56,7 @@ func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel 
 
 func MakeKernel(p *Param) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	k := mkKernel(p, fslib.Named(), cores)
+	k := mkKernel(p, []string{":1111"}, cores)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
 	proc.SetRealm(p.Realm)
@@ -67,7 +67,7 @@ func MakeKernel(p *Param) (*Kernel, error) {
 	k.ip = ip
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds()
-		nameds, err := fslib.SetNamedIP(k.ip)
+		nameds, err := fslib.SetNamedIP(k.ip, k.namedAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (k *Kernel) ShutDown() error {
 
 // Start nameds and wait until they have started
 func (k *Kernel) makeNameds() error {
-	n := len(fslib.Named())
+	n := len(k.namedAddr)
 	ch := make(chan error)
 	k.startNameds(ch, n)
 	var err error
@@ -192,7 +192,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 // Run a named (but not as a proc)
 func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := kproc.RunKernelProc(p, fslib.Named(), realmId, false)
+	cmd, err := kproc.RunKernelProc(p, peers, realmId, false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err

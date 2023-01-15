@@ -8,7 +8,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -83,7 +82,7 @@ func (k *Kernel) KillOne(srv string) error {
 // an address for this named.
 func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	// replicaId needs to be 1-indexed for replication library.
-	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), realmId)
+	cmd, err := RunNamed(k.namedAddr[replicaId], len(k.namedAddr) > 1, replicaId+1, k.namedAddr, realmId)
 	if err != nil {
 		return err
 	}

@@ -56,11 +56,11 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootKernel(t, "bootkernelclnt/bootall.yml")
+	ts, err := BootKernel(t, "bootkernelclnt/bootall.yml")
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
-	return b
+	return ts
 }
 
 func BootPath(t *testing.T, path string) (*Tstate, error) {

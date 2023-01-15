@@ -28,7 +28,7 @@ func Boot(n int, ymldir string) (*System, error) {
 		return nil, err
 	}
 	sys.boot = k
-	nameds, err := fslib.SetNamedIP(k.GetIP())
+	nameds, err := fslib.SetNamedIP(k.GetIP(), []string{":1111"})
 	if err != nil {
 		return nil, err
 	}

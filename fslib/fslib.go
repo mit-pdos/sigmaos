@@ -37,9 +37,9 @@ func SetSigmaNamed(nds []string) {
 	os.Setenv(proc.SIGMANAMED, s)
 }
 
-func SetNamedIP(ip string) ([]string, error) {
-	nameds := Named()
-	for i, s := range nameds {
+func SetNamedIP(ip string, ports []string) ([]string, error) {
+	nameds := make([]string, len(ports))
+	for i, s := range ports {
 		_, port, err := net.SplitHostPort(s)
 		if err != nil {
 			return nil, err

@@ -56,6 +56,11 @@ const (
 	KVMV_ERR                  = KVMV + ERR
 )
 
+// System
+const (
+	SYSTEM Tselector = "SYSTEM"
+)
+
 // Kernel
 const (
 	KERNEL     Tselector = "KERNEL"

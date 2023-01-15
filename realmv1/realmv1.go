@@ -46,10 +46,6 @@ func (r *Realm) Shutdown() error {
 	return r.boot.Shutdown()
 }
 
-func (r *Realm) Boot(s string) error {
-	return r.kernel.Boot(s)
-}
-
 func (r *Realm) KillOne(s string) error {
 	return r.kernel.Kill(s)
 }

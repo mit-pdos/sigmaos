@@ -55,7 +55,7 @@ echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$R
 ./install.sh --realm rootrealm
 # ./install.sh --realm $REALM
 
-bootsys $MACHINE &
+bootsys rootrealm $MACHINE &
 
 sleep 1
 

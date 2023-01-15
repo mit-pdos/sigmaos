@@ -1,5 +1,5 @@
 services:
-  - sigmamgr
+  - schedd
   - procd
   - ux
   - s3

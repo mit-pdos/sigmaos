@@ -11,14 +11,14 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v <nmachine>", os.Args[0])
+	if len(os.Args) < 3 {
+		db.DFatalf("Usage: %v <realmid> <nmachine>", os.Args[0])
 	}
-	n, err := strconv.Atoi(os.Args[1])
+	n, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		log.Fatalf("%s: Atoi err %v", os.Args[0], err)
 	}
-	_, err = system.Boot(n, "bootkernelclnt")
+	_, err = system.Boot(os.Args[1], n, "bootkernelclnt")
 	if err != nil {
 		log.Fatalf("%v: Boot %v", os.Args[0], err)
 	}

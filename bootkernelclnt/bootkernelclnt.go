@@ -49,6 +49,7 @@ func BootKernel(realmid string, contain bool, yml string) (*Kernel, error) {
 	cmd.Env = container.MakeEnv()
 
 	if contain {
+		db.DPrintf(db.BOOTCLNT, "Run kernel container realm %v", realmid)
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		if err := container.RunKernelContainer(cmd, realmid); err != nil {
 			return nil, err

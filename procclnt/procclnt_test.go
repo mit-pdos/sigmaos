@@ -674,6 +674,34 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Test to see if any core has a spinner running on it (high utilization).
+func anyCoresOccupied(coresMaps []map[string]bool) bool {
+	N_SAMPLES := 5
+	// Calculate the average utilization over a 250ms period for each core to be
+	// revoked.
+	coreOccupied := false
+	for c, m := range coresMaps {
+		idle0, total0 := perf.GetCPUSample(m)
+		idleDelta := uint64(0)
+		totalDelta := uint64(0)
+		// Collect some CPU util samples for this core.
+		for i := 0; i < N_SAMPLES; i++ {
+			time.Sleep(25 * time.Millisecond)
+			idle1, total1 := perf.GetCPUSample(m)
+			idleDelta += idle1 - idle0
+			totalDelta += total1 - total0
+			idle0 = idle1
+			total0 = total1
+		}
+		avgCoreUtil := 100.0 * ((float64(totalDelta) - float64(idleDelta)) / float64(totalDelta))
+		db.DPrintf(db.TEST, "Core %v utilization: %v", c, avgCoreUtil)
+		if avgCoreUtil > 50.0 {
+			coreOccupied = true
+		}
+	}
+	return coreOccupied
+}
+
 //func TestProcdResize1(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
 //
@@ -854,35 +882,6 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 //
 //	ts.Shutdown()
 //}
-
-// Test to see if any core has a spinner running on it (high utilization).
-func anyCoresOccupied(coresMaps []map[string]bool) bool {
-	N_SAMPLES := 5
-	// Calculate the average utilization over a 250ms period for each core to be
-	// revoked.
-	coreOccupied := false
-	for c, m := range coresMaps {
-		idle0, total0 := perf.GetCPUSample(m)
-		idleDelta := uint64(0)
-		totalDelta := uint64(0)
-		// Collect some CPU util samples for this core.
-		for i := 0; i < N_SAMPLES; i++ {
-			time.Sleep(25 * time.Millisecond)
-			idle1, total1 := perf.GetCPUSample(m)
-			idleDelta += idle1 - idle0
-			totalDelta += total1 - total0
-			idle0 = idle1
-			total0 = total1
-		}
-		avgCoreUtil := 100.0 * ((float64(totalDelta) - float64(idleDelta)) / float64(totalDelta))
-		db.DPrintf(db.TEST, "Core %v utilization: %v", c, avgCoreUtil)
-		if avgCoreUtil > 50.0 {
-			coreOccupied = true
-		}
-	}
-	return coreOccupied
-}
-
 //func TestProcdResizeCoreRepinning(t *testing.T) {
 //	ts := test.MakeTstateAll(t)
 //

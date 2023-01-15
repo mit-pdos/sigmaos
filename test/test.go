@@ -7,16 +7,22 @@ import (
 	"testing"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/realmv1"
+	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/system"
+)
+
+const (
+	ROOTREALM = "rootrealm"
 )
 
 var realmid string // Use this realm to run tests instead of starting a new one. This is used for multi-machine tests.
 
 // Read & set the proc version.
 func init() {
-	flag.StringVar(&realmid, "realm", "rootrealm", "realm id")
+	flag.StringVar(&realmid, "realm", ROOTREALM, "realm id")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -34,12 +40,14 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 }
 
 type Tstate struct {
-	*realmv1.Realm
+	*system.System
+	*fslib.FsLib
+	*procclnt.ProcClnt
 	T *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
-	b, err := BootPath(t, path)
+	b, err := bootPath(t, path)
 	if err != nil {
 		db.DFatalf("MakeTstatePath: %v\n", err)
 	}
@@ -47,7 +55,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
+	b, err := bootSystem(t, false)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -55,18 +63,18 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
+	b, err := bootSystem(t, true)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
 	return b
 }
 
-func BootPath(t *testing.T, path string) (*Tstate, error) {
+func bootPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return BootRealm(t, realmid, "../bootkernelclnt/boot.yml")
+		return bootSystem(t, false)
 	} else {
-		ts, err := BootRealm(t, realmid, "../bootkernelclnt/bootall.yml")
+		ts, err := bootSystem(t, true)
 		if err != nil {
 			return nil, err
 		}
@@ -83,49 +91,62 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	//	return nil, err
 	//}
 	//rconfig := realm.GetRealmConfig(fsl, realmid)
+	db.DFatalf("Unimplemented")
 	return nil, nil
 }
 
-func BootRealm(t *testing.T, realmid, yml string) (*Tstate, error) {
-	r, err := realmv1.BootRealm(realmid, yml)
+func bootSystem(t *testing.T, full bool) (*Tstate, error) {
+	var s *system.System
+	var err error
+	if full {
+		s, err = system.Boot(realmid, 1, "../bootkernelclnt")
+	} else {
+		s, err = system.BootNamedOnly(realmid, "../bootkernelclnt")
+	}
+	if err != nil {
+		return nil, err
+	}
+	fsl, pclnt, err := s.MakeClnt(0, "test")
 	if err != nil {
 		return nil, err
 	}
 	os.Setenv(proc.SIGMAREALM, realmid)
-	return &Tstate{r, t}, nil
+	return &Tstate{s, fsl, pclnt, t}, nil
 }
 
-func (ts *Tstate) RunningInRealm() bool {
-	return ts.Realmid != "rootrealm"
-}
-
-func (ts *Tstate) RealmId() string {
-	return ts.Realmid
-}
-
-func (ts *Tstate) NamedAddr() []string {
-	return ts.Realm.NamedAddr()
-}
-
-func (ts *Tstate) GetLocalIP() string {
-	return ts.Realm.GetIP()
-}
-
-func (ts *Tstate) Shutdown() error {
-	if ts.Realm != nil {
-		return ts.Realm.Shutdown()
+func (ts *Tstate) BootNode(n int) error {
+	for i := 0; i < n; i++ {
+		if err := ts.System.BootNode(realmid, "../bootkernelclnt"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (ts *Tstate) BootProcd() error {
-	return ts.Boot(sp.PROCDREL)
+func (ts *Tstate) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	return ts.System.MakeClnt(kidx, name)
 }
 
-func (ts *Tstate) BootFss3d() error {
-	return ts.Boot(sp.S3REL)
-}
+// XXX?
+//func (ts *Tstate) RunningInRealm() bool {
+//	return ts.Realmid != ROOTREALM
+//}
 
-func (ts *Tstate) BootFsUxd() error {
-	return ts.Boot(sp.UXREL)
+//func (ts *Tstate) RealmId() string {
+//	return ts.Realmid
+//}
+
+//func (ts *Tstate) NamedAddr() []string {
+//	return ts.System.Ip()
+//}
+
+//func (ts *Tstate) GetLocalIP() string {
+//	return ts.Realm.GetIP()
+//}
+
+func (ts *Tstate) Shutdown() error {
+	//	if ts.Realm != nil {
+	//		return ts.Realm.Shutdown()
+	//	}
+	return ts.System.Shutdown()
 }

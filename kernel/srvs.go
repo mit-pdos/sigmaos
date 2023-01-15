@@ -39,15 +39,13 @@ func (k *Kernel) BootSub(s string, p *Param, full bool) error {
 	case sp.PROCDREL:
 		ss, err = k.bootProcd(full)
 	case sp.S3REL:
-		ss, err = k.BootFss3d()
+		ss, err = k.bootS3d()
 	case sp.UXREL:
-		ss, err = k.BootFsUxd()
+		ss, err = k.bootUxd()
 	case sp.DBREL:
-		ss, err = k.BootDbd(p.Hostip)
-	case sp.SIGMAMGRREL:
-		ss, err = k.BootSigmaMgr()
+		ss, err = k.bootDbd(p.Hostip)
 	case sp.SCHEDDREL:
-		ss, err = k.BootSchedd()
+		ss, err = k.bootSchedd()
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -96,10 +94,6 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	return err
 }
 
-func (k *Kernel) BootProcd() (*Subsystem, error) {
-	return k.bootProcd(false)
-}
-
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
@@ -113,23 +107,19 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 	return ss, nil
 }
 
-func (k *Kernel) BootFsUxd() (*Subsystem, error) {
+func (k *Kernel) bootUxd() (*Subsystem, error) {
 	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.Param.Realm)}, k.Param.Realm, k.procdIp, true)
 }
 
-func (k *Kernel) BootFss3d() (*Subsystem, error) {
+func (k *Kernel) bootS3d() (*Subsystem, error) {
 	return k.bootSubsystem("fss3d", []string{k.Param.Realm}, k.Param.Realm, k.procdIp, true)
 }
 
-func (k *Kernel) BootDbd(hostip string) (*Subsystem, error) {
+func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, k.Param.Realm, k.procdIp, true)
 }
 
-func (k *Kernel) BootSigmaMgr() (*Subsystem, error) {
-	return k.bootSubsystem("sigmamgr", []string{}, k.Param.Realm, k.procdIp, false)
-}
-
-func (k *Kernel) BootSchedd() (*Subsystem, error) {
+func (k *Kernel) bootSchedd() (*Subsystem, error) {
 	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, false)
 }
 

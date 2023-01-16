@@ -76,8 +76,13 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 }
 
 func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
 	p := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
+	sd.coresfree += p.GetNcore()
+	sd.memfree += p.GetMem()
 	// XXX TODO: resource accounting.
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
@@ -86,6 +91,8 @@ func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneRespons
 
 // Run a proc via the local procd.
 func (sd *Schedd) runProc(p *proc.Proc) {
+	sd.coresfree -= p.GetNcore()
+	sd.memfree -= p.GetMem()
 	// Notify schedd that the proc is done running.
 	pdreq := &procdproto.RunProcRequest{
 		ProcProto: p.GetProto(),
@@ -100,6 +107,7 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
+
 	for {
 		// Currently, we iterate through the realms roughly round-robin (go maps
 		// are iterated in random order).
@@ -107,12 +115,13 @@ func (sd *Schedd) schedule() {
 		for r, q := range sd.qs {
 			// XXX For now, immediately dequeue the proc and spawn it. Of course, this
 			// will be done according to heuristics and resource utilization in future.
-			if p, ok := q.Dequeue(); ok {
+			if p, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
 				db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
 				sd.runProc(p)
 				continue
 			}
 		}
+		db.DPrintf(db.SCHEDD, "No procs runnable")
 		sd.cond.Wait()
 	}
 }

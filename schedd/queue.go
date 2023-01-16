@@ -34,18 +34,29 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 	}
 }
 
-// LC procs have absolute priority.
-func (q *Queue) Dequeue() (*proc.Proc, bool) {
+// Dequeue a proc with certain resource requirements. LC procs have absolute
+// priority.
+func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (*proc.Proc, bool) {
 	var p *proc.Proc
-	if len(q.lc) > 0 {
-		p, q.lc = q.lc[0], q.lc[1:]
-	} else if len(q.be) > 0 {
-		p, q.be = q.be[0], q.be[1:]
+	// Iterate through LC procs first, checking for core and memory requirements.
+	for i := 0; i < len(q.lc); i++ {
+		p = q.lc[i]
+		// If there are sufficient resources for the LC proc, dequeue it.
+		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem {
+			q.lc = append(q.lc[:i], q.lc[i+1:]...)
+			return p, true
+		}
 	}
-	if p == nil {
-		return nil, false
+	// Iterate through BE procs second, only checking for memory requirements.
+	for i := 0; i < len(q.be); i++ {
+		p = q.be[i]
+		// If there is sufficient memory for the LC proc, dequeue it.
+		if p.GetMem() <= maxmem {
+			q.be = append(q.be[:i], q.be[i+1:]...)
+			return p, true
+		}
 	}
-	return p, true
+	return nil, false
 }
 
 func (q *Queue) String() string {

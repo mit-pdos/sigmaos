@@ -43,7 +43,8 @@ type Tstate struct {
 	*system.System
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	T *testing.T
+	T         *testing.T
+	initNamed string
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -96,6 +97,7 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 }
 
 func bootSystem(t *testing.T, full bool) (*Tstate, error) {
+	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
 	var s *system.System
 	var err error
 	if full {
@@ -106,12 +108,16 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Store the init named, so we can restore it on shutdown.
+	initNamed := fslib.NamedAddrs()
+	// Set the new SIGMANAMED environment variable (filling in IP).
+	proc.SetSigmaNamed(fslib.NamedAddrsToString(s.GetNamedAddrs()))
 	fsl, pclnt, err := s.MakeClnt(0, "test")
 	if err != nil {
 		return nil, err
 	}
 	os.Setenv(proc.SIGMAREALM, realmid)
-	return &Tstate{s, fsl, pclnt, t}, nil
+	return &Tstate{s, fsl, pclnt, t, initNamed}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {

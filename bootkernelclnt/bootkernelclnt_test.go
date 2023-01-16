@@ -210,7 +210,5 @@ func TestBootMulti(t *testing.T) {
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Err boot node: %v", err)
 
-	//	time.Sleep(100 * time.Second)
-
 	ts.Shutdown()
 }

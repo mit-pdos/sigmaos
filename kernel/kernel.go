@@ -68,13 +68,19 @@ func MakeKernel(p *Param) (*Kernel, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.KERNEL, "MakeKernel ip %v", ip)
 	k.ip = ip
 	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, fslib.Named())
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", fslib.Named(), err)
 		return nil, err
 	}
 	k.FsLib = fsl
 	err = startSrvs(k)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
+		return nil, err
+	}
 	return k, err
 }
 

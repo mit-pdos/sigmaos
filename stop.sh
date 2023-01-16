@@ -10,7 +10,7 @@ fi
 
 pgrep -x bootkernel > /dev/null && killall bootkernel
 pgrep -x bootsys > /dev/null && killall bootsys
-pgrep -x proxyd > /dev/null && killall bootsys
+pgrep -x proxyd > /dev/null && killall proxyd
 
 while read -r line; do
     if [ ! -z "$line" ]; then

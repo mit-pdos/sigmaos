@@ -141,7 +141,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 		db.DFatalf("Error remove schedd file: %v", err)
 	}
 	if p.IsPrivilegedProc() && pd.kernelInitDone {
-		db.DPrintf(db.ALWAYS, "Spawned privileged proc %v on fully initialized procd", p)
+		db.DPrintf(db.PROCD, "Spawned privileged proc %v on fully initialized procd", p)
 	}
 	// Make a Linux Proc which corresponds to this proc.
 	linuxProc := makeLinuxProc(pd, p, stolen)

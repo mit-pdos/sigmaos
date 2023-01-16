@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/fslib"
+	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -131,7 +131,7 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	fsl, err := fslib.MakeFsLibAddr("abcd", ts.GetLocalIP(), ts.NamedAddr())
+	fsl, _, err := ts.MakeClnt(0, "abcd") // fslib.MakeFsLibAddr("abcd", ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	fsl.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
@@ -168,13 +168,10 @@ func procdName(ts *test.Tstate, exclude map[string]bool) string {
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name1 := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true})
+	name := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true})
 
 	var err error
-	err = ts.BootProcd()
-	assert.Nil(t, err, "kernel/procd")
 
-	name := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true, name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	_, error := sp.MkMount(b)
@@ -182,9 +179,9 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 8, len(sts)) // .statsd, .fences and ctl and running and runqs
+	assert.Equal(t, 7, len(sts)) // .statsd, .fences and ctl and running and runqs
 
-	ts.KillOne(sp.PROCDREL)
+	ts.KillOne(0, sp.PROCDREL)
 
 	start := time.Now()
 	for {
@@ -192,7 +189,7 @@ func TestEphemeral(t *testing.T) {
 			break
 		}
 		time.Sleep(sp.Conf.Session.TIMEOUT / 10)
-		_, err = ts.GetFile(name1)
+		_, err = ts.GetFile(name)
 		if err == nil {
 			log.Printf("retry\n")
 			continue
@@ -201,6 +198,19 @@ func TestEphemeral(t *testing.T) {
 		break
 	}
 	assert.Greater(t, 3*sp.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")
+
+	ts.Shutdown()
+}
+
+func TestBootMulti(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	db.DPrintf(db.TEST, "Boot second node")
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "Err boot node: %v", err)
+
+	//	time.Sleep(100 * time.Second)
 
 	ts.Shutdown()
 }

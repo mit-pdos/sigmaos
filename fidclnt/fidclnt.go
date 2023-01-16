@@ -3,10 +3,11 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/protclnt"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -94,6 +95,7 @@ func (fidc *FidClnt) Attach(uname string, addrs []string, pn, tree string) (sp.T
 	fid := fidc.allocFid()
 	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
 	if err != nil {
+		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}

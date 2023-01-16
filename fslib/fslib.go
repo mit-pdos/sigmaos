@@ -43,9 +43,17 @@ func SetNamedIP(ip string, ports []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		if host != "" {
+			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, host, port)
+		}
 		nameds[i] = net.JoinHostPort(ip, port)
 	}
 	return nameds, nil
+}
+
+// XXX clean up.
+func NamedAddrsToString(addrs []string) string {
+	return strings.Join(addrs, ",")
 }
 
 func MakeFsLibBase(uname, lip string) *FsLib {

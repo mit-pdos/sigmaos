@@ -15,7 +15,7 @@ type Boot struct {
 
 // The boot processes enters here
 func BootUp(param *kernel.Param) (*Boot, error) {
-	db.DPrintf(db.KERNEL, "Boot param %v env %v\n", param, os.Environ())
+	db.DPrintf(db.KERNEL, "Boot param %v env %v", param, os.Environ())
 	k, err := kernel.MakeKernel(param)
 	if err != nil {
 		return nil, err

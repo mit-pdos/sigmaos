@@ -29,7 +29,7 @@ func BridgeName(realm string) string {
 //
 
 const (
-	IPFormat = "10.100.%d.%d/24"
+	IPFormat = "10.100.%d.%d/16"
 	SCNETBIN = "/usr/bin/scnet"
 )
 

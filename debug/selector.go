@@ -56,6 +56,11 @@ const (
 	KVMV_ERR                  = KVMV + ERR
 )
 
+// System
+const (
+	SYSTEM Tselector = "SYSTEM"
+)
+
 // Kernel
 const (
 	KERNEL     Tselector = "KERNEL"
@@ -92,7 +97,6 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
-	FDCLNT_ERR              = "FDCLNT" + ERR
 	FSLIB                   = "FSLIB"
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
@@ -128,7 +132,10 @@ const (
 	SESS_CLNT_Q                   = "SESS_CLNT_Q"
 	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
 	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
+	FDCLNT                        = "FDCLNT"
+	FDCLNT_ERR                    = FDCLNT + ERR
 	FIDCLNT                       = "FIDCLNT"
+	FIDCLNT_ERR                   = FIDCLNT + ERR
 	MOUNT                         = "MOUNT"
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR

@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -201,11 +202,15 @@ func TestEphemeral(t *testing.T) {
 	ts.Shutdown()
 }
 
-func BootMulti(t *testing.T) {
+func TestBootMulti(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+
+	db.DPrintf(db.TEST, "Boot second node")
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Err boot node: %v", err)
+
+	//	time.Sleep(100 * time.Second)
 
 	ts.Shutdown()
 }

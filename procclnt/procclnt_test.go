@@ -519,6 +519,9 @@ func TestReserveCores(t *testing.T) {
 }
 
 func TestWorkStealing(t *testing.T) {
+	assert.True(t, false, "WorkStealing not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	err := ts.BootNode(1)
@@ -621,6 +624,9 @@ func TestBurstSpawn(t *testing.T) {
 }
 
 func TestSpawnProcdCrash(t *testing.T) {
+	assert.True(t, false, "Crash not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	// Spawn a proc which can't possibly be run by any procd.
@@ -642,6 +648,9 @@ func TestSpawnProcdCrash(t *testing.T) {
 }
 
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
+	assert.True(t, false, "Crash not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	N_REPL := 3

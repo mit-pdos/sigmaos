@@ -6,13 +6,14 @@ import (
 	"sigmaos/boot"
 	bk "sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/yaml"
 )
 
 func main() {
-	if len(os.Args) < 1 {
-		db.DFatalf("%v: usage\n", os.Args[0])
+	if len(os.Args) < 2 {
+		db.DFatalf("%v: usage yaml nameds\n", os.Args[0])
 	}
 	param := kernel.Param{}
 	err := yaml.ReadYaml(os.Args[1], &param)
@@ -22,7 +23,7 @@ func main() {
 
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+bk.HOME+"/bin/kernel:"+bk.HOME+"/bin/linux:"+bk.HOME+"/bin/user")
-	_, err = boot.BootUp(&param)
+	_, err = boot.BootUp(&param, fslib.StringToNamedAddrs(os.Args[2]))
 	if err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}

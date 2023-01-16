@@ -95,7 +95,7 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func TestWaitExitSimple(t *testing.T) {
+func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})

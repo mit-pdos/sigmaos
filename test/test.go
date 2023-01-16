@@ -43,8 +43,7 @@ type Tstate struct {
 	*system.System
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	T         *testing.T
-	initNamed string
+	T *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -108,16 +107,9 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Store the init named, so we can restore it on shutdown.
-	initNamed := fslib.NamedAddrs()
-	// Set the new SIGMANAMED environment variable (filling in IP).
-	proc.SetSigmaNamed(fslib.NamedAddrsToString(s.GetNamedAddrs()))
-	fsl, pclnt, err := s.MakeClnt(0, "test")
-	if err != nil {
-		return nil, err
-	}
+	fsl, pclnt := s.GetClnt(0)
 	os.Setenv(proc.SIGMAREALM, realmid)
-	return &Tstate{s, fsl, pclnt, t, initNamed}, nil
+	return &Tstate{s, fsl, pclnt, t}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
@@ -127,10 +119,6 @@ func (ts *Tstate) BootNode(n int) error {
 		}
 	}
 	return nil
-}
-
-func (ts *Tstate) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	return ts.System.MakeClnt(kidx, name)
 }
 
 func (ts *Tstate) NamedAddr() []string {

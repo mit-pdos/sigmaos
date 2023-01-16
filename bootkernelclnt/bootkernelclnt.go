@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -36,33 +35,42 @@ type Kernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	kclnt     *kernelclnt.KernelClnt
-	namedAddr []string
 	ip        string
 	cli       *client.Client
 	container string
 }
 
-var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF, proc.SIGMANAMED}
+var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF}
 var image string
 
 func init() {
 	flag.StringVar(&image, "image", "", "docker image")
 }
 
-func BootKernel(yml string) (*Kernel, error) {
-	k, err := startContainer(yml)
+// Takes named port and returns filled-in namedAddr
+func BootKernelNamed(yml string, nameds []string) (*Kernel, []string, error) {
+	k, err := startContainer(yml, nameds)
+	if err != nil {
+		return nil, nil, err
+	}
+	nds, err := fslib.SetNamedIP(k.GetIP(), nameds)
+	if err != nil {
+		return nil, nil, err
+	}
+	k, err = k.waitUntilBooted(nds)
+	if err != nil {
+		return nil, nil, err
+	}
+	return k, nds, err
+}
+
+// Takes filled-in namedAddr
+func BootKernel(yml string, nameds []string) (*Kernel, error) {
+	k, err := startContainer(yml, nameds)
 	if err != nil {
 		return nil, err
 	}
-	nameds, err := fslib.SetNamedIP(k.ip, []string{":1111"})
-	if err != nil {
-		return nil, err
-	}
-	k.namedAddr = nameds
-	log.Printf("named %v\n", nameds)
-	fslib.SetSigmaNamed(nameds)
-	proc.SetSigmaLocal(k.ip)
-	return k.waitUntilBooted()
+	return k.waitUntilBooted(nameds)
 }
 
 func (k *Kernel) Boot(s string) error {
@@ -73,17 +81,13 @@ func (k *Kernel) KillOne(s string) error {
 	return k.kclnt.Kill(s)
 }
 
-func (k *Kernel) NamedAddr() []string {
-	return k.namedAddr
-}
-
 func (k *Kernel) GetIP() string {
 	return k.ip
 }
 
-//func (k *Kernel) Boot(s string) error {
-//	return k.kclnt.Boot(s)
-//}
+func (k *Kernel) GetClnt() (*fslib.FsLib, *procclnt.ProcClnt) {
+	return k.FsLib, k.ProcClnt
+}
 
 func (k *Kernel) Shutdown() error {
 	ctx := context.Background()
@@ -95,16 +99,17 @@ func (k *Kernel) Shutdown() error {
 	return k.cli.ContainerKill(ctx, k.container, "SIGTERM")
 }
 
-func startContainer(yml string) (*Kernel, error) {
+func startContainer(yml string, nameds []string) (*Kernel, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
 	env := makeEnv()
+	fmt.Printf("start container %v %v %v\n", yml, nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
-		Cmd:   []string{"bin/linux/bootkernel", yml},
+		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
 		//AttachStdout: true,
 		// AttachStderr: true,
 		Tty: true,
@@ -134,11 +139,11 @@ func startContainer(yml string) (*Kernel, error) {
 	return &Kernel{ip: ip, cli: cli, container: resp.ID}, nil
 }
 
-func (k *Kernel) waitUntilBooted() (*Kernel, error) {
+func (k *Kernel) waitUntilBooted(nameds []string) (*Kernel, error) {
 	const N = 100
 	for i := 0; i < N; i++ {
 		time.Sleep(10 * time.Millisecond)
-		fsl, pclnt, err := mkClient(k.ip, ROOTREALM, k.namedAddr)
+		fsl, pclnt, err := mkClient(k.ip, ROOTREALM, nameds)
 		if err == nil {
 			k.FsLib = fsl
 			k.ProcClnt = pclnt

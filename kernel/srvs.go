@@ -76,7 +76,7 @@ func (k *Kernel) KillOne(srv string) error {
 	return nil
 }
 
-// replicaId is used to index into the fslib.Named() slice and select
+// replicaId is used to index into the namedAddr slice and select
 // an address for this named.
 func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	// replicaId needs to be 1-indexed for replication library.

@@ -26,8 +26,7 @@ func NamedAddrs() string {
 }
 
 func Named() []string {
-	addrs := strings.Split(NamedAddrs(), ",")
-	return addrs
+	return StringToNamedAddrs(NamedAddrs())
 }
 
 // XXX move to proc/env.go?
@@ -54,6 +53,10 @@ func SetNamedIP(ip string, ports []string) ([]string, error) {
 // XXX clean up.
 func NamedAddrsToString(addrs []string) string {
 	return strings.Join(addrs, ",")
+}
+
+func StringToNamedAddrs(s string) []string {
+	return strings.Split(s, ",")
 }
 
 func MakeFsLibBase(uname, lip string) *FsLib {

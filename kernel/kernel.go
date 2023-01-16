@@ -48,15 +48,15 @@ type Kernel struct {
 func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.namedAddr = namedAddr // XXX not Addr but Port?
+	k.namedAddr = namedAddr
 	k.cores = cores
 	k.svcs = mkServices()
 	return k
 }
 
-func MakeKernel(p *Param) (*Kernel, error) {
+func MakeKernel(p *Param, nameds []string) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	k := mkKernel(p, []string{":1111"}, cores)
+	k := mkKernel(p, nameds, cores)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
 	proc.SetRealm(p.Realm)
@@ -73,12 +73,13 @@ func MakeKernel(p *Param) (*Kernel, error) {
 		if err != nil {
 			return nil, err
 		}
-		fslib.SetSigmaNamed(nameds)
+		k.namedAddr = nameds
 		p.Services = p.Services[1:]
 	}
-	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, fslib.Named())
+	fslib.SetSigmaNamed(k.namedAddr)
+	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, k.namedAddr)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", fslib.Named(), err)
+		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", k.namedAddr, err)
 		return nil, err
 	}
 	k.FsLib = fsl

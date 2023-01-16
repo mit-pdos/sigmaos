@@ -28,10 +28,7 @@ func (pd *Procd) freeCores(p *proc.Proc) {
 
 // Free a set of cores which was being used by a proc.
 func (pd *Procd) freeCoresL(p *proc.Proc) {
-	// If no cores were exclusively allocated to this proc, return immediately.
-	if p.GetNcore() == proc.C_DEF {
-		return
-	}
+	pd.coresAvail += p.GetNcore()
 
 	pd.sanityCheckCoreCountsL()
 }

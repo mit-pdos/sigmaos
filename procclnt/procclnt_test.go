@@ -32,7 +32,7 @@ func procd(ts *test.Tstate) string {
 }
 
 func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
-	return spawnSpinnerNcore(ts, proc.C_DEF)
+	return spawnSpinnerNcore(ts, 0)
 }
 
 func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {

@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -56,7 +55,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	b, err := bootSystem(t, false)
+	ts, err := bootSystem(t, false)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,7 +63,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	b, err := bootSystem(t, true)
+	ts, err := bootSystem(t, true)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -100,15 +99,13 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	var s *system.System
 	var err error
 	if full {
-		s, err = system.Boot(realmid, 1, "../bootkernelclnt")
+		s, err = system.Boot(realmid, 1, "bootkernelclnt")
 	} else {
-		s, err = system.BootNamedOnly(realmid, "../bootkernelclnt")
+		s, err = system.BootNamedOnly(realmid, "bootkernelclnt")
 	}
 	if err != nil {
 		return nil, err
 	}
-	// Set the new SIGMANAMED environment variable (filling in IP).
-	proc.SetSigmaNamed(fslib.NamedAddrsToString(s.GetNamedAddrs()))
 	fsl, pclnt, err := s.MakeClnt(0, "test")
 	if err != nil {
 		return nil, err
@@ -119,7 +116,7 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		if err := ts.System.BootNode(realmid, "../bootkernelclnt"); err != nil {
+		if err := ts.System.BootNode(realmid, "bootkernelclnt"); err != nil {
 			return err
 		}
 	}
@@ -128,6 +125,10 @@ func (ts *Tstate) BootNode(n int) error {
 
 func (ts *Tstate) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
 	return ts.System.MakeClnt(kidx, name)
+}
+
+func (ts *Tstate) NamedAddr() []string {
+	return ts.System.GetNamedAddrs()
 }
 
 func (ts *Tstate) Shutdown() error {

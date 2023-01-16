@@ -35,18 +35,18 @@ func bootSystem(realmid, ymldir, ymlname string) (*System, error) {
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
 	sys.kernelclnts = make([]*kernelclnt.KernelClnt, 1)
 	db.DPrintf(db.SYSTEM, "Boot system %v %v %v", realmid, ymldir, ymlname)
-	k, err := bootkernelclnt.BootKernel(realmid, true, path.Join(ymldir, ymlname))
+	k, err := bootkernelclnt.BootKernel(path.Join(ymldir, ymlname))
 	if err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v", realmid, ymldir, ymlname)
 	sys.kernels[0] = k
-	nameds, err := fslib.SetNamedIP(k.Ip())
+	nameds, err := fslib.SetNamedIP(k.GetIP(), []string{":1111"})
 	if err != nil {
 		return nil, err
 	}
 	sys.nameds = nameds
-	sys.proxy = startProxy(sys.kernels[0].Ip(), nameds)
+	sys.proxy = startProxy(sys.kernels[0].GetIP(), nameds)
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func BootNamedOnly(realmid, ymldir string) (*System, error) {
 }
 
 func (sys *System) BootNode(realmid, ymldir string) error {
-	k, err := bootkernelclnt.BootKernel(realmid, true, path.Join(ymldir, BOOT_NODE))
+	k, err := bootkernelclnt.BootKernel(path.Join(ymldir, BOOT_NODE))
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (sys *System) BootNode(realmid, ymldir string) error {
 // Make a set of clients (fslib & procclnt) for a specific kernel (with the
 // appropriate localip set).
 func (sys *System) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	return sys.makeClnt(sys.kernels[kidx].Ip(), name)
+	return sys.makeClnt(sys.kernels[kidx].GetIP(), name)
 }
 
 func (sys *System) makeClnt(kip, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {

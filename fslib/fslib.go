@@ -39,7 +39,7 @@ func SetSigmaNamed(nds []string) {
 func SetNamedIP(ip string, ports []string) ([]string, error) {
 	nameds := make([]string, len(ports))
 	for i, s := range ports {
-		_, port, err := net.SplitHostPort(s)
+		host, port, err := net.SplitHostPort(s)
 		if err != nil {
 			return nil, err
 		}

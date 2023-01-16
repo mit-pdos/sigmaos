@@ -65,6 +65,10 @@ func BootKernel(yml string) (*Kernel, error) {
 	return k.waitUntilBooted()
 }
 
+func (k *Kernel) Boot(s string) error {
+	return k.kclnt.Boot(s)
+}
+
 func (k *Kernel) KillOne(s string) error {
 	return k.kclnt.Kill(s)
 }
@@ -77,9 +81,9 @@ func (k *Kernel) GetIP() string {
 	return k.ip
 }
 
-func (k *Kernel) Boot(s string) error {
-	return k.kclnt.Boot(s)
-}
+//func (k *Kernel) Boot(s string) error {
+//	return k.kclnt.Boot(s)
+//}
 
 func (k *Kernel) Shutdown() error {
 	ctx := context.Background()

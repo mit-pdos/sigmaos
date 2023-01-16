@@ -96,6 +96,10 @@ func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
 }
 
+func SetSigmaNamed(addrs string) {
+	os.Setenv(SIGMANAMED, addrs)
+}
+
 func GetSigmaNamed() string {
 	return os.Getenv(SIGMANAMED)
 }

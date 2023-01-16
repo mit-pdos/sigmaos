@@ -101,6 +101,27 @@ func TestWaitExitSimple(t *testing.T) {
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+
+	ts.Shutdown()
+}
+
+func TestWaitExitSimpleMultiKernel(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "Boot node: %v", err)
+
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts.Spawn(a)
 	db.DPrintf(db.TEST, "Post spawn")
 	assert.Nil(t, err, "Spawn")
 
@@ -271,10 +292,10 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 	const N_CONCUR = 13
 	const N_SPAWNS = 500
 
-	err := ts.BootProcd()
+	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
-	err = ts.BootProcd()
+	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
 	done := make(chan int)
@@ -500,13 +521,14 @@ func TestReserveCores(t *testing.T) {
 func TestWorkStealing(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	ts.BootProcd()
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "Boot node %v", err)
 
 	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
 
 	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
 
-	err := ts.WaitStart(pid)
+	err = ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart")
 
 	err = ts.WaitStart(pid1)
@@ -572,10 +594,10 @@ func TestBurstSpawn(t *testing.T) {
 	N := linuxsched.NCores * 3
 
 	// Start a couple new procds.
-	err := ts.BootProcd()
-	assert.Nil(t, err, "BootProcd 1")
-	err = ts.BootProcd()
-	assert.Nil(t, err, "BootProcd 2")
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootNode %v", err)
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootNode %v", err)
 
 	ps := burstSpawnSpinner(t, ts, N)
 
@@ -604,14 +626,17 @@ func TestSpawnProcdCrash(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any procd.
 	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores*2))
 
-	err := ts.KillOne(sp.PROCDREL)
-	assert.Nil(t, err, "KillOne: %v", err)
+	assert.True(t, false, "KillOne")
+	_ = pid
 
-	err = ts.WaitStart(pid)
-	assert.NotNil(t, err, "WaitStart: %v", err)
-
-	_, err = ts.WaitExit(pid)
-	assert.NotNil(t, err, "WaitExit: %v", err)
+	//	err := ts.KillOne(sp.PROCDREL)
+	//	assert.Nil(t, err, "KillOne: %v", err)
+	//
+	//	err = ts.WaitStart(pid)
+	//	assert.NotNil(t, err, "WaitStart: %v", err)
+	//
+	//	_, err = ts.WaitExit(pid)
+	//	assert.NotNil(t, err, "WaitExit: %v", err)
 
 	ts.Shutdown()
 }
@@ -623,10 +648,10 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	OUTDIR := "name/spinner-ephs"
 
 	// Start a couple new procds.
-	err := ts.BootProcd()
-	assert.Nil(t, err, "BootProcd 1")
-	err = ts.BootProcd()
-	assert.Nil(t, err, "BootProcd 2")
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootNode %v", err)
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootNode %v", err)
 
 	// Count number of children.
 	nChildren := getNChildren(ts)
@@ -647,29 +672,31 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
-	err = ts.KillOne(sp.PROCDREL)
-	assert.Nil(t, err, "kill procd")
-
-	// Wait for them to respawn.
-	time.Sleep(5 * time.Second)
-
-	// Make sure they spawned correctly.
-	st, err = ts.GetDir(OUTDIR)
-	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
-
-	err = ts.KillOne(sp.PROCDREL)
-	assert.Nil(t, err, "kill procd")
-
-	// Wait for them to respawn.
-	time.Sleep(5 * time.Second)
-
-	// Make sure they spawned correctly.
-	st, err = ts.GetDir(OUTDIR)
-	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
-
-	sm.Stop()
+	assert.True(t, false, "KillOne")
+	_ = sm
+	//	err = ts.KillOne(sp.PROCDREL)
+	//	assert.Nil(t, err, "kill procd")
+	//
+	//	// Wait for them to respawn.
+	//	time.Sleep(5 * time.Second)
+	//
+	//	// Make sure they spawned correctly.
+	//	st, err = ts.GetDir(OUTDIR)
+	//	assert.Nil(t, err, "readdir1")
+	//	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	//
+	//	err = ts.KillOne(sp.PROCDREL)
+	//	assert.Nil(t, err, "kill procd")
+	//
+	//	// Wait for them to respawn.
+	//	time.Sleep(5 * time.Second)
+	//
+	//	// Make sure they spawned correctly.
+	//	st, err = ts.GetDir(OUTDIR)
+	//	assert.Nil(t, err, "readdir1")
+	//	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+	//
+	//	sm.Stop()
 
 	ts.Shutdown()
 }

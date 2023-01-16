@@ -18,11 +18,16 @@ import (
 	"sigmaos/rand"
 	// "sigmaos/seccomp"
 	//sp "sigmaos/sigmap"
+	"sigmaos/proc"
 )
 
 const (
 	UBIN = "/bin"
 )
+
+func MakeUProc(proc *proc.Proc) error {
+	return dockerContainer(proc)
+}
 
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	// // Set up new namespaces
@@ -59,39 +64,53 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
-func dockerContainer(cmd []string, env []string) error {
-	db.DPrintf(db.CONTAINER, "dockerContainer %v %v\n", cmd, env)
+func dockerContainer(uproc *proc.Proc) error {
+	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", uproc)
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
 	}
+	// XXX don't hard code
+	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
+	cmd := append([]string{uproc.Program}, uproc.Args...)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v\n", cmd)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
 		Cmd:   cmd,
 		//AttachStdout: true,
 		// AttachStderr: true,
 		Tty: true,
-		Env: env,
+		Env: uproc.GetEnv(),
 	}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return err
 	}
-	json, err1 := cli.ContainerInspect(ctx, resp.ID)
-	if err1 != nil {
+	// json, err1 := cli.ContainerInspect(ctx, resp.ID)
+	// if err1 != nil {
+	// 	return err
+	// }
+	// ip := json.NetworkSettings.IPAddress
+	db.DPrintf(db.CONTAINER, "containerwait for %s\n", resp.ID[:10])
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
 		return err
+	case st := <-statusCh:
+		db.DPrintf(db.CONTAINER, "container %s done status %v\n", resp.ID[:10], st)
 	}
-	ip := json.NetworkSettings.IPAddress
-	db.DPrintf(db.CONTAINER, "container %s with image %s booting at %s...\n", resp.ID[:10], image, ip)
 	return nil
 }
 
 func execPContainer() error {
 	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
 
-	os.Setenv("PATH", "/home/sigmaos/bin/user")
-	return dockerContainer(os.Args[2:], os.Environ())
+	// os.Setenv("PATH", "/home/sigmaos/bin/user")
+	// return dockerContainer(os.Args[2:], os.Environ())
+	return nil
 }
 
 func execPContainer1() error {

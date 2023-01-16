@@ -91,12 +91,17 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		cmd = exec.Command(p.attr.Program, p.attr.Args...)
-		if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
-			db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
-			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		//cmd = exec.Command(p.attr.Program, p.attr.Args...)
+		//if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
+		//	db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
+		//	p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		//	return err
+		//}
+		if err := container.MakeUProc(p.attr); err != nil {
 			return err
 		}
+		db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)
+		return nil
 	}
 	cmd.Env = p.Env
 	cmd.Stdout = os.Stdout

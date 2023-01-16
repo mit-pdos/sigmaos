@@ -26,6 +26,8 @@ func main() {
 		os.Exit(1)
 	}
 	l.Work()
+	db.DPrintf(db.SLEEPER, "sleeper exit\n")
+	os.Exit(0)
 }
 
 type Sleeper struct {

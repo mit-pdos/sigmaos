@@ -10,7 +10,9 @@ const (
 	TMPREL      = "tmp"
 	TMP         = NAMED + TMPREL
 	PROCDREL    = "procd"
-	PROCD       = NAMED + PROCDREL + "/"
+	PROCD       = NAMED + UPROCDREL + "/"
+	UPROCDREL   = "uprocd"
+	UPROCD      = NAMED + PROCDREL + "/"
 	PROCD_WS    = PROCD + "ws" + "/"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
@@ -23,9 +25,6 @@ const (
 	DBREL       = "db"
 	DB          = NAMED + DBREL + "/"
 	DBD         = DB + "~local/"
-
-	FWREL = "fw"
-	FW    = NAMED + FWREL
 
 	UXBIN = UX + "~local/bin/"
 

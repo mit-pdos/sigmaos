@@ -5,7 +5,7 @@ import (
 	// "sigmaos/serr"
 	"sigmaos/fwsrv/proto"
 	"sigmaos/protdevsrv"
-	sp "sigmaos/sigmap"
+	//	sp "sigmaos/sigmap"
 )
 
 type FwSrv struct {
@@ -21,7 +21,7 @@ func (fw *FwSrv) Announce(req proto.AnnounceRequest, rep *proto.AnnounceResult) 
 func RunFireWall() error {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	fwsrv := &FwSrv{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.FW, fwsrv)
+	pds, err := protdevsrv.MakeProtDevSrv("XXX", fwsrv)
 	if err != nil {
 		return err
 	}

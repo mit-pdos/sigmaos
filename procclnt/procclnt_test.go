@@ -112,7 +112,6 @@ func TestWaitExitSimple(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
-
 	ts.Shutdown()
 }
 

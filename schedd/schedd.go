@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/linuxsched"
+	"sigmaos/mem"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -16,18 +18,25 @@ import (
 )
 
 type Schedd struct {
-	mu      sync.Mutex
-	procdIp string
-	procd   *protdevclnt.ProtDevClnt
-	mfs     *memfssrv.MemFs
-	qs      map[string]*Queue
+	mu        sync.Mutex
+	cond      *sync.Cond
+	procdIp   string
+	procd     *protdevclnt.ProtDevClnt
+	coresfree proc.Tcore
+	memfree   proc.Tmem
+	mfs       *memfssrv.MemFs
+	qs        map[string]*Queue
 }
 
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
-	return &Schedd{
-		mfs: mfs,
-		qs:  make(map[string]*Queue),
+	sd := &Schedd{
+		mfs:       mfs,
+		qs:        make(map[string]*Queue),
+		coresfree: proc.Tcore(linuxsched.NCores),
+		memfree:   mem.GetTotalMem(),
 	}
+	sd.cond = sync.NewCond(&sd.mu)
+	return sd
 }
 
 func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterResponse) error {
@@ -61,12 +70,22 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
 		db.DFatalf("Error create %v: %v", p.GetPid(), err)
 	}
-	// XXX For now, immediately dequeue the proc and spawn it. Of course, this
-	// will be done according to heuristics and resource utilization in future.
-	var ok bool
-	if p, ok = sd.qs[req.Realm].Dequeue(); !ok {
-		db.DFatalf("Couldn't dequeue enqueued proc: %v", sd.qs[req.Realm])
-	}
+	// Signal that a new proc may be runnable.
+	sd.cond.Signal()
+	return nil
+}
+
+func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneResponse) error {
+	p := proc.MakeProcFromProto(req.ProcProto)
+	db.DPrintf(db.SCHEDD, "Proc done %v", p)
+	// XXX TODO: resource accounting.
+	// Signal that a new proc may be runnable.
+	sd.cond.Signal()
+	return nil
+}
+
+// Run a proc via the local procd.
+func (sd *Schedd) runProc(p *proc.Proc) {
 	// Notify schedd that the proc is done running.
 	pdreq := &procdproto.RunProcRequest{
 		ProcProto: p.GetProto(),
@@ -75,16 +94,27 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	err := sd.procd.RPC("Procd.RunProc", pdreq, pdres)
 	if err != nil {
 		db.DFatalf("Error RunProc schedd: %v\n%v", err, sd.qs)
-		return err
 	}
-	return nil
 }
 
-func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneResponse) error {
-	p := proc.MakeProcFromProto(req.ProcProto)
-	db.DPrintf(db.SCHEDD, "Proc done %v", p)
-	// XXX TODO: resource accounting.
-	return nil
+func (sd *Schedd) schedule() {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	for {
+		// Currently, we iterate through the realms roughly round-robin (go maps
+		// are iterated in random order).
+		// TODO: Proper fair-share scheduling policy.
+		for r, q := range sd.qs {
+			// XXX For now, immediately dequeue the proc and spawn it. Of course, this
+			// will be done according to heuristics and resource utilization in future.
+			if p, ok := q.Dequeue(); ok {
+				db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
+				sd.runProc(p)
+				continue
+			}
+		}
+		sd.cond.Wait()
+	}
 }
 
 // Setup schedd's fs.
@@ -116,5 +146,6 @@ func RunSchedd() error {
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
+	go sd.schedule()
 	return pds.RunServer()
 }

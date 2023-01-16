@@ -90,7 +90,7 @@ func (k *Kernel) Ip() string {
 
 func (k *Kernel) ShutDown() error {
 	db.DPrintf(db.KERNEL, "ShutDown\n")
-	k.Shutdown()
+	k.shutdown()
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
 	n := k.PathClnt.FidClnt.Len()
 	if n > N {
@@ -128,8 +128,7 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 
 // Start kernel services listed in p
 func startSrvs(k *Kernel) error {
-	// XXX should this be GetPid?
-	k.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), k.FsLib, os.Args[0], k.namedAddr)
+	k.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), k.FsLib, os.Args[0], k.namedAddr)
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
 		err := k.BootSub(s, k.Param, n > 1) // XXX kernel should wait instead of procd?
@@ -141,10 +140,12 @@ func startSrvs(k *Kernel) error {
 	return nil
 }
 
-func (k *Kernel) Shutdown() {
+func (k *Kernel) shutdown() {
 	if k.ProcClnt != nil {
+		db.DPrintf(db.KERNEL, "Get children %v", proc.GetPid())
 		cpids, err := k.GetChildren()
 		if err != nil {
+			db.DPrintf(db.KERNEL, "Error get children: %v", err)
 			db.DFatalf("GetChildren in Kernel.Shutdown: %v", err)
 		}
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)

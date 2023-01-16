@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1
 
 FROM sigmaos AS user
-COPY make.sh make.sh
 RUN ./make.sh --norace user

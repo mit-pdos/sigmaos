@@ -135,14 +135,18 @@ func (sys *System) KillOne(kidx int, sname string) error {
 }
 
 func (sys *System) Shutdown() error {
+	db.DPrintf(db.SYSTEM, "Shutdown proxyd")
 	if err := sys.proxy.Process.Kill(); err != nil {
 		return err
 	}
+	db.DPrintf(db.SYSTEM, "Done shutdown proxyd")
 	for i := len(sys.kernels) - 1; i >= 0; i-- {
+		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
 		// XXX shut down other kernels first?
-		if err := sys.kernels[i].Shutdown(); err != nil {
+		if err := sys.kernels[i].Shutdown(i == 0); err != nil {
 			return err
 		}
+		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
 	//if err := sys.Root.Shutdown(); err != nil {
 	//	return err

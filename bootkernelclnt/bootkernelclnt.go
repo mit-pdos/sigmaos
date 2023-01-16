@@ -106,7 +106,7 @@ func (k *Kernel) Ip() string {
 	return k.ip
 }
 
-func (k *Kernel) Shutdown() error {
+func (k *Kernel) Shutdown(delnet bool) error {
 	defer k.stdout.Close()
 	if _, err := io.WriteString(k.stdin, SHUTDOWN+"\n"); err != nil {
 		return err
@@ -116,8 +116,10 @@ func (k *Kernel) Shutdown() error {
 	if err := k.cmd.Wait(); err != nil {
 		return err
 	}
-	if err := container.DelScnet(k.cmd.Process.Pid, k.realmid); err != nil {
-		return err
+	if delnet {
+		if err := container.DelScnet(k.cmd.Process.Pid, k.realmid); err != nil {
+			return err
+		}
 	}
 	return nil
 }

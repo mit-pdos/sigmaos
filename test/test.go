@@ -151,9 +151,11 @@ func (ts *Tstate) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcC
 //}
 
 func (ts *Tstate) Shutdown() error {
+	db.DPrintf(db.TEST, "Shutdown")
 	//	if ts.Realm != nil {
 	//		return ts.Realm.Shutdown()
 	//	}
-	proc.SetSigmaNamed(ts.initNamed)
+	// Set SIGMANAMED to what it was originally.
+	defer proc.SetSigmaNamed(ts.initNamed)
 	return ts.System.Shutdown()
 }

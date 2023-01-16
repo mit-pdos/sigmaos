@@ -138,9 +138,11 @@ func (sys *System) Shutdown() error {
 	if err := sys.proxy.Process.Kill(); err != nil {
 		return err
 	}
-	// XXX shut down other kernels first?
-	if err := sys.kernels[0].Shutdown(); err != nil {
-		return err
+	for i := len(sys.kernels) - 1; i >= 0; i-- {
+		// XXX shut down other kernels first?
+		if err := sys.kernels[i].Shutdown(); err != nil {
+			return err
+		}
 	}
 	//if err := sys.Root.Shutdown(); err != nil {
 	//	return err

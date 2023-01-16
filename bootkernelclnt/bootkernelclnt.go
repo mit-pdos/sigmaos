@@ -89,6 +89,15 @@ func (k *Kernel) GetClnt() (*fslib.FsLib, *procclnt.ProcClnt) {
 	return k.FsLib, k.ProcClnt
 }
 
+func (k *Kernel) MkClnt(name string, namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	fsl, err := fslib.MakeFsLibAddr(name, k.ip, namedAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, name, namedAddr)
+	return fsl, pclnt, nil
+}
+
 func (k *Kernel) Shutdown() error {
 	ctx := context.Background()
 	out, err := k.cli.ContainerLogs(ctx, k.container, types.ContainerLogsOptions{ShowStderr: true})
@@ -143,7 +152,7 @@ func (k *Kernel) waitUntilBooted(nameds []string) (*Kernel, error) {
 	const N = 100
 	for i := 0; i < N; i++ {
 		time.Sleep(10 * time.Millisecond)
-		fsl, pclnt, err := mkClient(k.ip, ROOTREALM, nameds)
+		fsl, pclnt, err := k.MkClnt("kclnt", nameds)
 		if err == nil {
 			k.FsLib = fsl
 			k.ProcClnt = pclnt
@@ -183,13 +192,4 @@ func makeEnv() []string {
 	}
 	env = append(env, fmt.Sprintf("%s=%s", proc.SIGMAREALM, ROOTREALM))
 	return env
-}
-
-func mkClient(kip string, realmid string, namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr("test", kip, namedAddr)
-	if err != nil {
-		return nil, nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, "test", namedAddr)
-	return fsl, pclnt, nil
 }

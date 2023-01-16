@@ -93,6 +93,10 @@ func (sys *System) KillOne(kidx int, sname string) error {
 	return sys.kernels[kidx].KillOne(sname)
 }
 
+func (sys *System) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+	return sys.kernels[kidx].MkClnt(name, sys.nameds)
+}
+
 func (sys *System) Shutdown() error {
 	db.DPrintf(db.SYSTEM, "Shutdown proxyd")
 	if err := sys.proxy.Process.Kill(); err != nil {

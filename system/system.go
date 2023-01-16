@@ -41,7 +41,7 @@ func bootSystem(realmid, ymldir, ymlname string) (*System, error) {
 	}
 	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v", realmid, ymldir, ymlname)
 	sys.kernels[0] = k
-	nameds, err := fslib.SetNamedIP(k.Ip())
+	nameds, err := fslib.SubNamedIP(k.Ip())
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +126,18 @@ func (sys *System) makeClnt(kip, name string) (*fslib.FsLib, *procclnt.ProcClnt,
 	return fsl, pclnt, nil
 }
 
+func (sys *System) GetNamedAddrs() []string {
+	return sys.nameds
+}
+
 func (sys *System) KillOne(kidx int, sname string) error {
 	return sys.kernelclnts[kidx].Kill(sname)
 }
 
 func (sys *System) Shutdown() error {
+	if err := sys.proxy.Process.Kill(); err != nil {
+		return err
+	}
 	// XXX shut down other kernels first?
 	if err := sys.kernels[0].Shutdown(); err != nil {
 		return err
@@ -138,9 +145,6 @@ func (sys *System) Shutdown() error {
 	//if err := sys.Root.Shutdown(); err != nil {
 	//	return err
 	//}
-	if err := sys.proxy.Process.Kill(); err != nil {
-		return err
-	}
 	return nil
 }
 

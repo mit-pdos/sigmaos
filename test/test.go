@@ -106,6 +106,8 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Set the new SIGMANAMED environment variable (filling in IP).
+	proc.SetSigmaNamed(fslib.NamedAddrsToString(s.GetNamedAddrs()))
 	fsl, pclnt, err := s.MakeClnt(0, "test")
 	if err != nil {
 		return nil, err

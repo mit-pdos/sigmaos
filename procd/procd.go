@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
+	"sigmaos/mem"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -52,7 +53,7 @@ func RunProcd(realm string, spawningSys bool) {
 	pd.realm = realm
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
-	pd.memAvail = getMemTotal()
+	pd.memAvail = mem.GetTotalMem()
 
 	pd.makeFs()
 

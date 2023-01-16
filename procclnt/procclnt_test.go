@@ -32,7 +32,7 @@ func procd(ts *test.Tstate) string {
 }
 
 func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
-	return spawnSpinnerNcore(ts, proc.C_DEF)
+	return spawnSpinnerNcore(ts, 0)
 }
 
 func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
@@ -519,6 +519,9 @@ func TestReserveCores(t *testing.T) {
 }
 
 func TestWorkStealing(t *testing.T) {
+	assert.True(t, false, "WorkStealing not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	err := ts.BootNode(1)
@@ -588,6 +591,9 @@ func getNChildren(ts *test.Tstate) int {
 }
 
 func TestBurstSpawn(t *testing.T) {
+	assert.True(t, false, "Burst Spawn not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	// Number of spinners to burst-spawn
@@ -621,6 +627,9 @@ func TestBurstSpawn(t *testing.T) {
 }
 
 func TestSpawnProcdCrash(t *testing.T) {
+	assert.True(t, false, "Crash not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	// Spawn a proc which can't possibly be run by any procd.
@@ -642,6 +651,9 @@ func TestSpawnProcdCrash(t *testing.T) {
 }
 
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
+	assert.True(t, false, "Crash not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	N_REPL := 3

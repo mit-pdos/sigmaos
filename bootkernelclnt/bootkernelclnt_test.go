@@ -212,3 +212,16 @@ func TestBootMulti(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestBootMulti2(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	db.DPrintf(db.TEST, "Boot second node")
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "Err boot node 1: %v", err)
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "Err boot node 2: %v", err)
+
+	ts.Shutdown()
+}

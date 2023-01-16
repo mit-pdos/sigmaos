@@ -19,10 +19,6 @@ const (
 	T_LC Ttype = 1
 )
 
-const (
-	C_DEF Tcore = 0
-)
-
 func (t Ttype) String() string {
 	switch t {
 	case T_BE:
@@ -61,7 +57,7 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p.Program = program
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
-	p.NcoreInt = uint32(C_DEF)
+	p.NcoreInt = uint32(0)
 	p.Privileged = priv
 	p.Env = make(map[string]string)
 	p.setProcDir("")

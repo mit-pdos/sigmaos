@@ -591,6 +591,9 @@ func getNChildren(ts *test.Tstate) int {
 }
 
 func TestBurstSpawn(t *testing.T) {
+	assert.True(t, false, "Burst Spawn not implemented")
+	return
+
 	ts := test.MakeTstateAll(t)
 
 	// Number of spinners to burst-spawn

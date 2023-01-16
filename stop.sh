@@ -31,4 +31,13 @@ while read -r line; do
     fi
 done <<< $(ip link list | grep -o "[0-9]*: sp[0-9]*@sp[0-9]*")
 
+while read -r line; do
+    if [ ! -z "$line" ]; then
+        links=$(echo $line | cut -f 2 -d ' ')
+        l1=$(echo $links | cut -f 1 -d '@')
+        echo "delete iface $l1"
+        sudo ip link del $l1
+    fi
+done <<< $(ip link list | grep -o "[0-9]*: sp[0-9]*@.*")
+
 sudo iptables -S | ./delroute.sh

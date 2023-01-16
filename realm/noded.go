@@ -254,7 +254,7 @@ func (nd *Noded) joinRealm() {
 
 func (nd *Noded) teardown() {
 	// Tear down realm resources
-	nd.s.Shutdown()
+	//	nd.s.Shutdown()
 }
 
 func (nd *Noded) deregister(cfg *RealmConfig) {

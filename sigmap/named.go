@@ -10,9 +10,7 @@ const (
 	TMPREL      = "tmp"
 	TMP         = NAMED + TMPREL
 	PROCDREL    = "procd"
-	PROCD       = NAMED + UPROCDREL + "/"
-	UPROCDREL   = "uprocd"
-	UPROCD      = NAMED + PROCDREL + "/"
+	PROCD       = NAMED + PROCDREL + "/"
 	PROCD_WS    = PROCD + "ws" + "/"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"

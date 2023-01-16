@@ -98,6 +98,8 @@ func (p *LinuxProc) run() error {
 		//	return err
 		//}
 		if err := container.MakeUProc(p.attr); err != nil {
+			db.DPrintf(db.ALWAYS, "MakeUProc run error: %v, %v\n", p.attr, err)
+			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err
 		}
 		db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)

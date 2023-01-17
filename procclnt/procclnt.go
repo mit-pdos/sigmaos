@@ -28,10 +28,10 @@ type ProcClnt struct {
 	pid             proc.Tpid
 	isExited        proc.Tpid
 	procdir         string
-	procds          []string
+	schedds         map[string]*protdevclnt.ProtDevClnt
+	scheddIps       []string
 	lastProcdUpdate time.Time
 	burstOffset     int
-	pdc             *protdevclnt.ProtDevClnt
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -39,24 +39,19 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.procdir = procdir
+	clnt.schedds = make(map[string]*protdevclnt.ProtDevClnt)
+	clnt.scheddIps = make([]string, 0)
 	return clnt
 }
 
 // ========== SPAWN ==========
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp, realm string, viaProcd bool) (*exec.Cmd, error) {
-	// Sanity checks
-	if viaProcd && procdIp == "" {
-		debug.PrintStack()
-		db.DFatalf("Spawned kernel proc via procd, with invalid procd IP %v", procdIp)
-	}
-	if !viaProcd && procdIp != "" {
-		debug.PrintStack()
-		db.DFatalf("Spawned kernel proc not via procd, with procd IP %v", procdIp)
-	}
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, viaProcd bool) (*exec.Cmd, error) {
+	// Always spawn kernel procs on the local kernel.
+	scheddIp := "~local"
 	// Spawn the proc, either through procd, or just by creating the named state
 	// the proc (and its parent) expects.
-	if err := clnt.spawn(procdIp, viaProcd, p, clnt.getScheddClnt()); err != nil {
+	if err := clnt.spawn(scheddIp, viaProcd, p, clnt.getScheddClnt(scheddIp)); err != nil {
 		return nil, err
 	}
 	if !viaProcd {
@@ -78,8 +73,9 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
-		clnt.updateProcds()
-		err := clnt.spawn(clnt.nextProcd(), true, ps[i], clnt.getScheddClnt())
+		clnt.updateSchedds()
+		scheddIp := clnt.nextSchedd()
+		err := clnt.spawn(scheddIp, true, ps[i], clnt.getScheddClnt(scheddIp))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -99,22 +95,22 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 	failed := []*proc.Proc{}
 	errs := []error{}
 	errc := make(chan []*errTuple)
-	clnt.updateProcds()
+	clnt.updateSchedds()
 	for i := 0; i < len(ps); i += chunksz {
 		go func(i int) {
 			// Take a slice of procs.
 			pslice := ps[i : i+chunksz]
 			es := []*errTuple{}
 			lastUpdate := time.Now()
-			for x, p := range pslice {
+			for _, p := range pslice {
 				// Update the list of procds periodically, but not too often
 				if time.Since(lastUpdate) >= sp.Conf.Realm.RESIZE_INTERVAL {
-					clnt.updateProcds()
+					clnt.updateSchedds()
 					lastUpdate = time.Now()
 				}
+				scheddIp := clnt.nextSchedd()
 				// Update the list of active procds.
-				_ = x
-				err := clnt.spawn(clnt.nextProcd(), true, p, clnt.getScheddClnt())
+				err := clnt.spawn(scheddIp, true, p, clnt.getScheddClnt(scheddIp))
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -135,13 +131,13 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", true, p, clnt.getScheddClnt())
+	return clnt.spawn("~local", true, p, clnt.getScheddClnt("~local"))
 }
 
-// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
+// Spawn a proc on scheddIp. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
-func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
+func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
 	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
@@ -156,7 +152,7 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *pr
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(procdIp, p, childProcdir, viaProcd); err != nil {
+	if err := clnt.addChild(scheddIp, p, childProcdir, viaProcd); err != nil {
 		return err
 	}
 
@@ -190,52 +186,72 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc, pdc *pr
 }
 
 // Update the list of active procds.
-func (clnt *ProcClnt) updateProcds() {
+func (clnt *ProcClnt) updateSchedds() {
 	clnt.Lock()
 	defer clnt.Unlock()
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL {
+	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(clnt.scheddIps) > 0 {
+		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
 		return
 	}
 	clnt.lastProcdUpdate = time.Now()
 	// Read the procd union dir.
-	procds, _, err := clnt.ReadDir(sp.PROCDREL + "/")
+	schedds, _, err := clnt.ReadDir(sp.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
+	db.DPrintf(db.PROCCLNT, "Got schedds %v", schedds)
 	// Alloc enough space for the list of procds, excluding the ws queue.
-	clnt.procds = make([]string, 0, len(procds)-1)
-	for _, procd := range procds {
-		if procd.Name != path.Base(path.Dir(sp.PROCD_WS)) {
-			clnt.procds = append(clnt.procds, procd.Name)
-		}
+	clnt.scheddIps = make([]string, 0, len(schedds)-1)
+	for _, schedd := range schedds {
+		clnt.scheddIps = append(clnt.scheddIps, schedd.Name)
 	}
 }
 
-func (clnt *ProcClnt) getScheddClnt() *protdevclnt.ProtDevClnt {
-	if clnt.pdc == nil {
-		var err error
-		clnt.pdc, err = protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, "~local"))
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "getScheddClnt: Error make protdevclnt: %v", err)
-		}
-	}
-	return clnt.pdc
-}
-
-// Get the next procd to burst on.
-func (clnt *ProcClnt) nextProcd() string {
+func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 	clnt.Lock()
 	defer clnt.Unlock()
 
-	if len(clnt.procds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
+	// See if we already have a client for this procd.
+	if pdc, ok := clnt.schedds[scheddIp]; ok {
+		return pdc
+	}
+	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, scheddIp))
+	if err != nil {
+		db.DPrintf(db.PROCD_ERR, "Error make protdevclnt: %v", err)
+		return nil
+	}
+	clnt.schedds[scheddIp] = pdc
+	// Local procd is special: it has 2 entries, one under its IP and the other
+	// under ~local.
+	if scheddIp == "~local" {
+		p, ok, err := clnt.ResolveUnion(path.Join(sp.SCHEDD, "~local"))
+		if !ok || err != nil {
+			// If ~local hasn't registered itself yet, this method should've bailed
+			// out earlier.
+			db.DFatalf("Couldn't resolve procd ~local: %v, %v, %v", p, ok, err)
+		}
+		scheddIp = path.Base(p)
+		db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", scheddIp)
+		clnt.schedds[scheddIp] = pdc
+	}
+	return pdc
+}
+
+// Get the next procd to burst on.
+func (clnt *ProcClnt) nextSchedd() string {
+	clnt.Lock()
+	defer clnt.Unlock()
+
+	if len(clnt.scheddIps) == 0 {
+		debug.PrintStack()
+		db.DFatalf("Error: no schedds to spawn on")
 	}
 
 	clnt.burstOffset++
-	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
+	return clnt.scheddIps[clnt.burstOffset%len(clnt.scheddIps)]
 }
 
 // ========== WAIT ==========
@@ -250,10 +266,9 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
-		scheddLink := path.Join(sp.SCHEDD, "~local", sp.QUEUE, pid.String())
-		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, scheddLink)
+		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, procfileLink)
 		done := make(chan bool)
-		err = clnt.SetRemoveWatch(scheddLink, func(string, error) {
+		err = clnt.SetRemoveWatch(procfileLink, func(string, error) {
 			done <- true
 		})
 		if err != nil {

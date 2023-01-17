@@ -244,7 +244,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), "", realmId, false)
+	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), realmId, false)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err

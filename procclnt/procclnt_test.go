@@ -591,9 +591,6 @@ func getNChildren(ts *test.Tstate) int {
 }
 
 func TestBurstSpawn(t *testing.T) {
-	assert.True(t, false, "Burst Spawn not implemented")
-	return
-
 	ts := test.MakeTstateAll(t)
 
 	// Number of spinners to burst-spawn
@@ -604,6 +601,8 @@ func TestBurstSpawn(t *testing.T) {
 	assert.Nil(t, err, "BootNode %v", err)
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
+
+	db.DPrintf(db.TEST, "Start burst spawn")
 
 	ps := burstSpawnSpinner(t, ts, N)
 

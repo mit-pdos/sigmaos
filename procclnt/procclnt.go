@@ -73,7 +73,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
-		clnt.updateProcds()
+		clnt.updateSchedds()
 		scheddIp := clnt.nextSchedd()
 		err := clnt.spawn(scheddIp, true, ps[i], clnt.getScheddClnt(scheddIp))
 		if err != nil {
@@ -95,7 +95,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 	failed := []*proc.Proc{}
 	errs := []error{}
 	errc := make(chan []*errTuple)
-	clnt.updateProcds()
+	clnt.updateSchedds()
 	for i := 0; i < len(ps); i += chunksz {
 		go func(i int) {
 			// Take a slice of procs.
@@ -105,7 +105,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 			for _, p := range pslice {
 				// Update the list of procds periodically, but not too often
 				if time.Since(lastUpdate) >= sp.Conf.Realm.RESIZE_INTERVAL {
-					clnt.updateProcds()
+					clnt.updateSchedds()
 					lastUpdate = time.Now()
 				}
 				scheddIp := clnt.nextSchedd()
@@ -186,13 +186,14 @@ func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *p
 }
 
 // Update the list of active procds.
-func (clnt *ProcClnt) updateProcds() {
+func (clnt *ProcClnt) updateSchedds() {
 	clnt.Lock()
 	defer clnt.Unlock()
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL {
+	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(clnt.scheddIps) > 0 {
+		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
 		return
 	}
 	clnt.lastProcdUpdate = time.Now()
@@ -201,12 +202,11 @@ func (clnt *ProcClnt) updateProcds() {
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
+	db.DPrintf(db.PROCCLNT, "Got schedds %v", schedds)
 	// Alloc enough space for the list of procds, excluding the ws queue.
 	clnt.scheddIps = make([]string, 0, len(schedds)-1)
-	for _, procd := range schedds {
-		if procd.Name != path.Base(path.Dir(sp.PROCD_WS)) {
-			clnt.scheddIps = append(clnt.scheddIps, procd.Name)
-		}
+	for _, schedd := range schedds {
+		clnt.scheddIps = append(clnt.scheddIps, schedd.Name)
 	}
 }
 
@@ -234,7 +234,7 @@ func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 			db.DFatalf("Couldn't resolve procd ~local: %v, %v, %v", p, ok, err)
 		}
 		scheddIp = path.Base(p)
-		db.DPrintf(db.ALWAYS, "Resolved ~local to %v", scheddIp)
+		db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", scheddIp)
 		clnt.schedds[scheddIp] = pdc
 	}
 	return pdc
@@ -245,8 +245,9 @@ func (clnt *ProcClnt) nextSchedd() string {
 	clnt.Lock()
 	defer clnt.Unlock()
 
-	if len(clnt.schedds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
+	if len(clnt.scheddIps) == 0 {
+		debug.PrintStack()
+		db.DFatalf("Error: no schedds to spawn on")
 	}
 
 	clnt.burstOffset++

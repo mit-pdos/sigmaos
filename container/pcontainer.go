@@ -59,7 +59,7 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
-func MkContainer(realm string) (*client.Client, string, error) {
+func MkContainer(p *proc.Proc, realm string) (*client.Client, string, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()
@@ -67,19 +67,16 @@ func MkContainer(realm string) (*client.Client, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	// XXX don't hard code; other stuff to set? different PID
-	os.Setenv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
-	os.Setenv(proc.SIGMAPROGRAM, "uprocd")
-	os.Setenv(proc.SIGMAPRIVILEGEDPROC, "false")
+
 	// cmd := append([]string{"exec-container", PROC, "rootrealm", uproc.Program}, uproc.Args...)
-	cmd := []string{"uprocd", realm}
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v\n", cmd, os.Environ())
+	cmd := append([]string{p.Program}, p.Args...)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v\n", cmd, p.GetEnv())
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
 		Cmd:   cmd, //AttachStdout: true,
 		// AttachStderr: true,
 		Tty: true,
-		Env: os.Environ(),
+		Env: p.GetEnv(),
 	}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)

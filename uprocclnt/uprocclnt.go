@@ -12,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -20,6 +21,7 @@ import (
 
 type UprocClnt struct {
 	*fslib.FsLib
+	*procclnt.ProcClnt
 	pdc       *protdevclnt.ProtDevClnt
 	cli       *client.Client
 	container string
@@ -27,19 +29,37 @@ type UprocClnt struct {
 
 var upc *UprocClnt
 
-func MakeUProc(fsl *fslib.FsLib, uproc *proc.Proc, realm string) error {
+func MakeUProc(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, uproc *proc.Proc, realm string) error {
 	if upc == nil {
+		// Spawn uprocd in side of docker container
 		u := &UprocClnt{}
 		u.FsLib = fsl
-		cli, c, err := container.MkContainer(realm)
+		u.ProcClnt = pclnt
+		program := "uprocd"
+		args := []string{realm}
+		pid := proc.Tpid(program + "-" + proc.GenPid().String())
+		p := proc.MakePrivProcPid(pid, program, args, true)
+
+		if err := u.SpawnContainer(p, fslib.Named(), realm); err != nil {
+			return err
+		}
+
+		// XXX don't hard code
+		p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+		p.FinalizeEnv("NONE")
+
+		cli, c, err := container.MkContainer(p, realm)
 		if err != nil {
 			return nil
 		}
+
 		u.cli = cli
 		u.container = c
 		upc = u
 		db.DPrintf(db.CONTAINER, "container %s\n", u.container[:10])
 		upc.waitContainer()
+		// pclnt.WaitStart(p.GetPid())
+		db.DPrintf(db.CONTAINER, "container started %s\n", u.container[:10])
 	}
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),

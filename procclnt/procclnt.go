@@ -62,6 +62,15 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm st
 	return nil, nil
 }
 
+// Create the named state the proc (and its parent) expects.
+func (clnt *ProcClnt) SpawnContainer(p *proc.Proc, namedAddr []string, realm string) error {
+	scheddIp := "~local"
+	if err := clnt.spawn(scheddIp, false, p, clnt.getScheddClnt(scheddIp)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Burst-spawn a set of procs across available procds. Return a slice of procs
 // which were unable to be successfully spawned, as well as corresponding
 // errors.

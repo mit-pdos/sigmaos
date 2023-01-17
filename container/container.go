@@ -41,13 +41,13 @@ func ExecContainer() error {
 	db.DPrintf(db.CONTAINER, "execContainer: %v\n", os.Args)
 
 	var r error
-	switch os.Args[0] {
+	switch os.Args[1] {
 	case KERNEL:
 		r = execKContainer()
 	case PROC:
 		r = execPContainer()
 	default:
-		r = fmt.Errorf("ExecContainer: unknown container type: %s", os.Args[0])
+		r = fmt.Errorf("ExecContainer: unknown container type: %s", os.Args[1])
 	}
 	return r
 }

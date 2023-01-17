@@ -58,6 +58,7 @@ if [ $WHAT == "kernel" ]; then
     WHAT="kernel linux"
 else
     mkdir -p bin/user
+    WHAT="user"
 fi
 
 LDF="-X sigmaos/sigmap.Target=$TARGET"

@@ -73,7 +73,8 @@ func dockerContainer(uproc *proc.Proc) error {
 		return err
 	}
 	// XXX don't hard code
-	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
+	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/linux")
+	// cmd := append([]string{"exec-container", PROC, "rootrealm", uproc.Program}, uproc.Args...)
 	cmd := append([]string{uproc.Program}, uproc.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v\n", cmd)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
@@ -108,33 +109,26 @@ func dockerContainer(uproc *proc.Proc) error {
 func execPContainer() error {
 	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
 
-	// os.Setenv("PATH", "/home/sigmaos/bin/user")
-	// return dockerContainer(os.Args[2:], os.Environ())
-	return nil
-}
-
-func execPContainer1() error {
 	//wl, err := seccomp.ReadWhiteList("./whitelist.yml")
 	//if err != nil {
 	//	return err
 	//}
-
-	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
-
-	//if err := setupFs(path.Join(sp.SIGMAHOME, os.Args[1])); err != nil {
-	//	return err
-	//}
-
 	// seccomp.LoadFilter(wl)
 
+	ip, err := LocalIP()
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.KERNEL, "Uproc ip %v", ip)
+	//proc.SetSigmaLocal(ip)
+
 	os.Setenv("PATH", "/home/sigmaos/bin/user")
-	pn, err := exec.LookPath(os.Args[2])
+	pn, err := exec.LookPath(os.Args[3])
 	if err != nil {
 		return fmt.Errorf("LookPath err %v", err)
 	}
-
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[2:])
-	return syscall.Exec(pn, os.Args[2:], os.Environ())
+	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[3:])
+	return syscall.Exec(pn, os.Args[3:], os.Environ())
 }
 
 // For debugging

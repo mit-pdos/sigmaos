@@ -126,7 +126,6 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
-	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
 
 	p.AppendEnv(SIGMAREALM, GetRealm())
 	if p.Privileged {
@@ -139,6 +138,7 @@ func (p *Proc) setBaseEnv() {
 func (p *Proc) FinalizeEnv(procdIp string) {
 	// Set the procdir based on procdIp
 	p.setProcDir(procdIp)
+	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
 	p.AppendEnv(SIGMAPROCDIP, procdIp)
 	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)

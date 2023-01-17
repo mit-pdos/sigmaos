@@ -121,7 +121,7 @@ func startContainer(yml string, nameds []string) (*Kernel, error) {
 		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
 		//AttachStdout: true,
 		// AttachStderr: true,
-		Tty: true,
+		Tty: true, // XXX false,
 		Env: env,
 	}, &container.HostConfig{
 		//Unnecessary with using docker for user containers.

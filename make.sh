@@ -49,10 +49,6 @@ if [ $# -gt 0 ]; then
 fi
 echo $WHAT
 
-
-DIR=$(dirname $0)
-. $DIR/env/env.sh
-
 if [ $WHAT == "kernel" ]; then
     mkdir -p bin/kernel
     WHAT="kernel linux"

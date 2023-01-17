@@ -54,7 +54,8 @@ func Boot(realmid string, n int, ymldir string) (*System, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO: is the below code necessary?
+		// TODO: is the below code necessary?  might be nice to see
+		// all kernels in named.
 		//kaddr := []string{""}
 		//mnt := sp.MkMountService(kaddr)
 		//if err := sys.initkernel.MkMountSymlink(sp.BOOT, mnt); err != nil {
@@ -111,9 +112,6 @@ func (sys *System) Shutdown() error {
 		}
 		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
-	//if err := sys.Root.Shutdown(); err != nil {
-	//	return err
-	//}
 	return nil
 }
 

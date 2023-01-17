@@ -1,7 +1,7 @@
 # Building, installing, and running sigmaos.
 
 Make sure docker is installed. We run with username spaces enabled
-(see $3.8 of https://wiki.archlinux.org/title/docker)
+(see $3.8 of https://wiki.archlinux.org/title/docker).
 
 Build docker images (one for kernel and one for user)
 $ ./build.sh

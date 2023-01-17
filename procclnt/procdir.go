@@ -120,26 +120,17 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string, viaProcd bool) error {
+func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir string, viaProcd bool) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v\n", childDir, err)
 		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 	}
-	var q string
-	switch p.GetType() {
-	case proc.T_LC:
-		q = sp.PROCD_RUNQ_LC
-	case proc.T_BE:
-		q = sp.PROCD_RUNQ_BE
-	default:
-		db.DFatalf("Unknown proc type %v", p.GetType())
-	}
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
 	if viaProcd {
-		procfileLink = path.Join(sp.PROCD, procdIp, q, p.GetPid().String())
+		procfileLink = path.Join(sp.SCHEDD, scheddIp, sp.QUEUE, p.GetPid().String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in
 	// this procd's runq.

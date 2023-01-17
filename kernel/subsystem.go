@@ -37,7 +37,7 @@ func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp s
 }
 
 func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.procdIp, s.realmId, s.viaProcd)
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.realmId, s.viaProcd)
 	if err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ func (e *TestEnv) BootMachined() error {
 	var err error
 	pid := proc.Tpid("machined-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "realm/machined", []string{})
-	machined, err := kproc.RunKernelProc(p, fslib.Named(), "", false)
+	machined, err := kproc.RunKernelProc(p, fslib.Named(), "")
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err

@@ -201,7 +201,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 // Run a named (but not as a proc)
 func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := kproc.RunKernelProc(p, peers, realmId, false)
+	cmd, err := kproc.RunKernelProc(p, peers, realmId)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err

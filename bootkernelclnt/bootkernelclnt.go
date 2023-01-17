@@ -108,6 +108,7 @@ func (k *Kernel) Shutdown() error {
 	return k.cli.ContainerKill(ctx, k.container, "SIGTERM")
 }
 
+// XXX move into container package
 func startContainer(yml string, nameds []string) (*Kernel, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())

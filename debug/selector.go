@@ -122,7 +122,7 @@ const (
 	CLONEDEV             = "CLONEDEV"
 	SESSDEV              = "SESSDEV"
 	PROTDEVSRV           = "PROTDEVSRV"
-	FWSSRV               = "FWSRV"
+	UPROCSRV             = "UPROCSRV"
 )
 
 // Client-side Infrastructure

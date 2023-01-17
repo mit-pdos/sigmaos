@@ -60,26 +60,27 @@ fi
 LDF="-X sigmaos/sigmap.Target=$TARGET"
 
 for k in $WHAT; do
-  echo "Building $k components"
-  for f in `ls cmd/$k`;  do
-    if [ $CMD == "vet" ]; then
-      echo "go vet cmd/$k/$f/main.go"
-      go vet cmd/$k/$f/main.go
-    else
-      # if [ $k == "user" ] && [ $f != "sleeper" ]; then
-      #      continue
-      # fi
-      GO="go"
-#      GO="~/go-custom/bin/go"
-      build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
-      echo $build
-      if [ -z "$PARALLEL" ]; then
-        eval "$build"
-      else
-        eval "$build" &
-      fi
+    echo "Building $k components"
+    FILES=`ls cmd/$k`
+    if [ $k == "user" ]; then
+        FILES="sleeper uprocd"
     fi
-  done
+    for f in $FILES;  do
+        if [ $CMD == "vet" ]; then
+            echo "go vet cmd/$k/$f/main.go"
+            go vet cmd/$k/$f/main.go
+        else
+            GO="go"
+            #      GO="~/go-custom/bin/go"
+            build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+            echo $build
+            if [ -z "$PARALLEL" ]; then
+                eval "$build"
+            else
+                eval "$build" &
+            fi
+        fi
+    done
 done
 
 wait

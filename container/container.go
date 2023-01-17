@@ -20,8 +20,6 @@ func ExecContainer() error {
 
 	var r error
 	switch os.Args[1] {
-	case PROC:
-		r = execPContainer()
 	default:
 		r = fmt.Errorf("ExecContainer: unknown container type: %s", os.Args[1])
 	}

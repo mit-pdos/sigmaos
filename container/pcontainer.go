@@ -17,17 +17,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/rand"
 	// "sigmaos/seccomp"
-	//sp "sigmaos/sigmap"
 	"sigmaos/proc"
 )
 
 const (
 	UBIN = "/bin"
 )
-
-func MakeUProc(proc *proc.Proc) error {
-	return dockerContainer(proc)
-}
 
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	// // Set up new namespaces
@@ -64,50 +59,51 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
-func dockerContainer(uproc *proc.Proc) error {
-	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", uproc)
+func MkContainer(realm string) (*client.Client, string, error) {
+	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	// XXX don't hard code
-	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/linux")
+	// XXX don't hard code; other stuff to set? different PID
+	os.Setenv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+	os.Setenv(proc.SIGMAPROGRAM, "uprocd")
+	os.Setenv(proc.SIGMAPRIVILEGEDPROC, "false")
 	// cmd := append([]string{"exec-container", PROC, "rootrealm", uproc.Program}, uproc.Args...)
-	cmd := append([]string{uproc.Program}, uproc.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v\n", cmd)
+	cmd := []string{"uprocd", realm}
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v\n", cmd, os.Environ())
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: image,
-		Cmd:   cmd,
-		//AttachStdout: true,
+		Cmd:   cmd, //AttachStdout: true,
 		// AttachStderr: true,
 		Tty: true,
-		Env: uproc.GetEnv(),
+		Env: os.Environ(),
 	}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
-		return err
+		return nil, "", err
 	}
 	// json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	// if err1 != nil {
 	// 	return err
 	// }
 	// ip := json.NetworkSettings.IPAddress
-	db.DPrintf(db.CONTAINER, "containerwait for %s\n", resp.ID[:10])
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
-		return err
-	case st := <-statusCh:
-		db.DPrintf(db.CONTAINER, "container %s done status %v\n", resp.ID[:10], st)
-	}
-	return nil
+	// db.DPrintf(db.CONTAINER, "containerwait for %s\n", resp.ID[:10])
+	// statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	// select {
+	// case err := <-errCh:
+	// 	db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
+	// 	return err
+	// case st := <-statusCh:
+	// 	db.DPrintf(db.CONTAINER, "container %s done status %v\n", resp.ID[:10], st)
+	// }
+	return cli, resp.ID, nil
 }
 
-func execPContainer() error {
-	db.DPrintf(db.CONTAINER, "env: %v\n", os.Environ())
+func Pexec(uproc *proc.Proc) error {
+	db.DPrintf(db.CONTAINER, "proc: %v\n", uproc)
 
 	//wl, err := seccomp.ReadWhiteList("./whitelist.yml")
 	//if err != nil {
@@ -119,16 +115,21 @@ func execPContainer() error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.KERNEL, "Uproc ip %v", ip)
-	//proc.SetSigmaLocal(ip)
+	db.DPrintf(db.CONTAINER, "Uproc ip %v", ip)
 
+	cmd := exec.Command(uproc.Program, uproc.Args...)
 	os.Setenv("PATH", "/home/sigmaos/bin/user")
-	pn, err := exec.LookPath(os.Args[3])
-	if err != nil {
-		return fmt.Errorf("LookPath err %v", err)
+	db.DPrintf(db.UPROCSRV, "exec %v\n", cmd)
+	cmd.Env = uproc.GetEnv()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return err
 	}
-	db.DPrintf(db.CONTAINER, "exec %s %v\n", pn, os.Args[3:])
-	return syscall.Exec(pn, os.Args[3:], os.Environ())
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // For debugging

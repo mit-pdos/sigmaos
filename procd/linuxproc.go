@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/uprocclnt"
 )
 
 const (
@@ -91,13 +91,8 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		//cmd = exec.Command(p.attr.Program, p.attr.Args...)
-		//if err := container.MakeProcContainer(cmd, p.pd.realm); err != nil {
-		//	db.DPrintf(db.PROCD_ERR, "MakeProcContainer error: %v, %v\n", p.attr, err)
-		//	p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
-		//	return err
-		//}
-		if err := container.MakeUProc(p.attr); err != nil {
+		// XXX hardcoded ROOTREALM for now
+		if err := uprocclnt.MakeUProc(p.pd.fsl, p.attr, "rootrealm"); err != nil {
 			db.DPrintf(db.ALWAYS, "MakeUProc run error: %v, %v\n", p.attr, err)
 			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err

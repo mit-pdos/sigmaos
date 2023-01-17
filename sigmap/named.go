@@ -12,6 +12,7 @@ const (
 	PROCDREL    = "procd"
 	PROCD       = NAMED + PROCDREL + "/"
 	PROCD_WS    = PROCD + "ws" + "/"
+	UPROCDREL   = "uprocd/"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
 	UXREL       = "ux"

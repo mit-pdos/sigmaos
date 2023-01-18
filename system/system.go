@@ -112,6 +112,16 @@ func (sys *System) Shutdown() error {
 		}
 		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
+
+	// removeOptions := types.ContainerRemoveOptions{
+	// 	RemoveVolumes: true,
+	// 	Force:         true,
+	// }
+
+	// if err := client.ContainerRemove(ctx, containername, removeOptions); err != nil {
+	// 	log.Printf("Unable to remove container: %s", err)
+	// 	return err
+	// }
 	return nil
 }
 

@@ -1,10 +1,8 @@
 package uprocclnt
 
 import (
-	"fmt"
-	"log"
 	"path"
-	"time"
+	"sync"
 
 	"github.com/docker/docker/client"
 
@@ -14,7 +12,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
 )
@@ -27,9 +24,13 @@ type UprocClnt struct {
 	container string
 }
 
+var mu sync.Mutex
 var upc *UprocClnt
 
 func MakeUProc(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, uproc *proc.Proc, realm string) error {
+	// XXX don't hold global lock over RPC
+	mu.Lock()
+	defer mu.Unlock()
 	if upc == nil {
 		// Spawn uprocd in side of docker container
 		u := &UprocClnt{}
@@ -55,11 +56,16 @@ func MakeUProc(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, uproc *proc.Proc, rea
 
 		u.cli = cli
 		u.container = c
-		upc = u
 		db.DPrintf(db.CONTAINER, "container %s\n", u.container[:10])
-		upc.waitContainer()
-		// pclnt.WaitStart(p.GetPid())
+		pclnt.WaitStart(p.GetPid())
 		db.DPrintf(db.CONTAINER, "container started %s\n", u.container[:10])
+		pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL)
+		pdc, err := protdevclnt.MkProtDevClnt(u.FsLib, pn)
+		if err != nil {
+			return err
+		}
+		u.pdc = pdc
+		upc = u
 	}
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),
@@ -70,25 +76,4 @@ func MakeUProc(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, uproc *proc.Proc, rea
 		return err
 	}
 	return nil
-}
-
-// XXX deduplicate with bootkernelclnt
-func (upc *UprocClnt) waitContainer() error {
-	const N = 100
-	for i := 0; i < N; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL)
-		pdc, err := protdevclnt.MkProtDevClnt(upc.FsLib, pn)
-		if err == nil {
-			log.Printf("running\n")
-			upc.pdc = pdc
-			return nil
-		} else if serr.IsErrUnavailable(err) {
-			log.Printf(".")
-			continue
-		} else {
-			return err
-		}
-	}
-	return fmt.Errorf("waitContainer: timeded out")
 }

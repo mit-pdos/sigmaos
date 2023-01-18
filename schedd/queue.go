@@ -37,22 +37,26 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 // Dequeue a proc with certain resource requirements. LC procs have absolute
 // priority.
 func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (*proc.Proc, bool) {
-	var p *proc.Proc
-	// Iterate through LC procs first, checking for core and memory requirements.
-	for i := 0; i < len(q.lc); i++ {
-		p = q.lc[i]
-		// If there are sufficient resources for the LC proc, dequeue it.
-		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem {
-			q.lc = append(q.lc[:i], q.lc[i+1:]...)
+	// Order in which to scan queues.
+	qs := []*[]*proc.Proc{&q.lc, &q.be}
+	for _, queue := range qs {
+		if p, ok := dequeue(maxcores, maxmem, queue); ok {
 			return p, true
 		}
 	}
-	// Iterate through BE procs second, only checking for memory requirements.
-	for i := 0; i < len(q.be); i++ {
-		p = q.be[i]
-		// If there is sufficient memory for the LC proc, dequeue it.
-		if p.GetMem() <= maxmem {
-			q.be = append(q.be[:i], q.be[i+1:]...)
+	return nil, false
+}
+
+func dequeue(maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
+	for i := 0; i < len(*q); i++ {
+		p := (*q)[i]
+		// Sanity check
+		if p.GetType() == proc.T_BE && p.GetNcore() > 0 {
+			db.DFatalf("BE proc with ncore > 0")
+		}
+		// If there are sufficient resources for the LC proc, dequeue it.
+		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem {
+			*q = append((*q)[:i], (*q)[i+1:]...)
 			return p, true
 		}
 	}

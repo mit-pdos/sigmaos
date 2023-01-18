@@ -55,18 +55,13 @@ const (
 	WS_RUNQ_LC     = WS + "runq-lc/"
 	WS_RUNQ_BE     = WS + "runq-be/"
 
-	// Procd spawn file
-	PROCD_SPAWN_FILE = "spawn"
-
+	// Procd namespace
 	PROCD_RUNNING = "running"
 
 	// special devs/dirs exported by fssrv
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
-
-	// Resource
-	RESOURCE_CTL = "resourcectl"
 )
 
 // Linux path

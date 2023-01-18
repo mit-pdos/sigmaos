@@ -13,7 +13,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	"sigmaos/uprocclnt"
 )
 
 const (
@@ -92,7 +91,7 @@ func (p *LinuxProc) run() error {
 		}()
 	} else {
 		// XXX hardcoded ROOTREALM for now
-		if err := uprocclnt.MakeUProc(p.pd.fsl, p.pd.procclnt, p.attr, "rootrealm"); err != nil {
+		if err := p.pd.updm.MakeUProc(p.attr, "rootrealm"); err != nil {
 			db.DPrintf(db.ALWAYS, "MakeUProc run error: %v, %v\n", p.attr, err)
 			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err

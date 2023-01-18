@@ -1,13 +1,32 @@
 package schedd
 
 import (
+	"path"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 func (sd *Schedd) stealProc(p *proc.Proc) bool {
 	db.DFatalf("TODO")
-	return false
+	var q string
+	switch p.GetType() {
+	case proc.T_LC:
+		q = sp.WS_RUNQ_LC
+	case proc.T_BE:
+		q = sp.WS_RUNQ_BE
+	default:
+		db.DFatalf("Unrecognized proc type: %v", p.GetType())
+	}
+	if err := sd.mfs.FsLib().Remove(path.Join(q, p.GetPid().String())); err != nil {
+		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
+		db.DPrintf(db.ALWAYS, "Failed to steal proc %v", p.GetPid())
+		return false
+	}
+	db.DPrintf(db.SCHEDD, "Stole proc %v", p.GetPid())
+	db.DPrintf(db.ALWAYS, "Stole proc %v", p.GetPid())
+	return true
 }
 
 //import (

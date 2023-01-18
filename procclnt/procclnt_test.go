@@ -552,13 +552,13 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status 2")
 
 	// Check that work-stealing symlinks were cleaned up.
-	sts, _, err := ts.ReadDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC))
+	sts, _, err := ts.ReadDir(sp.WS_RUNQ_LC)
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC), sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", sp.WS_RUNQ_LC, sts)
 
-	sts, _, err = ts.ReadDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE))
+	sts, _, err = ts.ReadDir(sp.WS_RUNQ_BE)
 	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE), sts)
+	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", sp.WS_RUNQ_BE, sts)
 
 	ts.Shutdown()
 }

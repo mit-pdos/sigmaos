@@ -14,6 +14,7 @@ import (
 
 	// sc "sigmaos/container"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
@@ -99,13 +100,31 @@ func (k *Kernel) MkClnt(name string, namedAddr []string) (*fslib.FsLib, *proccln
 }
 
 func (k *Kernel) Shutdown() error {
+	k.kclnt.Shutdown()
 	ctx := context.Background()
-	out, err := k.cli.ContainerLogs(ctx, k.container, types.ContainerLogsOptions{ShowStderr: true})
+	db.DPrintf(db.CONTAINER, "containerwait for %v\n", k.container)
+	statusCh, errCh := k.cli.ContainerWait(ctx, k.container, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
+		return err
+	case st := <-statusCh:
+		db.DPrintf(db.CONTAINER, "container %s done status %v\n", k.container, st)
+	}
+	out, err := k.cli.ContainerLogs(ctx, k.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
 	if err != nil {
 		panic(err)
 	}
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	return k.cli.ContainerKill(ctx, k.container, "SIGTERM")
+	removeOptions := types.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	}
+	if err := k.cli.ContainerRemove(ctx, k.container, removeOptions); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", k.container, err)
+		return err
+	}
+	return nil
 }
 
 // XXX move into container package
@@ -122,7 +141,7 @@ func startContainer(yml string, nameds []string) (*Kernel, error) {
 		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
 		//AttachStdout: true,
 		// AttachStderr: true,
-		Tty: true, // XXX false,
+		Tty: false,
 		Env: env,
 	}, &container.HostConfig{
 		//Unnecessary with using docker for user containers.

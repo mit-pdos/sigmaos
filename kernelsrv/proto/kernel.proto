@@ -1,13 +1,18 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/kernelsrv";
+option go_package = "sigmaos/kernelsrv/proto";
 
 message BootRequest {
   string name = 1;
 }
 
 message BootResult {
-  bool ok = 1;
+}
+
+message ShutdownRequest {
+}
+
+message ShutdownResult {
 }
 
 message KillRequest {
@@ -15,7 +20,6 @@ message KillRequest {
 }
 
 message KillResult {
-  bool ok = 1;
 }
 
 

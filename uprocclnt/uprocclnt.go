@@ -4,8 +4,6 @@ import (
 	"path"
 	"sync"
 
-	"github.com/docker/docker/client"
-
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -18,8 +16,7 @@ import (
 
 type UprocClnt struct {
 	pdc       *protdevclnt.ProtDevClnt
-	cli       *client.Client
-	container string
+	container *container.Container
 }
 
 type UprocdMgr struct {
@@ -63,7 +60,7 @@ func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc, realm string) error {
 	return nil
 }
 
-// Spawn uprocd in side of docker container
+// Start uprocd inside of docker container
 func (updm *UprocdMgr) StartUprocd(realm string) (*UprocClnt, error) {
 	u := &UprocClnt{}
 	program := "uprocd"
@@ -79,16 +76,13 @@ func (updm *UprocdMgr) StartUprocd(realm string) (*UprocClnt, error) {
 	p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
 	p.FinalizeEnv("NONE")
 
-	cli, c, err := container.MkContainer(p, realm)
+	c, err := container.MkContainer(p, realm)
 	if err != nil {
 		return nil, err
 	}
-
-	u.cli = cli
 	u.container = c
-	db.DPrintf(db.CONTAINER, "container %s\n", u.container[:10])
 	updm.pclnt.WaitStart(p.GetPid())
-	db.DPrintf(db.CONTAINER, "container started %s\n", u.container[:10])
+	db.DPrintf(db.CONTAINER, "container started %v\n", u.container)
 	pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL)
 	pdc, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
 	if err != nil {
@@ -96,4 +90,12 @@ func (updm *UprocdMgr) StartUprocd(realm string) (*UprocClnt, error) {
 	}
 	u.pdc = pdc
 	return u, nil
+}
+
+func (updm *UprocdMgr) Shutdown() error {
+	if updm.upc == nil {
+		return nil
+	}
+	updm.upc.container.KillRmContainer()
+	return nil
 }

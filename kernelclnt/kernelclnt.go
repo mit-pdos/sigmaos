@@ -2,7 +2,7 @@ package kernelclnt
 
 import (
 	"sigmaos/fslib"
-	"sigmaos/kernelsrv"
+	"sigmaos/kernelsrv/proto"
 	"sigmaos/protdevclnt"
 	//	sp "sigmaos/sigmap"
 )
@@ -21,8 +21,8 @@ func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 }
 
 func (kc *KernelClnt) Boot(s string) error {
-	var res kernelsrv.BootResult
-	req := &kernelsrv.BootRequest{Name: s}
+	var res proto.BootResult
+	req := &proto.BootRequest{Name: s}
 	err := kc.pdc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {
 		return err
@@ -31,9 +31,19 @@ func (kc *KernelClnt) Boot(s string) error {
 }
 
 func (kc *KernelClnt) Kill(s string) error {
-	var res kernelsrv.KillResult
-	req := &kernelsrv.KillRequest{Name: s}
+	var res proto.KillResult
+	req := &proto.KillRequest{Name: s}
 	err := kc.pdc.RPC("KernelSrv.Kill", req, &res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (kc *KernelClnt) Shutdown() error {
+	var res proto.ShutdownResult
+	req := &proto.ShutdownRequest{}
+	err := kc.pdc.RPC("KernelSrv.Shutdown", req, &res)
 	if err != nil {
 		return err
 	}

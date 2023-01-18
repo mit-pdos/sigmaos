@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
@@ -23,6 +24,16 @@ import (
 const (
 	UBIN = "/bin"
 )
+
+type Container struct {
+	ctx       context.Context
+	cli       *client.Client
+	container string
+}
+
+func (c *Container) String() string {
+	return c.container[:10]
+}
 
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	// // Set up new namespaces
@@ -59,13 +70,13 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
-func MkContainer(p *proc.Proc, realm string) (*client.Client, string, error) {
+func MkContainer(p *proc.Proc, realm string) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	// cmd := append([]string{"exec-container", PROC, "rootrealm", uproc.Program}, uproc.Args...)
@@ -75,12 +86,12 @@ func MkContainer(p *proc.Proc, realm string) (*client.Client, string, error) {
 		Image: image,
 		Cmd:   cmd, //AttachStdout: true,
 		// AttachStderr: true,
-		Tty: true,
+		Tty: false,
 		Env: p.GetEnv(),
 	}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
-		return nil, "", err
+		return nil, err
 	}
 	// json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	// if err1 != nil {
@@ -96,7 +107,33 @@ func MkContainer(p *proc.Proc, realm string) (*client.Client, string, error) {
 	// case st := <-statusCh:
 	// 	db.DPrintf(db.CONTAINER, "container %s done status %v\n", resp.ID[:10], st)
 	// }
-	return cli, resp.ID, nil
+	return &Container{ctx, cli, resp.ID}, nil
+}
+
+func (c *Container) KillRmContainer() error {
+	db.DPrintf(db.CONTAINER, "KillRmContainer %v\n", c)
+
+	out, err := c.cli.ContainerLogs(c.ctx, c.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
+	if err != nil {
+		panic(err)
+	}
+	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+
+	if err := c.cli.ContainerKill(c.ctx, c.container, "SIGTERM"); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerKill %v err %v\n", c, err)
+		return err
+	}
+
+	removeOptions := types.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	}
+
+	if err := c.cli.ContainerRemove(c.ctx, c.container, removeOptions); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", c, err)
+		return err
+	}
+	return nil
 }
 
 func Pexec(uproc *proc.Proc) error {

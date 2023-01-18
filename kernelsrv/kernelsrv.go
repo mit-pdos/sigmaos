@@ -1,8 +1,11 @@
 package kernelsrv
 
 import (
+	"os"
+
 	db "sigmaos/debug"
 	"sigmaos/kernel"
+	"sigmaos/kernelsrv/proto"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -22,18 +25,24 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	return pds.RunServer()
 }
 
-func (ks *KernelSrv) Boot(req BootRequest, rep *BootResult) error {
+func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
 	if err := ks.k.BootSub(req.Name, ks.k.Param, false); err != nil {
 		return err
 	}
-	rep.Ok = true
 	return nil
 }
 
-func (ks *KernelSrv) Kill(req KillRequest, rep *KillResult) error {
+func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
+	if err := ks.k.Shutdown(); err != nil {
+		return err
+	}
+	os.Exit(0) // XXX use more elegant way
+	return nil
+}
+
+func (ks *KernelSrv) Kill(req proto.KillRequest, rep *proto.KillResult) error {
 	if err := ks.k.KillOne(req.Name); err != nil {
 		return err
 	}
-	rep.Ok = true
 	return nil
 }

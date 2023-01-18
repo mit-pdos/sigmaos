@@ -95,7 +95,7 @@ func (k *Kernel) Ip() string {
 	return k.ip
 }
 
-func (k *Kernel) ShutDown() error {
+func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.KERNEL, "ShutDown\n")
 	k.shutdown()
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?

@@ -11,7 +11,6 @@ const (
 	TMP         = NAMED + TMPREL
 	PROCDREL    = "procd"
 	PROCD       = NAMED + PROCDREL + "/"
-	PROCD_WS    = PROCD + "ws" + "/"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
 	UXREL       = "ux"
@@ -48,14 +47,18 @@ const (
 	KPIDS    = NAMED + KPIDSREL
 
 	// Schedd
-	QUEUE = "queue"
+	QUEUE          = "queue"
+	WS             = "name/" + WS_REL
+	WS_REL         = "ws/"
+	WS_RUNQ_LC_REL = WS_REL + "runq-lc/"
+	WS_RUNQ_BE_REL = WS_REL + "runq-be/"
+	WS_RUNQ_LC     = WS + "runq-lc/"
+	WS_RUNQ_BE     = WS + "runq-be/"
 
 	// Procd spawn file
 	PROCD_SPAWN_FILE = "spawn"
 
 	PROCD_RUNNING = "running"
-	PROCD_RUNQ_LC = "runq-lc"
-	PROCD_RUNQ_BE = "runq-be"
 
 	// special devs/dirs exported by fssrv
 	STATSD   = ".statsd"

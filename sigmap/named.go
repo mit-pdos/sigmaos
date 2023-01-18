@@ -69,10 +69,5 @@ const (
 	SIGMAHOME = "/home/sigmaos"
 )
 
-// REALM
-const (
-	TEST_RID = "testrealm"
-)
-
 var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
 	HOTELUSER, HOTELPROF, DB + "~any/"}

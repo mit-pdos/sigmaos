@@ -104,6 +104,7 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	}
 }
 
+// TODO: Proper fair-share scheduling policy.
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -111,11 +112,22 @@ func (sd *Schedd) schedule() {
 	for {
 		// Currently, we iterate through the realms roughly round-robin (go maps
 		// are iterated in random order).
-		// TODO: Proper fair-share scheduling policy.
 		for r, q := range sd.qs {
-			// XXX For now, immediately dequeue the proc and spawn it. Of course, this
-			// will be done according to heuristics and resource utilization in future.
-			if p, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+			// Try to dequeue a proc, whether it be from a local queue or potentially
+			// stolen from a remote queue.
+			if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+				if stolen {
+					// Try to claim the proc.
+					if ok := sd.stealProc(p); ok {
+						// Proc was claimed successfully.
+						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
+						db.DPrintf(db.ALWAYS, "[%v] stole proc %v", r, p)
+					} else {
+						// Couldn't claim the proc. Move along.
+						continue
+					}
+				}
+				// Claimed a proc, so schedule it.
 				db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
 				sd.runProc(p)
 				continue

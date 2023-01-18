@@ -12,14 +12,18 @@ const (
 )
 
 type Queue struct {
-	lc []*proc.Proc
-	be []*proc.Proc
+	lc   []*proc.Proc
+	lcws []*proc.Proc
+	be   []*proc.Proc
+	bews []*proc.Proc
 }
 
 func makeQueue() *Queue {
 	return &Queue{
-		lc: make([]*proc.Proc, 0, DEF_Q_SZ),
-		be: make([]*proc.Proc, 0, DEF_Q_SZ),
+		lc:   make([]*proc.Proc, 0, DEF_Q_SZ),
+		lcws: make([]*proc.Proc, 0, DEF_Q_SZ),
+		be:   make([]*proc.Proc, 0, DEF_Q_SZ),
+		bews: make([]*proc.Proc, 0, DEF_Q_SZ),
 	}
 }
 
@@ -36,17 +40,19 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 
 // Dequeue a proc with certain resource requirements. LC procs have absolute
 // priority.
-func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (*proc.Proc, bool) {
+func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
 	// Order in which to scan queues.
-	qs := []*[]*proc.Proc{&q.lc, &q.be}
-	for _, queue := range qs {
+	qs := []*[]*proc.Proc{&q.lc, &q.lcws, &q.be, &q.bews}
+	for i, queue := range qs {
 		if p, ok := dequeue(maxcores, maxmem, queue); ok {
-			return p, true
+			return p, i%2 == 1, true
 		}
 	}
-	return nil, false
+	return nil, false, false
 }
 
+// Remove the first proc that fits the maxcores & maxmem resource constraints,
+// and return it.
 func dequeue(maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
 	for i := 0; i < len(*q); i++ {
 		p := (*q)[i]

@@ -336,7 +336,7 @@ func nodedOverprovisioned(fsl *fslib.FsLib, cc *config.ConfigClnt, realmId strin
 	db.DPrintf(debug, "[%v] Noded %v is underutilized threshold %v, had %v cores remaining.", realmId, nodedId, thresh, len(ndCfg.Cores))
 	// Don't evict this noded if it is running any LC procs.
 	if len(ndCfg.Cores) == 1 {
-		qs := []string{sp.PROCD_RUNQ_LC}
+		qs := []string{} //sp.PROCD_RUNQ_LC}
 		for _, q := range qs {
 			queued, err := fsl.GetDir(path.Join(RealmPath(realmId), sp.PROCDREL, ndCfg.ProcdIp, q))
 			if err != nil {

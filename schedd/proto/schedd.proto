@@ -8,6 +8,7 @@ service Schedd {
   rpc RegisterProcd(RegisterRequest) returns (RegisterResponse);
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
   rpc ProcDone(ProcDoneRequest) returns (ProcDoneResponse);
+  rpc StealProc(StealProcRequest) returns (StealProcResponse);
 }
 
 message RegisterRequest {
@@ -30,5 +31,15 @@ message ProcDoneRequest {
 }
 
 message ProcDoneResponse {
+  bool oK = 1;
+}
+
+message StealProcRequest {
+  string scheddIp = 1;
+  string realm = 2;
+  string pidStr = 3;
+}
+
+message StealProcResponse {
   bool oK = 1;
 }

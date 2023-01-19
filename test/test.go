@@ -3,7 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"os"
 	"testing"
 
 	db "sigmaos/debug"
@@ -97,6 +96,7 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 
 func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
+	proc.SetRealm(realmid)
 	var s *system.System
 	var err error
 	if full {
@@ -108,7 +108,6 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 		return nil, err
 	}
 	fsl, pclnt := s.GetClnt(0)
-	os.Setenv(proc.SIGMAREALM, realmid)
 	return &Tstate{s, fsl, pclnt, t}, nil
 }
 

@@ -14,6 +14,8 @@ message ProcProto {
   uint32 typeInt = 8;
   uint32 ncoreInt = 9;
   uint32 memInt = 10;
-  google.protobuf.Timestamp spawnTime = 11;
-  string sharedTarget = 12;
+  google.protobuf.Timestamp spawnTimePB = 11;
+  string realm = 12;
+  string sharedTarget = 13;
+  string scheddIp = 14;
 }

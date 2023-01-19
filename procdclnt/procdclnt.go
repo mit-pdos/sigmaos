@@ -72,11 +72,13 @@ func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
 		if err != nil {
 			return r, nil, err
 		}
-		beproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_BE))
+		//		beproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_BE))
+		beproc := 0
 		if err != nil {
 			return r, nil, err
 		}
-		lcproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_LC))
+		//		lcproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_LC))
+		lcproc := 0
 		if err != nil {
 			return r, nil, err
 		}

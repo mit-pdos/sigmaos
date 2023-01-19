@@ -453,8 +453,8 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (avgUtil float64, util
 }
 
 func (m *RealmResourceMgr) getRealmQueueLen() (lcqlen int, beqlen int) {
-	stslc, _ := m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC))
-	stsbe, _ := m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE))
+	stslc := []string{} //m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC))
+	stsbe := []string{} //m.GetDir(path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE))
 	return len(stslc), len(stsbe)
 }
 

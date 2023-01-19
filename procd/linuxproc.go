@@ -65,7 +65,7 @@ func (p *LinuxProc) run() error {
 		db.DPrintf(db.PROCD_ERR, "Err procd MakeProcDir: %v\n", err)
 	}
 
-	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.GetPid(), p.stolen, time.Since(p.attr.SpawnTime.AsTime()))
+	db.DPrintf(db.PROCD_PERF, "proc %v (stolen:%v) queueing delay: %v", p.attr.GetPid(), p.stolen, time.Since(p.attr.GetSpawnTime()))
 	var cmd *exec.Cmd
 	if p.attr.IsPrivilegedProc() {
 		cmd = exec.Command(p.attr.Program, p.attr.Args...)

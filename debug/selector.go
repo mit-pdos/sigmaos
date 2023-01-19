@@ -69,6 +69,7 @@ const (
 	NAMED                = "NAMED"
 	PROCD                = "PROCD"
 	SCHEDD               = "SCHEDD"
+	SCHEDD_ERR           = "SCHEDD" + ERR
 	PROCD_ERR            = PROCD + ERR
 	PROCD_PERF           = PROCD + "_PERF"
 	PROCCACHE            = "PROCCACHE"

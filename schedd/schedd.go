@@ -22,6 +22,7 @@ type Schedd struct {
 	cond      *sync.Cond
 	procdIp   string
 	procd     *protdevclnt.ProtDevClnt
+	schedds   map[string]*protdevclnt.ProtDevClnt
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
@@ -32,6 +33,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
 		qs:        make(map[string]*Queue),
+		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),
 		memfree:   mem.GetTotalMem(),
 	}
@@ -61,17 +63,40 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
+	p.ScheddIp = sd.mfs.MyAddr()
 	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
 	if _, ok := sd.qs[req.Realm]; !ok {
 		sd.qs[req.Realm] = makeQueue()
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[req.Realm].Enqueue(p)
-	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
-		db.DFatalf("Error create %v: %v", p.GetPid(), err)
-	}
+	sd.postProcInQueue(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
+	return nil
+}
+
+// Steal a proc from this schedd.
+func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	// See if proc is still queued.
+	var p *proc.Proc
+	if p, res.OK = sd.qs[req.Realm].Steal(proc.Tpid(req.PidStr)); res.OK {
+		ln := path.Join(sp.SCHEDD, req.ScheddIp, sp.QUEUE, p.GetPid().String())
+		fn := path.Join(p.ParentDir, proc.WS_LINK)
+		// Steal is successful. Add the new WS link to the parent's procdir.
+		if _, err := sd.mfs.FsLib().PutFile(fn, 0777, sp.OWRITE, []byte(ln)); err != nil {
+			db.DPrintf(db.SCHEDD_ERR, "Error write WS link", fn, err)
+		}
+		// Remove queue file via fslib to trigger parent watch.
+		// XXX Would be nice to be able to do this in-mem too.
+		if err := sd.mfs.FsLib().Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+			db.DFatalf("Error remove %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -83,7 +108,6 @@ func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneRespons
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
 	sd.coresfree += p.GetNcore()
 	sd.memfree += p.GetMem()
-	// XXX TODO: resource accounting.
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -104,6 +128,7 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	}
 }
 
+// TODO: Proper fair-share scheduling policy.
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -111,11 +136,21 @@ func (sd *Schedd) schedule() {
 	for {
 		// Currently, we iterate through the realms roughly round-robin (go maps
 		// are iterated in random order).
-		// TODO: Proper fair-share scheduling policy.
 		for r, q := range sd.qs {
-			// XXX For now, immediately dequeue the proc and spawn it. Of course, this
-			// will be done according to heuristics and resource utilization in future.
-			if p, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+			// Try to dequeue a proc, whether it be from a local queue or potentially
+			// stolen from a remote queue.
+			if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+				if stolen {
+					// Try to claim the proc.
+					if ok := sd.tryStealProc(r, p); ok {
+						// Proc was claimed successfully.
+						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
+					} else {
+						// Couldn't claim the proc. Move along.
+						continue
+					}
+				}
+				// Claimed a proc, so schedule it.
 				db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
 				sd.runProc(p)
 				continue
@@ -123,18 +158,6 @@ func (sd *Schedd) schedule() {
 		}
 		db.DPrintf(db.SCHEDD, "No procs runnable")
 		sd.cond.Wait()
-	}
-}
-
-// Setup schedd's fs.
-func setupFs(mfs *memfssrv.MemFs) {
-	dirs := []string{
-		sp.QUEUE,
-	}
-	for _, d := range dirs {
-		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE); err != nil {
-			db.DFatalf("Error create %v: %v", d, err)
-		}
 	}
 }
 
@@ -156,5 +179,8 @@ func RunSchedd() error {
 		db.DFatalf("Error PDS: %v", err)
 	}
 	go sd.schedule()
+	go sd.monitorWSQueue(sp.WS_RUNQ_LC, proc.T_LC)
+	go sd.monitorWSQueue(sp.WS_RUNQ_BE, proc.T_BE)
+	go sd.offerStealableProcs()
 	return pds.RunServer()
 }

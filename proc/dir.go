@@ -53,6 +53,7 @@ const (
 	PROCDIR       = "procdir"
 	PARENTDIR     = "parentdir"
 	PROCFILE_LINK = "procfile-link"
+	WS_LINK       = "ws-link" // Link to schedd which stole this proc.
 
 	// Files/directories in "pids/<pid>":
 	SHARED      = "shared"

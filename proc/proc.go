@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	sp "sigmaos/sigmap"
@@ -209,4 +210,18 @@ func (p *Proc) SetNcore(ncore Tcore) {
 // Set the amount of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
 	p.MemInt = uint32(mb)
+}
+
+func (p *Proc) Marshal() []byte {
+	b, err := proto.Marshal(p.ProcProto)
+	if err != nil {
+		log.Fatalf("Error marshal: %v", err)
+	}
+	return b
+}
+
+func (p *Proc) Unmarshal(b []byte) {
+	if err := proto.Unmarshal(b, p.ProcProto); err != nil {
+		log.Fatalf("Error unmarshal: %v", err)
+	}
 }

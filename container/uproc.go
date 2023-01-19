@@ -42,15 +42,17 @@ func RunUProc(uproc *proc.Proc) error {
 	// 	},
 	// }
 
+	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
+
 	cmd := exec.Command(uproc.Program, uproc.Args...)
+	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	os.Setenv("PATH", "/home/sigmaos/bin/user")
 	pn, err := exec.LookPath("exec-uproc")
 	if err != nil {
-		return fmt.Errorf("ContainUProc: LookPath: %v", err)
+		return fmt.Errorf("RunUProc: LookPath: %v", err)
 	}
 	cmd.Path = pn
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)

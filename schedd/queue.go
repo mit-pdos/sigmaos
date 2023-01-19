@@ -16,6 +16,7 @@ type Queue struct {
 	lcws []*proc.Proc
 	be   []*proc.Proc
 	bews []*proc.Proc
+	pmap map[proc.Tpid]*proc.Proc
 }
 
 func makeQueue() *Queue {
@@ -24,10 +25,12 @@ func makeQueue() *Queue {
 		lcws: make([]*proc.Proc, 0, DEF_Q_SZ),
 		be:   make([]*proc.Proc, 0, DEF_Q_SZ),
 		bews: make([]*proc.Proc, 0, DEF_Q_SZ),
+		pmap: make(map[proc.Tpid]*proc.Proc, 0),
 	}
 }
 
 func (q *Queue) Enqueue(p *proc.Proc) {
+	q.pmap[p.GetPid()] = p
 	switch p.GetType() {
 	case proc.T_LC:
 		q.lc = append(q.lc, p)
@@ -45,10 +48,42 @@ func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, wo
 	qs := []*[]*proc.Proc{&q.lc, &q.lcws, &q.be, &q.bews}
 	for i, queue := range qs {
 		if p, ok := dequeue(maxcores, maxmem, queue); ok {
-			return p, i%2 == 1, true
+			worksteal = i%2 == 1
+			// If not stolen, remove from pmap
+			if !worksteal {
+				delete(q.pmap, p.GetPid())
+			}
+			return p, worksteal, true
 		}
 	}
 	return nil, false, false
+}
+
+// Remove a stolen proc from the corresponding queue.
+func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
+	// If proc is still queued at this schedd
+	if p, ok := q.pmap[pid]; ok {
+		// Select queue
+		var queue *[]*proc.Proc
+		switch p.GetType() {
+		case proc.T_LC:
+			queue = &q.lc
+		case proc.T_BE:
+			queue = &q.be
+		default:
+			db.DFatalf("Unrecognized proc type: %v", p.GetType())
+		}
+		delete(q.pmap, pid)
+		// Scan queue and remove the proc.
+		for i, qp := range *queue {
+			if qp == p {
+				*queue = append((*queue)[:i], (*queue)[i+1:]...)
+				break
+			}
+		}
+		return p, true
+	}
+	return nil, false
 }
 
 // Remove the first proc that fits the maxcores & maxmem resource constraints,

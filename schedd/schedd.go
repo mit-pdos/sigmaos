@@ -67,11 +67,33 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[req.Realm].Enqueue(p)
-	if _, err := sd.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
-		db.DFatalf("Error create %v: %v", p.GetPid(), err)
-	}
+	sd.postProcInQueue(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
+	return nil
+}
+
+// Steal a proc from this schedd.
+func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	// See if proc is still queued.
+	var p *proc.Proc
+	if p, res.OK = sd.qs[req.Realm].Steal(proc.Tpid(req.PidStr)); res.OK {
+		ln := path.Join(sp.SCHEDD, req.ScheddIp, sp.QUEUE, p.GetPid().String())
+		fn := path.Join(p.ParentDir, proc.WS_LINK)
+		// Steal is successful. Add the new WS link to the parent's procdir.
+		if _, err := sd.mfs.FsLib().PutFile(fn, 0777, sp.OWRITE, []byte(ln)); err != nil {
+			db.DPrintf(db.SCHEDD_ERR, "Error write WS link", fn, err)
+		}
+		// Remove queue file via fslib to trigger parent watch.
+		// XXX Would be nice to be able to do this in-mem too.
+		if err := sd.mfs.FsLib().Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+			db.DFatalf("Error remove %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -83,7 +105,6 @@ func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneRespons
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
 	sd.coresfree += p.GetNcore()
 	sd.memfree += p.GetMem()
-	// XXX TODO: resource accounting.
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -118,7 +139,7 @@ func (sd *Schedd) schedule() {
 			if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
 				if stolen {
 					// Try to claim the proc.
-					if ok := sd.stealProc(p); ok {
+					if ok := sd.stealProc(r, p); ok {
 						// Proc was claimed successfully.
 						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
 						db.DPrintf(db.ALWAYS, "[%v] stole proc %v", r, p)
@@ -135,18 +156,6 @@ func (sd *Schedd) schedule() {
 		}
 		db.DPrintf(db.SCHEDD, "No procs runnable")
 		sd.cond.Wait()
-	}
-}
-
-// Setup schedd's fs.
-func setupFs(mfs *memfssrv.MemFs) {
-	dirs := []string{
-		sp.QUEUE,
-	}
-	for _, d := range dirs {
-		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE); err != nil {
-			db.DFatalf("Error create %v: %v", d, err)
-		}
 	}
 }
 

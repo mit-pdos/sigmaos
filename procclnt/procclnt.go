@@ -256,6 +256,25 @@ func (clnt *ProcClnt) nextSchedd() string {
 
 // ========== WAIT ==========
 
+// Wait until a proc file is removed. Return an error if SetRemoveWatch returns
+// an unreachable error.
+func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
+	db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, pn)
+	done := make(chan bool)
+	err := clnt.SetRemoveWatch(pn, func(string, error) {
+		done <- true
+	})
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
+		if serr.IsErrUnreachable(err) {
+			return err
+		}
+	} else {
+		<-done
+	}
+	return nil
+}
+
 func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
@@ -266,18 +285,25 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
-		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, procfileLink)
-		done := make(chan bool)
-		err = clnt.SetRemoveWatch(procfileLink, func(string, error) {
-			done <- true
-		})
+		// Wait for the proc queue file to be removed. If the schedd holding this
+		// queue becomes unreachable, return an error.
+		if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
+			return err
+		}
+		// See if this proc was stolen by another schedd. If so, wait on the new
+		// proc file link.
+		b, err = clnt.GetFile(path.Join(childDir, proc.WS_LINK))
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-			if serr.IsErrUnreachable(err) {
+			db.DPrintf(db.PROCCLNT_ERR, "No ws link %v", pid)
+		} else {
+			wsLink := string(b)
+			db.DPrintf(db.PROCCLNT_ERR, "Found ws link %v: %v", pid, wsLink)
+			// Wait for the proc queue file (in the new, stealing schedd), to be
+			// removed. If the schedd holding this queue becomes unreachable, return
+			// an error.
+			if err := clnt.waitProcFileRemove(pid, wsLink); err != nil {
 				return err
 			}
-		} else {
-			<-done
 		}
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)

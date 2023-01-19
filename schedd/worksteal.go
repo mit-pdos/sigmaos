@@ -5,10 +5,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	proto "sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 )
 
-func (sd *Schedd) stealProc(p *proc.Proc) bool {
+// Try to steal a proc. Returns true if successful.
+func (sd *Schedd) stealProc(realm string, p *proc.Proc) bool {
 	db.DFatalf("TODO")
 	var q string
 	switch p.GetType() {
@@ -18,6 +20,27 @@ func (sd *Schedd) stealProc(p *proc.Proc) bool {
 		q = sp.WS_RUNQ_BE
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
+	}
+	// Create a file for the parent proc to wait on
+	sd.postProcInQueue(p)
+	// Steal from the original schedd.
+	sreq := &proto.StealProcRequest{
+		ScheddIp: sd.mfs.MyAddr(),
+		Realm:    realm,
+		PidStr:   p.GetPid().String(),
+	}
+	sres := &proto.StealProcResponse{}
+	// TODO: get schedd ip.
+	err := sd.procd.RPC("Procd.StealProc", sreq, sres)
+	if err != nil {
+		db.DFatalf("Error StealProc schedd: %v", err)
+	}
+	// If unsuccessful, remove from queue.
+	if !sres.OK {
+		sd.removeProcFromQueue(p)
+		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
+		db.DPrintf(db.ALWAYS, "Failed to steal proc %v", p.GetPid())
+		return false
 	}
 	if err := sd.mfs.FsLib().Remove(path.Join(q, p.GetPid().String())); err != nil {
 		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())

@@ -40,5 +40,5 @@ func RunUprocSrv(realm string) error {
 
 func (ups *UprocSrv) Run(req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
-	return container.Pexec(uproc)
+	return container.RunUProc(uproc)
 }

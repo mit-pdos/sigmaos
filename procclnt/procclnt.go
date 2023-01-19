@@ -140,6 +140,9 @@ func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *p
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
 	}
+	// Set the realm id.
+	p.Realm = proc.GetRealm()
+
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir

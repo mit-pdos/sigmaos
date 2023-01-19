@@ -27,7 +27,7 @@ done
 #
 
 for T in reader writer stats; do
-    go test -v sigmaos/$T --image $IMAGE
+    go test -v sigmaos/$T
 done
 
 exit 0

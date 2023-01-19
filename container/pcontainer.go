@@ -25,16 +25,6 @@ const (
 	UBIN = "/bin"
 )
 
-type Container struct {
-	ctx       context.Context
-	cli       *client.Client
-	container string
-}
-
-func (c *Container) String() string {
-	return c.container[:10]
-}
-
 func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	// // Set up new namespaces
 	// cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -93,12 +83,7 @@ func MkContainer(p *proc.Proc, realm string) (*Container, error) {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err
 	}
-	// json, err1 := cli.ContainerInspect(ctx, resp.ID)
-	// if err1 != nil {
-	// 	return err
-	// }
-	// ip := json.NetworkSettings.IPAddress
-	return &Container{ctx, cli, resp.ID}, nil
+	return &Container{ctx, cli, resp.ID, ""}, nil
 }
 
 func (c *Container) Remove() error {

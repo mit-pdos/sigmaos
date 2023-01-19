@@ -1,20 +1,11 @@
 package bootkernelclnt
 
 import (
-	"context"
-	"flag"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-
-	// sc "sigmaos/container"
-
-	db "sigmaos/debug"
+	"sigmaos/container"
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
@@ -36,17 +27,10 @@ type Kernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	kclnt     *kernelclnt.KernelClnt
-	ip        string
-	cli       *client.Client
-	container string
+	container *container.Container
 }
 
 var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF}
-var image string
-
-func init() {
-	flag.StringVar(&image, "image", "", "docker image")
-}
 
 // Takes named port and returns filled-in namedAddr
 func BootKernelNamed(yml string, nameds []string) (*Kernel, []string, error) {
@@ -83,7 +67,7 @@ func (k *Kernel) KillOne(s string) error {
 }
 
 func (k *Kernel) GetIP() string {
-	return k.ip
+	return k.container.Ip()
 }
 
 func (k *Kernel) GetClnt() (*fslib.FsLib, *procclnt.ProcClnt) {
@@ -91,7 +75,7 @@ func (k *Kernel) GetClnt() (*fslib.FsLib, *procclnt.ProcClnt) {
 }
 
 func (k *Kernel) MkClnt(name string, namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr(name, k.ip, namedAddr)
+	fsl, err := fslib.MakeFsLibAddr(name, k.container.Ip(), namedAddr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,71 +85,15 @@ func (k *Kernel) MkClnt(name string, namedAddr []string) (*fslib.FsLib, *proccln
 
 func (k *Kernel) Shutdown() error {
 	k.kclnt.Shutdown()
-	ctx := context.Background()
-	db.DPrintf(db.CONTAINER, "containerwait for %v\n", k.container)
-	statusCh, errCh := k.cli.ContainerWait(ctx, k.container, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
-		return err
-	case st := <-statusCh:
-		db.DPrintf(db.CONTAINER, "container %s done status %v\n", k.container, st)
-	}
-	out, err := k.cli.ContainerLogs(ctx, k.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
-	if err != nil {
-		panic(err)
-	}
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	removeOptions := types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		Force:         true,
-	}
-	if err := k.cli.ContainerRemove(ctx, k.container, removeOptions); err != nil {
-		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", k.container, err)
-		return err
-	}
-	return nil
+	return k.container.Shutdown()
 }
 
-// XXX move into container package
 func startContainer(yml string, nameds []string) (*Kernel, error) {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	container, err := container.StartKContainer(yml, nameds, makeEnv())
 	if err != nil {
 		return nil, err
 	}
-	env := makeEnv()
-	fmt.Printf("start container %v %v %v\n", yml, nameds, env)
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: image,
-		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
-		//AttachStdout: true,
-		// AttachStderr: true,
-		Tty: false,
-		Env: env,
-	}, &container.HostConfig{
-		//Unnecessary with using docker for user containers.
-		//CapAdd:      []string{"SYS_ADMIN"},
-		//SecurityOpt: []string{"seccomp=unconfined"},
-		//
-		// This is bad idea in general because it requires to give rw
-		// permission on host to privileged daemon.  But maybe ok in
-		// our case where kernel is trusted as is. XXX Use different
-		// image for user procs.
-		Binds: []string{
-			"/var/run/docker.sock:/var/run/docker.sock",
-		},
-	}, nil, nil, "")
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return nil, err
-	}
-	json, err1 := cli.ContainerInspect(ctx, resp.ID)
-	if err1 != nil {
-		return nil, err
-	}
-	ip := json.NetworkSettings.IPAddress
-	fmt.Printf("container %s with image %s booting at %s...\n", resp.ID[:10], image, ip)
-	return &Kernel{ip: ip, cli: cli, container: resp.ID}, nil
+	return &Kernel{container: container}, nil
 }
 
 func (k *Kernel) waitUntilBooted(nameds []string) (*Kernel, error) {

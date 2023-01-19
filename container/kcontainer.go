@@ -2,42 +2,36 @@ package container
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 
-	// sc "sigmaos/container"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 )
+
+//
+// Start kernel inside a docker container
+//
 
 const (
 	SIGMAKIMAGE = "sigmaos"
 )
 
-// XXX move into container package
 func StartKContainer(yml string, nameds []string, env []string) (*Container, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("start container %v %v %v\n", yml, nameds, env)
+	db.DPrintf(db.CONTAINER, "start container %v %v %v\n", yml, nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
 		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
-		//AttachStdout: true,
-		// AttachStderr: true,
-		Tty: false,
-		Env: env,
+		Tty:   false,
+		Env:   env,
 	}, &container.HostConfig{
-		//Unnecessary with using docker for user containers.
-		//CapAdd:      []string{"SYS_ADMIN"},
-		//SecurityOpt: []string{"seccomp=unconfined"},
-		//
 		// This is bad idea in general because it requires to give rw
 		// permission on host to privileged daemon.  But maybe ok in
 		// our case where kernel is trusted as is. XXX Use different

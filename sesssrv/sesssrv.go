@@ -188,7 +188,7 @@ func (ssrv *SessSrv) Serve() {
 	} else {
 		<-ssrv.ch
 	}
-	db.DPrintf(db.ALWAYS, "Done serving")
+	db.DPrintf(db.SESSSRV, "Done serving")
 }
 
 // The server using ssrv is done; exit.

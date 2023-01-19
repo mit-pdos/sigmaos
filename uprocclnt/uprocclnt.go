@@ -18,15 +18,16 @@ type UprocdMgr struct {
 	fsl   *fslib.FsLib
 	pclnt *procclnt.ProcClnt
 	kclnt *kernelclnt.KernelClnt
-	pdc   *protdevclnt.ProtDevClnt
+	pdcs  map[sp.Trealm]*protdevclnt.ProtDevClnt
 }
 
 func MakeUprocdMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *UprocdMgr {
 	updm := &UprocdMgr{fsl: fsl, pclnt: pclnt}
+	updm.pdcs = make(map[sp.Trealm]*protdevclnt.ProtDevClnt)
 	return updm
 }
 
-func (updm *UprocdMgr) StartUprocd(realm string) error {
+func (updm *UprocdMgr) startUprocd(realm sp.Trealm) error {
 	if updm.kclnt == nil {
 		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, sp.BOOT+"~local/")
 		if err != nil {
@@ -37,24 +38,26 @@ func (updm *UprocdMgr) StartUprocd(realm string) error {
 	return updm.kclnt.Boot("uprocd", []string{"rootrealm"})
 }
 
-func (updm *UprocdMgr) lookupClnt(realm string) (*protdevclnt.ProtDevClnt, error) {
+func (updm *UprocdMgr) lookupClnt(realm sp.Trealm) (*protdevclnt.ProtDevClnt, error) {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
-	if updm.pdc == nil {
-		if err := updm.StartUprocd(realm); err != nil {
+	pdc, ok := updm.pdcs[realm]
+	if !ok {
+		if err := updm.startUprocd(realm); err != nil {
 			return nil, err
 		}
 		pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL)
-		pdc, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
+		c, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
 		if err != nil {
 			return nil, err
 		}
-		updm.pdc = pdc
+		updm.pdcs[realm] = c
+		pdc = c
 	}
-	return updm.pdc, nil
+	return pdc, nil
 }
 
-func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc, realm string) error {
+func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc, realm sp.Trealm) error {
 	pdc, err := updm.lookupClnt(realm)
 	if err != nil {
 		return err

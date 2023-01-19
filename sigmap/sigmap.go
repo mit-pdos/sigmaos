@@ -7,9 +7,9 @@ package sigmap
 import (
 	"fmt"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type Tfid uint32
@@ -18,6 +18,7 @@ type Tperm uint32
 type Toffset uint64
 type Tlength uint64
 type Tgid uint32
+type Trealm string
 
 func (fid Tfid) String() string {
 	if fid == NoFid {

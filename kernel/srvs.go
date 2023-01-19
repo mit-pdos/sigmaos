@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,7 +33,7 @@ func (ss *Services) addSvc(s string, sub *Subsystem) {
 	ss.svcs[s] = append(ss.svcs[s], sub)
 }
 
-func (k *Kernel) BootSub(s string, p *Param, full bool) error {
+func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) error {
 	var err error
 	var ss *Subsystem
 	switch s {
@@ -45,6 +47,8 @@ func (k *Kernel) BootSub(s string, p *Param, full bool) error {
 		ss, err = k.bootDbd(p.Hostip)
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
+	case sp.UPROCDREL:
+		ss, err = k.bootUprocd(args)
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -84,7 +88,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, nil, realmId, "", false, cmd)
+	ss := makeSubsystemCmd(nil, nil, realmId, "", procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
@@ -96,7 +100,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, strconv.FormatBool(spawningSys)}, k.Param.Realm, "", false)
+	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, strconv.FormatBool(spawningSys)}, k.Param.Realm, "", procclnt.HLINUX)
 	if err != nil {
 		return nil, err
 	}
@@ -107,19 +111,43 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.Param.Realm)}, k.Param.Realm, k.procdIp, true)
+	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.Param.Realm)}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.Param.Realm}, k.Param.Realm, k.procdIp, true)
+	return k.bootSubsystem("fss3d", []string{k.Param.Realm}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, k.Param.Realm, k.procdIp, true)
+	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, false)
+	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, procclnt.HLINUX)
+}
+
+// XXX clean this up
+func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
+	program := "uprocd"
+	realm := args[0]
+	pid := proc.Tpid(program + "-" + proc.GenPid().String())
+	p := proc.MakePrivProcPid(pid, program, args, true)
+	ss := makeSubsystem(k.ProcClnt, p, k.Param.Realm, k.procdIp, procclnt.HDOCKER)
+	if err := k.SpawnContainer(p, k.namedAddr, realm); err != nil {
+		return nil, err
+	}
+	// XXX don't hard code
+	p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+	p.FinalizeEnv("NONE")
+	c, err := container.MkContainer(p, realm)
+	if err != nil {
+		return nil, err
+	}
+	ss.container = c
+	k.WaitStart(p.GetPid())
+	db.DPrintf(db.CONTAINER, "container started %v\n", ss.container)
+
+	return ss, nil
 }
 
 func (k *Kernel) GetProcdIp() string {

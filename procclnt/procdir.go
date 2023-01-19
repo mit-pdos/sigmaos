@@ -120,7 +120,7 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir string, viaProcd bool) error {
+func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir string, how Thow) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
@@ -129,7 +129,7 @@ func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir strin
 	}
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
-	if viaProcd {
+	if how == HPROCD {
 		procfileLink = path.Join(sp.SCHEDD, scheddIp, sp.QUEUE, p.GetPid().String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in

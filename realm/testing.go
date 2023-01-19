@@ -11,6 +11,7 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 )
 
 type TestEnv struct {
@@ -103,7 +104,7 @@ func (e *TestEnv) bootNameds() error {
 
 func (e *TestEnv) bootSigmaMgr() error {
 	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "realm/sigmamgr", []string{})
-	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named(), "", false)
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named(), "", procclnt.HLINUX)
 	if err != nil {
 		return err
 	}

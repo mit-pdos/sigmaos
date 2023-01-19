@@ -98,20 +98,19 @@ func MkContainer(p *proc.Proc, realm string) (*Container, error) {
 	// 	return err
 	// }
 	// ip := json.NetworkSettings.IPAddress
-	// db.DPrintf(db.CONTAINER, "containerwait for %s\n", resp.ID[:10])
-	// statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	// select {
-	// case err := <-errCh:
-	// 	db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
-	// 	return err
-	// case st := <-statusCh:
-	// 	db.DPrintf(db.CONTAINER, "container %s done status %v\n", resp.ID[:10], st)
-	// }
 	return &Container{ctx, cli, resp.ID}, nil
 }
 
-func (c *Container) KillRmContainer() error {
-	db.DPrintf(db.CONTAINER, "KillRmContainer %v\n", c)
+func (c *Container) Remove() error {
+	db.DPrintf(db.CONTAINER, "RmContainer %v\n", c)
+	statusCh, errCh := c.cli.ContainerWait(c.ctx, c.container, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
+		return err
+	case st := <-statusCh:
+		db.DPrintf(db.CONTAINER, "container %s done status %v\n", c.container, st)
+	}
 
 	out, err := c.cli.ContainerLogs(c.ctx, c.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
 	if err != nil {
@@ -119,16 +118,10 @@ func (c *Container) KillRmContainer() error {
 	}
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 
-	if err := c.cli.ContainerKill(c.ctx, c.container, "SIGTERM"); err != nil {
-		db.DPrintf(db.CONTAINER, "ContainerKill %v err %v\n", c, err)
-		return err
-	}
-
 	removeOptions := types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
-
 	if err := c.cli.ContainerRemove(c.ctx, c.container, removeOptions); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", c, err)
 		return err

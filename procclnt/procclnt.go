@@ -22,6 +22,14 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type Thow uint32
+
+const (
+	HPROCD  Thow = iota + 1 // spawned as a sigmos proc
+	HLINUX                  // spawned as a linux process
+	HDOCKER                 // spawned as a container
+)
+
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -46,17 +54,17 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, viaProcd bool) (*exec.Cmd, error) {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, how Thow) (*exec.Cmd, error) {
 	// Always spawn kernel procs on the local kernel.
 	scheddIp := "~local"
 	// Spawn the proc, either through procd, or just by creating the named state
 	// the proc (and its parent) expects.
-	if err := clnt.spawn(scheddIp, viaProcd, p, clnt.getScheddClnt(scheddIp)); err != nil {
+	if err := clnt.spawn(scheddIp, how, p, clnt.getScheddClnt(scheddIp)); err != nil {
 		return nil, err
 	}
-	if !viaProcd {
+	if how == HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
-		// locally.
+		// as a local Linux process
 		return kproc.RunKernelProc(p, namedAddr, realm)
 	}
 	return nil, nil
@@ -65,7 +73,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm st
 // Create the named state the proc (and its parent) expects.
 func (clnt *ProcClnt) SpawnContainer(p *proc.Proc, namedAddr []string, realm string) error {
 	scheddIp := "~local"
-	if err := clnt.spawn(scheddIp, false, p, clnt.getScheddClnt(scheddIp)); err != nil {
+	if err := clnt.spawn(scheddIp, HDOCKER, p, clnt.getScheddClnt(scheddIp)); err != nil {
 		return err
 	}
 	return nil
@@ -84,7 +92,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 		// Update the list of active procds.
 		clnt.updateSchedds()
 		scheddIp := clnt.nextSchedd()
-		err := clnt.spawn(scheddIp, true, ps[i], clnt.getScheddClnt(scheddIp))
+		err := clnt.spawn(scheddIp, HPROCD, ps[i], clnt.getScheddClnt(scheddIp))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -119,7 +127,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 				}
 				scheddIp := clnt.nextSchedd()
 				// Update the list of active procds.
-				err := clnt.spawn(scheddIp, true, p, clnt.getScheddClnt(scheddIp))
+				err := clnt.spawn(scheddIp, HPROCD, p, clnt.getScheddClnt(scheddIp))
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -140,13 +148,13 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", true, p, clnt.getScheddClnt("~local"))
+	return clnt.spawn("~local", HPROCD, p, clnt.getScheddClnt("~local"))
 }
 
 // Spawn a proc on scheddIp. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
-func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
+func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
 	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
@@ -161,13 +169,13 @@ func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *p
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(scheddIp, p, childProcdir, viaProcd); err != nil {
+	if err := clnt.addChild(scheddIp, p, childProcdir, how); err != nil {
 		return err
 	}
 
 	p.SpawnTime = timestamppb.New(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
-	if viaProcd {
+	if how == HPROCD {
 		req := &schedd.SpawnRequest{
 			Realm:     proc.GetRealm(),
 			ProcProto: p.GetProto(),

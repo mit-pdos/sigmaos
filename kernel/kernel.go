@@ -138,7 +138,7 @@ func startSrvs(k *Kernel) error {
 	k.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), k.FsLib, os.Args[0], k.namedAddr)
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
-		err := k.BootSub(s, k.Param, n > 1) // XXX kernel should wait instead of procd?
+		err := k.BootSub(s, nil, k.Param, n > 1) // XXX kernel should wait instead of procd?
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Start %s err %v\n", k.Param, err)
 			return err
@@ -172,6 +172,7 @@ func (k *Kernel) shutdown() {
 			for _, d := range val {
 				d.Wait()
 			}
+
 		}
 	}
 	for _, d := range k.svcs.svcs[sp.NAMEDREL] {
@@ -244,7 +245,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), realmId, false)
+	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), realmId, procclnt.HLINUX)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err
@@ -261,7 +262,7 @@ func (k *Kernel) BootSubs() error {
 	// Procd must boot first, since other services are spawned as
 	// procs.
 	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
-		err := k.BootSub(s, nil, true)
+		err := k.BootSub(s, nil, nil, true)
 		if err != nil {
 			return err
 		}

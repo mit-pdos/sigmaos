@@ -94,7 +94,6 @@ func RunProcd(realm string, spawningSys bool) {
 	}
 
 	pd.work()
-	pd.updm.Shutdown()
 }
 
 func (pd *Procd) getLCProcUtil() float64 {

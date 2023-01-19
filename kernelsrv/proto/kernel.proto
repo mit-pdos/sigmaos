@@ -4,6 +4,7 @@ option go_package = "sigmaos/kernelsrv/proto";
 
 message BootRequest {
   string name = 1;
+  repeated string args = 2;
 }
 
 message BootResult {

@@ -8,5 +8,6 @@ message RunRequest {
   ProcProto procProto = 1;
 }
 
-message RunResponse {
+message RunResult {
 }
+

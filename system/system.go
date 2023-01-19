@@ -54,13 +54,6 @@ func Boot(realmid string, n int, ymldir string) (*System, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO: is the below code necessary?  might be nice to see
-		// all kernels in named.
-		//kaddr := []string{""}
-		//mnt := sp.MkMountService(kaddr)
-		//if err := sys.initkernel.MkMountSymlink(sp.BOOT, mnt); err != nil {
-		//	return nil, err
-		//}
 	}
 	return sys, nil
 }

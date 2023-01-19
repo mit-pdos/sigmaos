@@ -20,9 +20,9 @@ func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 	return &KernelClnt{fsl, pdc}, nil
 }
 
-func (kc *KernelClnt) Boot(s string) error {
+func (kc *KernelClnt) Boot(s string, args []string) error {
 	var res proto.BootResult
-	req := &proto.BootRequest{Name: s}
+	req := &proto.BootRequest{Name: s, Args: args}
 	err := kc.pdc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {
 		return err

@@ -5,6 +5,7 @@ import (
 	"path"
 	"syscall"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -14,30 +15,31 @@ import (
 
 type Subsystem struct {
 	*procclnt.ProcClnt
-	p        *proc.Proc
-	realmId  string
-	procdIp  string
-	viaProcd bool
-	cmd      *exec.Cmd
+	p         *proc.Proc
+	realmId   string
+	procdIp   string
+	how       procclnt.Thow
+	cmd       *exec.Cmd
+	container *container.Container
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, realmId, procdIp string, viaProcd bool) (*Subsystem, error) {
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, p, realmId, procdIp, how, cmd, nil}
+}
+
+func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, how procclnt.Thow) *Subsystem {
+	return makeSubsystemCmd(pclnt, p, realmId, procdIp, how, nil)
+}
+
+func (k *Kernel) bootSubsystem(program string, args []string, realmId, procdIp string, how procclnt.Thow) (*Subsystem, error) {
 	pid := proc.Tpid(path.Base(program) + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, viaProcd)
+	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, how)
 	return ss, ss.Run(k.namedAddr)
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, viaProcd bool) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, realmId, procdIp, viaProcd, nil)
-}
-
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp string, viaProcd bool, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, realmId, procdIp, viaProcd, cmd}
-}
-
 func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.realmId, s.viaProcd)
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.realmId, s.how)
 	if err != nil {
 		return err
 	}
@@ -52,7 +54,7 @@ func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 // Send SIGTERM to a system.
 func (s *Subsystem) Terminate() error {
 	db.DPrintf(db.KERNEL, "Terminate %v\n", s.cmd.Process.Pid)
-	if s.viaProcd {
+	if s.how != procclnt.HLINUX {
 		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
@@ -60,8 +62,8 @@ func (s *Subsystem) Terminate() error {
 
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
-	if s.viaProcd {
-		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through procd: %v", s.p)
+	if s.how == procclnt.HPROCD || s.how == procclnt.HDOCKER {
+		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.Evict(s.p.GetPid())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error killing procd-spawned kernel proc: %v err %v", s.p.GetPid(), err)
@@ -73,13 +75,16 @@ func (s *Subsystem) Kill() error {
 }
 
 func (s *Subsystem) Wait() {
-	if s.viaProcd {
+	if s.how == procclnt.HPROCD || s.how == procclnt.HDOCKER {
 		status, err := s.WaitExit(s.p.GetPid())
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
 		}
 	} else {
 		s.cmd.Wait()
+	}
+	if s.container != nil {
+		s.container.Remove()
 	}
 }
 

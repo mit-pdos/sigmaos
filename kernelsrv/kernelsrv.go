@@ -1,8 +1,6 @@
 package kernelsrv
 
 import (
-	"os"
-
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
@@ -12,21 +10,26 @@ import (
 )
 
 type KernelSrv struct {
-	k *kernel.Kernel
+	k  *kernel.Kernel
+	ch chan struct{}
 }
 
 func RunKernelSrv(k *kernel.Kernel) error {
-	ks := &KernelSrv{k}
+	ks := &KernelSrv{k: k}
+	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
 	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, k.FsLib, ks)
 	if err != nil {
 		return err
 	}
-	return pds.RunServer()
+	go pds.RunServer()
+	<-ks.ch
+	pds.Done()
+	return nil
 }
 
 func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
-	if err := ks.k.BootSub(req.Name, ks.k.Param, false); err != nil {
+	if err := ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
 		return err
 	}
 	return nil
@@ -36,7 +39,7 @@ func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResu
 	if err := ks.k.Shutdown(); err != nil {
 		return err
 	}
-	os.Exit(0) // XXX use more elegant way
+	ks.ch <- struct{}{}
 	return nil
 }
 

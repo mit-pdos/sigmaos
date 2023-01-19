@@ -22,6 +22,7 @@ type Schedd struct {
 	cond      *sync.Cond
 	procdIp   string
 	procd     *protdevclnt.ProtDevClnt
+	schedds   map[string]*protdevclnt.ProtDevClnt
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
@@ -61,6 +62,7 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
+	p.ScheddIp = sd.mfs.MyAddr()
 	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
 	if _, ok := sd.qs[req.Realm]; !ok {
 		sd.qs[req.Realm] = makeQueue()

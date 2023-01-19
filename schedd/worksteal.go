@@ -7,14 +7,28 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
 	proto "sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 	//	"sigmaos/serr"
 )
 
+func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
+	var pdc *protdevclnt.ProtDevClnt
+	var ok bool
+	if pdc, ok = sd.schedds[scheddIp]; !ok {
+		var err error
+		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.FsLib(), path.Join(sp.SCHEDD, scheddIp))
+		if err != nil {
+			db.DFatalf("Error make procd clnt: %v", err)
+		}
+		sd.schedds[scheddIp] = pdc
+	}
+	return pdc
+}
+
 // Try to steal a proc from another schedd. Returns true if successful.
 func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
-	db.DFatalf("TODO")
 	var q string
 	switch p.GetType() {
 	case proc.T_LC:
@@ -34,7 +48,7 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 	}
 	sres := &proto.StealProcResponse{}
 	// TODO: get schedd ip.
-	err := sd.procd.RPC("Procd.StealProc", sreq, sres)
+	err := sd.getScheddClnt(p.ScheddIp).RPC("Procd.StealProc", sreq, sres)
 	if err != nil {
 		db.DFatalf("Error StealProc schedd: %v", err)
 	}

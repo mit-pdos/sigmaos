@@ -47,7 +47,6 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 		PidStr:   p.GetPid().String(),
 	}
 	sres := &proto.StealProcResponse{}
-	// TODO: get schedd ip.
 	err := sd.getScheddClnt(p.ScheddIp).RPC("Procd.StealProc", sreq, sres)
 	if err != nil {
 		db.DFatalf("Error StealProc schedd: %v", err)

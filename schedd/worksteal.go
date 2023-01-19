@@ -57,10 +57,8 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 	if !sres.OK {
 		sd.removeProcFromQueue(p)
 		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
-		db.DPrintf(db.ALWAYS, "Failed to steal proc %v", p.GetPid())
 	} else {
 		db.DPrintf(db.SCHEDD, "Stole proc %v", p.GetPid())
-		db.DPrintf(db.ALWAYS, "Stole proc %v", p.GetPid())
 	}
 	return sres.OK
 }

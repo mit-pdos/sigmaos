@@ -33,6 +33,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
 		qs:        make(map[string]*Queue),
+		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),
 		memfree:   mem.GetTotalMem(),
 	}
@@ -144,7 +145,6 @@ func (sd *Schedd) schedule() {
 					if ok := sd.tryStealProc(r, p); ok {
 						// Proc was claimed successfully.
 						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
-						db.DPrintf(db.ALWAYS, "[%v] stole proc %v", r, p)
 					} else {
 						// Couldn't claim the proc. Move along.
 						continue

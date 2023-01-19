@@ -139,7 +139,7 @@ func (sd *Schedd) schedule() {
 			if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
 				if stolen {
 					// Try to claim the proc.
-					if ok := sd.stealProc(r, p); ok {
+					if ok := sd.tryStealProc(r, p); ok {
 						// Proc was claimed successfully.
 						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
 						db.DPrintf(db.ALWAYS, "[%v] stole proc %v", r, p)

@@ -1,16 +1,19 @@
 package schedd
 
 import (
+	"math/rand"
 	"path"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	proto "sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
+	//	"sigmaos/serr"
 )
 
-// Try to steal a proc. Returns true if successful.
-func (sd *Schedd) stealProc(realm string, p *proc.Proc) bool {
+// Try to steal a proc from another schedd. Returns true if successful.
+func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 	db.DFatalf("TODO")
 	var q string
 	switch p.GetType() {
@@ -52,76 +55,95 @@ func (sd *Schedd) stealProc(realm string, p *proc.Proc) bool {
 	return true
 }
 
-//import (
+// Monitor a Work-Stealing queue.
+func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
+	for {
+		// Wait for a bit to avoid overwhelming named.
+		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
+		stealable := make(map[string][]*proc.Proc, 0)
+		// Wait until there is a proc to steal.
+		sts, err := sd.mfs.FsLib().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
+			sd.mu.Lock()
+			defer sd.mu.Unlock()
+
+			var nStealable int
+			for _, st := range sts {
+				// Read and unmarshal proc.
+				b, err := sd.mfs.FsLib().GetFile(path.Join(wsQueue, st.Name))
+				if err != nil {
+					// Proc may have been stolen already.
+					continue
+				}
+				p := proc.MakeEmptyProc()
+				p.Unmarshal(b)
+
+				// Is the proc a local proc? If so, don't add it to the queue of
+				// stealable procs.
+				if _, ok := sd.qs[p.Realm].pmap[proc.Tpid(st.Name)]; ok {
+					continue
+				}
+				if _, ok := stealable[p.Realm]; !ok {
+					stealable[p.Realm] = make([]*proc.Proc, 0)
+				}
+				// Add to the list of stealable procs
+				stealable[p.Realm] = append(stealable[p.Realm], p)
+				nStealable++
+			}
+			db.DPrintf(db.SCHEDD, "Found %v stealable procs %v", nStealable, stealable)
+			return nStealable == 0
+		})
+		// TODO: special-case error handling?
+		if err != nil { //&& (serr.IsErrVersion(err) || serr.IsErrUnreachable(err)) {
+			db.DPrintf(db.SCHEDD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
+			db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
+			continue
+		}
+		// Shuffle the queues of stealable procs.
+		for _, q := range stealable {
+			rand.Shuffle(len(q), func(i, j int) {
+				q[i], q[j] = q[j], q[i]
+			})
+		}
+		// Store the queue of stealable procs for worker threads to read.
+		sd.mu.Lock()
+		db.DPrintf(db.SCHEDD, "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
+		for r, q := range stealable {
+			if _, ok := sd.qs[r]; !ok {
+				sd.qs[r] = makeQueue()
+			}
+			switch qtype {
+			case proc.T_LC:
+				sd.qs[r].lcws = q
+			case proc.T_BE:
+				sd.qs[r].bews = q
+			default:
+				db.DFatalf("Unrecognized queue type: %v", qtype)
+			}
+		}
+		// Wake up scheduler thread.
+		// TODO: don't wake up if stealable procs aren't new?
+		sd.cond.Signal()
+		sd.mu.Unlock()
+	}
+}
+
+// import (
+//
 //	sp "sigmaos/sigmap"
-//)
 //
-//var WS_LC_QUEUE_PATH = path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_LC)
-//var WS_BE_QUEUE_PATH = path.Join(sp.PROCD_WS, sp.PROCD_RUNQ_BE)
+// )
 //
-//// Thread in charge of stealing procs.
-//func (pd *Procd) startWorkStealingMonitors() {
-//	go pd.monitorWSQueue(sp.PROCD_RUNQ_LC)
-//	go pd.monitorWSQueue(sp.PROCD_RUNQ_BE)
-//}
+// var WS_LC_QUEUE_PATH = path.Join(sp.SCHEDD_WS, sp.SCHEDD_RUNQ_LC)
+// var WS_BE_QUEUE_PATH = path.Join(sp.SCHEDD_WS, sp.SCHEDD_RUNQ_BE)
 //
-//// Monitor a Work-Stealing queue.
-//func (sd *Procd) monitorWSQueue(wsQueue string) {
-//	wsQueuePath := path.Join(sp.PROCD_WS, wsQueue)
-//	for !pd.readDone() {
-//		// Wait for a bit to avoid overwhelming named.
-//		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
-//		// Don't bother reading the BE queue if we couldn't possibly claim the
-//		// proc.
-//		if wsQueue == sp.PROCD_RUNQ_BE && !pd.canClaimBEProc() {
-//			db.DPrintf(db.PROCD, "Skip monitoring BE WS queue because we can't claim another BE proc")
-//			continue
-//		}
-//		var nremote int
-//		stealable := make([]string, 0)
-//		// Wait until there is a proc to steal.
-//		sts, err := pd.ReadDirWatch(wsQueuePath, func(sts []*sp.Stat) bool {
-//			// Discount procs already on this procd
-//			for _, st := range sts {
-//				// See if this proc was spawned on this procd or has been stolen. If
-//				// so, discount it from the count of stealable procs.
-//				b, err := pd.GetFile(path.Join(wsQueuePath, st.Name))
-//				if err == nil {
-//					if !strings.Contains(string(b), pd.memfssrv.MyAddr()) {
-//						nremote++
-//					}
-//					stealable = append(stealable, st.Name)
-//				}
-//			}
-//			db.DPrintf(db.PROCD, "Found %v stealable procs, of which %v belonged to other procds", len(stealable), nremote)
-//			return len(stealable) == 0
-//		})
-//		// Version error may occur if another procd has modified the ws dir, and
-//		// unreachable err may occur if the other procd is shutting down.
-//		if err != nil && (serr.IsErrVersion(err) || serr.IsErrUnreachable(err)) {
-//			db.DPrintf(db.PROCD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
-//			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
-//			continue
-//		}
-//		if err != nil {
-//			pd.perf.Done()
-//			db.DFatalf("Error ReadDirWatch: %v", err)
-//		}
-//		// Shuffle the queue of stealable procs.
-//		rand.Shuffle(len(stealable), func(i, j int) {
-//			stealable[i], stealable[j] = stealable[j], stealable[i]
-//		})
-//		// Store the queue of stealable procs for worker threads to read.
-//		pd.Lock()
-//		db.DPrintf(db.PROCD, "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
-//		pd.wsQueues[wsQueuePath] = stealable
-//		// Wake up waiting workers to try to steal each proc.
-//		for _ = range stealable {
-//			pd.Signal()
-//		}
-//		pd.Unlock()
+// // Thread in charge of stealing procs.
+//
+//	func (pd *Procd) startWorkStealingMonitors() {
+//		go pd.monitorWSQueue(sp.SCHEDD_RUNQ_LC)
+//		go pd.monitorWSQueue(sp.SCHEDD_RUNQ_BE)
 //	}
-//}
+//
+
 //
 //// Find if any procs spawned at this procd haven't been run in a while. If so,
 //// offer them as stealable.
@@ -134,9 +156,9 @@ func (sd *Schedd) stealProc(realm string, p *proc.Proc) bool {
 //		present := make(map[string]string)
 //		// Wait for a bit.
 //		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
-//		runqs := []string{sp.PROCD_RUNQ_LC, sp.PROCD_RUNQ_BE}
+//		runqs := []string{sp.SCHEDD_RUNQ_LC, sp.SCHEDD_RUNQ_BE}
 //		for _, runq := range runqs {
-//			runqPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), runq)
+//			runqPath := path.Join(sp.SCHEDD, pd.memfssrv.MyAddr(), runq)
 //			_, err := pd.ProcessDir(runqPath, func(st *sp.Stat) (bool, error) {
 //				// XXX Based on how we stuff Mtime into sp.Stat (at a second
 //				// granularity), but this should be changed, perhaps.
@@ -156,16 +178,16 @@ func (sd *Schedd) stealProc(realm string, p *proc.Proc) bool {
 //				db.DFatalf("Error ProcessDir: p %v err %v myIP %v", runqPath, err, pd.memfssrv.MyAddr())
 //			}
 //		}
-//		//		db.DPrintf(db.PROCD, "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
+//		//		db.DPrintf(db.SCHEDD, "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
 //		for pid, runq := range toOffer {
-//			db.DPrintf(db.PROCD, "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
-//			runqPath := path.Join(sp.PROCD, pd.memfssrv.MyAddr(), runq)
+//			db.DPrintf(db.SCHEDD, "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
+//			runqPath := path.Join(sp.SCHEDD, pd.memfssrv.MyAddr(), runq)
 //			target := []byte(path.Join(runqPath, pid) + "/")
 //			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
-//			link := path.Join(sp.PROCD_WS, runq, pid)
+//			link := path.Join(sp.SCHEDD_WS, runq, pid)
 //			if err := pd.Symlink(target, link, 0777|sp.DMTMP); err != nil {
 //				if serr.IsErrExists(err) {
-//					db.DPrintf(db.PROCD, "Re-advertise symlink %v", target)
+//					db.DPrintf(db.SCHEDD, "Re-advertise symlink %v", target)
 //				} else {
 //					pd.perf.Done()
 //					db.DFatalf("Error Symlink: %v", err)

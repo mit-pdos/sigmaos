@@ -32,18 +32,33 @@ func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId, procdIp stri
 }
 
 func (k *Kernel) bootSubsystem(program string, args []string, realmId, procdIp string, how procclnt.Thow) (*Subsystem, error) {
-	pid := proc.Tpid(path.Base(program) + "-" + proc.GenPid().String())
+	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
 	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, how)
-	return ss, ss.Run(k.namedAddr)
+	return ss, ss.Run(k.namedAddr, how)
 }
 
-func (s *Subsystem) Run(namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.realmId, s.how)
-	if err != nil {
-		return err
+func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
+	if how == procclnt.HLINUX || how == procclnt.HPROCD {
+		cmd, err := s.SpawnKernelProc(s.p, namedAddr, s.realmId, s.how)
+		if err != nil {
+			return err
+		}
+		s.cmd = cmd
+	} else {
+		realm := s.p.Args[0]
+		if err := s.SpawnContainer(s.p, namedAddr, realm); err != nil {
+			return err
+		}
+		// XXX don't hard code
+		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+		s.p.FinalizeEnv("NONE")
+		c, err := container.MkContainer(s.p, realm)
+		if err != nil {
+			return err
+		}
+		s.container = c
 	}
-	s.cmd = cmd
 	return s.WaitStart(s.p.GetPid())
 }
 

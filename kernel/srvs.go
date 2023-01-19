@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -126,28 +125,8 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, k.procdIp, procclnt.HLINUX)
 }
 
-// XXX clean this up
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	program := "uprocd"
-	realm := args[0]
-	pid := proc.Tpid(program + "-" + proc.GenPid().String())
-	p := proc.MakePrivProcPid(pid, program, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, k.Param.Realm, k.procdIp, procclnt.HDOCKER)
-	if err := k.SpawnContainer(p, k.namedAddr, realm); err != nil {
-		return nil, err
-	}
-	// XXX don't hard code
-	p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
-	p.FinalizeEnv("NONE")
-	c, err := container.MkContainer(p, realm)
-	if err != nil {
-		return nil, err
-	}
-	ss.container = c
-	k.WaitStart(p.GetPid())
-	db.DPrintf(db.CONTAINER, "container started %v\n", ss.container)
-
-	return ss, nil
+	return k.bootSubsystem("uprocd", args, k.Param.Realm, k.procdIp, procclnt.HDOCKER)
 }
 
 func (k *Kernel) GetProcdIp() string {

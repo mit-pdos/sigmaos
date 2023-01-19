@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"syscall"
 
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
@@ -105,7 +104,6 @@ func (sys *System) Shutdown() error {
 		}
 		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
-	// XXX rm container?
 	return nil
 }
 
@@ -114,6 +112,5 @@ func startProxy(IP string, nds []string) *exec.Cmd {
 	cmd := exec.Command("proxyd", append([]string{IP}, nds...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return cmd
 }

@@ -54,12 +54,15 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, how Thow) (*exec.Cmd, error) {
+// Create the named state the proc (and its parent) expects.
+func (clnt *ProcClnt) MkProc(p *proc.Proc, namedAddr []string, realm string, how Thow) error {
 	// Always spawn kernel procs on the local kernel.
 	scheddIp := "~local"
-	// Spawn the proc, either through procd, or just by creating the named state
-	// the proc (and its parent) expects.
-	if err := clnt.spawn(scheddIp, how, p, clnt.getScheddClnt(scheddIp)); err != nil {
+	return clnt.spawn(scheddIp, how, p, clnt.getScheddClnt(scheddIp))
+}
+
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, how Thow) (*exec.Cmd, error) {
+	if err := clnt.MkProc(p, namedAddr, realm, how); err != nil {
 		return nil, err
 	}
 	if how == HLINUX {
@@ -68,15 +71,6 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm st
 		return kproc.RunKernelProc(p, namedAddr, realm)
 	}
 	return nil, nil
-}
-
-// Create the named state the proc (and its parent) expects.
-func (clnt *ProcClnt) SpawnContainer(p *proc.Proc, namedAddr []string, realm string) error {
-	scheddIp := "~local"
-	if err := clnt.spawn(scheddIp, HDOCKER, p, clnt.getScheddClnt(scheddIp)); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Burst-spawn a set of procs across available procds. Return a slice of procs

@@ -47,13 +47,13 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 		s.cmd = cmd
 	} else {
 		realm := s.p.Args[0]
-		if err := s.SpawnContainer(s.p, namedAddr, realm); err != nil {
+		if err := s.MkProc(s.p, namedAddr, realm, procclnt.HDOCKER); err != nil {
 			return err
 		}
 		// XXX don't hard code
 		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
 		s.p.FinalizeEnv("NONE")
-		c, err := container.MkContainer(s.p, realm)
+		c, err := container.StartPContainer(s.p, realm)
 		if err != nil {
 			return err
 		}

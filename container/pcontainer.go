@@ -59,7 +59,7 @@ func MakeProcContainer(cmd *exec.Cmd, realmid string) error {
 	return nil
 }
 
-func MkContainer(p *proc.Proc, realm string) (*Container, error) {
+func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()

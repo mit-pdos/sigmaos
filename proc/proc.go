@@ -5,6 +5,9 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	sp "sigmaos/sigmap"
 )
@@ -167,6 +170,14 @@ func (p *Proc) GetNcore() Tcore {
 
 func (p *Proc) GetMem() Tmem {
 	return Tmem(p.ProcProto.MemInt)
+}
+
+func (p *Proc) SetSpawnTime(t time.Time) {
+	p.SpawnTimePB = timestamppb.New(t)
+}
+
+func (p *Proc) GetSpawnTime() time.Time {
+	return p.SpawnTimePB.AsTime()
 }
 
 func (p *Proc) SetShared(target string) {

@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -156,7 +154,7 @@ func (clnt *ProcClnt) spawn(scheddIp string, viaProcd bool, p *proc.Proc, pdc *p
 		return err
 	}
 
-	p.SpawnTime = timestamppb.New(time.Now())
+	p.SetSpawnTime(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
 	if viaProcd {
 		req := &schedd.SpawnRequest{

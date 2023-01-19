@@ -13,7 +13,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
@@ -84,34 +83,6 @@ func MkContainer(p *proc.Proc, realm string) (*Container, error) {
 		return nil, err
 	}
 	return &Container{ctx, cli, resp.ID, ""}, nil
-}
-
-func (c *Container) Remove() error {
-	db.DPrintf(db.CONTAINER, "RmContainer %v\n", c)
-	statusCh, errCh := c.cli.ContainerWait(c.ctx, c.container, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
-		return err
-	case st := <-statusCh:
-		db.DPrintf(db.CONTAINER, "container %s done status %v\n", c.container, st)
-	}
-
-	out, err := c.cli.ContainerLogs(c.ctx, c.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
-	if err != nil {
-		panic(err)
-	}
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-
-	removeOptions := types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		Force:         true,
-	}
-	if err := c.cli.ContainerRemove(c.ctx, c.container, removeOptions); err != nil {
-		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", c, err)
-		return err
-	}
-	return nil
 }
 
 func Pexec(uproc *proc.Proc) error {

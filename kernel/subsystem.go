@@ -99,7 +99,7 @@ func (s *Subsystem) Wait() {
 		s.cmd.Wait()
 	}
 	if s.container != nil {
-		s.container.Remove()
+		s.container.Shutdown()
 	}
 }
 

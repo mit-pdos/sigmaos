@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/rand"
-	// "sigmaos/seccomp"
 	"sigmaos/proc"
+	"sigmaos/rand"
+	"sigmaos/seccomp"
 )
 
 //
@@ -19,6 +19,14 @@ import (
 //
 
 func RunUProc(uproc *proc.Proc) error {
+	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
+
+	cmd := exec.Command(uproc.Program, uproc.Args...)
+	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
+	cmd.Env = uproc.GetEnv()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	// // Set up new namespaces
 	// cmd.SysProcAttr = &syscall.SysProcAttr{
 	// 	Cloneflags: syscall.CLONE_NEWUTS |
@@ -41,14 +49,6 @@ func RunUProc(uproc *proc.Proc) error {
 	// 		},
 	// 	},
 	// }
-
-	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
-
-	cmd := exec.Command(uproc.Program, uproc.Args...)
-	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
-	cmd.Env = uproc.GetEnv()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	pn, err := exec.LookPath("exec-uproc")
 	if err != nil {
@@ -76,17 +76,17 @@ func RunUProc(uproc *proc.Proc) error {
 func ExecUProc() error {
 	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
 
-	//wl, err := seccomp.ReadWhiteList("./whitelist.yml")
-	//if err != nil {
-	//	return err
-	//}
-	// seccomp.LoadFilter(wl)
+	wl, err := seccomp.ReadWhiteList("seccomp/whitelist.yml")
+	if err != nil {
+		return err
+	}
+	seccomp.LoadFilter(wl)
 
 	pn, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return fmt.Errorf("ContainUProc: LookPath: %v", err)
 	}
-	db.DPrintf(db.CONTAINER, "exec %v %v\n", pn, os.Args)
+	db.DPrintf(db.CONTAINER, "exec %v %v %v\n", pn, os.Args, wl)
 	return syscall.Exec(pn, os.Args, os.Environ())
 }
 

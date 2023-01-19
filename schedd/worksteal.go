@@ -38,6 +38,8 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
+	// Remove the proc from the ws queue.
+	sd.mfs.FsLib().Remove(path.Join(q, p.GetPid().String()))
 	// Create a file for the parent proc to wait on
 	sd.postProcInQueue(p)
 	// Steal from the original schedd.
@@ -56,16 +58,11 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 		sd.removeProcFromQueue(p)
 		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
 		db.DPrintf(db.ALWAYS, "Failed to steal proc %v", p.GetPid())
-		return false
+	} else {
+		db.DPrintf(db.SCHEDD, "Stole proc %v", p.GetPid())
+		db.DPrintf(db.ALWAYS, "Stole proc %v", p.GetPid())
 	}
-	if err := sd.mfs.FsLib().Remove(path.Join(q, p.GetPid().String())); err != nil {
-		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
-		db.DPrintf(db.ALWAYS, "Failed to steal proc %v", p.GetPid())
-		return false
-	}
-	db.DPrintf(db.SCHEDD, "Stole proc %v", p.GetPid())
-	db.DPrintf(db.ALWAYS, "Stole proc %v", p.GetPid())
-	return true
+	return sres.OK
 }
 
 // Monitor a Work-Stealing queue.
@@ -140,79 +137,46 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 	}
 }
 
-// import (
-//
-//	sp "sigmaos/sigmap"
-//
-// )
-//
-// var WS_LC_QUEUE_PATH = path.Join(sp.SCHEDD_WS, sp.SCHEDD_RUNQ_LC)
-// var WS_BE_QUEUE_PATH = path.Join(sp.SCHEDD_WS, sp.SCHEDD_RUNQ_BE)
-//
-// // Thread in charge of stealing procs.
-//
-//	func (pd *Procd) startWorkStealingMonitors() {
-//		go pd.monitorWSQueue(sp.SCHEDD_RUNQ_LC)
-//		go pd.monitorWSQueue(sp.SCHEDD_RUNQ_BE)
-//	}
-//
-
-//
-//// Find if any procs spawned at this procd haven't been run in a while. If so,
-//// offer them as stealable.
-//func (pd *Procd) offerStealableProcs() {
-//	// Store the procs this procd has already offered, and the runq they were
-//	// stored in.
-//	alreadyOffered := make(map[string]string)
-//	for !pd.readDone() {
-//		toOffer := make(map[string]string)
-//		present := make(map[string]string)
-//		// Wait for a bit.
-//		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
-//		runqs := []string{sp.SCHEDD_RUNQ_LC, sp.SCHEDD_RUNQ_BE}
-//		for _, runq := range runqs {
-//			runqPath := path.Join(sp.SCHEDD, pd.memfssrv.MyAddr(), runq)
-//			_, err := pd.ProcessDir(runqPath, func(st *sp.Stat) (bool, error) {
-//				// XXX Based on how we stuff Mtime into sp.Stat (at a second
-//				// granularity), but this should be changed, perhaps.
-//				// If proc has been hanging in the runq for too long, it is a candidate for work-stealing.
-//				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
-//					// Don't re-offer procs which have already been offered.
-//					if _, ok := alreadyOffered[st.Name]; !ok {
-//						toOffer[st.Name] = runq
-//					}
-//					present[st.Name] = runq
-//					alreadyOffered[st.Name] = runq
-//				}
-//				return false, nil
-//			})
-//			if err != nil {
-//				pd.perf.Done()
-//				db.DFatalf("Error ProcessDir: p %v err %v myIP %v", runqPath, err, pd.memfssrv.MyAddr())
-//			}
-//		}
-//		//		db.DPrintf(db.SCHEDD, "Procd %v already offered %v", pd.memfssrv.MyAddr(), alreadyOffered)
-//		for pid, runq := range toOffer {
-//			db.DPrintf(db.SCHEDD, "Procd %v offering stealable proc %v", pd.memfssrv.MyAddr(), pid)
-//			runqPath := path.Join(sp.SCHEDD, pd.memfssrv.MyAddr(), runq)
-//			target := []byte(path.Join(runqPath, pid) + "/")
-//			//			target := fslib.MakeTargetTree(pd.memfssrv.MyAddr(), []string{runq, pid})
-//			link := path.Join(sp.SCHEDD_WS, runq, pid)
-//			if err := pd.Symlink(target, link, 0777|sp.DMTMP); err != nil {
-//				if serr.IsErrExists(err) {
-//					db.DPrintf(db.SCHEDD, "Re-advertise symlink %v", target)
-//				} else {
-//					pd.perf.Done()
-//					db.DFatalf("Error Symlink: %v", err)
-//				}
-//			}
-//		}
-//		// Clean up procs which are no longer in the queue.
-//		for pid := range alreadyOffered {
-//			// Proc is no longer in the queue, so forget about it.
-//			if _, ok := present[pid]; !ok {
-//				delete(alreadyOffered, pid)
-//			}
-//		}
-//	}
-//}
+// Find if any procs spawned at this schedd haven't been run in a while. If so,
+// offer them as stealable.
+func (sd *Schedd) offerStealableProcs() {
+	// Store the procs this schedd has already offered to avoid re-offering them.
+	// TODO: clear this list occasionally.
+	alreadyOffered := make(map[proc.Tpid]bool)
+	for {
+		toOffer := make([]*proc.Proc, 0)
+		// Wait for a bit.
+		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
+		sd.mu.Lock()
+		for _, q := range sd.qs {
+			// Iterate the procs in each realm's queue.
+			for _, p := range q.pmap {
+				// If this proc was already offered, skip it.
+				if _, ok := alreadyOffered[p.GetPid()]; ok {
+					continue
+				}
+				// If this proc has not been spawned for a long time, prepare to offer
+				// it as stealable.
+				if time.Since(p.GetSpawnTime()) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
+					toOffer = append(toOffer, p)
+				}
+			}
+		}
+		sd.mu.Unlock()
+		for _, p := range toOffer {
+			alreadyOffered[p.GetPid()] = true
+			var q string
+			switch p.GetType() {
+			case proc.T_LC:
+				q = sp.WS_RUNQ_LC
+			case proc.T_BE:
+				q = sp.WS_RUNQ_BE
+			default:
+				db.DFatalf("Unrecognized proc type: %v", p.GetType())
+			}
+			if _, err := sd.mfs.FsLib().PutFile(path.Join(q, p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
+				db.DFatalf("Error PutFile: %v", err)
+			}
+		}
+	}
+}

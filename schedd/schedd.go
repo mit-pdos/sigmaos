@@ -181,5 +181,6 @@ func RunSchedd() error {
 	go sd.schedule()
 	go sd.monitorWSQueue(sp.WS_RUNQ_LC, proc.T_LC)
 	go sd.monitorWSQueue(sp.WS_RUNQ_BE, proc.T_BE)
+	go sd.offerStealableProcs()
 	return pds.RunServer()
 }

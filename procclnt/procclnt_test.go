@@ -519,9 +519,6 @@ func TestReserveCores(t *testing.T) {
 }
 
 func TestWorkStealing(t *testing.T) {
-	assert.True(t, false, "WorkStealing not implemented")
-	return
-
 	ts := test.MakeTstateAll(t)
 
 	err := ts.BootNode(1)

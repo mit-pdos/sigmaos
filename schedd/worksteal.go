@@ -9,8 +9,8 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	proto "sigmaos/schedd/proto"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	//	"sigmaos/serr"
 )
 
 func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
@@ -66,8 +66,6 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 // Monitor a Work-Stealing queue.
 func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 	for {
-		// Wait for a bit to avoid overwhelming named.
-		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 		stealable := make(map[string][]*proc.Proc, 0)
 		// Wait until there is a proc to steal.
 		sts, err := sd.mfs.FsLib().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
@@ -100,11 +98,14 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 			db.DPrintf(db.SCHEDD, "Found %v stealable procs %v", nStealable, stealable)
 			return nStealable == 0
 		})
-		// TODO: special-case error handling?
-		if err != nil { //&& (serr.IsErrVersion(err) || serr.IsErrUnreachable(err)) {
+		// Since many schedds may be modifying the WS dir, we may get version
+		// errors.
+		if err != nil && serr.IsErrVersion(err) {
 			db.DPrintf(db.SCHEDD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
-			db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
 			continue
+		}
+		if err != nil {
+			db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
 		}
 		// Shuffle the queues of stealable procs.
 		for _, q := range stealable {
@@ -132,6 +133,8 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 		// TODO: don't wake up if stealable procs aren't new?
 		sd.cond.Signal()
 		sd.mu.Unlock()
+		// Wait for a bit to avoid overwhelming named.
+		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 	}
 }
 

@@ -31,5 +31,10 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err
 	}
-	return &Container{ctx, cli, resp.ID, ""}, nil
+	json, err1 := cli.ContainerInspect(ctx, resp.ID)
+	if err1 != nil {
+		return nil, err
+	}
+	ip := json.NetworkSettings.IPAddress
+	return &Container{ctx, cli, resp.ID, ip}, nil
 }

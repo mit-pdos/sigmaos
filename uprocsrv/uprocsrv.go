@@ -26,13 +26,6 @@ func RunUprocSrv(realm string) error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.UPROCSRV, "%v: makesrv ok\n", proc.GetName())
-	fsl := pds.MemFs.FsLib()
-	sts, err := fsl.GetDir(pn + "/")
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.UPROCSRV, "names %v: %v\n", pn, sp.Names(sts))
 	err = pds.RunServer()
 	db.DPrintf(db.UPROCSRV, "RunServer done %v\n", err)
 	return nil

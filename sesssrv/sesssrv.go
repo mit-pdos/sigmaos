@@ -112,6 +112,10 @@ func (ssrv *SessSrv) SetFsl(fsl *fslib.FsLib) {
 	ssrv.fsl = fsl
 }
 
+func (ssrv *SessSrv) FsLib() *fslib.FsLib {
+	return ssrv.fsl
+}
+
 func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
 	return ssrv.sct
 }

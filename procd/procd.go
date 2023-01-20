@@ -17,6 +17,7 @@ import (
 	"sigmaos/procd/proto"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
+	"sigmaos/realmclnt"
 	scheddproto "sigmaos/schedd/proto"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -39,6 +40,7 @@ type Procd struct {
 	memfssrv       *memfssrv.MemFs
 	schedd         *protdevclnt.ProtDevClnt
 	updm           *uprocclnt.UprocdMgr
+	rm             *realmclnt.RealmMgr
 	pds            *protdevsrv.ProtDevSrv
 	fsl            *fslib.FsLib
 }
@@ -82,7 +84,8 @@ func RunProcd(realm string, spawningSys bool) {
 	// Make a directory in which to put stealable procs.
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
-	pd.updm = uprocclnt.MakeUprocdMgr(pd.fsl, pd.procclnt)
+	pd.updm = uprocclnt.MakeUprocdMgr(pd.fsl)
+	pd.rm = realmclnt.MakeRealmMgr(pd.fsl)
 	// Notify schedd that the proc is done running.
 	req := &scheddproto.RegisterRequest{
 		ProcdIp: pd.memfssrv.MyAddr(),

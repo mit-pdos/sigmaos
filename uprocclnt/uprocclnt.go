@@ -7,7 +7,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
@@ -16,13 +15,12 @@ import (
 type UprocdMgr struct {
 	mu    sync.Mutex
 	fsl   *fslib.FsLib
-	pclnt *procclnt.ProcClnt
 	kclnt *kernelclnt.KernelClnt
 	pdcs  map[sp.Trealm]*protdevclnt.ProtDevClnt
 }
 
-func MakeUprocdMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *UprocdMgr {
-	updm := &UprocdMgr{fsl: fsl, pclnt: pclnt}
+func MakeUprocdMgr(fsl *fslib.FsLib) *UprocdMgr {
+	updm := &UprocdMgr{fsl: fsl}
 	updm.pdcs = make(map[sp.Trealm]*protdevclnt.ProtDevClnt)
 	return updm
 }

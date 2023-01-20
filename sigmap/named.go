@@ -7,6 +7,8 @@ const (
 	NAMEDREL    = "named"
 	REALMDREL   = "realmd"
 	REALMD      = NAMED + REALMDREL
+	REALMSREL   = "realms"
+	REALMS      = NAMED + REALMDREL + "/" + REALMSREL
 	BOOTREL     = "boot"
 	BOOT        = NAMED + BOOTREL + "/"
 	TMPREL      = "tmp"

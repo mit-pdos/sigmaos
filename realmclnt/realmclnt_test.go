@@ -31,7 +31,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	err = rc.MakeRealm(realm)
 	assert.Nil(t, err)
 
-	pn := path.Join(sp.REALMD, string(realm))
+	pn := path.Join(sp.REALMS, string(realm))
 	sts, err := ts.GetDir(pn + "/")
 	assert.Nil(t, err)
 

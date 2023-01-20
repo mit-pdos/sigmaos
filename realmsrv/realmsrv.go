@@ -28,6 +28,11 @@ func RunRealmSrv() error {
 	if err != nil {
 		return err
 	}
+	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD)
+	if serr != nil {
+		return serr
+	}
+
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
 	rs.fsl = pds.MemFs.FsLib()
 	rs.pclnt = pds.MemFs.ProcClnt()
@@ -37,7 +42,7 @@ func RunRealmSrv() error {
 
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
-	pn := path.Join(sp.REALMD, req.Realm)
+	pn := path.Join(sp.REALMS, req.Realm)
 	p := proc.MakeProc("named", []string{":1111", req.Realm, pn})
 	if err := rm.pclnt.Spawn(p); err != nil {
 		return err

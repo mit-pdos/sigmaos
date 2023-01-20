@@ -5,8 +5,6 @@ package sigmap
 const (
 	NAMED       = "name/"
 	NAMEDREL    = "named"
-	REALMSREL   = "realms"
-	REALMS      = NAMED + REALMSREL + "/"
 	REALMDREL   = "realmd"
 	REALMD      = NAMED + REALMDREL
 	BOOTREL     = "boot"

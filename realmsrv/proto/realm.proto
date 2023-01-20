@@ -7,5 +7,6 @@ message MakeRequest {
 }
 
 message MakeResult {
+  repeated string namedAddr = 1;
 }
 

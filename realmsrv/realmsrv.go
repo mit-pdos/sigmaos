@@ -31,10 +31,10 @@ func RunRealmSrv() error {
 	}
 	db.DPrintf(db.REALMD, "names %v: %v\n", sp.REALMD, sp.Names(sts))
 	err = pds.RunServer()
-	db.DPrintf(db.REALMD, "RunServer done %v\n", err)
 	return nil
 }
 
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	return nil
 }

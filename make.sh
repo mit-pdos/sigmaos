@@ -52,9 +52,12 @@ echo $WHAT
 if [ $WHAT == "kernel" ]; then
     mkdir -p bin/kernel
     WHAT="kernel linux"
-else
+elif [ $WHAT == "user" ]; then
     mkdir -p bin/user
     WHAT="user"
+else
+    mkdir -p bin/linux
+    WHAT="linux"
 fi
 
 LDF="-X sigmaos/sigmap.Target=$TARGET"

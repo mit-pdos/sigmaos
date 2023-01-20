@@ -90,12 +90,6 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		// XXX hardcoded ROOTREALM for now
-		pn, err := p.pd.rc.LookupNamed("xxx")
-		if err != nil {
-			return err
-		}
-		db.DPrintf(db.ALWAYS, "LookupNamed: %v\n", pn)
 		if err := p.pd.updm.MakeUProc(p.attr, "rootrealm"); err != nil {
 			db.DPrintf(db.ALWAYS, "MakeUProc run error: %v, %v\n", p.attr, err)
 			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))

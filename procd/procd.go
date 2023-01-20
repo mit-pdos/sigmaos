@@ -17,7 +17,6 @@ import (
 	"sigmaos/procd/proto"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
-	"sigmaos/realmclnt"
 	scheddproto "sigmaos/schedd/proto"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -40,7 +39,6 @@ type Procd struct {
 	memfssrv       *memfssrv.MemFs
 	schedd         *protdevclnt.ProtDevClnt
 	updm           *uprocclnt.UprocdMgr
-	rc             *realmclnt.RealmClnt
 	pds            *protdevsrv.ProtDevSrv
 	fsl            *fslib.FsLib
 }
@@ -85,7 +83,6 @@ func RunProcd(realm string, spawningSys bool) {
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 	pd.updm = uprocclnt.MakeUprocdMgr(pd.fsl)
-	pd.rc = realmclnt.MakeRealmClnt(pd.fsl)
 	// Notify schedd that the proc is done running.
 	req := &scheddproto.RegisterRequest{
 		ProcdIp: pd.memfssrv.MyAddr(),
@@ -168,7 +165,7 @@ func (pd *Procd) runProc(p *LinuxProc) error {
 	if !p.attr.IsPrivilegedProc() {
 		// Download the bin from s3, if it isn't already cached locally.
 		if err := pd.downloadProcBin(p.attr); err != nil {
-			db.DFatalf("runProc: failed to download proc %v\n", p)
+			db.DFatalf("runProc: failed to download proc %v\n", p.attr)
 			return err
 		}
 	}

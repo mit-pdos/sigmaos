@@ -5,14 +5,18 @@ import (
 	// "sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
 	sp "sigmaos/sigmap"
 )
 
 type RealmSrv struct {
-	ch chan struct{}
+	fsl   *fslib.FsLib
+	pclnt *procclnt.ProcClnt
+	ch    chan struct{}
 }
 
 func RunRealmSrv() error {
@@ -24,8 +28,9 @@ func RunRealmSrv() error {
 		return err
 	}
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
-	fsl := pds.MemFs.FsLib()
-	sts, err := fsl.GetDir(sp.REALMD + "/")
+	rs.fsl = pds.MemFs.FsLib()
+	rs.pclnt = pds.MemFs.ProcClnt()
+	sts, err := rs.fsl.GetDir(sp.REALMD + "/")
 	if err != nil {
 		return err
 	}
@@ -36,5 +41,13 @@ func RunRealmSrv() error {
 
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
+
+	p := proc.MakeProc("named", []string{":1111", "testrealm"})
+	if err := rm.pclnt.Spawn(p); err != nil {
+		return err
+	}
+	if err := rm.pclnt.WaitStart(p.GetPid()); err != nil {
+		return err
+	}
 	return nil
 }

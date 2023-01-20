@@ -14,6 +14,7 @@ import (
 
 type FsLib struct {
 	*fdclnt.FdClient
+	namedAddr []string
 }
 
 func NamedAddrs() string {
@@ -59,9 +60,10 @@ func StringToNamedAddrs(s string) []string {
 	return strings.Split(s, ",")
 }
 
-func MakeFsLibBase(uname, lip string) *FsLib {
+func MakeFsLibBase(uname, lip string, namedAddr []string) *FsLib {
 	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000))}
+	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
+		namedAddr}
 }
 
 func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
@@ -73,7 +75,7 @@ func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
 }
 
 func MakeFsLibAddr(uname string, lip string, addrs []string) (*FsLib, error) {
-	fl := MakeFsLibBase(uname, lip)
+	fl := MakeFsLibBase(uname, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
 		return nil, err
@@ -87,6 +89,10 @@ func MakeFsLibNamed(uname string, addrs []string) (*FsLib, error) {
 
 func MakeFsLib(uname string) (*FsLib, error) {
 	return MakeFsLibNamed(uname, Named())
+}
+
+func (fl *FsLib) NamedAddr() []string {
+	return fl.namedAddr
 }
 
 func (fl *FsLib) Exit() error {

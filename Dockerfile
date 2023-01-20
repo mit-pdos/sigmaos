@@ -12,5 +12,7 @@ RUN go mod download
 FROM base AS kernel
 COPY . .
 RUN ./make.sh --norace kernel
+RUN ./make.sh --norace user
+RUN cp bin/kernel/named bin/user/named
 
 CMD ["bin/linux/bootkernel", "bootkernelclnt/bootall.yml"]

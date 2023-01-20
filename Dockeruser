@@ -1,4 +1,4 @@
 # syntax=docker/dockerfile:1
 
 FROM sigmaos AS user
-RUN ./make.sh --norace user
+# maybe delete some files?

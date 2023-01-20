@@ -8,18 +8,23 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/procclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 var rootP = path.Path{""}
 
-func (fs *MemFs) Root() fs.Dir {
-	return fs.root
+func (mfs *MemFs) Root() fs.Dir {
+	return mfs.root
 }
 
-func (fs *MemFs) FsLib() *fslib.FsLib {
-	return fs.fsl
+func (mfs *MemFs) FsLib() *fslib.FsLib {
+	return mfs.fsl
+}
+
+func (mfs *MemFs) ProcClnt() *procclnt.ProcClnt {
+	return mfs.procclnt
 }
 
 // Note: MkDev() sets parent

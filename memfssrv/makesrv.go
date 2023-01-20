@@ -42,11 +42,11 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	}
 	var srv *sesssrv.SessSrv
 	var err error
-	// If this is not the init named, initialize the fslib & procclnt
-	if !isInitNamed {
-		srv, _, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
-	} else {
+	if isInitNamed {
 		srv, err = fslibsrv.MakeReplServerFsl(root, addr, path, nil, nil, conf)
+	} else {
+		// If this is not the init named, initialize the fslib & procclnt
+		srv, _, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
 	}
 	if err != nil {
 		return nil, serr.MkErrError(err)

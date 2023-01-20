@@ -1,56 +1,48 @@
 package realmclnt
 
 import (
+	"path"
 	"sync"
 
 	"sigmaos/fslib"
-	"sigmaos/kernelclnt"
+	"sigmaos/protdevclnt"
 	sp "sigmaos/sigmap"
 )
 
-type RealmMgr struct {
-	mu     sync.Mutex
-	fsl    *fslib.FsLib
-	kclnt  *kernelclnt.KernelClnt
-	nameds map[sp.Trealm][]string
+type RealmClnt struct {
+	mu sync.Mutex
+	*fslib.FsLib
+	pdc *protdevclnt.ProtDevClnt
 }
 
-func MakeRealmMgr(fsl *fslib.FsLib) *RealmMgr {
-	rm := &RealmMgr{fsl: fsl}
-	rm.nameds = make(map[sp.Trealm][]string)
+func MakeRealmClnt(fsl *fslib.FsLib) *RealmClnt {
+	rm := &RealmClnt{FsLib: fsl}
 	return rm
 }
 
-func (rm *RealmMgr) startNamed(realm sp.Trealm) error {
-	if rm.kclnt == nil {
-		kclnt, err := kernelclnt.MakeKernelClnt(rm.fsl, sp.BOOT+"~local/")
+func (rc *RealmClnt) lookupRealmSrv() (string, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	if rc.pdc == nil {
+		pdc, err := protdevclnt.MkProtDevClnt(rc.FsLib, sp.REALMD)
 		if err != nil {
-			return err
+			return "", err
 		}
-		rm.kclnt = kclnt
+		rc.pdc = pdc
 	}
-	return rm.kclnt.Boot("named", []string{"realm"})
+	return "", nil
 }
 
-func (rm *RealmMgr) lookupRealm(realm sp.Trealm) ([]string, error) {
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-	nds, ok := rm.nameds[realm]
-	if !ok {
-		if err := rm.startNamed(realm); err != nil {
-			return nil, err
-		}
-		rm.nameds[realm] = []string{}
-		nds = []string{}
+func (rc *RealmClnt) LookupNamed(realm sp.Trealm) (string, error) {
+	pn := path.Join(sp.REALMS, string(realm))
+	_, err := rc.GetDir(pn)
+	if err == nil {
+		return pn, nil
 	}
-	return nds, nil
-}
-
-// XXX return pn?
-func (rm *RealmMgr) LookupNamed(realm sp.Trealm) ([]string, error) {
-	nds, err := rm.lookupRealm(realm)
+	_, err = rc.lookupRealmSrv()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return nds, nil
+	// contact realmsrv
+	return "", nil
 }

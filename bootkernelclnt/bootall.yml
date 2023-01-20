@@ -3,4 +3,6 @@ services:
   - named
   - schedd
   - procd
+  - realmd
   - ux
+

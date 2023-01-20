@@ -46,6 +46,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) error {
 		ss, err = k.bootDbd(p.Hostip)
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
+	case sp.REALMDREL:
+		ss, err = k.bootRealmd()
 	case sp.UPROCDREL:
 		ss, err = k.bootUprocd(args)
 	default:
@@ -107,6 +109,10 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 		k.procdIp = ss.GetIp(k.FsLib)
 	}
 	return ss, nil
+}
+
+func (k *Kernel) bootRealmd() (*Subsystem, error) {
+	return k.bootSubsystem("realmd", []string{}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {

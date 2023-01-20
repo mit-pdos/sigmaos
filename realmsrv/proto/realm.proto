@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/realmsrv/proto";
+
+message MakeRequest {
+  string realm = 1;
+}
+
+message MakeResult {
+}
+

@@ -84,6 +84,7 @@ const (
 const (
 	SIGMAMGR     Tselector = "SIGMAMGR"
 	SIGMAMGR_ERR           = SIGMAMGR + ERR
+	REALMD                 = "REALMD"
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"

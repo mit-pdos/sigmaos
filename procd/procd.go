@@ -40,7 +40,7 @@ type Procd struct {
 	memfssrv       *memfssrv.MemFs
 	schedd         *protdevclnt.ProtDevClnt
 	updm           *uprocclnt.UprocdMgr
-	rm             *realmclnt.RealmMgr
+	rc             *realmclnt.RealmClnt
 	pds            *protdevsrv.ProtDevSrv
 	fsl            *fslib.FsLib
 }
@@ -85,7 +85,7 @@ func RunProcd(realm string, spawningSys bool) {
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
 	pd.updm = uprocclnt.MakeUprocdMgr(pd.fsl)
-	pd.rm = realmclnt.MakeRealmMgr(pd.fsl)
+	pd.rc = realmclnt.MakeRealmClnt(pd.fsl)
 	// Notify schedd that the proc is done running.
 	req := &scheddproto.RegisterRequest{
 		ProcdIp: pd.memfssrv.MyAddr(),

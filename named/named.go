@@ -29,24 +29,29 @@ func Run(args []string) {
 
 	addr := args[1]
 	realmId := args[2]
+	pn := args[3]
+
+	db.DPrintf(db.NAMED, "Named starting rid:%v pn %v addr:%v\n", realmId, pn, addr)
+
 	var ss *sesssrv.SessSrv
 	var err *serr.Err
+
 	// Replicate?
-	if len(args) >= 4 {
+	if len(args) >= 5 {
 		var config repl.Config = nil
 		if args[3] == "dummy" {
 			config = repldummy.MakeConfig()
 		} else {
-			id, r := strconv.Atoi(args[3])
+			id, r := strconv.Atoi(args[4])
 			if r != nil {
 				db.DFatalf("Couldn't convert id string: %v", err)
 			}
-			peers := strings.Split(args[4], ",")
+			peers := strings.Split(args[5], ",")
 			config = replraft.MakeRaftConfig(id, peers, true)
 		}
-		ss, err = memfssrv.MakeReplMemFs(addr, "", "named", config)
+		ss, err = memfssrv.MakeReplMemFs(addr, pn, "named", config)
 	} else {
-		ss, err = memfssrv.MakeReplMemFs(addr, "", "named", nil)
+		ss, err = memfssrv.MakeReplMemFs(addr, pn, "named", nil)
 	}
 
 	if err != nil {
@@ -57,7 +62,8 @@ func Run(args []string) {
 
 	initfs(ss)
 
-	db.DPrintf(db.NAMED, "Named started rid:%v ip:%v", realmId, ss.MyAddr())
+	fsl := ss.FsLib()
+	db.DPrintf(db.NAMED, "Named started rid:%v pn %v addr:%v named %v", realmId, pn, ss.MyAddr(), fsl.NamedAddr())
 
 	ss.Serve()
 	ss.Done()

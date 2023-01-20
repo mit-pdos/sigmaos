@@ -183,7 +183,7 @@ func (k *Kernel) shutdown() {
 }
 
 func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId string) *proc.Proc {
-	args := []string{addr, realmId}
+	args := []string{addr, realmId, ""}
 	// If we're running replicated...
 	if replicate {
 		// Add an offset to the peers' port addresses.

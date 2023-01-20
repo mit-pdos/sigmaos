@@ -2,14 +2,19 @@ package realmclnt_test
 
 import (
 	"fmt"
+	"log"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
 	// "sigmaos/perf"
+	"sigmaos/fslib"
+	"sigmaos/named"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -19,12 +24,20 @@ const (
 
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
+	realm := sp.Trealm("testrealm")
 	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
 	assert.Nil(t, err)
 
-	err = rc.MakeRealm("testrealm")
+	err = rc.MakeRealm(realm)
 	assert.Nil(t, err)
+
+	pn := path.Join(sp.REALMD, string(realm))
+	sts, err := ts.GetDir(pn + "/")
+	assert.Nil(t, err)
+
+	log.Printf("names %v\n", sp.Names(sts))
+
+	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

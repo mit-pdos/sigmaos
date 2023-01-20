@@ -2,6 +2,7 @@ package realmsrv
 
 import (
 	"os"
+	"path"
 	// "sync"
 
 	db "sigmaos/debug"
@@ -30,24 +31,20 @@ func RunRealmSrv() error {
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
 	rs.fsl = pds.MemFs.FsLib()
 	rs.pclnt = pds.MemFs.ProcClnt()
-	sts, err := rs.fsl.GetDir(sp.REALMD + "/")
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.REALMD, "names %v: %v\n", sp.REALMD, sp.Names(sts))
 	err = pds.RunServer()
 	return nil
 }
 
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
-
-	p := proc.MakeProc("named", []string{":1111", "testrealm"})
+	pn := path.Join(sp.REALMD, req.Realm)
+	p := proc.MakeProc("named", []string{":1111", req.Realm, pn})
 	if err := rm.pclnt.Spawn(p); err != nil {
 		return err
 	}
 	if err := rm.pclnt.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
+	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", req.Realm)
 	return nil
 }

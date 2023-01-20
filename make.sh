@@ -32,7 +32,7 @@ while [[ "$#" -gt 0 ]]; do
     usage
     exit 0
     ;;
-  kernel|user)
+  kernel|user|linux)
     WHAT=$1
     shift
     ;;

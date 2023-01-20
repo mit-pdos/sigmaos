@@ -12,6 +12,7 @@ RUN go mod download
 FROM base AS kernel
 COPY . .
 RUN ./make.sh --norace kernel
+# XXX only necessary to make "cache" of binaries work in procd
 RUN ./make.sh --norace user
 RUN cp bin/kernel/named bin/user/named
 

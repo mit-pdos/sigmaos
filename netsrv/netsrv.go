@@ -6,10 +6,11 @@ import (
 	"io"
 	"net"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -21,6 +22,22 @@ type NetServer struct {
 	sesssrv   sp.SessServer
 	marshal   MarshalF
 	unmarshal UnmarshalF
+}
+
+func (srv *NetServer) setSrvAddr(addr string) error {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return err
+	}
+	if host == "::" {
+		ip, err := container.LocalIP()
+		if err != nil {
+			return err
+		}
+		addr = net.JoinHostPort(ip, port)
+	}
+	srv.addr = addr
+	return nil
 }
 
 func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *NetServer {
@@ -35,7 +52,7 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	srv.addr = l.Addr().String()
+	srv.setSrvAddr(l.Addr().String())
 	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv

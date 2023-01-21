@@ -118,10 +118,6 @@ func GetSigmaRootFs() string {
 	return os.Getenv(SIGMAROOTFS)
 }
 
-func SetRealm(realm sp.Trealm) {
-	os.Setenv(SIGMAREALM, string(realm))
-}
-
 func GetRealm() string {
 	return os.Getenv(SIGMAREALM)
 }

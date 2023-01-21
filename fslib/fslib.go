@@ -97,6 +97,10 @@ func (fl *FsLib) NamedAddr() []string {
 	return fl.namedAddr
 }
 
+func (fl *FsLib) Realm() sp.Trealm {
+	return fl.realm
+}
+
 func (fl *FsLib) Exit() error {
 	return fl.PathClnt.Exit()
 }

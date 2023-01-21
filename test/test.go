@@ -82,7 +82,6 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 
 func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
-	proc.SetRealm(sp.ROOTREALM)
 	var s *system.System
 	var err error
 	if full {

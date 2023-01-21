@@ -9,6 +9,7 @@ import (
 	"sigmaos/fslibsrv"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
+	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/serr"
@@ -34,7 +35,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
-	for _, a := range fslib.Named() {
+	for _, a := range proc.Named() {
 		if a == addr {
 			isInitNamed = true
 			break

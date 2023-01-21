@@ -40,12 +40,12 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// XXX resolve mounts to find server?
 	// Mount procdir
-	mountDir(fsl, fslib.Named(), proc.GetProcDir(), proc.PROCDIR)
+	mountDir(fsl, proc.Named(), proc.GetProcDir(), proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
-	mountDir(fsl, fslib.Named(), proc.GetParentDir(), proc.PARENTDIR)
+	mountDir(fsl, proc.Named(), proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fslib.Named(), sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(proc.Named(), sp.PROCDREL, sp.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}

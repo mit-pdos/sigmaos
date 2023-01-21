@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -30,7 +29,7 @@ func (pd *Procd) makeFs() {
 	if err != nil {
 		db.DFatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
-	procclnt.MountPids(pd.fsl, fslib.Named())
+	procclnt.MountPids(pd.fsl, proc.Named())
 
 	// Set up runq dir
 	dirs := []string{sp.PROCD_RUNNING, proc.PIDS}

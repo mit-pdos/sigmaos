@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/kproc"
 	"sigmaos/proc"
@@ -60,7 +59,7 @@ func (e *TestEnv) BootMachined() error {
 	var err error
 	pid := proc.Tpid("machined-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "realm/machined", []string{})
-	machined, err := kproc.RunKernelProc(p, fslib.Named(), "")
+	machined, err := kproc.RunKernelProc(p, proc.Named(), "")
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err
@@ -92,7 +91,7 @@ func (e *TestEnv) Shutdown() {
 }
 
 func (e *TestEnv) bootNameds() error {
-	namedCmds, err := BootNamedReplicas(fslib.Named(), kernel.NO_REALM)
+	namedCmds, err := BootNamedReplicas(proc.Named(), kernel.NO_REALM)
 	e.namedCmds = namedCmds
 	// Start a named instance.
 	if err != nil {
@@ -104,7 +103,7 @@ func (e *TestEnv) bootNameds() error {
 
 func (e *TestEnv) bootSigmaMgr() error {
 	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "realm/sigmamgr", []string{})
-	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named(), "", procclnt.HLINUX)
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, proc.Named(), "", procclnt.HLINUX)
 	if err != nil {
 		return err
 	}

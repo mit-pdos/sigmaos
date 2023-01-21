@@ -1,12 +1,6 @@
 package fslib
 
 import (
-	"net"
-	"os"
-	"runtime/debug"
-	"strings"
-
-	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -17,49 +11,6 @@ type FsLib struct {
 	*fdclnt.FdClient
 	realm     sp.Trealm
 	namedAddr []string
-}
-
-func NamedAddrs() string {
-	addrs := proc.GetSigmaNamed()
-	if addrs == "" {
-		debug.PrintStack()
-		db.DFatalf("Getenv error: missing SIGMANAMED")
-	}
-	return addrs
-}
-
-func Named() []string {
-	return StringToNamedAddrs(NamedAddrs())
-}
-
-// XXX move to proc/env.go?
-func SetSigmaNamed(nds []string) {
-	s := strings.Join(nds, ",")
-	os.Setenv(proc.SIGMANAMED, s)
-}
-
-func SetNamedIP(ip string, ports []string) ([]string, error) {
-	nameds := make([]string, len(ports))
-	for i, s := range ports {
-		host, port, err := net.SplitHostPort(s)
-		if err != nil {
-			return nil, err
-		}
-		if host != "" {
-			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, host, port)
-		}
-		nameds[i] = net.JoinHostPort(ip, port)
-	}
-	return nameds, nil
-}
-
-// XXX clean up.
-func NamedAddrsToString(addrs []string) string {
-	return strings.Join(addrs, ",")
-}
-
-func StringToNamedAddrs(s string) []string {
-	return strings.Split(s, ",")
 }
 
 func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr []string) *FsLib {
@@ -85,6 +36,7 @@ func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (
 	return fl, nil
 }
 
+// get realm from "caller"
 func MakeFsLibAddr(uname, lip string, addrs []string) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
@@ -99,7 +51,7 @@ func MakeFsLibNamed(uname string, addrs []string) (*FsLib, error) {
 }
 
 func MakeFsLib(uname string) (*FsLib, error) {
-	return MakeFsLibNamed(uname, Named())
+	return MakeFsLibNamed(uname, proc.Named())
 }
 
 func (fl *FsLib) NamedAddr() []string {

@@ -69,14 +69,14 @@ func MakeKernel(p *Param, nameds []string) (*Kernel, error) {
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.NAMEDREL {
 		k.makeNameds()
-		nameds, err := fslib.SetNamedIP(k.ip, k.namedAddr)
+		nameds, err := SetNamedIP(k.ip, k.namedAddr)
 		if err != nil {
 			return nil, err
 		}
 		k.namedAddr = nameds
 		p.Services = p.Services[1:]
 	}
-	fslib.SetSigmaNamed(k.namedAddr)
+	proc.SetSigmaNamed(k.namedAddr)
 	fsl, err := fslib.MakeFsLibAddr("kernel", ip, k.namedAddr)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", k.namedAddr, err)
@@ -211,6 +211,21 @@ func RunNamed(addr string, replicate bool, id int, peers []string, realmId strin
 	return cmd, nil
 }
 
+func SetNamedIP(ip string, ports []string) ([]string, error) {
+	nameds := make([]string, len(ports))
+	for i, s := range ports {
+		host, port, err := net.SplitHostPort(s)
+		if err != nil {
+			return nil, err
+		}
+		if host != "" {
+			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, host, port)
+		}
+		nameds[i] = net.JoinHostPort(ip, port)
+	}
+	return nameds, nil
+}
+
 func addReplPortOffset(peerAddr string) string {
 	// Compute replica address as peerAddr + REPL_PORT_OFFSET
 	host, port, err := net.SplitHostPort(peerAddr)
@@ -245,7 +260,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, fslib.Named(), realmId, procclnt.HLINUX)
+	cmd, err := pclnt.SpawnKernelProc(p, proc.Named(), realmId, procclnt.HLINUX)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err

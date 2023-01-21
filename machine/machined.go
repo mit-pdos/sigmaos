@@ -48,7 +48,7 @@ func MakeMachined(args []string) *Machined {
 		db.DFatalf("Error MakeFsLib: %v", err)
 	}
 	m.FsLib = fsl
-	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
+	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), proc.Named())
 	mfs, err := memfssrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
@@ -97,7 +97,7 @@ func (m *Machined) BootNoded(req proto.MachineRequest, res *proto.MachineRespons
 
 	p := proc.MakeProcPid(pid, "realm/noded", []string{m.pds.MyAddr()})
 	// XXX need realm name...
-	noded, err := m.SpawnKernelProc(p, fslib.Named(), "", procclnt.HLINUX)
+	noded, err := m.SpawnKernelProc(p, proc.Named(), "", procclnt.HLINUX)
 	if err != nil {
 		db.DFatalf("RunKernelProc: %v", err)
 	}

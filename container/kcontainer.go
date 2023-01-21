@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/client"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/proc"
 )
 
 //
@@ -28,7 +28,7 @@ func StartKContainer(yml string, nameds []string, env []string) (*Container, err
 	db.DPrintf(db.CONTAINER, "start container %v %v %v\n", yml, nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", yml, fslib.NamedAddrsToString(nameds)},
+		Cmd:   []string{"bin/linux/bootkernel", yml, proc.NamedAddrsToString(nameds)},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{

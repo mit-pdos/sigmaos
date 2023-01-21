@@ -6,8 +6,8 @@ import (
 	"sigmaos/boot"
 	bk "sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/kernel"
+	"sigmaos/proc"
 	"sigmaos/yaml"
 )
 
@@ -23,7 +23,7 @@ func main() {
 
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+bk.HOME+"/bin/kernel:"+bk.HOME+"/bin/linux:"+bk.HOME+"/bin/user")
-	err = boot.BootUp(&param, fslib.StringToNamedAddrs(os.Args[2]))
+	err = boot.BootUp(&param, proc.StringToNamedAddrs(os.Args[2]))
 	if err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}

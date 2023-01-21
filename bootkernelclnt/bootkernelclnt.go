@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"sigmaos/container"
-	"sigmaos/fslib"
+	"sigmaos/kernel"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -36,7 +36,7 @@ func BootKernelNamed(yml string, nameds []string) (*Kernel, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	nds, err := fslib.SetNamedIP(k.GetIP(), nameds)
+	nds, err := kernel.SetNamedIP(k.GetIP(), nameds)
 	if err != nil {
 		return nil, nil, err
 	}

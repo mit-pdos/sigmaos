@@ -1,7 +1,9 @@
 package proc
 
 import (
+	"log"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"sigmaos/rand"
@@ -53,6 +55,36 @@ func SetProgram(program string) {
 	os.Setenv(SIGMAPROGRAM, program)
 }
 
+func NamedAddrs() string {
+	addrs := GetSigmaNamed()
+	if addrs == "" {
+		debug.PrintStack()
+		log.Fatalf("Getenv error: missing SIGMANAMED")
+	}
+	return addrs
+}
+
+func Named() []string {
+	return StringToNamedAddrs(NamedAddrs())
+}
+
+func NamedAddrsToString(addrs []string) string {
+	return strings.Join(addrs, ",")
+}
+
+func StringToNamedAddrs(s string) []string {
+	return strings.Split(s, ",")
+}
+
+func SetSigmaNamed(nds []string) {
+	s := strings.Join(nds, ",")
+	os.Setenv(SIGMANAMED, s)
+}
+
+func GetSigmaNamed() string {
+	return os.Getenv(SIGMANAMED)
+}
+
 func SetProcdIp(procdIp string) {
 	os.Setenv(SIGMAPROCDIP, procdIp)
 }
@@ -95,14 +127,6 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
-}
-
-func SetSigmaNamed(addrs string) {
-	os.Setenv(SIGMANAMED, addrs)
-}
-
-func GetSigmaNamed() string {
-	return os.Getenv(SIGMANAMED)
 }
 
 func GetSigmaLocal() string {

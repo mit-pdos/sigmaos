@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
 
@@ -37,7 +37,7 @@ func bootSystem(ymldir, ymlname string) (*System, error) {
 	sys.nameds = nds
 	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v", ymldir, ymlname, sys.nameds)
 	sys.kernels[0] = k
-	fslib.SetSigmaNamed(sys.nameds)
+	proc.SetSigmaNamed(sys.nameds)
 	sys.proxy = startProxy(sys.kernels[0].GetIP(), sys.nameds)
 	if err := sys.proxy.Start(); err != nil {
 		return nil, err

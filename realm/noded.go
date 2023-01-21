@@ -65,7 +65,7 @@ func MakeNoded(machineId string) *Noded {
 	}
 
 	// Mount the KPIDS dir.
-	if err := procclnt.MountPids(nd.FsLib, fslib.Named()); err != nil {
+	if err := procclnt.MountPids(nd.FsLib, proc.Named()); err != nil {
 		db.DFatalf("Error mountpids: %v", err)
 	}
 

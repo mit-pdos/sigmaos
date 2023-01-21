@@ -15,8 +15,8 @@ import (
 )
 
 // Procd caches binary locally at the sigma patname cacheDir().  When
-// running ./install.sh locally, it will copy binaries in the cache
-// and no downloads are necessary.  XXX make cache searchpath aware
+// running ./build.sh it will copy binaries in the cache and no
+// downloads are necessary.  XXX make cache searchpath aware
 func cacheDir(pn string) string {
 	return path.Join(sp.UXBIN, "user", path.Base(pn))
 }

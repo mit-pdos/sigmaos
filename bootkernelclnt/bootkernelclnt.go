@@ -73,7 +73,7 @@ func (k *Kernel) GetClnt() *sigmaclnt.SigmaClnt {
 }
 
 func (k *Kernel) MkClnt(name string, namedAddr []string) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.MkSigmaClnt(name, k.container.Ip(), namedAddr)
+	return sigmaclnt.MkSigmaClntProc(name, k.container.Ip(), namedAddr)
 }
 
 func (k *Kernel) Shutdown() error {

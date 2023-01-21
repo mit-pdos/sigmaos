@@ -52,7 +52,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	return makeProcClnt(fsl, proc.GetPid(), proc.PROCDIR)
 }
 
-// Called by tests to fake an initial process
+// Fake an initial process for, for example, tests.
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string, namedAddr []string) *ProcClnt {

@@ -8,10 +8,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,8 +30,7 @@ func main() {
 }
 
 type Sleeper struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	native      bool
 	sleepLength time.Duration
 	outdir      string
@@ -46,12 +44,11 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
-	fsl, err := fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("sleeper-" + proc.GetPid().String())
 	if err != nil {
-		db.DFatalf("MakeFsLib: %v", err)
+		db.DFatalf("MkSigmaClient: %v", err)
 	}
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	s.SigmaClnt = sc
 	s.startSeqno = s.ReadSeqNo()
 	s.outdir = args[1]
 	d, err := time.ParseDuration(args[0])

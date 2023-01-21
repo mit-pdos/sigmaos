@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/sigmaclnt"
 	// "sigmaos/perf"
 	"sigmaos/fslib"
 	"sigmaos/named"
@@ -36,18 +37,19 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	assert.Nil(t, err)
 
 	log.Printf("names %v\n", sp.Names(sts))
+	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
-	pclnt :=
-		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
+	sc, err := sigmaclnt.MkSigmaClnt(string(realm), ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts.Spawn(a)
+	err = sc.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := sc.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")

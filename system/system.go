@@ -16,6 +16,8 @@ const (
 	BOOT_ALL   = "bootall.yml"
 	BOOT_NAMED = "boot.yml"
 	BOOT_NODE  = "bootmach.yml"
+
+	NAMEDPORT = ":1111"
 )
 
 type System struct {
@@ -28,7 +30,7 @@ func bootSystem(realmid, ymldir, ymlname string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
 	db.DPrintf(db.SYSTEM, "Boot system %v %v %v", realmid, ymldir, ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), []string{":1111"})
+	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), []string{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}

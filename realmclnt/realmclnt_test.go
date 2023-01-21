@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt"
+	// "sigmaos/sigmaclnt"
 	// "sigmaos/perf"
 	"sigmaos/fslib"
 	"sigmaos/named"
@@ -32,24 +32,24 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	err = rc.MakeRealm(realm)
 	assert.Nil(t, err)
 
-	pn := path.Join(sp.REALMS, string(realm))
+	pn := path.Join(sp.REALMS, realm.String())
 	sts, err := ts.GetDir(pn + "/")
 	assert.Nil(t, err)
 
 	log.Printf("names %v\n", sp.Names(sts))
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
-	sc, err := sigmaclnt.MkSigmaClnt(string(realm), ts.GetLocalIP(), ts.NamedAddr())
-	assert.Nil(t, err)
+	//sc, err := sigmaclnt.MkSigmaClnt(realm.String(), ts.GetLocalIP(), ts.NamedAddr())
+	//assert.Nil(t, err)
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
-	err = sc.Spawn(a)
+	err = ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := sc.WaitExit(a.GetPid())
+	status, err := ts.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")

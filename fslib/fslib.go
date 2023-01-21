@@ -76,6 +76,15 @@ func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
 	}
 }
 
+func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (*FsLib, error) {
+	fl := MakeFsLibBase(uname, r, lip, addrs)
+	err := fl.MountTree(addrs, "", "name")
+	if err != nil {
+		return nil, err
+	}
+	return fl, nil
+}
+
 func MakeFsLibAddr(uname, lip string, addrs []string) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")

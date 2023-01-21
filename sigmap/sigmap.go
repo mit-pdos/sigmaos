@@ -22,6 +22,10 @@ type Trealm string
 
 const ROOTREALM Trealm = "rootrealm"
 
+func (r Trealm) String() string {
+	return string(r)
+}
+
 func (fid Tfid) String() string {
 	if fid == NoFid {
 		return "-1"

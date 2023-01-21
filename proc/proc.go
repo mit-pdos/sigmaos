@@ -114,15 +114,6 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
-	spath := GetSigmaPath()
-	if spath == "" {
-		if p.Privileged {
-			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/kernel")
-		} else {
-			spath = path.Join(sp.S3, "~local", GetRealm(), "/bin/user")
-		}
-	}
-	p.AppendEnv(SIGMAPATH, spath)
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.GetPid().String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
@@ -130,8 +121,6 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
-
-	p.AppendEnv(SIGMAREALM, GetRealm())
 	if p.Privileged {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
 	}
@@ -173,6 +162,14 @@ func (p *Proc) GetNcore() Tcore {
 
 func (p *Proc) GetMem() Tmem {
 	return Tmem(p.ProcProto.MemInt)
+}
+
+func (p *Proc) GetRealm() sp.Trealm {
+	return sp.Trealm(p.ProcProto.Realm)
+}
+
+func (p *Proc) SetRealm(r sp.Trealm) {
+	p.ProcProto.Realm = r.String()
 }
 
 func (p *Proc) SetSpawnTime(t time.Time) {

@@ -143,6 +143,18 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", HPROCD, p, clnt.getScheddClnt("~local"))
 }
 
+func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
+	spath := proc.GetSigmaPath()
+	if spath == "" {
+		if p.Privileged {
+			spath = path.Join(sp.S3, "~local", clnt.Realm().String(), "/bin/kernel")
+		} else {
+			spath = path.Join(sp.S3, "~local", clnt.Realm().String(), "/bin/user")
+		}
+	}
+	p.AppendEnv(proc.SIGMAPATH, spath)
+}
+
 // Spawn a proc on scheddIp. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
@@ -151,8 +163,11 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
 	}
+
+	clnt.extendBaseEnv(p)
+
 	// Set the realm id.
-	p.Realm = proc.GetRealm()
+	p.SetRealm(clnt.Realm())
 
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
@@ -172,7 +187,7 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 	// If this is not a privileged proc, spawn it through procd.
 	if how == HPROCD {
 		req := &schedd.SpawnRequest{
-			Realm:     proc.GetRealm(),
+			Realm:     clnt.Realm().String(),
 			ProcProto: p.GetProto(),
 		}
 		res := &schedd.SpawnResponse{}

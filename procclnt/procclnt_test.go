@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 	"testing"
@@ -97,6 +98,8 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+
+	log.Printf("fslib realm %v\n", ts.Realm())
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

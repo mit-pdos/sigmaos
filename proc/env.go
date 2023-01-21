@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"sigmaos/rand"
-	sp "sigmaos/sigmap"
 )
 
 // Environment variables which every proc expects to have.

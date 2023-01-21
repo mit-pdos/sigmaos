@@ -8,7 +8,7 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 // Boot ymls
@@ -74,7 +74,7 @@ func (sys *System) BootNode(realmid, ymldir string) error {
 	return nil
 }
 
-func (sys *System) GetClnt(kidx int) (*fslib.FsLib, *procclnt.ProcClnt) {
+func (sys *System) GetClnt(kidx int) *sigmaclnt.SigmaClnt {
 	return sys.kernels[kidx].GetClnt()
 }
 
@@ -86,7 +86,7 @@ func (sys *System) KillOne(kidx int, sname string) error {
 	return sys.kernels[kidx].KillOne(sname)
 }
 
-func (sys *System) MakeClnt(kidx int, name string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
+func (sys *System) MakeClnt(kidx int, name string) (*sigmaclnt.SigmaClnt, error) {
 	return sys.kernels[kidx].MkClnt(name, sys.nameds)
 }
 

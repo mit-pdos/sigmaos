@@ -9,8 +9,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,8 +24,7 @@ const (
 )
 
 type Kernel struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	kclnt     *kernelclnt.KernelClnt
 	container *container.Container
 }
@@ -70,17 +69,12 @@ func (k *Kernel) GetIP() string {
 	return k.container.Ip()
 }
 
-func (k *Kernel) GetClnt() (*fslib.FsLib, *procclnt.ProcClnt) {
-	return k.FsLib, k.ProcClnt
+func (k *Kernel) GetClnt() *sigmaclnt.SigmaClnt {
+	return k.SigmaClnt
 }
 
-func (k *Kernel) MkClnt(name string, namedAddr []string) (*fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr(name, k.container.Ip(), namedAddr)
-	if err != nil {
-		return nil, nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, name, namedAddr)
-	return fsl, pclnt, nil
+func (k *Kernel) MkClnt(name string, namedAddr []string) (*sigmaclnt.SigmaClnt, error) {
+	return sigmaclnt.MkSigmaClnt(name, k.container.Ip(), namedAddr)
 }
 
 func (k *Kernel) Shutdown() error {
@@ -100,10 +94,9 @@ func (k *Kernel) waitUntilBooted(nameds []string) (*Kernel, error) {
 	const N = 100
 	for i := 0; i < N; i++ {
 		time.Sleep(10 * time.Millisecond)
-		fsl, pclnt, err := k.MkClnt("kclnt", nameds)
+		sc, err := k.MkClnt("kclnt", nameds)
 		if err == nil {
-			k.FsLib = fsl
-			k.ProcClnt = pclnt
+			k.SigmaClnt = sc
 			break
 		} else if serr.IsErrUnavailable(err) {
 			fmt.Printf(".")

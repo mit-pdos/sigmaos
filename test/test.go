@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/system"
 )
@@ -40,8 +39,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate struct {
 	*system.System
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	T *testing.T
 }
 
@@ -107,8 +105,8 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	fsl, pclnt := s.GetClnt(0)
-	return &Tstate{s, fsl, pclnt, t}, nil
+	sc := s.GetClnt(0)
+	return &Tstate{s, sc, t}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {

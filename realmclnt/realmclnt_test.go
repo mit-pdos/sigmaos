@@ -37,7 +37,8 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	log.Printf("names %v\n", sp.Names(sts))
 
-	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
+	pclnt :=
+		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

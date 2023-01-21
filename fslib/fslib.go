@@ -10,10 +10,12 @@ import (
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
 	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 type FsLib struct {
 	*fdclnt.FdClient
+	realm     sp.Trealm
 	namedAddr []string
 }
 
@@ -60,10 +62,10 @@ func StringToNamedAddrs(s string) []string {
 	return strings.Split(s, ",")
 }
 
-func MakeFsLibBase(uname, lip string, namedAddr []string) *FsLib {
+func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr []string) *FsLib {
 	// Picking a small chunk size really kills throughput
 	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
-		namedAddr}
+		realm, namedAddr}
 }
 
 func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
@@ -74,8 +76,8 @@ func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
 	}
 }
 
-func MakeFsLibAddr(uname string, lip string, addrs []string) (*FsLib, error) {
-	fl := MakeFsLibBase(uname, lip, addrs)
+func MakeFsLibAddr(uname, lip string, addrs []string) (*FsLib, error) {
+	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
 		return nil, err

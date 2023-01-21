@@ -59,7 +59,7 @@ func MakeKernel(p *Param, nameds []string) (*Kernel, error) {
 	k := mkKernel(p, nameds, cores)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
-	proc.SetRealm(p.Realm)
+	// proc.SetRealm(p.Realm)
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func MakeKernel(p *Param, nameds []string) (*Kernel, error) {
 		p.Services = p.Services[1:]
 	}
 	fslib.SetSigmaNamed(k.namedAddr)
-	fsl, err := fslib.MakeFsLibAddr(p.Realm, ip, k.namedAddr)
+	fsl, err := fslib.MakeFsLibAddr("kernel", ip, k.namedAddr)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", k.namedAddr, err)
 		return nil, err

@@ -20,6 +20,8 @@ type Tlength uint64
 type Tgid uint32
 type Trealm string
 
+const ROOTREALM Trealm = "rootrealm"
+
 func (fid Tfid) String() string {
 	if fid == NoFid {
 		return "-1"

@@ -19,8 +19,7 @@ import (
 //
 
 const (
-	HOME      = "/home/sigmaos"
-	ROOTREALM = "rootrealm"
+	HOME = "/home/sigmaos"
 )
 
 type Kernel struct {
@@ -131,6 +130,6 @@ func makeEnv() []string {
 			env = append(env, fmt.Sprintf("%s=%s", s, e))
 		}
 	}
-	env = append(env, fmt.Sprintf("%s=%s", proc.SIGMAREALM, ROOTREALM))
+	env = append(env, fmt.Sprintf("%s=%s", proc.SIGMAREALM, sp.ROOTREALM))
 	return env
 }

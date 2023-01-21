@@ -26,16 +26,16 @@ type System struct {
 	proxy   *exec.Cmd
 }
 
-func bootSystem(realmid, ymldir, ymlname string) (*System, error) {
+func bootSystem(ymldir, ymlname string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
-	db.DPrintf(db.SYSTEM, "Boot system %v %v %v", realmid, ymldir, ymlname)
+	db.DPrintf(db.SYSTEM, "Boot system %v %v", ymldir, ymlname)
 	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), []string{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}
 	sys.nameds = nds
-	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v %v", realmid, ymldir, ymlname, sys.nameds)
+	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v", ymldir, ymlname, sys.nameds)
 	sys.kernels[0] = k
 	fslib.SetSigmaNamed(sys.nameds)
 	sys.proxy = startProxy(sys.kernels[0].GetIP(), sys.nameds)
@@ -45,13 +45,13 @@ func bootSystem(realmid, ymldir, ymlname string) (*System, error) {
 	return sys, nil
 }
 
-func Boot(realmid string, n int, ymldir string) (*System, error) {
-	sys, err := bootSystem(realmid, ymldir, BOOT_ALL)
+func Boot(n int, ymldir string) (*System, error) {
+	sys, err := bootSystem(ymldir, BOOT_ALL)
 	if err != nil {
 		return nil, err
 	}
 	for i := 1; i < n; i++ {
-		err := sys.BootNode(realmid, ymldir)
+		err := sys.BootNode(ymldir)
 		if err != nil {
 			return nil, err
 		}
@@ -59,15 +59,15 @@ func Boot(realmid string, n int, ymldir string) (*System, error) {
 	return sys, nil
 }
 
-func BootNamedOnly(realmid, ymldir string) (*System, error) {
-	sys, err := bootSystem(realmid, ymldir, BOOT_NAMED)
+func BootNamedOnly(ymldir string) (*System, error) {
+	sys, err := bootSystem(ymldir, BOOT_NAMED)
 	if err != nil {
 		return nil, err
 	}
 	return sys, nil
 }
 
-func (sys *System) BootNode(realmid, ymldir string) error {
+func (sys *System) BootNode(ymldir string) error {
 	k, err := bootkernelclnt.BootKernel(path.Join(ymldir, BOOT_NODE), sys.nameds)
 	if err != nil {
 		return err

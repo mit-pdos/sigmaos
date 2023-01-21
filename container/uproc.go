@@ -12,6 +12,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/seccomp"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -110,7 +111,7 @@ func setupFs(newRoot string) error {
 	oldRootMnt := "old_root" + rand.String(8)
 
 	// xnewRoot := newRoot
-	newRoot = newRoot + "/rootrealm"
+	newRoot = newRoot + "/" + string(sp.ROOTREALM)
 
 	log.Printf("new root %v\n", newRoot)
 

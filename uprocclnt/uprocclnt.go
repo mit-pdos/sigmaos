@@ -33,7 +33,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm) error {
 		}
 		updm.kclnt = kclnt
 	}
-	return updm.kclnt.Boot("uprocd", []string{"rootrealm"})
+	return updm.kclnt.Boot("uprocd", []string{string(sp.ROOTREALM)})
 }
 
 func (updm *UprocdMgr) lookupClnt(realm sp.Trealm) (*protdevclnt.ProtDevClnt, error) {

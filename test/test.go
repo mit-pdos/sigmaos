@@ -1,7 +1,6 @@
 package test
 
 import (
-	"flag"
 	"fmt"
 	"testing"
 
@@ -11,17 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/system"
 )
-
-const (
-	ROOTREALM = "rootrealm"
-)
-
-var realmid string // Use this realm to run tests instead of starting a new one. This is used for multi-machine tests.
-
-// Read & set the proc version.
-func init() {
-	flag.StringVar(&realmid, "realm", ROOTREALM, "realm id")
-}
 
 func Mbyte(sz sp.Tlength) float64 {
 	return float64(sz) / float64(sp.MBYTE)
@@ -81,7 +69,7 @@ func bootPath(t *testing.T, path string) (*Tstate, error) {
 	}
 }
 
-// Join a realm/set of machines are already running
+// Join a realm/set of machines are already running  XXX to compile
 func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	//fsl, pclnt, err := mkClient("", realmid, []string{""}) // XXX get it from rconfig
 	//if err != nil {
@@ -94,13 +82,13 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 
 func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
-	proc.SetRealm(realmid)
+	proc.SetRealm(sp.ROOTREALM)
 	var s *system.System
 	var err error
 	if full {
-		s, err = system.Boot(realmid, 1, "bootkernelclnt")
+		s, err = system.Boot(1, "bootkernelclnt")
 	} else {
-		s, err = system.BootNamedOnly(realmid, "bootkernelclnt")
+		s, err = system.BootNamedOnly("bootkernelclnt")
 	}
 	if err != nil {
 		return nil, err
@@ -111,7 +99,7 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		if err := ts.System.BootNode(realmid, "bootkernelclnt"); err != nil {
+		if err := ts.System.BootNode("bootkernelclnt"); err != nil {
 			return err
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 )
 
 // Environment variables which every proc expects to have.
@@ -117,8 +118,8 @@ func GetSigmaRootFs() string {
 	return os.Getenv(SIGMAROOTFS)
 }
 
-func SetRealm(realm string) {
-	os.Setenv(SIGMAREALM, realm)
+func SetRealm(realm sp.Trealm) {
+	os.Setenv(SIGMAREALM, string(realm))
 }
 
 func GetRealm() string {

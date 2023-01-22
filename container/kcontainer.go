@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/client"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -19,16 +19,24 @@ const (
 	SIGMAKIMAGE = "sigmaos"
 )
 
-func StartKContainer(yml string, nameds []string, env []string) (*Container, error) {
+type Tint int
+
+func xxx(a sp.Taddrs) {
+	return
+}
+
+func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
+	b := []string{"xxx"}
+	xxx(b)
 	db.DPrintf(db.CONTAINER, "start container %v %v %v\n", yml, nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", yml, proc.NamedAddrsToString(nameds)},
+		Cmd:   []string{"bin/linux/bootkernel", yml, nameds.String()},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{

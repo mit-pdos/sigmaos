@@ -38,14 +38,14 @@ type Kernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	Param     *Param
-	namedAddr []string
+	namedAddr sp.Taddrs
 	procdIp   string
 	cores     *sessp.Tinterval
 	svcs      *Services
 	ip        string
 }
 
-func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel {
+func mkKernel(param *Param, namedAddr sp.Taddrs, cores *sessp.Tinterval) *Kernel {
 	k := &Kernel{}
 	k.Param = param
 	k.namedAddr = namedAddr
@@ -54,7 +54,7 @@ func mkKernel(param *Param, namedAddr []string, cores *sessp.Tinterval) *Kernel 
 	return k
 }
 
-func MakeKernel(p *Param, nameds []string) (*Kernel, error) {
+func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
 	k := mkKernel(p, nameds, cores)
 	proc.SetProgram(os.Args[0])
@@ -182,12 +182,12 @@ func (k *Kernel) shutdown() {
 	}
 }
 
-func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId string) *proc.Proc {
+func makeNamedProc(addr string, replicate bool, id int, pe sp.Taddrs, realmId string) *proc.Proc {
 	args := []string{addr, realmId, ""}
 	// If we're running replicated...
 	if replicate {
 		// Add an offset to the peers' port addresses.
-		peers := []string{}
+		peers := sp.Taddrs{}
 		for _, peer := range pe {
 			peers = append(peers, addReplPortOffset(peer))
 		}
@@ -245,7 +245,7 @@ func addReplPortOffset(peerAddr string) string {
 // XXX kill backward-compatability, but keep for now for noded.go.
 //
 
-func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterval) (*Kernel, error) {
+func MakeSystem(uname, realmId string, namedAddr sp.Taddrs, cores *sessp.Tinterval) (*Kernel, error) {
 	p := &Param{Realm: realmId}
 	s := mkKernel(p, namedAddr, cores)
 	fsl, err := fslib.MakeFsLibAddr(p.Realm, s.ip, namedAddr)
@@ -258,7 +258,7 @@ func MakeSystem(uname, realmId string, namedAddr []string, cores *sessp.Tinterva
 }
 
 // Run a named as a proc
-func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers sp.Taddrs, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, proc.Named(), realmId, procclnt.HLINUX)
 	if err != nil {

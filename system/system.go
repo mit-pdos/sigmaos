@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 // Boot ymls
@@ -22,7 +23,7 @@ const (
 
 type System struct {
 	kernels []*bootkernelclnt.Kernel
-	nameds  []string
+	nameds  sp.Taddrs
 	proxy   *exec.Cmd
 }
 
@@ -30,7 +31,7 @@ func bootSystem(ymldir, ymlname string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
 	db.DPrintf(db.SYSTEM, "Boot system %v %v", ymldir, ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), []string{NAMEDPORT})
+	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), sp.Taddrs{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (sys *System) Shutdown() error {
 }
 
 // XXX make optional?
-func startProxy(IP string, nds []string) *exec.Cmd {
+func startProxy(IP string, nds sp.Taddrs) *exec.Cmd {
 	cmd := exec.Command("proxyd", append([]string{IP}, nds...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

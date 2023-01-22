@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv"
+	sp "sigmaos/sigmap"
 )
 
 type Boot struct {
@@ -14,7 +15,7 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(param *kernel.Param, nameds []string) error {
+func BootUp(param *kernel.Param, nameds sp.Taddrs) error {
 	db.DPrintf(db.KERNEL, "Boot param %v nameds %v env %v", param, nameds, os.Environ())
 	k, err := kernel.MakeKernel(param, nameds)
 	if err != nil {
@@ -28,7 +29,3 @@ func BootUp(param *kernel.Param, nameds []string) error {
 	}
 	return nil
 }
-
-//func (b *Boot) Ip() string {
-//	return b.k.Ip()
-//}

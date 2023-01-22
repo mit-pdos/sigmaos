@@ -13,7 +13,7 @@ type FsLib struct {
 	namedAddr sp.Taddrs
 }
 
-func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr []string) *FsLib {
+func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr sp.Taddrs) *FsLib {
 	// Picking a small chunk size really kills throughput
 	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
 		realm, namedAddr}
@@ -37,7 +37,7 @@ func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (
 }
 
 // get realm from "caller"
-func MakeFsLibAddr(uname, lip string, addrs []string) (*FsLib, error) {
+func MakeFsLibAddr(uname, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
@@ -46,7 +46,7 @@ func MakeFsLibAddr(uname, lip string, addrs []string) (*FsLib, error) {
 	return fl, nil
 }
 
-func MakeFsLibNamed(uname string, addrs []string) (*FsLib, error) {
+func MakeFsLibNamed(uname string, addrs sp.Taddrs) (*FsLib, error) {
 	return MakeFsLibAddr(uname, proc.GetSigmaLocal(), addrs)
 }
 

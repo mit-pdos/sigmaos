@@ -105,7 +105,7 @@ func (ts *Tstate) BootNode(n int) error {
 	return nil
 }
 
-func (ts *Tstate) NamedAddr() []string {
+func (ts *Tstate) NamedAddr() sp.Taddrs {
 	return ts.System.GetNamedAddrs()
 }
 

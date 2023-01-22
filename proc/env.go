@@ -69,10 +69,6 @@ func Named() []string {
 	return StringToNamedAddrs(NamedAddrs())
 }
 
-func NamedAddrsToString(addrs []string) string {
-	return strings.Join(addrs, ",")
-}
-
 func StringToNamedAddrs(s string) []string {
 	return strings.Split(s, ",")
 }

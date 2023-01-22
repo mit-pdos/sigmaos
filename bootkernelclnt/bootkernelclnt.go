@@ -31,7 +31,7 @@ type Kernel struct {
 var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF}
 
 // Takes named port and returns filled-in namedAddr
-func BootKernelNamed(yml string, nameds []string) (*Kernel, []string, error) {
+func BootKernelNamed(yml string, nameds sp.Taddrs) (*Kernel, sp.Taddrs, error) {
 	k, err := startContainer(yml, nameds)
 	if err != nil {
 		return nil, nil, err
@@ -48,7 +48,7 @@ func BootKernelNamed(yml string, nameds []string) (*Kernel, []string, error) {
 }
 
 // Takes filled-in namedAddr
-func BootKernel(yml string, nameds []string) (*Kernel, error) {
+func BootKernel(yml string, nameds sp.Taddrs) (*Kernel, error) {
 	k, err := startContainer(yml, nameds)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func BootKernel(yml string, nameds []string) (*Kernel, error) {
 }
 
 func (k *Kernel) Boot(s string) error {
-	return k.kclnt.Boot(s, []string{})
+	return k.kclnt.Boot(s, sp.Taddrs{})
 }
 
 func (k *Kernel) KillOne(s string) error {
@@ -72,7 +72,7 @@ func (k *Kernel) GetClnt() *sigmaclnt.SigmaClnt {
 	return k.SigmaClnt
 }
 
-func (k *Kernel) MkClnt(name string, namedAddr []string) (*sigmaclnt.SigmaClnt, error) {
+func (k *Kernel) MkClnt(name string, namedAddr sp.Taddrs) (*sigmaclnt.SigmaClnt, error) {
 	return sigmaclnt.MkSigmaClntProc(name, k.container.Ip(), namedAddr)
 }
 
@@ -81,7 +81,7 @@ func (k *Kernel) Shutdown() error {
 	return k.container.Shutdown()
 }
 
-func startContainer(yml string, nameds []string) (*Kernel, error) {
+func startContainer(yml string, nameds sp.Taddrs) (*Kernel, error) {
 	container, err := container.StartKContainer(yml, nameds, makeEnv())
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func startContainer(yml string, nameds []string) (*Kernel, error) {
 	return &Kernel{container: container}, nil
 }
 
-func (k *Kernel) waitUntilBooted(nameds []string) (*Kernel, error) {
+func (k *Kernel) waitUntilBooted(nameds sp.Taddrs) (*Kernel, error) {
 	const N = 100
 	for i := 0; i < N; i++ {
 		time.Sleep(10 * time.Millisecond)

@@ -51,7 +51,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	start := time.Now()
 	b, err = pdc.WriteRead(pdc.fd, b)
 	if err != nil {
-		return nil, fmt.Errorf("rpc err %v\n", err)
+		return nil, fmt.Errorf("rpc err %v", err)
 	}
 	// Record stats (qlen not used for now).
 	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)

@@ -1,10 +1,13 @@
 package sigmaclnt
 
 import (
+	"path"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 type SigmaClnt struct {
@@ -28,4 +31,19 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	return &SigmaClnt{fsl, pclnt}, nil
+}
+
+func MkSigmaClntRealmProc(fsl *fslib.FsLib, name string, realm sp.Trealm) (*SigmaClnt, error) {
+	pn := path.Join(sp.REALMS, realm.String())
+	target, err := fsl.GetFile(pn)
+	if err != nil {
+		return nil, err
+	}
+	mnt, r := sp.MkMount(target)
+	if r != nil {
+		return nil, err
+	}
+	db.DPrintf(db.REALMCLNT, "mnt %v\n", mnt.Addr)
+
+	return MkSigmaClntProc(name, fsl.GetLocalIP(), mnt.Addr)
 }

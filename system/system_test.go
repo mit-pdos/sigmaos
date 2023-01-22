@@ -33,6 +33,6 @@ func TestStartStop(t *testing.T) {
 	pn := path.Join(realm.REALM_NAMEDS, "testrealm")
 	sts, err := ts.Root.GetDir(pn + "/")
 	assert.Nil(t, err)
-	assert.True(t, fslib.Present(sts, named.InitDir))
+	assert.True(t, fslib.Present(sts, named.InitRootDir))
 	ts.Shutdown()
 }

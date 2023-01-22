@@ -27,7 +27,7 @@ func initTest(t *testing.T) *Tstate {
 	ts.Tstate = test.MakeTstatePath(t, sp.NAMED)
 	sts, err := ts.GetDir(sp.NAMED)
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, named.InitDir))
+	assert.True(t, fslib.Present(sts, named.InitRootDir))
 
 	// start proxy
 	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.GetLocalIP()}, ts.NamedAddr()...)...)

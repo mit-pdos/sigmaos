@@ -39,7 +39,7 @@ func TestInitFs(t *testing.T) {
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
-		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
+		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
 	} else {
 		assert.True(t, len(sts) == 0, "initfs")
 	}

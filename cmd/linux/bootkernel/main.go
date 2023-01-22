@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 	"sigmaos/yaml"
 )
 
@@ -21,6 +22,7 @@ func main() {
 		db.DFatalf("%v: ReadYaml %s\n", os.Args[0], os.Args[1])
 	}
 
+	param.Realm = sp.ROOTREALM
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+bk.HOME+"/bin/kernel:"+bk.HOME+"/bin/linux:"+bk.HOME+"/bin/user")
 	err = boot.BootUp(&param, proc.StringToNamedAddrs(os.Args[2]))

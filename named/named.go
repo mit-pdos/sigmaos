@@ -28,7 +28,7 @@ func Run(args []string) {
 	defer p.Done()
 
 	addr := args[1]
-	realmId := args[2]
+	realmId := sp.Trealm(args[2])
 	pn := args[3]
 
 	db.DPrintf(db.NAMED, "Named starting rid:%v pn %v addr:%v\n", realmId, pn, addr)
@@ -60,7 +60,11 @@ func Run(args []string) {
 
 	// seccomp.LoadFilter()
 
-	initfs(ss)
+	if realmId == sp.ROOTREALM {
+		initfs(ss, InitRootDir)
+	} else {
+		initfs(ss, InitDir)
+	}
 
 	fsl := ss.FsLib()
 	db.DPrintf(db.NAMED, "Named started rid:%v pn %v addr:%v named %v", realmId, pn, ss.MyAddr(), fsl.NamedAddr())
@@ -69,11 +73,13 @@ func Run(args []string) {
 	ss.Done()
 }
 
-var InitDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL, sp.WS_REL, sp.WS_RUNQ_LC_REL, sp.WS_RUNQ_BE_REL}
+var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL, sp.WS_REL, sp.WS_RUNQ_LC_REL, sp.WS_RUNQ_BE_REL}
 
-func initfs(ss *sesssrv.SessSrv) error {
+var InitDir = []string{sp.TMPREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
+
+func initfs(ss *sesssrv.SessSrv, root []string) error {
 	r := ss.Root()
-	for _, n := range InitDir {
+	for _, n := range root {
 		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
 		if err != nil {
 			return err

@@ -48,12 +48,12 @@ func MkSigmaClntRealm(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*Sigm
 	return &SigmaClnt{realm, nil}, nil
 }
 
-func MkSigmaClntRealmProc(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
+func MkSigmaClntRealmProc(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	db.DPrintf(db.REALMCLNT, "MkSigmaClntRealmProc %v\n", rid)
-	sc, err := MkSigmaClntRealm(rootrealm, name, rid)
+	sc, err := MkSigmaClntRealm(rootfsl, name, rid)
 	if err != nil {
 		return nil, err
 	}
-	// pclnt := procclnt.MakeProcClntInit(proc.GenPid(), rootfsl, name, mnt.Addr)
+	// sc.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), sc.FsLib, name, sc.NamedAddr())
 	return sc, nil
 }

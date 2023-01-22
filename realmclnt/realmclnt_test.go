@@ -46,10 +46,10 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
-	sts, err = sc.GetDir(sp.SCHEDDREL + "/")
+	sts, err = sc.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
-	log.Printf("names realm sched %v\n", sp.Names(sts))
+	log.Printf("realm names sched %v\n", sp.Names(sts))
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
 

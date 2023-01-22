@@ -53,13 +53,12 @@ func MkSigmaClntRealmProc(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*
 	}
 	// pclnt := procclnt.MakeProcClntInit(proc.GenPid(), rootfsl, name, mnt.Addr)
 
-	db.DPrintf(db.REALMCLNT, "mnt %v\n", sp.SCHEDDREL)
-
-	// mount schedd from root realm
-	if err := realm.MountTree(rootrealm.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
-		db.DPrintf(db.REALMCLNT, "Mount tree err %v\n", err)
+	pn = path.Join(sp.NAMED, sp.SCHEDDREL)
+	mnt = sp.Tmount{Addr: rootrealm.NamedAddr(), Root: sp.SCHEDDREL}
+	db.DPrintf(db.REALMCLNT, "mnt %v at %s\n", mnt, pn)
+	if err := realm.MountService(pn, mnt); err != nil {
+		db.DPrintf(db.REALMCLNT, "MountService %v err %v\n", pn, err)
 		return nil, err
 	}
-
 	return &SigmaClnt{realm, nil}, nil
 }

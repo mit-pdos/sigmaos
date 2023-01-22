@@ -9,9 +9,47 @@ import (
 	"sigmaos/union"
 )
 
-//
-// Client side
-//
+func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
+}
+
+// For code running using /mnt/9p, which doesn't support PutFile.
+func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
+}
+
+func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
+	p := pn + "/" + name
+	dir, err := fsl.IsDir(pn)
+
+	if err != nil {
+		return err
+	}
+	if !dir {
+		return fmt.Errorf("Not a directory")
+	}
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.Symlink(b, p, 0777|sp.DMTMP)
+}
+
+func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
+	if path.EndSlash(pn) {
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address())
+	} else {
+		return fsl.MountService(pn, mnt)
+	}
+}
 
 // Return pn, replacing first ~local/~any with a symlink for a specific
 // server.
@@ -95,50 +133,4 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		return rname, rmnt, nil
 	}
 	return rname, rmnt, serr.MkErr(serr.TErrNotfound, d)
-}
-
-//
-// Server side
-//
-
-func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
-	b, err := mnt.Marshal()
-	if err != nil {
-		return err
-	}
-	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
-}
-
-// For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
-	b, err := mnt.Marshal()
-	if err != nil {
-		return err
-	}
-	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
-}
-
-func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
-	p := pn + "/" + name
-	dir, err := fsl.IsDir(pn)
-
-	if err != nil {
-		return err
-	}
-	if !dir {
-		return fmt.Errorf("Not a directory")
-	}
-	b, err := mnt.Marshal()
-	if err != nil {
-		return err
-	}
-	return fsl.Symlink(b, p, 0777|sp.DMTMP)
-}
-
-func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
-	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address())
-	} else {
-		return fsl.MountService(pn, mnt)
-	}
 }

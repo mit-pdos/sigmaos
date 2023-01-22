@@ -33,9 +33,11 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, pclnt}, nil
 }
 
-func MkSigmaClntRealmProc(fsl *fslib.FsLib, name string, realm sp.Trealm) (*SigmaClnt, error) {
-	pn := path.Join(sp.REALMS, realm.String())
-	target, err := fsl.GetFile(pn)
+func MkSigmaClntRealmProc(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
+	db.DPrintf(db.REALMCLNT, "MkSigmaClntRealmProc %v\n", rid)
+
+	pn := path.Join(sp.REALMS, rid.String())
+	target, err := rootrealm.GetFile(pn)
 	if err != nil {
 		return nil, err
 	}
@@ -45,5 +47,19 @@ func MkSigmaClntRealmProc(fsl *fslib.FsLib, name string, realm sp.Trealm) (*Sigm
 	}
 	db.DPrintf(db.REALMCLNT, "mnt %v\n", mnt.Addr)
 
-	return MkSigmaClntProc(name, fsl.GetLocalIP(), mnt.Addr)
+	realm, err := fslib.MakeFsLibAddr(name, rootrealm.GetLocalIP(), mnt.Addr)
+	if err != nil {
+		return nil, err
+	}
+	// pclnt := procclnt.MakeProcClntInit(proc.GenPid(), rootfsl, name, mnt.Addr)
+
+	db.DPrintf(db.REALMCLNT, "mnt %v\n", sp.SCHEDDREL)
+
+	// mount schedd from root realm
+	if err := realm.MountTree(rootrealm.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
+		db.DPrintf(db.REALMCLNT, "Mount tree err %v\n", err)
+		return nil, err
+	}
+
+	return &SigmaClnt{realm, nil}, nil
 }

@@ -39,7 +39,7 @@ func mkTstate(t *testing.T) *Tstate {
 	err = rc.MakeRealm(REALM)
 	assert.Nil(t, err)
 
-	sc, err := sigmaclnt.MkSigmaClntRealm(ts.FsLib, "testrealm", REALM)
+	sc, err := sigmaclnt.MkSigmaClntRealmProc(ts.FsLib, "testrealm", REALM)
 	assert.Nil(t, err)
 	ts.sc = sc
 

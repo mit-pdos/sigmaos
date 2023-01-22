@@ -59,7 +59,6 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	k := mkKernel(p, nameds, cores)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
-	// proc.SetRealm(p.Realm)
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
@@ -148,7 +147,7 @@ func startSrvs(k *Kernel) error {
 }
 
 func (k *Kernel) shutdown() {
-	if k.ProcClnt != nil {
+	if len(k.Param.Services) > 0 {
 		db.DPrintf(db.KERNEL, "Get children %v", proc.GetPid())
 		cpids, err := k.GetChildren()
 		if err != nil {

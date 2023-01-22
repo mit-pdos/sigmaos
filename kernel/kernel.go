@@ -17,6 +17,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -35,8 +36,7 @@ type Param struct {
 }
 
 type Kernel struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	Param     *Param
 	namedAddr sp.Taddrs
 	procdIp   string
@@ -76,12 +76,12 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 		p.Services = p.Services[1:]
 	}
 	proc.SetSigmaNamed(k.namedAddr)
-	fsl, err := fslib.MakeFsLibAddr("kernel", ip, k.namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntProc("kernel", ip, k.namedAddr)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error MakeFsLibAbddr (%v): %v", k.namedAddr, err)
+		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc (%v): %v", k.namedAddr, err)
 		return nil, err
 	}
-	k.FsLib = fsl
+	k.SigmaClnt = sc
 	err = startSrvs(k)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
@@ -134,7 +134,6 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 
 // Start kernel services listed in p
 func startSrvs(k *Kernel) error {
-	k.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), k.FsLib, os.Args[0], k.namedAddr)
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
 		err := k.BootSub(s, nil, k.Param, n > 1) // XXX kernel should wait instead of procd?

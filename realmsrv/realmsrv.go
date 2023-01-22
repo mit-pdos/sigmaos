@@ -11,6 +11,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -42,6 +43,7 @@ func RunRealmSrv() error {
 
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
+	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
 	p := proc.MakeProc("named", []string{":1111", req.Realm, pn})
 	if err := rm.pclnt.Spawn(p); err != nil {
@@ -50,6 +52,24 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	if err := rm.pclnt.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", req.Realm)
+
+	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
+
+	sc, err := sigmaclnt.MkSigmaClntRealm(rm.fsl, "realmd", rid)
+	if err != nil {
+		return err
+	}
+
+	// Make some rootrealm services available in new realm
+	for _, s := range []string{sp.SCHEDDREL} {
+		pn := path.Join(sp.NAMED, s)
+		mnt := sp.Tmount{Addr: rm.fsl.NamedAddr(), Root: s}
+		db.DPrintf(db.REALMD, "mnt %v at %s\n", mnt, pn)
+		if err := sc.MountService(pn, mnt); err != nil {
+			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			return err
+		}
+	}
+
 	return nil
 }

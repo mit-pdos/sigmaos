@@ -193,7 +193,7 @@ func (nd *Noded) tryAddNamedReplicaL() bool {
 		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
-		_, pid, err := kernel.BootNamed(nd.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, nd.cfg.RealmId)
+		_, pid, err := kernel.BootNamed(nd.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, sp.Trealm(nd.cfg.RealmId))
 		if err != nil {
 			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}

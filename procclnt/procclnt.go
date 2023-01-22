@@ -53,20 +53,20 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 // ========== SPAWN ==========
 
 // Create the named state the proc (and its parent) expects.
-func (clnt *ProcClnt) MkProc(p *proc.Proc, namedAddr []string, realm string, how Thow) error {
+func (clnt *ProcClnt) MkProc(p *proc.Proc, how Thow) error {
 	// Always spawn kernel procs on the local kernel.
 	scheddIp := "~local"
 	return clnt.spawn(scheddIp, how, p, clnt.getScheddClnt(scheddIp))
 }
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, realm string, how Thow) (*exec.Cmd, error) {
-	if err := clnt.MkProc(p, namedAddr, realm, how); err != nil {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow) (*exec.Cmd, error) {
+	if err := clnt.MkProc(p, how); err != nil {
 		return nil, err
 	}
 	if how == HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
-		return kproc.RunKernelProc(p, namedAddr, realm)
+		return kproc.RunKernelProc(p, clnt.NamedAddr(), clnt.Realm())
 	}
 	return nil, nil
 }

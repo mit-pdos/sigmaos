@@ -103,7 +103,7 @@ func (e *TestEnv) bootNameds() error {
 
 func (e *TestEnv) bootSigmaMgr() error {
 	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "realm/sigmamgr", []string{})
-	cmd, err := e.RealmClnt.SpawnKernelProc(p, proc.Named(), "", procclnt.HLINUX)
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, procclnt.HLINUX)
 	if err != nil {
 		return err
 	}

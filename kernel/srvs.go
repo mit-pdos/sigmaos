@@ -2,7 +2,7 @@ package kernel
 
 import (
 	"fmt"
-	"path"
+	// "path"
 	"strconv"
 	"sync"
 	"time"
@@ -83,7 +83,7 @@ func (k *Kernel) KillOne(srv string) error {
 
 // replicaId is used to index into the namedAddr slice and select
 // an address for this named.
-func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
+func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error {
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(k.namedAddr[replicaId], len(k.namedAddr) > 1, replicaId+1, k.namedAddr, realmId)
 	if err != nil {
@@ -101,7 +101,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId string) error {
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm, strconv.FormatBool(spawningSys)}, k.Param.Realm, "", procclnt.HLINUX)
+	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm.String(), strconv.FormatBool(spawningSys)}, k.Param.Realm, "", procclnt.HLINUX)
 	if err != nil {
 		return nil, err
 	}
@@ -116,11 +116,12 @@ func (k *Kernel) bootRealmd() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{path.Join(sp.SIGMAHOME, k.Param.Realm)}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
+	// XXX ignore realm for now
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.Param.Realm}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
+	return k.bootSubsystem("fss3d", []string{k.Param.Realm.String()}, k.Param.Realm, k.procdIp, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {

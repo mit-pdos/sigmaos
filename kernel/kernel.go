@@ -30,9 +30,9 @@ const (
 )
 
 type Param struct {
-	Realm    string   `yalm:"realm, omitempty"`
-	Hostip   string   `yalm:"ip, omitempty"`
-	Services []string `yalm:"services"`
+	Realm    sp.Trealm `yalm:"realm, omitempty"`
+	Hostip   string    `yalm:"ip, omitempty"`
+	Services []string  `yalm:"services"`
 }
 
 type Kernel struct {
@@ -126,7 +126,7 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 		// Must happen in a separate thread because MakeKernelNamed
 		// will block until the replicas are able to process requests.
 		go func(i int) {
-			err := bootNamed(k, k.Param.Realm, i, k.Param.Realm)
+			err := bootNamed(k, k.Param.Realm.String(), i, k.Param.Realm)
 			ch <- err
 		}(i)
 	}
@@ -180,8 +180,8 @@ func (k *Kernel) shutdown() {
 	}
 }
 
-func makeNamedProc(addr string, replicate bool, id int, pe sp.Taddrs, realmId string) *proc.Proc {
-	args := []string{addr, realmId, ""}
+func makeNamedProc(addr string, replicate bool, id int, pe sp.Taddrs, realmId sp.Trealm) *proc.Proc {
+	args := []string{addr, realmId.String(), ""}
 	// If we're running replicated...
 	if replicate {
 		// Add an offset to the peers' port addresses.
@@ -198,7 +198,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe sp.Taddrs, realmId st
 }
 
 // Run a named (but not as a proc)
-func RunNamed(addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func RunNamed(addr string, replicate bool, id int, peers []string, realmId sp.Trealm) (*exec.Cmd, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := kproc.RunKernelProc(p, peers, realmId)
 	if err != nil {
@@ -244,21 +244,21 @@ func addReplPortOffset(peerAddr string) string {
 //
 
 func MakeSystem(uname, realmId string, namedAddr sp.Taddrs, cores *sessp.Tinterval) (*Kernel, error) {
-	p := &Param{Realm: realmId}
+	p := &Param{Realm: sp.Trealm(realmId)}
 	s := mkKernel(p, namedAddr, cores)
-	fsl, err := fslib.MakeFsLibAddr(p.Realm, s.ip, namedAddr)
+	fsl, err := fslib.MakeFsLibAddr(p.Realm.String(), s.ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}
 	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm.String(), namedAddr)
 	return s, nil
 }
 
 // Run a named as a proc
-func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers sp.Taddrs, realmId string) (*exec.Cmd, proc.Tpid, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, pclnt.NamedAddr(), realmId, procclnt.HLINUX)
+	cmd, err := pclnt.SpawnKernelProc(p, procclnt.HLINUX)
 	if err != nil {
 		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
 		return nil, "", err

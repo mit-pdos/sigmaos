@@ -8,16 +8,17 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
-func RunKernelProc(p *proc.Proc, namedAddr []string, realm string) (*exec.Cmd, error) {
+func RunKernelProc(p *proc.Proc, namedAddr []string, realm sp.Trealm) (*exec.Cmd, error) {
 	p.FinalizeEnv("NONE")
 	env := p.GetEnv()
 	env = append(env, "SIGMANAMED="+strings.Join(namedAddr, ","))
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
-
+	env = append(env, "SIGMAREALM="+realm.String())
 	cmd := exec.Command(p.Program, p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

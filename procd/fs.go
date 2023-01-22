@@ -29,7 +29,7 @@ func (pd *Procd) makeFs() {
 	if err != nil {
 		db.DFatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
-	procclnt.MountPids(pd.fsl, proc.Named())
+	procclnt.MountPids(pd.fsl, pd.fsl.NamedAddr())
 
 	// Set up runq dir
 	dirs := []string{sp.PROCD_RUNNING, proc.PIDS}

@@ -1099,7 +1099,7 @@ func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	assert.Nil(t, err)
 	if h == "" {
 		a := net.JoinHostPort(ts.GetLocalIP(), p)
-		mnt.SetAddr([]string{a})
+		mnt.SetAddr(sp.Taddrs{a})
 	}
 	return mnt
 }

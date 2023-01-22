@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/union"
@@ -49,7 +48,7 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return sp.MkMountService(proc.Named()), "", nil
+		return sp.MkMountService(fsl.NamedAddr()), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()

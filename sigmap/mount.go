@@ -24,7 +24,7 @@ func (mnt *Tmount) SetTree(tree string) {
 	mnt.Root = tree
 }
 
-func (mnt *Tmount) SetAddr(addr []string) {
+func (mnt *Tmount) SetAddr(addr Taddrs) {
 	mnt.Addr = addr
 }
 
@@ -36,12 +36,12 @@ func (mnt Tmount) Address() string {
 	return mnt.Addr[0]
 }
 
-func MkMountService(srvaddrs []string) Tmount {
+func MkMountService(srvaddrs Taddrs) Tmount {
 	return Tmount{Addr: srvaddrs}
 }
 
 func MkMountServer(addr string) Tmount {
-	return MkMountService([]string{addr})
+	return MkMountService(Taddrs{addr})
 }
 
 func (mnt Tmount) TargetHostPort() (string, string, error) {

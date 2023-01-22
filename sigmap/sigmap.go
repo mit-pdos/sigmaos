@@ -6,6 +6,7 @@ package sigmap
 
 import (
 	"fmt"
+	"strings"
 
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -19,11 +20,16 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 type Trealm string
+type Taddrs []string
 
 const ROOTREALM Trealm = "rootrealm"
 
 func (r Trealm) String() string {
 	return string(r)
+}
+
+func (as Taddrs) String() string {
+	return strings.Join(as, ",")
 }
 
 func (fid Tfid) String() string {

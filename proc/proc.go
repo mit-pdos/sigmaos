@@ -120,7 +120,6 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
-	p.AppendEnv(SIGMANAMED, GetSigmaNamed())
 	if p.Privileged {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
 	}

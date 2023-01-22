@@ -10,7 +10,7 @@ import (
 type FsLib struct {
 	*fdclnt.FdClient
 	realm     sp.Trealm
-	namedAddr []string
+	namedAddr sp.Taddrs
 }
 
 func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr []string) *FsLib {
@@ -54,7 +54,7 @@ func MakeFsLib(uname string) (*FsLib, error) {
 	return MakeFsLibNamed(uname, proc.Named())
 }
 
-func (fl *FsLib) NamedAddr() []string {
+func (fl *FsLib) NamedAddr() sp.Taddrs {
 	return fl.namedAddr
 }
 

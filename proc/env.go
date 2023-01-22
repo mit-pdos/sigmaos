@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 )
 
 // Environment variables which every proc expects to have.
@@ -76,9 +77,8 @@ func StringToNamedAddrs(s string) []string {
 	return strings.Split(s, ",")
 }
 
-func SetSigmaNamed(nds []string) {
-	s := strings.Join(nds, ",")
-	os.Setenv(SIGMANAMED, s)
+func SetSigmaNamed(nds sp.Taddrs) {
+	os.Setenv(SIGMANAMED, nds.String())
 }
 
 func GetSigmaNamed() string {

@@ -62,7 +62,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 
 	// Make some rootrealm services available in new realm
 	// XXX add sp.DBREL
-	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.KPIDSREL, sp.PROCDREL} {
+	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.PROCDREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.Tmount{Addr: rm.fsl.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
@@ -72,5 +72,14 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 		}
 	}
 
+	// Make some realm dirs
+	for _, s := range []string{sp.KPIDSREL} {
+		pn := path.Join(sp.NAMED, s)
+		db.DPrintf(db.REALMD, "Mkdir %v", pn)
+		if err := sc.MkDir(pn, 0777); err != nil {
+			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			return err
+		}
+	}
 	return nil
 }

@@ -3,6 +3,7 @@ package procclnt
 import (
 	"fmt"
 	"path"
+	"runtime/debug"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -15,6 +16,10 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
+		debug.PrintStack()
+		if serr.IsErrUnreachable(err) {
+			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}

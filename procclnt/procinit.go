@@ -31,7 +31,7 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
-			db.DFatalf("error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)
+			db.DFatalf("Error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)
 		}
 	}
 }
@@ -73,11 +73,7 @@ func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt
 }
 
 func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
-	// Make a pid directory for this initial proc
-	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
-		db.DFatalf("error mounting %v as %v err %v\n", proc.KPIDS, proc.KPIDS, err)
-		return err
-	}
+	mountDir(fsl, namedAddr, proc.KPIDS, proc.KPIDS)
 	return nil
 }
 

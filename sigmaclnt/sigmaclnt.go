@@ -20,7 +20,7 @@ func MkSigmaClntProc(name string, ip string, namedAddr []string) (*SigmaClnt, er
 	if err != nil {
 		return nil, err
 	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, name)
+	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, name)
 	return &SigmaClnt{fsl, pclnt}, nil
 }
 
@@ -54,6 +54,6 @@ func MkSigmaClntRealmProc(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*Si
 	if err != nil {
 		return nil, err
 	}
-	// sc.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), sc.FsLib, name, sc.NamedAddr())
+	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, name)
 	return sc, nil
 }

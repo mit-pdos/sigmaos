@@ -76,12 +76,26 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 			pathc.FidClnt.Clunk(fid)
 			return sp.NoFid, path, left, err
 		}
+
+		retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
+		if err != nil {
+			pathc.FidClnt.Clunk(fid)
+			return sp.NoFid, path, left, err
+		}
+		db.DPrintf(db.WALK, "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
+		if retry {
+			// On success walkSymlink returns new path to walk
+			path = left
+			pathc.FidClnt.Clunk(fid)
+			continue
+		}
+
 		fid, left, err = pathc.walkUnion(fid, left)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
 			return sp.NoFid, path, left, err
 		}
-		retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
+		retry, left, err = pathc.walkSymlink(fid, path, left, resolve)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
 			return sp.NoFid, path, left, err

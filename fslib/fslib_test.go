@@ -1340,15 +1340,20 @@ func TestFslibExit(t *testing.T) {
 
 	dot := pathname + "/."
 
+	// Make a new fsl for this test, because we want to use ts.FsLib
+	// to shutdown the system.
+	fsl, err := fslib.MakeFsLibAddr("fslibtest-1", ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
+
 	// connect
-	_, err := ts.Stat(dot)
+	_, err = fsl.Stat(dot)
 	assert.Nil(t, err)
 
 	// close
-	err = ts.Exit()
+	err = fsl.Exit()
 	assert.Nil(t, err)
 
-	_, err = ts.Stat(dot)
+	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrUnreachable(err))
 

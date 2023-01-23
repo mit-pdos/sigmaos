@@ -252,10 +252,6 @@ func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 	}
 	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, scheddIp))
 	if err != nil {
-		if scheddIp == "~local" {
-			sts, _ := clnt.GetDir(sp.SCHEDD)
-			db.DFatalf("No local schedd found: %v", sts)
-		}
 		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt: %v", err)
 		return nil
 	}

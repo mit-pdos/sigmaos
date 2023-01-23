@@ -26,24 +26,17 @@ done
 # test with a kernel with just named
 #
 
-for T in reader writer stats; do
+for T in reader writer stats reader writer stats fslib semclnt electclnt; do
     go test -v sigmaos/$T
 done
-
-exit 0
-    
-go test $@ sigmaos/reader
-go test $@ sigmaos/writer
-go test $@ sigmaos/stats
-go test $@ sigmaos/fslib
-go test $@ sigmaos/semclnt
-go test $@ sigmaos/electclnt
 
 #
 # test proxy
 #
 
-go test $@ sigmaos/proxy
+go test -v sigmaos/proxy
+
+exit 0
 
 #
 # tests a full kernel (one "fake" realm)

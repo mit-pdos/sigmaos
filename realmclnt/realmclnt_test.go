@@ -48,6 +48,8 @@ func mkTstate(t *testing.T) *Tstate {
 func TestBasic(t *testing.T) {
 	ts := mkTstate(t)
 
+	db.DPrintf(db.TEST, "Local ip: %v", ts.sc.GetLocalIP())
+
 	sts1, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
@@ -73,10 +75,17 @@ func TestBasic(t *testing.T) {
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := mkTstate(t)
 
+	sts1, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+
+	db.DPrintf(db.TEST, "Local ip: %v", ts.sc.GetLocalIP())
+
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
-	err := ts.sc.Spawn(a)
-	assert.Nil(t, err, "Spawn")
+	err = ts.sc.Spawn(a)
+	assert.Nil(t, err, "Errors spawn: %v", err)
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitexit")

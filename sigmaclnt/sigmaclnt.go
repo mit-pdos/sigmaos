@@ -20,7 +20,7 @@ func MkSigmaClntProc(name string, ip string, namedAddr []string) (*SigmaClnt, er
 	if err != nil {
 		return nil, err
 	}
-	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, name, namedAddr)
+	pclnt := procclnt.MakeProcClntInit(proc.GenPid(), fsl, name)
 	return &SigmaClnt{fsl, pclnt}, nil
 }
 

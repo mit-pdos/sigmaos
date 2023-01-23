@@ -251,7 +251,7 @@ func MakeSystem(uname, realmId string, namedAddr sp.Taddrs, cores *sessp.Tinterv
 		return nil, err
 	}
 	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm.String(), namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm.String())
 	return s, nil
 }
 

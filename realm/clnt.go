@@ -33,7 +33,7 @@ func MakeRealmClnt() (*RealmClnt, error) {
 		return nil, err
 	}
 	clnt.FsLib = fsl
-	clnt.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), clnt.FsLib, "realm-clnt", proc.Named())
+	clnt.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), clnt.FsLib, "realm-clnt")
 	return clnt, nil
 }
 

@@ -55,11 +55,11 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // Fake an initial process for, for example, tests.
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
-func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string, namedAddr []string) *ProcClnt {
+func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	proc.FakeProcEnv(pid, program, "", path.Join(proc.KPIDS, pid.String()), "")
-	MountPids(fsl, namedAddr)
+	MountPids(fsl, fsl.NamedAddr())
 
-	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(fsl.NamedAddr(), sp.PROCDREL, sp.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -67,7 +67,7 @@ func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string, namedAddr
 	clnt := makeProcClnt(fsl, pid, proc.GetProcDir())
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
 
-	mountDir(fsl, namedAddr, proc.GetProcDir(), proc.PROCDIR)
+	mountDir(fsl, fsl.NamedAddr(), proc.GetProcDir(), proc.PROCDIR)
 
 	return clnt
 }

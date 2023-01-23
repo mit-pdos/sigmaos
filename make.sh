@@ -49,10 +49,10 @@ if [ $# -gt 0 ]; then
 fi
 echo $WHAT
 
-if [ $WHAT == "kernel" ]; then
+if [[ $WHAT == "kernel" ]]; then
     mkdir -p bin/kernel
     WHAT="kernel linux"
-elif [ $WHAT == "user" ]; then
+elif [[ $WHAT == "user" ]]; then
     mkdir -p bin/user
     WHAT="user"
 else
@@ -65,7 +65,7 @@ LDF="-X sigmaos/sigmap.Target=$TARGET"
 for k in $WHAT; do
     echo "Building $k components"
     FILES=`ls cmd/$k`
-    if [ $k == "user" ]; then
+    if [[ $k == "user" ]]; then
        FILES="sleeper exec-uproc"
     fi
     for f in $FILES;  do

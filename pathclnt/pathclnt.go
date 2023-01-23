@@ -374,7 +374,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "SetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
+	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return 0, err
 	}
@@ -404,7 +404,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
+	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return 0, err
 	}

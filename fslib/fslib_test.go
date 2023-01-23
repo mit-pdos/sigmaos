@@ -1299,7 +1299,7 @@ func TestMountUnion(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.MkMountServer(":1111"))
 	assert.Nil(ts.T, err, "MountService")
 
-	err = ts.MountService(gopath.Join(pathname, "mount"), mkMount(t, ts, pathname))
+	err = ts.MountService(gopath.Join(pathname, "mount"), mkMount(t, ts, dn))
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")

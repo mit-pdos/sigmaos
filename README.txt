@@ -6,11 +6,8 @@ Make sure docker is installed. We run with username spaces enabled
 To augment PATH to find proxyd and, if desired, set SIGMADEBUG
 $ source env/env.sh
 
-Docker requires root privileges:
-# sudo bash
-
 So that sigmaos can access host's docker.sock within container (see comments
-in bootkernelclnt/)
+in bootkernelclnt/). Plus, don't have to run tests etc. as root.
 # chmod 666 /var/run/docker.sock
 
 Build docker images (one for kernel and one for user)

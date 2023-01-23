@@ -186,6 +186,31 @@ func TestRmDirWithSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestReadSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+
+	mnt := sp.MkMountService(ts.NamedAddr())
+	err = ts.MkMountSymlink(fn, mnt)
+	assert.Nil(t, err, "MkMount: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	target, err := ts.GetFile(fn)
+	assert.Nil(t, err, "GetFile: %v", err)
+	mnt1, err := sp.MkMount(target)
+	assert.Nil(t, err, "GetFile: %v", err)
+
+	log.Printf("mnt %v mnt %v\n", mnt, mnt1)
+
+	ts.Shutdown()
+}
+
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 

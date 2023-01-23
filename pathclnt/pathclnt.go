@@ -344,7 +344,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
+	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
 	}

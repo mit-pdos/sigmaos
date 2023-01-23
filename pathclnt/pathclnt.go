@@ -160,10 +160,12 @@ func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, 
 	base := path.Base()
 	fid, err := pathc.WalkPath(dir, true, nil)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
 		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
 		return sp.NoFid, err
 	}
 	return fid, nil

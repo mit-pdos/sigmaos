@@ -1289,6 +1289,26 @@ func TestSetFileSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestMountUnion(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	dn := gopath.Join(pathname, "d")
+	err := ts.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.MkMountServer(":1111"))
+	assert.Nil(ts.T, err, "MountService")
+
+	err = ts.MountService(gopath.Join(pathname, "mount"), mkMount(t, ts, pathname))
+	assert.Nil(ts.T, err, "MountService")
+
+	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
+
+	ts.Shutdown()
+}
+
 func TestOpenRemoveRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 

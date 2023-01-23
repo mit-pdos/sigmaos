@@ -6,3 +6,6 @@ if mount | grep -q 9p; then
 fi
 
 pgrep -x proxyd > /dev/null && killall proxyd
+
+docker stop $(docker ps -a | grep 'sigma' | cut -d ' ' -f1)
+docker rm $(docker ps -a | grep 'sigma' | cut -d ' ' -f1)

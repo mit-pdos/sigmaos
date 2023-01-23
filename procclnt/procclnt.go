@@ -188,6 +188,9 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 	p.SetSpawnTime(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
 	if how == HPROCD {
+		if pdc == nil {
+			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\nschedds:%v, %v", scheddIp, p, clnt.schedds, clnt.scheddIps)
+		}
 		req := &schedd.SpawnRequest{
 			Realm:     clnt.Realm().String(),
 			ProcProto: p.GetProto(),
@@ -249,7 +252,11 @@ func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 	}
 	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, scheddIp))
 	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "Error make protdevclnt: %v", err)
+		if scheddIp == "~local" {
+			sts, _ := clnt.GetDir(sp.SCHEDD)
+			db.DFatalf("No local schedd found: %v", sts)
+		}
+		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt: %v", err)
 		return nil
 	}
 	clnt.schedds[scheddIp] = pdc

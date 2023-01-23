@@ -2,7 +2,6 @@ package realmclnt_test
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,19 +51,19 @@ func TestBasic(t *testing.T) {
 	sts1, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
-	log.Printf("names sched %v\n", sp.Names(sts1))
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
 	sts, err := ts.sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 
-	log.Printf("realm named root %v\n", sp.Names(sts))
+	db.DPrintf(db.TEST, "realm named root %v\n", sp.Names(sts))
 
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
 	sts, err = ts.sc.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
-	log.Printf("realm names sched %v\n", sp.Names(sts))
+	db.DPrintf(db.TEST, "realm names sched %v\n", sp.Names(sts))
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
 

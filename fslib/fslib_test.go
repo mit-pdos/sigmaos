@@ -206,7 +206,7 @@ func TestReadSymlink(t *testing.T) {
 	mnt1, err := sp.MkMount(target)
 	assert.Nil(t, err, "GetFile: %v", err)
 
-	log.Printf("mnt %v mnt %v\n", mnt, mnt1)
+	assert.Equal(t, mnt.Addr[0], mnt1.Addr[0])
 
 	ts.Shutdown()
 }

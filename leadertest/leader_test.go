@@ -38,10 +38,10 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 
-		err = ts.WaitStart(p.Pid)
+		err = ts.WaitStart(p.GetPid())
 		assert.Nil(t, err, "WaitStarted")
 
-		pids = append(pids, p.Pid)
+		pids = append(pids, p.GetPid())
 	}
 
 	for _, pid := range pids {

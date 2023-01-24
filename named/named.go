@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -62,6 +63,7 @@ func Run(args []string) {
 
 	if realmId == sp.ROOTREALM {
 		initfs(ss, InitRootDir)
+		makews(ss)
 	} else {
 		initfs(ss, InitDir)
 	}
@@ -73,7 +75,7 @@ func Run(args []string) {
 	ss.Done()
 }
 
-var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL, sp.WS_REL, sp.WS_RUNQ_LC_REL, sp.WS_RUNQ_BE_REL}
+var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
 
 var InitDir = []string{sp.TMPREL, sp.HOTELREL, sp.CACHEREL}
 
@@ -82,6 +84,24 @@ func initfs(ss *sesssrv.SessSrv, root []string) error {
 	for _, n := range root {
 		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
 		if err != nil {
+			db.DFatalf("Error create [%v]: %v", n, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func makews(ss *sesssrv.SessSrv) error {
+	r := ss.Root()
+	ws, err := r.Create(ctx.MkCtx("", 0, nil), sp.WS_REL, 0777|sp.DMDIR, sp.OREAD|sp.OWRITE)
+	if err != nil {
+		db.DFatalf("Error create [%v]: %v", sp.WS_REL, err)
+		return err
+	}
+	for _, n := range []string{sp.WS_RUNQ_LC_REL, sp.WS_RUNQ_BE_REL} {
+		_, err := ws.(fs.Dir).Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
+		if err != nil {
+			db.DFatalf("Error create [%v]: %v", n, err)
 			return err
 		}
 	}

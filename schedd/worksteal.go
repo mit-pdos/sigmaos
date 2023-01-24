@@ -28,7 +28,7 @@ func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 }
 
 // Try to steal a proc from another schedd. Returns true if successful.
-func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
+func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 	var q string
 	switch p.GetType() {
 	case proc.T_LC:
@@ -45,7 +45,7 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 	// Steal from the original schedd.
 	sreq := &proto.StealProcRequest{
 		ScheddIp: sd.mfs.MyAddr(),
-		Realm:    realm,
+		Realm:    realm.String(),
 		PidStr:   p.GetPid().String(),
 	}
 	sres := &proto.StealProcResponse{}
@@ -66,7 +66,7 @@ func (sd *Schedd) tryStealProc(realm string, p *proc.Proc) bool {
 // Monitor a Work-Stealing queue.
 func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 	for {
-		stealable := make(map[string][]*proc.Proc, 0)
+		stealable := make(map[sp.Trealm][]*proc.Proc, 0)
 		// Wait until there is a proc to steal.
 		sts, err := sd.mfs.FsLib().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
 			sd.mu.Lock()
@@ -85,14 +85,14 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 
 				// Is the proc a local proc? If so, don't add it to the queue of
 				// stealable procs.
-				if _, ok := sd.qs[p.Realm].pmap[proc.Tpid(st.Name)]; ok {
+				if _, ok := sd.qs[p.GetRealm()].pmap[proc.Tpid(st.Name)]; ok {
 					continue
 				}
-				if _, ok := stealable[p.Realm]; !ok {
-					stealable[p.Realm] = make([]*proc.Proc, 0)
+				if _, ok := stealable[p.GetRealm()]; !ok {
+					stealable[p.GetRealm()] = make([]*proc.Proc, 0)
 				}
 				// Add to the list of stealable procs
-				stealable[p.Realm] = append(stealable[p.Realm], p)
+				stealable[p.GetRealm()] = append(stealable[p.GetRealm()], p)
 				nStealable++
 			}
 			db.DPrintf(db.SCHEDD, "Found %v stealable procs %v", nStealable, stealable)

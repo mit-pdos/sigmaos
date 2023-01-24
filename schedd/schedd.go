@@ -26,13 +26,13 @@ type Schedd struct {
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
-	qs        map[string]*Queue
+	qs        map[sp.Trealm]*Queue
 }
 
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
-		qs:        make(map[string]*Queue),
+		qs:        make(map[sp.Trealm]*Queue),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),
 		memfree:   mem.GetTotalMem(),
@@ -65,11 +65,11 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	p := proc.MakeProcFromProto(req.ProcProto)
 	p.ScheddIp = sd.mfs.MyAddr()
 	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
-	if _, ok := sd.qs[req.Realm]; !ok {
-		sd.qs[req.Realm] = makeQueue()
+	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
+		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
 	}
 	// Enqueue the proc according to its realm
-	sd.qs[req.Realm].Enqueue(p)
+	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
 	sd.postProcInQueue(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
@@ -83,7 +83,7 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 
 	// See if proc is still queued.
 	var p *proc.Proc
-	if p, res.OK = sd.qs[req.Realm].Steal(proc.Tpid(req.PidStr)); res.OK {
+	if p, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(proc.Tpid(req.PidStr)); res.OK {
 		ln := path.Join(sp.SCHEDD, req.ScheddIp, sp.QUEUE, p.GetPid().String())
 		fn := path.Join(p.ParentDir, proc.WS_LINK)
 		// Steal is successful. Add the new WS link to the parent's procdir.

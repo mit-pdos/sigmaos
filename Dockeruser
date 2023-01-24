@@ -1,4 +1,4 @@
 # syntax=docker/dockerfile:1
 
-FROM sigmaos AS user
+FROM sigmaosbase AS user
 # maybe delete some files?

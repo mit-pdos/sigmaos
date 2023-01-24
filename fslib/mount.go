@@ -3,6 +3,7 @@ package fslib
 import (
 	"fmt"
 
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -113,7 +114,8 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	rmnt := sp.NullMount()
 	rname := ""
-	_, err := fsl.ProcessDir(d, func(st *sp.Stat) (bool, error) {
+	// Make sure to resolve d in case it is a symlink or mount point.
+	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			return false, nil

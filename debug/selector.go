@@ -69,6 +69,7 @@ const (
 	CONTAINER            = "CONTAINER"
 	NAMED                = "NAMED"
 	PROCD                = "PROCD"
+	UPROCD               = "UPROCD"
 	SCHEDD               = "SCHEDD"
 	SCHEDD_ERR           = "SCHEDD" + ERR
 	PROCD_ERR            = PROCD + ERR
@@ -125,7 +126,6 @@ const (
 	CLONEDEV             = "CLONEDEV"
 	SESSDEV              = "SESSDEV"
 	PROTDEVSRV           = "PROTDEVSRV"
-	UPROCSRV             = "UPROCSRV"
 )
 
 // Client-side Infrastructure

@@ -12,7 +12,9 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 )
 
 const (
@@ -28,6 +30,7 @@ type LinuxProc struct {
 	attr      *proc.Proc
 	stolen    bool
 	pd        *Procd
+	sclnt     *sigmaclnt.SigmaClnt
 	UtilInfo  struct {
 		lastUtil float64
 		utime0   uint64
@@ -36,10 +39,11 @@ type LinuxProc struct {
 	}
 }
 
-func makeLinuxProc(pd *Procd, a *proc.Proc, stolen bool) *LinuxProc {
+func makeLinuxProc(pd *Procd, sclnt *sigmaclnt.SigmaClnt, a *proc.Proc, stolen bool) *LinuxProc {
 	a.FinalizeEnv(pd.addr)
 	p := &LinuxProc{}
 	p.pd = pd
+	p.sclnt = sclnt
 	p.attr = a
 	p.stolen = stolen
 	p.Env = p.attr.GetEnv()
@@ -52,7 +56,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Proc %v finished with error: %v\n", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 }
@@ -72,7 +76,7 @@ func (p *LinuxProc) run() error {
 		// If this is a privileged proc, wait for it to start & then mark it as
 		// started.
 		go func() {
-			semStart := semclnt.MakeSemClnt(p.pd.fsl, path.Join(p.attr.ProcDir, proc.START_SEM))
+			semStart := semclnt.MakeSemClnt(p.sclnt.FsLib, path.Join(p.attr.ProcDir, proc.START_SEM))
 			semStart.Down()
 
 			p.pd.mu.Lock()
@@ -92,7 +96,7 @@ func (p *LinuxProc) run() error {
 	} else {
 		if err := p.pd.updm.MakeUProc(p.attr, "rootrealm"); err != nil {
 			db.DPrintf(db.ALWAYS, "MakeUProc run error: %v, %v\n", p.attr, err)
-			p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+			procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err
 		}
 		db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)
@@ -104,7 +108,7 @@ func (p *LinuxProc) run() error {
 	err := cmd.Start()
 	if err != nil {
 		db.DPrintf(db.PROCD_ERR, "Procd run error: %v, %v\n", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
+		procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
 

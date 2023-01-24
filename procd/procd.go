@@ -19,6 +19,7 @@ import (
 	"sigmaos/protdevsrv"
 	scheddproto "sigmaos/schedd/proto"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
 )
@@ -26,13 +27,14 @@ import (
 type Procd struct {
 	mu             sync.Mutex
 	fs             *ProcdFs
-	realm          string                   // realm id of this procd
-	kernelInitDone bool                     // True if kernel init has finished (this procd has spawned ux & s3).
-	kernelProcs    map[string]bool          // Map of kernel procs spawned on this procd.
-	addr           string                   // Address of this procd.
-	runningProcs   map[proc.Tpid]*LinuxProc // Map of currently running procs.
-	coresAvail     proc.Tcore               // Current number of cores available to run procs on.
-	memAvail       proc.Tmem                // Available memory for this procd and its procs to use.
+	realm          string                             // realm id of this procd
+	kernelInitDone bool                               // True if kernel init has finished (this procd has spawned ux & s3).
+	kernelProcs    map[string]bool                    // Map of kernel procs spawned on this procd.
+	addr           string                             // Address of this procd.
+	runningProcs   map[proc.Tpid]*LinuxProc           // Map of currently running procs.
+	sigmaclnts     map[sp.Trealm]*sigmaclnt.SigmaClnt // Sigma clnt for each realm.
+	coresAvail     proc.Tcore                         // Current number of cores available to run procs on.
+	memAvail       proc.Tmem                          // Available memory for this procd and its procs to use.
 	perf           *perf.Perf
 	workers        sync.WaitGroup
 	procclnt       *procclnt.ProcClnt
@@ -54,6 +56,7 @@ func RunProcd(realm string, spawningSys bool) {
 	}
 	pd.realm = realm
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
+	pd.sigmaclnts = make(map[sp.Trealm]*sigmaclnt.SigmaClnt)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.memAvail = mem.GetTotalMem()
 
@@ -115,6 +118,26 @@ func (pd *Procd) getLCProcUtil() float64 {
 	return total
 }
 
+func (pd *Procd) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
+	var clnt *sigmaclnt.SigmaClnt
+	var ok bool
+	if clnt, ok = pd.sigmaclnts[realm]; !ok {
+		// No need to make a new client for the root realm.
+		if realm == sp.Trealm(proc.GetRealm()) {
+			clnt = &sigmaclnt.SigmaClnt{pd.fsl, nil}
+		} else {
+			var err error
+			if clnt, err = sigmaclnt.MkSigmaClntRealm(pd.fsl, sp.PROCDREL, realm); err != nil {
+				db.DFatalf("Err MkSigmaClntRealm: %v", err)
+			}
+			// Mount KPIDS.
+			procclnt.MountPids(clnt.FsLib, clnt.FsLib.NamedAddr())
+		}
+		pd.sigmaclnts[realm] = clnt
+	}
+	return clnt
+}
+
 // Caller holds lock.
 func (pd *Procd) putProcL(p *LinuxProc) {
 	pd.runningProcs[p.attr.GetPid()] = p
@@ -135,9 +158,11 @@ func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
 
 func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	// Create an ephemeral semaphore for the parent proc to wait on.
-	semStart := semclnt.MakeSemClnt(pd.fsl, path.Join(p.ParentDir, proc.START_SEM))
+	sclnt := pd.getSigmaClnt(p.GetRealm())
+	semPath := path.Join(p.ParentDir, proc.START_SEM)
+	semStart := semclnt.MakeSemClnt(sclnt.FsLib, semPath)
 	if err := semStart.Init(sp.DMTMP); err != nil {
-		db.DFatalf("Error creating start semaphore: %v", err)
+		db.DFatalf("Error creating start semaphore path:%v err:%v", semPath, err)
 	}
 	db.DPrintf(db.PROCD, "Sem init done: %v", p)
 	if err := pd.fsl.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
@@ -147,7 +172,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 		db.DPrintf(db.PROCD, "Spawned privileged proc %v on fully initialized procd", p)
 	}
 	// Make a Linux Proc which corresponds to this proc.
-	linuxProc := makeLinuxProc(pd, p, stolen)
+	linuxProc := makeLinuxProc(pd, sclnt, p, stolen)
 	// Allocate dedicated cores for this proc to run on, if it requires them.
 	// Core allocation & resource accounting has to happen at this point, while
 	// we still hold the lock we used to claim the proc, since more spawns may

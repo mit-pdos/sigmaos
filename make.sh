@@ -65,9 +65,9 @@ LDF="-X sigmaos/sigmap.Target=$TARGET"
 for k in $WHAT; do
     echo "Building $k components"
     FILES=`ls cmd/$k`
-    if [[ $k == "user" ]]; then
-       FILES="sleeper exec-uproc"
-    fi
+    # if [[ $k == "user" ]]; then
+    #   FILES="sleeper exec-uproc"
+    # fi
     for f in $FILES;  do
         if [ $CMD == "vet" ]; then
             echo "go vet cmd/$k/$f/main.go"

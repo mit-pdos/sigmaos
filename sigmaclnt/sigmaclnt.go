@@ -44,7 +44,7 @@ func MkSigmaClntRealm(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*Sigm
 		return nil, err
 	}
 	db.DPrintf(db.REALMCLNT, "Realm %v NamedAddr %v\n", rid, mnt.Addr)
-	realm, err := fslib.MakeFsLibAddr(name, rootrealm.GetLocalIP(), mnt.Addr)
+	realm, err := fslib.MakeFsLibRealmAddr(name, rid, rootrealm.GetLocalIP(), mnt.Addr)
 	return &SigmaClnt{realm, nil}, nil
 }
 

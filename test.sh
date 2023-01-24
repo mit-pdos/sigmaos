@@ -44,7 +44,7 @@ go test -v sigmaos/proxy
 # --- FAIL: TestSpawnProcdCrash (0.00s)
 # --- FAIL: TestMaintainReplicationLevelCrashProcd (0.00s)
 
-for T in procclnt ux bootkernelclnt leaderclnt leadertest snapshot cacheclnt; do
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot cacheclnt; do
     go test -v sigmaos/$T
 done
     
@@ -52,10 +52,9 @@ go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
 
 exit 0
 
-go test $@ sigmaos/s3
 go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
-# TestStartStopReplN hangs in:
+# TestStartStopReplOK hangs in:
 go test $@ sigmaos/group
 
 # TestProcManyOK hangs in:

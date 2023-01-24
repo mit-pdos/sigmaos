@@ -5,4 +5,5 @@ services:
   - procd
   - realmd
   - ux
+  - s3
 

@@ -105,5 +105,5 @@ func dequeue(maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc
 }
 
 func (q *Queue) String() string {
-	return fmt.Sprintf("{ lc:%v be:%v }", q.lc, q.be)
+	return fmt.Sprintf("{ lc:%v be:%v lcws:%v bews:%v }", q.lc, q.be, q.lcws, q.bews)
 }

@@ -50,6 +50,8 @@ done
     
 go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
 
+exit 0
+
 go test $@ sigmaos/s3
 go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 

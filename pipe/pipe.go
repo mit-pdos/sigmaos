@@ -7,10 +7,10 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
+	"sigmaos/serr"
 	"sigmaos/sesscond"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -187,7 +187,7 @@ func (pipe *Pipe) Unlink() {
 
 	// Free sess conds.
 	if pipe.nlink == 0 {
-		db.DPrintf(db.ALWAYS, "PIPE NLINK 0")
+		db.DPrintf(db.PIPE, "PIPE NLINK 0")
 		pipe.sct.FreeSessCond(pipe.condw)
 		pipe.sct.FreeSessCond(pipe.condr)
 	}

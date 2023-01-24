@@ -265,7 +265,7 @@ func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 		if !ok || err != nil {
 			// If ~local hasn't registered itself yet, this method should've bailed
 			// out earlier.
-			db.DFatalf("Couldn't resolve procd ~local: %v, %v, %v", p, ok, err)
+			db.DFatalf("Couldn't resolve schedd ~local: %v, %v, %v", p, ok, err)
 		}
 		scheddIp = path.Base(p)
 		db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", scheddIp)

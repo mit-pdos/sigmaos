@@ -252,6 +252,8 @@ func (clnt *ProcClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 	}
 	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, scheddIp))
 	if err != nil {
+		sts, _ := clnt.GetDir(sp.SCHEDD)
+		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt localIP:%v scheddIP:%v schedds:%v err:%v", clnt.GetLocalIP(), scheddIp, sp.Names(sts), err)
 		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt: %v", err)
 		return nil
 	}

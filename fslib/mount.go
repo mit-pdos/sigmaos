@@ -3,7 +3,6 @@ package fslib
 import (
 	"fmt"
 
-	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

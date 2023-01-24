@@ -131,18 +131,18 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	fsl, _, err := ts.MakeClnt(0, "abcd") // fslib.MakeFsLibAddr("abcd", ts.GetLocalIP(), ts.NamedAddr())
+	sc, err := ts.MakeClnt(0, "abcd") // fslib.MakeFsLibAddr("abcd", ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
-	fsl.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
+	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
-		fd, err := fsl.Open(linkPath+"/", sp.OREAD)
+		fd, err := sc.Open(linkPath+"/", sp.OREAD)
 		assert.Nil(t, err, "Opening")
 		// Read symlink contents again
-		b, err = fsl.GetFile(linkPath + "/")
+		b, err = sc.GetFile(linkPath + "/")
 		assert.Nil(t, err, "Reading linked file")
 		assert.Equal(t, contents, string(b), "File contents don't match")
 
-		err = fsl.Close(fd)
+		err = sc.Close(fd)
 		assert.Nil(t, err, "closing linked file")
 
 		return false, nil
@@ -168,7 +168,7 @@ func procdName(ts *test.Tstate, exclude map[string]bool) string {
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name := procdName(ts, map[string]bool{path.Dir(sp.PROCD_WS): true})
+	name := procdName(ts, map[string]bool{path.Dir(sp.WS): true})
 
 	var err error
 

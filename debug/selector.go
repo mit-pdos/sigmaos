@@ -65,6 +65,7 @@ const (
 const (
 	KERNEL     Tselector = "KERNEL"
 	BOOTCLNT             = "BOOTCLNT"
+	BOOT                 = "BOOT"
 	CONTAINER            = "CONTAINER"
 	NAMED                = "NAMED"
 	PROCD                = "PROCD"

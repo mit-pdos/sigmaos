@@ -164,11 +164,11 @@ func (p *Proc) GetMem() Tmem {
 }
 
 func (p *Proc) GetRealm() sp.Trealm {
-	return sp.Trealm(p.ProcProto.Realm)
+	return sp.Trealm(p.ProcProto.RealmStr)
 }
 
 func (p *Proc) SetRealm(r sp.Trealm) {
-	p.ProcProto.Realm = r.String()
+	p.ProcProto.RealmStr = r.String()
 }
 
 func (p *Proc) SetSpawnTime(t time.Time) {

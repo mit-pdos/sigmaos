@@ -1,7 +1,6 @@
 package boot
 
 import (
-	"log"
 	"os"
 
 	db "sigmaos/debug"
@@ -22,7 +21,7 @@ func BootUp(param *kernel.Param, nameds sp.Taddrs) error {
 		return err
 	}
 
-	log.Printf("container %s booted %v\n", os.Args[1], k.Ip())
+	db.DPrintf(db.BOOT, "container %s booted %v\n", os.Args[1], k.Ip())
 
 	if err := kernelsrv.RunKernelSrv(k); err != nil {
 		return err

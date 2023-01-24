@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -72,7 +73,7 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 // ========== HELPERS ==========
 
 // Clean up proc
-func (clnt *ProcClnt) removeProc(procdir string) error {
+func removeProc(fsl *fslib.FsLib, procdir string) error {
 	// Children may try to write in symlinks & exit statuses while the rmdir is
 	// happening. In order to avoid causing errors (such as removing a non-empty
 	// dir) temporarily rename so children can't find the dir. The dir may be
@@ -80,19 +81,19 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 	// to exit on its behalf.
 	src := path.Join(procdir, proc.CHILDREN)
 	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
-	if err := clnt.Rename(src, dst); err != nil {
+	if err := fsl.Rename(src, dst); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error rename removeProc %v -> %v : %v\n", src, dst, err)
 	}
-	err := clnt.RmDir(procdir)
+	err := fsl.RmDir(procdir)
 	maxRetries := 2
 	// May have to retry a few times if writing child already opened dir. We
 	// should only have to retry once at most.
 	for i := 0; i < maxRetries && err != nil; i++ {
-		s, _ := clnt.SprintfDir(procdir)
+		s, _ := fsl.SprintfDir(procdir)
 		// debug.PrintStack()
 		db.DPrintf(db.PROCCLNT_ERR, "RmDir %v err %v \n%v", procdir, err, s)
 		// Retry
-		err = clnt.RmDir(procdir)
+		err = fsl.RmDir(procdir)
 	}
 	return err
 }
@@ -103,7 +104,7 @@ func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) err
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
 	if len(procdir) > 0 {
-		clnt.removeProc(procdir)
+		removeProc(clnt.FsLib, procdir)
 	}
 	return err
 }

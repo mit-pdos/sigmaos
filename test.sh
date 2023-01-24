@@ -36,29 +36,30 @@ done
 
 go test -v sigmaos/proxy
 
-exit 0
-
 #
-# tests a full kernel (one "fake" realm)
+# tests a full kernel using root realm
 #
 
-go test $@ sigmaos/procclnt
+# procclnt; two tests fail:
+# --- FAIL: TestSpawnProcdCrash (0.00s)
+# --- FAIL: TestMaintainReplicationLevelCrashProcd (0.00s)
 
-go test $@ sigmaos/ux
+for T in procclnt ux bootkernelclnt leaderclnt leadertest snapshot cacheclnt; do
+    go test -v sigmaos/$T
+done
+    
 go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
+
+exit 0
 
 go test $@ sigmaos/s3
 go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
-go test $@ sigmaos/bootclnt
-go test $@ sigmaos/leaderclnt
-go test $@ sigmaos/leadertest
-go test $@ sigmaos/snapshot
-
+# TestStartStopReplN hangs in:
 go test $@ sigmaos/group
-go test $@ sigmaos/sessclnt
 
-go test $@ sigmaos/cacheclnt
+# TestProcManyOK hangs in:
+go test $@ sigmaos/sessclnt
 
 # dbd_test and wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $@ sigmaos/www

@@ -58,10 +58,10 @@ func (ts *Tstate) StartClerk(args []string, ncore proc.Tcore) {
 	// SpawnBurst to spread clerks across procds.
 	_, errs := ts.SpawnBurst([]*proc.Proc{p})
 	assert.True(ts.T, len(errs) == 0)
-	err := ts.WaitStart(p.Pid)
+	err := ts.WaitStart(p.GetPid())
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 
-	ts.clrks = append(ts.clrks, p.Pid)
+	ts.clrks = append(ts.clrks, p.GetPid())
 }
 
 func TestCacheSingle(t *testing.T) {

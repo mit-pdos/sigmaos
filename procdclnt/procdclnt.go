@@ -15,7 +15,7 @@ import (
 
 type ProcdClnt struct {
 	done    int32
-	realmid string
+	realmid sp.Trealm
 	*fslib.FsLib
 }
 
@@ -33,7 +33,7 @@ func nprocd(sts []*sp.Stat) int {
 	return len(sts) - 1
 }
 
-func MakeProcdClnt(fsl *fslib.FsLib, realmid string) *ProcdClnt {
+func MakeProcdClnt(fsl *fslib.FsLib, realmid sp.Trealm) *ProcdClnt {
 	return &ProcdClnt{0, realmid, fsl}
 }
 
@@ -100,7 +100,7 @@ func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
 func (pdc *ProcdClnt) MonitorProcds() {
 	var realmstr string
 	if pdc.realmid != "" {
-		realmstr = "[" + pdc.realmid + "] "
+		realmstr = "[" + pdc.realmid.String() + "] "
 	}
 	go func() {
 		for atomic.LoadInt32(&pdc.done) == 0 {

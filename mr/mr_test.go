@@ -195,7 +195,7 @@ func TestSeqGrep(t *testing.T) {
 	p := proc.MakeProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.Pid)
+	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 	// assert.Equal(t, 795, n)
@@ -212,7 +212,7 @@ func TestSeqWc(t *testing.T) {
 	p := proc.MakeProc("seqwc", []string{job.Input, OUT})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.Pid)
+	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 	// assert.Equal(t, 795, n)
@@ -277,7 +277,7 @@ func (ts *Tstate) checkJob() {
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.Realm())
 	if monitor {
 		pdc.MonitorProcds()
 		defer pdc.Done()

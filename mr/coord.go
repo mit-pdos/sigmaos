@@ -84,11 +84,11 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	db.DPrintf(db.MR, "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
 	fsl, err := fslib.MakeFsLib("coord-" + proc.GetPid().String())
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.MR, "Made fslib job %v, addr %v", c.job, fsl.NamedAddr())
 	c.FsLib = fsl
 	m, err := strconv.Atoi(args[1])
 	if err != nil {

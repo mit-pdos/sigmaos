@@ -43,22 +43,16 @@ go test -v sigmaos/proxy
 # procclnt; two tests fail:
 # --- FAIL: TestSpawnProcdCrash (0.00s)
 # --- FAIL: TestMaintainReplicationLevelCrashProcd (0.00s)
+# sessclnt; TestWriteCrash fails
 
-for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot cacheclnt; do
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt; do
     go test -v sigmaos/$T
 done
     
 go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
-
-exit 0
-
 go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
-# TestStartStopReplOK hangs in:
-go test $@ sigmaos/group
-
-# TestProcManyOK hangs in:
-go test $@ sigmaos/sessclnt
+exit 0
 
 # dbd_test and wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $@ sigmaos/www

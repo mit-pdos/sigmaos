@@ -128,36 +128,51 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	}
 }
 
-// TODO: Proper fair-share scheduling policy.
+// TODO: Proper fair-share scheduling policy, and more fine-grained locking.
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
 	for {
-		// Currently, we iterate through the realms roughly round-robin (go maps
-		// are iterated in random order).
+		var ok bool
+		// Iterate through the realms round-robin.
 		for r, q := range sd.qs {
-			// Try to dequeue a proc, whether it be from a local queue or potentially
-			// stolen from a remote queue.
-			if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
-				if stolen {
-					// Try to claim the proc.
-					if ok := sd.tryStealProc(r, p); ok {
-						// Proc was claimed successfully.
-						db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
-					} else {
-						// Couldn't claim the proc. Move along.
-						continue
-					}
-				}
-				// Claimed a proc, so schedule it.
-				db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
-				sd.runProc(p)
-				continue
-			}
+			// Try to schedule a proc from realm r.
+			ok = ok || sd.tryScheduleProc(r, q)
 		}
-		db.DPrintf(db.SCHEDD, "No procs runnable")
-		sd.cond.Wait()
+		// If unable to schedule a proc from any realm, wait.
+		if !ok {
+			db.DPrintf(db.SCHEDD, "No procs runnable cores:%v mem:%v qs:%v", sd.coresfree, sd.memfree, sd.qs)
+			sd.cond.Wait()
+		}
+	}
+}
+
+// Try to schedule a proc from realm r's queue q. Returns true if a proc was
+// successfully scheduled.
+func (sd *Schedd) tryScheduleProc(r sp.Trealm, q *Queue) bool {
+	for {
+		// Try to dequeue a proc, whether it be from a local queue or potentially
+		// stolen from a remote queue.
+		if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+			// If the proc was stolen...
+			if stolen {
+				// Try to claim the proc.
+				if ok := sd.tryStealProc(r, p); ok {
+					// Proc was claimed successfully.
+					db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
+				} else {
+					// Couldn't claim the proc. Try and steal another.
+					continue
+				}
+			}
+			// Claimed a proc, so schedule it.
+			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
+			sd.runProc(p)
+			return true
+		} else {
+			return false
+		}
 	}
 }
 

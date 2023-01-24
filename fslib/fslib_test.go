@@ -95,7 +95,7 @@ func TestConnect(t *testing.T) {
 	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
-	db.DPrintf(db.ALWAYS, "disconnected")
+	db.DPrintf(db.TEST, "disconnected")
 
 	_, err = ts.Write(fd, d)
 	assert.True(t, serr.IsErrUnreachable(err))
@@ -147,7 +147,7 @@ func TestRemoveSymlink(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
 	d1 := gopath.Join(pathname, "d1")
-	db.DPrintf(db.ALWAYS, "path %v", pathname)
+	db.DPrintf(db.TEST, "path %v", pathname)
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
@@ -465,7 +465,7 @@ func TestDirConcur(t *testing.T) {
 		assert.False(t, b)
 
 		if i < NFILE-N {
-			db.DPrintf(db.ALWAYS, "names %v", names)
+			db.DPrintf(db.TEST, "names %v", names)
 		}
 
 		assert.True(t, i >= NFILE-N)

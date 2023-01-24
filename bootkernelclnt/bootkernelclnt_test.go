@@ -151,24 +151,10 @@ func TestSymlink3(t *testing.T) {
 	ts.Shutdown()
 }
 
-func procdName(ts *test.Tstate, exclude map[string]bool) string {
-	sts, err := ts.GetDir(sp.PROCD)
-	stsExcluded := []*sp.Stat{}
-	for _, s := range sts {
-		if ok := exclude[path.Join(sp.PROCD, s.Name)]; !ok {
-			stsExcluded = append(stsExcluded, s)
-		}
-	}
-	assert.Nil(ts.T, err, sp.PROCD)
-	assert.Equal(ts.T, 1, len(stsExcluded))
-	name := path.Join(sp.PROCD, stsExcluded[0].Name)
-	return name
-}
-
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name := procdName(ts, map[string]bool{path.Dir(sp.WS): true})
+	name := path.Join(sp.PROCD, "~any")
 
 	var err error
 

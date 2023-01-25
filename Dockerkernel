@@ -3,7 +3,5 @@
 FROM sigmaosbase AS kernel
 
 WORKDIR /home/sigmaos
-RUN mkdir .aws && chmod 700 .aws
-COPY aws/.aws/credentials .aws/credentials
-RUN chmod 600 .aws/credentials
+# RUN mkdir .aws && chmod 700 .aws
 CMD ["bin/linux/bootkernel", "bootkernelclnt/bootall.yml"]

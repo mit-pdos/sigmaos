@@ -1,14 +1,15 @@
 # Building, installing, and running sigmaos.
 
-Make sure docker and gpg are installed. We run with username spaces
-enabled (see $3.8 of https://wiki.archlinux.org/title/docker).
+Make sure docker is installed.
 
 To augment PATH to find proxyd and, if desired, set SIGMADEBUG
 $ source env/env.sh
 
-So that sigmaos can access host's docker.sock within container (see comments
-in bootkernelclnt/). Plus, don't have to run tests etc. as root.
+So that sigmaos can access host's docker.sock within container:
 # chmod 666 /var/run/docker.sock
+
+This setup is insecure but see comments in kcontainer.go.  Small bonus we
+don't have to run tests etc. as root:
 
 Build docker images (one for kernel and one for user)
 $ ./build.sh

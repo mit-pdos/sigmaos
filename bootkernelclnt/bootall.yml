@@ -6,4 +6,4 @@ services:
   - realmd
   - ux
   - s3
-
+  - db

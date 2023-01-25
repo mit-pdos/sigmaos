@@ -14,12 +14,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/hotel/proto"
-	"sigmaos/linuxsched"
+	// "sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -50,12 +50,12 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	ts.Tstate = test.MakeTstateAll(t)
 	// If running as a test (not in a realm), and too few cores, then start more
 	// procds.
-	if !ts.RunningInRealm() {
-		// Start enough procds to run all of the srvs and the caches.
-		for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
-			ts.BootProcd()
-		}
-	}
+	// if !ts.RunningInRealm() {
+	// 	// Start enough procds to run all of the srvs and the caches.
+	// 	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
+	// 		ts.BootProcd()
+	// 	}
+	// }
 	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, ncache)
 	assert.Nil(ts.T, err)
 	return ts
@@ -76,8 +76,8 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 }
 
 func (ts *Tstate) statsSrv(fn string) {
-	stats := &protdevsrv.Stats{}
-	err := ts.GetFileJson(fn+"/"+protdevsrv.STATS, stats)
+	stats := &protdev.StatInfo{}
+	err := ts.GetFileJson(fn+"/"+protdev.STATS, stats)
 	assert.Nil(ts.T, err, "error get stats %v", err)
 	fmt.Printf("= %s: %v\n", fn, stats)
 }
@@ -108,7 +108,7 @@ func TestGeoSingle(t *testing.T) {
 	res := proto.GeoResult{}
 	err = pdc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "res %v\n", res)
+	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
 	assert.Equal(t, 5, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()

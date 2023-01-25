@@ -238,7 +238,7 @@ func makeHotelJobsCli(ts *test.Tstate, sigmaos bool, dur string, maxrps string, 
 
 // ========== Download Results Helpers ==========
 
-// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), "/tmp/sigmaos/perf-output")
+// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), test.HOSTTMP+ "perf-output")
 func downloadS3Results(ts *test.Tstate, src string, dst string) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)

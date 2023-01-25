@@ -85,8 +85,16 @@ func (sys *System) GetNamedAddrs() []string {
 	return sys.nameds
 }
 
-func (sys *System) KillOne(kidx int, sname string) error {
+func (sys *System) KillOneK(kidx int, sname string) error {
 	return sys.kernels[kidx].KillOne(sname)
+}
+
+func (sys *System) KillOne(sname string) error {
+	return sys.KillOneK(0, sname)
+}
+
+func (sys *System) Boot(s string) error {
+	return sys.kernels[0].Boot(s)
 }
 
 func (sys *System) BootFss3d() error {

@@ -52,14 +52,16 @@ done
 go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
 go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
-exit 0
 
 # dbd_test and wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $@ sigmaos/www
 
-go test $@ sigmaos/mr
-go test $@ sigmaos/kv
-go test $@ sigmaos/hotel
+# applications
+# mr: all Crash tests fail, except CrashTask
+
+for T in mr kv hotel; do
+    go test -v sigmaos/$T
+done
 
 # XXX broken
 # go test $@ sigmaos/cmd/user/test2pc

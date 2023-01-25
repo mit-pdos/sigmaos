@@ -650,7 +650,7 @@ func TestMRK8s(t *testing.T) {
 	}
 	c := startK8sMR(ts, K8S_LEADER_NODE_IP+":32585")
 	waitK8sMR(ts, c)
-	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), test.HOSTTMP+"perf-output")
 }
 
 func TestK8sBalanceHotelMR(t *testing.T) {
@@ -674,6 +674,6 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	waitK8sMR(ts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), "/tmp/sigmaos/perf-output")
-	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), "/tmp/sigmaos/perf-output")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), test.HOSTTMP+"perf-output")
+	downloadS3Results(ts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), test.HOSTTMP+perf-output")
 }

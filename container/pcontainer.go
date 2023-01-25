@@ -21,12 +21,13 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 	}
 	cmd := append([]string{p.Program}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v\n", cmd, p.GetEnv())
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: image,
-		Cmd:   cmd,
-		Tty:   false,
-		Env:   p.GetEnv(),
-	}, nil, nil, nil, "")
+	resp, err := cli.ContainerCreate(ctx,
+		&container.Config{
+			Image: image,
+			Cmd:   cmd,
+			Tty:   false,
+			Env:   p.GetEnv(),
+		}, nil, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err

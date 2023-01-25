@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -65,6 +66,7 @@ func (s *Spawner) Work() {
 		db.DFatalf("Error spawn: %v", err)
 	}
 	s.Started()
+	crash.Crasher(s.FsLib)
 	if s.shouldWaitExit {
 		s.WaitExit(s.childPid)
 	}

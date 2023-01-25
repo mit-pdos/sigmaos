@@ -91,5 +91,9 @@ func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc) (uprocErr error, childErr err
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	return nil, pdc.RPC("UprocSrv.Run", req, res)
+	if err := pdc.RPC("UprocSrv.Run", req, res); err != nil && serr.IsErrUnreachable(err) {
+		return err, nil
+	} else {
+		return nil, err
+	}
 }

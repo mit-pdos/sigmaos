@@ -114,5 +114,6 @@ func (ts *Tstate) NamedAddr() sp.Taddrs {
 }
 
 func (ts *Tstate) Shutdown() error {
+	db.DPrintf(db.TEST, "Shutdown")
 	return ts.System.Shutdown()
 }

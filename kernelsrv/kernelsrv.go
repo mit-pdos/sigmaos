@@ -38,6 +38,13 @@ func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
 	return nil
 }
 
+func (ks *KernelSrv) SetCPUShares(req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
+	if err := ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
 	if err := ks.k.Shutdown(); err != nil {
 		return err

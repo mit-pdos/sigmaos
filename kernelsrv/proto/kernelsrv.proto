@@ -11,6 +11,14 @@ message BootResult {
   string pidStr = 1;
 }
 
+message SetCPUSharesRequest {
+  string PidStr = 1;
+  int64 Shares = 2;
+}
+
+message SetCPUSharesResponse {
+}
+
 message ShutdownRequest {
 }
 

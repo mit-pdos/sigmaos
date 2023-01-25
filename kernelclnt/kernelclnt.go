@@ -30,6 +30,12 @@ func (kc *KernelClnt) Boot(s string, args []string) (proc.Tpid, error) {
 	return proc.Tpid(res.PidStr), nil
 }
 
+func (kc *KernelClnt) SetCPUShares(pid proc.Tpid, shares int64) error {
+	var res proto.SetCPUSharesResponse
+	req := &proto.SetCPUSharesRequest{PidStr: pid.String(), Shares: shares}
+	return kc.pdc.RPC("KernelSrv.SetCPUShares", req, &res)
+}
+
 func (kc *KernelClnt) Kill(s string) error {
 	var res proto.KillResult
 	req := &proto.KillRequest{Name: s}

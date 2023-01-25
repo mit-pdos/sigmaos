@@ -61,6 +61,10 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	return ss.p.GetPid(), err
 }
 
+func (k *Kernel) SetCPUShares(pid proc.Tpid, shares int64) error {
+	return k.svcs.svcMap[pid].SetCPUShares(shares)
+}
+
 func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()

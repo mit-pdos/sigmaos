@@ -62,6 +62,10 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 	return s.WaitStart(s.p.GetPid())
 }
 
+func (ss *Subsystem) SetCPUShares(shares int64) error {
+	return ss.container.SetCPUShares(shares)
+}
+
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }

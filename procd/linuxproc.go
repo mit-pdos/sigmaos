@@ -95,7 +95,7 @@ func (p *LinuxProc) run() error {
 		}()
 	} else {
 		if err := p.pd.updm.MakeUProc(p.attr); err != nil {
-			db.DFatalf("MakeUProc run error: %v, %v\n", p.attr, err)
+			db.DPrintf(db.PROCD_ERR, "MakeUProc run error: %v, %v\n", p.attr, err)
 			procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 			return err
 		}

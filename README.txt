@@ -8,8 +8,8 @@ $ source env/env.sh
 So that sigmaos can access host's docker.sock within container:
 # chmod 666 /var/run/docker.sock
 
-This setup is insecure but see comments in bootkernelclnt.
-Small bonus we don't have to run tests etc. as root:
+This setup is insecure but see comments in kcontainer.go.  Small bonus we
+don't have to run tests etc. as root:
 
 Build docker images (one for kernel and one for user)
 $ ./build.sh

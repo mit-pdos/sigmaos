@@ -7,8 +7,8 @@ do
   yes | gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
-./make.sh --norace linux
-docker build -t sigmaosbase .
+./make.sh --norace --parallel linux
+DOCKER_BUILDKIT=1 docker build -t sigmaosbase .
 docker build -f Dockerkernel -t sigmaos .
 
 rm $SECRETS

@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1-experimental
 
 FROM golang AS base
 RUN apt-get update
@@ -11,8 +11,7 @@ RUN go mod download
 
 FROM base AS kernel
 COPY . .
-RUN ./make.sh --norace kernel
+RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace kernel
 # XXX only necessary to make "cache" of binaries work in procd
-RUN ./make.sh --norace user
+RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace user
 RUN cp bin/kernel/named bin/user/named
-

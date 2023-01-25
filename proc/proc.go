@@ -35,6 +35,18 @@ func (t Ttype) String() string {
 	return ""
 }
 
+func ParseTtype(tstr string) Ttype {
+	switch tstr {
+	case "T_BE":
+		return T_BE
+	case "T_LC":
+		return T_LC
+	default:
+		log.Fatalf("Unknown proc type: %v", tstr)
+	}
+	return 0
+}
+
 func (pid Tpid) String() string {
 	return string(pid)
 }

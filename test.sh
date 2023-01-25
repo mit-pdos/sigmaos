@@ -18,7 +18,7 @@ go clean -testcache
 #
 
 for T in path serr linuxsched per sigmap memfs; do
-    go test -v sigmaos/$T
+    go test $@ sigmaos/$T
 done
 
 
@@ -27,14 +27,14 @@ done
 #
 
 for T in reader writer stats reader writer stats fslib semclnt electclnt; do
-    go test -v sigmaos/$T
+    go test $@ sigmaos/$T
 done
 
 #
 # test proxy
 #
 
-go test -v sigmaos/proxy
+go test $@ sigmaos/proxy
 
 #
 # tests a full kernel using root realm
@@ -46,11 +46,11 @@ go test -v sigmaos/proxy
 # sessclnt; TestWriteCrash fails
 
 for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt; do
-    go test -v sigmaos/$T
+    go test $@ sigmaos/$T
 done
     
-go test -v sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
-go test -v sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
 
 # dbd_test and wwwd_test requires mariadb running
@@ -61,18 +61,18 @@ pgrep mariadb >/dev/null && go test $@ sigmaos/www
 # kv: all crash tests fail
 
 for T in mr kv hotel; do
-    go test -v sigmaos/$T
+    go test $@ sigmaos/$T
 done
-
-# XXX broken
-# go test $@ sigmaos/cmd/user/test2pc
-# go test $@ sigmaos/cmd/user/test2pc2
 
 #
 # test with realms
 #
 
 go test $@ sigmaos/realm
+
+# XXX broken
+# go test $@ sigmaos/cmd/user/test2pc
+# go test $@ sigmaos/cmd/user/test2pc2
 
 # run without realm?
 # XXX needs fixing

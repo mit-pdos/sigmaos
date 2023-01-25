@@ -218,17 +218,21 @@ func (nd *Noded) register(cfg *RealmConfig) {
 }
 
 func (nd *Noded) boot(realmCfg *RealmConfig) {
-	sys, err := kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
-	if err != nil {
-		db.DFatalf("Error MakeSystem in Noded.boot: %v", err)
-	}
-	nd.s = sys
-	if err := nd.s.BootSubs(); err != nil {
-		db.DFatalf("Error Boot in Noded.boot: %v", err)
-	}
-	// Update the config with the procd IP.
-	nd.cfg.ProcdIp = nd.s.GetProcdIp()
-	nd.WriteConfig(nd.cfgPath, nd.cfg)
+	// sys, err := kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, nd.cfg.Cores[0])
+	//
+	//	if err != nil {
+	//		db.DFatalf("Error MakeSystem in Noded.boot: %v", err)
+	//	}
+	//
+	// nd.s = sys
+	//
+	//	if err := nd.s.BootSubs(); err != nil {
+	//		db.DFatalf("Error Boot in Noded.boot: %v", err)
+	//	}
+	//
+	// // Update the config with the procd IP.
+	// nd.cfg.ProcdIp = nd.s.GetProcdIp()
+	// nd.WriteConfig(nd.cfgPath, nd.cfg)
 }
 
 // Join a realm

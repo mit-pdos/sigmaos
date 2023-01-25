@@ -13,10 +13,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
-	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -40,23 +38,20 @@ type Kernel struct {
 	Param     *Param
 	namedAddr sp.Taddrs
 	procdIp   string
-	cores     *sessp.Tinterval
 	svcs      *Services
 	ip        string
 }
 
-func mkKernel(param *Param, namedAddr sp.Taddrs, cores *sessp.Tinterval) *Kernel {
+func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
 	k := &Kernel{}
 	k.Param = param
 	k.namedAddr = namedAddr
-	k.cores = cores
 	k.svcs = mkServices()
 	return k
 }
 
 func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
-	cores := sessp.MkInterval(0, uint64(linuxsched.NCores))
-	k := mkKernel(p, nameds, cores)
+	k := mkKernel(p, nameds)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(proc.GenPid())
 	ip, err := container.LocalIP()
@@ -243,9 +238,9 @@ func addReplPortOffset(peerAddr string) string {
 // XXX kill backward-compatability, but keep for now for noded.go.
 //
 
-func MakeSystem(uname, realmId string, namedAddr sp.Taddrs, cores *sessp.Tinterval) (*Kernel, error) {
+func MakeSystem(uname, realmId string, namedAddr sp.Taddrs) (*Kernel, error) {
 	p := &Param{Realm: sp.Trealm(realmId)}
-	s := mkKernel(p, namedAddr, cores)
+	s := mkKernel(p, namedAddr)
 	fsl, err := fslib.MakeFsLibAddr(p.Realm.String(), s.ip, namedAddr)
 	if err != nil {
 		return nil, err

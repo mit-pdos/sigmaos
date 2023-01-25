@@ -162,7 +162,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 	semPath := path.Join(p.ParentDir, proc.START_SEM)
 	semStart := semclnt.MakeSemClnt(sclnt.FsLib, semPath)
 	if err := semStart.Init(sp.DMTMP); err != nil {
-		db.DFatalf("Error creating start semaphore path:%v err:%v", semPath, err)
+		db.DPrintf(db.PROCD_ERR, "Error creating start semaphore path:%v err:%v", semPath, err)
 	}
 	db.DPrintf(db.PROCD, "Sem init done: %v", p)
 	if err := pd.fsl.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {

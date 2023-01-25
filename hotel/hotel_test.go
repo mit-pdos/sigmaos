@@ -14,7 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/hotel/proto"
-	// "sigmaos/linuxsched"
+	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -48,14 +48,12 @@ func makeTstate(t *testing.T, srvs []string, ncache int) *Tstate {
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
-	// If running as a test (not in a realm), and too few cores, then start more
-	// procds.
-	// if !ts.RunningInRealm() {
-	// 	// Start enough procds to run all of the srvs and the caches.
-	// 	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
-	// 		ts.BootProcd()
-	// 	}
-	// }
+	n := 0
+	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
+		n += 1
+	}
+	err = ts.BootNode(n)
+	assert.Nil(ts.T, err)
 	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ts.job, srvs, ncache)
 	assert.Nil(ts.T, err)
 	return ts

@@ -60,6 +60,10 @@ for T in mr kv; do
     go test $@ sigmaos/$T
 done
 
+#
+# application with several kernels and db
+#
+
 pgrep mariadb >/dev/null && go test $@ sigmaos/hotel
 
 #

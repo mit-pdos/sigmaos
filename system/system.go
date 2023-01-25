@@ -101,10 +101,6 @@ func (sys *System) BootFss3d() error {
 	return sys.kernels[0].Boot(sp.S3REL)
 }
 
-func (sys *System) BootProcd() error {
-	return sys.kernels[0].Boot(sp.PROCD)
-}
-
 func (sys *System) MakeClnt(kidx int, name string) (*sigmaclnt.SigmaClnt, error) {
 	return sys.kernels[kidx].MkClnt(name, sys.nameds)
 }

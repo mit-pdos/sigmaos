@@ -4,11 +4,6 @@ usage() {
   echo "Usage: $0"
 }
 
-if [ $# -ne 0 ]; then
-    usage
-    exit 1
-fi
-
 IMAGE="sigmaos"
 
 go clean -testcache
@@ -17,7 +12,7 @@ go clean -testcache
 # test some support package
 #
 
-for T in path serr linuxsched per sigmap memfs; do
+for T in path serr linuxsched perf sigmap memfs; do
     go test $@ sigmaos/$T
 done
 

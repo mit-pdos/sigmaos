@@ -58,6 +58,7 @@ pgrep mariadb >/dev/null && go test $@ sigmaos/www
 
 # applications
 # mr: all Crash tests fail, except CrashTask
+# kv: all crash tests fail
 
 for T in mr kv hotel; do
     go test -v sigmaos/$T

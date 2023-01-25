@@ -19,6 +19,19 @@ type Container struct {
 	ip        string
 }
 
+func (c *Container) SetCPUShares(cpu int64) error {
+	resp, err := c.cli.ContainerUpdate(c.ctx, c.container,
+		container.UpdateConfig{
+			Resources: container.Resources{
+				CPUShares: cpu,
+			},
+		})
+	if len(resp.Warnings) > 0 {
+		db.DPrintf(db.ALWAYS, "Set CPU shares warnings: %v", resp.Warnings)
+	}
+	return err
+}
+
 func (c *Container) String() string {
 	return c.container[:10]
 }

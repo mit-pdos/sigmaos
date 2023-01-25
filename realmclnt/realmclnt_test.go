@@ -51,6 +51,7 @@ func mkTstate(t *testing.T) *Tstate {
 }
 
 func calibrateCTimeLinux(ts *Tstate, nthread uint, niter int) time.Duration {
+	// If spinperf bin has not been build, print an error message and return.
 	if _, err := os.Stat("../bin/user/spinperf"); err != nil {
 		db.DPrintf(db.ALWAYS, "Run make.sh --norace user to build linux spinperf binary")
 		return 0

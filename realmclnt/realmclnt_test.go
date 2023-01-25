@@ -65,8 +65,9 @@ func calibrateCTimeLinux(ts *Tstate, nthread uint, niter int) time.Duration {
 	return time.Since(start)
 }
 
-func spawnSpinPerf(ts *Tstate, nthread uint, niter int, id string) proc.Tpid {
+func spawnSpinPerf(ts *Tstate, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
+	p.SetNcore(ncore)
 	err := ts.sc.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
@@ -80,8 +81,14 @@ func waitSpinPerf(ts *Tstate, pid proc.Tpid) time.Duration {
 }
 
 func calibrateCTimeSigma(ts *Tstate, nthread uint, niter int) time.Duration {
-	pid := spawnSpinPerf(ts, nthread, niter, "sigma-baseline")
-	return waitSpinPerf(ts, pid)
+	c := make(chan time.Duration)
+	go runSpinPerf(ts, c, 0, nthread, niter, "sigma-baseline")
+	return <-c
+}
+
+func runSpinPerf(ts *Tstate, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
+	pid := spawnSpinPerf(ts, ncore, nthread, niter, id)
+	c <- waitSpinPerf(ts, pid)
 }
 
 func TestBasic(t *testing.T) {
@@ -146,6 +153,56 @@ func TestSpinPerfCalibrate(t *testing.T) {
 	db.DPrintf(db.TEST, "Calibrate Linux baseline")
 	ctimeL := calibrateCTimeLinux(ts, linuxsched.NCores, N_ITER)
 	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
+
+	ts.Shutdown()
+}
+
+func TestSpinPerfDoubleSlowdown(t *testing.T) {
+	ts := mkTstate(t)
+
+	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+	ctimeS := calibrateCTimeSigma(ts, linuxsched.NCores, N_ITER)
+	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+
+	c := make(chan time.Duration)
+	go runSpinPerf(ts, c, 0, linuxsched.NCores, N_ITER, "spin1")
+	go runSpinPerf(ts, c, 0, linuxsched.NCores, N_ITER, "spin2")
+
+	d1 := <-c
+	d2 := <-c
+
+	ttime := float64(ctimeS) * 1.8
+
+	// Check that execution time matches target time.
+	assert.True(ts.T, float64(d1) > ttime, "Spin perf 1 finished too fast: %v <= %v", time.Duration(d1), ttime)
+	assert.True(ts.T, float64(d2) > ttime, "Spin perf 2 finished too fast: %v <= %v", time.Duration(d2), ttime)
+
+	ts.Shutdown()
+}
+
+func TestSpinPerfDoubleBEandLC(t *testing.T) {
+	ts := mkTstate(t)
+
+	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+	ctimeS := calibrateCTimeSigma(ts, linuxsched.NCores, N_ITER)
+	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+
+	beC := make(chan time.Duration)
+	lcC := make(chan time.Duration)
+	go runSpinPerf(ts, beC, 0, linuxsched.NCores, N_ITER, "spin2")
+	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores), linuxsched.NCores, N_ITER, "spin1")
+
+	timeBE := <-beC
+	timeLC := <-lcC
+
+	// BE slowdown should be < 150%
+	ttimeBE := float64(ctimeS) * 2.5
+	// LC slowdown should be < 10%
+	ttimeLC := float64(ctimeS) * 1.1
+
+	// Check that execution time matches target time.
+	assert.True(ts.T, float64(timeLC) <= ttimeLC, "LC finished too slowly: %v > %v", time.Duration(timeLC), time.Duration(ttimeLC))
+	assert.True(ts.T, float64(timeBE) <= ttimeBE, "BE finished too slowly: %v > %v", time.Duration(timeBE), time.Duration(ttimeBE))
 
 	ts.Shutdown()
 }

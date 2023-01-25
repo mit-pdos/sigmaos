@@ -32,6 +32,6 @@
   $ go run .
 
 * For access from container:
- CREATE USER 'sigma1'@'10.%.42.%' IDENTIFIED BY 'sigmaos1';
+ CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
  GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
  FLUSH PRIVILEGES;

@@ -3,6 +3,7 @@ package procclnt_test
 import (
 	"fmt"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 
 const (
 	SLEEP_MSECS = 2000
+	CRASH_MSECS = 5
 )
 
 const program = "procclnt_test"
@@ -73,8 +75,9 @@ func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {
-	p := proc.MakeProc("spawner", []string{"false", childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid proc.Tpid, msecs, crash int) proc.Tpid {
+	p := proc.MakeProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
+	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(crash))
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()
@@ -216,11 +219,39 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	start := time.Now()
 
 	cPid := proc.GenPid()
-	pid := spawnSpawner(t, ts, cPid, SLEEP_MSECS)
+	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, 0)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
 	assert.True(t, status.IsStatusOK(), "WaitExit status error")
+	assert.Nil(t, err, "WaitExit error")
+	// Wait for the child to run & finish
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+	// cleaned up
+	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat")
+
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
+
+	checkSleeperResult(t, ts, cPid)
+
+	ts.Shutdown()
+}
+
+func TestWaitExitParentCrash(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	start := time.Now()
+
+	cPid := proc.GenPid()
+	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, CRASH_MSECS)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(pid)
+	assert.True(t, status.IsStatusErr(), "WaitExit status not error: %v", status)
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)

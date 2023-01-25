@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -19,21 +20,13 @@ const (
 	SIGMAKIMAGE = "sigmaos"
 )
 
-type Tint int
-
-func xxx(a sp.Taddrs) {
-	return
-}
-
 func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-	b := []string{"xxx"}
-	xxx(b)
-	db.DPrintf(db.CONTAINER, "start container %v %v %v\n", yml, nameds, env)
+	db.DPrintf(db.CONTAINER, "start container %v %v %v %s\n", yml, nameds, env, os.Getenv("HOME"))
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
 		Cmd:   []string{"bin/linux/bootkernel", yml, nameds.String()},
@@ -46,6 +39,7 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 		// image for user procs.
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock",
+			os.Getenv("HOME") + "/.aws" + ":/home/sigmaos/.aws",
 		},
 	}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {

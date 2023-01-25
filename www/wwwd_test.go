@@ -24,7 +24,7 @@ func spawn(t *testing.T, ts *Tstate) proc.Tpid {
 	a := proc.MakeProc("wwwd", []string{ts.job, ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	return a.Pid
+	return a.GetPid()
 }
 
 func makeTstate(t *testing.T) *Tstate {

@@ -17,24 +17,23 @@ type Subsystem struct {
 	*procclnt.ProcClnt
 	p         *proc.Proc
 	realmId   sp.Trealm
-	procdIp   string
 	how       procclnt.Thow
 	cmd       *exec.Cmd
 	container *container.Container
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, procdIp string, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, realmId, procdIp, how, cmd, nil}
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, p, realmId, how, cmd, nil}
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, procdIp string, how procclnt.Thow) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, realmId, procdIp, how, nil)
+func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, how procclnt.Thow) *Subsystem {
+	return makeSubsystemCmd(pclnt, p, realmId, how, nil)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, realmId sp.Trealm, procdIp string, how procclnt.Thow) (*Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, realmId sp.Trealm, how procclnt.Thow) (*Subsystem, error) {
 	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, realmId, procdIp, how)
+	ss := makeSubsystem(k.ProcClnt, p, realmId, how)
 	return ss, ss.Run(k.namedAddr, how)
 }
 

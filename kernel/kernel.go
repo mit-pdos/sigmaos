@@ -37,7 +37,6 @@ type Kernel struct {
 	*sigmaclnt.SigmaClnt
 	Param     *Param
 	namedAddr sp.Taddrs
-	procdIp   string
 	svcs      *Services
 	ip        string
 }

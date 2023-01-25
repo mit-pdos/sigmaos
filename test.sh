@@ -45,30 +45,28 @@ go test $@ sigmaos/proxy
 # --- FAIL: TestMaintainReplicationLevelCrashProcd (0.00s)
 # sessclnt; TestWriteCrash fails
 
-for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt; do
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
     go test $@ sigmaos/$T
 done
     
 go test $@ sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
 go test $@ sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
-
-# dbd_test and wwwd_test requires mariadb running
-pgrep mariadb >/dev/null && go test $@ sigmaos/www
-
 # applications
 # mr: all Crash tests fail, except CrashTask
 # kv: all crash tests fail
 
-for T in mr kv hotel; do
+for T in mr kv; do
     go test $@ sigmaos/$T
 done
+
+pgrep mariadb >/dev/null && go test $@ sigmaos/hotel
 
 #
 # test with realms
 #
 
-go test $@ sigmaos/realm
+go test $@ sigmaos/realmclnt
 
 # XXX broken
 # go test $@ sigmaos/cmd/user/test2pc

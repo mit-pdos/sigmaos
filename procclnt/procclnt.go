@@ -235,8 +235,8 @@ func (clnt *ProcClnt) updateSchedds() {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
 	db.DPrintf(db.PROCCLNT, "Got schedds %v", schedds)
-	// Alloc enough space for the list of procds, excluding the ws queue.
-	clnt.scheddIps = make([]string, 0, len(schedds)-1)
+	// Alloc enough space for the list of schedds.
+	clnt.scheddIps = make([]string, 0, len(schedds))
 	for _, schedd := range schedds {
 		clnt.scheddIps = append(clnt.scheddIps, schedd.Name)
 	}

@@ -174,8 +174,8 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ttime := float64(ctimeS) * 1.8
 
 	// Check that execution time matches target time.
-	assert.True(ts.T, float64(d1) > ttime, "Spin perf 1 finished too fast: %v <= %v", time.Duration(d1), ttime)
-	assert.True(ts.T, float64(d2) > ttime, "Spin perf 2 finished too fast: %v <= %v", time.Duration(d2), ttime)
+	assert.True(ts.T, float64(d1) > ttime, "Spin perf 1 finished too fast: %v <= %v", d1, time.Duration(ttime))
+	assert.True(ts.T, float64(d2) > ttime, "Spin perf 2 finished too fast: %v <= %v", d2, time.Duration(ttime))
 
 	ts.Shutdown()
 }
@@ -197,12 +197,14 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 
 	// BE slowdown should be < 150%
 	ttimeBE := float64(ctimeS) * 2.5
+	ttimeBEMin := float64(ctimeS) * 1.5
 	// LC slowdown should be < 10%
 	ttimeLC := float64(ctimeS) * 1.1
 
 	// Check that execution time matches target time.
-	assert.True(ts.T, float64(timeLC) <= ttimeLC, "LC finished too slowly: %v > %v", time.Duration(timeLC), time.Duration(ttimeLC))
-	assert.True(ts.T, float64(timeBE) <= ttimeBE, "BE finished too slowly: %v > %v", time.Duration(timeBE), time.Duration(ttimeBE))
+	assert.True(ts.T, float64(timeLC) <= ttimeLC, "LC finished too slowly: %v > %v", timeLC, time.Duration(ttimeLC))
+	assert.True(ts.T, float64(timeBE) <= ttimeBE, "BE finished too slowly: %v > %v", timeBE, time.Duration(ttimeBE))
+	assert.True(ts.T, float64(timeBE) > ttimeBEMin, "BE finished too quickly: %v < %v", timeBE, time.Duration(ttimeBEMin))
 
 	ts.Shutdown()
 }

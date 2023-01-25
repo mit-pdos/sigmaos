@@ -1,7 +1,6 @@
 # Building, installing, and running sigmaos.
 
-Make sure docker and gpg are installed. We run with username spaces
-enabled (see $3.8 of https://wiki.archlinux.org/title/docker).
+Make sure docker is installed.
 
 To augment PATH to find proxyd and, if desired, set SIGMADEBUG
 $ source env/env.sh

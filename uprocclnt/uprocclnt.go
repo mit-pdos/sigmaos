@@ -82,14 +82,14 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*protdevcl
 	return pdc, nil
 }
 
-func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc) error {
+func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
-		return err
+		return err, nil
 	}
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	return pdc.RPC("UprocSrv.Run", req, res)
+	return nil, pdc.RPC("UprocSrv.Run", req, res)
 }

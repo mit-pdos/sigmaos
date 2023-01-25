@@ -94,10 +94,12 @@ func (p *LinuxProc) run() error {
 			}
 		}()
 	} else {
-		if err := p.pd.updm.MakeUProc(p.attr); err != nil {
-			db.DPrintf(db.PROCD_ERR, "MakeUProc run error: %v, %v\n", p.attr, err)
-			procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
-			return err
+		if uprocErr, childErr := p.pd.updm.MakeUProc(p.attr); childErr != nil {
+			db.DPrintf(db.PROCD_ERR, "MakeUProc run error: %v, %v\n", p.attr, childErr)
+			procclnt.ExitedProcd(p.sclnt.FsLib, p.attr.GetPid(), p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(childErr.Error(), nil))
+			return childErr
+		} else if uprocErr != nil {
+			db.DFatalf("Error setting up uprocd: %v", uprocErr)
 		}
 		db.DPrintf(db.PROCD, "Procd ran: %v\n", p.attr)
 		return nil

@@ -104,13 +104,12 @@ func (s *Subsystem) Wait() {
 }
 
 type SubsystemInfo struct {
-	Kpid    proc.Tpid
-	Ip      string
-	NodedId string
+	Kpid proc.Tpid
+	Ip   string
 }
 
-func MakeSubsystemInfo(kpid proc.Tpid, ip string, nodedId string) *SubsystemInfo {
-	return &SubsystemInfo{kpid, ip, nodedId}
+func MakeSubsystemInfo(kpid proc.Tpid, ip string) *SubsystemInfo {
+	return &SubsystemInfo{kpid, ip}
 }
 
 func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {

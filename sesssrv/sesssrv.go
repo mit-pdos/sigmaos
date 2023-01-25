@@ -179,7 +179,7 @@ func (ssrv *SessSrv) Serve() {
 	if ssrv.pclnt != nil {
 		// If this is a kernel proc, register the subsystem info for the realmmgr
 		if proc.GetIsPrivilegedProc() {
-			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
+			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
 			kernel.RegisterSubsystemInfo(ssrv.fsl, si)
 		}
 		if err := ssrv.pclnt.Started(); err != nil {

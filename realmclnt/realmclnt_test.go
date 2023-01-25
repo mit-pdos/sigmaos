@@ -56,8 +56,6 @@ func calibrateCTimeLinux(ts *Tstate, nthread uint, niter int) time.Duration {
 		return 0
 	}
 	cmd := exec.Command("../bin/user/spinperf", []string{"false", strconv.Itoa(int(nthread)), strconv.Itoa(niter), "linux-baseline"}...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	start := time.Now()
 	err := cmd.Start()
 	assert.Nil(ts.T, err, "Err start: %v", err)

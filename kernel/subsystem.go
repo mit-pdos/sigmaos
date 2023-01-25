@@ -20,10 +20,11 @@ type Subsystem struct {
 	how       procclnt.Thow
 	cmd       *exec.Cmd
 	container *container.Container
+	crashed   bool
 }
 
 func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, realmId, how, cmd, nil}
+	return &Subsystem{pclnt, p, realmId, how, cmd, nil, false}
 }
 
 func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, realmId sp.Trealm, how procclnt.Thow) *Subsystem {

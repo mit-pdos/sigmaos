@@ -130,7 +130,7 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 func startSrvs(k *Kernel) error {
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
-		err := k.BootSub(s, nil, k.Param, n > 1) // XXX kernel should wait instead of procd?
+		_, err := k.BootSub(s, nil, k.Param, n > 1) // XXX kernel should wait instead of procd?
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Start %s err %v\n", k.Param, err)
 			return err
@@ -151,7 +151,7 @@ func (k *Kernel) shutdown() {
 		for _, pid := range cpids {
 			k.Evict(pid)
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
-			if _, ok := k.svcs.crashedPids[pid]; !ok {
+			if k.svcs.svcMap[pid].crashed {
 				if status, err := k.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
@@ -269,7 +269,7 @@ func (k *Kernel) BootSubs() error {
 	// Procd must boot first, since other services are spawned as
 	// procs.
 	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
-		err := k.BootSub(s, nil, nil, true)
+		_, err := k.BootSub(s, nil, nil, true)
 		if err != nil {
 			return err
 		}

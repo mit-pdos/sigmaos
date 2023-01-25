@@ -29,9 +29,12 @@ func RunKernelSrv(k *kernel.Kernel) error {
 }
 
 func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
-	if err := ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
+	var pid proc.Tpid
+	var err error
+	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
 		return err
 	}
+	rep.PidStr = pid.String()
 	return nil
 }
 

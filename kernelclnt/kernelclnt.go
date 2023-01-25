@@ -3,8 +3,8 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevclnt"
-	//	sp "sigmaos/sigmap"
 )
 
 type KernelClnt struct {
@@ -20,14 +20,14 @@ func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 	return &KernelClnt{fsl, pdc}, nil
 }
 
-func (kc *KernelClnt) Boot(s string, args []string) error {
+func (kc *KernelClnt) Boot(s string, args []string) (proc.Tpid, error) {
 	var res proto.BootResult
 	req := &proto.BootRequest{Name: s, Args: args}
 	err := kc.pdc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {
-		return err
+		return proc.Tpid(""), err
 	}
-	return nil
+	return proc.Tpid(res.PidStr), nil
 }
 
 func (kc *KernelClnt) Kill(s string) error {

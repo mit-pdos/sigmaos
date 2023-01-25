@@ -8,6 +8,7 @@ message BootRequest {
 }
 
 message BootResult {
+  string pidStr = 1;
 }
 
 message ShutdownRequest {

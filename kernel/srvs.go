@@ -15,14 +15,14 @@ import (
 
 type Services struct {
 	sync.Mutex
-	svcs        map[string][]*Subsystem
-	crashedPids map[proc.Tpid]bool
+	svcs   map[string][]*Subsystem
+	svcMap map[proc.Tpid]*Subsystem
 }
 
 func mkServices() *Services {
 	ss := &Services{}
 	ss.svcs = make(map[string][]*Subsystem)
-	ss.crashedPids = make(map[proc.Tpid]bool)
+	ss.svcMap = make(map[proc.Tpid]*Subsystem)
 	return ss
 }
 
@@ -30,9 +30,10 @@ func (ss *Services) addSvc(s string, sub *Subsystem) {
 	ss.Lock()
 	defer ss.Unlock()
 	ss.svcs[s] = append(ss.svcs[s], sub)
+	ss.svcMap[sub.p.GetPid()] = sub
 }
 
-func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) error {
+func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpid, error) {
 	var err error
 	var ss *Subsystem
 	switch s {
@@ -54,10 +55,10 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) error {
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
 	if err != nil {
-		return err
+		return proc.Tpid(""), err
 	}
 	k.svcs.addSvc(s, ss)
-	return err
+	return ss.p.GetPid(), err
 }
 
 func (k *Kernel) KillOne(srv string) error {
@@ -74,7 +75,7 @@ func (k *Kernel) KillOne(srv string) error {
 	err := ss.Kill()
 	if err == nil {
 		ss.Wait()
-		k.svcs.crashedPids[ss.p.GetPid()] = true
+		k.svcs.svcMap[ss.p.GetPid()].crashed = true
 	} else {
 		db.DFatalf("%v kill failed %v\n", srv, err)
 	}

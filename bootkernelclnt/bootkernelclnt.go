@@ -57,7 +57,8 @@ func BootKernel(yml string, nameds sp.Taddrs) (*Kernel, error) {
 }
 
 func (k *Kernel) Boot(s string) error {
-	return k.kclnt.Boot(s, sp.Taddrs{})
+	_, err := k.kclnt.Boot(s, sp.Taddrs{})
+	return err
 }
 
 func (k *Kernel) KillOne(s string) error {

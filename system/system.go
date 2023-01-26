@@ -19,6 +19,8 @@ const (
 	BOOT_NODE  = "bootmach.yml"
 
 	NAMEDPORT = ":1111"
+
+	YMLDIR = "bootparam"
 )
 
 type System struct {
@@ -27,16 +29,16 @@ type System struct {
 	proxy   *exec.Cmd
 }
 
-func bootSystem(ymldir, ymlname string) (*System, error) {
+func bootSystem(ymlname string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
-	db.DPrintf(db.SYSTEM, "Boot system %v %v", ymldir, ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(ymldir, ymlname), sp.Taddrs{NAMEDPORT})
+	db.DPrintf(db.SYSTEM, "Boot system %v", ymlname)
+	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(YMLDIR, ymlname), sp.Taddrs{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}
 	sys.nameds = nds
-	db.DPrintf(db.SYSTEM, "Done boot system %v %v %v", ymldir, ymlname, sys.nameds)
+	db.DPrintf(db.SYSTEM, "Done boot system %v %v", ymlname, sys.nameds)
 	sys.kernels[0] = k
 	proc.SetSigmaNamed(sys.nameds)
 	sys.proxy = startProxy(sys.kernels[0].GetIP(), sys.nameds)
@@ -46,13 +48,13 @@ func bootSystem(ymldir, ymlname string) (*System, error) {
 	return sys, nil
 }
 
-func Boot(n int, ymldir string) (*System, error) {
-	sys, err := bootSystem(ymldir, BOOT_ALL)
+func Boot(n int) (*System, error) {
+	sys, err := bootSystem(BOOT_ALL)
 	if err != nil {
 		return nil, err
 	}
 	for i := 1; i < n; i++ {
-		err := sys.BootNode(ymldir)
+		err := sys.BootNode()
 		if err != nil {
 			return nil, err
 		}
@@ -60,16 +62,16 @@ func Boot(n int, ymldir string) (*System, error) {
 	return sys, nil
 }
 
-func BootNamedOnly(ymldir string) (*System, error) {
-	sys, err := bootSystem(ymldir, BOOT_NAMED)
+func BootNamedOnly() (*System, error) {
+	sys, err := bootSystem(BOOT_NAMED)
 	if err != nil {
 		return nil, err
 	}
 	return sys, nil
 }
 
-func (sys *System) BootNode(ymldir string) error {
-	k, err := bootkernelclnt.BootKernel(path.Join(ymldir, BOOT_NODE), sys.nameds)
+func (sys *System) BootNode() error {
+	k, err := bootkernelclnt.BootKernel(path.Join(YMLDIR, BOOT_NODE), sys.nameds)
 	if err != nil {
 		return err
 	}

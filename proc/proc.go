@@ -75,6 +75,9 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p.TypeInt = uint32(T_BE)
 	p.NcoreInt = uint32(0)
 	p.Privileged = priv
+	if p.Privileged {
+		p.TypeInt = uint32(T_LC)
+	}
 	p.Env = make(map[string]string)
 	p.setProcDir("")
 	p.setBaseEnv()

@@ -12,7 +12,8 @@
 # $ docker rm -v sigmadb
 #
 
-PORT=4406
+PORT=4406  # use non-default port number on host
+
 if docker images mariadb | grep mariab; then
     docker pull mariadb:10.4
 fi

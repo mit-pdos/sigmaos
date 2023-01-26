@@ -1,7 +1,15 @@
 #!/bin/bash
 
-# some tests produce output in tmp/
-mkdir -p /tmp/sigmaos
+TMP=/tmp/sigmaos
+
+# boot and tests uses hosts /tmp, which mounted in kernel container.
+mkdir -p $TMP
+
+# copy boot ymls, which be filled out in more detail during various stages
+cp bootparam/*.yml $TMP/
+
+# build and start db container
+./build-db.sh $TMP/bootall.yml $TMP/bootmach.yml
 
 # build binaries for host
 ./make.sh --norace linux

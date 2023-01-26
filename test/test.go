@@ -11,10 +11,6 @@ import (
 	"sigmaos/system"
 )
 
-const (
-	HOSTTMP = "/tmp/sigmaos/"
-)
-
 func Mbyte(sz sp.Tlength) float64 {
 	return float64(sz) / float64(sp.MBYTE)
 }
@@ -89,9 +85,9 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 	var s *system.System
 	var err error
 	if full {
-		s, err = system.Boot(1, "bootkernelclnt")
+		s, err = system.Boot(1)
 	} else {
-		s, err = system.BootNamedOnly("bootkernelclnt")
+		s, err = system.BootNamedOnly()
 	}
 	if err != nil {
 		return nil, err
@@ -102,7 +98,7 @@ func bootSystem(t *testing.T, full bool) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		if err := ts.System.BootNode("bootkernelclnt"); err != nil {
+		if err := ts.System.BootNode(); err != nil {
 			return err
 		}
 	}

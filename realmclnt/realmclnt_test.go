@@ -76,7 +76,7 @@ func spawnSpinPerf(ts *Tstate, ncore proc.Tcore, nthread uint, niter int, id str
 func waitSpinPerf(ts *Tstate, pid proc.Tpid) time.Duration {
 	status, err := ts.sc.WaitExit(pid)
 	assert.Nil(ts.T, err, "WaitExit error")
-	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong")
+	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
 	return time.Duration(status.Data().(float64))
 }
 
@@ -138,7 +138,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	status, err := ts.sc.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
 	ts.Shutdown()
 }
@@ -157,6 +157,15 @@ func TestSpinPerfCalibrate(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Calculate slowdown %
+func slowdown(baseline, dur time.Duration) float64 {
+	return float64(dur) / float64(baseline)
+}
+
+func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
+	return time.Duration(float64(baseline) * tslowdown)
+}
+
 func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ts := mkTstate(t)
 
@@ -171,11 +180,16 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	d1 := <-c
 	d2 := <-c
 
-	ttime := float64(ctimeS) * 1.8
+	// Calculate slowdown
+	d1sd := slowdown(ctimeS, d1)
+	d2sd := slowdown(ctimeS, d2)
+
+	// Target slowdown (x)
+	tsd := 1.80
 
 	// Check that execution time matches target time.
-	assert.True(ts.T, float64(d1) > ttime, "Spin perf 1 finished too fast: %v <= %v", d1, time.Duration(ttime))
-	assert.True(ts.T, float64(d2) > ttime, "Spin perf 2 finished too fast: %v <= %v", d2, time.Duration(ttime))
+	assert.True(ts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))
+	assert.True(ts.T, d2sd > tsd, "Spin perf 2 not enough slowdown (%v): %v <= %v", d1sd, d2, targetTime(ctimeS, tsd))
 
 	ts.Shutdown()
 }
@@ -189,22 +203,25 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts, beC, 0, linuxsched.NCores, N_ITER, "spin2")
-	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores), linuxsched.NCores, N_ITER, "spin1")
+	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores), linuxsched.NCores, N_ITER, "lcspin")
+	go runSpinPerf(ts, beC, 0, linuxsched.NCores, N_ITER, "bespin")
 
-	timeBE := <-beC
-	timeLC := <-lcC
+	durBE := <-beC
+	durLC := <-lcC
 
-	// BE slowdown should be < 150%
-	ttimeBE := float64(ctimeS) * 2.5
-	ttimeBEMin := float64(ctimeS) * 1.5
-	// LC slowdown should be < 10%
-	ttimeLC := float64(ctimeS) * 1.1
+	// Calculate slodown
+	beSD := slowdown(ctimeS, durBE)
+	lcSD := slowdown(ctimeS, durLC)
+
+	// Target slowdown (x)
+	beMinSD := 1.5
+	beMaxSD := 2.5
+	lcMaxSD := 1.1
 
 	// Check that execution time matches target time.
-	assert.True(ts.T, float64(timeLC) <= ttimeLC, "LC finished too slowly: %v > %v", timeLC, time.Duration(ttimeLC))
-	assert.True(ts.T, float64(timeBE) <= ttimeBE, "BE finished too slowly: %v > %v", timeBE, time.Duration(ttimeBE))
-	assert.True(ts.T, float64(timeBE) > ttimeBEMin, "BE finished too quickly: %v < %v", timeBE, time.Duration(ttimeBEMin))
+	assert.True(ts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, targetTime(ctimeS, lcMaxSD))
+	assert.True(ts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, targetTime(ctimeS, beMaxSD))
+	assert.True(ts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, targetTime(ctimeS, beMinSD))
 
 	ts.Shutdown()
 }

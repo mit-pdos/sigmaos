@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	CPU_SHARES_LC = 10000
-	CPU_SHARES_BE = 10
+	CPU_SHARES_LC = 100000
+	CPU_SHARES_BE = 50
 )
 
 type UprocdMgr struct {

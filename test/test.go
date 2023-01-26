@@ -11,10 +11,6 @@ import (
 	"sigmaos/system"
 )
 
-const (
-	HOSTTMP = "/tmp/sigmaos/"
-)
-
 func Mbyte(sz sp.Tlength) float64 {
 	return float64(sz) / float64(sp.MBYTE)
 }

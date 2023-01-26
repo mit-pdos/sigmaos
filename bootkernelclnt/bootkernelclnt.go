@@ -18,10 +18,6 @@ import (
 // Library to start a kernel boot process.
 //
 
-const (
-	HOME = "/home/sigmaos"
-)
-
 type Kernel struct {
 	*sigmaclnt.SigmaClnt
 	kclnt     *kernelclnt.KernelClnt

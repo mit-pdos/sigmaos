@@ -18,6 +18,8 @@ import (
 
 const (
 	SIGMAKIMAGE = "sigmaos"
+	HOME        = "/home/sigmaos"
+	HOSTTMP     = "/tmp/sigmaos"
 )
 
 func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, error) {
@@ -26,10 +28,10 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.CONTAINER, "start container %v %v %v %s\n", yml, nameds, env, os.Getenv("HOME"))
+	db.DPrintf(db.CONTAINER, "start container %v %v\n", nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", yml, nameds.String()},
+		Cmd:   []string{"bin/linux/bootkernel", nameds.String()},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{
@@ -40,6 +42,7 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock",
 			os.Getenv("HOME") + "/.aws" + ":/home/sigmaos/.aws",
+			HOSTTMP + ":" + HOSTTMP,
 		},
 	}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {

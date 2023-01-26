@@ -3,7 +3,6 @@ package system
 import (
 	"os"
 	"os/exec"
-	"path"
 
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
@@ -19,8 +18,6 @@ const (
 	BOOT_NODE  = "bootmach.yml"
 
 	NAMEDPORT = ":1111"
-
-	YMLDIR = "bootparam"
 )
 
 type System struct {
@@ -33,7 +30,7 @@ func bootSystem(ymlname string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
 	db.DPrintf(db.SYSTEM, "Boot system %v", ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(path.Join(YMLDIR, ymlname), sp.Taddrs{NAMEDPORT})
+	k, nds, err := bootkernelclnt.BootKernelNamed(ymlname, sp.Taddrs{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +68,7 @@ func BootNamedOnly() (*System, error) {
 }
 
 func (sys *System) BootNode() error {
-	k, err := bootkernelclnt.BootKernel(path.Join(YMLDIR, BOOT_NODE), sys.nameds)
+	k, err := bootkernelclnt.BootKernel(BOOT_NODE, sys.nameds)
 	if err != nil {
 		return err
 	}

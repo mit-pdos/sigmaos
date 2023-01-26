@@ -29,8 +29,8 @@ const (
 
 type Param struct {
 	Realm    sp.Trealm `yalm:"realm, omitempty"`
-	Hostip   string    `yalm:"ip, omitempty"`
 	Services []string  `yalm:"services"`
+	Dbip     string    `yalm:"dbIP, omitempty"`
 }
 
 type Kernel struct {

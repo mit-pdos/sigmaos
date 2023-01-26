@@ -4,3 +4,4 @@ services:
   - ux
   - s3
   - db
+dbip:

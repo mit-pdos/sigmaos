@@ -31,7 +31,7 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 	db.DPrintf(db.CONTAINER, "start container %v %v\n", nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", nameds.String()},
+		Cmd:   []string{"bin/linux/bootkernel", yml, nameds.String()},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{

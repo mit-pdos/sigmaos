@@ -9,7 +9,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 	"sigmaos/yaml"
 )
 
@@ -25,7 +24,6 @@ func main() {
 		db.DFatalf("%v: ReadYaml %s err %v\n", os.Args[0], pn, err)
 	}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
-	param.Realm = sp.ROOTREALM
 	h := container.HOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")

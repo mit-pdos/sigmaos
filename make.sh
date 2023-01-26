@@ -69,6 +69,10 @@ for k in $WHAT; do
     #   FILES="sleeper exec-uproc"
     # fi
     for f in $FILES;  do
+        # XXX delete when removing obselete code
+        if [[ $f == "sigmamgr" ]] ; then
+            continue
+        fi
         if [ $CMD == "vet" ]; then
             echo "go vet cmd/$k/$f/main.go"
             go vet cmd/$k/$f/main.go

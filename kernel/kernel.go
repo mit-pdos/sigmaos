@@ -11,10 +11,8 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -28,9 +26,8 @@ const (
 )
 
 type Param struct {
-	Realm    sp.Trealm `yalm:"realm, omitempty"`
-	Services []string  `yalm:"services"`
-	Dbip     string    `yalm:"dbIP, omitempty"`
+	Services []string `yalm:"services"`
+	Dbip     string   `yalm:"dbIP, omitempty"`
 }
 
 type Kernel struct {
@@ -120,7 +117,7 @@ func (k *Kernel) startNameds(ch chan error, n int) {
 		// Must happen in a separate thread because MakeKernelNamed
 		// will block until the replicas are able to process requests.
 		go func(i int) {
-			err := bootNamed(k, k.Param.Realm.String(), i, k.Param.Realm)
+			err := bootNamed(k, "rootnamed", i, sp.ROOTREALM)
 			ch <- err
 		}(i)
 	}
@@ -231,48 +228,4 @@ func addReplPortOffset(peerAddr string) string {
 	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
 
 	return host + ":" + newPort
-}
-
-//
-// XXX kill backward-compatability, but keep for now for noded.go.
-//
-
-func MakeSystem(uname, realmId string, namedAddr sp.Taddrs) (*Kernel, error) {
-	p := &Param{Realm: sp.Trealm(realmId)}
-	s := mkKernel(p, namedAddr)
-	fsl, err := fslib.MakeFsLibAddr(p.Realm.String(), s.ip, namedAddr)
-	if err != nil {
-		return nil, err
-	}
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, p.Realm.String())
-	return s, nil
-}
-
-// Run a named as a proc
-func BootNamed(pclnt *procclnt.ProcClnt, addr string, replicate bool, id int, peers sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, proc.Tpid, error) {
-	p := makeNamedProc(addr, replicate, id, peers, realmId)
-	cmd, err := pclnt.SpawnKernelProc(p, procclnt.HLINUX)
-	if err != nil {
-		db.DFatalf("Error SpawnKernelProc BootNamed: %v", err)
-		return nil, "", err
-	}
-	if err = pclnt.WaitStart(p.GetPid()); err != nil {
-		db.DFatalf("Error WaitStart in BootNamed: %v", err)
-		return nil, "", err
-	}
-	return cmd, p.GetPid(), nil
-}
-
-// Boot subsystems other than named
-func (k *Kernel) BootSubs() error {
-	// Procd must boot first, since other services are spawned as
-	// procs.
-	for _, s := range []string{sp.PROCDREL, sp.S3REL, sp.UXREL, sp.DBREL} {
-		_, err := k.BootSub(s, nil, nil, true)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

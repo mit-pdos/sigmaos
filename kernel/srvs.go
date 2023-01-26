@@ -123,7 +123,7 @@ func (k *Kernel) bootUxd() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{sp.ROOTREALM.String()}, procclnt.HPROCD)
+	return k.bootSubsystem("fss3d", []string{}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {

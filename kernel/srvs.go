@@ -44,7 +44,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	case sp.UXREL:
 		ss, err = k.bootUxd()
 	case sp.DBREL:
-		ss, err = k.bootDbd("172.17.0.1")
+		ss, err = k.bootDbd("172.17.0.2")
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
 	case sp.REALMDREL:

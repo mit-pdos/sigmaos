@@ -106,7 +106,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm.String(), strconv.FormatBool(spawningSys)}, procclnt.HLINUX)
+	ss, err := k.bootSubsystem("procd", []string{sp.ROOTREALM.String(), strconv.FormatBool(spawningSys)}, procclnt.HLINUX)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (k *Kernel) bootUxd() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.Param.Realm.String()}, procclnt.HPROCD)
+	return k.bootSubsystem("fss3d", []string{}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {

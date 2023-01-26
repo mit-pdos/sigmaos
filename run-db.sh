@@ -12,15 +12,16 @@
 # $ docker rm -v sigmadb
 #
 
+PORT=4406
 if docker images mariadb | grep mariab; then
     docker pull mariadb:10.4
 fi
 if ! docker ps | grep -q sigmadb; then
     echo "start db"
-    docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p 3306:3306 -d mariadb
+    docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb
 fi
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
-echo "database ip: $ip"
+echo "database ip=$ip"
 if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
     echo "initialize db"
     mysql -h $ip -u root -psigmadb <<ENDOFSQL

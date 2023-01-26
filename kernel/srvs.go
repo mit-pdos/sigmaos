@@ -94,7 +94,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, nil, realmId, procclnt.HLINUX, cmd)
+	ss := makeSubsystemCmd(nil, nil, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
@@ -106,7 +106,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 // Boot a procd. If spawningSys is true, procd will wait for all kernel procs
 // to be spawned before claiming any procs.
 func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm.String(), strconv.FormatBool(spawningSys)}, k.Param.Realm, procclnt.HLINUX)
+	ss, err := k.bootSubsystem("procd", []string{k.Param.Realm.String(), strconv.FormatBool(spawningSys)}, procclnt.HLINUX)
 	if err != nil {
 		return nil, err
 	}
@@ -114,28 +114,28 @@ func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootRealmd() (*Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{}, k.Param.Realm, procclnt.HPROCD)
+	return k.bootSubsystem("realmd", []string{}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {
 	// XXX ignore realm for now
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, k.Param.Realm, procclnt.HPROCD)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{k.Param.Realm.String()}, k.Param.Realm, procclnt.HPROCD)
+	return k.bootSubsystem("fss3d", []string{k.Param.Realm.String()}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, k.Param.Realm, procclnt.HPROCD)
+	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, procclnt.HPROCD)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{}, k.Param.Realm, procclnt.HLINUX)
+	return k.bootSubsystem("schedd", []string{}, procclnt.HLINUX)
 }
 
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	return k.bootSubsystem("uprocd", args, k.Param.Realm, procclnt.HDOCKER)
+	return k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
 }
 
 func (k *Kernel) GetProcdIp() string {

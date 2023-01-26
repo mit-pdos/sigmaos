@@ -24,7 +24,7 @@ import (
 const (
 	SLEEP_MSECS           = 2000
 	REALM       sp.Trealm = "testrealm"
-	N_ITER                = 2_500_000_000
+	N_ITER                = 5_000_000_000
 )
 
 type Tstate struct {
@@ -219,9 +219,9 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	lcMaxSD := 1.1
 
 	// Check that execution time matches target time.
-	assert.True(ts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, targetTime(ctimeS, lcMaxSD))
-	assert.True(ts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, targetTime(ctimeS, beMaxSD))
-	assert.True(ts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, targetTime(ctimeS, beMinSD))
+	assert.True(ts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
+	assert.True(ts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
+	assert.True(ts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
 
 	ts.Shutdown()
 }

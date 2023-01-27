@@ -3,4 +3,4 @@
 FROM sigmaosbase AS kernel
 
 WORKDIR /home/sigmaos
-CMD ["bin/linux/bootkernel", "bootkernelclnt/bootall.yml"]
+CMD ["bin/linux/bootkernel", "bootall.yml", ":1111"]

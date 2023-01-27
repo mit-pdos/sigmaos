@@ -10,17 +10,16 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt"
 )
 
 // XXX cmd line utility cp
 
 type Mover struct {
 	mu sync.Mutex
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	fclnt    *fenceclnt.FenceClnt
 	job      string
 	epochstr string
@@ -49,12 +48,11 @@ func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) err
 func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	mv := &Mover{}
 	mv.epochstr = epochstr
-	fsl, err := fslib.MakeFsLib("mover-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("mover-" + proc.GetPid().String())
 	if err != nil {
 		return nil, err
 	}
-	mv.FsLib = fsl
-	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
+	mv.SigmaClnt = sc
 	mv.job = job
 
 	if err := mv.Started(); err != nil {

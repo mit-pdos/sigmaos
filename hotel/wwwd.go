@@ -8,18 +8,16 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 type Www struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	p        *perf.Perf
 	job      string
 	userc    *protdevclnt.ProtDevClnt
@@ -35,12 +33,11 @@ type Www struct {
 func RunWww(job string) error {
 	www := &Www{}
 	www.job = job
-	fsl, err := fslib.MakeFsLib("hotel-wwwd-" + job)
+	sc, err := sigmaclnt.MkSigmaClnt("hotel-wwwd-" + job)
 	if err != nil {
 		return err
 	}
-	www.FsLib = fsl
-	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
+	www.SigmaClnt = sc
 	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELUSER)
 	if err != nil {
 		return err

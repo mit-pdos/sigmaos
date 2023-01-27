@@ -19,15 +19,14 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 type Mapper struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	mapf        MapT
 	sbc         *ScanByteCounter
 	job         string
@@ -40,7 +39,7 @@ type Mapper struct {
 	perf        *perf.Perf
 }
 
-func MkMapper(fsl *fslib.FsLib, mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
+func MkMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = job
@@ -50,7 +49,7 @@ func MkMapper(fsl *fslib.FsLib, mapf MapT, job string, p *perf.Perf, nr, lsz int
 	m.input = input
 	m.bin = path.Base(m.input)
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
-	m.FsLib = fsl
+	m.SigmaClnt = sc
 	m.perf = p
 	m.sbc = MakeScanByteCounter(p)
 	return m, nil
@@ -68,15 +67,14 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	fsl, err := fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + args[2])
+	sc, err := sigmaclnt.MkSigmaClnt("mapper-" + proc.GetPid().String() + " " + args[2])
 	if err != nil {
 		return nil, err
 	}
-	m, err := MkMapper(fsl, mapf, args[0], p, nr, lsz, args[2])
+	m, err := MkMapper(sc, mapf, args[0], p, nr, lsz, args[2])
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper failed %v", err)
 	}
-	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
 	}

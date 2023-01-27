@@ -11,11 +11,10 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/procdclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -65,8 +64,7 @@ const (
 //
 
 type Coord struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	job         string
 	nmaptask    int
 	nreducetask int
@@ -84,12 +82,12 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	fsl, err := fslib.MakeFsLib("coord-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("coord-" + proc.GetPid().String())
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.MR, "Made fslib job %v, addr %v", c.job, fsl.NamedAddr())
-	c.FsLib = fsl
+	db.DPrintf(db.MR, "Made fslib job %v, addr %v", c.job, sc.NamedAddr())
+	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])
@@ -110,8 +108,6 @@ func MakeCoord(args []string) (*Coord, error) {
 	c.crash = ctime
 
 	c.linesz = args[6]
-
-	c.ProcClnt = procclnt.MakeProcClnt(c.FsLib)
 
 	c.Started()
 

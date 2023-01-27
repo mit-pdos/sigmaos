@@ -16,3 +16,4 @@ packages:
   - python3-boto3
   - awscli
   - jq
+  - docker.io

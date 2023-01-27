@@ -24,7 +24,7 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	mfs, _, _, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
+	mfs, _, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

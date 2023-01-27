@@ -49,7 +49,7 @@ func MakeMachined(args []string) *Machined {
 	}
 	m.FsLib = fsl
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String())
-	mfs, err := memfssrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsClnt(MACHINES, m.FsLib, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

@@ -65,7 +65,7 @@ func (p *LinuxProc) run() error {
 	db.DPrintf(db.PROCD, "Procd run: %v\n", p.attr)
 
 	// Make the proc's procdir
-	if err := p.pd.procclnt.MakeProcDir(p.attr.GetPid(), p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
+	if err := p.pd.sc.MakeProcDir(p.attr.GetPid(), p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
 		db.DPrintf(db.PROCD_ERR, "Err procd MakeProcDir: %v\n", err)
 	}
 

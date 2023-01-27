@@ -131,7 +131,7 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	sc, err := ts.MakeClnt(0, "abcd") // fslib.MakeFsLibAddr("abcd", ts.GetLocalIP(), ts.NamedAddr())
+	sc, err := ts.MakeClnt(0, "abcd")
 	assert.Nil(t, err)
 	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
@@ -167,7 +167,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 7, len(sts)) // .statsd, .fences and ctl and running and runqs
 
-	ts.KillOne(0, sp.PROCDREL)
+	ts.KillOne(sp.PROCDREL)
 
 	start := time.Now()
 	for {

@@ -50,7 +50,7 @@ func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterRe
 	}
 	sd.procdIp = req.ProcdIp
 	var err error
-	sd.procd, err = protdevclnt.MkProtDevClnt(sd.mfs.FsLib(), path.Join(sp.PROCD, sd.procdIp))
+	sd.procd, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.PROCD, sd.procdIp))
 	if err != nil {
 		db.DFatalf("Error make procd clnt: %v", err)
 	}
@@ -87,12 +87,12 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 		ln := path.Join(sp.SCHEDD, req.ScheddIp, sp.QUEUE, p.GetPid().String())
 		fn := path.Join(p.ParentDir, proc.WS_LINK)
 		// Steal is successful. Add the new WS link to the parent's procdir.
-		if _, err := sd.mfs.FsLib().PutFile(fn, 0777, sp.OWRITE, []byte(ln)); err != nil {
+		if _, err := sd.mfs.SigmaClnt().PutFile(fn, 0777, sp.OWRITE, []byte(ln)); err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error write WS link", fn, err)
 		}
 		// Remove queue file via fslib to trigger parent watch.
 		// XXX Would be nice to be able to do this in-mem too.
-		if err := sd.mfs.FsLib().Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+		if err := sd.mfs.SigmaClnt().Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
 			db.DFatalf("Error remove %v", err)
 		}
 	}
@@ -177,7 +177,7 @@ func (sd *Schedd) tryScheduleProc(r sp.Trealm, q *Queue) bool {
 }
 
 func RunSchedd() error {
-	mfs, _, _, err := memfssrv.MakeMemFs(sp.SCHEDD, sp.SCHEDDREL)
+	mfs, _, err := memfssrv.MakeMemFs(sp.SCHEDD, sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

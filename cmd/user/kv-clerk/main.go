@@ -17,6 +17,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 )
 
 var done = int32(0)
@@ -44,11 +45,10 @@ func main() {
 		}
 		sempath = os.Args[4]
 	}
-	fsl, err := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("clerk-" + proc.GetPid().String())
 	if err != nil {
-		db.DFatalf("MakeFsLib err %v", err)
+		db.DFatalf("MkSigmaClnt err %v", err)
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
 	var rcli *redis.Client
 	var clk *kv.KvClerk
 	if len(os.Args) > 5 {
@@ -59,7 +59,7 @@ func main() {
 		})
 	} else {
 		var err error
-		clk, err = kv.MakeClerkFsl(fsl, pclnt, os.Args[1])
+		clk, err = kv.MakeClerkFsl(sc, os.Args[1])
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}
@@ -72,8 +72,8 @@ func main() {
 	}
 	defer p.Done()
 
-	pclnt.Started()
-	run(pclnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
+	sc.Started()
+	run(sc.ProcClnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
 func waitEvict(kc *kv.KvClerk) {

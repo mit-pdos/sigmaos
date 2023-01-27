@@ -33,6 +33,10 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, pclnt}, nil
 }
 
+func MkSigmaFsLib(fsl *fslib.FsLib) (*SigmaClnt, error) {
+	return &SigmaClnt{fsl, nil}, nil
+}
+
 func MkSigmaClntRealm(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)

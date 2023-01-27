@@ -18,7 +18,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
-	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, k.FsLib, ks)
+	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, k.SigmaClnt.FsLib, ks)
 	if err != nil {
 		return err
 	}

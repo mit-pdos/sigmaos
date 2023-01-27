@@ -3,11 +3,10 @@ package fslibsrv
 import (
 	"sigmaos/container"
 	"sigmaos/fs"
-	"sigmaos/fslib"
-	"sigmaos/procclnt"
 	"sigmaos/protsrv"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -22,24 +21,24 @@ import (
 // through sesssrv and protsrv.
 //
 
-func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *sesssrv.SessSrv {
-	srv := sesssrv.MakeSessSrv(root, addr, fsl, protsrv.MakeProtServer, protsrv.Restore, pclnt, config)
+func makeSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, config repl.Config) *sesssrv.SessSrv {
+	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config)
 	return srv
 }
 
-func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*sesssrv.SessSrv, error) {
+func MakeSrv(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}
-	return MakeReplServerFsl(root, ip+":0", path, fsl, pclnt, nil)
+	return MakeReplServerFsl(root, ip+":0", path, sc, nil)
 }
 
-func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) (*sesssrv.SessSrv, error) {
-	srv := makeSrv(root, addr, fsl, pclnt, config)
+func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
+	srv := makeSrv(root, addr, sc, config)
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
-		err := fsl.MkMountSymlink(path, mnt)
+		err := sc.MkMountSymlink(path, mnt)
 		if err != nil {
 			return nil, err
 		}
@@ -47,15 +46,14 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, 
 	return srv, nil
 }
 
-func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLib(name)
+func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, *sigmaclnt.SigmaClnt, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	srv, err := MakeReplServerFsl(root, addr, path, fsl, pclnt, config)
+	srv, err := MakeReplServerFsl(root, addr, path, sc, config)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return srv, fsl, pclnt, nil
+	return srv, sc, nil
 }

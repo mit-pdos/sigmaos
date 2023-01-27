@@ -7,7 +7,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -37,12 +36,11 @@ type Procd struct {
 	memAvail       proc.Tmem                          // Available memory for this procd and its procs to use.
 	perf           *perf.Perf
 	workers        sync.WaitGroup
-	procclnt       *procclnt.ProcClnt
 	memfssrv       *memfssrv.MemFs
 	schedd         *protdevclnt.ProtDevClnt
 	updm           *uprocclnt.UprocdMgr
 	pds            *protdevsrv.ProtDevSrv
-	fsl            *fslib.FsLib
+	sc             *sigmaclnt.SigmaClnt
 }
 
 func RunProcd(realm string, spawningSys bool) {
@@ -64,7 +62,7 @@ func RunProcd(realm string, spawningSys bool) {
 
 	pd.addr = pd.memfssrv.MyAddr()
 	var err error
-	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.fsl, path.Join(sp.SCHEDD, "~local"))
+	pd.schedd, err = protdevclnt.MkProtDevClnt(pd.sc.FsLib, path.Join(sp.SCHEDD, "~local"))
 	if err != nil {
 		db.DFatalf("Error make schedd clnt: %v", err)
 	}
@@ -85,7 +83,7 @@ func RunProcd(realm string, spawningSys bool) {
 	// Make a directory in which to put stealable procs.
 	pd.memfssrv.GetStats().DisablePathCnts()
 	pd.memfssrv.GetStats().MonitorCPUUtil(pd.getLCProcUtil)
-	pd.updm = uprocclnt.MakeUprocdMgr(pd.fsl)
+	pd.updm = uprocclnt.MakeUprocdMgr(pd.sc.FsLib)
 	// Notify schedd that the proc is done running.
 	req := &scheddproto.RegisterRequest{
 		ProcdIp: pd.memfssrv.MyAddr(),
@@ -124,10 +122,10 @@ func (pd *Procd) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	if clnt, ok = pd.sigmaclnts[realm]; !ok {
 		// No need to make a new client for the root realm.
 		if realm == sp.Trealm(proc.GetRealm()) {
-			clnt = &sigmaclnt.SigmaClnt{pd.fsl, nil}
+			clnt = &sigmaclnt.SigmaClnt{pd.sc.FsLib, nil}
 		} else {
 			var err error
-			if clnt, err = sigmaclnt.MkSigmaClntRealm(pd.fsl, sp.PROCDREL, realm); err != nil {
+			if clnt, err = sigmaclnt.MkSigmaClntRealm(pd.sc.FsLib, sp.PROCDREL, realm); err != nil {
 				db.DFatalf("Err MkSigmaClntRealm: %v", err)
 			}
 			// Mount KPIDS.
@@ -152,7 +150,7 @@ func (pd *Procd) deleteProc(p *LinuxProc) {
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
 	for pid, _ := range procs {
-		pd.procclnt.EvictProcd(pd.addr, pid)
+		pd.sc.EvictProcd(pd.addr, pid)
 	}
 }
 
@@ -165,7 +163,7 @@ func (pd *Procd) registerProcL(p *proc.Proc, stolen bool) *LinuxProc {
 		db.DPrintf(db.PROCD_ERR, "Error creating start semaphore path:%v err:%v", semPath, err)
 	}
 	db.DPrintf(db.PROCD, "Sem init done: %v", p)
-	if err := pd.fsl.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
+	if err := pd.sc.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
 		db.DFatalf("Error remove schedd file: %v", err)
 	}
 	if p.IsPrivilegedProc() && pd.kernelInitDone {

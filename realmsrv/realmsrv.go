@@ -6,9 +6,7 @@ import (
 	// "sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
 	"sigmaos/sigmaclnt"
@@ -16,9 +14,8 @@ import (
 )
 
 type RealmSrv struct {
-	fsl   *fslib.FsLib
-	pclnt *procclnt.ProcClnt
-	ch    chan struct{}
+	sc *sigmaclnt.SigmaClnt
+	ch chan struct{}
 }
 
 func RunRealmSrv() error {
@@ -35,8 +32,7 @@ func RunRealmSrv() error {
 	}
 
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
-	rs.fsl = pds.MemFs.FsLib()
-	rs.pclnt = pds.MemFs.ProcClnt()
+	rs.sc = pds.MemFs.SigmaClnt()
 	err = pds.RunServer()
 	return nil
 }
@@ -46,16 +42,16 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
 	p := proc.MakeProc("named", []string{":1111", req.Realm, pn})
-	if err := rm.pclnt.Spawn(p); err != nil {
+	if err := rm.sc.Spawn(p); err != nil {
 		return err
 	}
-	if err := rm.pclnt.WaitStart(p.GetPid()); err != nil {
+	if err := rm.sc.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
-	sc, err := sigmaclnt.MkSigmaClntRealm(rm.fsl, "realmd", rid)
+	sc, err := sigmaclnt.MkSigmaClntRealm(rm.sc.FsLib, "realmd", rid)
 	if err != nil {
 		return err
 	}
@@ -64,7 +60,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	// XXX add sp.DBREL
 	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.PROCDREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.Tmount{Addr: rm.fsl.NamedAddr(), Root: s}
+		mnt := sp.Tmount{Addr: rm.sc.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MountService(pn, mnt); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)

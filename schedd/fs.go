@@ -22,9 +22,11 @@ func (sd *Schedd) removeProcFromQueue(p *proc.Proc) {
 }
 
 // Setup schedd's fs.
-func setupFs(mfs *memfssrv.MemFs) {
+func setupFs(mfs *memfssrv.MemFs, sd *Schedd) {
 	dirs := []string{
 		sp.QUEUE,
+		sp.RUNNING,
+		sp.PIDS,
 	}
 	for _, d := range dirs {
 		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE); err != nil {

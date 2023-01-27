@@ -138,7 +138,7 @@ func (sd *Schedd) schedule() {
 		// Iterate through the realms round-robin.
 		for r, q := range sd.qs {
 			// Try to schedule a proc from realm r.
-			ok = ok || sd.tryScheduleProc(r, q)
+			ok = ok || sd.tryScheduleRealm(r, q)
 		}
 		// If unable to schedule a proc from any realm, wait.
 		if !ok {
@@ -150,7 +150,7 @@ func (sd *Schedd) schedule() {
 
 // Try to schedule a proc from realm r's queue q. Returns true if a proc was
 // successfully scheduled.
-func (sd *Schedd) tryScheduleProc(r sp.Trealm, q *Queue) bool {
+func (sd *Schedd) tryScheduleRealm(r sp.Trealm, q *Queue) bool {
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
@@ -181,8 +181,8 @@ func RunSchedd() error {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	setupFs(mfs)
 	sd := MakeSchedd(mfs)
+	setupFs(mfs, sd)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)
 	if err != nil {

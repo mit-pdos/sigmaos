@@ -21,16 +21,15 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/writer"
 )
 
 type Reducer struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	reducef  ReduceT
 	input    string
 	output   string
@@ -50,12 +49,8 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	fsl, err := fslib.MakeFsLib("reducer-" + r.input)
-	if err != nil {
-		return nil, err
-	}
-	r.FsLib = fsl
-	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("reducer-" + r.input)
+	r.SigmaClnt = sc
 	r.perf = p
 
 	m, err := strconv.Atoi(args[2])

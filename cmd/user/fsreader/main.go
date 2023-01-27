@@ -9,10 +9,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/pipe"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -32,8 +31,7 @@ func main() {
 }
 
 type Reader struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	input  string
 	output string
 	ctx    fs.CtxI
@@ -45,12 +43,11 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
-	fsl, err := fslib.MakeFsLib("fsreader")
+	sc, err := sigmaclnt.MkSigmaClnt("fsreader")
 	if err != nil {
 		return nil, err
 	}
-	r.FsLib = fsl
-	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+	r.SigmaClnt = sc
 	r.input = args[1]
 	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
 	r.Started()

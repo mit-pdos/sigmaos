@@ -8,9 +8,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 func main() {
@@ -27,8 +26,7 @@ func main() {
 }
 
 type Spawner struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	shouldWaitExit bool
 	childPid       proc.Tpid
 	childProgram   string
@@ -41,12 +39,11 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	}
 	// 	log.Printf("MakeSpawner %v", args)
 	s := &Spawner{}
-	fsl, err := fslib.MakeFsLib("spawner-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("spawner-" + proc.GetPid().String())
 	if err != nil {
 		return nil, err
 	}
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	s.SigmaClnt = sc
 	b, err := strconv.ParseBool(args[0])
 	if err != nil {
 		db.DFatalf("Error parseBool: %v %v", args[0], err)

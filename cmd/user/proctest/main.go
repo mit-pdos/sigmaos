@@ -8,9 +8,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 const (
@@ -43,12 +42,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fsl, err := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
 	if err != nil {
-		db.DFatalf("MakeFsLib: error %v\n", err)
+		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	err = pclnt.Started()
+	err = sc.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
@@ -61,17 +59,17 @@ func main() {
 		err := BurstProc(M, func(ch chan error) {
 			a := proc.MakeProc(os.Args[2], os.Args[3:])
 			db.DPrintf(db.TEST1, "Spawning %v", a.GetPid().String())
-			if err := pclnt.Spawn(a); err != nil {
+			if err := sc.Spawn(a); err != nil {
 				ch <- err
 				return
 			}
 			db.DPrintf(db.TEST1, "WaitStarting %v", a.GetPid().String())
-			if err := pclnt.WaitStart(a.GetPid()); err != nil {
+			if err := sc.WaitStart(a.GetPid()); err != nil {
 				ch <- err
 				return
 			}
 			db.DPrintf(db.TEST1, "WaitExiting %v", a.GetPid().String())
-			status, err := pclnt.WaitExit(a.GetPid())
+			status, err := sc.WaitExit(a.GetPid())
 			if err != nil {
 				ch <- err
 				return
@@ -87,9 +85,9 @@ func main() {
 
 		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error exit status 2") {
 
-			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
+			sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 			os.Exit(1)
 		}
 	}
-	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.Exited(proc.MakeStatus(proc.StatusOK))
 }

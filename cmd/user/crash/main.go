@@ -5,9 +5,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -15,12 +14,11 @@ import (
 //
 
 func main() {
-	fsl, err := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
 	if err != nil {
-		db.DFatalf("MakeFsLib err %v\n", err)
+		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	err = pclnt.Started()
+	err = sc.Started()
 	if err != nil {
 		db.DFatalf("Started: err %v\n", err)
 	}

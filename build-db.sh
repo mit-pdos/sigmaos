@@ -26,7 +26,7 @@ if ! docker ps | grep -q sigmadb; then
     docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb
 fi
 
-sleep 1
+sleep 2
 
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 if [ ! -z $ip ]; then

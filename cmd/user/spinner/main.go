@@ -7,9 +7,8 @@ import (
 	"runtime"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -25,8 +24,7 @@ func main() {
 }
 
 type Spinner struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	outdir string
 }
 
@@ -35,12 +33,11 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
-	fsl, err := fslib.MakeFsLib("spinner")
+	sc, err := sigmaclnt.MkSigmaClnt("spinner")
 	if err != nil {
 		return nil, err
 	}
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	s.SigmaClnt = sc
 	s.outdir = args[0]
 
 	db.DPrintf(db.SPINNER, "MakeSpinner: %v\n", args)

@@ -13,22 +13,20 @@ import (
 // Environment variables which every proc expects to have.
 const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
-	//	SIGMAPROCDIP        = "SIGMAPROCDIP"
-	//	SIGMANODEDID   = "SIGMANODEDID"
-	SIGMAPID       = "SIGMAPID"
-	SIGMAPROGRAM   = "SIGMAPROGRAM"
-	SIGMAPROCDIR   = "SIGMAPROCDIR"
-	SIGMAPARENTDIR = "SIGMAPARENTDIR"
-	SIGMACRASH     = "SIGMACRASH"
-	SIGMAPARTITION = "SIGMAPARTITION"
-	SIGMANETFAIL   = "SIGMANETFAIL"
-	SIGMAPERF      = "SIGMAPERF"
-	SIGMADEBUG     = "SIGMADEBUG"
-	SIGMANAMED     = "SIGMANAMED"
-	SIGMALOCAL     = "SIGMALOCAL"
-	SIGMAROOTFS    = "SIGMAROOTFS"
-	SIGMAPATH      = "SIGMAPATH"
-	SIGMAREALM     = "SIGMAREALM"
+	SIGMAPID            = "SIGMAPID"
+	SIGMAPROGRAM        = "SIGMAPROGRAM"
+	SIGMAPROCDIR        = "SIGMAPROCDIR"
+	SIGMAPARENTDIR      = "SIGMAPARENTDIR"
+	SIGMACRASH          = "SIGMACRASH"
+	SIGMAPARTITION      = "SIGMAPARTITION"
+	SIGMANETFAIL        = "SIGMANETFAIL"
+	SIGMAPERF           = "SIGMAPERF"
+	SIGMADEBUG          = "SIGMADEBUG"
+	SIGMANAMED          = "SIGMANAMED"
+	SIGMALOCAL          = "SIGMALOCAL"
+	SIGMAROOTFS         = "SIGMAROOTFS"
+	SIGMAPATH           = "SIGMAPATH"
+	SIGMAREALM          = "SIGMAREALM"
 )
 
 func GenPid() Tpid {
@@ -80,22 +78,6 @@ func SetSigmaNamed(nds sp.Taddrs) {
 func GetSigmaNamed() string {
 	return os.Getenv(SIGMANAMED)
 }
-
-//func SetProcdIp(procdIp string) {
-//	os.Setenv(SIGMAPROCDIP, procdIp)
-//}
-//
-//func GetProcdIp() string {
-//	return os.Getenv(SIGMAPROCDIP)
-//}
-
-//func SetNodedId(realmId string) {
-//	os.Setenv(SIGMANODEDID, realmId)
-//}
-//
-//func GetNodedId() string {
-//	return os.Getenv(SIGMANODEDID)
-//}
 
 func SetProcDir(procdir string) {
 	os.Setenv(SIGMAPROCDIR, procdir)

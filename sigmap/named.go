@@ -50,6 +50,8 @@ const (
 
 	// Schedd
 	QUEUE          = "queue"
+	RUNNING        = "running"
+	PIDS           = "pids"
 	WS             = "name/" + WS_REL + "/"
 	WS_REL         = "ws"
 	WS_RUNQ_LC_REL = "runq-lc"

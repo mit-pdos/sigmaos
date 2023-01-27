@@ -17,3 +17,5 @@ packages:
   - awscli
   - jq
   - docker.io
+  - mysql-client
+  - libseccomp-dev

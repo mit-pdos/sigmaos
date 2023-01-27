@@ -32,16 +32,15 @@ import (
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 type Balancer struct {
 	sync.Mutex
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	conf       *Config
 	lc         *leaderclnt.LeaderClnt
 	mo         *Monitor
@@ -73,12 +72,8 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	fsl, err := fslib.MakeFsLib("balancer-" + proc.GetPid().String())
-	if err != nil {
-		db.DFatalf("MakeFsLib err %v", err)
-	}
-	bl.FsLib = fsl
-	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("balancer-" + proc.GetPid().String())
+	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashChild = crashChild
@@ -97,7 +92,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
 	// start server but don't publish its existence
-	mfs, err := memfssrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsClnt("", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}

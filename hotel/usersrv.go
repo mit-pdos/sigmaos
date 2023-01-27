@@ -7,8 +7,8 @@ import (
 
 	"sigmaos/dbclnt"
 	"sigmaos/hotel/proto"
-	sp "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -39,7 +39,7 @@ func RunUserSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}

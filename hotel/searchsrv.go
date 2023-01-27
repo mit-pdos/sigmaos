@@ -24,12 +24,12 @@ func RunSearchSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib(), sp.HOTELRATE)
+	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib(), sp.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELGEO)
 	if err != nil {
 		return err
 	}

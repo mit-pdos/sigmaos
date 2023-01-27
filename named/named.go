@@ -68,8 +68,8 @@ func Run(args []string) {
 		initfs(ss, InitDir)
 	}
 
-	fsl := ss.FsLib()
-	db.DPrintf(db.NAMED, "Named started rid:%v pn %v addr:%v named %v", realmId, pn, ss.MyAddr(), fsl.NamedAddr())
+	sc := ss.SigmaClnt()
+	db.DPrintf(db.NAMED, "Named started rid:%v pn %v addr:%v named %v", realmId, pn, ss.MyAddr(), sc.NamedAddr())
 
 	ss.Serve()
 	ss.Done()

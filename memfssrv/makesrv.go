@@ -10,10 +10,10 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -24,11 +24,10 @@ import (
 
 type MemFs struct {
 	*sesssrv.SessSrv
-	root     fs.Dir
-	ctx      fs.CtxI // server context
-	plt      *lockmap.PathLockTable
-	fsl      *fslib.FsLib
-	procclnt *procclnt.ProcClnt
+	root fs.Dir
+	ctx  fs.CtxI // server context
+	plt  *lockmap.PathLockTable
+	sc   *sigmaclnt.SigmaClnt
 }
 
 func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
@@ -44,10 +43,10 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	var srv *sesssrv.SessSrv
 	var err error
 	if isInitNamed {
-		srv, err = fslibsrv.MakeReplServerFsl(root, addr, path, nil, nil, conf)
+		srv, err = fslibsrv.MakeReplServerFsl(root, addr, path, nil, conf)
 	} else {
 		// If this is not the init named, initialize the fslib & procclnt
-		srv, _, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
+		srv, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
 	}
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -60,42 +59,52 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
-		srv.SetFsl(fsl)
+		sc, err := sigmaclnt.MkSigmaFsLib(fsl)
+		if err != nil {
+			return nil, serr.MkErrError(err)
+		}
+		srv.SetSigmaClnt(sc)
 	}
 	return srv, nil
 }
 
-func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
+func MakeReplMemFsFsl(addr string, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
-	srv, err := fslibsrv.MakeReplServerFsl(root, addr, path, fsl, pclnt, conf)
+	srv, err := fslibsrv.MakeReplServerFsl(root, addr, path, sc, conf)
 	if err != nil {
 		db.DFatalf("Error makeReplMemfsFsl: err")
 	}
 	return srv, nil
 }
 
-func MakeMemFs(pn string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	fsl, err := fslib.MakeFsLib(name)
+func MakeMemFs(pn string, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	fs, err := MakeMemFsFsl(pn, fsl, pclnt)
-	return fs, fsl, pclnt, err
+	fs, err := MakeMemFsClnt(pn, sc)
+	return fs, sc, err
 }
 
-func MakeMemFsFsl(pn string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
+func MakeMemFsClnt(pn string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
 	fs := &MemFs{}
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
-	srv, err := fslibsrv.MakeSrv(root, pn, fsl, pclnt)
+	srv, err := fslibsrv.MakeSrv(root, pn, sc)
 	if err != nil {
 		return nil, err
 	}
 	fs.SessSrv = srv
 	fs.plt = srv.GetPathLockTable()
-	fs.fsl = fsl
-	fs.procclnt = pclnt
+	fs.sc = sc
 	fs.root = root
 	fs.ctx = ctx.MkCtx(pn, 0, nil)
 	return fs, err
+}
+
+func MakeMemFsLib(pn string, fsl *fslib.FsLib) (*MemFs, error) {
+	sc, err := sigmaclnt.MkSigmaFsLib(fsl)
+	if err != nil {
+		return nil, err
+	}
+	return MakeMemFsClnt(pn, sc)
 }

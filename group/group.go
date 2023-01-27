@@ -23,6 +23,7 @@ import (
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -75,8 +76,7 @@ type Group struct {
 	jobdir string
 	grp    string
 	ip     string
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
 	isBusy bool
 }
@@ -286,7 +286,7 @@ func RunMember(jobdir, grp string) {
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	// start server but don't publish its existence
-	mfs, err1 := memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg)
+	mfs, err1 := memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.SigmaClnt, raftCfg)
 	if err1 != nil {
 		db.DFatalf("StartMemFs %v\n", err1)
 	}

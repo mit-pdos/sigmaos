@@ -70,7 +70,7 @@ for k in $WHAT; do
     # fi
     for f in $FILES;  do
         # XXX delete when removing obselete code
-        if [[ $f == "sigmamgr" ]] ; then
+        if [[ $f == "sigmamgr" ]] || [[ $f == "memfs-raft-replica" ]] ; then
             continue
         fi
         if [ $CMD == "vet" ]; then

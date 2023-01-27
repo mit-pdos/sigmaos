@@ -3,13 +3,12 @@ package memfssrv
 import (
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,12 +18,8 @@ func (mfs *MemFs) Root() fs.Dir {
 	return mfs.root
 }
 
-func (mfs *MemFs) FsLib() *fslib.FsLib {
-	return mfs.fsl
-}
-
-func (mfs *MemFs) ProcClnt() *procclnt.ProcClnt {
-	return mfs.procclnt
+func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
+	return mfs.sc
 }
 
 // Note: MkDev() sets parent

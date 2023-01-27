@@ -37,7 +37,7 @@ type ProtDevSrv struct {
 }
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
-	mfs, _, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
+	mfs, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
@@ -45,7 +45,7 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 }
 
 func MakeProtDevSrvPriv(fn string, fsl *fslib.FsLib, svci any) (*ProtDevSrv, error) {
-	mfs, error := memfssrv.MakeMemFsFsl(fn, fsl, nil)
+	mfs, error := memfssrv.MakeMemFsLib(fn, fsl)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

@@ -82,12 +82,12 @@ func RunReserveSrv(job string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job)
+	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}

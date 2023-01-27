@@ -9,18 +9,17 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
 	"sigmaos/overlay"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/snapshot"
 	"sigmaos/spcodec"
@@ -56,18 +55,16 @@ type SessSrv struct {
 	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
-	pclnt      *procclnt.ProcClnt
 	snap       *snapshot.Snapshot
 	done       bool
 	replicated bool
 	ch         chan bool
-	fsl        *fslib.FsLib
+	sc         *sigmaclnt.SigmaClnt
 	cnt        stats.Tcounter
 }
 
-func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps sp.MkProtServer, rps sp.RestoreProtServer, pclnt *procclnt.ProcClnt,
-	config repl.Config) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
+	mkps sp.MkProtServer, rps sp.RestoreProtServer, config repl.Config) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -102,18 +99,17 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.MarshalFrame, spcodec.UnmarshalFrame)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
-	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
-	ssrv.fsl = fsl
+	ssrv.sc = sc
 	return ssrv
 }
 
-func (ssrv *SessSrv) SetFsl(fsl *fslib.FsLib) {
-	ssrv.fsl = fsl
+func (ssrv *SessSrv) SetSigmaClnt(sc *sigmaclnt.SigmaClnt) {
+	ssrv.sc = sc
 }
 
-func (ssrv *SessSrv) FsLib() *fslib.FsLib {
-	return ssrv.fsl
+func (ssrv *SessSrv) SigmaClnt() *sigmaclnt.SigmaClnt {
+	return ssrv.sc
 }
 
 func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
@@ -176,17 +172,17 @@ func (ssrv *SessSrv) Serve() {
 	// Non-intial-named services wait on the pclnt
 	// infrastructure. Initial named waits on the channel. XXX maybe
 	// also kernelsrv?
-	if ssrv.pclnt != nil {
+	if ssrv.sc.ProcClnt != nil {
 		// If this is a kernel proc, register the subsystem info for the realmmgr
 		if proc.GetIsPrivilegedProc() {
 			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
-			kernel.RegisterSubsystemInfo(ssrv.fsl, si)
+			kernel.RegisterSubsystemInfo(ssrv.sc.FsLib, si)
 		}
-		if err := ssrv.pclnt.Started(); err != nil {
+		if err := ssrv.sc.Started(); err != nil {
 			debug.PrintStack()
 			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 		}
-		if err := ssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
+		if err := ssrv.sc.WaitEvict(proc.GetPid()); err != nil {
 			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 		}
 	} else {
@@ -197,8 +193,8 @@ func (ssrv *SessSrv) Serve() {
 
 // The server using ssrv is done; exit.
 func (ssrv *SessSrv) Done() {
-	if ssrv.pclnt != nil {
-		ssrv.pclnt.Exited(proc.MakeStatus(proc.StatusEvicted))
+	if ssrv.sc.ProcClnt != nil {
+		ssrv.sc.Exited(proc.MakeStatus(proc.StatusEvicted))
 	} else {
 		if !ssrv.done {
 			ssrv.done = true

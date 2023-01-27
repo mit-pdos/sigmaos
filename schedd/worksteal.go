@@ -18,7 +18,7 @@ func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 	var ok bool
 	if pdc, ok = sd.schedds[scheddIp]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.FsLib(), path.Join(sp.SCHEDD, scheddIp))
+		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.SCHEDD, scheddIp))
 		if err != nil {
 			db.DFatalf("Error make procd clnt: %v", err)
 		}
@@ -39,7 +39,7 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
 	// Remove the proc from the ws queue.
-	sd.mfs.FsLib().Remove(path.Join(q, p.GetPid().String()))
+	sd.mfs.SigmaClnt().Remove(path.Join(q, p.GetPid().String()))
 	// Create a file for the parent proc to wait on
 	sd.postProcInQueue(p)
 	// Steal from the original schedd.
@@ -68,14 +68,14 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 	for {
 		stealable := make(map[sp.Trealm][]*proc.Proc, 0)
 		// Wait until there is a proc to steal.
-		sts, err := sd.mfs.FsLib().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
+		sts, err := sd.mfs.SigmaClnt().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
 			sd.mu.Lock()
 			defer sd.mu.Unlock()
 
 			var nStealable int
 			for _, st := range sts {
 				// Read and unmarshal proc.
-				b, err := sd.mfs.FsLib().GetFile(path.Join(wsQueue, st.Name))
+				b, err := sd.mfs.SigmaClnt().GetFile(path.Join(wsQueue, st.Name))
 				if err != nil {
 					// Proc may have been stolen already.
 					continue
@@ -175,7 +175,7 @@ func (sd *Schedd) offerStealableProcs() {
 			default:
 				db.DFatalf("Unrecognized proc type: %v", p.GetType())
 			}
-			if _, err := sd.mfs.FsLib().PutFile(path.Join(q, p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
+			if _, err := sd.mfs.SigmaClnt().PutFile(path.Join(q, p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
 				db.DFatalf("Error PutFile: %v", err)
 			}
 		}

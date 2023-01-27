@@ -5,18 +5,10 @@ import "proc/proc.proto";
 option go_package = "sigmaos/schedd/proto";
 
 service Schedd {
-  rpc RegisterProcd(RegisterRequest) returns (RegisterResponse);
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
-  rpc ProcDone(ProcDoneRequest) returns (ProcDoneResponse);
   rpc StealProc(StealProcRequest) returns (StealProcResponse);
 }
 
-message RegisterRequest {
-  string procdIp = 1;
-}
-
-message RegisterResponse {
-}
 
 message SpawnRequest {
   string realm = 1;
@@ -24,14 +16,6 @@ message SpawnRequest {
 }
 
 message SpawnResponse {
-}
-
-message ProcDoneRequest {
-  ProcProto procProto = 1;
-}
-
-message ProcDoneResponse {
-  bool oK = 1;
 }
 
 message StealProcRequest {

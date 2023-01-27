@@ -10,7 +10,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	procdproto "sigmaos/procd/proto"
+	"sigmaos/procmgr"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/schedd/proto"
@@ -20,8 +20,7 @@ import (
 type Schedd struct {
 	mu        sync.Mutex
 	cond      *sync.Cond
-	procdIp   string
-	procd     *protdevclnt.ProtDevClnt
+	pmgr      *procmgr.ProcMgr
 	schedds   map[string]*protdevclnt.ProtDevClnt
 	coresfree proc.Tcore
 	memfree   proc.Tmem
@@ -32,6 +31,7 @@ type Schedd struct {
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
+		pmgr:      procmgr.MakeProcMgr(mfs.SigmaClnt()),
 		qs:        make(map[sp.Trealm]*Queue),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),
@@ -39,23 +39,6 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	return sd
-}
-
-func (sd *Schedd) RegisterProcd(req proto.RegisterRequest, res *proto.RegisterResponse) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	if sd.procdIp != "" {
-		db.DFatalf("Register procd on schedd with procd already registered")
-	}
-	sd.procdIp = req.ProcdIp
-	var err error
-	sd.procd, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.PROCD, sd.procdIp))
-	if err != nil {
-		db.DFatalf("Error make procd clnt: %v", err)
-	}
-	db.DPrintf(db.SCHEDD, "Register procd %v", sd.procdIp)
-	return nil
 }
 
 func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error {
@@ -100,14 +83,12 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 	return nil
 }
 
-func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneResponse) error {
+func (sd *Schedd) procDone(p *proc.Proc) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	p := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
-	sd.coresfree += p.GetNcore()
-	sd.memfree += p.GetMem()
+	sd.freeResourcesL(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -115,17 +96,11 @@ func (sd *Schedd) ProcDone(req proto.ProcDoneRequest, res *proto.ProcDoneRespons
 
 // Run a proc via the local procd.
 func (sd *Schedd) runProc(p *proc.Proc) {
-	sd.coresfree -= p.GetNcore()
-	sd.memfree -= p.GetMem()
-	// Notify schedd that the proc is done running.
-	pdreq := &procdproto.RunProcRequest{
-		ProcProto: p.GetProto(),
-	}
-	pdres := &procdproto.RunProcResponse{}
-	err := sd.procd.RPC("Procd.RunProc", pdreq, pdres)
-	if err != nil {
-		db.DFatalf("Error RunProc schedd: %v\n%v", err, sd.qs)
-	}
+	sd.allocResourcesL(p)
+	go func() {
+		sd.pmgr.RunProc(p)
+		sd.procDone(p)
+	}()
 }
 
 // TODO: Proper fair-share scheduling policy, and more fine-grained locking.
@@ -181,6 +156,7 @@ func RunSchedd() error {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
+	setupMemFsSrv(mfs)
 	sd := MakeSchedd(mfs)
 	setupFs(mfs, sd)
 	// Perf monitoring

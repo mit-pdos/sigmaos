@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,6 +20,11 @@ func (sd *Schedd) removeProcFromQueue(p *proc.Proc) {
 	if err := sd.mfs.Remove(path.Join(sp.QUEUE, p.GetPid().String())); err != nil {
 		db.DFatalf("Error remove %v: %v", p.GetPid(), err)
 	}
+}
+
+func setupMemFsSrv(mfs *memfssrv.MemFs) {
+	mfs.GetStats().DisablePathCnts()
+	procclnt.MountPids(mfs.SigmaClnt().FsLib, mfs.SigmaClnt().NamedAddr())
 }
 
 // Setup schedd's fs.

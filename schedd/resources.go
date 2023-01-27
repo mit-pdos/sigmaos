@@ -10,15 +10,15 @@ import (
 func (sd *Schedd) allocResourcesL(p *proc.Proc) {
 	defer sd.sanityCheckResourcesL()
 
-	sd.coresfree += p.GetNcore()
-	sd.memfree += p.GetMem()
+	sd.coresfree -= p.GetNcore()
+	sd.memfree -= p.GetMem()
 }
 
 func (sd *Schedd) freeResourcesL(p *proc.Proc) {
 	defer sd.sanityCheckResourcesL()
 
-	sd.coresfree -= p.GetNcore()
-	sd.memfree -= p.GetMem()
+	sd.coresfree += p.GetNcore()
+	sd.memfree += p.GetMem()
 }
 
 // Sanity check resources

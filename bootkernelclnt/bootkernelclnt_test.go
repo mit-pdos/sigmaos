@@ -154,7 +154,7 @@ func TestSymlink3(t *testing.T) {
 func TestEphemeral(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name := path.Join(sp.PROCD, "~any")
+	name := path.Join(sp.SCHEDD, "~any")
 
 	var err error
 
@@ -165,9 +165,9 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 7, len(sts)) // .statsd, .fences and ctl and running and runqs
+	assert.Equal(t, 8, len(sts)) // .statsd, .fences and ctl and running and runqs
 
-	ts.KillOne(sp.PROCDREL)
+	ts.KillOne(sp.SCHEDDREL)
 
 	start := time.Now()
 	for {

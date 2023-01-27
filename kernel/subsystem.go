@@ -80,6 +80,7 @@ func (s *Subsystem) Terminate() error {
 
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
+	s.crashed = true
 	if s.how == procclnt.HPROCD || s.how == procclnt.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.Evict(s.p.GetPid())

@@ -148,7 +148,7 @@ func (k *Kernel) shutdown() {
 		for _, pid := range cpids {
 			k.Evict(pid)
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
-			if k.svcs.svcMap[pid].crashed {
+			if !k.svcs.svcMap[pid].crashed {
 				if status, err := k.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}

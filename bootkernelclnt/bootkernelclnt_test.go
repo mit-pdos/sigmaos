@@ -1,7 +1,6 @@
 package bootkernelclnt_test
 
 import (
-	"log"
 	"path"
 	"testing"
 	"time"
@@ -177,7 +176,7 @@ func TestEphemeral(t *testing.T) {
 		time.Sleep(sp.Conf.Session.TIMEOUT / 10)
 		_, err = ts.GetFile(name)
 		if err == nil {
-			log.Printf("retry\n")
+			db.DPrintf(db.TEST, "retry")
 			continue
 		}
 		assert.True(t, serr.IsErrNotfound(err) || serr.IsErrUnreachable(err), "Wrong err %v", err)

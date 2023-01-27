@@ -19,7 +19,6 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
@@ -215,12 +214,11 @@ func RunMember(jobdir, grp string) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	fsl, err := fslib.MakeFsLib("kv-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt("kv-" + proc.GetPid().String())
 	if err != nil {
-		db.DFatalf("MakeFsLib %v\n", err)
+		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
-	g.FsLib = fsl
-	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
+	g.SigmaClnt = sc
 	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
 	ip, err := container.LocalIP()
 	if err != nil {

@@ -14,9 +14,9 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	"sigmaos/procclnt"
 	"sigmaos/reader"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -65,30 +65,27 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 	job   string
 }
 
-func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
-	return makeClerk(fsl, pclnt, job)
+func MakeClerkFsl(sc *sigmaclnt.SigmaClnt, job string) (*KvClerk, error) {
+	return makeClerk(sc, job)
 }
 
-func MakeClerk(name, job string, namedAddr []string) (*KvClerk, error) {
-	fsl, err := fslib.MakeFsLibNamed(name, namedAddr)
+func MakeClerk(name, job string) (*KvClerk, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
 		return nil, err
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	return makeClerk(fsl, pclnt, job)
+	return makeClerk(sc, job)
 }
 
-func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
+func makeClerk(sc *sigmaclnt.SigmaClnt, job string) (*KvClerk, error) {
 	kc := &KvClerk{}
-	kc.FsLib = fsl
-	kc.ProcClnt = pclnt
+	kc.SigmaClnt = sc
 	kc.conf = &Config{}
 	kc.job = job
 	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))

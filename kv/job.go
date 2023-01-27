@@ -9,6 +9,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 const (
@@ -51,9 +52,9 @@ func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname, grp string, n
 	return groupmgr.Start(fsl, pclnt, repl, "kvd", []string{grp}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
 }
 
-func InitKeys(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, nkeys int) (*KvClerk, error) {
+func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) {
 	// Create keys
-	clrk, err := MakeClerkFsl(fsl, pclnt, job)
+	clrk, err := MakeClerkFsl(sc, job)
 	if err != nil {
 		return nil, err
 	}

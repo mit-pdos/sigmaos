@@ -2,8 +2,6 @@ package kernel
 
 import (
 	"fmt"
-	// "path"
-	"strconv"
 	"sync"
 	"time"
 
@@ -37,8 +35,6 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	var err error
 	var ss *Subsystem
 	switch s {
-	case sp.PROCDREL:
-		ss, err = k.bootProcd(full)
 	case sp.S3REL:
 		ss, err = k.bootS3d()
 	case sp.UXREL:
@@ -103,16 +99,6 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 	return err
 }
 
-// Boot a procd. If spawningSys is true, procd will wait for all kernel procs
-// to be spawned before claiming any procs.
-func (k *Kernel) bootProcd(spawningSys bool) (*Subsystem, error) {
-	ss, err := k.bootSubsystem("procd", []string{sp.ROOTREALM.String(), strconv.FormatBool(spawningSys)}, procclnt.HLINUX)
-	if err != nil {
-		return nil, err
-	}
-	return ss, nil
-}
-
 func (k *Kernel) bootRealmd() (*Subsystem, error) {
 	return k.bootSubsystem("realmd", []string{}, procclnt.HPROCD)
 }
@@ -136,15 +122,4 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	return k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
-}
-
-func (k *Kernel) GetProcdIp() string {
-	k.svcs.Lock()
-	defer k.svcs.Unlock()
-
-	if len(k.svcs.svcs[sp.PROCDREL]) != 1 {
-		db.DFatalf("Error unexpexted num procds: %v", k.svcs.svcs[sp.PROCDREL])
-	}
-	procd := k.svcs.svcs[sp.PROCDREL][0]
-	return procd.GetIp(k.FsLib)
 }

@@ -13,23 +13,26 @@ import (
 
 type ProcMgr struct {
 	sync.Mutex
-	rootsc  *sigmaclnt.SigmaClnt
-	updm    *uprocclnt.UprocdMgr
-	sclnts  map[sp.Trealm]*sigmaclnt.SigmaClnt
-	running map[proc.Tpid]*proc.Proc
+	scheddIp string
+	rootsc   *sigmaclnt.SigmaClnt
+	updm     *uprocclnt.UprocdMgr
+	sclnts   map[sp.Trealm]*sigmaclnt.SigmaClnt
+	running  map[proc.Tpid]*proc.Proc
 }
 
 // Manages the state and lifecycle of a proc.
-func MakeProcMgr(rootsc *sigmaclnt.SigmaClnt) *ProcMgr {
+func MakeProcMgr(scheddIp string, rootsc *sigmaclnt.SigmaClnt) *ProcMgr {
 	return &ProcMgr{
-		rootsc:  rootsc,
-		updm:    uprocclnt.MakeUprocdMgr(rootsc.FsLib),
-		sclnts:  make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
-		running: make(map[proc.Tpid]*proc.Proc),
+		scheddIp: scheddIp,
+		rootsc:   rootsc,
+		updm:     uprocclnt.MakeUprocdMgr(rootsc.FsLib),
+		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		running:  make(map[proc.Tpid]*proc.Proc),
 	}
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
+	p.Finalize(mgr.scheddIp)
 	mgr.setupProcState(p)
 	mgr.downloadProc(p)
 	mgr.runProc(p)

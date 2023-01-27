@@ -20,7 +20,7 @@ type UprocSrv struct {
 func RunUprocSrv(realm string, ptype proc.Ttype) error {
 	ups := &UprocSrv{}
 	ups.ch = make(chan struct{})
-	pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL, realm, ptype.String())
+	pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype.String())
 	db.DPrintf(db.UPROCD, "%v: Run %v %s\n", proc.GetName(), pn, os.Environ())
 	pds, err := protdevsrv.MakeProtDevSrv(pn, ups)
 	if err != nil {

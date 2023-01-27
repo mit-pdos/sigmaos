@@ -2,7 +2,6 @@ services:
    # order is important
   - named
   - schedd
-  - procd
   - realmd
   - ux
   - s3

@@ -27,8 +27,8 @@ const (
 
 const program = "procclnt_test"
 
-func procd(ts *test.Tstate) string {
-	st, err := ts.GetDir("name/procd")
+func schedd(ts *test.Tstate) string {
+	st, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(ts.T, err, "Readdir")
 	return st[0].Name
 }
@@ -111,7 +111,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
 	ts.Shutdown()
 }
@@ -149,8 +149,8 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
-	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -177,8 +177,8 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
-			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
+			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
 
@@ -201,8 +201,15 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
-	assert.NotNil(t, err, "Stat %v", path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
+	for {
+		_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+		if err != nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+		db.DPrintf(db.TEST, "PID dir not deleted yet.")
+	}
+	assert.NotNil(t, err, "Stat %v", path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -229,7 +236,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -257,7 +264,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
+	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -283,7 +290,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.GetDir(path.Join("name/procd", procd(ts), sp.PROCD_RUNNING))
+	sts, err := ts.GetDir(path.Join("name/procd", schedd(ts), sp.RUNNING))
 	assert.Nil(t, err, "Readdir")
 	assert.True(t, fslib.Present(sts, []string{pid.String()}), "pid")
 
@@ -405,7 +412,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid1.String()))
+	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -437,7 +444,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid1.String()))
+			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}(i)
@@ -487,8 +494,8 @@ func TestConcurrentProcs(t *testing.T) {
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(path.Join(sp.PROCD, "~local", proc.PIDS, pid.String()))
-			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
+			_, err := ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
 

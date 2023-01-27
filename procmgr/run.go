@@ -17,7 +17,9 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 	} else {
 		err = mgr.runUserProc(p)
 	}
-	mgr.procCrashed(p, err)
+	if err != nil {
+		mgr.procCrashed(p, err)
+	}
 }
 
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {

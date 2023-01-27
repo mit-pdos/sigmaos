@@ -78,8 +78,8 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	if p.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
+	p.setProcDir("NO_SCHEDD_IP")
 	p.Env = make(map[string]string)
-	p.setProcDir("")
 	p.setBaseEnv()
 	return p
 }
@@ -105,13 +105,11 @@ func (p *Proc) SetParentDir(parentdir string) {
 	}
 }
 
-func (p *Proc) setProcDir(procdIp string) {
+func (p *Proc) setProcDir(scheddIp string) {
 	if p.IsPrivilegedProc() {
-		p.ProcDir = path.Join(KPIDS, p.GetPid().String())
+		p.ProcDir = path.Join(sp.KPIDSREL, p.GetPid().String())
 	} else {
-		if procdIp != "" {
-			p.ProcDir = path.Join(sp.PROCD, procdIp, PIDS, p.GetPid().String())
-		}
+		p.ProcDir = path.Join(sp.SCHEDD, scheddIp, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -139,12 +137,9 @@ func (p *Proc) setBaseEnv() {
 
 // Finalize env details which can only be set once a physical machine has been
 // chosen.
-func (p *Proc) FinalizeEnv(procdIp string) {
-	// Set the procdir based on procdIp
-	p.setProcDir(procdIp)
+func (p *Proc) Finalize(scheddIp string) {
+	p.setProcDir(scheddIp)
 	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
-	p.AppendEnv(SIGMAPROCDIP, procdIp)
-	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
 }

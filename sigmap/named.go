@@ -13,8 +13,6 @@ const (
 	BOOT        = NAMED + BOOTREL + "/"
 	TMPREL      = "tmp"
 	TMP         = NAMED + TMPREL
-	PROCDREL    = "procd"
-	PROCD       = NAMED + PROCDREL + "/"
 	UPROCDREL   = "uprocd"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
@@ -58,9 +56,6 @@ const (
 	WS_RUNQ_BE_REL = "runq-be"
 	WS_RUNQ_LC     = WS + WS_RUNQ_LC_REL + "/"
 	WS_RUNQ_BE     = WS + WS_RUNQ_BE_REL + "/"
-
-	// Procd namespace
-	PROCD_RUNNING = "running"
 
 	// special devs/dirs exported by fssrv
 	STATSD   = ".statsd"

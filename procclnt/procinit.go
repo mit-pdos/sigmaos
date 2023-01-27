@@ -31,7 +31,8 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
-			db.DFatalf("Error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)
+			sts, err2 := fsl.GetDir(sp.SCHEDD)
+			db.DFatalf("Error mounting %v/%v as %v err %v\nsts:%v err2:%v", addr, splitPath, mountPoint, err, sp.Names(sts), err2)
 		}
 	}
 }
@@ -45,7 +46,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount parentdir. May fail if parent already exited.
 	mountDir(fsl, fsl.NamedAddr(), proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fsl.NamedAddr(), sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(fsl.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -56,10 +57,10 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
-	proc.FakeProcEnv(pid, program, "", path.Join(proc.KPIDS, pid.String()), "")
+	proc.FakeProcEnv(pid, program, path.Join(sp.KPIDSREL, pid.String()), "")
 	MountPids(fsl, fsl.NamedAddr())
 
-	if err := fsl.MountTree(fsl.NamedAddr(), sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(fsl.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -73,14 +74,14 @@ func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt
 }
 
 func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
-	mountDir(fsl, namedAddr, proc.KPIDS, proc.KPIDS)
+	mountDir(fsl, namedAddr, sp.KPIDSREL, sp.KPIDSREL)
 	return nil
 }
 
 // XXX REMOVE THIS AFTER DEADLINE PUSH
 func MakeProcClntTmp(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
 	MountPids(fsl, namedAddr)
-	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(namedAddr, sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}

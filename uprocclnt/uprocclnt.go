@@ -72,7 +72,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 
 // Fill out procd directory structure in which to register the uprocd.
 func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
-	d1 := path.Join(sp.PROCD, "~local", sp.UPROCDREL)
+	d1 := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL)
 	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
 	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrExists(err) {
 		return err
@@ -106,7 +106,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 		if pid, err = updm.startUprocd(realm, ptype); err != nil {
 			return nil, err
 		}
-		pn := path.Join(sp.PROCD, "~local", sp.UPROCDREL, realm.String(), ptype.String())
+		pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm.String(), ptype.String())
 		rc, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
 		if err != nil {
 			return nil, err

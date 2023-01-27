@@ -521,13 +521,13 @@ func (clnt *ProcClnt) Evict(pid proc.Tpid) error {
 
 // Called by realm to evict another machine's named.
 func (clnt *ProcClnt) EvictKernelProc(pid string) error {
-	procdir := path.Join(proc.KPIDS, pid)
+	procdir := path.Join(sp.KPIDSREL, pid)
 	return clnt.evict(procdir)
 }
 
 // Called by procd.
-func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
-	procdir := path.Join(sp.PROCD, procdIp, proc.PIDS, pid.String())
+func (clnt *ProcClnt) EvictProcd(scheddIp string, pid proc.Tpid) error {
+	procdir := path.Join(sp.SCHEDD, scheddIp, sp.PIDS, pid.String())
 	return clnt.evict(procdir)
 }
 

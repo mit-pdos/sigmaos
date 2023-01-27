@@ -75,7 +75,7 @@ func Run(args []string) {
 	ss.Done()
 }
 
-var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.PROCDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
+var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
 
 var InitDir = []string{sp.TMPREL, sp.HOTELREL, sp.CACHEREL}
 

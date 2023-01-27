@@ -58,7 +58,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 
 	// Make some rootrealm services available in new realm
 	// XXX add sp.DBREL
-	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.PROCDREL} {
+	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.Tmount{Addr: rm.sc.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)

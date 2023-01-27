@@ -31,7 +31,7 @@ type Schedd struct {
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
-		pmgr:      procmgr.MakeProcMgr(mfs.SigmaClnt()),
+		pmgr:      procmgr.MakeProcMgr(mfs.MyAddr(), mfs.SigmaClnt()),
 		qs:        make(map[sp.Trealm]*Queue),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),

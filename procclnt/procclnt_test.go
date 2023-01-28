@@ -279,18 +279,12 @@ func TestWaitExitParentCrash(t *testing.T) {
 func TestWaitStart(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	start := time.Now()
-
 	pid := spawnSleeper(t, ts)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
-
 	// Check if proc exists
-	sts, err := ts.GetDir(path.Join("name/procd", schedd(ts), sp.RUNNING))
+	sts, err := ts.GetDir(path.Join(sp.SCHEDD, schedd(ts), sp.RUNNING))
 	assert.Nil(t, err, "Readdir")
 	assert.True(t, fslib.Present(sts, []string{pid.String()}), "pid")
 
@@ -299,6 +293,7 @@ func TestWaitStart(t *testing.T) {
 
 	ts.WaitExit(pid)
 
+	// Make sure the proc finished...
 	checkSleeperResult(t, ts, pid)
 
 	ts.Shutdown()

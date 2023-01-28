@@ -23,7 +23,7 @@ import (
 type Thow uint32
 
 const (
-	HPROCD  Thow = iota + 1 // spawned as a sigmos proc
+	HSCHEDD Thow = iota + 1 // spawned as a sigmos proc
 	HLINUX                  // spawned as a linux process
 	HDOCKER                 // spawned as a container
 )
@@ -84,7 +84,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
 		// Update the list of active procds.
 		clnt.updateSchedds()
 		scheddIp := clnt.nextSchedd()
-		err := clnt.spawn(scheddIp, HPROCD, ps[i], clnt.getScheddClnt(scheddIp))
+		err := clnt.spawn(scheddIp, HSCHEDD, ps[i], clnt.getScheddClnt(scheddIp))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -119,7 +119,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 				}
 				scheddIp := clnt.nextSchedd()
 				// Update the list of active procds.
-				err := clnt.spawn(scheddIp, HPROCD, p, clnt.getScheddClnt(scheddIp))
+				err := clnt.spawn(scheddIp, HSCHEDD, p, clnt.getScheddClnt(scheddIp))
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
 					es = append(es, &errTuple{p, err})
@@ -140,7 +140,7 @@ func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", HPROCD, p, clnt.getScheddClnt("~local"))
+	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
 }
 
 func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
@@ -187,7 +187,7 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 
 	p.SetSpawnTime(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
-	if how == HPROCD {
+	if how == HSCHEDD {
 		if pdc == nil {
 			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\nschedds:%v, %v", scheddIp, p, clnt.schedds, clnt.scheddIps)
 		}

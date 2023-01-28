@@ -38,7 +38,7 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 }
 
 func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
-	if how == procclnt.HLINUX || how == procclnt.HPROCD {
+	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how)
 		if err != nil {
 			return err
@@ -81,7 +81,7 @@ func (s *Subsystem) Terminate() error {
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
 	s.crashed = true
-	if s.how == procclnt.HPROCD || s.how == procclnt.HDOCKER {
+	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.Evict(s.p.GetPid())
 		if err != nil {
@@ -94,7 +94,7 @@ func (s *Subsystem) Kill() error {
 }
 
 func (s *Subsystem) Wait() {
-	if s.how == procclnt.HPROCD || s.how == procclnt.HDOCKER {
+	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		status, err := s.WaitExit(s.p.GetPid())
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)

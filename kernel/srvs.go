@@ -99,20 +99,20 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 }
 
 func (k *Kernel) bootRealmd() (*Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{}, procclnt.HPROCD)
+	return k.bootSubsystem("realmd", []string{}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {
 	// XXX ignore realm for now
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, procclnt.HPROCD)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{}, procclnt.HPROCD)
+	return k.bootSubsystem("fss3d", []string{}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, procclnt.HPROCD)
+	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

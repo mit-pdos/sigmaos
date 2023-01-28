@@ -135,7 +135,7 @@ func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir strin
 	}
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
-	if how == HPROCD {
+	if how == HSCHEDD {
 		procfileLink = path.Join(sp.SCHEDD, scheddIp, sp.QUEUE, p.GetPid().String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in

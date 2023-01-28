@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
 FROM sigmaosbase AS kernel
-
 WORKDIR /home/sigmaos
-CMD ["bin/linux/bootkernel", "bootall.yml", ":1111"]
+ENV namedaddr  :1111
+CMD ["sh", "-c", "bin/linux/bootkernel bootall.yml ${namedaddr}"]

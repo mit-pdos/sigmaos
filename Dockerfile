@@ -3,6 +3,7 @@
 FROM golang AS base
 RUN apt-get update
 RUN apt-get install libseccomp-dev
+RUN apt-get --yes install iputils-ping
 RUN mkdir -p /home/sigmaos
 WORKDIR /home/sigmaos
 COPY go.mod ./

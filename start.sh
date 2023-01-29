@@ -40,8 +40,10 @@ IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
 
 # XXX maybe use mount to see if name is up
 until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
+    echo -n "." 1>&2
     sleep 0.1;
 done;
+sleep 1
 
 echo -n $IP
 

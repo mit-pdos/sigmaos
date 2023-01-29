@@ -11,11 +11,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Boot ymls
+// Boot confs
 const (
-	BOOT_ALL   = "bootall.yml"
-	BOOT_NAMED = "boot.yml"
-	BOOT_NODE  = "bootmach.yml"
+	BOOT_ALL   = "named;schedd;ux;s3;db"
+	BOOT_NAMED = "named"
+	BOOT_NODE  = "schedd;ux;s3;db"
 
 	NAMEDPORT = ":1111"
 )
@@ -26,16 +26,16 @@ type System struct {
 	proxy   *exec.Cmd
 }
 
-func bootSystem(ymlname string) (*System, error) {
+func bootSystem(conf string) (*System, error) {
 	sys := &System{}
 	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
-	db.DPrintf(db.SYSTEM, "Boot system %v", ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(ymlname, sp.Taddrs{NAMEDPORT})
+	db.DPrintf(db.SYSTEM, "Boot system %v", conf)
+	k, nds, err := bootkernelclnt.BootKernelNamed(sp.Taddrs{NAMEDPORT}, conf)
 	if err != nil {
 		return nil, err
 	}
 	sys.nameds = nds
-	db.DPrintf(db.SYSTEM, "Done boot system %v %v", ymlname, sys.nameds)
+	db.DPrintf(db.SYSTEM, "Done boot system %v %v", conf, sys.nameds)
 	sys.kernels[0] = k
 	proc.SetSigmaNamed(sys.nameds)
 	sys.proxy = startProxy(sys.kernels[0].GetIP(), sys.nameds)
@@ -68,7 +68,7 @@ func BootNamedOnly() (*System, error) {
 }
 
 func (sys *System) BootNode() error {
-	k, err := bootkernelclnt.BootKernel(BOOT_NODE, sys.nameds)
+	k, err := bootkernelclnt.BootKernel(sys.nameds, BOOT_NODE)
 	if err != nil {
 		return err
 	}

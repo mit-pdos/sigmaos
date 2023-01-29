@@ -22,7 +22,7 @@ const (
 	HOSTTMP     = "/tmp/sigmaos"
 )
 
-func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, error) {
+func StartKContainer(nameds sp.Taddrs, conf string, env []string) (*Container, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -31,7 +31,7 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 	db.DPrintf(db.CONTAINER, "start container %v %v\n", nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", yml, nameds.String()},
+		Cmd:   []string{"bin/linux/bootkernel", nameds.String(), conf},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{
@@ -44,6 +44,7 @@ func StartKContainer(yml string, nameds sp.Taddrs, env []string) (*Container, er
 			os.Getenv("HOME") + "/.aws" + ":/home/sigmaos/.aws",
 			HOSTTMP + ":" + HOSTTMP,
 		},
+		// Network: "host",
 	}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err

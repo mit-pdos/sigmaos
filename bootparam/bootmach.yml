@@ -1,6 +1,0 @@
-services:
-  - schedd
-  - ux
-  - s3
-  - db
-dbip:

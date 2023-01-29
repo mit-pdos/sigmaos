@@ -1,9 +1,0 @@
-services:
-   # order is important
-  - named
-  - schedd
-  - realmd
-  - ux
-  - s3
-  - db
-dbip:

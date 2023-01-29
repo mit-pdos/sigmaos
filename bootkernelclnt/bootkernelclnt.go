@@ -27,8 +27,8 @@ type Kernel struct {
 var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF}
 
 // Takes named port and returns filled-in namedAddr
-func BootKernelNamed(yml string, nameds sp.Taddrs) (*Kernel, sp.Taddrs, error) {
-	k, err := startContainer(yml, nameds)
+func BootKernelNamed(nameds sp.Taddrs, conf string) (*Kernel, sp.Taddrs, error) {
+	k, err := startContainer(nameds, conf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,8 +44,8 @@ func BootKernelNamed(yml string, nameds sp.Taddrs) (*Kernel, sp.Taddrs, error) {
 }
 
 // Takes filled-in namedAddr
-func BootKernel(yml string, nameds sp.Taddrs) (*Kernel, error) {
-	k, err := startContainer(yml, nameds)
+func BootKernel(nameds sp.Taddrs, conf string) (*Kernel, error) {
+	k, err := startContainer(nameds, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +78,8 @@ func (k *Kernel) Shutdown() error {
 	return k.container.Shutdown()
 }
 
-func startContainer(yml string, nameds sp.Taddrs) (*Kernel, error) {
-	container, err := container.StartKContainer(yml, nameds, makeEnv())
+func startContainer(nameds sp.Taddrs, conf string) (*Kernel, error) {
+	container, err := container.StartKContainer(nameds, conf, makeEnv())
 	if err != nil {
 		return nil, err
 	}

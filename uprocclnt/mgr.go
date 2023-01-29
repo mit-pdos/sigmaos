@@ -1,6 +1,7 @@
 package uprocclnt
 
 import (
+	"fmt"
 	"path"
 	"sync"
 
@@ -107,4 +108,14 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	} else {
 		return nil, err
 	}
+}
+
+func (updm *UprocdMgr) String() string {
+	clnts := make([]*UprocdClnt, 0)
+	for _, m := range updm.pdcms {
+		for _, c := range m {
+			clnts = append(clnts, c)
+		}
+	}
+	return fmt.Sprintf("&{ clnts:%v}", clnts)
 }

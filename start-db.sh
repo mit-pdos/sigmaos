@@ -28,11 +28,12 @@ fi
 
 sleep 2
 
+# until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
+#     echo -n "." 1>&2
+#     sleep 0.1;
+# done;
+
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
-if [ ! -z $ip ]; then
-    echo "dbIP: $ip"
-    sed -i "s/dbip:.*/dbip: ${ip}/" $@
-fi
 
 if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
     echo "initialize db"

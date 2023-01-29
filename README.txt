@@ -15,7 +15,7 @@ Build docker images (one for kernel and one for user)
 $ ./build.sh
 
 To run tests for package PACKAGE_NAME, run:
-$ go test -v sigmaos/PACKAGE_NAME
+$ go test -v sigmaos/PACKAGE_NAME -start
 
 To upload the built binaries to an s3 bucket corresponding to realm REALM, run
 (optional, purely local development also possible as described below):

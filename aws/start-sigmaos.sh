@@ -93,10 +93,10 @@ for vm in $vms; do
   fi
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
-    docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e namedaddr=:1111 --env SIGMADEBUG=KERNEL --network host --rm sigmaos
+    ../start.sh --boot "named;schedd;ux;s3;db" --named :1111 
   else
     echo "JOIN ${SIGMANAMED}"
-    docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e namedaddr=${SIGMANAMED} --env SIGMADEBUG=KERNEL --network host --rm sigmaos
+    ../start.sh --boot "schedd;ux;s3;db" --named ${SIGMANAMED}
   fi
 ENDSSH
 done

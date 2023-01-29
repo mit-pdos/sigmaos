@@ -3,19 +3,21 @@ package test
 import (
 	"flag"
 	"fmt"
-	"log"
 	"testing"
 
+	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
-	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/system"
 )
 
 const (
+	BOOT_ALL   = "named;schedd;ux;s3;db"
+	BOOT_NAMED = "named"
+	BOOT_NODE  = "schedd;ux;s3;db"
+
 	NAMEDPORT = ":1111"
 )
 
@@ -43,12 +45,12 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
-	kclnt *kernelclnt.KernelClnt
-	T     *testing.T
+	kclnts []*bootkernelclnt.Kernel
+	T      *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
-	b, err := makeClntPath(t, path)
+	b, err := makeSysClntPath(t, path)
 	if err != nil {
 		db.DFatalf("MakeTstatePath: %v\n", err)
 	}
@@ -56,7 +58,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	ts, err := makeClnt(t)
+	ts, err := makeSysClnt(t, BOOT_NAMED)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -64,18 +66,18 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	ts, err := makeClnt(t)
+	ts, err := makeSysClnt(t, BOOT_ALL)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
 	return ts
 }
 
-func makeClntPath(t *testing.T, path string) (*Tstate, error) {
+func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return makeClnt(t)
+		return makeSysClnt(t, BOOT_NAMED)
 	} else {
-		ts, err := makeClnt(t)
+		ts, err := makeSysClnt(t, BOOT_ALL)
 		if err != nil {
 			return nil, err
 		}
@@ -85,61 +87,59 @@ func makeClntPath(t *testing.T, path string) (*Tstate, error) {
 	}
 }
 
-// Join a realm/set of machines are already running  XXX to compile
-func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
-	//fsl, pclnt, err := mkClient("", realmid, []string{""}) // XXX get it from rconfig
-	//if err != nil {
-	//	return nil, err
-	//}
-	//rconfig := realm.GetRealmConfig(fsl, realmid)
-	db.DFatalf("Unimplemented")
-	return nil, nil
-}
-
-func makeClnt(t *testing.T) (*Tstate, error) {
+func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+	namedport := []string{NAMEDPORT}
 	if start {
-		ip, err := system.Start()
+		ip, err := bootkernelclnt.Start(srvs, namedport)
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("ip %v\n", ip)
 		containerIP = ip
 	}
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
-	namedAddr, err := kernel.SetNamedIP(containerIP, []string{NAMEDPORT})
+	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
 	if err != nil {
 		return nil, err
 	}
-	sc, err := sigmaclnt.MkSigmaClntProc("test", containerIP, namedAddr)
+	k, err := bootkernelclnt.MkKernelClnt("test", containerIP, namedAddr)
 	if err != nil {
 		return nil, err
 	}
-	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
-	if err != nil {
-		return nil, err
-	}
-	return &Tstate{sc, kclnt, t}, nil
+	return &Tstate{k.SigmaClnt, []*bootkernelclnt.Kernel{k}, t}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
-	db.DFatalf("Unimplemented")
+	for i := 0; i < n; i++ {
+		kclnt, err := bootkernelclnt.MkBootKernelClnt("kclnt", BOOT_NODE, ts.NamedAddr())
+		if err != nil {
+			return err
+		}
+		ts.kclnts = append(ts.kclnts, kclnt)
+	}
 	return nil
 }
 
 func (ts *Tstate) Boot(s string) error {
-	pid, err := ts.kclnt.Boot(s, sp.Taddrs{})
-	if err != nil {
-		return err
-	}
-	db.DFatalf("Unimplemented %v", pid)
-	return nil
+	return ts.kclnts[0].Boot(s)
+}
+
+func (ts *Tstate) BootFss3d() error {
+	return ts.Boot(sp.S3REL)
 }
 
 func (ts *Tstate) KillOne(s string) error {
-	return ts.kclnt.Kill(s)
+	return ts.kclnts[0].Kill(s)
 }
 
 func (ts *Tstate) Shutdown() error {
-	db.DPrintf(db.TEST, "Shutdown")
-	return ts.kclnt.Shutdown()
+	db.DPrintf(db.SYSTEM, "Shutdown")
+	for i := len(ts.kclnts) - 1; i >= 0; i-- {
+		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
+		// XXX shut down other kernels first?
+		if err := ts.kclnts[i].Shutdown(); err != nil {
+			return err
+		}
+		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
+	}
+	return nil
 }

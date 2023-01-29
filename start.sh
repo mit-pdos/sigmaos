@@ -1,15 +1,29 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--machine N]"  1>&2
+  echo "Usage: $0 [--boot SRVS] [--machine N] [--named ADDRs]"  1>&2
 }
 
 UPDATE=""
+BOOT="named"
+NAMED=":1111"
+DBIP="x.x.x.x"
+
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --machine)
     shift
     MACHINE=$1
+    shift
+    ;;
+  --boot)
+    shift
+    BOOT=$1
+    shift
+    ;;
+  --named)
+    shift
+    NAMED=$1
     shift
     ;;
   -help)
@@ -31,17 +45,29 @@ fi
 
 mkdir -p /tmp/sigmaos
 
-echo "docker run" 1>&2
+DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 
-# default arguments to bootkernel
-SIGMANAMED=":1111"
-SIGMABOOT="named"
-
-CID=$(docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e named=${SIGMANAMED} -e boot=${SIGMABOOT} -e SIGMADEBUG=${SIGMADEBUG} sigmaos)
+# Mounting docker.sock is bad idea in general because it requires to
+# give rw permission on host to privileged daemon.  But maybe ok in
+# our case where kernel is trusted.
+CID=$(docker run -dit\
+             --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
+             --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
+             --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
+             -e named=${NAMED}\
+             -e boot=${BOOT}\
+             -e dbip=${DBIP}\
+             -e SIGMADEBUG=${SIGMADEBUG}\
+             sigmaos)
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 
+# XXX maybe use mount to see if name is up
+until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
+    echo -n "." 1>&2
+    sleep 0.1;
+done;
 sleep 1
 
-echo "container $CID $IP" 1>&2
-
 echo -n $IP
+
+echo " container ${CID:0:10}" dbIP $DBIP 1>&2

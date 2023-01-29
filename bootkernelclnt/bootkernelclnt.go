@@ -1,55 +1,70 @@
 package bootkernelclnt
 
 import (
-	"fmt"
-	"os"
-	"time"
+	"os/exec"
 
-	"sigmaos/container"
-	"sigmaos/kernel"
+	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
-	"sigmaos/proc"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 //
-// Library to start a kernel boot process.
+// Library to start kernel
 //
+
+const (
+	START = "../start.sh"
+)
+
+func Start(srvs string, namedAddr sp.Taddrs) (string, error) {
+	out, err := exec.Command(START, []string{
+		"--boot", srvs,
+		"--named", namedAddr.String()}...).Output()
+	if err != nil {
+		db.DPrintf(db.BOOT, "Boot failed %s err %v\n", string(out), err)
+		return "", err
+	}
+	ip := string(out)
+	db.DPrintf("BOOT", "Start: %v IP %v\n", srvs, ip)
+	return ip, nil
+}
 
 type Kernel struct {
 	*sigmaclnt.SigmaClnt
-	kclnt     *kernelclnt.KernelClnt
-	container *container.Container
+	kclnt *kernelclnt.KernelClnt
 }
 
-var envvar = []string{proc.SIGMADEBUG, proc.SIGMAPERF}
-
-// Takes named port and returns filled-in namedAddr
-func BootKernelNamed(nameds sp.Taddrs, conf string) (*Kernel, sp.Taddrs, error) {
-	k, err := startContainer(nameds, conf)
-	if err != nil {
-		return nil, nil, err
-	}
-	nds, err := kernel.SetNamedIP(k.GetIP(), nameds)
-	if err != nil {
-		return nil, nil, err
-	}
-	k, err = k.waitUntilBooted(nds)
-	if err != nil {
-		return nil, nil, err
-	}
-	return k, nds, err
-}
-
-// Takes filled-in namedAddr
-func BootKernel(nameds sp.Taddrs, conf string) (*Kernel, error) {
-	k, err := startContainer(nameds, conf)
+func MkBootKernelClnt(name string, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
+	ip, err := Start(conf, namedAddr)
 	if err != nil {
 		return nil, err
 	}
-	return k.waitUntilBooted(nameds)
+	sc, err := sigmaclnt.MkSigmaClntProc(name, ip, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
+	if err != nil {
+		return nil, err
+	}
+	return &Kernel{sc, kclnt}, nil
+}
+
+func MkKernelClnt(name string, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
+	sc, err := sigmaclnt.MkSigmaClntProc(name, ip, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
+	if err != nil {
+		return nil, err
+	}
+	return &Kernel{sc, kclnt}, nil
+}
+
+func (k *Kernel) Shutdown() error {
+	return k.kclnt.Shutdown()
 }
 
 func (k *Kernel) Boot(s string) error {
@@ -57,75 +72,6 @@ func (k *Kernel) Boot(s string) error {
 	return err
 }
 
-func (k *Kernel) KillOne(s string) error {
+func (k *Kernel) Kill(s string) error {
 	return k.kclnt.Kill(s)
-}
-
-func (k *Kernel) GetIP() string {
-	return k.container.Ip()
-}
-
-func (k *Kernel) GetClnt() *sigmaclnt.SigmaClnt {
-	return k.SigmaClnt
-}
-
-func (k *Kernel) MkClnt(name string, namedAddr sp.Taddrs) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.MkSigmaClntProc(name, k.container.Ip(), namedAddr)
-}
-
-func (k *Kernel) Shutdown() error {
-	k.kclnt.Shutdown()
-	return k.container.Shutdown()
-}
-
-func startContainer(nameds sp.Taddrs, conf string) (*Kernel, error) {
-	container, err := container.StartKContainer(nameds, conf, makeEnv())
-	if err != nil {
-		return nil, err
-	}
-	return &Kernel{container: container}, nil
-}
-
-func (k *Kernel) waitUntilBooted(nameds sp.Taddrs) (*Kernel, error) {
-	const N = 100
-	for i := 0; i < N; i++ {
-		time.Sleep(10 * time.Millisecond)
-		sc, err := k.MkClnt("kclnt", nameds)
-		if err == nil {
-			k.SigmaClnt = sc
-			break
-		} else if serr.IsErrUnavailable(err) {
-			fmt.Printf(".")
-			continue
-		} else {
-			return nil, err
-		}
-	}
-	for i := 0; i < N; i++ {
-		time.Sleep(10 * time.Millisecond)
-		kclnt, err := kernelclnt.MakeKernelClnt(k.FsLib, sp.BOOT+"~local/")
-		if err == nil {
-			k.kclnt = kclnt
-			fmt.Printf("running\n")
-			break
-		} else if serr.IsErrUnavailable(err) {
-			fmt.Printf(".")
-		} else {
-			return nil, err
-		}
-	}
-	if k.kclnt == nil {
-		return nil, fmt.Errorf("BootKernel: timeded out")
-	}
-	return k, nil
-}
-
-func makeEnv() []string {
-	env := []string{}
-	for _, s := range envvar {
-		if e := os.Getenv(s); e != "" {
-			env = append(env, fmt.Sprintf("%s=%s", s, e))
-		}
-	}
-	return env
 }

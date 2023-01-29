@@ -141,7 +141,7 @@ func (ts *Tstate) KillOne(s string) error {
 }
 
 func (ts *Tstate) Shutdown() error {
-	db.DPrintf(db.Test, "Shutdown")
+	db.DPrintf(db.TEST, "Shutdown")
 	db.DPrintf(db.SYSTEM, "Shutdown")
 	for i := len(ts.kclnts) - 1; i >= 0; i-- {
 		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)

@@ -68,6 +68,7 @@ func localIPs() ([]net.IP, error) {
 	return ips, nil
 }
 
+// XXX should find what outgoing ip is
 func LocalIP() (string, error) {
 	ips, err := localIPs()
 	if err != nil {
@@ -77,6 +78,9 @@ func LocalIP() (string, error) {
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
 		if strings.HasPrefix(i.String(), "10.10.") {
+			return i.String(), nil
+		}
+		if !strings.HasPrefix(i.String(), "172.") {
 			return i.String(), nil
 		}
 	}

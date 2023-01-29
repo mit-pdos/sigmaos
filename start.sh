@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--boot SRVS] [--machine N] [--named ADDRs]"  1>&2
+  echo "Usage: $0 [--boot SRVS] [--machine N] [--named ADDRs] [--host] "  1>&2
 }
 
 UPDATE=""
 BOOT="named"
 NAMED=":1111"
 DBIP="x.x.x.x"
+NET="bridge"
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -19,6 +20,11 @@ while [[ "$#" -gt 0 ]]; do
   --boot)
     shift
     BOOT=$1
+    shift
+    ;;
+  --host)
+    shift
+    NET="host"
     shift
     ;;
   --named)
@@ -56,12 +62,19 @@ CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
+             --network ${NET}\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              sigmaos)
+
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
+if [ -z  ${IP} ]; then
+    # running with --network bridge; find out what host's IP is.
+    IP=$(ip route get 8.8.8.8 | head -1 | cut -d ' ' -f 7)
+    echo $IP
+fi
 
 # XXX maybe use mount to see if name is up
 until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do

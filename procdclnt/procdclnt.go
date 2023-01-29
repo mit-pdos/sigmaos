@@ -3,7 +3,7 @@ package procdclnt
 import (
 	//"encoding/json"
 	"fmt"
-	"path"
+	//	"path"
 	"sync/atomic"
 	"time"
 
@@ -57,44 +57,53 @@ func (pdc *ProcdClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
+// XXX fix
 func (pdc *ProcdClnt) Nprocd() (int, []Tload, error) {
-	sts, err := pdc.GetDir(sp.PROCD)
-	if err != nil {
-		return 0, nil, err
-	}
-	r := nprocd(sts)
-	nprocs := make([]Tload, 0, r)
-	for _, st := range sts {
-		if st.Name == "ws" {
-			continue
-		}
-		nproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNNING))
-		if err != nil {
-			return r, nil, err
-		}
-		//		beproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_BE))
-		beproc := 0
-		if err != nil {
-			return r, nil, err
-		}
-		//		lcproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_LC))
-		lcproc := 0
-		if err != nil {
-			return r, nil, err
-		}
-		nprocs = append(nprocs, Tload{nproc, beproc + lcproc})
-	}
-	return r, nprocs, err
+	return 0, make([]Tload, 0), nil
+	// sts, err := pdc.GetDir(sp.PROCD)
+	//
+	//	if err != nil {
+	//		return 0, nil, err
+	//	}
+	//
+	// r := nprocd(sts)
+	// nprocs := make([]Tload, 0, r)
+	//
+	//	for _, st := range sts {
+	//		if st.Name == "ws" {
+	//			continue
+	//		}
+	//		nproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNNING))
+	//		if err != nil {
+	//			return r, nil, err
+	//		}
+	//		//		beproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_BE))
+	//		beproc := 0
+	//		if err != nil {
+	//			return r, nil, err
+	//		}
+	//		//		lcproc, err := pdc.Nprocs(path.Join(sp.PROCD, st.Name, sp.PROCD_RUNQ_LC))
+	//		lcproc := 0
+	//		if err != nil {
+	//			return r, nil, err
+	//		}
+	//		nprocs = append(nprocs, Tload{nproc, beproc + lcproc})
+	//	}
+	//
+	// return r, nprocs, err
 }
 
 func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
-	sts, err := pdc.ReadDirWatch(sp.PROCD, func(sts []*sp.Stat) bool {
-		return nprocd(sts) == n
-	})
-	if err != nil {
-		return 0, err
-	}
-	return nprocd(sts), nil
+	return 0, nil
+	//	sts, err := pdc.ReadDirWatch(sp.PROCD, func(sts []*sp.Stat) bool {
+	//		return nprocd(sts) == n
+	//	})
+	//
+	//	if err != nil {
+	//		return 0, err
+	//	}
+	//
+	// return nprocd(sts), nil
 }
 
 func (pdc *ProcdClnt) MonitorProcds() {

@@ -12,6 +12,10 @@ import (
 	"sigmaos/uprocclnt"
 )
 
+const (
+	PROC_CACHE_SZ = 500
+)
+
 type ProcMgr struct {
 	sync.Mutex
 	mfs      *memfssrv.MemFs
@@ -20,6 +24,7 @@ type ProcMgr struct {
 	updm     *uprocclnt.UprocdMgr
 	sclnts   map[sp.Trealm]*sigmaclnt.SigmaClnt
 	running  map[proc.Tpid]*proc.Proc
+	pcache   *ProcCache
 }
 
 // Manages the state and lifecycle of a proc.
@@ -31,6 +36,7 @@ func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
 		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
 		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		running:  make(map[proc.Tpid]*proc.Proc),
+		pcache:   MakeProcCache(),
 	}
 }
 

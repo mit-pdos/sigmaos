@@ -16,6 +16,7 @@ type Tshare int64
 // shares.
 const (
 	SHARE_PER_CORE Tshare = 1000
+	MIN_SHARE             = 100
 )
 
 // Rebalance CPU shares when a proc runs.
@@ -66,6 +67,15 @@ func (updm *UprocdMgr) balanceBEShares() {
 // Set a uprocd's CPU share, and RPC to the kernelsrv to adjust the shares.
 func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
 	pdc.share = share
+	if share < MIN_SHARE {
+		// BE realms should not get <.1 cores.
+		if pdc.ptype == proc.T_BE {
+			db.DFatalf("Assign %v share to BE uprocd", share)
+		}
+		// If the uprocd is an LC uprocd, and it isn't running and procs which
+		// request cores, then set its share to .1 core.
+		share = MIN_SHARE
+	}
 	if err := updm.kclnt.SetCPUShares(pdc.pid, int64(share)); err != nil {
 		db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
 	}

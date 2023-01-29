@@ -7,6 +7,7 @@ usage() {
 UPDATE=""
 BOOT="named"
 NAMED=":1111"
+DBIP="x.x.x.x"
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -44,6 +45,8 @@ fi
 
 mkdir -p /tmp/sigmaos
 
+DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+
 # Mounting docker.sock is bad idea in general because it requires to
 # give rw permission on host to privileged daemon.  But maybe ok in
 # our case where kernel is trusted.
@@ -53,6 +56,7 @@ CID=$(docker run -dit\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
              -e named=${NAMED}\
              -e boot=${BOOT}\
+             -e dbip=${DBIP}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              sigmaos)
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
@@ -66,4 +70,4 @@ sleep 1
 
 echo -n $IP
 
-echo " container ${CID:0:10}" 1>&2
+echo " container ${CID:0:10}" dbIP $DBIP 1>&2

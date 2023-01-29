@@ -6,7 +6,7 @@ TMP=/tmp/sigmaos
 mkdir -p $TMP
 
 # build and start db container
-# ./build-db.sh $TMP/bootall.yml $TMP/bootmach.yml
+./start-db.sh
 
 # build binaries for host
 ./make.sh --norace linux

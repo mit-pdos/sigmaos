@@ -12,11 +12,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		db.DFatalf("%v: usage conf nameds\n", os.Args[0])
+	if len(os.Args) < 4 {
+		db.DFatalf("%v: usage srvs nameds dbip\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[2], ";")
-	param := kernel.Param{Services: srvs}
+	param := kernel.Param{srvs, os.Args[3]}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := container.HOME
 	p := os.Getenv("PATH")

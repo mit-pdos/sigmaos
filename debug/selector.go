@@ -70,6 +70,7 @@ const (
 	CONTAINER             = "CONTAINER"
 	NAMED                 = "NAMED"
 	PROCMGR               = "PROCMGR"
+	UPROCDMGR             = "UPROCDMGR"
 	UPROCD                = "UPROCD"
 	SCHEDD                = "SCHEDD"
 	SCHEDD_ERR            = "SCHEDD" + ERR

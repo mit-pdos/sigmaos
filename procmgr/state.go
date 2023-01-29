@@ -95,25 +95,25 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 	}
 }
 
-func getWSQueue(p *proc.Proc) string {
+func getWSQueue(t proc.Ttype) string {
 	var q string
-	switch p.GetType() {
+	switch t {
 	case proc.T_LC:
 		q = sp.WS_RUNQ_LC
 	case proc.T_BE:
 		q = sp.WS_RUNQ_BE
 	default:
-		db.DFatalf("Unrecognized proc type: %v", p.GetType())
+		db.DFatalf("Unrecognized proc type: %v", t)
 	}
 	return q
 }
 
 func (mgr *ProcMgr) removeWSLink(p *proc.Proc) {
-	mgr.rootsc.Remove(path.Join(getWSQueue(p), p.GetPid().String()))
+	mgr.rootsc.Remove(path.Join(getWSQueue(p.GetType()), p.GetPid().String()))
 }
 
 func (mgr *ProcMgr) createWSLink(p *proc.Proc) {
-	if _, err := mgr.rootsc.PutFile(path.Join(getWSQueue(p), p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
+	if _, err := mgr.rootsc.PutFile(path.Join(getWSQueue(p.GetType()), p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 }

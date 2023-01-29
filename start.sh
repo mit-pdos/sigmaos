@@ -31,13 +31,17 @@ fi
 
 mkdir -p /tmp/sigmaos
 
+echo "docker run" 1>&2
+
 # default arguments to bootkernel
 SIGMANAMED=":1111"
 SIGMABOOT="named"
 
-echo "running with SIGMANAMED=$SIGMANAMED"
+CID=$(docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e named=${SIGMANAMED} -e boot=${SIGMABOOT} -e SIGMADEBUG=${SIGMADEBUG} sigmaos)
+IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 
-docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e named=${SIGMANAMED} -e boot=${SIGMABOOT} -e SIGMADEBUG=${SIGMADEBUG} sigmaos
- 
 sleep 1
 
+echo "container $CID $IP" 1>&2
+
+echo -n $IP

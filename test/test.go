@@ -3,6 +3,7 @@ package test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"testing"
 
 	db "sigmaos/debug"
@@ -11,6 +12,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/system"
 )
 
 const (
@@ -18,9 +20,11 @@ const (
 )
 
 var containerIP string
+var start bool
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
+	flag.BoolVar(&start, "start", false, "Start system")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -93,6 +97,14 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 }
 
 func makeClnt(t *testing.T) (*Tstate, error) {
+	if start {
+		ip, err := system.Start()
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("ip %v\n", ip)
+		containerIP = ip
+	}
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
 	namedAddr, err := kernel.SetNamedIP(containerIP, []string{NAMEDPORT})
 	if err != nil {

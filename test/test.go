@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	BOOT_REALM = "named;realmd;schedd;ux;s3;db"
+	BOOT_REALM = "named;schedd;realmd;ux;s3;db"
 	BOOT_ALL   = "named;schedd;ux;s3;db"
 	BOOT_NAMED = "named"
 	BOOT_NODE  = "schedd;ux;s3;db"

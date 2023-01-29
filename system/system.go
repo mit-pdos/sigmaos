@@ -1,130 +1,20 @@
 package system
 
 import (
-	"os"
 	"os/exec"
-
-	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
-// Boot ymls
 const (
-	BOOT_ALL   = "bootall.yml"
-	BOOT_NAMED = "boot.yml"
-	BOOT_NODE  = "bootmach.yml"
-
-	NAMEDPORT = ":1111"
+	START = "../start.sh"
 )
 
-type System struct {
-	kernels []*bootkernelclnt.Kernel
-	nameds  sp.Taddrs
-	proxy   *exec.Cmd
-}
-
-func bootSystem(ymlname string) (*System, error) {
-	sys := &System{}
-	sys.kernels = make([]*bootkernelclnt.Kernel, 1)
-	db.DPrintf(db.SYSTEM, "Boot system %v", ymlname)
-	k, nds, err := bootkernelclnt.BootKernelNamed(ymlname, sp.Taddrs{NAMEDPORT})
+func Start() (string, error) {
+	db.DPrintf(db.BOOT, "Boot %v\n", START)
+	out, err := exec.Command(START, []string{}...).Output()
 	if err != nil {
-		return nil, err
+		db.DPrintf(db.BOOT, "Boot failed %s err %v\n", string(out), err)
+		return "", err
 	}
-	sys.nameds = nds
-	db.DPrintf(db.SYSTEM, "Done boot system %v %v", ymlname, sys.nameds)
-	sys.kernels[0] = k
-	proc.SetSigmaNamed(sys.nameds)
-	sys.proxy = startProxy(sys.kernels[0].GetIP(), sys.nameds)
-	if err := sys.proxy.Start(); err != nil {
-		return nil, err
-	}
-	return sys, nil
-}
-
-func Boot(n int) (*System, error) {
-	sys, err := bootSystem(BOOT_ALL)
-	if err != nil {
-		return nil, err
-	}
-	for i := 1; i < n; i++ {
-		err := sys.BootNode()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return sys, nil
-}
-
-func BootNamedOnly() (*System, error) {
-	sys, err := bootSystem(BOOT_NAMED)
-	if err != nil {
-		return nil, err
-	}
-	return sys, nil
-}
-
-func (sys *System) BootNode() error {
-	k, err := bootkernelclnt.BootKernel(BOOT_NODE, sys.nameds)
-	if err != nil {
-		return err
-	}
-	sys.kernels = append(sys.kernels, k)
-	return nil
-}
-
-func (sys *System) GetClnt(kidx int) *sigmaclnt.SigmaClnt {
-	return sys.kernels[kidx].GetClnt()
-}
-
-func (sys *System) GetNamedAddrs() []string {
-	return sys.nameds
-}
-
-func (sys *System) KillOneK(kidx int, sname string) error {
-	return sys.kernels[kidx].KillOne(sname)
-}
-
-func (sys *System) KillOne(sname string) error {
-	return sys.KillOneK(0, sname)
-}
-
-func (sys *System) Boot(s string) error {
-	return sys.kernels[0].Boot(s)
-}
-
-func (sys *System) BootFss3d() error {
-	return sys.kernels[0].Boot(sp.S3REL)
-}
-
-func (sys *System) MakeClnt(kidx int, name string) (*sigmaclnt.SigmaClnt, error) {
-	return sys.kernels[kidx].MkClnt(name, sys.nameds)
-}
-
-func (sys *System) Shutdown() error {
-	db.DPrintf(db.SYSTEM, "Shutdown proxyd")
-	if err := sys.proxy.Process.Kill(); err != nil {
-		return err
-	}
-	db.DPrintf(db.SYSTEM, "Done shutdown proxyd")
-	for i := len(sys.kernels) - 1; i >= 0; i-- {
-		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
-		// XXX shut down other kernels first?
-		if err := sys.kernels[i].Shutdown(); err != nil {
-			return err
-		}
-		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
-	}
-	return nil
-}
-
-// XXX make optional?
-func startProxy(IP string, nds sp.Taddrs) *exec.Cmd {
-	cmd := exec.Command("proxyd", append([]string{IP}, nds...)...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd
+	return string(out), nil
 }

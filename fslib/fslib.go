@@ -36,7 +36,6 @@ func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (
 	return fl, nil
 }
 
-// get realm from "caller"
 func MakeFsLibAddr(uname, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")

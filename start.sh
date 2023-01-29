@@ -1,17 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --machine N --realm REALM" 1>&2
+  echo "Usage: $0 [--machine N]"  1>&2
 }
 
-REALM=""
+UPDATE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
-  --realm)
-    shift
-    REALM=$1
-    shift
-    ;;
   --machine)
     shift
     MACHINE=$1
@@ -29,34 +24,24 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$MACHINE" ] || [ $# -gt 0 ]; then
+if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
 
-if [ -z "$REALM" ] || [ $# -gt 0 ]; then
-    usage
-    exit 1
-fi
+mkdir -p /tmp/sigmaos
 
-DIR=$(dirname $0)
-. $DIR/env/env.sh
+echo "docker run" 1>&2
 
-if [[ -z "${SIGMANAMED}" ]]; then
-  export SIGMANAMED=":1111"
-fi
+# default arguments to bootkernel
+SIGMANAMED=":1111"
+SIGMABOOT="named"
 
-if [[ -z "${N_REPLICAS}" ]]; then
-  export N_REPLICAS=1
-fi
-
-echo "running with SIGMANAMED=$SIGMANAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
-
-./install.sh --realm rootrealm
-# ./install.sh --realm $REALM
-
-bootsys rootrealm $MACHINE &
+CID=$(docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e named=${SIGMANAMED} -e boot=${SIGMABOOT} -e SIGMADEBUG=${SIGMADEBUG} sigmaos)
+IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 
 sleep 1
 
-./mount.sh
+echo "container $CID $IP" 1>&2
+
+echo -n $IP

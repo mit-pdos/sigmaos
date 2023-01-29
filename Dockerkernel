@@ -2,5 +2,6 @@
 
 FROM sigmaosbase AS kernel
 WORKDIR /home/sigmaos
-ENV namedaddr  :1111
-CMD ["sh", "-c", "bin/linux/bootkernel bootall.yml ${namedaddr}"]
+ENV named :1111
+ENV boot named
+CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot}"]

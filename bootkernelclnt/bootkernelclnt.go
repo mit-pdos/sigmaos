@@ -18,7 +18,6 @@ const (
 )
 
 func Start(srvs string, namedAddr sp.Taddrs) (string, error) {
-	db.DPrintf(db.BOOT, "Boot %v\n", START)
 	out, err := exec.Command(START, []string{
 		"--boot", srvs,
 		"--named", namedAddr.String()}...).Output()
@@ -41,7 +40,6 @@ func MkBootKernelClnt(name string, conf string, namedAddr sp.Taddrs) (*Kernel, e
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.BOOT, "Bootnode ip %v\n", ip)
 	sc, err := sigmaclnt.MkSigmaClntProc(name, ip, namedAddr)
 	if err != nil {
 		return nil, err

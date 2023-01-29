@@ -4,8 +4,6 @@ usage() {
   echo "Usage: $0"
 }
 
-IMAGE="sigmaos"
-
 go clean -testcache
 
 #
@@ -16,13 +14,12 @@ for T in path serr linuxsched perf sigmap memfs; do
     go test $@ sigmaos/$T
 done
 
-
 #
 # test with a kernel with just named
 #
 
 for T in reader writer stats reader writer stats fslib semclnt electclnt; do
-    go test $@ sigmaos/$T
+    go test $@ sigmaos/$T -start
 done
 
 #
@@ -41,18 +38,18 @@ go test $@ sigmaos/proxy
 # sessclnt; TestWriteCrash fails
 
 for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
-    go test $@ sigmaos/$T
+    go test $@ sigmaos/$T -start
 done
     
-go test $@ sigmaos/fslib -path "name/ux/~local/fslibtest/" -run ReadPerf
-go test $@ sigmaos/fslib -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslib -start -path "name/ux/~local/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslib -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
 # applications
 # mr: all Crash tests fail, except CrashTask
 # kv: all crash tests fail
 
 for T in mr kv; do
-    go test $@ sigmaos/$T
+    go test $@ sigmaos/$T -start
 done
 
 #
@@ -65,7 +62,7 @@ pgrep mariadb >/dev/null && go test $@ sigmaos/hotel
 # test with realms
 #
 
-go test $@ sigmaos/realmclnt
+go test $@ sigmaos/realmclnt -start
 
 # XXX broken
 # go test $@ sigmaos/cmd/user/test2pc

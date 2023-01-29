@@ -123,6 +123,10 @@ func (ts *Tstate) Boot(s string) error {
 	return ts.kclnts[0].Boot(s)
 }
 
+func (ts *Tstate) BootFss3d() error {
+	return ts.Boot(sp.S3REL)
+}
+
 func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[0].Kill(s)
 }

@@ -36,7 +36,7 @@ func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
 		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
 		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		running:  make(map[proc.Tpid]*proc.Proc),
-		pcache:   MakeProcCache(),
+		pcache:   MakeProcCache(PROC_CACHE_SZ),
 	}
 }
 

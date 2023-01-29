@@ -125,15 +125,20 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 	sts, err := mgr.rootsc.ReadDirWatch(qpath, func(sts []*sp.Stat) bool {
 		var nStealable int
 		for _, st := range sts {
-			// Read and unmarshal proc.
-			b, err := mgr.rootsc.GetFile(path.Join(qpath, st.Name))
-			if err != nil {
-				// Proc may have been stolen already.
-				continue
+			var p *proc.Proc
+			var ok bool
+			// Try to tread the proc from the cache.
+			if p, ok = mgr.pcache.Get(proc.Tpid(st.Name)); !ok {
+				// Read and unmarshal proc.
+				b, err := mgr.rootsc.GetFile(path.Join(qpath, st.Name))
+				if err != nil {
+					// Proc may have been stolen already.
+					continue
+				}
+				p = proc.MakeEmptyProc()
+				p.Unmarshal(b)
+				mgr.pcache.Set(p.GetPid(), p)
 			}
-			p := proc.MakeEmptyProc()
-			p.Unmarshal(b)
-
 			// Is the proc a local proc? If so, don't add it to the queue of
 			// stealable procs.
 			if p.ScheddIp == mgr.mfs.MyAddr() {

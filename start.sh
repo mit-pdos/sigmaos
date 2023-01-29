@@ -45,7 +45,9 @@ fi
 
 mkdir -p /tmp/sigmaos
 
-DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+if docker ps | grep -q sigmadb; then
+    DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+fi
 
 # Mounting docker.sock is bad idea in general because it requires to
 # give rw permission on host to privileged daemon.  But maybe ok in

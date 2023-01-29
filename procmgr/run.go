@@ -35,7 +35,7 @@ func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
 }
 
 func (mgr *ProcMgr) runUserProc(p *proc.Proc) error {
-	if uprocErr, childErr := mgr.updm.MakeUProc(p); childErr != nil {
+	if uprocErr, childErr := mgr.updm.RunUProc(p); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.

@@ -118,11 +118,15 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	return pdc, nil
 }
 
-func (updm *UprocdMgr) MakeUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
+func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
+	// Spawn and exit do resource accounting and share rebalancing for the
+	// uprocds.
+	updm.run(uproc)
+	defer updm.exit(uproc)
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),
 	}

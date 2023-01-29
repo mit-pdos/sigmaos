@@ -92,6 +92,9 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 		c := MakeUprocdClnt(pid, rc, realm, ptype)
 		updm.pdcms[realm][ptype] = c
 		pdc = c
+		if ptype == proc.T_BE {
+			updm.beUprocds = append(updm.beUprocds, pdc)
+		}
 	}
 	return pdc, nil
 }

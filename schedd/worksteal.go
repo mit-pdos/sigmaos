@@ -51,6 +51,8 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 // Monitor a Work-Stealing queue.
 func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 	for {
+		// Wait for a bit to avoid overwhelming named.
+		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 		var stealable map[sp.Trealm][]*proc.Proc
 		var ok bool
 		// If there was a version error triggered while reading the queue, reread
@@ -84,8 +86,6 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 		// TODO: don't wake up if stealable procs aren't new?
 		sd.cond.Signal()
 		sd.mu.Unlock()
-		// Wait for a bit to avoid overwhelming named.
-		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 	}
 }
 

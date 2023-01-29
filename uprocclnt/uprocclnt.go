@@ -42,6 +42,9 @@ func MakeUprocdMgr(fsl *fslib.FsLib) *UprocdMgr {
 }
 
 func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid, error) {
+	if err := updm.mkdirs(realm, ptype); err != nil {
+		return proc.Tpid(""), err
+	}
 	if updm.kclnt == nil {
 		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, sp.BOOT+"~local/")
 		if err != nil {
@@ -98,9 +101,6 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	}
 	pdc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
-		if err := updm.mkdirs(realm, ptype); err != nil {
-			return nil, err
-		}
 		var pid proc.Tpid
 		var err error
 		if pid, err = updm.startUprocd(realm, ptype); err != nil {

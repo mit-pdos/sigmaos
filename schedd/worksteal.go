@@ -9,7 +9,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	proto "sigmaos/schedd/proto"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -50,48 +49,14 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 }
 
 // Monitor a Work-Stealing queue.
-func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
+func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 	for {
-		stealable := make(map[sp.Trealm][]*proc.Proc, 0)
-		// Wait until there is a proc to steal.
-		sts, err := sd.mfs.SigmaClnt().ReadDirWatch(wsQueue, func(sts []*sp.Stat) bool {
-			sd.mu.Lock()
-			defer sd.mu.Unlock()
-
-			var nStealable int
-			for _, st := range sts {
-				// Read and unmarshal proc.
-				b, err := sd.mfs.SigmaClnt().GetFile(path.Join(wsQueue, st.Name))
-				if err != nil {
-					// Proc may have been stolen already.
-					continue
-				}
-				p := proc.MakeEmptyProc()
-				p.Unmarshal(b)
-
-				// Is the proc a local proc? If so, don't add it to the queue of
-				// stealable procs.
-				if _, ok := sd.qs[p.GetRealm()].pmap[proc.Tpid(st.Name)]; ok {
-					continue
-				}
-				if _, ok := stealable[p.GetRealm()]; !ok {
-					stealable[p.GetRealm()] = make([]*proc.Proc, 0)
-				}
-				// Add to the list of stealable procs
-				stealable[p.GetRealm()] = append(stealable[p.GetRealm()], p)
-				nStealable++
-			}
-			db.DPrintf(db.SCHEDD, "Found %v stealable procs %v", nStealable, stealable)
-			return nStealable == 0
-		})
-		// Since many schedds may be modifying the WS dir, we may get version
-		// errors.
-		if err != nil && serr.IsErrVersion(err) {
-			db.DPrintf(db.SCHEDD_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
+		var stealable map[sp.Trealm][]*proc.Proc
+		var ok bool
+		// If there was a version error triggered while reading the queue, reread
+		// it.
+		if stealable, ok = sd.pmgr.GetWSQueue(qtype); !ok {
 			continue
-		}
-		if err != nil {
-			db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
 		}
 		// Shuffle the queues of stealable procs.
 		for _, q := range stealable {
@@ -101,7 +66,7 @@ func (sd *Schedd) monitorWSQueue(wsQueue string, qtype proc.Ttype) {
 		}
 		// Store the queue of stealable procs for worker threads to read.
 		sd.mu.Lock()
-		db.DPrintf(db.SCHEDD, "Waking %v worker procs to steal from %v", len(stealable), wsQueue)
+		db.DPrintf(db.SCHEDD, "Waking %v worker procs to steal from %v", len(stealable), qtype)
 		for r, q := range stealable {
 			if _, ok := sd.qs[r]; !ok {
 				sd.qs[r] = makeQueue()

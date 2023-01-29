@@ -155,8 +155,8 @@ func RunSchedd() error {
 		db.DFatalf("Error PDS: %v", err)
 	}
 	go sd.schedule()
-	go sd.monitorWSQueue(sp.WS_RUNQ_LC, proc.T_LC)
-	go sd.monitorWSQueue(sp.WS_RUNQ_BE, proc.T_BE)
+	go sd.monitorWSQueue(proc.T_LC)
+	go sd.monitorWSQueue(proc.T_BE)
 	go sd.offerStealableProcs()
 	return pds.RunServer()
 }

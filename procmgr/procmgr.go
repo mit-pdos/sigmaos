@@ -68,6 +68,11 @@ func (mgr *ProcMgr) OfferStealableProc(p *proc.Proc) {
 	mgr.createWSLink(p)
 }
 
+// Get the contents of the WS Queue for procs of type ptype.
+func (mgr *ProcMgr) GetWSQueue(ptype proc.Ttype) (map[sp.Trealm][]*proc.Proc, bool) {
+	return mgr.getWSQueue(getWSQueuePath(ptype))
+}
+
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	mgr.Lock()
 	defer mgr.Unlock()

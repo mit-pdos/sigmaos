@@ -29,20 +29,7 @@ func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 
 // Try to steal a proc from another schedd. Returns true if successful.
 func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
-	var q string
-	switch p.GetType() {
-	case proc.T_LC:
-		q = sp.WS_RUNQ_LC
-	case proc.T_BE:
-		q = sp.WS_RUNQ_BE
-	default:
-		db.DFatalf("Unrecognized proc type: %v", p.GetType())
-	}
-	// Remove the proc from the ws queue.
-	sd.mfs.SigmaClnt().Remove(path.Join(q, p.GetPid().String()))
-	// Create a file for the parent proc to wait on
-	sd.postProcInQueue(p)
-	// Steal from the original schedd.
+	// Try to steal from the victim schedd.
 	sreq := &proto.StealProcRequest{
 		ScheddIp: sd.mfs.MyAddr(),
 		Realm:    realm.String(),
@@ -53,13 +40,12 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 	if err != nil {
 		db.DFatalf("Error StealProc schedd: %v", err)
 	}
-	// If unsuccessful, remove from queue.
-	if !sres.OK {
-		sd.removeProcFromQueue(p)
-		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
-	} else {
+	if sres.OK {
 		db.DPrintf(db.SCHEDD, "Stole proc %v", p.GetPid())
+	} else {
+		db.DPrintf(db.SCHEDD, "Failed to steal proc %v", p.GetPid())
 	}
+	sd.pmgr.TryStealProc(p)
 	return sres.OK
 }
 
@@ -166,18 +152,7 @@ func (sd *Schedd) offerStealableProcs() {
 		sd.mu.Unlock()
 		for _, p := range toOffer {
 			alreadyOffered[p.GetPid()] = true
-			var q string
-			switch p.GetType() {
-			case proc.T_LC:
-				q = sp.WS_RUNQ_LC
-			case proc.T_BE:
-				q = sp.WS_RUNQ_BE
-			default:
-				db.DFatalf("Unrecognized proc type: %v", p.GetType())
-			}
-			if _, err := sd.mfs.SigmaClnt().PutFile(path.Join(q, p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
-				db.DFatalf("Error PutFile: %v", err)
-			}
+			sd.pmgr.OfferStealableProc(p)
 		}
 	}
 }

@@ -319,25 +319,9 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
-		// Wait for the proc queue file to be removed. If the schedd holding this
-		// queue becomes unreachable, return an error.
+		// Wait for the proc queue file to be removed. Should not return an error.
 		if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
 			return err
-		}
-		// See if this proc was stolen by another schedd. If so, wait on the new
-		// proc file link.
-		b, err = clnt.GetFile(path.Join(childDir, proc.WS_LINK))
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "No ws link %v", pid)
-		} else {
-			wsLink := string(b)
-			db.DPrintf(db.PROCCLNT_ERR, "Found ws link %v: %v", pid, wsLink)
-			// Wait for the proc queue file (in the new, stealing schedd), to be
-			// removed. If the schedd holding this queue becomes unreachable, return
-			// an error.
-			if err := clnt.waitProcFileRemove(pid, wsLink); err != nil {
-				return err
-			}
 		}
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)

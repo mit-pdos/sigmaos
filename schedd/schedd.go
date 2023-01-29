@@ -1,7 +1,6 @@
 package schedd
 
 import (
-	"path"
 	"sync"
 
 	db "sigmaos/debug"
@@ -31,7 +30,7 @@ type Schedd struct {
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
-		pmgr:      procmgr.MakeProcMgr(mfs.MyAddr(), mfs.SigmaClnt()),
+		pmgr:      procmgr.MakeProcMgr(mfs),
 		qs:        make(map[sp.Trealm]*Queue),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores),
@@ -53,7 +52,7 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
-	sd.postProcInQueue(p)
+	sd.pmgr.Spawn(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -64,21 +63,7 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	// See if proc is still queued.
-	var p *proc.Proc
-	if p, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(proc.Tpid(req.PidStr)); res.OK {
-		ln := path.Join(sp.SCHEDD, req.ScheddIp, sp.QUEUE, p.GetPid().String())
-		fn := path.Join(p.ParentDir, proc.WS_LINK)
-		// Steal is successful. Add the new WS link to the parent's procdir.
-		if _, err := sd.mfs.SigmaClnt().PutFile(fn, 0777, sp.OWRITE, []byte(ln)); err != nil {
-			db.DPrintf(db.SCHEDD_ERR, "Error write WS link", fn, err)
-		}
-		// Remove queue file via fslib to trigger parent watch.
-		// XXX Would be nice to be able to do this in-mem too.
-		if err := sd.mfs.SigmaClnt().Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
-			db.DFatalf("Error remove %v", err)
-		}
-	}
+	_, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(proc.Tpid(req.PidStr))
 
 	return nil
 }

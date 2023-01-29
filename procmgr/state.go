@@ -14,21 +14,45 @@ import (
 // Proc state management in the realm namespace.
 //
 
+// Post a proc file in the local queue.
+func (mgr *ProcMgr) postProcInQueue(p *proc.Proc) {
+	if _, err := mgr.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
+		db.DFatalf("Error create %v: %v", p.GetPid(), err)
+	}
+}
+
+// Create an ephemeral "Started" semaphore. Must be ephemeral so parent procs can detect schedd crashes.
+func (mgr *ProcMgr) createStartedSem(p *proc.Proc) (*semclnt.SemClnt, error) {
+	semPath := path.Join(p.ParentDir, proc.START_SEM)
+	semStart := semclnt.MakeSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
+	var err error
+	if err = semStart.Init(sp.DMTMP); err == nil {
+		db.DPrintf(db.PROCMGR, "Sem init done: %v", p)
+	}
+	return semStart, err
+}
+
 // Set up a proc's state in the realm.
 func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	mgr.addRunningProc(p)
-	// Create an ephemeral semaphore for the parent proc to wait on.
-	//	sclnt := pd.getSigmaClnt(p.GetRealm())
-	semPath := path.Join(p.ParentDir, proc.START_SEM)
-	semStart := semclnt.MakeSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
-	if err := semStart.Init(sp.DMTMP); err != nil {
-		db.DPrintf(db.PROCMGR_ERR, "Error creating start semaphore path:%v err:%v", semPath, err)
+	// Create started semaphore, if the proc was not stolen. If the proc was
+	// stolen, the started semaphore would have been created as part of the
+	// stealing process.
+	if _, err := mgr.createStartedSem(p); err != nil {
+		db.DPrintf(db.PROCMGR_ERR, "Error creating start semaphore path:%v err:%v", path.Join(p.ParentDir, proc.START_SEM), err)
 	}
-	db.DPrintf(db.PROCMGR, "Sem init done: %v", p)
 	// Release the parent proc, which may be waiting for removal of the proc
 	// queue file in WaitStart.
-	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, "~local", sp.QUEUE, p.GetPid().String())); err != nil {
-		db.DFatalf("Error remove schedd queue file: %v", err)
+	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.ScheddIp, sp.QUEUE, p.GetPid().String())); err != nil {
+		// Check if the proc was stoelln from another schedd.
+		stolen := p.ScheddIp != mgr.mfs.MyAddr()
+		if stolen {
+			// May return an error if the schedd stolen from crashes.
+			db.DPrintf(db.PROCMGR_ERR, "Error remove schedd queue file [%v]: %v", p.ScheddIp, err)
+		} else {
+			// Removing from self should always succeed.
+			db.DFatalf("Error remove schedd queue file: %v", err)
+		}
 	}
 	// Make the proc's procdir
 	if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.ProcDir, p.IsPrivilegedProc()); err != nil {
@@ -66,8 +90,30 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 
 	// XXX Write package to expose running map as a dir.
 	delete(mgr.running, p.GetPid())
-	err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, "~local", sp.RUNNING, p.GetPid().String()))
-	if err != nil {
+	if err := mgr.mfs.Remove(path.Join(sp.RUNNING, p.GetPid().String())); err != nil {
 		db.DFatalf("Error Remove from running queue: %v", err)
+	}
+}
+
+func getWSQueue(p *proc.Proc) string {
+	var q string
+	switch p.GetType() {
+	case proc.T_LC:
+		q = sp.WS_RUNQ_LC
+	case proc.T_BE:
+		q = sp.WS_RUNQ_BE
+	default:
+		db.DFatalf("Unrecognized proc type: %v", p.GetType())
+	}
+	return q
+}
+
+func (mgr *ProcMgr) removeWSLink(p *proc.Proc) {
+	mgr.rootsc.Remove(path.Join(getWSQueue(p), p.GetPid().String()))
+}
+
+func (mgr *ProcMgr) createWSLink(p *proc.Proc) {
+	if _, err := mgr.rootsc.PutFile(path.Join(getWSQueue(p), p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
+		db.DFatalf("Error PutFile: %v", err)
 	}
 }

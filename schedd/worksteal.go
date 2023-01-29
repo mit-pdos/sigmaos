@@ -82,8 +82,8 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 				db.DFatalf("Unrecognized queue type: %v", qtype)
 			}
 		}
-		// Wake up scheduler thread.
 		// TODO: don't wake up if stealable procs aren't new?
+		// Wake up scheduler thread.
 		sd.cond.Signal()
 		sd.mu.Unlock()
 	}
@@ -93,31 +93,37 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 // offer them as stealable.
 func (sd *Schedd) offerStealableProcs() {
 	// Store the procs this schedd has already offered to avoid re-offering them.
-	// TODO: clear this list occasionally.
 	alreadyOffered := make(map[proc.Tpid]bool)
 	for {
-		toOffer := make([]*proc.Proc, 0)
+		toOffer := make(map[proc.Tpid]*proc.Proc)
 		// Wait for a bit.
 		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
 		sd.mu.Lock()
 		for _, q := range sd.qs {
 			// Iterate the procs in each realm's queue.
 			for _, p := range q.pmap {
-				// If this proc was already offered, skip it.
-				if _, ok := alreadyOffered[p.GetPid()]; ok {
-					continue
-				}
 				// If this proc has not been spawned for a long time, prepare to offer
 				// it as stealable.
 				if time.Since(p.GetSpawnTime()) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
-					toOffer = append(toOffer, p)
+					toOffer[p.GetPid()] = p
 				}
 			}
 		}
 		sd.mu.Unlock()
+		for pid, _ := range alreadyOffered {
+			// If this proc is no longer in the queue (it is not offerable), then
+			// remove it from the alreadyOffered, since it will never be offered
+			// again.
+			if _, ok := toOffer[pid]; !ok {
+				delete(alreadyOffered, pid)
+			}
+		}
 		for _, p := range toOffer {
-			alreadyOffered[p.GetPid()] = true
-			sd.pmgr.OfferStealableProc(p)
+			// If this proc has not been offered already, then offer it.
+			if _, ok := alreadyOffered[p.GetPid()]; !ok {
+				alreadyOffered[p.GetPid()] = true
+				sd.pmgr.OfferStealableProc(p)
+			}
 		}
 	}
 }

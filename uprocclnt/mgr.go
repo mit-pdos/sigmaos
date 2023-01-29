@@ -82,7 +82,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 		if err != nil {
 			return nil, err
 		}
-		c := MakeUprocdClnt(pid, rc)
+		c := MakeUprocdClnt(pid, rc, realm, ptype)
 		updm.pdcms[realm][ptype] = c
 		pdc = c
 	}

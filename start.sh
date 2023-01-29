@@ -31,8 +31,6 @@ fi
 
 mkdir -p /tmp/sigmaos
 
-echo "docker run" 1>&2
-
 # default arguments to bootkernel
 SIGMANAMED=":1111"
 SIGMABOOT="named"
@@ -40,8 +38,11 @@ SIGMABOOT="named"
 CID=$(docker run -dit --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos -e named=${SIGMANAMED} -e boot=${SIGMABOOT} -e SIGMADEBUG=${SIGMADEBUG} sigmaos)
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 
-sleep 1
-
-echo "container $CID $IP" 1>&2
+# XXX maybe use mount to see if name is up
+until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
+    sleep 0.1;
+done;
 
 echo -n $IP
+
+echo " container ${CID:0:10}" 1>&2

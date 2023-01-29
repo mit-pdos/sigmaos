@@ -15,15 +15,21 @@ import (
 )
 
 type UprocdMgr struct {
-	mu    sync.Mutex
-	fsl   *fslib.FsLib
-	kclnt *kernelclnt.KernelClnt
-	pdcms map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
+	mu            sync.Mutex
+	fsl           *fslib.FsLib
+	kclnt         *kernelclnt.KernelClnt
+	pdcms         map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
+	beUprocds     []*UprocdClnt
+	sharesAlloced Tshare
 }
 
 func MakeUprocdMgr(fsl *fslib.FsLib) *UprocdMgr {
-	updm := &UprocdMgr{fsl: fsl}
-	updm.pdcms = make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt)
+	updm := &UprocdMgr{
+		fsl:           fsl,
+		pdcms:         make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt),
+		beUprocds:     make([]*UprocdClnt, 0),
+		sharesAlloced: 0,
+	}
 	return updm
 }
 

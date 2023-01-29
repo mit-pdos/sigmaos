@@ -15,7 +15,7 @@ type Tshare int64
 // some BE procs, then each realm's BE procs will get .5 cores' worth of
 // shares.
 const (
-	CPU_SHARES_PER_CORE Tshare = 1000
+	SHARE_PER_CORE Tshare = 1000
 )
 
 // Rebalance CPU shares when a proc runs.
@@ -25,16 +25,13 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 
 	switch p.GetType() {
 	case proc.T_LC:
-		// TODO
-		db.DFatalf("Unimplemented")
+		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
+		updm.setShare(pdc, pdc.share+coresToShare(p.GetNcore()))
 	case proc.T_BE:
 		updm.balanceBEShares()
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
-
-	// updm.allocUProc(uproc)
-	// updm.RebalanceCPUShares()
 }
 
 // Rebalance CPU shares when a proc exits.
@@ -42,38 +39,38 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
-	// updm.allocUProc(uproc)
-	// updm.RebalanceCPUShares()
-}
-
-func (updm *UprocdMgr) balanceBEShares() {
-	// Equal shares for each BE uprocd.
-	cpuShares := CPU_SHARES_PER_CORE / Tshare(len(updm.beUprocds))
-	for _, pdc := range updm.beUprocds {
-		// If the number of BE Uprocds has not changed, no rebalancing needs to
-		// happen.
-		if pdc.shares == cpuShares {
-			continue
-		}
-		pdc.shares = cpuShares
-		if err := updm.kclnt.SetCPUShares(pdc.pid, int64(cpuShares)); err != nil {
-			db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
-		}
+	switch p.GetType() {
+	case proc.T_LC:
+		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
+		updm.setShare(pdc, pdc.share-coresToShare(p.GetNcore()))
+	case proc.T_BE:
+		// No need to readjust share.
+	default:
+		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
 }
 
-//	// TODO: Set cpu shares differently for LC uprocds according to proc core requests.
-//	var cpuShares int64
-//	switch ptype {
-//	case proc.T_LC:
-//		cpuShares = CPU_SHARES_LC
-//	case proc.T_BE:
-//		cpuShares = CPU_SHARES_BE
-//	default:
-//		db.DFatalf("Unkown proc type: %v", ptype)
-//	}
-//	err = updm.kclnt.SetCPUShares(pid, cpuShares)
-//	if err != nil {
-//		return pid, err
-//	}
-//
+func (updm *UprocdMgr) balanceBEShares() {
+	// Equal share for each BE uprocd.
+	cpuShare := SHARE_PER_CORE / Tshare(len(updm.beUprocds))
+	for _, pdc := range updm.beUprocds {
+		// If the number of BE Uprocds has not changed, no rebalancing needs to
+		// happen.
+		if pdc.share == cpuShare {
+			continue
+		}
+		updm.setShare(pdc, cpuShare)
+	}
+}
+
+// Set a uprocd's CPU share, and RPC to the kernelsrv to adjust the shares.
+func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
+	pdc.share = share
+	if err := updm.kclnt.SetCPUShares(pdc.pid, int64(share)); err != nil {
+		db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
+	}
+}
+
+func coresToShare(cores proc.Tcore) Tshare {
+	return Tshare(cores) * SHARE_PER_CORE
+}

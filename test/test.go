@@ -141,14 +141,15 @@ func (ts *Tstate) KillOne(s string) error {
 }
 
 func (ts *Tstate) Shutdown() error {
-	db.DPrintf(db.TEST, "Shutdown")
+	db.DPrintf(db.Test, "Shutdown")
+	db.DPrintf(db.SYSTEM, "Shutdown")
 	for i := len(ts.kclnts) - 1; i >= 0; i-- {
-		db.DPrintf(db.TEST, "Shutdown kernel %v", i)
+		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
 		// XXX shut down other kernels first?
 		if err := ts.kclnts[i].Shutdown(); err != nil {
 			return err
 		}
-		db.DPrintf(db.TEST, "Done shutdown kernel %v", i)
+		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
 	return nil
 }

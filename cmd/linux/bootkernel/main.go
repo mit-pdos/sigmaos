@@ -17,7 +17,7 @@ func main() {
 	}
 	srvs := strings.Split(os.Args[2], ";")
 	param := kernel.Param{Services: srvs}
-	db.DPrintf(db.KERNEL, "param %v %v\n", param, os.Args[2])
+	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := container.HOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")

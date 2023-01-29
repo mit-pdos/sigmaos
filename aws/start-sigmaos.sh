@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--ncores NCORES]" 1>&2
+  echo "Usage: $0 --vpc VPC [--update] [--ncores NCORES]" 1>&2
 }
 
 VPC=""

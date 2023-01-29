@@ -1,15 +1,27 @@
 package test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
 	db "sigmaos/debug"
+	"sigmaos/kernel"
+	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/system"
 )
+
+const (
+	NAMEDPORT = ":1111"
+)
+
+var containerIP string
+
+func init() {
+	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
+}
 
 func Mbyte(sz sp.Tlength) float64 {
 	return float64(sz) / float64(sp.MBYTE)
@@ -26,13 +38,13 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 }
 
 type Tstate struct {
-	*system.System
 	*sigmaclnt.SigmaClnt
-	T *testing.T
+	kclnt *kernelclnt.KernelClnt
+	T     *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
-	b, err := bootPath(t, path)
+	b, err := makeClntPath(t, path)
 	if err != nil {
 		db.DFatalf("MakeTstatePath: %v\n", err)
 	}
@@ -40,7 +52,7 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	ts, err := bootSystem(t, false)
+	ts, err := makeClnt(t)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
@@ -48,18 +60,18 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	ts, err := bootSystem(t, true)
+	ts, err := makeClnt(t)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}
 	return ts
 }
 
-func bootPath(t *testing.T, path string) (*Tstate, error) {
+func makeClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return bootSystem(t, false)
+		return makeClnt(t)
 	} else {
-		ts, err := bootSystem(t, true)
+		ts, err := makeClnt(t)
 		if err != nil {
 			return nil, err
 		}
@@ -80,36 +92,42 @@ func JoinRealm(t *testing.T, realmid string) (*Tstate, error) {
 	return nil, nil
 }
 
-func bootSystem(t *testing.T, full bool) (*Tstate, error) {
+func makeClnt(t *testing.T) (*Tstate, error) {
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
-	var s *system.System
-	var err error
-	if full {
-		s, err = system.Boot(1)
-	} else {
-		s, err = system.BootNamedOnly()
-	}
+	namedAddr, err := kernel.SetNamedIP(containerIP, []string{NAMEDPORT})
 	if err != nil {
 		return nil, err
 	}
-	sc := s.GetClnt(0)
-	return &Tstate{s, sc, t}, nil
+	sc, err := sigmaclnt.MkSigmaClntProc("test", containerIP, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
+	if err != nil {
+		return nil, err
+	}
+	return &Tstate{sc, kclnt, t}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
-	for i := 0; i < n; i++ {
-		if err := ts.System.BootNode(); err != nil {
-			return err
-		}
-	}
+	db.DFatalf("Unimplemented")
 	return nil
 }
 
-func (ts *Tstate) NamedAddr() sp.Taddrs {
-	return ts.System.GetNamedAddrs()
+func (ts *Tstate) Boot(s string) error {
+	pid, err := ts.kclnt.Boot(s, sp.Taddrs{})
+	if err != nil {
+		return err
+	}
+	db.DFatalf("Unimplemented %v", pid)
+	return nil
+}
+
+func (ts *Tstate) KillOne(s string) error {
+	return ts.kclnt.Kill(s)
 }
 
 func (ts *Tstate) Shutdown() error {
 	db.DPrintf(db.TEST, "Shutdown")
-	return ts.System.Shutdown()
+	return ts.kclnt.Shutdown()
 }

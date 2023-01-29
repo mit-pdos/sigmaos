@@ -31,7 +31,7 @@ func StartKContainer(nameds sp.Taddrs, conf string, env []string) (*Container, e
 	db.DPrintf(db.CONTAINER, "start container %v %v\n", nameds, env)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: SIGMAKIMAGE,
-		Cmd:   []string{"bin/linux/bootkernel", nameds.String(), conf},
+		Cmd:   []string{"bin/linux/bootkernel", nameds.String()},
 		Tty:   false,
 		Env:   env,
 	}, &container.HostConfig{
@@ -56,4 +56,19 @@ func StartKContainer(nameds sp.Taddrs, conf string, env []string) (*Container, e
 	ip := json.NetworkSettings.IPAddress
 	db.DPrintf(db.CONTAINER, "Booting %s %s at %s...\n", SIGMAKIMAGE, resp.ID[:10], ip)
 	return &Container{ctx, cli, resp.ID, ip}, nil
+}
+
+func ContainerIP(container string) (string, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.Background()
+	json, err1 := cli.ContainerInspect(ctx, container)
+	if err1 != nil {
+		return "", err
+	}
+	ip := json.NetworkSettings.IPAddress
+	db.DPrintf(db.CONTAINER, "ContainerIP %s %s\n", container[:10], ip)
+	return ip, nil
 }

@@ -96,6 +96,8 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 	}
 }
 
+// ========== Work-stealing ==========
+
 func getWSQueuePath(ptype proc.Ttype) string {
 	var q string
 	switch ptype {

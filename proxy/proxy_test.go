@@ -2,6 +2,7 @@ package proxy_test
 
 import (
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 type Tstate struct {
 	*test.Tstate
+	cmd *exec.Cmd
 }
 
 func initTest(t *testing.T) *Tstate {
@@ -27,6 +29,13 @@ func initTest(t *testing.T) *Tstate {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitRootDir))
 
+	// start proxy
+	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.GetLocalIP()}, ts.NamedAddr()...)...)
+	ts.cmd.Stdout = os.Stdout
+	ts.cmd.Stderr = os.Stderr
+	err = ts.cmd.Start()
+	assert.Equal(t, nil, err)
+
 	// mount proxy
 	_, err = run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
 	assert.Equal(t, nil, err)
@@ -36,6 +45,9 @@ func initTest(t *testing.T) *Tstate {
 
 func (ts *Tstate) cleanup() {
 	_, err := run("sudo umount /mnt/9p")
+	assert.Equal(ts.T, nil, err)
+
+	err = ts.cmd.Process.Kill()
 	assert.Equal(ts.T, nil, err)
 
 	ts.Shutdown()

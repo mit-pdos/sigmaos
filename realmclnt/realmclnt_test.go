@@ -34,7 +34,7 @@ type Tstate struct {
 }
 
 func mkTstate(t *testing.T) *Tstate {
-	ts := &Tstate{Tstate: test.MakeTstateAll(t)}
+	ts := &Tstate{Tstate: test.MakeTstateRealm(t)}
 
 	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
 	assert.Nil(t, err)

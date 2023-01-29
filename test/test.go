@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	BOOT_REALM = "named;realmd;schedd;ux;s3;db"
 	BOOT_ALL   = "named;schedd;ux;s3;db"
 	BOOT_NAMED = "named"
 	BOOT_NODE  = "schedd;ux;s3;db"
@@ -67,6 +68,14 @@ func MakeTstate(t *testing.T) *Tstate {
 
 func MakeTstateAll(t *testing.T) *Tstate {
 	ts, err := makeSysClnt(t, BOOT_ALL)
+	if err != nil {
+		db.DFatalf("MakeTstate: %v\n", err)
+	}
+	return ts
+}
+
+func MakeTstateRealm(t *testing.T) *Tstate {
+	ts, err := makeSysClnt(t, BOOT_REALM)
 	if err != nil {
 		db.DFatalf("MakeTstate: %v\n", err)
 	}

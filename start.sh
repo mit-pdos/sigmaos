@@ -55,7 +55,7 @@ while [[ "$#" -gt 0 ]]; do
     exit 0
     ;;
   *)
-    echo "unexpected argument $1"
+    echo "unexpected argument to boot $1"
     usage
     exit 1
     ;;

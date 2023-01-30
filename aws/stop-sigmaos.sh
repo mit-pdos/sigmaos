@@ -41,9 +41,6 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-DIR=$(dirname $0)
-. $DIR/../.env
-
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)

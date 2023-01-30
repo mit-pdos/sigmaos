@@ -1,10 +1,10 @@
 # Creating/managing VPC
 
 Run ./mkvpc.py to create a VPC, including one instance:
-$ ./mkvpc.py ulam
+$ ./mkvpc.py sigmaos
 
 If you specify, the vpc-id it will create a new instance:
-$ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam1
+$ ./mkvpc.py --vpc vpc-061a1808693a1626a sigmaos1
 
 ./lsvpc.py lists info about VPC:
 $ ./lsvpc.py vpc-061a1808693a1626a
@@ -12,24 +12,16 @@ $ ./lsvpc.py vpc-061a1808693a1626a
 To download the sigmaos software on an instance the first time it is being set up:
 $ ./setup-instance.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
 
-To build the sigmaos software and upload the build for all instances to pull:
-$ ./build-sigma.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
-
-To install the latest version of the sigmaos kernel on all instances:
-$ ./install-sigma.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
-
 ./rmvpc.py removes either an instance or the whole VPC
 $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
-To boot sigmaos on the VPC:
+To boot update and start containers on the VPC:
 
-$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
+$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
 
-will update the sigmaos software on each EC2 instances and restart
-sigmaos daemons.
-
+# XXXX update
 When doing this often:
  ./stop-sigmaos.sh --vpc $SIGMA_VPC --parallel && ./build-sigma.sh --vpc $SIGMA_VPC --realm $R --version $V && ./install-sigma.sh --vpc $SIGMA_VPC --realm $R --parallel && ./start-sigmaos.sh --vpc $SIGMA_VPC --realm $R
 

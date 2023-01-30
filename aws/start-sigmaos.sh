@@ -54,8 +54,8 @@ fi
 
 # XXX use docker hub
 if [ ! -z "$UPDATE" ]; then
-    docker save -o /tmp/sigmaos.tar sigmaos
-    # bzip2 /tmp/sigmaos.tar
+    echo "Save docker image sigmabase"
+    docker save -o /tmp/sigmaosbase.tar sigmaosbase
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
@@ -69,16 +69,34 @@ if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
 fi
 
+if [ ! -z "$UPDATE" ]; then
+    for vm in $vms; do
+        echo "copy image to $vm"
+        copy="scp -i key-$VPC.pem /tmp/sigmaosbase.tar ubuntu@$vm:/tmp/sigmaosbase.tar"
+        ( eval "$copy" ) &
+    done
+    wait
+    for vm in $vms; do
+        echo "load image"
+        load="docker load -i /tmp/sigmaosbase.tar"
+        ( eval "$load" ) &
+    done
+    wait
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+  cd ulambda
+  # build binaries for host
+  ./make.sh --norace $PARALLEL linux
+
+  # build containers from sigmaosbase
+  docker build -f Dockerkernel -t sigmaos .
+  docker build -f Dockeruser -t sigmauser .
+ENDSSH
+fi
+
 for vm in $vms; do
     echo $vm
-    if [ ! -z "$UPDATE" ]; then
-        scp -i key-$VPC.pem /tmp/sigmaos.tar ubuntu@$vm:/tmp/sigmaos.tar
-        # bzip2 /tmp/sigmaos.tar
-    fi
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  if [ ! -z "$UPDATE" ]; then
-    docker load -i /tmp/sigmaos.tar
-  fi
+  mkdir -p /tmp/sigmaos
   export SIGMADBADDR="10.0.102.10:3306"
   # export SIGMANAMED="${SIGMANAMED}"
 #  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
@@ -91,12 +109,17 @@ for vm in $vms; do
     echo "ncores:"
     nproc
   fi
+
+  cd ulambda
+  echo $PWD
+
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
-    ../start.sh --boot "named;schedd;ux;s3;db" --named :1111 
+    ./start-db.sh
+    ./start.sh --boot all --host
   else
     echo "JOIN ${SIGMANAMED}"
-    ../start.sh --boot "schedd;ux;s3;db" --named ${SIGMANAMED}
+    ./start.sh --boot all --named ${SIGMANAMED} --host
   fi
 ENDSSH
 done

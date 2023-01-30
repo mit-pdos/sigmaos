@@ -9,7 +9,7 @@ usage() {
   echo "Usage: $0 <IPaddr>"  1>&2
 }
 
-if [ $# -gt 1 ]; then
+if [ $# -ne 1 ]; then
     usage
     exit 1
 fi

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--boot SRVS] [--machine N] [--named ADDRs] [--host] "  1>&2
+    echo "Usage: $0 [--boot all|node|named|realm] [--machine N] [--named ADDRs] [--host] "  1>&2
 }
 
 UPDATE=""
@@ -19,7 +19,25 @@ while [[ "$#" -gt 0 ]]; do
     ;;
   --boot)
     shift
-    BOOT=$1
+    case "$1" in
+        "all")
+            BOOT="named;schedd;ux;s3;db"
+            ;;
+        "node")
+            BOOT="schedd;ux;s3;db"
+            ;;
+        "named")
+            BOOT="named"
+            ;;
+        "realm")
+            BOOT="named;schedd;realmd;ux;s3;db"
+            ;;
+        *)
+            echo "unexpected argument $1"
+            usage
+            exit 1
+            ;;
+    esac            
     shift
     ;;
   --host)

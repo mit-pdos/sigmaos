@@ -21,6 +21,7 @@ type Schedd struct {
 	cond      *sync.Cond
 	pmgr      *procmgr.ProcMgr
 	schedds   map[string]*protdevclnt.ProtDevClnt
+	ranBE     bool
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
@@ -33,6 +34,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 		pmgr:      procmgr.MakeProcMgr(mfs),
 		qs:        make(map[sp.Trealm]*Queue),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
+		ranBE:     false,
 		coresfree: proc.Tcore(linuxsched.NCores),
 		memfree:   mem.GetTotalMem(),
 	}

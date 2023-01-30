@@ -10,6 +10,12 @@ import (
 func (sd *Schedd) allocResourcesL(p *proc.Proc) {
 	defer sd.sanityCheckResourcesL()
 
+	// If the first BE proc is being run on this schedd, we allocate 1 cores'
+	// worth of shares to be shared by this (and any other) realm's BE procs.
+	if !sd.ranBE && p.GetType() == proc.T_BE {
+		sd.ranBE = true
+		sd.coresfree -= 1
+	}
 	sd.coresfree -= p.GetNcore()
 	sd.memfree -= p.GetMem()
 }

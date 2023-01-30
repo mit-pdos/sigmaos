@@ -9,11 +9,12 @@ type Tshare int64
 
 // 1000 CPU shares should equal ~1 core.
 //
-// Resource distribution plan: * LC procs consume shares proportional to the
-// number of cores they request.  * All BE procs, additively, consume shares
-// proportional to 1 core. This means that if there are 2 realms, each running
-// some BE procs, then each realm's BE procs will get .5 cores' worth of
-// shares.
+// Resource distribution plan:
+// * LC procs consume shares proportional to the number of cores they request.
+// * All BE procs, additively, consume shares proportional to 1 core. This
+// means that if there are 2 realms, each running some BE procs, then each
+// realm's BE procs will get .5 cores' worth of shares.
+
 const (
 	SHARE_PER_CORE Tshare = 1000
 	MIN_SHARE             = SHARE_PER_CORE / 10

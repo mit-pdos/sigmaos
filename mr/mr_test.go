@@ -296,7 +296,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashprocd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.PROCDREL, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.CrashServer(sp.SCHEDDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {

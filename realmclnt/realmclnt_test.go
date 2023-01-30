@@ -203,8 +203,8 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores), linuxsched.NCores, N_ITER, "lcspin")
-	go runSpinPerf(ts, beC, 0, linuxsched.NCores, N_ITER, "bespin")
+	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
+	go runSpinPerf(ts, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC

@@ -12,13 +12,18 @@ $ ./lsvpc.py vpc-061a1808693a1626a
 To download the sigmaos software on an instance the first time it is being set up:
 $ ./setup-instance.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
 
+To update repo:
+$ ./update-rep.py vpc-061a1808693a1626a
+
 ./rmvpc.py removes either an instance or the whole VPC
 $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
 To boot update and start containers on the VPC:
+$ ./start-sigmaos.sh --update --vpc vpc-061a1808693a1626a
 
+To start the containers:
 $ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
 
 # XXXX update

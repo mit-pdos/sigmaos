@@ -22,32 +22,42 @@ import (
 )
 
 const (
-	SLEEP_MSECS           = 2000
-	REALM       sp.Trealm = "testrealm"
-	N_ITER                = 5_000_000_000
+	SLEEP_MSECS = 2000
+	N_ITER      = 5_000_000_000
+
+	// Realms
+	REALM1 sp.Trealm = "testrealm"
+	REALM2 sp.Trealm = "testrealm2"
 )
 
 type Tstate struct {
 	*test.Tstate
-	rc *realmclnt.RealmClnt
-	sc *sigmaclnt.SigmaClnt
+	rc  *realmclnt.RealmClnt
+	scs map[sp.Trealm]*sigmaclnt.SigmaClnt
 }
 
 func mkTstate(t *testing.T) *Tstate {
-	ts := &Tstate{Tstate: test.MakeTstateRealm(t)}
+	ts := &Tstate{
+		Tstate: test.MakeTstateRealm(t),
+		scs:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+	}
 
 	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
 	assert.Nil(t, err)
 	ts.rc = rc
 
-	err = rc.MakeRealm(REALM)
-	assert.Nil(t, err)
-
-	sc, err := sigmaclnt.MkSigmaClntRealmProc(ts.FsLib, "testrealm", REALM)
-	assert.Nil(t, err)
-	ts.sc = sc
+	ts.mkRealm(REALM1)
 
 	return ts
+}
+
+func (ts *Tstate) mkRealm(realm sp.Trealm) {
+	err := ts.rc.MakeRealm(realm)
+	assert.Nil(ts.T, err)
+
+	sc, err := sigmaclnt.MkSigmaClntRealmProc(ts.FsLib, "test"+realm.String(), realm)
+	assert.Nil(ts.T, err)
+	ts.scs[realm] = sc
 }
 
 func calibrateCTimeLinux(ts *Tstate, nthread uint, niter int) time.Duration {
@@ -65,50 +75,50 @@ func calibrateCTimeLinux(ts *Tstate, nthread uint, niter int) time.Duration {
 	return time.Since(start)
 }
 
-func spawnSpinPerf(ts *Tstate, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
+func spawnSpinPerf(ts *Tstate, realm sp.Trealm, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetNcore(ncore)
-	err := ts.sc.Spawn(p)
+	err := ts.scs[realm].Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
 }
 
-func waitSpinPerf(ts *Tstate, pid proc.Tpid) time.Duration {
-	status, err := ts.sc.WaitExit(pid)
+func waitSpinPerf(ts *Tstate, realm sp.Trealm, pid proc.Tpid) time.Duration {
+	status, err := ts.scs[realm].WaitExit(pid)
 	assert.Nil(ts.T, err, "WaitExit error")
 	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
 	return time.Duration(status.Data().(float64))
 }
 
-func calibrateCTimeSigma(ts *Tstate, nthread uint, niter int) time.Duration {
+func calibrateCTimeSigma(ts *Tstate, realm sp.Trealm, nthread uint, niter int) time.Duration {
 	c := make(chan time.Duration)
-	go runSpinPerf(ts, c, 0, nthread, niter, "sigma-baseline")
+	go runSpinPerf(ts, realm, c, 0, nthread, niter, "sigma-baseline")
 	return <-c
 }
 
-func runSpinPerf(ts *Tstate, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
-	pid := spawnSpinPerf(ts, ncore, nthread, niter, id)
-	c <- waitSpinPerf(ts, pid)
+func runSpinPerf(ts *Tstate, realm sp.Trealm, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
+	pid := spawnSpinPerf(ts, realm, ncore, nthread, niter, id)
+	c <- waitSpinPerf(ts, realm, pid)
 }
 
 func TestBasic(t *testing.T) {
 	ts := mkTstate(t)
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts.sc.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts.scs[REALM1].GetLocalIP())
 
 	sts1, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	sts, err := ts.sc.GetDir(sp.NAMED)
+	sts, err := ts.scs[REALM1].GetDir(sp.NAMED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "realm named root %v\n", sp.Names(sts))
 
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 
-	sts, err = ts.sc.GetDir(sp.SCHEDD)
+	sts, err = ts.scs[REALM1].GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "realm names sched %v\n", sp.Names(sts))
@@ -126,16 +136,16 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts.sc.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts.scs[REALM1].GetLocalIP())
 
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts.sc.Spawn(a)
+	err = ts.scs[REALM1].Spawn(a)
 	assert.Nil(t, err, "Error spawn: %v", err)
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.sc.WaitExit(a.GetPid())
+	status, err := ts.scs[REALM1].WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
@@ -147,7 +157,7 @@ func TestSpinPerfCalibrate(t *testing.T) {
 	ts := mkTstate(t)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts, linuxsched.NCores, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts, REALM1, linuxsched.NCores, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	db.DPrintf(db.TEST, "Calibrate Linux baseline")
@@ -170,12 +180,12 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ts := mkTstate(t)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts, linuxsched.NCores, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts, REALM1, linuxsched.NCores, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	c := make(chan time.Duration)
-	go runSpinPerf(ts, c, 0, linuxsched.NCores, N_ITER, "spin1")
-	go runSpinPerf(ts, c, 0, linuxsched.NCores, N_ITER, "spin2")
+	go runSpinPerf(ts, REALM1, c, 0, linuxsched.NCores, N_ITER, "spin1")
+	go runSpinPerf(ts, REALM1, c, 0, linuxsched.NCores, N_ITER, "spin2")
 
 	d1 := <-c
 	d2 := <-c
@@ -198,13 +208,13 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	ts := mkTstate(t)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts, linuxsched.NCores, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts, REALM1, linuxsched.NCores-1, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
-	go runSpinPerf(ts, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
+	go runSpinPerf(ts, REALM1, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
+	go runSpinPerf(ts, REALM1, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC

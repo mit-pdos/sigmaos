@@ -3,7 +3,8 @@ package realmsrv
 import (
 	"os"
 	"path"
-	// "sync"
+	"strconv"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -13,13 +14,21 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	MIN_PORT = 30000
+)
+
 type RealmSrv struct {
-	sc *sigmaclnt.SigmaClnt
-	ch chan struct{}
+	mu         sync.Mutex
+	sc         *sigmaclnt.SigmaClnt
+	lastNDPort int
+	ch         chan struct{}
 }
 
 func RunRealmSrv() error {
-	rs := &RealmSrv{}
+	rs := &RealmSrv{
+		lastNDPort: MIN_PORT,
+	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
 	pds, err := protdevsrv.MakeProtDevSrv(sp.REALMD, rs)
@@ -30,18 +39,27 @@ func RunRealmSrv() error {
 	if serr != nil {
 		return serr
 	}
-
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
 	rs.sc = pds.MemFs.SigmaClnt()
 	err = pds.RunServer()
 	return nil
 }
 
+func (rm *RealmSrv) genNamedPort() string {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	port := rm.lastNDPort
+	rm.lastNDPort++
+	return ":" + strconv.Itoa(port)
+}
+
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
-	p := proc.MakeProc("named", []string{":1111", req.Realm, pn})
+	port := rm.genNamedPort()
+	p := proc.MakeProc("named", []string{port, req.Realm, pn})
 	if err := rm.sc.Spawn(p); err != nil {
 		return err
 	}

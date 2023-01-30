@@ -49,8 +49,8 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
-	if err := rm.sc.Spawn(p); err != nil {
-		return err
+	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {
+		return errs[0]
 	}
 	if err := rm.sc.WaitStart(p.GetPid()); err != nil {
 		return err

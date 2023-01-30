@@ -24,7 +24,7 @@ To boot update and start containers on the VPC:
 $ ./start-sigmaos.sh --update --vpc vpc-061a1808693a1626a
 
 To start the containers:
-$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --parallel
+$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
 
 To stop the containers:
 $ ./stop-sigmaos.sh --vpc vpc-061a1808693a1626a --parallel

@@ -119,7 +119,7 @@ for vm in $vms; do
     ./start.sh --boot all --host
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot all --named ${SIGMANAMED} --host
+    ./start.sh --boot node --named ${SIGMANAMED} --host
   fi
 ENDSSH
 done

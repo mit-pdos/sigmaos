@@ -35,11 +35,10 @@ $ ssh -i key-vpc-02f7e3816c4cc8e7f.pem ubuntu@ec2-52-54-107-185.compute-1.amazon
 
 $ hostname
 
-$ export SIGMANAMED="hostname:1111"
-
 $ cd ulambda
 
-$ go test -timeout 0 -v sigmaos/mr --realm fkaashoek --version=$(cat VERSION.txt) -app mr-grep-wiki2G.yml -run MRJOB > /tmp/mr.out 2>&1  &
+$ go test -timeout 0 -v sigmaos/mr -app mr-grep-wiki2G.yml -run MRJOB --containerIP 10.0.134.14
+> /tmp/mr.out 2>&1  &
 
 # log into the VPC
 
@@ -47,10 +46,6 @@ $ ./login.sh --vpc vpc-061a1808693a1626a
 
 this starts an ssh tunnel to the VPC. you only have to this once
 (e.g., you can run ./start.sh again without having to login)
-
-Set the SIGMANAMED environment variable, using the machine's full internal ip as so:
-
-$ export SIGMANAMED="10.x.x.x:1111"
 
 To mount the VPC under /mnt/9p:
 $ ./mount.sh 

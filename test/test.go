@@ -46,8 +46,9 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
-	kclnts []*bootkernelclnt.Kernel
-	T      *testing.T
+	kclnts  []*bootkernelclnt.Kernel
+	killidx int
+	T       *testing.T
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -114,7 +115,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tstate{k.SigmaClnt, []*bootkernelclnt.Kernel{k}, t}, nil
+	return &Tstate{k.SigmaClnt, []*bootkernelclnt.Kernel{k}, 0, t}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
@@ -137,7 +138,9 @@ func (ts *Tstate) BootFss3d() error {
 }
 
 func (ts *Tstate) KillOne(s string) error {
-	return ts.kclnts[0].Kill(s)
+	idx := ts.killidx
+	ts.killidx++
+	return ts.kclnts[idx].Kill(s)
 }
 
 func (ts *Tstate) Shutdown() error {

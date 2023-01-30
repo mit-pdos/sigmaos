@@ -26,14 +26,17 @@ if ! docker ps | grep -q sigmadb; then
     docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb
 fi
 
-sleep 2
-
-# until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
-#     echo -n "." 1>&2
-#     sleep 0.1;
-# done;
+until [ "`docker inspect -f {{.State.Running}} sigmadb`"=="true" ]; do
+    echo -n "." 1>&2
+    sleep 0.1;
+done;
 
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+
+until mysqlshow -h $ip -u root -psigmadb 2> /dev/null; do
+    echo -n "." 1>&2
+    sleep 0.1;
+done;    
 
 if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
     echo "initialize db"

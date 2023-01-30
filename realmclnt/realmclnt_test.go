@@ -128,6 +128,53 @@ func TestBasic(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestBasicMultiRealmSingleNode(t *testing.T) {
+	ts := mkTstate(t)
+	ts.mkRealm(REALM2)
+
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts.scs[REALM1].GetLocalIP())
+
+	schedds1, err := ts.scs[REALM1].GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	// Only one schedd so far.
+	assert.True(ts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
+
+	schedds2, err := ts.scs[REALM2].GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	// Only one schedd so far.
+	assert.True(ts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
+
+	for i := range schedds1 {
+		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	}
+
+	ts.Shutdown()
+}
+
+func TestBasicMultiRealmMultiNode(t *testing.T) {
+	ts := mkTstate(t)
+	ts.BootNode(1)
+	ts.mkRealm(REALM2)
+
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts.scs[REALM1].GetLocalIP())
+
+	schedds1, err := ts.scs[REALM1].GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	// Only one schedd so far.
+	assert.True(ts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
+
+	schedds2, err := ts.scs[REALM2].GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	// Only one schedd so far.
+	assert.True(ts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
+
+	for i := range schedds1 {
+		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	}
+
+	ts.Shutdown()
+}
+
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := mkTstate(t)
 

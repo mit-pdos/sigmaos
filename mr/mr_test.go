@@ -326,9 +326,9 @@ func TestCrashTaskOnly(t *testing.T) {
 	runN(t, CRASHTASK, 0, 0, 0, false)
 }
 
-// func TestCrashCoordOnly(t *testing.T) {
-// 	runN(t, 0, CRASHCOORD, 0, 0, false)
-// }
+func TestCrashCoordOnly(t *testing.T) {
+	runN(t, 0, CRASHCOORD, 0, 0, false)
+}
 
 // func TestCrashTaskAndCoord(t *testing.T) {
 // 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, false)

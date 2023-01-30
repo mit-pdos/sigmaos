@@ -133,6 +133,7 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts.mkRealm(REALM2)
 
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts.scs[REALM1].GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts.scs[REALM2].GetLocalIP())
 
 	schedds1, err := ts.scs[REALM1].GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -157,6 +158,7 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	ts.mkRealm(REALM2)
 
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts.scs[REALM1].GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts.scs[REALM2].GetLocalIP())
 
 	schedds1, err := ts.scs[REALM1].GetDir(sp.SCHEDD)
 	assert.Nil(t, err)

@@ -334,19 +334,19 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, false)
 }
 
-// func TestCrashProcd1(t *testing.T) {
-// 	runN(t, 0, 0, 1, 0, false)
-// }
+func TestCrashSchedd1(t *testing.T) {
+	runN(t, 0, 0, 1, 0, false)
+}
 
-// func TestCrashProcd2(t *testing.T) {
-// 	N := 2
-// 	runN(t, 0, 0, N, 0, false)
-// }
+//func TestCrashSchedd2(t *testing.T) {
+//	N := 2
+//	runN(t, 0, 0, N, 0, false)
+//}
 
-// func TestCrashProcdN(t *testing.T) {
-// 	N := 5
-// 	runN(t, 0, 0, N, 0, false)
-// }
+//func TestCrashScheddN(t *testing.T) {
+//	N := 5
+//	runN(t, 0, 0, N, 0, false)
+//}
 
 // func TestCrashUx1(t *testing.T) {
 // 	N := 1

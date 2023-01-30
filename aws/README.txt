@@ -24,11 +24,10 @@ To boot update and start containers on the VPC:
 $ ./start-sigmaos.sh --update --vpc vpc-061a1808693a1626a
 
 To start the containers:
-$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
+$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --parallel
 
-# XXXX update
-When doing this often:
- ./stop-sigmaos.sh --vpc $SIGMA_VPC --parallel && ./build-sigma.sh --vpc $SIGMA_VPC --realm $R --version $V && ./install-sigma.sh --vpc $SIGMA_VPC --realm $R --parallel && ./start-sigmaos.sh --vpc $SIGMA_VPC --realm $R
+To stop the containers:
+$ ./stop-sigmaos.sh --vpc vpc-061a1808693a1626a --parallel
 
 # run test on VPC
 

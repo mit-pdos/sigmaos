@@ -3,7 +3,6 @@ package realmsrv
 import (
 	"os"
 	"path"
-	"strconv"
 	"sync"
 
 	db "sigmaos/debug"
@@ -45,21 +44,11 @@ func RunRealmSrv() error {
 	return nil
 }
 
-func (rm *RealmSrv) genNamedPort() string {
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-
-	port := rm.lastNDPort
-	rm.lastNDPort++
-	return ":" + strconv.Itoa(port)
-}
-
 func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
-	port := rm.genNamedPort()
-	p := proc.MakeProc("named", []string{port, req.Realm, pn})
+	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
 	if err := rm.sc.Spawn(p); err != nil {
 		return err
 	}

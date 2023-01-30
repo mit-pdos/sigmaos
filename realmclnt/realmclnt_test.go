@@ -235,3 +235,37 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
+	ts := mkTstate(t)
+
+	ts.mkRealm(REALM2)
+
+	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+	ctimeS := calibrateCTimeSigma(ts, REALM1, linuxsched.NCores-1, N_ITER)
+	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+
+	beC := make(chan time.Duration)
+	lcC := make(chan time.Duration)
+	go runSpinPerf(ts, REALM1, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
+	go runSpinPerf(ts, REALM2, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
+
+	durBE := <-beC
+	durLC := <-lcC
+
+	// Calculate slodown
+	beSD := slowdown(ctimeS, durBE)
+	lcSD := slowdown(ctimeS, durLC)
+
+	// Target slowdown (x)
+	beMinSD := 1.5
+	beMaxSD := 2.5
+	lcMaxSD := 1.1
+
+	// Check that execution time matches target time.
+	assert.True(ts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
+	assert.True(ts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
+	assert.True(ts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+
+	ts.Shutdown()
+}

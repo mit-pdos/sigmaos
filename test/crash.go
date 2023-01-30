@@ -24,7 +24,7 @@ func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	db.DPrintf(db.ALWAYS, "Kill one %v", srv)
 	err = ts.KillOne(srv)
 	if err != nil {
-		db.DFatalf("Error non-nil kill procd: %v", err)
+		db.DFatalf("Error non-nil kill %v: %v", srv, err)
 	}
 	l.Unlock()
 	crashchan <- true

@@ -363,7 +363,7 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, 0, 0, 0, N, false)
 }
 
-func testCrashScheddUx5(t *testing.T) {
+func TestCrashScheddUx5(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, N, false)
 }

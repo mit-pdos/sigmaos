@@ -338,32 +338,32 @@ func TestCrashSchedd1(t *testing.T) {
 	runN(t, 0, 0, 1, 0, false)
 }
 
-//func TestCrashSchedd2(t *testing.T) {
-//	N := 2
-//	runN(t, 0, 0, N, 0, false)
-//}
+func TestCrashSchedd2(t *testing.T) {
+	N := 2
+	runN(t, 0, 0, N, 0, false)
+}
 
-//func TestCrashScheddN(t *testing.T) {
-//	N := 5
-//	runN(t, 0, 0, N, 0, false)
-//}
+func TestCrashScheddN(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, N, 0, false)
+}
 
-// func TestCrashUx1(t *testing.T) {
-// 	N := 1
-// 	runN(t, 0, 0, 0, N, false)
-// }
+func TestCrashUx1(t *testing.T) {
+	N := 1
+	runN(t, 0, 0, 0, N, false)
+}
 
-// func TestCrashUx2(t *testing.T) {
-// 	N := 2
-// 	runN(t, 0, 0, 0, N, false)
-// }
+func TestCrashUx2(t *testing.T) {
+	N := 2
+	runN(t, 0, 0, 0, N, false)
+}
 
-// func TestCrashUx5(t *testing.T) {
-// 	N := 5
-// 	runN(t, 0, 0, 0, N, false)
-// }
+func TestCrashUx5(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, 0, N, false)
+}
 
-// func testCrashProcdUx5(t *testing.T) {
-// 	N := 5
-// 	runN(t, 0, 0, N, N, false)
-// }
+func testCrashProcdUx5(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, N, N, false)
+}

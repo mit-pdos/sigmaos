@@ -52,18 +52,12 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-# XXX use docker hub?
-if [ ! -z "$UPDATE" ]; then
-    (cd ..; ./build.sh --target aws)
-    echo "Save docker image sigmabase"
-    docker save -o /tmp/sigmaosbase.tar sigmaosbase
-fi
-
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
 MAIN="${vma[0]}"
 SIGMANAMED="${vma[0]}:1111"
+IMGS="sigmauser sigmaos sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
 
 if ! [ -z "$N_VM" ]; then
@@ -71,27 +65,15 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$UPDATE" ]; then
+    # XXX build on one and then pull container?
     for vm in $vms; do
-        echo "copy image to $vm"
-        copy="scp -i key-$VPC.pem /tmp/sigmaosbase.tar ubuntu@$vm:/tmp/sigmaosbase.tar"
-        ( eval "$copy" ) &
-    done
-    wait
-    for vm in $vms; do
-        echo "load image"
-        load="ssh -i key-$VPC.pem ubuntu@$vm docker load -i /tmp/sigmaosbase.tar"
-        ( eval "$load" ) &
-    done
-    wait
-    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+        echo $vm
+        ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   cd ulambda
-  # build binaries for host
-  ./make.sh --norace $PARALLEL linux
-
-  # build containers from sigmaosbase
-  docker build -f Dockerkernel -t sigmaos .
-  docker build -f Dockeruser -t sigmauser .
+  ./build.sh --target aws
 ENDSSH
+    done
+
 fi
 
 for vm in $vms; do

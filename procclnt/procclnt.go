@@ -175,7 +175,7 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
 
-	db.DPrintf(db.PROCCLNT, "Spawn %v", p)
+	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", scheddIp, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
@@ -234,7 +234,7 @@ func (clnt *ProcClnt) updateSchedds() {
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
-	db.DPrintf(db.PROCCLNT, "Got schedds %v", schedds)
+	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
 	// Alloc enough space for the list of schedds.
 	clnt.scheddIps = make([]string, 0, len(schedds))
 	for _, schedd := range schedds {

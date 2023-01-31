@@ -2,6 +2,7 @@ package realmclnt_test
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -155,10 +156,18 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 func TestBasicMultiRealmMultiNode(t *testing.T) {
 	ts := mkTstate(t)
 	ts.BootNode(1)
+	time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
 	ts.mkRealm(REALM2)
 
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts.scs[REALM1].GetLocalIP())
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts.scs[REALM2].GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts.scs[REALM1].NamedAddr())
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts.scs[REALM2].NamedAddr())
+
+	nd1ip, _, err := net.SplitHostPort(ts.scs[REALM1].NamedAddr()[0])
+	assert.Nil(ts.T, err)
+	nd2ip, _, err := net.SplitHostPort(ts.scs[REALM2].NamedAddr()[0])
+	assert.Nil(ts.T, err)
+
+	assert.NotEqual(ts.T, nd1ip, nd2ip, "Nameds were spawned to the same node")
 
 	schedds1, err := ts.scs[REALM1].GetDir(sp.SCHEDD)
 	assert.Nil(t, err)

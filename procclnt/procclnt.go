@@ -198,7 +198,6 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 		res := &schedd.SpawnResponse{}
 		err := pdc.RPC("Schedd.Spawn", req, res)
 		if err != nil {
-			db.DFatalf("Error spawn schedd: %v", err)
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {

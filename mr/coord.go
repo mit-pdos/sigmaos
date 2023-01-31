@@ -357,6 +357,10 @@ func (c *Coord) Round(ttype string) {
 }
 
 func (c *Coord) monitorProcds() {
+	if true {
+		return
+	}
+	// XXX fix
 	pdc := procdclnt.MakeProcdClnt(c.FsLib, "")
 	n := 0
 	for atomic.LoadInt32(&c.done) == 0 {

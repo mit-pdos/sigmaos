@@ -284,8 +284,9 @@ func (clnt *ProcClnt) nextSchedd() string {
 		db.DFatalf("Error: no schedds to spawn on")
 	}
 
+	sdip := clnt.scheddIps[clnt.burstOffset%len(clnt.scheddIps)]
 	clnt.burstOffset++
-	return clnt.scheddIps[clnt.burstOffset%len(clnt.scheddIps)]
+	return sdip
 }
 
 // ========== WAIT ==========

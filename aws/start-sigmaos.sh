@@ -83,7 +83,9 @@ if [ ! -z "$UPDATE" ]; then
         ( eval "$load" ) &
     done
     wait
-    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+    for vm in $vms; do
+        echo $vm
+        ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   cd ulambda
   # build binaries for host
   ./make.sh --norace $PARALLEL linux
@@ -92,6 +94,7 @@ if [ ! -z "$UPDATE" ]; then
   docker build -f Dockerkernel -t sigmaos .
   docker build -f Dockeruser -t sigmauser .
 ENDSSH
+   done
 fi
 
 for vm in $vms; do

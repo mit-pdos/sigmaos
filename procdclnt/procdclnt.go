@@ -107,6 +107,9 @@ func (pdc *ProcdClnt) WaitProcdChange(n int) (int, error) {
 }
 
 func (pdc *ProcdClnt) MonitorProcds() {
+	if true {
+		return
+	}
 	var realmstr string
 	if pdc.realmid != "" {
 		realmstr = "[" + pdc.realmid.String() + "] "

@@ -66,6 +66,7 @@ fi
 
 if [ ! -z "$UPDATE" ]; then
     # XXX build on one and then pull container?
+    ./update-repo.sh --vpc $VPC --parallel
     for vm in $vms; do
         echo $vm
         ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH

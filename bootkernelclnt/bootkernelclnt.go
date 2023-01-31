@@ -26,7 +26,7 @@ func Start(srvs string, namedAddr sp.Taddrs) (string, error) {
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf("BOOT", "Start: %v IP %v\n", srvs, ip)
+	db.DPrintf(db.BOOT, "Start: %v IP %v\n", srvs, ip)
 	return ip, nil
 }
 

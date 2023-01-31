@@ -161,7 +161,6 @@ func (k *Kernel) shutdown() {
 			for _, d := range val {
 				d.Wait()
 			}
-
 		}
 	}
 	for _, d := range k.svcs.svcs[sp.NAMEDREL] {

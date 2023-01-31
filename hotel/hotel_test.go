@@ -106,7 +106,7 @@ func TestGeoSingle(t *testing.T) {
 	res := proto.GeoResult{}
 	err = pdc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
+	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 5, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
@@ -144,7 +144,7 @@ func TestRecSingle(t *testing.T) {
 	var res proto.RecResult
 	err = pdc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "res %v\n", res.HotelIds)
+	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
 	ts.Shutdown()
@@ -161,7 +161,7 @@ func TestUserSingle(t *testing.T) {
 	var res proto.UserResult
 	err = pdc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "res %v\n", res)
+	db.DPrintf(db.TEST, "res %v\n", res)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -177,7 +177,7 @@ func TestProfile(t *testing.T) {
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
-	db.DPrintf(db.ALWAYS, "res %v\n", res.Hotels[0])
+	db.DPrintf(db.TEST, "res %v\n", res.Hotels[0])
 
 	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
@@ -451,7 +451,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	for t := 0; t < nthread; t++ {
 		<-ch
 	}
-	db.DPrintf(db.ALWAYS, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
+	db.DPrintf(db.TEST, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
 	ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()

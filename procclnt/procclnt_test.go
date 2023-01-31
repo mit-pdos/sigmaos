@@ -101,7 +101,7 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 1000*SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -113,7 +113,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
-	ts.Shutdown()
+	// ts.Shutdown()
 }
 
 func TestWaitExitSimpleMultiKernel(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
@@ -20,14 +21,16 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		return nil, err
 	}
 	cmd := append([]string{p.Program}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v\n", cmd, p.GetEnv())
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE))
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image: image,
 			Cmd:   cmd,
 			Tty:   false,
 			Env:   p.GetEnv(),
-		}, nil, nil, nil, "")
+		}, &container.HostConfig{
+			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
+		}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err

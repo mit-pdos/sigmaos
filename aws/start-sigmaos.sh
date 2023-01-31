@@ -52,8 +52,9 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-# XXX use docker hub
+# XXX use docker hub?
 if [ ! -z "$UPDATE" ]; then
+    (cd ..; ./build.sh --target aws)
     echo "Save docker image sigmabase"
     docker save -o /tmp/sigmaosbase.tar sigmaosbase
 fi

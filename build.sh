@@ -1,15 +1,21 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel]" 1>&2
+  echo "Usage: $0 [--target target ] [--parallel]" 1>&2
 }
 
 PARALLEL=""
+TARGET="local"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
     shift
     PARALLEL="--parallel"
+    ;;
+  --target)
+    shift
+    TARGET="$1"
+    shift
     ;;
   -help)
     usage
@@ -39,6 +45,6 @@ mkdir -p $TMP
 ./make.sh --norace $PARALLEL linux
 
 # build containers
-DOCKER_BUILDKIT=1 docker build --build-arg parallel=$PARALLEL -t sigmaosbase .
+DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t sigmaosbase .
 docker build -f Dockerkernel -t sigmaos .
 docker build -f Dockeruser -t sigmauser .

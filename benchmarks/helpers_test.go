@@ -12,7 +12,6 @@ import (
 	db "sigmaos/debug"
 	//	"sigmaos/linuxsched"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -44,12 +43,6 @@ func makeNProcs(n int, prog string, args []string, env map[string]string, ncore 
 func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
 	_, errs := ts.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-}
-
-func spawnBurstProcs2(ts *test.RealmTstate, pclnt *procclnt.ProcClnt, ps []*proc.Proc) {
-	db.DPrintf(db.TEST, "Burst-spawning2 %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
-	_, errs := pclnt.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 

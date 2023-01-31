@@ -29,6 +29,7 @@ const (
 
 // Parameters
 var N_TRIALS int
+var N_THREADS int
 var PREGROW_REALM bool
 var MR_APP string
 var KV_AUTO string
@@ -56,12 +57,10 @@ var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
 var S3_RES_DIR string
 
-// XXX REMOVE EVENTUALLY
-var AAA int
-
 // Read & set the proc version.
 func init() {
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
+	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREGROW_REALM, "pregrow_realm", false, "Pre-grow realm to include all cluster resources.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
@@ -88,8 +87,6 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
-	// XXX Remove after protoyping
-	flag.IntVar(&AAA, "aaa", 1, "Num procclnts.")
 }
 
 // ========== Common parameters ==========

@@ -58,32 +58,22 @@ func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 }
 
 func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	db.DFatalf("SpawnBurst test")
-	//	ps := i.([]*proc.Proc)
-	//	per := len(ps) / AAA
-	//	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
-	//	pclnts := []*procclnt.ProcClnt{}
-	//	for i := 0; i < AAA; i++ {
-	//		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
-	//		fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
-	//		if err != nil {
-	//			db.DFatalf("MakeFsLib %v\n", err)
-	//		}
-	//		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
-	//	}
-	//	start := time.Now()
-	//	done := make(chan bool)
-	//	for i := range pclnts {
-	//		go func(i int) {
-	//			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
-	//			waitStartProcs(ts, ps[i*per:(i+1)*per])
-	//			done <- true
-	//		}(i)
-	//	}
-	//	for _ = range pclnts {
-	//		<-done
-	//	}
-	return time.Duration(0), 1.0 //time.Since(start), 1.0
+	ps := i.([]*proc.Proc)
+	per := len(ps) / N_THREADS
+	db.DPrintf(db.ALWAYS, "%v procs per thread", per)
+	start := time.Now()
+	done := make(chan bool)
+	for i := 0; i < N_THREADS; i++ {
+		go func(i int) {
+			spawnBurstProcs(ts, ps[i*per:(i+1)*per])
+			waitStartProcs(ts, ps[i*per:(i+1)*per])
+			done <- true
+		}(i)
+	}
+	for i := 0; i < N_THREADS; i++ {
+		<-done
+	}
+	return time.Since(start), 1.0
 }
 
 func invokeWaitStartLambdas(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {

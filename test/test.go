@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
+	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -46,6 +47,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
+	rc      *realmclnt.RealmClnt
 	kclnts  []*bootkernelclnt.Kernel
 	killidx int
 	T       *testing.T
@@ -70,16 +72,21 @@ func MakeTstate(t *testing.T) *Tstate {
 func MakeTstateAll(t *testing.T) *Tstate {
 	ts, err := makeSysClnt(t, BOOT_ALL)
 	if err != nil {
-		db.DFatalf("MakeTstate: %v\n", err)
+		db.DFatalf("MakeTstateAll: %v\n", err)
 	}
 	return ts
 }
 
-func MakeTstateRealm(t *testing.T) *Tstate {
+func MakeTstateWithRealms(t *testing.T) *Tstate {
 	ts, err := makeSysClnt(t, BOOT_REALM)
 	if err != nil {
-		db.DFatalf("MakeTstate: %v\n", err)
+		db.DFatalf("MakeTstateRealm: %v\n", err)
 	}
+	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
+	if err != nil {
+		db.DFatalf("MakeTstateRealm make realmclnt: %v\n", err)
+	}
+	ts.rc = rc
 	return ts
 }
 
@@ -115,7 +122,12 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tstate{k.SigmaClnt, []*bootkernelclnt.Kernel{k}, 0, t}, nil
+	return &Tstate{
+		SigmaClnt: k.SigmaClnt,
+		kclnts:    []*bootkernelclnt.Kernel{k},
+		killidx:   0,
+		T:         t,
+	}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {

@@ -46,6 +46,8 @@ USE sigmaos;
 source hotel/init-db.sql;
 CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
+CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';
+GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'192.168.%.%';
 FLUSH PRIVILEGES;
 ENDOFSQL
 fi

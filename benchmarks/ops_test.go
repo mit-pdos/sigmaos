@@ -3,11 +3,6 @@ package benchmarks_test
 import (
 	"time"
 
-	// XXX
-	"fmt"
-	"sigmaos/fslib"
-	"sigmaos/procclnt"
-
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
@@ -22,9 +17,9 @@ import (
 // The set of basic operations that we benchmark.
 //
 
-type testOp func(*test.Tstate, interface{}) (time.Duration, float64)
+type testOp func(*test.RealmTstate, interface{}) (time.Duration, float64)
 
-func initSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func initSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
@@ -32,7 +27,7 @@ func initSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func upSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func upSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
@@ -40,7 +35,7 @@ func upSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func downSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
@@ -49,12 +44,12 @@ func downSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 }
 
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf(db.TEST1, "Spawned %v", p)
-	status, err2 := ts.WaitExit(p.Pid)
+	status, err2 := ts.WaitExit(p.GetPid())
 	assert.Nil(ts.T, err1, "Failed to Spawn %v", err1)
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
@@ -62,35 +57,36 @@ func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func spawnBurstWaitStartProcs(ts *test.Tstate, i interface{}) (time.Duration, float64) {
-	ps := i.([]*proc.Proc)
-	per := len(ps) / AAA
-	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
-	pclnts := []*procclnt.ProcClnt{}
-	for i := 0; i < AAA; i++ {
-		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
-		fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
-		if err != nil {
-			db.DFatalf("MakeFsLib %v\n", err)
-		}
-		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
-	}
-	start := time.Now()
-	done := make(chan bool)
-	for i := range pclnts {
-		go func(i int) {
-			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
-			waitStartProcs(ts, ps[i*per:(i+1)*per])
-			done <- true
-		}(i)
-	}
-	for _ = range pclnts {
-		<-done
-	}
-	return time.Since(start), 1.0
+func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	db.DFatalf("SpawnBurst test")
+	//	ps := i.([]*proc.Proc)
+	//	per := len(ps) / AAA
+	//	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
+	//	pclnts := []*procclnt.ProcClnt{}
+	//	for i := 0; i < AAA; i++ {
+	//		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
+	//		fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
+	//		if err != nil {
+	//			db.DFatalf("MakeFsLib %v\n", err)
+	//		}
+	//		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
+	//	}
+	//	start := time.Now()
+	//	done := make(chan bool)
+	//	for i := range pclnts {
+	//		go func(i int) {
+	//			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
+	//			waitStartProcs(ts, ps[i*per:(i+1)*per])
+	//			done <- true
+	//		}(i)
+	//	}
+	//	for _ = range pclnts {
+	//		<-done
+	//	}
+	return time.Duration(0), 1.0 //time.Since(start), 1.0
 }
 
-func invokeWaitStartLambdas(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func invokeWaitStartLambdas(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
@@ -106,7 +102,7 @@ func invokeWaitStartLambdas(ts *test.Tstate, i interface{}) (time.Duration, floa
 	return time.Since(start), 1.0
 }
 
-func invokeWaitStartOneLambda(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	sem := i.(*semclnt.SemClnt)
 	go func(sem *semclnt.SemClnt) {
@@ -117,14 +113,14 @@ func invokeWaitStartOneLambda(ts *test.Tstate, i interface{}) (time.Duration, fl
 }
 
 // XXX Should get job name in a tuple.
-func runMR(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	ji := i.(*MRJobInstance)
 	ji.PrepareMRJob()
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.GetRealm())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	ji.StartMRJob()
@@ -134,9 +130,9 @@ func runMR(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.GetRealm())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	// Start some balancers
@@ -168,12 +164,12 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 }
 
 // XXX Should get job name in a tuple.
-func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*WwwJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.GetRealm())
 	pdc.MonitorProcds()
 	defer pdc.Done()
 	start := time.Now()
@@ -182,13 +178,13 @@ func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func runHotel(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*HotelJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.GetRealm())
 		pdc.MonitorProcds()
 		defer pdc.Done()
 	}

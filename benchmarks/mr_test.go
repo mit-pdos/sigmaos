@@ -11,7 +11,7 @@ import (
 )
 
 type MRJobInstance struct {
-	*test.Tstate
+	*test.RealmTstate
 	ready   chan bool
 	app     string
 	jobname string
@@ -21,9 +21,9 @@ type MRJobInstance struct {
 	cm      *groupmgr.GroupMgr
 }
 
-func MakeMRJobInstance(ts *test.Tstate, app, jobname string) *MRJobInstance {
+func MakeMRJobInstance(ts *test.RealmTstate, app, jobname string) *MRJobInstance {
 	ji := &MRJobInstance{}
-	ji.Tstate = ts
+	ji.RealmTstate = ts
 	ji.ready = make(chan bool)
 	ji.app = app
 	ji.jobname = jobname

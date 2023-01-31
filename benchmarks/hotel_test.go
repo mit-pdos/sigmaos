@@ -15,7 +15,7 @@ import (
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/protdev"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -40,16 +40,16 @@ type HotelJobInstance struct {
 	cc         *cacheclnt.CacheClnt
 	cm         *cacheclnt.CacheMgr
 	lgs        []*loadgen.LoadGenerator
-	*test.Tstate
+	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
 	ji.ready = make(chan bool)
 	ji.fn = fn
-	ji.Tstate = ts
+	ji.RealmTstate = ts
 	ji.justCli = justCli
 
 	durslice := strings.Split(durs, ",")
@@ -139,8 +139,8 @@ func (ji *HotelJobInstance) StartHotelJob() {
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
 		for _, s := range sp.HOTELSVC {
-			stats := &protdevsrv.Stats{}
-			err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
+			stats := &protdev.Stats{}
+			err := ji.GetFileJson(s+"/"+protdev.STATS, stats)
 			assert.Nil(ji.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}

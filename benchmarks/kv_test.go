@@ -42,10 +42,10 @@ type KVJobInstance struct {
 	balgm     *groupmgr.GroupMgr
 	kvdgms    []*groupmgr.GroupMgr
 	cpids     []proc.Tpid
-	*test.Tstate
+	*test.RealmTstate
 }
 
-func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) *KVJobInstance {
+func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) *KVJobInstance {
 	ji := &KVJobInstance{}
 	ji.nkvd = nkvd
 	ji.kvdrepl = kvdrepl
@@ -59,7 +59,7 @@ func MakeKVJobInstance(ts *test.Tstate, nkvd int, kvdrepl int, nclerks []int, ph
 	ji.redis = redisaddr != ""
 	ji.redisaddr = redisaddr
 	ji.ready = make(chan bool)
-	ji.Tstate = ts
+	ji.RealmTstate = ts
 	// May already exit
 	ji.MkDir(kv.KVDIR, 0777)
 	// Should not exist.
@@ -94,7 +94,7 @@ func (ji *KVJobInstance) StartKVJob() {
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
-	ck, err := kv.InitKeys(ji.FsLib, ji.ProcClnt, ji.job, ji.nkeys)
+	ck, err := kv.InitKeys(ji.SigmaClnt, ji.job, ji.nkeys)
 	assert.Nil(ji.T, err, "InitKeys: %v", err)
 	ji.ck = ck
 }

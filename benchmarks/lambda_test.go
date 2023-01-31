@@ -12,7 +12,7 @@ import (
 	"sigmaos/test"
 )
 
-func spawnLambda(ts *test.Tstate, semPath string) {
+func spawnLambda(ts *test.RealmTstate, semPath string) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))

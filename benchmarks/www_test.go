@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
@@ -33,10 +32,10 @@ type WwwJobInstance struct {
 	sempath    string
 	cpids      []proc.Tpid
 	pid        proc.Tpid
-	*test.Tstate
+	*test.RealmTstate
 }
 
-func MakeWwwJob(ts *test.Tstate, sigmaos bool, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
+func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
 	ji := &WwwJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rand.String(16)
@@ -45,13 +44,15 @@ func MakeWwwJob(ts *test.Tstate, sigmaos bool, wwwncore proc.Tcore, reqtype stri
 	ji.nreq = nreq
 	ji.delay = delay
 	ji.ready = make(chan bool)
-	ji.Tstate = ts
+	ji.RealmTstate = ts
 
 	www.InitWwwFs(ts.FsLib, ji.job)
 
 	if !sigmaos {
-		ip, err := fidclnt.LocalIP()
-		assert.Nil(ji.T, err, "Error LocalIP: %v", err)
+		db.DFatalf("Error: Get actual machine IP for k8s")
+		//		ip, err := fidclnt.LocalIP()
+		//		assert.Nil(ji.T, err, "Error LocalIP: %v", err)
+		ip := ""
 		ji.k8ssrvaddr = ip + K8S_PORT
 	}
 
@@ -87,8 +88,8 @@ func (ji *WwwJobInstance) StartWwwJob() {
 		a := proc.MakeProc("wwwd", []string{ji.job, ""})
 		err := ji.Spawn(a)
 		assert.Nil(ji.T, err, "Spawn")
-		err = ji.WaitStart(a.Pid)
-		ji.pid = a.Pid
+		err = ji.WaitStart(a.GetPid())
+		ji.pid = a.GetPid()
 		assert.Equal(ji.T, nil, err)
 	}
 	db.DPrintf(db.ALWAYS, "StartWwwJob ntrial %v nclnt %v nreq/clnt %v avgdelay %v", ji.ntrials, ji.nclnt, ji.nreq, ji.delay)

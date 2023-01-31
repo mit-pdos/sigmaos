@@ -3,17 +3,10 @@ package benchmarks_test
 import (
 	"runtime"
 	"strings"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 
 	"sigmaos/benchmarks"
-	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
-	"sigmaos/realm"
-	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -21,7 +14,7 @@ import (
 // Functions we use to record and output performance.
 //
 
-func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.Results) {
+func runOps(ts *test.RealmTstate, is []interface{}, op testOp, rs *benchmarks.Results) {
 	for i := 0; i < len(is); i++ {
 		// Ops we are benchmarking
 		elapsed, amt := op(ts, is[i])
@@ -50,33 +43,37 @@ func printResultSummary(rs *benchmarks.Results) {
 }
 
 // Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
-	p, err := perf.MakePerfMulti(perf.BENCH, ts.RealmId())
-	assert.Nil(ts.T, err)
-	go func() {
-		fsl, err := fslib.MakeFsLib("test")
-		assert.Nil(ts.T, err)
-		cc := config.MakeConfigClnt(fsl)
-		cfgPath := realm.RealmConfPath(ts.RealmId())
-		cfg := &realm.RealmConfig{}
-		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
-			b, _ := cc.GetFile(cfgPath)
-			db.DFatalf("Read config err: %v [%v]", err, string(b))
-		}
-		p.TptTick(float64(cfg.NCores))
-		for {
-			if err := cc.WaitConfigChange(cfgPath); err != nil {
-				db.DPrintf(db.ALWAYS, "Error WaitConfigChange: %v", err)
-				return
-			}
-			// Make sure changes don't get put in the same tpt bucket.
-			time.Sleep(time.Duration(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
-			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
-				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
-				return
-			}
-			p.TptTick(float64(cfg.NCores))
-		}
-	}()
-	return p
+func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
+	db.DFatalf("monitorCoresAssigned")
+	return nil
+	// p, err := perf.MakePerfMulti(perf.BENCH, ts.GetRealm().String())
+	// assert.Nil(ts.T, err)
+	//
+	//	go func() {
+	//		fsl, err := fslib.MakeFsLib("test")
+	//		assert.Nil(ts.T, err)
+	//		cc := config.MakeConfigClnt(fsl)
+	//		cfgPath := realm.RealmConfPath(ts.GetRealm())
+	//		cfg := &realm.RealmConfig{}
+	//		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+	//			b, _ := cc.GetFile(cfgPath)
+	//			db.DFatalf("Read config err: %v [%v]", err, string(b))
+	//		}
+	//		p.TptTick(float64(cfg.NCores))
+	//		for {
+	//			if err := cc.WaitConfigChange(cfgPath); err != nil {
+	//				db.DPrintf(db.ALWAYS, "Error WaitConfigChange: %v", err)
+	//				return
+	//			}
+	//			// Make sure changes don't get put in the same tpt bucket.
+	//			time.Sleep(time.Duration(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
+	//			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
+	//				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
+	//				return
+	//			}
+	//			p.TptTick(float64(cfg.NCores))
+	//		}
+	//	}()
+	//
+	// return p
 }

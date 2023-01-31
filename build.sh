@@ -39,7 +39,7 @@ TMP=/tmp/sigmaos
 mkdir -p $TMP
 
 # build and start db container
-if [ ${TARGET} != "aws" ]; then
+if [ "${TARGET}" != "aws" ]; then
    ./start-db.sh
 fi
 

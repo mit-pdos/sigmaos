@@ -39,7 +39,9 @@ TMP=/tmp/sigmaos
 mkdir -p $TMP
 
 # build and start db container
-./start-db.sh
+if [ ${TARGET} != "aws" ]; then
+   ./start-db.sh
+fi
 
 # build binaries for host
 ./make.sh --norace $PARALLEL linux

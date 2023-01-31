@@ -79,7 +79,7 @@ if [ ! -z "$UPDATE" ]; then
     wait
     for vm in $vms; do
         echo "load image"
-        load="docker load -i /tmp/sigmaosbase.tar"
+        load="ssh -i key-$VPC.pem ubuntu@$vm docker load -i /tmp/sigmaosbase.tar"
         ( eval "$load" ) &
     done
     wait

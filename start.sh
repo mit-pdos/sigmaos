@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Start container
+#
+
 usage() {
     echo "Usage: $0 [--boot all|node|named|realm] [--machine N] [--named ADDRs] [--host] "  1>&2
 }
@@ -33,7 +37,7 @@ while [[ "$#" -gt 0 ]]; do
             BOOT="named;schedd;realmd;ux;s3;db"
             ;;
         *)
-            echo "unexpected argument $1"
+            echo "unexpected argument $1 to boot"
             usage
             exit 1
             ;;
@@ -43,7 +47,6 @@ while [[ "$#" -gt 0 ]]; do
   --host)
     shift
     NET="host"
-    shift
     ;;
   --named)
     shift
@@ -55,7 +58,7 @@ while [[ "$#" -gt 0 ]]; do
     exit 0
     ;;
   *)
-    echo "unexpected argument to boot $1"
+    echo "unexpected argument $1"
     usage
     exit 1
     ;;

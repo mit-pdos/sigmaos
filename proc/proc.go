@@ -149,12 +149,12 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Priv:%t Program:%v ScheddIp:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t ScheddIp:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
+		p.Program,
 		p.GetPid(),
 		p.Privileged,
-		p.Program,
 		p.ScheddIp,
-		p.RealmStr,
+		p.GetRealm(),
 		p.ProcDir,
 		p.ParentDir,
 		p.Args,

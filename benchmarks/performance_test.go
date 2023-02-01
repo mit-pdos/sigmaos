@@ -54,12 +54,10 @@ func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
 	go func() {
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
-			percent := sdc.GetCPUUtil()
-			// Returns CPU util as a percentage. To get number of cores utilized,
-			// divide by 100.
-			ncores := percent / 100.0
+			ncores := sdc.GetCPUUtil()
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
+			db.DPrintf(db.ALWAYS, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
 			time.Sleep(1 * time.Second)
 		}
 	}()

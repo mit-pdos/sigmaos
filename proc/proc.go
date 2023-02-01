@@ -149,7 +149,20 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Priv %t Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }", p.GetPid(), p.Privileged, p.Program, p.ProcDir, p.ParentDir, "Abcd", p.Args, p.GetEnv(), p.GetType(), p.GetNcore(), p.GetMem())
+	return fmt.Sprintf("&{ Pid:%v Priv:%t Program:%v ScheddIp:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
+		p.GetPid(),
+		p.Privileged,
+		p.Program,
+		p.ScheddIp,
+		p.RealmStr,
+		p.ProcDir,
+		p.ParentDir,
+		p.Args,
+		p.GetEnv(),
+		p.GetType(),
+		p.GetNcore(),
+		p.GetMem(),
+	)
 }
 
 // ========== Getters and Setters ==========

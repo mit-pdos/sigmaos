@@ -1444,7 +1444,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	buf := test.MkBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER)
+	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	measure(p1, "writer", func() sp.Tlength {
@@ -1491,7 +1491,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for _, fn := range fns {
 		ts.Remove(fn)
 	}
-	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER)
+	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()

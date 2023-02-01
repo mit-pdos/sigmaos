@@ -2,6 +2,10 @@ package perf
 
 type Tselector string
 
+func (t Tselector) String() string {
+	return string(t)
+}
+
 // Suffixes
 const (
 	PPROF     Tselector = "_PPROF"

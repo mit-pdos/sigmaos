@@ -36,7 +36,7 @@ func (c *Container) SetCPUShares(cpu int64) error {
 
 func (c *Container) GetCPUUtil() (float64, error) {
 	// TODO: should we use ContainerStats, or ContainerStatsOneShot?
-	resp, err := c.cli.ContainerStats(c.ctx, c.container, true)
+	resp, err := c.cli.ContainerStats(c.ctx, c.container, false)
 	if err != nil {
 		db.DFatalf("Error ContainerStats: %v", err)
 		return 0.0, err

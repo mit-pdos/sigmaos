@@ -140,9 +140,19 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
-	// TODO
-	db.DFatalf("Unimplemented")
-	return 0.0
+	var total float64 = 0.0
+
+	// Get CPU util for BE & LC uprocds, if there are any.
+	if m, ok := updm.pdcms[realm]; ok {
+		for _, pdc := range m {
+			util, err := updm.kclnt.GetCPUUtil(pdc.pid)
+			if err != nil {
+				db.DFatalf("error GetCPUUtil: %v", err)
+			}
+			total += util
+		}
+	}
+	return total
 }
 
 func (updm *UprocdMgr) String() string {

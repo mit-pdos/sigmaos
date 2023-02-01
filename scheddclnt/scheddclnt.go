@@ -7,6 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -46,7 +47,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 			if err != nil { // the proc may not exist anymore
 				continue
 			}
-			p = proc.MakeEmptyProc()
+			p := proc.MakeEmptyProc()
 			p.Unmarshal(b)
 			db.DPrintf(db.SCHEDDCLNT, "%s: %v\n", procdir, p.Program)
 		}

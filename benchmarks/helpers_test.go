@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	//	"sigmaos/linuxsched"
+	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
@@ -74,28 +74,15 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 
 // ========== Realm Helpers ==========
 
-func countNClusterCores(ts *test.Tstate) {
-	// If realms are turned on, find aggregate number of cores across all
-	// machines.
-	// TODO: read from boot files.
-	db.DFatalf("Count cores")
-	// N_CLUSTER_CORES = 0
-	// db.DPrintf(db.TEST, "Running with realms")
-	// fsl, err1 := fslib.MakeFsLib("test")
-	// assert.Nil(ts.T, err1)
-	//
-	//	_, err := fsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
-	//		cfg := machine.MakeEmptyConfig()
-	//		err := fsl.GetFileJson(path.Join(machine.MACHINES, st.Name, machine.CONFIG), cfg)
-	//		if err != nil {
-	//			return true, err
-	//		}
-	//		N_CLUSTER_CORES += int(cfg.Cores.Size())
-	//		return false, nil
-	//	})
-	//
-	// assert.Nil(ts.T, err, "Error counting sigma cores: %v", err)
-	// db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", N_CLUSTER_CORES)
+// Count the number of cores in the cluster.
+func countClusterCores(rootts *test.Tstate) proc.Tcore {
+	// XXX For now, we assume all machines have the same number of cores.
+	sts, err := rootts.GetDir(sp.BOOT)
+	assert.Nil(rootts.T, err)
+
+	ncores := proc.Tcore(len(sts) * int(linuxsched.NCores))
+	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", ncores)
+	return ncores
 }
 
 // Potentially pregrow a realm to encompass all cluster resources.

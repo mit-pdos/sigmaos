@@ -94,8 +94,6 @@ const (
 	OUT_DIR = "name/out_dir"
 )
 
-var N_CLUSTER_CORES = 0
-
 // XXX Switch to spin.
 //// Length of time required to do a simple matrix multiplication.
 //func TestNiceMatMulBaseline(t *testing.T) {
@@ -232,7 +230,6 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 func TestAppMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	countNClusterCores(rootts)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, apps := makeNMRJobs(ts1, 1, MR_APP)
 	// XXX Clean this up/hide this somehow.
@@ -254,7 +251,6 @@ func TestAppMR(t *testing.T) {
 func runKVTest(t *testing.T, nReplicas int) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	countNClusterCores(rootts)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
@@ -288,13 +284,13 @@ func TestAppKVRepl(t *testing.T) {
 func TestRealmBurst(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	countNClusterCores(rootts)
+	ncores := countClusterCores(rootts)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	makeOutDir(ts1)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
-	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", N_CLUSTER_CORES)
-	ps, _ := makeNProcs(N_CLUSTER_CORES, "spinner", []string{OUT_DIR}, nil, 2)
+	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
+	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 2)
 	p := monitorCoresAssigned(ts1)
 	defer p.Done()
 	runOps(ts1, []interface{}{p}, spawnBurstWaitStartProcs, rs)
@@ -329,8 +325,6 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(720, benchmarks.E2E)
 	makeOutDir(ts1)
-	// Find the total number of cores available for spinners across all machines.
-	// We need to get this in order to find out how many spinners to start.
 	N_LAMBDAS := 640
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
 	_, is := makeNSemaphores(ts1, N_LAMBDAS)
@@ -349,9 +343,7 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
-	// Find the total number of cores available for spinners across all machines.
 	rootts := test.MakeTstateWithRealms(t)
-	countNClusterCores(rootts)
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
@@ -401,9 +393,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
-	// Find the total number of cores available for spinners across all machines.
 	rootts := test.MakeTstateWithRealms(t)
-	countNClusterCores(rootts)
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
@@ -451,9 +441,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 // realm-level software balance resource requests across realms.
 func TestKVMRRRB(t *testing.T) {
 	done := make(chan bool)
-	// Find the total number of cores available for spinners across all machines.
 	rootts := test.MakeTstateWithRealms(t)
-	countNClusterCores(rootts)
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
@@ -501,9 +489,6 @@ func testWww(t *testing.T, sigmaos bool) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	if sigmaos {
-		countNClusterCores(rootts)
-	}
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
 	jobs, ji := makeWwwJobs(ts1, sigmaos, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
 	// XXX Clean this up/hide this somehow.
@@ -536,9 +521,6 @@ func TestWwwK8s(t *testing.T) {
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	if sigmaos {
-		countNClusterCores(rootts)
-	}
 	jobs, ji := makeHotelJobs(ts1, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, fn)
 	// XXX Clean this up/hide this somehow.
 	go func() {

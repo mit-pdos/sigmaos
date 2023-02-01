@@ -18,7 +18,6 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -104,16 +103,16 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 // XXX cut new fslib?
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	fsl, err := fslib.MakeFsLibNamed("r-"+file, r.NamedAddr())
+	sc, err := sigmaclnt.MkSigmaClntFsLib("r-" + file + r.input)
 	if err != nil {
 		db.DPrintf(db.MR, "MakeFsLibAddr err %v", err)
 		return 0, 0, false
 	}
-	defer fsl.Exit()
+	defer sc.Exit()
 
 	sym := r.input + "/" + file + "/"
 	db.DPrintf(db.MR, "readFile %v\n", sym)
-	rdr, err := fsl.OpenAsyncReader(sym, 0)
+	rdr, err := sc.OpenAsyncReader(sym, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "MakeReader %v err %v", sym, err)
 		return 0, 0, false

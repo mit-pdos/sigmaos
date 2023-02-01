@@ -19,7 +19,7 @@ func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr sp.Taddr
 		realm, namedAddr}
 }
 
-func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (*FsLib, error) {
+func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, r, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
@@ -37,12 +37,8 @@ func MakeFsLibAddr(uname, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	return fl, nil
 }
 
-func MakeFsLibNamed(uname string, addrs sp.Taddrs) (*FsLib, error) {
-	return MakeFsLibAddr(uname, proc.GetSigmaLocal(), addrs)
-}
-
 func MakeFsLib(uname string) (*FsLib, error) {
-	return MakeFsLibNamed(uname, proc.Named())
+	return MakeFsLibAddr(uname, proc.GetSigmaLocal(), proc.Named())
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {

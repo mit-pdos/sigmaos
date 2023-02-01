@@ -42,6 +42,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	if err != nil {
 		return 0, nil
 	}
+	// Only read the proc directory if absolutely necessary.
 	if db.WillBePrinted(db.SCHEDDCLNT) {
 		for _, st := range sts {
 			b, err := sdc.GetFile(path.Join(procdir, st.Name))

@@ -58,7 +58,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
-	sc, err := sigmaclnt.MkSigmaClntRealm(rm.sc.FsLib, "realmd", rid)
+	sc, err := sigmaclnt.MkSigmaClntRealmFsLib(rm.sc.FsLib, "realmd", rid)
 	if err != nil {
 		return err
 	}

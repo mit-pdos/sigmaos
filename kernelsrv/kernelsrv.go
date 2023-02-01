@@ -42,7 +42,7 @@ func (ks *KernelSrv) SetCPUShares(req proto.SetCPUSharesRequest, rep *proto.SetC
 	return ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares)
 }
 
-func (ks *KernelSrv) GetCPUUtil(req proto.GetCPUUtilRequest, rep *proto.GetCPUUtilResponse) (float64, error) {
+func (ks *KernelSrv) GetKernelSrvCPUUtil(req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) (float64, error) {
 	return ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
 }
 

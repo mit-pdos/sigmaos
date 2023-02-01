@@ -37,9 +37,9 @@ func (kc *KernelClnt) SetCPUShares(pid proc.Tpid, shares int64) error {
 }
 
 func (kc *KernelClnt) GetCPUUtil(pid proc.Tpid) (float64, error) {
-	var res proto.GetCPUUtilResponse
-	req := &proto.GetCPUUtilRequest{PidStr: pid.String()}
-	err := kc.pdc.RPC("KernelSrv.GetCPUUtil", req, &res)
+	var res proto.GetKernelSrvCPUUtilResponse
+	req := &proto.GetKernelSrvCPUUtilRequest{PidStr: pid.String()}
+	err := kc.pdc.RPC("KernelSrv.GetKernelSrvCPUUtil", req, &res)
 	if err != nil {
 		return 0.0, err
 	}

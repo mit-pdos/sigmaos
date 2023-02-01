@@ -135,7 +135,7 @@ func (sdc *ScheddClnt) GetCPUUtil() float64 {
 	}
 	for _, sd := range sds {
 		// Get the CPU shares on this schedd.
-		req := &proto.GetCPUUtil{RealmStr: sdc.realm.String()}
+		req := &proto.GetCPUUtilRequest{RealmStr: sdc.realm.String()}
 		res := &proto.GetCPUUtilResponse{}
 		err := sdc.getScheddClnt(sd).RPC("Schedd.GetCPUUtil", req, res)
 		if err != nil {

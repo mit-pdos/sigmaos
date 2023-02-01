@@ -19,11 +19,11 @@ message SetCPUSharesRequest {
 message SetCPUSharesResponse {
 }
 
-message GetCPUUtilRequest {
+message GetKernelSrvCPUUtilRequest {
   string PidStr = 1;
 }
 
-message GetCPUUtilResponse {
+message GetKernelSrvCPUUtilResponse {
   double util = 1;
 }
 

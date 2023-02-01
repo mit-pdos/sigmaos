@@ -55,9 +55,7 @@ func monitorCoresAssigned(ts *test.RealmTstate, nClusterCores proc.Tcore) *perf.
 	go func() {
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
-			// TODO: get CPU usage percentage from docker.
-			_ = sdc
-			percent := 0.0
+			percent := sdc.GetCPUUtil()
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(float64(percent) * float64(nClusterCores))
 			time.Sleep(1 * time.Second)

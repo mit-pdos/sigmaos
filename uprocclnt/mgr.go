@@ -105,6 +105,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	if err != nil {
 		return err, nil
 	}
+	db.DPrintf(db.UPROCDMGR, "[realm:%v pid:%v] run uproc %v", pdc.realm, pdc.pid, uproc)
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
 	updm.startBalanceShares(uproc)

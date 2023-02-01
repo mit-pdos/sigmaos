@@ -19,6 +19,14 @@ message SetCPUSharesRequest {
 message SetCPUSharesResponse {
 }
 
+message GetCPUUtilRequest {
+  string PidStr = 1;
+}
+
+message GetCPUUtilResponse {
+  double util = 1;
+}
+
 message ShutdownRequest {
 }
 

@@ -36,22 +36,24 @@ func (kc *KernelClnt) SetCPUShares(pid proc.Tpid, shares int64) error {
 	return kc.pdc.RPC("KernelSrv.SetCPUShares", req, &res)
 }
 
+func (kc *KernelClnt) GetCPUUtil(pid proc.Tpid) (float64, error) {
+	var res proto.GetCPUUtilResponse
+	req := &proto.GetCPUUtilRequest{PidStr: pid.String()}
+	err := kc.pdc.RPC("KernelSrv.GetCPUUtil", req, &res)
+	if err != nil {
+		return 0.0, err
+	}
+	return res.Util, nil
+}
+
 func (kc *KernelClnt) Kill(s string) error {
 	var res proto.KillResult
 	req := &proto.KillRequest{Name: s}
-	err := kc.pdc.RPC("KernelSrv.Kill", req, &res)
-	if err != nil {
-		return err
-	}
-	return nil
+	return kc.pdc.RPC("KernelSrv.Kill", req, &res)
 }
 
 func (kc *KernelClnt) Shutdown() error {
 	var res proto.ShutdownResult
 	req := &proto.ShutdownRequest{}
-	err := kc.pdc.RPC("KernelSrv.Shutdown", req, &res)
-	if err != nil {
-		return err
-	}
-	return nil
+	return kc.pdc.RPC("KernelSrv.Shutdown", req, &res)
 }

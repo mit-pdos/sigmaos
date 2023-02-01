@@ -126,7 +126,7 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 }
 
 func (sdc *ScheddClnt) GetCPUUtil() float64 {
-	// Total CPU utilization [0, 1] in the system.
+	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
 	sds, err := sdc.getSchedds()

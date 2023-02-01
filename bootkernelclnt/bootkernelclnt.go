@@ -35,20 +35,12 @@ type Kernel struct {
 	kclnt *kernelclnt.KernelClnt
 }
 
-func MkBootKernelClnt(name string, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClntStart(name string, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
 	ip, err := Start(conf, namedAddr)
 	if err != nil {
 		return nil, err
 	}
-	sc, err := sigmaclnt.MkSigmaClntProc(name, ip, namedAddr)
-	if err != nil {
-		return nil, err
-	}
-	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
-	if err != nil {
-		return nil, err
-	}
-	return &Kernel{sc, kclnt}, nil
+	return MkKernelClnt(name, ip, namedAddr)
 }
 
 func MkKernelClnt(name string, ip string, namedAddr sp.Taddrs) (*Kernel, error) {

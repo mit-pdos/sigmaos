@@ -132,7 +132,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkBootKernelClnt("kclnt", BOOT_NODE, ts.NamedAddr())
+		kclnt, err := bootkernelclnt.MkKernelClntStart("kclnt", BOOT_NODE, ts.NamedAddr())
 		if err != nil {
 			return err
 		}

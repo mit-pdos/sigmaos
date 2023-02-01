@@ -241,7 +241,7 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	p := monitorCoresAssigned(ts1)
+	p := monitorCoresAssigned(ts1, countClusterCores(rootts))
 	defer p.Done()
 	runOps(ts1, apps, runMR, rs)
 	printResultSummary(rs)
@@ -264,7 +264,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	p := monitorCoresAssigned(ts1)
+	p := monitorCoresAssigned(ts1, countClusterCores(rootts))
 	defer p.Done()
 	runOps(ts1, ji, runKV, rs)
 	printResultSummary(rs)
@@ -291,7 +291,7 @@ func TestRealmBurst(t *testing.T) {
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
 	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 2)
-	p := monitorCoresAssigned(ts1)
+	p := monitorCoresAssigned(ts1, countClusterCores(rootts))
 	defer p.Done()
 	runOps(ts1, []interface{}{p}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
@@ -357,8 +357,9 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		hotel.RandSearchReq(wc, r)
 	})
-	p1 := monitorCoresAssigned(ts1)
-	p2 := monitorCoresAssigned(ts2)
+	ncores := countClusterCores(rootts)
+	p1 := monitorCoresAssigned(ts1, ncores)
+	p2 := monitorCoresAssigned(ts2, ncores)
 	defer p1.Done()
 	defer p2.Done()
 	// Run Hotel job
@@ -404,8 +405,9 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	mrjobs1, mrapps1 := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep MR job
 	mrjobs2, mrapps2 := makeNMRJobs(ts2, 1, MR_APP)
-	p1 := monitorCoresAssigned(ts1)
-	p2 := monitorCoresAssigned(ts2)
+	ncores := countClusterCores(rootts)
+	p1 := monitorCoresAssigned(ts1, ncores)
+	p2 := monitorCoresAssigned(ts2, ncores)
 	defer p1.Done()
 	defer p2.Done()
 	// Run MR job
@@ -453,9 +455,10 @@ func TestKVMRRRB(t *testing.T) {
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	p1 := monitorCoresAssigned(ts1)
+	ncores := countClusterCores(rootts)
+	p1 := monitorCoresAssigned(ts1, ncores)
 	defer p1.Done()
-	p2 := monitorCoresAssigned(ts2)
+	p2 := monitorCoresAssigned(ts2, ncores)
 	defer p2.Done()
 	// Run KV job
 	go func() {
@@ -501,7 +504,7 @@ func testWww(t *testing.T, sigmaos bool) {
 		}
 	}()
 	if sigmaos {
-		p := monitorCoresAssigned(ts1)
+		p := monitorCoresAssigned(ts1, countClusterCores(rootts))
 		defer p.Done()
 	}
 	runOps(ts1, ji, runWww, rs)
@@ -532,7 +535,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hote
 		}
 	}()
 	if sigmaos {
-		p := monitorCoresAssigned(ts1)
+		p := monitorCoresAssigned(ts1, countClusterCores(rootts))
 		defer p.Done()
 	}
 	runOps(ts1, ji, runHotel, rs)

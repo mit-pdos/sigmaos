@@ -85,27 +85,6 @@ func countClusterCores(rootts *test.Tstate) proc.Tcore {
 	return ncores
 }
 
-// Potentially pregrow a realm to encompass all cluster resources.
-//func maybePregrowRealm(ts *test.RealmTstate) {
-//	if PREGROW_REALM {
-//		// Make sure we've counted the number of cores in the cluster.
-//		countNClusterCores(ts)
-//		fsl, err := fslib.MakeFsLib("test-rclnt")
-//		assert.Nil(ts.T, err)
-//		rclnt := realm.MakeRealmClntFsl(fsl, ts.ProcClnt)
-//		// While we are missing cores, try to grow.
-//		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
-//			rclnt.GrowRealm(ts.RealmId())
-//		}
-//		// Sleep for a bit, so procclnts will take note of the change.
-//		time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
-//		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-//		n, _, err := pdc.Nprocd()
-//		assert.Nil(ts.T, err, "Err %v", err)
-//		db.DPrintf(db.TEST, "Pre-grew realm, now running with %v procds", n)
-//	}
-//}
-
 // ========== Dir Helpers ==========
 
 func makeOutDir(ts *test.RealmTstate) {

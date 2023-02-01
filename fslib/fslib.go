@@ -19,14 +19,6 @@ func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr sp.Taddr
 		realm, namedAddr}
 }
 
-func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
-	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
-		return fl.Mount(fd, mount)
-	} else {
-		return err
-	}
-}
-
 func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs []string) (*FsLib, error) {
 	fl := MakeFsLibBase(uname, r, lip, addrs)
 	err := fl.MountTree(addrs, "", "name")
@@ -59,6 +51,14 @@ func (fl *FsLib) NamedAddr() sp.Taddrs {
 
 func (fl *FsLib) Realm() sp.Trealm {
 	return fl.realm
+}
+
+func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
+	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
+		return fl.Mount(fd, mount)
+	} else {
+		return err
+	}
 }
 
 func (fl *FsLib) Exit() error {

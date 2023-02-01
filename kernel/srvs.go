@@ -61,6 +61,10 @@ func (k *Kernel) SetCPUShares(pid proc.Tpid, shares int64) error {
 	return k.svcs.svcMap[pid].SetCPUShares(shares)
 }
 
+func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
+	return k.svcs.svcMap[pid].GetCPUUtil()
+}
+
 func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()

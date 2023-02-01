@@ -65,6 +65,10 @@ func (ss *Subsystem) SetCPUShares(shares int64) error {
 	return ss.container.SetCPUShares(shares)
 }
 
+func (ss *Subsystem) GetCPUUtil() (float64, error) {
+	return ss.container.GetCPUUtil()
+}
+
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }

@@ -39,10 +39,11 @@ func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
 }
 
 func (ks *KernelSrv) SetCPUShares(req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
-	if err := ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares); err != nil {
-		return err
-	}
-	return nil
+	return ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares)
+}
+
+func (ks *KernelSrv) GetCPUUtil(req proto.GetCPUUtilRequest, rep *proto.GetCPUUtilResponse) (float64, error) {
+	return ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
 }
 
 func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
@@ -54,8 +55,5 @@ func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResu
 }
 
 func (ks *KernelSrv) Kill(req proto.KillRequest, rep *proto.KillResult) error {
-	if err := ks.k.KillOne(req.Name); err != nil {
-		return err
-	}
-	return nil
+	return ks.k.KillOne(req.Name)
 }

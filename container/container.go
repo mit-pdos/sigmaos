@@ -32,6 +32,18 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	return err
 }
 
+func (c *Container) GetCPUUtil() (float64, error) {
+	resp, err := c.cli.ContainerStats(c.ctx, c.container, true)
+	// TODO: parse stats, and calculate CPU util.
+	// TODO: should we use ContainerStats, or ContainerStatsOneShot?
+	db.DFatalf("Unimplemented")
+	_ = resp
+	if err != nil {
+		return 0.0, err
+	}
+	return 0.0, nil
+}
+
 func (c *Container) String() string {
 	return c.container[:10]
 }

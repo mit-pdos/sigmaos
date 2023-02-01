@@ -5,11 +5,11 @@ import (
 	"reflect"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/protdev"
 	"sigmaos/sessdevsrv"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -44,8 +44,8 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	return MakeProtDevSrvMemFs(mfs, svci)
 }
 
-func MakeProtDevSrvPriv(fn string, fsl *fslib.FsLib, svci any) (*ProtDevSrv, error) {
-	mfs, error := memfssrv.MakeMemFsLib(fn, fsl)
+func MakeProtDevSrvPriv(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFsClnt(fn, sc)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

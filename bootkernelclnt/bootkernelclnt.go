@@ -44,7 +44,7 @@ func MkKernelClntStart(name string, conf string, namedAddr sp.Taddrs) (*Kernel, 
 }
 
 func MkKernelClnt(name string, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
-	sc, err := sigmaclnt.MkSigmaClntProc(name, ip, namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntRootInit(name, ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}

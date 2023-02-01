@@ -15,29 +15,26 @@ type SigmaClnt struct {
 	*procclnt.ProcClnt
 }
 
-func MkSigmaClntProc(name string, ip string, namedAddr []string) (*SigmaClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr(name, ip, namedAddr)
-	if err != nil {
-		return nil, err
-	}
-	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, name)
-	return &SigmaClnt{fsl, pclnt}, nil
-}
-
-func MkSigmaClnt(name string) (*SigmaClnt, error) {
+func MkSigmaClntFsLib(name string) (*SigmaClnt, error) {
 	fsl, err := fslib.MakeFsLib(name)
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
 	}
-	pclnt := procclnt.MakeProcClnt(fsl)
-	return &SigmaClnt{fsl, pclnt}, nil
-}
-
-func MkSigmaFsLib(fsl *fslib.FsLib) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, nil}, nil
 }
 
-func MkSigmaClntRealm(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
+// Only to be called by procs (uses SIGMAREALM env variable, and expects realm
+// namespace to be set up for this proc, e.g. procdir).
+func MkSigmaClnt(name string) (*SigmaClnt, error) {
+	sc, err := MkSigmaClntFsLib(name)
+	if err != nil {
+		db.DFatalf("MkSigmaClnt: %v", err)
+	}
+	sc.ProcClnt = procclnt.MakeProcClnt(sc.FsLib)
+	return sc, nil
+}
+
+func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)
 	if err != nil {
@@ -52,12 +49,23 @@ func MkSigmaClntRealm(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*Sigm
 	return &SigmaClnt{realm, nil}, nil
 }
 
-func MkSigmaClntRealmProc(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
+func MkSigmaClntRealm(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	db.DPrintf(db.REALMCLNT, "MkSigmaClntRealmProc %v\n", rid)
-	sc, err := MkSigmaClntRealm(rootfsl, name, rid)
+	sc, err := MkSigmaClntRealmFsLib(rootfsl, name, rid)
 	if err != nil {
 		return nil, err
 	}
 	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, name)
 	return sc, nil
+}
+
+// Only to be used by non-procs (tests, and linux processes), and creates a
+// sigmaclnt for the root realm.
+func MkSigmaClntRootInit(name string, ip string, namedAddr []string) (*SigmaClnt, error) {
+	fsl, err := fslib.MakeFsLibAddr(name, ip, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, name)
+	return &SigmaClnt{fsl, pclnt}, nil
 }

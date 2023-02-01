@@ -22,7 +22,7 @@ func MakeRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
 		db.DFatalf("Error MakeRealmTstate: %v", err)
 	}
 	var sc *sigmaclnt.SigmaClnt
-	if sc, err = sigmaclnt.MkSigmaClntRealmProc(ts.FsLib, "test"+realm.String(), realm); err != nil {
+	if sc, err = sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test"+realm.String(), realm); err != nil {
 		db.DFatalf("Error MakeRealmTstate: %v", err)
 	}
 	return &RealmTstate{

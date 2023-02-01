@@ -5,7 +5,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
@@ -55,11 +54,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	if isInitNamed {
 		// Server is running, make an fslib for it, mounting itself, to ensure that
 		// srv can call checkLock
-		fsl, err := fslib.MakeFsLib(name)
-		if err != nil {
-			return nil, serr.MkErrError(err)
-		}
-		sc, err := sigmaclnt.MkSigmaFsLib(fsl)
+		sc, err := sigmaclnt.MkSigmaClntFsLib(name)
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
@@ -99,12 +94,4 @@ func MakeMemFsClnt(pn string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
 	fs.root = root
 	fs.ctx = ctx.MkCtx(pn, 0, nil)
 	return fs, err
-}
-
-func MakeMemFsLib(pn string, fsl *fslib.FsLib) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaFsLib(fsl)
-	if err != nil {
-		return nil, err
-	}
-	return MakeMemFsClnt(pn, sc)
 }

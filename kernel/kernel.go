@@ -67,7 +67,7 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 		p.Services = p.Services[1:]
 	}
 	proc.SetSigmaNamed(k.namedAddr)
-	sc, err := sigmaclnt.MkSigmaClntProc("kernel", ip, k.namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntRootInit("kernel", ip, k.namedAddr)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc (%v): %v", k.namedAddr, err)
 		return nil, err

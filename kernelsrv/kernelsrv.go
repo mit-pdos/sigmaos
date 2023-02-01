@@ -42,8 +42,13 @@ func (ks *KernelSrv) SetCPUShares(req proto.SetCPUSharesRequest, rep *proto.SetC
 	return ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares)
 }
 
-func (ks *KernelSrv) GetKernelSrvCPUUtil(req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) (float64, error) {
-	return ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
+func (ks *KernelSrv) GetCPUUtil(req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
+	util, err := ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
+	if err != nil {
+		return err
+	}
+	rep.Util = util
+	return nil
 }
 
 func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResult) error {

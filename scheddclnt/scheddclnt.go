@@ -8,14 +8,18 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	"sigmaos/schedd/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocclnt"
 )
 
 type ScheddClnt struct {
 	done  int32
 	realm sp.Trealm
 	*sigmaclnt.SigmaClnt
+	schedds map[string]*protdevclnt.ProtDevClnt
 }
 
 type Tload [2]int
@@ -24,15 +28,8 @@ func (t Tload) String() string {
 	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
-func nschedd(sts []*sp.Stat) int {
-	if len(sts) == 0 {
-		return 0
-	}
-	return len(sts)
-}
-
 func MakeScheddClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *ScheddClnt {
-	return &ScheddClnt{0, realm, sc}
+	return &ScheddClnt{0, realm, sc, make(map[string]*protdevclnt.ProtDevClnt)}
 }
 
 func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
@@ -56,14 +53,14 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
-	sts, err := sdc.GetDir(sp.SCHEDD)
+	sds, err := sdc.getSchedds()
 	if err != nil {
 		return 0, nil, err
 	}
-	r := nschedd(sts)
+	r := len(sds)
 	sdloads := make([]Tload, 0, r)
-	for _, st := range sts {
-		sdpath := path.Join(sp.SCHEDD, st.Name, sp.RUNNING)
+	for _, sd := range sds {
+		sdpath := path.Join(sp.SCHEDD, sd, sp.RUNNING)
 		nproc, err := sdc.Nprocs(path.Join(sdpath, sp.RUNNING))
 		if err != nil {
 			return r, nil, err
@@ -100,6 +97,56 @@ func (sdc *ScheddClnt) MonitorSchedds() {
 	}()
 }
 
+// Return the CPU shares assigned to this realm, and the total CPU shares in
+// the cluster
+func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.Tshare) {
+	// Total CPU shares in the system
+	total = 0
+	// Target realm's share
+	rshare = 0
+	// Get list of schedds
+	sds, err := sdc.getSchedds()
+	if err != nil {
+		db.DFatalf("Error getSchedds: %v", err)
+	}
+	for _, sd := range sds {
+		// Get the CPU shares on this schedd.
+		req := &proto.GetCPUSharesRequest{}
+		res := &proto.GetCPUSharesResponse{}
+		err := sdc.getScheddClnt(sd).RPC("Schedd.GetCPUShares", req, res)
+		if err != nil {
+			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
+		}
+		rshare += uprocclnt.Tshare(res.Shares[sdc.realm.String()])
+		for _, share := range res.Shares {
+			total += uprocclnt.Tshare(share)
+		}
+	}
+	return rshare, total
+}
+
 func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
+}
+
+func (sdc *ScheddClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
+	var pdc *protdevclnt.ProtDevClnt
+	var ok bool
+	if pdc, ok = sdc.schedds[scheddIp]; !ok {
+		var err error
+		pdc, err = protdevclnt.MkProtDevClnt(sdc.FsLib, path.Join(sp.SCHEDD, scheddIp))
+		if err != nil {
+			db.DFatalf("Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
+			return nil
+		}
+	}
+	return pdc
+}
+
+func (sdc *ScheddClnt) getSchedds() ([]string, error) {
+	sts, err := sdc.GetDir(sp.SCHEDD)
+	if err != nil {
+		return nil, err
+	}
+	return sp.Names(sts), nil
 }

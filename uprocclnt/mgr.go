@@ -145,6 +145,8 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 		for _, pdc := range m {
 			pdcs = append(pdcs, pdc)
 		}
+	} else {
+		db.DPrintf(db.UPROCDMGR, "No procs from realm %v", realm)
 	}
 	updm.mu.Unlock()
 
@@ -154,9 +156,10 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	for _, pdc := range pdcs {
 		util, err := updm.kclnt.GetCPUUtil(pdc.pid)
 		if err != nil {
-			db.DFatalf("error GetCPUUtil: %v", err)
+			db.DFatalf("Error GetCPUUtil: %v", err)
 		}
 		total += util
+		db.DPrintf(db.UPROCDMGR, "[%v] CPU util pid:%v util:%v", realm, pdc.pid, util)
 	}
 	return total
 }

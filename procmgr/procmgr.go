@@ -83,6 +83,10 @@ func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {
 	return mgr.updm.GetCPUShares()
 }
 
+func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
+	return mgr.updm.GetCPUUtil(realm)
+}
+
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	mgr.Lock()
 	defer mgr.Unlock()

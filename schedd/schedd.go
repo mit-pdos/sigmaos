@@ -84,6 +84,15 @@ func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUS
 	return nil
 }
 
+// Steal a proc from this schedd.
+func (sd *Schedd) GetCPUUtil(req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	res.Util = sd.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
+	return nil
+}
+
 func (sd *Schedd) procDone(p *proc.Proc) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()

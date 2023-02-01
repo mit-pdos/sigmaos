@@ -5,6 +5,7 @@ import (
 	"path"
 	"sync"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
@@ -132,6 +133,16 @@ func (updm *UprocdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 		}
 	}
 	return smap
+}
+
+// Return the CPU utilization of a realm.
+func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
+	updm.mu.Lock()
+	defer updm.mu.Unlock()
+
+	// TODO
+	db.DFatalf("Unimplemented")
+	return 0.0
 }
 
 func (updm *UprocdMgr) String() string {

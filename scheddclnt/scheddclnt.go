@@ -1,7 +1,6 @@
 package scheddclnt
 
 import (
-	//"encoding/json"
 	"fmt"
 	"path"
 	"sync/atomic"
@@ -10,7 +9,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	//"sigmaos/proc"
 )
 
 type ScheddClnt struct {
@@ -25,12 +23,11 @@ func (t Tload) String() string {
 	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
-// -1 for ws directory
 func nschedd(sts []*sp.Stat) int {
 	if len(sts) == 0 {
 		return 0
 	}
-	return len(sts) - 1
+	return len(sts)
 }
 
 func MakeScheddClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *ScheddClnt {

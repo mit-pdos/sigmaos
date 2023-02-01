@@ -10,7 +10,6 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/perf"
-	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/test"
 )
@@ -48,7 +47,7 @@ func printResultSummary(rs *benchmarks.Results) {
 }
 
 // Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.RealmTstate, nClusterCores proc.Tcore) *perf.Perf {
+func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
 	p, err := perf.MakePerfMulti(perf.BENCH, ts.GetRealm().String())
 	assert.Nil(ts.T, err)
 
@@ -56,8 +55,11 @@ func monitorCoresAssigned(ts *test.RealmTstate, nClusterCores proc.Tcore) *perf.
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
 			percent := sdc.GetCPUUtil()
+			// Returns CPU util as a percentage. To get number of cores utilized,
+			// divide by 100.
+			ncores := percent / 100.0
 			// Total CPU utilized by this realm (in cores).
-			p.TptTick(float64(percent) * float64(nClusterCores))
+			p.TptTick(ncores)
 			time.Sleep(1 * time.Second)
 		}
 	}()

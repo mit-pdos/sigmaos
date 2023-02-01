@@ -2,6 +2,8 @@ package container
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"os"
 
 	"github.com/docker/docker/api/types"
@@ -33,15 +35,34 @@ func (c *Container) SetCPUShares(cpu int64) error {
 }
 
 func (c *Container) GetCPUUtil() (float64, error) {
-	resp, err := c.cli.ContainerStats(c.ctx, c.container, true)
-	// TODO: parse stats, and calculate CPU util.
 	// TODO: should we use ContainerStats, or ContainerStatsOneShot?
-	db.DFatalf("Unimplemented")
-	_ = resp
+	resp, err := c.cli.ContainerStats(c.ctx, c.container, true)
 	if err != nil {
+		db.DFatalf("Error ContainerStats: %v", err)
 		return 0.0, err
 	}
-	return 0.0, nil
+	// Read the response
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		db.DFatalf("Error ReadAll: %v", err)
+		return 0.0, err
+	}
+	resp.Body.Close()
+	st := &types.Stats{}
+	err = json.Unmarshal(b, st)
+	if err != nil {
+		db.DFatalf("Error Unmarshal: %v", err)
+		return 0.0, err
+	}
+	// CPU util calculation taken from
+	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
+	cpuPercent := 0.0
+	cpuDelta := float64(st.CPUStats.CPUUsage.TotalUsage) - float64(st.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(st.CPUStats.SystemUsage) - float64(st.PreCPUStats.SystemUsage)
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(st.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent, nil
 }
 
 func (c *Container) String() string {

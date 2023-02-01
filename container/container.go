@@ -12,13 +12,15 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 
 	db "sigmaos/debug"
+	"sigmaos/linuxsched"
 )
 
 type Container struct {
-	ctx       context.Context
-	cli       *client.Client
-	container string
-	ip        string
+	ctx          context.Context
+	cli          *client.Client
+	container    string
+	ip           string
+	prevCPUStats *types.CPUStats
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {
@@ -35,8 +37,15 @@ func (c *Container) SetCPUShares(cpu int64) error {
 }
 
 func (c *Container) GetCPUUtil() (float64, error) {
-	// TODO: should we use ContainerStats, or ContainerStatsOneShot?
-	resp, err := c.cli.ContainerStats(c.ctx, c.container, false)
+	var resp types.ContainerStats
+	var err error
+	if c.prevCPUStats == nil {
+		// Wait for docker to "prime the stats" on the first attempt to read CPU
+		// util.
+		resp, err = c.cli.ContainerStats(c.ctx, c.container, false)
+	} else {
+		resp, err = c.cli.ContainerStatsOneShot(c.ctx, c.container)
+	}
 	if err != nil {
 		db.DFatalf("Error ContainerStats: %v", err)
 		return 0.0, err
@@ -54,14 +63,21 @@ func (c *Container) GetCPUUtil() (float64, error) {
 		db.DFatalf("Error Unmarshal: %v", err)
 		return 0.0, err
 	}
+	if c.prevCPUStats == nil {
+		c.prevCPUStats = &st.PreCPUStats
+	}
 	// CPU util calculation taken from
 	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
 	cpuPercent := 0.0
-	cpuDelta := float64(st.CPUStats.CPUUsage.TotalUsage) - float64(st.PreCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(st.CPUStats.SystemUsage) - float64(st.PreCPUStats.SystemUsage)
+	cpuDelta := float64(st.CPUStats.CPUUsage.TotalUsage) - float64(c.prevCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(st.CPUStats.SystemUsage) - float64(c.prevCPUStats.SystemUsage)
+	db.DPrintf(db.CONTAINER, "sysdelta %v cpudelta %v percpuUsage %v\nstats %v", systemDelta, cpuDelta, st.CPUStats.CPUUsage.PercpuUsage, st)
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
-		cpuPercent = (cpuDelta / systemDelta) * float64(len(st.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+		cpuPercent = (cpuDelta / systemDelta) * float64(linuxsched.NCores) * 100.0
+	} else {
+		db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", systemDelta, cpuDelta)
 	}
+	c.prevCPUStats = &st.CPUStats
 	return cpuPercent, nil
 }
 

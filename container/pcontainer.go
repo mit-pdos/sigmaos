@@ -40,5 +40,5 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	return &Container{ctx, cli, resp.ID, ip}, nil
+	return &Container{ctx, cli, resp.ID, ip, nil}, nil
 }

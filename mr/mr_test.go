@@ -20,8 +20,8 @@ import (
 	"sigmaos/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
+	"sigmaos/scheddclnt"
 	"sigmaos/seqwc"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
@@ -280,10 +280,10 @@ func (ts *Tstate) checkJob() {
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.Realm())
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.Realm())
 	if monitor {
-		pdc.MonitorProcds()
-		defer pdc.Done()
+		sdc.MonitorSchedds()
+		defer sdc.Done()
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)

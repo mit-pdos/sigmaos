@@ -12,7 +12,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/proc"
-	"sigmaos/procdclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -356,24 +355,6 @@ func (c *Coord) Round(ttype string) {
 	}
 }
 
-func (c *Coord) monitorProcds() {
-	if true {
-		return
-	}
-	// XXX fix
-	pdc := procdclnt.MakeProcdClnt(c.FsLib, "")
-	n := 0
-	for atomic.LoadInt32(&c.done) == 0 {
-		m, err := pdc.WaitProcdChange(n)
-		if err != nil && atomic.LoadInt32(&c.done) == 0 {
-			db.DFatalf("WaitProcdChange err %v\n", err)
-		}
-
-		db.DPrintf(db.ALWAYS, "nprocd = %d\n", m)
-		n = m
-	}
-}
-
 func (c *Coord) Work() {
 	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
 	// Try to become the leading coordinator.  If we get
@@ -382,8 +363,6 @@ func (c *Coord) Work() {
 	c.electclnt.AcquireLeadership(nil)
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
-
-	go c.monitorProcds()
 
 	c.recover(MapTask(c.job))
 	c.recover(ReduceTask(c.job))

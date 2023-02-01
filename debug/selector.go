@@ -74,6 +74,7 @@ const (
 	UPROCD                = "UPROCD"
 	SCHEDD                = "SCHEDD"
 	SCHEDD_ERR            = "SCHEDD" + ERR
+	SCHEDD_CLNT           = "SCHEDDCLNT"
 	PROCMGR_ERR           = PROCMGR + ERR
 	PROCCACHE             = "PROCCACHE"
 	S3                    = "S3"

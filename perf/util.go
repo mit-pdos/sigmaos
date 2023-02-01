@@ -94,7 +94,7 @@ func MakePerf(s Tselector) (*Perf, error) {
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(s Tselector, s2 Tselector) (*Perf, error) {
+func MakePerfMulti(s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -116,7 +116,7 @@ func MakePerfMulti(s Tselector, s2 Tselector) (*Perf, error) {
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
 	if s2 != "" {
-		basePath += "-" + string(s2)
+		basePath += "-" + s2
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF]; ok {

@@ -75,6 +75,12 @@ func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUS
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
+	sm := sd.pmgr.GetCPUShares()
+	smap := make(map[string]int64, len(sm))
+	for r, s := range sm {
+		smap[r.String()] = int64(s)
+	}
+	res.Shares = smap
 	return nil
 }
 

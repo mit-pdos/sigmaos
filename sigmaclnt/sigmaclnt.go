@@ -15,6 +15,7 @@ type SigmaClnt struct {
 	*procclnt.ProcClnt
 }
 
+// Create only an FsLib, as a proc.
 func MkSigmaClntFsLib(name string) (*SigmaClnt, error) {
 	fsl, err := fslib.MakeFsLib(name)
 	if err != nil {
@@ -34,6 +35,7 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 	return sc, nil
 }
 
+// Create only an FsLib, relative to a realm.
 func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)
@@ -49,6 +51,7 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (
 	return &SigmaClnt{realm, nil}, nil
 }
 
+// Create a full sigmaclnt relative to a realm (fslib and procclnt)
 func MkSigmaClntRealm(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	db.DPrintf(db.REALMCLNT, "MkSigmaClntRealmProc %v\n", rid)
 	sc, err := MkSigmaClntRealmFsLib(rootfsl, name, rid)

@@ -7,6 +7,7 @@ option go_package = "sigmaos/schedd/proto";
 service Schedd {
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
   rpc StealProc(StealProcRequest) returns (StealProcResponse);
+  rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
 }
 
 
@@ -26,4 +27,11 @@ message StealProcRequest {
 
 message StealProcResponse {
   bool oK = 1;
+}
+
+message GetCPUSharesRequest {
+}
+
+message GetCPUSharesResponse {
+  map<string, int64> shares = 1;
 }

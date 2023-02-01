@@ -119,6 +119,21 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
+// Return the CPU shares allocated to each realm.
+func (updm *UprocdMgr) GetCPUShares() map[sp.Trealm]Tshare {
+	updm.mu.Lock()
+	defer updm.mu.Unlock()
+
+	smap := make(map[sp.Trealm]Tshare, len(updm.pdcms))
+	for r, pdcm := range updm.pdcms {
+		smap[r] = 0
+		for _, pdc := range pdcm {
+			smap[r] += pdc.share
+		}
+	}
+	return smap
+}
+
 func (updm *UprocdMgr) String() string {
 	clnts := make([]*UprocdClnt, 0)
 	for _, m := range updm.pdcms {

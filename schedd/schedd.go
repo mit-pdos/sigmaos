@@ -70,6 +70,14 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 	return nil
 }
 
+// Steal a proc from this schedd.
+func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	return nil
+}
+
 func (sd *Schedd) procDone(p *proc.Proc) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()

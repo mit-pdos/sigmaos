@@ -79,6 +79,10 @@ func (mgr *ProcMgr) GetWSQueue(ptype proc.Ttype) (map[sp.Trealm][]*proc.Proc, bo
 	return mgr.getWSQueue(getWSQueuePath(ptype))
 }
 
+func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {
+	return mgr.updm.GetCPUShares()
+}
+
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	mgr.Lock()
 	defer mgr.Unlock()

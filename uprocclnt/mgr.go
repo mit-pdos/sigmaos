@@ -137,20 +137,26 @@ func (updm *UprocdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 
 // Return the CPU utilization of a realm.
 func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
+	// Get the protdevclnts relevant to this realm
 	updm.mu.Lock()
-	defer updm.mu.Unlock()
+	var pdcs []*UprocdClnt
+	if m, ok := updm.pdcms[realm]; ok {
+		pdcs = make([]*UprocdClnt, 0, len(m))
+		for _, pdc := range m {
+			pdcs = append(pdcs, pdc)
+		}
+	}
+	updm.mu.Unlock()
 
 	var total float64 = 0.0
 
 	// Get CPU util for BE & LC uprocds, if there are any.
-	if m, ok := updm.pdcms[realm]; ok {
-		for _, pdc := range m {
-			util, err := updm.kclnt.GetCPUUtil(pdc.pid)
-			if err != nil {
-				db.DFatalf("error GetCPUUtil: %v", err)
-			}
-			total += util
+	for _, pdc := range pdcs {
+		util, err := updm.kclnt.GetCPUUtil(pdc.pid)
+		if err != nil {
+			db.DFatalf("error GetCPUUtil: %v", err)
 		}
+		total += util
 	}
 	return total
 }

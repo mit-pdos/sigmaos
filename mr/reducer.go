@@ -105,7 +105,7 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 	// Make new fslib to parallelize request to a single fsux
 	sc, err := sigmaclnt.MkSigmaClntFsLib("r-" + file + r.input)
 	if err != nil {
-		db.DPrintf(db.MR, "MakeFsLibAddr err %v", err)
+		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false
 	}
 	defer sc.Exit()

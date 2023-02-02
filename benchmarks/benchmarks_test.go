@@ -368,6 +368,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	}()
 	// Wait for hotel jobs to set up.
 	<-hotelJobs[0].ready
+	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run MR job
 	go func() {
 		runOps(ts1, mrapps, runMR, rs1)
@@ -375,6 +376,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	}()
 	// Wait for MR jobs to set up.
 	<-mrjobs[0].ready
+	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	//	// Sleep for a bit

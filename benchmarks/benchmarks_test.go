@@ -225,7 +225,7 @@ func TestAppKVRepl(t *testing.T) {
 func TestRealmBurst(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	ncores := countClusterCores(rootts)
+	ncores := countClusterCores(rootts) - 1
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	makeOutDir(ts1)
 	// Find the total number of cores available for spinners across all machines.

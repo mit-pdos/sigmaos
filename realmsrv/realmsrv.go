@@ -48,7 +48,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
-	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
+	p := proc.MakePrivProcPid(proc.GenPid(), "named", []string{":0", req.Realm, pn}, true)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {
 		return errs[0]
 	}

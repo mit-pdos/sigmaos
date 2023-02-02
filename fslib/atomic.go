@@ -13,7 +13,7 @@ func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error 
 	tmpName := fname + rand.String(16)
 	_, err := fsl.PutFile(tmpName, perm, sp.OWRITE, data)
 	if err != nil {
-		db.DFatalf("MakeFileAtomic %v: %v", tmpName, err)
+		db.DFatalf("MakeFileAtomic %v %v: %v", fname, tmpName, err)
 		return err
 	}
 	err = fsl.Rename(tmpName, fname)

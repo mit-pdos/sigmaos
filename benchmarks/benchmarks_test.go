@@ -427,13 +427,17 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	<-mrjobs1[0].ready
 	// Kick off MR jobs.
 	mrjobs2[0].ready <- true
-	//	// Sleep for a bit
+	db.DPrintf(db.TEST, "Start MR job 1")
+	// Sleep for a bit
 	time.Sleep(SLEEP)
+	db.DPrintf(db.TEST, "Start MR job 2")
 	// Kick off hotel jobs
 	mrjobs1[0].ready <- true
 	// Wait for both jobs to finish.
 	<-done
+	db.DPrintf(db.TEST, "Done MR job 1")
 	<-done
+	db.DPrintf(db.TEST, "Done MR job 2")
 	printResultSummary(rs1)
 	rootts.Shutdown()
 }

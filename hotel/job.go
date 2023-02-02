@@ -44,7 +44,7 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	}
 }
 
-var HotelSvcs = []string{"hotel-userd", "hotel-rated",
+var HotelSvcs = []string{ /*"fwd",*/ "hotel-userd", "hotel-rated",
 	"hotel-geod", "hotel-profd", "hotel-searchd",
 	"hotel-reserved", "hotel-recd", "hotel-wwwd"}
 

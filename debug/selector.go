@@ -64,24 +64,25 @@ const (
 
 // Kernel
 const (
-	KERNEL      Tselector = "KERNEL"
-	BOOTCLNT              = "BOOTCLNT"
-	BOOT                  = "BOOT"
-	CONTAINER             = "CONTAINER"
-	NAMED                 = "NAMED"
-	PROCMGR               = "PROCMGR"
-	UPROCDMGR             = "UPROCDMGR"
-	UPROCD                = "UPROCD"
-	SCHEDD                = "SCHEDD"
-	SCHEDD_ERR            = "SCHEDD" + ERR
-	SCHEDDCLNT            = "SCHEDDCLNT"
-	PROCMGR_ERR           = PROCMGR + ERR
-	PROCCACHE             = "PROCCACHE"
-	S3                    = "S3"
-	UX                    = "UX"
-	DB                    = "DB"
-	PROXY                 = "PROXY"
-	FW                    = "FW"
+	KERNEL         Tselector = "KERNEL"
+	BOOTCLNT                 = "BOOTCLNT"
+	BOOT                     = "BOOT"
+	CONTAINER                = "CONTAINER"
+	NAMED                    = "NAMED"
+	PROCMGR                  = "PROCMGR"
+	UPROCDMGR                = "UPROCDMGR"
+	UPROCD                   = "UPROCD"
+	SCHEDD                   = "SCHEDD"
+	SCHEDD_ERR               = "SCHEDD" + ERR
+	SCHEDDCLNT               = "SCHEDDCLNT"
+	SCHEDDCLNT_ERR           = "SCHEDDCLNT" + ERR
+	PROCMGR_ERR              = PROCMGR + ERR
+	PROCCACHE                = "PROCCACHE"
+	S3                       = "S3"
+	UX                       = "UX"
+	DB                       = "DB"
+	PROXY                    = "PROXY"
+	FW                       = "FW"
 )
 
 // Realm

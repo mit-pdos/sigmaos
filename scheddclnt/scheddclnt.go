@@ -125,13 +125,14 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 	return rshare, total
 }
 
-func (sdc *ScheddClnt) GetCPUUtil() float64 {
+func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
 	sds, err := sdc.getSchedds()
 	if err != nil {
-		db.DFatalf("Error getSchedds: %v", err)
+		db.DPrintf(db.SCHEDDCLNT_ERR, "Error getSchedds: %v", err)
+		return 0, err
 	}
 	for _, sd := range sds {
 		// Get the CPU shares on this schedd.
@@ -139,11 +140,12 @@ func (sdc *ScheddClnt) GetCPUUtil() float64 {
 		res := &proto.GetCPUUtilResponse{}
 		err := sdc.getScheddClnt(sd).RPC("Schedd.GetCPUUtil", req, res)
 		if err != nil {
-			db.DFatalf("Error GetCPUUtil RPC [schedd:%v]: %v", sd, err)
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil: %v", err)
+			return 0, err
 		}
 		total += res.Util
 	}
-	return total
+	return total, nil
 }
 
 func (sdc *ScheddClnt) Done() {

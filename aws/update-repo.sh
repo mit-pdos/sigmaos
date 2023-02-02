@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
     VPC=$1
     shift
     ;;
-  -n)
+  --n)
     shift
     N_VM=$1
     shift

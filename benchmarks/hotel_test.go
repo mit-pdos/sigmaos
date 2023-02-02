@@ -34,6 +34,7 @@ type HotelJobInstance struct {
 	job        string
 	dur        []time.Duration
 	maxrps     []int
+	ncache     int
 	ready      chan bool
 	fn         hotelFn
 	pids       []proc.Tpid
@@ -43,7 +44,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -51,6 +52,7 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 	ji.fn = fn
 	ji.RealmTstate = ts
 	ji.justCli = justCli
+	ji.ncache = ncache
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -69,11 +71,9 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 	}
 
 	var err error
-	var ncache int
 	var svcs []string
 	if sigmaos {
 		svcs = hotel.HotelSvcs
-		ncache = hotel.NCACHE
 	}
 
 	if ji.justCli {
@@ -119,7 +119,7 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

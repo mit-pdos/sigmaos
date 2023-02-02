@@ -347,7 +347,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
-	// Structure for kv
+	// Structure for hotel
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job

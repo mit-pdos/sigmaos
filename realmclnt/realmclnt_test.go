@@ -316,13 +316,13 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-1, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
-	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
@@ -350,13 +350,13 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-3, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
-	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-3), linuxsched.NCores-3, N_ITER, "lcspin")
+	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-3, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC

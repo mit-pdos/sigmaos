@@ -290,7 +290,7 @@ func TestRealmBurst(t *testing.T) {
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
-	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 2)
+	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
 	p := monitorCoresAssigned(ts1)
 	defer p.Done()
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)

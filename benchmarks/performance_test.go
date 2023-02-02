@@ -64,7 +64,7 @@ func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
 			ncores := perc / 100.0
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}()
 

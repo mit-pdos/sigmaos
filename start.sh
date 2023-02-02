@@ -94,7 +94,6 @@ IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
 if [ -z  ${IP} ]; then
     # running with --network bridge; find out what host's IP is.
     IP=$(ip route get 8.8.8.8 | head -1 | cut -d ' ' -f 7)
-    echo $IP
 fi
 
 # XXX maybe use mount to see if name is up

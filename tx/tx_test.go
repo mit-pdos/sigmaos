@@ -42,7 +42,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	db.Name("tx_test")
-	ts.FsLib, err = fslib.MakeFsLibAddr("txtest", cfg.NamedAddrs)
+	ts.FsLib, err = fslib.MakeFsLibAddr("txtest", sp.ROOTREALM, cfg.NamedAddrs)
 	assert.Nil(t, err)
 	ts.t = t
 

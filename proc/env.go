@@ -119,8 +119,8 @@ func GetSigmaRootFs() string {
 	return os.Getenv(SIGMAROOTFS)
 }
 
-func GetRealm() string {
-	return os.Getenv(SIGMAREALM)
+func GetRealm() sp.Trealm {
+	return sp.Trealm(os.Getenv(SIGMAREALM))
 }
 
 func GetSigmaPath() string {

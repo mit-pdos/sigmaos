@@ -106,7 +106,7 @@ func TestMakeSnapshotSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	takeSnapshot(ts, fsl1, pid)
 
@@ -123,7 +123,7 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	// Fence the memfs
 	fenceMemfs(ts, fsl1, pid)
@@ -143,7 +143,7 @@ func TestRestoreSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "About to take snapshot")
 	b := takeSnapshot(ts, fsl1, pid)
@@ -165,7 +165,7 @@ func TestRestoreSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 
 	// Fence the memfs
@@ -201,7 +201,7 @@ func TestRestoreStateSimple(t *testing.T) {
 	// Check the state is there.
 	checkFiles(ts, N_FILES)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)
@@ -246,7 +246,7 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	sem1 := semclnt.MakeSemClnt(ts.FsLib, MUTEX_PATH)
 	sem1.Init(0777)
 
-	fsl2, err := fslib.MakeFsLibAddr("blocking-cli-2", ts.GetLocalIP(), ts.NamedAddr())
+	fsl2, err := fslib.MakeFsLibAddr("blocking-cli-2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	sem2 := semclnt.MakeSemClnt(fsl2, MUTEX_PATH)
 	done := make(chan bool)
@@ -260,7 +260,7 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	// Make sure to wait long enough for the other client to block server-side.
 	time.Sleep(1 * time.Second)
 
-	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.MakeFsLibAddr("test-fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	_, err = fsl1.Stat(path.Join(sp.MEMFS, pid2.String(), sp.SNAPDEV) + "/")
 	assert.Nil(ts.T, err, "Bad stat: %v", err)

@@ -113,7 +113,11 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUSharesRequest{}
 		res := &proto.GetCPUSharesResponse{}
-		err := sdc.getScheddClnt(sd).RPC("Schedd.GetCPUShares", req, res)
+		sclnt, err := sdc.getScheddClnt(sd)
+		if err != nil {
+			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
+		}
+		err = sclnt.RPC("Schedd.GetCPUShares", req, res)
 		if err != nil {
 			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
 		}
@@ -138,7 +142,12 @@ func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUUtilRequest{RealmStr: sdc.realm.String()}
 		res := &proto.GetCPUUtilResponse{}
-		err := sdc.getScheddClnt(sd).RPC("Schedd.GetCPUUtil", req, res)
+		sclnt, err := sdc.getScheddClnt(sd)
+		if err != nil {
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil getScheddClnt: %v", err)
+			return 0, err
+		}
+		err = sclnt.RPC("Schedd.GetCPUUtil", req, res)
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil: %v", err)
 			return 0, err
@@ -152,18 +161,18 @@ func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
+func (sdc *ScheddClnt) getScheddClnt(scheddIp string) (*protdevclnt.ProtDevClnt, error) {
 	var pdc *protdevclnt.ProtDevClnt
 	var ok bool
 	if pdc, ok = sdc.schedds[scheddIp]; !ok {
 		var err error
 		pdc, err = protdevclnt.MkProtDevClnt(sdc.FsLib, path.Join(sp.SCHEDD, scheddIp))
 		if err != nil {
-			db.DFatalf("Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
-			return nil
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
+			return nil, err
 		}
 	}
-	return pdc
+	return pdc, nil
 }
 
 func (sdc *ScheddClnt) getSchedds() ([]string, error) {

@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	// XXX Used for matrix tests before.
-	//	"fmt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/benchmarks"
@@ -93,65 +91,6 @@ func init() {
 const (
 	OUT_DIR = "name/out_dir"
 )
-
-// XXX Switch to spin.
-//// Length of time required to do a simple matrix multiplication.
-//func TestNiceMatMulBaseline(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	rootts.Shutdown()
-//}
-//
-//// Start a bunch of spinning procs to contend with one matmul task, and then
-//// see how long the matmul task took.
-//func TestNiceMatMulWithSpinners(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	makeOutDir(ts)
-//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-//	// Make some spinning procs to take up nContenders cores.
-//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
-//	// Burst-spawn BE procs
-//	spawnBurstProcs(ts, psSpin)
-//	// Wait for the procs to start
-//	waitStartProcs(ts, psSpin)
-//	// Make the LC proc.
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-//	// Spawn the LC procs
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	evictProcs(ts, psSpin)
-//	rmOutDir(ts)
-//	rootts.Shutdown()
-//}
-//
-//// Invert the nice relationship. Make spinners high-priority, and make matul
-//// low priority. This is intended to verify that changing priorities does
-//// actually affect application throughput for procs which have their priority
-//// lowered, and by how much.
-//func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	makeOutDir(ts)
-//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-//	// Make some spinning procs to take up nContenders cores. (AS LC)
-//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
-//	// Burst-spawn spinning procs
-//	spawnBurstProcs(ts, psSpin)
-//	// Wait for the procs to start
-//	waitStartProcs(ts, psSpin)
-//	// Make the matmul procs.
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
-//	// Spawn the matmul procs
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	evictProcs(ts, psSpin)
-//	rmOutDir(ts)
-//	rootts.Shutdown()
-//}
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {

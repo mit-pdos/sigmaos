@@ -293,7 +293,7 @@ func TestRealmBurst(t *testing.T) {
 	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 2)
 	p := monitorCoresAssigned(ts1)
 	defer p.Done()
-	runOps(ts1, []interface{}{p}, spawnBurstWaitStartProcs, rs)
+	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
 	rmOutDir(ts1)

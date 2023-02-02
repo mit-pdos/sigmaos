@@ -36,7 +36,7 @@ func init() {
 }
 
 type Tstate struct {
-	*test.RealmTstate
+	*test.Tstate
 	job  string
 	pids []proc.Tpid
 	cc   *cacheclnt.CacheClnt

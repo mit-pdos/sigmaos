@@ -23,7 +23,7 @@ func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 
 	cmd := exec.Command(uproc.Program, uproc.Args...)
-	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user")
+	uproc.AppendEnv("PATH", "/home/sigmaos/bin/user:/bin/:/usr/bin")
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

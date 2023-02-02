@@ -160,7 +160,7 @@ func (ji *HotelJobInstance) Wait() {
 		ji.printStats()
 		for _, pid := range ji.pids {
 			err := ji.Evict(pid)
-			assert.Nil(ji.T, err, "Evict: %v", err)
+			assert.Nil(ji.T, err, "Evict %v: %v", pid, err)
 			_, err = ji.WaitExit(pid)
 			assert.Nil(ji.T, err)
 		}

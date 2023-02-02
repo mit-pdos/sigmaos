@@ -196,7 +196,6 @@ func runKVTest(t *testing.T, nReplicas int) {
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
 	jobs, ji := makeNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

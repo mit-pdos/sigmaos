@@ -64,7 +64,7 @@ func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
 			ncores := perc / 100.0
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
-			db.DPrintf(db.TEST, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
 			time.Sleep(1 * time.Second)
 		}
 	}()

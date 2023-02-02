@@ -219,6 +219,44 @@ func TestEvictSingle(t *testing.T) {
 	rootts.Shutdown()
 }
 
+func TestEvictMultiRealm(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	// Make a second realm
+	test.MakeRealmTstate(rootts, REALM2)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+
+	sts1, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts1.Spawn(a)
+	assert.Nil(t, err, "Error spawn: %v", err)
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitstart")
+	err = ts1.WaitStart(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitstart")
+	assert.Nil(t, err, "waitstart error")
+
+	db.DPrintf(db.TEST, "Pre evict")
+	err = ts1.Evict(a.GetPid())
+	db.DPrintf(db.TEST, "Post evict")
+	assert.Nil(t, err, "evict error")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts1.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
+
+	rootts.Shutdown()
+}
+
 func TestSpinPerfCalibrate(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)

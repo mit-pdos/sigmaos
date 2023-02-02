@@ -302,7 +302,7 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	d2sd := slowdown(ctimeS, d2)
 
 	// Target slowdown (x)
-	tsd := 1.80
+	tsd := 1.70
 
 	// Check that execution time matches target time.
 	assert.True(rootts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))

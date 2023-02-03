@@ -26,12 +26,12 @@ func makeSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, config repl.Conf
 	return srv
 }
 
-func MakeSrv(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
+func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}
-	return MakeReplServerFsl(root, ip+":0", path, sc, nil)
+	return MakeReplServerFsl(root, ip+port, path, sc, nil)
 }
 
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {

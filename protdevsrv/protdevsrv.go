@@ -44,8 +44,16 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	return MakeProtDevSrvMemFs(mfs, svci)
 }
 
+func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
+	mfs, _, error := memfssrv.MakeMemFsPort(fn, ":"+port, "protdevsrv")
+	if error != nil {
+		db.DFatalf("protdevsrv.Run: %v\n", error)
+	}
+	return MakeProtDevSrvMemFs(mfs, svci)
+}
+
 func MakeProtDevSrvPriv(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
-	mfs, error := memfssrv.MakeMemFsClnt(fn, sc)
+	mfs, error := memfssrv.MakeMemFsSrvClnt(fn, ":0", sc)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}

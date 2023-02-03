@@ -5,11 +5,17 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+)
+
+const (
+	PORT = "1112"
 )
 
 func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
@@ -22,15 +28,35 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 	}
 	cmd := append([]string{p.Program}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE))
+	endpoints := make(map[string]*network.EndpointSettings, 1)
+	endpoints["sigmanet"] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image: image,
 			Cmd:   cmd,
 			Tty:   false,
 			Env:   p.GetEnv(),
+			ExposedPorts: nat.PortSet{
+				PORT + "/tcp": struct{}{},
+				"1113/tcp":    struct{}{},
+			},
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
-		}, nil, nil, "")
+			PortBindings: nat.PortMap{
+				PORT + "/tcp": []nat.PortBinding{
+					{
+						HostPort: PORT,
+					},
+				},
+				"1113/tcp": []nat.PortBinding{
+					{
+						HostPort: "1113",
+					},
+				},
+			},
+		}, &network.NetworkingConfig{
+			EndpointsConfig: endpoints,
+		}, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err

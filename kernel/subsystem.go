@@ -50,7 +50,7 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 			return err
 		}
 		// XXX don't hard code
-		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
 		c, err := container.StartPContainer(s.p, realm)
 		if err != nil {
@@ -58,7 +58,8 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 		}
 		s.container = c
 	}
-	return s.WaitStart(s.p.GetPid())
+	err := s.WaitStart(s.p.GetPid())
+	return err
 }
 
 func (ss *Subsystem) SetCPUShares(shares int64) error {

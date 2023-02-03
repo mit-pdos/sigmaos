@@ -7,6 +7,7 @@ RUN apt-get update
 RUN apt-get install libseccomp-dev
 RUN apt-get --yes install iputils-ping
 RUN apt-get --yes install iproute2
+RUN apt-get --yes install netcat-traditional
 RUN mkdir -p /home/sigmaos
 WORKDIR /home/sigmaos
 COPY go.mod ./

@@ -92,7 +92,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
 	// start server but don't publish its existence
-	mfs, err := memfssrv.MakeMemFsClnt("", bl.SigmaClnt)
+	mfs, err := memfssrv.MakeMemFsSrvClnt("", ":0", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}

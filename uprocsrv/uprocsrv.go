@@ -22,7 +22,7 @@ func RunUprocSrv(realm string, ptype proc.Ttype) error {
 	ups.ch = make(chan struct{})
 	pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype.String())
 	db.DPrintf(db.UPROCD, "%v: Run %v %s\n", proc.GetName(), pn, os.Environ())
-	pds, err := protdevsrv.MakeProtDevSrv(pn, ups)
+	pds, err := protdevsrv.MakeProtDevSrvPort(pn, container.PORT, ups)
 	if err != nil {
 		return err
 	}

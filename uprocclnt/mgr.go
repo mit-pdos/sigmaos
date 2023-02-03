@@ -2,6 +2,7 @@ package uprocclnt
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 
@@ -115,6 +116,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 	res := &proto.RunResult{}
 	if err := pdc.RPC("UprocSrv.Run", req, res); err != nil && serr.IsErrUnreachable(err) {
+		log.Printf("uprocsrv run err %v\n", err)
 		return err, nil
 	} else {
 		return nil, err

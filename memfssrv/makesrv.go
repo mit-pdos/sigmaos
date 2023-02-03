@@ -73,18 +73,22 @@ func MakeReplMemFsFsl(addr string, path string, sc *sigmaclnt.SigmaClnt, conf re
 }
 
 func MakeMemFs(pn string, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
+	return MakeMemFsPort(pn, ":0", name)
+}
+
+func MakeMemFsPort(pn, port string, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
 		return nil, nil, err
 	}
-	fs, err := MakeMemFsClnt(pn, sc)
+	fs, err := MakeMemFsSrvClnt(pn, port, sc)
 	return fs, sc, err
 }
 
-func MakeMemFsClnt(pn string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
+func MakeMemFsSrvClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
 	fs := &MemFs{}
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
-	srv, err := fslibsrv.MakeSrv(root, pn, sc)
+	srv, err := fslibsrv.MakeSrv(root, pn, port, sc)
 	if err != nil {
 		return nil, err
 	}

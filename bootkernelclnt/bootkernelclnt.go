@@ -20,7 +20,7 @@ const (
 func Start(srvs string, namedAddr sp.Taddrs) (string, error) {
 	out, err := exec.Command(START, []string{
 		"--boot", srvs,
-		"--named", namedAddr.String()}...).Output()
+		"--named", namedAddr.String(), "--host"}...).Output()
 	if err != nil {
 		db.DPrintf(db.BOOT, "Boot failed %s err %v\n", string(out), err)
 		return "", err

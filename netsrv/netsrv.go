@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -46,6 +47,11 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 		m,
 		u,
 	}
+	if strings.HasPrefix(address, "10.0.") {
+		address = ":1112"
+	}
+
+	db.DPrintf(db.NETSRV, "Invoke listen %v\n", address)
 	// Create and start the main server listener
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
@@ -69,7 +75,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		if err != nil {
 			db.DFatalf("%v: Accept error: %v", proc.GetName(), err)
 		}
-
+		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
 		MakeSrvConn(srv, conn)
 	}
 }

@@ -19,7 +19,7 @@ const (
 
 func Start(tag, srvs string, namedAddr sp.Taddrs) (string, error) {
 	out, err := exec.Command(START, []string{
-		"--tag", tag,
+		"--pull", tag,
 		"--boot", srvs,
 		"--named", namedAddr.String()}...).Output()
 	if err != nil {

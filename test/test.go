@@ -29,7 +29,7 @@ var tag string
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
-	flag.StringVar(&tag, "tag", "latest", "Docker image tag")
+	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
 }
 

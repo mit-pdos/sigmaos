@@ -1,4 +1,4 @@
 # syntax=docker/dockerfile:1
 
-FROM arielszekely/sigmabase AS user
+FROM sigmabase AS user
 # maybe delete some files?

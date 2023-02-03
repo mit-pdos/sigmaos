@@ -52,7 +52,7 @@ SSHVM="${vms[$VM]}"
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i key-$VPC.pem ubuntu@$SSHVM /bin/bash <<ENDSSH
 cd ulambda
-export SIGMANAMED=$MAIN_PRIVADDR:1111
+source ./env/enc.sh
 export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;"
 $COMMAND
 ENDSSH

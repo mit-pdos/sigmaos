@@ -1,16 +1,22 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--target target ] [--parallel]" 1>&2
+  echo "Usage: $0 --tag TAG [--target target ] [--parallel]" 1>&2
 }
 
 PARALLEL=""
+TAG=""
 TARGET="local"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
     shift
     PARALLEL="--parallel"
+    ;;
+  --tag)
+    shift
+    TAG="$1"
+    shift
     ;;
   --target)
     shift
@@ -28,10 +34,11 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$TAG" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+
 
 TMP=/tmp/sigmaos
 
@@ -59,8 +66,11 @@ fi
 
 # build containers
 DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t arielszekely/sigmabase .
-docker push arielszekely/sigmabase
+docker tag arielszekely/sigmabase arielszekely/sigmabase:$TAG
+docker push arielszekely/sigmabase:$TAG
 docker build -f Dockerkernel -t arielszekely/sigmaos .
-docker push arielszekely/sigmaos
+docker tag arielszekely/sigmaos arielszekely/sigmaos:$TAG
+docker push arielszekely/sigmaos:$TAG
 docker build -f Dockeruser -t arielszekely/sigmauser .
-docker push arielszekely/sigmauser
+docker tag arielszekely/sigmauser arielszekely/sigmauser:$TAG
+docker push arielszekely/sigmauser:$TAG

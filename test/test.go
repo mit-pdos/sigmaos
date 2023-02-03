@@ -25,9 +25,11 @@ const (
 
 var containerIP string
 var start bool
+var tag string
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
+	flag.StringVar(&tag, "tag", "latest", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
 }
 
@@ -107,7 +109,7 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := []string{NAMEDPORT}
 	if start {
-		ip, err := bootkernelclnt.Start(srvs, namedport)
+		ip, err := bootkernelclnt.Start(tag, srvs, namedport)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +134,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart("kclnt", BOOT_NODE, ts.NamedAddr())
+		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr())
 		if err != nil {
 			return err
 		}

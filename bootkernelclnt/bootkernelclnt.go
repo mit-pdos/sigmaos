@@ -17,8 +17,9 @@ const (
 	START = "../start.sh"
 )
 
-func Start(srvs string, namedAddr sp.Taddrs) (string, error) {
+func Start(tag, srvs string, namedAddr sp.Taddrs) (string, error) {
 	out, err := exec.Command(START, []string{
+		"--tag", tag,
 		"--boot", srvs,
 		"--named", namedAddr.String(), "--host"}...).Output()
 	if err != nil {
@@ -35,15 +36,15 @@ type Kernel struct {
 	kclnt *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(name string, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
-	ip, err := Start(conf, namedAddr)
+func MkKernelClntStart(tag, name, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
+	ip, err := Start(tag, conf, namedAddr)
 	if err != nil {
 		return nil, err
 	}
 	return MkKernelClnt(name, ip, namedAddr)
 }
 
-func MkKernelClnt(name string, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClnt(name, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
 	sc, err := sigmaclnt.MkSigmaClntRootInit(name, ip, namedAddr)
 	if err != nil {
 		return nil, err

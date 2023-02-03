@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"fmt"
+	"path"
 	"sync"
 	"time"
 
@@ -123,6 +124,28 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 	return k.bootSubsystem("schedd", []string{}, procclnt.HLINUX)
 }
 
+// Start uprocd in a sigmauser container and post the mount for
+// uprocd.  Uprocd cannot post because it doesn't know what the host
+// IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	return k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
+	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
+	if err != nil {
+		return nil, err
+	}
+
+	realm := args[0]
+	ptype := args[1]
+	pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype)
+	port := s.container.HostPort()
+
+	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn)
+
+	// Use 127.0.0.1, because only the local schedd should be talking
+	// to uprocd.
+	mnt := sp.MkMountServer("127.0.0.1:" + port)
+	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+	if err := k.MkMountSymlink(pn, mnt); err != nil {
+		return nil, err
+	}
+	return s, nil
 }

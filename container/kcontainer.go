@@ -55,7 +55,7 @@ func StartKContainer(nameds sp.Taddrs, conf string, env []string) (*Container, e
 	}
 	ip := json.NetworkSettings.IPAddress
 	db.DPrintf(db.CONTAINER, "Booting %s %s at %s...\n", SIGMAKIMAGE, resp.ID[:10], ip)
-	return &Container{ctx, cli, resp.ID, ip, nil}, nil
+	return &Container{ctx, cli, resp.ID, ip, "", nil}, nil
 }
 
 func ContainerIP(container string) (string, error) {

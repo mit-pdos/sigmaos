@@ -43,6 +43,17 @@ if [ "${TARGET}" != "aws" ]; then
    ./start-db.sh
 fi
 
+# XXX this will do go somewhere else
+if ! docker node ls | grep -q 'Leader'; then
+    docker swarm init
+fi 
+
+# XXX move and one per realm
+if ! docker network ls | grep -q 'sigmanet'; then
+    docker network create --driver overlay sigmanet --attachable
+fi
+   
+
 # build binaries for host
 ./make.sh --norace $PARALLEL linux
 

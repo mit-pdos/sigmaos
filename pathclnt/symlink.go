@@ -5,7 +5,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"strings"
 )
 
 func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *serr.Err) {
@@ -35,12 +34,9 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 func (pathc *PathClnt) autoMount(uname string, mnt sp.Tmount, path path.Path) *serr.Err {
 	var fid sp.Tfid
 	var err *serr.Err
-	addr := mnt.Addr[0]
-	if strings.HasPrefix(addr, "10.0.") {
-		addr = "127.0.0.1:1112"
-	}
-	db.DPrintf(db.PATHCLNT, "automount %v (%s) to %v\n", mnt, addr, path)
-	fid, err = pathc.Attach(uname, sp.Taddrs{addr}, path.String(), mnt.Root)
+
+	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
+	fid, err = pathc.Attach(uname, mnt.Addr, path.String(), mnt.Root)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT, "Attach error: %v", err)
 		return err

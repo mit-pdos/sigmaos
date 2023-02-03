@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"net"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -43,16 +44,9 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			PortBindings: nat.PortMap{
-				PORT + "/tcp": []nat.PortBinding{
-					{
-						HostPort: PORT,
-					},
-				},
-				"1113/tcp": []nat.PortBinding{
-					{
-						HostPort: "1113",
-					},
-				},
+				// let host decide on port
+				PORT + "/tcp": []nat.PortBinding{{}},
+				"1113/tcp":    []nat.PortBinding{{}},
 			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
@@ -66,5 +60,16 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	return &Container{ctx, cli, resp.ID, ip, nil}, nil
+	port := ""
+	ports := json.NetworkSettings.NetworkSettingsBase.Ports["1112/tcp"]
+	for _, p := range ports {
+		ip := net.ParseIP(p.HostIP)
+		if ip.To4() != nil {
+			port = p.HostPort
+			break
+		}
+	}
+
+	db.DPrintf(db.CONTAINER, "network setting: ip %v hostport %v\n", ip, port)
+	return &Container{ctx, cli, resp.ID, ip, port, nil}, nil
 }

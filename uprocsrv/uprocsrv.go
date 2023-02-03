@@ -2,14 +2,12 @@ package uprocsrv
 
 import (
 	"os"
-	"path"
-	// "sync"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
 )
 
@@ -20,9 +18,8 @@ type UprocSrv struct {
 func RunUprocSrv(realm string, ptype proc.Ttype) error {
 	ups := &UprocSrv{}
 	ups.ch = make(chan struct{})
-	pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype.String())
-	db.DPrintf(db.UPROCD, "%v: Run %v %s\n", proc.GetName(), pn, os.Environ())
-	pds, err := protdevsrv.MakeProtDevSrvPort(pn, container.PORT, ups)
+	db.DPrintf(db.UPROCD, "%v: Run %v %s\n", proc.GetName(), realm, os.Environ())
+	pds, err := protdevsrv.MakeProtDevSrvPort("", container.PORT, ups)
 	if err != nil {
 		return err
 	}

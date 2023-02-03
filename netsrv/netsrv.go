@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -47,11 +46,7 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 		m,
 		u,
 	}
-	if strings.HasPrefix(address, "10.0.") {
-		address = ":1112"
-	}
 
-	db.DPrintf(db.NETSRV, "Invoke listen %v\n", address)
 	// Create and start the main server listener
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
@@ -59,7 +54,7 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 		db.DFatalf("Listen error: %v", err)
 	}
 	srv.setSrvAddr(l.Addr().String())
-	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", address, srv.addr)
+	db.DPrintf(db.BOOT, "listen %v myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }

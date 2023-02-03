@@ -20,6 +20,7 @@ type Container struct {
 	cli          *client.Client
 	container    string
 	ip           string
+	hostport     string
 	prevCPUStats *types.CPUStats
 }
 
@@ -87,6 +88,10 @@ func (c *Container) String() string {
 
 func (c *Container) Ip() string {
 	return c.ip
+}
+
+func (c *Container) HostPort() string {
+	return c.hostport
 }
 
 func (c *Container) Shutdown() error {

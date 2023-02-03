@@ -58,6 +58,9 @@ fi
 ./make.sh --norace $PARALLEL linux
 
 # build containers
-DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t sigmaosbase .
-docker build -f Dockerkernel -t sigmaos .
-docker build -f Dockeruser -t sigmauser .
+DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t arielszekely/sigmabase .
+docker push arielszekely/sigmabase
+docker build -f Dockerkernel -t arielszekely/sigmaos .
+docker push arielszekely/sigmaos
+docker build -f Dockeruser -t arielszekely/sigmauser .
+docker push arielszekely/sigmauser

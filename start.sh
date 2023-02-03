@@ -72,6 +72,9 @@ fi
 
 mkdir -p /tmp/sigmaos
 
+docker pull arielszekely/sigmauser
+docker tag arielszekely/sigmauser sigmauser
+
 if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 fi
@@ -88,7 +91,7 @@ CID=$(docker run -dit\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
              -e SIGMADEBUG=${SIGMADEBUG}\
-             sigmaos)
+             arielszekely/sigmaos)
 
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 if [ -z  ${IP} ]; then

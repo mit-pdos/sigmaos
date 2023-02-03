@@ -1,13 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --realm1 REALM1 --realm2 REALM2 [--version VERSION]" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG [--version VERSION]" 1>&2
 }
 
 VPC=""
 KVPC=""
-REALM1=""
-REALM2=""
+TAG=""
 VERSION=$(date +%s)
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -21,14 +20,9 @@ while [[ "$#" -gt 0 ]]; do
     KVPC="$1"
     shift
     ;;
-  --realm1)
+  --tag)
     shift
-    REALM1=$1
-    shift
-    ;;
-  --realm2)
-    shift
-    REALM2=$1
+    TAG=$1
     shift
     ;;
   --version)
@@ -48,10 +42,13 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$REALM1" ] || [ -z "$REALM2" ] || [ -z "$VERSION" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$TAG" ] || [ -z "$VERSION" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+
+REALM1="benchrealm1"
+REALM2="benchrealm2"
 
 # Set some variables
 DIR=$(realpath $(dirname $0)/../..)
@@ -79,7 +76,7 @@ start_cluster() {
   cd $AWS_DIR
   echo "" > $INIT_OUT
   ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --update >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
   cd $DIR
 }
 

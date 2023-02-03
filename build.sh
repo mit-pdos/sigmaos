@@ -55,8 +55,11 @@ fi
 
 # build containers
 DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t arielszekely/sigmabase .
+docker tag arielszekely/sigmabase arielszekely/sigmabase:$TAG
 docker push arielszekely/sigmabase:$TAG
 docker build -f Dockerkernel -t arielszekely/sigmaos .
+docker tag arielszekely/sigmaos arielszekely/sigmaos:$TAG
 docker push arielszekely/sigmaos:$TAG
 docker build -f Dockeruser -t arielszekely/sigmauser .
+docker tag arielszekely/sigmauser arielszekely/sigmauser:$TAG
 docker push arielszekely/sigmauser:$TAG

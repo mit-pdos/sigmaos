@@ -44,6 +44,11 @@ while [[ "$#" -gt 0 ]]; do
     esac            
     shift
     ;;
+  --tag)
+    shift
+    TAG=$1
+    shift
+    ;;
   --host)
     shift
     NET="host"

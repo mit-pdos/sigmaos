@@ -13,14 +13,9 @@ type FsLib struct {
 	namedAddr sp.Taddrs
 }
 
-func MakeFsLibBase(uname string, realm sp.Trealm, lip string, namedAddr sp.Taddrs) *FsLib {
-	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
-		realm, namedAddr}
-}
-
-func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
-	fl := MakeFsLibBase(uname, r, lip, addrs)
+func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
+	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
+		realm, addrs}
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
 		return nil, err
@@ -28,17 +23,9 @@ func MakeFsLibRealmAddr(uname string, r sp.Trealm, lip string, addrs sp.Taddrs) 
 	return fl, nil
 }
 
-func MakeFsLibAddr(uname, lip string, addrs sp.Taddrs) (*FsLib, error) {
-	fl := MakeFsLibBase(uname, sp.ROOTREALM, lip, addrs)
-	err := fl.MountTree(addrs, "", "name")
-	if err != nil {
-		return nil, err
-	}
-	return fl, nil
-}
-
+// Only to be called by procs.
 func MakeFsLib(uname string) (*FsLib, error) {
-	return MakeFsLibAddr(uname, proc.GetSigmaLocal(), proc.Named())
+	return MakeFsLibAddr(uname, proc.GetRealm(), proc.GetSigmaLocal(), proc.Named())
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {

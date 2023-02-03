@@ -49,6 +49,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
+	p.SetNcore(1)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {
 		return errs[0]
 	}
@@ -64,8 +65,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	}
 
 	// Make some rootrealm services available in new realm
-	// XXX add sp.DBREL
-	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL} {
+	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.Tmount{Addr: rm.sc.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)

@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [-n N] --vpc VPC [--parallel]" 1>&2
+  echo "Usage: $0 --vpc VPC [--parallel] [--n N] [--branch BRANCH]" 1>&2
 }
 
 VPC=""
 REALM=""
 N_VM=""
+BRANCH="master"
 PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -16,9 +17,14 @@ while [[ $# -gt 0 ]]; do
     VPC=$1
     shift
     ;;
-  -n)
+  --n)
     shift
     N_VM=$1
+    shift
+    ;;
+  --branch)
+    shift
+    BRANCH=$1
     shift
     ;;
   --parallel)
@@ -53,7 +59,7 @@ for vm in $vms; do
   echo "UPDATE: $vm"
   install="
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
+      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git checkout $BRANCH; git pull > /tmp/git.out 2>&1 )'
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$install"

@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	// XXX Used for matrix tests before.
-	//	"fmt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/benchmarks"
@@ -43,6 +41,7 @@ var KVD_NCORE int
 var WWWD_NCORE int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
+var HOTEL_NCACHE int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
 var SLEEP time.Duration
@@ -75,6 +74,7 @@ func init() {
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
+	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
@@ -93,65 +93,6 @@ func init() {
 const (
 	OUT_DIR = "name/out_dir"
 )
-
-// XXX Switch to spin.
-//// Length of time required to do a simple matrix multiplication.
-//func TestNiceMatMulBaseline(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	rootts.Shutdown()
-//}
-//
-//// Start a bunch of spinning procs to contend with one matmul task, and then
-//// see how long the matmul task took.
-//func TestNiceMatMulWithSpinners(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	makeOutDir(ts)
-//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-//	// Make some spinning procs to take up nContenders cores.
-//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 0)
-//	// Burst-spawn BE procs
-//	spawnBurstProcs(ts, psSpin)
-//	// Wait for the procs to start
-//	waitStartProcs(ts, psSpin)
-//	// Make the LC proc.
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 1)
-//	// Spawn the LC procs
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	evictProcs(ts, psSpin)
-//	rmOutDir(ts)
-//	rootts.Shutdown()
-//}
-//
-//// Invert the nice relationship. Make spinners high-priority, and make matul
-//// low priority. This is intended to verify that changing priorities does
-//// actually affect application throughput for procs which have their priority
-//// lowered, and by how much.
-//func TestNiceMatMulWithSpinnersLCNiced(t *testing.T) {
-//	rootts := test.MakeTstateWithRealms(t)
-//	rs := benchmarks.MakeResults(N_TRIALS)
-//	makeOutDir(ts)
-//	nContenders := int(float64(linuxsched.NCores) / CONTENDERS_FRAC)
-//	// Make some spinning procs to take up nContenders cores. (AS LC)
-//	psSpin, _ := makeNProcs(nContenders, "spinner", []string{OUT_DIR}, []string{fmt.Sprintf("GOMAXPROCS=%v", 1)}, 1)
-//	// Burst-spawn spinning procs
-//	spawnBurstProcs(ts, psSpin)
-//	// Wait for the procs to start
-//	waitStartProcs(ts, psSpin)
-//	// Make the matmul procs.
-//	_, ps := makeNProcs(N_TRIALS, "matmul", []string{fmt.Sprintf("%v", MAT_SIZE)}, []string{fmt.Sprintf("GOMAXPROCS=%v", GO_MAX_PROCS)}, 0)
-//	// Spawn the matmul procs
-//	runOps(ts, ps, runProc, rs)
-//	printResultSummary(rs)
-//	evictProcs(ts, psSpin)
-//	rmOutDir(ts)
-//	rootts.Shutdown()
-//}
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
@@ -255,7 +196,6 @@ func runKVTest(t *testing.T, nReplicas int) {
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
 	jobs, ji := makeNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -284,16 +224,16 @@ func TestAppKVRepl(t *testing.T) {
 func TestRealmBurst(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	ncores := countClusterCores(rootts)
+	ncores := countClusterCores(rootts) - 1
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	makeOutDir(ts1)
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
-	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 2)
+	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
 	p := monitorCoresAssigned(ts1)
 	defer p.Done()
-	runOps(ts1, []interface{}{p}, spawnBurstWaitStartProcs, rs)
+	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
 	rmOutDir(ts1)
@@ -347,13 +287,13 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
-	// Structure for kv
+	// Structure for hotel
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep Hotel job
-	hotelJobs, ji := makeHotelJobs(ts2, true, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := makeHotelJobs(ts2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		hotel.RandSearchReq(wc, r)
 	})
@@ -368,6 +308,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	}()
 	// Wait for hotel jobs to set up.
 	<-hotelJobs[0].ready
+	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run MR job
 	go func() {
 		runOps(ts1, mrapps, runMR, rs1)
@@ -375,6 +316,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	}()
 	// Wait for MR jobs to set up.
 	<-mrjobs[0].ready
+	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	//	// Sleep for a bit
@@ -424,13 +367,17 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	<-mrjobs1[0].ready
 	// Kick off MR jobs.
 	mrjobs2[0].ready <- true
-	//	// Sleep for a bit
+	db.DPrintf(db.TEST, "Start MR job 1")
+	// Sleep for a bit
 	time.Sleep(SLEEP)
+	db.DPrintf(db.TEST, "Start MR job 2")
 	// Kick off hotel jobs
 	mrjobs1[0].ready <- true
 	// Wait for both jobs to finish.
 	<-done
+	db.DPrintf(db.TEST, "Done MR job 1")
 	<-done
+	db.DPrintf(db.TEST, "Done MR job 2")
 	printResultSummary(rs1)
 	rootts.Shutdown()
 }
@@ -521,7 +468,7 @@ func TestWwwK8s(t *testing.T) {
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeHotelJobs(ts1, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, fn)
+	jobs, ji := makeHotelJobs(ts1, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
 	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
@@ -556,7 +503,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 	// XXX Clean this up/hide this somehow.
@@ -577,7 +524,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 	// XXX Clean this up/hide this somehow.

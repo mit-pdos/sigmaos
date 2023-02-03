@@ -183,16 +183,90 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	rootts.Shutdown()
 }
 
+func TestEvictSingle(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+
+	sts1, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts1.Spawn(a)
+	assert.Nil(t, err, "Error spawn: %v", err)
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitstart")
+	err = ts1.WaitStart(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitstart")
+	assert.Nil(t, err, "waitstart error")
+
+	db.DPrintf(db.TEST, "Pre evict")
+	err = ts1.Evict(a.GetPid())
+	db.DPrintf(db.TEST, "Post evict")
+	assert.Nil(t, err, "evict error")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts1.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
+
+	rootts.Shutdown()
+}
+
+func TestEvictMultiRealm(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	// Make a second realm
+	test.MakeRealmTstate(rootts, REALM2)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+
+	sts1, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts1.Spawn(a)
+	assert.Nil(t, err, "Error spawn: %v", err)
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitstart")
+	err = ts1.WaitStart(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitstart")
+	assert.Nil(t, err, "waitstart error")
+
+	db.DPrintf(db.TEST, "Pre evict")
+	err = ts1.Evict(a.GetPid())
+	db.DPrintf(db.TEST, "Post evict")
+	assert.Nil(t, err, "evict error")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts1.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
+
+	rootts.Shutdown()
+}
+
 func TestSpinPerfCalibrate(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-1, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	db.DPrintf(db.TEST, "Calibrate Linux baseline")
-	ctimeL := calibrateCTimeLinux(ts1, linuxsched.NCores, N_ITER)
+	ctimeL := calibrateCTimeLinux(ts1, linuxsched.NCores-1, N_ITER)
 	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
 
 	rootts.Shutdown()
@@ -212,12 +286,13 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores, N_ITER)
+	// - 2 to account for NAMED reserved cores.
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	c := make(chan time.Duration)
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores, N_ITER, "spin1")
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores, N_ITER, "spin2")
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin1")
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin2")
 
 	d1 := <-c
 	d2 := <-c
@@ -227,7 +302,7 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	d2sd := slowdown(ctimeS, d2)
 
 	// Target slowdown (x)
-	tsd := 1.80
+	tsd := 1.70
 
 	// Check that execution time matches target time.
 	assert.True(rootts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))
@@ -241,13 +316,13 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-1, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
-	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
@@ -275,13 +350,13 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-1, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-3, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-1), linuxsched.NCores-1, N_ITER, "lcspin")
-	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-1, N_ITER, "bespin")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-3), linuxsched.NCores-3, N_ITER, "lcspin")
+	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-3, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC

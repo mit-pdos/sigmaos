@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--update] [--ncores NCORES]" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N_VM] [--update] [--ncores NCORES]" 1>&2
 }
 
 VPC=""
@@ -66,7 +66,7 @@ fi
 
 if [ ! -z "$UPDATE" ]; then
     # XXX build on one and then pull container?
-    ./update-repo.sh --vpc $VPC --parallel
+    ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
     for vm in $vms; do
         echo $vm
         ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH

@@ -52,7 +52,7 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 	for {
 		// Wait for a bit to avoid overwhelming named.
-		time.Sleep(sp.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
+		time.Sleep(sp.Conf.Schedd.WORK_STEAL_SCAN_TIMEOUT)
 		var stealable map[sp.Trealm][]*proc.Proc
 		var ok bool
 		// If there was a version error triggered while reading the queue, reread
@@ -97,14 +97,14 @@ func (sd *Schedd) offerStealableProcs() {
 	for {
 		toOffer := make(map[proc.Tpid]*proc.Proc)
 		// Wait for a bit.
-		time.Sleep(sp.Conf.Procd.STEALABLE_PROC_TIMEOUT)
+		time.Sleep(sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT)
 		sd.mu.Lock()
 		for _, q := range sd.qs {
 			// Iterate the procs in each realm's queue.
 			for _, p := range q.pmap {
 				// If this proc has not been spawned for a long time, prepare to offer
 				// it as stealable.
-				if time.Since(p.GetSpawnTime()) >= sp.Conf.Procd.STEALABLE_PROC_TIMEOUT {
+				if time.Since(p.GetSpawnTime()) >= sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT {
 					toOffer[p.GetPid()] = p
 				}
 			}

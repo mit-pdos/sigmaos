@@ -19,11 +19,11 @@ type RealmTstate struct {
 func MakeRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
 	var err error
 	if err = ts.rc.MakeRealm(realm); err != nil {
-		db.DFatalf("Error MakeRealmTstate: %v", err)
+		db.DFatalf("Error MakeRealmTstate MkRealm: %v", err)
 	}
 	var sc *sigmaclnt.SigmaClnt
 	if sc, err = sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test"+realm.String(), realm); err != nil {
-		db.DFatalf("Error MakeRealmTstate: %v", err)
+		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
 	}
 	return &RealmTstate{
 		realm:     realm,

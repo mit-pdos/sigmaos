@@ -29,7 +29,8 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 			Cmd:   cmd,
 			Tty:   false,
 			Env:   p.GetEnv(),
-		}, &container.HostConfig{
+		},
+		&container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			Mounts: []mount.Mount{
 				mount.Mount{
@@ -40,12 +41,17 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 				},
 			},
 		}, nil, nil, "")
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
+		return nil, err
+	}
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err
 	}
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	if err1 != nil {
+		db.DPrintf(db.CONTAINER, "ContainerInspect err %v\n", err)
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress

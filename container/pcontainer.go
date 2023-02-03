@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -43,6 +44,14 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 			},
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
+			Mounts: []mount.Mount{
+				mount.Mount{
+					Type:     mount.TypeBind,
+					Source:   PERF_MOUNT,
+					Target:   PERF_MOUNT,
+					ReadOnly: false,
+				},
+			},
 			PortBindings: nat.PortMap{
 				// let host decide on port
 				PORT + "/tcp": []nat.PortBinding{{}},
@@ -52,11 +61,12 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 			EndpointsConfig: endpoints,
 		}, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
+		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err
 	}
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	if err1 != nil {
+		db.DPrintf(db.CONTAINER, "ContainerInspect err %v\n", err)
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress

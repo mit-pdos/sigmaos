@@ -318,7 +318,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	ts.Shutdown()
 }
 
-func TestMRJOB(t *testing.T) {
+func TestMRJob(t *testing.T) {
 	runN(t, 0, 0, 0, 0, true)
 }
 

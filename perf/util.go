@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = "./perf-output/"
+	OUTPUT_PATH = "/tmp/sigmaos-perf"
 )
 
 type Tload [3]float64

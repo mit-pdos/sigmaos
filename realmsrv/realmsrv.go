@@ -63,7 +63,6 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	if err != nil {
 		return err
 	}
-
 	// Make some rootrealm services available in new realm
 	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL} {
 		pn := path.Join(sp.NAMED, s)
@@ -74,7 +73,6 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 			return err
 		}
 	}
-
 	// Make some realm dirs
 	for _, s := range []string{sp.KPIDSREL} {
 		pn := path.Join(sp.NAMED, s)

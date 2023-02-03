@@ -59,7 +59,7 @@ for vm in $vms; do
   # scp machined.out files.
   cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile $LOG_DIR/$vm.out"
   # scp performance files.
-  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* $PERF_DIR"
+  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.
   cmd3="scp -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 

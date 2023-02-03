@@ -28,9 +28,6 @@ session:
 realm:
   resize_interval: 100ms
 
-machine:
-  core_group_fraction: 0.25
-
 schedd:
   stealable_proc_timeout: 100ms
   work_steal_scan_timeout: 100ms
@@ -58,9 +55,6 @@ session:
 
 realm:
   resize_interval: 100ms
-
-machine:
-  core_group_fraction: 0.25
 
 schedd:
   stealable_proc_timeout: 50ms
@@ -95,10 +89,6 @@ type Config struct {
 		// Maximum frequency with which realmmgr resizes a realm.
 		RESIZE_INTERVAL time.Duration `yaml:"resize_interval"`
 	} `yaml:"realm"`
-	Machine struct {
-		// Core group size, in terms of fractions of a machine.
-		CORE_GROUP_FRACTION float64 `yaml:"core_group_fraction"`
-	} `yaml:"machine"`
 	Schedd struct {
 		// Time a proc remains un-spawned before becoming stealable.
 		STEALABLE_PROC_TIMEOUT time.Duration `yaml:"stealable_proc_timeout"`

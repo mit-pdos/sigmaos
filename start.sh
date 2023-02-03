@@ -71,6 +71,7 @@ if [ $# -gt 0 ]; then
 fi
 
 mkdir -p /tmp/sigmaos
+mkdir -p /tmp/sigmaos-perf
 
 # Pre-download sigmauser.
 docker pull arielszekely/sigmauser
@@ -86,6 +87,7 @@ fi
 CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
+             --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
              --network ${NET}\
              -e named=${NAMED}\

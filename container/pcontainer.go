@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 
 	db "sigmaos/debug"
@@ -30,6 +31,14 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 			Env:   p.GetEnv(),
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
+			Mounts: []mount.Mount{
+				mount.Mount{
+					Type:     mount.TypeBind,
+					Source:   PERF_MOUNT,
+					Target:   PERF_MOUNT,
+					ReadOnly: false,
+				},
+			},
 		}, nil, nil, "")
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)

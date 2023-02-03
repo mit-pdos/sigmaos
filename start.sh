@@ -74,8 +74,8 @@ mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-perf
 
 # Pre-download sigmauser.
-docker pull arielszekely/sigmauser
-docker tag arielszekely/sigmauser sigmauser
+docker pull arielszekely/sigmauser > /dev/null
+docker tag arielszekely/sigmauser sigmauser > /dev/null
 
 if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)

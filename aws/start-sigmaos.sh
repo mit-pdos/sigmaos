@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--n N_VM] [--update] [--ncores NCORES]" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N_VM] [--pull TAG] [--ncores NCORES]" 1>&2
 }
 
 VPC=""
 N_VM=""
 NCORES=4
 UPDATE=""
+TAG=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -26,8 +27,9 @@ while [[ $# -gt 0 ]]; do
     NCORES=$1
     shift
     ;;
-  --update)
-    UPDATE="yes"
+  --pull)
+    shift
+    TAG=$1
     shift
     ;;
   -help)
@@ -64,7 +66,7 @@ if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
 fi
 
-if [ ! -z "$UPDATE" ]; then
+if [ ! -z "$TAG" ]; then
   ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
 fi
 
@@ -91,10 +93,10 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
     ./start-db.sh
-    ./start.sh --boot all --host
+    ./start.sh --boot all --host --pull $TAG
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot node --named ${SIGMANAMED} --host
+    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG
   fi
 ENDSSH
 done

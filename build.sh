@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --tag TAG [--target target ] [--parallel]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target target ] [--parallel]" 1>&2
 }
 
 PARALLEL=""
@@ -13,7 +13,7 @@ while [[ "$#" -gt 0 ]]; do
     shift
     PARALLEL="--parallel"
     ;;
-  --tag)
+  --push)
     shift
     TAG="$1"
     shift
@@ -34,7 +34,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$TAG" ] || [ $# -gt 0 ]; then
+if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -65,12 +65,15 @@ fi
 ./make.sh --norace $PARALLEL linux
 
 # build containers
-DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t arielszekely/sigmabase .
-docker tag arielszekely/sigmabase arielszekely/sigmabase:$TAG
-docker push arielszekely/sigmabase:$TAG
-docker build -f Dockerkernel -t arielszekely/sigmaos .
-docker tag arielszekely/sigmaos arielszekely/sigmaos:$TAG
-docker push arielszekely/sigmaos:$TAG
-docker build -f Dockeruser -t arielszekely/sigmauser .
-docker tag arielszekely/sigmauser arielszekely/sigmauser:$TAG
-docker push arielszekely/sigmauser:$TAG
+DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t sigmabase .
+docker build -f Dockerkernel -t sigmaos .
+docker build -f Dockeruser -t sigmauser .
+
+if ! [ -z "$TAG" ]; then
+  docker tag sigmabase arielszekely/sigmabase:$TAG
+  docker push arielszekely/sigmabase:$TAG
+  docker tag sigmaos arielszekely/sigmaos:$TAG
+  docker push arielszekely/sigmaos:$TAG
+  docker tag sigmauser arielszekely/sigmauser:$TAG
+  docker push arielszekely/sigmauser:$TAG
+fi

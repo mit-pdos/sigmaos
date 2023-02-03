@@ -11,11 +11,17 @@ So that sigmaos can access host's docker.sock within container:
 This setup is insecure but see comments in kcontainer.go.  Small bonus we
 don't have to run tests etc. as root:
 
-Build docker images (one for kernel and one for user)
+Build docker images locally (one for kernel and one for user).
 $ ./build.sh
 
-To run tests for package PACKAGE_NAME, run:
-$ go test -v sigmaos/PACKAGE_NAME -start
+Build docker images locally and push to DockerHub.
+$ ./build.sh --push TAGNAME
+
+To run tests for package PACKAGE_NAME, on a locally build version, run:
+$ go test -v sigmaos/PACKAGE_NAME --start
+
+To run tests for package PACKAGE_NAME, on a version pulled from DockerHub, run:
+$ go test -v sigmaos/PACKAGE_NAME --start --tag TAGNAME.
 
 To upload the built binaries to an s3 bucket corresponding to realm REALM, run
 (optional, purely local development also possible as described below):

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 --tag TAG [--boot all|node|named|realm] [--machine N] [--named ADDRs] [--host] "  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--machine N] [--named ADDRs] [--host] "  1>&2
 }
 
 UPDATE=""
@@ -44,7 +44,7 @@ while [[ "$#" -gt 0 ]]; do
     esac            
     shift
     ;;
-  --tag)
+  --pull)
     shift
     TAG=$1
     shift
@@ -70,7 +70,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$TAG" ] || [ $# -gt 0 ]; then
+if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -78,9 +78,15 @@ fi
 mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-perf
 
-# Pre-download sigmauser.
-docker pull arielszekely/sigmauser:$TAG > /dev/null
-docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
+# Pull latest docker images
+if ! [ -z "$TAG" ]; then
+  docker pull arielszekely/sigmabase:$TAG > /dev/null
+  docker tag arielszekely/sigmabase:$TAG sigmabase > /dev/null
+  docker pull arielszekely/sigmaos:$TAG > /dev/null
+  docker tag arielszekely/sigmaos:$TAG sigmaos > /dev/null
+  docker pull arielszekely/sigmauser:$TAG > /dev/null
+  docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
+fi
 
 if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
@@ -99,7 +105,7 @@ CID=$(docker run -dit\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
              -e SIGMADEBUG=${SIGMADEBUG}\
-             arielszekely/sigmaos:$TAG)
+             sigmaos)
 
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 if [ -z  ${IP} ]; then

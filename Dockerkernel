@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM arielszekely/sigmabase AS kernel
+FROM sigmabase AS kernel
 WORKDIR /home/sigmaos
 ENV named :1111
 ENV boot named

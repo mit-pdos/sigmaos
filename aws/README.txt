@@ -20,10 +20,10 @@ $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
-To boot update and start containers on the VPC:
-$ ./start-sigmaos.sh --update --vpc vpc-061a1808693a1626a
+To update the git repo on every machine, pull DockerHub images with TAGNAME, and start containers on the VPC:
+$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --pull TAGNAME
 
-To start the containers:
+To start existing containers:
 $ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
 
 To stop the containers:

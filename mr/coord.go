@@ -32,7 +32,7 @@ const (
 
 	RESTART = "restart" // restart message from reducer
 
-	MEM_REQ = 7900
+	MEM_REQ = 1000
 )
 
 // XXX update

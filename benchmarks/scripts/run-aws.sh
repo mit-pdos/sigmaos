@@ -79,11 +79,7 @@ start_cluster() {
   cd $AWS_DIR
   echo "" > $INIT_OUT
   ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
-  ./build-sigma.sh --vpc $vpc --realm $REALM1 --version $VERSION --branch master >> $INIT_OUT 2>&1
-  ./build-sigma.sh --vpc $vpc --realm $REALM2 --version $VERSION --branch master >> $INIT_OUT 2>&1
-  ./install-sigma.sh --vpc $vpc --realm $REALM1 --parallel >> $INIT_OUT 2>&1
-  ./install-sigma.sh --vpc $vpc --realm $REALM2 --parallel >> $INIT_OUT 2>&1
-  ./start-sigmaos.sh --vpc $vpc --realm $REALM1 --ncores $n_cores --n $n_vm >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --update >> $INIT_OUT 2>&1
   cd $DIR
 }
 

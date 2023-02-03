@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"sigmaos/boot"
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	srvs := strings.Split(os.Args[2], ";")
 	param := kernel.Param{srvs, os.Args[3]}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
-	h := container.HOME
+	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
 	err := boot.BootUp(&param, proc.StringToNamedAddrs(os.Args[1]))

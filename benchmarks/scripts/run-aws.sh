@@ -47,6 +47,7 @@ if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$TAG" ] || [ -z "$VERSION" ] || [ $#
     exit 1
 fi
 
+# REALM1 is always the BE realm, REALM2 is always the LC realm.
 REALM1="benchrealm1"
 REALM2="benchrealm2"
 

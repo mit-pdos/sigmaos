@@ -57,7 +57,7 @@ vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 vma=($vms)
 MAIN="${vma[0]}"
 SIGMANAMED="${vma[0]}:1111"
-IMGS="sigmauser sigmaos sigmaosbase"
+IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
 
 if ! [ -z "$N_VM" ]; then
@@ -65,16 +65,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$UPDATE" ]; then
-    # XXX build on one and then pull container?
-    ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
-    for vm in $vms; do
-        echo $vm
-        ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  cd ulambda
-  ./build.sh --target aws
-ENDSSH
-    done
-
+  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
 fi
 
 for vm in $vms; do

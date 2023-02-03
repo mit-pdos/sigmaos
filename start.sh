@@ -72,6 +72,7 @@ fi
 
 mkdir -p /tmp/sigmaos
 
+# Pre-download sigmauser.
 docker pull arielszekely/sigmauser
 docker tag arielszekely/sigmauser sigmauser
 

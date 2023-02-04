@@ -94,6 +94,7 @@ const (
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"
+	SIGMACLNT              = "SIGMACLNT"
 	NODED                  = "NODED"
 	NODED_ERR              = NODED + ERR
 	MACHINED               = "MACHINED"

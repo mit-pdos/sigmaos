@@ -46,10 +46,10 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (
 	if r != nil {
 		return nil, err
 	}
-	db.DPrintf(db.REALMCLNT, "Realm %v NamedAddr %v\n", rid, mnt.Addr)
+	db.DPrintf(db.SIGMACLNT, "Realm %v NamedAddr %v\n", rid, mnt.Addr)
 	realm, err := fslib.MakeFsLibAddr(name, rid, rootrealm.GetLocalIP(), mnt.Addr)
 	if err != nil {
-		db.DPrintf(db.REALMCLNT, "Error mkFsLIbAddr: %v", err)
+		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", mnt.Addr, err)
 		return nil, err
 	}
 	return &SigmaClnt{realm, nil}, nil
@@ -57,7 +57,7 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (
 
 // Create a full sigmaclnt relative to a realm (fslib and procclnt)
 func MkSigmaClntRealm(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
-	db.DPrintf(db.REALMCLNT, "MkSigmaClntRealmProc %v\n", rid)
+	db.DPrintf(db.SIGMACLNT, "MkSigmaClntRealmProc %v\n", rid)
 	sc, err := MkSigmaClntRealmFsLib(rootfsl, name, rid)
 	if err != nil {
 		return nil, err

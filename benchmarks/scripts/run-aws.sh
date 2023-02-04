@@ -181,7 +181,7 @@ run_hotel() {
 
 mr_scalability() {
   mrapp=mr-grep-wiki120G.yml
-  for n_vm in 1 2 4 8 16 ; do
+  for n_vm in 1 16 ; do # 2 4 8 
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -249,9 +249,8 @@ realm_balance() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out --containerIP $LEADER_IP 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
@@ -268,7 +267,6 @@ realm_balance_be() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
@@ -491,11 +489,11 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #mr_replicated_named
-mr_vs_corral
-mr_scalability
+# XXX mr_vs_corral
 #realm_burst
 realm_balance
 realm_balance_be
+# XXX mr_scalability
 #hotel_tail
 #mr_k8s
 #k8s_balance
@@ -507,8 +505,8 @@ source ~/env/3.10/bin/activate
 graph_realm_balance_be
 graph_realm_balance
 #graph_k8s_balance
-graph_mr_aggregate_tpt
-graph_mr_scalability
+# XXX graph_mr_aggregate_tpt
+# XXX graph_mr_scalability
 # graph_mr_vs_corral
 #graph_k8s_mr_aggregate_tpt
 #scrape_realm_burst

@@ -29,11 +29,12 @@ type ProcMgr struct {
 
 // Manages the state and lifecycle of a proc.
 func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
+	ip := mfs.MyAddr()
 	return &ProcMgr{
 		mfs:      mfs,
-		scheddIp: mfs.MyAddr(),
+		scheddIp: ip,
 		rootsc:   mfs.SigmaClnt(),
-		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
+		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, ip),
 		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		running:  make(map[proc.Tpid]*proc.Proc),
 		pcache:   MakeProcCache(PROC_CACHE_SZ),

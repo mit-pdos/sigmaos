@@ -135,7 +135,8 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 	realm := args[0]
 	ptype := args[1]
-	pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype)
+	scheddIp := args[2]
+	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
 	port := s.container.HostPort()
 
 	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn)

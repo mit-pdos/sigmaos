@@ -78,7 +78,7 @@ func (mgr *ProcMgr) addRunningProc(p *proc.Proc) {
 
 	// XXX Write package to expose running map as a dir.
 	mgr.running[p.GetPid()] = p
-	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, "~local", sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.Marshal())
+	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, mgr.scheddIp, sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.Marshal())
 	if err != nil {
 		db.DFatalf("Error PutFile in running queue: %v", err)
 	}

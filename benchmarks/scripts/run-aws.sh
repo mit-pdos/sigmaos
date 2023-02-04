@@ -242,6 +242,7 @@ realm_balance() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
+  hotel_ncache=6
   n_vm=8
   driver_vm=14
   run=${FUNCNAME[0]}
@@ -250,7 +251,7 @@ realm_balance() {
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache 6 --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }

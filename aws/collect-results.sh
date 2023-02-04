@@ -54,7 +54,7 @@ for vm in $vms; do
   if [ $vm == $MAIN ]; then
     outfile="/tmp/start.out"
   else
-    outfile="/tmp/machined.out"
+    outfile="/tmp/join.out"
   fi
   # scp machined.out files.
   cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile $LOG_DIR/$vm.out"

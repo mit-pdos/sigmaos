@@ -74,7 +74,6 @@ for vm in $vms; do
     echo $vm
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
-  export SIGMADBADDR="10.0.102.10:3306"
   # export SIGMANAMED="${SIGMANAMED}"
 #  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
   if [ $NCORES -eq 2 ]; then
@@ -93,10 +92,10 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
     ./start-db.sh
-    ./start.sh --boot all --host --pull $TAG
+    ./start.sh --boot realm --host --pull $TAG > /tmp/start.out 2>&1
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG
+    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG > /tmp/join.out 2>&1
   fi
 ENDSSH
 done

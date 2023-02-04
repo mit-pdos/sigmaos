@@ -24,7 +24,7 @@ const (
 	SIGMAMGR    = NAMED + SIGMAMGRREL + "/"
 	DBREL       = "db"
 	DB          = NAMED + DBREL + "/"
-	DBD         = DB + "~local/"
+	DBD         = DB + "~any/"
 
 	UXBIN = UX + "~local/bin/"
 

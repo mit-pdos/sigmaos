@@ -10,7 +10,7 @@ import sys
 import durationpy
 
 def scrape_times(dname, sigma):
-  with open(os.path.join(dname, "bench.out"), "r") as f:
+  with open(os.path.join(dname, "bench.out.0"), "r") as f:
     b = f.read()
   lines = b.split("\n")
   if sigma:

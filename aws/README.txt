@@ -20,6 +20,9 @@ $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
+When building for aws, build and push to DockerHub with
+$ ./build.sh --push TAGNAME --target aws
+
 To update the git repo on every machine, pull DockerHub images with TAGNAME, and start containers on the VPC:
 $ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a --pull TAGNAME
 

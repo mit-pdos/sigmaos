@@ -48,7 +48,7 @@ var HotelSvcs = []string{"hotel-userd", "hotel-rated",
 	"hotel-reserved", "hotel-recd", "hotel-wwwd"}
 
 var ncores = []int{0, 2,
-	2, 2, 3,
+	1, 1, 3,
 	3, 0, 2}
 
 func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {

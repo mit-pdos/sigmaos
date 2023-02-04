@@ -181,7 +181,7 @@ def setup_graph(nplots, units, total_ncore):
       coresax.append(ax2)
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
-    ax.set_ylabel("Cores Assigned")
+    ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax):
@@ -251,7 +251,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       tptax = ta
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Cores Assigned", "green", "--", False)
+      p = add_data_to_graph(coresax[0], x, y, "Cores Utilized", "green", "--", False)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

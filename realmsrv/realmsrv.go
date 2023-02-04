@@ -51,9 +51,11 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
 	p.SetNcore(1)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {
+		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])
 		return errs[0]
 	}
 	if err := rm.sc.WaitStart(p.GetPid()); err != nil {
+		db.DPrintf(db.REALMD_ERR, "Error WaitStart: %v", err)
 		return err
 	}
 
@@ -61,6 +63,7 @@ func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
 
 	sc, err := sigmaclnt.MkSigmaClntRealmFsLib(rm.sc.FsLib, "realmd", rid)
 	if err != nil {
+		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)
 		return err
 	}
 	// Make some rootrealm services available in new realm

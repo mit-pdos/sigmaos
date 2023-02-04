@@ -284,15 +284,12 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
-	db.DPrintf(db.ALWAYS, "Pid %v Name %v", proc.GetPid(), proc.GetName())
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
-	db.DPrintf(db.ALWAYS, "Pid %v Name %v", proc.GetPid(), proc.GetName())
 	// Structure for hotel
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	db.DPrintf(db.ALWAYS, "Pid %v Name %v", proc.GetPid(), proc.GetName())
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
 	// Prep Hotel job

@@ -242,7 +242,7 @@ realm_balance() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
-  hotel_ncache=6
+  hotel_ncache=3
   n_vm=8
   driver_vm=14
   run=${FUNCNAME[0]}

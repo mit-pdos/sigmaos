@@ -92,10 +92,10 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
     ./start-db.sh
-    ./start.sh --boot realm --host --pull $TAG > /tmp/start.out 2>&1
+    ./start.sh --boot realm --host --pull $TAG 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG > /tmp/join.out 2>&1
+    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

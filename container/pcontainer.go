@@ -20,7 +20,7 @@ const (
 	PORT = "1112"
 )
 
-func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()
@@ -59,7 +59,7 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
-		}, nil, "")
+		}, nil, kernelId+"-uprocd-"+realm)
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err

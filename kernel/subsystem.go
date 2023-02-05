@@ -34,10 +34,10 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
 	ss := makeSubsystem(k.ProcClnt, p, how)
-	return ss, ss.Run(k.namedAddr, how)
+	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
 }
 
-func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
+func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how)
 		if err != nil {
@@ -53,7 +53,7 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
-		c, err := container.StartPContainer(s.p, realm)
+		c, err := container.StartPContainer(s.p, kernelId, realm)
 		if err != nil {
 			return err
 		}

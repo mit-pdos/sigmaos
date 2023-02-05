@@ -26,6 +26,7 @@ type Schedd struct {
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
 	qs        map[sp.Trealm]*Queue
+	realms    []sp.Trealm
 }
 
 func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
@@ -33,6 +34,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 		mfs:       mfs,
 		pmgr:      procmgr.MakeProcMgr(mfs),
 		qs:        make(map[sp.Trealm]*Queue),
+		realms:    make([]sp.Trealm, 0),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		ranBE:     false,
 		coresfree: proc.Tcore(linuxsched.NCores),
@@ -51,6 +53,7 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
 		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
+		sd.realms = append(sd.realms, sp.Trealm(req.Realm))
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
@@ -120,7 +123,7 @@ func (sd *Schedd) schedule() {
 		// Iterate through the realms round-robin.
 		for r, q := range sd.qs {
 			// Try to schedule a proc from realm r.
-			ok = ok || sd.tryScheduleRealm(r, q)
+			ok = ok || sd.tryScheduleRealmL(r, q)
 		}
 		// If unable to schedule a proc from any realm, wait.
 		if !ok {
@@ -132,11 +135,11 @@ func (sd *Schedd) schedule() {
 
 // Try to schedule a proc from realm r's queue q. Returns true if a proc was
 // successfully scheduled.
-func (sd *Schedd) tryScheduleRealm(r sp.Trealm, q *Queue) bool {
+func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue) bool {
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(sd.coresfree, sd.memfree); ok {
+		if p, stolen, ok := q.Dequeue(sd.ranBE, sd.coresfree, sd.memfree); ok {
 			// If the proc was stolen...
 			if stolen {
 				// Try to claim the proc.

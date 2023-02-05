@@ -43,11 +43,11 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 
 // Dequeue a proc with certain resource requirements. LC procs have absolute
 // priority.
-func (q *Queue) Dequeue(maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
+func (q *Queue) Dequeue(ranBE bool, maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
 	// Order in which to scan queues.
 	qs := []*[]*proc.Proc{&q.lc, &q.lcws, &q.be, &q.bews}
 	for i, queue := range qs {
-		if p, ok := dequeue(maxcores, maxmem, queue); ok {
+		if p, ok := dequeue(ranBE, maxcores, maxmem, queue); ok {
 			worksteal = i%2 == 1
 			// If not stolen, remove from pmap
 			if !worksteal {
@@ -88,15 +88,22 @@ func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
 
 // Remove the first proc that fits the maxcores & maxmem resource constraints,
 // and return it.
-func dequeue(maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
+func dequeue(ranBE bool, maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
 	for i := 0; i < len(*q); i++ {
 		p := (*q)[i]
 		// Sanity check
 		if p.GetType() == proc.T_BE && p.GetNcore() > 0 {
 			db.DFatalf("BE proc with ncore > 0")
 		}
-		// If there are sufficient resources for the LC proc, dequeue it.
-		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem {
+		// If there are sufficient resources for the proc, dequeue it. For LC
+		// procs, this just involves checking if there are enough cores & memory to
+		// run it.
+		//
+		// For BE procs the story is slightly more complicated: if this is
+		// the first BE proc to be spawned on this schedd, there must be a free
+		// core to run it (and other BE procs) when all LC cores are busy.
+		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem &&
+			!(p.GetType() == proc.T_BE && !ranBE && maxcores == 0) {
 			*q = append((*q)[:i], (*q)[i+1:]...)
 			return p, true
 		}

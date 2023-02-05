@@ -15,7 +15,7 @@ import (
 //
 
 const (
-	START = "../start.sh"
+	START = "../start-kernel.sh"
 )
 
 func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs) (string, error) {

@@ -20,15 +20,17 @@ type UprocdMgr struct {
 	mu            sync.Mutex
 	fsl           *fslib.FsLib
 	scheddIp      string
+	kernelId      string
 	kclnt         *kernelclnt.KernelClnt
 	pdcms         map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
 	beUprocds     []*UprocdClnt
 	sharesAlloced Tshare
 }
 
-func MakeUprocdMgr(fsl *fslib.FsLib, scheddIp string) *UprocdMgr {
+func MakeUprocdMgr(fsl *fslib.FsLib, kernelId, scheddIp string) *UprocdMgr {
 	updm := &UprocdMgr{
 		fsl:           fsl,
+		kernelId:      kernelId,
 		scheddIp:      scheddIp,
 		pdcms:         make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt),
 		beUprocds:     make([]*UprocdClnt, 0),
@@ -42,7 +44,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 		return proc.Tpid(""), err
 	}
 	if updm.kclnt == nil {
-		pn := path.Join(sp.BOOT, "~local") + "/"
+		pn := path.Join(sp.BOOT, updm.kernelId) + "/"
 		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, pn)
 		if err != nil {
 			return proc.Tpid(""), err

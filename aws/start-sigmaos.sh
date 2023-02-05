@@ -89,14 +89,15 @@ for vm in $vms; do
 
   cd ulambda
   echo $PWD
-
+  KERNELID=$(echo $RANDOM | md5sum | head -c 8)
+  KERNELID="sigma-${KERNELID}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
     ./start-db.sh
-    ./start.sh --boot all --host --pull $TAG
+    ./start.sh --boot all --host --pull $TAG ${KERNELID}
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG
+    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG$ {KERNELID}
   fi
 ENDSSH
 done

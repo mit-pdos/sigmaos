@@ -12,16 +12,16 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		db.DFatalf("%v: usage srvs nameds dbip\n", os.Args[0])
+	if len(os.Args) < 5 {
+		db.DFatalf("%v: usage kernelid srvs nameds dbip\n", os.Args[0])
 	}
-	srvs := strings.Split(os.Args[2], ";")
-	param := kernel.Param{srvs, os.Args[3]}
+	srvs := strings.Split(os.Args[3], ";")
+	param := kernel.Param{os.Args[1], srvs, os.Args[4]}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	err := boot.BootUp(&param, proc.StringToNamedAddrs(os.Args[1]))
+	err := boot.BootUp(&param, proc.StringToNamedAddrs(os.Args[2]))
 	if err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}

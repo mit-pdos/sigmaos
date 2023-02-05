@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
+	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -17,13 +18,13 @@ const (
 	START = "../start.sh"
 )
 
-func Start(tag, srvs string, namedAddr sp.Taddrs) (string, error) {
+func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs) (string, error) {
 	out, err := exec.Command(START, []string{
 		"--pull", tag,
 		"--boot", srvs,
-		"--named", namedAddr.String(), "--host"}...).Output()
+		"--named", namedAddr.String(), "--host", kernelId}...).Output()
 	if err != nil {
-		db.DPrintf(db.BOOT, "Boot failed %s err %v\n", string(out), err)
+		db.DPrintf(db.BOOT, "Boot: start out %s err %v\n", string(out), err)
 		return "", err
 	}
 	ip := string(out)
@@ -31,33 +32,42 @@ func Start(tag, srvs string, namedAddr sp.Taddrs) (string, error) {
 	return ip, nil
 }
 
+func GenKernelId() string {
+	return "sigma-" + rand.String(4)
+}
+
 type Kernel struct {
 	*sigmaclnt.SigmaClnt
-	kclnt *kernelclnt.KernelClnt
+	kernelId string
+	kclnt    *kernelclnt.KernelClnt
 }
 
 func MkKernelClntStart(tag, name, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
-	ip, err := Start(tag, conf, namedAddr)
+	kernelId := GenKernelId()
+	ip, err := Start(kernelId, tag, conf, namedAddr)
 	if err != nil {
 		return nil, err
 	}
-	return MkKernelClnt(name, ip, namedAddr)
+	return MkKernelClnt(kernelId, name, ip, namedAddr)
 }
 
-func MkKernelClnt(name, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
 	sc, err := sigmaclnt.MkSigmaClntRootInit(name, ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}
-	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+"~local/")
+	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+kernelId)
 	if err != nil {
 		return nil, err
 	}
-	return &Kernel{sc, kclnt}, nil
+	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
 func (k *Kernel) Shutdown() error {
-	return k.kclnt.Shutdown()
+	db.DPrintf(db.SYSTEM, "Shutdown kernel %s", k.kernelId)
+	err := k.kclnt.Shutdown()
+	db.DPrintf(db.SYSTEM, "Shutdown kernel %s err %v", k.kernelId, err)
+	return err
 }
 
 func (k *Kernel) Boot(s string) error {

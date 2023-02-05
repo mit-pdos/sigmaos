@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 1 {
-		db.DFatalf("Usage: %v", os.Args[0])
+	if len(os.Args) != 2 {
+		db.DFatalf("Usage: %v kernelId", os.Args[0])
 	}
-	schedd.RunSchedd()
+	schedd.RunSchedd(os.Args[1])
 }

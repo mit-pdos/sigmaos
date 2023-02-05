@@ -2,7 +2,8 @@
 
 FROM sigmabase AS kernel
 WORKDIR /home/sigmaos
+ENV kernelid kernel
 ENV named :1111
 ENV boot named
 ENV dbip x.x.x.x
-CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot} ${dbip}"]
+CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip}"]

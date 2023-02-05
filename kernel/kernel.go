@@ -18,16 +18,15 @@ import (
 )
 
 const (
-	NO_PID           = "no-realm"
-	NO_REALM         = "norealm"
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
 	SUBSYSTEM_INFO   = "subsystem-info"
 )
 
 type Param struct {
-	Services []string `yalm:"services"`
-	Dbip     string   `yalm:"dbIP, omitempty"`
+	KernelId string
+	Services []string
+	Dbip     string
 }
 
 type Kernel struct {
@@ -93,7 +92,7 @@ func (k *Kernel) Shutdown() error {
 	if n > N {
 		log.Printf("Too many FIDs open (%v): %v", n, k.PathClnt.FidClnt)
 	}
-	db.DPrintf(db.KERNEL, "ShutDown done\n")
+	db.DPrintf(db.KERNEL, "ShutDown %s done\n", k.Param.KernelId)
 	return nil
 }
 

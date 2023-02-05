@@ -108,8 +108,9 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := []string{NAMEDPORT}
+	kernelid := bootkernelclnt.GenKernelId()
 	if start {
-		ip, err := bootkernelclnt.Start(tag, srvs, namedport)
+		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +121,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	k, err := bootkernelclnt.MkKernelClnt("test", containerIP, namedAddr)
+	k, err := bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -160,13 +161,11 @@ func (ts *Tstate) KillOne(s string) error {
 func (ts *Tstate) Shutdown() error {
 	db.DPrintf(db.TEST, "Shutdown")
 	db.DPrintf(db.SYSTEM, "Shutdown")
+	// Shut down other kernel running named last
 	for i := len(ts.kclnts) - 1; i >= 0; i-- {
-		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
-		// XXX shut down other kernels first?
 		if err := ts.kclnts[i].Shutdown(); err != nil {
 			return err
 		}
-		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
 	return nil
 }

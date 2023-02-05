@@ -42,8 +42,10 @@ func printResultSummary(rs *benchmarks.Results) {
 	fnDetails := runtime.FuncForPC(pc)
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
+	db.DPrintf(db.TEST, "Start print results")
 	lsum, tsum := rs.Summary()
 	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====%v%v\n=====\n\n", fnName, lsum, tsum)
+	db.DPrintf(db.TEST, "Done print results")
 }
 
 // Monitor how many cores have been assigned to a realm.

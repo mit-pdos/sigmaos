@@ -327,6 +327,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Wait for both jobs to finish.
 	<-done
 	<-done
+	db.DPrintf(db.TEST, "MR and Hotel done.")
 	printResultSummary(rs1)
 	rootts.Shutdown()
 }

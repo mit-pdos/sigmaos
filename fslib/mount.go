@@ -82,6 +82,18 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 	}
 }
 
+func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+	target, err := fsl.GetFile(pn)
+	if err != nil {
+		return sp.Tmount{}, err
+	}
+	mnt, error := sp.MkMount(target)
+	if error != nil {
+		return sp.Tmount{}, err
+	}
+	return mnt, err
+}
+
 // Make copy of root mount or first union mount in pn. Return the
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {

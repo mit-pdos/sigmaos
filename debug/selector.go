@@ -90,9 +90,11 @@ const (
 	SIGMAMGR     Tselector = "SIGMAMGR"
 	SIGMAMGR_ERR           = SIGMAMGR + ERR
 	REALMD                 = "REALMD"
+	REALMD_ERR             = "REALMD" + ERR
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"
+	SIGMACLNT              = "SIGMACLNT"
 	NODED                  = "NODED"
 	NODED_ERR              = NODED + ERR
 	MACHINED               = "MACHINED"

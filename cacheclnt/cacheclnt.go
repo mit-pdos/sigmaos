@@ -3,13 +3,12 @@ package cacheclnt
 import (
 	"encoding/json"
 	"hash/fnv"
-	"log"
 	"strconv"
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
+	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	"sigmaos/protdev"
 	"sigmaos/reader"
 	"sigmaos/sessdev"
@@ -49,7 +48,7 @@ func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
 }
 
 func (cc *CacheClnt) Watch(path string, nshard int, err error) {
-	log.Printf("%v: CacheClnt watch %v %d err %v\n", proc.GetName(), path, nshard, err)
+	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nshard, err)
 }
 
 func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {

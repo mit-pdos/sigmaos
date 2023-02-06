@@ -52,7 +52,7 @@ SSHVM="${vms[$VM]}"
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i key-$VPC.pem ubuntu@$SSHVM /bin/bash <<ENDSSH
 cd ulambda
-source ./env/enc.sh
-export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;"
+source ./env/env.sh
+export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;"
 $COMMAND
 ENDSSH

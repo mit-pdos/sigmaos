@@ -17,7 +17,10 @@ $ ./build.sh
 Build docker images locally and push to DockerHub.
 $ ./build.sh --push TAGNAME
 
-To run tests for package PACKAGE_NAME, on a locally build version, run:
+When building images for aws, make sure to run with the --target aws flag
+$ ./build.sh --push TAGNAME --target aws
+
+To run tests for package PACKAGE_NAME, on a locally built version, run:
 $ go test -v sigmaos/PACKAGE_NAME --start
 
 To run tests for package PACKAGE_NAME, on a version pulled from DockerHub, run:

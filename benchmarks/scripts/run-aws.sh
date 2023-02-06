@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG [--version VERSION]" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --version VERSION" 1>&2
 }
 
 VPC=""
@@ -53,14 +53,17 @@ REALM2="benchrealm2"
 
 # Set some variables
 DIR=$(realpath $(dirname $0)/../..)
-. $DIR/.env
 AWS_DIR=$DIR/aws
 OUT_DIR=$DIR/benchmarks/results/$VERSION
 GRAPH_SCRIPTS_DIR=$DIR/benchmarks/scripts/graph
 GRAPH_OUT_DIR=$DIR/benchmarks/results/graphs
 INIT_OUT=/tmp/init.out
 
-# cd to the ulambda root directory
+# Get the private IP address of the leader.
+cd $AWS_DIR
+LEADER_IP=$(./leader-ip.sh --vpc $VPC)
+
+# cd to the sigmaos root directory
 cd $DIR
 mkdir $OUT_DIR
 
@@ -118,7 +121,7 @@ run_mr() {
   perf_dir=$5
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run AppMR --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
 }
@@ -136,7 +139,7 @@ run_hotel() {
     export SIGMADEBUG=\"TEST;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out --containerIP $LEADER_IP 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -178,7 +181,7 @@ run_hotel() {
 
 mr_scalability() {
   mrapp=mr-grep-wiki120G.yml
-  for n_vm in 1 2 4 8 16 ; do
+  for n_vm in 1 16 ; do # 2 4 8 
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -239,6 +242,7 @@ realm_balance() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
+  hotel_ncache=3
   n_vm=8
   driver_vm=14
   run=${FUNCNAME[0]}
@@ -246,9 +250,8 @@ realm_balance() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache 6 --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
@@ -265,9 +268,8 @@ realm_balance_be() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
@@ -291,7 +293,7 @@ k8s_balance() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
@@ -310,7 +312,7 @@ mr_k8s() {
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }
@@ -372,7 +374,7 @@ realm_burst() {
   perf_dir=$OUT_DIR/$run
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst --containerIP $LEADER_IP > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_vm $perf_dir "$cmd" 0
 }
@@ -488,25 +490,25 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #mr_replicated_named
-#mr_scalability
-#mr_vs_corral
+# XXX mr_vs_corral
 #realm_burst
-#realm_balance
+realm_balance
 realm_balance_be
+# XXX mr_scalability
 #hotel_tail
 #mr_k8s
 #k8s_balance
-hotel_tail_multi
+#hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
 graph_realm_balance_be
-#graph_realm_balance
+graph_realm_balance
 #graph_k8s_balance
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#graph_mr_vs_corral
+# XXX graph_mr_aggregate_tpt
+# XXX graph_mr_scalability
+# graph_mr_vs_corral
 #graph_k8s_mr_aggregate_tpt
 #scrape_realm_burst
 #graph_hotel_tail

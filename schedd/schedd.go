@@ -113,17 +113,21 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	}()
 }
 
-// TODO: Proper fair-share scheduling policy, and more fine-grained locking.
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
+	// Priority order in which procs are claimed
+	priority := []proc.Ttype{proc.T_LC, proc.T_BE}
 	for {
 		var ok bool
 		// Iterate through the realms round-robin.
-		for r, q := range sd.qs {
-			// Try to schedule a proc from realm r.
-			ok = ok || sd.tryScheduleRealmL(r, q)
+
+		for _, ptype := range priority {
+			for r, q := range sd.qs {
+				// Try to schedule a proc from realm r.
+				ok = ok || sd.tryScheduleRealmL(r, q, ptype)
+			}
 		}
 		// If unable to schedule a proc from any realm, wait.
 		if !ok {
@@ -135,11 +139,11 @@ func (sd *Schedd) schedule() {
 
 // Try to schedule a proc from realm r's queue q. Returns true if a proc was
 // successfully scheduled.
-func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue) bool {
+func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) bool {
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(sd.ranBE, sd.coresfree, sd.memfree); ok {
+		if p, stolen, ok := q.Dequeue(ptype, sd.ranBE, sd.coresfree, sd.memfree); ok {
 			// If the proc was stolen...
 			if stolen {
 				// Try to claim the proc.

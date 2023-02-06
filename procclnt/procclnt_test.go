@@ -122,7 +122,7 @@ func TestWaitExitSimpleMultiKernel(t *testing.T) {
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node: %v", err)
 
-	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 10*SLEEP_MSECS), "name/"})
+	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err = ts.Spawn(a)
 	db.DPrintf(db.TEST, "Post spawn")

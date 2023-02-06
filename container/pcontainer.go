@@ -55,7 +55,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 			PortBindings: nat.PortMap{
 				// let host decide on port
 				PORT + "/tcp": []nat.PortBinding{{}},
-				"1113/tcp":    []nat.PortBinding{{}},
+				"1113/tcp":    []nat.PortBinding{{HostPort: "1113"}},
 			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,

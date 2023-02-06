@@ -1,18 +1,23 @@
 package memfssrv
 
 import (
+	"sigmaos/container"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
+	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
 	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/uprocsrv/proto"
 )
 
 //
@@ -23,13 +28,14 @@ import (
 
 type MemFs struct {
 	*sesssrv.SessSrv
-	root fs.Dir
-	ctx  fs.CtxI // server context
-	plt  *lockmap.PathLockTable
-	sc   *sigmaclnt.SigmaClnt
+	root       fs.Dir
+	ctx        fs.CtxI // server context
+	plt        *lockmap.PathLockTable
+	sc         *sigmaclnt.SigmaClnt
+	uprocdclnt *protdevclnt.ProtDevClnt
 }
 
-func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
+func MakeReplMemFs(addr, path, name string, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
@@ -63,7 +69,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*se
 	return srv, nil
 }
 
-func MakeReplMemFsFsl(addr string, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
+func MakeReplMemFsFsl(addr, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	srv, err := fslibsrv.MakeReplServerFsl(root, addr, path, sc, conf)
 	if err != nil {
@@ -72,8 +78,46 @@ func MakeReplMemFsFsl(addr string, path string, sc *sigmaclnt.SigmaClnt, conf re
 	return srv, nil
 }
 
-func MakeMemFs(pn string, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
+func MakeMemFs(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	return MakeMemFsPort(pn, ":0", name)
+}
+
+func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
+	realm := proc.GetRealm()
+
+	// mount uprocd
+	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.PORT})
+	pdc, err := protdevclnt.MkProtDevClnt(fsl, "name/")
+	if err != nil {
+		return nil, nil, err
+	}
+	req := &proto.PortRequest{
+		Realm: realm.String(),
+	}
+	res := &proto.PortResult{}
+	if err := pdc.RPC("UprocSrv.Port", req, res); err != nil {
+		return nil, nil, err
+	}
+
+	db.DPrintf(db.CACHESRV, "fn %s res.Ip %v res.Port %v\n", pn, res.Ip, res.Port)
+
+	// Make server without advertising mnt
+	mfs, sc, err := MakeMemFsPort("", ":"+res.Port, name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Advertise server inside and outside realm
+	lip := mfs.MyAddr()
+	mnt := sp.MkMountService(sp.Taddrs{lip, res.Ip + ":" + res.Port})
+
+	db.DPrintf(db.CACHESRV, "mnt %v\n", mnt)
+
+	if err := sc.MkMountSymlink(pn, mnt); err != nil {
+		return nil, nil, err
+	}
+
+	return mfs, sc, err
 }
 
 func MakeMemFsPort(pn, port string, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
@@ -81,6 +125,7 @@ func MakeMemFsPort(pn, port string, name string) (*MemFs, *sigmaclnt.SigmaClnt, 
 	if err != nil {
 		return nil, nil, err
 	}
+	db.DPrintf(db.CACHESRV, "MakeMemFsPort %v %v\n", pn, port)
 	fs, err := MakeMemFsSrvClnt(pn, port, sc)
 	return fs, sc, err
 }

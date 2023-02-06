@@ -1,7 +1,10 @@
 package uprocsrv
 
 import (
+	"net"
 	"os"
+	"strconv"
+	"sync"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -12,13 +15,30 @@ import (
 )
 
 type UprocSrv struct {
-	ch chan struct{}
+	mu    sync.Mutex
+	ch    chan struct{}
+	port  int
+	extIp string
 }
 
-func RunUprocSrv(realm string, ptype proc.Ttype) error {
+func RunUprocSrv(realm, scheddIp string, ptype proc.Ttype) error {
+	db.DPrintf(db.UPROCD, "Run %v ip %v t %v\n", realm, scheddIp, ptype)
 	ups := &UprocSrv{}
 	ups.ch = make(chan struct{})
-	db.DPrintf(db.UPROCD, "%v: Run %v %s\n", proc.GetName(), realm, os.Environ())
+	p, r := strconv.Atoi(container.PORT)
+	if r != nil {
+		return nil
+	}
+	h, _, r := net.SplitHostPort(scheddIp)
+	if r != nil {
+		return nil
+	}
+	ups.port = p + 1
+	ups.extIp = h
+
+	db.DPrintf(db.UPROCD, "%v: Run %v %v %s\n", proc.GetName(), realm, h, os.Environ())
+
+	// The kernel will advertise the server, so pass "" as pn.
 	pds, err := protdevsrv.MakeProtDevSrvPort("", container.PORT, ups)
 	if err != nil {
 		return err
@@ -31,4 +51,13 @@ func RunUprocSrv(realm string, ptype proc.Ttype) error {
 func (ups *UprocSrv) Run(req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
 	return container.RunUProc(uproc)
+}
+
+func (ups *UprocSrv) Port(req proto.PortRequest, res *proto.PortResult) error {
+	ups.mu.Lock()
+	defer ups.mu.Unlock()
+	db.DPrintf(db.UPROCD, "ip %v port %v\n", ups.extIp, ups.port)
+	res.Port = strconv.Itoa(ups.port)
+	res.Ip = ups.extIp
+	return nil
 }

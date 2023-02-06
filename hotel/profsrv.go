@@ -10,6 +10,7 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -107,7 +108,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) error {
+func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
 	db.DPrintf(db.HOTEL_PROF, "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}

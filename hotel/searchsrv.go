@@ -4,6 +4,7 @@ import (
 	"log"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
@@ -45,7 +46,7 @@ func RunSearchSrv(n string) error {
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error {
+func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
 	var gres proto.GeoResult
 	greq := &proto.GeoRequest{
 		Lat: req.Lat,

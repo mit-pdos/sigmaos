@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -31,7 +32,7 @@ func RunUprocSrv(realm string, ptype proc.Ttype) error {
 	return nil
 }
 
-func (ups *UprocSrv) Run(req proto.RunRequest, res *proto.RunResult) error {
+func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
 	return container.RunUProc(uproc)
 }

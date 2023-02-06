@@ -11,6 +11,7 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -65,7 +66,7 @@ func RunRateSrv(job string) error {
 }
 
 // GetRates gets rates for hotels
-func (s *Rate) GetRates(req proto.RateRequest, res *proto.RateResult) error {
+func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}

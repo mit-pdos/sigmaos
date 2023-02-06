@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -44,7 +45,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 	return sd
 }
 
-func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error {
+func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -64,7 +65,7 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResponse) error {
+func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -74,7 +75,7 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
+func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -88,7 +89,7 @@ func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUS
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) GetCPUUtil(req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
+func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
 	res.Util = sd.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
 	return nil
 }

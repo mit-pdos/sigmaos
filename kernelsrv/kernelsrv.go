@@ -2,6 +2,7 @@ package kernelsrv
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/proc"
@@ -28,7 +29,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	return nil
 }
 
-func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
+func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootResult) error {
 	var pid proc.Tpid
 	var err error
 	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
@@ -38,11 +39,11 @@ func (ks *KernelSrv) Boot(req proto.BootRequest, rep *proto.BootResult) error {
 	return nil
 }
 
-func (ks *KernelSrv) SetCPUShares(req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
+func (ks *KernelSrv) SetCPUShares(ctx fs.CtxI, req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
 	return ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares)
 }
 
-func (ks *KernelSrv) GetCPUUtil(req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
+func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
 	util, err := ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
 	if err != nil {
 		return err
@@ -51,7 +52,7 @@ func (ks *KernelSrv) GetCPUUtil(req proto.GetKernelSrvCPUUtilRequest, rep *proto
 	return nil
 }
 
-func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
+func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
 	if err := ks.k.Shutdown(); err != nil {
 		return err
 	}
@@ -59,6 +60,6 @@ func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResu
 	return nil
 }
 
-func (ks *KernelSrv) Kill(req proto.KillRequest, rep *proto.KillResult) error {
+func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillResult) error {
 	return ks.k.KillOne(req.Name)
 }

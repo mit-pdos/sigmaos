@@ -262,11 +262,13 @@ func TestSpinPerfCalibrate(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-1, N_ITER)
+	// -1 for BE-reserved core, -1 for named
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	db.DPrintf(db.TEST, "Calibrate Linux baseline")
-	ctimeL := calibrateCTimeLinux(ts1, linuxsched.NCores-1, N_ITER)
+	// -1 for BE-reserved core, -1 for named
+	ctimeL := calibrateCTimeLinux(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
 
 	rootts.Shutdown()
@@ -286,13 +288,13 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	// - 2 to account for NAMED reserved cores.
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
+	// - 2 to account for NAMED reserved cores, -1 for BE-reserved core
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-3, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	c := make(chan time.Duration)
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin1")
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin2")
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-3, N_ITER, "spin1")
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-3, N_ITER, "spin2")
 
 	d1 := <-c
 	d2 := <-c
@@ -316,13 +318,15 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
+	// - 2 to account for NAMED reserved cores, -1 for BE-reserved core
+	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-3, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
-	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
+	// - 2 to account for NAMED reserved cores, -1 for BE-reserved core
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-3), linuxsched.NCores-3, N_ITER, "lcspin")
+	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-3, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
@@ -350,11 +354,13 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+	// - 2 to account for NAMED reserved cores, -1 for BE-reserved core
 	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-3, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
+	// - 2 to account for NAMED reserved cores, -1 for BE-reserved core
 	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-3), linuxsched.NCores-3, N_ITER, "lcspin")
 	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-3, N_ITER, "bespin")
 

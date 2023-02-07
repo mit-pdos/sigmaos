@@ -48,7 +48,7 @@ var HotelSvcs = []string{"hotel-userd", "hotel-rated",
 	"hotel-reserved", "hotel-recd", "hotel-wwwd"}
 
 var ncores = []int{0, 2,
-	2, 2, 2,
+	2, 1, 2,
 	2, 0, 2}
 
 //var ncores = []int{0, 2,

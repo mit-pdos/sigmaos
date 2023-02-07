@@ -36,7 +36,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 		qs:        make(map[sp.Trealm]*Queue),
 		realms:    make([]sp.Trealm, 0),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
-		coresfree: proc.Tcore(linuxsched.NCores) - 1, // 1 core is reserved for BE procs.
+		coresfree: proc.Tcore(linuxsched.NCores), //- 1, // 1 core is reserved for BE procs.
 		memfree:   mem.GetTotalMem(),
 	}
 	sd.cond = sync.NewCond(&sd.mu)

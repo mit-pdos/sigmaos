@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
@@ -28,27 +29,27 @@ func RunUProc(uproc *proc.Proc) error {
 	cmd.Stderr = os.Stderr
 
 	// Set up new namespaces
-	//	cmd.SysProcAttr = &syscall.SysProcAttr{
-	//		Cloneflags: syscall.CLONE_NEWUTS |
-	//			syscall.CLONE_NEWNS |
-	//			syscall.CLONE_NEWIPC |
-	//			syscall.CLONE_NEWPID |
-	//			syscall.CLONE_NEWUSER,
-	//		UidMappings: []syscall.SysProcIDMap{
-	//			{
-	//				ContainerID: 0,
-	//				HostID:      os.Getuid(),
-	//				Size:        1,
-	//			},
-	//		},
-	//		GidMappings: []syscall.SysProcIDMap{
-	//			{
-	//				ContainerID: 0,
-	//				HostID:      os.Getgid(),
-	//				Size:        1,
-	//			},
-	//		},
-	//	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWNS |
+			syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID, // |
+		//			syscall.CLONE_NEWUSER,
+		//		UidMappings: []syscall.SysProcIDMap{
+		//			{
+		//				ContainerID: os.Getuid(),
+		//				HostID:      os.Getuid(),
+		//				Size:        1,
+		//			},
+		//		},
+		//		GidMappings: []syscall.SysProcIDMap{
+		//			{
+		//				ContainerID: os.Getgid(),
+		//				HostID:      os.Getgid(),
+		//				Size:        1,
+		//			},
+		//		},
+	}
 
 	pn, err := exec.LookPath("exec-uproc")
 	if err != nil {
@@ -112,7 +113,7 @@ func setupFS(newRoot string) error {
 	oldRootMnt := "old_root"
 
 	// Create directories to use as mount points, as well as the new root directory itself.
-	for _, d := range []string{"", oldRootMnt, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "bin"} {
+	for _, d := range []string{"", oldRootMnt, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "bin", "tmp", perf.OUTPUT_PATH} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {
 			db.DPrintf(db.ALWAYS, "failed to mkdir [%v]: %v", d, err)
 			return err
@@ -133,7 +134,7 @@ func setupFS(newRoot string) error {
 
 	// Mount /sys for /sys/devices/system/cpu/online; XXX exclude
 	// /sys/firmware; others?
-	if err := syscall.Mount("/sys", path.Join(newRoot, "sys"), "sysfs", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("/sys", path.Join(newRoot, "sys"), "sysfs", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /sys err %v", err)
 		return err
 	}
@@ -151,25 +152,31 @@ func setupFS(newRoot string) error {
 	}
 
 	// Mount /lib
-	if err := syscall.Mount("/lib", "lib", "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("/lib", "lib", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /lib: %v", err)
 		return err
 	}
 
 	// Mount /lib
-	if err := syscall.Mount("/lib64", "lib64", "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("/lib64", "lib64", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /lib64: %v", err)
 		return err
 	}
 
 	// Mount /etc
-	if err := syscall.Mount("/etc", "etc", "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("/etc", "etc", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
 		return err
 	}
 
 	// Mount bin directory as /bin
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/user"), "bin", "none", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/user"), "bin", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
+		return err
+	}
+
+	// Mount perf dir (remove starting first slash)
+	if err := syscall.Mount(perf.OUTPUT_PATH, perf.OUTPUT_PATH[1:], "none", syscall.MS_BIND, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
 		return err
 	}

@@ -3,20 +3,17 @@
 FROM golang AS base
 ARG parallel
 ARG target=local
-RUN apt-get update
-RUN apt-get install libseccomp-dev
-RUN apt-get --yes install iputils-ping
-RUN mkdir -p /home/sigmaos
+# Install apt packages & clean up apt cache
+RUN apt-get update && \
+  apt-get --no-install-recommends --yes install iputils-ping libseccomp-dev && \
+  apt clean && \
+  apt autoclean && \
+  apt autoremove && \
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 WORKDIR /home/sigmaos
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
-
-# Clean up apt cache
-RUN apt clean && \
-  apt autoclean && \
-  apt autoremove && \
-  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM base AS kernel
 COPY . .

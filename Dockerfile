@@ -12,6 +12,12 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
 
+# Clean up apt cache
+RUN apt clean && \
+  apt autoclean && \
+  apt autoremove && \
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 FROM base AS kernel
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --target $target $parallel kernel

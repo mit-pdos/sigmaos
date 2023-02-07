@@ -330,7 +330,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	//	<-done
 	<-done
 	db.DPrintf(db.TEST, "MR and Hotel done.")
-	printResultSummary(rs1)
+	_ = rs1
+	//	printResultSummary(rs1)
 	rootts.Shutdown()
 }
 

@@ -40,6 +40,7 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 					ReadOnly: false,
 				},
 			},
+			Privileged: true,
 		}, nil, nil, "")
 	if err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)

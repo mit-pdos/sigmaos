@@ -8,6 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
+	"sigmaos/kernelsrv/proto"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	"sigmaos/proc"
@@ -17,7 +18,6 @@ import (
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocsrv/proto"
 )
 
 //
@@ -86,30 +86,31 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	realm := proc.GetRealm()
 
 	// mount uprocd
+	// XXX move into uprocd clnt
 	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.FPORT.String()})
 	pdc, err := protdevclnt.MkProtDevClnt(fsl, "name/")
 	if err != nil {
 		return nil, nil, err
 	}
 	req := &proto.PortRequest{
-		Realm: realm.String(),
+		Port: "",
 	}
 	res := &proto.PortResult{}
 	if err := pdc.RPC("UprocSrv.Port", req, res); err != nil {
 		return nil, nil, err
 	}
 
-	db.DPrintf(db.CACHESRV, "fn %s res.Ip %v res.Port %v\n", pn, res.Ip, res.Port)
+	db.DPrintf(db.CACHESRV, "fn %s res.Ip %v res.Port %v\n", pn, res.HostIp, res.RealmPort)
 
 	// Make server without advertising mnt
-	mfs, sc, err := MakeMemFsPort("", ":"+res.Port, name)
+	mfs, sc, err := MakeMemFsPort("", ":"+res.RealmPort, name)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Advertise server inside and outside realm
 	lip := mfs.MyAddr()
-	mnt := sp.MkMountService(sp.Taddrs{lip, res.Ip + ":" + res.Port})
+	mnt := sp.MkMountService(sp.Taddrs{lip, res.HostIp + ":" + res.HostPort})
 
 	db.DPrintf(db.CACHESRV, "mnt %v\n", mnt)
 

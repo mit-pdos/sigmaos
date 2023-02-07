@@ -106,108 +106,6 @@ func (*RunResult) Descriptor() ([]byte, []int) {
 	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{1}
 }
 
-type PortRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Realm string `protobuf:"bytes,1,opt,name=realm,proto3" json:"realm,omitempty"`
-}
-
-func (x *PortRequest) Reset() {
-	*x = PortRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *PortRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PortRequest) ProtoMessage() {}
-
-func (x *PortRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PortRequest.ProtoReflect.Descriptor instead.
-func (*PortRequest) Descriptor() ([]byte, []int) {
-	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *PortRequest) GetRealm() string {
-	if x != nil {
-		return x.Realm
-	}
-	return ""
-}
-
-type PortResult struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Ip   string `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
-	Port string `protobuf:"bytes,2,opt,name=port,proto3" json:"port,omitempty"`
-}
-
-func (x *PortResult) Reset() {
-	*x = PortResult{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *PortResult) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PortResult) ProtoMessage() {}
-
-func (x *PortResult) ProtoReflect() protoreflect.Message {
-	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PortResult.ProtoReflect.Descriptor instead.
-func (*PortResult) Descriptor() ([]byte, []int) {
-	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *PortResult) GetIp() string {
-	if x != nil {
-		return x.Ip
-	}
-	return ""
-}
-
-func (x *PortResult) GetPort() string {
-	if x != nil {
-		return x.Port
-	}
-	return ""
-}
-
 var File_uprocsrv_proto_uproc_proto protoreflect.FileDescriptor
 
 var file_uprocsrv_proto_uproc_proto_rawDesc = []byte{
@@ -218,14 +116,9 @@ var file_uprocsrv_proto_uproc_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a,
 	0x2e, 0x50, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63,
 	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x0b, 0x0a, 0x09, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x22, 0x23, 0x0a, 0x0b, 0x50, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x22, 0x30, 0x0a, 0x0a, 0x50, 0x6f, 0x72, 0x74, 0x52,
-	0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x02, 0x69, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67,
-	0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x75, 0x70, 0x72, 0x6f, 0x63, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x75, 0x70,
+	0x72, 0x6f, 0x63, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -240,16 +133,14 @@ func file_uprocsrv_proto_uproc_proto_rawDescGZIP() []byte {
 	return file_uprocsrv_proto_uproc_proto_rawDescData
 }
 
-var file_uprocsrv_proto_uproc_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_uprocsrv_proto_uproc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_uprocsrv_proto_uproc_proto_goTypes = []interface{}{
 	(*RunRequest)(nil),     // 0: RunRequest
 	(*RunResult)(nil),      // 1: RunResult
-	(*PortRequest)(nil),    // 2: PortRequest
-	(*PortResult)(nil),     // 3: PortResult
-	(*proc.ProcProto)(nil), // 4: ProcProto
+	(*proc.ProcProto)(nil), // 2: ProcProto
 }
 var file_uprocsrv_proto_uproc_proto_depIdxs = []int32{
-	4, // 0: RunRequest.procProto:type_name -> ProcProto
+	2, // 0: RunRequest.procProto:type_name -> ProcProto
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -287,30 +178,6 @@ func file_uprocsrv_proto_uproc_proto_init() {
 				return nil
 			}
 		}
-		file_uprocsrv_proto_uproc_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PortRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_uprocsrv_proto_uproc_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PortResult); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -318,7 +185,7 @@ func file_uprocsrv_proto_uproc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_uprocsrv_proto_uproc_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,6 +1,7 @@
 package kernelsrv
 
 import (
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
@@ -61,4 +62,20 @@ func (ks *KernelSrv) Shutdown(req proto.ShutdownRequest, rep *proto.ShutdownResu
 
 func (ks *KernelSrv) Kill(req proto.KillRequest, rep *proto.KillResult) error {
 	return ks.k.KillOne(req.Name)
+}
+
+func (ks *KernelSrv) Port(req proto.PortRequest, rep *proto.PortResult) error {
+	pb, err := ks.k.Port(proc.Tpid(req.PidStr), req.Port)
+	if err != nil {
+		return err
+	}
+	ip, err := container.LocalIP()
+	if err != nil {
+		return err
+	}
+
+	rep.RealmPort = pb.RealmPort
+	rep.HostPort = pb.HostPort
+	rep.HostIp = ip
+	return nil
 }

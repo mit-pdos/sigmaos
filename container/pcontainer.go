@@ -2,7 +2,6 @@ package container
 
 import (
 	"context"
-	"net"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
@@ -90,17 +89,9 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	port := ""
 
-	ports := json.NetworkSettings.NetworkSettingsBase.Ports["1112/tcp"]
-	for _, p := range ports {
-		ip := net.ParseIP(p.HostIP)
-		if ip.To4() != nil {
-			port = p.HostPort
-			break
-		}
-	}
+	pm := makePortMap(json.NetworkSettings.NetworkSettingsBase.Ports)
 
-	db.DPrintf(db.CONTAINER, "network setting: ip %v hostport %v\n", ip, port)
-	return &Container{ctx, cli, resp.ID, ip, port, nil}, nil
+	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
+	return &Container{ctx, cli, resp.ID, ip, pm, nil}, nil
 }

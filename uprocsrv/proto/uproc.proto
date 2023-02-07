@@ -11,12 +11,3 @@ message RunRequest {
 message RunResult {
 }
 
-message PortRequest {
-  string realm = 1;
-}
-
-message PortResult {
-  string ip = 1;
-  string port = 2;
-}
-

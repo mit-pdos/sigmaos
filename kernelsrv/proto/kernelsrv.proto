@@ -40,4 +40,15 @@ message KillRequest {
 message KillResult {
 }
 
+message PortRequest {
+  string pidStr = 1;
+  string port = 2;
+}
+
+message PortResult {
+  string realmPort = 1;
+  string hostIp = 3;
+  string hostPort = 2;
+}
+
 

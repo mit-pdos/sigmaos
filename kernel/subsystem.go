@@ -71,6 +71,10 @@ func (ss *Subsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
+func (ss *Subsystem) GetPort(port string) (container.PortBinding, error) {
+	return ss.container.GetPort(port)
+}
+
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -64,6 +65,10 @@ func (k *Kernel) SetCPUShares(pid proc.Tpid, shares int64) error {
 
 func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
+}
+
+func (k *Kernel) Port(pid proc.Tpid, port string) (container.PortBinding, error) {
+	return k.svcs.svcMap[pid].GetPort(port)
 }
 
 func (k *Kernel) KillOne(srv string) error {
@@ -128,6 +133,10 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
+
+	scheddIp := args[2]
+	args[2] = k.Param.KernelId
+
 	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
 	if err != nil {
 		return nil, err
@@ -135,9 +144,11 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 	realm := args[0]
 	ptype := args[1]
-	scheddIp := args[2]
 	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
-	port := s.container.HostPort()
+	port, err := s.container.HostPort(container.FPORT.String())
+	if err != nil {
+		return nil, err
+	}
 
 	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn)
 
@@ -148,5 +159,6 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	if err := k.MkMountSymlink(pn, mnt); err != nil {
 		return nil, err
 	}
+
 	return s, nil
 }

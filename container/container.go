@@ -3,13 +3,17 @@ package container
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"os"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
@@ -20,12 +24,64 @@ const (
 	PERF_MOUNT = "/tmp/sigmaos-perf"
 )
 
+type PortBinding struct {
+	RealmPort string
+	HostPort  string
+}
+
+type PortMap struct {
+	sync.Mutex
+	portmap map[string]PortBinding
+}
+
+func makePortMap(ports nat.PortMap) *PortMap {
+	pm := &PortMap{}
+	pm.portmap = make(map[string]PortBinding)
+	for i := FPORT; i < LPORT; i++ {
+		p, err := nat.NewPort("tcp", i.String())
+		if err != nil {
+			break
+		}
+		for _, p := range ports[p] {
+			ip := net.ParseIP(p.HostIP)
+			if ip.To4() != nil {
+				pm.portmap[i.String()] = PortBinding{HostPort: p.HostPort, RealmPort: ""}
+				break
+			}
+		}
+	}
+	return pm
+}
+
+func (pm *PortMap) HostPort(port string) (string, error) {
+	pm.Lock()
+	defer pm.Unlock()
+	pb, ok := pm.portmap[port]
+	if !ok {
+		return "", fmt.Errorf("No host port for uprocd")
+	}
+	return pb.HostPort, nil
+}
+
+func (pm *PortMap) GetPort(port string) (PortBinding, error) {
+	pm.Lock()
+	defer pm.Unlock()
+
+	for p, pb := range pm.portmap {
+		if pb.RealmPort == "" {
+			pb.RealmPort = p
+			return pb, nil
+		}
+	}
+	return PortBinding{}, fmt.Errorf("No host port for uprocd")
+}
+
 type Container struct {
 	ctx          context.Context
 	cli          *client.Client
 	container    string
 	ip           string
-	hostport     string
+	portMap      *PortMap
 	prevCPUStats *types.CPUStats
 }
 
@@ -95,8 +151,12 @@ func (c *Container) Ip() string {
 	return c.ip
 }
 
-func (c *Container) HostPort() string {
-	return c.hostport
+func (c *Container) HostPort(port string) (string, error) {
+	return c.portMap.HostPort(port)
+}
+
+func (c *Container) GetPort(port string) (PortBinding, error) {
+	return c.portMap.GetPort(port)
 }
 
 func (c *Container) Shutdown() error {

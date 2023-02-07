@@ -22,7 +22,6 @@ type Schedd struct {
 	cond      *sync.Cond
 	pmgr      *procmgr.ProcMgr
 	schedds   map[string]*protdevclnt.ProtDevClnt
-	ranBE     bool
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
@@ -37,8 +36,7 @@ func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
 		qs:        make(map[sp.Trealm]*Queue),
 		realms:    make([]sp.Trealm, 0),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
-		ranBE:     false,
-		coresfree: proc.Tcore(linuxsched.NCores),
+		coresfree: proc.Tcore(linuxsched.NCores) - 1, // 1 core is reserved for BE procs.
 		memfree:   mem.GetTotalMem(),
 	}
 	sd.cond = sync.NewCond(&sd.mu)
@@ -144,7 +142,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(ptype, sd.ranBE, sd.coresfree, sd.memfree); ok {
+		if p, stolen, ok := q.Dequeue(ptype, sd.coresfree, sd.memfree); ok {
 			// If the proc was stolen...
 			if stolen {
 				// Try to claim the proc.

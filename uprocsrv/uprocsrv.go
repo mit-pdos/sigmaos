@@ -25,21 +25,17 @@ func RunUprocSrv(realm, scheddIp string, ptype proc.Ttype) error {
 	db.DPrintf(db.UPROCD, "Run %v ip %v t %v\n", realm, scheddIp, ptype)
 	ups := &UprocSrv{}
 	ups.ch = make(chan struct{})
-	p, r := strconv.Atoi(container.PORT)
-	if r != nil {
-		return nil
-	}
 	h, _, r := net.SplitHostPort(scheddIp)
 	if r != nil {
 		return nil
 	}
-	ups.port = p + 1
+	ups.port = int(container.FPORT) + 1
 	ups.extIp = h
 
 	db.DPrintf(db.UPROCD, "%v: Run %v %v %s\n", proc.GetName(), realm, h, os.Environ())
 
 	// The kernel will advertise the server, so pass "" as pn.
-	pds, err := protdevsrv.MakeProtDevSrvPort("", container.PORT, ups)
+	pds, err := protdevsrv.MakeProtDevSrvPort("", container.FPORT.String(), ups)
 	if err != nil {
 		return err
 	}

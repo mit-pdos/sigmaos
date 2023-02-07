@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"net"
+	"strconv"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -16,9 +17,16 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type Tport int
+
 const (
-	PORT = "1112"
+	FPORT Tport = 1112 // Must be used by uprocd for now
+	LPORT Tport = 1122
 )
+
+func (p Tport) String() string {
+	return strconv.Itoa(int(p))
+}
 
 func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
@@ -30,18 +38,34 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	}
 	cmd := append([]string{p.Program}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE))
+
+	pset := nat.PortSet{} // Ports to expose
+	pmap := nat.PortMap{} // NAT mappings for exposed ports
+	for i := FPORT; i < LPORT; i++ {
+		p, err := nat.NewPort("tcp", i.String())
+		if err != nil {
+			return nil, err
+		}
+		pset[p] = struct{}{}
+		if i != FPORT {
+			// XXX for now
+			pmap[p] = []nat.PortBinding{{HostPort: i.String()}}
+		} else {
+			pmap[p] = []nat.PortBinding{{}}
+		}
+	}
+
+	db.DPrintf(db.CONTAINER, "pset %v pmap %v\n", pset, pmap)
+
 	endpoints := make(map[string]*network.EndpointSettings, 1)
 	endpoints["sigmanet"] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
-			Image: image,
-			Cmd:   cmd,
-			Tty:   false,
-			Env:   p.GetEnv(),
-			ExposedPorts: nat.PortSet{
-				PORT + "/tcp": struct{}{},
-				"1113/tcp":    struct{}{},
-			},
+			Image:        image,
+			Cmd:          cmd,
+			Tty:          false,
+			Env:          p.GetEnv(),
+			ExposedPorts: pset,
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			Mounts: []mount.Mount{
@@ -52,11 +76,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 					ReadOnly: false,
 				},
 			},
-			PortBindings: nat.PortMap{
-				// let host decide on port
-				PORT + "/tcp": []nat.PortBinding{{}},
-				"1113/tcp":    []nat.PortBinding{{HostPort: "1113"}},
-			},
+			PortBindings: pmap,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-uprocd-"+realm)
@@ -71,6 +91,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	}
 	ip := json.NetworkSettings.IPAddress
 	port := ""
+
 	ports := json.NetworkSettings.NetworkSettingsBase.Ports["1112/tcp"]
 	for _, p := range ports {
 		ip := net.ParseIP(p.HostIP)

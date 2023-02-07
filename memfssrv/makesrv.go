@@ -86,7 +86,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	realm := proc.GetRealm()
 
 	// mount uprocd
-	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.PORT})
+	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.FPORT.String()})
 	pdc, err := protdevclnt.MkProtDevClnt(fsl, "name/")
 	if err != nil {
 		return nil, nil, err

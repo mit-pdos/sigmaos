@@ -5,11 +5,12 @@ import (
 	"net"
 	"sync"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/delay"
-	"sigmaos/sessp"
-    "sigmaos/serr"
+	"sigmaos/serr"
 	"sigmaos/sessconnclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -73,7 +74,41 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect(addrs []string) *serr.Err {
+func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
+	if len(addrs) == 1 {
+		return addrs
+	}
+	a := make(sp.Taddrs, len(addrs))
+	p := 0
+	for i, a := range addrs {
+		h1, _, r := net.SplitHostPort(a)
+		if r != nil {
+			return addrs
+		}
+		ip1, ipnet1, r := net.ParseCIDR(h1 + "/16") // XXX
+		if r != nil {
+			return addrs
+		}
+		ip2 := net.ParseIP(ip)
+		if ip1 == nil || ip2 == nil {
+			return addrs
+		}
+		if ipnet1.Contains(ip2) {
+			p = i
+			break
+		}
+	}
+	v := addrs[0]
+	a[0] = addrs[p]
+	a[p] = v
+	return a
+}
+
+func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
+	ip, err := container.LocalIP()
+	if err == nil {
+		addrs = rearrange(addrs, ip)
+	}
 	for _, addr := range addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {

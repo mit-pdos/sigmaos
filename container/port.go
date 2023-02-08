@@ -60,8 +60,6 @@ func makePortMap(ports nat.PortMap) *PortMap {
 			}
 		}
 	}
-	pb := pm.portmap[FPORT.String()]
-	pb.Mark(FPORT.String())
 	return pm
 }
 

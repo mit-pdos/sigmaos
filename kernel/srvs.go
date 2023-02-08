@@ -146,12 +146,12 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	ptype := args[1]
 	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
 
-	pm, err := s.container.GetBinding(container.UPROCD_PORT.String())
+	pm, err := s.container.AllocPortOne(container.UPROCD_PORT.String())
 	if err != nil {
 		return nil, err
 	}
 
-	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn, pm)
+	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)
 
 	// Use 127.0.0.1, because only the local schedd should be talking
 	// to uprocd.

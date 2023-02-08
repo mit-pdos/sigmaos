@@ -87,7 +87,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 
 	// mount uprocd
 	// XXX move into uprocd clnt
-	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.FPORT.String()})
+	fsl, err := fslib.MakeFsLibAddr(name, realm, "127.0.0.1", sp.Taddrs{"127.0.0.1:" + container.UPROCD_PORT.String()})
 	pdc, err := protdevclnt.MkProtDevClnt(fsl, "name/")
 	if err != nil {
 		return nil, nil, err
@@ -96,7 +96,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 		Port: "",
 	}
 	res := &proto.PortResult{}
-	if err := pdc.RPC("UprocSrv.Port", req, res); err != nil {
+	if err := pdc.RPC("UprocSrv.AllocPort", req, res); err != nil {
 		return nil, nil, err
 	}
 

@@ -62,7 +62,7 @@ func (kc *KernelClnt) Shutdown() error {
 func (kc *KernelClnt) Port(pid proc.Tpid, port string) (string, container.PortBinding, error) {
 	var res proto.PortResult
 	req := &proto.PortRequest{PidStr: pid.String(), Port: port}
-	if err := kc.pdc.RPC("KernelSrv.Port", req, &res); err != nil {
+	if err := kc.pdc.RPC("KernelSrv.AllocPort", req, &res); err != nil {
 		return "", container.PortBinding{}, err
 	}
 	return res.HostIp, container.PortBinding{res.RealmPort, res.HostPort}, nil

@@ -47,7 +47,7 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 func MakeProtDevSrvPublic(fn string, svci any) (*ProtDevSrv, error) {
 	mfs, _, error := memfssrv.MakeMemFsPublic(fn, "protdevsrv")
 	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+		db.DFatalf("MakeMemFsPublic: %v\n", error)
 	}
 	db.DPrintf(db.CACHESRV, "mfs %v error %v\n", mfs, error)
 	return MakeProtDevSrvMemFs(mfs, svci)

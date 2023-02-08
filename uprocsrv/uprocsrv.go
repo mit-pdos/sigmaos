@@ -28,7 +28,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype) error {
 	db.DPrintf(db.UPROCD, "%v: Run %v %v %s\n", proc.GetName(), realm, kernelId, os.Environ())
 
 	// The kernel will advertise the server, so pass "" as pn.
-	pds, err := protdevsrv.MakeProtDevSrvPort("", container.FPORT.String(), ups)
+	pds, err := protdevsrv.MakeProtDevSrvPort("", container.UPROCD_PORT.String(), ups)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (ups *UprocSrv) getKernelClnt() (*kernelclnt.KernelClnt, error) {
 	return ups.kc, nil
 }
 
-func (ups *UprocSrv) Port(req kproto.PortRequest, res *kproto.PortResult) error {
+func (ups *UprocSrv) AllocPort(req kproto.PortRequest, res *kproto.PortResult) error {
 	kc, err := ups.getKernelClnt()
 	if err != nil {
 		return err

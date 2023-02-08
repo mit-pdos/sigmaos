@@ -2,7 +2,6 @@ package container
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -15,17 +14,6 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
-
-type Tport int
-
-const (
-	FPORT Tport = 1112 // Must be used by uprocd for now
-	LPORT Tport = 1122
-)
-
-func (p Tport) String() string {
-	return strconv.Itoa(int(p))
-}
 
 func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)

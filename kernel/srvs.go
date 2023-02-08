@@ -67,8 +67,8 @@ func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) Port(pid proc.Tpid, port string) (container.PortBinding, error) {
-	return k.svcs.svcMap[pid].GetPort(port)
+func (k *Kernel) AllocPort(pid proc.Tpid, port string) (*container.PortBinding, error) {
+	return k.svcs.svcMap[pid].AllocPort(port)
 }
 
 func (k *Kernel) KillOne(srv string) error {
@@ -145,16 +145,17 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	realm := args[0]
 	ptype := args[1]
 	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
-	port, err := s.container.HostPort(container.FPORT.String())
+
+	pm, err := s.container.AllocPortOne(container.UPROCD_PORT.String())
 	if err != nil {
 		return nil, err
 	}
 
-	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn)
+	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s\n", realm, ptype, pn, pm)
 
 	// Use 127.0.0.1, because only the local schedd should be talking
 	// to uprocd.
-	mnt := sp.MkMountServer("127.0.0.1:" + port)
+	mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort)
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if err := k.MkMountSymlink(pn, mnt); err != nil {
 		return nil, err

@@ -34,12 +34,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 			return nil, err
 		}
 		pset[p] = struct{}{}
-		if i != FPORT {
-			// XXX for now
-			pmap[p] = []nat.PortBinding{{HostPort: i.String()}}
-		} else {
-			pmap[p] = []nat.PortBinding{{}}
-		}
+		pmap[p] = []nat.PortBinding{{}}
 	}
 
 	db.DPrintf(db.CONTAINER, "pset %v pmap %v\n", pset, pmap)

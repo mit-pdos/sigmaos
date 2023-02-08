@@ -146,7 +146,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	ptype := args[1]
 	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
 
-	pm, err := s.container.AllocPortOne(container.UPROCD_PORT.String())
+	pm, err := s.container.GetBinding(container.UPROCD_PORT.String())
 	if err != nil {
 		return nil, err
 	}

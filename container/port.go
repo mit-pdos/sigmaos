@@ -17,6 +17,8 @@ const (
 	FPORT       Tport = 1112
 	LPORT       Tport = 1122
 	UPROCD_PORT Tport = FPORT
+
+	FREEPORT = ""
 )
 
 func (p Tport) String() string {
@@ -26,6 +28,15 @@ func (p Tport) String() string {
 type PortBinding struct {
 	RealmPort string
 	HostPort  string
+}
+
+func (pb *PortBinding) String() string {
+	return fmt.Sprintf("RealmPort %s HostPort %s\n", pb.RealmPort, pb.HostPort)
+}
+
+func (pb *PortBinding) Mark(port string) {
+	db.DPrintf(db.BOOT, "AllocPort: %v\n", port)
+	pb.RealmPort = port
 }
 
 type PortMap struct {
@@ -44,7 +55,7 @@ func makePortMap(ports nat.PortMap) *PortMap {
 		for _, p := range ports[p] {
 			ip := net.ParseIP(p.HostIP)
 			if ip.To4() != nil {
-				pm.portmap[i.String()] = &PortBinding{HostPort: p.HostPort, RealmPort: ""}
+				pm.portmap[i.String()] = &PortBinding{HostPort: p.HostPort, RealmPort: FREEPORT}
 				break
 			}
 		}
@@ -54,12 +65,7 @@ func makePortMap(ports nat.PortMap) *PortMap {
 	return pm
 }
 
-func (pb *PortBinding) Mark(port string) {
-	db.DPrintf(db.BOOT, "AllocPort: %v\n", port)
-	pb.RealmPort = port
-}
-
-func (pm *PortMap) GetPort(port string) (*PortBinding, error) {
+func (pm *PortMap) GetBinding(port string) (*PortBinding, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
@@ -75,7 +81,7 @@ func (pm *PortMap) AllocPortOne(port string) (*PortBinding, error) {
 	defer pm.Unlock()
 
 	pb := pm.portmap[port]
-	if pb.RealmPort != "" {
+	if pb.RealmPort == FREEPORT {
 		pb.Mark(port)
 		return pb, nil
 	}
@@ -87,7 +93,7 @@ func (pm *PortMap) AllocPort() (*PortBinding, error) {
 	defer pm.Unlock()
 
 	for p, pb := range pm.portmap {
-		if pb.RealmPort == "" {
+		if pb.RealmPort == FREEPORT {
 			pb.Mark(p)
 			return pb, nil
 		}

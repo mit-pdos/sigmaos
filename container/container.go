@@ -103,8 +103,8 @@ func (c *Container) AllocPort() (*PortBinding, error) {
 	return c.portMap.AllocPort()
 }
 
-func (c *Container) GetPort(port string) (*PortBinding, error) {
-	return c.portMap.GetPort(port)
+func (c *Container) GetBinding(port string) (*PortBinding, error) {
+	return c.portMap.GetBinding(port)
 }
 
 func (c *Container) Shutdown() error {

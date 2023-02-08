@@ -31,7 +31,7 @@ type PortBinding struct {
 }
 
 func (pb *PortBinding) String() string {
-	return fmt.Sprintf("RealmPort %s HostPort %s\n", pb.RealmPort, pb.HostPort)
+	return fmt.Sprintf("{R %s H %s}", pb.RealmPort, pb.HostPort)
 }
 
 func (pb *PortBinding) Mark(port string) {
@@ -61,6 +61,17 @@ func makePortMap(ports nat.PortMap) *PortMap {
 		}
 	}
 	return pm
+}
+
+func (pm *PortMap) String() string {
+	pm.Lock()
+	defer pm.Unlock()
+
+	s := ""
+	for p, pb := range pm.portmap {
+		s += fmt.Sprintf("{%v: %v} ", p, pb)
+	}
+	return s
 }
 
 func (pm *PortMap) GetBinding(port string) (*PortBinding, error) {

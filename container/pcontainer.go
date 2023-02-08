@@ -37,8 +37,6 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 		pmap[p] = []nat.PortBinding{{}}
 	}
 
-	db.DPrintf(db.CONTAINER, "pset %v pmap %v\n", pset, pmap)
-
 	endpoints := make(map[string]*network.EndpointSettings, 1)
 	endpoints["sigmanet"] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,

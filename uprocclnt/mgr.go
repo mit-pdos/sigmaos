@@ -88,6 +88,8 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	if !ok1 || !ok2 {
 		var pid proc.Tpid
 		var err error
+
+		db.DPrintf(db.UPROCDMGR, "[realm:%v] start uprocd", realm)
 		if pid, err = updm.startUprocd(realm, ptype); err != nil {
 			return nil, err
 		}
@@ -107,11 +109,11 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 }
 
 func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
+	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
 	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
-	db.DPrintf(db.UPROCDMGR, "[realm:%v pid:%v] run uproc %v", pdc.realm, pdc.pid, uproc)
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
 	updm.startBalanceShares(uproc)

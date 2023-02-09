@@ -526,8 +526,7 @@ func TestReserveCores(t *testing.T) {
 
 	start := time.Now()
 	pid := proc.Tpid("sleeper-aaaaaaa")
-	// 1 core reserved for BE procs.
-	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores-1), SLEEP_MSECS)
+	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
@@ -558,9 +557,8 @@ func TestWorkStealing(t *testing.T) {
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node %v", err)
 
-	// 1 core reserved for BE procs.
-	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores-1))
-	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores-1))
+	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
+	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
 
 	err = ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart")
@@ -625,8 +623,7 @@ func TestBurstSpawn(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Number of spinners to burst-spawn
-	// One core on each node is reserved for BE procs.
-	N := (linuxsched.NCores - 1) * 3
+	N := (linuxsched.NCores) * 3
 
 	// Start a couple new procds.
 	err := ts.BootNode(1)

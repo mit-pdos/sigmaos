@@ -55,22 +55,6 @@ func (mgr *ProcMgr) downloadProcBin(p *proc.Proc) error {
 		return nil
 	}
 	commonBins := path.Join(sp.UXBIN, "user", "common")
-	// Make a dir for the realm's binaries.
-	cachePn := cachePath(p.GetRealm(), p.Program)
-	if err := mgr.rootsc.MkDir(path.Dir(cachePn), 0777); err != nil {
-		// Only expect ErrExists (may have been called by the LC/BE-peer of this
-		// uprocd.
-		if !serr.IsErrExists(err) {
-			return err
-		}
-	} else {
-		// If this is the first time downloading a proc bin for this proc, also
-		// download exec-uproc, which will be invoked in order to trampoline to user
-		// procs.
-		if err := mgr.downloadProcPath(p.GetRealm(), commonBins, "exec-uproc"); err != nil {
-			return err
-		}
-	}
 	// Search order:
 	// 1. Try to copy from the local bin cache (user bins will be here when built locally).
 	// 2. Try the shared to download from the realm's s3 bucket.

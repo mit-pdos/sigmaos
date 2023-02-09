@@ -6,8 +6,11 @@ ARG target=local
 WORKDIR /home/sigmaos
 
 # Clean out all bins except for uprocd, which is the entrypoint for this
-# container.
-RUN rm -rf bin/user/* && \
+# container, and exec-uproc, which is the trampoline program. We place the
+# trampoline program in /bin/kernel because /bin/user will be mounuted
+# dynamically at runtime.
+RUN mv bin/user/common/exec-uproc bin/kernel && \
+  rm -rf bin/user/* && \
   rm -rf bin/linux && \
   mv bin/kernel/uprocd /tmp && \
   rm -rf bin/kernel/* && \

@@ -9,9 +9,9 @@ WORKDIR /home/sigmaos
 # container, and exec-uproc, which is the trampoline program. We place the
 # trampoline program in /bin/kernel because /bin/user will be mounuted
 # dynamically at runtime.
-RUN mv bin/user/common/exec-uproc bin/kernel && \
-  rm -rf bin/user/* && \
-  rm -rf bin/linux && \
+RUN rm -rf bin/linux && \
   mv bin/kernel/uprocd /tmp && \
   rm -rf bin/kernel/* && \
-  mv /tmp/uprocd bin/kernel/uprocd
+  mv /tmp/uprocd bin/kernel/uprocd && \
+  mv bin/user/common/exec-uproc bin/kernel && \
+  rm -rf bin/user/*

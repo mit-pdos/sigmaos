@@ -50,7 +50,7 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
 			return err
 		}
 		// XXX don't hard code
-		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/kernel")
+		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/user/common:/home/sigmaos/bin/kernel")
 		s.p.Finalize("")
 		c, err := container.StartPContainer(s.p, realm)
 		if err != nil {

@@ -144,15 +144,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
-	spath := proc.GetSigmaPath()
-	if spath == "" {
-		if p.Privileged {
-			spath = path.Join(sp.S3, "~local", clnt.Realm().String(), "/bin/kernel")
-		} else {
-			spath = path.Join(sp.S3, "~local", clnt.Realm().String(), "/bin/user")
-		}
-	}
-	p.AppendEnv(proc.SIGMAPATH, spath)
 	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
 	p.AppendEnv(proc.SIGMANAMED, clnt.NamedAddr().String())
 }

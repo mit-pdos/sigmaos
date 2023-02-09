@@ -39,11 +39,19 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
+if [[ "$TAG" != "" && "$TARGET" == "local" ]] || [[ "$TAG" == "" && "$TARGET" != "local" ]] ; then
+  echo "Must run with either --push set and --target=aws, or --target=local and without --push"
+  exit 1
+fi
 
 TMP=/tmp/sigmaos
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
+
+# Make a dir to hold user proc build output
+USRBIN=$(pwd)/bin/user
+mkdir -p $USRBIN
 
 # build and start db container
 if [ "${TARGET}" != "aws" ]; then
@@ -53,10 +61,40 @@ fi
 # build binaries for host
 ./make.sh --norace $PARALLEL linux
 
-# build containers
-DOCKER_BUILDKIT=1 docker build --build-arg target=$TARGET --build-arg parallel=$PARALLEL -t sigmabase .
-docker build -f Dockerkernel -t sigmaos .
-docker build -f Dockeruser -t sigmauser .
+# Build base image
+DOCKER_BUILDKIT=1 docker build \
+  --build-arg target=$TARGET \
+  --build-arg parallel=$PARALLEL \
+  --build-arg tag=$TAG \
+  -t sigmabase .
+# If running on AWS, upload user bins and remove them from the base image.
+if [ "${TARGET}" != "local" ]; then
+  # Run the base image, which will copy the built user bins to USRBIN
+  docker run -it \
+    --mount type=bind,src=$USRBIN,dst=/tmp/bin \
+    -e "TAG=$TAG" \
+    sigmabase
+  ./upload.sh --tag $TAG
+  # Clean up base container
+  docker stop $(docker ps -aq --filter="ancestor=sigmabase")
+  docker rm $(docker ps -aq --filter="ancestor=sigmabase")
+  # Replace the base image with a clean version, which doesn't include the user
+  # bins.
+  docker build \
+    -f Dockerclean \
+    -t sigmaclean .
+  docker tag sigmaclean sigmabase
+fi
+# Build the kernel image
+docker build \
+  -f Dockerkernel \
+  -t sigmaos .
+# Build the user image
+docker build \
+  --build-arg target=$TARGET \
+  --build-arg parallel=$PARALLEL \
+  -f Dockeruser \
+  -t sigmauser .
 
 if ! [ -z "$TAG" ]; then
   docker tag sigmabase arielszekely/sigmabase:$TAG

@@ -1,4 +1,14 @@
 # syntax=docker/dockerfile:1
 
-FROM sigmabase AS user
-# maybe delete some files?
+FROM sigmaos AS user
+ARG parallel
+ARG target=local
+WORKDIR /home/sigmaos
+
+# Clean out all bins except for uprocd, which is the entrypoint for this
+# container.
+RUN rm -rf bin/user/* && \
+  rm -rf bin/linux && \
+  mv bin/kernel/uprocd /tmp && \
+  rm -rf bin/kernel/* && \
+  mv /tmp/uprocd bin/kernel/uprocd

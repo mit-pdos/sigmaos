@@ -15,11 +15,6 @@ import (
 	"sigmaos/linuxsched"
 )
 
-// Mounts
-const (
-	PERF_MOUNT = "/tmp/sigmaos-perf"
-)
-
 type Container struct {
 	ctx          context.Context
 	cli          *client.Client

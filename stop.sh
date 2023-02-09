@@ -24,8 +24,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-
-
 if mount | grep -q 9p; then
     echo "umount /mnt/9p"
     ./umount.sh
@@ -48,5 +46,7 @@ if docker ps -a | grep -qE 'sigma|uprocd|bootkerne'; then
     fi
   done
 fi
+
+sudo rm -rf /tmp/sigmaos-bin
 
 wait

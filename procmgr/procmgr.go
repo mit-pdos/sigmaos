@@ -25,6 +25,7 @@ type ProcMgr struct {
 	sclnts   map[sp.Trealm]*sigmaclnt.SigmaClnt
 	running  map[proc.Tpid]*proc.Proc
 	pcache   *ProcCache
+	bintag   string
 }
 
 // Manages the state and lifecycle of a proc.
@@ -37,6 +38,7 @@ func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
 		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		running:  make(map[proc.Tpid]*proc.Proc),
 		pcache:   MakeProcCache(PROC_CACHE_SZ),
+		bintag:   proc.GetBuildTag(),
 	}
 }
 

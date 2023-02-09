@@ -34,5 +34,6 @@ func RunUprocSrv(realm string, ptype proc.Ttype) error {
 
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
+	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
 	return container.RunUProc(uproc)
 }

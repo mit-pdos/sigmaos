@@ -5,4 +5,5 @@ WORKDIR /home/sigmaos
 ENV named :1111
 ENV boot named
 ENV dbip x.x.x.x
+
 CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot} ${dbip}"]

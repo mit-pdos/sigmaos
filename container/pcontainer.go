@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"path"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -9,6 +10,7 @@ import (
 	"github.com/docker/docker/client"
 
 	db "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -33,10 +35,18 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		&container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			Mounts: []mount.Mount{
+				// user bin dir
 				mount.Mount{
 					Type:     mount.TypeBind,
-					Source:   PERF_MOUNT,
-					Target:   PERF_MOUNT,
+					Source:   path.Join("/tmp/sigmaos-bin", realm),
+					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
+					ReadOnly: true,
+				},
+				// perf output dir
+				mount.Mount{
+					Type:     mount.TypeBind,
+					Source:   perf.OUTPUT_PATH,
+					Target:   perf.OUTPUT_PATH,
 					ReadOnly: false,
 				},
 			},

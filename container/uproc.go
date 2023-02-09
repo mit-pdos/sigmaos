@@ -59,6 +59,7 @@ func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
 
 	if err := cmd.Start(); err != nil {
+		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
 		return err
 	}
 	if err := cmd.Wait(); err != nil {
@@ -169,7 +170,7 @@ func setupFS(newRoot string) error {
 		return err
 	}
 
-	// Mount bin directory as /bin
+	// Mount realm's bin directory as /bin
 	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/user"), "bin", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
 		return err

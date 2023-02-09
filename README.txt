@@ -14,10 +14,7 @@ don't have to run tests etc. as root:
 Build docker images locally (one for kernel and one for user).
 $ ./build.sh
 
-Build docker images locally and push to DockerHub.
-$ ./build.sh --push TAGNAME
-
-When building images for aws, make sure to run with the --target aws flag
+Build docker images locally and push to DockerHub/S3. Images will not include user programs. Instead, they will be pushed to (and downloaded from) an S3 bucket named TAGNAME. The script expects s3://TAGNAME to already exist.
 $ ./build.sh --push TAGNAME --target aws
 
 To run tests for package PACKAGE_NAME, on a locally built version, run:

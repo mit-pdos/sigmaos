@@ -20,7 +20,7 @@ $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
-When building for aws, build and push to DockerHub with
+Build docker images locally and push to DockerHub/S3. Images will not include user programs. Instead, they will be pushed to (and downloaded from) an S3 bucket named TAGNAME. The script expects s3://TAGNAME to already exist.
 $ ./build.sh --push TAGNAME --target aws
 
 To update the git repo on every machine, pull DockerHub images with TAGNAME, and start containers on the VPC:

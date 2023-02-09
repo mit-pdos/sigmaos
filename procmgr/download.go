@@ -31,7 +31,7 @@ func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	if _, ok := mgr.cachedirs[proc.GetRealm()]; !ok {
+	if _, ok := mgr.cachedirs[p.GetRealm()]; !ok {
 		cachePn := path.Dir(cachePath(p.GetRealm(), p.Program))
 		// Make a dir to cache the realm's binaries.
 		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrExists(err) {

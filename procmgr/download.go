@@ -22,20 +22,22 @@ func cachePath(realm sp.Trealm, prog string) string {
 }
 
 func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
+	// Only set up cache dir when we start spawning user procs. By this time, UX
+	// will already be up.
+	if p.Privileged {
+		return
+	}
+
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	// If a SigmaClnt hasn't been set up for this realm, then no procs have been
-	// spawned for this realm yet.
-	if _, ok := mgr.sclnts[proc.GetRealm()]; !ok {
+	if _, ok := mgr.cachedirs[proc.GetRealm()]; !ok {
 		cachePn := path.Dir(cachePath(p.GetRealm(), p.Program))
-		// Create a sigmaclnt, so the next time this method is called ProcMgr will
-		// realize the proc cache dir has already been set up.
-		sc := mgr.getSigmaClnt(p.GetRealm())
 		// Make a dir to cache the realm's binaries.
-		if err := sc.MkDir(cachePn, 0777); err != nil && !serr.IsErrExists(err) {
+		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrExists(err) {
 			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
 		}
+		mgr.cachedirs[proc.GetRealm()] = true
 	}
 }
 

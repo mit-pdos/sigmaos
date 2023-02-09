@@ -18,27 +18,29 @@ const (
 
 type ProcMgr struct {
 	sync.Mutex
-	mfs      *memfssrv.MemFs
-	scheddIp string
-	rootsc   *sigmaclnt.SigmaClnt
-	updm     *uprocclnt.UprocdMgr
-	sclnts   map[sp.Trealm]*sigmaclnt.SigmaClnt
-	running  map[proc.Tpid]*proc.Proc
-	pcache   *ProcCache
-	bintag   string
+	mfs       *memfssrv.MemFs
+	scheddIp  string
+	rootsc    *sigmaclnt.SigmaClnt
+	updm      *uprocclnt.UprocdMgr
+	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
+	cachedirs map[sp.Trealm]bool
+	running   map[proc.Tpid]*proc.Proc
+	pcache    *ProcCache
+	bintag    string
 }
 
 // Manages the state and lifecycle of a proc.
 func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
 	return &ProcMgr{
-		mfs:      mfs,
-		scheddIp: mfs.MyAddr(),
-		rootsc:   mfs.SigmaClnt(),
-		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
-		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
-		running:  make(map[proc.Tpid]*proc.Proc),
-		pcache:   MakeProcCache(PROC_CACHE_SZ),
-		bintag:   proc.GetBuildTag(),
+		mfs:       mfs,
+		scheddIp:  mfs.MyAddr(),
+		rootsc:    mfs.SigmaClnt(),
+		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
+		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		cachedirs: make(map[sp.Trealm]bool),
+		running:   make(map[proc.Tpid]*proc.Proc),
+		pcache:    MakeProcCache(PROC_CACHE_SZ),
+		bintag:    proc.GetBuildTag(),
 	}
 }
 

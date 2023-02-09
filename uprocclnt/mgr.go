@@ -67,14 +67,6 @@ func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
 	if err := updm.fsl.MkDir(d3, 0777); err != nil && !serr.IsErrExists(err) {
 		return err
 	}
-	// If this is the first uprocd of this realm, make a dir to cache the realm's
-	// binaries.
-	if _, ok := updm.pdcms[realm]; !ok {
-		procCache := path.Join(sp.UXBIN, "user", "realms", realm.String())
-		if err := updm.fsl.MkDir(procCache, 0777); err != nil && !serr.IsErrExists(err) {
-			return err
-		}
-	}
 	return nil
 }
 

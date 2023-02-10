@@ -11,11 +11,12 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
+	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
-func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId, realm string, fport, lport port.Tport) (*Container, error) {
 	db.DPrintf(db.CONTAINER, "dockerContainer %v\n", realm)
 	image := "sigmauser"
 	ctx := context.Background()
@@ -24,11 +25,11 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 		return nil, err
 	}
 	cmd := append([]string{p.Program}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE))
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v %v-%v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE), fport, lport)
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	for i := FPORT; i < LPORT; i++ {
+	for i := fport; i < lport; i++ {
 		p, err := nat.NewPort("tcp", i.String())
 		if err != nil {
 			return nil, err
@@ -71,8 +72,8 @@ func StartPContainer(p *proc.Proc, kernelId, realm string) (*Container, error) {
 	}
 	ip := json.NetworkSettings.IPAddress
 
-	pm := makePortMap(json.NetworkSettings.NetworkSettingsBase.Ports)
+	pm := port.MakePortMap(json.NetworkSettings.NetworkSettingsBase.Ports, fport, lport)
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
-	return &Container{ctx, cli, resp.ID, ip, pm, nil}, nil
+	return &Container{pm, ctx, cli, resp.ID, ip, nil}, nil
 }

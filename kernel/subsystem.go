@@ -8,6 +8,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
@@ -15,6 +16,7 @@ import (
 
 type Subsystem struct {
 	*procclnt.ProcClnt
+	k         *Kernel
 	p         *proc.Proc
 	how       procclnt.Thow
 	cmd       *exec.Cmd
@@ -22,18 +24,18 @@ type Subsystem struct {
 	crashed   bool
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, how, cmd, nil, false}
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, k, p, how, cmd, nil, false}
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, how procclnt.Thow) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, how, nil)
+func makeSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow) *Subsystem {
+	return makeSubsystemCmd(pclnt, k, p, how, nil)
 }
 
 func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
 	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, how)
+	ss := makeSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
 }
 
@@ -53,7 +55,7 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow, kernelId string) 
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
-		c, err := container.StartPContainer(s.p, kernelId, realm)
+		c, err := container.StartPContainer(s.p, kernelId, realm, 1112, 1122)
 		if err != nil {
 			return err
 		}
@@ -71,11 +73,11 @@ func (ss *Subsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *Subsystem) AllocPort(port string) (*container.PortBinding, error) {
-	if port == "" {
+func (ss *Subsystem) AllocPort(p port.Tport) (*port.PortBinding, error) {
+	if p == port.NOPORT {
 		return ss.container.AllocPort()
 	} else {
-		return ss.container.AllocPortOne(port)
+		return ss.container.AllocPortOne(p)
 	}
 }
 

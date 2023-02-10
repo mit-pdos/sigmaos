@@ -1,9 +1,9 @@
 package kernelclnt
 
 import (
-	"sigmaos/container"
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 )
@@ -59,11 +59,11 @@ func (kc *KernelClnt) Shutdown() error {
 	return kc.pdc.RPC("KernelSrv.Shutdown", req, &res)
 }
 
-func (kc *KernelClnt) Port(pid proc.Tpid, port string) (string, container.PortBinding, error) {
+func (kc *KernelClnt) Port(pid proc.Tpid, p port.Tport) (string, port.PortBinding, error) {
 	var res proto.PortResult
-	req := &proto.PortRequest{PidStr: pid.String(), Port: port}
+	req := &proto.PortRequest{PidStr: pid.String(), Port: int32(p)}
 	if err := kc.pdc.RPC("KernelSrv.AllocPort", req, &res); err != nil {
-		return "", container.PortBinding{}, err
+		return "", port.PortBinding{}, err
 	}
-	return res.HostIp, container.PortBinding{res.RealmPort, res.HostPort}, nil
+	return res.HostIp, port.PortBinding{port.Tport(res.RealmPort), port.Tport(res.HostPort)}, nil
 }

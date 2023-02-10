@@ -27,6 +27,8 @@ const (
 	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMAPATH           = "SIGMAPATH"
 	SIGMAREALM          = "SIGMAREALM"
+	SIGMAKERNEL         = "SIGMAKERNEL"
+	SIGMAUPROCD         = "SIGMAUPROCD"
 )
 
 func GenPid() Tpid {
@@ -121,6 +123,14 @@ func GetSigmaRootFs() string {
 
 func GetRealm() sp.Trealm {
 	return sp.Trealm(os.Getenv(SIGMAREALM))
+}
+
+func GetKernelId() string {
+	return os.Getenv(SIGMAKERNEL)
+}
+
+func GetUprocdPid() Tpid {
+	return Tpid(os.Getenv(SIGMAUPROCD))
 }
 
 func GetSigmaPath() string {

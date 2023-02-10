@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
+	"sigmaos/port"
 )
 
 // Mounts
@@ -21,11 +22,11 @@ const (
 )
 
 type Container struct {
+	*port.PortMap
 	ctx          context.Context
 	cli          *client.Client
 	container    string
 	ip           string
-	portMap      *PortMap
 	prevCPUStats *types.CPUStats
 }
 
@@ -93,18 +94,6 @@ func (c *Container) String() string {
 
 func (c *Container) Ip() string {
 	return c.ip
-}
-
-func (c *Container) AllocPortOne(port string) (*PortBinding, error) {
-	return c.portMap.AllocPortOne(port)
-}
-
-func (c *Container) AllocPort() (*PortBinding, error) {
-	return c.portMap.AllocPort()
-}
-
-func (c *Container) GetBinding(port string) (*PortBinding, error) {
-	return c.portMap.GetBinding(port)
 }
 
 func (c *Container) Shutdown() error {

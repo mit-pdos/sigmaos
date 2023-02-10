@@ -5,6 +5,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -65,7 +66,7 @@ func (ks *KernelSrv) Kill(req proto.KillRequest, rep *proto.KillResult) error {
 }
 
 func (ks *KernelSrv) AllocPort(req proto.PortRequest, rep *proto.PortResult) error {
-	pb, err := ks.k.AllocPort(proc.Tpid(req.PidStr), req.Port)
+	pb, err := ks.k.AllocPort(proc.Tpid(req.PidStr), port.Tport(req.Port))
 	if err != nil {
 		return err
 	}
@@ -74,8 +75,8 @@ func (ks *KernelSrv) AllocPort(req proto.PortRequest, rep *proto.PortResult) err
 		return err
 	}
 
-	rep.RealmPort = pb.RealmPort
-	rep.HostPort = pb.HostPort
+	rep.RealmPort = int32(pb.RealmPort)
+	rep.HostPort = int32(pb.HostPort)
 	rep.HostIp = ip
 	return nil
 }

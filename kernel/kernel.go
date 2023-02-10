@@ -12,6 +12,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -35,6 +36,7 @@ type Kernel struct {
 	namedAddr sp.Taddrs
 	svcs      *Services
 	ip        string
+	nextPort  port.Tport
 }
 
 func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {

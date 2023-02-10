@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
@@ -67,7 +67,7 @@ func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) AllocPort(pid proc.Tpid, port string) (*container.PortBinding, error) {
+func (k *Kernel) AllocPort(pid proc.Tpid, port port.Tport) (*port.PortBinding, error) {
 	return k.svcs.svcMap[pid].AllocPort(port)
 }
 
@@ -99,7 +99,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, nil, procclnt.HLINUX, cmd)
+	ss := makeSubsystemCmd(nil, k, nil, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
@@ -136,6 +136,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 	scheddIp := args[2]
 	args[2] = k.Param.KernelId
+	args = append(args, "1112")
 
 	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
 	if err != nil {
@@ -146,7 +147,8 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	ptype := args[1]
 	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
 
-	pm, err := s.container.AllocPortOne(container.UPROCD_PORT.String())
+	// container's first port is for uprocd
+	pm, err := s.container.AllocFirst()
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +157,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 	// Use 127.0.0.1, because only the local schedd should be talking
 	// to uprocd.
-	mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort)
+	mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort.String())
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if err := k.MkMountSymlink(pn, mnt); err != nil {
 		return nil, err

@@ -10,6 +10,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/port"
+	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/sigmaclnt"
@@ -26,10 +28,11 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
+	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
-func RunWww(job string) error {
+func RunWww(job string, public bool) error {
 	www := &Www{}
 	www.job = job
 	sc, err := sigmaclnt.MkSigmaClnt("hotel-wwwd-" + job)
@@ -76,12 +79,18 @@ func RunWww(job string) error {
 	http.HandleFunc("/reservation", www.reservationHandler)
 	http.HandleFunc("/geo", www.geoHandler)
 
-	ip, err := container.LocalIP()
+	pc, err := portclnt.MkPortClnt(www.FsLib, proc.GetKernelId())
 	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
+		return err
+	}
+	www.pc = pc
+
+	hip, pb, err := pc.AllocPort(port.NOPORT)
+	if err != nil {
+		db.DFatalf("AllocPort err %v", err)
 	}
 
-	l, err := net.Listen("tcp", ip+":0")
+	l, err := net.Listen("tcp", ":"+pb.RealmPort.String())
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}
@@ -90,11 +99,13 @@ func RunWww(job string) error {
 		db.DFatalf("%v", http.Serve(l, nil))
 	}()
 
-	// Write a file for clients to discover the server's address.
-	p := JobHTTPAddrsPath(job)
-	// mnt := sp.MkMountService(sp.Taddrs{lip, hip + ":" + pm.HostPort.String()})
-	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
-		db.DFatalf("Error PutFileJson addrs %v", err)
+	a, err := container.QualifyAddr(l.Addr().String())
+	if err != nil {
+		db.DFatalf("QualifyAddr %v err %v", a, err)
+	}
+
+	if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, a); err != nil {
+		db.DFatalf("AdvertisePort %v", err)
 	}
 
 	perf, err := perf.MakePerf(perf.HOTEL_WWW)

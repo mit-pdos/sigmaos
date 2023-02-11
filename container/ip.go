@@ -6,6 +6,21 @@ import (
 	"strings"
 )
 
+func QualifyAddr(addr string) (string, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", err
+	}
+	if host == "::" {
+		ip, err := LocalIP()
+		if err != nil {
+			return "", err
+		}
+		addr = net.JoinHostPort(ip, port)
+	}
+	return addr, nil
+}
+
 // XXX deduplicate with localIP
 func LocalInterface() (string, error) {
 	ifaces, err := net.Interfaces()

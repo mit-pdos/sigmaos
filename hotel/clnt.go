@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 )
@@ -37,6 +39,8 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
+	addrs = container.Rearrange(addrs)
+	log.Printf("addrs %v\n", addrs)
 	return &WebClnt{job, addrs, "http://" + addrs[0], clnt, fsl}
 }
 

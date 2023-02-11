@@ -31,10 +31,11 @@ func MemFsPath(job string) string {
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) ([]string, error) {
-	p := JobHTTPAddrsPath(job)
-	var addrs []string
-	err := fsl.GetFileJson(p, &addrs)
-	return addrs, err
+	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	if err != nil {
+		return nil, err
+	}
+	return mnt.Addr, err
 }
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) {

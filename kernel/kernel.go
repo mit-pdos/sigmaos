@@ -28,6 +28,7 @@ type Param struct {
 	KernelId string
 	Services []string
 	Dbip     string
+	Range    *port.Range
 }
 
 type Kernel struct {
@@ -36,7 +37,7 @@ type Kernel struct {
 	namedAddr sp.Taddrs
 	svcs      *Services
 	ip        string
-	nextPort  port.Tport
+	ports     *port.PortPool
 }
 
 func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
@@ -44,6 +45,7 @@ func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
 	k.Param = param
 	k.namedAddr = namedAddr
 	k.svcs = mkServices()
+	k.ports = port.MakePortPool(param.Range.Fport, param.Range.Lport)
 	return k
 }
 

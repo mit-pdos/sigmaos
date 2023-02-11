@@ -14,6 +14,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const NPORT_PER_CONTAINER = 20
+
 type Subsystem struct {
 	*procclnt.ProcClnt
 	k         *Kernel
@@ -55,7 +57,11 @@ func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow, kernelId string) 
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
-		c, err := container.StartPContainer(s.p, kernelId, realm, 1112, 1122)
+		r, err := s.k.ports.AllocRange(NPORT_PER_CONTAINER)
+		if err != nil {
+			return err
+		}
+		c, err := container.StartPContainer(s.p, kernelId, realm, r)
 		if err != nil {
 			return err
 		}

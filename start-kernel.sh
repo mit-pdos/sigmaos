@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--host] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--host] [--ports range] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -15,6 +15,7 @@ NAMED=":1111"
 DBIP="x.x.x.x"
 NET="bridge"
 KERNELID=""
+PORTS="0-0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
   --boot)
@@ -52,6 +53,11 @@ while [[ "$#" -gt 1 ]]; do
   --named)
     shift
     NAMED=$1
+    shift
+    ;;
+  --ports)
+    shift
+    PORTS=$1
     shift
     ;;
   -help)
@@ -103,6 +109,7 @@ CID=$(docker run -dit\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
+             -e ports=${PORTS}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              sigmaos)
 

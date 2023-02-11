@@ -133,10 +133,8 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-
 	scheddIp := args[2]
 	args[2] = k.Param.KernelId
-	args = append(args, "1112")
 
 	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
 	if err != nil {

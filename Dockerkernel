@@ -6,4 +6,5 @@ ENV kernelid kernel
 ENV named :1111
 ENV boot named
 ENV dbip x.x.x.x
-CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip}"]
+ENV ports 0-0
+CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${ports}"]

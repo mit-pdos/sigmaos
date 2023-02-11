@@ -7,16 +7,15 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
-	"sigmaos/kernelclnt"
 	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	"sigmaos/port"
+	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
 //
@@ -31,7 +30,7 @@ type MemFs struct {
 	ctx  fs.CtxI // server context
 	plt  *lockmap.PathLockTable
 	sc   *sigmaclnt.SigmaClnt
-	kc   *kernelclnt.KernelClnt
+	pc   *portclnt.PortClnt
 }
 
 func MakeReplMemFs(addr, path, name string, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
@@ -86,32 +85,24 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	if err != nil {
 		db.DFatalf("MakeMemFsPublic: MakeFsLib err %v", err)
 	}
-	kc, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+proc.GetKernelId())
-	if err != nil {
-		return nil, nil, err
-	}
-	hip, pm, err := kc.Port(proc.GetUprocdPid(), port.NOPORT)
+	pc, err := portclnt.MkPortClnt(fsl, proc.GetKernelId())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	db.DPrintf(db.CACHESRV, "fn %s hip %v pm %v\n", pn, hip, pm)
+	hip, pb, err := pc.AllocPort(port.NOPORT)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Make server without advertising mnt
-	mfs, sc, err := MakeMemFsPort("", ":"+pm.RealmPort.String(), name)
+	mfs, sc, err := MakeMemFsPort("", ":"+pb.RealmPort.String(), name)
 	if err != nil {
 		return nil, nil, err
 	}
+	mfs.pc = pc
 
-	mfs.kc = kc
-
-	// Advertise server inside and outside realm
-	lip := mfs.MyAddr()
-	mnt := sp.MkMountService(sp.Taddrs{lip, hip + ":" + pm.HostPort.String()})
-
-	db.DPrintf(db.CACHESRV, "mnt %v\n", mnt)
-
-	if err := sc.MkMountSymlink(pn, mnt); err != nil {
+	if err = pc.AdvertisePort(pn, hip, pb, mfs.MyAddr()); err != nil {
 		return nil, nil, err
 	}
 
@@ -123,7 +114,7 @@ func MakeMemFsPort(pn, port string, name string) (*MemFs, *sigmaclnt.SigmaClnt, 
 	if err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf(db.CACHESRV, "MakeMemFsPort %v %v\n", pn, port)
+	db.DPrintf(db.PORT, "MakeMemFsPort %v %v\n", pn, port)
 	fs, err := MakeMemFsSrvClnt(pn, port, sc)
 	return fs, sc, err
 }

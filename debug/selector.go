@@ -99,6 +99,7 @@ const (
 	NODED_ERR              = NODED + ERR
 	MACHINED               = "MACHINED"
 	REALM_LOCK             = "REALM_LOCK"
+	PORT                   = "PORT"
 )
 
 // Client Libraries

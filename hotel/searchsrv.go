@@ -18,9 +18,9 @@ type Search struct {
 }
 
 // Run starts the server
-func RunSearchSrv(n string) error {
+func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELSEARCH, s)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELSEARCH, s, public)
 	if err != nil {
 		return err
 	}

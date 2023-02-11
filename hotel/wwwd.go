@@ -26,7 +26,6 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
-	fwc      *protdevclnt.ProtDevClnt
 }
 
 // Run starts the server
@@ -71,13 +70,6 @@ func RunWww(job string) error {
 	}
 	www.geoc = pdc
 
-	// pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.FW)
-	// if err != nil {
-	// 	db.DFatalf("Error protdev %v", err)
-	// 	return err
-	// }
-	// www.fwc = pdc
-
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
 	http.HandleFunc("/recommendations", www.recommendHandler)
@@ -100,6 +92,7 @@ func RunWww(job string) error {
 
 	// Write a file for clients to discover the server's address.
 	p := JobHTTPAddrsPath(job)
+	// mnt := sp.MkMountService(sp.Taddrs{lip, hip + ":" + pm.HostPort.String()})
 	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
 		db.DFatalf("Error PutFileJson addrs %v", err)
 	}

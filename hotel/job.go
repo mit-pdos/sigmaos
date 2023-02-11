@@ -2,6 +2,7 @@ package hotel
 
 import (
 	"path"
+	"strconv"
 
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
@@ -43,9 +44,14 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	}
 }
 
-var HotelSvcs = []string{"hotel-userd", "hotel-rated",
-	"hotel-geod", "hotel-profd", "hotel-searchd",
-	"hotel-reserved", "hotel-recd", "hotel-wwwd"}
+type Srv struct {
+	Name   string
+	Public bool
+}
+
+var HotelSvcs = []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
+	Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
+	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", true}}
 
 var ncores = []int{0, 2,
 	2, 2, 2,
@@ -55,7 +61,7 @@ var ncores = []int{0, 2,
 //	2, 2, 3,
 //	3, 0, 2}
 
-func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -65,7 +71,7 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache)
+		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache, true)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
 			return nil, nil, nil, err
@@ -80,7 +86,7 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 	pids := make([]proc.Tpid, 0, len(srvs))
 
 	for i, srv := range srvs {
-		p := proc.MakeProc(srv, []string{job})
+		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public)})
 		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := pclnt.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

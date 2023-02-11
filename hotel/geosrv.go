@@ -39,10 +39,10 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(n string) error {
+func RunGeoSrv(n string, public bool) error {
 	geo := &Geo{}
 	geo.geoidx = newGeoIndex("data/geo.json")
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELGEO, geo)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELGEO, geo, public)
 	if err != nil {
 		return err
 	}

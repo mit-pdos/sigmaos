@@ -16,9 +16,9 @@ type CacheMgr struct {
 	job string
 }
 
-func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int) (*CacheMgr, error) {
+func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int, public bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := shardsvcmgr.MkShardMgr(fsl, pclnt, n, job, "cached", sp.CACHE)
+	sm, err := shardsvcmgr.MkShardMgr(fsl, pclnt, n, job, "cached", sp.CACHE, public)
 	if err != nil {
 		return nil, err
 	}

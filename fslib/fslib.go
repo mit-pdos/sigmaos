@@ -16,8 +16,7 @@ type FsLib struct {
 func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
 		realm, addrs}
-	err := fl.MountTree(addrs, "", "name")
-	if err != nil {
+	if err := fl.MountTree(addrs, "", "name"); err != nil {
 		return nil, err
 	}
 	return fl, nil

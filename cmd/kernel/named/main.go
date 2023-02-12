@@ -5,7 +5,7 @@ import (
 	"sigmaos/named"
 )
 
-// Usage: <named> address realmId <peerId> <peers>
+// Usage: <named> address realmId pn [<peerId> <peers>]
 
 func main() {
 	named.Run(os.Args)

@@ -70,7 +70,7 @@ func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, ncore proc.Tcore, n
 	c <- waitSpinPerf(ts, pid)
 }
 
-func TestBasic(t *testing.T) {
+func TestBasicSimple(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 

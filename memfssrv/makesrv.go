@@ -16,6 +16,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -33,7 +34,7 @@ type MemFs struct {
 	pc   *portclnt.PortClnt
 }
 
-func MakeReplMemFs(addr, path, name string, conf repl.Config) (*sesssrv.SessSrv, *serr.Err) {
+func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, *serr.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
@@ -48,8 +49,9 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config) (*sesssrv.SessSrv,
 	if isInitNamed {
 		srv, err = fslibsrv.MakeReplServerFsl(root, addr, path, nil, conf)
 	} else {
+		db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, name, conf)
 		// If this is not the init named, initialize the fslib & procclnt
-		srv, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
+		srv, err = MakeReplServerRealm(root, addr, path, name, conf, realm)
 	}
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -64,6 +66,33 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config) (*sesssrv.SessSrv,
 		}
 		srv.SetSigmaClnt(sc)
 	}
+	return srv, nil
+}
+
+// XXX deduplicate with Public
+func MakeReplServerRealm(root fs.Dir, addr, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
+	fsl, err := fslib.MakeFsLib(name)
+	if err != nil {
+		db.DFatalf("MakReplServerRealm: MakeFsLib err %v", err)
+	}
+	pc, err := portclnt.MkPortClnt(fsl, proc.GetKernelId())
+	if err != nil {
+		return nil, serr.MkErrError(err)
+	}
+	hip, pb, err := pc.AllocPort(port.NOPORT)
+	if err != nil {
+		return nil, serr.MkErrError(err)
+	}
+
+	srv, _, err := fslibsrv.MakeReplServer(root, ":"+pb.RealmPort.String(), "", name, conf)
+	if err != nil {
+		return nil, serr.MkErrError(err)
+	}
+
+	if err = pc.AdvertisePort(path, hip, pb, srv.MyAddr()); err != nil {
+		return nil, serr.MkErrError(err)
+	}
+
 	return srv, nil
 }
 

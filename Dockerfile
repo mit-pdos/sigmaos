@@ -15,7 +15,7 @@ RUN apt-get update && \
   apt autoclean && \
   apt autoremove && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
->>>>>>> docker-dev
+
 WORKDIR /home/sigmaos
 COPY go.mod ./
 COPY go.sum ./

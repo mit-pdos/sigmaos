@@ -66,7 +66,7 @@ func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillRes
 	return ks.k.KillOne(req.Name)
 }
 
-func (ks *KernelSrv) AllocPort(req proto.PortRequest, rep *proto.PortResult) error {
+func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
 	pb, err := ks.k.AllocPort(proc.Tpid(req.PidStr), port.Tport(req.Port))
 	if err != nil {
 		return err

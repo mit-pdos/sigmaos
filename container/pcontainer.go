@@ -70,7 +70,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 					ReadOnly: false,
 				},
 			},
-			Privilged:    true,
+			Privileged:   true,
 			PortBindings: pmap,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,

@@ -26,6 +26,7 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid) error {
 	uproc.AppendEnv("PATH", "/bin:/usr/bin")
 	uproc.AppendEnv(proc.SIGMAKERNEL, kernelId)
 	uproc.AppendEnv(proc.SIGMAUPROCD, uprocd.String())
+
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -133,9 +133,6 @@ func GetUprocdPid() Tpid {
 	return Tpid(os.Getenv(SIGMAUPROCD))
 }
 
-func GetSigmaPath() string {
-	return os.Getenv(SIGMAPATH)
-
 func GetBuildTag() string {
 	return os.Getenv(SIGMATAG)
 }

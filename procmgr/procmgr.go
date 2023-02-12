@@ -33,14 +33,15 @@ type ProcMgr struct {
 func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 	ip := mfs.MyAddr()
 	return &ProcMgr{
-		mfs:      mfs,
-		scheddIp: ip,
-		rootsc:   mfs.SigmaClnt(),
-		updm:     uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, kernelId, ip),
-		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
-		running:  make(map[proc.Tpid]*proc.Proc),
-		pcache:   MakeProcCache(PROC_CACHE_SZ),
-		bintag:   proc.GetBuildTag(),
+		mfs:       mfs,
+		scheddIp:  ip,
+		rootsc:    mfs.SigmaClnt(),
+		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, kernelId, ip),
+		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		cachedirs: make(map[sp.Trealm]bool),
+		running:   make(map[proc.Tpid]*proc.Proc),
+		pcache:    MakeProcCache(PROC_CACHE_SZ),
+		bintag:    proc.GetBuildTag(),
 	}
 }
 

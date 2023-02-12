@@ -22,13 +22,15 @@ const (
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
 	SUBSYSTEM_INFO   = "subsystem-info"
+
+	FPORT port.Tport = 1112
+	LPORT port.Tport = 11112
 )
 
 type Param struct {
 	KernelId string
 	Services []string
 	Dbip     string
-	Range    *port.Range
 }
 
 type Kernel struct {
@@ -45,7 +47,7 @@ func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
 	k.Param = param
 	k.namedAddr = namedAddr
 	k.svcs = mkServices()
-	k.ports = port.MakePortPool(param.Range.Fport, param.Range.Lport)
+	k.ports = port.MakePortPool(FPORT, LPORT)
 	return k
 }
 

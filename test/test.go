@@ -8,7 +8,6 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
@@ -22,23 +21,16 @@ const (
 	BOOT_NODE  = "node"
 
 	NAMEDPORT = ":1111"
-
-	FPORT port.Tport = 1112
-	LPORT port.Tport = 11112
-
-	NPORT = 1000
 )
 
 var containerIP string
 var start bool
 var tag string
-var ports *port.PortPool
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
-	ports = port.MakePortPool(FPORT, LPORT)
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -118,11 +110,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := []string{NAMEDPORT}
 	kernelid := bootkernelclnt.GenKernelId()
 	if start {
-		r, err := ports.AllocRange(NPORT)
-		if err != nil {
-			return nil, err
-		}
-		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, r)
+		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport)
 		if err != nil {
 			return nil, err
 		}
@@ -147,11 +135,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		r, err := ports.AllocRange(NPORT)
-		if err != nil {
-			return err
-		}
-		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr(), r)
+		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr())
 		if err != nil {
 			return err
 		}

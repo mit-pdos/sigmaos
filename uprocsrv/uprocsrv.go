@@ -24,7 +24,8 @@ type UprocSrv struct {
 func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{})}
 
-	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s\n", proc.GetName(), realm, kernelId, port, os.Environ())
+	ip, _ := container.LocalIP()
+	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, port, os.Environ(), ip)
 
 	// The kernel will advertise the server, so pass "" as pn.
 	pds, err := protdevsrv.MakeProtDevSrvPort("", port, ups)

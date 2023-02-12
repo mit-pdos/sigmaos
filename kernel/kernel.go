@@ -24,7 +24,7 @@ const (
 	SUBSYSTEM_INFO   = "subsystem-info"
 
 	FPORT port.Tport = 1112
-	LPORT port.Tport = 11112
+	LPORT port.Tport = 1132
 )
 
 type Param struct {
@@ -39,7 +39,6 @@ type Kernel struct {
 	namedAddr sp.Taddrs
 	svcs      *Services
 	ip        string
-	ports     *port.PortPool
 }
 
 func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
@@ -47,7 +46,6 @@ func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
 	k.Param = param
 	k.namedAddr = namedAddr
 	k.svcs = mkServices()
-	k.ports = port.MakePortPool(FPORT, LPORT)
 	return k
 }
 

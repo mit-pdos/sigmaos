@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/docker/go-connections/nat"
@@ -47,47 +46,8 @@ type Range struct {
 	Lport Tport
 }
 
-func ParsePortRange(prange string) (*Range, error) {
-	parts := strings.Split(prange, "-")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("Bad port range")
-	}
-	fport, err := StringToPort(parts[0])
-	if err != nil {
-		return nil, fmt.Errorf("Bad port range")
-	}
-	lport, err := StringToPort(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("Bad port range")
-	}
-	return &Range{fport, lport}, nil
-}
-
 func (pr *Range) String() string {
 	return fmt.Sprintf("%d-%d", pr.Fport, pr.Lport)
-}
-
-type PortPool struct {
-	sync.Mutex
-	fport Tport
-	lport Tport
-}
-
-func MakePortPool(fport, lport Tport) *PortPool {
-	return &PortPool{fport: fport, lport: lport}
-}
-
-func (pp *PortPool) AllocRange(n int) (*Range, error) {
-	pp.Lock()
-	defer pp.Unlock()
-
-	if pp.fport+Tport(n) > pp.lport {
-		return nil, fmt.Errorf("Out of ports")
-	}
-	f := pp.fport
-	l := f + Tport(n)
-	pp.fport = l + 1
-	return &Range{f, l}, nil
 }
 
 type PortMap struct {

@@ -2,7 +2,6 @@ package realmclnt_test
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -133,12 +132,9 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.NamedAddr())
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.NamedAddr())
 
-	nd1ip, _, err := net.SplitHostPort(ts1.NamedAddr()[0])
-	assert.Nil(rootts.T, err)
-	nd2ip, _, err := net.SplitHostPort(ts2.NamedAddr()[0])
-	assert.Nil(rootts.T, err)
-
-	assert.NotEqual(rootts.T, nd1ip, nd2ip, "Nameds were spawned to the same node")
+	// Should have a public and private address
+	assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
+	assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -21,7 +22,6 @@ type Schedd struct {
 	cond      *sync.Cond
 	pmgr      *procmgr.ProcMgr
 	schedds   map[string]*protdevclnt.ProtDevClnt
-	ranBE     bool
 	coresfree proc.Tcore
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
@@ -37,8 +37,7 @@ func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 		qs:        make(map[sp.Trealm]*Queue),
 		realms:    make([]sp.Trealm, 0),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
-		ranBE:     false,
-		coresfree: proc.Tcore(linuxsched.NCores),
+		coresfree: proc.Tcore(linuxsched.NCores), //- 1, // 1 core is reserved for BE procs.
 		memfree:   mem.GetTotalMem(),
 		kernelId:  kernelId,
 	}
@@ -46,7 +45,7 @@ func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 	return sd
 }
 
-func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error {
+func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -66,7 +65,7 @@ func (sd *Schedd) Spawn(req proto.SpawnRequest, res *proto.SpawnResponse) error 
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResponse) error {
+func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -76,7 +75,7 @@ func (sd *Schedd) StealProc(req proto.StealProcRequest, res *proto.StealProcResp
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
+func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -90,7 +89,7 @@ func (sd *Schedd) GetCPUShares(req proto.GetCPUSharesRequest, res *proto.GetCPUS
 }
 
 // Steal a proc from this schedd.
-func (sd *Schedd) GetCPUUtil(req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
+func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
 	res.Util = sd.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
 	return nil
 }
@@ -115,17 +114,21 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	}()
 }
 
-// TODO: Proper fair-share scheduling policy, and more fine-grained locking.
 func (sd *Schedd) schedule() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
+	// Priority order in which procs are claimed
+	priority := []proc.Ttype{proc.T_LC, proc.T_BE}
 	for {
 		var ok bool
 		// Iterate through the realms round-robin.
-		for r, q := range sd.qs {
-			// Try to schedule a proc from realm r.
-			ok = ok || sd.tryScheduleRealmL(r, q)
+
+		for _, ptype := range priority {
+			for r, q := range sd.qs {
+				// Try to schedule a proc from realm r.
+				ok = ok || sd.tryScheduleRealmL(r, q, ptype)
+			}
 		}
 		// If unable to schedule a proc from any realm, wait.
 		if !ok {
@@ -137,11 +140,11 @@ func (sd *Schedd) schedule() {
 
 // Try to schedule a proc from realm r's queue q. Returns true if a proc was
 // successfully scheduled.
-func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue) bool {
+func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) bool {
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(sd.ranBE, sd.coresfree, sd.memfree); ok {
+		if p, stolen, ok := q.Dequeue(ptype, sd.coresfree, sd.memfree); ok {
 			// If the proc was stolen...
 			if stolen {
 				// Try to claim the proc.

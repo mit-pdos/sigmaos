@@ -6,6 +6,7 @@ import (
 
 	"sigmaos/dbd/proto"
 	"sigmaos/debug"
+	"sigmaos/fs"
 )
 
 type Server struct {
@@ -37,7 +38,7 @@ func (s *Server) doQuery(arg string, rep *[]byte) error {
 	return nil
 }
 
-func (s *Server) Query(req proto.DBRequest, rep *proto.DBResult) error {
+func (s *Server) Query(ctx fs.CtxI, req proto.DBRequest, rep *proto.DBResult) error {
 	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err
@@ -45,7 +46,7 @@ func (s *Server) Query(req proto.DBRequest, rep *proto.DBResult) error {
 	return nil
 }
 
-func (s *Server) Exec(req proto.DBRequest, rep *proto.DBResult) error {
+func (s *Server) Exec(ctx fs.CtxI, req proto.DBRequest, rep *proto.DBResult) error {
 	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err

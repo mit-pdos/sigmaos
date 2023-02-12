@@ -72,6 +72,7 @@ const (
 	PROCMGR                  = "PROCMGR"
 	UPROCDMGR                = "UPROCDMGR"
 	UPROCD                   = "UPROCD"
+	UPROCD_ERR               = "UPROCD" + ERR
 	SCHEDD                   = "SCHEDD"
 	SCHEDD_ERR               = "SCHEDD" + ERR
 	SCHEDDCLNT               = "SCHEDDCLNT"

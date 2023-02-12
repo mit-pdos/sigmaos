@@ -105,16 +105,16 @@ func (psd *ProtDevSrv) mkService(svci any) {
 
 		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
 		if methodt.PkgPath != "" || // capitalized?
-			mtype.NumIn() != 3 ||
+			mtype.NumIn() != 4 ||
 			//mtype.In(1).Kind() != reflect.Ptr ||
-			mtype.In(2).Kind() != reflect.Ptr ||
+			mtype.In(3).Kind() != reflect.Ptr ||
 			mtype.NumOut() != 1 ||
 			mtype.Out(0) != typeOfError {
 			// the method is not suitable for a handler
 			log.Printf("bad method: %v\n", mname)
 		} else {
 			// the method looks like a handler
-			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
+			svc.methods[mname] = &method{methodt, mtype.In(2), mtype.In(3)}
 		}
 	}
 	psd.svc = svc

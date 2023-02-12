@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"path"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -11,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -53,17 +55,30 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 		}, &container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			Mounts: []mount.Mount{
+				// user bin dir
 				mount.Mount{
 					Type:     mount.TypeBind,
-					Source:   PERF_MOUNT,
-					Target:   PERF_MOUNT,
+					Source:   path.Join("/tmp/sigmaos-bin", realm),
+					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
+					ReadOnly: true,
+				},
+				// perf output dir
+				mount.Mount{
+					Type:     mount.TypeBind,
+					Source:   perf.OUTPUT_PATH,
+					Target:   perf.OUTPUT_PATH,
 					ReadOnly: false,
 				},
 			},
+			Privilged:    true,
 			PortBindings: pmap,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-uprocd-"+realm+"-"+p.GetPid().String())
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
+		return nil, err
+	}
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err

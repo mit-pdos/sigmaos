@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
@@ -44,7 +45,7 @@ func RunRealmSrv() error {
 	return nil
 }
 
-func (rm *RealmSrv) Make(req proto.MakeRequest, res *proto.MakeResult) error {
+func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)

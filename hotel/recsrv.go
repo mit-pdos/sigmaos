@@ -10,6 +10,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -49,7 +50,7 @@ func RunRecSrv(n string, public bool) error {
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
-func (s *Rec) GetRecs(req proto.RecRequest, res *proto.RecResult) error {
+func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/dbclnt"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -79,7 +80,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) CheckUser(req proto.UserRequest, res *proto.UserResult) error {
+func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
 	error := s.dbc.Query(q, &users)

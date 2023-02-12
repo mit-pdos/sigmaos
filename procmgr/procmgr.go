@@ -18,13 +18,15 @@ const (
 
 type ProcMgr struct {
 	sync.Mutex
-	mfs      *memfssrv.MemFs
-	scheddIp string
-	rootsc   *sigmaclnt.SigmaClnt
-	updm     *uprocclnt.UprocdMgr
-	sclnts   map[sp.Trealm]*sigmaclnt.SigmaClnt
-	running  map[proc.Tpid]*proc.Proc
-	pcache   *ProcCache
+	mfs       *memfssrv.MemFs
+	scheddIp  string
+	rootsc    *sigmaclnt.SigmaClnt
+	updm      *uprocclnt.UprocdMgr
+	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
+	cachedirs map[sp.Trealm]bool
+	running   map[proc.Tpid]*proc.Proc
+	pcache    *ProcCache
+	bintag    string
 }
 
 // Manages the state and lifecycle of a proc.
@@ -38,6 +40,7 @@ func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		sclnts:   make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		running:  make(map[proc.Tpid]*proc.Proc),
 		pcache:   MakeProcCache(PROC_CACHE_SZ),
+		bintag:   proc.GetBuildTag(),
 	}
 }
 

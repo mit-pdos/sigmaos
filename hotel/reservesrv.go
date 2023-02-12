@@ -8,6 +8,7 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
@@ -177,7 +178,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
-func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
 	b, date_num, err := s.checkAvailability(hotelId, req)
@@ -221,7 +222,7 @@ func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveRe
 	return nil
 }
 
-func (s *Reserve) CheckAvailability(req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
 		b, _, err := s.checkAvailability(hotelId, req)

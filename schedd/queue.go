@@ -43,11 +43,11 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 
 // Dequeue a proc with certain resource requirements. LC procs have absolute
 // priority.
-func (q *Queue) Dequeue(ranBE bool, maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
-	// Order in which to scan queues.
-	qs := []*[]*proc.Proc{&q.lc, &q.lcws, &q.be, &q.bews}
+func (q *Queue) Dequeue(ptype proc.Ttype, maxcores proc.Tcore, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
+	// Get queues holding procs of type ptype.
+	qs := q.getQs(ptype)
 	for i, queue := range qs {
-		if p, ok := dequeue(ranBE, maxcores, maxmem, queue); ok {
+		if p, ok := dequeue(maxcores, maxmem, queue); ok {
 			worksteal = i%2 == 1
 			// If not stolen, remove from pmap
 			if !worksteal {
@@ -88,27 +88,34 @@ func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
 
 // Remove the first proc that fits the maxcores & maxmem resource constraints,
 // and return it.
-func dequeue(ranBE bool, maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
+func dequeue(maxcores proc.Tcore, maxmem proc.Tmem, q *[]*proc.Proc) (*proc.Proc, bool) {
 	for i := 0; i < len(*q); i++ {
 		p := (*q)[i]
 		// Sanity check
 		if p.GetType() == proc.T_BE && p.GetNcore() > 0 {
 			db.DFatalf("BE proc with ncore > 0")
 		}
-		// If there are sufficient resources for the proc, dequeue it. For LC
-		// procs, this just involves checking if there are enough cores & memory to
-		// run it.
-		//
-		// For BE procs the story is slightly more complicated: if this is
-		// the first BE proc to be spawned on this schedd, there must be a free
-		// core to run it (and other BE procs) when all LC cores are busy.
-		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem &&
-			!(p.GetType() == proc.T_BE && !ranBE && maxcores == 0) {
+		// If there are sufficient resources for the proc, dequeue it. This just
+		// involves checking if there are enough cores & memory to run it.
+		if p.GetNcore() <= maxcores && p.GetMem() <= maxmem {
 			*q = append((*q)[:i], (*q)[i+1:]...)
 			return p, true
 		}
 	}
 	return nil, false
+}
+
+func (q *Queue) getQs(ptype proc.Ttype) []*[]*proc.Proc {
+	var qs []*[]*proc.Proc
+	switch ptype {
+	case proc.T_LC:
+		qs = []*[]*proc.Proc{&q.lc, &q.lcws}
+	case proc.T_BE:
+		qs = []*[]*proc.Proc{&q.be, &q.bews}
+	default:
+		db.DFatalf("Unrecognized proc type: %v", ptype)
+	}
+	return qs
 }
 
 func (q *Queue) String() string {

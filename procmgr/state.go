@@ -36,6 +36,8 @@ func (mgr *ProcMgr) createStartedSem(p *proc.Proc) (*semclnt.SemClnt, error) {
 // Set up a proc's state in the realm.
 func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	mgr.addRunningProc(p)
+	// Set up the directory to cache proc binaries for this realm.
+	mgr.setupUserBinCache(p)
 	// Create started semaphore, if the proc was not stolen. If the proc was
 	// stolen, the started semaphore would have been created as part of the
 	// stealing process.

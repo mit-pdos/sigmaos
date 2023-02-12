@@ -16,11 +16,6 @@ import (
 	"sigmaos/port"
 )
 
-// Mounts
-const (
-	PERF_MOUNT = "/tmp/sigmaos-perf"
-)
-
 type Container struct {
 	*port.PortMap
 	ctx          context.Context

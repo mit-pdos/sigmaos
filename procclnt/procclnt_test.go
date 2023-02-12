@@ -558,7 +558,6 @@ func TestWorkStealing(t *testing.T) {
 	assert.Nil(t, err, "Boot node %v", err)
 
 	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
-
 	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
 
 	err = ts.WaitStart(pid)
@@ -624,7 +623,7 @@ func TestBurstSpawn(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Number of spinners to burst-spawn
-	N := linuxsched.NCores * 3
+	N := (linuxsched.NCores) * 3
 
 	// Start a couple new procds.
 	err := ts.BootNode(1)

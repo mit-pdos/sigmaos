@@ -17,7 +17,8 @@ type Tshare int64
 
 const (
 	SHARE_PER_CORE Tshare = 1000
-	MIN_SHARE             = SHARE_PER_CORE / 10
+	BE_SHARES             = 100 // shares split by BE procs.
+	MIN_SHARE             = SHARE_PER_CORE / 100
 )
 
 // Rebalance CPU shares when a proc runs.
@@ -54,7 +55,7 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 
 func (updm *UprocdMgr) balanceBEShares() {
 	// Equal share for each BE uprocd.
-	cpuShare := SHARE_PER_CORE / Tshare(len(updm.beUprocds))
+	cpuShare := BE_SHARES / Tshare(len(updm.beUprocds))
 	for _, pdc := range updm.beUprocds {
 		// If the number of BE Uprocds has not changed, no rebalancing needs to
 		// happen.

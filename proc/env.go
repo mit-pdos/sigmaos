@@ -24,8 +24,8 @@ const (
 	SIGMADEBUG          = "SIGMADEBUG"
 	SIGMANAMED          = "SIGMANAMED"
 	SIGMALOCAL          = "SIGMALOCAL"
+	SIGMATAG            = "SIGMATAG"
 	SIGMAROOTFS         = "SIGMAROOTFS"
-	SIGMAPATH           = "SIGMAPATH"
 	SIGMAREALM          = "SIGMAREALM"
 	SIGMAKERNEL         = "SIGMAKERNEL"
 	SIGMAUPROCD         = "SIGMAUPROCD"
@@ -135,6 +135,9 @@ func GetUprocdPid() Tpid {
 
 func GetSigmaPath() string {
 	return os.Getenv(SIGMAPATH)
+
+func GetBuildTag() string {
+	return os.Getenv(SIGMATAG)
 }
 
 func GetLabels(envvar string) map[string]bool {

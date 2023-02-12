@@ -214,7 +214,7 @@ mr_vs_corral() {
 hotel_tail() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.108.117.18:5000"
-  for sys in Sigmaos K8s ; do
+  for sys in Sigmaos ; do #K8s ; do
     for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
@@ -495,7 +495,7 @@ echo "Running benchmarks with version: $VERSION"
 realm_balance
 realm_balance_be
 # XXX mr_scalability
-#hotel_tail
+hotel_tail
 #mr_k8s
 #k8s_balance
 #hotel_tail_multi

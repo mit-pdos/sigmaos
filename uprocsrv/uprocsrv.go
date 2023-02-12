@@ -6,6 +6,7 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
@@ -36,7 +37,8 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
 	return nil
 }
 
-func (ups *UprocSrv) Run(req proto.RunRequest, res *proto.RunResult) error {
+func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
+	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
 	return container.RunUProc(uproc, ups.kernelId, proc.GetPid())
 }

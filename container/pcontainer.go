@@ -42,7 +42,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 	}
 
 	endpoints := make(map[string]*network.EndpointSettings, 1)
-	endpoints["sigmanet"] = &network.EndpointSettings{}
+	endpoints["sigmanet-"+realm] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,

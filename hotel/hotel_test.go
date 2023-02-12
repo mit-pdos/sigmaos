@@ -332,7 +332,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
-	ts.PrintStats(nil)
+	//ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()
 }
@@ -344,6 +344,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		return
 	}
 	ts := makeTstate(t, nil, 0)
+	// XXX use mount points
 	// Write a file for clients to discover the server's address.
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	if err := ts.PutFileJson(p, 0777, []string{K8S_ADDR}); err != nil {

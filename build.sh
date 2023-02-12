@@ -57,7 +57,10 @@ fi
 
 # XXX move and one per realm
 if ! docker network ls | grep -q 'sigmanet'; then
-    docker network create --driver overlay sigmanet --attachable
+    docker network create --driver overlay sigmanet-rootrealm --attachable
+    docker network create --driver overlay sigmanet-testrealm --attachable
+    docker network create --driver overlay sigmanet-testrealm2 --attachable
+    
 fi
    
 

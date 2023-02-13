@@ -8,7 +8,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func Rearrange(addrs sp.Taddrs) sp.Taddrs {
+func Rearrange(realm sp.Trealm, addrs sp.Taddrs) sp.Taddrs {
 	ip, err := LocalIP()
 	if err == nil {
 		addrs = rearrange(addrs, ip)

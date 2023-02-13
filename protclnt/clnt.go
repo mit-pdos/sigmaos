@@ -24,13 +24,14 @@ type Clnt struct {
 	id    sessp.Tclient
 	seqno sessp.Tseqno
 	sm    *sessclnt.Mgr
+	realm sp.Trealm
 }
 
-func MakeClnt() *Clnt {
+func MakeClnt(realm sp.Trealm) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid
-	clnt.sm = sessclnt.MakeMgr(clnt.id)
+	clnt.sm = sessclnt.MakeMgr(clnt.id, realm)
 	return clnt
 }
 

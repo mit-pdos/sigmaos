@@ -16,15 +16,16 @@ import (
 //
 
 type FidClnt struct {
-	fids *FidMap
-	pc   *protclnt.Clnt
-	ft   *FenceTable
+	fids  *FidMap
+	pc    *protclnt.Clnt
+	ft    *FenceTable
+	realm sp.Trealm
 }
 
-func MakeFidClnt() *FidClnt {
+func MakeFidClnt(realm sp.Trealm) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt()
+	fidc.pc = protclnt.MakeClnt(realm)
 	fidc.ft = MakeFenceTable()
 	return fidc
 }

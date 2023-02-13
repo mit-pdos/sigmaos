@@ -269,7 +269,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	target, rest, _ := pathc.mnt.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
-		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
+		st.Name = pathc.FidClnt.Lookup(target).Servers().Taddrs2String()
 		return st, nil
 	} else {
 		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)

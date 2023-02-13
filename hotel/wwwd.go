@@ -104,7 +104,7 @@ func RunWww(job string, public bool) error {
 		db.DFatalf("QualifyAddr %v err %v", a, err)
 	}
 
-	if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, a); err != nil {
+	if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, proc.GetRealm(), a); err != nil {
 		db.DFatalf("AdvertisePort %v", err)
 	}
 

@@ -20,7 +20,7 @@ func main() {
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	if err := boot.BootUp(&param, sp.ParseTaddrs(os.Args[2])); err != nil {
+	if err := boot.BootUp(&param, sp.String2Taddrs(os.Args[2])); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)

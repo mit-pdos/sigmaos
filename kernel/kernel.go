@@ -183,7 +183,7 @@ func makeNamedProc(addr *sp.Taddr, replicate bool, id int, pe sp.Taddrs, realmId
 			peers = append(peers, addReplPortOffset(peer.Addr))
 		}
 		args = append(args, strconv.Itoa(id))
-		args = append(args, peers.String())
+		args = append(args, peers.Taddrs2String())
 	}
 
 	p := proc.MakePrivProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args, true)

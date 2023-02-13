@@ -14,7 +14,7 @@ import (
 func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm) (*exec.Cmd, error) {
 	p.Finalize("")
 	env := p.GetEnv()
-	env = append(env, "SIGMANAMED="+namedAddr.String())
+	env = append(env, "SIGMANAMED="+namedAddr.Taddrs2String())
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
 	env = append(env, "SIGMAREALM="+realm.String())

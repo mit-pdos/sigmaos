@@ -66,11 +66,11 @@ func NamedAddrs() string {
 }
 
 func Named() sp.Taddrs {
-	return sp.ParseTaddrs(NamedAddrs())
+	return sp.String2Taddrs(NamedAddrs())
 }
 
 func SetSigmaNamed(nds sp.Taddrs) {
-	os.Setenv(SIGMANAMED, nds.String())
+	os.Setenv(SIGMANAMED, nds.Taddrs2String())
 }
 
 func GetSigmaNamed() string {

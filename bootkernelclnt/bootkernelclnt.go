@@ -22,7 +22,7 @@ func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs) (string, error) {
 	out, err := exec.Command(START, []string{
 		"--pull", tag,
 		"--boot", srvs,
-		"--named", namedAddr.String(),
+		"--named", namedAddr.Taddrs2String(),
 		"--host", kernelId}...).Output()
 	if err != nil {
 		db.DPrintf(db.BOOT, "Boot: start out %s err %v\n", string(out), err)

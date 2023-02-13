@@ -89,7 +89,7 @@ func MakeReplServerRealm(root fs.Dir, addr, path, name string, conf repl.Config,
 		return nil, serr.MkErrError(err)
 	}
 
-	if err = pc.AdvertisePort(path, hip, pb, srv.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(path, hip, pb, realm, srv.MyAddr()); err != nil {
 		return nil, serr.MkErrError(err)
 	}
 
@@ -131,7 +131,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, *sigmaclnt.SigmaClnt, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, hip, pb, mfs.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, hip, pb, proc.GetRealm(), mfs.MyAddr()); err != nil {
 		return nil, nil, err
 	}
 

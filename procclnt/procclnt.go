@@ -145,7 +145,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
 	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
-	p.AppendEnv(proc.SIGMANAMED, clnt.NamedAddr().String())
+	p.AppendEnv(proc.SIGMANAMED, clnt.NamedAddr().Taddrs2String())
 }
 
 // Spawn a proc on scheddIp. If viaProcd is false, then the proc env is set up

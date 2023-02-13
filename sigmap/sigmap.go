@@ -190,15 +190,12 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-type TAtype uint
-
-const (
-	OVERLAY TAtype = 1
-	HOST    TAtype = 2
-)
-
 func MkTaddr(addr string) *Taddr {
-	return &Taddr{Addr: addr}
+	return &Taddr{Realm: ROOTREALM.String(), Addr: addr}
+}
+
+func MkTaddrRealm(addr string, realm Trealm) *Taddr {
+	return &Taddr{Realm: realm.String(), Addr: addr}
 }
 
 type Taddrs []*Taddr
@@ -211,15 +208,15 @@ func MkTaddrs(addr []string) Taddrs {
 	return addrs
 }
 
-func ParseTaddrs(as string) Taddrs {
+func String2Taddrs(as string) Taddrs {
 	addrs := make([]*Taddr, 0)
 	for _, s := range strings.Split(as, ",") {
-		addrs = append(addrs, &Taddr{Addr: s})
+		addrs = append(addrs, MkTaddr(s))
 	}
 	return addrs
 }
 
-func (as Taddrs) String() string {
+func (as Taddrs) Taddrs2String() string {
 	s := ""
 	for i, a := range as {
 		if i < len(as)-1 {

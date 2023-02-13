@@ -81,5 +81,5 @@ func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
 }
 
 func sessKey(addrs sp.Taddrs) string {
-	return addrs.String()
+	return addrs.Taddrs2String()
 }

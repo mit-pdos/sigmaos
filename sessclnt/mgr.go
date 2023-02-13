@@ -1,13 +1,13 @@
 package sessclnt
 
 import (
-	"strings"
 	"sync"
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
+	sp "sigmaos/sigmap"
 )
 
 type Mgr struct {
@@ -37,7 +37,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *serr.Err) {
+func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -53,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *serr.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
+func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
@@ -66,7 +66,7 @@ func (sc *Mgr) RPC(addr []string, req sessp.Tmsg, data []byte, f *sessp.Tfence) 
 }
 
 // For testing
-func (sc *Mgr) Disconnect(addrs []string) *serr.Err {
+func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect cli %v addr %v", sc.cli, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
@@ -80,6 +80,6 @@ func (sc *Mgr) Disconnect(addrs []string) *serr.Err {
 	return nil
 }
 
-func sessKey(addrs []string) string {
-	return strings.Join(addrs, ",")
+func sessKey(addrs sp.Taddrs) string {
+	return addrs.String()
 }

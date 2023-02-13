@@ -77,6 +77,6 @@ func (c *Channel) Disconnect() *serr.Err {
 	return c.pc.Disconnect()
 }
 
-func (c *Channel) Servers() []string {
+func (c *Channel) Servers() sp.Taddrs {
 	return c.pc.Servers()
 }

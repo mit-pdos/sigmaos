@@ -107,7 +107,7 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	namedport := []string{NAMEDPORT}
+	namedport := sp.MkTaddrs([]string{NAMEDPORT})
 	kernelid := bootkernelclnt.GenKernelId()
 	if start {
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport)

@@ -41,7 +41,7 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
 }
 
-func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow, kernelId string) error {
+func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how)
 		if err != nil {

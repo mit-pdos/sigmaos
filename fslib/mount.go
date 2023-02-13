@@ -45,7 +45,7 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error
 
 func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address())
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr)
 	} else {
 		return fsl.MountService(pn, mnt)
 	}

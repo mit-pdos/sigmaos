@@ -3,7 +3,6 @@ package kproc
 import (
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 
 	db "sigmaos/debug"
@@ -12,10 +11,10 @@ import (
 )
 
 // To run kernel procs
-func RunKernelProc(p *proc.Proc, namedAddr []string, realm sp.Trealm) (*exec.Cmd, error) {
+func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm) (*exec.Cmd, error) {
 	p.Finalize("")
 	env := p.GetEnv()
-	env = append(env, "SIGMANAMED="+strings.Join(namedAddr, ","))
+	env = append(env, "SIGMANAMED="+namedAddr.String())
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
 	env = append(env, "SIGMAREALM="+realm.String())

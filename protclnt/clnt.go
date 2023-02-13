@@ -3,11 +3,11 @@ package protclnt
 import (
 	"sync/atomic"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/path"
 	"sigmaos/rand"
+	"sigmaos/serr"
 	"sigmaos/sessclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -38,7 +38,7 @@ func (clnt *Clnt) ReadSeqNo() sessp.Tseqno {
 	return sessp.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs []string, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
+func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, data, fence)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (clnt *Clnt) CallServer(addrs []string, args sessp.Tmsg, data []byte, fence
 	return reply, nil
 }
 
-func (clnt *Clnt) Attach(addrs []string, uname string, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+func (clnt *Clnt) Attach(addrs sp.Taddrs, uname string, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.MkTattach(fid, sp.NoFid, uname, path)
 	reply, err := clnt.CallServer(addrs, args, nil, sessp.MakeFenceNull())
 	if err != nil {
@@ -71,17 +71,17 @@ func (clnt *Clnt) Exit() *serr.Err {
 	return nil
 }
 
-func (clnt *Clnt) MakeProtClnt(addrs []string) *ProtClnt {
+func (clnt *Clnt) MakeProtClnt(addrs sp.Taddrs) *ProtClnt {
 	protclnt := &ProtClnt{addrs, clnt}
 	return protclnt
 }
 
 type ProtClnt struct {
-	addrs []string
+	addrs sp.Taddrs
 	clnt  *Clnt
 }
 
-func (pclnt *ProtClnt) Servers() []string {
+func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 

@@ -32,7 +32,7 @@ func (mnt Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(&mnt)
 }
 
-func (mnt Tmount) Address() string {
+func (mnt Tmount) Address() *Taddr {
 	return mnt.Addr[0]
 }
 
@@ -41,9 +41,10 @@ func MkMountService(srvaddrs Taddrs) Tmount {
 }
 
 func MkMountServer(addr string) Tmount {
-	return MkMountService(Taddrs{addr})
+	addrs := MkTaddrs([]string{addr})
+	return MkMountService(addrs)
 }
 
 func (mnt Tmount) TargetHostPort() (string, string, error) {
-	return net.SplitHostPort(mnt.Addr[0])
+	return net.SplitHostPort(mnt.Addr[0].Addr)
 }

@@ -65,12 +65,8 @@ func NamedAddrs() string {
 	return addrs
 }
 
-func Named() []string {
-	return StringToNamedAddrs(NamedAddrs())
-}
-
-func StringToNamedAddrs(s string) []string {
-	return strings.Split(s, ",")
+func Named() sp.Taddrs {
+	return sp.ParseTaddrs(NamedAddrs())
 }
 
 func SetSigmaNamed(nds sp.Taddrs) {

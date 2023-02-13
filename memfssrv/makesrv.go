@@ -39,7 +39,7 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
 	for _, a := range proc.Named() {
-		if a == addr {
+		if a.Addr == addr {
 			isInitNamed = true
 			break
 		}

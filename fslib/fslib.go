@@ -37,7 +37,7 @@ func (fl *FsLib) Realm() sp.Trealm {
 	return fl.realm
 }
 
-func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
+func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {

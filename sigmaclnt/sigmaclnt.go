@@ -68,7 +68,7 @@ func MkSigmaClntRealm(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaC
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func MkSigmaClntRootInit(name string, ip string, namedAddr []string) (*SigmaClnt, error) {
+func MkSigmaClntRootInit(name string, ip string, namedAddr sp.Taddrs) (*SigmaClnt, error) {
 	fsl, err := fslib.MakeFsLibAddr(name, sp.ROOTREALM, ip, namedAddr)
 	if err != nil {
 		return nil, err

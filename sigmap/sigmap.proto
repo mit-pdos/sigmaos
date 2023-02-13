@@ -23,10 +23,15 @@ message Stat {
         string  uid = 9;     // owner name
         string  gid = 10;     // group name
         string  muid = 11;    // name of the last user that modified the file
-} 
+}
+
+message Taddr {
+        string addr = 1;
+        uint32 type = 2;
+}
 
 message Tmount {
-        repeated string addr = 1;
+        repeated Taddr addr = 1;
         string root = 3;
         bytes pubKey = 4;
 }

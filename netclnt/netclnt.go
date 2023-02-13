@@ -29,7 +29,7 @@ type NetClnt struct {
 	bw     *bufio.Writer
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *serr.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
@@ -78,12 +78,12 @@ func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
 	addrs = container.Rearrange(addrs)
 	db.DPrintf(db.PORT, "NetClnt connect to any of %v\n", addrs)
 	for _, addr := range addrs {
-		c, err := net.Dial("tcp", addr)
+		c, err := net.Dial("tcp", addr.Addr)
 		if err != nil {
 			continue
 		}
 		nc.conn = c
-		nc.addr = addr
+		nc.addr = addr.Addr
 		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
 		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
 		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)

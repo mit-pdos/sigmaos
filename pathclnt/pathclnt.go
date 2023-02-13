@@ -2,7 +2,6 @@ package pathclnt
 
 import (
 	"fmt"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -270,7 +269,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	target, rest, _ := pathc.mnt.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
-		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
+		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
 		return st, nil
 	} else {
 		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)

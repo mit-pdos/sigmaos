@@ -72,7 +72,7 @@ func (k *Kernel) Shutdown() error {
 }
 
 func (k *Kernel) Boot(s string) error {
-	_, err := k.kclnt.Boot(s, sp.Taddrs{})
+	_, err := k.kclnt.Boot(s, []string{})
 	return err
 }
 

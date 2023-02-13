@@ -5,11 +5,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
 )
@@ -23,13 +23,13 @@ type SessClnt struct {
 	sid    sessp.Tsession
 	seqno  sessp.Tseqno
 	closed bool
-	addrs  []string
+	addrs  sp.Taddrs
 	nc     *netclnt.NetClnt
 	queue  *sessstateclnt.RequestQueue
 	ivs    *intervals.Intervals
 }
 
-func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *serr.Err) {
+func makeSessClnt(cli sessp.Tclient, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())

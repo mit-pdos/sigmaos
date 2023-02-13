@@ -30,7 +30,7 @@ func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
 	p := 0
 	l := 0
 	for i, a := range raddrs {
-		h1, _, r := net.SplitHostPort(a)
+		h1, _, r := net.SplitHostPort(a.Addr)
 		if r != nil {
 			return raddrs
 		}
@@ -50,7 +50,7 @@ func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
 			break
 		}
 
-		// See if a is a public address
+		// See if a is a host address
 		_, pnet2, r := net.ParseCIDR("10.0.0.0/8") // XXX fix for aws
 		if r != nil {
 			return raddrs

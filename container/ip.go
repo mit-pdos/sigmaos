@@ -16,35 +16,63 @@ func Rearrange(addrs sp.Taddrs) sp.Taddrs {
 	return addrs
 }
 
-// Rearrange addrs so that first addr is on same network as ip
+// Rearrange addrs so that first addr is on same network as ip. If
+// none, prefer a non-10 address.
 func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
 	if len(addrs) == 1 {
 		return addrs
 	}
-	a := make(sp.Taddrs, len(addrs))
+	raddrs := make(sp.Taddrs, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		raddrs[i] = addrs[i]
+	}
+	local := false
 	p := 0
-	for i, a := range addrs {
+	l := 0
+	for i, a := range raddrs {
 		h1, _, r := net.SplitHostPort(a)
 		if r != nil {
-			return addrs
+			return raddrs
 		}
-		ip1, ipnet1, r := net.ParseCIDR(h1 + "/16") // XXX
+		ip1, ipnet1, r := net.ParseCIDR(h1 + "/24") // XXX
 		if r != nil {
 			return addrs
 		}
 		ip2 := net.ParseIP(ip)
 		if ip1 == nil || ip2 == nil {
-			return addrs
+			return raddrs
 		}
+
+		// See if ip is local (i.e., on same subnet) as a
 		if ipnet1.Contains(ip2) {
-			p = i
+			l = i
+			local = true
 			break
 		}
+
+		// See if a is a public address
+		_, pnet2, r := net.ParseCIDR("10.0.0.0/8") // XXX fix for aws
+		if r != nil {
+			return raddrs
+		}
+		if !pnet2.Contains(ip1) {
+			p = i
+		}
+
 	}
+	if local {
+		swap(raddrs, l)
+	} else {
+		swap(raddrs, p)
+	}
+	return raddrs
+}
+
+func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 	v := addrs[0]
-	a[0] = addrs[p]
-	a[p] = v
-	return a
+	addrs[0] = addrs[i]
+	addrs[i] = v
+	return addrs
 }
 
 func QualifyAddr(addr string) (string, error) {

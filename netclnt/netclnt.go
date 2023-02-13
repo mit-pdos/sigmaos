@@ -76,6 +76,7 @@ func (nc *NetClnt) isClosed() bool {
 
 func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
 	addrs = container.Rearrange(addrs)
+	db.DPrintf(db.PORT, "NetClnt connect to any of %v\n", addrs)
 	for _, addr := range addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {

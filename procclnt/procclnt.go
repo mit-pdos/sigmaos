@@ -160,7 +160,9 @@ func (clnt *ProcClnt) spawn(scheddIp string, how Thow, p *proc.Proc, pdc *protde
 	clnt.extendBaseEnv(p)
 
 	// Set the realm id.
-	p.SetRealm(clnt.Realm())
+	if p.RealmStr == "" {
+		p.SetRealm(clnt.Realm())
+	}
 
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)

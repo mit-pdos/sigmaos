@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -14,6 +15,7 @@ type FsLib struct {
 }
 
 func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
+	db.DPrintf(db.PORT, "MakeFsLibAddr: uname %s lip %s addrs %v\n", uname, lip, addrs)
 	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, lip, sessp.Tsize(10_000_000)),
 		realm, addrs}
 	if err := fl.MountTree(addrs, "", "name"); err != nil {

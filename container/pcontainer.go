@@ -30,7 +30,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 	p.Args = append(p.Args, r.Fport.String())
 
 	cmd := append([]string{p.Program}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v %v %v\n", cmd, p.GetEnv(), container.NetworkMode(sp.Conf.Network.MODE), r, realm)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v %v\n", cmd, p.GetEnv(), r, realm)
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
@@ -53,7 +53,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
+			NetworkMode: "bridge",
 			Mounts: []mount.Mount{
 				// user bin dir
 				mount.Mount{

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Start container
+# Start kernel container
 #
 
 usage() {

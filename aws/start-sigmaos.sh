@@ -93,10 +93,10 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED}"
     ./start-db.sh
-    ./start.sh --boot realm --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED}"
-    ./start.sh --boot node --named ${SIGMANAMED} --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

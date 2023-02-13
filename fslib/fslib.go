@@ -14,13 +14,17 @@ type FsLib struct {
 	namedAddr sp.Taddrs
 }
 
-func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
-	db.DPrintf(db.PORT, "MakeFsLibAddr: uname %s lip %s addrs %v\n", uname, lip, addrs)
-	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, realm, lip, sessp.Tsize(10_000_000)), realm, addrs}
+func MakeFsLibAddrRealm(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clnt sp.Trealm) (*FsLib, error) {
+	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
+	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clnt, lip, sessp.Tsize(10_000_000)), realm, addrs}
 	if err := fl.MountTree(addrs, "", "name"); err != nil {
 		return nil, err
 	}
 	return fl, nil
+}
+
+func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
+	return MakeFsLibAddrRealm(uname, realm, lip, addrs, realm)
 }
 
 // Only to be called by procs.

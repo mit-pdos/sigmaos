@@ -141,25 +141,26 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.k.Param.Overlays {
+		realm := args[0]
+		ptype := args[1]
 
-	realm := args[0]
-	ptype := args[1]
-	pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
+		pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
 
-	// container's first port is for uprocd
-	pm, err := s.container.AllocFirst()
-	if err != nil {
-		return nil, err
-	}
+		// container's first port is for uprocd
+		pm, err := s.container.AllocFirst()
+		if err != nil {
+			return nil, err
+		}
 
-	db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)
-
-	// Use 127.0.0.1, because only the local schedd should be talking
-	// to uprocd.
-	mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort.String())
-	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-	if err := k.MkMountSymlink(pn, mnt); err != nil {
-		return nil, err
+		// Use 127.0.0.1, because only the local schedd should be talking
+		// to uprocd.
+		mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort.String())
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+		if err := k.MkMountSymlink(pn, mnt); err != nil {
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)
 	}
 
 	return s, nil

@@ -25,12 +25,14 @@ const (
 
 var containerIP string
 var start bool
+var overlays bool
 var tag string
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
+	flag.BoolVar(&overlays, "overlays", false, "Overlays")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -49,10 +51,11 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
-	rc      *realmclnt.RealmClnt
-	kclnts  []*bootkernelclnt.Kernel
-	killidx int
-	T       *testing.T
+	rc       *realmclnt.RealmClnt
+	kclnts   []*bootkernelclnt.Kernel
+	killidx  int
+	T        *testing.T
+	Overlays bool
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -110,7 +113,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := sp.MkTaddrs([]string{NAMEDPORT})
 	kernelid := bootkernelclnt.GenKernelId()
 	if start {
-		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport)
+		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, overlays)
 		if err != nil {
 			return nil, err
 		}
@@ -130,12 +133,13 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
+		Overlays:  overlays,
 	}, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr())
+		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr(), overlays)
 		if err != nil {
 			return err
 		}

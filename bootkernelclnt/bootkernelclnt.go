@@ -18,12 +18,18 @@ const (
 	START = "../start-kernel.sh"
 )
 
-func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs) (string, error) {
-	out, err := exec.Command(START, []string{
+func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs, overlays bool) (string, error) {
+	args := []string{
 		"--pull", tag,
 		"--boot", srvs,
 		"--named", namedAddr.Taddrs2String(),
-		"--host", kernelId}...).Output()
+		"--host",
+	}
+	if overlays {
+		args = append(args, "--overlays")
+	}
+	args = append(args, kernelId)
+	out, err := exec.Command(START, args...).Output()
 	if err != nil {
 		db.DPrintf(db.BOOT, "Boot: start out %s err %v\n", string(out), err)
 		return "", err
@@ -43,9 +49,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(tag, name, conf string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClntStart(tag, name, conf string, namedAddr sp.Taddrs, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	ip, err := Start(kernelId, tag, conf, namedAddr)
+	ip, err := Start(kernelId, tag, conf, namedAddr, overlays)
 	if err != nil {
 		return nil, err
 	}

@@ -2,14 +2,17 @@ package uprocsrv
 
 import (
 	"os"
+	"path"
 	"sync"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
 )
 
@@ -22,14 +25,21 @@ type UprocSrv struct {
 	net      string
 }
 
-func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
+func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{})}
 
 	ip, _ := container.LocalIP()
-	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, port, os.Environ(), ip)
+	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, up, os.Environ(), ip)
 
-	// The kernel will advertise the server, so pass "" as pn.
-	pds, err := protdevsrv.MakeProtDevSrvPort("", port, ups)
+	var pds *protdevsrv.ProtDevSrv
+	var err error
+	if up == port.NOPORT.String() {
+		pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype.String())
+		pds, err = protdevsrv.MakeProtDevSrv(pn, ups)
+	} else {
+		// The kernel will advertise the server, so pass "" as pn.
+		pds, err = protdevsrv.MakeProtDevSrvPort("", up, ups)
+	}
 	if err != nil {
 		return err
 	}

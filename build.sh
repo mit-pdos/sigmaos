@@ -63,6 +63,7 @@ fi
 
 # Build base image
 DOCKER_BUILDKIT=1 docker build \
+  --progress=plain \
   --build-arg target=$TARGET \
   --build-arg parallel=$PARALLEL \
   --build-arg tag=$TAG \

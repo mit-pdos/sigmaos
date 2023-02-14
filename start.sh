@@ -81,8 +81,6 @@ mkdir -p /tmp/sigmaos-perf
 
 # Pull latest docker images
 if ! [ -z "$TAG" ]; then
-  docker pull arielszekely/sigmabase:$TAG > /dev/null
-  docker tag arielszekely/sigmabase:$TAG sigmabase > /dev/null
   docker pull arielszekely/sigmaos:$TAG > /dev/null
   docker tag arielszekely/sigmaos:$TAG sigmaos > /dev/null
   docker pull arielszekely/sigmauser:$TAG > /dev/null
@@ -103,6 +101,7 @@ CID=$(docker run -dit\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
              --network ${NET}\
+             --privileged\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\

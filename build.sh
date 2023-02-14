@@ -62,44 +62,43 @@ fi
 ./make.sh --norace $PARALLEL linux
 
 # Build base image
-DOCKER_BUILDKIT=1 docker build \
-  --progress=plain \
+DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
   --build-arg parallel=$PARALLEL \
   --build-arg tag=$TAG \
-  -t sigmabase .
+  --target builder \
+  -t sigmabuilder .
+# Default to building the sigmakernel image with user binaries
+SIGMAKERNEL_TARGET="sigmakernel"
 # If running on AWS, upload user bins and remove them from the base image.
 if [ "${TARGET}" != "local" ]; then
   # Run the base image, which will copy the built user bins to USRBIN
   docker run -it \
     --mount type=bind,src=$USRBIN,dst=/tmp/bin \
     -e "TAG=$TAG" \
-    sigmabase
+    sigmabuilder 
   ./upload.sh --tag $TAG
   # Clean up base container
-  docker stop $(docker ps -aq --filter="ancestor=sigmabase")
-  docker rm $(docker ps -aq --filter="ancestor=sigmabase")
-  # Replace the base image with a clean version, which doesn't include the user
-  # bins.
-  docker build \
-    -f Dockerclean \
-    -t sigmaclean .
-  docker tag sigmaclean sigmabase
+  docker stop $(docker ps -aq --filter="ancestor=sigmabuilder")
+  docker rm $(docker ps -aq --filter="ancestor=sigmabuilder")
+  # Build the kernel image with no user binaries.
+  SIGMAKERNEL_TARGET="sigmakernelclean"
 fi
 # Build the kernel image
-docker build \
-  -f Dockerkernel \
-  -t sigmaos .
-# Build the user image
-docker build \
+DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
   --build-arg parallel=$PARALLEL \
-  -f Dockeruser \
+  --build-arg tag=$TAG \
+  --target $SIGMAKERNEL_TARGET \
+  -t sigmaos .
+# Build the user image
+DOCKER_BUILDKIT=1 docker build --progress=plain \
+  --build-arg target=$TARGET \
+  --build-arg parallel=$PARALLEL \
+  --target sigmauser \
   -t sigmauser .
 
 if ! [ -z "$TAG" ]; then
-  docker tag sigmabase arielszekely/sigmabase:$TAG
-  docker push arielszekely/sigmabase:$TAG
   docker tag sigmaos arielszekely/sigmaos:$TAG
   docker push arielszekely/sigmaos:$TAG
   docker tag sigmauser arielszekely/sigmauser:$TAG

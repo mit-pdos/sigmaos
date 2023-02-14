@@ -13,18 +13,52 @@ RUN apt-get update && \
   apt autoremove && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 WORKDIR /home/sigmaos
+RUN mkdir bin && \
+    mkdir bin/user && \
+    mkdir bin/kernel && \
+    mkdir bin/linux
+# Copy some yaml files to the base image.
+COPY seccomp seccomp
+
+# ========== binary builder image ==========
+FROM base AS builder
+# Download go modules
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
-
+# Copy source
 COPY . .
-# Build kernel and linux bins.
+# Build all binaries.
 RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --target $target $parallel kernel && \
   ./make.sh --norace --target $target $parallel user && \
-  mkdir bin/user-common && \
-  mv bin/user/* bin/user-common && \
-  mv bin/user-common bin/user/common && \
+  mkdir bin/common && \
+  mv bin/user/* bin/common && \
+  mv bin/common bin/user/common && \
   cp bin/kernel/named bin/user/common/named
-
 # Copy bins to host
 CMD ["sh", "-c", "cp -r --no-preserve=mode,ownership bin/user/* /tmp/bin"]
+
+# ========== kernel image, omitting user binaries ==========
+FROM base AS sigmakernelclean
+WORKDIR /home/sigmaos
+ENV named :1111
+ENV boot named
+ENV dbip x.x.x.x
+# Copy kernel bins
+COPY --from=builder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
+# Copy linus bins
+COPY --from=builder /home/sigmaos/bin/linux /home/sigmaos/bin/linux
+CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot} ${dbip}"]
+
+# ========== kernel image, including user binaries ==========
+FROM sigmakernelclean AS sigmakernel
+COPY --from=builder /home/sigmaos/bin/user /home/sigmaos/bin/user
+
+# ========== user image ==========
+FROM base AS sigmauser 
+# Copy mr yaml files.
+COPY mr mr
+# Copy uprocd, the entrypoint for this container, to the user image.
+COPY --from=builder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
+# Copy exec-uproc, the trampoline program, to the user image, 
+COPY --from=builder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel

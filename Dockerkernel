@@ -1,9 +1,0 @@
-# syntax=docker/dockerfile:1
-
-FROM sigmabase AS kernel
-WORKDIR /home/sigmaos
-ENV named :1111
-ENV boot named
-ENV dbip x.x.x.x
-
-CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot} ${dbip}"]

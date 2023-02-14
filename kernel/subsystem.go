@@ -43,14 +43,14 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 
 func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
-		cmd, err := s.SpawnKernelProc(s.p, s.how)
+		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
 			return err
 		}
 		s.cmd = cmd
 	} else {
 		realm := sp.Trealm(s.p.Args[0])
-		if err := s.MkProc(s.p, procclnt.HDOCKER); err != nil {
+		if err := s.MkProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
 			return err
 		}
 		// XXX don't hard code

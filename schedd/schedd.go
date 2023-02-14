@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	"path"
 	"sync"
 
 	db "sigmaos/debug"
@@ -50,7 +51,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
-	p.ScheddIp = sd.mfs.MyAddr()
+	p.KernelId = sd.kernelId
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
 		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
@@ -167,7 +168,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 }
 
 func RunSchedd(kernelId string) error {
-	mfs, _, err := memfssrv.MakeMemFs(sp.SCHEDD, sp.SCHEDDREL)
+	mfs, _, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

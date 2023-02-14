@@ -134,9 +134,6 @@ func (k *Kernel) bootSchedd() (*Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	scheddIp := args[2]
-	args[2] = k.Param.KernelId
-
 	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
 	if err != nil {
 		return nil, err
@@ -145,7 +142,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 		realm := args[0]
 		ptype := args[1]
 
-		pn := path.Join(sp.SCHEDD, scheddIp, sp.UPROCDREL, realm, ptype)
+		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, realm, ptype)
 
 		// container's first port is for uprocd
 		pm, err := s.container.AllocFirst()

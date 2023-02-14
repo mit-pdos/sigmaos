@@ -29,7 +29,6 @@ func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
 func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
 	p := pn + "/" + name
 	dir, err := fsl.IsDir(pn)
-
 	if err != nil {
 		return err
 	}

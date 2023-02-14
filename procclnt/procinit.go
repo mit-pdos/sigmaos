@@ -11,21 +11,22 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Right now mounts don't resolve to find the server. So, get the server addr
-// from the path for now.
+// Split path at last mount point, if any
 func splitMountServerAddrPath(fsl *fslib.FsLib, namedAddrs sp.Taddrs, dpath string) (sp.Taddrs, string) {
-	p := strings.Split(dpath, "/")
-	for i := len(p) - 1; i >= 0; i-- {
-		if strings.Contains(p[i], ":") {
-			return sp.MkTaddrs([]string{p[i]}), path.Join(p[i+1:]...)
-		}
+	symlink, rest, err := fsl.PathLastSymlink(dpath)
+	if err != nil {
+		return namedAddrs, dpath
 	}
-	return namedAddrs, dpath
+	mnt, err := fsl.ReadMount(symlink)
+	if err != nil {
+		return namedAddrs, dpath
+	}
+	return mnt.Addr, rest.String()
 }
 
 func mountDir(fsl *fslib.FsLib, namedAddrs sp.Taddrs, dpath string, mountPoint string) {
-	tree := strings.TrimPrefix(dpath, "name/")
-	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, tree)
+	db.DPrintf(db.PROCCLNT, "mountDir: %v %v %v\n", namedAddrs, dpath, mountPoint)
+	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, dpath)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
 			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)

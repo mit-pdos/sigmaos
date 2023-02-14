@@ -105,11 +105,11 @@ func (p *Proc) SetParentDir(parentdir string) {
 	}
 }
 
-func (p *Proc) setProcDir(scheddIp string) {
+func (p *Proc) setProcDir(kernelId string) {
 	if p.IsPrivilegedProc() {
 		p.ProcDir = path.Join(sp.KPIDSREL, p.GetPid().String())
 	} else {
-		p.ProcDir = path.Join(sp.SCHEDD, scheddIp, sp.PIDS, p.GetPid().String())
+		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -137,8 +137,8 @@ func (p *Proc) setBaseEnv() {
 
 // Finalize env details which can only be set once a physical machine has been
 // chosen.
-func (p *Proc) Finalize(scheddIp string) {
-	p.setProcDir(scheddIp)
+func (p *Proc) Finalize(kernelId string) {
+	p.setProcDir(kernelId)
 	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
@@ -149,11 +149,11 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t ScheddIp:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t KernelId:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
 		p.Program,
 		p.GetPid(),
 		p.Privileged,
-		p.ScheddIp,
+		p.KernelId,
 		p.GetRealm(),
 		p.ProcDir,
 		p.ParentDir,

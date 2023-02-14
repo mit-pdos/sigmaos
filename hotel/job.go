@@ -10,6 +10,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 const (
@@ -53,7 +54,7 @@ type Srv struct {
 
 var HotelSvcs = []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
 	Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
-	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", true}}
+	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", test.Overlays}}
 
 var ncores = []int{0, 1,
 	1, 1, 3,
@@ -73,7 +74,7 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache, true)
+		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache, test.Overlays)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
 			return nil, nil, nil, err

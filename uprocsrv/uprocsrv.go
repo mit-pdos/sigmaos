@@ -34,7 +34,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	var pds *protdevsrv.ProtDevSrv
 	var err error
 	if up == port.NOPORT.String() {
-		pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm, ptype.String())
+		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
 		pds, err = protdevsrv.MakeProtDevSrv(pn, ups)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.

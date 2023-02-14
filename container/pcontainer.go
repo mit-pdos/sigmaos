@@ -45,8 +45,10 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
+	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
 	if r != nil {
+		netmode = "bridge"
 		for i := r.Fport; i < r.Lport; i++ {
 			p, err := nat.NewPort("tcp", i.String())
 			if err != nil {
@@ -67,7 +69,7 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			NetworkMode: "bridge",
+			NetworkMode: container.NetworkMode(netmode),
 			Mounts: []mount.Mount{
 				// user bin dir
 				mount.Mount{

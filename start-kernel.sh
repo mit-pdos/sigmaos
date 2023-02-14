@@ -83,8 +83,6 @@ mkdir -p /tmp/sigmaos-perf
 
 # Pull latest docker images
 if ! [ -z "$TAG" ]; then
-  docker pull arielszekely/sigmabase:$TAG > /dev/null
-  docker tag arielszekely/sigmabase:$TAG sigmabase > /dev/null
   docker pull arielszekely/sigmaos:$TAG > /dev/null
   docker tag arielszekely/sigmaos:$TAG sigmaos > /dev/null
   docker pull arielszekely/sigmauser:$TAG > /dev/null

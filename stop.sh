@@ -47,6 +47,6 @@ if docker ps -a | grep -qE 'sigma|uprocd|bootkerne'; then
   done
 fi
 
-sudo rm -rf /tmp/sigmaos-bin
-
 wait
+
+sudo rm -rf /tmp/sigmaos-bin

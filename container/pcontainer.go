@@ -18,38 +18,47 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range) (*Container, error) {
+// Start container for uprocd. If r is nil, don't use overlays.
+func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
+
+	// set overlay network
+	net := sp.ROOTREALM.String()
+	if r != nil {
+		net = "sigmanet-" + realm.String()
+		if realm == sp.ROOTREALM {
+			net = "sigmanet-testuser"
+		}
+	}
+
 	// append uprocd's port
-	p.Args = append(p.Args, r.Fport.String())
+	p.Args = append(p.Args, up.String())
+	p.AppendEnv(proc.SIGMANET, net)
 
 	cmd := append([]string{p.Program}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v %v\n", cmd, p.GetEnv(), r, realm)
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	for i := r.Fport; i < r.Lport; i++ {
-		p, err := nat.NewPort("tcp", i.String())
-		if err != nil {
-			return nil, err
+	var endpoints map[string]*network.EndpointSettings
+	if r != nil {
+		for i := r.Fport; i < r.Lport; i++ {
+			p, err := nat.NewPort("tcp", i.String())
+			if err != nil {
+				return nil, err
+			}
+			pset[p] = struct{}{}
+			pmap[p] = []nat.PortBinding{{}}
 		}
-		pset[p] = struct{}{}
-		pmap[p] = []nat.PortBinding{{}}
+		endpoints = make(map[string]*network.EndpointSettings, 1)
+		endpoints[net] = &network.EndpointSettings{}
 	}
 
-	net := "sigmanet-" + realm.String()
-	if realm == sp.ROOTREALM {
-		net = "sigmanet-testuser"
-	}
-	p.AppendEnv(proc.SIGMANET, net)
-
-	endpoints := make(map[string]*network.EndpointSettings, 1)
-	endpoints[net] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,

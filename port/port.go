@@ -57,6 +57,9 @@ type PortMap struct {
 }
 
 func MakePortMap(ports nat.PortMap, r *Range) *PortMap {
+	if r == nil {
+		return nil
+	}
 	pm := &PortMap{fport: r.Fport, portmap: make(map[Tport]*PortBinding)}
 	for i := r.Fport; i < r.Lport; i++ {
 		p, err := nat.NewPort("tcp", i.String())

@@ -57,7 +57,13 @@ func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string)
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
-		c, err := container.StartPContainer(s.p, kernelId, realm, &port.Range{FPORT, LPORT})
+		var r *port.Range
+		up := port.NOPORT
+		if s.k.Param.Overlays {
+			r = &port.Range{FPORT, LPORT}
+			up = r.Fport
+		}
+		c, err := container.StartPContainer(s.p, kernelId, realm, r, up)
 		if err != nil {
 			return err
 		}

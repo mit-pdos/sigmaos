@@ -15,7 +15,7 @@ func main() {
 		db.DFatalf("%v: usage kernelid srvs nameds dbip\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[3], ";")
-	param := kernel.Param{os.Args[1], srvs, os.Args[4]}
+	param := kernel.Param{os.Args[1], srvs, os.Args[4], true}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")

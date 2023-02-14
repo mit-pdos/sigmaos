@@ -38,6 +38,15 @@ RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --target 
 # Copy bins to host
 CMD ["sh", "-c", "cp -r --no-preserve=mode,ownership bin/user/* /tmp/bin"]
 
+# ========== user image ==========
+FROM base AS sigmauser 
+# Copy mr yaml files.
+COPY mr mr
+# Copy uprocd, the entrypoint for this container, to the user image.
+COPY --from=builder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
+# Copy exec-uproc, the trampoline program, to the user image, 
+COPY --from=builder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel
+
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmakernelclean
 WORKDIR /home/sigmaos
@@ -53,12 +62,3 @@ CMD ["sh", "-c", "bin/linux/bootkernel ${named} ${boot} ${dbip}"]
 # ========== kernel image, including user binaries ==========
 FROM sigmakernelclean AS sigmakernel
 COPY --from=builder /home/sigmaos/bin/user /home/sigmaos/bin/user
-
-# ========== user image ==========
-FROM base AS sigmauser 
-# Copy mr yaml files.
-COPY mr mr
-# Copy uprocd, the entrypoint for this container, to the user image.
-COPY --from=builder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
-# Copy exec-uproc, the trampoline program, to the user image, 
-COPY --from=builder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel

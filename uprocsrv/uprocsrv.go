@@ -19,6 +19,7 @@ type UprocSrv struct {
 	pds      *protdevsrv.ProtDevSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
+	net      string
 }
 
 func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
@@ -33,6 +34,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
 		return err
 	}
 	ups.pds = pds
+	ups.net = proc.GetNet()
 	err = pds.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil
@@ -41,5 +43,5 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, port string) error {
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
-	return container.RunUProc(uproc, ups.kernelId, proc.GetPid())
+	return container.RunUProc(uproc, ups.kernelId, proc.GetPid(), ups.net)
 }

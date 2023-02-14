@@ -33,9 +33,9 @@ type FdClient struct {
 	uname string // the principal associated with this FdClient
 }
 
-func MakeFdClient(fsc *fidclnt.FidClnt, uname string, realm sp.Trealm, lip string, sz sessp.Tsize) *FdClient {
+func MakeFdClient(fsc *fidclnt.FidClnt, uname string, clntnet, lip string, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{}
-	fdc.PathClnt = pathclnt.MakePathClnt(fsc, realm, lip, sz)
+	fdc.PathClnt = pathclnt.MakePathClnt(fsc, clntnet, lip, sz)
 	fdc.fds = mkFdTable()
 	fdc.uname = uname
 	return fdc

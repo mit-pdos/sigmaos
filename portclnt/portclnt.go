@@ -31,10 +31,10 @@ func (pc *PortClnt) AllocPort(p port.Tport) (string, port.PortBinding, error) {
 	return hip, pb, nil
 }
 
-func (pc *PortClnt) AdvertisePort(pn string, hip string, pb port.PortBinding, realm sp.Trealm, laddr string) error {
+func (pc *PortClnt) AdvertisePort(pn string, hip string, pb port.PortBinding, net string, laddr string) error {
 
 	addrs := make(sp.Taddrs, 2)
-	addrs[0] = sp.MkTaddrRealm(laddr, realm)
+	addrs[0] = sp.MkTaddrRealm(laddr, net)
 	addrs[1] = sp.MkTaddr(hip + ":" + pb.HostPort.String())
 	mnt := sp.MkMountService(addrs)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)

@@ -191,11 +191,11 @@ func (p Tperm) String() string {
 }
 
 func MkTaddr(addr string) *Taddr {
-	return &Taddr{Realm: ROOTREALM.String(), Addr: addr}
+	return &Taddr{Net: ROOTREALM.String(), Addr: addr}
 }
 
-func MkTaddrRealm(addr string, realm Trealm) *Taddr {
-	return &Taddr{Realm: realm.String(), Addr: addr}
+func MkTaddrRealm(addr string, net string) *Taddr {
+	return &Taddr{Net: net, Addr: addr}
 }
 
 type Taddrs []*Taddr

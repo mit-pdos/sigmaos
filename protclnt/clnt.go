@@ -27,11 +27,11 @@ type Clnt struct {
 	realm sp.Trealm
 }
 
-func MakeClnt(realm sp.Trealm) *Clnt {
+func MakeClnt(clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid
-	clnt.sm = sessclnt.MakeMgr(clnt.id, realm)
+	clnt.sm = sessclnt.MakeMgr(clnt.id, clntnet)
 	return clnt
 }
 

@@ -27,15 +27,19 @@ func TestExpose(t *testing.T) {
 }
 
 func TestRearrange(t *testing.T) {
-	addrs := sp.Taddrs{"10.0.1.55:1113", "192.168.2.114:1113"}
-	raddrs := rearrange(addrs, "192.168.2.114")
-	log.Printf("addrs %v %v -> %v\n", addrs, "192.168.2.114", raddrs)
+	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", sp.Trealm("realm1"))
+	addr1 := sp.MkTaddrRealm("10.0.7.53:1113", sp.Trealm("realm2"))
+	addr2 := sp.MkTaddrRealm("192.168.2.114:1113", sp.ROOTREALM)
 
-	addrs = sp.Taddrs{"192.168.2.114:1113", "10.0.1.55:1113"}
-	raddrs = rearrange(addrs, "10.0.1.53")
-	log.Printf("addrs %v %v -> %v\n", addrs, "10.0.1.53", raddrs)
+	addrs := sp.Taddrs{addr0, addr2}
+	raddrs := Rearrange(sp.ROOTREALM, addrs)
+	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 
-	addrs = sp.Taddrs{"10.0.7.63:1122", "192.168.2.114:39395"}
-	raddrs = rearrange(addrs, "10.0.5.61")
-	log.Printf("addrs %v %v -> %v\n", addrs, "10.0.5.61", raddrs)
+	addrs = sp.Taddrs{addr2, addr0}
+	raddrs = Rearrange(sp.Trealm("realm1"), addrs)
+	log.Printf("addrs %v -> %v\n", addrs, raddrs)
+
+	addrs = sp.Taddrs{addr1, addr2}
+	raddrs = Rearrange(sp.Trealm("realm1"), addrs)
+	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 }

@@ -8,17 +8,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func Rearrange(realm sp.Trealm, addrs sp.Taddrs) sp.Taddrs {
-	ip, err := LocalIP()
-	if err == nil {
-		addrs = rearrange(addrs, ip)
-	}
-	return addrs
-}
-
-// Rearrange addrs so that first addr is on same network as ip. If
-// none, prefer a non-10 address.
-func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
+// Rearrange addrs so that first addr is in the realm as clnt.
+func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
 	if len(addrs) == 1 {
 		return addrs
 	}
@@ -30,35 +21,14 @@ func rearrange(addrs sp.Taddrs, ip string) sp.Taddrs {
 	p := 0
 	l := 0
 	for i, a := range raddrs {
-		h1, _, r := net.SplitHostPort(a.Addr)
-		if r != nil {
-			return raddrs
-		}
-		ip1, ipnet1, r := net.ParseCIDR(h1 + "/24") // XXX
-		if r != nil {
-			return addrs
-		}
-		ip2 := net.ParseIP(ip)
-		if ip1 == nil || ip2 == nil {
-			return raddrs
-		}
-
-		// See if ip is local (i.e., on same subnet) as a
-		if ipnet1.Contains(ip2) {
+		if a.Net == clntnet {
 			l = i
 			local = true
 			break
 		}
-
-		// See if a is a host address
-		_, pnet2, r := net.ParseCIDR("10.0.0.0/8") // XXX fix for aws
-		if r != nil {
-			return raddrs
-		}
-		if !pnet2.Contains(ip1) {
+		if a.Net == sp.ROOTREALM.String() {
 			p = i
 		}
-
 	}
 	if local {
 		swap(raddrs, l)

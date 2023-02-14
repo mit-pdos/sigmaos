@@ -18,14 +18,13 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-
 	// append uprocd's port
 	p.Args = append(p.Args, r.Fport.String())
 
@@ -43,8 +42,14 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 		pmap[p] = []nat.PortBinding{{}}
 	}
 
+	net := "sigmanet-" + realm.String()
+	if realm == sp.ROOTREALM {
+		net = "sigmanet-testuser"
+	}
+	p.AppendEnv(proc.SIGMANET, net)
+
 	endpoints := make(map[string]*network.EndpointSettings, 1)
-	endpoints["sigmanet-"+realm] = &network.EndpointSettings{}
+	endpoints[net] = &network.EndpointSettings{}
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,
@@ -58,7 +63,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 				// user bin dir
 				mount.Mount{
 					Type:     mount.TypeBind,
-					Source:   path.Join("/tmp/sigmaos-bin", realm),
+					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
 					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
 					ReadOnly: true,
 				},
@@ -74,7 +79,7 @@ func StartPContainer(p *proc.Proc, kernelId, realm string, r *port.Range) (*Cont
 			PortBindings: pmap,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
-		}, nil, kernelId+"-uprocd-"+realm+"-"+p.GetPid().String())
+		}, nil, kernelId+"-uprocd-"+realm.String()+"-"+p.GetPid().String())
 	if err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err

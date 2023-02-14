@@ -27,7 +27,7 @@ message Stat {
 
 message Taddr {
         string addr = 1;
-        string realm = 2;
+        string net = 2;
 }
 
 message Tmount {

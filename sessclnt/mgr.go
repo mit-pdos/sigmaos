@@ -14,14 +14,14 @@ type Mgr struct {
 	mu       sync.Mutex
 	cli      sessp.Tclient
 	sessions map[string]*SessClnt
-	realm    sp.Trealm
+	clntnet  string
 }
 
-func MakeMgr(cli sessp.Tclient, realm sp.Trealm) *Mgr {
+func MakeMgr(cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
 	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
-	sc.realm = realm
+	sc.clntnet = clntnet
 	db.DPrintf(db.SESS_STATE_CLNT, "Session Mgr for client %v", sc.cli)
 	return sc
 }
@@ -47,7 +47,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := makeSessClnt(sc.cli, sc.realm, addrs)
+	sess, err := makeSessClnt(sc.cli, sc.clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}

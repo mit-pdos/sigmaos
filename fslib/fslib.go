@@ -14,9 +14,9 @@ type FsLib struct {
 	namedAddr sp.Taddrs
 }
 
-func MakeFsLibAddrRealm(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clnt sp.Trealm) (*FsLib, error) {
+func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
-	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clnt, lip, sessp.Tsize(10_000_000)), realm, addrs}
+	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, lip, sessp.Tsize(10_000_000)), realm, addrs}
 	if err := fl.MountTree(addrs, "", "name"); err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func MakeFsLibAddrRealm(uname string, realm sp.Trealm, lip string, addrs sp.Tadd
 }
 
 func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
-	return MakeFsLibAddrRealm(uname, realm, lip, addrs, realm)
+	return MakeFsLibAddrNet(uname, realm, lip, addrs, proc.GetNet())
 }
 
 // Only to be called by procs.

@@ -27,6 +27,7 @@ const (
 	SIGMATAG            = "SIGMATAG"
 	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMAREALM          = "SIGMAREALM"
+	SIGMANET            = "SIGMANET"
 	SIGMAKERNEL         = "SIGMAKERNEL"
 	SIGMAUPROCD         = "SIGMAUPROCD"
 )
@@ -123,6 +124,10 @@ func GetRealm() sp.Trealm {
 
 func GetKernelId() string {
 	return os.Getenv(SIGMAKERNEL)
+}
+
+func GetNet() string {
+	return os.Getenv(SIGMANET)
 }
 
 func GetUprocdPid() Tpid {

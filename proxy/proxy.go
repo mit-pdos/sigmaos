@@ -86,10 +86,10 @@ type NpConn struct {
 
 func makeNpConn(lip string, named sp.Taddrs) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM)
+	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
 	npc.named = named
-	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM)
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM, lip, sessp.Tsize(1_000_000))
+	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }

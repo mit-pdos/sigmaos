@@ -49,7 +49,7 @@ func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string)
 		}
 		s.cmd = cmd
 	} else {
-		realm := s.p.Args[0]
+		realm := sp.Trealm(s.p.Args[0])
 		if err := s.MkProc(s.p, procclnt.HDOCKER); err != nil {
 			return err
 		}

@@ -30,11 +30,11 @@ type NetClnt struct {
 	realm  sp.Trealm
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, realm sp.Trealm, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
-	err := nc.connect(realm, addrs)
+	err := nc.connect(clntnet, addrs)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "MakeNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
@@ -75,9 +75,9 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect(realm sp.Trealm, addrs sp.Taddrs) *serr.Err {
-	addrs = container.Rearrange(realm, addrs)
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v\n", realm, addrs)
+func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
+	addrs = container.Rearrange(clntnet, addrs)
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
 		c, err := net.Dial("tcp", addr.Addr)
 		if err != nil {

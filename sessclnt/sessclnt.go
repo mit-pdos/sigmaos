@@ -19,18 +19,18 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	*sync.Cond
-	cli    sessp.Tclient
-	sid    sessp.Tsession
-	seqno  sessp.Tseqno
-	closed bool
-	addrs  sp.Taddrs
-	nc     *netclnt.NetClnt
-	queue  *sessstateclnt.RequestQueue
-	ivs    *intervals.Intervals
-	realm  sp.Trealm
+	cli     sessp.Tclient
+	sid     sessp.Tsession
+	seqno   sessp.Tseqno
+	closed  bool
+	addrs   sp.Taddrs
+	nc      *netclnt.NetClnt
+	queue   *sessstateclnt.RequestQueue
+	ivs     *intervals.Intervals
+	clntnet string
 }
 
-func makeSessClnt(cli sessp.Tclient, realm sp.Trealm, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func makeSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())
@@ -38,10 +38,10 @@ func makeSessClnt(cli sessp.Tclient, realm sp.Trealm, addrs sp.Taddrs) (*SessCln
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
-	c.realm = realm
+	c.clntnet = clntnet
 	c.queue = sessstateclnt.MakeRequestQueue(addrs)
 	db.DPrintf(db.SESS_STATE_CLNT, "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
-	nc, err := netclnt.MakeNetClnt(c, realm, addrs)
+	nc, err := netclnt.MakeNetClnt(c, clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 
 	if c.nc == nil {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.MakeNetClnt(c, c.realm, c.addrs)
+		nc, err := netclnt.MakeNetClnt(c, c.clntnet, c.addrs)
 		if err != nil {
 			db.DPrintf(db.SESS_STATE_CLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err

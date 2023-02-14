@@ -22,10 +22,10 @@ type FidClnt struct {
 	realm sp.Trealm
 }
 
-func MakeFidClnt(realm sp.Trealm) *FidClnt {
+func MakeFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt(realm)
+	fidc.pc = protclnt.MakeClnt(clntnet)
 	fidc.ft = MakeFenceTable()
 	return fidc
 }

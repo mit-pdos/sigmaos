@@ -29,10 +29,10 @@ type PathClnt struct {
 	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet, lip string, sz sessp.Tsize) *PathClnt {
 	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, lip: lip}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt(realm)
+		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
 	} else {
 		pathc.FidClnt = fidc
 	}

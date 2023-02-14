@@ -3,7 +3,6 @@ package procclnt
 import (
 	"path"
 	"runtime/debug"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"

@@ -51,7 +51,11 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	} else {
 		db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, name, conf)
 		// If this is not the init named, initialize the fslib & procclnt
-		srv, err = MakeReplServerRealm(root, addr, path, name, conf, realm)
+		if proc.GetNet() == sp.ROOTREALM.String() {
+			srv, _, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
+		} else {
+			srv, err = MakeReplServerPublic(root, addr, path, name, conf, realm)
+		}
 	}
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -69,12 +73,13 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	return srv, nil
 }
 
-// XXX deduplicate with Public
-func MakeReplServerRealm(root fs.Dir, addr, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
+// XXX deduplicate with MakeMemFsPublic
+func MakeReplServerPublic(root fs.Dir, addr, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
 	fsl, err := fslib.MakeFsLib(name)
 	if err != nil {
 		db.DFatalf("MakReplServerRealm: MakeFsLib err %v", err)
 	}
+	db.DPrintf(db.PORT, "MakeReplServerPublic: get port for realm %v\n", realm)
 	pc, err := portclnt.MkPortClnt(fsl, proc.GetKernelId())
 	if err != nil {
 		return nil, serr.MkErrError(err)

@@ -67,15 +67,15 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
+  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev-aws
 fi
 
 for vm in $vms; do
     echo $vm
+    KERNELID=$(echo $RANDOM | md5sum | head -c 8)
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
-  # export SIGMANAMED="${SIGMANAMED}"
-#  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
+  export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
     ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
     echo "ncores:"
@@ -88,15 +88,13 @@ for vm in $vms; do
 
   cd ulambda
   echo $PWD
-  KERNELID=$(echo $RANDOM | md5sum | head -c 8)
-  KERNELID="sigma-${KERNELID}"
   if [ "${vm}" = "${MAIN}" ]; then 
-    echo "START ${SIGMANAMED}"
+    echo "START ${SIGMANAMED} ${KERNELID}"
     ./start-db.sh
-    ./start-kernel.sh --boot realm --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --host --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
-    echo "JOIN ${SIGMANAMED}"
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --host --pull $TAG ${KERNELID} 2>&1 | tee /tmp/join.out
+    echo "JOIN ${SIGMANAMED} ${KERNELID}"
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --host --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

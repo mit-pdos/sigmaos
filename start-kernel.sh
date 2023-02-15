@@ -13,7 +13,7 @@ TAG=""
 BOOT="named"
 NAMED=":1111"
 DBIP="x.x.x.x"
-NET="bridge"
+NET="host"
 KERNELID=""
 OVERLAYS="false"
 while [[ "$#" -gt 1 ]]; do

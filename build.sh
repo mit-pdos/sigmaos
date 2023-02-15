@@ -98,6 +98,12 @@ if [ "${TARGET}" != "local" ]; then
   # Build the kernel image with no user binaries.
   SIGMAKERNEL_TARGET="sigmakernelclean"
 fi
+# Build the user image
+DOCKER_BUILDKIT=1 docker build --progress=plain \
+  --build-arg target=$TARGET \
+  --build-arg parallel=$PARALLEL \
+  --target sigmauser \
+  -t sigmauser .
 # Build the kernel image
 DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
@@ -105,12 +111,6 @@ DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg tag=$TAG \
   --target $SIGMAKERNEL_TARGET \
   -t sigmaos .
-# Build the user image
-DOCKER_BUILDKIT=1 docker build --progress=plain \
-  --build-arg target=$TARGET \
-  --build-arg parallel=$PARALLEL \
-  --target sigmauser \
-  -t sigmauser .
 
 if ! [ -z "$TAG" ]; then
   docker tag sigmaos arielszekely/sigmaos:$TAG

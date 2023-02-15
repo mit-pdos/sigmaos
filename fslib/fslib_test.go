@@ -204,7 +204,7 @@ func TestReadSymlink(t *testing.T) {
 	mnt1, err := ts.ReadMount(fn)
 	assert.Nil(t, err, "ReadMount: %v", err)
 
-	assert.Equal(t, mnt.Addr[0], mnt1.Addr[0])
+	assert.Equal(t, mnt.Addr[0].Addr, mnt1.Addr[0].Addr)
 
 	ts.Shutdown()
 }

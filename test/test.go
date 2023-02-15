@@ -160,6 +160,10 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
+func (ts *Tstate) MakeClnt(idx int, name string) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].MkSigmaClnt(name)
+}
+
 func (ts *Tstate) Shutdown() error {
 	db.DPrintf(db.TEST, "Shutdown")
 	db.DPrintf(db.TEST, "Done Shutdown")

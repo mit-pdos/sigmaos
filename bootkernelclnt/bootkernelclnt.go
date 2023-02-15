@@ -70,6 +70,10 @@ func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, erro
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
+func (k *Kernel) MkSigmaClnt(name string) (*sigmaclnt.SigmaClnt, error) {
+	return sigmaclnt.MkSigmaClntRootInit(name, k.GetLocalIP(), k.SigmaClnt.NamedAddr())
+}
+
 func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.SYSTEM, "Shutdown kernel %s", k.kernelId)
 	err := k.kclnt.Shutdown()

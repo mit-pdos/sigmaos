@@ -10,6 +10,7 @@ import (
 
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

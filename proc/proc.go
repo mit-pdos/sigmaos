@@ -139,6 +139,7 @@ func (p *Proc) setBaseEnv() {
 // chosen.
 func (p *Proc) Finalize(kernelId string) {
 	p.setProcDir(kernelId)
+	p.AppendEnv(SIGMAKERNEL, kernelId)
 	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)

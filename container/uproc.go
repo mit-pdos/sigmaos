@@ -24,7 +24,6 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 
 	cmd := exec.Command(uproc.Program, uproc.Args...)
 	uproc.AppendEnv("PATH", "/bin:/usr/bin")
-	uproc.AppendEnv(proc.SIGMAKERNEL, kernelId)
 	uproc.AppendEnv(proc.SIGMAUPROCD, uprocd.String())
 	uproc.AppendEnv(proc.SIGMANET, net)
 

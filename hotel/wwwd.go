@@ -85,27 +85,37 @@ func RunWww(job string, public bool) error {
 	}
 	www.pc = pc
 
-	hip, pb, err := pc.AllocPort(port.NOPORT)
-	if err != nil {
-		db.DFatalf("AllocPort err %v", err)
-	}
-
-	l, err := net.Listen("tcp", ":"+pb.RealmPort.String())
-	if err != nil {
-		db.DFatalf("Error Listen: %v", err)
-	}
-
-	go func() {
-		db.DFatalf("%v", http.Serve(l, nil))
-	}()
-
-	a, err := container.QualifyAddr(l.Addr().String())
-	if err != nil {
-		db.DFatalf("QualifyAddr %v err %v", a, err)
-	}
-
-	if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, proc.GetNet(), a); err != nil {
-		db.DFatalf("AdvertisePort %v", err)
+	if public {
+		hip, pb, err := pc.AllocPort(port.NOPORT)
+		if err != nil {
+			db.DFatalf("AllocPort err %v", err)
+		}
+		l, err := net.Listen("tcp", ":"+pb.RealmPort.String())
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		a, err := container.QualifyAddr(l.Addr().String())
+		if err != nil {
+			db.DFatalf("QualifyAddr %v err %v", a, err)
+		}
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, proc.GetNet(), a); err != nil {
+			db.DFatalf("AdvertisePort %v", err)
+		}
+	} else {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
+		if err = pc.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+			db.DFatalf("MountService %v", err)
+		}
 	}
 
 	perf, err := perf.MakePerf(perf.HOTEL_WWW)

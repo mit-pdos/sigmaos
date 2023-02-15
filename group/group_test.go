@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
-vb
+
 const (
 	CRASH_KVD = 5000
 	GRP_PATH  = "name/group/grp-0"

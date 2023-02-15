@@ -18,7 +18,11 @@ type RealmTstate struct {
 // Creates a realm, and a tstate relative to that realm.
 func MakeRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
 	var err error
-	if err = ts.rc.MakeRealm(realm); err != nil {
+	net := ""
+	if Overlays {
+		net = realm.String()
+	}
+	if err = ts.rc.MakeRealm(realm, net); err != nil {
 		db.DFatalf("Error MakeRealmTstate MkRealm: %v", err)
 	}
 	var sc *sigmaclnt.SigmaClnt

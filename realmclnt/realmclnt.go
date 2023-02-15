@@ -22,9 +22,10 @@ func MakeRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	return rc, nil
 }
 
-func (rc *RealmClnt) MakeRealm(realm sp.Trealm) error {
+func (rc *RealmClnt) MakeRealm(realm sp.Trealm, net string) error {
 	req := &proto.MakeRequest{
-		Realm: realm.String(),
+		Realm:   realm.String(),
+		Network: net,
 	}
 	res := &proto.MakeResult{}
 	if err := rc.pdc.RPC("RealmSrv.Make", req, res); err != nil {

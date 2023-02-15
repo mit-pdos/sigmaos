@@ -63,14 +63,10 @@ if ! docker node ls | grep -q 'Leader'; then
     docker swarm init
 fi 
 
-# XXX move and one per realm
-if ! docker network ls | grep -q 'sigmanet'; then
+# One network for tests
+if ! docker network ls | grep -q 'sigmanet-testuser'; then
     docker network create --driver overlay sigmanet-testuser --attachable
-    docker network create --driver overlay sigmanet-testrealm --attachable
-    docker network create --driver overlay sigmanet-testrealm2 --attachable
-    
 fi
-   
 
 # build binaries for host
 ./make.sh --norace $PARALLEL linux

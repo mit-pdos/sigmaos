@@ -2,6 +2,7 @@ package realmsrv
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"sync"
 
@@ -15,6 +16,7 @@ import (
 )
 
 const (
+	MKNET    = "./bin/kernel/create-net.sh"
 	MIN_PORT = 30000
 )
 
@@ -45,10 +47,29 @@ func RunRealmSrv() error {
 	return nil
 }
 
+func MkNet(net string) error {
+	if net == "" {
+		return nil
+	}
+	args := []string{"sigmanet-" + net}
+	out, err := exec.Command(MKNET, args...).Output()
+	if err != nil {
+		db.DPrintf(db.REALMD, "MkNet: %v %s err %v\n", net, string(out), err)
+		return err
+	}
+	db.DPrintf(db.REALMD, "MkNet: %v\n", string(out))
+	return nil
+}
+
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
+
+	//if err := MkNet(req.Network); err != nil {
+	//	return err
+	//}
+
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
 	p.SetNcore(1)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {

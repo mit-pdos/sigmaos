@@ -101,7 +101,6 @@ CID=$(docker run -dit\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
              --network ${NET}\
-             --privileged\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\

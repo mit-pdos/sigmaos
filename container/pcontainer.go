@@ -35,7 +35,7 @@ func StartPContainer(p *proc.Proc, realm string) (*Container, error) {
 		&container.HostConfig{
 			NetworkMode: container.NetworkMode(sp.Conf.Network.MODE),
 			Mounts: []mount.Mount{
-				// user bin dir
+				// user bin dir.
 				mount.Mount{
 					Type:     mount.TypeBind,
 					Source:   path.Join("/tmp/sigmaos-bin", realm),

@@ -2,6 +2,7 @@ package bootkernelclnt
 
 import (
 	"os/exec"
+	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
@@ -63,7 +64,17 @@ func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, erro
 	if err != nil {
 		return nil, err
 	}
-	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, sp.BOOT+kernelId)
+	pn := sp.BOOT + kernelId
+	if kernelId == "" {
+		pn1, _, err := sc.ResolveUnion(sp.BOOT + "~local")
+		if err != nil {
+			return nil, err
+		}
+		pn = pn1
+		kernelId = path.Base(pn)
+		db.DPrintf(db.SYSTEM, "MakeKernelClnt %s %s\n", pn, kernelId)
+	}
+	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, pn)
 	if err != nil {
 		return nil, err
 	}

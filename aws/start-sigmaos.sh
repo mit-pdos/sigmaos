@@ -72,7 +72,7 @@ fi
 
 for vm in $vms; do
     echo $vm
-    KERNELID=$(echo $RANDOM | md5sum | head -c 8)
+    KERNELID="sigma-$(echo $RANDOM | md5sum | head -c 8)"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
@@ -87,14 +87,14 @@ for vm in $vms; do
   fi
 
   cd ulambda
-  echo $PWD
+  echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
     ./start-db.sh
-    ./start-kernel.sh --boot realm --host --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --host --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

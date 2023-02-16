@@ -29,13 +29,6 @@ func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bo
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
-	if isKernelProc {
-		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
-		if _, err := clnt.PutFile(kprocFPath, 0777, sp.OWRITE, []byte{}); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir MakeFile %v err %v", kprocFPath, err)
-			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
-		}
-	}
 
 	// Create exit signal
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))

@@ -91,10 +91,7 @@ for vm in $vms; do
     nproc
   fi
 
-  # One network for tests
-  if ! docker network ls | grep -q 'sigmanet-testuser'; then
-    docker network create --driver overlay sigmanet-testuser --attachable
-  fi
+  ./start-network.sh
 
   cd ulambda
   echo "$PWD $SIGMADEBUG"

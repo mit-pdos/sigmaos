@@ -9,6 +9,6 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-if ! docker network ls | grep -q "sigmanet-$1"; then
-    docker network create --driver overlay sigmanet-$1 --attachable    
+if ! docker network ls | grep -q "$1"; then
+    docker network create --driver overlay $1 --attachable    
 fi

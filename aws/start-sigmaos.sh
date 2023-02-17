@@ -86,15 +86,20 @@ for vm in $vms; do
     nproc
   fi
 
+  # One network for tests
+  if ! docker network ls | grep -q 'sigmanet-testuser'; then
+    docker network create --driver overlay sigmanet-testuser --attachable
+  fi
+
   cd ulambda
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
     ./start-db.sh
-    ./start-kernel.sh --boot realm --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --overlays --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --overlays --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

@@ -5,8 +5,19 @@ ARG parallel
 ARG target=local
 ARG tag
 ENV SIGMATAG=$tag
+
+# Install docker ce-cli
+RUN apt-get update
+RUN apt-get --yes install ca-certificates curl gnupg lsb-release
+RUN mkdir -m 0755 -p /etc/apt/keyrings
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+RUN echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+RUN apt-get --yes update && apt-get --yes install docker-ce-cli
+
 # Install apt packages & clean up apt cache
-RUN apt-get update && \
+RUN \
   apt-get --no-install-recommends --yes install libseccomp-dev && \
   apt-get --no-install-recommends --yes install iputils-ping && \
   apt-get --no-install-recommends --yes install iproute2 && \

@@ -33,10 +33,13 @@ func isolateUserProc() error {
 	// thread before starting the user proc.
 	runtime.LockOSThread()
 	// Apply SELinux Label
-	if false {
-		// XXX Which SELinux label should we apply? Looks like docker doesn't have a
-		// default.
-		selinux.SetExecLabel("xxxx")
+	if selinux.GetEnabled() {
+		plabel, flabel := selinux.InitContainerLabels()
+		if err := selinux.SetExecLabel(plabel); err != nil {
+			return err
+		}
+		// XXX what to do with flabel?
+		_ = flabel
 	}
 	return nil
 }

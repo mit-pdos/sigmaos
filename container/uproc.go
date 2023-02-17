@@ -84,6 +84,7 @@ func ExecUProc() error {
 		db.DPrintf(db.CONTAINER, "Error exec %v", err)
 		return err
 	}
+	defer finishIsolation()
 	return nil
 }
 

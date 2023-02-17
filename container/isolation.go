@@ -3,7 +3,10 @@ package container
 import (
 	"os"
 	"path"
+	"runtime"
 	"syscall"
+
+	selinux "github.com/opencontainers/selinux/go-selinux"
 
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -22,11 +25,24 @@ func isolateUserProc() error {
 		db.DPrintf(db.CONTAINER, "Error jail process %v", err)
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "After process jail")
 	// Load the sigmaOS seccomp white list.
 	seccomp.LoadFilter(sigmaSeccomp)
 	db.DPrintf(db.CONTAINER, "Apply sigma whitelist %v %v", os.Args, sigmaSeccomp)
+	// Lock the OS thread, since SE Linux labels are per-thread, and so this
+	// thread should disallow the Go runtime from scheduling it on another kernel
+	// thread before starting the user proc.
+	runtime.LockOSThread()
+	// Apply SELinux Label
+	if false {
+		// XXX Which SELinux label should we apply? Looks like docker doesn't have a
+		// default.
+		selinux.SetExecLabel("xxxx")
+	}
 	return nil
+}
+
+func finishIsolation() {
+	runtime.UnlockOSThread()
 }
 
 // XXX pair down what is being mounted; exec needs a lot, but maybe

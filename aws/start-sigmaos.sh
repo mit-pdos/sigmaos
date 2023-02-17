@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--pull TAG] [--n N_VM] [--ncores NCORES]" 1>&2
+  echo "Usage: $0 --vpc VPC [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 VPC=""
@@ -9,6 +9,7 @@ N_VM=""
 NCORES=4
 UPDATE=""
 TAG=""
+OVERLAYS=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -31,6 +32,10 @@ while [[ $# -gt 0 ]]; do
     shift
     TAG=$1
     shift
+    ;;
+  --overlays)
+    shift
+    OVERLAYS="--overlays"
     ;;
   -help)
     usage
@@ -96,10 +101,10 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
     ./start-db.sh
-    ./start-kernel.sh --boot realm --overlays --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --overlays --pull ${TAG} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
 done

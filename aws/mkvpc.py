@@ -9,7 +9,7 @@ parser=argparse.ArgumentParser(description='mk VPC on AWS.')
 parser.add_argument('--vpc', metavar='vpc-id', help='Create only vm instance')
 parser.add_argument('name', help='name for this VPC/instance')
 parser.add_argument('--instance_type', type=str, default='t3.small')
-parser.add_argument('--storage', type=int, default=20)
+parser.add_argument('--storage', type=int, default=40)
 args = vars(parser.parse_args())
 
 #

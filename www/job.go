@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -26,11 +27,12 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) ([]string, error) {
-	p := JobHTTPAddrsPath(job)
-	var addrs []string
-	err := fsl.GetFileJson(p, &addrs)
-	return addrs, err
+func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
+	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	if err != nil {
+		return nil, err
+	}
+	return mnt.Addr, err
 }
 
 func InitWwwFs(fsl *fslib.FsLib, jobname string) {

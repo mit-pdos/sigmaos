@@ -57,7 +57,7 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 		if proc.GetNet() == sp.ROOTREALM.String() {
 			srv, err = fslibsrv.MakeReplServer(root, addr, path, name, conf)
 		} else {
-			srv, err = MakeReplServerPublic(root, addr, path, name, conf, realm)
+			srv, err = MakeReplServerPublic(root, path, name, conf, realm)
 		}
 	}
 	if err != nil {
@@ -74,25 +74,25 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	return srv, nil
 }
 
-func MakeReplServerPublic(root fs.Dir, addr, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
+func MakeReplServerPublic(root fs.Dir, path, name string, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
 	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
 		return nil, err
 	}
-	return MakeReplServerClntPublic(root, addr, path, sc, conf, realm)
+	return MakeReplServerClntPublic(root, path, sc, conf, realm)
 }
 
 // XXX deduplicate with MakeMemFsPublic
-func MakeReplServerClntPublic(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
-	pc, hip, pb, err := AllocPublicPort(sc)
+func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, error) {
+	pc, pi, err := AllocPublicPort(sc)
 	if err != nil {
 		return nil, err
 	}
-	srv, err := fslibsrv.MakeReplServerFsl(root, ":"+pb.RealmPort.String(), "", sc, conf)
+	srv, err := fslibsrv.MakeReplServerFsl(root, ":"+pi.Pb.RealmPort.String(), "", sc, conf)
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	if err = pc.AdvertisePort(path, hip, pb, proc.GetNet(), srv.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(path, pi, proc.GetNet(), srv.MyAddr()); err != nil {
 		return nil, serr.MkErrError(err)
 	}
 	return srv, nil
@@ -100,7 +100,7 @@ func MakeReplServerClntPublic(root fs.Dir, addr, path string, sc *sigmaclnt.Sigm
 
 func MakeReplMemFsFslPublic(addr, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*sesssrv.SessSrv, *serr.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
-	srv, err := MakeReplServerClntPublic(root, addr, path, sc, conf, realm)
+	srv, err := MakeReplServerClntPublic(root, path, sc, conf, realm)
 	if err != nil {
 		db.DFatalf("Error makeReplMemfsFslPublic: err")
 	}
@@ -116,16 +116,16 @@ func MakeReplMemFsFsl(addr, path string, sc *sigmaclnt.SigmaClnt, conf repl.Conf
 	return srv, nil
 }
 
-func AllocPublicPort(sc *sigmaclnt.SigmaClnt) (*portclnt.PortClnt, string, port.PortBinding, error) {
+func AllocPublicPort(sc *sigmaclnt.SigmaClnt) (*portclnt.PortClnt, portclnt.PortInfo, error) {
 	pc, err := portclnt.MkPortClnt(sc.FsLib, proc.GetKernelId())
 	if err != nil {
-		return nil, "", port.PortBinding{}, err
+		return nil, portclnt.PortInfo{}, err
 	}
-	hip, pb, err := pc.AllocPort(port.NOPORT)
+	pi, err := pc.AllocPort(port.NOPORT)
 	if err != nil {
-		return nil, "", port.PortBinding{}, err
+		return nil, portclnt.PortInfo{}, err
 	}
-	return pc, hip, pb, nil
+	return pc, pi, nil
 }
 
 // Allocate server with public port and advertise it
@@ -134,18 +134,18 @@ func MakeMemFsPublic(pn, name string) (*MemFs, error) {
 	if err != nil {
 		return nil, err
 	}
-	pc, hip, pb, err := AllocPublicPort(sc)
+	pc, pi, err := AllocPublicPort(sc)
 	if err != nil {
 		return nil, err
 	}
 	// Make server without advertising mnt
-	mfs, err := MakeMemFsPortClnt("", ":"+pb.RealmPort.String(), sc)
+	mfs, err := MakeMemFsPortClnt("", ":"+pi.Pb.RealmPort.String(), sc)
 	if err != nil {
 		return nil, err
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, hip, pb, proc.GetNet(), mfs.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, proc.GetNet(), mfs.MyAddr()); err != nil {
 		return nil, err
 	}
 	return mfs, err

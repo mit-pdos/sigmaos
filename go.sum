@@ -641,5 +641,9 @@ honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
+kernel.org/pub/linux/libs/security/libcap/cap v1.2.67 h1:sPQ9qlSNR26fToTKbxe/HDWJlXvBLqGmt84LGCQkOy0=
+kernel.org/pub/linux/libs/security/libcap/cap v1.2.67/go.mod h1:GkntoBuwffz19qtdFVB+k2NtWNN+yCKnC/Ykv/hMiTU=
+kernel.org/pub/linux/libs/security/libcap/psx v1.2.67 h1:NxbXJ7pDVq0FKBsqjieT92QDXI2XaqH2HAi4QcCOHt8=
+kernel.org/pub/linux/libs/security/libcap/psx v1.2.67/go.mod h1:+l6Ee2F59XiJ2I6WR5ObpC1utCQJZ/VLsEbQCD8RG24=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=

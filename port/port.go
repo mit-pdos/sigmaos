@@ -9,6 +9,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 type Tport int
@@ -25,6 +26,13 @@ func (p Tport) String() string {
 func StringToPort(s string) (Tport, error) {
 	p, err := strconv.Atoi(s)
 	return Tport(p), err
+}
+
+func MkPublicMount(hip string, pb PortBinding, net string, laddr string) sp.Tmount {
+	addrs := make(sp.Taddrs, 2)
+	addrs[0] = sp.MkTaddrRealm(laddr, net)
+	addrs[1] = sp.MkTaddr(hip + ":" + pb.HostPort.String())
+	return sp.MkMountService(addrs)
 }
 
 type PortBinding struct {

@@ -29,7 +29,7 @@ func main() {
 			fss.Done()
 		}
 	} else {
-		mfs, _, err := memfssrv.MakeMemFs(name, name)
+		mfs, err := memfssrv.MakeMemFs(name, name)
 		if err != nil {
 			db.DFatalf("MakeMemFs %v\n", err)
 		}

@@ -32,11 +32,7 @@ func (pc *PortClnt) AllocPort(p port.Tport) (string, port.PortBinding, error) {
 }
 
 func (pc *PortClnt) AdvertisePort(pn string, hip string, pb port.PortBinding, net string, laddr string) error {
-
-	addrs := make(sp.Taddrs, 2)
-	addrs[0] = sp.MkTaddrRealm(laddr, net)
-	addrs[1] = sp.MkTaddr(hip + ":" + pb.HostPort.String())
-	mnt := sp.MkMountService(addrs)
+	mnt := port.MkPublicMount(hip, pb, net, laddr)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
 	if err := pc.MkMountSymlink(pn, mnt); err != nil {
 		return err

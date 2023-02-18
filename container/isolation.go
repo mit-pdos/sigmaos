@@ -181,7 +181,7 @@ func setCapabilities() error {
 		cap.KILL,
 		cap.AUDIT_WRITE,
 	}
-	// TODO: Bounding?
+	// TODO: Bounding set? Ambient set?
 	caps := cap.NewSet()
 	for _, c := range dockerDefaults {
 		// Add to the Permitted capability set

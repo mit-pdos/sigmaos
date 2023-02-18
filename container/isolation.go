@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	selinux "github.com/opencontainers/selinux/go-selinux"
+	"kernel.org/pub/linux/libs/security/libcap/cap"
 
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -46,6 +47,9 @@ func isolateUserProc(program string) (string, error) {
 		if err := selinux.SetFileLabel(pn, flabel); err != nil {
 			return "", err
 		}
+	}
+	if err := setCapabilities(); err != nil {
+		return "", err
 	}
 	return pn, nil
 }
@@ -154,4 +158,39 @@ func jailProcess() error {
 	}
 	db.DPrintf(db.CONTAINER, "Successfully pivoted to new root %v", newRoot)
 	return nil
+}
+
+// Capabilities
+func setCapabilities() error {
+	// Taken from https://github.com/moby/moby/blob/master/oci/caps/defaults.go
+	dockerDefaults := []cap.Value{
+		cap.CHOWN,
+		cap.DAC_OVERRIDE,
+		cap.FSETID,
+		cap.FOWNER,
+		cap.NET_RAW,
+		cap.SETGID,
+		cap.SETUID,
+		cap.SETFCAP,
+		cap.SETPCAP,
+		cap.NET_BIND_SERVICE,
+		cap.SYS_CHROOT,
+		cap.KILL,
+		cap.AUDIT_WRITE,
+	}
+	// TODO: Bounding?
+	caps := cap.NewSet()
+	for _, c := range dockerDefaults {
+		// Add to the Permitted capability set
+		if err := caps.SetFlag(cap.Permitted, true, c); err != nil {
+			return err
+		}
+		// Add to the Inheritable capability set
+		if err := caps.SetFlag(cap.Inheritable, true, c); err != nil {
+			return err
+		}
+	}
+	// TODO: sanity check capabilities actually work out as planned.
+	// Set the current process's capabilities.
+	return caps.SetProc()
 }

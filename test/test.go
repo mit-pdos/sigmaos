@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"sigmaos/bootkernelclnt"
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
@@ -23,13 +24,11 @@ const (
 	NAMEDPORT = ":1111"
 )
 
-var containerIP string
 var start bool
 var tag string
 var Overlays bool
 
 func init() {
-	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
@@ -111,6 +110,10 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := sp.MkTaddrs([]string{NAMEDPORT})
 	kernelid := ""
+	containerIP, err := container.LocalIP()
+	if err != nil {
+		return nil, err
+	}
 	if start {
 		kernelid = bootkernelclnt.GenKernelId()
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)

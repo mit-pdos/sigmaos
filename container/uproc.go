@@ -71,13 +71,11 @@ func RunUProc(uproc *proc.Proc) error {
 
 func ExecUProc() error {
 	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
+	program := os.Args[0]
 	// Isolate the user proc.
-	if err := isolateUserProc(); err != nil {
-		return err
-	}
-	pn, err := exec.LookPath(os.Args[0])
+	pn, err := isolateUserProc(program)
 	if err != nil {
-		return fmt.Errorf("ContainUProc: LookPath: %v", err)
+		return err
 	}
 	db.DPrintf(db.CONTAINER, "exec %v %v", pn, os.Args)
 	if err := syscall.Exec(pn, os.Args, os.Environ()); err != nil {

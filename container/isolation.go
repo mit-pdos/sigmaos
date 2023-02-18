@@ -1,7 +1,9 @@
 package container
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"syscall"
@@ -14,16 +16,20 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func isolateUserProc() error {
+func isolateUserProc(program string) (string, error) {
 	// Read the seccomp whitelist before doing the pivot_root.
 	sigmaSeccomp, err := seccomp.ReadWhiteList("seccomp/whitelist.yml")
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Setup and chroot to the process jail.
 	if err := jailProcess(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error jail process %v", err)
-		return err
+		return "", err
+	}
+	pn, err := exec.LookPath(program)
+	if err != nil {
+		return "", fmt.Errorf("ContainUProc: LookPath: %v", err)
 	}
 	// Load the sigmaOS seccomp white list.
 	seccomp.LoadFilter(sigmaSeccomp)
@@ -36,12 +42,13 @@ func isolateUserProc() error {
 	if selinux.GetEnabled() {
 		plabel, flabel := selinux.InitContainerLabels()
 		if err := selinux.SetExecLabel(plabel); err != nil {
-			return err
+			return "", err
 		}
-		// TODO: label executable file.
-		_ = flabel
+		if err := selinux.SetFileLabel(pn, flabel); err != nil {
+			return "", err
+		}
 	}
-	return nil
+	return pn, nil
 }
 
 func finishIsolation() {

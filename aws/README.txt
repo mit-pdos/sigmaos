@@ -40,7 +40,7 @@ $ hostname
 
 $ cd ulambda
 
-$ go test -timeout 0 -v sigmaos/mr -app mr-grep-wiki2G.yml -run MRJOB --containerIP 10.0.134.14
+$ go test -timeout 0 -v sigmaos/mr -app mr-grep-wiki2G.yml -run MRJOB
 > /tmp/mr.out 2>&1  &
 
 # log into the VPC

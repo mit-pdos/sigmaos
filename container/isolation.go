@@ -42,13 +42,16 @@ func isolateUserProc(program string) (string, error) {
 	if selinux.GetEnabled() {
 		plabel, flabel := selinux.InitContainerLabels()
 		if err := selinux.SetExecLabel(plabel); err != nil {
+			db.DPrintf(db.CONTAINER, "Error set SELinux exec label: %v", err)
 			return "", err
 		}
 		if err := selinux.SetFileLabel(pn, flabel); err != nil {
+			db.DPrintf(db.CONTAINER, "Error set SELinux file label: %v", err)
 			return "", err
 		}
 	}
 	if err := setCapabilities(); err != nil {
+		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
 	return pn, nil
@@ -190,7 +193,11 @@ func setCapabilities() error {
 			return err
 		}
 	}
-	// TODO: sanity check capabilities actually work out as planned.
 	// Set the current process's capabilities.
-	return caps.SetProc()
+	if err := caps.SetProc(); err != nil {
+		return err
+	}
+	// TODO: sanity check capabilities actually work out as planned.
+	db.DPrintf(db.CONTAINER, "Successfully set capabilities to %v", dockerDefaults)
+	return nil
 }

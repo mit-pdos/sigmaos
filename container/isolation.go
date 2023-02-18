@@ -38,7 +38,7 @@ func isolateUserProc() error {
 		if err := selinux.SetExecLabel(plabel); err != nil {
 			return err
 		}
-		// XXX what to do with flabel?
+		// TODO: label executable file.
 		_ = flabel
 	}
 	return nil

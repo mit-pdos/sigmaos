@@ -17,11 +17,6 @@ import (
 )
 
 func isolateUserProc(program string) (string, error) {
-	// Read the seccomp whitelist before doing the pivot_root.
-	sigmaSeccomp, err := seccomp.ReadWhiteList("seccomp/whitelist.yml")
-	if err != nil {
-		return "", err
-	}
 	// Setup and chroot to the process jail.
 	if err := jailProcess(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error jail process %v", err)
@@ -32,8 +27,12 @@ func isolateUserProc(program string) (string, error) {
 		return "", fmt.Errorf("ContainUProc: LookPath: %v", err)
 	}
 	// Load the sigmaOS seccomp white list.
-	seccomp.LoadFilter(sigmaSeccomp)
-	db.DPrintf(db.CONTAINER, "Apply sigma whitelist %v %v", os.Args, sigmaSeccomp)
+	sigmaSCWL, err := seccomp.ReadWhiteList("/seccomp/whitelist.yml")
+	if err != nil {
+		return "", err
+	}
+	seccomp.LoadFilter(sigmaSCWL)
+	db.DPrintf(db.CONTAINER, "Apply sigma whitelist %v %v", os.Args, sigmaSCWL)
 	// Lock the OS thread, since SE Linux labels are per-thread, and so this
 	// thread should disallow the Go runtime from scheduling it on another kernel
 	// thread before starting the user proc.
@@ -60,7 +59,7 @@ func finishIsolation() {
 func jailProcess() error {
 	newRoot := path.Join(sp.SIGMAHOME, "jail")
 	// Create directories to use as mount points, as well as the new root directory itself.
-	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "bin", "bin2", "tmp", perf.OUTPUT_PATH} {
+	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {
 			db.DPrintf(db.ALWAYS, "failed to mkdir [%v]: %v", d, err)
 			return err
@@ -76,16 +75,6 @@ func jailProcess() error {
 		db.DPrintf(db.ALWAYS, "failed to chdir to /: %v", err)
 		return err
 	}
-	// Mount realm's user bin directory as /bin
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/user"), "bin", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount userbin: %v", err)
-		return err
-	}
-	// Mount realm's kernel bin directory as /bin2
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/kernel"), "bin2", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount kernelbin: %v", err)
-		return err
-	}
 	// Mount /lib
 	if err := syscall.Mount("/lib", "lib", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /lib: %v", err)
@@ -99,6 +88,21 @@ func jailProcess() error {
 	// Mount /proc
 	if err := syscall.Mount("proc", "proc", "proc", 0, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount /proc: %v", err)
+		return err
+	}
+	// Mount realm's user bin directory as /bin
+	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/user"), "bin", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount userbin: %v", err)
+		return err
+	}
+	// Mount realm's kernel bin directory as /bin2
+	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "bin/kernel"), "bin2", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount kernelbin: %v", err)
+		return err
+	}
+	// Mount realm's seccomp directory as /seccomp
+	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "seccomp"), "seccomp", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount seccomp: %v", err)
 		return err
 	}
 	// Mount perf dir (remove starting first slash)

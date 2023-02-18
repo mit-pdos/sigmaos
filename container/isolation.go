@@ -197,7 +197,6 @@ func setCapabilities() error {
 	if err := caps.SetProc(); err != nil {
 		return err
 	}
-	// TODO: sanity check capabilities actually work out as planned.
-	db.DPrintf(db.CONTAINER, "Successfully set capabilities to %v", dockerDefaults)
+	db.DPrintf(db.CONTAINER, "Successfully set capabilities to:\n%v.\nResulting caps:\n%v", dockerDefaults, cap.GetProc())
 	return nil
 }

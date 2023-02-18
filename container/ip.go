@@ -134,7 +134,7 @@ func LocalIP() (string, error) {
 		if strings.HasPrefix(i.String(), "10.10.") {
 			return i.String(), nil
 		}
-		if !strings.HasPrefix(i.String(), "172.") {
+		if !strings.HasPrefix(i.String(), "127.") {
 			return i.String(), nil
 		}
 	}

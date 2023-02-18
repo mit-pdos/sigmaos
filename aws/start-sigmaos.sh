@@ -97,6 +97,7 @@ for vm in $vms; do
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
+    ./make.sh --norace linux
     ./start-network.sh
     ./start-db.sh
     ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out

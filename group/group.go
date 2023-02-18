@@ -210,7 +210,7 @@ func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	return err
 }
 
-func RunMember(jobdir, grp string) {
+func RunMember(jobdir, grp string, public bool) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true

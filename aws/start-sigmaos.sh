@@ -10,6 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
+TOKEN=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -93,7 +94,6 @@ for vm in $vms; do
 
   cd ulambda
 
-
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
@@ -102,7 +102,11 @@ for vm in $vms; do
     ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
+     ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
+ if [ "${vm}" = "${MAIN}" ]; then
+     TOKEN=$(ssh -i key-$VPC.pem ubuntu@$vm docker swarm join-token worker | grep docker)
+ fi   
 done

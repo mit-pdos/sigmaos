@@ -284,13 +284,19 @@ func RunMember(jobdir, grp string, public bool) {
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	// start server but don't publish its existence
-	mfs, err1 := memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.SigmaClnt, raftCfg)
+	var mfs *memfssrv.MemFs
+	var err1 error
+	if public {
+		mfs, err1 = memfssrv.MakeReplMemFsFslPublic(g.ip+":0", "", g.SigmaClnt, raftCfg, proc.GetRealm())
+	} else {
+		mfs, err1 = memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.SigmaClnt, raftCfg)
+	}
 	if err1 != nil {
 		db.DFatalf("StartMemFs %v\n", err1)
 	}
 
-	crash.Partitioner(mfs)
-	crash.NetFailer(mfs)
+	crash.Partitioner(mfs.SessSrv)
+	crash.NetFailer(mfs.SessSrv)
 
 	sigmaAddrs := []string{}
 

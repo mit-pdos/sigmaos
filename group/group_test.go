@@ -61,7 +61,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 	db.DPrintf(db.TEST, "done testGetPutSet")
 }
 
-func TestStartStop(t *testing.T) {
+func TestStartStopSimple(t *testing.T) {
 	ts := makeTstate(t, 0, 0)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")

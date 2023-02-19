@@ -7,6 +7,7 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/port"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -20,6 +21,10 @@ func (mfs *MemFs) Root() fs.Dir {
 
 func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
+}
+
+func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
+	return port.MkPublicAddrs(mfs.pi.Hip, mfs.pi.Pb, net, mfs.MyAddr())
 }
 
 // Note: MkDev() sets parent

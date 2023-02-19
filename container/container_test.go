@@ -8,6 +8,7 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
+	"sigmaos/container"
 	"sigmaos/port"
 	sp "sigmaos/sigmap"
 )
@@ -27,19 +28,19 @@ func TestExpose(t *testing.T) {
 }
 
 func TestRearrange(t *testing.T) {
-	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", sp.Trealm("realm1"))
-	addr1 := sp.MkTaddrRealm("10.0.7.53:1113", sp.Trealm("realm2"))
-	addr2 := sp.MkTaddrRealm("192.168.2.114:1113", sp.ROOTREALM)
+	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", "realm1")
+	addr1 := sp.MkTaddrRealm("10.0.7.53:1113", "realm2")
+	addr2 := sp.MkTaddrRealm("192.168.2.114:1113", string(sp.ROOTREALM))
 
 	addrs := sp.Taddrs{addr0, addr2}
-	raddrs := Rearrange(sp.ROOTREALM, addrs)
+	raddrs := container.Rearrange(sp.ROOTREALM.String(), addrs)
 	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 
 	addrs = sp.Taddrs{addr2, addr0}
-	raddrs = Rearrange(sp.Trealm("realm1"), addrs)
+	raddrs = container.Rearrange("realm1", addrs)
 	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 
 	addrs = sp.Taddrs{addr1, addr2}
-	raddrs = Rearrange(sp.Trealm("realm1"), addrs)
+	raddrs = container.Rearrange("realm1", addrs)
 	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 }

@@ -13,10 +13,10 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
-	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

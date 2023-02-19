@@ -181,20 +181,26 @@ func setCapabilities() error {
 		cap.KILL,
 		cap.AUDIT_WRITE,
 	}
-	// TODO: Bounding set? Ambient set?
+	// Effective, Permitted, Inheritable.
 	caps := cap.NewSet()
-	for _, c := range dockerDefaults {
-		// Add to the Permitted capability set
-		if err := caps.SetFlag(cap.Permitted, true, c); err != nil {
-			return err
-		}
-		// Add to the Inheritable capability set
-		if err := caps.SetFlag(cap.Inheritable, true, c); err != nil {
-			return err
-		}
+	// Bounding.
+	capsIAB := cap.NewIAB()
+	// Set process Permitted flags.
+	if err := caps.SetFlag(cap.Permitted, true, dockerDefaults...); err != nil {
+		return err
 	}
-	// Set the current process's capabilities.
+	// Set process Inheritable flags.
+	if err := caps.SetFlag(cap.Inheritable, true, dockerDefaults...); err != nil {
+		return err
+	}
+	// Set process Bounding flags.
+	if err := capsIAB.Fill(cap.Bound, caps, cap.Permitted); err != nil {
+		return err
+	}
 	if err := caps.SetProc(); err != nil {
+		return err
+	}
+	if err := capsIAB.SetProc(); err != nil {
 		return err
 	}
 	db.DPrintf(db.CONTAINER, "Successfully set capabilities to:\n%v.\nResulting caps:\n%v", dockerDefaults, cap.GetProc())

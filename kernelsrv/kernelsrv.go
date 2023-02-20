@@ -1,10 +1,12 @@
 package kernelsrv
 
 import (
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -18,8 +20,8 @@ type KernelSrv struct {
 func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
-	db.DPrintf(db.KERNEL, "%v: Run KernelSrv", proc.GetName())
-	pds, err := protdevsrv.MakeProtDevSrvPriv(sp.BOOT, k.SigmaClnt, ks)
+	db.DPrintf(db.KERNEL, "%v: Run KernelSrv %v", proc.GetName(), k.Param.KernelId)
+	pds, err := protdevsrv.MakeProtDevSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
 	if err != nil {
 		return err
 	}
@@ -62,4 +64,20 @@ func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto
 
 func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillResult) error {
 	return ks.k.KillOne(req.Name)
+}
+
+func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
+	pb, err := ks.k.AllocPort(proc.Tpid(req.PidStr), port.Tport(req.Port))
+	if err != nil {
+		return err
+	}
+	ip, err := container.LocalIP()
+	if err != nil {
+		return err
+	}
+
+	rep.RealmPort = int32(pb.RealmPort)
+	rep.HostPort = int32(pb.HostPort)
+	rep.HostIp = ip
+	return nil
 }

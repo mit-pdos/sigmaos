@@ -2,7 +2,6 @@ package pathclnt
 
 import (
 	"fmt"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -30,10 +29,10 @@ type PathClnt struct {
 	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, lip string, sz sessp.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet, lip string, sz sessp.Tsize) *PathClnt {
 	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, lip: lip}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt()
+		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -270,7 +269,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	target, rest, _ := pathc.mnt.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
-		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
+		st.Name = pathc.FidClnt.Lookup(target).Servers().Taddrs2String()
 		return st, nil
 	} else {
 		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)

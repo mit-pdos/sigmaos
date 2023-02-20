@@ -2,7 +2,6 @@ package realmclnt_test
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -70,7 +69,7 @@ func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, ncore proc.Tcore, n
 	c <- waitSpinPerf(ts, pid)
 }
 
-func TestBasic(t *testing.T) {
+func TestBasicSimple(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
@@ -133,21 +132,18 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.NamedAddr())
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.NamedAddr())
 
-	nd1ip, _, err := net.SplitHostPort(ts1.NamedAddr()[0])
-	assert.Nil(rootts.T, err)
-	nd2ip, _, err := net.SplitHostPort(ts2.NamedAddr()[0])
-	assert.Nil(rootts.T, err)
-
-	assert.NotEqual(rootts.T, nd1ip, nd2ip, "Nameds were spawned to the same node")
+	// Should have a public and private address
+	if test.Overlays {
+		assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
+		assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
+	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
-	// Only one schedd so far.
 	assert.True(rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
 
 	schedds2, err := ts2.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
-	// Only one schedd so far.
 	assert.True(rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
 
 	for i := range schedds1 {

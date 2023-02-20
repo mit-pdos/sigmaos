@@ -77,9 +77,9 @@ func (s *Reserve) initDb() error {
 	return nil
 }
 
-func RunReserveSrv(job string) error {
+func RunReserveSrv(job string, public bool) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELRESERVE, r)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRESERVE, r, public)
 	if err != nil {
 		return err
 	}

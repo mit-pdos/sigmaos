@@ -18,11 +18,11 @@ import (
 
 type Npd struct {
 	lip   string
-	named []string
+	named sp.Taddrs
 	st    *sessstatesrv.SessionTable
 }
 
-func MakeNpd(lip string, nds []string) *Npd {
+func MakeNpd(lip string, nds sp.Taddrs) *Npd {
 	npd := &Npd{lip, nds, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
@@ -80,16 +80,16 @@ type NpConn struct {
 	uname string
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
-	named []string
+	named sp.Taddrs
 	fm    *fidMap
 }
 
-func makeNpConn(lip string, named []string) *NpConn {
+func makeNpConn(lip string, named sp.Taddrs) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt()
+	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
 	npc.named = named
-	npc.fidc = fidclnt.MakeFidClnt()
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, lip, sessp.Tsize(1_000_000))
+	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }

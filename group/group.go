@@ -181,10 +181,10 @@ func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
 
 func (g *Group) writeSymlink(sigmaAddrs []string) {
 	// Clean sigma addrs, removing placeholders...
-	srvAddrs := []string{}
+	srvAddrs := sp.Taddrs{}
 	for _, a := range sigmaAddrs {
 		if a != repl.PLACEHOLDER_ADDR {
-			srvAddrs = append(srvAddrs, a)
+			srvAddrs = append(srvAddrs, sp.MkTaddr(a))
 		}
 	}
 

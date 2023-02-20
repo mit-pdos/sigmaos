@@ -12,16 +12,16 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
+func (sd *Schedd) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
 	var pdc *protdevclnt.ProtDevClnt
 	var ok bool
-	if pdc, ok = sd.schedds[scheddIp]; !ok {
+	if pdc, ok = sd.schedds[kernelId]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.SCHEDD, scheddIp))
+		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
 			db.DFatalf("Error make procd clnt: %v", err)
 		}
-		sd.schedds[scheddIp] = pdc
+		sd.schedds[kernelId] = pdc
 	}
 	return pdc
 }
@@ -30,12 +30,12 @@ func (sd *Schedd) getScheddClnt(scheddIp string) *protdevclnt.ProtDevClnt {
 func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 	// Try to steal from the victim schedd.
 	sreq := &proto.StealProcRequest{
-		ScheddIp: sd.mfs.MyAddr(),
+		KernelId: sd.kernelId,
 		Realm:    realm.String(),
 		PidStr:   p.GetPid().String(),
 	}
 	sres := &proto.StealProcResponse{}
-	err := sd.getScheddClnt(p.ScheddIp).RPC("Procd.StealProc", sreq, sres)
+	err := sd.getScheddClnt(p.KernelId).RPC("Procd.StealProc", sreq, sres)
 	if err != nil {
 		db.DFatalf("Error StealProc schedd: %v", err)
 	}

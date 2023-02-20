@@ -15,10 +15,12 @@ import (
 // Contain user procs using exec-uproc trampoline
 //
 
-func RunUProc(uproc *proc.Proc) error {
+func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	cmd := exec.Command(uproc.Program, uproc.Args...)
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin")
+	uproc.AppendEnv(proc.SIGMAUPROCD, uprocd.String())
+	uproc.AppendEnv(proc.SIGMANET, net)
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

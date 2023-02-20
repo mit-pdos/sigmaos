@@ -2,10 +2,12 @@ package kernel
 
 import (
 	"fmt"
+	"path"
 	"sync"
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
@@ -65,6 +67,10 @@ func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
+func (k *Kernel) AllocPort(pid proc.Tpid, port port.Tport) (*port.PortBinding, error) {
+	return k.svcs.svcMap[pid].AllocPort(port)
+}
+
 func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()
@@ -93,7 +99,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, nil, procclnt.HLINUX, cmd)
+	ss := makeSubsystemCmd(nil, k, nil, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
@@ -121,9 +127,38 @@ func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{}, procclnt.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelId}, procclnt.HLINUX)
 }
 
+// Start uprocd in a sigmauser container and post the mount for
+// uprocd.  Uprocd cannot post because it doesn't know what the host
+// IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	return k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
+	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
+	if err != nil {
+		return nil, err
+	}
+	if s.k.Param.Overlays {
+		realm := args[0]
+		ptype := args[1]
+
+		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, realm, ptype)
+
+		// container's first port is for uprocd
+		pm, err := s.container.AllocFirst()
+		if err != nil {
+			return nil, err
+		}
+
+		// Use 127.0.0.1, because only the local schedd should be talking
+		// to uprocd.
+		mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort.String())
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+		if err := k.MkMountSymlink(pn, mnt); err != nil {
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)
+	}
+
+	return s, nil
 }

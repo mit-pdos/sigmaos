@@ -16,15 +16,16 @@ import (
 //
 
 type FidClnt struct {
-	fids *FidMap
-	pc   *protclnt.Clnt
-	ft   *FenceTable
+	fids  *FidMap
+	pc    *protclnt.Clnt
+	ft    *FenceTable
+	realm sp.Trealm
 }
 
-func MakeFidClnt() *FidClnt {
+func MakeFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt()
+	fidc.pc = protclnt.MakeClnt(clntnet)
 	fidc.ft = MakeFenceTable()
 	return fidc
 }
@@ -91,7 +92,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname string, addrs []string, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(uname string, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
 	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
 	if err != nil {

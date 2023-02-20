@@ -24,36 +24,25 @@ type NetServer struct {
 	unmarshal UnmarshalF
 }
 
-func (srv *NetServer) setSrvAddr(addr string) error {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return err
-	}
-	if host == "::" {
-		ip, err := container.LocalIP()
-		if err != nil {
-			return err
-		}
-		addr = net.JoinHostPort(ip, port)
-	}
-	srv.addr = addr
-	return nil
-}
-
 func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *NetServer {
 	srv := &NetServer{"",
 		ss,
 		m,
 		u,
 	}
+
 	// Create and start the main server listener
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	srv.setSrvAddr(l.Addr().String())
-	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", address, srv.addr)
+	a, err := container.QualifyAddr(l.Addr().String())
+	if err != nil {
+		db.DFatalf("QualifyAddr %v error: %v", a, err)
+	}
+	srv.addr = a
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", address, a)
 	go srv.runsrv(l)
 	return srv
 }
@@ -69,7 +58,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		if err != nil {
 			db.DFatalf("%v: Accept error: %v", proc.GetName(), err)
 		}
-
+		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
 		MakeSrvConn(srv, conn)
 	}
 }

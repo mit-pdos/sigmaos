@@ -21,7 +21,7 @@ func main() {
 		addr := ip + ":0"
 		config := repldummy.MakeConfig()
 		if os.Args[1] == "dummy" {
-			fss, err := memfssrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config)
+			fss, err := memfssrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config, proc.GetRealm())
 			if err != nil {
 				db.DFatalf("Error makreplmemfs: %v", err)
 			}

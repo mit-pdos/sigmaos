@@ -18,9 +18,6 @@ apparmor:
 conn:
   msg_len: 65536
 
-network:
-  mode: bridge
-
 perf:
   cpu_util_sample_hz: 50
 
@@ -48,9 +45,6 @@ apparmor:
 
 conn:
   msg_len: 65536
-
-network:
-  mode: host
 
 perf:
   cpu_util_sample_hz: 50
@@ -80,10 +74,6 @@ type Config struct {
 	Conn struct {
 		// SigmaP connection message length.
 		MSG_LEN int `yaml:"msg_len"`
-	}
-	Network struct {
-		// Network mode
-		MODE string `yaml:"mode"`
 	}
 	Perf struct {
 		// SigmaP connection message length.

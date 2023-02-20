@@ -46,12 +46,12 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	}
 	// Release the parent proc, which may be waiting for removal of the proc
 	// queue file in WaitStart.
-	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.ScheddIp, sp.QUEUE, p.GetPid().String())); err != nil {
+	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.KernelId, sp.QUEUE, p.GetPid().String())); err != nil {
 		// Check if the proc was stoelln from another schedd.
-		stolen := p.ScheddIp != mgr.mfs.MyAddr()
+		stolen := p.KernelId != mgr.kernelId
 		if stolen {
 			// May return an error if the schedd stolen from crashes.
-			db.DPrintf(db.PROCMGR_ERR, "Error remove schedd queue file [%v]: %v", p.ScheddIp, err)
+			db.DPrintf(db.PROCMGR_ERR, "Error remove schedd queue file [%v]: %v", p.KernelId, err)
 		} else {
 			// Removing from self should always succeed.
 			db.DFatalf("Error remove schedd queue file: %v", err)
@@ -80,7 +80,7 @@ func (mgr *ProcMgr) addRunningProc(p *proc.Proc) {
 
 	// XXX Write package to expose running map as a dir.
 	mgr.running[p.GetPid()] = p
-	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, "~local", sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.Marshal())
+	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, mgr.kernelId, sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.Marshal())
 	if err != nil {
 		db.DFatalf("Error PutFile in running queue: %v", err)
 	}
@@ -145,7 +145,7 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 			}
 			// Is the proc a local proc? If so, don't add it to the queue of
 			// stealable procs.
-			if p.ScheddIp == mgr.mfs.MyAddr() {
+			if p.KernelId == mgr.kernelId {
 				continue
 			}
 			if _, ok := stealable[p.GetRealm()]; !ok {

@@ -2,6 +2,7 @@ package uprocclnt
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 
@@ -18,15 +19,17 @@ import (
 type UprocdMgr struct {
 	mu            sync.Mutex
 	fsl           *fslib.FsLib
+	kernelId      string
 	kclnt         *kernelclnt.KernelClnt
 	pdcms         map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
 	beUprocds     []*UprocdClnt
 	sharesAlloced Tshare
 }
 
-func MakeUprocdMgr(fsl *fslib.FsLib) *UprocdMgr {
+func MakeUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 	updm := &UprocdMgr{
 		fsl:           fsl,
+		kernelId:      kernelId,
 		pdcms:         make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt),
 		beUprocds:     make([]*UprocdClnt, 0),
 		sharesAlloced: 0,
@@ -39,13 +42,14 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 		return proc.Tpid(""), err
 	}
 	if updm.kclnt == nil {
-		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, sp.BOOT+"~local/")
+		pn := path.Join(sp.BOOT, updm.kernelId) + "/"
+		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, pn)
 		if err != nil {
 			return proc.Tpid(""), err
 		}
 		updm.kclnt = kclnt
 	}
-	pid, err := updm.kclnt.Boot("uprocd", []string{realm.String(), ptype.String()})
+	pid, err := updm.kclnt.Boot("uprocd", []string{realm.String(), ptype.String(), updm.kernelId})
 	if err != nil {
 		return pid, err
 	}
@@ -54,7 +58,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 
 // Fill out procd directory structure in which to register the uprocd.
 func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
-	d1 := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL)
+	d1 := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL)
 	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
 	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrExists(err) {
 		return err
@@ -82,10 +86,12 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	if !ok1 || !ok2 {
 		var pid proc.Tpid
 		var err error
+
+		db.DPrintf(db.UPROCDMGR, "[realm:%v] start uprocd", realm)
 		if pid, err = updm.startUprocd(realm, ptype); err != nil {
 			return nil, err
 		}
-		pn := path.Join(sp.SCHEDD, "~local", sp.UPROCDREL, realm.String(), ptype.String())
+		pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, realm.String(), ptype.String())
 		rc, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
 		if err != nil {
 			return nil, err
@@ -101,11 +107,11 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 }
 
 func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
+	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
 	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
-	db.DPrintf(db.UPROCDMGR, "[realm:%v pid:%v] run uproc %v", pdc.realm, pdc.pid, uproc)
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
 	updm.startBalanceShares(uproc)
@@ -115,6 +121,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 	res := &proto.RunResult{}
 	if err := pdc.RPC("UprocSrv.Run", req, res); err != nil && serr.IsErrUnreachable(err) {
+		log.Printf("uprocsrv run err %v\n", err)
 		return err, nil
 	} else {
 		return nil, err

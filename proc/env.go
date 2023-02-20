@@ -27,6 +27,9 @@ const (
 	SIGMATAG            = "SIGMATAG"
 	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMAREALM          = "SIGMAREALM"
+	SIGMANET            = "SIGMANET"
+	SIGMAKERNEL         = "SIGMAKERNEL"
+	SIGMAUPROCD         = "SIGMAUPROCD"
 )
 
 func GenPid() Tpid {
@@ -63,16 +66,12 @@ func NamedAddrs() string {
 	return addrs
 }
 
-func Named() []string {
-	return StringToNamedAddrs(NamedAddrs())
-}
-
-func StringToNamedAddrs(s string) []string {
-	return strings.Split(s, ",")
+func Named() sp.Taddrs {
+	return sp.String2Taddrs(NamedAddrs())
 }
 
 func SetSigmaNamed(nds sp.Taddrs) {
-	os.Setenv(SIGMANAMED, nds.String())
+	os.Setenv(SIGMANAMED, nds.Taddrs2String())
 }
 
 func GetSigmaNamed() string {
@@ -121,6 +120,18 @@ func GetSigmaRootFs() string {
 
 func GetRealm() sp.Trealm {
 	return sp.Trealm(os.Getenv(SIGMAREALM))
+}
+
+func GetKernelId() string {
+	return os.Getenv(SIGMAKERNEL)
+}
+
+func GetNet() string {
+	return os.Getenv(SIGMANET)
+}
+
+func GetUprocdPid() Tpid {
+	return Tpid(os.Getenv(SIGMAUPROCD))
 }
 
 func GetBuildTag() string {

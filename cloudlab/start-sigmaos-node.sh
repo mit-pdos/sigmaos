@@ -33,8 +33,8 @@ echo "running with SIGMANAMED=$SIGMANAMED"
 if [[ $IS_LEADER -gt 0 ]]; then
   echo "each realm runs with $N_REPLICAS replicas"
   
-  # Boot a realm
-  ./start.sh --realm arielck > leader.out 2>&1 &
+  # Boot a realm  XXX broken
+  ./start-kernel.sh --realm arielck > leader.out 2>&1 &
 
 else
   SIGMAPID=machined-$HOSTNAME nohup /tmp/sigmaos/bin/realm/machined > noded-$(hostname).out 2>&1 &

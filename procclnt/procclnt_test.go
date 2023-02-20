@@ -100,7 +100,6 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)

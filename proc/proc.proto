@@ -17,5 +17,5 @@ message ProcProto {
   google.protobuf.Timestamp spawnTimePB = 11;
   string realmStr = 12;
   string sharedTarget = 13;
-  string scheddIp = 14;
+  string kernelId = 14;
 }

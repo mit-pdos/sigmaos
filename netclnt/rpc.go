@@ -1,8 +1,9 @@
 package netclnt
 
 import (
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
+	sp "sigmaos/sigmap"
 )
 
 type Reply struct {
@@ -11,12 +12,12 @@ type Reply struct {
 }
 
 type Rpc struct {
-	addrs  []string
+	addrs  sp.Taddrs
 	Req    *sessp.FcallMsg
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs []string, fc *sessp.FcallMsg) *Rpc {
+func MakeRpc(addrs sp.Taddrs, fc *sessp.FcallMsg) *Rpc {
 	rpc := &Rpc{}
 	rpc.addrs = addrs
 	rpc.Req = fc

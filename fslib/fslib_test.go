@@ -201,12 +201,10 @@ func TestReadSymlink(t *testing.T) {
 	_, err = ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
 
-	target, err := ts.GetFile(fn)
-	assert.Nil(t, err, "GetFile: %v", err)
-	mnt1, err := sp.MkMount(target)
-	assert.Nil(t, err, "GetFile: %v", err)
+	mnt1, err := ts.ReadMount(fn)
+	assert.Nil(t, err, "ReadMount: %v", err)
 
-	assert.Equal(t, mnt.Addr[0], mnt1.Addr[0])
+	assert.Equal(t, mnt.Addr[0].Addr, mnt1.Addr[0].Addr)
 
 	ts.Shutdown()
 }
@@ -413,7 +411,7 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, dn, name, lip string, nds []string, ch chan bool) {
+func dirwriter(t *testing.T, dn, name, lip string, nds sp.Taddrs, ch chan bool) {
 	fsl, err := fslib.MakeFsLibAddr("fslibtest-"+name, sp.ROOTREALM, lip, nds)
 	assert.Nil(t, err)
 	stop := false
@@ -1124,7 +1122,7 @@ func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	assert.Nil(t, err)
 	if h == "" {
 		a := net.JoinHostPort(ts.GetLocalIP(), p)
-		mnt.SetAddr(sp.Taddrs{a})
+		mnt.SetAddr(sp.MkTaddrs([]string{a}))
 	}
 	return mnt
 }
@@ -1726,7 +1724,7 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int, lip string, nds []string) {
+func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int, lip string, nds sp.Taddrs) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {

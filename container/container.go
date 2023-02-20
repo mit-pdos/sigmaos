@@ -13,9 +13,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
+	"sigmaos/port"
 )
 
 type Container struct {
+	*port.PortMap
 	ctx          context.Context
 	cli          *client.Client
 	container    string

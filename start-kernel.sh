@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #
-# Start container
+# Start kernel container
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--machine N] [--named ADDRs] [--host] "  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--host] [--overlays] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -13,14 +13,11 @@ TAG=""
 BOOT="named"
 NAMED=":1111"
 DBIP="x.x.x.x"
-NET="bridge"
-while [[ "$#" -gt 0 ]]; do
+NET="host"
+KERNELID=""
+OVERLAYS="false"
+while [[ "$#" -gt 1 ]]; do
   case "$1" in
-  --machine)
-    shift
-    MACHINE=$1
-    shift
-    ;;
   --boot)
     shift
     case "$1" in
@@ -53,6 +50,10 @@ while [[ "$#" -gt 0 ]]; do
     shift
     NET="host"
     ;;
+  --overlays)
+    shift
+    OVERLAYS="true"
+    ;;
   --named)
     shift
     NAMED=$1
@@ -70,10 +71,11 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ $# -gt 1 ]; then
     usage
     exit 1
 fi
+KERNELID=$1
 
 mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-bin
@@ -101,17 +103,24 @@ CID=$(docker run -dit\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
              --network ${NET}\
+             --name ${KERNELID}\
+             -e kernelid=${KERNELID}\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
+             -e overlays=${OVERLAYS}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              sigmaos)
 
+if [ -z ${CID} ]; then
+    echo "Docker run failed $?"  1>&2
+    exit 1
+fi
+
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CID})
 if [ -z  ${IP} ]; then
-    # running with --network bridge; find out what host's IP is.
+    # find out what host's IP is (e.g., when running with --network bridge)
     IP=$(ip route get 8.8.8.8 | head -1 | cut -d ' ' -f 7)
-    echo $IP
 fi
 
 # XXX maybe use mount to see if name is up

@@ -20,16 +20,11 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 type Trealm string
-type Taddrs []string
 
 const ROOTREALM Trealm = "rootrealm"
 
 func (r Trealm) String() string {
 	return string(r)
-}
-
-func (as Taddrs) String() string {
-	return strings.Join(as, ",")
 }
 
 func (fid Tfid) String() string {
@@ -193,6 +188,44 @@ func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
+}
+
+func MkTaddr(addr string) *Taddr {
+	return &Taddr{Net: ROOTREALM.String(), Addr: addr}
+}
+
+func MkTaddrRealm(addr string, net string) *Taddr {
+	return &Taddr{Net: net, Addr: addr}
+}
+
+type Taddrs []*Taddr
+
+func MkTaddrs(addr []string) Taddrs {
+	addrs := make([]*Taddr, len(addr))
+	for i, a := range addr {
+		addrs[i] = MkTaddr(a)
+	}
+	return addrs
+}
+
+func String2Taddrs(as string) Taddrs {
+	addrs := make([]*Taddr, 0)
+	for _, s := range strings.Split(as, ",") {
+		addrs = append(addrs, MkTaddr(s))
+	}
+	return addrs
+}
+
+func (as Taddrs) Taddrs2String() string {
+	s := ""
+	for i, a := range as {
+		if i < len(as)-1 {
+			s += a.Addr + ","
+		} else {
+			s += a.Addr
+		}
+	}
+	return s
 }
 
 func MkErr(msg *Rerror) *serr.Err {

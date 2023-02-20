@@ -26,11 +26,13 @@ const (
 var containerIP string
 var start bool
 var tag string
+var Overlays bool
 
 func init() {
 	flag.StringVar(&containerIP, "containerIP", "127.0.0.1", "IP addr for container")
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&start, "start", false, "Start system")
+	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -107,9 +109,11 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	namedport := []string{NAMEDPORT}
+	namedport := sp.MkTaddrs([]string{NAMEDPORT})
+	kernelid := ""
 	if start {
-		ip, err := bootkernelclnt.Start(tag, srvs, namedport)
+		kernelid = bootkernelclnt.GenKernelId()
+		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +124,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	k, err := bootkernelclnt.MkKernelClnt("test", containerIP, namedAddr)
+	k, err := bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +138,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr())
+		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr(), Overlays)
 		if err != nil {
 			return err
 		}
@@ -157,17 +161,19 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
+func (ts *Tstate) MakeClnt(idx int, name string) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].MkSigmaClnt(name)
+}
+
 func (ts *Tstate) Shutdown() error {
 	db.DPrintf(db.TEST, "Shutdown")
 	db.DPrintf(db.TEST, "Done Shutdown")
 	db.DPrintf(db.SYSTEM, "Shutdown")
+	// Shut down other kernel running named last
 	for i := len(ts.kclnts) - 1; i >= 0; i-- {
-		db.DPrintf(db.SYSTEM, "Shutdown kernel %v", i)
-		// XXX shut down other kernels first?
 		if err := ts.kclnts[i].Shutdown(); err != nil {
 			return err
 		}
-		db.DPrintf(db.SYSTEM, "Done shutdown kernel %v", i)
 	}
 	return nil
 }

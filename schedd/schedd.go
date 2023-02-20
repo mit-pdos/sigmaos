@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	"path"
 	"sync"
 
 	db "sigmaos/debug"
@@ -26,18 +27,20 @@ type Schedd struct {
 	memfree   proc.Tmem
 	mfs       *memfssrv.MemFs
 	qs        map[sp.Trealm]*Queue
+	kernelId  string
 	realms    []sp.Trealm
 }
 
-func MakeSchedd(mfs *memfssrv.MemFs) *Schedd {
+func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 	sd := &Schedd{
 		mfs:       mfs,
-		pmgr:      procmgr.MakeProcMgr(mfs),
+		pmgr:      procmgr.MakeProcMgr(mfs, kernelId),
 		qs:        make(map[sp.Trealm]*Queue),
 		realms:    make([]sp.Trealm, 0),
 		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
 		coresfree: proc.Tcore(linuxsched.NCores), //- 1, // 1 core is reserved for BE procs.
 		memfree:   mem.GetTotalMem(),
+		kernelId:  kernelId,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	return sd
@@ -48,8 +51,8 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
-	p.ScheddIp = sd.mfs.MyAddr()
-	db.DPrintf(db.SCHEDD, "[%v] Spawned %v", req.Realm, p)
+	p.KernelId = sd.kernelId
+	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
 		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
 		sd.realms = append(sd.realms, sp.Trealm(req.Realm))
@@ -164,13 +167,13 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	}
 }
 
-func RunSchedd() error {
-	mfs, _, err := memfssrv.MakeMemFs(sp.SCHEDD, sp.SCHEDDREL)
+func RunSchedd(kernelId string) error {
+	mfs, _, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
 	setupMemFsSrv(mfs)
-	sd := MakeSchedd(mfs)
+	sd := MakeSchedd(mfs, kernelId)
 	setupFs(mfs, sd)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)

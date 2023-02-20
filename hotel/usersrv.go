@@ -34,9 +34,9 @@ type Users struct {
 	dbc *dbclnt.DbClnt
 }
 
-func RunUserSrv(n string) error {
+func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELUSER, u)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELUSER, u, public)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,61 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	sp "sigmaos/sigmap"
 )
+
+// Rearrange addrs so that first addr is in the realm as clnt.
+func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
+	if len(addrs) == 1 {
+		return addrs
+	}
+	raddrs := make(sp.Taddrs, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		raddrs[i] = addrs[i]
+	}
+	local := false
+	p := 0
+	l := 0
+	for i, a := range raddrs {
+		if a.Net == clntnet {
+			l = i
+			local = true
+			break
+		}
+		if a.Net == sp.ROOTREALM.String() {
+			p = i
+		}
+	}
+	if local {
+		swap(raddrs, l)
+	} else {
+		swap(raddrs, p)
+	}
+	return raddrs
+}
+
+func swap(addrs sp.Taddrs, i int) sp.Taddrs {
+	v := addrs[0]
+	addrs[0] = addrs[i]
+	addrs[i] = v
+	return addrs
+}
+
+func QualifyAddr(addr string) (string, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", err
+	}
+	if host == "::" {
+		ip, err := LocalIP()
+		if err != nil {
+			return "", err
+		}
+		addr = net.JoinHostPort(ip, port)
+	}
+	return addr, nil
+}
 
 // XXX deduplicate with localIP
 func LocalInterface() (string, error) {

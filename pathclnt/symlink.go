@@ -32,9 +32,10 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 }
 
 func (pathc *PathClnt) autoMount(uname string, mnt sp.Tmount, path path.Path) *serr.Err {
-	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
 	var fid sp.Tfid
 	var err *serr.Err
+
+	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
 	fid, err = pathc.Attach(uname, mnt.Addr, path.String(), mnt.Root)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT, "Attach error: %v", err)

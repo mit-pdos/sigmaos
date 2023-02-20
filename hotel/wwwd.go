@@ -10,6 +10,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/port"
+	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/sigmaclnt"
@@ -26,11 +28,11 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
-	fwc      *protdevclnt.ProtDevClnt
+	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
-func RunWww(job string) error {
+func RunWww(job string, public bool) error {
 	www := &Www{}
 	www.job = job
 	sc, err := sigmaclnt.MkSigmaClnt("hotel-wwwd-" + job)
@@ -71,37 +73,49 @@ func RunWww(job string) error {
 	}
 	www.geoc = pdc
 
-	// pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.FW)
-	// if err != nil {
-	// 	db.DFatalf("Error protdev %v", err)
-	// 	return err
-	// }
-	// www.fwc = pdc
-
 	http.HandleFunc("/user", www.userHandler)
 	http.HandleFunc("/hotels", www.searchHandler)
 	http.HandleFunc("/recommendations", www.recommendHandler)
 	http.HandleFunc("/reservation", www.reservationHandler)
 	http.HandleFunc("/geo", www.geoHandler)
 
-	ip, err := container.LocalIP()
+	pc, err := portclnt.MkPortClnt(www.FsLib, proc.GetKernelId())
 	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
+		return err
 	}
+	www.pc = pc
 
-	l, err := net.Listen("tcp", ip+":0")
-	if err != nil {
-		db.DFatalf("Error Listen: %v", err)
-	}
-
-	go func() {
-		db.DFatalf("%v", http.Serve(l, nil))
-	}()
-
-	// Write a file for clients to discover the server's address.
-	p := JobHTTPAddrsPath(job)
-	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
-		db.DFatalf("Error PutFileJson addrs %v", err)
+	if public {
+		hip, pb, err := pc.AllocPort(port.NOPORT)
+		if err != nil {
+			db.DFatalf("AllocPort err %v", err)
+		}
+		l, err := net.Listen("tcp", ":"+pb.RealmPort.String())
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		a, err := container.QualifyAddr(l.Addr().String())
+		if err != nil {
+			db.DFatalf("QualifyAddr %v err %v", a, err)
+		}
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, proc.GetNet(), a); err != nil {
+			db.DFatalf("AdvertisePort %v", err)
+		}
+	} else {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
+		if err = pc.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+			db.DFatalf("MountService %v", err)
+		}
 	}
 
 	perf, err := perf.MakePerf(perf.HOTEL_WWW)

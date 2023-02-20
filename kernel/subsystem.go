@@ -8,13 +8,17 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
 
+const NPORT_PER_CONTAINER = 20
+
 type Subsystem struct {
 	*procclnt.ProcClnt
+	k         *Kernel
 	p         *proc.Proc
 	how       procclnt.Thow
 	cmd       *exec.Cmd
@@ -22,43 +26,51 @@ type Subsystem struct {
 	crashed   bool
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, p, how, cmd, nil, false}
+func makeSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+	return &Subsystem{pclnt, k, p, how, cmd, nil, false}
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc, how procclnt.Thow) *Subsystem {
-	return makeSubsystemCmd(pclnt, p, how, nil)
+func makeSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow) *Subsystem {
+	return makeSubsystemCmd(pclnt, k, p, how, nil)
 }
 
 func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
 	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
-	ss := makeSubsystem(k.ProcClnt, p, how)
-	return ss, ss.Run(k.namedAddr, how)
+	ss := makeSubsystem(k.ProcClnt, k, p, how)
+	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
 }
 
-func (s *Subsystem) Run(namedAddr []string, how procclnt.Thow) error {
+func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
-		cmd, err := s.SpawnKernelProc(s.p, s.how)
+		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
 			return err
 		}
 		s.cmd = cmd
 	} else {
-		realm := s.p.Args[0]
-		if err := s.MkProc(s.p, procclnt.HDOCKER); err != nil {
+		realm := sp.Trealm(s.p.Args[0])
+		if err := s.MkProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
 			return err
 		}
 		// XXX don't hard code
-		s.p.AppendEnv("PATH", "/home/sigmaos/bin/user:/home/sigmaos/bin/user/common:/home/sigmaos/bin/kernel")
+		h := sp.SIGMAHOME
+		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.Finalize("")
-		c, err := container.StartPContainer(s.p, realm)
+		var r *port.Range
+		up := port.NOPORT
+		if s.k.Param.Overlays {
+			r = &port.Range{FPORT, LPORT}
+			up = r.Fport
+		}
+		c, err := container.StartPContainer(s.p, kernelId, realm, r, up)
 		if err != nil {
 			return err
 		}
 		s.container = c
 	}
-	return s.WaitStart(s.p.GetPid())
+	err := s.WaitStart(s.p.GetPid())
+	return err
 }
 
 func (ss *Subsystem) SetCPUShares(shares int64) error {
@@ -67,6 +79,14 @@ func (ss *Subsystem) SetCPUShares(shares int64) error {
 
 func (ss *Subsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
+}
+
+func (ss *Subsystem) AllocPort(p port.Tport) (*port.PortBinding, error) {
+	if p == port.NOPORT {
+		return ss.container.AllocPort()
+	} else {
+		return ss.container.AllocPortOne(p)
+	}
 }
 
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {

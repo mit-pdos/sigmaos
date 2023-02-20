@@ -27,11 +27,12 @@ type ShardMgr struct {
 	shards []proc.Tpid
 	nshard int
 	pn     string
+	public bool
 }
 
 func (sm *ShardMgr) addShard(i int) error {
 	// SpawnBurst to spread shards across procds.
-	p := proc.MakeProc(sm.bin, []string{sm.job, SHRDDIR + strconv.Itoa(i)})
+	p := proc.MakeProc(sm.bin, []string{sm.job, strconv.FormatBool(sm.public), SHRDDIR + strconv.Itoa(i)})
 	p.SetNcore(proc.Tcore(NCORE))
 	_, errs := sm.SpawnBurst([]*proc.Proc{p})
 	if len(errs) > 0 {
@@ -44,13 +45,13 @@ func (sm *ShardMgr) addShard(i int) error {
 	return nil
 }
 
-func MkShardMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, job, bin, pn string) (*ShardMgr, error) {
+func MkShardMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, job, bin, pn string, public bool) (*ShardMgr, error) {
 	if _, err := fsl.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
 	}
-	sm := &ShardMgr{FsLib: fsl, ProcClnt: pclnt, bin: bin, job: job, shards: make([]proc.Tpid, 0), nshard: n, pn: pn}
+	sm := &ShardMgr{FsLib: fsl, ProcClnt: pclnt, bin: bin, job: job, shards: make([]proc.Tpid, 0), nshard: n, pn: pn, public: public}
 	for i := 0; i < n; i++ {
 		if err := sm.addShard(i); err != nil {
 			return nil, err

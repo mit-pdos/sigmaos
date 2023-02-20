@@ -5,8 +5,9 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/netclnt"
+	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 // A Request Queue which guarantees:
@@ -23,13 +24,13 @@ import (
 type RequestQueue struct {
 	sync.Mutex
 	*sync.Cond
-	addrs       []string // Purely for debugging purposes.
+	addrs       sp.Taddrs // Purely for debugging purposes.
 	queue       []*netclnt.Rpc
 	outstanding map[sessp.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
 	closed      bool
 }
 
-func MakeRequestQueue(addrs []string) *RequestQueue {
+func MakeRequestQueue(addrs sp.Taddrs) *RequestQueue {
 	rq := &RequestQueue{}
 	rq.Cond = sync.NewCond(&rq.Mutex)
 	rq.addrs = addrs

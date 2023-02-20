@@ -25,9 +25,9 @@ type ProfSrv struct {
 	cachec *cacheclnt.CacheClnt
 }
 
-func RunProfSrv(job string) error {
+func RunProfSrv(job string, public bool) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELPROF, ps)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELPROF, ps, public)
 	if err != nil {
 		return err
 	}

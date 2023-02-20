@@ -26,7 +26,7 @@ done
 # test proxy
 #
 
-go test $@ sigmaos/proxy
+go test $@ sigmaos/proxy -start
 
 #
 # tests a full kernel using root realm

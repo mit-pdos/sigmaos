@@ -19,7 +19,7 @@ const (
 type ProcMgr struct {
 	sync.Mutex
 	mfs       *memfssrv.MemFs
-	scheddIp  string
+	kernelId  string
 	rootsc    *sigmaclnt.SigmaClnt
 	updm      *uprocclnt.UprocdMgr
 	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
@@ -30,12 +30,12 @@ type ProcMgr struct {
 }
 
 // Manages the state and lifecycle of a proc.
-func MakeProcMgr(mfs *memfssrv.MemFs) *ProcMgr {
+func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 	return &ProcMgr{
 		mfs:       mfs,
-		scheddIp:  mfs.MyAddr(),
+		kernelId:  kernelId,
 		rootsc:    mfs.SigmaClnt(),
-		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib),
+		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
 		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		cachedirs: make(map[sp.Trealm]bool),
 		running:   make(map[proc.Tpid]*proc.Proc),
@@ -50,7 +50,7 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
-	p.Finalize(mgr.scheddIp)
+	p.Finalize(mgr.kernelId)
 	mgr.setupProcState(p)
 	mgr.downloadProc(p)
 	mgr.runProc(p)

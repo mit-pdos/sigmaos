@@ -2,12 +2,15 @@ package hotel
 
 import (
 	"path"
+	"strconv"
 
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 const (
@@ -29,11 +32,12 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) ([]string, error) {
-	p := JobHTTPAddrsPath(job)
-	var addrs []string
-	err := fsl.GetFileJson(p, &addrs)
-	return addrs, err
+func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
+	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	if err != nil {
+		return nil, err
+	}
+	return mnt.Addr, err
 }
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) {
@@ -43,9 +47,14 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	}
 }
 
-var HotelSvcs = []string{"hotel-userd", "hotel-rated",
-	"hotel-geod", "hotel-profd", "hotel-searchd",
-	"hotel-reserved", "hotel-recd", "hotel-wwwd"}
+type Srv struct {
+	Name   string
+	Public bool
+}
+
+var HotelSvcs = []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
+	Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
+	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", test.Overlays}}
 
 var ncores = []int{0, 1,
 	1, 1, 3,
@@ -55,7 +64,7 @@ var ncores = []int{0, 1,
 //	2, 2, 3,
 //	3, 0, 2}
 
-func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []string, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -65,7 +74,7 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache)
+		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache, test.Overlays)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
 			return nil, nil, nil, err
@@ -80,7 +89,7 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 	pids := make([]proc.Tpid, 0, len(srvs))
 
 	for i, srv := range srvs {
-		p := proc.MakeProc(srv, []string{job})
+		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public)})
 		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := pclnt.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

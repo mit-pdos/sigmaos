@@ -35,7 +35,7 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 	return sc, nil
 }
 
-// Create only an FsLib, relative to a realm.
+// Create only an FsLib, relative to a realm, but with the client being in the root realm
 func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)
@@ -47,7 +47,7 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (
 		return nil, err
 	}
 	db.DPrintf(db.SIGMACLNT, "Realm %v NamedAddr %v\n", rid, mnt.Addr)
-	realm, err := fslib.MakeFsLibAddr(name, rid, rootrealm.GetLocalIP(), mnt.Addr)
+	realm, err := fslib.MakeFsLibAddrNet(name, rid, rootrealm.GetLocalIP(), mnt.Addr, sp.ROOTREALM.String())
 	if err != nil {
 		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", mnt.Addr, err)
 		return nil, err
@@ -68,8 +68,8 @@ func MkSigmaClntRealm(rootfsl *fslib.FsLib, name string, rid sp.Trealm) (*SigmaC
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func MkSigmaClntRootInit(name string, ip string, namedAddr []string) (*SigmaClnt, error) {
-	fsl, err := fslib.MakeFsLibAddr(name, sp.ROOTREALM, ip, namedAddr)
+func MkSigmaClntRootInit(name string, ip string, namedAddr sp.Taddrs) (*SigmaClnt, error) {
+	fsl, err := fslib.MakeFsLibAddrNet(name, sp.ROOTREALM, ip, namedAddr, sp.ROOTREALM.String())
 	if err != nil {
 		return nil, err
 	}

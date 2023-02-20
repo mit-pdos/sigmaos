@@ -20,7 +20,7 @@ message SpawnResponse {
 }
 
 message StealProcRequest {
-  string scheddIp = 1;
+  string kernelId = 1;
   string realm = 2;
   string pidStr = 3;
 }

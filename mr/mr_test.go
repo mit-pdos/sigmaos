@@ -15,7 +15,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -58,9 +57,10 @@ func TestHash(t *testing.T) {
 func TestMakeWordCount(t *testing.T) {
 	const (
 		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
-		F     = "gutenberg.txt"
-		INPUT = "../input/" + F
-		OUT   = container.HOSTTMP + F + ".out"
+		HOSTTMP = "/tmp/sigmaos"
+		F       = "gutenberg.txt"
+		INPUT   = "../input/" + F
+		OUT     = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)

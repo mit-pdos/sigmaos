@@ -5,11 +5,12 @@ import (
 	"net"
 	"sync"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/delay"
-	"sigmaos/sessp"
-    "sigmaos/serr"
+	"sigmaos/serr"
 	"sigmaos/sessconnclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -26,13 +27,14 @@ type NetClnt struct {
 	closed bool
 	br     *bufio.Reader
 	bw     *bufio.Writer
+	realm  sp.Trealm
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *serr.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
-	err := nc.connect(addrs)
+	err := nc.connect(clntnet, addrs)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "MakeNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
@@ -73,14 +75,16 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect(addrs []string) *serr.Err {
+func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
+	addrs = container.Rearrange(clntnet, addrs)
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.Dial("tcp", addr)
+		c, err := net.Dial("tcp", addr.Addr)
 		if err != nil {
 			continue
 		}
 		nc.conn = c
-		nc.addr = addr
+		nc.addr = addr.Addr
 		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
 		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
 		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)

@@ -29,7 +29,6 @@ func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
 func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
 	p := pn + "/" + name
 	dir, err := fsl.IsDir(pn)
-
 	if err != nil {
 		return err
 	}
@@ -45,7 +44,7 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error
 
 func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address())
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr)
 	} else {
 		return fsl.MountService(pn, mnt)
 	}
@@ -80,6 +79,18 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 		}
 		pn = npn
 	}
+}
+
+func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+	target, err := fsl.GetFile(pn)
+	if err != nil {
+		return sp.Tmount{}, err
+	}
+	mnt, error := sp.MkMount(target)
+	if error != nil {
+		return sp.Tmount{}, err
+	}
+	return mnt, err
 }
 
 // Make copy of root mount or first union mount in pn. Return the

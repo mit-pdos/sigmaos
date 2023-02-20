@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/opencontainers/runc/libcontainer/apparmor"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"kernel.org/pub/linux/libs/security/libcap/cap"
 
@@ -16,6 +17,10 @@ import (
 	"sigmaos/proc"
 	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
+)
+
+const (
+	APPARMOR_PROF = "docker-default"
 )
 
 func isolateUserProc(program string) (string, error) {
@@ -33,21 +38,18 @@ func isolateUserProc(program string) (string, error) {
 	// thread before starting the user proc.
 	runtime.LockOSThread()
 	// Apply SELinux Label
-	if selinux.GetEnabled() {
-		plabel, flabel := selinux.InitContainerLabels()
-		if err := selinux.SetExecLabel(plabel); err != nil {
-			db.DPrintf(db.CONTAINER, "Error set SELinux exec label: %v", err)
-			return "", err
-		}
-		if err := selinux.SetFileLabel(pn, flabel); err != nil {
-			db.DPrintf(db.CONTAINER, "Error set SELinux file label: %v", err)
-			return "", err
-		}
+	if err := applySELinuxLabel(pn); err != nil {
+		return "", err
 	}
+	if err := applyAppArmorProfile(APPARMOR_PROF); err != nil {
+		return "", err
+	}
+	// Decrease process capabilities.
 	if err := setCapabilities(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
+	// Seccomp the process.
 	if err := seccompProcess(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error seccomp: %v", err)
 		return "", err
@@ -158,6 +160,38 @@ func jailProcess() error {
 		return err
 	}
 	db.DPrintf(db.CONTAINER, "Successfully pivoted to new root %v", newRoot)
+	return nil
+}
+
+func applySELinuxLabel(pn string) error {
+	if selinux.GetEnabled() {
+		plabel, flabel := selinux.InitContainerLabels()
+		if err := selinux.SetExecLabel(plabel); err != nil {
+			db.DPrintf(db.CONTAINER, "Error set SELinux exec label: %v", err)
+			return err
+		}
+		if err := selinux.SetFileLabel(pn, flabel); err != nil {
+			db.DPrintf(db.CONTAINER, "Error set SELinux file label: %v", err)
+			return err
+		}
+		db.DPrintf(db.CONTAINER, "Successfully applied SELinux labels plabel:%v flabel:%v", plabel, flabel)
+	} else {
+		db.DPrintf(db.CONTAINER, "SELinux disabled.")
+	}
+	return nil
+}
+
+func applyAppArmorProfile(prof string) error {
+	if apparmor.IsEnabled() {
+		// Apply the apparmor profile. Will take effect after the next exec.
+		if err := apparmor.ApplyProfile(prof); err != nil {
+			db.DPrintf(db.CONTAINER, "Error apply AppArmor profile %v: %v", prof, err)
+			return err
+		}
+		db.DPrintf(db.CONTAINER, "Successfully applied AppArmor profile %v", prof)
+	} else {
+		db.DPrintf(db.CONTAINER, "AppArmor disabled.")
+	}
 	return nil
 }
 

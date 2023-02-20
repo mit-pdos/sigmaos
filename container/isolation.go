@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/seccomp"
 	sp "sigmaos/sigmap"
 )
@@ -27,13 +28,6 @@ func isolateUserProc(program string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ContainUProc: LookPath: %v", err)
 	}
-	// Load the sigmaOS seccomp white list.
-	sigmaSCWL, err := seccomp.ReadWhiteList("/seccomp/whitelist.yml")
-	if err != nil {
-		return "", err
-	}
-	seccomp.LoadFilter(sigmaSCWL)
-	db.DPrintf(db.CONTAINER, "Apply sigma whitelist %v %v", os.Args, sigmaSCWL)
 	// Lock the OS thread, since SE Linux labels are per-thread, and so this
 	// thread should disallow the Go runtime from scheduling it on another kernel
 	// thread before starting the user proc.
@@ -54,6 +48,10 @@ func isolateUserProc(program string) (string, error) {
 		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
+	if err := seccompProcess(); err != nil {
+		db.DPrintf(db.CONTAINER, "Error seccomp: %v", err)
+		return "", err
+	}
 	return pn, nil
 }
 
@@ -64,7 +62,7 @@ func finishIsolation() {
 // XXX pair down what is being mounted; exec needs a lot, but maybe
 // not all of it (e.g., usr? and only some subdirectories)
 func jailProcess() error {
-	newRoot := path.Join(sp.SIGMAHOME, "jail")
+	newRoot := path.Join(sp.SIGMAHOME, "jail", proc.GetPid().String())
 	// Create directories to use as mount points, as well as the new root directory itself.
 	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {
@@ -204,5 +202,17 @@ func setCapabilities() error {
 		return err
 	}
 	db.DPrintf(db.CONTAINER, "Successfully set capabilities to:\n%v.\nResulting caps:\n%v", dockerDefaults, cap.GetProc())
+	return nil
+}
+
+// Seccomp
+func seccompProcess() error {
+	// Load the sigmaOS seccomp white list.
+	sigmaSCWL, err := seccomp.ReadWhiteList("/seccomp/whitelist.yml")
+	if err != nil {
+		return err
+	}
+	seccomp.LoadFilter(sigmaSCWL)
+	db.DPrintf(db.CONTAINER, "Successfully seccomped process %v %v", os.Args, sigmaSCWL)
 	return nil
 }

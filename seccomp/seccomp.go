@@ -1,6 +1,7 @@
 package seccomp
 
 import (
+	"fmt"
 	"syscall"
 
 	"github.com/seccomp/libseccomp-golang"
@@ -9,7 +10,23 @@ import (
 )
 
 type WhiteList struct {
-	Allowed []string `yalm:"allowed"`
+	Allowed     []string         `yaml:"allowed"`
+	CondAllowed map[string]*Cond `yaml:"cond_allowed"`
+}
+
+type Cond struct {
+	Index uint   `yaml:"index"`
+	Op1   uint64 `yaml:"op1"`
+	Op2   uint64 `yaml:"op2"`
+	Op    string `yaml:"op"`
+}
+
+func (wl *WhiteList) String() string {
+	return fmt.Sprintf("{ Allowed:%v CondAllowed:%v }", wl.Allowed, wl.CondAllowed)
+}
+
+func (cond *Cond) String() string {
+	return fmt.Sprintf("{ Idx:%v Op1:%v Op2:%v Op:%v }", cond.Index, cond.Op1, cond.Op2, cond.Op)
 }
 
 func ReadWhiteList(pn string) (*WhiteList, error) {
@@ -33,10 +50,39 @@ func LoadFilter(wl *WhiteList) error {
 		if err != nil {
 			return err
 		}
+		// Add a rule for the syscall.
 		err = filter.AddRule(syscallID, seccomp.ActAllow)
 		if err != nil {
 			return err
 		}
 	}
+	for name, c := range wl.CondAllowed {
+		syscallID, err := seccomp.GetSyscallFromName(name)
+		if err != nil {
+			return err
+		}
+		op, err := parseOp(c.Op)
+		if err != nil {
+			return err
+		}
+		cond, err := seccomp.MakeCondition(c.Index, op, c.Op1, c.Op2)
+		if err != nil {
+			return err
+		}
+		// Add a conditional rule for the syscall.
+		err = filter.AddRuleConditional(syscallID, seccomp.ActAllow, []seccomp.ScmpCondition{cond})
+		if err != nil {
+			return err
+		}
+	}
 	return filter.Load()
+}
+
+func parseOp(op string) (seccomp.ScmpCompareOp, error) {
+	switch op {
+	case "SCMP_CMP_NE":
+		return seccomp.CompareNotEqual, nil
+	default:
+		return 0, fmt.Errorf("Unrecognized seccomp op %v")
+	}
 }

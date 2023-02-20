@@ -24,9 +24,19 @@ const (
 	APPARMOR_PROF = "docker-default"
 )
 
-// Mount /sys/kernel/security for apparmor to use.
 func SetupIsolationEnv() error {
 	return nil
+}
+
+func jailPath(pid proc.Tpid) string {
+	return path.Join(sp.SIGMAHOME, "jail", pid.String())
+}
+
+// Clean up a proc's chroot jail.
+func cleanupJail(pid proc.Tpid) {
+	if err := os.RemoveAll(jailPath(pid)); err != nil {
+		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
+	}
 }
 
 func isolateUserProc(program string) (string, error) {
@@ -71,7 +81,7 @@ func finishIsolation() {
 // XXX pair down what is being mounted; exec needs a lot, but maybe
 // not all of it (e.g., usr? and only some subdirectories)
 func jailProcess() error {
-	newRoot := path.Join(sp.SIGMAHOME, "jail", proc.GetPid().String())
+	newRoot := jailPath(proc.GetPid())
 	// Create directories to use as mount points, as well as the new root directory itself.
 	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {

@@ -50,6 +50,7 @@ func RunUProc(uproc *proc.Proc) error {
 	}
 	cmd.Path = pn
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
+	defer cleanupJail(uproc.GetPid())
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
 		return err

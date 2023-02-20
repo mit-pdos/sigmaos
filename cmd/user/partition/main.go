@@ -19,6 +19,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
+	sc.Started()
 	if error := sc.Disconnect(sp.NAMED); error != nil {
 		db.DFatalf("Disconnect %v name fails err %v\n", os.Args, error)
 	}

@@ -497,7 +497,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		ps.vt.IncVersion(newf.Pobj().Obj().Path())
 		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
 
-		// XXX rename
+		ps.et.Rename(oldf.Pobj().Path(), newf.Pobj().Path(), newf.Pobj())
 
 		ps.wt.WakeupWatch(dstlk) // trigger create watch
 		ps.wt.WakeupWatch(srclk) // trigger remove watch

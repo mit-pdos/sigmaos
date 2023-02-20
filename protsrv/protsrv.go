@@ -101,7 +101,7 @@ func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
 	ps.ft.ClunkOpen()
 	ephemeral := ps.et.Get()
 	for _, po := range ephemeral {
-		db.DPrintf(db.ALWAYS, "Detach %v", po.Path())
+		db.DPrintf(db.PROTSRV, "Detach %v", po.Path())
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	if detach != nil {
@@ -418,7 +418,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.ALWAYS, "%v: Wstat %v %v", f.Pobj().Ctx().Uname(), f, args)
+	db.DPrintf(db.PROTSRV, "%v: Wstat %v %v", f.Pobj().Ctx().Uname(), f, args)
 	o := f.Pobj().Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
@@ -466,7 +466,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.ALWAYS, "%v: renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
+	db.DPrintf(db.PROTSRV, "%v: renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
 	oo := oldf.Pobj().Obj()
 	no := newf.Pobj().Obj()
 	switch d1 := oo.(type) {

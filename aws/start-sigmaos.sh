@@ -74,8 +74,7 @@ for vm in $vms; do
     echo $vm
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
-  # export SIGMANAMED="${SIGMANAMED}"
-#  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
+  export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
     ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
     echo "ncores:"

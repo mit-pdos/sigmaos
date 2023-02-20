@@ -11,10 +11,6 @@ import (
 	"sigmaos/proc"
 )
 
-const (
-	OLD_ROOT_MNT = "old_root"
-)
-
 //
 // Contain user procs using exec-uproc trampoline
 //

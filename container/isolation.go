@@ -20,8 +20,19 @@ import (
 )
 
 const (
+	OLD_ROOT_MNT  = "old_root"
 	APPARMOR_PROF = "docker-default"
 )
+
+// Mount /sys/kernel/security for apparmor to use.
+func SetupIsolationEnv() error {
+	// Mount /sys/kernel/security
+	if err := syscall.Mount("securityfs", "/sys/kernel/security", "securityfs", 0, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /sys/kernel/security: %v", err)
+		return err
+	}
+	return nil
+}
 
 func isolateUserProc(program string) (string, error) {
 	// Setup and chroot to the process jail.
@@ -183,7 +194,7 @@ func applySELinuxLabel(pn string) error {
 }
 
 func applyAppArmorProfile(prof string) error {
-	if sp.Conf.AppArmor.ENABLED {
+	if apparmor.IsEnabled() {
 		// Apply the apparmor profile. Will take effect after the next exec.
 		if err := apparmor.ApplyProfile(prof); err != nil {
 			db.DPrintf(db.CONTAINER, "Error apply AppArmor profile %v: %v", prof, err)

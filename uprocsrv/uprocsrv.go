@@ -27,6 +27,9 @@ func RunUprocSrv(realm string, ptype proc.Ttype) error {
 	if err != nil {
 		return err
 	}
+	if err := container.SetupIsolationEnv(); err != nil {
+		db.DFatalf("Error setting up isolation env: %v", err)
+	}
 	err = pds.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil

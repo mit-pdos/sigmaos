@@ -5,9 +5,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fid"
-	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
+	"sigmaos/sessp"
 	"sigmaos/sesssrv"
+	sp "sigmaos/sigmap"
 )
 
 type ProtSrvSnapshot struct {
@@ -53,8 +53,8 @@ func Restore(srv sp.SessServer, b []byte) sp.Protsrv {
 		fos.ft.fids[f] = fid.Restore(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
 	}
 	for ptr, b := range foss.Ephemeral {
-		o := ssrv.GetSnapshotter().RestoreFsTree(ptr)
-		fos.et.ephemeral[o] = fid.RestorePobj(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
+		f := fid.RestorePobj(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
+		fos.et.ephemeral[ptr.String()] = f
 	}
 	return fos
 }

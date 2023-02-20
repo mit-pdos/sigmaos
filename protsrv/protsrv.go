@@ -2,13 +2,13 @@ package protsrv
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
@@ -101,7 +101,7 @@ func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
 	ps.ft.ClunkOpen()
 	ephemeral := ps.et.Get()
 	for _, po := range ephemeral {
-		db.DPrintf(db.PROTSRV, "Detach %v", po.Path())
+		db.DPrintf(db.ALWAYS, "Detach %v", po.Path())
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	if detach != nil {
@@ -227,11 +227,11 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 }
 
 func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, eph bool, qid *sp.Tqid) *fid.Fid {
-	p := dir.Copy()
-	po := fid.MkPobj(append(p, name), o, ctx)
+	pn := dir.Copy().Append(name)
+	po := fid.MkPobj(pn, o, ctx)
 	nf := fid.MakeFidPath(po, 0, qid)
 	if eph {
-		ps.et.Add(o, po)
+		ps.et.Add(pn, po)
 	}
 	return nf
 }
@@ -378,7 +378,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path) *sp.Rerror
 	ps.wt.WakeupWatch(dlk)
 
 	if ephemeral {
-		ps.et.Del(o)
+		ps.et.Del(path)
 	}
 	return nil
 }
@@ -418,7 +418,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Wstat %v %v", f.Pobj().Ctx().Uname(), f, args)
+	db.DPrintf(db.ALWAYS, "%v: Wstat %v %v", f.Pobj().Ctx().Uname(), f, args)
 	o := f.Pobj().Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
@@ -438,6 +438,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		ps.wt.WakeupWatch(tlk) // trigger create watch
 		ps.wt.WakeupWatch(slk) // trigger remove watch
 		ps.wt.WakeupWatch(dlk) // trigger dir watch
+		ps.et.Rename(f.Pobj().Path(), dst, f.Pobj())
 		f.Pobj().SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -465,7 +466,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
+	db.DPrintf(db.ALWAYS, "%v: renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
 	oo := oldf.Pobj().Obj()
 	no := newf.Pobj().Obj()
 	switch d1 := oo.(type) {
@@ -495,6 +496,8 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		}
 		ps.vt.IncVersion(newf.Pobj().Obj().Path())
 		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
+
+		// XXX rename
 
 		ps.wt.WakeupWatch(dstlk) // trigger create watch
 		ps.wt.WakeupWatch(srclk) // trigger remove watch

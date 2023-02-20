@@ -40,6 +40,7 @@ CMD ["sh", "-c", "cp -r --no-preserve=mode,ownership bin/user/* /tmp/bin"]
 
 # ========== user image ==========
 FROM base AS sigmauser 
+RUN mkdir jail
 # Copy mr yaml files.
 COPY mr mr
 # Copy uprocd, the entrypoint for this container, to the user image.

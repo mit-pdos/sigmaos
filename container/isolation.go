@@ -26,11 +26,6 @@ const (
 
 // Mount /sys/kernel/security for apparmor to use.
 func SetupIsolationEnv() error {
-	// Mount /sys/kernel/security
-	if err := syscall.Mount("securityfs", "/sys/kernel/security", "securityfs", 0, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /sys/kernel/security: %v", err)
-		return err
-	}
 	return nil
 }
 
@@ -194,7 +189,7 @@ func applySELinuxLabel(pn string) error {
 }
 
 func applyAppArmorProfile(prof string) error {
-	if apparmor.IsEnabled() {
+	if sp.Conf.AppArmor.ENABLED {
 		// Apply the apparmor profile. Will take effect after the next exec.
 		if err := apparmor.ApplyProfile(prof); err != nil {
 			db.DPrintf(db.CONTAINER, "Error apply AppArmor profile %v: %v", prof, err)

@@ -11,7 +11,7 @@ import (
 )
 
 //
-// Crashing proc
+// Partitioning proc
 //
 
 func main() {

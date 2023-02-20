@@ -12,6 +12,9 @@ var Target = "local"
 
 // Local params
 var local = `
+apparmor:
+  enabled: false
+
 conn:
   msg_len: 65536
 
@@ -40,6 +43,9 @@ raft:
 
 // AWS params
 var aws = `
+apparmor:
+  enabled: true
+
 conn:
   msg_len: 65536
 
@@ -67,6 +73,10 @@ raft:
 `
 
 type Config struct {
+	AppArmor struct {
+		// SigmaP connection message length.
+		ENABLED bool `yaml:"enabled"`
+	}
 	Conn struct {
 		// SigmaP connection message length.
 		MSG_LEN int `yaml:"msg_len"`

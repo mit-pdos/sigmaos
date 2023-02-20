@@ -37,10 +37,11 @@ func isolateUserProc(program string) (string, error) {
 	// thread should disallow the Go runtime from scheduling it on another kernel
 	// thread before starting the user proc.
 	runtime.LockOSThread()
-	// Apply SELinux Label
+	// Apply SELinux label.
 	if err := applySELinuxLabel(pn); err != nil {
 		return "", err
 	}
+	// Apply apparmor profile.
 	if err := applyAppArmorProfile(APPARMOR_PROF); err != nil {
 		return "", err
 	}
@@ -182,7 +183,7 @@ func applySELinuxLabel(pn string) error {
 }
 
 func applyAppArmorProfile(prof string) error {
-	if apparmor.IsEnabled() {
+	if sp.Conf.AppArmor.ENABLED {
 		// Apply the apparmor profile. Will take effect after the next exec.
 		if err := apparmor.ApplyProfile(prof); err != nil {
 			db.DPrintf(db.CONTAINER, "Error apply AppArmor profile %v: %v", prof, err)

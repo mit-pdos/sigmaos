@@ -25,6 +25,7 @@ allowed:
   - execve
   - exit_group
   - fcntl
+  - fstat
   - futex
   - getdents64
   - getpeername
@@ -42,7 +43,6 @@ allowed:
   - open
   - pipe2
   - pread64
-  - pthread_create # XXX Not allowed by docker
   - prlimit64
   - read
   - readlinkat
@@ -58,10 +58,18 @@ allowed:
   - setsockopt
   - sigaltstack
   - write
+  - writev
+  # XXX Special for docker
+#  - arch_prctl
 #  - arch_prctl # XXX Not allowed by docker
+#  - pthread_create # XXX Not allowed by docker
 
 cond_allowed:
   socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).
     index: 0
     op1: 40
     op: "SCMP_CMP_NE"
+  clone:
+    index: 0
+    op1: 0x7E020000
+    op: "SCMP_CMP_MASKED_EQ"

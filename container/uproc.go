@@ -1,7 +1,6 @@
 package container
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -17,8 +16,9 @@ import (
 
 func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
-	cmd := exec.Command(uproc.Program, uproc.Args...)
-	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin")
+	//	cmd := exec.Command("strace", append([]string{"-f", "exec-uproc", uproc.Program}, uproc.Args...)...)
+	cmd := exec.Command("exec-uproc", append([]string{uproc.Program}, uproc.Args...)...)
+	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv(proc.SIGMAUPROCD, uprocd.String())
 	uproc.AppendEnv(proc.SIGMANET, net)
 	cmd.Env = uproc.GetEnv()
@@ -46,11 +46,6 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 		//			},
 		//		},
 	}
-	pn, err := exec.LookPath("exec-uproc")
-	if err != nil {
-		return fmt.Errorf("RunUProc: LookPath: %v", err)
-	}
-	cmd.Path = pn
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
 	defer cleanupJail(uproc.GetPid())
 	if err := cmd.Start(); err != nil {
@@ -70,14 +65,15 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 
 func ExecUProc() error {
 	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
-	program := os.Args[0]
+	args := os.Args[1:]
+	program := args[0]
 	// Isolate the user proc.
 	pn, err := isolateUserProc(program)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.CONTAINER, "exec %v %v", pn, os.Args)
-	if err := syscall.Exec(pn, os.Args, os.Environ()); err != nil {
+	db.DPrintf(db.CONTAINER, "exec %v %v", pn, args)
+	if err := syscall.Exec(pn, args, os.Environ()); err != nil {
 		db.DPrintf(db.CONTAINER, "Error exec %v", err)
 		return err
 	}

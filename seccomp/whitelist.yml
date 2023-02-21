@@ -15,6 +15,7 @@
 allowed:
   - accept4
   - access
+  - arch_prctl # Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
   - bind
   - brk
   - close
@@ -59,10 +60,6 @@ allowed:
   - sigaltstack
   - write
   - writev
-  # XXX Special for docker
-#  - arch_prctl
-#  - arch_prctl # XXX Not allowed by docker
-#  - pthread_create # XXX Not allowed by docker
 
 cond_allowed:
   socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).

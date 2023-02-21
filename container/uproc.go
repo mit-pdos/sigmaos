@@ -29,22 +29,7 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 		Cloneflags: syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWIPC |
 			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNS, // |
-		//		syscall.CLONE_NEWUSER,
-		//		UidMappings: []syscall.SysProcIDMap{
-		//			{
-		//				ContainerID: 0, //os.Getuid(),
-		//				HostID:      os.Getuid(),
-		//				Size:        1,
-		//			},
-		//		},
-		//		GidMappings: []syscall.SysProcIDMap{
-		//			{
-		//				ContainerID: 0, //os.Getgid(),
-		//				HostID:      os.Getgid(),
-		//				Size:        1,
-		//			},
-		//		},
+			syscall.CLONE_NEWNS,
 	}
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
 	defer cleanupJail(uproc.GetPid())

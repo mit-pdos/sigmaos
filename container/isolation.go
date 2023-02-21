@@ -78,8 +78,6 @@ func finishIsolation() {
 	runtime.UnlockOSThread()
 }
 
-// XXX pair down what is being mounted; exec needs a lot, but maybe
-// not all of it (e.g., usr? and only some subdirectories)
 func jailProcess() error {
 	newRoot := jailPath(proc.GetPid())
 	// Create directories to use as mount points, as well as the new root directory itself.

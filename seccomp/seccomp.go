@@ -82,6 +82,8 @@ func parseOp(op string) (seccomp.ScmpCompareOp, error) {
 	switch op {
 	case "SCMP_CMP_NE":
 		return seccomp.CompareNotEqual, nil
+	case "SCMP_CMP_MASKED_EQ":
+		return seccomp.CompareMaskedEqual, nil
 	default:
 		return 0, fmt.Errorf("Unrecognized seccomp op %v")
 	}

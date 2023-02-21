@@ -69,7 +69,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat([]uint64{uint64(c.sid)}), nil, sessp.MakeFenceNull())
+	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, sessp.MakeFenceNull())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}

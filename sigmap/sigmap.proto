@@ -203,11 +203,12 @@ message Rdetach {
 }
 
 message Theartbeat {
-        repeated uint64 sids = 1;
+        bool serverSide = 1;
+        map<uint64, bool> sids = 2;
 }
 
 message Rheartbeat {
-        repeated uint64 sids = 1;
+        map<uint64, bool> sids = 1;
 }
 
 message Tremovefile {

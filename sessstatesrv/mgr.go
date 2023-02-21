@@ -41,16 +41,16 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find connected sessions.
-func (sm *SessionMgr) getConnectedSessions() []uint64 {
+func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
 	// Lock the session table.
 	sm.st.Lock()
 	defer sm.st.Unlock()
-	sess := make([]uint64, 0, len(sm.st.sessions))
+	sess := make(map[uint64]bool, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.isConnected() {
 			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected, generating heartbeat.", sid)
-			sess = append(sess, uint64(s.Sid))
+			sess[uint64(s.Sid)] = true
 		}
 	}
 	return sess

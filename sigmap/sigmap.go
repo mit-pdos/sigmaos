@@ -483,7 +483,7 @@ func (r *Tremovefile) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-func MkTheartbeat(sess []uint64) *Theartbeat {
+func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 

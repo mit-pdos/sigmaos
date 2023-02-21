@@ -2,10 +2,12 @@ package group
 
 import (
 	"fmt"
+
+	sp "sigmaos/sigmap"
 )
 
 type GroupConfig struct {
-	SigmaAddrs []string
+	SigmaAddrs []sp.Taddrs
 	RaftAddrs  []string
 }
 

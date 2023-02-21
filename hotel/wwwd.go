@@ -86,11 +86,11 @@ func RunWww(job string, public bool) error {
 	www.pc = pc
 
 	if public {
-		hip, pb, err := pc.AllocPort(port.NOPORT)
+		pi, err := pc.AllocPort(port.NOPORT)
 		if err != nil {
 			db.DFatalf("AllocPort err %v", err)
 		}
-		l, err := net.Listen("tcp", ":"+pb.RealmPort.String())
+		l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -101,7 +101,7 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), hip, pb, proc.GetNet(), a); err != nil {
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, proc.GetNet(), a); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {

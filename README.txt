@@ -1,6 +1,7 @@
 # Building, installing, and running sigmaos.
 
-Make sure docker, mysql, and libseccomp-dev are installed.
+Make sure docker, mysql, and libseccomp-dev are installed,
+and docker daemon is running.
 
 To augment PATH to find proxyd and, if desired, set SIGMADEBUG
 $ source env/env.sh

@@ -37,14 +37,14 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 	return srv, nil
 }
 
-func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, *sigmaclnt.SigmaClnt, error) {
+func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, error) {
 	sc, err := sigmaclnt.MkSigmaClnt(name)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	srv, err := MakeReplServerFsl(root, addr, path, sc, config)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return srv, sc, nil
+	return srv, nil
 }

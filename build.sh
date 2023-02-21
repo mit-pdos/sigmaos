@@ -55,17 +55,8 @@ mkdir -p $USRBIN
 
 # build and start db container
 if [ "${TARGET}" != "aws" ]; then
-   ./start-db.sh
-fi
-
-# XXX this will do go somewhere else
-if ! docker node ls | grep -q 'Leader'; then
-    docker swarm init
-fi 
-
-# One network for tests
-if ! docker network ls | grep -q 'sigmanet-testuser'; then
-    docker network create --driver overlay sigmanet-testuser --attachable
+    ./start-db.sh
+    ./start-network.sh
 fi
 
 # build binaries for host

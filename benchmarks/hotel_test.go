@@ -71,7 +71,7 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 	}
 
 	var err error
-	var svcs []string
+	var svcs []hotel.Srv
 	if sigmaos {
 		svcs = hotel.HotelSvcs
 	}
@@ -100,8 +100,9 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
-			if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
-				db.DFatalf("Error PutFileJson addrs %v", err)
+			mnt := sp.MkMountService(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
+			if err = ts.MountService(p, mnt); err != nil {
+				db.DFatalf("MountService %v", err)
 			}
 		}
 	}

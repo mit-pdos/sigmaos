@@ -17,22 +17,20 @@ func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
 	for i := 0; i < len(addrs); i++ {
 		raddrs[i] = addrs[i]
 	}
-	local := false
-	p := 0
-	l := 0
+	p := -1
+	l := -1
 	for i, a := range raddrs {
 		if a.Net == clntnet {
 			l = i
-			local = true
 			break
 		}
-		if a.Net == sp.ROOTREALM.String() {
+		if a.Net == sp.ROOTREALM.String() && p < 0 {
 			p = i
 		}
 	}
-	if local {
+	if l >= 0 {
 		swap(raddrs, l)
-	} else {
+	} else if p >= 0 {
 		swap(raddrs, p)
 	}
 	return raddrs
@@ -134,7 +132,7 @@ func LocalIP() (string, error) {
 		if strings.HasPrefix(i.String(), "10.10.") {
 			return i.String(), nil
 		}
-		if !strings.HasPrefix(i.String(), "172.") {
+		if !strings.HasPrefix(i.String(), "127.") {
 			return i.String(), nil
 		}
 	}

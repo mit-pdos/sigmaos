@@ -55,7 +55,7 @@ func restoreSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid, b []byte)
 }
 
 func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
-	addrs := []string{}
+	addrs := sp.Taddrs{}
 	for _, pid := range pids {
 		p := path.Join(sp.MEMFS, pid.String())
 		b, err := ts.GetFile(p)

@@ -30,7 +30,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.FsLib, ts.ProcClnt, nrepl, "kvd", []string{group.GRP + "0"}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.FsLib, ts.ProcClnt, nrepl, "kvd", []string{group.GRP + "0", strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
 	return ts
 }
 
@@ -61,7 +61,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 	db.DPrintf(db.TEST, "done testGetPutSet")
 }
 
-func TestStartStop(t *testing.T) {
+func TestStartStopSimple(t *testing.T) {
 	ts := makeTstate(t, 0, 0)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")

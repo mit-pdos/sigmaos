@@ -10,6 +10,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/www"
 )
@@ -69,7 +70,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	if ji.sigmaos {
 		clnt = www.MakeWWWClnt(ji.FsLib, ji.job)
 	} else {
-		clnt = www.MakeWWWClntAddr([]string{ji.k8ssrvaddr})
+		clnt = www.MakeWWWClntAddr(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
 	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {

@@ -71,7 +71,7 @@ while [[ "$#" -gt 1 ]]; do
   esac
 done
 
-if [ $# -gt 1 ]; then
+if [ $# -ne 1 ]; then
     usage
     exit 1
 fi

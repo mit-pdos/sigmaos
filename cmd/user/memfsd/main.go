@@ -21,19 +21,20 @@ func main() {
 		addr := ip + ":0"
 		config := repldummy.MakeConfig()
 		if os.Args[1] == "dummy" {
-			fss, err := memfssrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config, proc.GetRealm())
+			mfs, err := memfssrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config, proc.GetRealm())
 			if err != nil {
 				db.DFatalf("Error makreplmemfs: %v", err)
 			}
-			fss.Serve()
-			fss.Done()
+			mfs.Serve()
+			mfs.Done()
 		}
 	} else {
-		mfs, _, err := memfssrv.MakeMemFs(name, name)
+		mfs, err := memfssrv.MakeMemFs(name, name)
 		if err != nil {
 			db.DFatalf("MakeMemFs %v\n", err)
 		}
 		mfs.Serve()
+		db.DPrintf(db.TEST, "evicted\n")
 		mfs.Done()
 	}
 }

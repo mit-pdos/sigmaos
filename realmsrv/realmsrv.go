@@ -62,13 +62,13 @@ func MkNet(net string) error {
 }
 
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v\n", req.Realm)
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v %v\n", req.Realm, req.Network)
 	rid := sp.Trealm(req.Realm)
 	pn := path.Join(sp.REALMS, req.Realm)
 
-	//if err := MkNet(req.Network); err != nil {
-	//	return err
-	//}
+	if err := MkNet(req.Network); err != nil {
+		return err
+	}
 
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
 	p.SetNcore(1)

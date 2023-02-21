@@ -10,6 +10,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
+	"sigmaos/test"
 )
 
 const (
@@ -49,7 +50,7 @@ func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, 
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "kvd", []string{grp}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
+	return groupmgr.Start(fsl, pclnt, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
 }
 
 func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) {

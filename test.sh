@@ -58,3 +58,15 @@ go test $@ sigmaos/hotel
 #
 
 go test $@ sigmaos/realmclnt -start
+
+
+#
+# tests with overlays
+#
+
+go test $@ sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+go test $@ sigmaos/cacheclnt -start --overlays --run TestCacheClerk
+go test $@ sigmaos/realmclnt -start --overlays --run Basic
+go test $@ sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+
+  

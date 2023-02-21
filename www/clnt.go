@@ -10,11 +10,12 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sp "sigmaos/sigmap"
 )
 
 type WWWClnt struct {
 	jobname  string
-	srvaddrs []string
+	srvaddrs sp.Taddrs
 	*fslib.FsLib
 }
 
@@ -26,7 +27,7 @@ func MakeWWWClnt(fsl *fslib.FsLib, job string) *WWWClnt {
 	return &WWWClnt{job, addrs, fsl}
 }
 
-func MakeWWWClntAddr(addrs []string) *WWWClnt {
+func MakeWWWClntAddr(addrs sp.Taddrs) *WWWClnt {
 	return &WWWClnt{"NOJOB", addrs, nil}
 }
 
@@ -35,7 +36,7 @@ func addrToUrl(addr string) string {
 }
 
 func (clnt *WWWClnt) get(path string) ([]byte, error) {
-	resp, err := http.Get(addrToUrl(clnt.srvaddrs[0]) + path)
+	resp, err := http.Get(addrToUrl(clnt.srvaddrs[0].Addr) + path)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -49,7 +50,7 @@ func (clnt *WWWClnt) get(path string) ([]byte, error) {
 }
 
 func (clnt *WWWClnt) post(path string, vals map[string][]string) ([]byte, error) {
-	resp, err := http.PostForm(addrToUrl(clnt.srvaddrs[0])+path, vals)
+	resp, err := http.PostForm(addrToUrl(clnt.srvaddrs[0].Addr)+path, vals)
 	if err != nil {
 		return []byte{}, err
 	}

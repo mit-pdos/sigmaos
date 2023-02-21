@@ -263,7 +263,9 @@ func seccompProcess() error {
 	if err != nil {
 		return err
 	}
-	seccomp.LoadFilter(sigmaSCWL)
+	if err := seccomp.LoadFilter(sigmaSCWL); err != nil {
+		return err
+	}
 	db.DPrintf(db.CONTAINER, "Successfully seccomped process %v %v", os.Args, sigmaSCWL)
 	return nil
 }

@@ -35,6 +35,7 @@ allowed:
   - getsockopt
   - gettid
   - listen
+  - mkdirat
   - mmap
   - mprotect
   - munmap

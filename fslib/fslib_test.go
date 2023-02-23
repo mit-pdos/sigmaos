@@ -1164,7 +1164,6 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
-	// // XXX these will fail since named runs with a different IP address on this machine
 	sts, err = ts.GetDir(gopath.Join(pathname, "d/~local") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")

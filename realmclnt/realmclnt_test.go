@@ -268,7 +268,54 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 	return status
 }
 
-func TestRealmNetIsolation(t *testing.T) {
+func TestRealmNetIsolationOK(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	// Make a second realm
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+
+	job := rd.String(16)
+	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, test.Overlays)
+	assert.Nil(t, err)
+
+	cc, err := cacheclnt.MkCacheClnt(ts1.FsLib, job)
+	assert.Nil(t, err)
+
+	err = cc.Set("hello", "hello")
+	assert.Nil(t, err)
+
+	_, err = cacheclnt.MkCacheClnt(rootts.FsLib, job)
+	assert.NotNil(t, err)
+
+	mnt, err := ts1.ReadMount(cc.Server(0))
+	assert.Nil(t, err)
+
+	log.Printf("s = %v %v\n", cc.Server(0), mnt)
+
+	// Remove public port
+	if len(mnt.Addr) > 1 {
+		mnt.Addr = mnt.Addr[:1]
+	}
+
+	pn := path.Join(sp.NAMED, "srv")
+	err = ts1.MountService(pn, mnt)
+	assert.Nil(t, err)
+
+	pn = pn + "/"
+
+	status := spawnDirreader(ts1, pn)
+	log.Printf("ts1 dirreader = %v\n", status)
+	if test.Overlays {
+		assert.True(t, status.IsStatusOK())
+	} else {
+		assert.True(t, status.IsStatusOK())
+	}
+
+	cm.Stop()
+
+	rootts.Shutdown()
+}
+
+func TestRealmNetIsolationFail(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	// Make a second realm
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
@@ -298,20 +345,10 @@ func TestRealmNetIsolation(t *testing.T) {
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts1.MountService(pn, mnt)
-	assert.Nil(t, err)
 	err = ts2.MountService(pn, mnt)
 	assert.Nil(t, err)
 
 	pn = pn + "/"
-
-	//status := spawnDirreader(ts1, pn)
-	//if test.Overlays {
-	//assert.True(t, status.IsStatusErr())
-	//} else {
-	//	log.Printf("ts1 dirreader = %v\n", status)
-	//assert.True(t, status.IsStatusOK())
-	//}
 
 	status := spawnDirreader(ts2, pn)
 	if test.Overlays {

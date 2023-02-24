@@ -70,3 +70,4 @@ go test $@ sigmaos/hotel -start --overlays --run GeoSingle
 go test $@ sigmaos/hotel -start --overlays --run Www
 go test $@ sigmaos/realmclnt -start --overlays --run Basic
 go test $@ sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+go test $@ sigmaos/realmclnt -start --overlays --run RealmNetIsolation

@@ -66,4 +66,7 @@ go test $@ sigmaos/realmclnt -start
 
 go test $@ sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
 go test $@ sigmaos/cacheclnt -start --overlays --run TestCacheClerk
+go test $@ sigmaos/hotel -start --overlays --run GeoSingle
+go test $@ sigmaos/hotel -start --overlays --run Www
 go test $@ sigmaos/realmclnt -start --overlays --run Basic
+go test $@ sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle

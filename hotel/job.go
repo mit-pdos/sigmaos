@@ -53,9 +53,10 @@ type Srv struct {
 }
 
 func MkHotelSvc(public bool) []Srv {
-	return []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
-		Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
-		Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", public}}
+	return []Srv{Srv{"hotel-userd", public}, Srv{"hotel-rated", public},
+		Srv{"hotel-geod", public}, Srv{"hotel-profd", public},
+		Srv{"hotel-searchd", public}, Srv{"hotel-reserved", public},
+		Srv{"hotel-recd", public}, Srv{"hotel-wwwd", public}}
 }
 
 var ncores = []int{0, 1,

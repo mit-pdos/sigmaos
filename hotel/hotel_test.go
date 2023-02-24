@@ -353,7 +353,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBenchSearch(t *testing.T) {
+func TestBenchSearchSigma(t *testing.T) {
 	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)
@@ -398,7 +398,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBenchGeo(t *testing.T) {
+func TestBenchGeoSigma(t *testing.T) {
 	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)

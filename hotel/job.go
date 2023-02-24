@@ -52,9 +52,11 @@ type Srv struct {
 	Public bool
 }
 
-var HotelSvcs = []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
-	Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
-	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", test.Overlays}}
+func MkHotelSvc(public bool) []Srv {
+	return []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
+		Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
+		Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", public}}
+}
 
 var ncores = []int{0, 1,
 	1, 1, 3,

@@ -273,7 +273,7 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstate(t, hotel.HotelSvcs, NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 
@@ -328,7 +328,7 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := makeTstate(t, hotel.HotelSvcs, NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
@@ -354,7 +354,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearch(t *testing.T) {
-	ts := makeTstate(t, hotel.HotelSvcs, NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
@@ -399,7 +399,7 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeo(t *testing.T) {
-	ts := makeTstate(t, hotel.HotelSvcs, NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
@@ -438,7 +438,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := makeTstate(t, hotel.HotelSvcs, NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

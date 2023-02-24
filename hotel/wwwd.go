@@ -10,7 +10,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/port"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
@@ -79,17 +78,12 @@ func RunWww(job string, public bool) error {
 	http.HandleFunc("/reservation", www.reservationHandler)
 	http.HandleFunc("/geo", www.geoHandler)
 
-	pc, err := portclnt.MkPortClnt(www.FsLib, proc.GetKernelId())
-	if err != nil {
-		return err
-	}
-	www.pc = pc
-
 	if public {
-		pi, err := pc.AllocPort(port.NOPORT)
+		pc, pi, err := portclnt.MkPortClntPort(www.FsLib)
 		if err != nil {
 			db.DFatalf("AllocPort err %v", err)
 		}
+		www.pc = pc
 		l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
@@ -113,7 +107,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("%v", http.Serve(l, nil))
 		}()
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
-		if err = pc.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+		if err = www.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
 			db.DFatalf("MountService %v", err)
 		}
 	}

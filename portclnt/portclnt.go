@@ -6,7 +6,6 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -28,8 +27,8 @@ func MkPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
 	return &PortClnt{fsl, kc}, nil
 }
 
-func MkPortClntPort(sc *sigmaclnt.SigmaClnt) (*PortClnt, PortInfo, error) {
-	pc, err := MkPortClnt(sc.FsLib, proc.GetKernelId())
+func MkPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
+	pc, err := MkPortClnt(fsl, proc.GetKernelId())
 	if err != nil {
 		return nil, PortInfo{}, err
 	}

@@ -72,7 +72,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, error) {
 	if err != nil {
 		return nil, err
 	}
-	pc, pi, err := portclnt.MkPortClntPort(sc)
+	pc, pi, err := portclnt.MkPortClntPort(sc.FsLib)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func MakeReplServerPublic(root fs.Dir, path, name string, conf repl.Config, real
 
 // Make MemFs with a public port and advertise the port if valid pn
 func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
-	pc, pi, err := portclnt.MkPortClntPort(sc)
+	pc, pi, err := portclnt.MkPortClntPort(sc.FsLib)
 	if err != nil {
 		return nil, err
 	}

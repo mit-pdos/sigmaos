@@ -1,9 +1,8 @@
 package cacheclnt
 
 import (
-	"sigmaos/fslib"
-	"sigmaos/procclnt"
 	"sigmaos/shardsvcmgr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -16,9 +15,9 @@ type CacheMgr struct {
 	job string
 }
 
-func MkCacheMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, n int, public bool) (*CacheMgr, error) {
+func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, n int, public bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := shardsvcmgr.MkShardMgr(fsl, pclnt, n, job, "cached", sp.CACHE, public)
+	sm, err := shardsvcmgr.MkShardMgr(sc, n, job, "cached", sp.CACHE, public)
 	if err != nil {
 		return nil, err
 	}

@@ -289,8 +289,6 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	mnt, err := ts1.ReadMount(cc.Server(0))
 	assert.Nil(t, err)
 
-	log.Printf("s = %v %v\n", cc.Server(0), mnt)
-
 	// Remove public port
 	if len(mnt.Addr) > 1 {
 		mnt.Addr = mnt.Addr[:1]
@@ -303,7 +301,6 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	pn = pn + "/"
 
 	status := spawnDirreader(ts1, pn)
-	log.Printf("ts1 dirreader = %v\n", status)
 	if test.Overlays {
 		assert.True(t, status.IsStatusOK())
 	} else {
@@ -336,8 +333,6 @@ func TestRealmNetIsolationFail(t *testing.T) {
 
 	mnt, err := ts1.ReadMount(cc.Server(0))
 	assert.Nil(t, err)
-
-	log.Printf("s = %v %v\n", cc.Server(0), mnt)
 
 	// Remove public port
 	if len(mnt.Addr) > 1 {

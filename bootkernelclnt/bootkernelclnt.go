@@ -20,10 +20,14 @@ const (
 )
 
 func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs, overlays bool) (string, error) {
+	s, e := namedAddr.Taddrs2String()
+	if e != nil {
+		return "", e
+	}
 	args := []string{
 		"--pull", tag,
 		"--boot", srvs,
-		"--named", namedAddr.Taddrs2String(),
+		"--named", s,
 		"--host",
 	}
 	if overlays {

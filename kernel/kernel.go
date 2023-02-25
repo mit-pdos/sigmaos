@@ -174,7 +174,7 @@ func (k *Kernel) shutdown() {
 	}
 }
 
-func makeNamedProc(addr *sp.Taddr, replicate bool, id int, pe sp.Taddrs, realmId sp.Trealm) *proc.Proc {
+func makeNamedProc(addr *sp.Taddr, replicate bool, id int, pe sp.Taddrs, realmId sp.Trealm) (*proc.Proc, error) {
 	args := []string{addr.Addr, realmId.String(), ""}
 	// If we're running replicated...
 	if replicate {
@@ -184,16 +184,23 @@ func makeNamedProc(addr *sp.Taddr, replicate bool, id int, pe sp.Taddrs, realmId
 			peers = append(peers, addReplPortOffset(peer.Addr))
 		}
 		args = append(args, strconv.Itoa(id))
-		args = append(args, peers.Taddrs2String())
+		s, err := peers.Taddrs2String()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, s)
 	}
 
 	p := proc.MakePrivProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args, true)
-	return p
+	return p, nil
 }
 
 // Run a named (but not as a proc)
 func RunNamed(addr *sp.Taddr, replicate bool, id int, peers sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
-	p := makeNamedProc(addr, replicate, id, peers, realmId)
+	p, err := makeNamedProc(addr, replicate, id, peers, realmId)
+	if err != nil {
+		return nil, err
+	}
 	cmd, err := kproc.RunKernelProc(p, peers, realmId)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)

@@ -102,9 +102,14 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
 }
 
-func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
+func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
 	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
-	p.AppendEnv(proc.SIGMANAMED, clnt.NamedAddr().Taddrs2String())
+	s, err := clnt.NamedAddr().Taddrs2String()
+	if err != nil {
+		return err
+	}
+	p.AppendEnv(proc.SIGMANAMED, s)
+	return nil
 }
 
 // Spawn a proc on kernelId. If viaProcd is false, then the proc env is set up
@@ -422,6 +427,10 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 		db.DFatalf("exited %v err %v", proc.GetPid(), err)
 	}
 	clnt.FsLib.Exit()
+}
+
+func (clnt *ProcClnt) ExitedOK() {
+	clnt.Exited(proc.MakeStatus(proc.StatusOK))
 }
 
 func ExitedProcd(fsl *fslib.FsLib, pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {

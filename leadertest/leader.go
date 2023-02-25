@@ -85,5 +85,5 @@ func RunLeader(dir, last, child string) {
 		}
 	}
 
-	sc.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.ExitedOK()
 }

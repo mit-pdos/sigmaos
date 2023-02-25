@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -52,9 +52,12 @@ type Srv struct {
 	Public bool
 }
 
-var HotelSvcs = []Srv{Srv{"hotel-userd", false}, Srv{"hotel-rated", false},
-	Srv{"hotel-geod", false}, Srv{"hotel-profd", false}, Srv{"hotel-searchd", false},
-	Srv{"hotel-reserved", false}, Srv{"hotel-recd", false}, Srv{"hotel-wwwd", test.Overlays}}
+func MkHotelSvc(public bool) []Srv {
+	return []Srv{Srv{"hotel-userd", public}, Srv{"hotel-rated", public},
+		Srv{"hotel-geod", public}, Srv{"hotel-profd", public},
+		Srv{"hotel-searchd", public}, Srv{"hotel-reserved", public},
+		Srv{"hotel-recd", public}, Srv{"hotel-wwwd", public}}
+}
 
 var ncores = []int{0, 1,
 	1, 1, 3,
@@ -64,22 +67,22 @@ var ncores = []int{0, 1,
 //	2, 2, 3,
 //	3, 0, 2}
 
-func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
 
 	// Init fs.
-	InitHotelFs(fsl, job)
+	InitHotelFs(sc.FsLib, job)
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(fsl, pclnt, job, ncache, test.Overlays)
+		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, test.Overlays)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
 			return nil, nil, nil, err
 		}
-		cc, err = cacheclnt.MkCacheClnt(fsl, job)
+		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
 		if err != nil {
 			db.DFatalf("Error cacheclnt %v", err)
 			return nil, nil, nil, err
@@ -91,11 +94,11 @@ func MakeHotelJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, srvs [
 	for i, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public)})
 		p.SetNcore(proc.Tcore(ncores[i]))
-		if _, errs := pclnt.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
+		if _, errs := sc.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, nil, nil, err
 		}
-		if err = pclnt.WaitStart(p.GetPid()); err != nil {
+		if err = sc.WaitStart(p.GetPid()); err != nil {
 			db.DFatalf("Error spawn proc %v: %v", p, err)
 			return nil, nil, nil, err
 		}

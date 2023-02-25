@@ -72,7 +72,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, error) {
 	if err != nil {
 		return nil, err
 	}
-	pc, pi, err := portclnt.MkPortClntPort(sc)
+	pc, pi, err := portclnt.MkPortClntPort(sc.FsLib)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,11 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
-	for _, a := range proc.Named() {
+	as, e := proc.Named()
+	if e != nil {
+		return nil, e
+	}
+	for _, a := range as {
 		if a.Addr == addr {
 			isInitNamed = true
 			break
@@ -165,7 +169,7 @@ func MakeReplServerPublic(root fs.Dir, path, name string, conf repl.Config, real
 
 // Make MemFs with a public port and advertise the port if valid pn
 func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
-	pc, pi, err := portclnt.MkPortClntPort(sc)
+	pc, pi, err := portclnt.MkPortClntPort(sc.FsLib)
 	if err != nil {
 		return nil, err
 	}

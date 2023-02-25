@@ -208,15 +208,8 @@ func MkTaddrs(addr []string) Taddrs {
 	return addrs
 }
 
-func String2Taddrs(as string) Taddrs {
-	addrs := make([]*Taddr, 0)
-	for _, s := range strings.Split(as, ",") {
-		addrs = append(addrs, MkTaddr(s))
-	}
-	return addrs
-}
-
-func (as Taddrs) Taddrs2String() string {
+// Ignores net
+func (as Taddrs) String() string {
 	s := ""
 	for i, a := range as {
 		if i < len(as)-1 {
@@ -226,6 +219,34 @@ func (as Taddrs) Taddrs2String() string {
 		}
 	}
 	return s
+}
+
+// Includes net. In the future should return a mnt, but we need to
+// package it up in a way suitable to pass as argument or environment
+// variable to a program.
+func (as Taddrs) Taddrs2String() (string, error) {
+	s := ""
+	for i, a := range as {
+		if i < len(as)-1 {
+			s += a.Addr + "/" + a.Net + ","
+		} else {
+			s += a.Addr + "/" + a.Net
+		}
+	}
+	return s, nil
+}
+
+func String2Taddrs(as string) (Taddrs, error) {
+	addrs := make([]*Taddr, 0)
+	for _, s := range strings.Split(as, ",") {
+		a := strings.Split(s, "/")
+		n := ""
+		if len(a) > 1 {
+			n = a[1]
+		}
+		addrs = append(addrs, MkTaddrRealm(a[0], n))
+	}
+	return addrs, nil
 }
 
 func MkErr(msg *Rerror) *serr.Err {

@@ -73,7 +73,7 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 	var err error
 	var svcs []hotel.Srv
 	if sigmaos {
-		svcs = hotel.HotelSvcs
+		svcs = hotel.MkHotelSvc(test.Overlays)
 	}
 
 	if ji.justCli {

@@ -395,5 +395,5 @@ func (c *Coord) Work() {
 
 	atomic.StoreInt32(&c.done, 1)
 
-	c.Exited(proc.MakeStatus(proc.StatusOK))
+	c.ExitedOK()
 }

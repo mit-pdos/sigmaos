@@ -469,6 +469,10 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	clnt.FsLib.Exit()
 }
 
+func (clnt *ProcClnt) ExitedOK() {
+	clnt.Exited(proc.MakeStatus(proc.StatusOK))
+}
+
 func ExitedProcd(fsl *fslib.FsLib, pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := exited(fsl, procdir, parentdir, pid, status)

@@ -89,5 +89,5 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	sc.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.ExitedOK()
 }

@@ -63,5 +63,5 @@ func RunProc(epochstr, dir string) {
 		}
 	}
 
-	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
+	pclnt.ExitedOK()
 }

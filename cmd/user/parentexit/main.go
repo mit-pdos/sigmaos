@@ -33,5 +33,5 @@ func main() {
 	if err != nil {
 		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
-	sc.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.ExitedOK()
 }

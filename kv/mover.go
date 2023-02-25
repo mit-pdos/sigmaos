@@ -114,7 +114,7 @@ func (mv *Mover) delShard(sharddir string) {
 	// we are done.
 	if _, err := mv.Stat(sharddir); err != nil && serr.IsErrNotfound(err) {
 		db.DPrintf(db.KVMV_ERR, "Delete conf %v not found %v\n", mv.epochstr, sharddir)
-		mv.Exited(proc.MakeStatus(proc.StatusOK))
+		mv.ExitedOK()
 		return
 	}
 
@@ -122,7 +122,7 @@ func (mv *Mover) delShard(sharddir string) {
 		db.DPrintf(db.KVMV_ERR, "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
 		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 	} else {
-		mv.Exited(proc.MakeStatus(proc.StatusOK))
+		mv.ExitedOK()
 	}
 }
 

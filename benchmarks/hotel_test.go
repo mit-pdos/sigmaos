@@ -91,7 +91,7 @@ func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss strin
 	}
 
 	if !ji.justCli {
-		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
+		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 	}
 

@@ -173,7 +173,6 @@ func TestAppMR(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, apps := makeNMRJobs(ts1, 1, MR_APP)
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -384,7 +383,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	rootts.Shutdown()
 }
 
-// XXX Old realm balance benchmark involving KV & MR.
+// Old realm balance benchmark involving KV & MR.
 // Start a realm with a long-running BE mr job. Then, start a realm with a kv
 // job. In phases, ramp the kv job's CPU utilization up and down, and watch the
 // realm-level software balance resource requests across realms.
@@ -440,7 +439,6 @@ func testWww(t *testing.T, sigmaos bool) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
 	jobs, ji := makeWwwJobs(ts1, sigmaos, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -471,7 +469,6 @@ func TestWwwK8s(t *testing.T) {
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, ji := makeHotelJobs(ts1, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -508,7 +505,6 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -529,7 +525,6 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
-	// XXX Clean this up/hide this somehow.
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

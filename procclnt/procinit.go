@@ -77,18 +77,3 @@ func MountPids(fsl *fslib.FsLib, namedAddr sp.Taddrs) error {
 	mountDir(fsl, namedAddr, sp.KPIDSREL, sp.KPIDSREL)
 	return nil
 }
-
-// XXX REMOVE THIS AFTER DEADLINE PUSH
-func MakeProcClntTmp(fsl *fslib.FsLib, namedAddr sp.Taddrs) *ProcClnt {
-	MountPids(fsl, namedAddr)
-	if err := fsl.MountTree(namedAddr, sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
-		debug.PrintStack()
-		db.DFatalf("error mounting procd err %v\n", err)
-	}
-
-	clnt := makeProcClnt(fsl, proc.GetPid(), proc.GetProcDir())
-
-	mountDir(fsl, namedAddr, proc.GetProcDir(), proc.PROCDIR)
-
-	return clnt
-}

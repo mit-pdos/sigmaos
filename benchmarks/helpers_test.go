@@ -42,7 +42,7 @@ func makeNProcs(n int, prog string, args []string, env map[string]string, ncore 
 
 func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
-	_, errs := ts.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
+	_, errs := ts.SpawnBurst(ps)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 

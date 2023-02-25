@@ -244,7 +244,7 @@ realm_balance() {
   hotel_max_rps="1000,3000,1000"
   hotel_ncache=3
   n_vm=8
-  driver_vm=14
+  driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run

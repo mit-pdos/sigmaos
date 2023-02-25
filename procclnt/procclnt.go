@@ -98,46 +98,6 @@ type errTuple struct {
 	err  error
 }
 
-// XXX Currently for benchmarking purposes... remove eventually.
-func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.Proc, []error) {
-	failed := []*proc.Proc{}
-	errs := []error{}
-	errc := make(chan []*errTuple)
-	clnt.updateSchedds()
-	for i := 0; i < len(ps); i += chunksz {
-		go func(i int) {
-			// Take a slice of procs.
-			pslice := ps[i : i+chunksz]
-			es := []*errTuple{}
-			lastUpdate := time.Now()
-			for _, p := range pslice {
-				// Update the list of procds periodically, but not too often
-				if time.Since(lastUpdate) >= sp.Conf.Realm.RESIZE_INTERVAL {
-					clnt.updateSchedds()
-					lastUpdate = time.Now()
-				}
-				kernelId := clnt.nextSchedd()
-				// Update the list of active procds.
-				err := clnt.spawn(kernelId, HSCHEDD, p, clnt.getScheddClnt(kernelId))
-				if err != nil {
-					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
-					es = append(es, &errTuple{p, err})
-				}
-			}
-			errc <- es
-		}(i)
-	}
-	// Wait for spawn results.
-	for i := 0; i < len(ps); i += chunksz {
-		es := <-errc
-		for _, e := range es {
-			failed = append(failed, e.proc)
-			errs = append(errs, e.err)
-		}
-	}
-	return failed, errs
-}
-
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
 }
@@ -468,7 +428,6 @@ func ExitedProcd(fsl *fslib.FsLib, pid proc.Tpid, procdir string, parentdir stri
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := exited(fsl, procdir, parentdir, pid, status)
 	if err != nil {
-		// XXX maybe remove any state left of proc?
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()

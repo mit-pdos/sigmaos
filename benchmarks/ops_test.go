@@ -102,7 +102,6 @@ func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duratio
 	return time.Since(start), 1.0
 }
 
-// XXX Should get job name in a tuple.
 func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	ji := i.(*MRJobInstance)

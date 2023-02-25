@@ -29,7 +29,11 @@ func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (
 
 // Only to be called by procs.
 func MakeFsLib(uname string) (*FsLib, error) {
-	return MakeFsLibAddr(uname, proc.GetRealm(), proc.GetSigmaLocal(), proc.Named())
+	as, err := proc.Named()
+	if err != nil {
+		return nil, err
+	}
+	return MakeFsLibAddr(uname, proc.GetRealm(), proc.GetSigmaLocal(), as)
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {

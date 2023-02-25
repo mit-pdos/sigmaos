@@ -142,9 +142,14 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
 }
 
-func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) {
+func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
 	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
-	p.AppendEnv(proc.SIGMANAMED, clnt.NamedAddr().Taddrs2String())
+	s, err := clnt.NamedAddr().Taddrs2String()
+	if err != nil {
+		return err
+	}
+	p.AppendEnv(proc.SIGMANAMED, s)
+	return nil
 }
 
 // Spawn a proc on kernelId. If viaProcd is false, then the proc env is set up

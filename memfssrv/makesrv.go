@@ -120,7 +120,11 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
-	for _, a := range proc.Named() {
+	as, e := proc.Named()
+	if e != nil {
+		return nil, e
+	}
+	for _, a := range as {
 		if a.Addr == addr {
 			isInitNamed = true
 			break

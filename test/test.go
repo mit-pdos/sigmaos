@@ -115,11 +115,13 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var containerIP string
 	var err error
 	if rootNamedIP == "" {
+		// If no root named IP is specified, assume it is running locally.
 		containerIP, err = container.LocalIP()
 		if err != nil {
 			return nil, err
 		}
 	} else {
+		// Set root named IP to specified IP.
 		containerIP = rootNamedIP
 	}
 	if start {

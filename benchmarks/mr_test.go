@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -48,5 +49,7 @@ func (ji *MRJobInstance) StartMRJob() {
 
 func (ji *MRJobInstance) Wait() {
 	ji.cm.Wait()
+	// Sleep a bit to allow util to update.
+	time.Sleep(4 * time.Second)
 	ji.p.Done()
 }

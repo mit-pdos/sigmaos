@@ -245,7 +245,7 @@ realm_balance() {
   hotel_ncache=3
   sl="20s"
   n_vm=8
-  driver_vm=0
+  driver_vm=9
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run

@@ -117,7 +117,6 @@ func RunWww(job string, public bool) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	www.p = perf
-	defer www.p.Done()
 
 	if err := www.Started(); err != nil {
 		return err
@@ -136,6 +135,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
+	s.p.Done()
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

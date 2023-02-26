@@ -14,6 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdev"
 	rd "sigmaos/rand"
@@ -41,16 +42,18 @@ type HotelJobInstance struct {
 	cc         *cacheclnt.CacheClnt
 	cm         *cacheclnt.CacheMgr
 	lgs        []*loadgen.LoadGenerator
+	p          *perf.Perf
 	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.RealmTstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.RealmTstate = ts
+	ji.p = p
 	ji.justCli = justCli
 	ji.ncache = ncache
 
@@ -156,6 +159,9 @@ func (ji *HotelJobInstance) printStats() {
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf(db.TEST, "extra sleep")
 	time.Sleep(10 * time.Second)
+	if ji.p != nil {
+		ji.p.Done()
+	}
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()

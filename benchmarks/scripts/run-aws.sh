@@ -240,7 +240,7 @@ realm_balance() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki20G.yml
-  hotel_dur="30s,20s,50s"
+  hotel_dur="20s,20s,40s"
   hotel_max_rps="1000,3000,1000"
   hotel_ncache=3
   sl="20s"

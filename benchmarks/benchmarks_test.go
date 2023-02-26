@@ -294,7 +294,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep Hotel job
 	hotelJobs, ji := makeHotelJobs(ts2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
-		hotel.RandSearchReq(wc, r)
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	p1 := monitorCoresAssigned(ts1)
 	p2 := monitorCoresAssigned(ts2)

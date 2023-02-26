@@ -106,7 +106,11 @@ func RunWww(job string, public bool) error {
 		go func() {
 			db.DFatalf("%v", http.Serve(l, nil))
 		}()
-		mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
+		a, err := container.QualifyAddr(l.Addr().String())
+		if err != nil {
+			db.DFatalf("QualifyAddr %v err %v", a, err)
+		}
+		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = www.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
 			db.DFatalf("MountService %v", err)
 		}

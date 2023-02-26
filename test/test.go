@@ -26,10 +26,12 @@ const (
 
 var start bool
 var tag string
+var rootNamedIP string
 var Overlays bool
 
 func init() {
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
+	flag.StringVar(&rootNamedIP, "rootNamedIP", "", "IP of the root named server")
 	flag.BoolVar(&start, "start", false, "Start system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 }
@@ -110,9 +112,15 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	namedport := sp.MkTaddrs([]string{NAMEDPORT})
 	kernelid := ""
-	containerIP, err := container.LocalIP()
-	if err != nil {
-		return nil, err
+	var containerIP string
+	var err error
+	if rootNamedIP == "" {
+		containerIP, err = container.LocalIP()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		containerIP = rootNamedIP
 	}
 	if start {
 		kernelid = bootkernelclnt.GenKernelId()

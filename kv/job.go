@@ -155,7 +155,7 @@ func SpawnGrp(sc *sigmaclnt.SigmaClnt, jobname, grp string, ncore proc.Tcore, re
 
 func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) {
 	// Create keys
-	clrk, err := MakeClerkFsl(sc, job)
+	clrk, err := MakeClerkFsl(sc.FsLib, job)
 	if err != nil {
 		return nil, err
 	}

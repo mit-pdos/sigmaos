@@ -59,7 +59,7 @@ func main() {
 		})
 	} else {
 		var err error
-		clk, err = kv.MakeClerkFsl(sc, os.Args[1])
+		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1])
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}
@@ -76,8 +76,8 @@ func main() {
 	run(sc.ProcClnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
-func waitEvict(kc *kv.KvClerk) {
-	err := kc.WaitEvict(proc.GetPid())
+func waitEvict(pclnt *procclnt.ProcClnt, kc *kv.KvClerk) {
+	err := pclnt.WaitEvict(proc.GetPid())
 	if err != nil {
 		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
@@ -98,7 +98,7 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 			atomic.StoreInt32(&done, 1)
 		}()
 	} else {
-		go waitEvict(kc)
+		go waitEvict(pclnt, kc)
 	}
 	start := time.Now()
 	for atomic.LoadInt32(&done) == 0 {
@@ -187,13 +187,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
+				if err := kc.SetRaw(key, []byte(proc.GetPid().String()), 0); err != nil {
 					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
-				if _, err := kc.Get(key, 0); err != nil {
+				if _, err := kc.GetRaw(key, 0); err != nil {
 					return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.

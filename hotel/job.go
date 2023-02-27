@@ -75,9 +75,10 @@ type HotelJob struct {
 	cacheClnt *cacheclnt.CacheClnt
 	cacheMgr  *cacheclnt.CacheMgr
 	pids      []proc.Tpid
+	cache     string
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, ncache int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -102,7 +103,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (
 	pids := make([]proc.Tpid, 0, len(srvs))
 
 	for i, srv := range srvs {
-		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public)})
+		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
@@ -115,7 +116,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (
 		pids = append(pids, p.GetPid())
 	}
 
-	return &HotelJob{sc, cc, cm, pids}, nil
+	return &HotelJob{sc, cc, cm, pids, "cached"}, nil
 }
 
 func (hj *HotelJob) Stop() error {

@@ -33,11 +33,11 @@ func (r RatePlans) Less(i, j int) bool {
 
 type Rate struct {
 	dbc    *dbclnt.DbClnt
-	cachec *cacheclnt.CacheClnt
+	cachec CacheClnt
 }
 
 // Run starts the server
-func RunRateSrv(job string, public bool) error {
+func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
 	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRATE, r, public)
 	if err != nil {
@@ -48,7 +48,7 @@ func RunRateSrv(job string, public bool) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, job)
+	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}

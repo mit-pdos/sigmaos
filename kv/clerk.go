@@ -16,7 +16,6 @@ import (
 	"sigmaos/group"
 	"sigmaos/reader"
 	"sigmaos/serr"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -65,27 +64,27 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	*sigmaclnt.SigmaClnt
+	*fslib.FsLib
 	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 	job   string
 }
 
-func MakeClerkFsl(sc *sigmaclnt.SigmaClnt, job string) (*KvClerk, error) {
-	return makeClerk(sc, job)
+func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+	return makeClerk(fsl, job)
 }
 
 func MakeClerk(name, job string) (*KvClerk, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
+	fsl, err := fslib.MakeFsLib(name)
 	if err != nil {
 		return nil, err
 	}
-	return makeClerk(sc, job)
+	return makeClerk(fsl, job)
 }
 
-func makeClerk(sc *sigmaclnt.SigmaClnt, job string) (*KvClerk, error) {
+func makeClerk(fsl *fslib.FsLib, job string) (*KvClerk, error) {
 	kc := &KvClerk{}
-	kc.SigmaClnt = sc
+	kc.FsLib = fsl
 	kc.conf = &Config{}
 	kc.job = job
 	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
@@ -214,7 +213,18 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k Tkey, off sp.Toffset) ([]byte, error) {
+func (kc *KvClerk) Get(key string, val any) error {
+	b, err := kc.GetRaw(Tkey(key), 0)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(b, val); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (kc *KvClerk) GetRaw(k Tkey, off sp.Toffset) ([]byte, error) {
 	op := &op{GETVAL, []byte{}, k, off, sp.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
@@ -226,7 +236,15 @@ func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k Tkey, b []byte, off sp.Toffset) error {
+func (kc *KvClerk) Set(k string, val any) error {
+	b, err := json.Marshal(val)
+	if err != nil {
+		return nil
+	}
+	return kc.SetRaw(Tkey(k), b, 0)
+}
+
+func (kc *KvClerk) SetRaw(k Tkey, b []byte, off sp.Toffset) error {
 	op := &op{SET, b, k, off, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err

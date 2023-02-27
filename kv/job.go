@@ -94,7 +94,7 @@ func (kvf *KVFleet) Job() string {
 }
 
 func (kvf *KVFleet) StartJob() error {
-	kvf.balgm = StartBalancers(kvf.FsLib, kvf.ProcClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
+	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
 	// Add an initial kvd group to put keys in.
 	return kvf.AddKVDGroup()
 }
@@ -103,7 +103,7 @@ func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	kvf.kvdgms = append(kvf.kvdgms, SpawnGrp(kvf.FsLib, kvf.ProcClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0))
+	kvf.kvdgms = append(kvf.kvdgms, SpawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0))
 	// Get balancer to add the group
 	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "add", grp); err != nil {
 		return err
@@ -144,13 +144,13 @@ func (kvf *KVFleet) Stop() error {
 	return nil
 }
 
-func StartBalancers(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
+func StartBalancers(sc *sigmaclnt.SigmaClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdncore))
-	return groupmgr.Start(fsl, pclnt, nbal, "balancer", []string{crashhelper, kvdnc, auto}, jobname, 0, nbal, crashbal, 0, 0)
+	return groupmgr.Start(sc, nbal, "balancer", []string{crashhelper, kvdnc, auto}, jobname, 0, nbal, crashbal, 0, 0)
 }
 
-func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
+func SpawnGrp(sc *sigmaclnt.SigmaClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
+	return groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
 }
 
 func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) {

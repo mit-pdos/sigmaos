@@ -139,7 +139,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt, bl.job, bl.kvdncore)
+			bl.mo = MakeMonitor(bl.SigmaClnt, bl.job, bl.kvdncore)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}

@@ -9,11 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/group"
-	"sigmaos/groupmgr"
 	"sigmaos/kv"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/test"
 )
 
@@ -69,46 +66,33 @@ func TestRegex(t *testing.T) {
 
 type Tstate struct {
 	*test.Tstate
-	clrk    *kv.KvClerk
-	mfsgrps []*groupmgr.GroupMgr
-	gmbal   *groupmgr.GroupMgr
-	clrks   []proc.Tpid
-	job     string
+	kvj   *kv.KVJob
+	clrk  *kv.KvClerk
+	clrks []proc.Tpid
 }
 
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *kv.KvClerk) {
 	ts := &Tstate{}
-	ts.job = rand.String(16)
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gmbal = kv.StartBalancers(ts.FsLib, ts.ProcClnt, ts.job, kv.NBALANCER, crashbal, 0, crashhelper, auto)
-	clrk := ts.setup(repl, ncrash)
+	kvj, err := kv.MakeKvdJob(ts.SigmaClnt, 1, repl, 0, "manual")
+	assert.Nil(t, err)
+	ts.kvj = kvj
+	err = ts.kvj.StartJob()
+	assert.Nil(t, err)
+	clrk := ts.setup()
 	return ts, clrk
 }
 
-func (ts *Tstate) setup(repl, ncrash int) *kv.KvClerk {
-	// Create first shard group
-	gn := group.GRP + "0"
-	grp := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, ts.job, gn, 0, repl, ncrash)
-	err := kv.BalancerOpRetry(ts.FsLib, ts.job, "add", gn)
-	assert.Nil(ts.T, err, "BalancerOp")
-	ts.mfsgrps = append(ts.mfsgrps, grp)
-
-	// Create keys
-	clrk, err := kv.InitKeys(ts.SigmaClnt, ts.job, kv.NKEYS)
+// Create keys
+func (ts *Tstate) setup() *kv.KvClerk {
+	clrk, err := kv.InitKeys(ts.SigmaClnt, ts.kvj.Job(), kv.NKEYS)
 	assert.Nil(ts.T, err, "InitKeys: %v", err)
 	return clrk
 }
 
 func (ts *Tstate) done() {
-	ts.gmbal.Stop()
-	ts.stopMemfsgrps()
+	ts.kvj.Stop()
 	ts.Shutdown()
-}
-
-func (ts *Tstate) stopMemfsgrps() {
-	for _, gm := range ts.mfsgrps {
-		gm.Stop()
-	}
 }
 
 func (ts *Tstate) stopClerks() {
@@ -147,32 +131,26 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.job, nil, 0)
+		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvj.Job(), nil, 0)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
 
 	db.DPrintf(db.TEST, "Done startClerks")
 
-	for s := 0; s < kv.NKV; s++ {
-		grp := group.GRP + strconv.Itoa(s+1)
-		gm := kv.SpawnGrp(ts.FsLib, ts.ProcClnt, ts.job, grp, 0, repl, ncrash)
-		ts.mfsgrps = append(ts.mfsgrps, gm)
-		err := kv.BalancerOpRetry(ts.FsLib, ts.job, "add", grp)
-		assert.Nil(ts.T, err, "BalancerOp")
-		// do some puts/gets
+	for i := 0; i < kv.NKV; i++ {
+		err := ts.kvj.AddKVDGroup()
+		assert.Nil(ts.T, err, "AddKVDGroup")
+		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
 
 	db.DPrintf(db.TEST, "Done adds")
 
-	for s := 0; s < kv.NKV; s++ {
-		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
-		err := kv.BalancerOpRetry(ts.FsLib, ts.job, "del", grp)
-		assert.Nil(ts.T, err, "BalancerOp")
-		ts.mfsgrps[len(ts.mfsgrps)-1].Stop()
-		ts.mfsgrps = ts.mfsgrps[0 : len(ts.mfsgrps)-1]
-		// do some puts/gets
+	for i := 0; i < kv.NKV; i++ {
+		err := ts.kvj.RemoveKVDGroup()
+		assert.Nil(ts.T, err, "RemoveKVDGroup")
+		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
 
@@ -184,9 +162,8 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.gmbal.Stop()
-
-	ts.mfsgrps[0].Stop()
+	err := ts.kvj.Stop()
+	assert.Nil(t, err)
 
 	ts.Shutdown()
 }
@@ -258,7 +235,7 @@ func TestAuto(t *testing.T) {
 	ts, _ := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.job, nil, 0)
+		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvj.Job(), nil, 0)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
@@ -271,9 +248,7 @@ func TestAuto(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.gmbal.Stop()
-
-	ts.mfsgrps[0].Stop()
+	ts.kvj.Stop()
 
 	ts.Shutdown()
 }

@@ -139,7 +139,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 			for _, r := range reserves {
 				count += r.Number
 			}
-			if err := s.cachec.Set(key, &count); err != nil {
+			if err := s.cachec.Put(key, &count); err != nil {
 				return false, nil, err
 			}
 		}
@@ -164,7 +164,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
 			hotel_cap = int(nums[0].Number)
-			if err := s.cachec.Set(key, &hotel_cap); err != nil {
+			if err := s.cachec.Put(key, &hotel_cap); err != nil {
 				return false, nil, err
 			}
 		}
@@ -192,7 +192,7 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	// update reservation number
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
-		if err := s.cachec.Set(key, &cnt); err != nil {
+		if err := s.cachec.Put(key, &cnt); err != nil {
 			return err
 		}
 	}

@@ -1,6 +1,7 @@
 package kv_test
 
 import (
+	"log"
 	"regexp"
 	"strconv"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/test"
 )
 
@@ -74,10 +76,11 @@ type Tstate struct {
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *kv.KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, 1, repl, 0, "manual")
+	job := rand.String(16)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, "manual")
 	assert.Nil(t, err)
 	ts.kvf = kvf
-	err = ts.kvf.StartJob()
+	err = ts.kvf.Start()
 	assert.Nil(t, err)
 	clrk := ts.setup()
 	return ts, clrk
@@ -104,21 +107,28 @@ func (ts *Tstate) stopClerks() {
 	}
 }
 
+func TestMiss(t *testing.T) {
+	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
+	assert.True(t, clrk.IsMiss(err))
+	ts.done()
+}
+
 func TestGetPutSet(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	_, err := clrk.Get(kv.MkKey(kv.NKEYS+1), 0)
+	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
 
-	err = clrk.Set(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
+	err = clrk.SetRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
 	assert.NotEqual(ts.T, err, nil, "Set")
 
-	err = clrk.Set(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
+	err = clrk.SetRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
 	assert.Nil(ts.T, err, "Set")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)
-		_, err := clrk.Get(key, 0)
+		_, err := clrk.GetRaw(key, 0)
 		assert.Nil(ts.T, err, "Get "+key.String())
 	}
 

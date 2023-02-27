@@ -17,7 +17,7 @@ func main() {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
 
-	if err := hotel.RunGeoSrv(os.Args[0], public); err != nil {
+	if err := hotel.RunGeoSrv(os.Args[1], public); err != nil {
 		db.DFatalf("RunGeoSrv %v err %v\n", os.Args[0], err)
 	}
 }

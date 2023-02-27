@@ -94,6 +94,11 @@ func makeClerk(fsl *fslib.FsLib, job string) (*KvClerk, error) {
 	return kc, nil
 }
 
+func (kc *KvClerk) IsMiss(err error) bool {
+	db.DPrintf(db.KVCLERK, "IsMiss err %v", err)
+	return serr.IsErrNotfound(err)
+}
+
 // Detach servers not in kvs
 func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	mnts := kc.Mounts()
@@ -256,7 +261,15 @@ func (kc *KvClerk) Append(k Tkey, b []byte) error {
 	return op.err
 }
 
-func (kc *KvClerk) Put(k Tkey, b []byte) error {
+func (kc *KvClerk) Put(k string, val any) error {
+	b, err := json.Marshal(val)
+	if err != nil {
+		return nil
+	}
+	return kc.PutRaw(Tkey(k), b)
+}
+
+func (kc *KvClerk) PutRaw(k Tkey, b []byte) error {
 	op := &op{PUT, b, k, 0, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err

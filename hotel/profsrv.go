@@ -25,7 +25,7 @@ type ProfSrv struct {
 	cachec *cacheclnt.CacheClnt
 }
 
-func RunProfSrv(job string, public bool) error {
+func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
 	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELPROF, ps, public)
 	if err != nil {
@@ -122,7 +122,7 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 			if err != nil {
 				return err
 			}
-			if err := ps.cachec.Set(key, p); err != nil {
+			if err := ps.cachec.Put(key, p); err != nil {
 				return err
 			}
 		}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -72,7 +71,7 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
 		if err := s.cachec.Get(key, r); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !s.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
@@ -80,7 +79,7 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 			if err != nil {
 				return err
 			}
-			if err := s.cachec.Set(key, r); err != nil {
+			if err := s.cachec.Put(key, r); err != nil {
 				return err
 			}
 		}

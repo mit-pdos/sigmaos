@@ -9,7 +9,6 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/test"
@@ -62,13 +61,13 @@ type KVFleet struct {
 	cpids    []proc.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, nkvd int, kvdrepl int, kvdncore proc.Tcore, auto string) (*KVFleet, error) {
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdncore proc.Tcore, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{}
 	kvf.SigmaClnt = sc
 	kvf.nkvd = nkvd
 	kvf.kvdrepl = kvdrepl
 	kvf.kvdncore = kvdncore
-	kvf.job = rand.String(16)
+	kvf.job = job
 	kvf.auto = auto
 	kvf.ready = make(chan bool)
 
@@ -93,7 +92,7 @@ func (kvf *KVFleet) Job() string {
 	return kvf.job
 }
 
-func (kvf *KVFleet) StartJob() error {
+func (kvf *KVFleet) Start() error {
 	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
 	// Add an initial kvd group to put keys in.
 	return kvf.AddKVDGroup()
@@ -160,7 +159,7 @@ func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) 
 		return nil, err
 	}
 	for i := uint64(0); i < uint64(nkeys); i++ {
-		err := clrk.Put(MkKey(i), []byte{})
+		err := clrk.PutRaw(MkKey(i), []byte{})
 		if err != nil {
 			return clrk, err
 		}

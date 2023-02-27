@@ -7,6 +7,7 @@ import (
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kv"
 	"sigmaos/proc"
 	"sigmaos/protdev"
 	"sigmaos/sigmaclnt"
@@ -76,27 +77,39 @@ type HotelJob struct {
 	cacheMgr  *cacheclnt.CacheMgr
 	pids      []proc.Tpid
 	cache     string
+	kvf       *kv.KVFleet
 }
 
 func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, ncache int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
-
+	var kvf *kv.KVFleet
 	// Init fs.
 	InitHotelFs(sc.FsLib, job)
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, proc.Tcore(cacheNcore), test.Overlays)
-		if err != nil {
-			db.DFatalf("Error MkCacheMgr %v", err)
-			return nil, err
-		}
-		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
-		if err != nil {
-			db.DFatalf("Error cacheclnt %v", err)
-			return nil, err
+		if cache == "cached" {
+			cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, proc.Tcore(cacheNcore), test.Overlays)
+			if err != nil {
+				db.DFatalf("Error MkCacheMgr %v", err)
+				return nil, err
+			}
+			cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
+			if err != nil {
+				db.DFatalf("Error cacheclnt %v", err)
+				return nil, err
+			}
+		} else {
+			kvf, err = kv.MakeKvdFleet(sc, job, 1, 0, 0, "manual")
+			if err != nil {
+				return nil, err
+			}
+			err = kvf.Start()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -116,7 +129,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 		pids = append(pids, p.GetPid())
 	}
 
-	return &HotelJob{sc, cc, cm, pids, "cached"}, nil
+	return &HotelJob{sc, cc, cm, pids, cache, kvf}, nil
 }
 
 func (hj *HotelJob) Stop() error {
@@ -130,6 +143,9 @@ func (hj *HotelJob) Stop() error {
 	}
 	if hj.cacheMgr != nil {
 		hj.cacheMgr.Stop()
+	}
+	if hj.kvf != nil {
+		hj.kvf.Stop()
 	}
 	return nil
 }

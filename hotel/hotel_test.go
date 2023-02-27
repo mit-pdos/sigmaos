@@ -3,6 +3,7 @@ package hotel_test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ import (
 var K8S_ADDR string
 var MAX_RPS int
 var DURATION time.Duration
+var cache string
 
 const (
 	NCACHE = 6
@@ -35,6 +37,7 @@ func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
+	flag.StringVar(&cache, "cache", "cached", "Cache service")
 }
 
 type Tstate struct {
@@ -52,9 +55,10 @@ func makeTstate(t *testing.T, srvs []hotel.Srv, ncache int) *Tstate {
 	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
 		n += 1
 	}
+	log.Printf("Nodes %d\n", n)
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, "cached", ncache)
+	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, ncache)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -121,6 +125,7 @@ func TestRateSingle(t *testing.T) {
 	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
+	log.Printf("Rate shutdown\n")
 	ts.stop()
 	ts.Shutdown()
 }

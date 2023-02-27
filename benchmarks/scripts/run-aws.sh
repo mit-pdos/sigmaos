@@ -158,24 +158,43 @@ run_hotel() {
   run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm
 }
 
-#run_kv() {
-#  if [ $# -ne 7 ]; then
-#    echo "run_kv args: n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
-#    exit 1
-#  fi
-#  n_vm=$1
-#  nkvd=$2
-#  nkvd_ncore=$3
-#  nclerk=$4
-#  auto=$5
-#  redisaddr=$6
-#  perf_dir=$7
-#  cmd="
-#    go clean -testcache; \
-#    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
-#  "
-#  run_benchmark $VPC $n_vm $perf_dir "$cmd"
-#}
+run_kv() {
+  if [ $# -ne 8 ]; then
+    echo "run_kv args: n_cores n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
+    exit 1
+  fi
+  n_cores=$1
+  n_vm=$2
+  nkvd=$3
+  nkvd_ncore=$4
+  nclerk=$5
+  auto=$6
+  redisaddr=$7
+  perf_dir=$8
+  cmd="
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+}
+
+run_cached() {
+  if [ $# -ne 6 ]; then
+    echo "run_cached args: n_cores n_vm nkvd kvd_ncore nclerk perf_dir" 1>&2
+    exit 1
+  fi
+  n_cores=$1
+  n_vm=$2
+  nkvd=$3
+  nkvd_ncore=$4
+  nclerk=$5
+  perf_dir=$6
+  cmd="
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+}
 
 # ========== Top-level benchmarks ==========
 
@@ -368,6 +387,30 @@ mr_k8s() {
 #  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
 #}
 
+kv_vs_cached() {
+  # First, run against KVD.
+  auto="manual"
+  nkvd=1
+  nclerk=1
+  n_core=4
+  kvd_ncore=4
+  redisaddr=""
+  n_vm=8
+  run=${FUNCNAME[0]}/kvd/
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_kv $n_core $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+
+  # Then, run against cached.
+  nkvd=0
+  redisaddr="10.0.134.192:6379"
+  n_vm=15
+  run=${FUNCNAME[0]}/cached
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_cached $n_core $n_vm $nkvd $kvd_ncore $nclerk $perf_dir
+}
+
 realm_burst() {
   n_vm=16
   run=${FUNCNAME[0]}
@@ -506,10 +549,10 @@ source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
 graph_realm_balance_be
 graph_realm_balance
+graph_mr_vs_corral
 #graph_k8s_balance
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability
-# graph_mr_vs_corral
 #graph_k8s_mr_aggregate_tpt
 #scrape_realm_burst
 #graph_hotel_tail

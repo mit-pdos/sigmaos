@@ -152,6 +152,15 @@ func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func runCached(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CachedJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	start := time.Now()
+	ji.RunCachedJob()
+	return time.Since(start), 1.0
+}
+
 // XXX Should get job name in a tuple.
 func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*WwwJobInstance)

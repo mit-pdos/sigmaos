@@ -221,6 +221,29 @@ func TestAppKVRepl(t *testing.T) {
 	runKVTest(t, 3)
 }
 
+func TestAppCached(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	const NKEYS = 100
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
+	jobs, ji := makeNCachedJobs(ts1, 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tcore(CLERK_NCORE), proc.Tcore(KVD_NCORE))
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	monitorCoresAssigned(ts1, p)
+	runOps(ts1, ji, runCached, rs)
+	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
 func TestRealmBurst(t *testing.T) {

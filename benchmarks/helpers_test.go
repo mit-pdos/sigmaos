@@ -152,6 +152,19 @@ func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phas
 	return js, is
 }
 
+// ========== Cached Helpers ==========
+func makeNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckncore, cachencore proc.Tcore) ([]*CachedJobInstance, []interface{}) {
+	js := make([]*CachedJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	durs := parseDurations(ts, []string{durstr})
+	for i := 0; i < n; i++ {
+		ji := MakeCachedJob(ts, nkeys, ncache, nclerks, durs[0], ckncore, cachencore)
+		js = append(js, ji)
+		is = append(is, ji)
+	}
+	return js, is
+}
+
 // ========== Www Helpers ========
 
 func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {

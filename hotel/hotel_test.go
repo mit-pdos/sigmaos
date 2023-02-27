@@ -30,7 +30,7 @@ var DURATION time.Duration
 var cache string
 
 const (
-	NCACHE = 6
+	NCACHESRV = 1
 )
 
 func init() {
@@ -110,7 +110,7 @@ func TestGeoSingle(t *testing.T) {
 }
 
 func TestRateSingle(t *testing.T) {
-	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-rated", test.Overlays}}, NCACHE)
+	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-rated", test.Overlays}}, NCACHESRV)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
@@ -164,7 +164,7 @@ func TestUserSingle(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-profd", test.Overlays}}, NCACHE)
+	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-profd", test.Overlays}}, NCACHESRV)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
@@ -185,7 +185,7 @@ func TestProfile(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-reserved", test.Overlays}}, NCACHE)
+	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-reserved", test.Overlays}}, NCACHESRV)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -207,7 +207,7 @@ func TestCheck(t *testing.T) {
 }
 
 func TestReserve(t *testing.T) {
-	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-reserved", test.Overlays}}, NCACHE)
+	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-reserved", test.Overlays}}, NCACHESRV)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -245,7 +245,7 @@ func TestQueryDev(t *testing.T) {
 }
 
 func TestSingleSearch(t *testing.T) {
-	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-geod", false}, hotel.Srv{"hotel-rated", false}, hotel.Srv{"hotel-searchd", test.Overlays}}, NCACHE)
+	ts := makeTstate(t, []hotel.Srv{hotel.Srv{"hotel-geod", false}, hotel.Srv{"hotel-rated", false}, hotel.Srv{"hotel-searchd", test.Overlays}}, NCACHESRV)
 	pdc, err := protdevclnt.MkProtDevClnt(ts.FsLib, sp.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
@@ -266,7 +266,7 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 
@@ -321,7 +321,7 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
@@ -347,7 +347,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearchSigma(t *testing.T) {
-	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
@@ -392,7 +392,7 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeoSigma(t *testing.T) {
-	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	p, err := perf.MakePerf(perf.TEST)
 	assert.Nil(t, err)
@@ -431,7 +431,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHE)
+	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

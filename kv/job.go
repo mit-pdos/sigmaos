@@ -46,7 +46,7 @@ func kvShardPath(job, kvd string, shard Tshard) string {
 	return path.Join(group.GrpPath(JobDir(job), kvd), "shard"+shard.String())
 }
 
-type KVJob struct {
+type KVFleet struct {
 	*sigmaclnt.SigmaClnt
 	nkvd     int        // Number of kvd groups to run the test with.
 	kvdrepl  int        // kvd replication level
@@ -62,83 +62,83 @@ type KVJob struct {
 	cpids    []proc.Tpid
 }
 
-func MakeKvdJob(sc *sigmaclnt.SigmaClnt, nkvd int, kvdrepl int, kvdncore proc.Tcore, auto string) (*KVJob, error) {
-	kvj := &KVJob{}
-	kvj.SigmaClnt = sc
-	kvj.nkvd = nkvd
-	kvj.kvdrepl = kvdrepl
-	kvj.kvdncore = kvdncore
-	kvj.job = rand.String(16)
-	kvj.auto = auto
-	kvj.ready = make(chan bool)
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, nkvd int, kvdrepl int, kvdncore proc.Tcore, auto string) (*KVFleet, error) {
+	kvf := &KVFleet{}
+	kvf.SigmaClnt = sc
+	kvf.nkvd = nkvd
+	kvf.kvdrepl = kvdrepl
+	kvf.kvdncore = kvdncore
+	kvf.job = rand.String(16)
+	kvf.auto = auto
+	kvf.ready = make(chan bool)
 
 	// May already exit
-	kvj.MkDir(KVDIR, 0777)
+	kvf.MkDir(KVDIR, 0777)
 	// Should not exist.
-	if err := kvj.MkDir(JobDir(kvj.job), 0777); err != nil {
+	if err := kvf.MkDir(JobDir(kvf.job), 0777); err != nil {
 		return nil, err
 	}
 
-	kvj.sempath = path.Join(JobDir(kvj.job), "kvclerk-sem")
-	kvj.sem = semclnt.MakeSemClnt(kvj.FsLib, kvj.sempath)
-	if err := kvj.sem.Init(0); err != nil {
+	kvf.sempath = path.Join(JobDir(kvf.job), "kvclerk-sem")
+	kvf.sem = semclnt.MakeSemClnt(kvf.FsLib, kvf.sempath)
+	if err := kvf.sem.Init(0); err != nil {
 		return nil, err
 	}
-	kvj.kvdgms = []*groupmgr.GroupMgr{}
-	kvj.cpids = []proc.Tpid{}
-	return kvj, nil
+	kvf.kvdgms = []*groupmgr.GroupMgr{}
+	kvf.cpids = []proc.Tpid{}
+	return kvf, nil
 }
 
-func (kvj *KVJob) Job() string {
-	return kvj.job
+func (kvf *KVFleet) Job() string {
+	return kvf.job
 }
 
-func (kvj *KVJob) StartJob() error {
-	kvj.balgm = StartBalancers(kvj.FsLib, kvj.ProcClnt, kvj.job, NBALANCER, 0, kvj.kvdncore, "0", kvj.auto)
+func (kvf *KVFleet) StartJob() error {
+	kvf.balgm = StartBalancers(kvf.FsLib, kvf.ProcClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
 	// Add an initial kvd group to put keys in.
-	return kvj.AddKVDGroup()
+	return kvf.AddKVDGroup()
 }
 
-func (kvj *KVJob) AddKVDGroup() error {
+func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
-	grp := group.GRP + strconv.Itoa(len(kvj.kvdgms))
+	grp := group.GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	kvj.kvdgms = append(kvj.kvdgms, SpawnGrp(kvj.FsLib, kvj.ProcClnt, kvj.job, grp, kvj.kvdncore, kvj.kvdrepl, 0))
+	kvf.kvdgms = append(kvf.kvdgms, SpawnGrp(kvf.FsLib, kvf.ProcClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0))
 	// Get balancer to add the group
-	if err := BalancerOpRetry(kvj.FsLib, kvj.job, "add", grp); err != nil {
+	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "add", grp); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (kvj *KVJob) RemoveKVDGroup() error {
-	n := len(kvj.kvdgms) - 1
+func (kvf *KVFleet) RemoveKVDGroup() error {
+	n := len(kvf.kvdgms) - 1
 	// Get group nambe
 	grp := group.GRP + strconv.Itoa(n)
 	// Get balancer to remove the group
-	if err := BalancerOpRetry(kvj.FsLib, kvj.job, "del", grp); err != nil {
+	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "del", grp); err != nil {
 		return err
 	}
 	// Stop kvd group
-	if err := kvj.kvdgms[n].Stop(); err != nil {
+	if err := kvf.kvdgms[n].Stop(); err != nil {
 		return err
 	}
 	// Remove kvd group
-	kvj.kvdgms = kvj.kvdgms[:n]
+	kvf.kvdgms = kvf.kvdgms[:n]
 	return nil
 }
 
-func (kvj *KVJob) Stop() error {
-	nkvds := len(kvj.kvdgms)
+func (kvf *KVFleet) Stop() error {
+	nkvds := len(kvf.kvdgms)
 	for i := 0; i < nkvds-1; i++ {
-		kvj.RemoveKVDGroup()
+		kvf.RemoveKVDGroup()
 	}
 	// Stop the balancers.
-	kvj.balgm.Stop()
+	kvf.balgm.Stop()
 	// Remove the last kvd group after removing the balancer.
-	kvj.kvdgms[0].Stop()
-	kvj.kvdgms = nil
-	if err := RemoveJob(kvj.FsLib, kvj.job); err != nil {
+	kvf.kvdgms[0].Stop()
+	kvf.kvdgms = nil
+	if err := RemoveJob(kvf.FsLib, kvf.job); err != nil {
 		return err
 	}
 	return nil

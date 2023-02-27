@@ -66,7 +66,7 @@ func TestRegex(t *testing.T) {
 
 type Tstate struct {
 	*test.Tstate
-	kvj   *kv.KVJob
+	kvf   *kv.KVFleet
 	clrk  *kv.KvClerk
 	clrks []proc.Tpid
 }
@@ -74,10 +74,10 @@ type Tstate struct {
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *kv.KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	kvj, err := kv.MakeKvdJob(ts.SigmaClnt, 1, repl, 0, "manual")
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, 1, repl, 0, "manual")
 	assert.Nil(t, err)
-	ts.kvj = kvj
-	err = ts.kvj.StartJob()
+	ts.kvf = kvf
+	err = ts.kvf.StartJob()
 	assert.Nil(t, err)
 	clrk := ts.setup()
 	return ts, clrk
@@ -85,13 +85,13 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 
 // Create keys
 func (ts *Tstate) setup() *kv.KvClerk {
-	clrk, err := kv.InitKeys(ts.SigmaClnt, ts.kvj.Job(), kv.NKEYS)
+	clrk, err := kv.InitKeys(ts.SigmaClnt, ts.kvf.Job(), kv.NKEYS)
 	assert.Nil(ts.T, err, "InitKeys: %v", err)
 	return clrk
 }
 
 func (ts *Tstate) done() {
-	ts.kvj.Stop()
+	ts.kvf.Stop()
 	ts.Shutdown()
 }
 
@@ -131,7 +131,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvj.Job(), nil, 0)
+		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), nil, 0)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
@@ -139,7 +139,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	db.DPrintf(db.TEST, "Done startClerks")
 
 	for i := 0; i < kv.NKV; i++ {
-		err := ts.kvj.AddKVDGroup()
+		err := ts.kvf.AddKVDGroup()
 		assert.Nil(ts.T, err, "AddKVDGroup")
 		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
@@ -148,7 +148,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	db.DPrintf(db.TEST, "Done adds")
 
 	for i := 0; i < kv.NKV; i++ {
-		err := ts.kvj.RemoveKVDGroup()
+		err := ts.kvf.RemoveKVDGroup()
 		assert.Nil(ts.T, err, "RemoveKVDGroup")
 		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
@@ -162,7 +162,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	time.Sleep(100 * time.Millisecond)
 
-	err := ts.kvj.Stop()
+	err := ts.kvf.Stop()
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -235,7 +235,7 @@ func TestAuto(t *testing.T) {
 	ts, _ := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvj.Job(), nil, 0)
+		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), nil, 0)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
@@ -248,7 +248,7 @@ func TestAuto(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.kvj.Stop()
+	ts.kvf.Stop()
 
 	ts.Shutdown()
 }

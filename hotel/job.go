@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -67,7 +68,14 @@ var ncores = []int{0, 1,
 //	2, 2, 3,
 //	3, 0, 2}
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+type HotelJob struct {
+	*sigmaclnt.SigmaClnt
+	cacheClnt *cacheclnt.CacheClnt
+	cacheMgr  *cacheclnt.CacheMgr
+	pids      []proc.Tpid
+}
+
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -80,12 +88,12 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (
 		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, test.Overlays)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
-			return nil, nil, nil, err
+			return nil, err
 		}
 		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
 		if err != nil {
 			db.DFatalf("Error cacheclnt %v", err)
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -96,14 +104,33 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (
 		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
-			return nil, nil, nil, err
+			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
 			db.DFatalf("Error spawn proc %v: %v", p, err)
-			return nil, nil, nil, err
+			return nil, err
 		}
 		pids = append(pids, p.GetPid())
 	}
 
-	return cc, cm, pids, nil
+	return &HotelJob{sc, cc, cm, pids}, nil
+}
+
+func (hj *HotelJob) Stop() error {
+	for _, pid := range hj.pids {
+		if err := hj.Evict(pid); err != nil {
+			return err
+		}
+		if _, err := hj.WaitExit(pid); err != nil {
+			return err
+		}
+	}
+	if hj.cacheMgr != nil {
+		hj.cacheMgr.Stop()
+	}
+	return nil
+}
+
+func (hj *HotelJob) StatsSrv() ([]*protdev.Stats, error) {
+	return hj.cacheClnt.StatsSrv()
 }

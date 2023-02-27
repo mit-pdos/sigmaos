@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
@@ -17,7 +16,6 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
-	"sigmaos/proc"
 	"sigmaos/protdev"
 	"sigmaos/protdevclnt"
 	rd "sigmaos/rand"
@@ -41,10 +39,8 @@ func init() {
 
 type Tstate struct {
 	*test.Tstate
-	job  string
-	pids []proc.Tpid
-	cc   *cacheclnt.CacheClnt
-	cm   *cacheclnt.CacheMgr
+	job   string
+	hotel *hotel.HotelJob
 }
 
 func makeTstate(t *testing.T, srvs []hotel.Srv, ncache int) *Tstate {
@@ -58,7 +54,7 @@ func makeTstate(t *testing.T, srvs []hotel.Srv, ncache int) *Tstate {
 	}
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.cc, ts.cm, ts.pids, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, ncache)
+	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, ncache)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -70,7 +66,7 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 	for _, s := range sp.HOTELSVC {
 		ts.statsSrv(s)
 	}
-	cs, err := ts.cc.StatsSrv()
+	cs, err := ts.hotel.StatsSrv()
 	assert.Nil(ts.T, err)
 	for i, cstat := range cs {
 		fmt.Printf("= cache-%v: %v\n", i, cstat)
@@ -85,15 +81,8 @@ func (ts *Tstate) statsSrv(fn string) {
 }
 
 func (ts *Tstate) stop() {
-	for _, pid := range ts.pids {
-		err := ts.Evict(pid)
-		assert.Nil(ts.T, err, "Evict: %v", err)
-		_, err = ts.WaitExit(pid)
-		assert.Nil(ts.T, err)
-	}
-	if ts.cm != nil {
-		ts.cm.Stop()
-	}
+	err := ts.hotel.Stop()
+	assert.Nil(ts.T, err, "Stop: %v", err)
 	sts, err := ts.GetDir(sp.DBD)
 	assert.Nil(ts.T, err, "Error GetDir: %v", err)
 	assert.Equal(ts.T, 5, len(sts), "%v", sts)

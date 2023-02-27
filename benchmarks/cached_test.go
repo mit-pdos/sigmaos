@@ -60,6 +60,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 		assert.Nil(ji.T, err, "Err StartClerk: %v", err)
 		ji.clerks = append(ji.clerks, ck)
 	}
+	ji.sem.Up()
 	// Stop clerks
 	for _, ck := range ji.clerks {
 		tpt, err := cacheclnt.WaitClerk(ji.SigmaClnt, ck)

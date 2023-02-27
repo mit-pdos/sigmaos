@@ -62,10 +62,13 @@ func (ji *CachedJobInstance) RunCachedJob() {
 	}
 	ji.sem.Up()
 	// Stop clerks
+	aggTpt := float64(0)
 	for _, ck := range ji.clerks {
 		tpt, err := cacheclnt.WaitClerk(ji.SigmaClnt, ck)
 		db.DPrintf(db.ALWAYS, "Clerk throughput: %v ops/sec", tpt)
 		assert.Nil(ji.T, err, "Err waitclerk %v", err)
+		aggTpt += tpt
 	}
+	db.DPrintf(db.ALWAYS, "Aggregate throughput: %v (ops/sec)", aggTpt)
 	ji.cm.Stop()
 }

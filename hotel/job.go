@@ -80,7 +80,7 @@ type HotelJob struct {
 	kvf       *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, ncache int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, nshard int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -89,9 +89,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 	InitHotelFs(sc.FsLib, job)
 
 	// Create a cache clnt.
-	if ncache > 0 {
+	if nshard > 0 {
 		if cache == "cached" {
-			cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, proc.Tcore(cacheNcore), test.Overlays)
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nshard, proc.Tcore(cacheNcore), test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
@@ -102,7 +102,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 				return nil, err
 			}
 		} else {
-			kvf, err = kv.MakeKvdFleet(sc, job, 1, 0, 0, "manual")
+			kvf, err = kv.MakeKvdFleet(sc, job, nshard, 0, 0, "manual")
 			if err != nil {
 				return nil, err
 			}

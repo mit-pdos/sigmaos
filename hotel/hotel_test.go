@@ -46,19 +46,19 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func makeTstate(t *testing.T, srvs []hotel.Srv, ncache int) *Tstate {
+func makeTstate(t *testing.T, srvs []hotel.Srv, nshard int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
 	n := 0
-	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+ncache*2; i++ {
+	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+nshard*2; i++ {
 		n += 1
 	}
 	log.Printf("Nodes %d\n", n)
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, ncache)
+	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, nshard)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -125,7 +125,6 @@ func TestRateSingle(t *testing.T) {
 	err = pdc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	log.Printf("Rate shutdown\n")
 	ts.stop()
 	ts.Shutdown()
 }

@@ -95,7 +95,12 @@ func (kvf *KVFleet) Job() string {
 func (kvf *KVFleet) Start() error {
 	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
 	// Add an initial kvd group to put keys in.
-	return kvf.AddKVDGroup()
+	for i := 0; i < kvf.nkvd; i++ {
+		if err := kvf.AddKVDGroup(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (kvf *KVFleet) AddKVDGroup() error {

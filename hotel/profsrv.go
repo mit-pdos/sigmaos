@@ -7,7 +7,6 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -22,7 +21,7 @@ const (
 
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
-	cachec *cacheclnt.CacheClnt
+	cachec CacheClnt
 }
 
 func RunProfSrv(job string, public bool, cache string) error {
@@ -36,7 +35,7 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, job)
+	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}
@@ -114,7 +113,7 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
 		if err := ps.cachec.Get(key, p); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !ps.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_PROF, "Cache miss: key %v\n", id)

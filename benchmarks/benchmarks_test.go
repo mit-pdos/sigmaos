@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/linuxsched"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -172,7 +173,9 @@ func TestAppMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, apps := makeNMRJobs(ts1, 1, MR_APP)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	jobs, apps := makeNMRJobs(ts1, p, 1, MR_APP)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -181,8 +184,7 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	p := monitorCoresAssigned(ts1)
-	defer p.Done()
+	monitorCoresAssigned(ts1, p)
 	runOps(ts1, apps, runMR, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -192,6 +194,8 @@ func runKVTest(t *testing.T, nReplicas int) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
 	jobs, ji := makeNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
@@ -203,8 +207,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	p := monitorCoresAssigned(ts1)
-	defer p.Done()
+	monitorCoresAssigned(ts1, p)
 	runOps(ts1, ji, runKV, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -216,6 +219,29 @@ func TestAppKVUnrepl(t *testing.T) {
 
 func TestAppKVRepl(t *testing.T) {
 	runKVTest(t, 3)
+}
+
+func TestAppCached(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	const NKEYS = 100
+	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
+	jobs, ji := makeNCachedJobs(ts1, 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tcore(CLERK_NCORE), proc.Tcore(KVD_NCORE))
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	monitorCoresAssigned(ts1, p)
+	runOps(ts1, ji, runCached, rs)
+	printResultSummary(rs)
+	rootts.Shutdown()
 }
 
 // Burst a bunch of spinning procs, and see how long it takes for all of them
@@ -230,8 +256,9 @@ func TestRealmBurst(t *testing.T) {
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
 	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
-	p := monitorCoresAssigned(ts1)
+	p := makeRealmPerf(ts1)
 	defer p.Done()
+	monitorCoresAssigned(ts1, p)
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
@@ -286,20 +313,25 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
 	// Structure for hotel
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	// Prep MR job
-	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
-	// Prep Hotel job
-	hotelJobs, ji := makeHotelJobs(ts2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
-		//		hotel.RunDSB(ts2.T, 1, wc, r)
-		hotel.RandSearchReq(wc, r)
-	})
-	p1 := monitorCoresAssigned(ts1)
-	p2 := monitorCoresAssigned(ts2)
-	defer p1.Done()
+	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
+	// Prep MR job
+	mrjobs, mrapps := makeNMRJobs(ts1, p1, 1, MR_APP)
+	// Prep Hotel job
+	hotelJobs, ji := makeHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(ts2.T, 1, wc, r)
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "SearchReq %v", err)
+	})
+	// Monitor cores assigned to MR.
+	monitorCoresAssigned(ts1, p1)
+	// Monitor cores assigned to Hotel.
+	monitorCoresAssigned(ts2, p2)
 	// Run Hotel job
 	go func() {
 		runOps(ts2, ji, runHotel, rs2)
@@ -341,17 +373,19 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
 	// Structure for kv
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	// Prep MR job
-	mrjobs1, mrapps1 := makeNMRJobs(ts1, 1, MR_APP)
-	// Prep MR job
-	mrjobs2, mrapps2 := makeNMRJobs(ts2, 1, MR_APP)
-	p1 := monitorCoresAssigned(ts1)
-	p2 := monitorCoresAssigned(ts2)
-	defer p1.Done()
+	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
+	// Prep MR job
+	mrjobs1, mrapps1 := makeNMRJobs(ts1, p1, 1, MR_APP)
+	// Prep MR job
+	mrjobs2, mrapps2 := makeNMRJobs(ts2, p2, 1, MR_APP)
+	monitorCoresAssigned(ts1, p1)
+	monitorCoresAssigned(ts2, p2)
 	// Run MR job
 	go func() {
 		runOps(ts2, mrapps2, runMR, rs2)
@@ -393,18 +427,20 @@ func TestKVMRRRB(t *testing.T) {
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
 	// Structure for kv
 	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := makeNMRJobs(ts1, 1, MR_APP)
+	mrjobs, mrapps := makeNMRJobs(ts1, p1, 1, MR_APP)
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	p1 := monitorCoresAssigned(ts1)
-	defer p1.Done()
-	p2 := monitorCoresAssigned(ts2)
-	defer p2.Done()
+	monitorCoresAssigned(ts1, p1)
+	monitorCoresAssigned(ts2, p2)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)
@@ -448,8 +484,9 @@ func testWww(t *testing.T, sigmaos bool) {
 		}
 	}()
 	if sigmaos {
-		p := monitorCoresAssigned(ts1)
+		p := makeRealmPerf(ts1)
 		defer p.Done()
+		monitorCoresAssigned(ts1, p)
 	}
 	runOps(ts1, ji, runWww, rs)
 	printResultSummary(rs)
@@ -466,9 +503,9 @@ func TestWwwK8s(t *testing.T) {
 	testWww(t, false)
 }
 
-func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hotelFn) {
+func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeHotelJobs(ts1, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
+	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -478,8 +515,9 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hote
 		}
 	}()
 	if sigmaos {
-		p := monitorCoresAssigned(ts1)
+		p := makeRealmPerf(ts1)
 		defer p.Done()
+		monitorCoresAssigned(ts1, p)
 	}
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
@@ -493,7 +531,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, sigmaos bool, fn hote
 func TestHotelSigmaosSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	testHotel(rootts, ts1, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 }
@@ -541,7 +579,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 func TestHotelK8sSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	testHotel(rootts, ts1, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 }
@@ -549,7 +587,7 @@ func TestHotelK8sSearch(t *testing.T) {
 func TestHotelK8sSearchCli(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	testHotel(rootts, ts1, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 }
@@ -557,7 +595,7 @@ func TestHotelK8sSearchCli(t *testing.T) {
 func TestHotelSigmaosAll(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	testHotel(rootts, ts1, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(rootts.T, 1, wc, r)
 	})
 }
@@ -565,7 +603,7 @@ func TestHotelSigmaosAll(t *testing.T) {
 func TestHotelK8sAll(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	testHotel(rootts, ts1, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(rootts.T, 1, wc, r)
 	})
 }
@@ -591,7 +629,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	db.DPrintf(db.TEST, "Starting hotel")
 	done := make(chan bool)
 	go func() {
-		testHotel(rootts, ts1, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 			hotel.RandSearchReq(wc, r)
 		})
 		done <- true

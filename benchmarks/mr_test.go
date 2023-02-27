@@ -2,16 +2,19 @@ package benchmarks_test
 
 import (
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/groupmgr"
 	"sigmaos/mr"
+	"sigmaos/perf"
 	"sigmaos/test"
 )
 
 type MRJobInstance struct {
 	*test.RealmTstate
+	p       *perf.Perf
 	ready   chan bool
 	app     string
 	jobname string
@@ -21,9 +24,10 @@ type MRJobInstance struct {
 	cm      *groupmgr.GroupMgr
 }
 
-func MakeMRJobInstance(ts *test.RealmTstate, app, jobname string) *MRJobInstance {
+func MakeMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
+	ji.p = p
 	ji.ready = make(chan bool)
 	ji.app = app
 	ji.jobname = jobname
@@ -45,4 +49,7 @@ func (ji *MRJobInstance) StartMRJob() {
 
 func (ji *MRJobInstance) Wait() {
 	ji.cm.Wait()
+	// Sleep a bit to allow util to update.
+	time.Sleep(4 * time.Second)
+	ji.p.Done()
 }

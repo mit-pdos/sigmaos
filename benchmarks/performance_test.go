@@ -48,11 +48,14 @@ func printResultSummary(rs *benchmarks.Results) {
 	db.DPrintf(db.TEST, "Done print results")
 }
 
-// Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
+func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
 	p, err := perf.MakePerfMulti(perf.BENCH, ts.GetRealm().String())
 	assert.Nil(ts.T, err)
+	return p
+}
 
+// Monitor how many cores have been assigned to a realm.
+func monitorCoresAssigned(ts *test.RealmTstate, p *perf.Perf) {
 	go func() {
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
@@ -70,6 +73,4 @@ func monitorCoresAssigned(ts *test.RealmTstate) *perf.Perf {
 			time.Sleep(1 * time.Second)
 		}
 	}()
-
-	return p
 }

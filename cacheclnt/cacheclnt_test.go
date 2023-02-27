@@ -1,7 +1,6 @@
 package cacheclnt_test
 
 import (
-	"log"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,6 +16,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	CACHE_NCORE = 2
+)
+
 type Tstate struct {
 	*test.Tstate
 	cm    *cacheclnt.CacheMgr
@@ -30,7 +33,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tcore(CACHE_NCORE), test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
@@ -43,25 +46,17 @@ func mkTstate(t *testing.T, n int) *Tstate {
 func (ts *Tstate) stop() {
 	db.DPrintf(db.ALWAYS, "wait for %d clerks to exit\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
-		status, err := ts.WaitExit(ck)
+		opTpt, err := cacheclnt.WaitClerk(ts.SigmaClnt, ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
-		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
-		log.Printf("clerk %v %v %v\n", ck, status, status.Data().(float64))
+		db.DPrintf(db.ALWAYS, "clerk %v %v ops/sec", ck, opTpt)
 	}
 	ts.cm.Stop()
 }
 
-func (ts *Tstate) StartClerk(args []string, ncore proc.Tcore) {
-	args = append([]string{ts.job}, args...)
-	p := proc.MakeProc("cache-clerk", args)
-	p.SetNcore(ncore)
-	// SpawnBurst to spread clerks across procds.
-	_, errs := ts.SpawnBurst([]*proc.Proc{p})
-	assert.True(ts.T, len(errs) == 0)
-	err := ts.WaitStart(p.GetPid())
+func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, ncore proc.Tcore) {
+	pid, err := cacheclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, ncore)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
-
-	ts.clrks = append(ts.clrks, p.GetPid())
+	ts.clrks = append(ts.clrks, pid)
 }
 
 func TestCacheSingle(t *testing.T) {
@@ -172,14 +167,13 @@ func TestCacheClerk(t *testing.T) {
 		N      = 2
 		NSHARD = 2
 		NKEYS  = 100
-		DUR    = "10s"
+		DUR    = 10 * time.Second
 	)
 
 	ts := mkTstate(t, NSHARD)
 
 	for i := 0; i < N; i++ {
-		args := []string{strconv.Itoa(NKEYS), DUR, strconv.Itoa(i * NKEYS), ts.sempn}
-		ts.StartClerk(args, 0)
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
 	}
 
 	ts.sem.Up()
@@ -193,14 +187,13 @@ func TestElasticCache(t *testing.T) {
 		N      = 2
 		NSHARD = 1
 		NKEYS  = 100
-		DUR    = "30s"
+		DUR    = 30 * time.Second
 	)
 
 	ts := mkTstate(t, NSHARD)
 
 	for i := 0; i < N; i++ {
-		args := []string{strconv.Itoa(NKEYS), DUR, strconv.Itoa(i * NKEYS), ts.sempn}
-		ts.StartClerk(args, 2)
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2)
 	}
 
 	ts.sem.Up()
@@ -213,7 +206,7 @@ func TestElasticCache(t *testing.T) {
 		sts, err := cc.StatsSrv()
 		assert.Nil(t, err)
 		qlen := sts[0].AvgQLen
-		log.Printf("Qlen %v\n", qlen)
+		db.DPrintf(db.ALWAYS, "Qlen %v\n", qlen)
 		if qlen > 1.1 && i < 1 {
 			ts.cm.AddShard()
 		}

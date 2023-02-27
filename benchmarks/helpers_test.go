@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
@@ -113,11 +114,11 @@ func makeNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfa
 
 // ========== MR Helpers ========
 
-func makeNMRJobs(ts *test.RealmTstate, n int, app string) ([]*MRJobInstance, []interface{}) {
+func makeNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String())
+		i := MakeMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String())
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -151,6 +152,19 @@ func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phas
 	return js, is
 }
 
+// ========== Cached Helpers ==========
+func makeNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckncore, cachencore proc.Tcore) ([]*CachedJobInstance, []interface{}) {
+	js := make([]*CachedJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	durs := parseDurations(ts, []string{durstr})
+	for i := 0; i < n; i++ {
+		ji := MakeCachedJob(ts, nkeys, ncache, nclerks, durs[0], ckncore, cachencore)
+		js = append(js, ji)
+		is = append(is, ji)
+	}
+	return js, is
+}
+
 // ========== Www Helpers ========
 
 func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
@@ -166,13 +180,13 @@ func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwncore proc.Tcore,
 
 // ========== Hotel Helpers ========
 
-func makeHotelJobs(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, false, ncache)
+		i := MakeHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -185,7 +199,7 @@ func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps str
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, true, ncache)
+		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

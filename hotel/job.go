@@ -64,6 +64,8 @@ var ncores = []int{0, 1,
 	1, 1, 3,
 	3, 0, 2}
 
+var cacheNcore = 2
+
 //var ncores = []int{0, 2,
 //	2, 2, 3,
 //	3, 0, 2}
@@ -85,7 +87,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (
 
 	// Create a cache clnt.
 	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, test.Overlays)
+		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, proc.Tcore(cacheNcore), test.Overlays)
 		if err != nil {
 			db.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err

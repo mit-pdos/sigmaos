@@ -402,7 +402,7 @@ kv_vs_cached() {
   run_kv $n_core $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
 
   # Then, run against cached.
-  nkvd=0
+  nkvd=1
   redisaddr="10.0.134.192:6379"
   n_vm=15
   run=${FUNCNAME[0]}/cached
@@ -535,6 +535,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #mr_replicated_named
 #realm_burst
+kv_vs_cached
 mr_vs_corral
 realm_balance
 realm_balance_be

@@ -1,7 +1,6 @@
 package kv_test
 
 import (
-	"log"
 	"regexp"
 	"strconv"
 	"testing"

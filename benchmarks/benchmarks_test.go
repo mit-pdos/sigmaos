@@ -29,7 +29,7 @@ const (
 // Parameters
 var N_TRIALS int
 var N_THREADS int
-var PREGROW_REALM bool
+var PREWARM_REALM bool
 var MR_APP string
 var KV_AUTO string
 var N_KVD int
@@ -61,7 +61,7 @@ var S3_RES_DIR string
 func init() {
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
-	flag.BoolVar(&PREGROW_REALM, "pregrow_realm", false, "Pre-grow realm to include all cluster resources.")
+	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
@@ -172,6 +172,9 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 func TestAppMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()

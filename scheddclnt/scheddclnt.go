@@ -32,6 +32,14 @@ func MakeScheddClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *ScheddClnt {
 	return &ScheddClnt{0, realm, sc, make(map[string]*protdevclnt.ProtDevClnt)}
 }
 
+func (sdc *ScheddClnt) Nschedd() (int, error) {
+	sds, err := sdc.getSchedds()
+	if err != nil {
+		return 0, err
+	}
+	return len(sds), nil
+}
+
 func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	sts, err := sdc.GetDir(procdir)
 	if err != nil {

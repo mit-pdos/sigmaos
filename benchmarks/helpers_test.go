@@ -14,6 +14,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -84,6 +85,24 @@ func countClusterCores(rootts *test.Tstate) proc.Tcore {
 	ncores := proc.Tcore(len(sts) * int(linuxsched.NCores))
 	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", ncores)
 	return ncores
+}
+
+// Warm up a realm, by starting uprocds for it on all machines in the cluster.
+func warmupRealm(ts *test.RealmTstate) {
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	// Get the number of schedds.
+	n, err := sdc.Nschedd()
+	assert.Nil(ts.T, err, "Get NSchedd: %v", err)
+	// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
+	for _, ncore := range []proc.Tcore{0, 1} {
+		// Make N LC procs.
+		ps, _ := makeNProcs(n, "sleeper", []string{"1000us", ""}, nil, ncore)
+		// Burst the procs across the available schedds.
+		spawnBurstProcs(ts, ps)
+		// Wait for them to exit.
+		waitExitProcs(ts, ps)
+	}
+	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
 }
 
 // ========== Dir Helpers ==========

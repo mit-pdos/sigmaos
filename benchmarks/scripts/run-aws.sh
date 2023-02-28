@@ -111,17 +111,17 @@ run_benchmark() {
 
 run_mr() {
   if [ $# -ne 5 ]; then
-    echo "run_mr args: n_cores n_vm repl app perf_dir" 1>&2
+    echo "run_mr args: n_cores n_vm prewarm app perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
-  repl=$3
+  prewarm=$3
   mrapp=$4
   perf_dir=$5
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
 }
@@ -221,12 +221,17 @@ mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
   dataset_size="2G"
-  for size in $dataset_size ; do
+  for prewarm in "" "--prewarm_realm" ; do
     mrapp="$app$size.yml"
+    if [ -z "$prewarm" ]; then
+      mrapp="$mrapp-cold"
+    else
+      mrapp="$mrapp-warm"
+    fi
     run=${FUNCNAME[0]}/$mrapp
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "" $mrapp $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $perf_dir
   done
 }
 

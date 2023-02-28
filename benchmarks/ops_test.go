@@ -103,7 +103,6 @@ func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duratio
 }
 
 func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	start := time.Now()
 	ji := i.(*MRJobInstance)
 	ji.PrepareMRJob()
 	ji.ready <- true
@@ -112,6 +111,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 	sdc.MonitorSchedds()
 	defer sdc.Done()
+	start := time.Now()
 	ji.StartMRJob()
 	ji.Wait()
 	dur := time.Since(start)

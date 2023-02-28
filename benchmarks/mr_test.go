@@ -2,7 +2,6 @@ package benchmarks_test
 
 import (
 	"path"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 

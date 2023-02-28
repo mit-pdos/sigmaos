@@ -222,7 +222,7 @@ mr_vs_corral() {
   app="mr-wc-wiki"
   dataset_size="2G"
   for prewarm in "" "--prewarm_realm" ; do
-    mrapp="$app$size.yml"
+    mrapp="$app$dataset_size.yml"
     if [ -z "$prewarm" ]; then
       runname="$mrapp-cold"
     else

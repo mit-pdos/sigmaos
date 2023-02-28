@@ -114,9 +114,13 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	defer sdc.Done()
 	ji.StartMRJob()
 	ji.Wait()
+	dur := time.Since(start)
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
-	return time.Since(start), 1.0
+	// Sleep a bit to allow util to update.
+	time.Sleep(4 * time.Second)
+	ji.p.Done()
+	return dur, 1.0
 }
 
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {

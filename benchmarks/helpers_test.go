@@ -16,6 +16,7 @@ import (
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -223,6 +224,55 @@ func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps str
 		is = append(is, i)
 	}
 	return ws, is
+}
+
+// ========== Client Helpers ==========
+
+var clidir string = path.Join("name/", "clnts")
+
+func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
+	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	err := sem.Init(0)
+	if !assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error sem init %v", err) {
+		return nil
+	}
+	db.DPrintf(db.TEST, "Create sem %v", sem)
+	return sem
+}
+
+// Waits for n - 1 clients to mark themselves as ready, releases them, and then
+// returns.
+func waitForClnts(rootts *test.Tstate, n int) {
+	// Make sure the clients directory has been created.
+	err := rootts.MkDir(clidir, 0777)
+	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	// Wait for n - 1 clnts to register themselves.
+	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
+		// N - 1 clnts + the semaphore
+		return len(sts) < n
+	})
+	assert.Nil(rootts.T, err, "Err ReadDirWatch: %v", err)
+	sem := createClntWaitSem(rootts)
+	err = sem.Up()
+	assert.Nil(rootts.T, err, "Err sem.Up: %v", err)
+}
+
+// Marks client as ready, waits for leader to release clients, adn then
+// returns.
+func clientReady(rootts *test.Tstate) {
+	// Make sure the clients directory has been created.
+	err := rootts.MkDir(clidir, 0777)
+	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	// Register the client as ready.
+	cid := "clnt-" + rand.String(4)
+	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)
+	assert.Nil(rootts.T, err, "Err PutFile: %v", err)
+	// Create a semaphore and wait for the leader to start the benchmark
+	sem := createClntWaitSem(rootts)
+	db.DPrintf(db.TEST, "sem.Down %v", cid)
+	sem.Down()
+	db.DPrintf(db.TEST, "sem.Down done %v", cid)
 }
 
 // ========== Download Results Helpers ==========

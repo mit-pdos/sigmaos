@@ -135,11 +135,12 @@ run_hotel() {
   rps=$2
   k8saddr=$3
   perf_dir=$4
+  hotel_ncache=6
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run Hotel${sys}Search  --rootNamedIP $LEADER_IP --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run Hotel${sys}Search  --rootNamedIP $LEADER_IP --k8saddr $k8saddr --hotel_ncache $hotel_ncache --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -267,7 +268,7 @@ realm_balance() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="20s,20s,40s"
   hotel_max_rps="1000,3000,1000"
-  hotel_ncache=3
+  hotel_ncache=6
   sl="20s"
   n_vm=8
   driver_vm=8
@@ -277,7 +278,7 @@ realm_balance() {
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache 6 --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
 }

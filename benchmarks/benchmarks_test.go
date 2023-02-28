@@ -66,8 +66,8 @@ func init() {
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
-	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of www clients.")
-	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each www client makes.")
+	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
+	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client makes.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
 	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
@@ -507,6 +507,10 @@ func TestWwwK8s(t *testing.T) {
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
+	if N_CLNT > 1 {
+		// Wait for clients to start up on other machines.
+		waitForClnts(rootts, N_CLNT)
+	}
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
 	go func() {
@@ -554,6 +558,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
+	clientReady(rootts)
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()

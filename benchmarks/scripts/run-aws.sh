@@ -224,11 +224,11 @@ mr_vs_corral() {
   for prewarm in "" "--prewarm_realm" ; do
     mrapp="$app$size.yml"
     if [ -z "$prewarm" ]; then
-      mrapp="$mrapp-cold"
+      runname="$mrapp-cold"
     else
-      mrapp="$mrapp-warm"
+      runname="$mrapp-warm"
     fi
-    run=${FUNCNAME[0]}/$mrapp
+    run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
     run_mr 2 $n_vm "$prewarm" $mrapp $perf_dir

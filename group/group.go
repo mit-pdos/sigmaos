@@ -15,7 +15,6 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -209,12 +208,6 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 
 	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
 	return nil
-}
-
-func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
-	s := opcode + " " + kv
-	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), sp.OWRITE, 0)
-	return err
 }
 
 func RunMember(jobdir, grp string, public bool) {

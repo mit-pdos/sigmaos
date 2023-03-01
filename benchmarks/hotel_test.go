@@ -10,12 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
-	"sigmaos/proc"
 	"sigmaos/protdev"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -38,9 +36,7 @@ type HotelJobInstance struct {
 	ncache     int
 	ready      chan bool
 	fn         hotelFn
-	pids       []proc.Tpid
-	cc         *cacheclnt.CacheClnt
-	cm         *cacheclnt.CacheMgr
+	hj         *hotel.HotelJob
 	lgs        []*loadgen.LoadGenerator
 	p          *perf.Perf
 	*test.RealmTstate
@@ -94,7 +90,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	}
 
 	if !ji.justCli {
-		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, ncache)
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, "cached", ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 	}
 
@@ -148,7 +144,7 @@ func (ji *HotelJobInstance) printStats() {
 			assert.Nil(ji.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
-		cs, err := ji.cc.StatsSrv()
+		cs, err := ji.hj.StatsSrv()
 		assert.Nil(ji.T, err)
 		for i, cstat := range cs {
 			fmt.Printf("= cache-%v: %v\n", i, cstat)
@@ -165,13 +161,8 @@ func (ji *HotelJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()
-		for _, pid := range ji.pids {
-			err := ji.Evict(pid)
-			assert.Nil(ji.T, err, "Evict %v: %v", pid, err)
-			_, err = ji.WaitExit(pid)
-			assert.Nil(ji.T, err)
-		}
-		ji.cm.Stop()
+		err := ji.hj.Stop()
+		assert.Nil(ji.T, err, "stop %v", err)
 	}
 	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {

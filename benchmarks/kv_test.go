@@ -90,7 +90,7 @@ func (ji *KVJobInstance) StartKVJob() {
 	if ji.redis {
 		return
 	}
-	ji.balgm = kv.StartBalancers(ji.FsLib, ji.ProcClnt, ji.job, kv.NBALANCER, 0, ji.kvdncore, "0", ji.auto)
+	ji.balgm = kv.StartBalancers(ji.SigmaClnt, ji.job, kv.NBALANCER, 0, ji.kvdncore, "0", ji.auto)
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
@@ -163,7 +163,7 @@ func (ji *KVJobInstance) AddKVDGroup() {
 	// Name group
 	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
 	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.FsLib, ji.ProcClnt, ji.job, grp, ji.kvdncore, ji.kvdrepl, 0))
+	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.SigmaClnt, ji.job, grp, ji.kvdncore, ji.kvdrepl, 0))
 	// Get balancer to add the group
 	err := kv.BalancerOpRetry(ji.FsLib, ji.job, "add", grp)
 	assert.Nil(ji.T, err, "BalancerOp add: %v", err)

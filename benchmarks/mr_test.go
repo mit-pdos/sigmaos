@@ -43,7 +43,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	ji.cm = mr.StartMRJob(ji.FsLib, ji.ProcClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
 }
 
 func (ji *MRJobInstance) Wait() {

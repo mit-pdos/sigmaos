@@ -13,7 +13,7 @@ func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duratio
 	p := proc.MakeProc("cache-clerk", []string{job, strconv.Itoa(nkeys), dur.String(), strconv.Itoa(keyOffset), sempn})
 	p.SetNcore(ncore)
 	// SpawnBurst to spread clerks across procds.
-	_, errs := sc.SpawnBurst([]*proc.Proc{p})
+	_, errs := sc.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {
 		return "", errs[0]
 	}

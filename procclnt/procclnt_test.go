@@ -53,7 +53,7 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 		p.SetNcore(1)
 		ps = append(ps, p)
 	}
-	failed, errs := ts.SpawnBurst(ps)
+	failed, errs := ts.SpawnBurst(ps, 1)
 	assert.Equal(t, 0, len(failed), "Failed spawning some procs: %v", errs)
 	return ps
 }
@@ -338,7 +338,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				pid := proc.GenPid()
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.MakeProcPid(pid, "sleeper", []string{"0ms", "name/"})
-				_, errs := ts.SpawnBurst([]*proc.Proc{a})
+				_, errs := ts.SpawnBurst([]*proc.Proc{a}, 1)
 				assert.True(t, len(errs) == 0, "Spawn err %v", errs)
 				db.DPrintf(db.TEST, "Done spawn %v", pid)
 

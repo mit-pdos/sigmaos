@@ -177,7 +177,7 @@ func StartClerk(pclnt *procclnt.ProcClnt, job string, args []string, ncore proc.
 	p := proc.MakeProc("kv-clerk", args)
 	p.SetNcore(ncore)
 	// SpawnBurst to spread clerks across procds.
-	_, errs := pclnt.SpawnBurst([]*proc.Proc{p})
+	_, errs := pclnt.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {
 		return p.GetPid(), errs[0]
 	}

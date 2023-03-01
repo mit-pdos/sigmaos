@@ -76,13 +76,13 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (
 //
 // Use of burstOffset makes sure we continue rotating across invocations as
 // well as within an invocation.
-func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
+func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
 		clnt.updateSchedds()
-		kernelId := clnt.nextSchedd()
+		kernelId := clnt.nextSchedd(procsPerSchedd)
 		err := clnt.spawn(kernelId, HSCHEDD, ps[i], clnt.getScheddClnt(kernelId))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
@@ -231,7 +231,7 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
 }
 
 // Get the next procd to burst on.
-func (clnt *ProcClnt) nextSchedd() string {
+func (clnt *ProcClnt) nextSchedd(spread int) string {
 	clnt.Lock()
 	defer clnt.Unlock()
 
@@ -240,7 +240,7 @@ func (clnt *ProcClnt) nextSchedd() string {
 		db.DFatalf("Error: no schedds to spawn on")
 	}
 
-	sdip := clnt.scheddIps[clnt.burstOffset%len(clnt.scheddIps)]
+	sdip := clnt.scheddIps[(clnt.burstOffset/spread)%len(clnt.scheddIps)]
 	clnt.burstOffset++
 	return sdip
 }

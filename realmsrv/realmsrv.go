@@ -83,7 +83,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
 	p.SetNcore(1)
-	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}); len(errs) != 0 {
+	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])
 		return errs[0]
 	}

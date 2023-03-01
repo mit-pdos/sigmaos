@@ -232,7 +232,7 @@ func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func
 	}
 	start := time.Now()
 	// Burst-spawn procs.
-	failed, errs := c.SpawnBurst(tasks)
+	failed, errs := c.SpawnBurst(tasks, 1)
 	if len(failed) > 0 {
 		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
 	}

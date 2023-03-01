@@ -84,9 +84,38 @@ start_cluster() {
   cd $DIR
 }
 
+should_skip() {
+  if [ $# -ne 1 ]; then
+    echo "should_skip args: perf_dir" 1>&2
+    exit 1
+  fi
+  perf_dir=$1
+  # Check if the experiment has already been run.
+  if [ -d $perf_dir ]; then
+    benchname="${perf_dir#$OUT_DIR/}"
+    echo "========== Skipping $benchname (already ran) =========="
+    return 1
+  fi
+  # Create an output directory for the results.
+  mkdir -p $perf_dir
+  return 0
+}
+
+end_benchmark() {
+  if [ $# -ne 2 ]; then
+    echo "end_benchmark_driver args: vpc perf_dir" 1>&2
+    exit 1
+  fi
+  vpc=$1
+  perf_dir=$2
+  cd $AWS_DIR
+  ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
+  cd $DIR
+}
+
 run_benchmark() {
-  if [ $# -ne 6 ]; then
-    echo "run_benchmark args: vpc n_cores n_vm perfdir cmd vm" 1>&2
+  if [ $# -ne 8 ]; then
+    echo "run_benchmark args: vpc n_cores n_vm perf_dir cmd vm is_driver async" 1>&2
     exit 1
   fi
   vpc=$1
@@ -95,18 +124,25 @@ run_benchmark() {
   perf_dir=$4
   cmd=$5
   vm=$6 # benchmark driver vm index (usually 0)
+  is_driver=$7
+  async=$8
   # Avoid doing duplicate work.
-  if [ -d $perf_dir ]; then
-    benchname="${perf_dir#$OUT_DIR/}"
-    echo "========== Skipping $benchname (already ran) =========="
+  if ! should_skip $perf_dir ; then
     return 0
   fi
-  start_cluster $vpc $n_cores $n_vm
-  mkdir -p $perf_dir
+  # Start the cluster if this is the benchmark driver.
+  if [[ $is_driver == "true" ]]; then
+    start_cluster $vpc $n_cores $n_vm
+  fi
   cd $AWS_DIR
-  ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm
-  ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
+  # Start the benchmark as a background task.
+  ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm &
   cd $DIR
+  # Wait for it to complete, if this benchmark is being run synchronously.
+  if [[ $async == "false" ]] ; then
+    wait
+    end_benchmark $vpc $perf_dir
+  fi
 }
 
 run_mr() {
@@ -123,40 +159,37 @@ run_mr() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
 }
 
 run_hotel() {
-  if [ $# -ne 4 ]; then
-    echo "run_hotel args: sys rps k8saddr perf_dir" 1>&2
+  if [ $# -ne 8 ]; then
+    echo "run_hotel args: testname rps cli_vm nclnt k8saddr perf_dir driver async " 1>&2
     exit 1
   fi
-  sys=$1
+  testname=$1
   rps=$2
-  k8saddr=$3
-  perf_dir=$4
+  cli_vm=$3
+  nclnt=$4
+  k8saddr=$5
+  perf_dir=$6
+  driver=$7
+  async=$8
   hotel_ncache=6
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run Hotel${sys}Search  --rootNamedIP $LEADER_IP --k8saddr $k8saddr --hotel_ncache $hotel_ncache --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
-    # We're only running on 5 machines, so use #14 as a client (it is unused).
-    cli_vm=9
   else
     # If running against k8s, pass through k8s VPC
     vpc=$KVPC
-    # If running against k8s, we make sure not to untaint the control node, so
-    # node 0 can't run any pods. We then use this as the client machine. Thus,
-    # we should make sure to start up an extra node in the k8s cluster.
-    cli_vm=0
   fi
   n_cores=4
-  # Since we only use 5 VMs anyway, it should be fine to run the client on VM 14, which should also exist in the k8s cluster.
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async
 }
 
 run_kv() {
@@ -176,7 +209,7 @@ run_kv() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
 }
 
 run_cached() {
@@ -194,7 +227,7 @@ run_cached() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
 }
 
 # ========== Top-level benchmarks ==========
@@ -240,12 +273,18 @@ hotel_tail() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.108.117.18:5000"
   for sys in Sigmaos ; do #K8s ; do
+    testname="Hotel${sys}Search"
+    if [ "$sys" = "Sigmaos" ]; then
+      cli_vm=9
+    else
+      cli_vm=0
+    fi
     # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
     for rps in 1000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $sys $rps $k8saddr $perf_dir
+      run_hotel $testname $rps $cli_vm 1 $k8saddr $perf_dir true false
     done
   done
 }
@@ -253,13 +292,29 @@ hotel_tail() {
 hotel_tail_multi() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.100.220.158:5000"
-  rps=6000
+  rps=2500
   sys="Sigmaos"
 #  sys="K8s"
+  driver_vm=9
+  testname_driver="Hotel${sys}Search"
+  testname_clnt="Hotel${sys}JustCliSearch"
   run=${FUNCNAME[0]}/$sys/$rps
   echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_hotel $sys $rps $k8saddr $perf_dir
+  for cli_vm in $driver_vm 10 11 12 ; do
+    perf_dir=$OUT_DIR/"$run-cli-$cli_vm"
+    driver="false"
+    if [[ $cli_vm == $driver_vm ]]; then
+      testname=$testname_driver
+      driver="true"
+    else
+      testname=$testname_clnt
+    fi
+    run_hotel $testname $rps $cli_vm 4 $k8saddr $perf_dir $driver true
+  done
+  # Wait for all clients to terminate.
+  wait
+  # Copy results.
+  end_benchmark $VPC $perf_dir
 }
 
 realm_balance() {
@@ -280,7 +335,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 realm_balance_be() {
@@ -298,7 +353,7 @@ realm_balance_be() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 k8s_balance() {
@@ -322,7 +377,7 @@ k8s_balance() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 mr_k8s() {
@@ -341,7 +396,7 @@ mr_k8s() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 #mr_overlap() {
@@ -427,7 +482,7 @@ realm_burst() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false
 }
 
 # ========== Make Graphs ==========
@@ -547,10 +602,10 @@ mr_vs_corral
 realm_balance
 realm_balance_be
 hotel_tail
+hotel_tail_multi
 # XXX mr_scalability
 #mr_k8s
 #k8s_balance
-#hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

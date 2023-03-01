@@ -507,16 +507,16 @@ func TestWwwK8s(t *testing.T) {
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
-	if N_CLNT > 1 {
-		// Wait for clients to start up on other machines.
-		waitForClnts(rootts, N_CLNT)
-	}
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
 			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				waitForClnts(rootts, N_CLNT)
+			}
 			// Ack to allow the job to proceed.
 			j.ready <- true
 		}
@@ -547,6 +547,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	clientReady(rootts)
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
@@ -558,7 +559,6 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	clientReady(rootts)
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()

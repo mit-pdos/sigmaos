@@ -623,12 +623,25 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	dlk := ps.plt.Acquire(f.Pobj().Ctx(), dname)
 	defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
-	// flk also ensures that two Puts execute atomically
-	lo, flk, err := ps.createObj(f.Pobj().Ctx(), lo.(fs.Dir), dlk, fn, args.Tperm(), args.Tmode())
+	dir := lo.(fs.Dir)
+	lo, flk, err := ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode())
 	if err != nil {
-		return sp.MkRerror(err)
+		if err.Code() != serr.TErrExists {
+			return sp.MkRerror(err)
+		}
+		// look up the file and get a lock on it. note: it cannot have
+		// been removed since the failed create above, because PutFile
+		// holds the directory lock.
+		flk = ps.plt.Acquire(f.Pobj().Ctx(), fn)
+		_, lo, _, err = dir.LookupPath(f.Pobj().Ctx(), path.Path{fn.Base()})
+		if err != nil {
+			return sp.MkRerror(err)
+		}
 	}
+
+	// flk also ensures that two Puts execute atomically
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
+
 	qid := ps.mkQid(lo.Perm(), lo.Path())
 	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Tperm().IsEphemeral(), qid)
 	i, err := fs.Obj2File(lo, fn)

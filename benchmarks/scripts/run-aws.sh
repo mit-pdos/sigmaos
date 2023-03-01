@@ -308,7 +308,7 @@ hotel_tail_multi() {
   if ! should_skip $perf_dir false ; then
     return 0
   fi
-  for cli_vm in $driver_vm 9 10 11 ; do #11 ; do
+  for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
     driver="false"
     if [[ $cli_vm == $driver_vm ]]; then
       testname=$testname_driver
@@ -316,7 +316,7 @@ hotel_tail_multi() {
     else
       testname=$testname_clnt
     fi
-    run_hotel $testname $rps $cli_vm 4 $k8saddr $perf_dir $driver true
+    run_hotel $testname $rps $cli_vm 5 $k8saddr $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
       sleep 30s

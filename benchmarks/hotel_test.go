@@ -34,6 +34,7 @@ type HotelJobInstance struct {
 	dur        []time.Duration
 	maxrps     []int
 	ncache     int
+	cachetype  string
 	ready      chan bool
 	fn         hotelFn
 	hj         *hotel.HotelJob
@@ -42,7 +43,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -52,6 +53,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	ji.p = p
 	ji.justCli = justCli
 	ji.ncache = ncache
+	ji.cachetype = cachetype
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -90,7 +92,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	}
 
 	if !ji.justCli {
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, "cached", ncache)
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 	}
 

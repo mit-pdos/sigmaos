@@ -85,19 +85,22 @@ start_cluster() {
 }
 
 should_skip() {
-  if [ $# -ne 1 ]; then
-    echo "should_skip args: perf_dir" 1>&2
+  if [ $# -ne 2 ]; then
+    echo "should_skip args: perf_dir make_dir" 1>&2
     exit 1
   fi
   perf_dir=$1
+  make_dir=$2
   # Check if the experiment has already been run.
   if [ -d $perf_dir ]; then
     benchname="${perf_dir#$OUT_DIR/}"
     echo "========== Skipping $benchname (already ran) =========="
     return 1
   fi
-  # Create an output directory for the results.
-  mkdir -p $perf_dir
+  if [[ $make_dir == "true" ]]; then
+    # Create an output directory for the results.
+    mkdir -p $perf_dir
+  fi
   return 0
 }
 
@@ -126,12 +129,12 @@ run_benchmark() {
   vm=$6 # benchmark driver vm index (usually 0)
   is_driver=$7
   async=$8
-  # Avoid doing duplicate work.
-  if ! should_skip $perf_dir ; then
-    return 0
-  fi
   # Start the cluster if this is the benchmark driver.
   if [[ $is_driver == "true" ]]; then
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir true ; then
+      return 0
+    fi
     start_cluster $vpc $n_cores $n_vm
   fi
   cd $AWS_DIR
@@ -177,7 +180,7 @@ run_hotel() {
   async=$8
   hotel_ncache=6
   cmd="
-    export SIGMADEBUG=\"TEST;\"; \
+    export SIGMADEBUG=\"TEST;THROUGHPUT;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
     go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
@@ -300,12 +303,18 @@ hotel_tail_multi() {
   testname_clnt="Hotel${sys}JustCliSearch"
   run=${FUNCNAME[0]}/$sys/$rps
   echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/"$run"
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return 0
+  fi
   for cli_vm in $driver_vm 9 10 11 ; do
-    perf_dir=$OUT_DIR/"$run-cli-$cli_vm"
     driver="false"
     if [[ $cli_vm == $driver_vm ]]; then
       testname=$testname_driver
       driver="true"
+      # Give the driver time to start up the realm.
+      sleep 10s
     else
       testname=$testname_clnt
     fi

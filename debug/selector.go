@@ -15,8 +15,9 @@ const (
 
 // Benchmarks
 const (
-	LOADGEN Tselector = "LOADGEN"
-	BENCH             = "BENCH"
+	LOADGEN    Tselector = "LOADGEN"
+	BENCH                = "BENCH"
+	THROUGHPUT           = "THROUGHPUT"
 )
 
 // Tests

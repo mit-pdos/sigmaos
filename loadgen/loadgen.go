@@ -121,7 +121,8 @@ func (lg *LoadGenerator) StatsDataString() string {
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
 	db.DPrintf(db.LOADGEN, "Load generator latencies:\n%v", lg.res)
-	lsum, _ := lg.res.Summary()
+	lsum, tsum := lg.res.Summary()
+	db.DPrintf(db.THROUGHPUT, tsum)
 	db.DPrintf(db.ALWAYS, lsum)
 }
 

@@ -3,7 +3,6 @@ package hotel_test
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -55,7 +54,6 @@ func makeTstate(t *testing.T, srvs []hotel.Srv, nshard int) *Tstate {
 	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+nshard*2; i++ {
 		n += 1
 	}
-	log.Printf("Nodes %d\n", n)
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
 	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, nshard)

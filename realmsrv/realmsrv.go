@@ -22,6 +22,7 @@ const (
 
 type RealmSrv struct {
 	mu         sync.Mutex
+	realms     map[sp.Trealm]bool
 	sc         *sigmaclnt.SigmaClnt
 	lastNDPort int
 	ch         chan struct{}
@@ -30,6 +31,7 @@ type RealmSrv struct {
 func RunRealmSrv() error {
 	rs := &RealmSrv{
 		lastNDPort: MIN_PORT,
+		realms:     make(map[sp.Trealm]bool),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
@@ -62,8 +64,17 @@ func MkNet(net string) error {
 }
 
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v %v\n", req.Realm, req.Network)
 	rid := sp.Trealm(req.Realm)
+	// If realm already exists
+	if rm.realms[rid] {
+		db.DFatalf("Error: Realm already exists")
+	}
+	rm.realms[rid] = true
+
 	pn := path.Join(sp.REALMS, req.Realm)
 
 	if err := MkNet(req.Network); err != nil {

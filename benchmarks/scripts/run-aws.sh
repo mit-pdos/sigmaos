@@ -295,12 +295,12 @@ hotel_tail_multi() {
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
-  driver_vm=9
+  driver_vm=8
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
   run=${FUNCNAME[0]}/$sys/$rps
   echo "========== Running $run =========="
-  for cli_vm in $driver_vm 10 11 12 ; do
+  for cli_vm in $driver_vm 9 10 11 ; do
     perf_dir=$OUT_DIR/"$run-cli-$cli_vm"
     driver="false"
     if [[ $cli_vm == $driver_vm ]]; then

@@ -103,7 +103,6 @@ func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duratio
 }
 
 func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	start := time.Now()
 	ji := i.(*MRJobInstance)
 	ji.PrepareMRJob()
 	ji.ready <- true
@@ -112,11 +111,16 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 	sdc.MonitorSchedds()
 	defer sdc.Done()
+	start := time.Now()
 	ji.StartMRJob()
 	ji.Wait()
+	dur := time.Since(start)
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
-	return time.Since(start), 1.0
+	// Sleep a bit to allow util to update.
+	time.Sleep(4 * time.Second)
+	ji.p.Done()
+	return dur, 1.0
 }
 
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {

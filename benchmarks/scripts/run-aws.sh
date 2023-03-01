@@ -111,17 +111,17 @@ run_benchmark() {
 
 run_mr() {
   if [ $# -ne 5 ]; then
-    echo "run_mr args: n_cores n_vm repl app perf_dir" 1>&2
+    echo "run_mr args: n_cores n_vm prewarm app perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
-  repl=$3
+  prewarm=$3
   mrapp=$4
   perf_dir=$5
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
 }
@@ -221,12 +221,17 @@ mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
   dataset_size="2G"
-  for size in $dataset_size ; do
-    mrapp="$app$size.yml"
-    run=${FUNCNAME[0]}/$mrapp
+  for prewarm in "" "--prewarm_realm" ; do
+    mrapp="$app$dataset_size.yml"
+    if [ -z "$prewarm" ]; then
+      runname="$mrapp-cold"
+    else
+      runname="$mrapp-warm"
+    fi
+    run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "" $mrapp $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $perf_dir
   done
 }
 
@@ -402,7 +407,7 @@ kv_vs_cached() {
   run_kv $n_core $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
 
   # Then, run against cached.
-  nkvd=0
+  nkvd=1
   redisaddr="10.0.134.192:6379"
   n_vm=15
   run=${FUNCNAME[0]}/cached
@@ -535,6 +540,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #mr_replicated_named
 #realm_burst
+kv_vs_cached
 mr_vs_corral
 realm_balance
 realm_balance_be

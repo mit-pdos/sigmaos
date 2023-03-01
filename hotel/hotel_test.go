@@ -30,7 +30,7 @@ var DURATION time.Duration
 var cache string
 
 const (
-	NCACHESRV = 1
+	NCACHESRV = 6
 )
 
 func init() {

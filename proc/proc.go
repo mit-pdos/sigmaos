@@ -1,6 +1,7 @@
 package proc
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -233,6 +234,14 @@ func (p *Proc) SetMem(mb Tmem) {
 
 func (p *Proc) Marshal() []byte {
 	b, err := proto.Marshal(p.ProcProto)
+	if err != nil {
+		log.Fatalf("Error marshal: %v", err)
+	}
+	return b
+}
+
+func (p *Proc) MarshalJson() []byte {
+	b, err := json.Marshal(p.ProcProto)
 	if err != nil {
 		log.Fatalf("Error marshal: %v", err)
 	}

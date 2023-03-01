@@ -73,7 +73,7 @@ func TestCreateTwice(t *testing.T) {
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
-	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrExists(err))
 	ts.Shutdown()

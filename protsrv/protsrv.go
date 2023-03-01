@@ -629,6 +629,9 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		if err.Code() != serr.TErrExists {
 			return sp.MkRerror(err)
 		}
+		if err.Code() == serr.TErrExists && args.Tmode()&sp.OEXCL == sp.OEXCL {
+			return sp.MkRerror(err)
+		}
 		// look up the file and get a lock on it. note: it cannot have
 		// been removed since the failed create above, because PutFile
 		// holds the directory lock.
@@ -648,6 +651,14 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	if err != nil {
 		return sp.MkRerror(err)
 	}
+
+	if args.Tmode()&sp.OAPPEND == sp.OAPPEND && args.Toffset() != sp.NoOffset {
+		return sp.MkRerror(serr.MkErr(serr.TErrInval, "offset should be sp.NoOffset"))
+	}
+	if args.Toffset() == sp.NoOffset && args.Tmode()&sp.OAPPEND != sp.OAPPEND {
+		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
+	}
+
 	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV)
 	if err != nil {
 		return sp.MkRerror(err)

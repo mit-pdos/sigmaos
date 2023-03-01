@@ -117,7 +117,7 @@ func TestGetPutSet(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
-	assert.NotEqual(ts.T, err, nil, "Get")
+	assert.NotNil(ts.T, err, "Get")
 
 	err = clrk.SetRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
 	assert.NotEqual(ts.T, err, nil, "Set")

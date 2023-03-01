@@ -53,7 +53,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 		b, err := ts.GetFile(fname)
 		assert.Nil(ts.T, err, "Get %v", err)
 		assert.Equal(ts.T, i_str, string(b), "Didn't read expected")
-		_, err = ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
+		_, err = ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD|sp.OEXCL, []byte(i_str))
 		assert.NotNil(ts.T, err, "Put nil")
 		_, err = ts.SetFile(fname, []byte(i_str+i_str), sp.OWRITE|sp.OREAD, 0)
 		assert.Nil(ts.T, err, "Set %v", err)

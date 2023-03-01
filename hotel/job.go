@@ -52,18 +52,21 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 type Srv struct {
 	Name   string
 	Public bool
+	Ncore  proc.Tcore
 }
 
 func MkHotelSvc(public bool) []Srv {
-	return []Srv{Srv{"hotel-userd", public}, Srv{"hotel-rated", public},
-		Srv{"hotel-geod", public}, Srv{"hotel-profd", public},
-		Srv{"hotel-searchd", public}, Srv{"hotel-reserved", public},
-		Srv{"hotel-recd", public}, Srv{"hotel-wwwd", public}}
+	return []Srv{
+		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2},
+		Srv{"hotel-geod", public, 2}, Srv{"hotel-profd", public, 2},
+		Srv{"hotel-searchd", public, 3}, Srv{"hotel-reserved", public, 3},
+		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 2},
+	}
 }
 
-var ncores = []int{0, 1,
-	1, 1, 3,
-	3, 0, 2}
+//var ncores = []int{0, 1,
+//	1, 1, 3,
+//	3, 0, 2}
 
 var cacheNcore = 2
 
@@ -115,9 +118,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	pids := make([]proc.Tpid, 0, len(srvs))
 
-	for i, srv := range srvs {
+	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
-		p.SetNcore(proc.Tcore(ncores[i]))
+		p.SetNcore(srv.Ncore)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err

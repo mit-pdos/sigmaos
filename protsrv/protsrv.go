@@ -604,6 +604,22 @@ func (ps *ProtSrv) SetFile(args *sp.Tsetfile, data []byte, rets *sp.Rwrite) *sp.
 	return nil
 }
 
+// Caller holds pathname lock for f
+func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.Tmode) (fs.FsObj, *serr.Err) {
+	_, lo, _, err := dir.LookupPath(f.Pobj().Ctx(), path.Path{name})
+	if err != nil {
+		return nil, err
+	}
+	no, err := lo.Open(f.Pobj().Ctx(), mode)
+	if err != nil {
+		return nil, err
+	}
+	if no != nil {
+		lo = no
+	}
+	return lo, nil
+}
+
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	if sessp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
@@ -636,7 +652,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		// been removed since the failed create above, because PutFile
 		// holds the directory lock.
 		flk = ps.plt.Acquire(f.Pobj().Ctx(), fn)
-		_, lo, _, err = dir.LookupPath(f.Pobj().Ctx(), path.Path{fn.Base()})
+		lo, err = ps.lookupPathOpen(f, dir, fn.Base(), args.Tmode())
 		if err != nil {
 			return sp.MkRerror(err)
 		}

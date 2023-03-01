@@ -274,13 +274,13 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, test.Overlays)
 	assert.Nil(t, err)
 
 	cc, err := cacheclnt.MkCacheClnt(ts1.FsLib, job)
 	assert.Nil(t, err)
 
-	err = cc.Set("hello", "hello")
+	err = cc.Put("hello", "hello")
 	assert.Nil(t, err)
 
 	_, err = cacheclnt.MkCacheClnt(rootts.FsLib, job)
@@ -319,13 +319,13 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, test.Overlays)
 	assert.Nil(t, err)
 
 	cc, err := cacheclnt.MkCacheClnt(ts1.FsLib, job)
 	assert.Nil(t, err)
 
-	err = cc.Set("hello", "hello")
+	err = cc.Put("hello", "hello")
 	assert.Nil(t, err)
 
 	_, err = cacheclnt.MkCacheClnt(rootts.FsLib, job)

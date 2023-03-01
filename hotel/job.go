@@ -7,7 +7,9 @@ import (
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kv"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -69,43 +71,88 @@ var cacheNcore = 2
 //	2, 2, 3,
 //	3, 0, 2}
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, ncache int) (*cacheclnt.CacheClnt, *cacheclnt.CacheMgr, []proc.Tpid, error) {
+type HotelJob struct {
+	*sigmaclnt.SigmaClnt
+	cacheClnt *cacheclnt.CacheClnt
+	cacheMgr  *cacheclnt.CacheMgr
+	pids      []proc.Tpid
+	cache     string
+	kvf       *kv.KVFleet
+}
+
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, nsrv int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
-
+	var kvf *kv.KVFleet
 	// Init fs.
 	InitHotelFs(sc.FsLib, job)
 
 	// Create a cache clnt.
-	if ncache > 0 {
-		cm, err = cacheclnt.MkCacheMgr(sc, job, ncache, proc.Tcore(cacheNcore), test.Overlays)
-		if err != nil {
-			db.DFatalf("Error MkCacheMgr %v", err)
-			return nil, nil, nil, err
-		}
-		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
-		if err != nil {
-			db.DFatalf("Error cacheclnt %v", err)
-			return nil, nil, nil, err
+	if nsrv > 0 {
+		if cache == "cached" {
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, proc.Tcore(cacheNcore), test.Overlays)
+			if err != nil {
+				db.DFatalf("Error MkCacheMgr %v", err)
+				return nil, err
+			}
+			cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
+			if err != nil {
+				db.DFatalf("Error cacheclnt %v", err)
+				return nil, err
+			}
+		} else {
+			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, 0, "manual")
+			if err != nil {
+				return nil, err
+			}
+			err = kvf.Start()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	pids := make([]proc.Tpid, 0, len(srvs))
 
 	for i, srv := range srvs {
-		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public)})
+		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.SetNcore(proc.Tcore(ncores[i]))
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
-			return nil, nil, nil, err
+			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
 			db.DFatalf("Error spawn proc %v: %v", p, err)
-			return nil, nil, nil, err
+			return nil, err
 		}
 		pids = append(pids, p.GetPid())
 	}
 
-	return cc, cm, pids, nil
+	return &HotelJob{sc, cc, cm, pids, cache, kvf}, nil
+}
+
+func (hj *HotelJob) Stop() error {
+	for _, pid := range hj.pids {
+		if err := hj.Evict(pid); err != nil {
+			return err
+		}
+		if _, err := hj.WaitExit(pid); err != nil {
+			return err
+		}
+	}
+	if hj.cacheMgr != nil {
+		hj.cacheMgr.Stop()
+	}
+	if hj.kvf != nil {
+		hj.kvf.Stop()
+	}
+	return nil
+}
+
+func (hj *HotelJob) StatsSrv() ([]*protdev.Stats, error) {
+	if hj.cacheClnt != nil {
+		return hj.cacheClnt.StatsSrv()
+	}
+	return nil, nil
 }

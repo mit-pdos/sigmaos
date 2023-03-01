@@ -135,7 +135,7 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := cc.Set(key, []byte(proc.GetPid().String())); err != nil {
+			if err := cc.Put(key, []byte(proc.GetPid().String())); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

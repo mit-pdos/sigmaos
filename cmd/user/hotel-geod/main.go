@@ -9,15 +9,15 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		db.DFatalf("Usage: %v jobname public", os.Args[0])
+	if len(os.Args) != 4 {
+		db.DFatalf("Usage: %v jobname public cache", os.Args[0])
 	}
 	public, err := strconv.ParseBool(os.Args[2])
 	if err != nil {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
 
-	if err := hotel.RunGeoSrv(os.Args[0], public); err != nil {
+	if err := hotel.RunGeoSrv(os.Args[1], public); err != nil {
 		db.DFatalf("RunGeoSrv %v err %v\n", os.Args[0], err)
 	}
 }

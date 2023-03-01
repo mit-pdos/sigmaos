@@ -290,7 +290,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(ts.FsLib, ts.ProcClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
+	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

@@ -71,7 +71,7 @@ func TestCacheSingle(t *testing.T) {
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Set(key, key)
+		err = cc.Put(key, key)
 		assert.Nil(t, err)
 	}
 	for k := 0; k < N; k++ {
@@ -103,7 +103,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Set(key, key)
+		err = cc.Put(key, key)
 		assert.Nil(t, err)
 	}
 
@@ -142,7 +142,7 @@ func TestCacheConcur(t *testing.T) {
 	v := "hello"
 	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
-	err = cc.Set("x", v)
+	err = cc.Put("x", v)
 	assert.Nil(t, err)
 
 	wg := &sync.WaitGroup{}

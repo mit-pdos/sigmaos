@@ -47,6 +47,10 @@ func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
 	return cc, nil
 }
 
+func (cc *CacheClnt) IsMiss(err error) bool {
+	return err.Error() == ErrMiss.Error()
+}
+
 func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nshard, err)
 }
@@ -56,7 +60,7 @@ func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResu
 	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 
-func (c *CacheClnt) Set(key string, val any) error {
+func (c *CacheClnt) Put(key string, val any) error {
 	req := &proto.CacheRequest{}
 	req.Key = key
 	b, err := json.Marshal(val)
@@ -65,7 +69,7 @@ func (c *CacheClnt) Set(key string, val any) error {
 	}
 	req.Value = b
 	var res proto.CacheResult
-	if err := c.RPC("Cache.Set", req, &res); err != nil {
+	if err := c.RPC("Cache.Put", req, &res); err != nil {
 		return err
 	}
 	return nil

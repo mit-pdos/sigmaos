@@ -6,12 +6,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
@@ -63,8 +62,7 @@ func (gm *grpMap) groups() []*groupmgr.GroupMgr {
 }
 
 type Monitor struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 
 	mu       sync.Mutex
 	job      string
@@ -73,10 +71,9 @@ type Monitor struct {
 	gm       *grpMap
 }
 
-func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, kvdncore proc.Tcore) *Monitor {
+func MakeMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdncore proc.Tcore) *Monitor {
 	mo := &Monitor{}
-	mo.FsLib = fslib
-	mo.ProcClnt = pclnt
+	mo.SigmaClnt = sc
 	mo.group = 1
 	mo.job = job
 	mo.kvdncore = kvdncore
@@ -95,7 +92,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
+	grp := SpawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
 		grp.Stop()

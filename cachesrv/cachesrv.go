@@ -71,8 +71,8 @@ func RunCacheSrv(args []string) error {
 }
 
 // XXX support timeout
-func (s *CacheSrv) Set(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Set %v\n", proc.GetName(), req)
+func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
+	db.DPrintf(db.CACHESRV, "%v: Put %v\n", proc.GetName(), req)
 
 	b := key2bin(req.Key)
 

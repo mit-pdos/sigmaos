@@ -144,7 +144,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	os, lo, lk, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
 	defer ps.plt.Release(f.Pobj().Ctx(), lk)
-	if err != nil && !serr.IsMaybeSpecialElem(err) {
+	if err != nil && !err.IsMaybeSpecialElem() {
 		return sp.MkRerror(err)
 	}
 

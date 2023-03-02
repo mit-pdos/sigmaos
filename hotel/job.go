@@ -94,6 +94,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 	// Create a cache clnt.
 	if nsrv > 0 {
 		if cache == "cached" {
+			db.DPrintf(db.ALWAYS, "Hotel running with cached")
 			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, proc.Tcore(cacheNcore), test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
@@ -105,6 +106,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 				return nil, err
 			}
 		} else {
+			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, proc.Tcore(cacheNcore), "manual")
 			if err != nil {
 				return nil, err

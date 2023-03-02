@@ -542,7 +542,7 @@ func TestHotelSigmaosSearch(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
-		assert.Nil(t, err, "Error search req")
+		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
 
@@ -553,7 +553,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	clientReady(rootts)
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
-		assert.Nil(t, err, "Error search req")
+		assert.Nil(t, err, "Error search req: %v", err)
 	})
 	go func() {
 		for _, j := range jobs {

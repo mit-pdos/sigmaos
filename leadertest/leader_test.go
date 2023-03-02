@@ -86,8 +86,6 @@ func TestOldPrimary(t *testing.T) {
 	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
 
-	log.Printf("exit\n")
-
 	ts.Shutdown()
 }
 

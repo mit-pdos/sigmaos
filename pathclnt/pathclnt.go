@@ -247,7 +247,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			fid, err = pathc.WalkPath(pn, path.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -352,7 +352,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	// symlink.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) {
+		if err.IsMaybeSpecialElem() {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err

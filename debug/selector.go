@@ -18,6 +18,7 @@ const (
 	LOADGEN    Tselector = "LOADGEN"
 	BENCH                = "BENCH"
 	THROUGHPUT           = "THROUGHPUT"
+	CPU_UTIL             = "CPU_UTIL"
 )
 
 // Tests

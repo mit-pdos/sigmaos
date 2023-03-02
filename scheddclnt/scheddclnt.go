@@ -160,6 +160,7 @@ func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil: %v", err)
 			return 0, err
 		}
+		db.DPrintf(db.CPU_UTIL, "Schedd %v CPU util %v", sd, res.Util)
 		total += res.Util
 	}
 	return total, nil

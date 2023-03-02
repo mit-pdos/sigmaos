@@ -461,24 +461,8 @@ func (g *Tgetfile) Tcount() sessp.Tsize {
 	return sessp.Tsize(g.Count)
 }
 
-func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool) *Tsetfile {
-	return &Tsetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Wnames: path, Resolve: resolve}
-}
-
-func (s *Tsetfile) Tfid() Tfid {
-	return Tfid(s.Fid)
-}
-
-func (s *Tsetfile) Tmode() Tmode {
-	return Tmode(s.Mode)
-}
-
-func (s *Tsetfile) Toffset() Toffset {
-	return Toffset(s.Offset)
-}
-
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve}
 }
 
 func (p *Tputfile) Tfid() Tfid {
@@ -556,7 +540,6 @@ func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
 func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
 func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }
 func (Tgetfile) Type() sessp.Tfcall    { return sessp.TTgetfile }
-func (Tsetfile) Type() sessp.Tfcall    { return sessp.TTsetfile }
 func (Tputfile) Type() sessp.Tfcall    { return sessp.TTputfile }
 func (Tdetach) Type() sessp.Tfcall     { return sessp.TTdetach }
 func (Rdetach) Type() sessp.Tfcall     { return sessp.TRdetach }

@@ -31,25 +31,26 @@ func initTest(t *testing.T) *Tstate {
 
 	// start proxy
 
-	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.GetLocalIP()}, ts.NamedAddr().Taddrs2String())...)
+	as := ts.NamedAddr().String()
+	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.GetLocalIP()}, as)...)
 	ts.cmd.Stdout = os.Stdout
 	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	// mount proxy
 	_, err = run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	return ts
 }
 
 func (ts *Tstate) cleanup() {
 	_, err := run("sudo umount /mnt/9p")
-	assert.Equal(ts.T, nil, err)
+	assert.Nil(ts.T, err)
 
 	err = ts.cmd.Process.Kill()
-	assert.Equal(ts.T, nil, err)
+	assert.Nil(ts.T, err)
 
 	ts.Shutdown()
 }
@@ -66,37 +67,37 @@ func TestBasic(t *testing.T) {
 	ts := initTest(t)
 
 	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.Equal(t, ".statsd\n", string(out))
 
 	out, err = run("cat /mnt/9p/.statsd | grep Nwalk")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.True(t, strings.Contains(string(out), "Nwalk"))
 
 	out, err = run("echo hello > /mnt/9p/xxx")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("mv /mnt/9p/xxx /mnt/9p/yyy")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("rm /mnt/9p/yyy")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("mkdir /mnt/9p/ddd")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("echo hello > /mnt/9p/ddd/xxx")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("ls /mnt/9p/ddd | grep 'xxx'")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.Equal(t, "xxx\n", string(out))
 
 	out, err = run("rm /mnt/9p/ddd/xxx")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("rmdir /mnt/9p/ddd")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	out, err = run("ls /mnt/9p/xxx")
 	assert.NotNil(t, err)
@@ -116,7 +117,7 @@ func TestSymlinkPath(t *testing.T) {
 	assert.Nil(ts.T, err, "MkMountSymlink")
 
 	out, err := run("ls /mnt/9p/namedself")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 
 	log.Printf("Out: %v\n", string(out))
 

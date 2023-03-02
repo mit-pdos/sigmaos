@@ -291,10 +291,6 @@ func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	return nil, nil
 }
 
-func (npc *NpConn) SetFile(args *sp.Tsetfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
-	return nil
-}
-
 func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }

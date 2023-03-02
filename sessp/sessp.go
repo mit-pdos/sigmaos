@@ -238,7 +238,6 @@ const (
 	TRrenameat
 	TTremovefile
 	TTgetfile
-	TTsetfile
 	TTputfile
 	TTdetach
 	TRdetach
@@ -328,8 +327,6 @@ func (fct Tfcall) String() string {
 		return "Tremovefile"
 	case TTgetfile:
 		return "Tgetfile"
-	case TTsetfile:
-		return "Tsetfile"
 	case TTputfile:
 		return "Tputfile"
 	case TTdetach:

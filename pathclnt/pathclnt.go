@@ -369,37 +369,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	return data, nil
 }
 
-// Write file
-func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
-	db.DPrintf(db.PATHCLNT, "SetFile %v %v\n", pn, mode)
-	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
-	if err != nil {
-		return 0, err
-	}
-	// Optimistcally SetFile without doing a pathname walk; this
-	// may fail if rest contains an automount symlink.
-	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
-	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, path.EndSlash(pn))
-	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
-			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
-			if err != nil {
-				return 0, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.SetFile(fid, []string{}, mode, off, data, false)
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			return 0, err
-		}
-	}
-	return cnt, nil
-}
-
-// Create file
+// Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
@@ -410,17 +380,23 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
+	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
-			fid, err = pathc.WalkPath(dir, true, nil)
+			resolve := true
+			if p.Base() == err.Obj { // was the final pn component a symlink?
+				dir = p
+				base = path.Path{}
+				resolve = path.EndSlash(pn)
+			}
+			fid, err = pathc.WalkPath(dir, resolve, nil)
 			if err != nil {
 				return 0, err
 			}
 			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data)
+			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false)
 			if err != nil {
 				return 0, err
 			}

@@ -13,11 +13,11 @@ import (
 	"unsafe"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 
 	"sigmaos/perf"
@@ -125,8 +125,6 @@ func (si *StatInfo) Inc(fct sessp.Tfcall) {
 		si.Nrenameat.Inc()
 	case sessp.TTgetfile:
 		si.Nget.Inc()
-	case sessp.TTsetfile:
-		si.Nset.Inc()
 	case sessp.TTputfile:
 		si.Nput.Inc()
 	default:

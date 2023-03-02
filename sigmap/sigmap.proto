@@ -178,20 +178,13 @@ message Tgetfile {
         bool resolve = 6;
 }
 
-message Tsetfile {
-        uint32 fid = 1;
-        uint32 mode = 2;
-        uint64 offset = 3;
-        repeated string Wnames = 4;
-        bool resolve = 5;
-}
-
 message Tputfile {
         uint32 fid = 1;
         uint32 mode = 2;
         uint32 perm = 3;
         uint64 offset = 4;
         repeated string Wnames = 5;
+        bool resolve = 6;
 }
 
 message Tdetach {

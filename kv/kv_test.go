@@ -120,7 +120,7 @@ func TestGetPutSet(t *testing.T) {
 	assert.NotNil(ts.T, err, "Get")
 
 	err = clrk.SetRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
-	assert.NotEqual(ts.T, err, nil, "Set")
+	assert.Nil(ts.T, err, "Set")
 
 	err = clrk.SetRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
 	assert.Nil(ts.T, err, "Set")

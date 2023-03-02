@@ -166,24 +166,25 @@ run_mr() {
 }
 
 run_hotel() {
-  if [ $# -ne 8 ]; then
-    echo "run_hotel args: testname rps cli_vm nclnt k8saddr perf_dir driver async " 1>&2
+  if [ $# -ne 9 ]; then
+    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr perf_dir driver async " 1>&2
     exit 1
   fi
   testname=$1
   rps=$2
   cli_vm=$3
   nclnt=$4
-  k8saddr=$5
-  perf_dir=$6
-  driver=$7
-  async=$8
+  cache_type=$5
+  k8saddr=$6
+  perf_dir=$7
+  driver=$8
+  async=$9
   hotel_ncache=6
   cmd="
-    export SIGMADEBUG=\"TEST;THROUGHPUT;\"; \
+    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_tye --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -287,7 +288,7 @@ hotel_tail() {
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $testname $rps $cli_vm 1 $k8saddr $perf_dir true false
+      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr $perf_dir true false
     done
   done
 }
@@ -298,6 +299,8 @@ hotel_tail_multi() {
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
+  cache_type="cached"
+#  cache_type="kvd"
   driver_vm=8
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
@@ -316,7 +319,7 @@ hotel_tail_multi() {
     else
       testname=$testname_clnt
     fi
-    run_hotel $testname $rps $cli_vm 5 $k8saddr $perf_dir $driver true
+    run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
       sleep 30s

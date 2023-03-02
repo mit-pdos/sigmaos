@@ -157,5 +157,6 @@ func (hj *HotelJob) StatsSrv() ([]*protdev.Stats, error) {
 	if hj.cacheClnt != nil {
 		return hj.cacheClnt.StatsSrv()
 	}
+	db.DPrintf(db.ALWAYS, "No cacheclnt")
 	return nil, nil
 }

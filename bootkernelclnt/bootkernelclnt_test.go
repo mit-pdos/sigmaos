@@ -46,7 +46,6 @@ func TestSymlink1(t *testing.T) {
 	w := []byte("overwritten!!")
 	_, err = ts.SetFile(linkPath+"/", w, sp.OWRITE, 0)
 	assert.Nil(t, err, "Writing linked file")
-	assert.Equal(t, contents, string(b), "File contents don't match")
 
 	// Read target file
 	b, err = ts.GetFile(targetPath)

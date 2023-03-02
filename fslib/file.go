@@ -9,9 +9,9 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/reader"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -29,7 +29,7 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sessp.Tsize, error) {
-	return fl.FdClient.SetFile(fname, m, data, off)
+	return fl.FdClient.PutFile(fname, m, 0777, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sessp.Tsize, error) {

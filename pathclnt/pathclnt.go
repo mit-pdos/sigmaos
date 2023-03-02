@@ -1,6 +1,7 @@
 package pathclnt
 
 import (
+	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -410,17 +411,24 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
+	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
 	if err != nil {
 		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
-			fid, err = pathc.WalkPath(dir, true, nil)
+			var serr *serr.Err
+			resolve := true
+			if errors.As(err, &serr) && p.Base() == serr.Obj {
+				dir = p
+				base = path.Path{}
+				resolve = path.EndSlash(pn)
+			}
+			fid, err = pathc.WalkPath(dir, resolve, nil)
 			if err != nil {
 				return 0, err
 			}
 			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data)
+			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false)
 			if err != nil {
 				return 0, err
 			}

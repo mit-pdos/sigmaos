@@ -273,13 +273,13 @@ func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte) (sessp.Tsize, *serr.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, serr.MkErr(serr.TErrUnreachable, "putfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, f, data)
+	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data)
 	if err != nil {
 		return 0, err
 	}

@@ -327,8 +327,8 @@ func (pclnt *ProtClnt) SetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTputfile(fid, mode, perm, offset, path)
+func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve)
 	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err

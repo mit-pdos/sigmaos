@@ -477,8 +477,8 @@ func (s *Tsetfile) Toffset() Toffset {
 	return Toffset(s.Offset)
 }
 
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve}
 }
 
 func (p *Tputfile) Tfid() Tfid {

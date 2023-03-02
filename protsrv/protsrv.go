@@ -574,36 +574,6 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	return data, nil
 }
 
-func (ps *ProtSrv) SetFile(args *sp.Tsetfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	if sessp.Tsize(len(data)) > sp.MAXGETSET {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
-	}
-	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
-	if err != nil {
-		return sp.MkRerror(err)
-	}
-
-	db.DPrintf(db.PROTSRV, "SetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
-
-	if args.Tmode()&sp.OAPPEND == sp.OAPPEND && args.Toffset() != sp.NoOffset {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "offset should be sp.NoOffset"))
-	}
-	if args.Toffset() == sp.NoOffset && args.Tmode()&sp.OAPPEND != sp.OAPPEND {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
-	}
-
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV)
-	if err != nil {
-		return sp.MkRerror(err)
-	}
-
-	if err := lo.Close(f.Pobj().Ctx(), args.Tmode()); err != nil {
-		return sp.MkRerror(err)
-	}
-	rets.Count = uint32(n)
-	return nil
-}
-
 // Caller holds pathname lock for f
 func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.Tmode, resolve bool) (fs.FsObj, *serr.Err) {
 	_, lo, _, err := dir.LookupPath(f.Pobj().Ctx(), path.Path{name})

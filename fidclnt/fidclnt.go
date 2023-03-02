@@ -260,19 +260,6 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
-	ch := fidc.fids.lookup(fid)
-	if ch == nil {
-		return 0, serr.MkErr(serr.TErrUnreachable, "getfile")
-	}
-	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.SetFile(fid, path, mode, off, resolve, f, data)
-	if err != nil {
-		return 0, err
-	}
-	return reply.Tcount(), nil
-}
-
 func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {

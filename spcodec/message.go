@@ -70,8 +70,6 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 		return &sp.Tremovefile{}, nil
 	case sessp.TTgetfile:
 		return &sp.Tgetfile{}, nil
-	case sessp.TTsetfile:
-		return &sp.Tsetfile{}, nil
 	case sessp.TTputfile:
 		return &sp.Tputfile{}, nil
 	case sessp.TTdetach:

@@ -187,7 +187,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.SetRaw(key, []byte(proc.GetPid().String()), 0); err != nil {
+				if err := kc.PutRaw(key, []byte(proc.GetPid().String()), 0); err != nil {
 					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.

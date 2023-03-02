@@ -113,17 +113,17 @@ func TestMiss(t *testing.T) {
 	ts.done()
 }
 
-func TestGetPutSet(t *testing.T) {
+func TestGetPut(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
 	assert.NotNil(ts.T, err, "Get")
 
-	err = clrk.SetRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
-	assert.Nil(ts.T, err, "Set")
+	err = clrk.PutRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
+	assert.Nil(ts.T, err, "Put")
 
-	err = clrk.SetRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
-	assert.Nil(ts.T, err, "Set")
+	err = clrk.PutRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
+	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)

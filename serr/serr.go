@@ -175,6 +175,15 @@ func (err *Err) String() string {
 	return err.Error()
 }
 
+// Maybe the error is because of a symlink or ~
+func (err *Err) IsMaybeSpecialElem() bool {
+	return err.Code() == TErrNotDir || err.Code() == TErrNotfound
+}
+
+func (err *Err) IsErrUnreachable() bool {
+	return err.Code() == TErrUnreachable
+}
+
 // SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
 	return error != nil && strings.Contains(error.Error(), TErrNotfound.String())

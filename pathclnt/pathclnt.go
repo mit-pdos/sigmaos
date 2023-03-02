@@ -1,7 +1,6 @@
 package pathclnt
 
 import (
-	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -400,7 +399,7 @@ func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Tof
 	return cnt, nil
 }
 
-// Create file
+// Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
@@ -413,12 +412,11 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
-			var serr *serr.Err
 			resolve := true
-			if errors.As(err, &serr) && p.Base() == serr.Obj {
+			if p.Base() == err.Obj { // was the final pn component a symlink?
 				dir = p
 				base = path.Path{}
 				resolve = path.EndSlash(pn)

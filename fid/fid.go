@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -56,7 +56,7 @@ func MakeFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
 }
 
 func (f *Fid) String() string {
-	return fmt.Sprintf("po %v o? %v %v v %v", f.po, f.isOpen, f.m, f.qid)
+	return fmt.Sprintf("{po %v o? %v %v v %v}", f.po, f.isOpen, f.m, f.qid)
 }
 
 func (f *Fid) Mode() sp.Tmode {

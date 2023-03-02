@@ -620,7 +620,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		dlk = ps.plt.Acquire(f.Pobj().Ctx(), dname)
 		defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
-		db.DPrintf(db.PROTSRV, "%v: PutFile try to create", f.Pobj().Ctx().Uname(), fn)
+		db.DPrintf(db.PROTSRV, "%v: PutFile try to create %v", f.Pobj().Ctx().Uname(), fn)
 		// try to create file, which will fail it exists
 		dir := lo.(fs.Dir)
 		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode())
@@ -658,7 +658,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	}
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
 
-	// make an fid for the file (in case we creaed it)
+	// make an fid for the file (in case we created it)
 	qid := ps.mkQid(lo.Perm(), lo.Path())
 	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Tperm().IsEphemeral(), qid)
 	i, err := fs.Obj2File(lo, fn)

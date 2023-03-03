@@ -99,12 +99,12 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
-			progs[sd] = make([]string, len(ps))
+			progs[sd] = make([]string, 0, len(ps))
 			for _, p := range ps {
 				progs[sd] = append(progs[sd], p.Program)
 			}
 		}
-		db.DPrintf(db.TEST, "Running procs:\n%v", progs)
+		db.DPrintf(db.TEST, "Running procs:%v", progs)
 	}
 
 	if !sigmaos {

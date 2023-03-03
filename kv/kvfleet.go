@@ -46,27 +46,29 @@ func kvShardPath(job, kvd string, shard Tshard) string {
 
 type KVFleet struct {
 	*sigmaclnt.SigmaClnt
-	nkvd     int        // Number of kvd groups to run the test with.
-	kvdrepl  int        // kvd replication level
-	kvdncore proc.Tcore // Number of exclusive cores allocated to each kvd.
-	ck       *KvClerk   // A clerk which can be used for initialization.
-	auto     string     // Balancer auto-balancing setting.
-	job      string
-	ready    chan bool
-	sem      *semclnt.SemClnt
-	sempath  string
-	balgm    *groupmgr.GroupMgr
-	kvdgms   []*groupmgr.GroupMgr
-	cpids    []proc.Tpid
+	nkvd        int        // Number of kvd groups to run the test with.
+	kvdrepl     int        // kvd replication level
+	kvdncore    proc.Tcore // Number of exclusive cores allocated to each kvd.
+	ck          *KvClerk   // A clerk which can be used for initialization.
+	crashhelper string     // Crash balancer helper/mover?
+	auto        string     // Balancer auto-balancing setting.
+	job         string
+	ready       chan bool
+	sem         *semclnt.SemClnt
+	sempath     string
+	balgm       *groupmgr.GroupMgr
+	kvdgms      []*groupmgr.GroupMgr
+	cpids       []proc.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdncore proc.Tcore, auto string) (*KVFleet, error) {
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdncore proc.Tcore, crashhelper, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{}
 	kvf.SigmaClnt = sc
 	kvf.nkvd = nkvd
 	kvf.kvdrepl = kvdrepl
 	kvf.kvdncore = kvdncore
 	kvf.job = job
+	kvf.crashhelper = crashhelper
 	kvf.auto = auto
 	kvf.ready = make(chan bool)
 
@@ -92,7 +94,7 @@ func (kvf *KVFleet) Job() string {
 }
 
 func (kvf *KVFleet) Start() error {
-	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, "0", kvf.auto)
+	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, kvf.crashhelper, kvf.auto)
 	// Add an initial kvd group to put keys in.
 	for i := 0; i < kvf.nkvd; i++ {
 		if err := kvf.AddKVDGroup(); err != nil {

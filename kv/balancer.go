@@ -40,15 +40,15 @@ import (
 type Balancer struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	conf       *Config
-	lc         *leaderclnt.LeaderClnt
-	mo         *Monitor
-	job        string
-	kvdncore   proc.Tcore
-	ch         chan bool
-	crash      int64
-	crashChild string
-	isBusy     bool // in config change?
+	conf        *Config
+	lc          *leaderclnt.LeaderClnt
+	mo          *Monitor
+	job         string
+	kvdncore    proc.Tcore
+	ch          chan bool
+	crash       int64
+	crashhelper string
+	isBusy      bool // in config change?
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -65,7 +65,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashChild, kvdncore string, auto string) {
+func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -75,7 +75,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
-	bl.crashChild = crashChild
+	bl.crashhelper = crashhelper
 	var kvdnc int
 	var error error
 	kvdnc, error = strconv.Atoi(kvdncore)
@@ -284,7 +284,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	p.AppendEnv("SIGMACRASH", bl.crashChild)
+	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)

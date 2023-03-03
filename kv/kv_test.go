@@ -74,7 +74,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	job := rand.String(16)
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, auto)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
 	err = ts.kvf.Start()
@@ -224,9 +224,12 @@ func TestConcurReplFailN(t *testing.T) {
 func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
 
-	ts := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	err := ts.cm.StartClerks("10s")
+	err := ts.kvf.AddKVDGroup()
+	assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
+
+	err = ts.cm.StartClerks("20s")
 	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
 
 	ts.cm.WaitForClerks()

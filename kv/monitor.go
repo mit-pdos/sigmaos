@@ -15,6 +15,10 @@ import (
 	"sigmaos/stats"
 )
 
+//
+// Adds or removes shards based on load
+//
+
 const (
 	MAXLOAD        float64 = 85.0
 	MINLOAD        float64 = 40.0

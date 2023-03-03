@@ -6,8 +6,7 @@ package kv
 // several backups.
 //
 // When a client adds/removes a shard, the primary balancer updates
-// KVCONF, which has the mapping from shards to groups in the
-// following steps.
+// KVCONF, which has the mapping from shards to groups.
 //
 // If the balancer isn't the primary anymore (e.g., it is partitioned
 // and another balancer has become primary), the old primary's writes
@@ -102,7 +101,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}
 
-	// start server and write xch when server is done
+	// start server and write ch when server is done
 	ch := make(chan bool)
 	go func() {
 		mfs.Serve()
@@ -122,8 +121,8 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 
 	db.DPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
 
-	// first epoch is used to create a functional system
-	// (e.g., creating shards), so don't crash then.
+	// first epoch is used to create a functional system (e.g.,
+	// creating shards), so don't allow a crash then.
 	if epoch > 1 {
 		crash.Crasher(bl.FsLib)
 	}
@@ -225,7 +224,8 @@ func (bl *Balancer) monitor() {
 	}
 }
 
-// Monitor if i am connected; if not, terminate myself
+// Monitor if i am connected; if not, terminate myself.  Another
+// balancer will take over.
 func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)

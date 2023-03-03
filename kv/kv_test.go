@@ -1,6 +1,7 @@
 package kv_test
 
 import (
+	"path"
 	"regexp"
 	"strconv"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"sigmaos/kv"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/semclnt"
 	"sigmaos/test"
 )
 
@@ -103,6 +105,14 @@ func (ts *Tstate) stopClerks() {
 		status, err := kv.StopClerk(ts.ProcClnt, ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
 		assert.True(ts.T, status.IsStatusEvicted(), "Exit status: %v", status)
+	}
+}
+
+func (ts *Tstate) waitForClerks() {
+	db.DPrintf(db.ALWAYS, "clerks to wait for %v\n", len(ts.clrks))
+	for _, ck := range ts.clrks {
+		_, err := kv.WaitForClerk(ts.ProcClnt, ck)
+		assert.Nil(ts.T, err, "WaitForClerk: %v", err)
 	}
 }
 
@@ -243,17 +253,20 @@ func TestAuto(t *testing.T) {
 	nclerk := NCLERK
 	ts, _ := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
+	sempath := path.Join(kv.JobDir(ts.kvf.Job()), "kvclerk-sem")
+	sem := semclnt.MakeSemClnt(ts.FsLib, sempath)
+	err := sem.Init(0)
+	assert.Nil(ts.T, err, "Sem init: %v", err)
+
 	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), nil, 0)
+		args := []string{"20s", strconv.Itoa(i * kv.NKEYS), sempath}
+		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), args, 0)
 		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 		ts.clrks = append(ts.clrks, pid)
 	}
+	sem.Up()
 
-	time.Sleep(10 * time.Second)
-
-	db.DPrintf(db.ALWAYS, "Wait for clerks\n")
-
-	ts.stopClerks()
+	ts.waitForClerks()
 
 	time.Sleep(100 * time.Millisecond)
 

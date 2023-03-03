@@ -194,6 +194,11 @@ func StopClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {
 	return status, err
 }
 
+func WaitForClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {
+	status, err := pclnt.WaitExit(pid)
+	return status, err
+}
+
 func RemoveJob(fsl *fslib.FsLib, job string) error {
 	return fsl.RmDir(JobDir(job))
 }

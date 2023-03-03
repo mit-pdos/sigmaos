@@ -76,7 +76,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	job := rand.String(16)
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, "manual")
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
 	err = ts.kvf.Start()

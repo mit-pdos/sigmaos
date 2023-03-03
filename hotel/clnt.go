@@ -40,6 +40,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 1000
 	addrs = container.Rearrange(sp.ROOTREALM.String(), addrs)
+	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0].Addr)
 	return &WebClnt{job, addrs, "http://" + addrs[0].Addr, clnt, fsl}
 }
 

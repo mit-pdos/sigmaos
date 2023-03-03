@@ -334,6 +334,7 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	defer p.Done()
 
+	mfs.GetStats().DisablePathCnts()
 	mfs.MonitorCPU(nil)
 
 	mfs.Serve()

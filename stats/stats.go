@@ -66,7 +66,6 @@ type StatInfo struct {
 	Nwstat      Tcounter
 	Nrenameat   Tcounter
 	Nget        Tcounter
-	Nset        Tcounter
 	Nput        Tcounter
 
 	Paths map[string]int
@@ -259,7 +258,7 @@ func (st *Stats) stats() []byte {
 }
 
 func (si *StatInfo) String() string {
-	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
+	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nput, si.Paths, si.Load, si.Util)
 }
 
 func (st *Stats) Snapshot(fn fs.SnapshotF) []byte {

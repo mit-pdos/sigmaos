@@ -144,6 +144,11 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	os, lo, lk, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames)
 	defer ps.plt.Release(f.Pobj().Ctx(), lk)
+
+	if lk != nil {
+		ps.stats.IncPathString(lk.Path())
+	}
+
 	if err != nil && !err.IsMaybeSpecialElem() {
 		return sp.MkRerror(err)
 	}
@@ -182,6 +187,8 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 		return sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Open f %v %v", f.Pobj().Ctx().Uname(), f, args)
+
+	ps.stats.IncPathString(f.Pobj().Path().String())
 
 	o := f.Pobj().Obj()
 	no, r := o.Open(f.Pobj().Ctx(), args.Tmode())
@@ -286,6 +293,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 		return sp.MkRerror(err)
 	}
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
+	ps.stats.IncPathString(f.Pobj().Path().String())
 	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
@@ -400,6 +408,7 @@ func (ps *ProtSrv) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 		return sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Stat %v", f.Pobj().Ctx().Uname(), f)
+	ps.stats.IncPathString(f.Pobj().Path().String())
 	o := f.Pobj().Obj()
 	st, r := o.Stat(f.Pobj().Ctx())
 	if r != nil {
@@ -429,7 +438,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		defer ps.plt.ReleaseLocks(f.Pobj().Ctx(), dlk, slk)
 		tlk := ps.plt.Acquire(f.Pobj().Ctx(), dst)
 		defer ps.plt.Release(f.Pobj().Ctx(), tlk)
-
+		ps.stats.IncPathString(f.Pobj().Path().String())
 		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Path().Base(), args.Stat.Name)
 		if err != nil {
 			return sp.MkRerror(err)
@@ -530,7 +539,6 @@ func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Path, resolve bool, m
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	ps.stats.IncPath(fname)
 	no, err := lo.Open(f.Pobj().Ctx(), mode)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -563,6 +571,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
+	ps.stats.IncPathString(f.Pobj().Path().String())
 	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
 	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), sp.NoV)
 	if err != nil {
@@ -665,6 +674,8 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	if err != nil {
 		return sp.MkRerror(err)
 	}
+
+	ps.stats.IncPathString(f.Pobj().Path().String())
 
 	if args.Tmode()&sp.OAPPEND == sp.OAPPEND && args.Toffset() != sp.NoOffset {
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "offset should be sp.NoOffset"))

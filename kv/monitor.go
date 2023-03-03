@@ -140,7 +140,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
 		}
-		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, sti)
+		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, &sti)
 		n += 1
 		util += sti.Util
 		if sti.Util < low {

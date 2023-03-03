@@ -18,7 +18,6 @@ func releaseLk(plt *lockmap.PathLockTable, ctx fs.CtxI, pl *lockmap.PathLock) {
 // depending if the underlying file system can do a lookup for the
 // complete path.  Caller provides locked dir.
 func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, dn, target path.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *serr.Err) {
-	// ps.stats.IncPathString(dlk.Path())
 	fn := dn.AppendPath(target)
 	var plk *lockmap.PathLock
 	if len(target) > 1 {

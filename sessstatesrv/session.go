@@ -51,7 +51,7 @@ func makeSession(protsrv sp.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *t
 	return sess
 }
 
-func (sess *Session) QueueLen() int {
+func (sess *Session) QueueLen() int64 {
 	return sess.threadmgr.QueueLen()
 }
 

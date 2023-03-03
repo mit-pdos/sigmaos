@@ -39,7 +39,7 @@ func (st *Stats) String() string {
 type StatInfo struct {
 	sync.Mutex
 	st  *Stats
-	len uint64
+	len int64
 }
 
 func MakeStatInfo() *StatInfo {
@@ -62,10 +62,10 @@ func (si *StatInfo) Stats() *Stats {
 	return si.st
 }
 
-func (sts *StatInfo) Stat(m string, t int64, ql int) {
+func (sts *StatInfo) Stat(m string, t int64, ql int64) {
 	sts.Lock()
 	defer sts.Unlock()
-	sts.len += uint64(ql)
+	sts.len += ql
 	st, ok := sts.st.MStats[m]
 	if !ok {
 		st = &MethodStat{}

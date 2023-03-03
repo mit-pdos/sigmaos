@@ -222,8 +222,8 @@ func (ssrv *SessSrv) GetStats() *stats.Stats {
 	return ssrv.stats
 }
 
-func (ssrv *SessSrv) QueueLen() int {
-	return ssrv.st.QueueLen() + int(ssrv.cnt.Read())
+func (ssrv *SessSrv) QueueLen() int64 {
+	return ssrv.st.QueueLen() + ssrv.cnt.Read()
 }
 
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
@@ -272,7 +272,7 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 		if s == 0 {
 			ssrv.srvfcall(fc)
 		} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
-			ssrv.cnt.Inc()
+			ssrv.cnt.Inc(1)
 			go func() {
 				ssrv.srvfcall(fc)
 				ssrv.cnt.Dec()
@@ -343,7 +343,8 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "srvfcall %v reply not in cache", fc)
 	if ok := sess.GetReplyTable().Register(fc); ok {
 		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
-		ssrv.stats.StatInfo().Inc(fc.Msg.Type())
+		qlen := ssrv.QueueLen()
+		ssrv.stats.StatInfo().Inc(fc.Msg.Type(), qlen)
 		ssrv.fenceFcall(sess, fc)
 	} else {
 		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)

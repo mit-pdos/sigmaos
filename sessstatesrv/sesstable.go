@@ -32,10 +32,10 @@ func MakeSessionTable(mkps sp.MkProtServer, sesssrv sp.SessServer, tm *threadmgr
 	return st
 }
 
-func (st *SessionTable) QueueLen() int {
+func (st *SessionTable) QueueLen() int64 {
 	st.Lock()
 	defer st.Unlock()
-	len := 0
+	len := int64(0)
 	for _, s := range st.sessions {
 		len += s.QueueLen()
 	}

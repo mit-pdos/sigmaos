@@ -88,7 +88,7 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
 	return psd, nil
 }
 
-func (psd *ProtDevSrv) QueueLen() int {
+func (psd *ProtDevSrv) QueueLen() int64 {
 	return psd.MemFs.QueueLen()
 }
 

@@ -25,10 +25,10 @@ const STATS = true
 type Tcounter int64
 type TCycles uint64
 
-func (c *Tcounter) Inc() {
+func (c *Tcounter) Inc(v int64) {
 	if STATS {
 		n := (*int64)(unsafe.Pointer(c))
-		atomic.AddInt64(n, 1)
+		atomic.AddInt64(n, v)
 	}
 }
 
@@ -49,9 +49,11 @@ func (c *Tcounter) Read() int64 {
 
 // XXX separate cache lines
 type StatInfo struct {
+	Ntotal      Tcounter
 	Nversion    Tcounter
 	Nauth       Tcounter
 	Nattach     Tcounter
+	Ndetach     Tcounter
 	Nflush      Tcounter
 	Nwalk       Tcounter
 	Nclunk      Tcounter
@@ -67,8 +69,12 @@ type StatInfo struct {
 	Nrenameat   Tcounter
 	Nget        Tcounter
 	Nput        Tcounter
+	Nrpc        Tcounter
 
 	Paths map[string]int
+
+	Qlen    Tcounter
+	AvgQlen float64
 
 	Util       float64
 	CustomUtil float64
@@ -83,46 +89,53 @@ func MkStatInfo() *StatInfo {
 	return sti
 }
 
-func (si *StatInfo) Inc(fct sessp.Tfcall) {
+func (si *StatInfo) Inc(fct sessp.Tfcall, ql int64) {
 	switch fct {
 	case sessp.TTversion:
-		si.Nversion.Inc()
+		si.Nversion.Inc(1)
 	case sessp.TTauth:
-		si.Nauth.Inc()
+		si.Nauth.Inc(1)
 	case sessp.TTattach:
-		si.Nattach.Inc()
+		si.Nattach.Inc(1)
+	case sessp.TTdetach:
+		si.Ndetach.Inc(1)
 	case sessp.TTflush:
-		si.Nflush.Inc()
+		si.Nflush.Inc(1)
 	case sessp.TTwalk:
-		si.Nwalk.Inc()
+		si.Nwalk.Inc(1)
 	case sessp.TTopen:
-		si.Nopen.Inc()
+		si.Nopen.Inc(1)
 	case sessp.TTcreate:
-		si.Ncreate.Inc()
+		si.Ncreate.Inc(1)
 	case sessp.TTread, sessp.TTreadV:
-		si.Nread.Inc()
+		si.Nread.Inc(1)
 	case sessp.TTwrite, sessp.TTwriteV:
-		si.Nwrite.Inc()
+		si.Nwrite.Inc(1)
 	case sessp.TTclunk:
-		si.Nclunk.Inc()
+		si.Nclunk.Inc(1)
 	case sessp.TTremove:
-		si.Nremove.Inc()
+		si.Nremove.Inc(1)
 	case sessp.TTremovefile:
-		si.Nremovefile.Inc()
+		si.Nremovefile.Inc(1)
 	case sessp.TTstat:
-		si.Nstat.Inc()
+		si.Nstat.Inc(1)
 	case sessp.TTwstat:
-		si.Nwstat.Inc()
+		si.Nwstat.Inc(1)
 	case sessp.TTwatch:
-		si.Nwatch.Inc()
+		si.Nwatch.Inc(1)
 	case sessp.TTrenameat:
-		si.Nrenameat.Inc()
+		si.Nrenameat.Inc(1)
 	case sessp.TTgetfile:
-		si.Nget.Inc()
+		si.Nget.Inc(1)
 	case sessp.TTputfile:
-		si.Nput.Inc()
+		si.Nput.Inc(1)
+	case sessp.TTwriteread:
+		si.Nrpc.Inc(1)
 	default:
+		db.DPrintf(db.ALWAYS, "StatInfo: missing counter for %v\n", fct)
 	}
+	si.Ntotal.Inc(1)
+	si.Qlen.Inc(ql)
 }
 
 type Stats struct {
@@ -244,6 +257,7 @@ func (st *Stats) stats() []byte {
 	stcp := st.sti.acopy()
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	stcp.AvgQlen = float64(st.sti.Qlen) / float64(st.sti.Ntotal)
 	stcp.Paths = st.sti.Paths
 	stcp.Util = st.sti.Util
 	stcp.Load = st.sti.Load
@@ -258,7 +272,7 @@ func (st *Stats) stats() []byte {
 }
 
 func (si *StatInfo) String() string {
-	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nput, si.Paths, si.Load, si.Util)
+	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", si.Ntotal, si.Nattach, si.Ndetach, si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nput, si.Nrpc, si.Qlen, si.AvgQlen, si.Paths, si.Load, si.Util)
 }
 
 func (st *Stats) Snapshot(fn fs.SnapshotF) []byte {

@@ -76,7 +76,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	job := rand.String(16)
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, "manual")
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
 	err = ts.kvf.Start()
@@ -113,17 +113,17 @@ func TestMiss(t *testing.T) {
 	ts.done()
 }
 
-func TestGetPutSet(t *testing.T) {
+func TestGetPut(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
 	assert.NotNil(ts.T, err, "Get")
 
-	err = clrk.SetRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
-	assert.Nil(ts.T, err, "Set")
+	err = clrk.PutRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
+	assert.Nil(ts.T, err, "Put")
 
-	err = clrk.SetRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
-	assert.Nil(ts.T, err, "Set")
+	err = clrk.PutRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
+	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)

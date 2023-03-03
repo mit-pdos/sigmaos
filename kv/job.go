@@ -164,7 +164,7 @@ func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) 
 		return nil, err
 	}
 	for i := uint64(0); i < uint64(nkeys); i++ {
-		err := clrk.PutRaw(MkKey(i), []byte{})
+		err := clrk.PutRaw(MkKey(i), []byte{}, 0)
 		if err != nil {
 			return clrk, err
 		}

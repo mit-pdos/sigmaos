@@ -15,7 +15,9 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
-// XXX cmd line utility cp
+//
+// Move shards between servers
+//
 
 type Mover struct {
 	mu sync.Mutex

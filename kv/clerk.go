@@ -211,9 +211,11 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case GETRD:
 		o.rdr, o.err = fsl.OpenReader(fn)
 	case PUT:
-		_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
-	case SET:
-		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
+		if o.off == 0 {
+			_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
+		} else {
+			_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
+		}
 	}
 	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
@@ -241,22 +243,8 @@ func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k string, val any) error {
-	b, err := json.Marshal(val)
-	if err != nil {
-		return nil
-	}
-	return kc.SetRaw(Tkey(k), b, 0)
-}
-
-func (kc *KvClerk) SetRaw(k Tkey, b []byte, off sp.Toffset) error {
-	op := &op{SET, b, k, off, sp.OWRITE, nil, nil}
-	kc.doop(op)
-	return op.err
-}
-
 func (kc *KvClerk) Append(k Tkey, b []byte) error {
-	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -266,11 +254,11 @@ func (kc *KvClerk) Put(k string, val any) error {
 	if err != nil {
 		return nil
 	}
-	return kc.PutRaw(Tkey(k), b)
+	return kc.PutRaw(Tkey(k), b, 0)
 }
 
-func (kc *KvClerk) PutRaw(k Tkey, b []byte) error {
-	op := &op{PUT, b, k, 0, sp.OWRITE, nil, nil}
+func (kc *KvClerk) PutRaw(k Tkey, b []byte, off sp.Toffset) error {
+	op := &op{PUT, b, k, off, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -280,7 +268,7 @@ func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }

@@ -38,7 +38,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 		Transport: http.DefaultTransport,
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
-	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 5000
+	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 1000
 	addrs = container.Rearrange(sp.ROOTREALM.String(), addrs)
 	return &WebClnt{job, addrs, "http://" + addrs[0].Addr, clnt, fsl}
 }

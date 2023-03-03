@@ -3,32 +3,27 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
+	"sigmaos/perf"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-
-	"sigmaos/perf"
 )
 
 const STATS = true
 
 type Tcounter int64
 type TCycles uint64
-
-type UtilFn func() float64
 
 func (c *Tcounter) Inc() {
 	if STATS {
@@ -133,121 +128,31 @@ func (si *StatInfo) Inc(fct sessp.Tfcall) {
 
 type Stats struct {
 	fs.Inode
-	mu            sync.Mutex // protects some fields of StatInfo
-	sti           *StatInfo
-	pathCnts      bool
-	pid           int
-	hz            int
-	cores         map[string]bool
-	monitoringCPU bool
-	done          uint32
+	mu       sync.Mutex // protects some fields of StatInfo
+	sti      *StatInfo
+	pathCnts bool
 }
 
 func MkStatsDev(parent fs.Dir) *Stats {
 	st := &Stats{}
 	st.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
 	st.sti = MkStatInfo()
-	st.pid = os.Getpid()
 	st.pathCnts = true
 	return st
 }
 
-func (st *Stats) GetUtil() (float64, float64) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	return st.sti.Util, 0.0
-}
-
-func (st *Stats) GetLoad() perf.Tload {
+func (st *Stats) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
-	load := perf.Tload{}
-	load[0] = st.sti.Load[0]
-	load[1] = st.sti.Load[1]
-	load[2] = st.sti.Load[2]
-	return load
+	st.sti.Load = load
+	st.sti.CustomLoad = cload
+	st.sti.Util = u
+	st.sti.CustomUtil = cu
 }
 
 func (st *Stats) StatInfo() *StatInfo {
 	return st.sti
-}
-
-func (st *Stats) MonitorCPUUtil(ufn UtilFn) {
-	st.hz = perf.Hz()
-	// Don't duplicate work
-	if !st.monitoringCPU {
-		st.monitoringCPU = true
-		go st.monitorCPUUtil(ufn)
-	}
-}
-
-const (
-	EXP_0 = 0.9048 // 1/exp(100ms/1000ms)
-	EXP_1 = 0.9512 // 1/exp(100ms/2000ms)
-	EXP_2 = 0.9801 // 1/exp(100ms/5000ms)
-	MS    = 100    // 100 ms
-	SEC   = 1000   // 1s
-)
-
-func setLoad(load *perf.Tload, x float64) {
-	load[0] *= EXP_0
-	load[0] += (1 - EXP_0) * x
-	load[1] *= EXP_1
-	load[1] += (1 - EXP_1) * x
-	load[2] *= EXP_2
-	load[2] += (1 - EXP_2) * x
-}
-
-// Caller holds lock
-func (st *Stats) loadCPUUtilL(idle, total uint64, customUtil float64) {
-	util := 100.0 * (1.0 - float64(idle)/float64(total))
-
-	setLoad(&st.sti.Load, util)
-	setLoad(&st.sti.CustomLoad, customUtil)
-
-	st.sti.Util = util
-	st.sti.CustomUtil = customUtil
-}
-
-// Update the set of cores we scan to determine CPU utilization.
-func (st *Stats) UpdateCores() {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
-	st.cores = perf.GetActiveCores()
-}
-
-func (st *Stats) monitorCPUUtil(ufn UtilFn) {
-	total0 := uint64(0)
-	total1 := uint64(0)
-	idle0 := uint64(0)
-	idle1 := uint64(0)
-
-	st.UpdateCores()
-
-	for atomic.LoadUint32(&st.done) != 1 {
-		time.Sleep(time.Duration(MS) * time.Millisecond)
-
-		// Can't call into ufn while the st lock is held, in order to ensure lock
-		// ordering and avoid deadlock.
-		var customUtil float64
-		if ufn != nil {
-			customUtil = ufn()
-		}
-		// Lock in case the set of cores we're monitoring changes.
-		st.mu.Lock()
-		idle1, total1 = perf.GetCPUSample(st.cores)
-		st.loadCPUUtilL(idle1-idle0, total1-total0, customUtil)
-		st.mu.Unlock()
-
-		total0 = total1
-		idle0 = idle1
-	}
-}
-
-func (st *Stats) Done() {
-	atomic.StoreUint32(&st.done, 1)
 }
 
 func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {

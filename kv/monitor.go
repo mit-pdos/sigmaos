@@ -124,7 +124,6 @@ func (mo *Monitor) done() {
 	}
 }
 
-// XXX Use load too?
 func (mo *Monitor) doMonitor(conf *Config) {
 	kvs := MakeKvs(conf.Shards)
 	db.DPrintf(db.ALWAYS, "Monitor config %v\n", kvs)
@@ -141,6 +140,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
 		}
+		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, sti)
 		n += 1
 		util += sti.Util
 		if sti.Util < low {

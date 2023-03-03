@@ -102,8 +102,6 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 	}
 	start := time.Now()
 	for atomic.LoadInt32(&done) == 0 {
-		// this does NKEYS puts & gets, or appends & checks, depending on whether
-		// this is a time-bound clerk or an unbounded clerk.
 		err = test(kc, rcli, ntest, keyOffset, &nops, p, timed)
 		if err != nil {
 			break
@@ -166,6 +164,9 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	return nil
 }
 
+// test performs NKEYS puts & gets, or appends & checks, depending on
+// whether this is a time-bound clerk or an unbounded clerk (as
+// indicated by setget).
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i + keyOffset)

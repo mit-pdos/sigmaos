@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"runtime/debug"
 
+	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -61,6 +62,7 @@ type SessSrv struct {
 	ch         chan bool
 	sc         *sigmaclnt.SigmaClnt
 	cnt        stats.Tcounter
+	cpumon     *cpumon.CpuMon
 }
 
 func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
@@ -133,6 +135,10 @@ func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid sessp.Tsession) *serr.Err
 	return nil
 }
 
+func (ssrv *SessSrv) MonitorCPU(ufn cpumon.UtilFn) {
+	ssrv.cpumon = cpumon.MkCpuMon(ssrv.stats, ufn)
+}
+
 func (ssrv *SessSrv) Snapshot() []byte {
 	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
 	if !ssrv.replicated {
@@ -148,7 +154,9 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	}
 	// Store snapshot for later use during restore.
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	ssrv.stats.Done()
+	if ssrv.cpumon != nil {
+		ssrv.cpumon.Done()
+	}
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
 	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
@@ -201,7 +209,9 @@ func (ssrv *SessSrv) Done() {
 			ssrv.ch <- true
 		}
 	}
-	ssrv.stats.Done()
+	if ssrv.cpumon != nil {
+		ssrv.cpumon.Done()
+	}
 }
 
 func (ssrv *SessSrv) MyAddr() string {

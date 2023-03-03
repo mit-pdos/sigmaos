@@ -334,7 +334,7 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	defer p.Done()
 
-	mfs.GetStats().MonitorCPUUtil(nil)
+	mfs.MonitorCPU(nil)
 
 	mfs.Serve()
 	mfs.Done()

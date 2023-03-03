@@ -27,9 +27,9 @@ type ProtSrv struct {
 	plt   *lockmap.PathLockTable // shared across sessions
 	wt    *watch.WatchTable      // shared across sessions
 	vt    *version.VersionTable  // shared across sessions
+	stats *stats.Stats           // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
-	stats *stats.Stats
 	sid   sessp.Tsession
 }
 

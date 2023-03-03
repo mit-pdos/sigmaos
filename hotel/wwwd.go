@@ -95,7 +95,6 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
 		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, proc.GetNet(), a); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
@@ -111,6 +110,7 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = www.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
 			db.DFatalf("MountService %v", err)

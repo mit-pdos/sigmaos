@@ -16,6 +16,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/protdev"
 	rd "sigmaos/rand"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -94,6 +95,16 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	if !ji.justCli {
 		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		procs := sdc.GetRunningProcs()
+		progs := make(map[string][]string)
+		for sd, ps := range procs {
+			progs[sd] = make([]string, len(ps))
+			for _, p := range ps {
+				progs[sd] = append(progs[sd], p.Program)
+			}
+		}
+		db.DPrintf(db.TEST, "Running procs:\n%v", progs)
 	}
 
 	if !sigmaos {

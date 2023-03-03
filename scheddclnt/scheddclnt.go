@@ -166,6 +166,33 @@ func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 	return total, nil
 }
 
+func (sdc *ScheddClnt) GetRunningProcs() map[string][]*proc.Proc {
+	// Get list of schedds
+	sds, err := sdc.getSchedds()
+	if err != nil {
+		db.DFatalf("Error getSchedds: %v", err)
+	}
+	procs := make(map[string][]*proc.Proc)
+	for _, sd := range sds {
+		sdrun := path.Join(sp.SCHEDD, sd, sp.RUNNING)
+		sts, err := sdc.GetDir(sdrun)
+		if err != nil {
+			db.DFatalf("Error getdir: %v", err)
+		}
+		procs[sd] = []*proc.Proc{}
+		for _, st := range sts {
+			b, err := sdc.GetFile(path.Join(sdrun, st.Name))
+			if err != nil {
+				db.DFatalf("Error getfile: %v", err)
+			}
+			p := proc.MakeEmptyProc()
+			p.UnmarshalJson(b)
+			procs[sd] = append(procs[sd], p)
+		}
+	}
+	return procs
+}
+
 func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }

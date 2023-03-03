@@ -253,3 +253,9 @@ func (p *Proc) Unmarshal(b []byte) {
 		log.Fatalf("Error unmarshal: %v", err)
 	}
 }
+
+func (p *Proc) UnmarshalJson(b []byte) {
+	if err := json.Unmarshal(b, p.ProcProto); err != nil {
+		log.Fatalf("Error unmarshal: %v", err)
+	}
+}

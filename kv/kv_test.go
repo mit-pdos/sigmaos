@@ -1,7 +1,6 @@
 package kv_test
 
 import (
-	"path"
 	"regexp"
 	"strconv"
 	"testing"
@@ -11,9 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/kv"
-	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/semclnt"
 	"sigmaos/test"
 )
 
@@ -69,12 +66,11 @@ func TestRegex(t *testing.T) {
 
 type Tstate struct {
 	*test.Tstate
-	kvf   *kv.KVFleet
-	clrk  *kv.KvClerk
-	clrks []proc.Tpid
+	kvf *kv.KVFleet
+	cm  *kv.ClerkMgr
 }
 
-func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *kv.KvClerk) {
+func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	job := rand.String(16)
@@ -83,77 +79,55 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts.kvf = kvf
 	err = ts.kvf.Start()
 	assert.Nil(t, err)
-	clrk := ts.setup()
-	return ts, clrk
-}
-
-// Create keys
-func (ts *Tstate) setup() *kv.KvClerk {
-	clrk, err := kv.InitKeys(ts.SigmaClnt, ts.kvf.Job(), kv.NKEYS)
-	assert.Nil(ts.T, err, "InitKeys: %v", err)
-	return clrk
+	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job, NCLERK)
+	assert.Nil(t, err)
+	err = ts.cm.InitKeys(kv.NKEYS)
+	assert.Nil(t, err)
+	return ts
 }
 
 func (ts *Tstate) done() {
+	ts.cm.Stop()
 	ts.kvf.Stop()
 	ts.Shutdown()
 }
 
-func (ts *Tstate) stopClerks() {
-	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(ts.clrks))
-	for _, ck := range ts.clrks {
-		status, err := kv.StopClerk(ts.ProcClnt, ck)
-		assert.Nil(ts.T, err, "StopClerk: %v", err)
-		assert.True(ts.T, status.IsStatusEvicted(), "Exit status: %v", status)
-	}
-}
-
-func (ts *Tstate) waitForClerks() {
-	db.DPrintf(db.ALWAYS, "clerks to wait for %v\n", len(ts.clrks))
-	for _, ck := range ts.clrks {
-		_, err := kv.WaitForClerk(ts.ProcClnt, ck)
-		assert.Nil(ts.T, err, "WaitForClerk: %v", err)
-	}
-}
-
 func TestMiss(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
-	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
-	assert.True(t, clrk.IsMiss(err))
+	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	_, err := ts.cm.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
+	assert.True(t, ts.cm.IsMiss(err))
 	ts.done()
 }
 
 func TestGetPut(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	_, err := clrk.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
+	_, err := ts.cm.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
 	assert.NotNil(ts.T, err, "Get")
 
-	err = clrk.PutRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
+	err = ts.cm.PutRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
 	assert.Nil(ts.T, err, "Put")
 
-	err = clrk.PutRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
+	err = ts.cm.PutRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
 	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)
-		_, err := clrk.GetRaw(key, 0)
+		_, err := ts.cm.GetRaw(key, 0)
 		assert.Nil(ts.T, err, "Get "+key.String())
 	}
 
+	ts.cm.Stop()
 	ts.done()
 }
 
 func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
 	const TIME = 100
 
-	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
+	ts := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
-	for i := 0; i < nclerk; i++ {
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), nil, 0)
-		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
-		ts.clrks = append(ts.clrks, pid)
-	}
+	err := ts.cm.StartClerks("")
+	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 
 	db.DPrintf(db.TEST, "Done startClerks")
 
@@ -175,13 +149,13 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	db.DPrintf(db.TEST, "Done dels")
 
-	ts.stopClerks()
+	ts.cm.Stop()
 
 	db.DPrintf(db.TEST, "Done stopClerks")
 
 	time.Sleep(100 * time.Millisecond)
 
-	err := ts.kvf.Stop()
+	err = ts.kvf.Stop()
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -250,23 +224,12 @@ func TestConcurReplFailN(t *testing.T) {
 func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
 
-	nclerk := NCLERK
-	ts, _ := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := makeTstate(t, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
-	sempath := path.Join(kv.JobDir(ts.kvf.Job()), "kvclerk-sem")
-	sem := semclnt.MakeSemClnt(ts.FsLib, sempath)
-	err := sem.Init(0)
-	assert.Nil(ts.T, err, "Sem init: %v", err)
+	err := ts.cm.StartClerks("10s")
+	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
 
-	for i := 0; i < nclerk; i++ {
-		args := []string{"20s", strconv.Itoa(i * kv.NKEYS), sempath}
-		pid, err := kv.StartClerk(ts.ProcClnt, ts.kvf.Job(), args, 0)
-		assert.Nil(ts.T, err, "Error StartClerk: %v", err)
-		ts.clrks = append(ts.clrks, pid)
-	}
-	sem.Up()
-
-	ts.waitForClerks()
+	ts.cm.WaitForClerks()
 
 	time.Sleep(100 * time.Millisecond)
 

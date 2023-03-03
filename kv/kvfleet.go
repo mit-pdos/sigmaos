@@ -8,7 +8,6 @@ import (
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/test"
@@ -155,48 +154,6 @@ func StartBalancers(sc *sigmaclnt.SigmaClnt, jobname string, nbal, crashbal int,
 
 func SpawnGrp(sc *sigmaclnt.SigmaClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
-}
-
-func InitKeys(sc *sigmaclnt.SigmaClnt, job string, nkeys int) (*KvClerk, error) {
-	// Create keys
-	clrk, err := MakeClerkFsl(sc.FsLib, job)
-	if err != nil {
-		return nil, err
-	}
-	for i := uint64(0); i < uint64(nkeys); i++ {
-		err := clrk.PutRaw(MkKey(i), []byte{}, 0)
-		if err != nil {
-			return clrk, err
-		}
-	}
-	return clrk, nil
-}
-
-func StartClerk(pclnt *procclnt.ProcClnt, job string, args []string, ncore proc.Tcore) (proc.Tpid, error) {
-	args = append([]string{job}, args...)
-	p := proc.MakeProc("kv-clerk", args)
-	p.SetNcore(ncore)
-	// SpawnBurst to spread clerks across procds.
-	_, errs := pclnt.SpawnBurst([]*proc.Proc{p}, 2)
-	if len(errs) > 0 {
-		return p.GetPid(), errs[0]
-	}
-	err := pclnt.WaitStart(p.GetPid())
-	return p.GetPid(), err
-}
-
-func StopClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {
-	err := pclnt.Evict(pid)
-	if err != nil {
-		return nil, err
-	}
-	status, err := pclnt.WaitExit(pid)
-	return status, err
-}
-
-func WaitForClerk(pclnt *procclnt.ProcClnt, pid proc.Tpid) (*proc.Status, error) {
-	status, err := pclnt.WaitExit(pid)
-	return status, err
 }
 
 func RemoveJob(fsl *fslib.FsLib, job string) error {

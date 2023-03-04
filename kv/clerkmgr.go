@@ -60,7 +60,7 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 	}
 	var ck proc.Tpid
 	if nclerk < 0 {
-		for ; nclerk > 0; nclerk-- {
+		for ; nclerk < 0; nclerk++ {
 			ck, cm.clrks = cm.clrks[0], cm.clrks[1:]
 			_, err := cm.stopClerk(ck)
 			if err != nil {

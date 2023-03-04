@@ -33,16 +33,14 @@ type KVJobInstance struct {
 }
 
 func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) *KVJobInstance {
-	ji := &KVJobInstance{}
-
-	ji.job = rand.String(16)
+	ji := &KVJobInstance{RealmTstate: ts, job: rand.String(16)}
 
 	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdncore, "0", auto)
-	assert.Nil(ji.T, err)
+	assert.Nil(ts.T, err)
 	ji.kvf = kvf
 
 	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job)
-	assert.Nil(ji.T, err)
+	assert.Nil(ts.T, err)
 	ji.cm = cm
 
 	ji.nclerks = nclerks

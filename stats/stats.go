@@ -48,7 +48,7 @@ func (c *Tcounter) Read() int64 {
 }
 
 // XXX separate cache lines
-type StatInfo struct {
+type Stats struct {
 	Ntotal      Tcounter
 	Nversion    Tcounter
 	Nauth       Tcounter
@@ -83,13 +83,13 @@ type StatInfo struct {
 	CustomLoad perf.Tload
 }
 
-func MkStatInfo() *StatInfo {
-	sti := &StatInfo{}
+func MkStats() *Stats {
+	sti := &Stats{}
 	sti.Paths = make(map[string]int)
 	return sti
 }
 
-func (si *StatInfo) Inc(fct sessp.Tfcall, ql int64) {
+func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 	switch fct {
 	case sessp.TTversion:
 		si.Nversion.Inc(1)
@@ -138,40 +138,40 @@ func (si *StatInfo) Inc(fct sessp.Tfcall, ql int64) {
 	si.Qlen.Inc(ql)
 }
 
-type Stats struct {
+type StatInfo struct {
 	fs.Inode
 	mu       sync.Mutex // protects some fields of StatInfo
-	sti      *StatInfo
+	st       *Stats
 	pathCnts bool
 }
 
-func MkStatsDev(parent fs.Dir) *Stats {
-	st := &Stats{}
-	st.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
-	st.sti = MkStatInfo()
-	st.pathCnts = true
-	return st
+func MkStatsDev(parent fs.Dir) *StatInfo {
+	sti := &StatInfo{}
+	sti.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
+	sti.st = MkStats()
+	sti.pathCnts = true
+	return sti
 }
 
-func (st *Stats) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	st.sti.Load = load
-	st.sti.CustomLoad = cload
-	st.sti.Util = u
-	st.sti.CustomUtil = cu
+	sti.st.Load = load
+	sti.st.CustomLoad = cload
+	sti.st.Util = u
+	sti.st.CustomUtil = cu
 }
 
-func (st *Stats) StatInfo() *StatInfo {
-	return st.sti
+func (sti *StatInfo) Stats() *Stats {
+	return sti.st
 }
 
-func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}
@@ -182,39 +182,39 @@ func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion
 	return b, nil
 }
 
-func (st *Stats) DisablePathCnts() {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) DisablePathCnts() {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	st.pathCnts = false
-	st.sti.Paths = nil
+	sti.pathCnts = false
+	sti.st.Paths = nil
 }
 
-func (st *Stats) IncPath(path path.Path) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) IncPath(path path.Path) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	if !st.pathCnts {
+	if !sti.pathCnts {
 		return
 	}
 	p := path.String()
-	if _, ok := st.sti.Paths[p]; !ok {
-		st.sti.Paths[p] = 0
+	if _, ok := sti.st.Paths[p]; !ok {
+		sti.st.Paths[p] = 0
 	}
-	st.sti.Paths[p] += 1
+	sti.st.Paths[p] += 1
 }
 
-func (st *Stats) IncPathString(p string) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) IncPathString(p string) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	if !st.pathCnts {
+	if !sti.pathCnts {
 		return
 	}
-	if _, ok := st.sti.Paths[p]; !ok {
-		st.sti.Paths[p] = 0
+	if _, ok := sti.st.Paths[p]; !ok {
+		sti.st.Paths[p] = 0
 	}
-	st.sti.Paths[p] += 1
+	sti.st.Paths[p] += 1
 }
 
 type pair struct {
@@ -222,10 +222,10 @@ type pair struct {
 	cnt  int
 }
 
-func (sti *StatInfo) SortPath() []pair {
+func (st *Stats) SortPath() []pair {
 	var s []pair
 
-	for k, v := range sti.Paths {
+	for k, v := range st.Paths {
 		s = append(s, pair{k, v})
 	}
 	sort.Slice(s, func(i, j int) bool {
@@ -235,11 +235,11 @@ func (sti *StatInfo) SortPath() []pair {
 }
 
 // Make a copy of st while concurrent Inc()s may happen
-func (sti *StatInfo) acopy() *StatInfo {
-	sticp := &StatInfo{}
+func (st *Stats) acopy() Stats {
+	stcp := &Stats{}
 
-	v := reflect.ValueOf(sti).Elem()
-	v1 := reflect.ValueOf(sticp).Elem()
+	v := reflect.ValueOf(st).Elem()
+	v1 := reflect.ValueOf(stcp).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
@@ -250,31 +250,35 @@ func (sti *StatInfo) acopy() *StatInfo {
 			*p1 = Tcounter(n)
 		}
 	}
-	return sticp
+	return *stcp
 }
 
-func (st *Stats) stats() []byte {
-	stcp := st.sti.acopy()
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	stcp.AvgQlen = float64(st.sti.Qlen) / float64(st.sti.Ntotal)
-	stcp.Paths = st.sti.Paths
-	stcp.Util = st.sti.Util
-	stcp.Load = st.sti.Load
-	stcp.CustomUtil = st.sti.CustomUtil
-	stcp.CustomLoad = st.sti.CustomLoad
+func (sti *StatInfo) StatsCopy() Stats {
+	stcp := sti.st.acopy()
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
+	stcp.AvgQlen = float64(sti.st.Qlen) / float64(sti.st.Ntotal)
+	stcp.Paths = sti.st.Paths
+	stcp.Util = sti.st.Util
+	stcp.Load = sti.st.Load
+	stcp.CustomUtil = sti.st.CustomUtil
+	stcp.CustomLoad = sti.st.CustomLoad
+	return stcp
+}
 
-	data, err := json.Marshal(*stcp)
+func (sti *StatInfo) stats() []byte {
+	st := sti.StatsCopy()
+	data, err := json.Marshal(st)
 	if err != nil {
 		db.DFatalf("stats: json failed %v\n", err)
 	}
 	return data
 }
 
-func (si *StatInfo) String() string {
-	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", si.Ntotal, si.Nattach, si.Ndetach, si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nput, si.Nrpc, si.Qlen, si.AvgQlen, si.Paths, si.Load, si.Util)
+func (st *Stats) String() string {
+	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Ntotal, st.Nattach, st.Ndetach, st.Nwalk, st.Nclunk, st.Nopen, st.Nwatch, st.Ncreate, st.Nflush, st.Nread, st.Nwrite, st.Nremove, st.Nstat, st.Nwstat, st.Nrenameat, st.Nget, st.Nput, st.Nrpc, st.Qlen, st.AvgQlen, st.Paths, st.Load, st.Util)
 }
 
-func (st *Stats) Snapshot(fn fs.SnapshotF) []byte {
-	return st.snapshot()
+func (sti *StatInfo) Snapshot(fn fs.SnapshotF) []byte {
+	return sti.snapshot()
 }

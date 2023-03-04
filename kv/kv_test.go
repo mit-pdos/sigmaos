@@ -77,9 +77,11 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
+	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job, 0)
+	assert.Nil(t, err)
 	err = ts.kvf.Start()
 	assert.Nil(t, err)
-	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job, NCLERK)
+	err = ts.cm.StartCmClerk()
 	assert.Nil(t, err)
 	err = ts.cm.InitKeys(kv.NKEYS)
 	assert.Nil(t, err)
@@ -87,7 +89,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 }
 
 func (ts *Tstate) done() {
-	ts.cm.Stop()
+	ts.cm.StopClerks()
 	ts.kvf.Stop()
 	ts.Shutdown()
 }
@@ -117,7 +119,7 @@ func TestGetPut(t *testing.T) {
 		assert.Nil(ts.T, err, "Get "+key.String())
 	}
 
-	ts.cm.Stop()
+	ts.cm.StopClerks()
 	ts.done()
 }
 
@@ -126,7 +128,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	ts := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
-	err := ts.cm.StartClerks("")
+	err := ts.cm.StartClerks("", NCLERK)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 
 	db.DPrintf(db.TEST, "Done startClerks")
@@ -149,7 +151,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	db.DPrintf(db.TEST, "Done dels")
 
-	ts.cm.Stop()
+	ts.cm.StopClerks()
 
 	db.DPrintf(db.TEST, "Done stopClerks")
 
@@ -231,7 +233,7 @@ func TestAuto(t *testing.T) {
 		assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
 	}
 
-	err := ts.cm.StartClerks("20s")
+	err := ts.cm.StartClerks("10s", NCLERK)
 	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
 
 	ts.cm.WaitForClerks()

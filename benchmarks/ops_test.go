@@ -131,11 +131,7 @@ func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	// Start some balancers
 	start := time.Now()
 	ji.StartKVJob()
-	db.DPrintf(db.TEST, "Made KV job")
-	// Add more kvd groups.
-	for i := 0; i < ji.nkvd-1; i++ {
-		ji.AddKVDGroup()
-	}
+
 	// If not running against redis.
 	if !ji.redis {
 		cnts := ji.GetKeyCountsPerGroup()
@@ -146,6 +142,7 @@ func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	// Wait for an ack.
 	<-ji.ready
 	db.DPrintf(db.TEST, "Added KV groups")
+
 	db.DPrintf(db.TEST, "Running clerks")
 	// Run through the job phases.
 	for !ji.IsDone() {

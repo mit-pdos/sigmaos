@@ -53,8 +53,8 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v", err)
 	}
-	// Record stats (qlen not used for now).
-	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
+	// Record stats
+	pdc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
@@ -82,12 +82,12 @@ func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message)
 	return nil
 }
 
-func (pdc *ProtDevClnt) StatsClnt() *protdev.Stats {
+func (pdc *ProtDevClnt) StatsClnt() *protdev.RPCStats {
 	return pdc.si.Stats()
 }
 
-func (pdc *ProtDevClnt) StatsSrv() (*protdev.Stats, error) {
-	stats := &protdev.Stats{}
+func (pdc *ProtDevClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
+	stats := &protdev.SigmaRPCStats{}
 	if err := pdc.GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err

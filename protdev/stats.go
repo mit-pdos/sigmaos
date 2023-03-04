@@ -3,6 +3,8 @@ package protdev
 import (
 	"fmt"
 	"sync"
+
+	"sigmaos/stats"
 )
 
 type MethodStat struct {
@@ -16,30 +18,38 @@ func (ms *MethodStat) String() string {
 	return fmt.Sprintf("N %d Tot %dus Max %dus Avg %.1fms", ms.N, ms.Tot, ms.Max, ms.Avg)
 }
 
-type Stats struct {
-	MStats  map[string]*MethodStat
-	AvgQLen float64
+type RPCStats struct {
+	MStats map[string]*MethodStat
 }
 
-func mkStats() *Stats {
-	st := &Stats{}
+type SigmaRPCStats struct {
+	SigmapStat stats.Stats
+	RpcStat    RPCStats
+}
+
+func (st *SigmaRPCStats) String() string {
+	s := "Sigma stats:\n" + st.SigmapStat.String() + "\n"
+	s += st.RpcStat.String()
+	return s
+}
+
+func mkStats() *RPCStats {
+	st := &RPCStats{}
 	st.MStats = make(map[string]*MethodStat)
 	return st
 }
 
-func (st *Stats) String() string {
-	s := "stats:\n methods:\n"
+func (st *RPCStats) String() string {
+	s := "RPC stats:\n methods:\n"
 	for k, st := range st.MStats {
 		s += fmt.Sprintf("  %s: %s\n", k, st.String())
 	}
-	s += fmt.Sprintf(" AvgQLen: %.3f", st.AvgQLen)
 	return s
 }
 
 type StatInfo struct {
 	sync.Mutex
-	st  *Stats
-	len int64
+	st *RPCStats
 }
 
 func MakeStatInfo() *StatInfo {
@@ -48,7 +58,7 @@ func MakeStatInfo() *StatInfo {
 	return si
 }
 
-func (si *StatInfo) Stats() *Stats {
+func (si *StatInfo) Stats() *RPCStats {
 	n := uint64(0)
 	for _, st := range si.st.MStats {
 		n += st.N
@@ -56,16 +66,12 @@ func (si *StatInfo) Stats() *Stats {
 			st.Avg = float64(st.Tot) / float64(st.N) / 1000.0
 		}
 	}
-	if n > 0 {
-		si.st.AvgQLen = float64(si.len) / float64(n)
-	}
 	return si.st
 }
 
-func (sts *StatInfo) Stat(m string, t int64, ql int64) {
+func (sts *StatInfo) Stat(m string, t int64) {
 	sts.Lock()
 	defer sts.Unlock()
-	sts.len += ql
 	st, ok := sts.st.MStats[m]
 	if !ok {
 		st = &MethodStat{}

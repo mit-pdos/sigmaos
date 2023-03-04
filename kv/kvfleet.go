@@ -8,7 +8,6 @@ import (
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/test"
 )
@@ -54,8 +53,6 @@ type KVFleet struct {
 	auto        string     // Balancer auto-balancing setting.
 	job         string
 	ready       chan bool
-	sem         *semclnt.SemClnt
-	sempath     string
 	balgm       *groupmgr.GroupMgr
 	kvdgms      []*groupmgr.GroupMgr
 	cpids       []proc.Tpid
@@ -79,11 +76,6 @@ func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kv
 		return nil, err
 	}
 
-	kvf.sempath = path.Join(JobDir(kvf.job), "kvclerk-sem")
-	kvf.sem = semclnt.MakeSemClnt(kvf.FsLib, kvf.sempath)
-	if err := kvf.sem.Init(0); err != nil {
-		return nil, err
-	}
 	kvf.kvdgms = []*groupmgr.GroupMgr{}
 	kvf.cpids = []proc.Tpid{}
 	return kvf, nil
@@ -91,6 +83,10 @@ func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kv
 
 func (kvf *KVFleet) Job() string {
 	return kvf.job
+}
+
+func (kvf *KVFleet) Nkvd() int {
+	return kvf.nkvd
 }
 
 func (kvf *KVFleet) Start() error {

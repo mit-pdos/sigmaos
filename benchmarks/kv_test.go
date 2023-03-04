@@ -94,9 +94,10 @@ func (ji *KVJobInstance) StartKVJob() {
 	// Add an initial kvd group to put keys in.
 	ji.AddKVDGroup()
 	// Create keys
-	ck, err := kv.InitKeys(ji.SigmaClnt, ji.job, ji.nkeys)
-	assert.Nil(ji.T, err, "InitKeys: %v", err)
-	ji.ck = ck
+	// XXX 	ck, err := kv.InitKeys(ji.SigmaClnt, ji.job, ji.nkeys)
+	// XXX 	assert.Nil(ji.T, err, "InitKeys: %v", err)
+	db.DFatalf("Fix")
+	// ji.ck = ck
 }
 
 // Returns true if there are no more phases left to execute.
@@ -116,9 +117,9 @@ func (ji *KVJobInstance) NextPhase() {
 		ji.StopClerk()
 	}
 	// While we have too few...
-	for ; diff < 0; diff++ {
-		ji.StartClerk()
-	}
+	//	for ; diff < 0; diff++ {
+	//		ji.StartClerk()
+	//	}
 	// All clerks have started and can start doing ops.
 	ji.AllClerksStarted()
 	// Make sure we got the number of clerks right.
@@ -199,24 +200,26 @@ func (ji *KVJobInstance) StartClerk() {
 	db.DPrintf(db.TEST, "Spawn clerk")
 	var pid proc.Tpid
 	var err error
-	for {
-		pid, err = kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
-		if err == nil {
-			break
-		}
-	}
+	//	for {
+	//		pid, err = kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
+	//		if err == nil {
+	//			break
+	//		}
+	//	}
+	db.DFatalf("Fix")
 	assert.Nil(ji.T, err, "StartClerk: %v", err)
 	db.DPrintf(db.TEST, "Done spawning clerk %v", pid)
 	ji.cpids = append(ji.cpids, pid)
 }
 
 func (ji *KVJobInstance) StopClerk() {
-	var cpid proc.Tpid
-	// Pop the first clerk pid.
-	cpid, ji.cpids = ji.cpids[0], ji.cpids[1:]
-	status, err := kv.StopClerk(ji.ProcClnt, cpid)
-	assert.Nil(ji.T, err, "StopClerk: %v", err)
-	assert.True(ji.T, status.IsStatusEvicted(), "Exit status: %v", status)
+	//	var cpid proc.Tpid
+	//	// Pop the first clerk pid.
+	//	cpid, ji.cpids = ji.cpids[0], ji.cpids[1:]
+	//
+	// status, err := kv.StopClerk(ji.ProcClnt, cpid)
+	// assert.Nil(ji.T, err, "StopClerk: %v", err)
+	// assert.True(ji.T, status.IsStatusEvicted(), "Exit status: %v", status)
 }
 
 func (ji *KVJobInstance) GetKeyCountsPerGroup() map[string]int {

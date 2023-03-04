@@ -107,7 +107,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 			}
 		} else {
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, proc.Tcore(cacheNcore), "manual")
+			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, proc.Tcore(cacheNcore), "0", "manual")
 			if err != nil {
 				return nil, err
 			}

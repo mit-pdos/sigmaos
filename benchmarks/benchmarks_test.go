@@ -515,6 +515,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	go func() {
 		time.Sleep(10 * time.Second)
 		if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
+			rootts.Shutdown()
 			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
 		}
 	}()

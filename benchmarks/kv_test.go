@@ -87,27 +87,22 @@ func (ji *KVJobInstance) IsDone() bool {
 // Perform the next phase of the job.
 func (ji *KVJobInstance) NextPhase() {
 	assert.False(ji.T, ji.IsDone(), "Tried to advance to another phase when already done.")
-	// // Find out how far off we are from the desired number of clerks in this
-	// // phase.
-	// diff := len(ji.cpids) - ji.nclerks[ji.phase]
-	// db.DPrintf(db.TEST, "Phase %v: diff %v", ji.phase, diff)
-	// // While we have too many...
-	// for ; diff > 0; diff-- {
-	// 	ji.StopClerk()
-	// }
+	// Find out how far off we are from the desired number of clerks in this
+	// phase.
 
-	ji.cm.StartClerks(ji.ckdur, ji.nclerks[ji.phase])
+	diff := ji.nclerks[ji.phase] - ji.cm.Nclerk()
 
-	// While we have too few...
-	//	for ; diff < 0; diff++ {
-	//		ji.StartClerk()
-	//	}
-	// All clerks have started and can start doing ops.
-	//ji.AllClerksStarted()
+	db.DPrintf(db.TEST, "Phase %v: diff %v", ji.phase, diff)
+
+	ji.cm.AddClerks(ji.ckdur, ji.nclerks[ji.phase])
+
 	// Make sure we got the number of clerks right.
+
 	assert.Equal(ji.T, ji.cm.Nclerk(), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", ji.cm.Nclerk(), ji.nclerks[ji.phase])
+
 	// Sleep for the duration of this phase.
 	db.DPrintf(db.TEST, "Phase %v: sleep", ji.phase)
+
 	// If running with unbounded clerks, sleep for a bit.
 	if len(ji.phases) > 0 {
 		time.Sleep(ji.phases[ji.phase])
@@ -122,7 +117,6 @@ func (ji *KVJobInstance) NextPhase() {
 }
 
 func (ji *KVJobInstance) Stop() {
-	// Remove all clerks.
 	ji.cm.StopClerks()
 	ji.kvf.Stop()
 }

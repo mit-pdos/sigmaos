@@ -50,18 +50,33 @@ func (cm *ClerkMgr) InitKeys(nkeys int) error {
 }
 
 func (cm *ClerkMgr) StartClerks(dur string, nclerk int) error {
-	for i := 0; i < nclerk; i++ {
-		var args []string
-		if dur != "" {
-			args = []string{dur, strconv.Itoa(i * NKEYS), cm.sempath}
-		}
-		pid, err := cm.startClerk(args, 0)
-		if err != nil {
-			return err
-		}
-		cm.clrks = append(cm.clrks, pid)
+	return cm.AddClerks(dur, nclerk)
+}
+
+// Add or remove clerk clerks
+func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
+	if nclerk == 0 {
+		return nil
 	}
-	cm.sem.Up()
+	var ck proc.Tpid
+	if nclerk < 0 {
+		for ; nclerk > 0; nclerk-- {
+			ck, cm.clrks = cm.clrks[0], cm.clrks[1:]
+			_, err := cm.stopClerk(ck)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for ; nclerk > 0; nclerk-- {
+			ck, err := cm.startClerk(dur, 0)
+			if err != nil {
+				return err
+			}
+			cm.clrks = append(cm.clrks, ck)
+		}
+		cm.sem.Up()
+	}
 	return nil
 }
 
@@ -90,7 +105,12 @@ func (cm *ClerkMgr) WaitForClerks() error {
 	return nil
 }
 
-func (cm *ClerkMgr) startClerk(args []string, ncore proc.Tcore) (proc.Tpid, error) {
+func (cm *ClerkMgr) startClerk(dur string, ncore proc.Tcore) (proc.Tpid, error) {
+	idx := len(cm.clrks)
+	var args []string
+	if dur != "" {
+		args = []string{dur, strconv.Itoa(idx * NKEYS), cm.sempath}
+	}
 	args = append([]string{cm.job}, args...)
 	p := proc.MakeProc("kv-clerk", args)
 	p.SetNcore(ncore)

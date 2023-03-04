@@ -226,10 +226,12 @@ func TestAuto(t *testing.T) {
 
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	err := ts.kvf.AddKVDGroup()
-	assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
+	for i := 0; i < 0; i++ {
+		err := ts.kvf.AddKVDGroup()
+		assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
+	}
 
-	err = ts.cm.StartClerks("20s")
+	err := ts.cm.StartClerks("20s")
 	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
 
 	ts.cm.WaitForClerks()

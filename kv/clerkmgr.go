@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"fmt"
 	"path"
 	"strconv"
 
@@ -72,12 +73,15 @@ func (cm *ClerkMgr) Stop() error {
 }
 
 func (cm *ClerkMgr) WaitForClerks() error {
-	db.DPrintf(db.ALWAYS, "clerks to wait for %v\n", len(cm.clrks))
 	for _, ck := range cm.clrks {
-		_, err := cm.WaitExit(ck)
+		status, err := cm.WaitExit(ck)
 		if err != nil {
 			return err
 		}
+		if !status.IsStatusOK() {
+			return fmt.Errorf("clerk exit err %v\n", status)
+		}
+		db.DPrintf(db.ALWAYS, "Clerk %v ops/s\n", status.Data().(float64))
 	}
 	return nil
 }

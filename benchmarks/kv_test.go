@@ -1,19 +1,14 @@
 package benchmarks_test
 
 import (
-	"path"
-	"strconv"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/group"
-	"sigmaos/groupmgr"
 	"sigmaos/kv"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/semclnt"
 	"sigmaos/test"
 )
 
@@ -22,57 +17,43 @@ const (
 )
 
 type KVJobInstance struct {
-	nkvd      int             // Number of kvd groups to run the test with.
-	kvdrepl   int             // kvd replication level
+	job       string
+	kvf       *kv.KVFleet
+	cm        *kv.ClerkMgr
 	phase     int             // Current phase of execution
 	nclerks   []int           // Number of clerks in each phase of the test.
 	phases    []time.Duration // Duration of each phase of the test.
-	ck        *kv.KvClerk     // A clerk which can be used for initialization.
 	ckdur     string          // Duration for which the clerk will do puts & gets.
-	kvdncore  proc.Tcore      // Number of exclusive cores allocated to each kvd.
 	ckncore   proc.Tcore      // Number of exclusive cores allocated to each clerk.
-	auto      string          // Balancer auto-balancing setting.
 	redis     bool            // True if this is a redis kv job.
 	redisaddr string          // Redis server address.
 	nkeys     int
-	job       string
 	ready     chan bool
-	sem       *semclnt.SemClnt
-	sempath   string
-	balgm     *groupmgr.GroupMgr
-	kvdgms    []*groupmgr.GroupMgr
-	cpids     []proc.Tpid
 	*test.RealmTstate
 }
 
 func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) *KVJobInstance {
 	ji := &KVJobInstance{}
-	ji.nkvd = nkvd
-	ji.kvdrepl = kvdrepl
+
+	ji.job = rand.String(16)
+
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdncore, "0", auto)
+	assert.Nil(ji.T, err)
+	ji.kvf = kvf
+
+	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job)
+	assert.Nil(ji.T, err)
+	ji.cm = cm
+
 	ji.nclerks = nclerks
 	ji.phases = phases
 	ji.ckdur = ckdur
-	ji.kvdncore = kvdncore
 	ji.ckncore = ckncore
-	ji.job = rand.String(16)
-	ji.auto = auto
 	ji.redis = redisaddr != ""
 	ji.redisaddr = redisaddr
 	ji.ready = make(chan bool)
 	ji.RealmTstate = ts
-	// May already exit
-	ji.MkDir(kv.KVDIR, 0777)
-	// Should not exist.
-	err := ji.MkDir(kv.JobDir(ji.job), 0777)
-	assert.Nil(ts.T, err, "Make job dir: %v", err)
-	if len(phases) == 0 {
-		ji.sempath = path.Join(kv.JobDir(ji.job), "kvclerk-sem")
-		ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
-		err = ji.sem.Init(0)
-		assert.Nil(ts.T, err, "Sem init: %v", err)
-	}
-	ji.kvdgms = []*groupmgr.GroupMgr{}
-	ji.cpids = []proc.Tpid{}
+
 	// Find the maximum number of clerks ever set.
 	maxNclerks := 0
 	for _, nck := range nclerks {
@@ -81,7 +62,8 @@ func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []in
 		}
 	}
 	ji.nkeys = maxNclerks * KEYS_PER_CLERK
-	assert.False(ts.T, ji.redis && ji.nkvd > 0, "Tried to run a kv job with both redis and sigma")
+
+	assert.False(ts.T, ji.redis && ji.kvf.Nkvd() > 0, "Tried to run a kv job with both redis and sigma")
 	return ji
 }
 
@@ -90,14 +72,10 @@ func (ji *KVJobInstance) StartKVJob() {
 	if ji.redis {
 		return
 	}
-	ji.balgm = kv.StartBalancers(ji.SigmaClnt, ji.job, kv.NBALANCER, 0, ji.kvdncore, "0", ji.auto)
-	// Add an initial kvd group to put keys in.
-	ji.AddKVDGroup()
-	// Create keys
-	// XXX 	ck, err := kv.InitKeys(ji.SigmaClnt, ji.job, ji.nkeys)
-	// XXX 	assert.Nil(ji.T, err, "InitKeys: %v", err)
-	db.DFatalf("Fix")
-	// ji.ck = ck
+	err := ji.kvf.Start()
+	assert.Nil(ji.T, err)
+
+	ji.cm.InitKeys(ji.nkeys)
 }
 
 // Returns true if there are no more phases left to execute.
@@ -108,147 +86,46 @@ func (ji *KVJobInstance) IsDone() bool {
 // Perform the next phase of the job.
 func (ji *KVJobInstance) NextPhase() {
 	assert.False(ji.T, ji.IsDone(), "Tried to advance to another phase when already done.")
-	// Find out how far off we are from the desired number of clerks in this
-	// phase.
-	diff := len(ji.cpids) - ji.nclerks[ji.phase]
-	db.DPrintf(db.TEST, "Phase %v: diff %v", ji.phase, diff)
-	// While we have too many...
-	for ; diff > 0; diff-- {
-		ji.StopClerk()
-	}
+	// // Find out how far off we are from the desired number of clerks in this
+	// // phase.
+	// diff := len(ji.cpids) - ji.nclerks[ji.phase]
+	// db.DPrintf(db.TEST, "Phase %v: diff %v", ji.phase, diff)
+	// // While we have too many...
+	// for ; diff > 0; diff-- {
+	// 	ji.StopClerk()
+	// }
+
+	ji.cm.StartClerks(ji.ckdur, ji.nclerks[ji.phase])
+
 	// While we have too few...
 	//	for ; diff < 0; diff++ {
 	//		ji.StartClerk()
 	//	}
 	// All clerks have started and can start doing ops.
-	ji.AllClerksStarted()
+	//ji.AllClerksStarted()
 	// Make sure we got the number of clerks right.
-	assert.Equal(ji.T, len(ji.cpids), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", len(ji.cpids), ji.nclerks[ji.phase])
+	assert.Equal(ji.T, ji.cm.Nclerk(), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", ji.cm.Nclerk(), ji.nclerks[ji.phase])
 	// Sleep for the duration of this phase.
 	db.DPrintf(db.TEST, "Phase %v: sleep", ji.phase)
 	// If running with unbounded clerks, sleep for a bit.
 	if len(ji.phases) > 0 {
 		time.Sleep(ji.phases[ji.phase])
+		ji.cm.StopClerks()
 	} else {
 		// Otherwise, wait for bounded clerks to finish.
-		ji.WaitForClerks()
+		ji.cm.WaitForClerks()
 	}
 	db.DPrintf(db.TEST, "Phase %v: done", ji.phase)
 	// Move to the  next phase
 	ji.phase++
 }
 
-func (ji *KVJobInstance) AllClerksStarted() {
-	if len(ji.phases) > 0 {
-		return
-	}
-	ji.sem.Up()
-}
-
-// If running with bounded clerks, wait for clerks to run.
-func (ji *KVJobInstance) WaitForClerks() {
-	aggTpt := float64(0)
-	for _, cpid := range ji.cpids {
-		status, err := ji.WaitExit(cpid)
-		assert.Nil(ji.T, err, "StopClerk: %v", err)
-		assert.True(ji.T, status.IsStatusOK(), "Exit status: %v", status)
-		tpt := status.Data().(float64)
-		aggTpt += tpt
-		db.DPrintf(db.ALWAYS, "Ops/sec: %v", tpt)
-	}
-	db.DPrintf(db.ALWAYS, "Aggregate throughput: %v (ops/sec)", aggTpt)
-	ji.cpids = ji.cpids[:0]
-}
-
-func (ji *KVJobInstance) AddKVDGroup() {
-	// Name group
-	grp := group.GRP + strconv.Itoa(len(ji.kvdgms))
-	// Spawn group
-	ji.kvdgms = append(ji.kvdgms, kv.SpawnGrp(ji.SigmaClnt, ji.job, grp, ji.kvdncore, ji.kvdrepl, 0))
-	// Get balancer to add the group
-	err := kv.BalancerOpRetry(ji.FsLib, ji.job, "add", grp)
-	assert.Nil(ji.T, err, "BalancerOp add: %v", err)
-}
-
-func (ji *KVJobInstance) RemoveKVDGroup() {
-	n := len(ji.kvdgms) - 1
-	// Get group nambe
-	grp := group.GRP + strconv.Itoa(n)
-	// Get balancer to remove the group
-	err := kv.BalancerOpRetry(ji.FsLib, ji.job, "del", grp)
-	assert.Nil(ji.T, err, "BalancerOp del: %v", err)
-	// Stop kvd group
-	err = ji.kvdgms[n].Stop()
-	assert.Nil(ji.T, err, "Stop kvd group: %v", err)
-	// Remove kvd group
-	ji.kvdgms = ji.kvdgms[:n]
-}
-
-func (ji *KVJobInstance) StartClerk() {
-	idx := len(ji.cpids)
-	var args []string
-	if len(ji.phases) > 0 {
-		args = nil
-	} else {
-		// Each clerk puts/sets kv.NKEYS, so offset their puts/sets by idx * kv.NKEYS
-		args = append(args, ji.ckdur, strconv.Itoa(idx*kv.NKEYS), ji.sempath)
-		// Append redis server address if we're running against redis.
-		if ji.redis {
-			args = append(args, ji.redisaddr)
-		}
-	}
-	db.DPrintf(db.TEST, "Spawn clerk")
-	var pid proc.Tpid
-	var err error
-	//	for {
-	//		pid, err = kv.StartClerk(ji.ProcClnt, ji.job, args, ji.ckncore)
-	//		if err == nil {
-	//			break
-	//		}
-	//	}
-	db.DFatalf("Fix")
-	assert.Nil(ji.T, err, "StartClerk: %v", err)
-	db.DPrintf(db.TEST, "Done spawning clerk %v", pid)
-	ji.cpids = append(ji.cpids, pid)
-}
-
-func (ji *KVJobInstance) StopClerk() {
-	//	var cpid proc.Tpid
-	//	// Pop the first clerk pid.
-	//	cpid, ji.cpids = ji.cpids[0], ji.cpids[1:]
-	//
-	// status, err := kv.StopClerk(ji.ProcClnt, cpid)
-	// assert.Nil(ji.T, err, "StopClerk: %v", err)
-	// assert.True(ji.T, status.IsStatusEvicted(), "Exit status: %v", status)
+func (ji *KVJobInstance) Stop() {
+	// Remove all clerks.
+	ji.cm.StopClerks()
+	ji.kvf.Stop()
 }
 
 func (ji *KVJobInstance) GetKeyCountsPerGroup() map[string]int {
-	keys := make([]kv.Tkey, 0, ji.nkeys)
-	for i := uint64(0); i < uint64(ji.nkeys); i++ {
-		keys = append(keys, kv.MkKey(i))
-	}
-	return ji.ck.GetKeyCountsPerGroup(keys)
-}
-
-func (ji *KVJobInstance) Stop() {
-	// Remove all clerks.
-	nclerks := len(ji.cpids)
-	for i := 0; i < nclerks; i++ {
-		ji.StopClerk()
-	}
-	// Remove all but one kvd group.
-	nkvds := len(ji.kvdgms)
-	for i := 0; i < nkvds-1; i++ {
-		ji.RemoveKVDGroup()
-	}
-	// If we aren't running against Redis...
-	if !ji.redis {
-		// Stop the balancers.
-		ji.balgm.Stop()
-		// Remove the last kvd group after removing the balancer.
-		ji.kvdgms[0].Stop()
-		ji.kvdgms = nil
-		//	err := kv.RemoveJob(ji.FsLib, ji.job)
-		//	assert.Nil(ji.T, err, "Remove job: %v", err)
-	}
+	return ji.cm.GetKeyCountsPerGroup(ji.nkeys)
 }

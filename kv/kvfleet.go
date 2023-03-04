@@ -93,6 +93,10 @@ func (kvf *KVFleet) Job() string {
 	return kvf.job
 }
 
+func (kvf *KVFleet) Nkvd() int {
+	return kvf.nkvd
+}
+
 func (kvf *KVFleet) Start() error {
 	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, kvf.crashhelper, kvf.auto)
 	for i := 0; i < kvf.nkvd; i++ {

@@ -17,12 +17,11 @@ type ClerkMgr struct {
 	job     string
 	sempath string
 	sem     *semclnt.SemClnt
-	nclerk  int
 	clrks   []proc.Tpid
 }
 
-func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, nclerk int) (*ClerkMgr, error) {
-	cm := &ClerkMgr{SigmaClnt: sc, job: job, nclerk: nclerk}
+func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string) (*ClerkMgr, error) {
+	cm := &ClerkMgr{SigmaClnt: sc, job: job}
 	clrk, err := MakeClerkFsl(cm.SigmaClnt.FsLib, cm.job)
 	if err != nil {
 		return nil, err
@@ -36,6 +35,10 @@ func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, nclerk int) (*ClerkMgr, err
 	return cm, nil
 }
 
+func (cm *ClerkMgr) Nclerk() int {
+	return len(cm.clrks)
+}
+
 func (cm *ClerkMgr) InitKeys(nkeys int) error {
 	for i := uint64(0); i < uint64(nkeys); i++ {
 		if err := cm.PutRaw(MkKey(i), []byte{}, 0); err != nil {
@@ -45,8 +48,8 @@ func (cm *ClerkMgr) InitKeys(nkeys int) error {
 	return nil
 }
 
-func (cm *ClerkMgr) StartClerks(dur string) error {
-	for i := 0; i < cm.nclerk; i++ {
+func (cm *ClerkMgr) StartClerks(dur string, nclerk int) error {
+	for i := 0; i < nclerk; i++ {
 		var args []string
 		if dur != "" {
 			args = []string{dur, strconv.Itoa(i * NKEYS), cm.sempath}
@@ -61,7 +64,7 @@ func (cm *ClerkMgr) StartClerks(dur string) error {
 	return nil
 }
 
-func (cm *ClerkMgr) Stop() error {
+func (cm *ClerkMgr) StopClerks() error {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(cm.clrks))
 	for _, ck := range cm.clrks {
 		_, err := cm.stopClerk(ck)
@@ -106,4 +109,12 @@ func (cm *ClerkMgr) stopClerk(pid proc.Tpid) (*proc.Status, error) {
 	}
 	status, err := cm.WaitExit(pid)
 	return status, err
+}
+
+func (cm *ClerkMgr) GetKeyCountsPerGroup(nkeys int) map[string]int {
+	keys := make([]Tkey, 0, nkeys)
+	for i := uint64(0); i < uint64(nkeys); i++ {
+		keys = append(keys, MkKey(i))
+	}
+	return cm.KvClerk.GetKeyCountsPerGroup(keys)
 }

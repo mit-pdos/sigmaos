@@ -73,7 +73,6 @@ func (cm *ClerkMgr) Stop() error {
 }
 
 func (cm *ClerkMgr) WaitForClerks() error {
-	db.DPrintf(db.ALWAYS, "clerks to wait for %v\n", len(cm.clrks))
 	for _, ck := range cm.clrks {
 		status, err := cm.WaitExit(ck)
 		if err != nil {

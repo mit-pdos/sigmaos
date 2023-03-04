@@ -17,11 +17,12 @@ type ClerkMgr struct {
 	job     string
 	sempath string
 	sem     *semclnt.SemClnt
+	ckncore proc.Tcore // Number of exclusive cores allocated to each clerk.
 	clrks   []proc.Tpid
 }
 
-func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string) (*ClerkMgr, error) {
-	cm := &ClerkMgr{SigmaClnt: sc, job: job}
+func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, ncore proc.Tcore) (*ClerkMgr, error) {
+	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckncore: ncore}
 	clrk := MakeClerkFslOnly(cm.SigmaClnt.FsLib, cm.job)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")
@@ -69,7 +70,7 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 		}
 	} else {
 		for ; nclerk > 0; nclerk-- {
-			ck, err := cm.startClerk(dur, 0)
+			ck, err := cm.startClerk(dur, cm.ckncore)
 			if err != nil {
 				return err
 			}

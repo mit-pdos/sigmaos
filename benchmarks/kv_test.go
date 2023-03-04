@@ -24,7 +24,6 @@ type KVJobInstance struct {
 	nclerks   []int           // Number of clerks in each phase of the test.
 	phases    []time.Duration // Duration of each phase of the test.
 	ckdur     string          // Duration for which the clerk will do puts & gets.
-	ckncore   proc.Tcore      // Number of exclusive cores allocated to each clerk.
 	redis     bool            // True if this is a redis kv job.
 	redisaddr string          // Redis server address.
 	nkeys     int
@@ -39,14 +38,13 @@ func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []in
 	assert.Nil(ts.T, err)
 	ji.kvf = kvf
 
-	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job)
+	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job, ckncore)
 	assert.Nil(ts.T, err)
 	ji.cm = cm
 
 	ji.nclerks = nclerks
 	ji.phases = phases
 	ji.ckdur = ckdur
-	ji.ckncore = ckncore
 	ji.redis = redisaddr != ""
 	ji.redisaddr = redisaddr
 	ji.ready = make(chan bool)

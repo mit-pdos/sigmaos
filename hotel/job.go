@@ -155,7 +155,7 @@ func (hj *HotelJob) Stop() error {
 	return nil
 }
 
-func (hj *HotelJob) StatsSrv() ([]*protdev.Stats, error) {
+func (hj *HotelJob) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	if hj.cacheClnt != nil {
 		return hj.cacheClnt.StatsSrv()
 	}

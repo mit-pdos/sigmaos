@@ -107,10 +107,10 @@ func (ssc *ShardSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Messa
 	return ssc.clnts[i].RPC(m, arg, res)
 }
 
-func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.Stats, error) {
+func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.SigmaRPCStats, error) {
 	return ssc.clnts[i].StatsSrv()
 }
 
-func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.Stats {
+func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.RPCStats {
 	return ssc.clnts[i].StatsClnt()
 }

@@ -45,7 +45,7 @@ type SessSrv struct {
 	root       fs.Dir
 	mkps       sp.MkProtServer
 	rps        sp.RestoreProtServer
-	stats      *stats.Stats
+	stats      *stats.StatInfo
 	st         *sessstatesrv.SessionTable
 	sm         *sessstatesrv.SessionMgr
 	sct        *sesscond.SessCondTable
@@ -218,7 +218,7 @@ func (ssrv *SessSrv) MyAddr() string {
 	return ssrv.srv.MyAddr()
 }
 
-func (ssrv *SessSrv) GetStats() *stats.Stats {
+func (ssrv *SessSrv) GetStats() *stats.StatInfo {
 	return ssrv.stats
 }
 
@@ -344,7 +344,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 	if ok := sess.GetReplyTable().Register(fc); ok {
 		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
 		qlen := ssrv.QueueLen()
-		ssrv.stats.StatInfo().Inc(fc.Msg.Type(), qlen)
+		ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 		ssrv.fenceFcall(sess, fc)
 	} else {
 		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)

@@ -46,11 +46,10 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
 
-	ql := rpc.pds.QueueLen()
 	start := time.Now()
 	rep = rpc.pds.svc.dispatch(ctx, req.Method, &req)
 	t := time.Since(start).Microseconds()
-	rpc.pds.sti.Stat(req.Method, t, ql)
+	rpc.pds.sti.Stat(req.Method, t)
 
 	b, err := proto.Marshal(rep)
 	if err != nil {

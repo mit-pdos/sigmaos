@@ -108,9 +108,9 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	return m, nil
 }
 
-func (cc *CacheClnt) StatsSrv() ([]*protdev.Stats, error) {
+func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	n := cc.Nshard()
-	stats := make([]*protdev.Stats, 0, n)
+	stats := make([]*protdev.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
@@ -121,9 +121,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdev.Stats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []*protdev.Stats {
+func (cc *CacheClnt) StatsClnt() []*protdev.RPCStats {
 	n := cc.Nshard()
-	stats := make([]*protdev.Stats, 0, n)
+	stats := make([]*protdev.RPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

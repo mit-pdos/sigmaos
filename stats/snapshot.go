@@ -10,17 +10,17 @@ import (
 
 type StatsSnapshot struct {
 	InodeSnap []byte
-	Info      *StatInfo
+	Stats     *Stats
 }
 
 func MakeStatsSnapshot() *StatsSnapshot {
 	return &StatsSnapshot{}
 }
 
-func (stats *Stats) snapshot() []byte {
+func (stats *StatInfo) snapshot() []byte {
 	ss := MakeStatsSnapshot()
 	ss.InodeSnap = stats.Inode.Snapshot(nil)
-	ss.Info = stats.sti
+	ss.Stats = stats.st
 	b, err := json.Marshal(ss)
 	if err != nil {
 		db.DFatalf("Error snapshot encoding stats: %v", err)
@@ -28,14 +28,14 @@ func (stats *Stats) snapshot() []byte {
 	return b
 }
 
-func Restore(fn fs.RestoreF, b []byte) *Stats {
+func Restore(fn fs.RestoreF, b []byte) *StatInfo {
 	ss := MakeStatsSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
 		db.DFatalf("error unmarshal stats in restore: %v", err)
 	}
-	stats := &Stats{}
+	stats := &StatInfo{}
 	stats.Inode = inode.RestoreInode(fn, ss.InodeSnap)
-	stats.sti = ss.Info
+	stats.st = ss.Stats
 	return stats
 }

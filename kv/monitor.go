@@ -135,18 +135,18 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	n := 0
 	for gn, _ := range kvs.Set {
 		kvgrp := path.Join(group.GrpPath(JobDir(mo.job), gn), sp.STATSD)
-		sti := stats.StatInfo{}
-		err := mo.GetFileJson(kvgrp, &sti)
+		st := stats.Stats{}
+		err := mo.GetFileJson(kvgrp, &st)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
 		}
-		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, &sti)
+		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, &st)
 		n += 1
-		util += sti.Util
-		if sti.Util < low {
-			low = sti.Util
+		util += st.Util
+		if st.Util < low {
+			low = st.Util
 			lowkv = gn
-			lowload = sti.Load
+			lowload = st.Load
 		}
 		// db.DPrintf(db.KVMON, "path %v\n", sti.SortPath())
 	}

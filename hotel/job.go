@@ -60,7 +60,7 @@ func MkHotelSvc(public bool) []Srv {
 		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2},
 		Srv{"hotel-geod", public, 2}, Srv{"hotel-profd", public, 2},
 		Srv{"hotel-searchd", public, 3}, Srv{"hotel-reserved", public, 3},
-		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 2},
+		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 3},
 	}
 }
 

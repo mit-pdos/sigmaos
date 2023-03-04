@@ -304,31 +304,33 @@ hotel_tail_multi() {
   driver_vm=8
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
-  run=${FUNCNAME[0]}/$sys/$rps
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/"$run"
-  # Avoid doing duplicate work.
-  if ! should_skip $perf_dir false ; then
-    return 0
-  fi
-  for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
-    driver="false"
-    if [[ $cli_vm == $driver_vm ]]; then
-      testname=$testname_driver
-      driver="true"
-    else
-      testname=$testname_clnt
+#  for n in {1..10} ; do
+    run=${FUNCNAME[0]}/$sys/$rps #-$n
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/"$run"
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return 0
     fi
-    run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
-    if [[ $cli_vm == $driver_vm ]]; then
-      # Give the driver time to start up the realm.
-      sleep 30s
-    fi
-  done
-  # Wait for all clients to terminate.
-  wait
-  # Copy results.
-  end_benchmark $VPC $perf_dir
+    for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
+      driver="false"
+      if [[ $cli_vm == $driver_vm ]]; then
+        testname=$testname_driver
+        driver="true"
+      else
+        testname=$testname_clnt
+      fi
+      run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
+      if [[ $cli_vm == $driver_vm ]]; then
+        # Give the driver time to start up the realm.
+        sleep 30s
+      fi
+    done
+    # Wait for all clients to terminate.
+    wait
+    # Copy results.
+    end_benchmark $VPC $perf_dir
+#  done
 }
 
 realm_balance() {

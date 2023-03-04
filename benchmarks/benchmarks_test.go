@@ -518,6 +518,9 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 			if N_CLNT > 1 {
 				// Wait for clients to start up on other machines.
 				waitForClnts(rootts, N_CLNT)
+				if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
+					db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+				}
 			}
 			// Ack to allow the job to proceed.
 			j.ready <- true
@@ -551,6 +554,9 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
+	if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
+		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+	}
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)

@@ -513,10 +513,12 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, fn)
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(20 * time.Second)
 		if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
 			rootts.Shutdown()
 			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+		} else {
+			db.DPrintf(db.ALWAYS, "WS dir contents: %v", sp.Names(sts))
 		}
 	}()
 	go func() {

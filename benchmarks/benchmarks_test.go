@@ -512,15 +512,18 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, fn)
 	go func() {
+		time.Sleep(10 * time.Second)
+		if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
+			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+		}
+	}()
+	go func() {
 		for _, j := range jobs {
 			// Wait until ready
 			<-j.ready
 			if N_CLNT > 1 {
 				// Wait for clients to start up on other machines.
 				waitForClnts(rootts, N_CLNT)
-				if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
-					db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
-				}
 			}
 			// Ack to allow the job to proceed.
 			j.ready <- true

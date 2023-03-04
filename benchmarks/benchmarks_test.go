@@ -213,6 +213,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 		}
 	}()
 	monitorCoresAssigned(ts1, p)
+	db.DPrintf(db.TEST, "runOps")
 	runOps(ts1, ji, runKV, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()

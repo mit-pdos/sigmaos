@@ -22,10 +22,7 @@ type ClerkMgr struct {
 
 func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string) (*ClerkMgr, error) {
 	cm := &ClerkMgr{SigmaClnt: sc, job: job}
-	clrk, err := MakeClerkFsl(cm.SigmaClnt.FsLib, cm.job)
-	if err != nil {
-		return nil, err
-	}
+	clrk := MakeClerkFslOnly(cm.SigmaClnt.FsLib, cm.job)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")
 	cm.sem = semclnt.MakeSemClnt(sc.FsLib, cm.sempath)
@@ -37,6 +34,10 @@ func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string) (*ClerkMgr, error) {
 
 func (cm *ClerkMgr) Nclerk() int {
 	return len(cm.clrks)
+}
+
+func (cm *ClerkMgr) StartCmClerk() error {
+	return cm.StartClerk()
 }
 
 func (cm *ClerkMgr) InitKeys(nkeys int) error {

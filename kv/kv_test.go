@@ -77,9 +77,11 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
+	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job)
+	assert.Nil(t, err)
 	err = ts.kvf.Start()
 	assert.Nil(t, err)
-	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job)
+	err = ts.cm.StartCmClerk()
 	assert.Nil(t, err)
 	err = ts.cm.InitKeys(kv.NKEYS)
 	assert.Nil(t, err)
@@ -231,7 +233,7 @@ func TestAuto(t *testing.T) {
 		assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
 	}
 
-	err := ts.cm.StartClerks("20s", NCLERK)
+	err := ts.cm.StartClerks("10s", NCLERK)
 	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
 
 	ts.cm.WaitForClerks()

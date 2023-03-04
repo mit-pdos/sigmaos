@@ -70,7 +70,10 @@ func (ji *KVJobInstance) StartKVJob() {
 	if ji.redis {
 		return
 	}
+	db.DPrintf(db.TEST, "StartKVJob()")
 	err := ji.kvf.Start()
+	assert.Nil(ji.T, err)
+	err = ji.cm.StartCmClerk()
 	assert.Nil(ji.T, err)
 
 	ji.cm.InitKeys(ji.nkeys)

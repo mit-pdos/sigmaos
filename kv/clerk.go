@@ -71,6 +71,10 @@ type KvClerk struct {
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+	return makeClerkStart(fsl, job)
+}
+
+func MakeClerkFslOnly(fsl *fslib.FsLib, job string) *KvClerk {
 	return makeClerk(fsl, job)
 }
 
@@ -79,19 +83,32 @@ func MakeClerk(name, job string) (*KvClerk, error) {
 	if err != nil {
 		return nil, err
 	}
-	return makeClerk(fsl, job)
+	return makeClerkStart(fsl, job)
 }
 
-func makeClerk(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fsl
 	kc.conf = &Config{}
 	kc.job = job
 	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	return kc
+}
+
+func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+	kc := &KvClerk{}
+	kc.FsLib = fsl
+	kc.conf = &Config{}
+	kc.job = job
+	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	return kc, kc.StartClerk()
+}
+
+func (kc *KvClerk) StartClerk() error {
 	if err := kc.switchConfig(); err != nil {
-		return nil, err
+		return err
 	}
-	return kc, nil
+	return nil
 }
 
 func (kc *KvClerk) IsMiss(err error) bool {

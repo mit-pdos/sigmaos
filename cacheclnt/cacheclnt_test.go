@@ -205,7 +205,7 @@ func TestElasticCache(t *testing.T) {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrv()
 		assert.Nil(t, err)
-		qlen := sts[0].SigmaStat.AvgQlen
+		qlen := sts[0].SigmapStat.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
 		if qlen > 1.1 && i < 1 {
 			ts.cm.AddShard()

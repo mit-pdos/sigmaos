@@ -23,12 +23,12 @@ type RPCStats struct {
 }
 
 type SigmaRPCStats struct {
-	SigmaStat stats.Stats
-	RpcStat   RPCStats
+	SigmapStat stats.Stats
+	RpcStat    RPCStats
 }
 
 func (st *SigmaRPCStats) String() string {
-	s := "Sigma stats:\n" + st.SigmaStat.String() + "\n"
+	s := "Sigma stats:\n" + st.SigmapStat.String() + "\n"
 	s += st.RpcStat.String()
 	return s
 }

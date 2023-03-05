@@ -562,6 +562,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
 	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
+		rootts.Shutdown()
 		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
 	}
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {

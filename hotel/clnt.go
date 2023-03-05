@@ -34,11 +34,11 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	//		}).Dial,
 	//	}
 	clnt := &http.Client{
-		Timeout:   2 * time.Minute,
-		Transport: http.DefaultTransport,
+		//		Timeout:   2 * time.Minute,
+		//		Transport: http.DefaultTransport,
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
-	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 1000
+	//	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 1000
 	addrs = container.Rearrange(sp.ROOTREALM.String(), addrs)
 	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0].Addr)
 	return &WebClnt{job, addrs, "http://" + addrs[0].Addr, clnt, fsl}

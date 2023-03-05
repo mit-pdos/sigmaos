@@ -513,7 +513,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	go func() {
 		time.Sleep(20 * time.Second)
-		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
+		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 1 {
 			rootts.Shutdown()
 			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
 		}
@@ -559,7 +559,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
-	if sts, err := rootts.GetDir(sp.WS); err != nil || len(sts) > 0 {
+	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
 		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
 	}
 	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {

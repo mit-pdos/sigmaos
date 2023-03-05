@@ -513,7 +513,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	go func() {
 		time.Sleep(20 * time.Second)
-		if sts, err := rootts.GetDir(sp.RUNQ_LC); err != nil || len(sts) > 0 {
+		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
 			rootts.Shutdown()
 			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
 		}

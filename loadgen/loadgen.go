@@ -9,6 +9,10 @@ import (
 	db "sigmaos/debug"
 )
 
+const (
+	RAND_SEED = 12345
+)
+
 type Req func(*rand.Rand)
 
 type LoadGenerator struct {
@@ -75,7 +79,8 @@ func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
 // Find the base latency on which to base future measurements.
 func (lg *LoadGenerator) Calibrate() {
 	const N = 1000
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(RAND_SEED))
 	start := time.Now()
 	for i := 0; i < N; i++ {
 		lg.wg.Add(1)
@@ -97,7 +102,8 @@ func (lg *LoadGenerator) warmup() {
 func (lg *LoadGenerator) initiatorThread(tid int) {
 	t := time.NewTicker(lg.sleepdurs[tid])
 	var nreq int64
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(RAND_SEED))
 	start := time.Now()
 	for time.Since(start) < lg.totaldur {
 		<-t.C

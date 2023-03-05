@@ -516,6 +516,8 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 1 {
 			rootts.Shutdown()
 			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+		} else {
+			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
 		}
 	}()
 	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, fn)

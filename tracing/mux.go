@@ -25,6 +25,5 @@ func (tm *TracedHTTPMux) HandleFunc(pattern string, handler func(w http.Response
 }
 
 func (tm *TracedHTTPMux) Serve(l net.Listener) {
-	//  tm.wrappedMux = otelhttp.NewHandler(tm.mux,
 	db.DFatalf("%v", http.Serve(l, tm.mux))
 }

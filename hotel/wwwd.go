@@ -60,13 +60,11 @@ func RunWww(job string, public bool) error {
 		return err
 	}
 	www.reservec = pdc
-
 	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = pdc
-
 	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELGEO)
 	if err != nil {
 		return err

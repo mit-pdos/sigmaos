@@ -73,7 +73,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.geoc = pdc
 
-	tracing.Init("wwwd", "localhost")
+	tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	mux := tracing.MakeHTTPMux()
 	mux.HandleFunc("/user", www.userHandler)
 	mux.HandleFunc("/hotels", www.searchHandler)

@@ -55,6 +55,7 @@ type Srv struct {
 	Ncore  proc.Tcore
 }
 
+// XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func MkHotelSvc(public bool) []Srv {
 	return []Srv{
 		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2},
@@ -93,7 +94,8 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	// Create a cache clnt.
 	if nsrv > 0 {
-		if cache == "cached" {
+		switch cache {
+		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
 			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, proc.Tcore(cacheNcore), test.Overlays)
 			if err != nil {
@@ -105,7 +107,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err
 			}
-		} else {
+		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, proc.Tcore(cacheNcore), "0", "manual")
 			if err != nil {
@@ -115,6 +117,8 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 			if err != nil {
 				return nil, err
 			}
+		default:
+			db.DFatalf("Unrecognized hotel cache type: %v", cache)
 		}
 	}
 

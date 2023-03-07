@@ -30,6 +30,7 @@ type Param struct {
 	KernelId string
 	Services []string
 	Dbip     string
+	Jaegerip string
 	Overlays bool
 }
 

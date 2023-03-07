@@ -15,6 +15,7 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 type Www struct {
@@ -72,11 +73,13 @@ func RunWww(job string, public bool) error {
 	}
 	www.geoc = pdc
 
-	http.HandleFunc("/user", www.userHandler)
-	http.HandleFunc("/hotels", www.searchHandler)
-	http.HandleFunc("/recommendations", www.recommendHandler)
-	http.HandleFunc("/reservation", www.reservationHandler)
-	http.HandleFunc("/geo", www.geoHandler)
+	tracing.Init("wwwd", "localhost")
+	mux := tracing.MakeHTTPMux()
+	mux.HandleFunc("/user", www.userHandler)
+	mux.HandleFunc("/hotels", www.searchHandler)
+	mux.HandleFunc("/recommendations", www.recommendHandler)
+	mux.HandleFunc("/reservation", www.reservationHandler)
+	mux.HandleFunc("/geo", www.geoHandler)
 
 	if public {
 		pc, pi, err := portclnt.MkPortClntPort(www.FsLib)
@@ -88,9 +91,7 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
-		go func() {
-			db.DFatalf("%v", http.Serve(l, nil))
-		}()
+		go mux.Serve(l)
 		a, err := container.QualifyAddr(l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
@@ -103,9 +104,8 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
-		go func() {
-			db.DFatalf("%v", http.Serve(l, nil))
-		}()
+		go mux.Serve(l)
+
 		a, err := container.QualifyAddr(l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)

@@ -70,13 +70,14 @@ ENV kernelid kernel
 ENV named :1111
 ENV boot named
 ENV dbip x.x.x.x
+ENV jaegerip x.x.x.x
 ENV overlays "false"
 # Copy kernel bins
 COPY --from=builder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
 COPY --from=builder /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy linus bins
 COPY --from=builder /home/sigmaos/bin/linux /home/sigmaos/bin/linux
-CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${overlays}"]
+CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${jaegerip} ${overlays}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmakernelclean AS sigmakernel

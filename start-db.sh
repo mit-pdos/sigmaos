@@ -33,6 +33,8 @@ done;
 
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 
+echo "db IP: $ip"
+
 until mysqlshow -h $ip -u root -psigmadb 2> /dev/null; do
     echo -n "." 1>&2
     sleep 0.1;

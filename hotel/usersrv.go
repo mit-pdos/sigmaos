@@ -85,7 +85,7 @@ func (s *Users) initDB() error {
 }
 
 func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
-	span := s.tracer.StartRPCSpan(&req, "User")
+	span := s.tracer.StartRPCSpan(&req, "CheckUser")
 	defer span.End()
 
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)

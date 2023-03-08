@@ -10,8 +10,10 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 type Reservation struct {
@@ -30,6 +32,7 @@ type Number struct {
 type Reserve struct {
 	dbc    *dbclnt.DbClnt
 	cachec CacheClnt
+	tracer *tracing.Tracer
 }
 
 func (s *Reserve) initDb() error {
@@ -101,6 +104,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	defer p.Done()
+	r.tracer = tracing.Init("reserve", proc.GetSigmaJaegerIP())
 	return pds.RunServer()
 }
 
@@ -178,6 +182,9 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
 func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
+	span := s.tracer.StartRPCSpan(&req, "MakeReservation")
+	defer span.End()
+
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
 	b, date_num, err := s.checkAvailability(hotelId, req)
@@ -222,6 +229,9 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 }
 
 func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
+	span := s.tracer.StartRPCSpan(&req, "CheckAvailability")
+	defer span.End()
+
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
 		b, _, err := s.checkAvailability(hotelId, req)

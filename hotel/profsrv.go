@@ -11,8 +11,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 const (
@@ -22,6 +24,7 @@ const (
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
 	cachec CacheClnt
+	tracer *tracing.Tracer
 }
 
 func RunProfSrv(job string, public bool, cache string) error {
@@ -46,6 +49,7 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.initDB(profs)
+	ps.tracer = tracing.Init("prof", proc.GetSigmaJaegerIP())
 	return pds.RunServer()
 }
 
@@ -108,6 +112,9 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 }
 
 func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
+	span := ps.tracer.StartRPCSpan(&req, "GetProfiles")
+	defer span.End()
+
 	db.DPrintf(db.HOTEL_PROF, "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}

@@ -12,8 +12,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 type RatePlans []*proto.RatePlan
@@ -33,6 +35,7 @@ func (r RatePlans) Less(i, j int) bool {
 type Rate struct {
 	dbc    *dbclnt.DbClnt
 	cachec CacheClnt
+	tracer *tracing.Tracer
 }
 
 // Run starts the server
@@ -61,11 +64,15 @@ func RunRateSrv(job string, public bool, cache string) error {
 	if err := r.initDB(rates); err != nil {
 		return err
 	}
+	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	return pds.RunServer()
 }
 
 // GetRates gets rates for hotels
 func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
+	span := s.tracer.StartRPCSpan(&req, "GetRates")
+	defer span.End()
+
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}

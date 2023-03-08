@@ -13,8 +13,10 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 const (
@@ -37,6 +39,7 @@ func (p *point) Id() string   { return p.Pid }
 // Server implements the geo service
 type Geo struct {
 	geoidx *geoindex.ClusteringIndex
+	tracer *tracing.Tracer
 }
 
 // Run starts the server
@@ -53,12 +56,16 @@ func RunGeoSrv(job string, public bool) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	defer p.Done()
+	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 
 	return pds.RunServer()
 }
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(ctx fs.CtxI, req proto.GeoRequest, rep *proto.GeoResult) error {
+	span := s.tracer.StartRPCSpan(&req, "Nearby")
+	defer span.End()
+
 	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {

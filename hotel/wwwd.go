@@ -164,8 +164,9 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check username and password
 	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
-		Name:     username,
-		Password: password,
+		Name:              username,
+		Password:          password,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -222,10 +223,11 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	var searchRes proto.SearchResult
 	searchReq := &proto.SearchRequest{
-		Lat:     lat,
-		Lon:     lon,
-		InDate:  inDate,
-		OutDate: outDate,
+		Lat:               lat,
+		Lon:               lon,
+		InDate:            inDate,
+		OutDate:           outDate,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}
 	// search for best hotels
 	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
@@ -244,11 +246,12 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	var reserveRes proto.ReserveResult
 	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
-		CustomerName: "",
-		HotelId:      searchRes.HotelIds,
-		InDate:       inDate,
-		OutDate:      outDate,
-		Number:       1,
+		CustomerName:      "",
+		HotelId:           searchRes.HotelIds,
+		InDate:            inDate,
+		OutDate:           outDate,
+		Number:            1,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &reserveRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -258,8 +261,9 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	// hotel profiles
 	var profRes proto.ProfResult
 	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
-		HotelIds: reserveRes.HotelIds,
-		Locale:   locale,
+		HotelIds:          reserveRes.HotelIds,
+		Locale:            locale,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &profRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -299,9 +303,10 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	// recommend hotels
 	var recResp proto.RecResult
 	err := s.recc.RPC("Rec.GetRecs", &proto.RecRequest{
-		Require: require,
-		Lat:     lat,
-		Lon:     lon,
+		Require:           require,
+		Lat:               lat,
+		Lon:               lon,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &recResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -318,8 +323,9 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	// hotel profiles
 	var profResp proto.ProfResult
 	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
-		HotelIds: recResp.HotelIds,
-		Locale:   locale,
+		HotelIds:          recResp.HotelIds,
+		Locale:            locale,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &profResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -382,8 +388,9 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check username and password
 	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
-		Name:     username,
-		Password: password,
+		Name:              username,
+		Password:          password,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -399,11 +406,12 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	// Make reservation
 	var resResp proto.ReserveResult
 	err = s.reservec.RPC("Reserve.MakeReservation", &proto.ReserveRequest{
-		CustomerName: customerName,
-		HotelId:      []string{hotelId},
-		InDate:       inDate,
-		OutDate:      outDate,
-		Number:       int32(numberOfRoom),
+		CustomerName:      customerName,
+		HotelId:           []string{hotelId},
+		InDate:            inDate,
+		OutDate:           outDate,
+		Number:            int32(numberOfRoom),
+		SpanContextConfig: tracing.SpanToContext(span),
 	}, &resResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -444,8 +452,9 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 	var gres proto.GeoResult
 	greq := proto.GeoRequest{
-		Lat: lat,
-		Lon: lon,
+		Lat:               lat,
+		Lon:               lon,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}
 	err := s.geoc.RPC("Geo.Nearby", &greq, &gres)
 	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)

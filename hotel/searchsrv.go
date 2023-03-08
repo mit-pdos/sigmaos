@@ -7,15 +7,18 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 type Search struct {
-	ratec *protdevclnt.ProtDevClnt
-	geoc  *protdevclnt.ProtDevClnt
-	pds   *protdevsrv.ProtDevSrv
+	ratec  *protdevclnt.ProtDevClnt
+	geoc   *protdevclnt.ProtDevClnt
+	pds    *protdevsrv.ProtDevSrv
+	tracer *tracing.Tracer
 }
 
 // Run starts the server
@@ -42,15 +45,21 @@ func RunSearchSrv(n string, public bool) error {
 	}
 	defer p.Done()
 
+	s.tracer = tracing.Init("search", proc.GetSigmaJaegerIP())
+
 	return pds.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
+	span := s.tracer.StartRPCSpan(&req, "Nearby")
+	defer span.End()
+
 	var gres proto.GeoResult
 	greq := &proto.GeoRequest{
-		Lat: req.Lat,
-		Lon: req.Lon,
+		Lat:               req.Lat,
+		Lon:               req.Lon,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}
 	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
@@ -62,9 +71,10 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	// find rates for hotels
 	var rres proto.RateResult
 	rreq := &proto.RateRequest{
-		HotelIds: gres.HotelIds,
-		InDate:   req.InDate,
-		OutDate:  req.OutDate,
+		HotelIds:          gres.HotelIds,
+		InDate:            req.InDate,
+		OutDate:           req.OutDate,
+		SpanContextConfig: tracing.SpanToContext(span),
 	}
 	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
 	if err != nil {

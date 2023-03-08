@@ -12,8 +12,10 @@ import (
 
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 //	type RecRequest struct {
@@ -36,6 +38,7 @@ type Hotel struct {
 
 type Rec struct {
 	hotels map[string]*Hotel
+	tracer *tracing.Tracer
 }
 
 // Run starts the server
@@ -46,11 +49,15 @@ func RunRecSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
+	r.tracer = tracing.Init("rec", proc.GetSigmaJaegerIP())
 	return pds.RunServer()
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
 func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
+	span := s.tracer.StartRPCSpan(&req, "GetRecs")
+	defer span.End()
+
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{

@@ -63,7 +63,7 @@ func RunGeoSrv(job string, public bool) error {
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(ctx fs.CtxI, req proto.GeoRequest, rep *proto.GeoResult) error {
-	span := s.tracer.StartRPCSpan(&req, "Nearby")
+	_, span := s.tracer.StartRPCSpan(&req, "Nearby")
 	defer span.End()
 
 	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)

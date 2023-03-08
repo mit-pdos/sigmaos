@@ -1,6 +1,7 @@
 package hotel
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -70,23 +71,31 @@ func RunRateSrv(job string, public bool, cache string) error {
 
 // GetRates gets rates for hotels
 func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
-	span := s.tracer.StartRPCSpan(&req, "GetRates")
+	sctx, span := s.tracer.StartRPCSpan(&req, "GetRates")
 	defer span.End()
 
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
-		if err := s.cachec.Get(key, r); err != nil {
+		span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		err := s.cachec.Get(key, r)
+		span2.End()
+		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
-			r, err = s.getRate(hotelId)
+			span3 := s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			r, err = s.getRate(sctx, hotelId)
+			span3.End()
 			if err != nil {
 				return err
 			}
-			if err := s.cachec.Put(key, r); err != nil {
+			span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			err = s.cachec.Put(key, r)
+			span4.End()
+			if err != nil {
 				return err
 			}
 		}
@@ -120,10 +129,13 @@ type RateFlat struct {
 	RoomDescription        string
 }
 
-func (s *Rate) getRate(id string) (*proto.RatePlan, error) {
+func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error) {
 	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
 	var rates []RateFlat
-	if error := s.dbc.Query(q, &rates); error != nil {
+	dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	error := s.dbc.Query(q, &rates)
+	dbspan.End()
+	if error != nil {
 		return nil, error
 	}
 	if len(rates) == 0 {

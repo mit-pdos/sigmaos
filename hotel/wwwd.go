@@ -146,7 +146,7 @@ func (s *Www) done() error {
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartHTTPSpan(r.Context(), "User")
+	span := s.tracer.StartContextSpan(r.Context(), "User")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -187,7 +187,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartHTTPSpan(r.Context(), "Search")
+	span := s.tracer.StartContextSpan(r.Context(), "Search")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -274,7 +274,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartHTTPSpan(r.Context(), "Recommend")
+	span := s.tracer.StartContextSpan(r.Context(), "Recommend")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -337,7 +337,7 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartHTTPSpan(r.Context(), "Reservation")
+	span := s.tracer.StartContextSpan(r.Context(), "Reservation")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -430,7 +430,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartHTTPSpan(r.Context(), "Geo")
+	span := s.tracer.StartContextSpan(r.Context(), "Geo")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")

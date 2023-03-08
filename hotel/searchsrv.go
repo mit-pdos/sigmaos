@@ -52,7 +52,7 @@ func RunSearchSrv(n string, public bool) error {
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
-	span := s.tracer.StartRPCSpan(&req, "Nearby")
+	_, span := s.tracer.StartRPCSpan(&req, "Nearby")
 	defer span.End()
 
 	var gres proto.GeoResult

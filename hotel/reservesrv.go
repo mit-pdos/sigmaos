@@ -1,6 +1,7 @@
 package hotel
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -109,7 +110,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 }
 
 // checkAvailability checks if given information is available
-func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (bool, map[string]int, error) {
+func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req proto.ReserveRequest) (bool, map[string]int, error) {
 	inDate, _ := time.Parse(
 		time.RFC3339,
 		req.InDate+"T12:00:00+00:00")
@@ -129,20 +130,28 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 		key := hotelId + "_" + indate + "_" + outdate
 
 		var reserves []Reservation
-		if err := s.cachec.Get(key, &count); err != nil {
+		span := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		err := s.cachec.Get(key, &count)
+		span.End()
+		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
 			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
+			dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 			err := s.dbc.Query(q, &reserves)
+			dbspan.End()
 			if err != nil {
 				return false, nil, err
 			}
 			for _, r := range reserves {
 				count += r.Number
 			}
-			if err := s.cachec.Put(key, &count); err != nil {
+			span := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			err = s.cachec.Put(key, &count)
+			span.End()
+			if err != nil {
 				return false, nil, err
 			}
 		}
@@ -152,14 +161,19 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 		// check capacity
 		hotel_cap := 0
 		key = hotelId + "_cap"
-		if err := s.cachec.Get(key, &hotel_cap); err != nil {
+		span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		err = s.cachec.Get(key, &hotel_cap)
+		span2.End()
+		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)
 			var nums []Number
 			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
+			dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 			err = s.dbc.Query(q, &nums)
+			dbspan.End()
 			if err != nil {
 				return false, nil, err
 			}
@@ -167,7 +181,10 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
 			hotel_cap = int(nums[0].Number)
-			if err := s.cachec.Put(key, &hotel_cap); err != nil {
+			span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
+			err = s.cachec.Put(key, &hotel_cap)
+			span.End()
+			if err != nil {
 				return false, nil, err
 			}
 		}
@@ -182,12 +199,12 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
 func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
-	span := s.tracer.StartRPCSpan(&req, "MakeReservation")
+	sctx, span := s.tracer.StartRPCSpan(&req, "MakeReservation")
 	defer span.End()
 
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
-	b, date_num, err := s.checkAvailability(hotelId, req)
+	b, date_num, err := s.checkAvailability(sctx, hotelId, req)
 	if err != nil {
 		return err
 	}
@@ -198,7 +215,10 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	// update reservation number
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
-		if err := s.cachec.Put(key, &cnt); err != nil {
+		span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+		err := s.cachec.Put(key, &cnt)
+		span2.End()
+		if err != nil {
 			return err
 		}
 	}
@@ -229,12 +249,12 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 }
 
 func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
-	span := s.tracer.StartRPCSpan(&req, "CheckAvailability")
+	sctx, span := s.tracer.StartRPCSpan(&req, "CheckAvailability")
 	defer span.End()
 
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
-		b, _, err := s.checkAvailability(hotelId, req)
+		b, _, err := s.checkAvailability(sctx, hotelId, req)
 		if err != nil {
 			return err
 		}

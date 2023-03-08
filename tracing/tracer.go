@@ -32,16 +32,15 @@ func MakeTracer(t trace.Tracer) *Tracer {
 	}
 }
 
-func (t *Tracer) StartHTTPSpan(ctx context.Context, name string) trace.Span {
+func (t *Tracer) StartContextSpan(ctx context.Context, name string) trace.Span {
 	_, span := t.t.Start(ctx, name)
 	return span
 }
 
-func (t *Tracer) StartRPCSpan(req HotelRequest, name string) trace.Span {
+func (t *Tracer) StartRPCSpan(req HotelRequest, name string) (context.Context, trace.Span) {
 	cfg := req.GetSpanContextConfig()
 	ctx := contextFromConfig(cfg)
-	_, span := t.t.Start(ctx, name)
-	return span
+	return t.t.Start(ctx, name)
 }
 
 func makeJaegerExporter(host string) *jaeger.Exporter {

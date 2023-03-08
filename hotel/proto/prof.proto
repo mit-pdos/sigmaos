@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service Prof {
   rpc GetProfiles(ProfRequest) returns (ProfResult);
@@ -24,6 +26,7 @@ message ProfileFlat {
   string  postalCode = 10;
   float   lat = 11;
   float   lon = 12;
+  SpanContextConfig spanContextConfig = 13;
 }
 
 message ProfResult {

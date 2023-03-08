@@ -22,6 +22,7 @@ type Www struct {
 	*sigmaclnt.SigmaClnt
 	p        *perf.Perf
 	job      string
+	tracer   *tracing.Tracer
 	userc    *protdevclnt.ProtDevClnt
 	searchc  *protdevclnt.ProtDevClnt
 	reservec *protdevclnt.ProtDevClnt
@@ -71,7 +72,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.geoc = pdc
 
-	tracing.Init("wwwd", proc.GetSigmaJaegerIP())
+	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	mux := tracing.MakeHTTPMux()
 	mux.HandleFunc("/user", www.userHandler)
 	mux.HandleFunc("/hotels", www.searchHandler)
@@ -145,6 +146,9 @@ func (s *Www) done() error {
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
+	span := s.tracer.StartHTTPSpan(r.Context(), "User")
+	defer span.End()
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	username, password := r.URL.Query().Get("username"), r.URL.Query().Get("password")
@@ -182,6 +186,9 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
+	span := s.tracer.StartHTTPSpan(r.Context(), "Search")
+	defer span.End()
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	//	headerContentTtype := r.Header.Get("Content-Type")
@@ -263,6 +270,9 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
+	span := s.tracer.StartHTTPSpan(r.Context(), "Recommend")
+	defer span.End()
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// lan/lon from query params
@@ -321,6 +331,9 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
+	span := s.tracer.StartHTTPSpan(r.Context(), "Reservation")
+	defer span.End()
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	inDate, outDate := r.URL.Query().Get("inDate"), r.URL.Query().Get("outDate")
@@ -409,6 +422,9 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
+	span := s.tracer.StartHTTPSpan(r.Context(), "Geo")
+	defer span.End()
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	//XXX

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# TODO: add more
 # Note: order is important.
 for P in tracing ; do
   echo "protoc $P"

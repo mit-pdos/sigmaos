@@ -66,6 +66,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
+	defer r.tracer.Flush()
 	return pds.RunServer()
 }
 

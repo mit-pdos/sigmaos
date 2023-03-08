@@ -106,6 +106,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 	}
 	defer p.Done()
 	r.tracer = tracing.Init("reserve", proc.GetSigmaJaegerIP())
+	defer r.tracer.Flush()
 	return pds.RunServer()
 }
 

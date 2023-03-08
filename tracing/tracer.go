@@ -43,6 +43,11 @@ func (t *Tracer) StartRPCSpan(req HotelRequest, name string) (context.Context, t
 	return t.t.Start(ctx, name)
 }
 
+// Force flush all spans to jaeger.
+func (t *Tracer) Flush() {
+	otel.GetTracerProvider().(*sdktrace.TracerProvider).ForceFlush(context.TODO())
+}
+
 func makeJaegerExporter(host string) *jaeger.Exporter {
 	exp, err := jaeger.New(
 		jaeger.WithAgentEndpoint(

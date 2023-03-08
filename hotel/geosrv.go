@@ -57,6 +57,7 @@ func RunGeoSrv(job string, public bool) error {
 	}
 	defer p.Done()
 	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
+	defer geo.tracer.Flush()
 
 	return pds.RunServer()
 }

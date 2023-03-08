@@ -53,6 +53,7 @@ func RunUserSrv(n string, public bool) error {
 		return err
 	}
 	u.tracer = tracing.Init("user", proc.GetSigmaJaegerIP())
+	defer u.tracer.Flush()
 	return pds.RunServer()
 }
 

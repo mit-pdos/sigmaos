@@ -50,6 +50,7 @@ func RunRecSrv(n string, public bool) error {
 		return err
 	}
 	r.tracer = tracing.Init("rec", proc.GetSigmaJaegerIP())
+	defer r.tracer.Flush()
 	return pds.RunServer()
 }
 

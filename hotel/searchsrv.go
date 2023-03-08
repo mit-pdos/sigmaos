@@ -47,6 +47,8 @@ func RunSearchSrv(n string, public bool) error {
 
 	s.tracer = tracing.Init("search", proc.GetSigmaJaegerIP())
 
+	defer s.tracer.Flush()
+
 	return pds.RunServer()
 }
 

@@ -139,6 +139,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
+	s.tracer.Flush()
 	s.p.Done()
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil

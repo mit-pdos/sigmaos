@@ -109,7 +109,7 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v jaegerip %v", a, proc.GetSigmaJaegerIP())
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = www.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
 			db.DFatalf("MountService %v", err)

@@ -1,14 +1,17 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service Geo {
   rpc Nearby(GeoRequest) returns (GeoResult);
 }
 
 message GeoRequest {
-  float lat = 1;
-  float lon = 2;
+  float lat                           = 1;
+  float lon                           = 2;
+  SpanContextConfig spanContextConfig = 3;
 }
 
 message GeoResult {

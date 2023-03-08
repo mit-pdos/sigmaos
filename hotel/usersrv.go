@@ -8,8 +8,10 @@ import (
 	"sigmaos/dbclnt"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 const (
@@ -31,7 +33,8 @@ type User struct {
 }
 
 type Users struct {
-	dbc *dbclnt.DbClnt
+	dbc    *dbclnt.DbClnt
+	tracer *tracing.Tracer
 }
 
 func RunUserSrv(n string, public bool) error {
@@ -49,6 +52,7 @@ func RunUserSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
+	u.tracer = tracing.Init("user", proc.GetSigmaJaegerIP())
 	return pds.RunServer()
 }
 
@@ -81,6 +85,9 @@ func (s *Users) initDB() error {
 }
 
 func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
+	span := s.tracer.StartRPCSpan(&req, "User")
+	defer span.End()
+
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
 	error := s.dbc.Query(q, &users)

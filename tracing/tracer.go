@@ -11,11 +11,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	db "sigmaos/debug"
+	proto "sigmaos/tracing/proto"
 )
 
 const (
 	SAMPLE_RATIO = 0.01
 )
+
+type HotelRequest interface {
+	GetSpanContextConfig() *proto.SpanContextConfig
+}
 
 type Tracer struct {
 	t trace.Tracer
@@ -30,6 +35,33 @@ func MakeTracer(t trace.Tracer) *Tracer {
 func (t *Tracer) StartHTTPSpan(ctx context.Context, name string) trace.Span {
 	_, span := t.t.Start(ctx, name)
 	return span
+}
+
+func (t *Tracer) StartRPCSpan(req HotelRequest, name string) trace.Span {
+	cfg := req.GetSpanContextConfig()
+	ctx := contextFromConfig(cfg)
+	_, span := t.t.Start(ctx, name)
+	return span
+}
+
+func contextFromConfig(c *proto.SpanContextConfig) context.Context {
+	var tid [16]byte
+	copy(tid[:], c.TraceID[0:16])
+	var sid [8]byte
+	copy(sid[:], c.TraceID[0:8])
+	ts, err := trace.ParseTraceState(c.TraceState)
+	if err != nil {
+		db.DFatalf("Error parse trace state %v", err)
+	}
+	cfg := trace.SpanContextConfig{
+		TraceID:    trace.TraceID(tid),
+		SpanID:     trace.SpanID(sid),
+		TraceFlags: trace.TraceFlags(c.TraceFlags),
+		TraceState: ts,
+		Remote:     c.Remote,
+	}
+	rsc := trace.NewSpanContext(cfg)
+	return trace.ContextWithRemoteSpanContext(context.TODO(), rsc)
 }
 
 func makeJaegerExporter(host string) *jaeger.Exporter {

@@ -100,6 +100,7 @@ for vm in $vms; do
     ./make.sh --norace linux
     ./start-network.sh
     ./start-db.sh
+    ./start-jaeger.sh
     ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"

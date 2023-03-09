@@ -65,8 +65,8 @@ func Init(svcname string, jaegerhost string) *Tracer {
 	unsafeExporter := makeJaegerExporter(jaegerhost)
 	exporter := makeThreadSafeExporterWrapper(unsafeExporter)
 	// Create a sampler for the trace provider.
-	//	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(SAMPLE_RATIO))
-	sampler := sdktrace.AlwaysSample()
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(SAMPLE_RATIO))
+	//	sampler := sdktrace.AlwaysSample()
 	res, err := resource.New(context.TODO(), resource.WithAttributes(semconv.ServiceNameKey.String(svcname)))
 	if err != nil {
 		db.DFatalf("Error resource.New: %v", err)

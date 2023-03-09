@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
+	"sync"
 
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
@@ -38,6 +39,7 @@ func (p *point) Id() string   { return p.Pid }
 
 // Server implements the geo service
 type Geo struct {
+	mu     sync.Mutex
 	geoidx *geoindex.ClusteringIndex
 	tracer *tracing.Tracer
 }
@@ -81,6 +83,9 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plat: lat,
 		Plon: lon,
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	return s.geoidx.KNearest(
 		center,

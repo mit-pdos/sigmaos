@@ -1,8 +1,6 @@
 package hotel
 
 import (
-	"log"
-
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
@@ -65,7 +63,7 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	}
 	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
-		log.Fatalf("nearby error: %v", err)
+		db.DFatalf("nearby error: %v", err)
 	}
 
 	db.DPrintf(db.HOTEL_SEARCH, "Search Nearby: %v %v\n", greq, gres)
@@ -80,7 +78,7 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	}
 	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
 	if err != nil {
-		log.Fatalf("rates error: %v", err)
+		db.DFatalf("rates error: %v", err)
 	}
 
 	db.DPrintf(db.HOTEL_SEARCH, "Search Getrates: %v %v\n", rreq, rres)

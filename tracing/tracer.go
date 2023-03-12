@@ -50,6 +50,7 @@ func (t *Tracer) Flush() {
 	if err != nil {
 		db.DFatalf("Error flushing traces %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Done flushing traces")
 }
 
 func makeJaegerExporter(host string) *jaeger.Exporter {

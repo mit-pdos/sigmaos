@@ -52,16 +52,18 @@ func RunSearchSrv(n string, public bool) error {
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "Nearby")
+	sctx, span := s.tracer.StartRPCSpan(&req, "Nearby")
 	defer span.End()
 
+	span2 := s.tracer.StartContextSpan(sctx, "Geo.Nearby")
 	var gres proto.GeoResult
 	greq := &proto.GeoRequest{
 		Lat:               req.Lat,
 		Lon:               req.Lon,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: tracing.SpanToContext(span2),
 	}
 	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	span2.End()
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)
 	}
@@ -69,14 +71,16 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	db.DPrintf(db.HOTEL_SEARCH, "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
+	span3 := s.tracer.StartContextSpan(sctx, "Rate.GetRates")
 	var rres proto.RateResult
 	rreq := &proto.RateRequest{
 		HotelIds:          gres.HotelIds,
 		InDate:            req.InDate,
 		OutDate:           req.OutDate,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: tracing.SpanToContext(span3),
 	}
 	err = s.ratec.RPC("Rate.GetRates", rreq, &rres)
+	span3.End()
 	if err != nil {
 		db.DFatalf("rates error: %v", err)
 	}

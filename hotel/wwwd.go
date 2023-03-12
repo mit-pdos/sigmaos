@@ -246,6 +246,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var reserveRes proto.ReserveResult
+
 	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName:      "",
 		HotelId:           searchRes.HotelIds,

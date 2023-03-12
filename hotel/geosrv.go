@@ -16,14 +16,43 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
+	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
+)
+
+const (
+	N_INDEX = 1000
 )
 
 const (
 	maxSearchRadius  = 10
 	maxSearchResults = 5
 )
+
+type safeIndex struct {
+	mu     sync.Mutex
+	geoidx *geoindex.ClusteringIndex
+}
+
+func makeSafeIndex(path string) *safeIndex {
+	return &safeIndex{
+		geoidx: newGeoIndex(path),
+	}
+}
+
+func (si *safeIndex) KNN(center *geoindex.GeoPoint) []geoindex.Point {
+	si.mu.Lock()
+	defer si.mu.Unlock()
+
+	return si.geoidx.KNearest(
+		center,
+		maxSearchResults,
+		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
+			return true
+		},
+	)
+}
 
 // Point represents a hotels's geo location on map
 type point struct {
@@ -39,15 +68,17 @@ func (p *point) Id() string   { return p.Pid }
 
 // Server implements the geo service
 type Geo struct {
-	mu     sync.Mutex
-	geoidx *geoindex.ClusteringIndex
-	tracer *tracing.Tracer
+	tracer  *tracing.Tracer
+	indexes []*safeIndex
 }
 
 // Run starts the server
 func RunGeoSrv(job string, public bool) error {
 	geo := &Geo{}
-	geo.geoidx = newGeoIndex("data/geo.json")
+	geo.indexes = make([]*safeIndex, 0, N_INDEX)
+	for i := 0; i < N_INDEX; i++ {
+		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
+	}
 	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELGEO, geo, public)
 	if err != nil {
 		return err
@@ -84,16 +115,11 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plon: lon,
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	r := rand.Int64(N_INDEX)
 
-	return s.geoidx.KNearest(
-		center,
-		maxSearchResults,
-		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
-			return true
-		},
-	)
+	si := s.indexes[r]
+
+	return si.KNN(center)
 }
 
 // newGeoIndex returns a geo index with points loaded

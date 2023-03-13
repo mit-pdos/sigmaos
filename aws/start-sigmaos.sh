@@ -61,9 +61,12 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
+vms_privaddr=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
+vma_privaddr=($vms_privaddr)
 MAIN="${vma[0]}"
+MAIN_PRIVADDR="${vma_privaddr[0]}"
 SIGMANAMED="${vma[0]}:1111"
 IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
@@ -73,7 +76,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
+  ./update-repo.sh --vpc $VPC --parallel --branch jaeger # docker-dev
 fi
 
 for vm in $vms; do
@@ -101,11 +104,11 @@ for vm in $vms; do
     ./start-network.sh
     ./start-db.sh
     ./start-jaeger.sh
-    ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

@@ -99,6 +99,7 @@ if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 fi
 
+echo "Running with jaeger $JAEGERIP"
 #if docker ps | grep -q sigmajaeger; then
 ##    JAEGERIP="localhost"
 #    JAEGERIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmajaeger)

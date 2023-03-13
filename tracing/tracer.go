@@ -45,12 +45,10 @@ func (t *Tracer) StartRPCSpan(req HotelRequest, name string) (context.Context, t
 
 // Force flush all spans to jaeger.
 func (t *Tracer) Flush() {
-	db.DPrintf(db.ALWAYS, "Flushing traces")
 	err := otel.GetTracerProvider().(*sdktrace.TracerProvider).ForceFlush(context.TODO())
 	if err != nil {
 		db.DFatalf("Error flushing traces %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "Done flushing traces")
 }
 
 func makeJaegerExporter(host string) *jaeger.Exporter {

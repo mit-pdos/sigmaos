@@ -518,15 +518,6 @@ func TestWwwK8s(t *testing.T) {
 
 func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn rpcbenchFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	go func() {
-		time.Sleep(20 * time.Second)
-		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
-			rootts.Shutdown()
-			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
-		} else {
-			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
-		}
-	}()
 	jobs, ji := makeRPCBenchJobs(ts1, p, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
 	go func() {
 		for _, j := range jobs {

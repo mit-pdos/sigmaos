@@ -41,11 +41,10 @@ func RunSearchSrv(n string, public bool) error {
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
-	defer p.Done()
-
 	s.tracer = tracing.Init("search", proc.GetSigmaJaegerIP())
 
 	defer s.tracer.Flush()
+	defer p.Done()
 
 	return pds.RunServer()
 }

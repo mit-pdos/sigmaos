@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--host] [--overlays] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--jaeger JAEGERIP] [--host] [--overlays] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -58,6 +58,11 @@ while [[ "$#" -gt 1 ]]; do
   --named)
     shift
     NAMED=$1
+    shift
+    ;;
+  --jaeger)
+    shift
+    JAEGERIP=$1
     shift
     ;;
   -help)

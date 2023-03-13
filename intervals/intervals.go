@@ -149,3 +149,10 @@ func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {
 		}
 	}
 }
+
+func (ivs *Intervals) Size() int {
+	ivs.Lock()
+	defer ivs.Unlock()
+
+	return len(ivs.ivs)
+}

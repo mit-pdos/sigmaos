@@ -102,6 +102,9 @@ func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *serr.Err) {
 		o := reply.Fc.Seqno
 		c.ivs.Insert(sessp.MkInterval(o, o+1))
 		c.ivs.Delete(reply.Fc.Received)
+		if c.ivs.Size() > 500 {
+			db.DPrintf(db.ALWAYS, "Large sessclnt intervals array: %v", c.ivs.Size())
+		}
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
 	} else {

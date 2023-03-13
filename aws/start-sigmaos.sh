@@ -61,7 +61,7 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
-vms_privaddr=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 6`
+vms_privaddr=`./lsvpc.py --privaddr $VPC | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
 vma_privaddr=($vms_privaddr)

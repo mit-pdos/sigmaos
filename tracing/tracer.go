@@ -18,7 +18,7 @@ const (
 	SAMPLE_RATIO = 0.01
 )
 
-type HotelRequest interface {
+type Request interface {
 	GetSpanContextConfig() *proto.SpanContextConfig
 }
 
@@ -37,7 +37,11 @@ func (t *Tracer) StartContextSpan(ctx context.Context, name string) (context.Con
 	return ctx, span
 }
 
-func (t *Tracer) StartRPCSpan(req HotelRequest, name string) (context.Context, trace.Span) {
+func (t *Tracer) StartTopLevelSpan(name string) (context.Context, trace.Span) {
+	return t.t.Start(context.TODO(), name)
+}
+
+func (t *Tracer) StartRPCSpan(req Request, name string) (context.Context, trace.Span) {
 	cfg := req.GetSpanContextConfig()
 	ctx := contextFromConfig(cfg)
 	return t.t.Start(ctx, name)

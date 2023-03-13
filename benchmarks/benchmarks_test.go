@@ -15,6 +15,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rpcbench"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -46,6 +47,9 @@ var HOTEL_NCACHE int
 var CACHE_TYPE string
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var RPCBENCH_NCORE int
+var RPCBENCH_DURS string
+var RPCBENCH_MAX_RPS string
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -80,6 +84,9 @@ func init() {
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
+	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
+	flag.IntVar(&RPCBENCH_NCORE, "rpcbench_ncore", 3, "RPCbench Ncore")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
@@ -507,6 +514,69 @@ func TestWwwSigmaos(t *testing.T) {
 
 func TestWwwK8s(t *testing.T) {
 	testWww(t, false)
+}
+
+func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn rpcbenchFn) {
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	go func() {
+		time.Sleep(20 * time.Second)
+		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
+			rootts.Shutdown()
+			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+		} else {
+			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
+		}
+	}()
+	jobs, ji := makeRPCBenchJobs(ts1, p, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				waitForClnts(rootts, N_CLNT)
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	p2 := makeRealmPerf(ts1)
+	defer p2.Done()
+	monitorCoresAssigned(ts1, p2)
+	runOps(ts1, ji, runRPCBench, rs)
+	//	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
+func TestRPCBenchSigmaosSleep(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	testRPCBench(rootts, ts1, nil, func(c *rpcbench.Clnt) {
+		err := c.Sleep(int64(SLEEP / time.Millisecond))
+		assert.Nil(t, err, "Error sleep req: %v", err)
+	})
+}
+
+func TestRPCBenchSigmaosJustCliSleep(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	clientReady(rootts)
+	jobs, ji := makeRPCBenchJobsCli(ts1, nil, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, func(c *rpcbench.Clnt) {
+		err := c.Sleep(int64(SLEEP / time.Millisecond))
+		assert.Nil(t, err, "Error sleep req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {

@@ -198,6 +198,34 @@ func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwncore proc.Tcore,
 	return ws, is
 }
 
+// ========== RPCBench Helpers ========
+
+func makeRPCBenchJobs(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*RPCBenchJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeRPCBenchJob(ts, p, ncore, dur, maxrps, fn, false)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+func makeRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*RPCBenchJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeRPCBenchJob(ts, p, ncore, dur, maxrps, fn, true)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Hotel Helpers ========
 
 func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {

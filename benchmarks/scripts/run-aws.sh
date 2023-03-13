@@ -304,13 +304,14 @@ hotel_tail_multi() {
   driver_vm=8
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
-#  for n in {1..10} ; do
-    run=${FUNCNAME[0]}/$sys/$rps #-$n
+  for n in {1..1000} ; do
+    # run=${FUNCNAME[0]}/$sys/$rps #-$n
+    run=${FUNCNAME[0]}/$sys/ncache-6/$rps-$n
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/"$run"
     # Avoid doing duplicate work.
     if ! should_skip $perf_dir false ; then
-      return 0
+      continue
     fi
     for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
       driver="false"
@@ -330,7 +331,20 @@ hotel_tail_multi() {
     wait
     # Copy results.
     end_benchmark $VPC $perf_dir
-#  done
+    echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
+    if grep -r "file not found http" $perf_dir ; then
+      echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
+      continue
+    fi
+    if grep -r "server-side" $perf_dir ; then
+      if grep -r "concurrent map writes" /tmp/*.out ; then
+        echo "----------------- Error concurrent map writes -----------------"
+        continue
+      fi
+      echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
+      return
+    fi
+  done
 }
 
 realm_balance() {

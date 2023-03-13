@@ -36,6 +36,8 @@ const (
 	MATMUL                    = "MATMUL"
 	CACHESRV                  = "CACHESRV"
 	CACHECLERK                = "CACHECLERK"
+	RPC_BENCH_SRV             = "RPC_BENCH_SRV"
+	RPC_BENCH_CLNT            = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                = "HOTEL_CLNT"
 	HOTEL_GEO                 = "HOTEL_GEO"
 	HOTEL_PROF                = "HOTEL_PROF"

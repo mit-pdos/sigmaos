@@ -68,7 +68,7 @@ func (ps *ProfSrv) getProf(sctx context.Context, id string) (*proto.ProfileFlat,
 	q := fmt.Sprintf("SELECT * from profile where hotelid='%s';", id)
 	var profs []proto.ProfileFlat
 
-	dbspan := ps.tracer.StartContextSpan(sctx, "db.Query")
+	_, dbspan := ps.tracer.StartContextSpan(sctx, "db.Query")
 	error := ps.dbc.Query(q, &profs)
 	dbspan.End()
 	if error != nil {
@@ -125,7 +125,7 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
-		span2 := ps.tracer.StartContextSpan(sctx, "Cache.Get")
+		_, span2 := ps.tracer.StartContextSpan(sctx, "Cache.Get")
 		err := ps.cachec.Get(key, p)
 		span2.End()
 		if err != nil {

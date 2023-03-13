@@ -147,7 +147,7 @@ func (s *Www) done() error {
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartContextSpan(r.Context(), "User")
+	_, span := s.tracer.StartContextSpan(r.Context(), "User")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -188,7 +188,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartContextSpan(r.Context(), "Search")
+	sctx, span := s.tracer.StartContextSpan(r.Context(), "Search")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -222,16 +222,18 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
+	_, span2 := s.tracer.StartContextSpan(sctx, "Search.Nearby")
 	var searchRes proto.SearchResult
 	searchReq := &proto.SearchRequest{
 		Lat:               lat,
 		Lon:               lon,
 		InDate:            inDate,
 		OutDate:           outDate,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: tracing.SpanToContext(span2),
 	}
 	// search for best hotels
 	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
+	span2.End()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -247,14 +249,16 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	var reserveRes proto.ReserveResult
 
+	_, span3 := s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
 	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName:      "",
 		HotelId:           searchRes.HotelIds,
 		InDate:            inDate,
 		OutDate:           outDate,
 		Number:            1,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: tracing.SpanToContext(span3),
 	}, &reserveRes)
+	span3.End()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -262,11 +266,13 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// hotel profiles
 	var profRes proto.ProfResult
+	_, span4 := s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
 	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds:          reserveRes.HotelIds,
 		Locale:            locale,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: tracing.SpanToContext(span4),
 	}, &profRes)
+	span4.End()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -276,7 +282,7 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartContextSpan(r.Context(), "Recommend")
+	_, span := s.tracer.StartContextSpan(r.Context(), "Recommend")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -339,7 +345,7 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartContextSpan(r.Context(), "Reservation")
+	_, span := s.tracer.StartContextSpan(r.Context(), "Reservation")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -432,7 +438,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	span := s.tracer.StartContextSpan(r.Context(), "Geo")
+	_, span := s.tracer.StartContextSpan(r.Context(), "Geo")
 	defer span.End()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")

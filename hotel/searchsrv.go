@@ -55,7 +55,7 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	sctx, span := s.tracer.StartRPCSpan(&req, "Nearby")
 	defer span.End()
 
-	span2 := s.tracer.StartContextSpan(sctx, "Geo.Nearby")
+	_, span2 := s.tracer.StartContextSpan(sctx, "Geo.Nearby")
 	var gres proto.GeoResult
 	greq := &proto.GeoRequest{
 		Lat:               req.Lat,
@@ -71,7 +71,7 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	db.DPrintf(db.HOTEL_SEARCH, "Search Nearby: %v %v\n", greq, gres)
 
 	// find rates for hotels
-	span3 := s.tracer.StartContextSpan(sctx, "Rate.GetRates")
+	_, span3 := s.tracer.StartContextSpan(sctx, "Rate.GetRates")
 	var rres proto.RateResult
 	rreq := &proto.RateRequest{
 		HotelIds:          gres.HotelIds,

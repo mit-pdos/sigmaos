@@ -131,7 +131,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		key := hotelId + "_" + indate + "_" + outdate
 
 		var reserves []Reservation
-		span := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		_, span := s.tracer.StartContextSpan(sctx, "Cache.Get")
 		err := s.cachec.Get(key, &count)
 		span.End()
 		if err != nil {
@@ -140,7 +140,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
 			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
-			dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+			_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 			err := s.dbc.Query(q, &reserves)
 			dbspan.End()
 			if err != nil {
@@ -149,7 +149,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			for _, r := range reserves {
 				count += r.Number
 			}
-			span := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			_, span := s.tracer.StartContextSpan(sctx, "Cache.Put")
 			err = s.cachec.Put(key, &count)
 			span.End()
 			if err != nil {
@@ -162,7 +162,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		// check capacity
 		hotel_cap := 0
 		key = hotelId + "_cap"
-		span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
 		err = s.cachec.Get(key, &hotel_cap)
 		span2.End()
 		if err != nil {
@@ -172,7 +172,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)
 			var nums []Number
 			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
-			dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+			_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 			err = s.dbc.Query(q, &nums)
 			dbspan.End()
 			if err != nil {
@@ -182,7 +182,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
 			hotel_cap = int(nums[0].Number)
-			span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
+			_, span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
 			err = s.cachec.Put(key, &hotel_cap)
 			span.End()
 			if err != nil {
@@ -216,7 +216,7 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	// update reservation number
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
-		span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
 		err := s.cachec.Put(key, &cnt)
 		span2.End()
 		if err != nil {

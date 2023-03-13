@@ -91,7 +91,7 @@ func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserRes
 
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
-	dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 	error := s.dbc.Query(q, &users)
 	dbspan.End()
 	res.OK = "False"

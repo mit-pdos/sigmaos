@@ -32,9 +32,9 @@ func MakeTracer(t trace.Tracer) *Tracer {
 	}
 }
 
-func (t *Tracer) StartContextSpan(ctx context.Context, name string) trace.Span {
-	_, span := t.t.Start(ctx, name)
-	return span
+func (t *Tracer) StartContextSpan(ctx context.Context, name string) (context.Context, trace.Span) {
+	ctx, span := t.t.Start(ctx, name)
+	return ctx, span
 }
 
 func (t *Tracer) StartRPCSpan(req HotelRequest, name string) (context.Context, trace.Span) {

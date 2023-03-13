@@ -79,7 +79,7 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
-		span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
 		err := s.cachec.Get(key, r)
 		span2.End()
 		if err != nil {
@@ -87,13 +87,13 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
-			span3 := s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			_, span3 := s.tracer.StartContextSpan(sctx, "DB.GetRate")
 			r, err = s.getRate(sctx, hotelId)
 			span3.End()
 			if err != nil {
 				return err
 			}
-			span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			_, span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
 			err = s.cachec.Put(key, r)
 			span4.End()
 			if err != nil {
@@ -133,7 +133,7 @@ type RateFlat struct {
 func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error) {
 	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
 	var rates []RateFlat
-	dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
 	error := s.dbc.Query(q, &rates)
 	dbspan.End()
 	if error != nil {

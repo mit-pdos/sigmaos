@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
-	if err := rpcbench.RunRPCBenchSrv(os.Args[0], public); err != nil {
+	if err := rpcbench.RunRPCBenchSrv(os.Args[1], public); err != nil {
 		db.DFatalf("RunRPCBenchSrv %v err %v\n", os.Args[0], err)
 	}
 }

@@ -62,7 +62,7 @@ func (rt *ReplyTable) Register(request *sessp.FcallMsg) bool {
 	// always expected to be present, unless there has been a partition and the
 	// client has to resend some RPCs.
 	for s := request.Fc.Received.Start; s < request.Fc.Received.End; s++ {
-		db.DPrintf(db.REPLY_TABLE, "%v Remove seqno %v", rt.sid, s)
+		db.DPrintf(db.REPLY_TABLE, "[%v][%v] Remove seqno %v", rt.sid, request.Fc.Seqno, s)
 		if _, ok := rt.entries[sessp.Tseqno(s)]; !ok {
 			//			db.DPrintf(db.ALWAYS, "XXXXX Remove non-existent seqno %v", sessp.Tseqno(s))
 			db.DPrintf(db.REPLY_TABLE, "%v XXXXX Remove non-existent seqno %v", rt.sid, s)

@@ -55,6 +55,7 @@ allowed:
   - read
   - readlinkat
   - recvfrom
+  - restart_syscall
   - rt_sigaction
   - rt_sigprocmask
   - rt_sigreturn
@@ -68,6 +69,8 @@ allowed:
   - sigaltstack
   - sync
   - timer_create
+  - timer_delete
+  - timer_settime
   - tgkill
   - write
   - writev

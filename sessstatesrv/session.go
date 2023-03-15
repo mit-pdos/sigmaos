@@ -42,7 +42,7 @@ type Session struct {
 func makeSession(protsrv sp.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
-	sess.rt = replies.MakeReplyTable()
+	sess.rt = replies.MakeReplyTable(sid)
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid

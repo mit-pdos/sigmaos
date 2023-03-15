@@ -6,6 +6,7 @@ package intervals
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	db "sigmaos/debug"
@@ -113,12 +114,9 @@ func contains(entries []*sessp.Tinterval, e uint64) bool {
 }
 
 func del(entries *[]*sessp.Tinterval, ivd *sessp.Tinterval) {
-	for i := 0; i < len(*entries); {
+	i := search(*entries, ivd.Start)
+	for i < len(*entries) {
 		iv := (*entries)[i]
-		if ivd.Start > iv.End { // ivd is beyond iv
-			i++
-			continue
-		}
 		if ivd.End < iv.Start { // ivd preceeds iv
 			return
 		}
@@ -162,27 +160,35 @@ func merge(entries *[]*sessp.Tinterval, i int) {
 }
 
 func insert(entries *[]*sessp.Tinterval, n *sessp.Tinterval) {
-	for i, iv := range *entries {
-		if n.Start > iv.End { // n is beyond iv
-			continue
-		}
-		if n.End < iv.Start { // n preceeds iv
-			*entries = append((*entries)[:i+1], (*entries)[i:]...)
-			(*entries)[i] = n
-			return
-		}
-		// n overlaps iv
-		if n.Start < iv.Start {
-			iv.Start = n.Start
-		}
-		if n.End > iv.End {
-			iv.End = n.End
-			merge(entries, i)
-			return
-		}
+	i := search(*entries, n.Start)
+	// If the new entry starts after all of the other entries, append and return.
+	if i == len(*entries) {
+		*entries = append(*entries, n)
 		return
 	}
-	*entries = append(*entries, n)
+
+	iv := (*entries)[i]
+	if n.End < iv.Start { // n preceeds iv
+		*entries = append((*entries)[:i+1], (*entries)[i:]...)
+		(*entries)[i] = n
+		return
+	}
+	// n overlaps iv
+	if n.Start < iv.Start {
+		iv.Start = n.Start
+	}
+	if n.End > iv.End {
+		iv.End = n.End
+		merge(entries, i)
+		return
+	}
+}
+
+// Search for the index of the first entry for which entry.End is <= start.
+func search(entries []*sessp.Tinterval, start uint64) int {
+	return sort.Search(len(entries), func(i int) bool {
+		return start <= entries[i].End
+	})
 }
 
 func deepcopy(src *[]*sessp.Tinterval, dst *[]*sessp.Tinterval) {

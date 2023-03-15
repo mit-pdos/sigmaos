@@ -125,7 +125,8 @@ func del(entries *[]*sessp.Tinterval, ivd *sessp.Tinterval) {
 			ivd.Start = iv.Start
 		}
 		if ivd.Start <= iv.Start && ivd.End >= iv.End { // delete i?
-			*entries = append((*entries)[:i], (*entries)[i+1:]...)
+			copy((*entries)[i:], (*entries)[i+1:])
+			*entries = (*entries)[:len(*entries)-1]
 		} else if ivd.Start > iv.Start && ivd.End >= iv.End {
 			iv.End = ivd.Start
 			i++
@@ -133,7 +134,8 @@ func del(entries *[]*sessp.Tinterval, ivd *sessp.Tinterval) {
 			iv.Start = ivd.End
 			i++
 		} else { // split iv
-			*entries = append((*entries)[:i+1], (*entries)[i:]...)
+			*entries = append(*entries, nil)
+			copy((*entries)[i+1:], (*entries)[i:])
 			(*entries)[i] = sessp.MkInterval(iv.Start, ivd.Start)
 			(*entries)[i+1].Start = ivd.End
 			i += 2

@@ -409,6 +409,7 @@ func (p *Perf) teardownPprof() {
 		p.pprof = false
 		pprof.StopCPUProfile()
 		p.pprofFile.Close()
+		db.DPrintf(db.ALWAYS, "Done writing pprof file")
 	}
 }
 

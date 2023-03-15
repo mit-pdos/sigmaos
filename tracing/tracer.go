@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	SAMPLE_RATIO = 0.01
+	SAMPLE_RATIO = 0.001
 )
 
 type Request interface {

@@ -55,7 +55,6 @@ func (ivs *Intervals) ResetNext() {
 	defer ivs.Unlock()
 
 	db.DPrintf(db.INTERVALS, "[%v] ivs.ResetNext", ivs.sid)
-	db.DPrintf(db.ALWAYS, "[%v] ivs.ResetNext", ivs.sid)
 
 	// Copy entries to next, to resend all received intervals.
 	deepcopy(&ivs.entries, &ivs.next)

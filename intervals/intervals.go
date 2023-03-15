@@ -14,6 +14,7 @@ import (
 
 type Intervals struct {
 	sync.Mutex
+	sid     sessp.Tsession
 	entries []*sessp.Tinterval
 	next    []*sessp.Tinterval
 }
@@ -22,7 +23,7 @@ func (ivs *Intervals) String() string {
 	return fmt.Sprintf("{ entries:%v next:%v }", ivs.entries, ivs.next)
 }
 
-func MkIntervals() *Intervals {
+func MkIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.entries = make([]*sessp.Tinterval, 0)
 	ivs.next = make([]*sessp.Tinterval, 0)

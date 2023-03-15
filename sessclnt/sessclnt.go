@@ -46,7 +46,7 @@ func makeSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt
 		return nil, err
 	}
 	c.nc = nc
-	c.ivs = intervals.MkIntervals()
+	c.ivs = intervals.MkIntervals(c.sid)
 	go c.writer()
 	return c, nil
 }

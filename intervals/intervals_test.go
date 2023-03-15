@@ -10,7 +10,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(1234512345)
 	ivs.Insert(sessp.MkInterval(1, 2))
 	ivs.Insert(sessp.MkInterval(2, 3))
 	ivs.Delete(sessp.MkInterval(1, 2))
@@ -18,7 +18,7 @@ func TestSimple(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(90, 100))
 	assert.True(t, ivs.Contains(0))
@@ -30,7 +30,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(10, 20))
 	assert.Equal(t, 1, ivs.Size())
@@ -53,7 +53,7 @@ func TestInsert(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	ivs.Delete(sessp.MkInterval(5, 10))
@@ -130,7 +130,7 @@ func doNext(t *testing.T, ivs *intervals.Intervals, retrieved map[uint64]bool, s
 // * All intervals inserted in ivs will eventually be returned by Next.
 func TestNextInsert(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Size())
@@ -158,7 +158,7 @@ func TestNextInsert(t *testing.T) {
 
 func TestNextDelete(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Size())
@@ -189,7 +189,7 @@ func TestNextDelete(t *testing.T) {
 
 func TestNextReset(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals()
+	ivs := intervals.MkIntervals(12345)
 	ivs.Insert(sessp.MkInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Size())

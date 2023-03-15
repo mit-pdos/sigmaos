@@ -31,16 +31,6 @@ func MkIntervals(sid sessp.Tsession) *Intervals {
 	return ivs
 }
 
-func (ivs *Intervals) First() *sessp.Tinterval {
-	ivs.Lock()
-	defer ivs.Unlock()
-
-	if len(ivs.entries) == 0 {
-		return nil
-	}
-	return sessp.MkInterval(ivs.entries[0].Start, ivs.entries[0].End)
-}
-
 // Spec:
 // * Unless ivs.ResetNext is called, the same number should never be returned
 // twice from ivs.Next, assuming it was never inserted twice.

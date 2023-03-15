@@ -155,7 +155,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
+	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

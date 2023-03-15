@@ -90,6 +90,7 @@ func (c *SessClnt) Reset() {
 	// Reset outstanding request queue.
 	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
+	c.ivs.Reset()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
 }
@@ -105,9 +106,6 @@ func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *serr.Err) {
 		o := reply.Fc.Seqno
 		c.ivs.Insert(sessp.MkInterval(o, o+1))
 		c.ivs.Delete(reply.Fc.Received)
-		if strings.Contains(proc.GetPid().String(), "test") {
-			db.DPrintf(db.ALWAYS, "Sessclnt received: %v", reply.Fc.Received)
-		}
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
 	} else {

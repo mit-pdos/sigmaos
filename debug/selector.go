@@ -163,6 +163,7 @@ const (
 	REPLRAFT                     = "REPLRAFT"
 	RAFT_TIMING                  = "RAFT_TIMING"
 	REPLY_TABLE                  = "REPLY_TABLE"
+	INTERVALS                    = "INTERVALS"
 	SESSSRV                      = "SESSSRV"
 	WATCH                        = "WATCH"
 	WATCH_ERR                    = WATCH + ERR

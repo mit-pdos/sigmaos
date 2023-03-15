@@ -27,6 +27,7 @@ allowed:
   - exit_group
   - fcntl
   - fstat
+  - fsync
   - futex
   - getdents64
   - getpeername
@@ -59,6 +60,7 @@ allowed:
   - set_tid_address
   - setsockopt
   - sigaltstack
+  - sync
   - write
   - writev
 

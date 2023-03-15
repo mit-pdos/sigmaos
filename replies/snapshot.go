@@ -1,12 +1,12 @@
 package replies
 
 import (
-	"bytes"
+	//	"bytes"
 	"encoding/json"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/spcodec"
 )
 
@@ -30,24 +30,24 @@ func (rt *ReplyTable) Snapshot() []byte {
 	return b
 }
 
-func Restore(b []byte) *ReplyTable {
-	entries := make(map[sessp.Tseqno][]byte)
-	err := json.Unmarshal(b, &entries)
-	if err != nil {
-		db.DFatalf("error unmarshal ReplyTable in restore: %v", err)
-	}
-	rt := MakeReplyTable()
-	for seqno, b := range entries {
-		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(b))
-		if len(b) != 0 && err1 != nil {
-			db.DFatalf("Error unmarshal sp.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))
-		}
-
-		if fm != nil {
-			rf := MakeReplyFuture()
-			rf.Complete(fm)
-			rt.entries[seqno] = rf
-		}
-	}
-	return rt
-}
+//func Restore(b []byte) *ReplyTable {
+//	entries := make(map[sessp.Tseqno][]byte)
+//	err := json.Unmarshal(b, &entries)
+//	if err != nil {
+//		db.DFatalf("error unmarshal ReplyTable in restore: %v", err)
+//	}
+//	rt := MakeReplyTable()
+//	for seqno, b := range entries {
+//		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(b))
+//		if len(b) != 0 && err1 != nil {
+//			db.DFatalf("Error unmarshal sp.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))
+//		}
+//
+//		if fm != nil {
+//			rf := MakeReplyFuture()
+//			rf.Complete(fm)
+//			rt.entries[seqno] = rf
+//		}
+//	}
+//	return rt
+//}

@@ -156,10 +156,6 @@ func TestNextInsert(t *testing.T) {
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{100})
 }
 
-// Spec we are testing for:
-// * Unless ivs.ResetNext is called, the same number should never be returned
-// twice from ivs.Next, assuming it was never inserted twice.
-// * All intervals inserted in ivs will eventually be returned by Next.
 func TestNextDelete(t *testing.T) {
 	retrieved := make(map[uint64]bool)
 	ivs := intervals.MkIntervals()

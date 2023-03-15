@@ -4,9 +4,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
 
-	"sigmaos/proc"
-	"strings"
-
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
@@ -90,7 +87,8 @@ func (c *SessClnt) Reset() {
 	// Reset outstanding request queue.
 	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
-	c.ivs.Reset()
+	// Reset intervals "next" slice so we can resend message acks.
+	c.ivs.ResetNext()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
 }

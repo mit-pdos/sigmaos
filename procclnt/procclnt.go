@@ -424,7 +424,7 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, s
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
-		db.DFatalf("exited %v err %v", proc.GetPid(), err)
+		db.DPrintf(db.ALWAYS, "exited %v err %v", proc.GetPid(), err)
 	}
 	clnt.FsLib.Exit()
 }

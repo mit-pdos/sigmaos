@@ -38,6 +38,10 @@ func (ivs *Intervals) First() *sessp.Tinterval {
 	return sessp.MkInterval(ivs.entries[0].Start, ivs.entries[0].End)
 }
 
+// Spec:
+// * Unless ivs.ResetNext is called, the same number should never be returned
+// twice from ivs.Next, assuming it was never inserted twice.
+// * All intervals inserted in ivs will eventually be returned by Next.
 func (ivs *Intervals) Next() *sessp.Tinterval {
 	ivs.Lock()
 	defer ivs.Unlock()

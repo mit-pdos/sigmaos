@@ -14,16 +14,17 @@ import (
 type Intervals struct {
 	sync.Mutex
 	entries []*sessp.Tinterval
-	idx     int
+	next    []*sessp.Tinterval
 }
 
 func (ivs *Intervals) String() string {
-	return fmt.Sprintf("%v", ivs.entries)
+	return fmt.Sprintf("{ entries:%v next:%v }", ivs.entries, ivs.next)
 }
 
 func MkIntervals() *Intervals {
 	ivs := &Intervals{}
 	ivs.entries = make([]*sessp.Tinterval, 0)
+	ivs.next = make([]*sessp.Tinterval, 0)
 	return ivs
 }
 
@@ -41,25 +42,32 @@ func (ivs *Intervals) Next() *sessp.Tinterval {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	if len(ivs.entries) == 0 {
+	if len(ivs.next) == 0 {
 		return nil
 	}
-	iv := sessp.MkInterval(ivs.entries[ivs.idx%len(ivs.entries)].Start, ivs.entries[ivs.idx%len(ivs.entries)].End)
-	ivs.idx++
+	var iv *sessp.Tinterval
+	// Pop the next interval from the queue.
+	iv, ivs.next = ivs.next[0], ivs.next[1:]
 	return iv
 }
 
-func (ivs *Intervals) ResetRetrieved() {
+func (ivs *Intervals) ResetNext() {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	ivs.idx = 0
+	// Copy entries to next, to resend all received intervals.
+	deepcopy(&ivs.entries, &ivs.next)
 }
 
 func (ivs *Intervals) Insert(n *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
+	// Insert into next slice, so future calls to ivs.Next will return this
+	// interval. Must make a deep copy of n, because it may be modified during
+	// insert.
+	insert(&ivs.next, sessp.MkInterval(n.Start, n.End))
+	// Insert into entries slice.
 	insert(&ivs.entries, n)
 }
 
@@ -74,6 +82,9 @@ func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
+	// Delete from Next slice to ensure the interval isn't returned by ivs.Next.
+	del(&ivs.next, sessp.MkInterval(ivd.Start, ivd.End))
+	// Delete from entries slice.
 	del(&ivs.entries, ivd)
 }
 
@@ -167,4 +178,11 @@ func insert(entries *[]*sessp.Tinterval, n *sessp.Tinterval) {
 		return
 	}
 	*entries = append(*entries, n)
+}
+
+func deepcopy(src *[]*sessp.Tinterval, dst *[]*sessp.Tinterval) {
+	*dst = make([]*sessp.Tinterval, len(*src))
+	for i, iv := range *src {
+		(*dst)[i] = sessp.MkInterval(iv.Start, iv.End)
+	}
 }

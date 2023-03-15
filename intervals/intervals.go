@@ -153,7 +153,8 @@ func merge(entries *[]*sessp.Tinterval, i int) {
 			if i+2 == len(*entries) { // trim i+1
 				*entries = (*entries)[:i+1]
 			} else {
-				*entries = append((*entries)[:i+1], (*entries)[i+2:]...)
+				copy((*entries)[i+1:], (*entries)[i+2:])
+				*entries = (*entries)[:len(*entries)-1]
 			}
 		}
 	}
@@ -169,7 +170,8 @@ func insert(entries *[]*sessp.Tinterval, n *sessp.Tinterval) {
 
 	iv := (*entries)[i]
 	if n.End < iv.Start { // n preceeds iv
-		*entries = append((*entries)[:i+1], (*entries)[i:]...)
+		*entries = append(*entries, nil)
+		copy((*entries)[i+1:], (*entries)[i:])
 		(*entries)[i] = n
 		return
 	}

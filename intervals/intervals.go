@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync"
 
+	db "sigmaos/debug"
 	"sigmaos/sessp"
 )
 
@@ -58,6 +59,9 @@ func (ivs *Intervals) Next() *sessp.Tinterval {
 func (ivs *Intervals) ResetNext() {
 	ivs.Lock()
 	defer ivs.Unlock()
+
+	db.DPrintf(db.INTERVALS, "ResetNext")
+	db.DPrintf(db.ALWAYS, "ResetNext")
 
 	// Copy entries to next, to resend all received intervals.
 	deepcopy(&ivs.entries, &ivs.next)

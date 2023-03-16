@@ -12,6 +12,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/serr"
@@ -67,6 +68,13 @@ func RunCacheSrv(args []string) error {
 	if err := sessdevsrv.MkSessDev(pds.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}
+
+	p, err := perf.MakePerf(perf.CACHESRV)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
 	return pds.RunServer()
 }
 

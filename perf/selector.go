@@ -57,6 +57,7 @@ const (
 // cache
 const (
 	CACHECLERK Tselector = "CACHECLERK"
+	CACHESRV             = "CACHESRV"
 )
 
 // microbenchmarks

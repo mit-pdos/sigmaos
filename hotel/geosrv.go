@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
+	"github.com/mit-pdos/go-geoindex"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	db "sigmaos/debug"

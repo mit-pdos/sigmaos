@@ -44,7 +44,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheNcore proc.Tcore) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -93,7 +93,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	}
 
 	if !ji.justCli {
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, ncache)
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, cacheNcore, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		procs := sdc.GetRunningProcs()

@@ -228,26 +228,26 @@ func makeRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, d
 
 // ========== Hotel Helpers ========
 
-func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheNcore proc.Tcore, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype)
+		i := MakeHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheNcore)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheNcore proc.Tcore, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype)
+		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheNcore)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

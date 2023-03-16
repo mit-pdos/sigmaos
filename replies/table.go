@@ -63,10 +63,6 @@ func (rt *ReplyTable) Register(request *sessp.FcallMsg) bool {
 	// client has to resend some RPCs.
 	for s := request.Fc.Received.Start; s < request.Fc.Received.End; s++ {
 		db.DPrintf(db.REPLY_TABLE, "[%v][%v] Remove seqno %v", rt.sid, request.Fc.Seqno, s)
-		if _, ok := rt.entries[sessp.Tseqno(s)]; !ok {
-			//			db.DPrintf(db.ALWAYS, "XXXXX Remove non-existent seqno %v", sessp.Tseqno(s))
-			db.DPrintf(db.REPLY_TABLE, "%v XXXXX Remove non-existent seqno %v", rt.sid, s)
-		}
 		delete(rt.entries, sessp.Tseqno(s))
 	}
 	rt.entries[request.Seqno()] = MakeReplyFuture()

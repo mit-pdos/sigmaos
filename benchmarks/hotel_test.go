@@ -14,6 +14,7 @@ import (
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdev"
 	rd "sigmaos/rand"
 	"sigmaos/scheddclnt"

@@ -1,13 +1,14 @@
 package cachesrv
 
 import (
-	"encoding/json"
 	"errors"
 	"hash/fnv"
 	"strconv"
 	"sync"
 
-	"sigmaos/cache/proto"
+	"google.golang.org/protobuf/proto"
+
+	cacheproto "sigmaos/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -79,7 +80,7 @@ func RunCacheSrv(args []string) error {
 }
 
 // XXX support timeout
-func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
+func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
 	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
 	b := key2bin(req.Key)
@@ -91,7 +92,7 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResu
 	return nil
 }
 
-func (s *CacheSrv) Get(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
+func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	b := key2bin(req.Key)
 
@@ -133,7 +134,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 		cs.bins[i].Unlock()
 	}
 
-	b, err := json.Marshal(m)
+	b, err := proto.Marshal(&cacheproto.CacheDump{Vals: m})
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}

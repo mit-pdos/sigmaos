@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -135,15 +135,14 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := cc.Put(key, []byte(proc.GetPid().String())); err != nil {
+			if err := cc.Put(key, &proto.CacheString{Val: proc.GetPid().String()}); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
 			*nops++
-			var s string
-			if err := cc.Get(key, &s); err != nil {
-				log.Printf("miss %v\n", key)
+			if err := cc.Get(key, &proto.CacheString{}); err != nil {
+				db.DPrintf(db.ALWAYS, "miss %v", key)
 				// return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

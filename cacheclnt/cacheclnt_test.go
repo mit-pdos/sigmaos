@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -71,13 +72,14 @@ func TestCacheSingle(t *testing.T) {
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Put(key, key)
+		err = cc.Put(key, &proto.CacheString{Val: key})
 		assert.Nil(t, err)
 	}
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		s := string("")
-		err = cc.Get(key, &s)
+		res := &proto.CacheString{}
+		err = cc.Get(key, res)
+		s := res.Val
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
@@ -103,14 +105,15 @@ func testCacheSharded(t *testing.T, nshard int) {
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Put(key, key)
+		err = cc.Put(key, &proto.CacheString{Val: key})
 		assert.Nil(t, err)
 	}
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		s := string("")
-		err = cc.Get(key, &s)
+		res := &proto.CacheString{}
+		err = cc.Get(key, res)
+		s := res.Val
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
@@ -142,7 +145,7 @@ func TestCacheConcur(t *testing.T) {
 	v := "hello"
 	cc, err := cacheclnt.MkCacheClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err)
-	err = cc.Put("x", v)
+	err = cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -150,8 +153,9 @@ func TestCacheConcur(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s := string("")
-			err = cc.Get("x", &s)
+			res := &proto.CacheString{}
+			err = cc.Get("x", res)
+			s := res.Val
 			assert.Equal(t, v, s)
 			db.DPrintf(db.TEST, "Done get")
 		}()

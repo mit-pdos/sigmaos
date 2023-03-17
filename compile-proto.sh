@@ -6,7 +6,7 @@ for P in tracing ; do
   protoc -I=. --go_out=../ $P/proto/$P.proto
 done
 
-for PP in hotel rpcbench ; do
+for PP in cache hotel rpcbench ; do
   for P in $PP/proto/*.proto ; do
     echo "protoc $P"
     protoc -I=. --go_out=../ $P

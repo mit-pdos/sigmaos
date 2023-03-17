@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "ulambda/cachesrv/proto";
+option go_package = "sigmaos/cache/proto";
 
 service Cache {
   rpc Get(CacheRequest) returns (CacheResult);
@@ -14,4 +14,16 @@ message CacheRequest {
 
 message CacheResult {
   bytes value = 1;
+}
+
+message CacheDump {
+  map<string, bytes> vals = 1;
+}
+
+message CacheString {
+  string val = 1;
+}
+
+message CacheInt {
+  int64 val = 1;
 }

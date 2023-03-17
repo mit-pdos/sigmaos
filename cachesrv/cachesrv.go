@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"sigmaos/cachesrv/proto"
+	"sigmaos/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"

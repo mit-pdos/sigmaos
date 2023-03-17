@@ -44,10 +44,12 @@ func (ivs *Intervals) Next() *sessp.Tinterval {
 		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: nil", ivs.sid)
 		return nil
 	}
-	var iv *sessp.Tinterval
 	// Pop the next interval from the queue.
-	iv, ivs.next = ivs.next[0], ivs.next[1:]
-	db.DPrintf(db.INTERVALS, "[%v] ivs.Next: %v", ivs.sid, iv)
+	iv := ivs.next[0]
+	delidx(&ivs.next, 0)
+	if db.WillBePrinted(db.INTERVALS) {
+		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: %v", ivs.sid, iv)
+	}
 	return iv
 }
 
@@ -125,8 +127,7 @@ func del(entries *[]*sessp.Tinterval, ivd *sessp.Tinterval) {
 			ivd.Start = iv.Start
 		}
 		if ivd.Start <= iv.Start && ivd.End >= iv.End { // delete i?
-			copy((*entries)[i:], (*entries)[i+1:])
-			*entries = (*entries)[:len(*entries)-1]
+			delidx(entries, i)
 		} else if ivd.Start > iv.Start && ivd.End >= iv.End {
 			iv.End = ivd.Start
 			i++
@@ -134,9 +135,7 @@ func del(entries *[]*sessp.Tinterval, ivd *sessp.Tinterval) {
 			iv.Start = ivd.End
 			i++
 		} else { // split iv
-			*entries = append(*entries, nil)
-			copy((*entries)[i+1:], (*entries)[i:])
-			(*entries)[i] = sessp.MkInterval(iv.Start, ivd.Start)
+			insertidx(entries, i, sessp.MkInterval(iv.Start, ivd.Start))
 			(*entries)[i+1].Start = ivd.End
 			i += 2
 		}
@@ -155,8 +154,7 @@ func merge(entries *[]*sessp.Tinterval, i int) {
 			if i+2 == len(*entries) { // trim i+1
 				*entries = (*entries)[:i+1]
 			} else {
-				copy((*entries)[i+1:], (*entries)[i+2:])
-				*entries = (*entries)[:len(*entries)-1]
+				delidx(entries, i+1)
 			}
 		}
 	}
@@ -172,9 +170,7 @@ func insert(entries *[]*sessp.Tinterval, n *sessp.Tinterval) {
 
 	iv := (*entries)[i]
 	if n.End < iv.Start { // n preceeds iv
-		*entries = append(*entries, nil)
-		copy((*entries)[i+1:], (*entries)[i:])
-		(*entries)[i] = n
+		insertidx(entries, i, n)
 		return
 	}
 	// n overlaps iv
@@ -186,6 +182,19 @@ func insert(entries *[]*sessp.Tinterval, n *sessp.Tinterval) {
 		merge(entries, i)
 		return
 	}
+}
+
+// Delete the ith index of the entries slice.
+func delidx(entries *[]*sessp.Tinterval, i int) {
+	copy((*entries)[i:], (*entries)[i+1:])
+	*entries = (*entries)[:len(*entries)-1]
+}
+
+// Insert iv at the ith index of the entries slice.
+func insertidx(entries *[]*sessp.Tinterval, i int, iv *sessp.Tinterval) {
+	*entries = append(*entries, nil)
+	copy((*entries)[i+1:], (*entries)[i:])
+	(*entries)[i] = iv
 }
 
 // Search for the index of the first entry for which entry.End is <= start.

@@ -80,7 +80,7 @@ func RunCacheSrv(args []string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Put %v\n", proc.GetName(), req)
+	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
 	b := key2bin(req.Key)
 
@@ -92,7 +92,7 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResu
 }
 
 func (s *CacheSrv) Get(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Get %v\n", proc.GetName(), req)
+	db.DPrintf(db.CACHESRV, "Get %v", req)
 	b := key2bin(req.Key)
 
 	s.bins[b].Lock()
@@ -145,6 +145,6 @@ func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQvers
 }
 
 func (cs *cacheSession) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	db.DPrintf(db.CACHESRV, "%v: Close %v\n", proc.GetName(), cs.sid)
+	db.DPrintf(db.CACHESRV, "Close %v\n", cs.sid)
 	return nil
 }

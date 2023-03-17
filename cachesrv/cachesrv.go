@@ -24,7 +24,7 @@ import (
 
 const (
 	DUMP = "dump"
-	NBIN = 251
+	NBIN = 1009
 )
 
 var (

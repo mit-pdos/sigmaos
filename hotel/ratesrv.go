@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -67,6 +68,11 @@ func RunRateSrv(job string, public bool, cache string) error {
 	}
 	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	defer r.tracer.Flush()
+	p, err := perf.MakePerf(perf.HOTEL_RATE)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
 	return pds.RunServer()
 }
 

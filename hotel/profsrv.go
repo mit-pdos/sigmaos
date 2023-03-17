@@ -8,6 +8,7 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/cache"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -24,7 +25,7 @@ const (
 
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
-	cachec CacheClnt
+	cachec cache.CacheClnt
 	tracer *tracing.Tracer
 }
 

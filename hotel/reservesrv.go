@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"sigmaos/cache"
+	cacheproto "sigmaos/cache/proto"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -32,7 +34,7 @@ type Number struct {
 
 type Reserve struct {
 	dbc    *dbclnt.DbClnt
-	cachec CacheClnt
+	cachec cache.CacheClnt
 	tracer *tracing.Tracer
 }
 
@@ -132,7 +134,9 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 
 		var reserves []Reservation
 		_, span := s.tracer.StartContextSpan(sctx, "Cache.Get")
-		err := s.cachec.Get(key, &count)
+		cnt := &cacheproto.CacheInt{}
+		err := s.cachec.Get(key, cnt)
+		count = int(cnt.Val)
 		span.End()
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
@@ -150,7 +154,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 				count += r.Number
 			}
 			_, span := s.tracer.StartContextSpan(sctx, "Cache.Put")
-			err = s.cachec.Put(key, &count)
+			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(count)})
 			span.End()
 			if err != nil {
 				return false, nil, err
@@ -163,7 +167,9 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		hotel_cap := 0
 		key = hotelId + "_cap"
 		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
-		err = s.cachec.Get(key, &hotel_cap)
+		hc := &cacheproto.CacheInt{}
+		err = s.cachec.Get(key, hc)
+		hotel_cap = int(hc.Val)
 		span2.End()
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
@@ -181,9 +187,9 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			if len(nums) == 0 {
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
-			hotel_cap = int(nums[0].Number)
+			hotel_cap = nums[0].Number
 			_, span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
-			err = s.cachec.Put(key, &hotel_cap)
+			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
 			span.End()
 			if err != nil {
 				return false, nil, err
@@ -217,7 +223,7 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
 		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
-		err := s.cachec.Put(key, &cnt)
+		err := s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(cnt)})
 		span2.End()
 		if err != nil {
 			return err

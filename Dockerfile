@@ -6,6 +6,9 @@ ARG target=local
 ARG tag
 ENV SIGMATAG=$tag
 
+# Install custom version of go with larger minimum stack size.
+RUN git clone https://github.com/ArielSzekely/go.git go-custom && cd go-custom && git checkout bigstack && git config pull.rebase false && git pull && cd src && ./all.bash
+
 # Install docker ce-cli
 RUN apt-get update
 RUN apt-get --yes install ca-certificates curl gnupg lsb-release
@@ -44,8 +47,8 @@ RUN go mod download
 # Copy source
 COPY . .
 # Build all binaries.
-RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --target $target $parallel kernel && \
-  ./make.sh --norace --target $target $parallel user && \
+RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go/go-custom/bin/go --target $target $parallel kernel && \
+  ./make.sh --norace --gopath /go/go-custom/bin/go --target $target $parallel user && \
   mkdir bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \

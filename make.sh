@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target TARGET] kernel|user" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GOPATH] [--target TARGET] kernel|user" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
+GOPATH="go"
 PARALLEL=""
 WHAT=""
 while [[ "$#" -gt 0 ]]; do
@@ -18,6 +19,11 @@ while [[ "$#" -gt 0 ]]; do
   --vet)
     shift
     CMD="vet"
+    ;;
+  --gopath)
+    shift
+    GOPATH="$1"
+    shift
     ;;
   --target)
     shift
@@ -74,12 +80,11 @@ for k in $WHAT; do
             continue
         fi
         if [ $CMD == "vet" ]; then
-            echo "go vet cmd/$k/$f/main.go"
-            go vet cmd/$k/$f/main.go
+            echo "$GOPATH vet cmd/$k/$f/main.go"
+            $GOPATH vet cmd/$k/$f/main.go
         else
-            GO="go"
             #      GO="~/go-custom/bin/go"
-            build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+            build="$GOPATH build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
             echo $build
             if [ -z "$PARALLEL" ]; then
                 eval "$build"

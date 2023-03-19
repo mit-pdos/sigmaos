@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
@@ -29,7 +29,7 @@ type Number struct {
 
 type Reserve struct {
 	dbc    *dbclnt.DbClnt
-	cachec *cacheclnt.CacheClnt
+	cachec CacheClnt
 }
 
 func (s *Reserve) initDb() error {
@@ -76,18 +76,18 @@ func (s *Reserve) initDb() error {
 	return nil
 }
 
-func RunReserveSrv(job string) error {
+func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELRESERVE, r)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRESERVE, r, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job)
+	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,10 @@ func RunReserveSrv(job string) error {
 	if err != nil {
 		return err
 	}
-	p := perf.MakePerf(perf.HOTEL_RESERVE)
+	p, err := perf.MakePerf(perf.HOTEL_RESERVE)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 	return pds.RunServer()
 }
@@ -123,7 +126,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 
 		var reserves []Reservation
 		if err := s.cachec.Get(key, &count); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !s.cachec.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
@@ -135,7 +138,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 			for _, r := range reserves {
 				count += r.Number
 			}
-			if err := s.cachec.Set(key, &count); err != nil {
+			if err := s.cachec.Put(key, &count); err != nil {
 				return false, nil, err
 			}
 		}
@@ -146,7 +149,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 		hotel_cap := 0
 		key = hotelId + "_cap"
 		if err := s.cachec.Get(key, &hotel_cap); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !s.cachec.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)
@@ -160,7 +163,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
 			hotel_cap = int(nums[0].Number)
-			if err := s.cachec.Set(key, &hotel_cap); err != nil {
+			if err := s.cachec.Put(key, &hotel_cap); err != nil {
 				return false, nil, err
 			}
 		}
@@ -174,7 +177,7 @@ func (s *Reserve) checkAvailability(hotelId string, req proto.ReserveRequest) (b
 
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
-func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
 	b, date_num, err := s.checkAvailability(hotelId, req)
@@ -188,7 +191,7 @@ func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveRe
 	// update reservation number
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
-		if err := s.cachec.Set(key, &cnt); err != nil {
+		if err := s.cachec.Put(key, &cnt); err != nil {
 			return err
 		}
 	}
@@ -218,7 +221,7 @@ func (s *Reserve) MakeReservation(req proto.ReserveRequest, res *proto.ReserveRe
 	return nil
 }
 
-func (s *Reserve) CheckAvailability(req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {
 		b, _, err := s.checkAvailability(hotelId, req)

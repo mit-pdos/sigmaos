@@ -17,6 +17,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 )
 
 var done = int32(0)
@@ -44,8 +45,10 @@ func main() {
 		}
 		sempath = os.Args[4]
 	}
-	fsl := fslib.MakeFsLib("clerk-" + proc.GetPid().String())
-	pclnt := procclnt.MakeProcClnt(fsl)
+	sc, err := sigmaclnt.MkSigmaClnt("clerk-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MkSigmaClnt err %v", err)
+	}
 	var rcli *redis.Client
 	var clk *kv.KvClerk
 	if len(os.Args) > 5 {
@@ -56,22 +59,25 @@ func main() {
 		})
 	} else {
 		var err error
-		clk, err = kv.MakeClerkFsl(fsl, pclnt, os.Args[1])
+		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1])
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}
 	}
 
 	// Record performance.
-	p := perf.MakePerf(perf.KVCLERK)
+	p, err := perf.MakePerf(perf.KVCLERK)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
-	pclnt.Started()
-	run(pclnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
+	sc.Started()
+	run(sc.ProcClnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
-func waitEvict(kc *kv.KvClerk) {
-	err := kc.WaitEvict(proc.GetPid())
+func waitEvict(pclnt *procclnt.ProcClnt, kc *kv.KvClerk) {
+	err := pclnt.WaitEvict(proc.GetPid())
 	if err != nil {
 		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
@@ -92,12 +98,10 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 			atomic.StoreInt32(&done, 1)
 		}()
 	} else {
-		go waitEvict(kc)
+		go waitEvict(pclnt, kc)
 	}
 	start := time.Now()
 	for atomic.LoadInt32(&done) == 0 {
-		// this does NKEYS puts & gets, or appends & checks, depending on whether
-		// this is a time-bound clerk or an unbounded clerk.
 		err = test(kc, rcli, ntest, keyOffset, &nops, p, timed)
 		if err != nil {
 			break
@@ -160,6 +164,9 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	return nil
 }
 
+// test performs NKEYS puts & gets, or appends & checks, depending on
+// whether this is a time-bound clerk or an unbounded clerk (as
+// indicated by setget).
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i + keyOffset)
@@ -181,13 +188,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.Set(key, []byte(proc.GetPid().String()), 0); err != nil {
+				if err := kc.PutRaw(key, []byte(proc.GetPid().String()), 0); err != nil {
 					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
-				if _, err := kc.Get(key, 0); err != nil {
+				if _, err := kc.GetRaw(key, 0); err != nil {
 					return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.

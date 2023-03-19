@@ -9,9 +9,33 @@ import (
 	"sigmaos/union"
 )
 
-//
-// Client side
-//
+func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
+	b, err := mnt.Marshal()
+	if err != nil {
+		return err
+	}
+	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
+}
+
+func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
+	p := pn + "/" + name
+	dir, err := fsl.IsDir(pn)
+	if err != nil {
+		return err
+	}
+	if !dir {
+		return fmt.Errorf("Not a directory")
+	}
+	return fsl.MountService(p, mnt)
+}
+
+func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
+	if path.EndSlash(pn) {
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr)
+	} else {
+		return fsl.MountService(pn, mnt)
+	}
+}
 
 // Return pn, replacing first ~local/~any with a symlink for a specific
 // server.
@@ -44,11 +68,23 @@ func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
 	}
 }
 
+func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+	target, err := fsl.GetFile(pn)
+	if err != nil {
+		return sp.Tmount{}, err
+	}
+	mnt, error := sp.MkMount(target)
+	if error != nil {
+		return sp.Tmount{}, err
+	}
+	return mnt, err
+}
+
 // Make copy of root mount or first union mount in pn. Return the
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return sp.MkMountService(Named()), "", nil
+		return sp.MkMountService(fsl.NamedAddr()), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
@@ -75,7 +111,8 @@ func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	rmnt := sp.NullMount()
 	rname := ""
-	_, err := fsl.ProcessDir(d, func(st *sp.Stat) (bool, error) {
+	// Make sure to resolve d in case it is a symlink or mount point.
+	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			return false, nil
@@ -84,7 +121,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if error != nil {
 			return false, nil
 		}
-		if ok := union.UnionMatch(q, mnt); ok {
+		if ok := union.UnionMatch(fsl.GetLocalIP(), q, mnt); ok {
 			rname = st.Name
 			rmnt = mnt
 			return true, nil
@@ -97,18 +134,6 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	return rname, rmnt, serr.MkErr(serr.TErrNotfound, d)
 }
 
-//
-// Server side
-//
-
-func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
-	b, err := mnt.Marshal()
-	if err != nil {
-		return err
-	}
-	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
-}
-
 // For code running using /mnt/9p, which doesn't support PutFile.
 func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
 	b, err := mnt.Marshal()
@@ -116,29 +141,4 @@ func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
 		return err
 	}
 	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
-}
-
-func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
-	p := pn + "/" + name
-	dir, err := fsl.IsDir(pn)
-
-	if err != nil {
-		return err
-	}
-	if !dir {
-		return fmt.Errorf("Not a directory")
-	}
-	b, err := mnt.Marshal()
-	if err != nil {
-		return err
-	}
-	return fsl.Symlink(b, p, 0777|sp.DMTMP)
-}
-
-func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
-	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address())
-	} else {
-		return fsl.MountService(pn, mnt)
-	}
 }

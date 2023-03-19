@@ -5,14 +5,14 @@ import (
 	"sync"
 	"syscall"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 )
@@ -21,7 +21,7 @@ var fsux *FsUx
 
 type FsUx struct {
 	*sesssrv.SessSrv
-	*fslib.FsLib
+	*sigmaclnt.SigmaClnt
 	mount string
 
 	sync.Mutex
@@ -29,7 +29,7 @@ type FsUx struct {
 }
 
 func RunFsUx(rootux string) {
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
@@ -46,12 +46,12 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
 	}
-	srv, fsl, _, error := fslibsrv.MakeReplServer(root, addr, sp.UX, "ux", config)
+	srv, error := fslibsrv.MakeReplServer(root, addr, sp.UX, "ux", config)
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
 	fsux.SessSrv = srv
-	fsux.FsLib = fsl
+	fsux.SigmaClnt = srv.SigmaClnt()
 	return fsux
 }
 

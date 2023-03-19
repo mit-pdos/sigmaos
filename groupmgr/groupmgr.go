@@ -8,9 +8,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -28,8 +27,7 @@ type GroupMgr struct {
 }
 
 type member struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	pid       proc.Tpid
 	bin       string
 	args      []string
@@ -51,8 +49,8 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, job string, ncore proc.Tcore, crash int, nReplicas int, partition, netfail int) *member {
-	return &member{fsl, pclnt, "", bin, append([]string{job}, args...), job, ncore, crash, nReplicas, partition, netfail}
+func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, ncore proc.Tcore, crash int, nReplicas int, partition, netfail int) *member {
+	return &member{sc, "", bin, append([]string{job}, args...), job, ncore, crash, nReplicas, partition, netfail}
 }
 
 func (m *member) spawn() error {
@@ -67,15 +65,15 @@ func (m *member) spawn() error {
 	if m.ncore == 1 && strings.Contains(m.bin, "kvd") {
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
 	}
-	db.DPrintf(db.GROUPMGR, "SpawnBurst pid %v", p.Pid)
-	if _, errs := m.SpawnBurst([]*proc.Proc{p}); len(errs) > 0 {
-		db.DPrintf(db.GROUPMGR, "Error SpawnBurst pid %v err %v", p.Pid, errs[0])
+	db.DPrintf(db.GROUPMGR, "SpawnBurst p %v", p)
+	if _, errs := m.SpawnBurst([]*proc.Proc{p}, 1); len(errs) > 0 {
+		db.DPrintf(db.GROUPMGR, "Error SpawnBurst pid %v err %v", p.GetPid(), errs[0])
 		return errs[0]
 	}
-	if err := m.WaitStart(p.Pid); err != nil {
+	if err := m.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	m.pid = p.Pid
+	m.pid = p.GetPid()
 	return nil
 }
 
@@ -94,7 +92,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 
 // If n == 0, run only one member, unreplicated.
 // ncrash = number of group members which may crash.
-func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, job string, ncore proc.Tcore, ncrash, crash, partition, netfail int) *GroupMgr {
+func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string, ncore proc.Tcore, ncrash, crash, partition, netfail int) *GroupMgr {
 	var N int
 	if n > 0 {
 		N = n
@@ -111,7 +109,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		} else {
 			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", args, i, crashMember)
 		}
-		gm.members[i] = makeMember(fsl, pclnt, bin, args, job, ncore, crashMember, n, partition, netfail)
+		gm.members[i] = makeMember(sc, bin, args, job, ncore, crashMember, n, partition, netfail)
 	}
 	done := make(chan *procret)
 	starts := make([]chan error, len(gm.members))
@@ -133,7 +131,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 
 func (gm *GroupMgr) restart(i int, done chan *procret) {
 	// XXX hack
-	if gm.members[i].bin == "user/kvd" {
+	if gm.members[i].bin == "kvd" {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		go func() {

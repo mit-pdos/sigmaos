@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"hash/fnv"
+	"strconv"
 	"sync"
 
 	"sigmaos/cachesrv/proto"
@@ -47,15 +48,19 @@ type CacheSrv struct {
 
 func RunCacheSrv(args []string) error {
 	s := &CacheSrv{}
-	if len(args) > 2 {
-		s.shrd = args[2]
+	if len(args) > 3 {
+		s.shrd = args[3]
+	}
+	public, err := strconv.ParseBool(args[2])
+	if err != nil {
+		return err
 	}
 	s.bins = make([]cache, NBIN)
 	for i := 0; i < NBIN; i++ {
 		s.bins[i].cache = make(map[string][]byte)
 	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	pds, err := protdevsrv.MakeProtDevSrv(sp.CACHE+s.shrd, s)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.CACHE+s.shrd, s, public)
 	if err != nil {
 		return err
 	}
@@ -66,8 +71,8 @@ func RunCacheSrv(args []string) error {
 }
 
 // XXX support timeout
-func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Set %v\n", proc.GetName(), req)
+func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
+	db.DPrintf(db.CACHESRV, "%v: Put %v\n", proc.GetName(), req)
 
 	b := key2bin(req.Key)
 
@@ -78,7 +83,7 @@ func (s *CacheSrv) Set(req proto.CacheRequest, rep *proto.CacheResult) error {
 	return nil
 }
 
-func (s *CacheSrv) Get(req proto.CacheRequest, rep *proto.CacheResult) error {
+func (s *CacheSrv) Get(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
 	db.DPrintf(db.CACHESRV, "%v: Get %v\n", proc.GetName(), req)
 	b := key2bin(req.Key)
 

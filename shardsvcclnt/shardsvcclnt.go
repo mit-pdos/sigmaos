@@ -1,15 +1,15 @@
 package shardsvcclnt
 
 import (
-	"log"
 	"sync"
 
 	"google.golang.org/protobuf/proto"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
 	"sigmaos/reader"
 	"sigmaos/shardsvcmgr"
 )
@@ -75,21 +75,21 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 }
 
 func (ssc *ShardSvcClnt) Watch(path string, err error) {
-	log.Printf("%v: shardsvcclnt watch %v err %v\n", proc.GetName(), path, err)
+	db.DPrintf(db.ALWAYS, "%v: shardsvcclnt watch %v err %v\n", proc.GetName(), path, err)
 	if err != nil {
-		log.Printf("Watch err %v\n", err)
+		db.DPrintf(db.ALWAYS, "Watch err %v\n", err)
 		return
 	}
 	sts, err := ssc.GetDir(path)
 	if len(sts) > len(ssc.clnts) {
 		if err := ssc.addClnt(len(sts) - 1); err != nil {
-			log.Printf("%v: addClnt err %v\n", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "%v: addClnt err %v\n", proc.GetName(), err)
 		}
 		ssc.sw(path, len(sts), err)
 	}
 	ssc.rdr.Close()
 	if err := ssc.setWatch(); err != nil {
-		log.Printf("setWatch err %v\n", err)
+		db.DPrintf(db.ALWAYS, "setWatch err %v\n", err)
 	}
 }
 
@@ -107,10 +107,10 @@ func (ssc *ShardSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Messa
 	return ssc.clnts[i].RPC(m, arg, res)
 }
 
-func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdevsrv.Stats, error) {
+func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.SigmaRPCStats, error) {
 	return ssc.clnts[i].StatsSrv()
 }
 
-func (ssc *ShardSvcClnt) StatsClnt(i int) *protdevsrv.Stats {
+func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.RPCStats {
 	return ssc.clnts[i].StatsClnt()
 }

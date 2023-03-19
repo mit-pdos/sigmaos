@@ -27,7 +27,10 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	m.configPath = args[1]
 	m.unionDirPath = args[2]
 	// Set up fslib
-	fsl := fslib.MakeFsLib("memfs-replica-monitor")
+	fsl, err := fslib.MakeFsLib("memfs-replica-monitor")
+	if err != nil {
+		return nil
+	}
 	m.FsLib = fsl
 	//	m.configLock = sync.MakeLock(fsl, sp.LOCKS, m.configPath, true)
 	m.ProcClnt = procclnt.MakeProcClnt(fsl)
@@ -64,5 +67,5 @@ func (m *ReplicaMonitor) Work() {
 }
 
 func (m *ReplicaMonitor) Exit() {
-	m.Exited(proc.MakeStatus(proc.StatusOK))
+	m.ExitedOK()
 }

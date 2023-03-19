@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -83,10 +83,6 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		reply := &sp.Rread{}
 		data, err := s.protsrv.GetFile(req, reply)
 		return reply, data, false, err
-	case *sp.Tsetfile:
-		reply := &sp.Rwrite{}
-		err := s.protsrv.SetFile(req, data, reply)
-		return reply, nil, false, err
 	case *sp.Tputfile:
 		reply := &sp.Rwrite{}
 		err := s.protsrv.PutFile(req, data, reply)

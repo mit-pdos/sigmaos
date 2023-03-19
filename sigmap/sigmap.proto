@@ -23,10 +23,15 @@ message Stat {
         string  uid = 9;     // owner name
         string  gid = 10;     // group name
         string  muid = 11;    // name of the last user that modified the file
-} 
+}
+
+message Taddr {
+        string addr = 1;
+        string net = 2;
+}
 
 message Tmount {
-        repeated string addr = 1;
+        repeated Taddr addr = 1;
         string root = 3;
         bytes pubKey = 4;
 }
@@ -173,20 +178,13 @@ message Tgetfile {
         bool resolve = 6;
 }
 
-message Tsetfile {
-        uint32 fid = 1;
-        uint32 mode = 2;
-        uint64 offset = 3;
-        repeated string Wnames = 4;
-        bool resolve = 5;
-}
-
 message Tputfile {
         uint32 fid = 1;
         uint32 mode = 2;
         uint32 perm = 3;
         uint64 offset = 4;
         repeated string Wnames = 5;
+        bool resolve = 6;
 }
 
 message Tdetach {
@@ -198,11 +196,12 @@ message Rdetach {
 }
 
 message Theartbeat {
-        repeated uint64 sids = 1;
+        bool serverSide = 1;
+        map<uint64, bool> sids = 2;
 }
 
 message Rheartbeat {
-        repeated uint64 sids = 1;
+        map<uint64, bool> sids = 1;
 }
 
 message Tremovefile {

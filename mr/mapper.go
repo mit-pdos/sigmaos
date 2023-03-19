@@ -19,15 +19,14 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 type Mapper struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	mapf        MapT
 	sbc         *ScanByteCounter
 	job         string
@@ -40,7 +39,7 @@ type Mapper struct {
 	perf        *perf.Perf
 }
 
-func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *Mapper {
+func MkMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = job
@@ -50,10 +49,10 @@ func MkMapper(mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) *M
 	m.input = input
 	m.bin = path.Base(m.input)
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
-	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
+	m.SigmaClnt = sc
 	m.perf = p
 	m.sbc = MakeScanByteCounter(p)
-	return m
+	return m, nil
 }
 
 func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
@@ -68,8 +67,14 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	m := MkMapper(mapf, args[0], p, nr, lsz, args[2])
-	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("mapper-" + proc.GetPid().String() + " " + args[2])
+	if err != nil {
+		return nil, err
+	}
+	m, err := MkMapper(sc, mapf, args[0], p, nr, lsz, args[2])
+	if err != nil {
+		return nil, fmt.Errorf("MakeMapper failed %v", err)
+	}
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
 	}
@@ -267,7 +272,10 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p := perf.MakePerf(perf.MRMAPPER)
+	p, err := perf.MakePerf(perf.MRMAPPER)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)

@@ -11,12 +11,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fid"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/protclnt"
 	"sigmaos/protsrv"
 	"sigmaos/repl"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -218,7 +218,7 @@ func (rs *ChainReplServer) runDirWatcher() {
 			done <- true
 		})
 		<-done
-		attr := proc.MakeProc("user/replica-monitor", []string{config.ConfigPath, config.UnionDirPath})
+		attr := proc.MakeProc("replica-monitor", []string{config.ConfigPath, config.UnionDirPath})
 		rs.Spawn(attr)
 	}
 }

@@ -3,10 +3,11 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/protclnt"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -15,15 +16,16 @@ import (
 //
 
 type FidClnt struct {
-	fids *FidMap
-	pc   *protclnt.Clnt
-	ft   *FenceTable
+	fids  *FidMap
+	pc    *protclnt.Clnt
+	ft    *FenceTable
+	realm sp.Trealm
 }
 
-func MakeFidClnt() *FidClnt {
+func MakeFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt()
+	fidc.pc = protclnt.MakeClnt(clntnet)
 	fidc.ft = MakeFenceTable()
 	return fidc
 }
@@ -90,10 +92,11 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname string, addrs []string, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(uname string, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
 	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
 	if err != nil {
+		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
@@ -257,26 +260,13 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) SetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
-	ch := fidc.fids.lookup(fid)
-	if ch == nil {
-		return 0, serr.MkErr(serr.TErrUnreachable, "getfile")
-	}
-	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.SetFile(fid, path, mode, off, resolve, f, data)
-	if err != nil {
-		return 0, err
-	}
-	return reply.Tcount(), nil
-}
-
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte) (sessp.Tsize, *serr.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, serr.MkErr(serr.TErrUnreachable, "putfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, f, data)
+	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data)
 	if err != nil {
 		return 0, err
 	}

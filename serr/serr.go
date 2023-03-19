@@ -175,6 +175,16 @@ func (err *Err) String() string {
 	return err.Error()
 }
 
+// Maybe the error is because of a symlink or ~
+func (err *Err) IsMaybeSpecialElem() bool {
+	return err.Code() == TErrNotDir ||
+		(err.Code() == TErrNotfound && path.IsUnionElem(err.Obj))
+}
+
+func (err *Err) IsErrUnreachable() bool {
+	return err.Code() == TErrUnreachable
+}
+
 // SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
 	return error != nil && strings.Contains(error.Error(), TErrNotfound.String())
@@ -227,15 +237,6 @@ func IsErrPipeClosed(error error) bool {
 
 func IsErrNotDir(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrNotDir.String())
-}
-
-// Maybe the error is because of a symlink or ~
-func IsMaybeSpecialElem(error error) bool {
-	return IsErrNotDir(error) || IsErrUnionElem(error)
-}
-
-func IsErrUnionElem(error error) bool {
-	return IsErrNotfound(error) && path.IsUnionElem(ErrPath(error))
 }
 
 func IsErrCode(error error, code Terror) bool {

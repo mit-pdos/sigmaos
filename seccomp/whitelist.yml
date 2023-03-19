@@ -1,0 +1,73 @@
+# helpful ref: https:#eigenstate.org/notes/seccomp
+
+#
+# The following system calls allows memfsd to run.  - This list should
+# probably be paired down further or limited based on arguments.
+#
+# Don't allow "openat because this would allow a process to read
+# local resources. For example, adding it would enable fsuxd to work,
+# and we want arbitrary processes not to read/write local files.
+#
+# allow exit_group() to exit a process. don't use _exit because it
+# just terminates a thread.
+#
+
+allowed:
+  - accept4
+  - access
+  - arch_prctl # Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
+  - bind
+  - brk
+  - close
+  - connect
+  - epoll_create1
+  - epoll_ctl
+  - epoll_pwait
+  - execve
+  - exit_group
+  - fcntl
+  - fstat
+  - futex
+  - getdents64
+  - getpeername
+  - getpid
+  - getsockname
+  - getsockopt
+  - gettid
+  - listen
+  - mkdirat
+  - mmap
+  - mprotect
+  - munmap
+  - nanosleep
+  - newfstatat
+  - openat
+  - open
+  - pipe2
+  - pread64
+  - prlimit64
+  - read
+  - readlinkat
+  - recvfrom
+  - rt_sigaction
+  - rt_sigprocmask
+  - rt_sigreturn
+  - sched_getaffinity
+  - sched_yield
+  - sendto
+  - set_robust_list
+  - set_tid_address
+  - setsockopt
+  - sigaltstack
+  - write
+  - writev
+
+cond_allowed:
+  socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).
+    index: 0
+    op1: 40
+    op: "SCMP_CMP_NE"
+  clone:
+    index: 0
+    op1: 0x7E020000
+    op: "SCMP_CMP_MASKED_EQ"

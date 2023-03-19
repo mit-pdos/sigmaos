@@ -32,8 +32,8 @@ func TestOldLeaderFail(t *testing.T) {
 	_, err := ts.PutFile(epochname, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "PutFile")
 
-	fsl := fslib.MakeFsLibAddr("leader", fslib.Named())
-
+	fsl, err := fslib.MakeFsLibAddr("leader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err, "MakeFsLib")
 	ch := make(chan bool)
 	go func() {
 		l := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777)

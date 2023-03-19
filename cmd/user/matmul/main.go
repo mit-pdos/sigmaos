@@ -8,9 +8,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 func main() {
@@ -25,8 +24,7 @@ func main() {
 }
 
 type MatrixMult struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	n  int
 	m1 *mat.Dense
 	m2 *mat.Dense
@@ -34,14 +32,17 @@ type MatrixMult struct {
 }
 
 func MakeMatrixMult(args []string) (*MatrixMult, error) {
-	var err error
 	db.DPrintf(db.MATMUL, "MakeMatrixMul: %v %v", proc.GetPid(), args)
 	m := &MatrixMult{}
-	m.FsLib = fslib.MakeFsLib("spinner")
-	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
-	m.n, err = strconv.Atoi(args[0])
+	sc, err := sigmaclnt.MkSigmaClnt("spinner")
 	if err != nil {
-		db.DFatalf("Error parsing N: %v", err)
+		return nil, err
+	}
+	var error error
+	m.SigmaClnt = sc
+	m.n, error = strconv.Atoi(args[0])
+	if error != nil {
+		db.DFatalf("Error parsing N: %v", error)
 	}
 	m.m1 = matrix(m.n)
 	m.m2 = matrix(m.n)

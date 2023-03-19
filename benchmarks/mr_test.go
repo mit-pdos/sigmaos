@@ -7,11 +7,13 @@ import (
 
 	"sigmaos/groupmgr"
 	"sigmaos/mr"
+	"sigmaos/perf"
 	"sigmaos/test"
 )
 
 type MRJobInstance struct {
-	*test.Tstate
+	*test.RealmTstate
+	p       *perf.Perf
 	ready   chan bool
 	app     string
 	jobname string
@@ -21,9 +23,10 @@ type MRJobInstance struct {
 	cm      *groupmgr.GroupMgr
 }
 
-func MakeMRJobInstance(ts *test.Tstate, app, jobname string) *MRJobInstance {
+func MakeMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string) *MRJobInstance {
 	ji := &MRJobInstance{}
-	ji.Tstate = ts
+	ji.RealmTstate = ts
+	ji.p = p
 	ji.ready = make(chan bool)
 	ji.app = app
 	ji.jobname = jobname
@@ -40,7 +43,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	ji.cm = mr.StartMRJob(ji.FsLib, ji.ProcClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0)
 }
 
 func (ji *MRJobInstance) Wait() {

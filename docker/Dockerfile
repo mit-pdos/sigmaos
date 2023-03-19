@@ -23,6 +23,6 @@ RUN service ssh start
 EXPOSE 22
 
 # Build sigmaos
-RUN ./make.sh --norace --version TEST && ./install.sh --realm test-ream --version TEST && ./install.sh --realm test-realm --version TEST
+RUN ./make.sh --norace --version TEST && ./install.sh --realm testrealm --version TEST && ./install.sh --realm test-realm --version TEST
  
 CMD ["/usr/sbin/sshd", "-D"]

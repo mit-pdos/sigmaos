@@ -42,7 +42,7 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = sp.UXROOT + "perf-output/"
+	OUTPUT_PATH = "/tmp/sigmaos-perf"
 )
 
 type Tload [3]float64
@@ -88,13 +88,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(s Tselector) *Perf {
+func MakePerf(s Tselector) (*Perf, error) {
 	return MakePerfMulti(s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(s Tselector, s2 Tselector) *Perf {
+func MakePerfMulti(s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -111,11 +111,12 @@ func MakePerfMulti(s Tselector, s2 Tselector) *Perf {
 	}
 	// Make the output dir
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
-		db.DFatalf("Error Mkdir: %v", err)
+		db.DPrintf(db.ALWAYS, "MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
+		return nil, err
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
 	if s2 != "" {
-		basePath += "-" + string(s2)
+		basePath += "-" + s2
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF]; ok {
@@ -133,7 +134,7 @@ func MakePerfMulti(s Tselector, s2 Tselector) *Perf {
 	if ok := labels[s+TPT]; ok {
 		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
-	return p
+	return p, nil
 }
 
 // Register that an event has happened with a given instantaneous throughput.
@@ -188,7 +189,7 @@ func (p *Perf) Done() {
 }
 
 // Get the total cpu time usage for process with pid PID
-func GetCPUTimePid(pid string) (utime, stime uint64) {
+func GetCPUTimePid(pid string) (utime, stime uint64, err error) {
 	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't get CPU time: %v", err)
@@ -197,15 +198,18 @@ func GetCPUTimePid(pid string) (utime, stime uint64) {
 	fields := strings.Split(string(contents), " ")
 	if len(fields) != 52 {
 		db.DFatalf("Wrong num fields (%v): %v", len(fields), fields)
+		return
 	}
 	// From: https://man7.org/linux/man-pages/man5/proc.5.html
 	utime, err = strconv.ParseUint(fields[13], 10, 64)
 	if err != nil {
 		db.DFatalf("Error parse uint: %v", err)
+		return
 	}
 	stime, err = strconv.ParseUint(fields[14], 10, 64)
 	if err != nil {
 		db.DFatalf("Error parse uint: %v", err)
+		return
 	}
 	return
 }

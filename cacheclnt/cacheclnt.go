@@ -3,17 +3,15 @@ package cacheclnt
 import (
 	"encoding/json"
 	"hash/fnv"
-	"log"
 	"strconv"
 
 	"sigmaos/cachesrv"
 	"sigmaos/cachesrv/proto"
-	"sigmaos/clonedev"
+	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/protdev"
 	"sigmaos/reader"
-	"sigmaos/sessdevsrv"
+	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
 	sp "sigmaos/sigmap"
 )
@@ -49,8 +47,12 @@ func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
 	return cc, nil
 }
 
+func (cc *CacheClnt) IsMiss(err error) bool {
+	return err.Error() == ErrMiss.Error()
+}
+
 func (cc *CacheClnt) Watch(path string, nshard int, err error) {
-	log.Printf("%v: CacheClnt watch %v %d err %v\n", proc.GetName(), path, nshard, err)
+	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nshard, err)
 }
 
 func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
@@ -58,7 +60,7 @@ func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResu
 	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 
-func (c *CacheClnt) Set(key string, val any) error {
+func (c *CacheClnt) Put(key string, val any) error {
 	req := &proto.CacheRequest{}
 	req.Key = key
 	b, err := json.Marshal(val)
@@ -67,7 +69,7 @@ func (c *CacheClnt) Set(key string, val any) error {
 	}
 	req.Value = b
 	var res proto.CacheResult
-	if err := c.RPC("Cache.Set", req, &res); err != nil {
+	if err := c.RPC("Cache.Put", req, &res); err != nil {
 		return err
 	}
 	return nil
@@ -88,13 +90,13 @@ func (c *CacheClnt) Get(key string, val any) error {
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
-	b, err := cc.fsl.GetFile(srv + "/" + clonedev.CloneName(cachesrv.DUMP))
+	b, err := cc.fsl.GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
-	sidn := clonedev.SidName(sid, cachesrv.DUMP)
-	fn := srv + "/" + sidn + "/" + sessdevsrv.DataName(cachesrv.DUMP)
+	sidn := sessdev.SidName(sid, cachesrv.DUMP)
+	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err
@@ -106,9 +108,9 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	return m, nil
 }
 
-func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
+func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	n := cc.Nshard()
-	stats := make([]*protdevsrv.Stats, 0, n)
+	stats := make([]*protdev.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
@@ -119,9 +121,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdevsrv.Stats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []*protdevsrv.Stats {
+func (cc *CacheClnt) StatsClnt() []*protdev.RPCStats {
 	n := cc.Nshard()
-	stats := make([]*protdevsrv.Stats, 0, n)
+	stats := make([]*protdev.RPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

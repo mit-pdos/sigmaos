@@ -6,15 +6,18 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 )
+
+//
+// Adds or removes shards based on load
+//
 
 const (
 	MAXLOAD        float64 = 85.0
@@ -63,8 +66,7 @@ func (gm *grpMap) groups() []*groupmgr.GroupMgr {
 }
 
 type Monitor struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 
 	mu       sync.Mutex
 	job      string
@@ -73,10 +75,9 @@ type Monitor struct {
 	gm       *grpMap
 }
 
-func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt, job string, kvdncore proc.Tcore) *Monitor {
+func MakeMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdncore proc.Tcore) *Monitor {
 	mo := &Monitor{}
-	mo.FsLib = fslib
-	mo.ProcClnt = pclnt
+	mo.SigmaClnt = sc
 	mo.group = 1
 	mo.job = job
 	mo.kvdncore = kvdncore
@@ -95,7 +96,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
+	grp := SpawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
 		grp.Stop()
@@ -123,7 +124,6 @@ func (mo *Monitor) done() {
 	}
 }
 
-// XXX Use load too?
 func (mo *Monitor) doMonitor(conf *Config) {
 	kvs := MakeKvs(conf.Shards)
 	db.DPrintf(db.ALWAYS, "Monitor config %v\n", kvs)
@@ -135,17 +135,18 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	n := 0
 	for gn, _ := range kvs.Set {
 		kvgrp := path.Join(group.GrpPath(JobDir(mo.job), gn), sp.STATSD)
-		sti := stats.StatInfo{}
-		err := mo.GetFileJson(kvgrp, &sti)
+		st := stats.Stats{}
+		err := mo.GetFileJson(kvgrp, &st)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
 		}
+		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, &st)
 		n += 1
-		util += sti.Util
-		if sti.Util < low {
-			low = sti.Util
+		util += st.Util
+		if st.Util < low {
+			low = st.Util
 			lowkv = gn
-			lowload = sti.Load
+			lowload = st.Load
 		}
 		// db.DPrintf(db.KVMON, "path %v\n", sti.SortPath())
 	}

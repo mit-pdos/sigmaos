@@ -7,15 +7,17 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
+	//	"time"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	sp "sigmaos/sigmap"
 )
 
 type WebClnt struct {
 	jobname  string
-	srvaddrs []string
+	srvaddrs sp.Taddrs
 	baseurl  string
 	clnt     *http.Client
 	*fslib.FsLib
@@ -32,12 +34,14 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	//		}).Dial,
 	//	}
 	clnt := &http.Client{
-		Timeout:   2 * time.Minute,
-		Transport: http.DefaultTransport,
+		//		Timeout:   2 * time.Minute,
+		//		Transport: http.DefaultTransport,
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
-	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
-	return &WebClnt{job, addrs, "http://" + addrs[0], clnt, fsl}
+	//	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 1000
+	addrs = container.Rearrange(sp.ROOTREALM.String(), addrs)
+	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0].Addr)
+	return &WebClnt{job, addrs, "http://" + addrs[0].Addr, clnt, fsl}
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {

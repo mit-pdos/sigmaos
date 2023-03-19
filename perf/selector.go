@@ -2,6 +2,10 @@ package perf
 
 type Tselector string
 
+func (t Tselector) String() string {
+	return string(t)
+}
+
 // Suffixes
 const (
 	PPROF     Tselector = "_PPROF"
@@ -18,9 +22,10 @@ const (
 
 // kernel procs
 const (
-	NAMED Tselector = "NAMED"
-	PROCD           = "PROCD"
-	S3              = "S3"
+	NAMED  Tselector = "NAMED"
+	PROCD            = "PROCD"
+	S3               = "S3"
+	SCHEDD           = "SCHEDD"
 )
 
 // libs

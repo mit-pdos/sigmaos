@@ -18,19 +18,17 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/writer"
 )
 
 type Reducer struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	reducef  ReduceT
 	input    string
 	output   string
@@ -50,8 +48,8 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
-	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("reducer-" + r.input)
+	r.SigmaClnt = sc
 	r.perf = p
 
 	m, err := strconv.Atoi(args[2])
@@ -105,12 +103,16 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 // XXX cut new fslib?
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
-	defer fsl.Exit()
+	sc, err := sigmaclnt.MkSigmaClntFsLib("r-" + file + r.input)
+	if err != nil {
+		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
+		return 0, 0, false
+	}
+	defer sc.Exit()
 
 	sym := r.input + "/" + file + "/"
 	db.DPrintf(db.MR, "readFile %v\n", sym)
-	rdr, err := fsl.OpenAsyncReader(sym, 0)
+	rdr, err := sc.OpenAsyncReader(sym, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "MakeReader %v err %v", sym, err)
 		return 0, 0, false
@@ -217,7 +219,10 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p := perf.MakePerf(perf.MRREDUCER)
+	p, err := perf.MakePerf(perf.MRREDUCER)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	r, err := makeReducer(reducef, args, p)

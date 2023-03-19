@@ -32,10 +32,10 @@ func MakeSessionTable(mkps sp.MkProtServer, sesssrv sp.SessServer, tm *threadmgr
 	return st
 }
 
-func (st *SessionTable) QueueLen() int {
+func (st *SessionTable) QueueLen() int64 {
 	st.Lock()
 	defer st.Unlock()
-	len := 0
+	len := int64(0)
 	for _, s := range st.sessions {
 		len += s.QueueLen()
 	}
@@ -75,7 +75,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	st.Lock()
 	defer st.Unlock()
 
-	for _, sid := range hbs.Sids {
+	for sid, _ := range hbs.Sids {
 		sess := st.allocL(0, sessp.Tsession(sid))
 		sess.Lock()
 		if !sess.closed {

@@ -3,8 +3,10 @@ package procclnt
 import (
 	"fmt"
 	"path"
+	"runtime/debug"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -15,6 +17,10 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
+		if serr.IsErrUnreachable(err) {
+			debug.PrintStack()
+			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
@@ -22,13 +28,6 @@ func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bo
 	if err := clnt.MkDir(childrenDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
-	}
-	if isKernelProc {
-		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
-		if _, err := clnt.PutFile(kprocFPath, 0777, sp.OWRITE, []byte{}); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir MakeFile %v err %v", kprocFPath, err)
-			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
-		}
 	}
 
 	// Create exit signal
@@ -67,7 +66,7 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 // ========== HELPERS ==========
 
 // Clean up proc
-func (clnt *ProcClnt) removeProc(procdir string) error {
+func removeProc(fsl *fslib.FsLib, procdir string) error {
 	// Children may try to write in symlinks & exit statuses while the rmdir is
 	// happening. In order to avoid causing errors (such as removing a non-empty
 	// dir) temporarily rename so children can't find the dir. The dir may be
@@ -75,19 +74,19 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 	// to exit on its behalf.
 	src := path.Join(procdir, proc.CHILDREN)
 	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
-	if err := clnt.Rename(src, dst); err != nil {
+	if err := fsl.Rename(src, dst); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error rename removeProc %v -> %v : %v\n", src, dst, err)
 	}
-	err := clnt.RmDir(procdir)
+	err := fsl.RmDir(procdir)
 	maxRetries := 2
 	// May have to retry a few times if writing child already opened dir. We
 	// should only have to retry once at most.
 	for i := 0; i < maxRetries && err != nil; i++ {
-		s, _ := clnt.SprintfDir(procdir)
+		s, _ := fsl.SprintfDir(procdir)
 		// debug.PrintStack()
 		db.DPrintf(db.PROCCLNT_ERR, "RmDir %v err %v \n%v", procdir, err, s)
 		// Retry
-		err = clnt.RmDir(procdir)
+		err = fsl.RmDir(procdir)
 	}
 	return err
 }
@@ -98,7 +97,7 @@ func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) err
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
 	if len(procdir) > 0 {
-		clnt.removeProc(procdir)
+		removeProc(clnt.FsLib, procdir)
 	}
 	return err
 }
@@ -120,26 +119,17 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(procdIp string, p *proc.Proc, childProcdir string, viaProcd bool) error {
+func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir string, how Thow) error {
 	// Directory which holds link to child procdir
-	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
+	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v\n", childDir, err)
-		return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
-	}
-	var q string
-	switch p.Type {
-	case proc.T_LC:
-		q = sp.PROCD_RUNQ_LC
-	case proc.T_BE:
-		q = sp.PROCD_RUNQ_BE
-	default:
-		db.DFatalf("Unknown proc type %v", p.Type)
+		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 	}
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
-	if viaProcd {
-		procfileLink = path.Join(sp.PROCD, procdIp, q, p.Pid.String())
+	if how == HSCHEDD {
+		procfileLink = path.Join(sp.SCHEDD, scheddIp, sp.QUEUE, p.GetPid().String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in
 	// this procd's runq.

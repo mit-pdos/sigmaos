@@ -11,18 +11,17 @@ import (
 	"strconv"
 	"sync"
 
+	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -75,8 +74,7 @@ type Group struct {
 	jobdir string
 	grp    string
 	ip     string
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
 	isBusy bool
 }
@@ -147,7 +145,7 @@ func (g *Group) registerInClusterConfig() (int, *GroupConfig, *replraft.RaftConf
 func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *replraft.RaftConfig) {
 	// Read the current cluster config.
 	clusterCfg, _ := g.readGroupConfig(path)
-	clusterCfg.SigmaAddrs = append(clusterCfg.SigmaAddrs, repl.PLACEHOLDER_ADDR)
+	clusterCfg.SigmaAddrs = append(clusterCfg.SigmaAddrs, sp.MkTaddrs([]string{repl.PLACEHOLDER_ADDR}))
 	// Prepare peer addresses for raftlib.
 	clusterCfg.RaftAddrs = append(clusterCfg.RaftAddrs, g.ip+":0")
 	// Get the raft replica id.
@@ -169,6 +167,7 @@ func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
 		db.DPrintf(db.GROUP_ERR, "Error GetFileJson: %v", err)
 		return cfg, err
 	}
+	db.DPrintf(db.GROUP, "readGroupConfig: %v\n", cfg)
 	return cfg, nil
 }
 
@@ -180,15 +179,21 @@ func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
 	return nil
 }
 
-func (g *Group) writeSymlink(sigmaAddrs []string) {
+func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 	// Clean sigma addrs, removing placeholders...
-	srvAddrs := []string{}
-	for _, a := range sigmaAddrs {
-		if a != repl.PLACEHOLDER_ADDR {
-			srvAddrs = append(srvAddrs, a)
+	srvAddrs := make(sp.Taddrs, 0)
+	for _, as := range sigmaAddrs {
+		addrs := sp.Taddrs{}
+		for _, a := range as {
+			if a.Addr != repl.PLACEHOLDER_ADDR {
+				addrs = append(addrs, a)
+			}
+		}
+		if len(addrs) > 0 {
+			srvAddrs = append(srvAddrs, addrs...)
 		}
 	}
-
+	db.DPrintf(db.GROUP, "Advertise %v", srvAddrs)
 	mnt := sp.MkMountService(srvAddrs)
 	if err := g.MkMountSymlink(GrpSym(g.jobdir, g.grp), mnt); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
@@ -205,20 +210,17 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	return nil
 }
 
-func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
-	s := opcode + " " + kv
-	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), sp.OWRITE, 0)
-	return err
-}
-
-func RunMember(jobdir, grp string) {
+func RunMember(jobdir, grp string, public bool) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
-	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("kv-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MkSigmaClnt %v\n", err)
+	}
+	g.SigmaClnt = sc
 	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("group ip %v\n", err)
 	}
@@ -282,20 +284,30 @@ func RunMember(jobdir, grp string) {
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	// start server but don't publish its existence
-	mfs, err1 := memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg)
+	var mfs *memfssrv.MemFs
+	var err1 error
+	if public {
+		mfs, err1 = memfssrv.MakeReplMemFsFslPublic("", g.SigmaClnt, raftCfg, proc.GetRealm())
+	} else {
+		mfs, err1 = memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.SigmaClnt, raftCfg)
+	}
 	if err1 != nil {
 		db.DFatalf("StartMemFs %v\n", err1)
 	}
 
-	crash.Partitioner(mfs)
-	crash.NetFailer(mfs)
+	crash.Partitioner(mfs.SessSrv)
+	crash.NetFailer(mfs.SessSrv)
 
-	sigmaAddrs := []string{}
+	sigmaAddrs := make([]sp.Taddrs, 0)
 
 	// If running replicated...
 	if nReplicas > 0 {
 		// Get the final sigma addr
-		clusterCfg.SigmaAddrs[id-1] = mfs.MyAddr()
+		if public {
+			clusterCfg.SigmaAddrs[id-1] = mfs.MyAddrsPublic(proc.GetNet())
+		} else {
+			clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{mfs.MyAddr()})
+		}
 		db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
 
 		if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
@@ -303,7 +315,11 @@ func RunMember(jobdir, grp string) {
 		}
 		sigmaAddrs = clusterCfg.SigmaAddrs
 	} else {
-		sigmaAddrs = append(sigmaAddrs, mfs.MyAddr())
+		if public {
+			sigmaAddrs = append(sigmaAddrs, mfs.MyAddrsPublic(proc.GetNet()))
+		} else {
+			sigmaAddrs = append(sigmaAddrs, sp.MkTaddrs([]string{mfs.MyAddr()}))
+		}
 	}
 
 	g.writeSymlink(sigmaAddrs)
@@ -312,10 +328,14 @@ func RunMember(jobdir, grp string) {
 	g.ReleaseLeadership()
 
 	// Record performance.
-	p := perf.MakePerf(perf.GROUP)
+	p, err := perf.MakePerf(perf.GROUP)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
-	mfs.GetStats().MonitorCPUUtil(nil)
+	mfs.GetStats().DisablePathCnts()
+	mfs.MonitorCPU(nil)
 
 	mfs.Serve()
 	mfs.Done()

@@ -6,10 +6,11 @@ package sigmap
 
 import (
 	"fmt"
+	"strings"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type Tfid uint32
@@ -18,6 +19,13 @@ type Tperm uint32
 type Toffset uint64
 type Tlength uint64
 type Tgid uint32
+type Trealm string
+
+const ROOTREALM Trealm = "rootrealm"
+
+func (r Trealm) String() string {
+	return string(r)
+}
 
 func (fid Tfid) String() string {
 	if fid == NoFid {
@@ -114,6 +122,7 @@ const (
 	OWRITE  Tmode = 0x01 // write-only
 	ORDWR   Tmode = 0x02 // read-write
 	OEXEC   Tmode = 0x03 // execute (implies OREAD)
+	OEXCL   Tmode = 0x04 // exclusive
 	OTRUNC  Tmode = 0x10 // or truncate file first
 	OCEXEC  Tmode = 0x20 // or close on exec
 	ORCLOSE Tmode = 0x40 // remove on close
@@ -180,6 +189,65 @@ func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
+}
+
+func MkTaddr(addr string) *Taddr {
+	return &Taddr{Net: ROOTREALM.String(), Addr: addr}
+}
+
+func MkTaddrRealm(addr string, net string) *Taddr {
+	return &Taddr{Net: net, Addr: addr}
+}
+
+type Taddrs []*Taddr
+
+func MkTaddrs(addr []string) Taddrs {
+	addrs := make([]*Taddr, len(addr))
+	for i, a := range addr {
+		addrs[i] = MkTaddr(a)
+	}
+	return addrs
+}
+
+// Ignores net
+func (as Taddrs) String() string {
+	s := ""
+	for i, a := range as {
+		if i < len(as)-1 {
+			s += a.Addr + ","
+		} else {
+			s += a.Addr
+		}
+	}
+	return s
+}
+
+// Includes net. In the future should return a mnt, but we need to
+// package it up in a way suitable to pass as argument or environment
+// variable to a program.
+func (as Taddrs) Taddrs2String() (string, error) {
+	s := ""
+	for i, a := range as {
+		if i < len(as)-1 {
+			s += a.Addr + "/" + a.Net + ","
+		} else {
+			s += a.Addr + "/" + a.Net
+		}
+	}
+	return s, nil
+}
+
+func String2Taddrs(as string) (Taddrs, error) {
+	addrs := make([]*Taddr, 0)
+	for _, s := range strings.Split(as, ",") {
+		a := strings.Split(s, "/")
+		n := ""
+		if len(a) > 1 {
+			n = a[1]
+		}
+		addrs = append(addrs, MkTaddrRealm(a[0], n))
+	}
+	return addrs, nil
 }
 
 func MkErr(msg *Rerror) *serr.Err {
@@ -393,24 +461,8 @@ func (g *Tgetfile) Tcount() sessp.Tsize {
 	return sessp.Tsize(g.Count)
 }
 
-func MkTsetfile(fid Tfid, mode Tmode, offset Toffset, path path.Path, resolve bool) *Tsetfile {
-	return &Tsetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Wnames: path, Resolve: resolve}
-}
-
-func (s *Tsetfile) Tfid() Tfid {
-	return Tfid(s.Fid)
-}
-
-func (s *Tsetfile) Tmode() Tmode {
-	return Tmode(s.Mode)
-}
-
-func (s *Tsetfile) Toffset() Toffset {
-	return Toffset(s.Offset)
-}
-
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve}
 }
 
 func (p *Tputfile) Tfid() Tfid {
@@ -437,7 +489,7 @@ func (r *Tremovefile) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-func MkTheartbeat(sess []uint64) *Theartbeat {
+func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 
@@ -488,7 +540,6 @@ func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
 func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
 func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }
 func (Tgetfile) Type() sessp.Tfcall    { return sessp.TTgetfile }
-func (Tsetfile) Type() sessp.Tfcall    { return sessp.TTsetfile }
 func (Tputfile) Type() sessp.Tfcall    { return sessp.TTputfile }
 func (Tdetach) Type() sessp.Tfcall     { return sessp.TTdetach }
 func (Rdetach) Type() sessp.Tfcall     { return sessp.TRdetach }

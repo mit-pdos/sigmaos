@@ -7,9 +7,9 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -21,21 +21,21 @@ const (
 
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
-	cachec *cacheclnt.CacheClnt
+	cachec CacheClnt
 }
 
-func RunProfSrv(job string) error {
+func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELPROF, ps)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELPROF, ps, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job)
+	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}
@@ -107,13 +107,13 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) error {
+func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
 	db.DPrintf(db.HOTEL_PROF, "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
 		if err := ps.cachec.Get(key, p); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !ps.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_PROF, "Cache miss: key %v\n", id)
@@ -121,7 +121,7 @@ func (ps *ProfSrv) GetProfiles(req proto.ProfRequest, res *proto.ProfResult) err
 			if err != nil {
 				return err
 			}
-			if err := ps.cachec.Set(key, p); err != nil {
+			if err := ps.cachec.Put(key, p); err != nil {
 				return err
 			}
 		}

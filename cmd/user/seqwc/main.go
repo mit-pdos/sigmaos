@@ -5,25 +5,29 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/seqwc"
+	"sigmaos/sigmaclnt"
 )
 
 func main() {
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
-	pclnt := procclnt.MakeProcClnt(fsl)
-	p := perf.MakePerf(perf.SEQWC)
+	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MkSigmaClnt: error %v\n", err)
+	}
+	p, err := perf.MakePerf(perf.SEQWC)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
-	err := pclnt.Started()
+	err = sc.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	n, err := seqwc.Wc(fsl, os.Args[1], os.Args[2])
+	n, err := seqwc.Wc(sc.FsLib, os.Args[1], os.Args[2])
 	if err != nil {
 		db.DFatalf("Wc: error %v\n", err)
 	}
-	pclnt.Exited(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
+	sc.Exited(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

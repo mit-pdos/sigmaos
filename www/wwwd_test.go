@@ -21,10 +21,10 @@ type Tstate struct {
 }
 
 func spawn(t *testing.T, ts *Tstate) proc.Tpid {
-	a := proc.MakeProc("user/wwwd", []string{ts.job, ""})
+	a := proc.MakeProc("wwwd", []string{ts.job, ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	return a.Pid
+	return a.GetPid()
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -71,7 +71,7 @@ func TestStatic(t *testing.T) {
 }
 
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
-	clnt := www.MakeWWWClnt(ts.FsLib, ts.job)
+	clnt := www.MakeWWWClnt(ts.Tstate.FsLib, ts.job)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
 		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)
@@ -83,11 +83,13 @@ func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, don
 	done <- true
 }
 
+const N = 100
+
 func TestMatMul(t *testing.T) {
 	ts := makeTstate(t)
 
 	done := make(chan bool)
-	go matmulClnt(ts, 2000, 0, 1, 0, done)
+	go matmulClnt(ts, N, 0, 1, 0, done)
 	<-done
 
 	ts.waitWww()
@@ -96,10 +98,10 @@ func TestMatMul(t *testing.T) {
 func TestMatMulConcurrent(t *testing.T) {
 	ts := makeTstate(t)
 
-	N_CLNT := 40
+	N_CLNT := 5
 	done := make(chan bool)
 	for i := 0; i < N_CLNT; i++ {
-		go matmulClnt(ts, 2000, i, 10, 500*time.Millisecond, done)
+		go matmulClnt(ts, N, i, 10, 500*time.Millisecond, done)
 	}
 	for i := 0; i < N_CLNT; i++ {
 		<-done

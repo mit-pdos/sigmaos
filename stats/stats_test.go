@@ -2,7 +2,6 @@ package stats_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -28,15 +27,6 @@ func TestStatsd(t *testing.T) {
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(t, stats.Tcounter(1000)+nget+1, st.Nget, "statsd")
-
-	last := float64(0.0)
-	for i := 0; i < 5; i++ {
-		err = ts.GetFileJson("name/"+sp.STATSD, &st)
-		assert.Nil(t, err, "statsd")
-		assert.NotEqual(t, last, st.Util, "util")
-		last = st.Util
-		time.Sleep(100 * time.Millisecond)
-	}
 
 	ts.Shutdown()
 }

@@ -6,20 +6,20 @@ import (
 	"net/http"
 	"strconv"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/portclnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/protdevclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 type Www struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
+	p        *perf.Perf
 	job      string
 	userc    *protdevclnt.ProtDevClnt
 	searchc  *protdevclnt.ProtDevClnt
@@ -27,15 +27,18 @@ type Www struct {
 	profc    *protdevclnt.ProtDevClnt
 	recc     *protdevclnt.ProtDevClnt
 	geoc     *protdevclnt.ProtDevClnt
-	p        *perf.Perf
+	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
-func RunWww(job string) error {
+func RunWww(job string, public bool) error {
 	www := &Www{}
 	www.job = job
-	www.FsLib = fslib.MakeFsLib("hotel-wwwd-" + job)
-	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("hotel-wwwd-" + job)
+	if err != nil {
+		return err
+	}
+	www.SigmaClnt = sc
 	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELUSER)
 	if err != nil {
 		return err
@@ -75,28 +78,50 @@ func RunWww(job string) error {
 	http.HandleFunc("/reservation", www.reservationHandler)
 	http.HandleFunc("/geo", www.geoHandler)
 
-	ip, err := fidclnt.LocalIP()
+	if public {
+		pc, pi, err := portclnt.MkPortClntPort(www.FsLib)
+		if err != nil {
+			db.DFatalf("AllocPort err %v", err)
+		}
+		www.pc = pc
+		l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		a, err := container.QualifyAddr(l.Addr().String())
+		if err != nil {
+			db.DFatalf("QualifyAddr %v err %v", a, err)
+		}
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, proc.GetNet(), a); err != nil {
+			db.DFatalf("AdvertisePort %v", err)
+		}
+	} else {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			db.DFatalf("Error %v Listen: %v", public, err)
+		}
+		go func() {
+			db.DFatalf("%v", http.Serve(l, nil))
+		}()
+		a, err := container.QualifyAddr(l.Addr().String())
+		if err != nil {
+			db.DFatalf("QualifyAddr %v err %v", a, err)
+		}
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
+		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
+		if err = www.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+			db.DFatalf("MountService %v", err)
+		}
+	}
+
+	perf, err := perf.MakePerf(perf.HOTEL_WWW)
 	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
+		db.DFatalf("MakePerf err %v\n", err)
 	}
-
-	l, err := net.Listen("tcp", ip+":0")
-	if err != nil {
-		db.DFatalf("Error Listen: %v", err)
-	}
-
-	go func() {
-		db.DFatalf("%v", http.Serve(l, nil))
-	}()
-
-	// Write a file for clients to discover the server's address.
-	p := JobHTTPAddrsPath(job)
-	if err := www.PutFileJson(p, 0777, []string{l.Addr().String()}); err != nil {
-		db.DFatalf("Error PutFileJson addrs %v", err)
-	}
-
-	www.p = perf.MakePerf(perf.HOTEL_WWW)
-	defer www.p.Done()
+	www.p = perf
 
 	if err := www.Started(); err != nil {
 		return err
@@ -115,6 +140,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
+	s.p.Done()
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

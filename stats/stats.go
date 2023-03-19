@@ -3,24 +3,21 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/path"
-	sp "sigmaos/sigmap"
-
 	"sigmaos/perf"
+	"sigmaos/serr"
+	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 const STATS = true
@@ -28,12 +25,10 @@ const STATS = true
 type Tcounter int64
 type TCycles uint64
 
-type UtilFn func() float64
-
-func (c *Tcounter) Inc() {
+func (c *Tcounter) Inc(v int64) {
 	if STATS {
 		n := (*int64)(unsafe.Pointer(c))
-		atomic.AddInt64(n, 1)
+		atomic.AddInt64(n, v)
 	}
 }
 
@@ -53,10 +48,12 @@ func (c *Tcounter) Read() int64 {
 }
 
 // XXX separate cache lines
-type StatInfo struct {
+type Stats struct {
+	Ntotal      Tcounter
 	Nversion    Tcounter
 	Nauth       Tcounter
 	Nattach     Tcounter
+	Ndetach     Tcounter
 	Nflush      Tcounter
 	Nwalk       Tcounter
 	Nclunk      Tcounter
@@ -71,10 +68,13 @@ type StatInfo struct {
 	Nwstat      Tcounter
 	Nrenameat   Tcounter
 	Nget        Tcounter
-	Nset        Tcounter
 	Nput        Tcounter
+	Nrpc        Tcounter
 
 	Paths map[string]int
+
+	Qlen    Tcounter
+	AvgQlen float64
 
 	Util       float64
 	CustomUtil float64
@@ -83,180 +83,95 @@ type StatInfo struct {
 	CustomLoad perf.Tload
 }
 
-func MkStatInfo() *StatInfo {
-	sti := &StatInfo{}
+func MkStats() *Stats {
+	sti := &Stats{}
 	sti.Paths = make(map[string]int)
 	return sti
 }
 
-func (si *StatInfo) Inc(fct sessp.Tfcall) {
+func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 	switch fct {
 	case sessp.TTversion:
-		si.Nversion.Inc()
+		si.Nversion.Inc(1)
 	case sessp.TTauth:
-		si.Nauth.Inc()
+		si.Nauth.Inc(1)
 	case sessp.TTattach:
-		si.Nattach.Inc()
+		si.Nattach.Inc(1)
+	case sessp.TTdetach:
+		si.Ndetach.Inc(1)
 	case sessp.TTflush:
-		si.Nflush.Inc()
+		si.Nflush.Inc(1)
 	case sessp.TTwalk:
-		si.Nwalk.Inc()
+		si.Nwalk.Inc(1)
 	case sessp.TTopen:
-		si.Nopen.Inc()
+		si.Nopen.Inc(1)
 	case sessp.TTcreate:
-		si.Ncreate.Inc()
+		si.Ncreate.Inc(1)
 	case sessp.TTread, sessp.TTreadV:
-		si.Nread.Inc()
+		si.Nread.Inc(1)
 	case sessp.TTwrite, sessp.TTwriteV:
-		si.Nwrite.Inc()
+		si.Nwrite.Inc(1)
 	case sessp.TTclunk:
-		si.Nclunk.Inc()
+		si.Nclunk.Inc(1)
 	case sessp.TTremove:
-		si.Nremove.Inc()
+		si.Nremove.Inc(1)
 	case sessp.TTremovefile:
-		si.Nremovefile.Inc()
+		si.Nremovefile.Inc(1)
 	case sessp.TTstat:
-		si.Nstat.Inc()
+		si.Nstat.Inc(1)
 	case sessp.TTwstat:
-		si.Nwstat.Inc()
+		si.Nwstat.Inc(1)
 	case sessp.TTwatch:
-		si.Nwatch.Inc()
+		si.Nwatch.Inc(1)
 	case sessp.TTrenameat:
-		si.Nrenameat.Inc()
+		si.Nrenameat.Inc(1)
 	case sessp.TTgetfile:
-		si.Nget.Inc()
-	case sessp.TTsetfile:
-		si.Nset.Inc()
+		si.Nget.Inc(1)
 	case sessp.TTputfile:
-		si.Nput.Inc()
+		si.Nput.Inc(1)
+	case sessp.TTwriteread:
+		si.Nrpc.Inc(1)
 	default:
+		db.DPrintf(db.ALWAYS, "StatInfo: missing counter for %v\n", fct)
 	}
+	si.Ntotal.Inc(1)
+	si.Qlen.Inc(ql)
 }
 
-type Stats struct {
+type StatInfo struct {
 	fs.Inode
-	mu            sync.Mutex // protects some fields of StatInfo
-	sti           *StatInfo
-	pathCnts      bool
-	pid           int
-	hz            int
-	cores         map[string]bool
-	monitoringCPU bool
-	done          uint32
+	mu       sync.Mutex // protects some fields of StatInfo
+	st       *Stats
+	pathCnts bool
 }
 
-func MkStatsDev(parent fs.Dir) *Stats {
-	st := &Stats{}
-	st.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
-	st.sti = MkStatInfo()
-	st.pid = os.Getpid()
-	st.pathCnts = true
-	return st
+func MkStatsDev(parent fs.Dir) *StatInfo {
+	sti := &StatInfo{}
+	sti.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
+	sti.st = MkStats()
+	sti.pathCnts = true
+	return sti
 }
 
-func (st *Stats) GetUtil() (float64, float64) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	return st.sti.Util, 0.0
+func (sti *StatInfo) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
+
+	sti.st.Load = load
+	sti.st.CustomLoad = cload
+	sti.st.Util = u
+	sti.st.CustomUtil = cu
 }
 
-func (st *Stats) GetLoad() perf.Tload {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
-	load := perf.Tload{}
-	load[0] = st.sti.Load[0]
-	load[1] = st.sti.Load[1]
-	load[2] = st.sti.Load[2]
-	return load
+func (sti *StatInfo) Stats() *Stats {
+	return sti.st
 }
 
-func (st *Stats) StatInfo() *StatInfo {
-	return st.sti
-}
-
-func (st *Stats) MonitorCPUUtil(ufn UtilFn) {
-	st.hz = perf.Hz()
-	// Don't duplicate work
-	if !st.monitoringCPU {
-		st.monitoringCPU = true
-		go st.monitorCPUUtil(ufn)
-	}
-}
-
-const (
-	EXP_0 = 0.9048 // 1/exp(100ms/1000ms)
-	EXP_1 = 0.9512 // 1/exp(100ms/2000ms)
-	EXP_2 = 0.9801 // 1/exp(100ms/5000ms)
-	MS    = 100    // 100 ms
-	SEC   = 1000   // 1s
-)
-
-func setLoad(load *perf.Tload, x float64) {
-	load[0] *= EXP_0
-	load[0] += (1 - EXP_0) * x
-	load[1] *= EXP_1
-	load[1] += (1 - EXP_1) * x
-	load[2] *= EXP_2
-	load[2] += (1 - EXP_2) * x
-}
-
-// Caller holds lock
-func (st *Stats) loadCPUUtilL(idle, total uint64, customUtil float64) {
-	util := 100.0 * (1.0 - float64(idle)/float64(total))
-
-	setLoad(&st.sti.Load, util)
-	setLoad(&st.sti.CustomLoad, customUtil)
-
-	st.sti.Util = util
-	st.sti.CustomUtil = customUtil
-}
-
-// Update the set of cores we scan to determine CPU utilization.
-func (st *Stats) UpdateCores() {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
-	st.cores = perf.GetActiveCores()
-}
-
-func (st *Stats) monitorCPUUtil(ufn UtilFn) {
-	total0 := uint64(0)
-	total1 := uint64(0)
-	idle0 := uint64(0)
-	idle1 := uint64(0)
-
-	st.UpdateCores()
-
-	for atomic.LoadUint32(&st.done) != 1 {
-		time.Sleep(time.Duration(MS) * time.Millisecond)
-
-		// Can't call into ufn while the st lock is held, in order to ensure lock
-		// ordering and avoid deadlock.
-		var customUtil float64
-		if ufn != nil {
-			customUtil = ufn()
-		}
-		// Lock in case the set of cores we're monitoring changes.
-		st.mu.Lock()
-		idle1, total1 = perf.GetCPUSample(st.cores)
-		st.loadCPUUtilL(idle1-idle0, total1-total0, customUtil)
-		st.mu.Unlock()
-
-		total0 = total1
-		idle0 = idle1
-	}
-}
-
-func (st *Stats) Done() {
-	atomic.StoreUint32(&st.done, 1)
-}
-
-func (st *Stats) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}
@@ -267,39 +182,39 @@ func (st *Stats) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion
 	return b, nil
 }
 
-func (st *Stats) DisablePathCnts() {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) DisablePathCnts() {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	st.pathCnts = false
-	st.sti.Paths = nil
+	sti.pathCnts = false
+	sti.st.Paths = nil
 }
 
-func (st *Stats) IncPath(path path.Path) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) IncPath(path path.Path) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	if !st.pathCnts {
+	if !sti.pathCnts {
 		return
 	}
 	p := path.String()
-	if _, ok := st.sti.Paths[p]; !ok {
-		st.sti.Paths[p] = 0
+	if _, ok := sti.st.Paths[p]; !ok {
+		sti.st.Paths[p] = 0
 	}
-	st.sti.Paths[p] += 1
+	sti.st.Paths[p] += 1
 }
 
-func (st *Stats) IncPathString(p string) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+func (sti *StatInfo) IncPathString(p string) {
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
 
-	if !st.pathCnts {
+	if !sti.pathCnts {
 		return
 	}
-	if _, ok := st.sti.Paths[p]; !ok {
-		st.sti.Paths[p] = 0
+	if _, ok := sti.st.Paths[p]; !ok {
+		sti.st.Paths[p] = 0
 	}
-	st.sti.Paths[p] += 1
+	sti.st.Paths[p] += 1
 }
 
 type pair struct {
@@ -307,10 +222,10 @@ type pair struct {
 	cnt  int
 }
 
-func (sti *StatInfo) SortPath() []pair {
+func (st *Stats) SortPath() []pair {
 	var s []pair
 
-	for k, v := range sti.Paths {
+	for k, v := range st.Paths {
 		s = append(s, pair{k, v})
 	}
 	sort.Slice(s, func(i, j int) bool {
@@ -320,11 +235,11 @@ func (sti *StatInfo) SortPath() []pair {
 }
 
 // Make a copy of st while concurrent Inc()s may happen
-func (sti *StatInfo) acopy() *StatInfo {
-	sticp := &StatInfo{}
+func (st *Stats) acopy() Stats {
+	stcp := &Stats{}
 
-	v := reflect.ValueOf(sti).Elem()
-	v1 := reflect.ValueOf(sticp).Elem()
+	v := reflect.ValueOf(st).Elem()
+	v1 := reflect.ValueOf(stcp).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
@@ -335,30 +250,35 @@ func (sti *StatInfo) acopy() *StatInfo {
 			*p1 = Tcounter(n)
 		}
 	}
-	return sticp
+	return *stcp
 }
 
-func (st *Stats) stats() []byte {
-	stcp := st.sti.acopy()
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	stcp.Paths = st.sti.Paths
-	stcp.Util = st.sti.Util
-	stcp.Load = st.sti.Load
-	stcp.CustomUtil = st.sti.CustomUtil
-	stcp.CustomLoad = st.sti.CustomLoad
+func (sti *StatInfo) StatsCopy() Stats {
+	stcp := sti.st.acopy()
+	sti.mu.Lock()
+	defer sti.mu.Unlock()
+	stcp.AvgQlen = float64(sti.st.Qlen) / float64(sti.st.Ntotal)
+	stcp.Paths = sti.st.Paths
+	stcp.Util = sti.st.Util
+	stcp.Load = sti.st.Load
+	stcp.CustomUtil = sti.st.CustomUtil
+	stcp.CustomLoad = sti.st.CustomLoad
+	return stcp
+}
 
-	data, err := json.Marshal(*stcp)
+func (sti *StatInfo) stats() []byte {
+	st := sti.StatsCopy()
+	data, err := json.Marshal(st)
 	if err != nil {
 		db.DFatalf("stats: json failed %v\n", err)
 	}
 	return data
 }
 
-func (si *StatInfo) String() string {
-	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
+func (st *Stats) String() string {
+	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Ntotal, st.Nattach, st.Ndetach, st.Nwalk, st.Nclunk, st.Nopen, st.Nwatch, st.Ncreate, st.Nflush, st.Nread, st.Nwrite, st.Nremove, st.Nstat, st.Nwstat, st.Nrenameat, st.Nget, st.Nput, st.Nrpc, st.Qlen, st.AvgQlen, st.Paths, st.Load, st.Util)
 }
 
-func (st *Stats) Snapshot(fn fs.SnapshotF) []byte {
-	return st.snapshot()
+func (sti *StatInfo) Snapshot(fn fs.SnapshotF) []byte {
+	return sti.snapshot()
 }

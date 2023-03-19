@@ -34,7 +34,7 @@ var DIRGRP0 = group.GrpPath(JOBDIR, GRP0) + "/"
 func TestWaitClosed(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 1, CRASH, 0, 0)
+	grp := groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{GRP0, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 1, CRASH, 0, 0)
 	_, err := ts.Stat(DIRGRP0)
 	assert.Nil(t, err, "stat")
 
@@ -50,7 +50,7 @@ func TestWaitClosed(t *testing.T) {
 func TestServerCrash(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 1, CRASH, 0, 0)
+	grp := groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{GRP0, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 1, CRASH, 0, 0)
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, DIRGRP0+"sem")
 	err := sem.Init(0)
@@ -60,9 +60,10 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
-		err := sem.Down()
+		err = sem.Down()
 		ch <- err
 	}()
 
@@ -91,12 +92,12 @@ func BurstProc(n int, f func(chan error)) error {
 
 func TestProcManyOK(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/sleeper", "1us", ""})
+	a := proc.MakeProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.Pid)
+	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
 	ts.Shutdown()
@@ -104,12 +105,12 @@ func TestProcManyOK(t *testing.T) {
 
 func TestProcCrashMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/crash"})
+	a := proc.MakeProc("proctest", []string{NTRIALS, "crash"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.Pid)
+	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
 	ts.Shutdown()
@@ -117,12 +118,12 @@ func TestProcCrashMany(t *testing.T) {
 
 func TestProcPartitionMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/partition"})
+	a := proc.MakeProc("proctest", []string{NTRIALS, "partition"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.Pid)
+	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.Pid)
+	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	if assert.NotNil(t, status, "nil status") {
 		assert.True(t, status.IsStatusOK(), status)
@@ -133,10 +134,11 @@ func TestProcPartitionMany(t *testing.T) {
 func TestReconnectSimple(t *testing.T) {
 	const N = 1000
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 0, 0, 0, NETFAIL)
+	grp := groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{GRP0, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, 0, 0, NETFAIL)
 	ch := make(chan error)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(DIRGRP0)
 			if err != nil {
@@ -159,12 +161,13 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	const N = 50
 
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 0, 0, PARTITION, 0)
+	grp := groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{GRP0, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(DIRGRP0)
 				if err != nil {
@@ -188,15 +191,16 @@ func TestServerPartitionBlocking(t *testing.T) {
 	const N = 50
 
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, JOBDIR, 0, 0, 0, PARTITION, 0)
+	grp := groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{GRP0, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func() {
-			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr("fsl", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
 			sem.Init(0)
-			err := sem.Down()
+			err = sem.Down()
 			ch <- err
 			fsl.Exit()
 
@@ -214,8 +218,9 @@ const (
 	WRITESZ = 4096
 )
 
-func writer(t *testing.T, ch chan error, name string) {
-	fsl := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
+func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
+	fsl, err := fslib.MakeFsLibAddr("writer-"+name, sp.ROOTREALM, lip, nds)
+	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + name
 	stop := false
 	nfile := 0
@@ -258,13 +263,13 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		go writer(ts.T, ch, strconv.Itoa(i))
+		go writer(ts.T, ch, strconv.Itoa(i), ts.GetLocalIP(), ts.NamedAddr())
 	}
 
 	crashchan := make(chan bool)
 	l := &sync.Mutex{}
 	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(sp.UX, (i+1)*CRASHSRV, l, crashchan)
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
 	}
 
 	for i := 0; i < NCRASH; i++ {

@@ -7,13 +7,12 @@ import (
 	"os"
 	"strconv"
 
-	"gopkg.in/yaml.v3"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/yaml"
 )
 
 func JobDir(job string) string {
@@ -74,14 +73,8 @@ type Job struct {
 
 func ReadJobConfig(app string) *Job {
 	job := &Job{}
-	file, err := os.Open(app)
-	if err != nil {
+	if err := yaml.ReadYaml(app, job); err != nil {
 		db.DFatalf("ReadConfig err %v\n", err)
-	}
-	defer file.Close()
-	d := yaml.NewDecoder(file)
-	if err := d.Decode(&job); err != nil {
-		db.DFatalf("Yalm decode %s err %v\n", app, err)
 	}
 	return job
 }
@@ -135,8 +128,8 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	return len(bins), nil
 }
 
-func StartMRJob(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, ncoord, "user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "user/mr-m-" + job.App, "user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, jobname, 0, ncoord, crashcoord, 0, 0)
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
+	return groupmgr.Start(sc, ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, jobname, 0, ncoord, crashcoord, 0, 0)
 }
 
 // XXX run as a proc?

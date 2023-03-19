@@ -7,12 +7,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/sessp"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfs"
 	"sigmaos/overlay"
+	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
@@ -65,7 +65,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) sessp.Tpath {
 		stype = Tfile
 	case *fencefs.Fence:
 		stype = Tfence
-	case *stats.Stats:
+	case *stats.StatInfo:
 		stype = Tstats
 	case *Dev:
 		stype = Tsnapshotdev
@@ -76,7 +76,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) sessp.Tpath {
 	return i.Path()
 }
 
-func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
+func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.StatInfo, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
@@ -96,7 +96,7 @@ func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesss
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
 	st := sessstatesrv.RestoreTable(oldSt, mkps, rps, sesssrv, tmt, s.St)
-	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt
+	return dirover, ffs.(fs.Dir), stat.(*stats.StatInfo), st, tmt
 }
 
 func (s *Snapshot) RestoreFsTree(inum sessp.Tpath) fs.Inode {

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "proc/proc.proto";
+
+option go_package = "sigmaos/schedd/proto";
+
+service Schedd {
+  rpc Spawn(SpawnRequest) returns (SpawnResponse);
+  rpc StealProc(StealProcRequest) returns (StealProcResponse);
+  rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
+}
+
+
+message SpawnRequest {
+  string realm = 1;
+  ProcProto procProto = 2;
+}
+
+message SpawnResponse {
+}
+
+message StealProcRequest {
+  string kernelId = 1;
+  string realm = 2;
+  string pidStr = 3;
+}
+
+message StealProcResponse {
+  bool oK = 1;
+}
+
+message GetCPUSharesRequest {
+}
+
+message GetCPUSharesResponse {
+  map<string, int64> shares = 1;
+}
+
+message GetCPUUtilRequest {
+  string realmStr = 1;
+}
+
+message GetCPUUtilResponse {
+  double util = 1;
+}

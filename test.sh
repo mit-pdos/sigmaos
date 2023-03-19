@@ -1,88 +1,73 @@
 #!/bin/bash
 
-DIR=$(dirname $0)
-. $DIR/.env
+usage() {
+  echo "Usage: $0"
+}
 
-VERSION=$(cat "${VERSION_FILE}")
+go clean -testcache
 
-./install.sh --realm test-realm # --from s3
+#
+# test some support package
+#
 
-for ND in :1111 :1111,:1112,:1113
-do
-  export NAMED=$ND
-  echo "============ RUN NAMED=$ND"
-  go clean -testcache
-  
-  #
-  # test some support package
-  #
+for T in path serr linuxsched perf sigmap memfs; do
+    go test $@ sigmaos/$T
+done
 
-  go test $@ sigmaos/path
-  go test $@ sigmaos/sessp
-  go test $@ sigmaos/linuxsched
-  go test $@ sigmaos/perf
-  
-  #
-  # tests without servers
-  #
-  go test $@ sigmaos/sigmap
-  go test $@ sigmaos/memfs
-  
-  #
-  # test with just named
-  #
-  go test $@ sigmaos/reader --version=$VERSION
-  go test $@ sigmaos/writer --version=$VERSION
-  go test $@ sigmaos/stats --version=$VERSION
-  go test $@ sigmaos/fslib --version=$VERSION
-  go test $@ sigmaos/semclnt --version=$VERSION
-  go test $@ sigmaos/electclnt --version=$VERSION
-  
-  #
-  # test proxy
-  #
-  
-  go test $@ sigmaos/proxy --version=$VERSION
-  
-  #
-  # tests kernel (with 1 "fake" realm)
-  #
-  
-  go test $@ sigmaos/procclnt --version=$VERSION
+#
+# test with a kernel with just named
+#
 
-  go test $@ sigmaos/ux --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/ux/~local/fslibtest/" -run ReadPerf
-  
-  go test $@ sigmaos/s3 --version=$VERSION
-  go test -v sigmaos/fslib --version=$VERSION -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
-  
-  go test $@ sigmaos/kernel --version=$VERSION
-  go test $@ sigmaos/leaderclnt --version=$VERSION
-  go test $@ sigmaos/leadertest --version=$VERSION
-  go test $@ sigmaos/snapshot --version=$VERSION
-  
-  go test $@ sigmaos/group --version=$VERSION
-  go test $@ sigmaos/sessclnt --version=$VERSION
-  
-  # dbd_test and wwwd_test requires mariadb running
-  pgrep mariadb >/dev/null && go test $@ sigmaos/www
-  
-  go test $@ sigmaos/mr --version=$VERSION
-  go test $@ sigmaos/kv --version=$VERSION
-  go test $@ sigmaos/cacheclnt --version=$VERSION
-  go test $@ sigmaos/hotel --version=$VERSION
-  
-  # XXX broken
-  # go test $@ sigmaos/cmd/user/test2pc
-  # go test $@ sigmaos/cmd/user/test2pc2
-  
-  #
-  # test with realms
-  #
-  
-  go test $@ sigmaos/realm --version=$VERSION
-  
-  # run without realm?
-  # XXX needs fixing
-  # go test $@ -timeout=45m sigmaos/replica
-done 
+for T in reader writer stats reader writer stats fslib semclnt electclnt; do
+    go test $@ sigmaos/$T -start
+done
+
+#
+# test proxy
+#
+
+go test $@ sigmaos/proxy -start
+
+#
+# tests a full kernel using root realm
+#
+
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
+    go test $@ sigmaos/$T -start
+done
+    
+go test $@ sigmaos/fslib -start -path "name/ux/~local/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslib -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+
+#
+# applications
+#
+
+for T in mr kv; do
+    go test $@ sigmaos/$T -start
+done
+
+#
+# application with several kernels and db
+#
+
+go test $@ sigmaos/hotel
+
+#
+# test with realms
+#
+
+go test $@ sigmaos/realmclnt -start
+
+
+#
+# tests with overlays
+#
+
+go test $@ sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+go test $@ sigmaos/cacheclnt -start --overlays --run TestCacheClerk
+go test $@ sigmaos/hotel -start --overlays --run GeoSingle
+go test $@ sigmaos/hotel -start --overlays --run Www
+go test $@ sigmaos/realmclnt -start --overlays --run Basic
+go test $@ sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+go test $@ sigmaos/realmclnt -start --overlays --run RealmNetIsolation

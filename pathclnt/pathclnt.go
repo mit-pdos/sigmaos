@@ -2,7 +2,6 @@ package pathclnt
 
 import (
 	"fmt"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -27,14 +26,13 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	chunkSz sessp.Tsize
+	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{}
-	pathc.mnt = makeMntTable()
-	pathc.chunkSz = sz
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet, lip string, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, lip: lip}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt()
+		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -45,6 +43,10 @@ func (pathc *PathClnt) String() string {
 	str := fmt.Sprintf("Pathclnt mount table:\n")
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
+}
+
+func (pathc *PathClnt) GetLocalIP() string {
+	return pathc.lip
 }
 
 func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
@@ -157,10 +159,12 @@ func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, 
 	base := path.Base()
 	fid, err := pathc.WalkPath(dir, true, nil)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
 		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
 		return sp.NoFid, err
 	}
 	return fid, nil
@@ -243,7 +247,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			fid, err = pathc.WalkPath(pn, path.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -265,7 +269,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	target, rest, _ := pathc.mnt.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
-		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
+		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
 		return st, nil
 	} else {
 		fid, err := pathc.WalkPath(path.Split(name), path.EndSlash(name), nil)
@@ -339,7 +343,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
+	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +352,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	// symlink.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) {
+		if err.IsMaybeSpecialElem() {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err
@@ -365,58 +369,34 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	return data, nil
 }
 
-// Write file
-func (pathc *PathClnt) SetFile(pn string, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
-	db.DPrintf(db.PATHCLNT, "SetFile %v %v\n", pn, mode)
-	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
-	if err != nil {
-		return 0, err
-	}
-	// Optimistcally SetFile without doing a pathname walk; this
-	// may fail if rest contains an automount symlink.
-	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
-	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, path.EndSlash(pn))
-	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
-			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
-			if err != nil {
-				return 0, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.SetFile(fid, []string{}, mode, off, data, false)
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			return 0, err
-		}
-	}
-	return cnt, nil
-}
-
-// Create file
+// Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, true)
+	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return 0, err
 	}
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
+	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
 	if err != nil {
-		if serr.IsMaybeSpecialElem(err) || serr.IsErrUnreachable(err) {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			dir := p.Dir()
 			base := path.Path{p.Base()}
-			fid, err = pathc.WalkPath(dir, true, nil)
+			resolve := true
+			if p.Base() == err.Obj { // was the final pn component a symlink?
+				dir = p
+				base = path.Path{}
+				resolve = path.EndSlash(pn)
+			}
+			fid, err = pathc.WalkPath(dir, resolve, nil)
 			if err != nil {
 				return 0, err
 			}
 			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data)
+			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false)
 			if err != nil {
 				return 0, err
 			}
@@ -426,37 +406,3 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	}
 	return cnt, nil
 }
-
-//// Return path to the root directory for last server on path
-//func (pathc *PathClnt) PathServer(pn string) (string, path.Path, error) {
-//	if _, err := pathc.Stat(pn + "/"); err != nil {
-//		db.DPrintf(db.PATHCLNT_ERR, "PathServer: stat %v err %v\n", pn, err)
-//		return "", nil, err
-//	}
-//	p := path.Split(pn)
-//	_, left, err := pathc.mnt.resolve(p, true)
-//	if err != nil {
-//		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
-//		return "", nil, err
-//	}
-//	p = p[0 : len(p)-len(left)]
-//	return p.String(), left, nil
-//}
-//
-//// Return path to server, replacing ~local with the IP address of the mounted server
-//func (pathc *PathClnt) AbsPathServer(pn string) (path.Path, path.Path, error) {
-//	srv, left, err := pathc.PathServer(pn)
-//	if err != nil {
-//		return nil, nil, err
-//	}
-//	p := path.Split(srv)
-//	if path.IsUnionElem(p.Base()) {
-//		st, err := pathc.Stat(srv)
-//		if err != nil {
-//			return path.Path{}, left, err
-//		}
-//		p[len(p)-1] = st.Name
-//		return p, left, nil
-//	}
-//	return p, left, nil
-//}

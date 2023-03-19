@@ -9,8 +9,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/protdevsrv"
-	rpcproto "sigmaos/protdevsrv/proto"
+	"sigmaos/protdev"
+	rpcproto "sigmaos/protdev/proto"
 	"sigmaos/serr"
 	"sigmaos/sessdevclnt"
 	sp "sigmaos/sigmap"
@@ -19,14 +19,14 @@ import (
 type ProtDevClnt struct {
 	*fslib.FsLib
 	fd  int
-	si  *protdevsrv.StatInfo
+	si  *protdev.StatInfo
 	sdc *sessdevclnt.SessDevClnt
 	pn  string
 }
 
 func MkProtDevClnt(fsl *fslib.FsLib, pn string) (*ProtDevClnt, error) {
-	pdc := &ProtDevClnt{FsLib: fsl, si: protdevsrv.MakeStatInfo(), pn: pn}
-	sdc, err := sessdevclnt.MkSessDevClnt(pdc.FsLib, pn, protdevsrv.RPC)
+	pdc := &ProtDevClnt{FsLib: fsl, si: protdev.MakeStatInfo(), pn: pn}
+	sdc, err := sessdevclnt.MkSessDevClnt(pdc.FsLib, pn, protdev.RPC)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +51,10 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	start := time.Now()
 	b, err = pdc.WriteRead(pdc.fd, b)
 	if err != nil {
-		return nil, fmt.Errorf("rpc err %v\n", err)
+		return nil, fmt.Errorf("rpc err %v", err)
 	}
-	// Record stats (qlen not used for now).
-	pdc.si.Stat(method, time.Since(start).Microseconds(), 0)
+	// Record stats
+	pdc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
@@ -82,13 +82,13 @@ func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message)
 	return nil
 }
 
-func (pdc *ProtDevClnt) StatsClnt() *protdevsrv.Stats {
+func (pdc *ProtDevClnt) StatsClnt() *protdev.RPCStats {
 	return pdc.si.Stats()
 }
 
-func (pdc *ProtDevClnt) StatsSrv() (*protdevsrv.Stats, error) {
-	stats := &protdevsrv.Stats{}
-	if err := pdc.GetFileJson(path.Join(pdc.pn, protdevsrv.STATS), stats); err != nil {
+func (pdc *ProtDevClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
+	stats := &protdev.SigmaRPCStats{}
+	if err := pdc.GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

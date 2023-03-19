@@ -3,7 +3,6 @@ package procclnt
 import (
 	"path"
 	"runtime/debug"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -11,27 +10,29 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Right now mounts don't resolve to find the server. So, get the server addr
-// from the path for now.
-func splitMountServerAddrPath(fsl *fslib.FsLib, namedAddrs []string, dpath string) ([]string, string) {
-	p := strings.Split(dpath, "/")
-	for i := len(p) - 1; i >= 0; i-- {
-		if strings.Contains(p[i], ":") {
-			return []string{p[i]}, path.Join(p[i+1:]...)
-		}
+// Split path at last mount point, if any
+func splitMountServerAddrPath(fsl *fslib.FsLib, namedAddrs sp.Taddrs, dpath string) (sp.Taddrs, string) {
+	symlink, rest, err := fsl.PathLastSymlink(dpath)
+	if err != nil {
+		return namedAddrs, dpath
 	}
-	return namedAddrs, dpath
+	mnt, err := fsl.ReadMount(symlink)
+	if err != nil {
+		return namedAddrs, dpath
+	}
+	return mnt.Addr, rest.String()
 }
 
-func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint string) {
-	tree := strings.TrimPrefix(dpath, "name/")
-	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, tree)
+func mountDir(fsl *fslib.FsLib, namedAddrs sp.Taddrs, dpath string, mountPoint string) {
+	db.DPrintf(db.PROCCLNT, "mountDir: %v %v %v\n", namedAddrs, dpath, mountPoint)
+	addr, splitPath := splitMountServerAddrPath(fsl, namedAddrs, dpath)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
 			db.DPrintf(db.PROCCLNT_ERR, "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
-			db.DFatalf("error mounting %v/%v as %v err %v", addr, splitPath, mountPoint, err)
+			sts, err2 := fsl.GetDir(sp.SCHEDD)
+			db.DFatalf("Error mounting %v/%v as %v err %v\nsts:%v err2:%v", addr, splitPath, mountPoint, err, sp.Names(sts), err2)
 		}
 	}
 }
@@ -40,26 +41,26 @@ func mountDir(fsl *fslib.FsLib, namedAddrs []string, dpath string, mountPoint st
 func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// XXX resolve mounts to find server?
 	// Mount procdir
-	mountDir(fsl, fslib.Named(), proc.GetProcDir(), proc.PROCDIR)
+	mountDir(fsl, fsl.NamedAddr(), proc.GetProcDir(), proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
-	mountDir(fsl, fslib.Named(), proc.GetParentDir(), proc.PARENTDIR)
+	mountDir(fsl, fsl.NamedAddr(), proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fslib.Named(), sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(fsl.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 	return makeProcClnt(fsl, proc.GetPid(), proc.PROCDIR)
 }
 
-// Called by tests to fake an initial process
+// Fake an initial process for, for example, tests.
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
-func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, uname string, namedAddr []string) *ProcClnt {
-	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid.String()), "")
-	MountPids(fsl, namedAddr)
+func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
+	proc.FakeProcEnv(pid, program, path.Join(sp.KPIDSREL, pid.String()), "")
+	MountPids(fsl, fsl.NamedAddr())
 
-	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
+	if err := fsl.MountTree(fsl.NamedAddr(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
@@ -67,31 +68,12 @@ func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, uname string, namedAddr [
 	clnt := makeProcClnt(fsl, pid, proc.GetProcDir())
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
 
-	mountDir(fsl, namedAddr, proc.GetProcDir(), proc.PROCDIR)
+	mountDir(fsl, fsl.NamedAddr(), proc.GetProcDir(), proc.PROCDIR)
 
 	return clnt
 }
 
-func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
-	// Make a pid directory for this initial proc
-	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
-		db.DFatalf("error mounting %v as %v err %v\n", proc.KPIDS, proc.KPIDS, err)
-		return err
-	}
+func MountPids(fsl *fslib.FsLib, namedAddr sp.Taddrs) error {
+	mountDir(fsl, namedAddr, sp.KPIDSREL, sp.KPIDSREL)
 	return nil
-}
-
-// XXX REMOVE THIS AFTER DEADLINE PUSH
-func MakeProcClntTmp(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
-	MountPids(fsl, namedAddr)
-	if err := fsl.MountTree(namedAddr, sp.PROCDREL, sp.PROCDREL); err != nil {
-		debug.PrintStack()
-		db.DFatalf("error mounting procd err %v\n", err)
-	}
-
-	clnt := makeProcClnt(fsl, proc.GetPid(), proc.GetProcDir())
-
-	mountDir(fsl, namedAddr, proc.GetProcDir(), proc.PROCDIR)
-
-	return clnt
 }

@@ -8,7 +8,7 @@ import (
 )
 
 //
-// mysql client exporting a database server through the file system
+// A db proxy exporting a database server through the file system
 // interface, modeled after
 // http://man.cat-v.org/plan_9_contrib/4/mysqlfs
 //

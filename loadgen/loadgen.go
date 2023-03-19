@@ -9,6 +9,10 @@ import (
 	db "sigmaos/debug"
 )
 
+const (
+	RAND_SEED = 12345
+)
+
 type Req func(*rand.Rand)
 
 type LoadGenerator struct {
@@ -75,15 +79,16 @@ func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
 // Find the base latency on which to base future measurements.
 func (lg *LoadGenerator) Calibrate() {
 	const N = 1000
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(RAND_SEED))
 	start := time.Now()
 	for i := 0; i < N; i++ {
 		lg.wg.Add(1)
 		lg.runReq(i, r, false)
 	}
 	lg.avgReqLat = time.Since(start) / N
-	// Preallocate entries.
-	lg.res = benchmarks.MakeResults(int(lg.maxrps*int64(lg.totaldur/lg.avgReqLat))+N, benchmarks.REQ)
+	// Preallocate entries. Multiply by 2 to leave a slight buffer.
+	lg.res = benchmarks.MakeResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
 	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	for i := 0; i < N; i++ {
 		lg.res.Append(lg.avgReqLat, 1)
@@ -97,7 +102,8 @@ func (lg *LoadGenerator) warmup() {
 func (lg *LoadGenerator) initiatorThread(tid int) {
 	t := time.NewTicker(lg.sleepdurs[tid])
 	var nreq int64
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(RAND_SEED))
 	start := time.Now()
 	for time.Since(start) < lg.totaldur {
 		<-t.C
@@ -121,7 +127,8 @@ func (lg *LoadGenerator) StatsDataString() string {
 func (lg *LoadGenerator) Stats() {
 	// Print raw latencies.
 	db.DPrintf(db.LOADGEN, "Load generator latencies:\n%v", lg.res)
-	lsum, _ := lg.res.Summary()
+	lsum, tsum := lg.res.Summary()
+	db.DPrintf(db.THROUGHPUT, tsum)
 	db.DPrintf(db.ALWAYS, lsum)
 }
 

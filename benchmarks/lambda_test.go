@@ -12,13 +12,13 @@ import (
 	"sigmaos/test"
 )
 
-func spawnLambda(ts *test.Tstate, semPath string) {
+func spawnLambda(ts *test.RealmTstate, semPath string) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
 	client := lambda.New(sess, &aws.Config{Region: aws.String("us-east-1")})
-	request := []string{ts.NamedAddr()[0], semPath}
+	request := []string{ts.NamedAddr()[0].Addr, semPath}
 
 	payload, err := json.Marshal(request)
 	if err != nil {

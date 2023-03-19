@@ -8,9 +8,9 @@ import (
  * Proc Directory structure:
  *
  * /
- * |- procd
+ * |- schedd
  * |  |
- * |  |- x.x.x.x
+ * |  |- kernel-1
  * |  |  |
  * |  |  |- pids
  * |  |     |
@@ -23,24 +23,23 @@ import (
  * |  |               |- start-sem
  * |  |               |- exit-status
  * |  |               |- shared -> link/to/parent/shared/state // Symlink to shared state of parent's choosing, if desired.
- * |  |               |- procdir -> /procd/y.y.y.y/pids/1001 // Symlink to child's procdir.
+ * |  |               |- procdir -> /schedd/kernel-2/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |
- * |  |- y.y.y.y
+ * |  |- kernel-2
  * |     |
  * |     |- pids
  * |        |
  * |        |- 1001
  * |            |
- * |            |- parentdir -> /procd/x.x.x.x/pids/1000/children/1001 // Mount of subdir of parent proc.
+ * |            |- parentdir -> /schedd/kernel-1/pids/1000/children/1001 // Mount of subdir of parent proc.
  * |            |- ...
  * |
- * |- kernel-pids // Only for kernel procs such as s3, ux, procd, ...
+ * |- kpids // Only for kernel procs such as s3, ux, schedd, ...
  *    |
- *    |- fsux-2000
+ *    |- schedd-2000
  *       |
  *       |- kernel-proc // Only present if this is a kernel proc.
- *       |- subsystem-info // Only present if this is a kernel proc. Contains IP and NodedId.
  *       |- ... // Same directory structure as regular procs
  */
 
@@ -48,8 +47,6 @@ const (
 	// name for dir where procs live. May not refer to name/pids
 	// because proc.PidDir may change it.  A proc refers to itself
 	// using "pids/<pid>", where pid is the proc's PID.
-	PIDS          = "pids" // TODO: make this explicitly kernel PIDs only
-	KPIDS         = "kpids"
 	PROCDIR       = "procdir"
 	PARENTDIR     = "parentdir"
 	PROCFILE_LINK = "procfile-link"
@@ -60,8 +57,7 @@ const (
 	EXIT_SEM    = "exit-sem"
 	EVICT_SEM   = "evict-sem"
 	EXIT_STATUS = "exit-status"
-	CHILDREN    = "children"    // directory with children's pids and symlinks
-	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
+	CHILDREN    = "children" // directory with children's pids and symlinks
 )
 
 func GetChildProcDir(procdir string, cpid Tpid) string {

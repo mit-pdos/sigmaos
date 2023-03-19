@@ -5,32 +5,32 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
 
 type Npd struct {
-	named []string
+	lip   string
+	named sp.Taddrs
 	st    *sessstatesrv.SessionTable
 }
 
-func MakeNpd() *Npd {
-	npd := &Npd{fslib.Named(), nil}
+func MakeNpd(lip string, nds sp.Taddrs) *Npd {
+	npd := &Npd{lip, nds, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
 	return npd
 }
 
 func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid sessp.Tsession) sp.Protsrv {
-	return makeNpConn(npd.named)
+	return makeNpConn(npd.lip, npd.named)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -80,16 +80,16 @@ type NpConn struct {
 	uname string
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
-	named []string
+	named sp.Taddrs
 	fm    *fidMap
 }
 
-func makeNpConn(named []string) *NpConn {
+func makeNpConn(lip string, named sp.Taddrs) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt()
+	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
 	npc.named = named
-	npc.fidc = fidclnt.MakeFidClnt()
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, sessp.Tsize(1_000_000))
+	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
+	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	return npc
 }
@@ -289,10 +289,6 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 
 func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return nil, nil
-}
-
-func (npc *NpConn) SetFile(args *sp.Tsetfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
-	return nil
 }
 
 func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rerror {

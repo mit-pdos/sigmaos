@@ -54,12 +54,12 @@ for vm in $vms; do
   if [ $vm == $MAIN ]; then
     outfile="/tmp/start.out"
   else
-    outfile="/tmp/machined.out"
+    outfile="/tmp/join.out"
   fi
-  # scp machined.out files.
-  cmd1="scp -i key-$VPC.pem ubuntu@$vm:$outfile $LOG_DIR/$vm.out"
+  # read log files.
+  cmd1="ssh -i key-$VPC.pem ubuntu@$vm \"/bin/bash -c '~/ulambda/logs.sh'\" > $LOG_DIR/$vm.out 2>&1" 
   # scp performance files.
-  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos/perf-output/* $PERF_DIR"
+  cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.
   cmd3="scp -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 

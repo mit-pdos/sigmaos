@@ -180,6 +180,9 @@ fi
 
 ulimit -n 100000
 
+# Add to docker group
+sudo usermod -aG docker ubuntu
+
 echo -n > ~/.hushlogin
 ENDSSH
 

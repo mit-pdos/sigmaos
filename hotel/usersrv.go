@@ -6,9 +6,10 @@ import (
 	"strconv"
 
 	"sigmaos/dbclnt"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
-	sp "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -33,13 +34,13 @@ type Users struct {
 	dbc *dbclnt.DbClnt
 }
 
-func RunUserSrv(n string) error {
+func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELUSER, u)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELUSER, u, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) CheckUser(req proto.UserRequest, res *proto.UserResult) error {
+func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
 	error := s.dbc.Query(q, &users)

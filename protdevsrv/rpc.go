@@ -11,7 +11,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	rpcproto "sigmaos/protdevsrv/proto"
+	rpcproto "sigmaos/protdev/proto"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -46,11 +46,10 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
 
-	ql := rpc.pds.QueueLen()
 	start := time.Now()
-	rep = rpc.pds.svc.dispatch(req.Method, &req)
+	rep = rpc.pds.svc.dispatch(ctx, req.Method, &req)
 	t := time.Since(start).Microseconds()
-	rpc.pds.sti.Stat(req.Method, t, ql)
+	rpc.pds.sti.Stat(req.Method, t)
 
 	b, err := proto.Marshal(rep)
 	if err != nil {
@@ -59,7 +58,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	return b, nil
 }
 
-func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.Reply {
+func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request) *rpcproto.Reply {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -83,7 +82,7 @@ func (svc *service) dispatch(methname string, req *rpcproto.Request) *rpcproto.R
 
 		// call the method.
 		function := method.method.Func
-		rv := function.Call([]reflect.Value{svc.svc, args.Elem(), replyv})
+		rv := function.Call([]reflect.Value{svc.svc, reflect.ValueOf(ctx), args.Elem(), replyv})
 
 		// The return value for the method is an error.
 		errI := rv[0].Interface()

@@ -6,10 +6,10 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 func main() {
@@ -26,8 +26,7 @@ func main() {
 }
 
 type Spawner struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	shouldWaitExit bool
 	childPid       proc.Tpid
 	childProgram   string
@@ -40,8 +39,11 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	}
 	// 	log.Printf("MakeSpawner %v", args)
 	s := &Spawner{}
-	s.FsLib = fslib.MakeFsLib("spawner-" + proc.GetPid().String())
-	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("spawner-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	s.SigmaClnt = sc
 	b, err := strconv.ParseBool(args[0])
 	if err != nil {
 		db.DFatalf("Error parseBool: %v %v", args[0], err)
@@ -61,8 +63,9 @@ func (s *Spawner) Work() {
 		db.DFatalf("Error spawn: %v", err)
 	}
 	s.Started()
+	crash.Crasher(s.FsLib)
 	if s.shouldWaitExit {
 		s.WaitExit(s.childPid)
 	}
-	s.Exited(proc.MakeStatus(proc.StatusOK))
+	s.ExitedOK()
 }

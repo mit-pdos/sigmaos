@@ -14,7 +14,6 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	"sigmaos/procclnt"
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -66,33 +65,55 @@ func nrand() uint64 {
 
 type KvClerk struct {
 	*fslib.FsLib
-	*procclnt.ProcClnt
 	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 	job   string
 }
 
-func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
-	return makeClerk(fsl, pclnt, job)
+func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+	return makeClerkStart(fsl, job)
 }
 
-func MakeClerk(name, job string, namedAddr []string) (*KvClerk, error) {
-	fsl := fslib.MakeFsLibAddr(name, namedAddr)
-	pclnt := procclnt.MakeProcClnt(fsl)
-	return makeClerk(fsl, pclnt, job)
+func MakeClerkFslOnly(fsl *fslib.FsLib, job string) *KvClerk {
+	return makeClerk(fsl, job)
 }
 
-func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, job string) (*KvClerk, error) {
+func MakeClerk(name, job string) (*KvClerk, error) {
+	fsl, err := fslib.MakeFsLib(name)
+	if err != nil {
+		return nil, err
+	}
+	return makeClerkStart(fsl, job)
+}
+
+func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fsl
-	kc.ProcClnt = pclnt
 	kc.conf = &Config{}
 	kc.job = job
 	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	return kc
+}
+
+func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+	kc := &KvClerk{}
+	kc.FsLib = fsl
+	kc.conf = &Config{}
+	kc.job = job
+	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	return kc, kc.StartClerk()
+}
+
+func (kc *KvClerk) StartClerk() error {
 	if err := kc.switchConfig(); err != nil {
-		return nil, err
+		return err
 	}
-	return kc, nil
+	return nil
+}
+
+func (kc *KvClerk) IsMiss(err error) bool {
+	db.DPrintf(db.KVCLERK, "IsMiss err %v", err)
+	return serr.IsErrNotfound(err)
 }
 
 // Detach servers not in kvs
@@ -207,14 +228,27 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case GETRD:
 		o.rdr, o.err = fsl.OpenReader(fn)
 	case PUT:
-		_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
-	case SET:
-		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
+		if o.off == 0 {
+			_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
+		} else {
+			_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
+		}
 	}
 	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k Tkey, off sp.Toffset) ([]byte, error) {
+func (kc *KvClerk) Get(key string, val any) error {
+	b, err := kc.GetRaw(Tkey(key), 0)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(b, val); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (kc *KvClerk) GetRaw(k Tkey, off sp.Toffset) ([]byte, error) {
 	op := &op{GETVAL, []byte{}, k, off, sp.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
@@ -226,20 +260,22 @@ func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k Tkey, b []byte, off sp.Toffset) error {
-	op := &op{SET, b, k, off, sp.OWRITE, nil, nil}
-	kc.doop(op)
-	return op.err
-}
-
 func (kc *KvClerk) Append(k Tkey, b []byte) error {
-	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Put(k Tkey, b []byte) error {
-	op := &op{PUT, b, k, 0, sp.OWRITE, nil, nil}
+func (kc *KvClerk) Put(k string, val any) error {
+	b, err := json.Marshal(val)
+	if err != nil {
+		return nil
+	}
+	return kc.PutRaw(Tkey(k), b, 0)
+}
+
+func (kc *KvClerk) PutRaw(k Tkey, b []byte, off sp.Toffset) error {
+	op := &op{PUT, b, k, off, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -249,7 +285,7 @@ func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	op := &op{SET, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }

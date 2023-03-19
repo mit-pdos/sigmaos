@@ -8,10 +8,10 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/proc"
 	"sigmaos/replies"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/threadmgr"
 )
@@ -51,7 +51,7 @@ func makeSession(protsrv sp.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *t
 	return sess
 }
 
-func (sess *Session) QueueLen() int {
+func (sess *Session) QueueLen() int64 {
 	return sess.threadmgr.QueueLen()
 }
 

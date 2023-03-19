@@ -33,11 +33,11 @@ func spin(done chan bool) {
 	}
 }
 
-func tick(pid string, t0 *time.Time) (utime0, stime0, utime1, stime1 uint64) {
+func tick(pid string, t0 *time.Time) (utime0, stime0, utime1, stime1 uint64, err error) {
 	*t0 = time.Now()
-	utime0, stime0 = perf.GetCPUTimePid(pid)
+	utime0, stime0, err = perf.GetCPUTimePid(pid)
 	time.Sleep(100 * time.Millisecond)
-	utime1, stime1 = perf.GetCPUTimePid(pid)
+	utime1, stime1, err = perf.GetCPUTimePid(pid)
 	return
 }
 
@@ -51,8 +51,10 @@ func TestGetCPUTimePid(t *testing.T) {
 	var stime1 uint64
 	var util float64
 	var t0 time.Time
+	var err error
 
-	utime0, stime0, utime1, stime1 = tick(pid, &t0)
+	utime0, stime0, utime1, stime1, err = tick(pid, &t0)
+	assert.Nil(t, err)
 	util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
 
 	db.DPrintf(db.TEST, "Util (sleep): %v", util)
@@ -68,7 +70,8 @@ func TestGetCPUTimePid(t *testing.T) {
 		// Wait for the spinning thread to start
 		time.Sleep(100 * time.Millisecond)
 
-		utime0, stime0, utime1, stime1 = tick(pid, &t0)
+		utime0, stime0, utime1, stime1, err = tick(pid, &t0)
+		assert.Nil(t, err)
 		util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
 
 		db.DPrintf(db.TEST, "Util (%v spinner): %v", i, util)

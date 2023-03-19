@@ -11,11 +11,9 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
-	"sigmaos/procdclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -34,7 +32,7 @@ const (
 
 	RESTART = "restart" // restart message from reducer
 
-	MEM_REQ = 7900
+	MEM_REQ = 1000
 )
 
 // XXX update
@@ -65,8 +63,7 @@ const (
 //
 
 type Coord struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	job         string
 	nmaptask    int
 	nreducetask int
@@ -84,9 +81,12 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	db.DPrintf(db.MR, "About to MakeFsLib job %v, addr %v", c.job, fslib.Named())
-	c.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
-
+	sc, err := sigmaclnt.MkSigmaClnt("coord-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.MR, "Made fslib job %v, addr %v", c.job, sc.NamedAddr())
+	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])
@@ -107,8 +107,6 @@ func MakeCoord(args []string) (*Coord, error) {
 	c.crash = ctime
 
 	c.linesz = args[6]
-
-	c.ProcClnt = procclnt.MakeProcClnt(c.FsLib)
 
 	c.Started()
 
@@ -197,7 +195,7 @@ func (c *Coord) doneTasks(dir string) int {
 
 func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *proc.Proc, t string) {
 	// Wait for the task to exit.
-	status, err := c.WaitExit(p.Pid)
+	status, err := c.WaitExit(p.GetPid())
 	// Record end time.
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
@@ -230,11 +228,11 @@ func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func
 	// Make task proc structures.
 	for i, tn := range taskNames {
 		tasks[i] = f(tn)
-		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].Pid, tasks[i].Args)
+		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].GetPid(), tasks[i].Args)
 	}
 	start := time.Now()
 	// Burst-spawn procs.
-	failed, errs := c.SpawnBurst(tasks)
+	failed, errs := c.SpawnBurst(tasks, 1)
 	if len(failed) > 0 {
 		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
 	}
@@ -357,20 +355,6 @@ func (c *Coord) Round(ttype string) {
 	}
 }
 
-func (c *Coord) monitorProcds() {
-	pdc := procdclnt.MakeProcdClnt(c.FsLib, "")
-	n := 0
-	for atomic.LoadInt32(&c.done) == 0 {
-		m, err := pdc.WaitProcdChange(n)
-		if err != nil && atomic.LoadInt32(&c.done) == 0 {
-			db.DFatalf("WaitProcdChange err %v\n", err)
-		}
-
-		db.DPrintf(db.ALWAYS, "nprocd = %d\n", m)
-		n = m
-	}
-}
-
 func (c *Coord) Work() {
 	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
 	// Try to become the leading coordinator.  If we get
@@ -379,8 +363,6 @@ func (c *Coord) Work() {
 	c.electclnt.AcquireLeadership(nil)
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
-
-	go c.monitorProcds()
 
 	c.recover(MapTask(c.job))
 	c.recover(ReduceTask(c.job))
@@ -413,5 +395,5 @@ func (c *Coord) Work() {
 
 	atomic.StoreInt32(&c.done, 1)
 
-	c.Exited(proc.MakeStatus(proc.StatusOK))
+	c.ExitedOK()
 }

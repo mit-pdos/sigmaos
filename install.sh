@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# Install the sigmaOS software, either from the local build or from s3.
+#
+# Install the sigmaOS software into root file system, either from the
+# local build or from s3.
+#
 
 usage() {
-    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE] [--version VERSION]" 1>&2
+    echo "Usage: $0 --realm REALM [--from FROM] [--profile PROFILE]" 1>&2
 }
 
 FROM="local"
 REALM=""
-VERSION=""
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -20,11 +22,6 @@ while [[ "$#" -gt 0 ]]; do
   --realm)
     shift
     REALM=$1
-    shift
-    ;;
-  --version)
-    shift
-    VERSION=$1
     shift
     ;;
   --profile)
@@ -50,27 +47,38 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
-mkdir -p $PRIVILEGED_BIN
-rm -rf $PRIVILEGED_BIN/*
-rm -rf $UXROOT/$REALM/bin/user/*
+echo "install sigmaos in $SIGMAHOME/$REALM"
+
+rm -rf $SIGMAHOME/$REALM/bin/*/*
 if [ $FROM == "local" ]; then
-  if [ -z "$VERSION" ]; then
-    VERSION=$(cat "${VERSION_FILE}")
-  fi
-  # Make the user program dir
-  mkdir -p $UXROOT/$REALM/bin/user/$VERSION/
-  # Copy from local
-  cp -r bin/user/* $UXROOT/$REALM/bin/user/$VERSION/
-  cp -r bin/realm $PRIVILEGED_BIN
-  cp -r bin/kernel $PRIVILEGED_BIN
+  mkdir -p $SIGMAHOME/$REALM/bin/
+  for d in "linux" "kernel" "user"; do
+      mkdir -p $SIGMAHOME/$REALM/bin/$d
+      cp -r ./bin/$d/* $SIGMAHOME/$REALM/bin/$d/
+  done
 elif [ $FROM == "s3" ]; then
+  # XXX needs updating
   # Copy kernel & realm dirs from s3
   aws s3 cp --recursive s3://$REALM/bin/realm $PRIVILEGED_BIN/realm $PROFILE
   aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/kernel $PROFILE
+  aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/linux $PROFILE
   chmod --recursive +x $PRIVILEGED_BIN
 else
   echo "Unrecognized bin source: $FROM"
   exit 1
 fi
+
+cp seccomp/whitelist.yml $SIGMAHOME/$REALM/
+
+for d in etc dev sys proc usr lib lib64
+do        
+    mkdir -p $SIGMAHOME/$REALM/$d
+done
+for f in urandom null
+do
+    echo -n > $SIGMAHOME/$REALM/dev/$f
+done
+
+cp -r $SIGMAHOME/.aws $SIGMAHOME/$REALM/

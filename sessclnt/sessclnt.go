@@ -5,11 +5,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
 )
@@ -19,17 +19,18 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	*sync.Cond
-	cli    sessp.Tclient
-	sid    sessp.Tsession
-	seqno  sessp.Tseqno
-	closed bool
-	addrs  []string
-	nc     *netclnt.NetClnt
-	queue  *sessstateclnt.RequestQueue
-	ivs    *intervals.Intervals
+	cli     sessp.Tclient
+	sid     sessp.Tsession
+	seqno   sessp.Tseqno
+	closed  bool
+	addrs   sp.Taddrs
+	nc      *netclnt.NetClnt
+	queue   *sessstateclnt.RequestQueue
+	ivs     *intervals.Intervals
+	clntnet string
 }
 
-func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *serr.Err) {
+func makeSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())
@@ -37,9 +38,10 @@ func makeSessClnt(cli sessp.Tclient, addrs []string) (*SessClnt, *serr.Err) {
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
+	c.clntnet = clntnet
 	c.queue = sessstateclnt.MakeRequestQueue(addrs)
 	db.DPrintf(db.SESS_STATE_CLNT, "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
-	nc, err := netclnt.MakeNetClnt(c, addrs)
+	nc, err := netclnt.MakeNetClnt(c, clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat([]uint64{uint64(c.sid)}), nil, sessp.MakeFenceNull())
+	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, sessp.MakeFenceNull())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -175,7 +177,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 
 	if c.nc == nil {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.MakeNetClnt(c, c.addrs)
+		nc, err := netclnt.MakeNetClnt(c, c.clntnet, c.addrs)
 		if err != nil {
 			db.DPrintf(db.SESS_STATE_CLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err

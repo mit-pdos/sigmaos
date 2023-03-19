@@ -4,30 +4,40 @@ import (
 	"sync"
 
 	"sigmaos/fid"
-	"sigmaos/fs"
+	"sigmaos/path"
 )
 
 type ephemeralTable struct {
 	sync.Mutex
-	ephemeral map[fs.FsObj]*fid.Pobj
+	ephemeral map[string]*fid.Pobj
 }
 
 func makeEphemeralTable() *ephemeralTable {
 	ft := &ephemeralTable{}
-	ft.ephemeral = make(map[fs.FsObj]*fid.Pobj)
+	ft.ephemeral = make(map[string]*fid.Pobj)
 	return ft
 }
 
-func (et *ephemeralTable) Add(o fs.FsObj, po *fid.Pobj) {
+func (et *ephemeralTable) Add(p path.Path, po *fid.Pobj) {
 	et.Lock()
 	defer et.Unlock()
-	et.ephemeral[o] = po
+	et.ephemeral[p.String()] = po
 }
 
-func (et *ephemeralTable) Del(o fs.FsObj) {
+func (et *ephemeralTable) Del(p path.Path) {
 	et.Lock()
 	defer et.Unlock()
-	delete(et.ephemeral, o)
+	delete(et.ephemeral, p.String())
+}
+
+func (et *ephemeralTable) Rename(s, t path.Path, po *fid.Pobj) {
+	et.Lock()
+	defer et.Unlock()
+	_, ok := et.ephemeral[s.String()]
+	if ok {
+		delete(et.ephemeral, s.String())
+		et.ephemeral[t.String()] = po
+	}
 }
 
 func (et *ephemeralTable) Get() []*fid.Pobj {

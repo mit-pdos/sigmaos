@@ -30,7 +30,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, nrepl, "user/kvd", []string{group.GRP + "0"}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{group.GRP + "0", strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
 	return ts
 }
 
@@ -53,7 +53,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 		b, err := ts.GetFile(fname)
 		assert.Nil(ts.T, err, "Get %v", err)
 		assert.Equal(ts.T, i_str, string(b), "Didn't read expected")
-		_, err = ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
+		_, err = ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD|sp.OEXCL, []byte(i_str))
 		assert.NotNil(ts.T, err, "Put nil")
 		_, err = ts.SetFile(fname, []byte(i_str+i_str), sp.OWRITE|sp.OREAD, 0)
 		assert.Nil(ts.T, err, "Set %v", err)
@@ -61,7 +61,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 	db.DPrintf(db.TEST, "done testGetPutSet")
 }
 
-func TestStartStop(t *testing.T) {
+func TestStartStopSimple(t *testing.T) {
 	ts := makeTstate(t, 0, 0)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
@@ -111,7 +111,7 @@ func TestGetPutSetFail1(t *testing.T) {
 
 // func follower(t *testing.T, i int, N int, fn string) {
 // 	I := strconv.Itoa(i)
-// 	fsl := fslib.MakeFsLibAddr("fsl"+I, fslib.Named())
+// 	fsl := fslib.MakeFsLibAddr("fsl"+I, ts.NamedAddr())
 // 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for n := 0; n < N; {
 // 		b, err := f.AcquireFenceR()
@@ -130,7 +130,7 @@ func TestGetPutSetFail1(t *testing.T) {
 // 	for i := 0; i < W; i++ {
 // 		go follower(t, i, N, fn)
 // 	}
-// 	fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+// 	fsl := fslib.MakeFsLibAddr("fsl", ts.NamedAddr())
 // 	f := fenceclnt.MakeFenceClnt(fsl, fn, 0, []string{sp.NAMED})
 // 	for i := 0; i < N; i++ {
 // 		err := f.AcquireFenceW([]byte(strconv.Itoa(i)))

@@ -6,16 +6,21 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
+
 	"sigmaos/fslib"
 	"sigmaos/semclnt"
+	sp "sigmaos/sigmap"
 )
 
 func spin(args []string) error {
 	addr := args[0]
 	sempath := args[1]
-	fsl := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), []string{addr})
+	fsl, err := fslib.MakeFsLibAddr("spin-"+path.Base(sempath), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
+	if err != nil {
+		return err
+	}
 	sem := semclnt.MakeSemClnt(fsl, sempath)
-	err := sem.Up()
+	err = sem.Up()
 	if err != nil {
 		return err
 	}

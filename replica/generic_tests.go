@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/realm"
 	sp "sigmaos/sigmap"
@@ -48,7 +48,7 @@ func run(bin string, name string, args []string, namedAddr []string) (*exec.Cmd,
 	cmd := exec.Command(bin+"/"+name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "NAMED="+strings.Join(namedAddr, ","))
+	cmd.Env = append(os.Environ(), "SIGMANAMED="+strings.Join(namedAddr, ","))
 	return cmd, cmd.Start()
 }
 
@@ -81,7 +81,7 @@ func killReplica(ts *Tstate, replica *Replica) {
 
 func allocReplicas(ts *Tstate, n int) []*Replica {
 	replicas := make([]*Replica, n)
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	assert.Nil(ts.t, err, "Failed to get local ip")
 	for i, _ := range replicas {
 		portstr := strconv.Itoa(PORT_OFFSET + i)
@@ -438,7 +438,8 @@ func ChainCrashTail(ts *Tstate) {
 func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup) {
 	defer end.Done()
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.RealmIP, ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_files; i++ {
@@ -621,7 +622,8 @@ func ConcurrentClientsCrashTail(ts *Tstate) {
 func pausedClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup, writes *sync.WaitGroup, reads *sync.WaitGroup) {
 	defer end.Done()
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.RealmIP, ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_files; i++ {
@@ -735,7 +737,8 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 
 	id_str := strconv.Itoa(id)
 
-	fsl := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.NamedAddrs)
+	fsl, err := fslib.MakeFsLibAddr("client-"+strconv.Itoa(id), ts.cfg.RealmIP, ts.cfg.NamedAddrs)
+	assert.Nil(ts.t, err)
 	start.Done()
 	start.Wait()
 	for i := 0; i < n_renames; i++ {

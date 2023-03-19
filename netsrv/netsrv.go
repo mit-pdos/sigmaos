@@ -6,10 +6,11 @@ import (
 	"io"
 	"net"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -29,14 +30,19 @@ func MakeNetServer(ss sp.SessServer, address string, m MarshalF, u UnmarshalF) *
 		m,
 		u,
 	}
+
 	// Create and start the main server listener
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	srv.addr = l.Addr().String()
-	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", address, srv.addr)
+	a, err := container.QualifyAddr(l.Addr().String())
+	if err != nil {
+		db.DFatalf("QualifyAddr %v error: %v", a, err)
+	}
+	srv.addr = a
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", address, a)
 	go srv.runsrv(l)
 	return srv
 }
@@ -52,7 +58,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		if err != nil {
 			db.DFatalf("%v: Accept error: %v", proc.GetName(), err)
 		}
-
+		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
 		MakeSrvConn(srv, conn)
 	}
 }

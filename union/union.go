@@ -1,24 +1,24 @@
 package union
 
 import (
-	"sigmaos/fidclnt"
+	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
-func UnionMatch(q string, mnt sp.Tmount) bool {
+func UnionMatch(lip string, q string, mnt sp.Tmount) bool {
 	switch q {
 	case "~any":
 		return true
 	case "~local":
-		ip, err := fidclnt.LocalIP()
+		tip, _, err := mnt.TargetHostPort()
 		if err != nil {
 			return false
 		}
-		tip := mnt.TargetIp()
 		if tip == "" {
-			tip = ip
+			tip = lip
 		}
-		if tip == ip {
+		db.DPrintf(db.MOUNT, "UnionMatch: %v tip %v lip %v\n", q, tip, lip)
+		if tip == lip {
 			return true
 		}
 		return false

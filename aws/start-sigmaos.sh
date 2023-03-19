@@ -1,24 +1,22 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --realm REALM [--n N] [--ncores NCORES]" 1>&2
+  echo "Usage: $0 --vpc VPC [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 VPC=""
-REALM=""
 N_VM=""
 NCORES=4
+UPDATE=""
+TAG=""
+OVERLAYS=""
+TOKEN=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --vpc)
     shift
     VPC=$1
-    shift
-    ;;
-  --realm)
-    shift
-    REALM=$1
     shift
     ;;
   --n)
@@ -30,6 +28,15 @@ while [[ $# -gt 0 ]]; do
     shift
     NCORES=$1
     shift
+    ;;
+  --pull)
+    shift
+    TAG=$1
+    shift
+    ;;
+  --overlays)
+    shift
+    OVERLAYS="--overlays"
     ;;
   -help)
     usage
@@ -43,7 +50,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -53,25 +60,28 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-DIR=$(dirname $0)
-. $DIR/../.env
-
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
 MAIN="${vma[0]}"
-NAMED="${vma[0]}:1111"
-export NAMED="${NAMED}"
+SIGMANAMED="${vma[0]}:1111"
+IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
+#export SIGMANAMED="${SIGMANAMED}"
 
 if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
 fi
 
+if [ ! -z "$TAG" ]; then
+  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
+fi
+
 for vm in $vms; do
-  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  export SIGMADBADDR="10.0.102.10:3306"
-  export NAMED="${NAMED}"
-#  export SIGMADEBUG="REALMMGR;SIGMAMGR;REALMMGR_ERR;SIGMAMGR_ERR;NODED;NODED_ERR;MACHINED;MACHINED_ERR;"
+    echo $vm
+    KERNELID="sigma-$(echo $RANDOM | md5sum | head -c 8)"
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+  mkdir -p /tmp/sigmaos
+  export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
     ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
     echo "ncores:"
@@ -81,12 +91,23 @@ for vm in $vms; do
     echo "ncores:"
     nproc
   fi
+
+  cd ulambda
+
+  echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
-    echo "START ${NAMED}"
-    (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)
+    echo "START ${SIGMANAMED} ${KERNELID}"
+    ./make.sh --norace linux
+    ./start-network.sh
+    ./start-db.sh
+    ./start-kernel.sh --boot realm --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
-    echo "JOIN ${NAMED}"
-    (cd ulambda; SIGMAPID=machined-$vm nohup $PRIVILEGED_BIN/realm/machined > /tmp/machined.out 2>&1 < /dev/null &)
+    echo "JOIN ${SIGMANAMED} ${KERNELID}"
+     ${TOKEN} 2>&1 > /dev/null
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
+ if [ "${vm}" = "${MAIN}" ]; then
+     TOKEN=$(ssh -i key-$VPC.pem ubuntu@$vm docker swarm join-token worker | grep docker)
+ fi   
 done

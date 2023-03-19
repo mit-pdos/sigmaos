@@ -4,10 +4,9 @@ import (
 	"strconv"
 	"sync"
 
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -15,42 +14,42 @@ import (
 
 const (
 	SHRDDIR = "shard/"
-	NCORE   = 2
 )
 
 type ShardMgr struct {
 	sync.Mutex
-	*fslib.FsLib
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClnt
 	bin    string
 	job    string
 	shards []proc.Tpid
 	nshard int
+	ncore  proc.Tcore
 	pn     string
+	public bool
 }
 
 func (sm *ShardMgr) addShard(i int) error {
 	// SpawnBurst to spread shards across procds.
-	p := proc.MakeProc(sm.bin, []string{sm.job, SHRDDIR + strconv.Itoa(i)})
-	p.SetNcore(proc.Tcore(NCORE))
-	_, errs := sm.SpawnBurst([]*proc.Proc{p})
+	p := proc.MakeProc(sm.bin, []string{sm.job, strconv.FormatBool(sm.public), SHRDDIR + strconv.Itoa(i)})
+	p.SetNcore(sm.ncore)
+	_, errs := sm.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {
 		return errs[0]
 	}
-	if err := sm.WaitStart(p.Pid); err != nil {
+	if err := sm.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	sm.shards = append(sm.shards, p.Pid)
+	sm.shards = append(sm.shards, p.GetPid())
 	return nil
 }
 
-func MkShardMgr(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, job, bin, pn string) (*ShardMgr, error) {
-	if _, err := fsl.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
+func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, ncore proc.Tcore, job, bin, pn string, public bool) (*ShardMgr, error) {
+	if _, err := sc.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
 	}
-	sm := &ShardMgr{FsLib: fsl, ProcClnt: pclnt, bin: bin, job: job, shards: make([]proc.Tpid, 0), nshard: n, pn: pn}
+	sm := &ShardMgr{SigmaClnt: sc, bin: bin, job: job, shards: make([]proc.Tpid, 0), nshard: n, ncore: ncore, pn: pn, public: public}
 	for i := 0; i < n; i++ {
 		if err := sm.addShard(i); err != nil {
 			return nil, err

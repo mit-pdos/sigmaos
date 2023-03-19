@@ -8,9 +8,9 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -32,22 +32,22 @@ func (r RatePlans) Less(i, j int) bool {
 
 type Rate struct {
 	dbc    *dbclnt.DbClnt
-	cachec *cacheclnt.CacheClnt
+	cachec CacheClnt
 }
 
 // Run starts the server
-func RunRateSrv(job string) error {
+func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELRATE, r)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRATE, r, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.FsLib(), sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.FsLib(), job)
+	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
 	if err != nil {
 		return err
 	}
@@ -65,13 +65,13 @@ func RunRateSrv(job string) error {
 }
 
 // GetRates gets rates for hotels
-func (s *Rate) GetRates(req proto.RateRequest, res *proto.RateResult) error {
+func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
 		if err := s.cachec.Get(key, r); err != nil {
-			if err.Error() != cacheclnt.ErrMiss.Error() {
+			if !s.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
@@ -79,7 +79,7 @@ func (s *Rate) GetRates(req proto.RateRequest, res *proto.RateResult) error {
 			if err != nil {
 				return err
 			}
-			if err := s.cachec.Set(key, r); err != nil {
+			if err := s.cachec.Put(key, r); err != nil {
 				return err
 			}
 		}

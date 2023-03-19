@@ -41,9 +41,6 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-DIR=$(dirname $0)
-. $DIR/../.env
-
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
@@ -57,11 +54,12 @@ do
   stop="
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
         (cd ulambda; ./stop.sh)
-        rm -rf $UXROOT > /dev/null 2>&1
+        rm -rf /tmp/sigmaos-perf > /dev/null 2>&1
         rm /tmp/bench.out > /dev/null 2>&1
         rm /tmp/start.out > /dev/null 2>&1
         rm /tmp/make.out > /dev/null 2>&1
         rm /tmp/machine.out > /dev/null 2>&1
+        yes | docker system prune
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$stop"

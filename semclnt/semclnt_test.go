@@ -9,6 +9,7 @@ import (
 	"sigmaos/delay"
 	"sigmaos/fslib"
 	"sigmaos/semclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -21,7 +22,8 @@ func TestSemClntSimple(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
+	fsl0, err := fslib.MakeFsLibAddr("sem0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
 	sem.Init(0)
@@ -54,8 +56,10 @@ func TestSemClntConcur(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
-	fsl1 := fslib.MakeFsLibAddr("semd1", fslib.Named())
+	fsl0, err := fslib.MakeFsLibAddr("sem0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(ts.T, err, "fsl0")
+	fsl1, err := fslib.MakeFsLibAddr("semd1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 1000; i++ {
 		sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")

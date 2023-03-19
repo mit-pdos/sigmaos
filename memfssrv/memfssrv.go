@@ -3,23 +3,28 @@ package memfssrv
 import (
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/port"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 var rootP = path.Path{""}
 
-func (fs *MemFs) Root() fs.Dir {
-	return fs.root
+func (mfs *MemFs) Root() fs.Dir {
+	return mfs.root
 }
 
-func (fs *MemFs) FsLib() *fslib.FsLib {
-	return fs.fsl
+func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
+	return mfs.sc
+}
+
+func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
+	return port.MkPublicAddrs(mfs.pi.Hip, mfs.pi.Pb, net, mfs.MyAddr())
 }
 
 // Note: MkDev() sets parent
@@ -57,7 +62,6 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	// i := inode.MakeInode(mfs.ctx, sp.DMDEVICE, d)
 	dev.SetParent(d)
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }

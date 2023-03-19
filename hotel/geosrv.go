@@ -10,6 +10,7 @@ import (
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
@@ -39,22 +40,25 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(n string) error {
+func RunGeoSrv(job string, public bool) error {
 	geo := &Geo{}
 	geo.geoidx = newGeoIndex("data/geo.json")
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELGEO, geo)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELGEO, geo, public)
 	if err != nil {
 		return err
 	}
 
-	p := perf.MakePerf(perf.HOTEL_GEO)
+	p, err := perf.MakePerf(perf.HOTEL_GEO)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	return pds.RunServer()
 }
 
 // Nearby returns all hotels within a given distance.
-func (s *Geo) Nearby(req proto.GeoRequest, rep *proto.GeoResult) error {
+func (s *Geo) Nearby(ctx fs.CtxI, req proto.GeoRequest, rep *proto.GeoResult) error {
 	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
 	for _, p := range points {

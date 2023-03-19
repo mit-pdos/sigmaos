@@ -11,13 +11,21 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/namespace"
+	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	schedd "sigmaos/schedd/proto"
+	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+)
 
-	// "sigmaos/seccomp"
-	"sigmaos/semclnt"
+type Thow uint32
+
+const (
+	HSCHEDD Thow = iota + 1 // spawned as a sigmos proc
+	HLINUX                  // spawned as a linux process
+	HDOCKER                 // spawned as a container
 )
 
 type ProcClnt struct {
@@ -26,7 +34,8 @@ type ProcClnt struct {
 	pid             proc.Tpid
 	isExited        proc.Tpid
 	procdir         string
-	procds          []string
+	schedds         map[string]*protdevclnt.ProtDevClnt
+	scheddIps       []string
 	lastProcdUpdate time.Time
 	burstOffset     int
 }
@@ -36,30 +45,27 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.procdir = procdir
+	clnt.schedds = make(map[string]*protdevclnt.ProtDevClnt)
+	clnt.scheddIps = make([]string, 0)
 	return clnt
 }
 
 // ========== SPAWN ==========
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp string, viaProcd bool) (*exec.Cmd, error) {
-	// Sanity checks
-	if viaProcd && procdIp == "" {
-		debug.PrintStack()
-		db.DFatalf("Spawned kernel proc via procd, with invalid procd IP %v", procdIp)
-	}
-	if !viaProcd && procdIp != "" {
-		debug.PrintStack()
-		db.DFatalf("Spawned kernel proc not via procd, with procd IP %v", procdIp)
-	}
-	// Spawn the proc, either through procd, or just by creating the named state
-	// the proc (and its parent) expects.
-	if err := clnt.spawn(procdIp, viaProcd, p); err != nil {
+// Create the named state the proc (and its parent) expects.
+func (clnt *ProcClnt) MkProc(p *proc.Proc, how Thow, kernelId string) error {
+	// Always spawn kernel procs on the local kernel.
+	return clnt.spawn(kernelId, how, p, clnt.getScheddClnt(kernelId))
+}
+
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (*exec.Cmd, error) {
+	if err := clnt.MkProc(p, how, kernelId); err != nil {
 		return nil, err
 	}
-	if !viaProcd {
+	if how == HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
-		// locally.
-		return proc.RunKernelProc(p, namedAddr)
+		// as a local Linux process
+		return kproc.RunKernelProc(p, clnt.NamedAddr(), clnt.Realm())
 	}
 	return nil, nil
 }
@@ -70,13 +76,14 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string, procdIp 
 //
 // Use of burstOffset makes sure we continue rotating across invocations as
 // well as within an invocation.
-func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc) ([]*proc.Proc, []error) {
+func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
-		clnt.updateProcds()
-		err := clnt.spawn(clnt.nextProcd(), true, ps[i])
+		clnt.updateSchedds()
+		kernelId := clnt.nextSchedd(procsPerSchedd)
+		err := clnt.spawn(kernelId, HSCHEDD, ps[i], clnt.getScheddClnt(kernelId))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -91,95 +98,74 @@ type errTuple struct {
 	err  error
 }
 
-// XXX Currently for benchmarking purposes... remove eventually.
-func (clnt *ProcClnt) SpawnBurstParallel(ps []*proc.Proc, chunksz int) ([]*proc.Proc, []error) {
-	failed := []*proc.Proc{}
-	errs := []error{}
-	errc := make(chan []*errTuple)
-	clnt.updateProcds()
-	for i := 0; i < len(ps); i += chunksz {
-		go func(i int) {
-			// Take a slice of procs.
-			pslice := ps[i : i+chunksz]
-			es := []*errTuple{}
-			lastUpdate := time.Now()
-			for x, p := range pslice {
-				// Update the list of procds periodically, but not too often
-				if time.Since(lastUpdate) >= sp.Conf.Realm.RESIZE_INTERVAL {
-					clnt.updateProcds()
-					lastUpdate = time.Now()
-				}
-				// Update the list of active procds.
-				_ = x
-				err := clnt.spawn(clnt.nextProcd(), true, p)
-				if err != nil {
-					db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", p, err)
-					es = append(es, &errTuple{p, err})
-				}
-			}
-			errc <- es
-		}(i)
-	}
-	// Wait for spawn results.
-	for i := 0; i < len(ps); i += chunksz {
-		es := <-errc
-		for _, e := range es {
-			failed = append(failed, e.proc)
-			errs = append(errs, e.err)
-		}
-	}
-	return failed, errs
-}
-
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", true, p)
+	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
 }
 
-// Spawn a proc on procdIp. If viaProcd is false, then the proc env is set up
+func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
+	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
+	s, err := clnt.NamedAddr().Taddrs2String()
+	if err != nil {
+		return err
+	}
+	p.AppendEnv(proc.SIGMANAMED, s)
+	return nil
+}
+
+// Spawn a proc on kernelId. If viaProcd is false, then the proc env is set up
 // and the proc is not actually spawned on procd, since it will be started
 // later.
-func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
-	if p.Ncore > 0 && p.Type != proc.T_LC {
+func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protdevclnt.ProtDevClnt) error {
+	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
 	}
+
+	clnt.extendBaseEnv(p)
+
+	// Set the realm id.
+	if p.RealmStr == "" {
+		p.SetRealm(clnt.Realm())
+	}
+
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
 
-	db.DPrintf(db.PROCCLNT, "Spawn %v", p)
+	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(procdIp, p, childProcdir, viaProcd); err != nil {
+	if err := clnt.addChild(kernelId, p, childProcdir, how); err != nil {
 		return err
 	}
 
-	p.SpawnTime = time.Now()
+	p.SetSpawnTime(time.Now())
 	// If this is not a privileged proc, spawn it through procd.
-	if viaProcd {
-		b, err := json.Marshal(p)
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Spawn marshal err %v", err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+	if how == HSCHEDD {
+		if pdc == nil {
+			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\nschedds:%v, %v", kernelId, p, clnt.schedds, clnt.scheddIps)
 		}
-		fn := path.Join(sp.PROCDREL, procdIp, sp.PROCD_SPAWN_FILE)
-		_, err = clnt.SetFile(fn, b, sp.OWRITE, 0)
+		req := &schedd.SpawnRequest{
+			Realm:     clnt.Realm().String(),
+			ProcProto: p.GetProto(),
+		}
+		res := &schedd.SpawnResponse{}
+		err := pdc.RPC("Schedd.Spawn", req, res)
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "SetFile %v err %v", fn, err)
-			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
+		err := clnt.MakeProcDir(p.GetPid(), p.ProcDir, p.IsPrivilegedProc())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, procd will create the semaphore.
-		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
+		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
 	}
@@ -188,53 +174,97 @@ func (clnt *ProcClnt) spawn(procdIp string, viaProcd bool, p *proc.Proc) error {
 }
 
 // Update the list of active procds.
-func (clnt *ProcClnt) updateProcds() {
+func (clnt *ProcClnt) updateSchedds() {
 	clnt.Lock()
 	defer clnt.Unlock()
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL {
+	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(clnt.scheddIps) > 0 {
+		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
 		return
 	}
 	clnt.lastProcdUpdate = time.Now()
 	// Read the procd union dir.
-	procds, _, err := clnt.ReadDir(sp.PROCDREL + "/")
+	schedds, _, err := clnt.ReadDir(sp.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error ReadDir procd: %v", err)
 	}
-	// Alloc enough space for the list of procds, excluding the ws queue.
-	clnt.procds = make([]string, 0, len(procds)-1)
-	for _, procd := range procds {
-		if procd.Name != path.Base(path.Dir(sp.PROCD_WS)) {
-			clnt.procds = append(clnt.procds, procd.Name)
-		}
+	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
+	// Alloc enough space for the list of schedds.
+	clnt.scheddIps = make([]string, 0, len(schedds))
+	for _, schedd := range schedds {
+		clnt.scheddIps = append(clnt.scheddIps, schedd.Name)
 	}
 }
 
-// Get the next procd to burst on.
-func (clnt *ProcClnt) nextProcd() string {
+func (clnt *ProcClnt) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
 	clnt.Lock()
 	defer clnt.Unlock()
 
-	if len(clnt.procds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
+	// See if we already have a client for this procd.
+	if pdc, ok := clnt.schedds[kernelId]; ok {
+		return pdc
 	}
-
-	clnt.burstOffset++
-	return clnt.procds[clnt.burstOffset%len(clnt.procds)]
+	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, kernelId))
+	if err != nil {
+		sts, _ := clnt.GetDir(sp.SCHEDD)
+		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt localIP:%v scheddIP:%v schedds:%v err:%v", clnt.GetLocalIP(), kernelId, sp.Names(sts), err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt: %v", err)
+		return nil
+	}
+	clnt.schedds[kernelId] = pdc
+	// Local procd is special: it has 2 entries, one under its IP and the other
+	// under ~local.
+	if kernelId == "~local" {
+		p, ok, err := clnt.ResolveUnion(path.Join(sp.SCHEDD, "~local"))
+		if !ok || err != nil {
+			// If ~local hasn't registered itself yet, this method should've bailed
+			// out earlier.
+			db.DFatalf("Couldn't resolve schedd ~local: %v, %v, %v", p, ok, err)
+		}
+		kernelId = path.Base(p)
+		db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", kernelId)
+		clnt.schedds[kernelId] = pdc
+	}
+	return pdc
 }
 
-// XXX For short-term benchmarking only.
-func (clnt *ProcClnt) nextProcdUnsafe(i int) string {
-	if len(clnt.procds) == 0 {
-		db.DFatalf("Error: no procds to spawn on")
+// Get the next procd to burst on.
+func (clnt *ProcClnt) nextSchedd(spread int) string {
+	clnt.Lock()
+	defer clnt.Unlock()
+
+	if len(clnt.scheddIps) == 0 {
+		debug.PrintStack()
+		db.DFatalf("Error: no schedds to spawn on")
 	}
 
-	return clnt.procds[i%len(clnt.procds)]
+	sdip := clnt.scheddIps[(clnt.burstOffset/spread)%len(clnt.scheddIps)]
+	clnt.burstOffset++
+	return sdip
 }
 
 // ========== WAIT ==========
+
+// Wait until a proc file is removed. Return an error if SetRemoveWatch returns
+// an unreachable error.
+func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
+	db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, pn)
+	done := make(chan bool)
+	err := clnt.SetRemoveWatch(pn, func(string, error) {
+		done <- true
+	})
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
+		if serr.IsErrUnreachable(err) {
+			return err
+		}
+	} else {
+		<-done
+	}
+	return nil
+}
 
 func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
@@ -246,21 +276,13 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	procfileLink := string(b)
 	// Kernel procs will have empty proc file links.
 	if procfileLink != "" {
-		db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, procfileLink)
-		done := make(chan bool)
-		err := clnt.SetRemoveWatch(procfileLink, func(string, error) {
-			done <- true
-		})
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-			if serr.IsErrUnreachable(err) {
-				return err
-			}
-		} else {
-			<-done
+		// Wait for the proc queue file to be removed. Should not return an error.
+		if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
+			return err
 		}
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
+	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
 }
@@ -348,17 +370,6 @@ func (clnt *ProcClnt) Started() error {
 	if err != nil && !serr.IsErrUnavailable(err) {
 		return fmt.Errorf("Started error %v", err)
 	}
-	// Only isolate non-kernel procs
-	if !proc.GetIsPrivilegedProc() {
-		// Isolate the process namespace
-		newRoot := proc.GetNewRoot()
-		if err := namespace.Isolate(newRoot); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error Isolate in clnt.Started: %v", err)
-			return fmt.Errorf("Started error %v", err)
-		}
-		// Load a seccomp filter.
-		// seccomp.LoadFilter()
-	}
 	return nil
 }
 
@@ -371,7 +382,7 @@ func (clnt *ProcClnt) Started() error {
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
-func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
+func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 
 	// will catch some unintended misuses: a proc calling exited
@@ -381,6 +392,10 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 		db.DFatalf("Exited called after exited %v", procdir)
 	}
 
+	return exited(fsl, procdir, parentdir, pid, status)
+}
+
+func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
 	b, err := json.Marshal(status)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
@@ -388,17 +403,17 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	}
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
+	if _, err := fsl.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) MakeFile %v err %v", fn, err)
 	}
 
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+	semExit := semclnt.MakeSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
 	if err := semExit.Up(); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited semExit up error: %v, %v, %v", procdir, pid, err)
 	}
 
 	// clean myself up
-	r := clnt.removeProc(procdir + "/")
+	r := removeProc(fsl, procdir+"/")
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}
@@ -406,25 +421,26 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 	return nil
 }
 
-// If exited() fails, invoke os.Exit(1) to indicate to procd that proc
-// failed
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	err := clnt.exited(clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
+	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
 		db.DFatalf("exited %v err %v", proc.GetPid(), err)
 	}
 	clnt.FsLib.Exit()
 }
 
-func (clnt *ProcClnt) ExitedProcd(pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {
+func (clnt *ProcClnt) ExitedOK() {
+	clnt.Exited(proc.MakeStatus(proc.StatusOK))
+}
+
+func ExitedProcd(fsl *fslib.FsLib, pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
-	err := clnt.exited(procdir, parentdir, pid, status)
+	err := exited(fsl, procdir, parentdir, pid, status)
 	if err != nil {
-		// XXX maybe remove any state left of proc?
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentdir, proc.START_SEM))
+	semStart := semclnt.MakeSemClnt(fsl, path.Join(parentdir, proc.START_SEM))
 	semStart.Up()
 }
 
@@ -449,13 +465,13 @@ func (clnt *ProcClnt) Evict(pid proc.Tpid) error {
 
 // Called by realm to evict another machine's named.
 func (clnt *ProcClnt) EvictKernelProc(pid string) error {
-	procdir := path.Join(proc.KPIDS, pid)
+	procdir := path.Join(sp.KPIDSREL, pid)
 	return clnt.evict(procdir)
 }
 
 // Called by procd.
-func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
-	procdir := path.Join(sp.PROCD, procdIp, proc.PIDS, pid.String())
+func (clnt *ProcClnt) EvictProcd(scheddIp string, pid proc.Tpid) error {
+	procdir := path.Join(sp.SCHEDD, scheddIp, sp.PIDS, pid.String())
 	return clnt.evict(procdir)
 }
 

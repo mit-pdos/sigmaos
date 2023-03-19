@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/sessp"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -34,14 +34,14 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("user/leadertest-leader", []string{dir, last, sec})
+		p := proc.MakeProc("leadertest-leader", []string{dir, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 
-		err = ts.WaitStart(p.Pid)
+		err = ts.WaitStart(p.GetPid())
 		assert.Nil(t, err, "WaitStarted")
 
-		pids = append(pids, p.Pid)
+		pids = append(pids, p.GetPid())
 	}
 
 	for _, pid := range pids {
@@ -85,8 +85,6 @@ func TestOldPrimary(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
-
-	log.Printf("exit\n")
 
 	ts.Shutdown()
 }

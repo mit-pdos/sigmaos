@@ -3,11 +3,11 @@ package protclnt
 import (
 	"sync/atomic"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/path"
 	"sigmaos/rand"
+	"sigmaos/serr"
 	"sigmaos/sessclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,13 +24,14 @@ type Clnt struct {
 	id    sessp.Tclient
 	seqno sessp.Tseqno
 	sm    *sessclnt.Mgr
+	realm sp.Trealm
 }
 
-func MakeClnt() *Clnt {
+func MakeClnt(clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid
-	clnt.sm = sessclnt.MakeMgr(clnt.id)
+	clnt.sm = sessclnt.MakeMgr(clnt.id, clntnet)
 	return clnt
 }
 
@@ -38,7 +39,7 @@ func (clnt *Clnt) ReadSeqNo() sessp.Tseqno {
 	return sessp.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs []string, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
+func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, data, fence)
 	if err != nil {
 		return nil, err
@@ -50,7 +51,7 @@ func (clnt *Clnt) CallServer(addrs []string, args sessp.Tmsg, data []byte, fence
 	return reply, nil
 }
 
-func (clnt *Clnt) Attach(addrs []string, uname string, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+func (clnt *Clnt) Attach(addrs sp.Taddrs, uname string, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.MkTattach(fid, sp.NoFid, uname, path)
 	reply, err := clnt.CallServer(addrs, args, nil, sessp.MakeFenceNull())
 	if err != nil {
@@ -71,17 +72,17 @@ func (clnt *Clnt) Exit() *serr.Err {
 	return nil
 }
 
-func (clnt *Clnt) MakeProtClnt(addrs []string) *ProtClnt {
+func (clnt *Clnt) MakeProtClnt(addrs sp.Taddrs) *ProtClnt {
 	protclnt := &ProtClnt{addrs, clnt}
 	return protclnt
 }
 
 type ProtClnt struct {
-	addrs []string
+	addrs sp.Taddrs
 	clnt  *Clnt
 }
 
-func (pclnt *ProtClnt) Servers() []string {
+func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 
@@ -313,21 +314,8 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) SetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTsetfile(fid, mode, offset, path, resolve)
-	reply, err := pclnt.CallData(args, data, f)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.Msg.(*sp.Rwrite)
-	if !ok {
-		return nil, serr.MkErr(serr.TErrBadFcall, "Rwrite")
-	}
-	return msg, nil
-}
-
-func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTputfile(fid, mode, perm, offset, path)
+func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve)
 	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err

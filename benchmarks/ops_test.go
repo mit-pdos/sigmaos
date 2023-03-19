@@ -3,17 +3,12 @@ package benchmarks_test
 import (
 	"time"
 
-	// XXX
-	"fmt"
-	"sigmaos/fslib"
-	"sigmaos/procclnt"
-
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/proc"
-	"sigmaos/procdclnt"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/test"
 )
@@ -22,9 +17,9 @@ import (
 // The set of basic operations that we benchmark.
 //
 
-type testOp func(*test.Tstate, interface{}) (time.Duration, float64)
+type testOp func(*test.RealmTstate, interface{}) (time.Duration, float64)
 
-func initSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func initSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
@@ -32,7 +27,7 @@ func initSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func upSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func upSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
@@ -40,7 +35,7 @@ func upSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func downSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
@@ -49,12 +44,12 @@ func downSemaphore(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 }
 
 // TODO for matmul, possibly only benchmark internal time
-func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	p := i.(*proc.Proc)
 	err1 := ts.Spawn(p)
 	db.DPrintf(db.TEST1, "Spawned %v", p)
-	status, err2 := ts.WaitExit(p.Pid)
+	status, err2 := ts.WaitExit(p.GetPid())
 	assert.Nil(ts.T, err1, "Failed to Spawn %v", err1)
 	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
@@ -62,32 +57,26 @@ func runProc(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func spawnBurstWaitStartProcs(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ps := i.([]*proc.Proc)
-	per := len(ps) / AAA
-	db.DPrintf(db.ALWAYS, "%v procs per clnt", per)
-	pclnts := []*procclnt.ProcClnt{}
-	for i := 0; i < AAA; i++ {
-		db.DPrintf(db.ALWAYS, "realm ndaddr %v", ts.NamedAddr())
-		fsl := fslib.MakeFsLibAddr(fmt.Sprintf("test-%v", i), ts.NamedAddr())
-		pclnts = append(pclnts, procclnt.MakeProcClntTmp(fsl, ts.NamedAddr()))
-	}
+	per := len(ps) / N_THREADS
+	db.DPrintf(db.ALWAYS, "%v procs per thread", per)
 	start := time.Now()
 	done := make(chan bool)
-	for i := range pclnts {
+	for i := 0; i < N_THREADS; i++ {
 		go func(i int) {
-			spawnBurstProcs2(ts, pclnts[i], ps[i*per:(i+1)*per])
+			spawnBurstProcs(ts, ps[i*per:(i+1)*per])
 			waitStartProcs(ts, ps[i*per:(i+1)*per])
 			done <- true
 		}(i)
 	}
-	for _ = range pclnts {
+	for i := 0; i < N_THREADS; i++ {
 		<-done
 	}
 	return time.Since(start), 1.0
 }
 
-func invokeWaitStartLambdas(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func invokeWaitStartLambdas(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	sems := i.([]*semclnt.SemClnt)
 	for _, sem := range sems {
@@ -103,7 +92,7 @@ func invokeWaitStartLambdas(ts *test.Tstate, i interface{}) (time.Duration, floa
 	return time.Since(start), 1.0
 }
 
-func invokeWaitStartOneLambda(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	sem := i.(*semclnt.SemClnt)
 	go func(sem *semclnt.SemClnt) {
@@ -113,37 +102,36 @@ func invokeWaitStartOneLambda(ts *test.Tstate, i interface{}) (time.Duration, fl
 	return time.Since(start), 1.0
 }
 
-// XXX Should get job name in a tuple.
-func runMR(ts *test.Tstate, i interface{}) (time.Duration, float64) {
-	start := time.Now()
+func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*MRJobInstance)
 	ji.PrepareMRJob()
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-	pdc.MonitorProcds()
-	defer pdc.Done()
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	sdc.MonitorSchedds()
+	defer sdc.Done()
+	start := time.Now()
 	ji.StartMRJob()
 	ji.Wait()
+	dur := time.Since(start)
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
-	return time.Since(start), 1.0
+	// Sleep a bit to allow util to update.
+	time.Sleep(4 * time.Second)
+	ji.p.Done()
+	return dur, 1.0
 }
 
-func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-	pdc.MonitorProcds()
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	pdc.MonitorSchedds()
 	defer pdc.Done()
 	// Start some balancers
 	start := time.Now()
 	ji.StartKVJob()
-	db.DPrintf(db.TEST, "Made KV job")
-	// Add more kvd groups.
-	for i := 0; i < ji.nkvd-1; i++ {
-		ji.AddKVDGroup()
-	}
+
 	// If not running against redis.
 	if !ji.redis {
 		cnts := ji.GetKeyCountsPerGroup()
@@ -154,6 +142,7 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	// Wait for an ack.
 	<-ji.ready
 	db.DPrintf(db.TEST, "Added KV groups")
+
 	db.DPrintf(db.TEST, "Running clerks")
 	// Run through the job phases.
 	for !ji.IsDone() {
@@ -164,14 +153,23 @@ func runKV(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func runCached(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CachedJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	start := time.Now()
+	ji.RunCachedJob()
+	return time.Since(start), 1.0
+}
+
 // XXX Should get job name in a tuple.
-func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*WwwJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-	pdc.MonitorProcds()
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	pdc.MonitorSchedds()
 	defer pdc.Done()
 	start := time.Now()
 	ji.StartWwwJob()
@@ -179,14 +177,14 @@ func runWww(ts *test.Tstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
-func runHotel(ts *test.Tstate, i interface{}) (time.Duration, float64) {
+func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*HotelJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-		pdc.MonitorProcds()
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc.MonitorSchedds()
 		defer pdc.Done()
 	}
 	start := time.Now()

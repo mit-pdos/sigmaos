@@ -1,6 +1,8 @@
 package semclnt
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/serr"
@@ -77,4 +79,8 @@ func (c *SemClnt) Up() error {
 
 func (c *SemClnt) GetPath() string {
 	return c.path
+}
+
+func (c *SemClnt) String() string {
+	return fmt.Sprintf("sem %v", c.path)
 }

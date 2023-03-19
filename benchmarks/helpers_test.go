@@ -10,15 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/machine"
+	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
-	"sigmaos/procdclnt"
 	"sigmaos/rand"
-	"sigmaos/realm"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -29,13 +27,15 @@ import (
 
 // ========== Proc Helpers ==========
 
-func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcore) ([]*proc.Proc, []interface{}) {
+func makeNProcs(n int, prog string, args []string, env map[string]string, ncore proc.Tcore) ([]*proc.Proc, []interface{}) {
 	ps := make([]*proc.Proc, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProc(prog, args)
-		p.Env = append(p.Env, env...)
+		for k, v := range env {
+			p.AppendEnv(k, v)
+		}
 		p.SetNcore(ncore)
 		ps = append(ps, p)
 		is = append(is, p)
@@ -43,104 +43,84 @@ func makeNProcs(n int, prog string, args []string, env []string, ncore proc.Tcor
 	return ps, is
 }
 
-func spawnBurstProcs(ts *test.Tstate, ps []*proc.Proc) {
+func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
-	_, errs := ts.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
+	_, errs := ts.SpawnBurst(ps, 1)
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 
-func spawnBurstProcs2(ts *test.Tstate, pclnt *procclnt.ProcClnt, ps []*proc.Proc) {
-	db.DPrintf(db.TEST, "Burst-spawning2 %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
-	_, errs := pclnt.SpawnBurstParallel(ps, len(ps)/MAX_PARALLEL)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
-}
-
-func waitStartProcs(ts *test.Tstate, ps []*proc.Proc) {
+func waitStartProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
-		err := ts.WaitStart(p.Pid)
+		err := ts.WaitStart(p.GetPid())
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 	}
 	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
 
-func waitExitProcs(ts *test.Tstate, ps []*proc.Proc) {
+func waitExitProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
-		status, err := ts.WaitExit(p.Pid)
+		status, err := ts.WaitExit(p.GetPid())
 		assert.Nil(ts.T, err, "WaitStart: %v", err)
 		assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
 	}
 	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
 
-func evictProcs(ts *test.Tstate, ps []*proc.Proc) {
+func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
-		err := ts.Evict(p.Pid)
+		err := ts.Evict(p.GetPid())
 		assert.Nil(ts.T, err, "Evict: %v", err)
-		status, err := ts.WaitExit(p.Pid)
+		status, err := ts.WaitExit(p.GetPid())
 		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
 	}
 }
 
 // ========== Realm Helpers ==========
 
-func countNClusterCores(ts *test.Tstate) {
-	// If realms are turned on, find aggregate number of cores across all
-	// machines.
-	if ts.RunningInRealm() {
-		N_CLUSTER_CORES = 0
-		db.DPrintf(db.TEST, "Running with realms")
-		fsl := fslib.MakeFsLib("test")
-		_, err := fsl.ProcessDir(machine.MACHINES, func(st *sp.Stat) (bool, error) {
-			cfg := machine.MakeEmptyConfig()
-			err := fsl.GetFileJson(path.Join(machine.MACHINES, st.Name, machine.CONFIG), cfg)
-			if err != nil {
-				return true, err
-			}
-			N_CLUSTER_CORES += int(cfg.Cores.Size())
-			return false, nil
-		})
-		assert.Nil(ts.T, err, "Error counting sigma cores: %v", err)
-	} else {
-		db.DPrintf(db.TEST, "Running without realms")
-		N_CLUSTER_CORES = int(linuxsched.NCores)
-	}
-	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", N_CLUSTER_CORES)
+// Count the number of cores in the cluster.
+func countClusterCores(rootts *test.Tstate) proc.Tcore {
+	// XXX For now, we assume all machines have the same number of cores.
+	sts, err := rootts.GetDir(sp.BOOT)
+	assert.Nil(rootts.T, err)
+
+	ncores := proc.Tcore(len(sts) * int(linuxsched.NCores))
+	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", ncores)
+	return ncores
 }
 
-// Potentially pregrow a realm to encompass all cluster resources.
-func maybePregrowRealm(ts *test.Tstate) {
-	if PREGROW_REALM {
-		// Make sure we've counted the number of cores in the cluster.
-		countNClusterCores(ts)
-		rclnt := realm.MakeRealmClntFsl(fslib.MakeFsLib("test-rclnt"), ts.ProcClnt)
-		// While we are missing cores, try to grow.
-		for realm.GetRealmConfig(rclnt.FsLib, ts.RealmId()).NCores != proc.Tcore(N_CLUSTER_CORES) {
-			rclnt.GrowRealm(ts.RealmId())
-		}
-		// Sleep for a bit, so procclnts will take note of the change.
-		time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
-		pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
-		n, _, err := pdc.Nprocd()
-		assert.Nil(ts.T, err, "Err %v", err)
-		db.DPrintf(db.TEST, "Pre-grew realm, now running with %v procds", n)
+// Warm up a realm, by starting uprocds for it on all machines in the cluster.
+func warmupRealm(ts *test.RealmTstate) {
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	// Get the number of schedds.
+	n, err := sdc.Nschedd()
+	assert.Nil(ts.T, err, "Get NSchedd: %v", err)
+	// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
+	for _, ncore := range []proc.Tcore{0, 1} {
+		// Make N LC procs.
+		ps, _ := makeNProcs(n, "sleeper", []string{"1000us", ""}, nil, ncore)
+		// Burst the procs across the available schedds.
+		spawnBurstProcs(ts, ps)
+		// Wait for them to exit.
+		waitExitProcs(ts, ps)
 	}
+	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
 }
 
 // ========== Dir Helpers ==========
 
-func makeOutDir(ts *test.Tstate) {
+func makeOutDir(ts *test.RealmTstate) {
 	err := ts.MkDir(OUT_DIR, 0777)
 	assert.Nil(ts.T, err, "Couldn't make out dir: %v", err)
 }
 
-func rmOutDir(ts *test.Tstate) {
+func rmOutDir(ts *test.RealmTstate) {
 	err := ts.RmDir(OUT_DIR)
 	assert.Nil(ts.T, err, "Couldn't rm out dir: %v", err)
 }
 
 // ========== Semaphore Helpers ==========
 
-func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{}) {
+func makeNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interface{}) {
 	ss := make([]*semclnt.SemClnt, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
@@ -154,11 +134,11 @@ func makeNSemaphores(ts *test.Tstate, n int) ([]*semclnt.SemClnt, []interface{})
 
 // ========== MR Helpers ========
 
-func makeNMRJobs(ts *test.Tstate, n int, app string) ([]*MRJobInstance, []interface{}) {
+func makeNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeMRJobInstance(ts, app, app+"-mr-"+rand.String(16)+"-"+ts.RealmId())
+		i := MakeMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String())
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -167,7 +147,7 @@ func makeNMRJobs(ts *test.Tstate, n int, app string) ([]*MRJobInstance, []interf
 
 // ========== KV Helpers ========
 
-func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
+func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 	ds := make([]time.Duration, 0, len(ss))
 	for _, s := range ss {
 		d, err := time.ParseDuration(s)
@@ -177,7 +157,7 @@ func parseDurations(ts *test.Tstate, ss []string) []time.Duration {
 	return ds
 }
 
-func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
+func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
 	// If we're running with unbounded clerks...
 	if len(phases) > 0 {
 		assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
@@ -192,9 +172,22 @@ func makeNKVJobs(ts *test.Tstate, n, nkvd, kvdrepl int, nclerks []int, phases []
 	return js, is
 }
 
+// ========== Cached Helpers ==========
+func makeNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckncore, cachencore proc.Tcore) ([]*CachedJobInstance, []interface{}) {
+	js := make([]*CachedJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	durs := parseDurations(ts, []string{durstr})
+	for i := 0; i < n; i++ {
+		ji := MakeCachedJob(ts, nkeys, ncache, nclerks, durs[0], ckncore, cachencore)
+		js = append(js, ji)
+		is = append(is, ji)
+	}
+	return js, is
+}
+
 // ========== Www Helpers ========
 
-func makeWwwJobs(ts *test.Tstate, sigmaos bool, n int, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
+func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
 	ws := make([]*WwwJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
@@ -207,35 +200,84 @@ func makeWwwJobs(ts *test.Tstate, sigmaos bool, n int, wwwncore proc.Tcore, reqt
 
 // ========== Hotel Helpers ========
 
-func makeHotelJobs(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, false)
+		i := MakeHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func makeHotelJobsCli(ts *test.Tstate, sigmaos bool, dur string, maxrps string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, sigmaos, dur, maxrps, fn, true)
+		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
+}
+
+// ========== Client Helpers ==========
+
+var clidir string = path.Join("name/", "clnts")
+
+func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
+	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	err := sem.Init(0)
+	if !assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error sem init %v", err) {
+		return nil
+	}
+	db.DPrintf(db.TEST, "Create sem %v", sem)
+	return sem
+}
+
+// Waits for n - 1 clients to mark themselves as ready, releases them, and then
+// returns.
+func waitForClnts(rootts *test.Tstate, n int) {
+	// Make sure the clients directory has been created.
+	err := rootts.MkDir(clidir, 0777)
+	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	// Wait for n - 1 clnts to register themselves.
+	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
+		// N - 1 clnts + the semaphore
+		return len(sts) < n
+	})
+	assert.Nil(rootts.T, err, "Err ReadDirWatch: %v", err)
+	sem := createClntWaitSem(rootts)
+	err = sem.Up()
+	assert.Nil(rootts.T, err, "Err sem.Up: %v", err)
+}
+
+// Marks client as ready, waits for leader to release clients, adn then
+// returns.
+func clientReady(rootts *test.Tstate) {
+	// Make sure the clients directory has been created.
+	err := rootts.MkDir(clidir, 0777)
+	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	// Register the client as ready.
+	cid := "clnt-" + rand.String(4)
+	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)
+	assert.Nil(rootts.T, err, "Err PutFile: %v", err)
+	// Create a semaphore and wait for the leader to start the benchmark
+	sem := createClntWaitSem(rootts)
+	db.DPrintf(db.TEST, "sem.Down %v", cid)
+	sem.Down()
+	db.DPrintf(db.TEST, "sem.Down done %v", cid)
 }
 
 // ========== Download Results Helpers ==========
 
-// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), "/tmp/sigmaos/perf-output")
+// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), test.HOSTTMP+ "perf-output")
 func downloadS3Results(ts *test.Tstate, src string, dst string) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)

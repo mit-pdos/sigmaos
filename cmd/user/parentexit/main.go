@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"sigmaos/fslib"
+	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -18,18 +18,20 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage msec pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
-	pclnt := procclnt.MakeProcClnt(fsl)
-	pclnt.Started()
+	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MkSigmaClnt err %v\n", err)
+	}
+	sc.Started()
 	pid1 := proc.Tpid(os.Args[2])
-	a := proc.MakeProcPid(pid1, "user/sleeper", []string{os.Args[1], "name/"})
-	err := pclnt.Spawn(a)
+	a := proc.MakeProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
+	err = sc.Spawn(a)
 	if err != nil {
-		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
+		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
-	err = pclnt.WaitStart(pid1)
+	err = sc.WaitStart(pid1)
 	if err != nil {
-		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
+		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
-	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.ExitedOK()
 }

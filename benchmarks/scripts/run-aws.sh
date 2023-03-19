@@ -1,14 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --realm1 REALM1 --realm2 REALM2 [--version VERSION]" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --version VERSION" 1>&2
 }
 
 VPC=""
 KVPC=""
-REALM1=""
-REALM2=""
-VERSION=$(date +%s)
+TAG=""
+VERSION=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --vpc)
@@ -21,14 +20,9 @@ while [[ "$#" -gt 0 ]]; do
     KVPC="$1"
     shift
     ;;
-  --realm1)
+  --tag)
     shift
-    REALM1=$1
-    shift
-    ;;
-  --realm2)
-    shift
-    REALM2=$1
+    TAG=$1
     shift
     ;;
   --version)
@@ -48,21 +42,28 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$REALM1" ] || [ -z "$REALM2" ] || [ -z "$VERSION" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$TAG" ] || [ -z "$VERSION" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
 
+# REALM1 is always the BE realm, REALM2 is always the LC realm.
+REALM1="benchrealm1"
+REALM2="benchrealm2"
+
 # Set some variables
 DIR=$(realpath $(dirname $0)/../..)
-. $DIR/.env
 AWS_DIR=$DIR/aws
 OUT_DIR=$DIR/benchmarks/results/$VERSION
 GRAPH_SCRIPTS_DIR=$DIR/benchmarks/scripts/graph
 GRAPH_OUT_DIR=$DIR/benchmarks/results/graphs
 INIT_OUT=/tmp/init.out
 
-# cd to the ulambda root directory
+# Get the private IP address of the leader.
+cd $AWS_DIR
+LEADER_IP=$(./leader-ip.sh --vpc $VPC)
+
+# cd to the sigmaos root directory
 cd $DIR
 mkdir $OUT_DIR
 
@@ -79,17 +80,45 @@ start_cluster() {
   cd $AWS_DIR
   echo "" > $INIT_OUT
   ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
-  ./build-sigma.sh --vpc $vpc --realm $REALM1 --version $VERSION --branch master >> $INIT_OUT 2>&1
-  ./build-sigma.sh --vpc $vpc --realm $REALM2 --version $VERSION --branch master >> $INIT_OUT 2>&1
-  ./install-sigma.sh --vpc $vpc --realm $REALM1 --parallel >> $INIT_OUT 2>&1
-  ./install-sigma.sh --vpc $vpc --realm $REALM2 --parallel >> $INIT_OUT 2>&1
-  ./start-sigmaos.sh --vpc $vpc --realm $REALM1 --ncores $n_cores --n $n_vm >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
+  cd $DIR
+}
+
+should_skip() {
+  if [ $# -ne 2 ]; then
+    echo "should_skip args: perf_dir make_dir" 1>&2
+    exit 1
+  fi
+  perf_dir=$1
+  make_dir=$2
+  # Check if the experiment has already been run.
+  if [ -d $perf_dir ]; then
+    benchname="${perf_dir#$OUT_DIR/}"
+    echo "========== Skipping $benchname (already ran) =========="
+    return 1
+  fi
+  if [[ $make_dir == "true" ]]; then
+    # Create an output directory for the results.
+    mkdir -p $perf_dir
+  fi
+  return 0
+}
+
+end_benchmark() {
+  if [ $# -ne 2 ]; then
+    echo "end_benchmark_driver args: vpc perf_dir" 1>&2
+    exit 1
+  fi
+  vpc=$1
+  perf_dir=$2
+  cd $AWS_DIR
+  ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
   cd $DIR
 }
 
 run_benchmark() {
-  if [ $# -ne 6 ]; then
-    echo "run_benchmark args: vpc n_cores n_vm perfdir cmd vm" 1>&2
+  if [ $# -ne 8 ]; then
+    echo "run_benchmark args: vpc n_cores n_vm perf_dir cmd vm is_driver async" 1>&2
     exit 1
   fi
   vpc=$1
@@ -98,93 +127,118 @@ run_benchmark() {
   perf_dir=$4
   cmd=$5
   vm=$6 # benchmark driver vm index (usually 0)
-  # Avoid doing duplicate work.
-  if [ -d $perf_dir ]; then
-    benchname="${perf_dir#$OUT_DIR/}"
-    echo "========== Skipping $benchname (already ran) =========="
-    return 0
+  is_driver=$7
+  async=$8
+  # Start the cluster if this is the benchmark driver.
+  if [[ $is_driver == "true" ]]; then
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir true ; then
+      return 0
+    fi
+    start_cluster $vpc $n_cores $n_vm
   fi
-  start_cluster $vpc $n_cores $n_vm
-  mkdir -p $perf_dir
   cd $AWS_DIR
-  ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm
-  ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
+  # Start the benchmark as a background task.
+  ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm &
   cd $DIR
+  # Wait for it to complete, if this benchmark is being run synchronously.
+  if [[ $async == "false" ]] ; then
+    wait
+    end_benchmark $vpc $perf_dir
+  fi
 }
 
 run_mr() {
   if [ $# -ne 5 ]; then
-    echo "run_mr args: n_cores n_vm repl app perf_dir" 1>&2
+    echo "run_mr args: n_cores n_vm prewarm app perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
-  repl=$3
+  prewarm=$3
   mrapp=$4
   perf_dir=$5
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppMR --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
 }
 
 run_hotel() {
-  if [ $# -ne 4 ]; then
-    echo "run_hotel args: sys rps k8saddr perf_dir" 1>&2
+  if [ $# -ne 9 ]; then
+    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr perf_dir driver async " 1>&2
     exit 1
   fi
-  sys=$1
+  testname=$1
   rps=$2
-  k8saddr=$3
-  perf_dir=$4
+  cli_vm=$3
+  nclnt=$4
+  cache_type=$5
+  k8saddr=$6
+  perf_dir=$7
+  driver=$8
+  async=$9
+  hotel_ncache=6
   cmd="
-    export SIGMADEBUG=\"TEST;\"; \
+    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run Hotel${sys}Search --k8saddr $k8saddr --hotel_dur 60s --hotel_max_rps $rps --pregrow_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
-    # We're only running on 5 machines, so use #14 as a client (it is unused).
-    cli_vm=14
   else
     # If running against k8s, pass through k8s VPC
     vpc=$KVPC
-    # If running against k8s, we make sure not to untaint the control node, so
-    # node 0 can't run any pods. We then use this as the client machine. Thus,
-    # we should make sure to start up an extra node in the k8s cluster.
-    cli_vm=0
   fi
   n_cores=4
-  # Since we only use 5 VMs anyway, it should be fine to run the client on VM 14, which should also exist in the k8s cluster.
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async
 }
 
-#run_kv() {
-#  if [ $# -ne 7 ]; then
-#    echo "run_kv args: n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
-#    exit 1
-#  fi
-#  n_vm=$1
-#  nkvd=$2
-#  nkvd_ncore=$3
-#  nclerk=$4
-#  auto=$5
-#  redisaddr=$6
-#  perf_dir=$7
-#  cmd="
-#    go clean -testcache; \
-#    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
-#  "
-#  run_benchmark $VPC $n_vm $perf_dir "$cmd"
-#}
+run_kv() {
+  if [ $# -ne 8 ]; then
+    echo "run_kv args: n_cores n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
+    exit 1
+  fi
+  n_cores=$1
+  n_vm=$2
+  nkvd=$3
+  nkvd_ncore=$4
+  nclerk=$5
+  auto=$6
+  redisaddr=$7
+  perf_dir=$8
+  cmd="
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
+}
+
+run_cached() {
+  if [ $# -ne 6 ]; then
+    echo "run_cached args: n_cores n_vm nkvd kvd_ncore nclerk perf_dir" 1>&2
+    exit 1
+  fi
+  n_cores=$1
+  n_vm=$2
+  nkvd=$3
+  nkvd_ncore=$4
+  nclerk=$5
+  perf_dir=$6
+  cmd="
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
+}
 
 # ========== Top-level benchmarks ==========
 
 mr_scalability() {
   mrapp=mr-grep-wiki120G.yml
-  for n_vm in 1 2 4 8 16 ; do
+  for n_vm in 1 16 ; do # 2 4 8 
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -205,24 +259,36 @@ mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
   dataset_size="2G"
-  for size in $dataset_size ; do
-    mrapp="$app$size.yml"
-    run=${FUNCNAME[0]}/$mrapp
+  for prewarm in "" "--prewarm_realm" ; do
+    mrapp="$app$dataset_size.yml"
+    if [ -z "$prewarm" ]; then
+      runname="$mrapp-cold"
+    else
+      runname="$mrapp-warm"
+    fi
+    run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "" $mrapp $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $perf_dir
   done
 }
 
 hotel_tail() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.108.117.18:5000"
-  for sys in Sigmaos K8s ; do
-    for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
+  for sys in Sigmaos ; do #K8s ; do
+    testname="Hotel${sys}Search"
+    if [ "$sys" = "Sigmaos" ]; then
+      cli_vm=9
+    else
+      cli_vm=0
+    fi
+    # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
+    for rps in 1000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $sys $rps $k8saddr $perf_dir
+      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr $perf_dir true false
     done
   done
 }
@@ -230,33 +296,62 @@ hotel_tail() {
 hotel_tail_multi() {
   # Make sure to fill in new k8s addr.
   k8saddr="10.100.220.158:5000"
-  rps=6000
+  rps=2500
   sys="Sigmaos"
 #  sys="K8s"
-  run=${FUNCNAME[0]}/$sys/$rps
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_hotel $sys $rps $k8saddr $perf_dir
+  cache_type="cached"
+#  cache_type="kvd"
+  driver_vm=8
+  testname_driver="Hotel${sys}Search"
+  testname_clnt="Hotel${sys}JustCliSearch"
+#  for n in {1..10} ; do
+    run=${FUNCNAME[0]}/$sys/$rps #-$n
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/"$run"
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return 0
+    fi
+    for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
+      driver="false"
+      if [[ $cli_vm == $driver_vm ]]; then
+        testname=$testname_driver
+        driver="true"
+      else
+        testname=$testname_clnt
+      fi
+      run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
+      if [[ $cli_vm == $driver_vm ]]; then
+        # Give the driver time to start up the realm.
+        sleep 30s
+      fi
+    done
+    # Wait for all clients to terminate.
+    wait
+    # Copy results.
+    end_benchmark $VPC $perf_dir
+#  done
 }
 
 realm_balance() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki20G.yml
-  hotel_dur="40s,20s,50s"
+  hotel_dur="20s,20s,40s"
   hotel_max_rps="1000,3000,1000"
+  hotel_ncache=6
+  sl="20s"
   n_vm=8
-  driver_vm=14
+  driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalanceMRHotel --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 realm_balance_be() {
@@ -265,17 +360,16 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
-  driver_vm=0
+  driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    $PRIVILEGED_BIN/realm/create $REALM2; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run RealmBalanceMRMR --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 k8s_balance() {
@@ -297,9 +391,9 @@ k8s_balance() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 mr_k8s() {
@@ -316,9 +410,9 @@ mr_k8s() {
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 --realm2 $REALM2 -run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
 
 #mr_overlap() {
@@ -371,6 +465,30 @@ mr_k8s() {
 #  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
 #}
 
+kv_vs_cached() {
+  # First, run against KVD.
+  auto="manual"
+  nkvd=1
+  nclerk=1
+  n_core=4
+  kvd_ncore=4
+  redisaddr=""
+  n_vm=8
+  run=${FUNCNAME[0]}/kvd/
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_kv $n_core $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+
+  # Then, run against cached.
+  nkvd=1
+  redisaddr="10.0.134.192:6379"
+  n_vm=15
+  run=${FUNCNAME[0]}/cached
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  run_cached $n_core $n_vm $nkvd $kvd_ncore $nclerk $perf_dir
+}
+
 realm_burst() {
   n_vm=16
   run=${FUNCNAME[0]}
@@ -378,9 +496,9 @@ realm_burst() {
   perf_dir=$OUT_DIR/$run
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --version=$VERSION --realm $REALM1 -run RealmBurst > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0
+  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false
 }
 
 # ========== Make Graphs ==========
@@ -494,25 +612,26 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #mr_replicated_named
-#mr_scalability
-#mr_vs_corral
 #realm_burst
-#realm_balance
+kv_vs_cached
+mr_vs_corral
+realm_balance
 realm_balance_be
-#hotel_tail
+hotel_tail
+hotel_tail_multi
+# XXX mr_scalability
 #mr_k8s
 #k8s_balance
-hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
 graph_realm_balance_be
-#graph_realm_balance
+graph_realm_balance
+graph_mr_vs_corral
 #graph_k8s_balance
-#graph_mr_aggregate_tpt
-#graph_mr_scalability
-#graph_mr_vs_corral
+# XXX graph_mr_aggregate_tpt
+# XXX graph_mr_scalability
 #graph_k8s_mr_aggregate_tpt
 #scrape_realm_burst
 #graph_hotel_tail

@@ -5,6 +5,7 @@ type Tselector string
 // ALWAYS
 const (
 	ALWAYS Tselector = "ALWAYS"
+	NEVER            = "NEVER"
 )
 
 // ERR
@@ -14,8 +15,10 @@ const (
 
 // Benchmarks
 const (
-	LOADGEN Tselector = "LOADGEN"
-	BENCH             = "BENCH"
+	LOADGEN    Tselector = "LOADGEN"
+	BENCH                = "BENCH"
+	THROUGHPUT           = "THROUGHPUT"
+	CPU_UTIL             = "CPU_UTIL"
 )
 
 // Tests
@@ -56,31 +59,50 @@ const (
 	KVMV_ERR                  = KVMV + ERR
 )
 
+// System
+const (
+	SYSTEM Tselector = "SYSTEM"
+)
+
 // Kernel
 const (
-	KERNEL     Tselector = "KERNEL"
-	NAMED                = "NAMED"
-	PROCD                = "PROCD"
-	PROCD_ERR            = PROCD + ERR
-	PROCD_PERF           = PROCD + "_PERF"
-	PROCCACHE            = "PROCCACHE"
-	S3                   = "S3"
-	UX                   = "UX"
-	DB                   = "DB"
-	PROXY                = "PROXY"
+	KERNEL         Tselector = "KERNEL"
+	BOOTCLNT                 = "BOOTCLNT"
+	BOOT                     = "BOOT"
+	CONTAINER                = "CONTAINER"
+	NAMED                    = "NAMED"
+	PROCMGR                  = "PROCMGR"
+	UPROCDMGR                = "UPROCDMGR"
+	UPROCD                   = "UPROCD"
+	UPROCD_ERR               = "UPROCD" + ERR
+	SCHEDD                   = "SCHEDD"
+	SCHEDD_ERR               = "SCHEDD" + ERR
+	SCHEDDCLNT               = "SCHEDDCLNT"
+	SCHEDDCLNT_ERR           = "SCHEDDCLNT" + ERR
+	PROCMGR_ERR              = PROCMGR + ERR
+	PROCCACHE                = "PROCCACHE"
+	S3                       = "S3"
+	UX                       = "UX"
+	DB                       = "DB"
+	PROXY                    = "PROXY"
+	FW                       = "FW"
 )
 
 // Realm
 const (
 	SIGMAMGR     Tselector = "SIGMAMGR"
 	SIGMAMGR_ERR           = SIGMAMGR + ERR
+	REALMD                 = "REALMD"
+	REALMD_ERR             = "REALMD" + ERR
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"
+	SIGMACLNT              = "SIGMACLNT"
 	NODED                  = "NODED"
 	NODED_ERR              = NODED + ERR
 	MACHINED               = "MACHINED"
 	REALM_LOCK             = "REALM_LOCK"
+	PORT                   = "PORT"
 )
 
 // Client Libraries
@@ -88,7 +110,6 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
-	FDCLNT_ERR              = "FDCLNT" + ERR
 	FSLIB                   = "FSLIB"
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
@@ -123,7 +144,10 @@ const (
 	SESS_CLNT_Q                   = "SESS_CLNT_Q"
 	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
 	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
+	FDCLNT                        = "FDCLNT"
+	FDCLNT_ERR                    = FDCLNT + ERR
 	FIDCLNT                       = "FIDCLNT"
+	FIDCLNT_ERR                   = FIDCLNT + ERR
 	MOUNT                         = "MOUNT"
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR

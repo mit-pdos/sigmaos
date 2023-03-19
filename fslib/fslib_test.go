@@ -3,6 +3,8 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
+	"log"
+	"net"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -35,12 +37,15 @@ func init() {
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	sts, err := ts.GetDir(pathname)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	if pathname == sp.NAMED {
-		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
+		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
 	} else {
 		assert.True(t, len(sts) == 0, "initfs")
 	}
+	sts, err = ts.GetDir(pathname + "/boot")
+	assert.Nil(t, err)
+	log.Printf("boot %v\n", sp.Names(sts))
 	ts.Shutdown()
 }
 
@@ -68,7 +73,7 @@ func TestCreateTwice(t *testing.T) {
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
-	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrExists(err))
 	ts.Shutdown()
@@ -90,7 +95,7 @@ func TestConnect(t *testing.T) {
 	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
-	db.DPrintf(db.ALWAYS, "disconnected")
+	db.DPrintf(db.TEST, "disconnected")
 
 	_, err = ts.Write(fd, d)
 	assert.True(t, serr.IsErrUnreachable(err))
@@ -142,12 +147,12 @@ func TestRemoveSymlink(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
 	d1 := gopath.Join(pathname, "d1")
-	db.DPrintf(db.ALWAYS, "path %v", pathname)
+	db.DPrintf(db.TEST, "path %v", pathname)
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := sp.MkMountService(fslib.Named())
+	mnt := sp.MkMountService(ts.NamedAddr())
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
@@ -168,7 +173,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := sp.MkMountService(fslib.Named())
+	mnt := sp.MkMountService(ts.NamedAddr())
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
@@ -177,6 +182,29 @@ func TestRmDirWithSymlink(t *testing.T) {
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
+func TestReadSymlink(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	fn := gopath.Join(d1, "f")
+
+	mnt := sp.MkMountService(ts.NamedAddr())
+	err = ts.MkMountSymlink(fn, mnt)
+	assert.Nil(t, err, "MkMount: %v", err)
+
+	_, err = ts.GetDir(fn + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	mnt1, err := ts.ReadMount(fn)
+	assert.Nil(t, err, "ReadMount: %v", err)
+
+	assert.Equal(t, mnt.Addr[0].Addr, mnt1.Addr[0].Addr)
 
 	ts.Shutdown()
 }
@@ -383,8 +411,9 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, dn string, name string, ch chan bool) {
-	fsl := fslib.MakeFsLibAddr("fslibtest-"+name, fslib.Named())
+func dirwriter(t *testing.T, dn, name, lip string, nds sp.Taddrs, ch chan bool) {
+	fsl, err := fslib.MakeFsLibAddr("fslibtest-"+name, sp.ROOTREALM, lip, nds)
+	assert.Nil(t, err)
 	stop := false
 	for !stop {
 		select {
@@ -418,7 +447,7 @@ func TestDirConcur(t *testing.T) {
 
 	ch := make(chan bool)
 	for i := 0; i < N; i++ {
-		go dirwriter(t, dn, strconv.Itoa(i), ch)
+		go dirwriter(t, dn, strconv.Itoa(i), ts.GetLocalIP(), ts.NamedAddr(), ch)
 	}
 
 	for i := 0; i < NSCAN; i++ {
@@ -434,7 +463,7 @@ func TestDirConcur(t *testing.T) {
 		assert.False(t, b)
 
 		if i < NFILE-N {
-			db.DPrintf(db.ALWAYS, "names %v", names)
+			db.DPrintf(db.TEST, "names %v", names)
 		}
 
 		assert.True(t, i >= NFILE-N)
@@ -603,8 +632,9 @@ func TestCreateExcl1(t *testing.T) {
 
 	fn := gopath.Join(pathname, "exclusive")
 	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OCEXEC, []byte{})
-	assert.Equal(t, nil, err)
-	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
+	assert.Nil(t, err)
+	fsl, err := fslib.MakeFsLibAddr("fslibtest0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
 	go func() {
 		_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 		assert.Nil(t, err, "Putfile")
@@ -632,8 +662,9 @@ func TestCreateExclN(t *testing.T) {
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
+			fsl, err := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			assert.Nil(t, err)
+			_, err = fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -654,9 +685,9 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 
 	fn := gopath.Join(pathname, "create-conn-close-test")
 
-	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
-
-	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
+	fsl1, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
+	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 	assert.Nil(t, err, "Create 1")
 
 	go func() {
@@ -699,7 +730,8 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ch := make(chan error)
 	done := make(chan bool)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		for i := 1; i < N; {
 			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
 			assert.Equal(t, nil, err)
@@ -744,7 +776,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 
 	ch := make(chan error)
 	done := make(chan bool)
-	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	fsl, err := fslib.MakeFsLibAddr("fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
 		_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
@@ -862,7 +895,8 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		fsl := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
 			for c := true; c; {
@@ -902,7 +936,8 @@ func TestPipeBasic(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		b, err := fsl.Read(fd, 100)
@@ -935,7 +970,8 @@ func TestPipeClose(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		for true {
@@ -973,8 +1009,9 @@ func TestPipeRemove(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
-		_, err := fsl.Open(pipe, sp.OREAD)
+		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
+		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
 		ch <- true
 	}(ch)
@@ -994,8 +1031,9 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "MakePipe")
 
 	go func() {
-		fsl := fslib.MakeFsLibAddr("writer", fslib.Named())
-		_, err := fsl.Open(pipe, sp.OWRITE)
+		fsl, err := fslib.MakeFsLibAddr("writer", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
+		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
@@ -1020,7 +1058,8 @@ func TestPipeCrash1(t *testing.T) {
 	err := ts.MakePipe(pipe, 0777)
 	assert.Nil(ts.T, err, "MakePipe")
 
-	fsl1 := fslib.MakeFsLibAddr("w1", fslib.Named())
+	fsl1, err := fslib.MakeFsLibAddr("w1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
 	go func() {
 		// blocks
 		_, err := fsl1.Open(pipe, sp.OWRITE)
@@ -1039,10 +1078,11 @@ func TestPipeCrash1(t *testing.T) {
 
 	// start up second write to pipe
 	go func() {
-		fsl2 := fslib.MakeFsLibAddr("w2", fslib.Named())
+		fsl2, err := fslib.MakeFsLibAddr("w2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.
-		_, err := fsl2.Open(pipe, sp.OWRITE)
+		_, err = fsl2.Open(pipe, sp.OWRITE)
 		assert.NotNil(ts.T, err, "Open")
 	}()
 
@@ -1078,6 +1118,12 @@ func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
+	h, p, err := mnt.TargetHostPort()
+	assert.Nil(t, err)
+	if h == "" {
+		a := net.JoinHostPort(ts.GetLocalIP(), p)
+		mnt.SetAddr(sp.MkTaddrs([]string{a}))
+	}
 	return mnt
 }
 
@@ -1125,7 +1171,7 @@ func TestUnionDir(t *testing.T) {
 	pn, err := ts.ResolveUnions(gopath.Join(pathname, "d/~local"))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
 	ts.Shutdown()
@@ -1240,6 +1286,26 @@ func TestSetFileSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestMountUnion(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	dn := gopath.Join(pathname, "d")
+	err := ts.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.MkMountServer(":1111"))
+	assert.Nil(ts.T, err, "MountService")
+
+	err = ts.MountService(gopath.Join(pathname, "mount"), mkMount(t, ts, dn))
+	assert.Nil(ts.T, err, "MountService")
+
+	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
+
+	ts.Shutdown()
+}
+
 func TestOpenRemoveRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
@@ -1271,15 +1337,20 @@ func TestFslibExit(t *testing.T) {
 
 	dot := pathname + "/."
 
+	// Make a new fsl for this test, because we want to use ts.FsLib
+	// to shutdown the system.
+	fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	assert.Nil(t, err)
+
 	// connect
-	_, err := ts.Stat(dot)
+	_, err = fsl.Stat(dot)
 	assert.Nil(t, err)
 
 	// close
-	err = ts.Exit()
+	err = fsl.Exit()
 	assert.Nil(t, err)
 
-	_, err = ts.Stat(dot)
+	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrUnreachable(err))
 
@@ -1370,7 +1441,8 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	buf := test.MkBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	p1 := perf.MakePerfMulti(perf.BENCH, perf.WRITER)
+	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
+	assert.Nil(t, err)
 	defer p1.Done()
 	measure(p1, "writer", func() sp.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
@@ -1378,7 +1450,8 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p2 := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	assert.Nil(t, err)
 	defer p2.Done()
 	measure(p2, "bufwriter", func() sp.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
@@ -1386,7 +1459,8 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p3 := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "abufwriter", func() sp.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
@@ -1406,13 +1480,16 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
+		fsls = append(fsls, fsl)
 	}
 	// Remove just in case it was left over from a previous run.
 	for _, fn := range fns {
 		ts.Remove(fn)
 	}
-	p1 := perf.MakePerfMulti(perf.BENCH, perf.WRITER)
+	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
+	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
 	for i := range fns {
@@ -1432,7 +1509,8 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p2 := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
 	for i := range fns {
@@ -1452,7 +1530,8 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3 := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()
 	for i := range fns {
@@ -1482,7 +1561,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	p1 := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	p1, r := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	assert.Nil(t, r)
 	defer p1.Done()
 	measure(p1, "reader", func() sp.Tlength {
 		r, err := ts.OpenReader(fn)
@@ -1494,7 +1574,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
-	p2 := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	assert.Nil(t, err)
 	defer p2.Done()
 	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	measure(p2, "bufreader", func() sp.Tlength {
@@ -1506,7 +1587,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 		r.Close()
 		return n
 	})
-	p3 := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "readahead", func() sp.Tlength {
 		r, err := ts.OpenAsyncReader(fn, 0)
@@ -1530,14 +1612,17 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsls = append(fsls, fslib.MakeFsLibAddr("test"+strconv.Itoa(i), ts.NamedAddr()))
+		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		assert.Nil(t, err)
+		fsls = append(fsls, fsl)
 	}
 	// Remove just in case it was left over from a previous run.
 	for _, fn := range fns {
 		ts.Remove(fn)
 		mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	}
-	p1 := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	p1, err := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
 	for i := range fns {
@@ -1564,7 +1649,8 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		assert.Nil(ts.T, err)
 		mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	}
-	p2 := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
 	for i := range fns {
@@ -1587,7 +1673,8 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3 := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()
 	for i := range fns {
@@ -1636,13 +1723,14 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int) {
+func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int, lip string, nds sp.Taddrs) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
 		go func() {
 			cn := strconv.Itoa(c)
-			fsl := fslib.MakeFsLibAddr("fslibtest-"+cn, fslib.Named())
+			fsl, err := fslib.MakeFsLibAddr("fslibtest-"+cn, sp.ROOTREALM, lip, nds)
+			assert.Nil(t, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
 					_, err := fsl.Stat(gopath.Join(dir, "f"+strconv.Itoa(f)))
@@ -1674,7 +1762,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(t, 1, N, dir, NFILE)
+	lookuper(t, 1, N, dir, NFILE, ts.GetLocalIP(), ts.NamedAddr())
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)

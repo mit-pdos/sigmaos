@@ -10,13 +10,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
-	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/perf"
+	"sigmaos/protdev"
 	rd "sigmaos/rand"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -34,23 +34,27 @@ type HotelJobInstance struct {
 	job        string
 	dur        []time.Duration
 	maxrps     []int
+	ncache     int
+	cachetype  string
 	ready      chan bool
 	fn         hotelFn
-	pids       []proc.Tpid
-	cc         *cacheclnt.CacheClnt
-	cm         *cacheclnt.CacheMgr
+	hj         *hotel.HotelJob
 	lgs        []*loadgen.LoadGenerator
-	*test.Tstate
+	p          *perf.Perf
+	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool) *HotelJobInstance {
+func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
 	ji.ready = make(chan bool)
 	ji.fn = fn
-	ji.Tstate = ts
+	ji.RealmTstate = ts
+	ji.p = p
 	ji.justCli = justCli
+	ji.ncache = ncache
+	ji.cachetype = cachetype
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -69,11 +73,9 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 	}
 
 	var err error
-	var ncache int
-	var svcs []string
+	var svcs []hotel.Srv
 	if sigmaos {
-		svcs = hotel.HotelSvcs
-		ncache = hotel.NCACHE
+		svcs = hotel.MkHotelSvc(test.Overlays)
 	}
 
 	if ji.justCli {
@@ -91,8 +93,18 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 	}
 
 	if !ji.justCli {
-		ji.cc, ji.cm, ji.pids, err = hotel.MakeHotelJob(ts.FsLib, ts.ProcClnt, ji.job, svcs, ncache)
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, ncache)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		procs := sdc.GetRunningProcs()
+		progs := make(map[string][]string)
+		for sd, ps := range procs {
+			progs[sd] = make([]string, 0, len(ps))
+			for _, p := range ps {
+				progs[sd] = append(progs[sd], p.Program)
+			}
+		}
+		db.DPrintf(db.TEST, "Running procs:%v", progs)
 	}
 
 	if !sigmaos {
@@ -100,8 +112,9 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
-			if err := ts.PutFileJson(p, 0777, []string{ji.k8ssrvaddr}); err != nil {
-				db.DFatalf("Error PutFileJson addrs %v", err)
+			mnt := sp.MkMountService(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
+			if err = ts.MountService(p, mnt); err != nil {
+				db.DFatalf("MountService %v", err)
 			}
 		}
 	}
@@ -119,7 +132,7 @@ func MakeHotelJob(ts *test.Tstate, sigmaos bool, durs string, maxrpss string, fn
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -139,12 +152,12 @@ func (ji *HotelJobInstance) StartHotelJob() {
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
 		for _, s := range sp.HOTELSVC {
-			stats := &protdevsrv.Stats{}
-			err := ji.GetFileJson(s+"/"+protdevsrv.STATS, stats)
+			stats := &protdev.SigmaRPCStats{}
+			err := ji.GetFileJson(s+"/"+protdev.STATS, stats)
 			assert.Nil(ji.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
-		cs, err := ji.cc.StatsSrv()
+		cs, err := ji.hj.StatsSrv()
 		assert.Nil(ji.T, err)
 		for i, cstat := range cs {
 			fmt.Printf("= cache-%v: %v\n", i, cstat)
@@ -155,16 +168,14 @@ func (ji *HotelJobInstance) printStats() {
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf(db.TEST, "extra sleep")
 	time.Sleep(10 * time.Second)
+	if ji.p != nil {
+		ji.p.Done()
+	}
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()
-		for _, pid := range ji.pids {
-			err := ji.Evict(pid)
-			assert.Nil(ji.T, err, "Evict: %v", err)
-			_, err = ji.WaitExit(pid)
-			assert.Nil(ji.T, err)
-		}
-		ji.cm.StopCache()
+		err := ji.hj.Stop()
+		assert.Nil(ji.T, err, "stop %v", err)
 	}
 	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {

@@ -5,13 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"sigmaos/benchmarks"
-	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
-	"sigmaos/realm"
-	sp "sigmaos/sigmap"
+	"sigmaos/scheddclnt"
 	"sigmaos/test"
 )
 
@@ -19,7 +18,7 @@ import (
 // Functions we use to record and output performance.
 //
 
-func runOps(ts *test.Tstate, is []interface{}, op testOp, rs *benchmarks.Results) {
+func runOps(ts *test.RealmTstate, is []interface{}, op testOp, rs *benchmarks.Results) {
 	for i := 0; i < len(is); i++ {
 		// Ops we are benchmarking
 		elapsed, amt := op(ts, is[i])
@@ -43,35 +42,35 @@ func printResultSummary(rs *benchmarks.Results) {
 	fnDetails := runtime.FuncForPC(pc)
 	n := fnDetails.Name()
 	fnName := n[strings.Index(n, ".")+1:]
+	db.DPrintf(db.TEST, "Start print results")
 	lsum, tsum := rs.Summary()
 	db.DPrintf(db.ALWAYS, "\n\nResults: %v\n=====%v%v\n=====\n\n", fnName, lsum, tsum)
+	db.DPrintf(db.TEST, "Done print results")
+}
+
+func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
+	p, err := perf.MakePerfMulti(perf.BENCH, ts.GetRealm().String())
+	assert.Nil(ts.T, err)
+	return p
 }
 
 // Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.Tstate) *perf.Perf {
-	p := perf.MakePerfMulti(perf.BENCH, ts.RealmId())
+func monitorCoresAssigned(ts *test.RealmTstate, p *perf.Perf) {
 	go func() {
-		cc := config.MakeConfigClnt(fslib.MakeFsLib("test"))
-		cfgPath := realm.RealmConfPath(ts.RealmId())
-		cfg := &realm.RealmConfig{}
-		if err := cc.ReadConfig(cfgPath, cfg); err != nil {
-			b, _ := cc.GetFile(cfgPath)
-			db.DFatalf("Read config err: %v [%v]", err, string(b))
-		}
-		p.TptTick(float64(cfg.NCores))
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
-			if err := cc.WaitConfigChange(cfgPath); err != nil {
-				db.DPrintf(db.ALWAYS, "Error WaitConfigChange: %v", err)
+			perc, err := sdc.GetCPUUtil()
+			if err != nil {
+				db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
 				return
 			}
-			// Make sure changes don't get put in the same tpt bucket.
-			time.Sleep(time.Duration(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) * time.Millisecond)
-			if err := cc.ReadConfig(cfgPath, cfg); err != nil {
-				db.DPrintf(db.ALWAYS, "Read config err: %v", err)
-				return
-			}
-			p.TptTick(float64(cfg.NCores))
+			// Util is returned as a percentage (e.g. 100 = 1 core fully utilized,
+			// 200 = 2 cores, etc.). So, convert no # of cores by dividing by 100.
+			ncores := perc / 100.0
+			// Total CPU utilized by this realm (in cores).
+			p.TptTick(ncores)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
+			time.Sleep(1 * time.Second)
 		}
 	}()
-	return p
 }

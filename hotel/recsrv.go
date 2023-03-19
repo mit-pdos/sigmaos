@@ -10,9 +10,10 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
-	sp "sigmaos/sigmap"
 	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 )
 
 //	type RecRequest struct {
@@ -38,10 +39,10 @@ type Rec struct {
 }
 
 // Run starts the server
-func RunRecSrv(n string) error {
+func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELREC, r)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELREC, r, public)
 	if err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func RunRecSrv(n string) error {
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
-func (s *Rec) GetRecs(req proto.RecRequest, res *proto.RecResult) error {
+func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{

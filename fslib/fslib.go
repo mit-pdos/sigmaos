@@ -1,58 +1,55 @@
 package fslib
 
 import (
-	"os"
-	"runtime/debug"
-	"strings"
-
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
+	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 type FsLib struct {
 	*fdclnt.FdClient
+	realm     sp.Trealm
+	namedAddr sp.Taddrs
 }
 
-func NamedAddrs() string {
-	addrs := os.Getenv("NAMED")
-	if addrs == "" {
-		db.DFatalf("Getenv error: missing NAMED")
+func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
+	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
+	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, lip, sessp.Tsize(10_000_000)), realm, addrs}
+	if err := fl.MountTree(addrs, "", "name"); err != nil {
+		return nil, err
 	}
-	return addrs
+	return fl, nil
 }
 
-func Named() []string {
-	addrs := strings.Split(NamedAddrs(), ",")
-	return addrs
+func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
+	return MakeFsLibAddrNet(uname, realm, lip, addrs, proc.GetNet())
 }
 
-func MakeFsLibBase(uname string) *FsLib {
-	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname, sessp.Tsize(10_000_000))}
+// Only to be called by procs.
+func MakeFsLib(uname string) (*FsLib, error) {
+	as, err := proc.Named()
+	if err != nil {
+		return nil, err
+	}
+	return MakeFsLibAddr(uname, proc.GetRealm(), proc.GetSigmaLocal(), as)
 }
 
-func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
+func (fl *FsLib) NamedAddr() sp.Taddrs {
+	return fl.namedAddr
+}
+
+func (fl *FsLib) Realm() sp.Trealm {
+	return fl.realm
+}
+
+func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {
 		return err
 	}
-}
-
-func MakeFsLibAddr(uname string, addrs []string) *FsLib {
-	fl := MakeFsLibBase(uname)
-	err := fl.MountTree(addrs, "", "name")
-	if err != nil {
-		debug.PrintStack()
-		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), addrs, err)
-	}
-	return fl
-}
-
-func MakeFsLib(uname string) *FsLib {
-	return MakeFsLibAddr(uname, Named())
 }
 
 func (fl *FsLib) Exit() error {

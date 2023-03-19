@@ -13,11 +13,11 @@ import (
 
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 )
 
 var done = int32(0)
@@ -45,8 +45,10 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	fsl := fslib.MakeFsLib("cacheclerk-" + proc.GetPid().String())
-	pclnt := procclnt.MakeProcClnt(fsl)
+	sc, err := sigmaclnt.MkSigmaClnt("cacheclerk-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("MkSigmaClnt err %v", err)
+	}
 	var rcli *redis.Client
 	var cc *cacheclnt.CacheClnt
 	if len(os.Args) > 6 {
@@ -57,18 +59,21 @@ func main() {
 		})
 	} else {
 		var err error
-		cc, err = cacheclnt.MkCacheClnt(fsl, os.Args[1])
+		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, os.Args[1])
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}
 	}
 
 	// Record performance.
-	p := perf.MakePerf(perf.CACHECLERK)
+	p, err := perf.MakePerf(perf.CACHECLERK)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
-	pclnt.Started()
-	run(pclnt, cc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
+	sc.Started()
+	run(sc.ProcClnt, cc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
 }
 
 func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
@@ -130,7 +135,7 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := cc.Set(key, []byte(proc.GetPid().String())); err != nil {
+			if err := cc.Put(key, []byte(proc.GetPid().String())); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

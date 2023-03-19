@@ -3,144 +3,37 @@ package test
 import (
 	"flag"
 	"fmt"
-	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"sigmaos/bootkernelclnt"
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-	"sigmaos/fslib"
 	"sigmaos/kernel"
-	"sigmaos/linuxsched"
 	"sigmaos/proc"
-	"sigmaos/realm"
+	"sigmaos/realmclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
-var version string
-var realmid string // Use this realm to run tests instead of starting a new one. This is used for multi-machine tests.
+const (
+	BOOT_REALM = "realm"
+	BOOT_ALL   = "all"
+	BOOT_NAMED = "named"
+	BOOT_NODE  = "node"
 
-// Read & set the proc version.
+	NAMEDPORT = ":1111"
+)
+
+var start bool
+var tag string
+var rootNamedIP string
+var Overlays bool
+
 func init() {
-	flag.StringVar(&version, "version", "none", "version")
-	flag.StringVar(&realmid, "realm", "", "realm id")
-}
-
-type Tstate struct {
-	sync.Mutex
-	realmid string
-	wg      sync.WaitGroup
-	T       *testing.T
-	*kernel.System
-	replicas  []*kernel.System
-	namedAddr []string
-}
-
-func makeTstate(t *testing.T, realmid string) *Tstate {
-	setVersion()
-	ts := &Tstate{}
-	ts.T = t
-	ts.realmid = realmid
-	ts.namedAddr = fslib.Named()
-	return ts
-}
-
-func MakeTstatePath(t *testing.T, path string) *Tstate {
-	if path == sp.NAMED {
-		return MakeTstate(t)
-	} else {
-		ts := MakeTstateAll(t)
-		ts.RmDir(path)
-		ts.MkDir(path, 0777)
-		return ts
-	}
-}
-
-func MakeTstate(t *testing.T) *Tstate {
-	ts := makeTstate(t, "")
-	ts.makeSystem(kernel.MakeSystemNamed)
-	return ts
-}
-
-// A realm/set of machines are already running
-func MakeTstateRealm(t *testing.T, realmid string) *Tstate {
-	ts := makeTstate(t, realmid)
-	// XXX make fslib exit?
-	rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmid)
-	ts.namedAddr = rconfig.NamedAddrs
-	ts.System = kernel.MakeSystem("test", realmid, rconfig.NamedAddrs, sessp.MkInterval(0, uint64(linuxsched.NCores)))
-	return ts
-}
-
-func MakeTstateAll(t *testing.T) *Tstate {
-	var ts *Tstate
-	// If no realm is running (single-machine)
-	if realmid == "" {
-		ts = makeTstate(t, realmid)
-		ts.makeSystem(kernel.MakeSystemAll)
-	} else {
-		ts = MakeTstateRealm(t, realmid)
-	}
-	return ts
-}
-
-func (ts *Tstate) RunningInRealm() bool {
-	return ts.realmid != ""
-}
-
-func (ts *Tstate) RealmId() string {
-	return ts.realmid
-}
-
-func (ts *Tstate) NamedAddr() []string {
-	return ts.namedAddr
-}
-
-func (ts *Tstate) Shutdown() {
-	db.DPrintf(db.TEST, "Shutting down")
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
-	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < N, "Too many FIDs open (%v): %v", ts.PathClnt.FidClnt.Len(), ts.PathClnt.FidClnt)
-	db.DPrintf(db.TEST, "Done shutting down")
-}
-
-func (ts *Tstate) addNamedReplica(i int) {
-	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", sp.TEST_RID, i, sessp.MkInterval(0, uint64(linuxsched.NCores)))
-	ts.Lock()
-	defer ts.Unlock()
-	ts.replicas = append(ts.replicas, r)
-}
-
-func (ts *Tstate) startReplicas() {
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
-		go ts.addNamedReplica(i + 1)
-	}
-}
-
-func (ts *Tstate) makeSystem(mkSys func(string, string, int, *sessp.Tinterval) *kernel.System) {
-	ts.wg.Add(len(fslib.Named()))
-	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
-	go func() {
-		defer ts.wg.Done()
-		ts.System = mkSys("test", sp.TEST_RID, 0, sessp.MkInterval(0, uint64(linuxsched.NCores)))
-	}()
-	ts.startReplicas()
-	ts.wg.Wait()
-}
-
-func setVersion() {
-	if version == "" || version == "none" || !flag.Parsed() {
-		db.DFatalf("Version not set in test")
-	}
-	proc.Version = version
+	flag.StringVar(&tag, "tag", "", "Docker image tag")
+	flag.StringVar(&rootNamedIP, "rootNamedIP", "", "IP of the root named server")
+	flag.BoolVar(&start, "start", false, "Start system")
+	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -155,4 +48,145 @@ func TputStr(sz sp.Tlength, ms int64) string {
 func Tput(sz sp.Tlength, ms int64) float64 {
 	t := float64(ms) / 1000
 	return Mbyte(sz) / t
+}
+
+type Tstate struct {
+	*sigmaclnt.SigmaClnt
+	rc      *realmclnt.RealmClnt
+	kclnts  []*bootkernelclnt.Kernel
+	killidx int
+	T       *testing.T
+}
+
+func MakeTstatePath(t *testing.T, path string) *Tstate {
+	b, err := makeSysClntPath(t, path)
+	if err != nil {
+		db.DFatalf("MakeTstatePath: %v\n", err)
+	}
+	return b
+}
+
+func MakeTstate(t *testing.T) *Tstate {
+	ts, err := makeSysClnt(t, BOOT_NAMED)
+	if err != nil {
+		db.DFatalf("MakeTstate: %v\n", err)
+	}
+	return ts
+}
+
+func MakeTstateAll(t *testing.T) *Tstate {
+	ts, err := makeSysClnt(t, BOOT_ALL)
+	if err != nil {
+		db.DFatalf("MakeTstateAll: %v\n", err)
+	}
+	return ts
+}
+
+func MakeTstateWithRealms(t *testing.T) *Tstate {
+	ts, err := makeSysClnt(t, BOOT_REALM)
+	if err != nil {
+		db.DFatalf("MakeTstateRealm: %v\n", err)
+	}
+	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
+	if err != nil {
+		db.DFatalf("MakeTstateRealm make realmclnt: %v\n", err)
+	}
+	ts.rc = rc
+	return ts
+}
+
+func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
+	if path == sp.NAMED {
+		return makeSysClnt(t, BOOT_NAMED)
+	} else {
+		ts, err := makeSysClnt(t, BOOT_ALL)
+		if err != nil {
+			return nil, err
+		}
+		ts.RmDir(path)
+		ts.MkDir(path, 0777)
+		return ts, nil
+	}
+}
+
+func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+	namedport := sp.MkTaddrs([]string{NAMEDPORT})
+	kernelid := ""
+	var containerIP string
+	var err error
+	if rootNamedIP == "" {
+		// If no root named IP is specified, assume it is running locally.
+		containerIP, err = container.LocalIP()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Set root named IP to specified IP.
+		containerIP = rootNamedIP
+	}
+	if start {
+		kernelid = bootkernelclnt.GenKernelId()
+		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
+		if err != nil {
+			return nil, err
+		}
+		containerIP = ip
+	}
+	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
+	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
+	if err != nil {
+		return nil, err
+	}
+	k, err := bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &Tstate{
+		SigmaClnt: k.SigmaClnt,
+		kclnts:    []*bootkernelclnt.Kernel{k},
+		killidx:   0,
+		T:         t,
+	}, nil
+}
+
+func (ts *Tstate) BootNode(n int) error {
+	for i := 0; i < n; i++ {
+		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr(), Overlays)
+		if err != nil {
+			return err
+		}
+		ts.kclnts = append(ts.kclnts, kclnt)
+	}
+	return nil
+}
+
+func (ts *Tstate) Boot(s string) error {
+	return ts.kclnts[0].Boot(s)
+}
+
+func (ts *Tstate) BootFss3d() error {
+	return ts.Boot(sp.S3REL)
+}
+
+func (ts *Tstate) KillOne(s string) error {
+	idx := ts.killidx
+	ts.killidx++
+	return ts.kclnts[idx].Kill(s)
+}
+
+func (ts *Tstate) MakeClnt(idx int, name string) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].MkSigmaClnt(name)
+}
+
+func (ts *Tstate) Shutdown() error {
+	db.DPrintf(db.TEST, "Shutdown")
+	db.DPrintf(db.TEST, "Done Shutdown")
+	db.DPrintf(db.SYSTEM, "Shutdown")
+	// Shut down other kernel running named last
+	for i := len(ts.kclnts) - 1; i >= 0; i-- {
+		if err := ts.kclnts[i].Shutdown(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

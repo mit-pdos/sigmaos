@@ -4,6 +4,7 @@ import (
 	"log"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
@@ -18,31 +19,34 @@ type Search struct {
 }
 
 // Run starts the server
-func RunSearchSrv(n string) error {
+func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.HOTELSEARCH, s)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELSEARCH, s, public)
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.FsLib(), sp.HOTELRATE)
+	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.FsLib(), sp.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELGEO)
 	if err != nil {
 		return err
 	}
 	s.geoc = pdc
 
-	p := perf.MakePerf(perf.HOTEL_SEARCH)
+	p, err := perf.MakePerf(perf.HOTEL_SEARCH)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
 	defer p.Done()
 
 	return pds.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(req proto.SearchRequest, res *proto.SearchResult) error {
+func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
 	var gres proto.GeoResult
 	greq := &proto.GeoRequest{
 		Lat: req.Lat,

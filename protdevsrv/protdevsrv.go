@@ -7,12 +7,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
+	"sigmaos/protdev"
 	"sigmaos/sessdevsrv"
-)
-
-const (
-	STATS = "stats"
-	RPC   = "rpc"
+	"sigmaos/sigmaclnt"
 )
 
 //
@@ -35,12 +32,40 @@ type service struct {
 
 type ProtDevSrv struct {
 	*memfssrv.MemFs
-	sti *StatInfo
+	sti *protdev.StatInfo
 	svc *service
 }
 
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
-	mfs, _, _, error := memfssrv.MakeMemFs(fn, "protdevsrv")
+	mfs, error := memfssrv.MakeMemFs(fn, "protdevsrv")
+	if error != nil {
+		db.DFatalf("protdevsrv.Run: %v\n", error)
+	}
+	return MakeProtDevSrvMemFs(mfs, svci)
+}
+
+func MakeProtDevSrvPublic(fn string, svci any, public bool) (*ProtDevSrv, error) {
+	if public {
+		mfs, error := memfssrv.MakeMemFsPublic(fn, "protdevsrv")
+		if error != nil {
+			return nil, error
+		}
+		return MakeProtDevSrvMemFs(mfs, svci)
+	} else {
+		return MakeProtDevSrv(fn, svci)
+	}
+}
+
+func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, "protdevsrv")
+	if error != nil {
+		db.DFatalf("protdevsrv.Run: %v\n", error)
+	}
+	return MakeProtDevSrvMemFs(mfs, svci)
+}
+
+func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if error != nil {
 		db.DFatalf("protdevsrv.Run: %v\n", error)
 	}
@@ -52,7 +77,7 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := sessdevsrv.MkSessDev(psd.MemFs, RPC, rd.mkRpcSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(psd.MemFs, protdev.RPC, rd.mkRpcSession, nil); err != nil {
 		return nil, err
 	}
 	if si, err := makeStatsDev(mfs); err != nil {
@@ -63,7 +88,7 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
 	return psd, nil
 }
 
-func (psd *ProtDevSrv) QueueLen() int {
+func (psd *ProtDevSrv) QueueLen() int64 {
 	return psd.MemFs.QueueLen()
 }
 
@@ -80,16 +105,16 @@ func (psd *ProtDevSrv) mkService(svci any) {
 
 		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
 		if methodt.PkgPath != "" || // capitalized?
-			mtype.NumIn() != 3 ||
+			mtype.NumIn() != 4 ||
 			//mtype.In(1).Kind() != reflect.Ptr ||
-			mtype.In(2).Kind() != reflect.Ptr ||
+			mtype.In(3).Kind() != reflect.Ptr ||
 			mtype.NumOut() != 1 ||
 			mtype.Out(0) != typeOfError {
 			// the method is not suitable for a handler
 			log.Printf("bad method: %v\n", mname)
 		} else {
 			// the method looks like a handler
-			svc.methods[mname] = &method{methodt, mtype.In(1), mtype.In(2)}
+			svc.methods[mname] = &method{methodt, mtype.In(2), mtype.In(3)}
 		}
 	}
 	psd.svc = svc

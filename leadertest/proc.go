@@ -5,19 +5,23 @@ import (
 	"log"
 	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/delay"
-	"sigmaos/sessp"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 func RunProc(epochstr, dir string) {
 	pid := proc.GetPid()
 
-	fsl := fslib.MakeFsLib("proc-" + pid.String())
+	fsl, err := fslib.MakeFsLib("proc-" + pid.String())
+	if err != nil {
+		db.DFatalf("%v MakeFsLib err %v\n", proc.GetName(), err)
+	}
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started()
 
@@ -59,5 +63,5 @@ func RunProc(epochstr, dir string) {
 		}
 	}
 
-	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
+	pclnt.ExitedOK()
 }

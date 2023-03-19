@@ -6,11 +6,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -23,13 +22,15 @@ const (
 
 func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("leader-" + pid.String())
-	pclnt := procclnt.MakeProcClnt(fsl)
+	sc, err := sigmaclnt.MkSigmaClnt("leader-" + pid.String())
+	if err != nil {
+		db.DFatalf("%v SigmaClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
+	}
 
-	pclnt.Started()
+	sc.Started()
 
 	fn := dir + "/out"
-	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0777)
+	l := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
 
 	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
 	if err != nil {
@@ -46,20 +47,20 @@ func RunLeader(dir, last, child string) {
 	if err != nil {
 		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
-	_, err = fsl.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
+	_, err = sc.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 	if err != nil {
 		db.DFatalf("%v SetFile b %v failed %v\n", proc.GetName(), fn, err)
 	}
 
 	if child == "child" {
 		// Create a proc running in the same epoch as leader
-		p := proc.MakeProc("user/leadertest-proc", []string{epoch.String(), dir})
-		if err := pclnt.Spawn(p); err != nil {
-			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
+		p := proc.MakeProc("leadertest-proc", []string{epoch.String(), dir})
+		if err := sc.Spawn(p); err != nil {
+			sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
-		if err := pclnt.WaitStart(p.Pid); err != nil {
-			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
+		if err := sc.WaitStart(p.GetPid()); err != nil {
+			sc.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 	}
@@ -68,7 +69,7 @@ func RunLeader(dir, last, child string) {
 		// allow others to write for a while
 		time.Sleep(500 * time.Millisecond)
 	} else {
-		if err := fsl.Disconnect(sp.NAMED); err != nil {
+		if err := sc.Disconnect(sp.NAMED); err != nil {
 			db.DFatalf("disconnect failed %v\n", err)
 		}
 
@@ -77,12 +78,12 @@ func RunLeader(dir, last, child string) {
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {
-			_, err := fsl.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
+			_, err := sc.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 			if err != nil {
 				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			}
 		}
 	}
 
-	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
+	sc.ExitedOK()
 }

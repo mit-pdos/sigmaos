@@ -6,13 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
@@ -21,8 +19,8 @@ import (
 	"sigmaos/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procdclnt"
 	rd "sigmaos/rand"
+	"sigmaos/scheddclnt"
 	"sigmaos/seqwc"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
@@ -59,7 +57,10 @@ func TestHash(t *testing.T) {
 func TestMakeWordCount(t *testing.T) {
 	const (
 		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
-		INPUT = "../input/gutenberg.txt"
+		HOSTTMP = "/tmp/sigmaos"
+		F       = "gutenberg.txt"
+		INPUT   = "../input/" + F
+		OUT     = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)
@@ -71,7 +72,8 @@ func TestMakeWordCount(t *testing.T) {
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
 	proc.SetPid("test")
-	p := perf.MakePerf(perf.SEQWC)
+	p, err := perf.MakePerf(perf.SEQWC)
+	assert.Nil(t, err)
 	sbc := mr.MakeScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
@@ -81,7 +83,7 @@ func TestMakeWordCount(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	file, err = os.Create("/tmp/sigmaos/" + path.Base(INPUT) + ".out")
+	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
 	for k, v := range data {
@@ -118,7 +120,8 @@ func TestMapper(t *testing.T) {
 	)
 
 	ts := test.MakeTstateAll(t)
-	p := perf.MakePerf(perf.MRMAPPER)
+	p, err := perf.MakePerf(perf.MRMAPPER)
+	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
 	ts.Remove(REDUCEOUT)
@@ -128,8 +131,8 @@ func TestMapper(t *testing.T) {
 
 	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err MkBins %v", err)
-	m := mr.MkMapper(wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
-
+	m, err := mr.MkMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
+	assert.Nil(t, err, "MkMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 
@@ -192,10 +195,10 @@ func TestSeqGrep(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
-	p := proc.MakeProc("user/seqgrep", []string{job.Input})
+	p := proc.MakeProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.Pid)
+	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 	// assert.Equal(t, 795, n)
@@ -209,10 +212,10 @@ func TestSeqWc(t *testing.T) {
 
 	ts.Remove(OUT)
 
-	p := proc.MakeProc("user/seqwc", []string{job.Input, OUT})
+	p := proc.MakeProc("seqwc", []string{job.Input, OUT})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.Pid)
+	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 	// assert.Equal(t, 795, n)
@@ -236,7 +239,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll(path.Join(sp.UXROOT, "mr"))
+	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
 	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 
@@ -274,57 +277,31 @@ func (ts *Tstate) checkJob() {
 	}
 }
 
-// Sleep for a random time, then crash a server.  Crash a server of a
-// certain type, then crash a server of that type.
-func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
-	r := rand.Intn(randMax)
-	time.Sleep(time.Duration(r) * time.Microsecond)
-	db.DPrintf(db.ALWAYS, "Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)
-	// Make sure not too many crashes happen at once by taking a lock (we always
-	// want >= 1 server to be up).
-	l.Lock()
-	switch srv {
-	case sp.PROCD:
-		err := ts.BootProcd()
-		assert.Nil(ts.T, err, "Spawn procd %v", err)
-	case sp.UX:
-		err := ts.BootFsUxd()
-		assert.Nil(ts.T, err, "Spawn uxd %v", err)
-	default:
-		assert.False(ts.T, true, "%v: Unrecognized service type", proc.GetProgram())
-	}
-	db.DPrintf(db.ALWAYS, "Kill one %v", srv)
-	err := ts.KillOne(srv)
-	assert.Nil(ts.T, err, "Kill procd %v", err)
-	l.Unlock()
-	crashchan <- true
-}
-
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	pdc := procdclnt.MakeProcdClnt(ts.FsLib, ts.RealmId())
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.Realm())
 	if monitor {
-		pdc.MonitorProcds()
-		defer pdc.Done()
+		sdc.MonitorSchedds()
+		defer sdc.Done()
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(ts.FsLib, ts.ProcClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
+	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashprocd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(sp.PROCD, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.CrashServer(sp.SCHEDDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.crashServer(sp.UX, (i+1)*CRASHSRV, l2, crashchan)
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l2, crashchan)
 	}
 
 	cm.Wait()
@@ -341,7 +318,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	ts.Shutdown()
 }
 
-func TestMRJOB(t *testing.T) {
+func TestMRJob(t *testing.T) {
 	runN(t, 0, 0, 0, 0, true)
 }
 
@@ -357,16 +334,16 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, false)
 }
 
-func TestCrashProcd1(t *testing.T) {
+func TestCrashSchedd1(t *testing.T) {
 	runN(t, 0, 0, 1, 0, false)
 }
 
-func TestCrashProcd2(t *testing.T) {
+func TestCrashSchedd2(t *testing.T) {
 	N := 2
 	runN(t, 0, 0, N, 0, false)
 }
 
-func TestCrashProcdN(t *testing.T) {
+func TestCrashScheddN(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, 0, false)
 }
@@ -386,7 +363,7 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, 0, 0, 0, N, false)
 }
 
-func TestCrashProcdUx5(t *testing.T) {
+func TestCrashScheddUx5(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, N, false)
 }

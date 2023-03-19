@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "proc/proc.proto";
+
+option go_package = "sigmaos/uprocsrv/proto";
+
+message RunRequest {
+  ProcProto procProto = 1;
+}
+
+message RunResult {
+}
+

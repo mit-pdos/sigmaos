@@ -24,11 +24,14 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	mfs, _, _, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
+	mfs, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	p := perf.MakePerf(perf.S3)
+	p, err := perf.MakePerf(perf.S3)
+	if err != nil {
+		db.DFatalf("Error MakePerf: %v", err)
+	}
 	defer p.Done()
 
 	commonBuckets := []string{"9ps3", "sigma-common"}

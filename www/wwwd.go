@@ -10,9 +10,8 @@ import (
 
 	"net/http/pprof"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/memfssrv"
 	"sigmaos/pipe"
 	"sigmaos/proc"
@@ -46,7 +45,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := fidclnt.LocalIP()
+	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}
@@ -57,8 +56,10 @@ func RunWwwd(job, tree string) {
 	}
 
 	// Write a file for clients to discover the server's address.
-	p := JobHTTPAddrsPath(job)
-	www.PutFileJson(p, 0777, []string{l.Addr().String()})
+	mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
+	if err = www.mfs.SigmaClnt().MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+		db.DFatalf("MountService %v", err)
+	}
 
 	go func() {
 		www.mfs.Serve()
@@ -68,8 +69,6 @@ func RunWwwd(job, tree string) {
 }
 
 type Wwwd struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
 	mfs           *memfssrv.MemFs
 	localSrvpath  string
 	globalSrvpath string
@@ -79,26 +78,26 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.mfs, www.FsLib, www.ProcClnt, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
+	www.mfs, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 	// In order to automount children, we need to at least mount /pids.
-	if err := procclnt.MountPids(www.FsLib, fslib.Named()); err != nil {
+	if err := procclnt.MountPids(www.mfs.SigmaClnt().FsLib, www.mfs.SigmaClnt().NamedAddr()); err != nil {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrExists(err) {
+	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrExists(err) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
 	www.globalSrvpath = path.Join(proc.GetProcDir(), WWWD)
 
-	err = www.Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
+	err = www.mfs.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {
 		db.DFatalf("Error symlink memfs wwwd: %v", err)
 	}
@@ -132,7 +131,7 @@ func (www *Wwwd) makePipe() string {
 	// Make the pipe in the server.
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
-	if err := www.MakePipe(pipePath, 0777); err != nil {
+	if err := www.mfs.SigmaClnt().MakePipe(pipePath, 0777); err != nil {
 		db.DFatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
 	}
 	return pipeName
@@ -140,7 +139,7 @@ func (www *Wwwd) makePipe() string {
 
 func (www *Wwwd) removePipe(pipeName string) {
 	pipePath := path.Join(www.localSrvpath, pipeName)
-	if err := www.Remove(pipePath); err != nil {
+	if err := www.mfs.SigmaClnt().Remove(pipePath); err != nil {
 		db.DFatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
 	}
 }
@@ -149,14 +148,14 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
 	db.DPrintf(db.WWW, "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
-	fd, err := www.Open(pipePath, sp.OREAD)
+	fd, err := www.mfs.SigmaClnt().Open(pipePath, sp.OREAD)
 	if err != nil {
 		db.DPrintf(db.WWW_ERR, "pipe open %v failed %v", pipePath, err)
 		return
 	}
-	defer www.Close(fd)
+	defer www.mfs.SigmaClnt().Close(fd)
 	for {
-		b, err := www.Read(fd, pipe.PIPESZ)
+		b, err := www.mfs.SigmaClnt().Read(fd, pipe.PIPESZ)
 		if err != nil || len(b) == 0 {
 			break
 		}
@@ -183,13 +182,13 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	}
 	db.DPrintf(db.WWW, "About to spawn %v", a)
-	_, errs := www.SpawnBurst([]*proc.Proc{a})
+	_, errs := www.mfs.SigmaClnt().SpawnBurst([]*proc.Proc{a}, 1)
 	if len(errs) != 0 {
 		db.DFatalf("Error SpawnBurst %v", errs)
 		return nil, errs[0]
 	}
 	db.DPrintf(db.WWW, "About to WaitStart %v", a)
-	err := www.WaitStart(pid)
+	err := www.mfs.SigmaClnt().WaitStart(pid)
 	if err != nil {
 		db.DFatalf("Error WaitStart %v", err)
 		return nil, err
@@ -204,7 +203,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		}()
 	}
 	db.DPrintf(db.WWW, "About to WaitExit %v", a)
-	status, err := www.WaitExit(pid)
+	status, err := www.mfs.SigmaClnt().WaitExit(pid)
 	db.DPrintf(db.WWW, "WaitExit done %v status %v err %v", pid, status, err)
 	if pipe {
 		www.removePipe(pipeName)
@@ -215,7 +214,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(sp.TMP, args)
-	return www.spawnApp("user/fsreader", w, r, true, []string{file}, nil, 0)
+	return www.spawnApp("fsreader", w, r, true, []string{file}, nil, 0)
 }
 
 func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -234,5 +233,5 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
-	return www.spawnApp("user/matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
+	return www.spawnApp("matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
 }

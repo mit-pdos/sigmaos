@@ -1,0 +1,8 @@
+#!/bin/bash
+
+for containerid in $(docker ps -a --format "{{.Names}}"); do
+    if [[ $containerid == sigma-* ]] ; then
+        echo "========== Logs for $containerid =========="
+        docker logs $containerid
+    fi
+done

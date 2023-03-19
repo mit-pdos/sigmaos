@@ -1,4 +1,5 @@
 aaa*
+xxxxx
 bin/
 *.bk
 *.sw*
@@ -10,4 +11,3 @@ mr/par-mr.out
 perf/perf.test
 *.err
 *.pdf
-VERSION.txt

@@ -6,8 +6,7 @@ package kv
 // several backups.
 //
 // When a client adds/removes a shard, the primary balancer updates
-// KVCONF, which has the mapping from shards to groups in the
-// following steps.
+// KVCONF, which has the mapping from shards to groups.
 //
 // If the balancer isn't the primary anymore (e.g., it is partitioned
 // and another balancer has become primary), the old primary's writes
@@ -32,25 +31,24 @@ import (
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 type Balancer struct {
 	sync.Mutex
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	conf       *Config
-	lc         *leaderclnt.LeaderClnt
-	mo         *Monitor
-	job        string
-	kvdncore   proc.Tcore
-	ch         chan bool
-	crash      int64
-	crashChild string
-	isBusy     bool // in config change?
+	*sigmaclnt.SigmaClnt
+	conf        *Config
+	lc          *leaderclnt.LeaderClnt
+	mo          *Monitor
+	job         string
+	kvdncore    proc.Tcore
+	ch          chan bool
+	crash       int64
+	crashhelper string
+	isBusy      bool // in config change?
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -67,22 +65,22 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashChild, kvdncore string, auto string) {
+func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid().String())
-	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
+	sc, err := sigmaclnt.MkSigmaClnt("balancer-" + proc.GetPid().String())
+	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
-	bl.crashChild = crashChild
+	bl.crashhelper = crashhelper
 	var kvdnc int
-	var err error
-	kvdnc, err = strconv.Atoi(kvdncore)
-	if err != nil {
-		db.DFatalf("Bad kvdncore: %v", err)
+	var error error
+	kvdnc, error = strconv.Atoi(kvdncore)
+	if error != nil {
+		db.DFatalf("Bad kvdncore: %v", error)
 	}
 	bl.kvdncore = proc.Tcore(kvdnc)
 
@@ -93,7 +91,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
 	// start server but don't publish its existence
-	mfs, err := memfssrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
+	mfs, err := memfssrv.MakeMemFsPortClnt("", ":0", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
@@ -103,7 +101,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}
 
-	// start server and write xch when server is done
+	// start server and write ch when server is done
 	ch := make(chan bool)
 	go func() {
 		mfs.Serve()
@@ -123,8 +121,8 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 
 	db.DPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
 
-	// first epoch is used to create a functional system
-	// (e.g., creating shards), so don't crash then.
+	// first epoch is used to create a functional system (e.g.,
+	// creating shards), so don't allow a crash then.
 	if epoch > 1 {
 		crash.Crasher(bl.FsLib)
 	}
@@ -140,7 +138,7 @@ func RunBalancer(job, crashChild, kvdncore string, auto string) {
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt, bl.job, bl.kvdncore)
+			bl.mo = MakeMonitor(bl.SigmaClnt, bl.job, bl.kvdncore)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}
@@ -226,7 +224,8 @@ func (bl *Balancer) monitor() {
 	}
 }
 
-// Monitor if i am connected; if not, terminate myself
+// Monitor if i am connected; if not, terminate myself.  Another
+// balancer will take over.
 func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)
@@ -285,12 +284,12 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	p.AppendEnv("SIGMACRASH", bl.crashChild)
+	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
-		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.Pid, err)
+		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)
 	}
-	return p.Pid, err
+	return p.GetPid(), err
 }
 
 func (bl *Balancer) runProc(args []string) (*proc.Status, error) {
@@ -347,7 +346,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"user/kv-mover", bl.job, bl.conf.Epoch.String(), m.Src, m.Dst},
+		bl.runProcRetry([]string{"kv-mover", bl.job, bl.conf.Epoch.String(), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
 				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()

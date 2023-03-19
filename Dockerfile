@@ -7,7 +7,13 @@ ARG tag
 ENV SIGMATAG=$tag
 
 # Install custom version of go with larger minimum stack size.
-RUN git clone https://github.com/ArielSzekely/go.git go-custom && cd go-custom && git checkout bigstack && git config pull.rebase false && git pull && cd src && ./all.bash
+RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
+  cd go-custom && \
+  git checkout bigstack && \
+  git config pull.rebase false && \
+  git pull && \
+  cd src && \
+  ./all.bash
 
 # Install docker ce-cli
 RUN apt-get update

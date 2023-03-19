@@ -179,12 +179,13 @@ run_hotel() {
   perf_dir=$7
   driver=$8
   async=$9
-  hotel_ncache=6
+  hotel_ncache=3
+  hotel_cache_ncore=2
   cmd="
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -352,7 +353,7 @@ rpcbench_tail_multi() {
       run_rpcbench $testname $rps $cli_vm 5 $perf_dir $driver true
       if [[ $cli_vm == $driver_vm ]]; then
         # Give the driver time to start up the realm.
-        sleep 30s
+        sleep 10s
       fi
     done
     # Wait for all clients to terminate.
@@ -389,7 +390,7 @@ hotel_tail_multi() {
   testname_clnt="Hotel${sys}JustCliSearch"
   for n in {1..1000} ; do
     # run=${FUNCNAME[0]}/$sys/$rps #-$n
-    run=${FUNCNAME[0]}/$sys/ncache-6/$rps-$n
+    run=${FUNCNAME[0]}/$sys/ncache-3/$rps-$n
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/"$run"
     # Avoid doing duplicate work.
@@ -419,11 +420,17 @@ hotel_tail_multi() {
       echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
       continue
     fi
+    if grep -r "concurrent map reads" /tmp/*.out ; then
+      echo "----------------- Error concurrent map reads -----------------"
+      return
+      continue
+    fi
+    if grep -r "concurrent map writes" /tmp/*.out ; then
+      echo "----------------- Error concurrent map writes -----------------"
+      return
+      continue
+    fi
     if grep -r "server-side" $perf_dir ; then
-      if grep -r "concurrent map writes" /tmp/*.out ; then
-        echo "----------------- Error concurrent map writes -----------------"
-        continue
-      fi
       echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
       return
     fi
@@ -715,8 +722,8 @@ mr_vs_corral
 realm_balance
 realm_balance_be
 hotel_tail
-#hotel_tail_multi
-rpcbench_tail_multi
+hotel_tail_multi
+#rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
 #k8s_balance

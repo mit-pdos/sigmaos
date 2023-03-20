@@ -149,7 +149,7 @@ func (c *SrvConn) write(fm *sessp.FcallMsg) {
 		return
 	}
 	if time.Since(start) > 20*time.Millisecond {
-		db.DPrintf(db.ALWAYS, "Long marshal time %v avg %vus", time.Since(start))
+		db.DPrintf(db.ALWAYS, "Long marshal time %v", time.Since(start))
 	}
 }
 

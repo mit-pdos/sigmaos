@@ -135,7 +135,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		var reserves []Reservation
 		_, span := s.tracer.StartContextSpan(sctx, "Cache.Get")
 		cnt := &cacheproto.CacheInt{}
-		err := s.cachec.Get(key, cnt)
+		err := s.cachec.GetTraced(tracing.SpanToContext(span), key, cnt)
 		count = int(cnt.Val)
 		span.End()
 		if err != nil {
@@ -154,7 +154,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 				count += r.Number
 			}
 			_, span := s.tracer.StartContextSpan(sctx, "Cache.Put")
-			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(count)})
+			err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(count)})
 			span.End()
 			if err != nil {
 				return false, nil, err
@@ -168,7 +168,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		key = hotelId + "_cap"
 		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
 		hc := &cacheproto.CacheInt{}
-		err = s.cachec.Get(key, hc)
+		err = s.cachec.GetTraced(tracing.SpanToContext(span2), key, hc)
 		hotel_cap = int(hc.Val)
 		span2.End()
 		if err != nil {
@@ -189,7 +189,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			}
 			hotel_cap = nums[0].Number
 			_, span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
-			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
+			err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
 			span.End()
 			if err != nil {
 				return false, nil, err
@@ -223,7 +223,7 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
 		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
-		err := s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(cnt)})
+		err := s.cachec.PutTraced(tracing.SpanToContext(span2), key, &cacheproto.CacheInt{Val: int64(cnt)})
 		span2.End()
 		if err != nil {
 			return err

@@ -2,19 +2,20 @@ package snapshot
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 type Dev struct {
 	fs.Inode
-	srv sp.SessServer
+	srv sps.SessServer
 }
 
-func MakeDev(srv sp.SessServer, ctx fs.CtxI, root fs.Dir) *Dev {
+func MakeDev(srv sps.SessServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	i := inode.MakeInode(ctx, 0, root)
 	return &Dev{i, srv}
 }

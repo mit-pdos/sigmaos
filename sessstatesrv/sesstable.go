@@ -8,6 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/threadmgr"
 )
 
@@ -16,13 +17,13 @@ type SessionTable struct {
 	c *sync.Cond
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
-	mkps     sp.MkProtServer
-	sesssrv  sp.SessServer
+	mkps     sps.MkProtServer
+	sesssrv  sps.SessServer
 	sessions map[sessp.Tsession]*Session
 	last     *Session // for tests
 }
 
-func MakeSessionTable(mkps sp.MkProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.sesssrv = sesssrv

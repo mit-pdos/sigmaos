@@ -10,6 +10,7 @@ import (
 	"sigmaos/sessdev"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
@@ -19,12 +20,12 @@ type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
-	detach    sp.DetachF
+	detach    sps.DetachF
 	fn        string
 	wctl      WriteCtlF
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sp.DetachF, w WriteCtlF) *serr.Err {
+func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sps.DetachF, w WriteCtlF) *serr.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
 	err := mfs.MkDev(sessdev.CloneName(fn), cl) // put clone file into root dir
@@ -96,7 +97,7 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sp.DetachF, w WriteCtlF) error {
+func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sps.DetachF, w WriteCtlF) error {
 	if err := makeClone(mfs, fn, f, d, w); err != nil {
 		return err
 	}

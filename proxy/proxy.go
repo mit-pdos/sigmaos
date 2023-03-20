@@ -13,6 +13,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/threadmgr"
 )
 
@@ -29,7 +30,7 @@ func MakeNpd(lip string, nds sp.Taddrs) *Npd {
 	return npd
 }
 
-func (npd *Npd) mkProtServer(sesssrv sp.SessServer, sid sessp.Tsession) sp.Protsrv {
+func (npd *Npd) mkProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	return makeNpConn(npd.lip, npd.named)
 }
 
@@ -46,14 +47,14 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	sess.SendConn(reply)
 }
 
-func (npd *Npd) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *serr.Err {
+func (npd *Npd) Register(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) *serr.Err {
 	sess := npd.st.Alloc(cid, sid)
 	sess.SetConn(conn)
 	return nil
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (npd *Npd) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) {
+func (npd *Npd) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == sessp.NoSession {
 		return
@@ -127,7 +128,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
+func (npc *NpConn) Detach(rets *sp.Rdetach, detach sps.DetachF) *sp.Rerror {
 	db.DPrintf(db.PROXY, "Detach\n")
 	return nil
 }

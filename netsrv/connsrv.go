@@ -5,9 +5,13 @@ import (
 	"net"
 	"sync"
 
+	"time"
+
 	db "sigmaos/debug"
+	"sigmaos/queue"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 type SrvConn struct {
@@ -15,10 +19,10 @@ type SrvConn struct {
 	wg             *sync.WaitGroup
 	conn           net.Conn
 	closed         bool
-	sesssrv        sp.SessServer
+	sesssrv        sps.SessServer
 	br             *bufio.Reader
 	bw             *bufio.Writer
-	replies        chan *sessp.FcallMsg
+	replies        *queue.ReplyQueue
 	marshalframe   MarshalF
 	unmarshalframe UnmarshalF
 	clid           sessp.Tclient
@@ -34,7 +38,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		make(chan *sessp.FcallMsg),
+		queue.MakeReplyQueue(),
 		srv.marshal,
 		srv.unmarshal,
 		0,
@@ -63,7 +67,7 @@ func (c *SrvConn) Close() {
 	go func() {
 		c.wg.Wait()
 		db.DPrintf(db.NETSRV, "Cli %v Sess %v Close replies chan %p", c.clid, c.sessid, c.replies)
-		close(c.replies)
+		c.replies.Close()
 	}()
 }
 
@@ -94,7 +98,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyC() chan *sessp.FcallMsg {
+func (c *SrvConn) GetReplyQueue() *queue.ReplyQueue {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -117,8 +121,8 @@ func (c *SrvConn) reader() {
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
 				fm := sessp.MakeFcallMsgReply(fc, sp.MkRerror(err))
-				c.GetReplyC() <- fm
-				close(c.replies)
+				c.GetReplyQueue().Enqueue(fm)
+				c.replies.Close()
 				return
 			} else {
 				// If we successfully registered, we'll have to unregister once the
@@ -133,21 +137,33 @@ func (c *SrvConn) reader() {
 	}
 }
 
+func (c *SrvConn) write(fm *sessp.FcallMsg) {
+	// Mark that the sender is no longer waiting to send on the replies channel.
+	c.wg.Done()
+	db.DPrintf(db.NETSRV, "rep %v\n", fm)
+	start := time.Now()
+	if err := c.marshalframe(fm, c.bw); err != nil {
+		db.DPrintf(db.NETSRV_ERR, "%v writer %v err %v\n", c.sessid, c.Src(), err)
+		// XXX Remove
+		// continue
+		return
+	}
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Long marshal time %v avg %vus", time.Since(start))
+	}
+}
+
 func (c *SrvConn) writer() {
 	// Close the TCP connection once we return.
 	defer c.conn.Close()
 	for {
-		fm, ok := <-c.replies
+		fms, ok := c.replies.Dequeue()
 		if !ok {
 			db.DPrintf(db.NETSRV, "%v writer: close conn from %v\n", c.sessid, c.Src())
 			return
 		}
-		// Mark that the sender is no longer waiting to send on the replies channel.
-		c.wg.Done()
-		db.DPrintf(db.NETSRV, "rep %v\n", fm)
-		if err := c.marshalframe(fm, c.bw); err != nil {
-			db.DPrintf(db.NETSRV_ERR, "%v writer %v err %v\n", c.sessid, c.Src(), err)
-			continue
+		for _, fm := range fms {
+			c.write(fm)
 		}
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"runtime/debug"
 
+	"time"
+
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -22,6 +24,7 @@ import (
 	"sigmaos/sessstatesrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/snapshot"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
@@ -43,8 +46,8 @@ import (
 type SessSrv struct {
 	addr       string
 	root       fs.Dir
-	mkps       sp.MkProtServer
-	rps        sp.RestoreProtServer
+	mkps       sps.MkProtServer
+	rps        sps.RestoreProtServer
 	stats      *stats.StatInfo
 	st         *sessstatesrv.SessionTable
 	sm         *sessstatesrv.SessionMgr
@@ -66,7 +69,7 @@ type SessSrv struct {
 }
 
 func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
-	mkps sp.MkProtServer, rps sp.RestoreProtServer, config repl.Config) *SessSrv {
+	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -126,7 +129,7 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f sp.DetachF, sid sessp.Tsession) *serr.Err {
+func (sssrv *SessSrv) RegisterDetach(f sps.DetachF, sid sessp.Tsession) *serr.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, sid)
@@ -243,14 +246,14 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid sessp.Tsessio
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) *serr.Err {
+func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) *serr.Err {
 	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(cid, sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sp.Conn) {
+func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == sessp.NoSession {
 		return
@@ -294,7 +297,12 @@ func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, s
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
 	if request.Fc.Seqno != 0 && ok {
+		// XXX Remove
+		start := time.Now()
 		sess.SendConn(reply)
+		if time.Since(start) > 20*time.Millisecond {
+			db.DPrintf(db.ALWAYS, "Long SendConn %v", time.Since(start))
+		}
 	}
 }
 

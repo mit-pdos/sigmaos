@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -20,6 +21,7 @@ import (
 	"sigmaos/sessdevsrv"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 const (
@@ -44,8 +46,9 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	bins []cache
-	shrd string
+	bins   []cache
+	shrd   string
+	tracer *tracing.Tracer
 }
 
 func RunCacheSrv(args []string) error {
@@ -70,6 +73,9 @@ func RunCacheSrv(args []string) error {
 		return err
 	}
 
+	s.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
+	defer s.tracer.Flush()
+
 	p, err := perf.MakePerf(perf.CACHESRV)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
@@ -81,23 +87,37 @@ func RunCacheSrv(args []string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	_, span := s.tracer.StartRPCSpan(&req, "Put")
+	defer span.End()
+
 	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
 	b := key2bin(req.Key)
 
+	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	}
 
 	s.bins[b].cache[req.Key] = req.Value
 	return nil
 }
 
 func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	_, span := s.tracer.StartRPCSpan(&req, "Get")
+	defer span.End()
+
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	b := key2bin(req.Key)
 
+	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	}
 
 	v, ok := s.bins[b].cache[req.Key]
 	if ok {

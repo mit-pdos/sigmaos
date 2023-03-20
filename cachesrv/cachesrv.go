@@ -87,8 +87,10 @@ func RunCacheSrv(args []string) error {
 
 // XXX support timeout
 func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "Put")
-	defer span.End()
+	if false {
+		_, span := s.tracer.StartRPCSpan(&req, "Put")
+		defer span.End()
+	}
 
 	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
@@ -106,8 +108,10 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 }
 
 func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "Get")
-	defer span.End()
+	if false {
+		_, span := s.tracer.StartRPCSpan(&req, "Get")
+		defer span.End()
+	}
 
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	b := key2bin(req.Key)

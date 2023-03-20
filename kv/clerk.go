@@ -207,7 +207,6 @@ type opT int
 const (
 	GETVAL opT = iota + 1
 	PUT
-	SET
 	GETRD
 )
 

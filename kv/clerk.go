@@ -18,6 +18,7 @@ import (
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	tproto "sigmaos/tracing/proto"
 )
 
 //
@@ -238,6 +239,10 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
+func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	return kc.Get(key, val)
+}
+
 func (kc *KvClerk) Get(key string, val proto.Message) error {
 	b, err := kc.GetRaw(Tkey(key), 0)
 	if err != nil {
@@ -265,6 +270,10 @@ func (kc *KvClerk) Append(k Tkey, b []byte) error {
 	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
+}
+
+func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	return kc.Put(key, val)
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {

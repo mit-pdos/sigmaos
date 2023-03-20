@@ -23,6 +23,9 @@ func SpanToContext(span trace.Span) *proto.SpanContextConfig {
 }
 
 func contextFromConfig(c *proto.SpanContextConfig) context.Context {
+	if c == nil {
+		return context.TODO()
+	}
 	var tid [16]byte
 	copy(tid[:], c.TraceID[0:16])
 	var sid [8]byte

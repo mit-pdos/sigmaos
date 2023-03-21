@@ -18,9 +18,7 @@ usage() {
 
 PORT=4406  # use non-default port number on host
 
-if docker images mariadb | grep mariab; then
-    docker pull mariadb:10.4
-fi
+docker pull mariadb:10.4
 if ! docker ps | grep -q sigmadb; then
     echo "start db"
     docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb

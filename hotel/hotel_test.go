@@ -16,6 +16,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/protdev"
 	"sigmaos/protdevclnt"
 	rd "sigmaos/rand"

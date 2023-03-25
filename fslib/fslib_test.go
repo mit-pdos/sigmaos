@@ -1258,7 +1258,7 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
 
-	st := stats.StatInfo{}
+	st := stats.Stats{}
 	err = ts.GetFileJson(gopath.Join("name", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk

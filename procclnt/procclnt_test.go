@@ -14,6 +14,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
+	"sigmaos/mem"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -755,4 +756,37 @@ func anyCoresOccupied(coresMaps []map[string]bool) bool {
 		}
 	}
 	return coreOccupied
+}
+
+func runMemHog(ts *test.Tstate, c chan error, id, delay, mem string) {
+	p := proc.MakeProc("memhog", []string{id, delay, mem})
+	if id == "LC" {
+		p.SetNcore(2)
+	}
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err, "Error spawn: %v", err)
+	status, err := ts.WaitExit(p.GetPid())
+	if err != nil {
+		c <- err
+	}
+	if !status.IsStatusOK() {
+		c <- fmt.Errorf("err: %s", status.Error())
+	}
+	c <- nil
+}
+
+func TestReapBE(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	mem := mem.GetTotalMem()
+	beC := make(chan error)
+	lcC := make(chan error)
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", (mem*3)/4))
+	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem/2)))
+	r := <-beC
+	db.DPrintf(db.TEST, "beLC %v\n", r)
+	r = <-lcC
+	assert.Nil(t, r)
+
+	ts.Shutdown()
 }

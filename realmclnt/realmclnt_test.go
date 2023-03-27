@@ -25,7 +25,7 @@ import (
 
 const (
 	SLEEP_MSECS = 2000
-	N_ITER      = 200_000_000
+	N_ITER      = 5_000_000_000
 
 	// Realms
 	REALM1 sp.Trealm = "testrealm"
@@ -47,42 +47,30 @@ func calibrateCTimeLinux(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	return time.Since(start)
 }
 
-func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter int, id, delay, mem string) proc.Tpid {
-	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id, delay, mem})
+func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
+	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetNcore(ncore)
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
 }
 
-func waitSpinPerf(ts *test.RealmTstate, pid proc.Tpid) (time.Duration, error) {
+func waitSpinPerf(ts *test.RealmTstate, pid proc.Tpid) time.Duration {
 	status, err := ts.WaitExit(pid)
-	if err != nil {
-		return time.Duration(0), err
-	}
-	if !status.IsStatusOK() {
-		db.DPrintf(db.TEST, "pid %v %v\n", pid, status.Error())
-		return time.Duration(0), fmt.Errorf("err: %s", status.Error())
-	}
-	return time.Duration(status.Data().(float64)), nil
+	assert.Nil(ts.T, err)
+	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
+	return time.Duration(status.Data().(float64))
 }
 
 func calibrateCTimeSigma(ts *test.RealmTstate, nthread uint, niter int) time.Duration {
-	c := make(chan res)
-	go runSpinPerf(ts, c, 0, nthread, niter, "sigma-baseline", "0s", "0B")
-	r := <-c
-	return r.dur
+	c := make(chan time.Duration)
+	go runSpinPerf(ts, c, 0, nthread, niter, "sigma-baseline")
+	return <-c
 }
 
-type res struct {
-	dur time.Duration
-	err error
-}
-
-func runSpinPerf(ts *test.RealmTstate, c chan res, ncore proc.Tcore, nthread uint, niter int, id, delay, mem string) {
-	pid := spawnSpinPerf(ts, ncore, nthread, niter, id, delay, mem)
-	d, err := waitSpinPerf(ts, pid)
-	c <- res{d, err}
+func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
+	pid := spawnSpinPerf(ts, ncore, nthread, niter, id)
+	c <- waitSpinPerf(ts, pid)
 }
 
 func TestBasicSimple(t *testing.T) {
@@ -405,16 +393,16 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
-	c := make(chan res)
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin1", "0s", "0B")
-	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin2", "0s", "0B")
+	c := make(chan time.Duration)
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin1")
+	go runSpinPerf(ts1, c, 0, linuxsched.NCores-2, N_ITER, "spin2")
 
 	d1 := <-c
 	d2 := <-c
 
 	// Calculate slowdown
-	d1sd := slowdown(ctimeS, d1.dur)
-	d2sd := slowdown(ctimeS, d2.dur)
+	d1sd := slowdown(ctimeS, d1)
+	d2sd := slowdown(ctimeS, d2)
 
 	// Target slowdown (x)
 	tsd := 1.70
@@ -435,21 +423,18 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
-	beC := make(chan res)
-	lcC := make(chan res)
+	beC := make(chan time.Duration)
+	lcC := make(chan time.Duration)
 	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin", "0s", "0B")
-	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin", "0s", "0B")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
 
-	assert.Nil(t, durBE.err)
-	assert.Nil(t, durLC.err)
-
 	// Calculate slodown
-	beSD := slowdown(ctimeS, durBE.dur)
-	lcSD := slowdown(ctimeS, durLC.dur)
+	beSD := slowdown(ctimeS, durBE)
+	lcSD := slowdown(ctimeS, durLC)
 
 	// Target slowdown (x)
 	beMinSD := 1.5
@@ -474,18 +459,18 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	ctimeS := calibrateCTimeSigma(ts1, linuxsched.NCores-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
-	beC := make(chan res)
-	lcC := make(chan res)
+	beC := make(chan time.Duration)
+	lcC := make(chan time.Duration)
 	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin", "0s", "0B")
-	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-2, N_ITER, "bespin", "0s", "0B")
+	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
 
 	// Calculate slodown
-	beSD := slowdown(ctimeS, durBE.dur)
-	lcSD := slowdown(ctimeS, durLC.dur)
+	beSD := slowdown(ctimeS, durBE)
+	lcSD := slowdown(ctimeS, durLC)
 
 	// Target slowdown (x)
 	beMinSD := 1.5
@@ -496,34 +481,6 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
 	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
 	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
-
-	rootts.Shutdown()
-}
-
-func TestSpinPerfEvictBEandLC(t *testing.T) {
-	niter := N_ITER / 2
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
-
-	db.DPrintf(db.TEST, "SigmaOS ncore %v", linuxsched.NCores-2)
-
-	beC := make(chan res)
-	lcC := make(chan res)
-	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, niter, "lcspin", "10s", "1024MB")
-	beCores := uint(2)
-	nbe := (linuxsched.NCores - 2) / beCores
-	for i := uint(0); i < nbe; i++ {
-		go runSpinPerf(ts1, beC, 0, beCores, niter, "bespin", "0s", "800MB")
-	}
-	for i := uint(0); i < nbe; i++ {
-		_ = <-beC
-	}
-	durLC := <-lcC
-
-	assert.Nil(t, durLC.err)
-
-	db.DPrintf(db.TEST, "durLC %v\n", durLC.dur)
 
 	rootts.Shutdown()
 }

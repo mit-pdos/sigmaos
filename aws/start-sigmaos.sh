@@ -73,7 +73,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch docker-dev
+  ./update-repo.sh --vpc $VPC --parallel --branch master
 fi
 
 for vm in $vms; do

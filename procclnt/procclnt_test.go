@@ -781,12 +781,12 @@ func TestReapBE(t *testing.T) {
 	mem := mem.GetTotalMem()
 	beC := make(chan error)
 	lcC := make(chan error)
-	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", (mem*3)/4))
-	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem/2)))
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2))
+	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem*3)/4))
 	r := <-beC
 	db.DPrintf(db.TEST, "beLC %v\n", r)
-	r = <-lcC
-	assert.Nil(t, r)
+	r1 := <-lcC
+	assert.Nil(t, r1)
 
 	ts.Shutdown()
 }

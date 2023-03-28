@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-
+        "github.com/shirou/gopsutil/process"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -35,6 +35,16 @@ func main() {
 		time.Sleep(d)
 	}
 	db.DPrintf(db.ALWAYS, "%v:  start (%v %v)", id, d, m)
+	pid := os.Getpid()
+	proc, err := process.NewProcess(int32(pid))
+	if err != nil {
+	    db.DFatalf("Error NewProcess: %v", err)
+	}
+	t := time.Now()
+	pf, err := proc.PageFaults()
+	if err != nil {
+	    db.DFatalf("Error PageFaults: %v", err)
+	}
 	mem := make([]byte, 1)
 	if m > 0 {
 		mem = make([]byte, m)
@@ -47,7 +57,11 @@ func main() {
 		l := uint(len(mem))
 		mem[j%l] = mem[k%l] + mem[i%l]
 	}
-	db.DPrintf(db.ALWAYS, "%v: iter %v", id, niter)
+	pf1, err:= proc.PageFaults()
+	if err != nil {
+	    db.DFatalf("Error PageFaults: %v", err)
+	}
+	db.DPrintf(db.ALWAYS, "%v: iter %v %v %v %v", id, niter,  time.Since(t), pf, pf1)
 	if id == "BE" {
 	    time.Sleep(d)
 	}

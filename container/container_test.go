@@ -10,13 +10,27 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"sigmaos/container"
-	db "sigmaos/debug"
+	 db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
+
+func TestExpose(t *testing.T) {
+	const (
+		FPORT port.Tport = 100
+		LPORT port.Tport = 200
+	)
+	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
+	assert.Nil(t, err)
+	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8112-8113")
+	assert.Nil(t, err)
+	pmap := nat.PortMap{}
+	pmap[ports] = []nat.PortBinding{}
+	log.Printf("ports %v pms  %v\n", ports, pms)
+}
 
 func TestRearrange(t *testing.T) {
 	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", "realm1")
@@ -53,6 +67,17 @@ func runMemHog(ts *test.Tstate, c chan error, id, delay, mem string) {
 	c <- nil
 }
 
+func TestLCAlone(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	mem := mem.GetTotalMem()
+	lcC := make(chan error)
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2))
+	r1 := <-lcC
+	assert.Nil(t, r1)
+	ts.Shutdown()
+}
+
 func TestReapBE(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -65,6 +90,5 @@ func TestReapBE(t *testing.T) {
 	db.DPrintf(db.TEST, "beLC %v\n", r)
 	r1 := <-lcC
 	assert.Nil(t, r1)
-
 	ts.Shutdown()
 }

@@ -25,7 +25,7 @@ require (
 	go.etcd.io/etcd/raft/v3 v3.5.0
 	go.etcd.io/etcd/server/v3 v3.5.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+	golang.org/x/sys v0.2.0
 	gonum.org/v1/gonum v0.12.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v3 v3.0.0
@@ -58,6 +58,7 @@ require (
 	github.com/docker/docker v23.0.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -72,9 +73,13 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/shirou/gopsutil v2.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/tklauser/go-sysconf v0.3.11 // indirect
+	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.etcd.io/etcd/pkg/v3 v3.5.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect

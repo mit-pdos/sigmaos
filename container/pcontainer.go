@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
+	"sigmaos/mem"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -94,6 +95,11 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,
+			Resources: container.Resources{
+				// This also allows for GetTotalMem() of swap, if host
+				// has swap space
+				Memory: int64(mem.GetTotalMem()) * sp.MBYTE,
+			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-uprocd-"+realm.String()+"-"+p.GetPid().String())

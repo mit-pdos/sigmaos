@@ -651,6 +651,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	clientReady(rootts)
 	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})

@@ -18,20 +18,6 @@ import (
 	"sigmaos/test"
 )
 
-func TestExpose(t *testing.T) {
-	const (
-		FPORT port.Tport = 100
-		LPORT port.Tport = 200
-	)
-	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
-	assert.Nil(t, err)
-	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8112-8113")
-	assert.Nil(t, err)
-	pmap := nat.PortMap{}
-	pmap[ports] = []nat.PortBinding{}
-	log.Printf("ports %v pms  %v\n", ports, pms)
-}
-
 func TestRearrange(t *testing.T) {
 	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", "realm1")
 	addr1 := sp.MkTaddrRealm("10.0.7.53:1113", "realm2")

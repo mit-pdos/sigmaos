@@ -38,8 +38,10 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	}
 
 	score := 0
+	swappiness := int64(0)
 	if ptype == proc.T_BE {
 		score = 1000
+		swappiness = 100
 	}
 
 	// append uprocd's port
@@ -98,7 +100,8 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Resources: container.Resources{
 				// This also allows for GetTotalMem() of swap, if host
 				// has swap space
-				Memory: int64(mem.GetTotalMem()) * sp.MBYTE,
+				Memory:           int64(mem.GetTotalMem()) * sp.MBYTE,
+				MemorySwappiness: &swappiness,
 			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,

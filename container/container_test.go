@@ -10,7 +10,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"sigmaos/container"
-	 db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -60,9 +60,11 @@ func runMemHog(ts *test.Tstate, c chan error, id, delay, mem string) {
 	status, err := ts.WaitExit(p.GetPid())
 	if err != nil {
 		c <- err
+		return
 	}
 	if !status.IsStatusOK() {
 		c <- status.Error()
+		return
 	}
 	c <- nil
 }

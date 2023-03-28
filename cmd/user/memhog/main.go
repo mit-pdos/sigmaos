@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-        "github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/process"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -24,13 +25,13 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)
 	}
-		sc, err := sigmaclnt.MkSigmaClnt("memhog-" + proc.GetPid().String())
-		if err != nil {
-			db.DFatalf("Error mkSigmaClnt: %v", err)
-		}
-		if err := sc.Started(); err != nil {
-			db.DFatalf("Error started: %v", err)
-		}
+	sc, err := sigmaclnt.MkSigmaClnt("memhog-" + proc.GetPid().String())
+	if err != nil {
+		db.DFatalf("Error mkSigmaClnt: %v", err)
+	}
+	if err := sc.Started(); err != nil {
+		db.DFatalf("Error started: %v", err)
+	}
 	if id == "LC" {
 		time.Sleep(d)
 	}
@@ -38,33 +39,36 @@ func main() {
 	pid := os.Getpid()
 	proc, err := process.NewProcess(int32(pid))
 	if err != nil {
-	    db.DFatalf("Error NewProcess: %v", err)
+		db.DFatalf("Error NewProcess: %v", err)
 	}
 	t := time.Now()
 	pf, err := proc.PageFaults()
 	if err != nil {
-	    db.DFatalf("Error PageFaults: %v", err)
+		db.DFatalf("Error PageFaults: %v", err)
 	}
-	mem := make([]byte, 1)
-	if m > 0 {
-		mem = make([]byte, m)
+	mem := make([]byte, m)
+	iter := uint64(0)
+	for time.Since(t) < time.Duration(5*time.Second) {
+		iter += rw(mem, m)
 	}
-	j := uint(0)
-	niter := uint(10_000_000)
-	for i := uint(0); i < niter; i++ {
-		k := j * i
-		j = k + i
-		l := uint(len(mem))
-		mem[j%l] = mem[k%l] + mem[i%l]
-	}
-	pf1, err:= proc.PageFaults()
+	pf1, err := proc.PageFaults()
 	if err != nil {
-	    db.DFatalf("Error PageFaults: %v", err)
+		db.DFatalf("Error PageFaults: %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "%v: iter %v %v %v %v", id, niter,  time.Since(t), pf, pf1)
+	db.DPrintf(db.ALWAYS, "%v: done %v %v %v %v", id, iter, time.Since(t), pf, pf1)
 	if id == "BE" {
-	    time.Sleep(d)
+		time.Sleep(d)
 	}
 	sc.ExitedOK()
 }
 
+func rw(mem []byte, m uint64) uint64 {
+	j := uint64(0)
+	ps := uint64(4 * sp.KBYTE)
+	for i := uint64(0); i < m; i += ps {
+		k := j * i
+		j = k + i
+		mem[j%m] = mem[k%m] + mem[i%m]
+	}
+	return m
+}

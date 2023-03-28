@@ -62,7 +62,7 @@ func runMemHog(ts *test.Tstate, c chan error, id, delay, mem string) {
 		c <- err
 	}
 	if !status.IsStatusOK() {
-		c <- fmt.Errorf("err: %s", status.Error())
+		c <- status.Error()
 	}
 	c <- nil
 }

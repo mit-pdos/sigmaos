@@ -659,6 +659,9 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
+		if err == nil {
+			db.DPrintf(db.ALWAYS, "Successful request!")
+		}
 	})
 	go func() {
 		for _, j := range jobs {

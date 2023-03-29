@@ -3,6 +3,7 @@ package container_test
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,8 +51,8 @@ func TestRearrange(t *testing.T) {
 	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 }
 
-func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string) {
-	p := proc.MakeProc("memhog", []string{id, delay, mem, dur})
+func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {
+	p := proc.MakeProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
 	if id == "LC" {
 		p.SetNcore(2)
 	}
@@ -74,7 +75,7 @@ func TestLCAlone(t *testing.T) {
 
 	mem := mem.GetTotalMem()
 	lcC := make(chan error)
-	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), "60s")
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), "60s", 2)
 	r1 := <-lcC
 	assert.Nil(t, r1)
 	ts.Shutdown()
@@ -87,8 +88,8 @@ func TestReapBE(t *testing.T) {
 	mem := mem.GetTotalMem()
 	beC := make(chan error)
 	lcC := make(chan error)
-	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), duration)
-	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem*3)/4), duration)
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), duration, 2)
+	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem*3)/4), duration, 1)
 	r := <-beC
 	db.DPrintf(db.TEST, "beLC %v\n", r)
 	r1 := <-lcC

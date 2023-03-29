@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -14,8 +15,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 5 {
-		db.DFatalf("Usage: %v id delay mem duration\nArgs: %v", os.Args[0], os.Args)
+	if len(os.Args) != 6 {
+		db.DFatalf("Usage: %v id delay mem duration nthread\nArgs: %v", os.Args[0], os.Args)
 	}
 	id := os.Args[1]
 	d, err := time.ParseDuration(os.Args[2])
@@ -29,6 +30,10 @@ func main() {
 	dur, err := time.ParseDuration(os.Args[4])
 	if err != nil {
 		db.DFatalf("Error ParseDuration: %v", err)
+	}
+	nthread, err := strconv.Atoi(os.Args[5])
+	if err != nil {
+		db.DFatalf("Error strconv: %v", err)
 	}
 	sc, err := sigmaclnt.MkSigmaClnt("memhog-" + proc.GetPid().String())
 	if err != nil {
@@ -46,25 +51,37 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error NewProcess: %v", err)
 	}
-	t := time.Now()
 	pf, err := proc.PageFaults()
 	if err != nil {
 		db.DFatalf("Error PageFaults: %v", err)
 	}
-	mem := make([]byte, m)
 	iter := uint64(0)
-	for time.Since(t) < dur {
-		iter += rw(mem, m)
+	ch := make(chan uint64)
+	t := time.Now()
+	for i := 0; i < nthread; i++ {
+	    go worker(ch, m/uint64(nthread), t, dur)
+	}
+	for i := 0; i < nthread; i++ {
+	    iter += <- ch
 	}
 	pf1, err := proc.PageFaults()
 	if err != nil {
 		db.DFatalf("Error PageFaults: %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "%v: done %v %v %v %v", id, iter, time.Since(t), pf, pf1)
+	db.DPrintf(db.ALWAYS, "%v: done %v %v %v %v", id, time.Since(t), iter, pf, pf1)
 	if id == "BE" {
 		time.Sleep(d)
 	}
 	sc.ExitedOK()
+}
+
+func worker(ch chan uint64, m uint64, t time.Time, dur time.Duration) {
+	mem := make([]byte, m)
+	iter := uint64(0)
+	for time.Since(t) < dur {
+		iter += rw(mem, m)
+	}
+	ch <- iter
 }
 
 func rw(mem []byte, m uint64) uint64 {

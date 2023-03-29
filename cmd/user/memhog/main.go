@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/linuxsched"
 	sp "sigmaos/sigmap"
 )
 
@@ -45,7 +46,7 @@ func main() {
 	if id == "LC" {
 		time.Sleep(d)
 	}
-	db.DPrintf(db.ALWAYS, "%v: start %v %v %v", id, d, humanize.Bytes(m), dur)
+	db.DPrintf(db.ALWAYS, "%v: start %v %v %v %d %d", id, d, humanize.Bytes(m), dur, nthread, linuxsched.NCores)
 	pid := os.Getpid()
 	proc, err := process.NewProcess(int32(pid))
 	if err != nil {
@@ -68,7 +69,8 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error PageFaults: %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "%v: done %v %v %v %v", id, time.Since(t), iter, pf, pf1)
+	tput := float64(iter) / time.Since(t).Seconds()
+	db.DPrintf(db.ALWAYS, "%v: done %v %v %.2f %v %v", id, time.Since(t), iter, tput, pf, pf1)
 	if id == "BE" {
 		time.Sleep(d)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/shirou/gopsutil/process"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -35,7 +36,7 @@ func main() {
 	if id == "LC" {
 		time.Sleep(d)
 	}
-	db.DPrintf(db.ALWAYS, "%v:  start (%v %v)", id, d, m)
+	db.DPrintf(db.ALWAYS, "%v:  start (%v %v)", id, d, humanize.Bytes(m))
 	pid := os.Getpid()
 	proc, err := process.NewProcess(int32(pid))
 	if err != nil {

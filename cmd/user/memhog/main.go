@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "fmt"
 	"os"
 	"strconv"
 	"time"
@@ -9,9 +10,9 @@ import (
 	"github.com/shirou/gopsutil/process"
 
 	db "sigmaos/debug"
+	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/linuxsched"
 	sp "sigmaos/sigmap"
 )
 
@@ -60,10 +61,10 @@ func main() {
 	ch := make(chan uint64)
 	t := time.Now()
 	for i := 0; i < nthread; i++ {
-	    go worker(ch, m/uint64(nthread), t, dur)
+		go worker(ch, m/uint64(nthread), t, dur)
 	}
 	for i := 0; i < nthread; i++ {
-	    iter += <- ch
+		iter += <-ch
 	}
 	pf1, err := proc.PageFaults()
 	if err != nil {
@@ -81,17 +82,21 @@ func worker(ch chan uint64, m uint64, t time.Time, dur time.Duration) {
 	mem := make([]byte, m)
 	iter := uint64(0)
 	for time.Since(t) < dur {
-		iter += rw(mem, m)
+		iter += rw(mem)
 	}
 	ch <- iter
 }
 
-func rw(mem []byte, m uint64) uint64 {
+func rw(mem []byte) uint64 {
 	j := uint64(0)
-	for i := uint64(0); i < m; i += uint64(sp.KBYTE) {
+	l := uint64(len(mem))
+	//start := time.Now()
+	inc := uint64(sp.KBYTE)
+	for i := uint64(0); i < l; i += inc {
 		k := j * i
 		j = k + i
-		mem[j%m] = mem[k%m] + mem[i%m] + byte(i%8)
+		mem[j%l] = mem[k%l] + mem[i%l] + byte(i%8)
 	}
-	return m
+	//fmt.Printf("time %v\n", time.Since(start))
+	return l / inc
 }

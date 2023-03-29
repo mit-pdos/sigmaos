@@ -50,8 +50,8 @@ func TestRearrange(t *testing.T) {
 	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 }
 
-func runMemHog(ts *test.Tstate, c chan error, id, delay, mem string) {
-	p := proc.MakeProc("memhog", []string{id, delay, mem})
+func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string) {
+	p := proc.MakeProc("memhog", []string{id, delay, mem, dur})
 	if id == "LC" {
 		p.SetNcore(2)
 	}
@@ -74,7 +74,7 @@ func TestLCAlone(t *testing.T) {
 
 	mem := mem.GetTotalMem()
 	lcC := make(chan error)
-	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2))
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), "60s")
 	r1 := <-lcC
 	assert.Nil(t, r1)
 	ts.Shutdown()
@@ -83,11 +83,12 @@ func TestLCAlone(t *testing.T) {
 func TestReapBE(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
+	duration := "60s"
 	mem := mem.GetTotalMem()
 	beC := make(chan error)
 	lcC := make(chan error)
-	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2))
-	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem*3)/4))
+	go runMemHog(ts, lcC, "LC", "2s", fmt.Sprintf("%dMB", mem/2), duration)
+	go runMemHog(ts, beC, "BE", "5s", fmt.Sprintf("%dMB", (mem*3)/4), duration)
 	r := <-beC
 	db.DPrintf(db.TEST, "beLC %v\n", r)
 	r1 := <-lcC

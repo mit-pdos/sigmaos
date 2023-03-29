@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 4 {
-		db.DFatalf("Usage: %v id delay mem\nArgs: %v", os.Args[0], os.Args)
+	if len(os.Args) != 5 {
+		db.DFatalf("Usage: %v id delay mem duration\nArgs: %v", os.Args[0], os.Args)
 	}
 	id := os.Args[1]
 	d, err := time.ParseDuration(os.Args[2])
@@ -25,6 +25,10 @@ func main() {
 	m, err := humanize.ParseBytes(os.Args[3])
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)
+	}
+	dur, err := time.ParseDuration(os.Args[4])
+	if err != nil {
+		db.DFatalf("Error ParseDuration: %v", err)
 	}
 	sc, err := sigmaclnt.MkSigmaClnt("memhog-" + proc.GetPid().String())
 	if err != nil {
@@ -36,7 +40,7 @@ func main() {
 	if id == "LC" {
 		time.Sleep(d)
 	}
-	db.DPrintf(db.ALWAYS, "%v:  start (%v %v)", id, d, humanize.Bytes(m))
+	db.DPrintf(db.ALWAYS, "%v: start %v %v %v", id, d, humanize.Bytes(m), dur)
 	pid := os.Getpid()
 	proc, err := process.NewProcess(int32(pid))
 	if err != nil {
@@ -49,7 +53,7 @@ func main() {
 	}
 	mem := make([]byte, m)
 	iter := uint64(0)
-	for time.Since(t) < time.Duration(5*time.Second) {
+	for time.Since(t) < dur {
 		iter += rw(mem, m)
 	}
 	pf1, err := proc.PageFaults()
@@ -65,11 +69,10 @@ func main() {
 
 func rw(mem []byte, m uint64) uint64 {
 	j := uint64(0)
-	ps := uint64(4 * sp.KBYTE)
-	for i := uint64(0); i < m; i += ps {
+	for i := uint64(0); i < m; i += uint64(sp.KBYTE) {
 		k := j * i
 		j = k + i
-		mem[j%m] = mem[k%m] + mem[i%m]
+		mem[j%m] = mem[k%m] + mem[i%m] + byte(i%8)
 	}
 	return m
 }

@@ -590,7 +590,9 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 			<-j.ready
 			if N_CLNT > 1 {
 				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
 				waitForClnts(rootts, N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 			}
 			// Ack to allow the job to proceed.
 			j.ready <- true
@@ -651,7 +653,9 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(rootts)
+	db.DPrintf(db.ALWAYS, "Clnt done waiting")
 	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)

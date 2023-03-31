@@ -30,7 +30,7 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 	for {
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
-		if err != nil && serr.IsErrUnreachable(err) {
+		if err != nil && err.IsErrUnreachable() {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
 			if e := pathc.umountFree(path1[0:done]); e != nil {
@@ -141,7 +141,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Path, w Watch) (sp.Tfid, p
 	db.DPrintf(db.WALK, "walkOne %v left %v\n", fid, path)
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
-		if w != nil && serr.IsErrNotfound(err) {
+		if w != nil && err.IsErrNotfound() {
 			var err1 *serr.Err
 			fid1, err1 = pathc.setWatch(fid, path, left, w)
 			if err1 != nil {

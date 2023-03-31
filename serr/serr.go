@@ -175,68 +175,56 @@ func (err *Err) String() string {
 	return err.Error()
 }
 
+// SigmaOS server couldn't find the requested file
+func (err *Err) IsErrNotfound() bool {
+	return err.Code() == TErrNotfound
+}
+
 // Maybe the error is because of a symlink or ~
 func (err *Err) IsMaybeSpecialElem() bool {
 	return err.Code() == TErrNotDir ||
-		(err.Code() == TErrNotfound && path.IsUnionElem(err.Obj))
+		(err.IsErrNotfound() && path.IsUnionElem(err.Obj))
 }
 
+// SigmaOS couldn't reach a server
 func (err *Err) IsErrUnreachable() bool {
 	return err.Code() == TErrUnreachable
 }
 
-// SigmaOS server couldn't find the requested file
-func IsErrNotfound(error error) bool {
-	return error != nil && strings.Contains(error.Error(), TErrNotfound.String())
-}
-
-// SigmaOS server couldn't reach a server
-func IsErrUnreachable(error error) bool {
-	return error != nil && strings.HasPrefix(error.Error(), TErrUnreachable.String())
-}
-
 // A file is unavailable: either a server on the file's path is
 // unreachable or the file is not found
-func IsErrUnavailable(error error) bool {
-	return IsErrUnreachable(error) || IsErrNotfound(error)
+func (err *Err) IsErrUnavailable() bool {
+	return err.IsErrUnreachable() || err.IsErrNotfound()
 }
 
-func ErrPath(error error) string {
-	if IsErrNotfound(error) {
-		return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
-	} else if IsErrUnreachable(error) {
-		return strings.TrimPrefix(error.Error(), TErrUnreachable.String()+" ")
+func (err *Err) IsErrVersion() bool {
+	return err.Code() == TErrVersion
+}
+
+func (err *Err) IsErrStale() bool {
+	return err.Code() == TErrStale
+}
+
+func (err *Err) IsErrSessClosed() bool {
+	return err.Code() == TErrClosed && strings.Contains(err.Error(), "sess")
+}
+
+func (err *Err) IsErrRetry() bool {
+	return err.Code() == TErrRetry
+}
+
+func (err *Err) IsErrExists() bool {
+	return err.Code() == TErrExists
+}
+
+func (err *Err) ErrPath() string {
+	if err.IsErrNotfound() {
+		return err.Obj
+	} else if err.IsErrUnreachable() {
+		return err.Obj
 	} else {
 		return ""
 	}
-}
-
-func IsErrExists(error error) bool {
-	return strings.Contains(error.Error(), TErrExists.String())
-}
-
-func IsErrStale(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrStale.String())
-}
-
-func IsErrVersion(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrVersion.String())
-}
-
-func IsErrRetry(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrRetry.String())
-}
-
-func IsErrSessClosed(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrClosed.String()) && strings.Contains(error.Error(), "sess")
-}
-
-func IsErrPipeClosed(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrClosed.String()) && strings.Contains(error.Error(), "pipe")
-}
-
-func IsErrNotDir(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrNotDir.String())
 }
 
 func IsErrCode(error error, code Terror) bool {

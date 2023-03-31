@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -174,7 +175,8 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 				ch <- r
 			}); err != nil {
 				rdr.Close()
-				if serr.IsErrVersion(err) {
+				var serr *serr.Err
+				if errors.As(err, &serr) && serr.IsErrVersion() {
 					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
 					continue
 				}

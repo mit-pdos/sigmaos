@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--n N] [--taint]" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N] [--taint N:M]" 1>&2
 }
 
 VPC=""
@@ -17,7 +17,8 @@ while [[ $# -gt 0 ]]; do
     ;;
   --taint)
     shift
-    TAINT="TRUE"
+    TAINT=$1
+    shift
     ;;
   --n)
     shift
@@ -80,11 +81,8 @@ for vm in $vms; do
     kubectl apply -f /tmp/kube-flannel.yml
     kubectl apply -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
 
-    if [ -z "$TAINT" ]; then
-      # If desired, un-taint all nodes, so the control-plane node can run pods
-      # too
-      kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    fi
+    # Un-taint all nodes, so the control-plane node can run pods too
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
 
     # Install dashboard
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
@@ -117,3 +115,18 @@ ENDSSH"
     join_cmd=$(eval "$print_join_cmd")
   fi
 done
+
+# If desired, taint benchmark driver nodes.
+if ! [ -z "$TAINT" ]; then
+  x1=$(echo $TAINT | cut -d ":" -f1)
+  x2=$(echo $TAINT | cut -d ":" -f2)
+  to_taint="${vma_privaddr[@]:$x1:$x2}"
+  to_taint=($to_taint)
+  to_taint=$(printf "ip-%s " "${to_taint[@]}" | sed "s/\./-/g")
+  ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
+    for i in $to_taint; do
+      echo "Tainting node \$i"
+      kubectl taint nodes \$i t=benchdriver:NoSchedule
+    done
+ENDSSH
+fi

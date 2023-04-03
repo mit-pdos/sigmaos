@@ -40,11 +40,17 @@ func (skipl *SkipIntervals) String() string {
 
 func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
-	if elem := skipl.findNext(nil, iv, prevElems); elem != nil {
+	elem := skipl.findNext(nil, iv, prevElems)
+
+	if elem != nil && iv.End > elem.iv.Start { // XXX
 		return
 	}
+	if prevElems[0] != nil && prevElems[0].iv.End > iv.Start { // XXX
+		return
+	}
+
 	level := skipl.randLevel()
-	elem := mkElement(level, iv)
+	elem = mkElement(level, iv)
 
 	// Set previous elements
 	elem.prev = prevElems[0]
@@ -74,11 +80,12 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
 	elem := skipl.findNext(nil, iv, prevElems)
-	if elem == nil {
-		return
-	}
 
 	log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
+
+	if elem == nil || !iv.Eq(elem.iv) {
+		return
+	}
 
 	// Remove elem from each level
 	for i := 0; i < len(elem.levels); i++ {
@@ -118,11 +125,8 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 			next = prev.levels[i]
 		}
 		for ; next != nil; next = next.levels[i] {
-			if next.iv.Start == iv.Start {
+			if iv.Start <= next.iv.Start {
 				elem = next
-				break
-			}
-			if iv.Start < next.iv.Start {
 				break
 			}
 			prev = next

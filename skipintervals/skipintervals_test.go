@@ -13,7 +13,7 @@ func TestBasic(t *testing.T) {
 	log.Printf("siv %v\n", siv)
 	e := siv.Find(*sessp.MkInterval(10, 2))
 	assert.Nil(t, e)
-	siv.Insert(*sessp.MkInterval(1, 2))
+	siv.Insert(*sessp.MkInterval(2, 2))
 	log.Printf("siv %v\n", siv)
 	siv.Insert(*sessp.MkInterval(10, 2))
 	log.Printf("insert 10 siv %v\n", siv)
@@ -31,6 +31,6 @@ func TestBasic(t *testing.T) {
 	log.Printf("del 5 siv %v\n", siv)
 	siv.Delete(*sessp.MkInterval(10, 2))
 	log.Printf("del 5 siv %v\n", siv)
-	siv.Delete(*sessp.MkInterval(1, 2))
+	siv.Delete(*sessp.MkInterval(2, 2))
 	log.Printf("del 5 siv %v\n", siv)
 }

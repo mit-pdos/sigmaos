@@ -12,10 +12,9 @@ func mkLevels(l int) levels {
 }
 
 type element struct {
-	levels       levels
-	iv           sessp.Tinterval
-	prev         *element
-	prevTopLevel *element
+	levels levels
+	iv     sessp.Tinterval
+	prev   *element
 }
 
 func mkElement(l int, iv sessp.Tinterval) *element {

@@ -40,19 +40,14 @@ func (skipl *SkipIntervals) String() string {
 
 func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
-	elem := skipl.findNext(nil, iv, prevElems)
-	log.Printf("%v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
-
-	if elem != nil {
+	if elem := skipl.findNext(nil, iv, prevElems); elem != nil {
 		return
 	}
-
 	level := skipl.randLevel()
-	elem = mkElement(level, iv)
+	elem := mkElement(level, iv)
 
 	// Set previous elements
 	elem.prev = prevElems[0]
-	elem.prevTopLevel = prevElems[level-1]
 
 	// Insert elem at each level
 	for i := 0; i < level; i++ {
@@ -65,29 +60,8 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 		}
 	}
 
-	// Find out the largest level with next element.
-	largestLevel := 0
-	for i := level - 1; i >= 0; i-- {
-		if elem.levels[i] != nil {
-			largestLevel = i + 1
-			break
-		}
-	}
-
-	// Adjust prev and prevTopLevel of next elements.
 	if next := elem.levels[0]; next != nil {
 		next.prev = elem
-	}
-
-	for i := 0; i < largestLevel; {
-		next := elem.levels[i]
-		nextLevel := len(next.levels)
-
-		if nextLevel <= level {
-			next.prevTopLevel = elem
-		}
-
-		i = nextLevel
 	}
 
 	if elem.levels[0] == nil {
@@ -95,6 +69,36 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	}
 
 	skipl.length++
+}
+
+func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
+	prevElems := mkLevels(MaxLevel)
+	elem := skipl.findNext(nil, iv, prevElems)
+	if elem == nil {
+		return
+	}
+
+	log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
+
+	// Remove elem from each level
+	for i := 0; i < len(elem.levels); i++ {
+		if prevElems[i] == nil {
+			skipl.levels[i] = elem.levels[i]
+		} else {
+			prevElems[i].levels[i] = elem.levels[i]
+
+		}
+	}
+
+	if next := elem.levels[0]; next != nil {
+		next.prev = elem.prev
+	}
+
+	if skipl.back == elem {
+		skipl.back = elem.prev
+	}
+
+	skipl.length--
 }
 
 func (skipl *SkipIntervals) Find(iv sessp.Tinterval) *element {
@@ -107,6 +111,7 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 		levels = start.levels
 	}
 	var prev *element
+	var elem *element
 	for i := MaxLevel - 1; i >= 0; i-- {
 		next := levels[i]
 		if prev != nil {
@@ -114,7 +119,8 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 		}
 		for ; next != nil; next = next.levels[i] {
 			if next.iv.Start == iv.Start {
-				return next
+				elem = next
+				break
 			}
 			if iv.Start < next.iv.Start {
 				break
@@ -125,7 +131,7 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 			pe[i] = prev
 		}
 	}
-	return nil
+	return elem
 }
 
 func (skipl *SkipIntervals) randLevel() int {

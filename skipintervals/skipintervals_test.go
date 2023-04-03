@@ -8,7 +8,7 @@ import (
 	"sigmaos/sessp"
 )
 
-func TestEmpty(t *testing.T) {
+func TestBasic(t *testing.T) {
 	siv := MkSkipIntervals()
 	log.Printf("siv %v\n", siv)
 	e := siv.Find(*sessp.MkInterval(10, 2))
@@ -24,4 +24,13 @@ func TestEmpty(t *testing.T) {
 	e = siv.Find(*sessp.MkInterval(10, 2))
 	assert.NotNil(t, e)
 	log.Printf("find %v\n", e)
+
+	siv.Delete(*sessp.MkInterval(0, 2))
+	log.Printf("del 0 siv %v\n", siv)
+	siv.Delete(*sessp.MkInterval(5, 2))
+	log.Printf("del 5 siv %v\n", siv)
+	siv.Delete(*sessp.MkInterval(10, 2))
+	log.Printf("del 5 siv %v\n", siv)
+	siv.Delete(*sessp.MkInterval(1, 2))
+	log.Printf("del 5 siv %v\n", siv)
 }

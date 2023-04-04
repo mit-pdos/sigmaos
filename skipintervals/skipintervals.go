@@ -129,14 +129,39 @@ func (skipl *SkipIntervals) merge(prevElems levels, elem *element) {
 func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
 	elem := skipl.findNext(nil, iv, prevElems)
+	for elem != nil {
 
-	log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
+		log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
 
-	if elem == nil || !iv.Eq(elem.iv) {
-		return
+		if iv.End < elem.iv.Start { // iv proceeds elem; done
+			break
+		}
+		if iv.Start < elem.iv.Start { // iv overlaps elem
+			iv.Start = elem.iv.Start
+		}
+		if iv.Start <= elem.iv.Start && iv.End >= elem.iv.End { // delete next
+			skipl.del(prevElems, elem)
+			// XXX see if more to be deleted
+		} else if iv.Start > elem.iv.Start && iv.End >= elem.iv.End {
+			elem.iv.End = iv.Start
+			// XXX see if next elem  should be deleted?
+		} else if elem.iv.Start == iv.Start {
+			elem.iv.Start = iv.End
+			// XXX see if next elem  should be deleted?
+		} else { // split iv
+			skipl.insert(*sessp.MkInterval(elem.iv.Start, iv.Start), prevElems, elem)
+			elem.iv.Start = iv.End
+			break
+		}
+		log.Printf("skip: %v\n", skipl)
+		// need to get next and prevElems for next to see if next should be deleted,
+		// and delete it.
+		elem = skipl.findNext(nil, iv, prevElems)
 	}
+}
 
-	// Remove elem from each level
+// Remove elem from each level
+func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 	for i := 0; i < len(elem.levels); i++ {
 		if prevElems[i] == nil {
 			skipl.levels[i] = elem.levels[i]

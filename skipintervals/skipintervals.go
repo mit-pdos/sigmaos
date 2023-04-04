@@ -38,19 +38,35 @@ func (skipl *SkipIntervals) String() string {
 	return s
 }
 
+func (skipl *SkipIntervals) Length() int {
+	return skipl.length
+}
+
 func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
-	elem := skipl.findNext(nil, iv, prevElems)
+	next := skipl.findNext(nil, iv, prevElems)
 
-	if elem != nil && iv.End > elem.iv.Start { // XXX
+	log.Printf("insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
+
+	if next == nil || iv.End < next.iv.Start {
+		skipl.insert(iv, prevElems, next)
 		return
 	}
-	if prevElems[0] != nil && prevElems[0].iv.End > iv.Start { // XXX
-		return
+
+	if iv.Start < next.iv.Start { // iv overlaps next
+		next.iv.Start = iv.Start
 	}
 
+	if iv.End > next.iv.End {
+		next.iv.End = iv.End
+		skipl.merge(prevElems, next)
+		return
+	}
+}
+
+func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *element) {
 	level := skipl.randLevel()
-	elem = mkElement(level, iv)
+	elem := mkElement(level, iv)
 
 	// Set previous elements
 	elem.prev = prevElems[0]
@@ -75,6 +91,39 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	}
 
 	skipl.length++
+}
+
+// maybe merge elem with elem's next
+func (skipl *SkipIntervals) merge(prevElems levels, elem *element) {
+	if elem.levels[0] == nil {
+		return
+	}
+	log.Printf("skipl %v merge? %v\n", skipl, elem)
+	next := elem.levels[0]
+	if elem.iv.End >= next.iv.Start { // merge  elem and next
+		if next.iv.End > elem.iv.End {
+			elem.iv.End = next.iv.End
+		}
+		next.iv.Start = elem.iv.Start
+		if !elem.iv.Eq(next.iv) {
+			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
+		}
+		if len(next.levels) > len(elem.levels) { // delete elem
+			for i := 0; i < len(elem.levels); i++ {
+				if prevElems[i] == nil {
+					skipl.levels[i] = next
+				} else {
+					prevElems[i].levels[i] = next
+				}
+			}
+		} else { // delete next
+			for i := 0; i < len(next.levels); i++ {
+				elem.levels[i] = next.levels[i]
+			}
+		}
+		skipl.length--
+		log.Printf("skipl %v merged %v %v\n", skipl, elem, next)
+	}
 }
 
 func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
@@ -125,7 +174,7 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 			next = prev.levels[i]
 		}
 		for ; next != nil; next = next.levels[i] {
-			if iv.Start <= next.iv.Start {
+			if iv.Start <= next.iv.End {
 				elem = next
 				break
 			}

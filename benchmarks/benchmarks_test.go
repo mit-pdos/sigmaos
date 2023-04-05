@@ -174,6 +174,9 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
 	_, ps := makeNProcs(N_TRIALS, "sleeper", []string{"5000us", OUT_DIR}, nil, 1)

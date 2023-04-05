@@ -44,23 +44,23 @@ func (skipl *SkipIntervals) Length() int {
 
 func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
-	next := skipl.findNext(nil, iv, prevElems)
+	next := skipl.findNext(nil, iv.Start, prevElems)
 
 	log.Printf("insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
-
-	if next == nil || iv.End < next.iv.Start {
+	if next == nil || iv.End < next.iv.Start { // iv preceeds next
 		skipl.insert(iv, prevElems, next)
-		return
-	}
-
-	if iv.Start < next.iv.Start { // iv overlaps next
-		next.iv.Start = iv.Start
-	}
-
-	if iv.End > next.iv.End {
-		next.iv.End = iv.End
-		skipl.merge(prevElems, next)
-		return
+		skipl.merge(prevElems)
+	} else { // iv overlaps next
+		if iv.End >= next.iv.End {
+			next.iv.End = iv.End
+		}
+		if iv.Start >= next.iv.Start { // iv is in net
+			return
+		}
+		if iv.Start < next.iv.Start {
+			next.iv.Start = iv.Start
+		}
+		skipl.merge(prevElems)
 	}
 }
 
@@ -93,13 +93,15 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 	skipl.length++
 }
 
-// maybe merge elem with elem's next
-func (skipl *SkipIntervals) merge(prevElems levels, elem *element) {
-	if elem.levels[0] == nil {
+// maybe merge prevelem, elem, and XXX elem's next
+func (skipl *SkipIntervals) merge(prevElems levels) {
+	log.Printf("skipl merge prevelem %v %v\n", prevElems, skipl)
+	if prevElems[0] == nil {
 		return
 	}
-	log.Printf("skipl %v merge? %v\n", skipl, elem)
+	elem := prevElems[0]
 	next := elem.levels[0]
+	log.Printf("skipl merge? prevelem %v %v %v\n", elem, next, skipl)
 	if elem.iv.End >= next.iv.Start { // merge  elem and next
 		if next.iv.End > elem.iv.End {
 			elem.iv.End = next.iv.End
@@ -108,27 +110,23 @@ func (skipl *SkipIntervals) merge(prevElems levels, elem *element) {
 		if !elem.iv.Eq(next.iv) {
 			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
 		}
-		if len(next.levels) > len(elem.levels) { // delete elem
-			for i := 0; i < len(elem.levels); i++ {
-				if prevElems[i] == nil {
-					skipl.levels[i] = next
+		for i := 0; i < len(elem.levels); i++ {
+			if elem.levels[i] == next {
+				if i < len(next.levels) {
+					elem.levels[i] = next.levels[i]
 				} else {
-					prevElems[i].levels[i] = next
+					elem.levels[i] = nil
 				}
-			}
-		} else { // delete next
-			for i := 0; i < len(next.levels); i++ {
-				elem.levels[i] = next.levels[i]
 			}
 		}
 		skipl.length--
-		log.Printf("skipl %v merged %v %v\n", skipl, elem, next)
+		log.Printf("skipl merged %v %v %v\n", elem, next, skipl)
 	}
 }
 
 func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
-	elem := skipl.findNext(nil, iv, prevElems)
+	elem := skipl.findNext(nil, iv.Start, prevElems)
 	for elem != nil {
 
 		log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
@@ -156,7 +154,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 		log.Printf("skip: %v\n", skipl)
 		// need to get next and prevElems for next to see if next should be deleted,
 		// and delete it.
-		elem = skipl.findNext(nil, iv, prevElems)
+		elem = skipl.findNext(nil, iv.Start, prevElems)
 	}
 }
 
@@ -183,13 +181,14 @@ func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 }
 
 func (skipl *SkipIntervals) Find(iv sessp.Tinterval) *element {
-	return skipl.findNext(nil, iv, nil)
+	return skipl.findNext(nil, iv.Start, nil)
 }
 
-func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe levels) *element {
+// Return first interval whose end is passed start and its predecessors at each level
+func (skipl *SkipIntervals) findNext(begin *element, start uint64, pe levels) *element {
 	levels := skipl.levels
-	if start != nil {
-		levels = start.levels
+	if begin != nil {
+		levels = begin.levels
 	}
 	var prev *element
 	var elem *element
@@ -199,7 +198,7 @@ func (skipl *SkipIntervals) findNext(start *element, iv sessp.Tinterval, pe leve
 			next = prev.levels[i]
 		}
 		for ; next != nil; next = next.levels[i] {
-			if iv.Start <= next.iv.End {
+			if start < next.iv.End {
 				elem = next
 				break
 			}

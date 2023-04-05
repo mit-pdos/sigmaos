@@ -91,3 +91,19 @@ func TestDelete(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	assert.Equal(t, 0, ivs.Length())
 }
+
+func TestMany(t *testing.T) {
+	const (
+		N = 100
+		B = 10
+	)
+
+	ivs := MkSkipIntervals()
+	for i := uint64(0); i < N; i++ {
+		ivs.Insert(*sessp.MkInterval(i, i+1))
+	}
+	log.Printf("skipl %v\n", ivs)
+	//for i := uint64(0); i < N/B; i += B {
+	//	ivs.Delete(*sessp.MkInterval(i, i+B))
+	//}
+}

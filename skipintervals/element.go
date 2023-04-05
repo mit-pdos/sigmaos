@@ -11,6 +11,14 @@ func mkLevels(l int) levels {
 	return make([]*element, l)
 }
 
+func (lv levels) String() string {
+	s := "["
+	for i := 0; i < len(lv); i++ {
+		s += fmt.Sprintf("%p(%v)", lv[i], lv[i])
+	}
+	return s + "]"
+}
+
 type element struct {
 	levels levels
 	iv     sessp.Tinterval
@@ -26,4 +34,12 @@ func mkElement(l int, iv sessp.Tinterval) *element {
 
 func (elem *element) String() string {
 	return fmt.Sprintf("%v", elem.iv.Marshal())
+}
+
+func (elem *element) Level(l int) string {
+	s := ""
+	for e := elem; e != nil; e = e.levels[l] {
+		s += fmt.Sprintf("%v(%p) ", e, e)
+	}
+	return s
 }

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/sessp"
 )
 
@@ -29,11 +30,7 @@ func MkSkipIntervals() *SkipIntervals {
 func (skipl *SkipIntervals) String() string {
 	s := "SkipIntervals:\n"
 	for i := MaxLevel - 1; i >= 0; i-- {
-		s1 := fmt.Sprintf("level %d:", i)
-		for e := skipl.levels[i]; e != nil; e = e.levels[i] {
-			s1 += fmt.Sprintf("%v ", e)
-		}
-		s += s1 + "\n"
+		s += fmt.Sprintf("level %d %v\n", i, skipl.levels[i].Level(i))
 	}
 	return s
 }
@@ -46,7 +43,7 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
 	next := skipl.findNext(nil, iv.Start, prevElems)
 
-	log.Printf("insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
+	db.DPrintf(db.ALWAYS, "Insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
 	if next == nil || iv.End < next.iv.Start { // iv preceeds next
 		skipl.insert(iv, prevElems, next)
 		skipl.merge(prevElems)
@@ -68,6 +65,8 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 	level := skipl.randLevel()
 	elem := mkElement(level, iv)
 
+	db.DPrintf(db.ALWAYS, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)
+
 	// Set previous elements
 	elem.prev = prevElems[0]
 
@@ -79,29 +78,29 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 		} else {
 			elem.levels[i] = prevElems[i].levels[i]
 			prevElems[i].levels[i] = elem
+			db.DPrintf(db.ALWAYS, "insert level %d %s\n", i, prevElems[i].Level(i))
+
 		}
 	}
 
-	if next := elem.levels[0]; next != nil {
+	if next := elem.levels[0]; next == nil {
+		skipl.back = elem
+	} else {
 		next.prev = elem
 	}
 
-	if elem.levels[0] == nil {
-		skipl.back = elem
-	}
-
+	db.DPrintf(db.ALWAYS, "inserted %v %v\n", iv.Marshal(), skipl)
 	skipl.length++
 }
 
-// maybe merge prevelem, elem, and XXX elem's next
+// maybe merge prevelem and elem
 func (skipl *SkipIntervals) merge(prevElems levels) {
-	log.Printf("skipl merge prevelem %v %v\n", prevElems, skipl)
 	if prevElems[0] == nil {
 		return
 	}
+	log.Printf("merge? %v %v\n", prevElems, skipl)
 	elem := prevElems[0]
 	next := elem.levels[0]
-	log.Printf("skipl merge? prevelem %v %v %v\n", elem, next, skipl)
 	if elem.iv.End >= next.iv.Start { // merge  elem and next
 		if next.iv.End > elem.iv.End {
 			elem.iv.End = next.iv.End
@@ -110,6 +109,8 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 		if !elem.iv.Eq(next.iv) {
 			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
 		}
+
+		// remove next
 		for i := 0; i < len(elem.levels); i++ {
 			if elem.levels[i] == next {
 				if i < len(next.levels) {
@@ -119,6 +120,8 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 				}
 			}
 		}
+		// XXX need to fix up pointers that point to next at level j,
+		// where j > elem.levels.
 		skipl.length--
 		log.Printf("skipl merged %v %v %v\n", elem, next, skipl)
 	}
@@ -129,7 +132,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 	elem := skipl.findNext(nil, iv.Start, prevElems)
 	for elem != nil {
 
-		log.Printf("del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
+		db.DPrintf(db.TEST, "del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
 
 		if iv.End < elem.iv.Start { // iv proceeds elem; done
 			break
@@ -151,7 +154,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 			elem.iv.Start = iv.End
 			break
 		}
-		log.Printf("skip: %v\n", skipl)
+		db.DPrintf(db.ALWAYS, "skip: %v\n", skipl)
 		// need to get next and prevElems for next to see if next should be deleted,
 		// and delete it.
 		elem = skipl.findNext(nil, iv.Start, prevElems)

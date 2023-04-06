@@ -54,10 +54,10 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.Finalize(mgr.kernelId)
 	s := time.Now()
 	mgr.setupProcState(p)
-	db.DPrintf(db.SPAWN_LAT, "Proc state setup %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()
 	mgr.downloadProc(p)
-	db.DPrintf(db.SPAWN_LAT, "Binary downlaod time %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Binary downlaod time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
 	mgr.teardownProcState(p)
 }

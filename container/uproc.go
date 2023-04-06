@@ -56,7 +56,7 @@ func ExecUProc() error {
 	s := time.Now()
 	// Isolate the user proc.
 	pn, err := isolateUserProc(program)
-	db.DPrintf(db.SPAWN_LAT, "Uproc jail creation %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc jail creation %v", proc.GetPid(), time.Since(s))
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
 	s := time.Now()
 	sd.pmgr.Spawn(p)
-	db.DPrintf(db.SPAWN_LAT, "E2E Procmgr Spawn %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] E2E Procmgr Spawn %v", p.GetPid(), time.Since(s))
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -162,7 +162,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 			}
 			// Claimed a proc, so schedule it.
 			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
-			db.DPrintf(db.SPAWN_LAT, "Queueing latency %v", time.Since(p.GetSpawnTime()))
+			db.DPrintf(db.SPAWN_LAT, "[%v] Queueing latency %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 			sd.runProc(p)
 			return true
 		} else {

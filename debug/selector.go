@@ -23,7 +23,7 @@ const (
 
 // Latency break-down.
 const (
-	SPAWN_LAT Tselector = "SPAWN_PERF"
+	SPAWN_LAT Tselector = "SPAWN_LAT"
 )
 
 // Tests

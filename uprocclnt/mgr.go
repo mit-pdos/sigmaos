@@ -5,6 +5,7 @@ import (
 	"log"
 	"path"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -49,7 +50,9 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 		}
 		updm.kclnt = kclnt
 	}
+	s := time.Now()
 	pid, err := updm.kclnt.Boot("uprocd", []string{realm.String(), ptype.String(), updm.kernelId})
+	db.DPrintf(db.SPAWN_LAT, "Boot uprocd %v", time.Since(s))
 	if err != nil {
 		return pid, err
 	}

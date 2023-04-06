@@ -3,6 +3,7 @@ package schedd
 import (
 	"path"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -59,7 +60,9 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
+	s := time.Now()
 	sd.pmgr.Spawn(p)
+	db.DPrintf(db.SPAWN_LAT, "E2E Procmgr Spawn %v", time.Since(s))
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -159,6 +162,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 			}
 			// Claimed a proc, so schedule it.
 			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
+			db.DPrintf(db.SPAWN_LAT, "Queueing latency %v", time.Since(p.GetSpawnTime()))
 			sd.runProc(p)
 			return true
 		} else {

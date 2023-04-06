@@ -21,6 +21,11 @@ const (
 	CPU_UTIL             = "CPU_UTIL"
 )
 
+// Latency break-down.
+const (
+	SPAWN_LAT Tselector = "SPAWN_PERF"
+)
+
 // Tests
 const (
 	TEST  Tselector = "TEST"

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -52,8 +53,10 @@ func ExecUProc() error {
 	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
 	args := os.Args[1:]
 	program := args[0]
+	s := time.Now()
 	// Isolate the user proc.
 	pn, err := isolateUserProc(program)
+	db.DPrintf(db.SPAWN_LAT, "Uproc jail creation %v", time.Since(s))
 	if err != nil {
 		return err
 	}

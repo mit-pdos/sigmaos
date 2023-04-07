@@ -57,6 +57,7 @@ const (
 	KVMON                     = "KVMON"
 	KVMV                      = "KVMV"
 	KVMV_ERR                  = KVMV + ERR
+	SOCIAL_NETWORK			  = "SOCIAL_NETWORK"
 )
 
 // System

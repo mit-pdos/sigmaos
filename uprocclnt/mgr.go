@@ -52,7 +52,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 	}
 	s := time.Now()
 	pid, err := updm.kclnt.Boot("uprocd", []string{realm.String(), ptype.String(), updm.kernelId})
-	db.DPrintf(db.SPAWN_LAT, "[%v] Boot uprocd %v", realm, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Boot %v uprocd %v", realm, ptype, time.Since(s))
 	if err != nil {
 		return pid, err
 	}

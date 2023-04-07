@@ -58,6 +58,8 @@ const (
 	KVMV                      = "KVMV"
 	KVMV_ERR                  = KVMV + ERR
 	SOCIAL_NETWORK			  = "SOCIAL_NETWORK"
+	SOCIAL_NETWORK_MOL        = SOCIAL_NETWORK + "_MOL"
+	SOCIAL_NETWORK_USER       = SOCIAL_NETWORK + "_USER"
 )
 
 // System

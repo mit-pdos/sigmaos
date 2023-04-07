@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "ulambda/socialnetwork/proto";
+
+service UserService {
+  rpc CheckUser(CheckUserRequest) returns (CheckUserResponse);
+  rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
+
+}
+
+message CheckUserRequest {
+	string username = 1;
+}
+
+message CheckUserResponse {
+	string ok = 1;
+}
+
+message RegisterUserRequest {
+	string username = 1;
+	string password = 2;
+	string firstname = 3;
+	string lastname = 4;
+}
+
+message RegisterUserResponse {
+	string ok = 1;	
+}

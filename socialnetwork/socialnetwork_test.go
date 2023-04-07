@@ -5,6 +5,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/rand"
 	sn "sigmaos/socialnetwork"
+	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/protdevclnt"
 	"github.com/stretchr/testify/assert"
@@ -28,23 +29,13 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv) *TstateSN {
 	return tssn
 }
 
-func TestFindMeaningLocal(t *testing.T) {
-	mol := sn.MeaningOfLife{}
-	arg := proto.MoLRequest{
-		Name: "test",
-	} 
-	res := proto.MoLResult{}
-	mol.FindMeaning(nil, arg, &res)
-	assert.Equal(t, float32(42), res.Meaning)
-}
-
 func TestFindMeanlingServer(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-mol", test.Overlays, 1}})
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sn.MOL_SERVICE_NAME)
+	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_MOL)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := proto.MoLRequest{
 		Name: "test",
@@ -55,8 +46,52 @@ func TestFindMeanlingServer(t *testing.T) {
 	assert.Equal(t, float32(42), res.Meaning)
 
 	// sleep a while to print heartbeats then stop
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Second)
 	stopErr := snCfg.Stop()
 	assert.Nil(t, stopErr, "Procs should stop properly")
 	tssn.Shutdown()
+}
+
+func TestUser(t *testing.T) {
+	// start server
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1}})
+	snCfg := tssn.snCfg
+
+	// create a RPC client and query
+	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_USER)
+	assert.Nil(t, err, "RPC client should be created properly")
+
+	// check user
+	arg_check := proto.CheckUserRequest{Username: "test_user"}
+	res_check := proto.CheckUserResponse{}
+	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
+	assert.Nil(t, err)
+	assert.Equal(t, "No", res_check.Ok)
+
+	// register user
+	arg_reg := proto.RegisterUserRequest{
+		Firstname: "Alice", Lastname: "Test", Username: "user_0", Password: "xxyyzz"}
+	res_reg := proto.RegisterUserResponse{}
+	err = pdc.RPC("User.RegisterUser", &arg_reg, &res_reg)
+	assert.Nil(t, err)
+	assert.Equal(t, "Username user_0 already exist", res_reg.Ok)
+
+	arg_reg.Username = "test_user"
+	err = pdc.RPC("User.RegisterUser", &arg_reg, &res_reg)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_reg.Ok)
+
+	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_check.Ok)
+
+
+    // new user login
+
+	//stop server
+	time.Sleep(2 * time.Second)
+	stopErr := snCfg.Stop()
+	assert.Nil(t, stopErr, "Procs should stop properly")
+	tssn.Shutdown()
+
 }

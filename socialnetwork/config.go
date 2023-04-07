@@ -7,16 +7,7 @@ import (
 	"path"
 	"strconv"
 	dbg "sigmaos/debug"
-)
-
-const (
-	BOOT_REALM = "realm"
-	BOOT_ALL   = "all"
-	BOOT_NAMED = "named"
-	BOOT_NODE  = "node"
-	NAMEDPORT  = ":1111"
-
-	SOCIAL_NETWORK_ROOT = "name/socialnetwork/" 
+	sp "sigmaos/sigmap"
 )
 
 type Srv struct {
@@ -28,6 +19,7 @@ type Srv struct {
 func MakeMoLSrvs(public bool) []Srv {
 	return []Srv{
 		Srv{"socialnetwork-mol", public, 1},
+		Srv{"socialnetwork-user", public, 1},
 	}
 }
 
@@ -38,12 +30,12 @@ type SocialNetworkConfig struct {
 }
 
 func JobDir(job string) string {
-	return path.Join(SOCIAL_NETWORK_ROOT, job)
+	return path.Join(sp.SOCIAL_NETWORK, job)
 }
 
 func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv) (*SocialNetworkConfig, error) {
 	fsl := sc.FsLib
-	fsl.MkDir(SOCIAL_NETWORK_ROOT, 0777)
+	fsl.MkDir(sp.SOCIAL_NETWORK, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		fmt.Printf("Mkdir %v err %v\n", JobDir(jobname), err)
 		return nil, err

@@ -12,29 +12,27 @@ import (
 // No overlapping intervals
 func TestBasic(t *testing.T) {
 	siv := MkSkipIntervals()
-	log.Printf("siv %v\n", siv)
 	e := siv.Find(*sessp.MkInterval(10, 12))
 	assert.Nil(t, e)
 	siv.Insert(*sessp.MkInterval(2, 4))
-	log.Printf("siv %v\n", siv)
 	siv.Insert(*sessp.MkInterval(10, 12))
-	log.Printf("insert 10 siv %v\n", siv)
 	siv.Insert(*sessp.MkInterval(5, 7))
-	log.Printf("insert 5 siv %v\n", siv)
 	siv.Insert(*sessp.MkInterval(0, 1))
-	log.Printf("insert 0 siv %v\n", siv)
+	siv.Insert(*sessp.MkInterval(20, 22))
+
 	e = siv.Find(*sessp.MkInterval(10, 12))
 	assert.NotNil(t, e)
-	log.Printf("find %v\n", e)
+	siv.Prevs(e)
+
+	e = siv.Find(*sessp.MkInterval(5, 7))
+	assert.NotNil(t, e)
+	siv.Prevs(e)
 
 	siv.Delete(*sessp.MkInterval(0, 1))
-	log.Printf("del 0 siv %v\n", siv)
 	siv.Delete(*sessp.MkInterval(5, 7))
-	log.Printf("del 5 siv %v\n", siv)
 	siv.Delete(*sessp.MkInterval(10, 12))
-	log.Printf("del 5 siv %v\n", siv)
 	siv.Delete(*sessp.MkInterval(2, 4))
-	log.Printf("del 5 siv %v\n", siv)
+	siv.Delete(*sessp.MkInterval(20, 22))
 }
 
 func TestInsert(t *testing.T) {

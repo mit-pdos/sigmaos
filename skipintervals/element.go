@@ -20,9 +20,10 @@ func (lv levels) String() string {
 }
 
 type element struct {
-	levels levels
-	iv     sessp.Tinterval
-	prev   *element
+	levels  levels
+	iv      sessp.Tinterval
+	topPrev *element
+	prev    *element
 }
 
 func mkElement(l int, iv sessp.Tinterval) *element {
@@ -33,7 +34,11 @@ func mkElement(l int, iv sessp.Tinterval) *element {
 }
 
 func (elem *element) String() string {
-	return fmt.Sprintf("%v", elem.iv.Marshal())
+	s := ""
+	if elem.topPrev != nil {
+		s = "tp " + elem.topPrev.iv.Marshal()
+	}
+	return fmt.Sprintf("%v (%s)", elem.iv.Marshal(), s)
 }
 
 func (elem *element) Level(l int) string {

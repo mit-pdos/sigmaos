@@ -48,14 +48,14 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 		skipl.insert(iv, prevElems, next)
 		skipl.merge(prevElems)
 	} else { // iv overlaps next
-		if iv.End >= next.iv.End {
+		if iv.End >= next.iv.End { // extend next
 			next.iv.End = iv.End
 		}
-		if iv.Start >= next.iv.Start { // iv is in net
+		if iv.Start >= next.iv.Start { // iv is inside next
 			return
 		}
 		if iv.Start < next.iv.Start {
-			next.iv.Start = iv.Start
+			next.iv.Start = iv.Start // prepend to next
 		}
 		skipl.merge(prevElems)
 	}
@@ -67,8 +67,11 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 
 	db.DPrintf(db.ALWAYS, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)
 
-	// Set previous elements
+	// Set previous's
 	elem.prev = prevElems[0]
+	if prev := prevElems[level-1]; prev != nil {
+		elem.topPrev = prev
+	}
 
 	// Insert elem at each level
 	for i := 0; i < level; i++ {
@@ -87,6 +90,14 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 		skipl.back = elem
 	} else {
 		next.prev = elem
+	}
+
+	for i := 0; i < level; i++ {
+		if next := elem.levels[i]; next != nil {
+			if len(next.levels) <= level {
+				next.topPrev = elem
+			}
+		}
 	}
 
 	db.DPrintf(db.ALWAYS, "inserted %v %v\n", iv.Marshal(), skipl)
@@ -110,19 +121,8 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
 		}
 
-		// remove next
-		for i := 0; i < len(elem.levels); i++ {
-			if elem.levels[i] == next {
-				if i < len(next.levels) {
-					elem.levels[i] = next.levels[i]
-				} else {
-					elem.levels[i] = nil
-				}
-			}
-		}
-		// XXX need to fix up pointers that point to next at level j,
-		// where j > elem.levels.
-		skipl.length--
+		prevsNext := skipl.Prevs(next)
+		skipl.del(prevsNext, next)
 		log.Printf("skipl merged %v %v %v\n", elem, next, skipl)
 	}
 }
@@ -155,7 +155,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 			break
 		}
 		db.DPrintf(db.ALWAYS, "skip: %v\n", skipl)
-		// need to get next and prevElems for next to see if next should be deleted,
+		// XXX need to get next and prevElems for next to see if next should be deleted,
 		// and delete it.
 		elem = skipl.findNext(nil, iv.Start, prevElems)
 	}
@@ -172,8 +172,17 @@ func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 		}
 	}
 
+	// update prevs
 	if next := elem.levels[0]; next != nil {
 		next.prev = elem.prev
+	}
+	for i := 0; i < len(elem.levels); {
+		next := elem.levels[i]
+		if next == nil || next.topPrev != elem {
+			break
+		}
+		i = len(next.levels)
+		next.topPrev = prevElems[i-1]
 	}
 
 	if skipl.back == elem {
@@ -212,6 +221,27 @@ func (skipl *SkipIntervals) findNext(begin *element, start uint64, pe levels) *e
 		}
 	}
 	return elem
+}
+
+func (skipl *SkipIntervals) Prevs(elem *element) levels {
+	prevElems := mkLevels(len(elem.levels))
+	prev := elem.topPrev
+	for i := len(elem.levels) - 1; i >= 0; i-- {
+		if prev == nil {
+			prev = skipl.levels[i]
+		}
+		if prev != elem {
+			for next := prev.levels[i]; next != elem; next = next.levels[i] {
+				prev = next
+			}
+			prevElems[i] = prev
+		} else {
+			prevElems[i] = nil
+			prev = nil
+		}
+	}
+	db.DPrintf(db.ALWAYS, "Prevs: %v(%p) %v in %v\n", elem, elem, prevElems, skipl)
+	return prevElems
 }
 
 func (skipl *SkipIntervals) randLevel() int {

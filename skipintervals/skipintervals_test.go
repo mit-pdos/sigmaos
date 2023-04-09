@@ -101,7 +101,7 @@ func TestMany(t *testing.T) {
 		ivs.Insert(*sessp.MkInterval(i, i+1))
 	}
 	log.Printf("skipl %v\n", ivs)
-	//for i := uint64(0); i < N/B; i += B {
-	//	ivs.Delete(*sessp.MkInterval(i, i+B))
-	//}
+	for i := uint64(0); i < N; i += B {
+		ivs.Delete(*sessp.MkInterval(i, i+B))
+	}
 }

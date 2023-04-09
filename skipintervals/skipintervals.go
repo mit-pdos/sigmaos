@@ -120,10 +120,8 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 		if !elem.iv.Eq(next.iv) {
 			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
 		}
-
 		prevsNext := skipl.Prevs(next)
 		skipl.del(prevsNext, next)
-		log.Printf("skipl merged %v %v %v\n", elem, next, skipl)
 	}
 }
 
@@ -131,33 +129,28 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
 	elem := skipl.findNext(nil, iv.Start, prevElems)
 	for elem != nil {
-
-		db.DPrintf(db.TEST, "del: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
-
+		db.DPrintf(db.TEST, "Delete: %v elem %v prevElems %v\n", iv.Marshal(), elem, prevElems)
 		if iv.End < elem.iv.Start { // iv proceeds elem; done
 			break
 		}
 		if iv.Start < elem.iv.Start { // iv overlaps elem
 			iv.Start = elem.iv.Start
 		}
-		if iv.Start <= elem.iv.Start && iv.End >= elem.iv.End { // delete next
+		next := elem.levels[0]
+		if iv.Start <= elem.iv.Start && iv.End >= elem.iv.End { // delete elem
 			skipl.del(prevElems, elem)
-			// XXX see if more to be deleted
 		} else if iv.Start > elem.iv.Start && iv.End >= elem.iv.End {
 			elem.iv.End = iv.Start
-			// XXX see if next elem  should be deleted?
 		} else if elem.iv.Start == iv.Start {
 			elem.iv.Start = iv.End
-			// XXX see if next elem  should be deleted?
 		} else { // split iv
 			skipl.insert(*sessp.MkInterval(elem.iv.Start, iv.Start), prevElems, elem)
 			elem.iv.Start = iv.End
 			break
 		}
-		db.DPrintf(db.ALWAYS, "skip: %v\n", skipl)
-		// XXX need to get next and prevElems for next to see if next should be deleted,
-		// and delete it.
-		elem = skipl.findNext(nil, iv.Start, prevElems)
+		db.DPrintf(db.ALWAYS, "Delete iterate: %v %v %v\n", iv.Marshal(), next, skipl)
+		elem = next
+		prevElems = skipl.Prevs(elem)
 	}
 }
 
@@ -224,6 +217,9 @@ func (skipl *SkipIntervals) findNext(begin *element, start uint64, pe levels) *e
 }
 
 func (skipl *SkipIntervals) Prevs(elem *element) levels {
+	if elem == nil {
+		return nil
+	}
 	prevElems := mkLevels(len(elem.levels))
 	prev := elem.topPrev
 	for i := len(elem.levels) - 1; i >= 0; i-- {

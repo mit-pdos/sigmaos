@@ -1,11 +1,11 @@
 package skipinterval
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"testing"
+	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/sessp"
 )
 
@@ -61,46 +61,38 @@ func TestInsert(t *testing.T) {
 func TestDelete(t *testing.T) {
 	ivs := MkSkipIntervals()
 	ivs.Insert(*sessp.MkInterval(0, 100))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	ivs.Delete(*sessp.MkInterval(5, 10))
 	assert.Equal(t, 2, ivs.Length())
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	ivs.Delete(*sessp.MkInterval(30, 50))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	assert.Equal(t, 3, ivs.Length())
 	ivs.Delete(*sessp.MkInterval(50, 100))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	assert.Equal(t, 2, ivs.Length())
 	ivs.Delete(*sessp.MkInterval(20, 30))
 	assert.Equal(t, 2, ivs.Length())
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	ivs.Delete(*sessp.MkInterval(0, 5))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	assert.Equal(t, 1, ivs.Length())
 	ivs.Delete(*sessp.MkInterval(10, 20))
 	assert.Equal(t, 0, ivs.Length())
 
 	ivs.Insert(*sessp.MkInterval(0, 100))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	ivs.Delete(*sessp.MkInterval(5, 10))
 	assert.Equal(t, 2, ivs.Length())
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	ivs.Delete(*sessp.MkInterval(0, 100))
-	db.DPrintf(db.ALWAYS, "ivs %v\n", ivs)
 	assert.Equal(t, 0, ivs.Length())
 }
 
 func TestMany(t *testing.T) {
 	const (
-		N = 100
+		N = 1000
 		B = 10
 	)
 
 	ivs := MkSkipIntervals()
+	start := time.Now()
 	for i := uint64(0); i < N; i++ {
 		ivs.Insert(*sessp.MkInterval(i, i+1))
 	}
-	log.Printf("skipl %v\n", ivs)
+	fmt.Printf("%d inserts took %v skipl %v\n", N, time.Since(start), ivs)
 	for i := uint64(0); i < N; i += B {
 		ivs.Delete(*sessp.MkInterval(i, i+B))
 	}

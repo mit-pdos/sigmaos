@@ -2,7 +2,6 @@ package skipinterval
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 
@@ -43,7 +42,7 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	prevElems := mkLevels(MaxLevel)
 	next := skipl.findNext(nil, iv.Start, prevElems)
 
-	db.DPrintf(db.ALWAYS, "Insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
+	db.DPrintf(db.TEST, "Insert %v next %v prevElem %v\n", iv.Marshal(), next, prevElems)
 	if next == nil || iv.End < next.iv.Start { // iv preceeds next
 		skipl.insert(iv, prevElems, next)
 		skipl.merge(prevElems)
@@ -65,7 +64,7 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 	level := skipl.randLevel()
 	elem := mkElement(level, iv)
 
-	db.DPrintf(db.ALWAYS, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)
+	db.DPrintf(db.TEST, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)
 
 	// Set previous's
 	elem.prev = prevElems[0]
@@ -81,7 +80,7 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 		} else {
 			elem.levels[i] = prevElems[i].levels[i]
 			prevElems[i].levels[i] = elem
-			db.DPrintf(db.ALWAYS, "insert level %d %s\n", i, prevElems[i].Level(i))
+			db.DPrintf(db.TEST, "insert level %d %s\n", i, prevElems[i].Level(i))
 
 		}
 	}
@@ -100,7 +99,7 @@ func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *e
 		}
 	}
 
-	db.DPrintf(db.ALWAYS, "inserted %v %v\n", iv.Marshal(), skipl)
+	db.DPrintf(db.TEST, "inserted %v %v\n", iv.Marshal(), skipl)
 	skipl.length++
 }
 
@@ -109,7 +108,6 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 	if prevElems[0] == nil {
 		return
 	}
-	log.Printf("merge? %v %v\n", prevElems, skipl)
 	elem := prevElems[0]
 	next := elem.levels[0]
 	if elem.iv.End >= next.iv.Start { // merge  elem and next
@@ -148,7 +146,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 			elem.iv.Start = iv.End
 			break
 		}
-		db.DPrintf(db.ALWAYS, "Delete iterate: %v %v %v\n", iv.Marshal(), next, skipl)
+		db.DPrintf(db.TEST, "Delete iterate: %v %v %v\n", iv.Marshal(), next, skipl)
 		elem = next
 		prevElems = skipl.Prevs(elem)
 	}
@@ -236,7 +234,7 @@ func (skipl *SkipIntervals) Prevs(elem *element) levels {
 			prev = nil
 		}
 	}
-	db.DPrintf(db.ALWAYS, "Prevs: %v(%p) %v in %v\n", elem, elem, prevElems, skipl)
+	db.DPrintf(db.TEST, "Prevs: %v(%p) %v in %v\n", elem, elem, prevElems, skipl)
 	return prevElems
 }
 

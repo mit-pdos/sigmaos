@@ -89,11 +89,19 @@ func TestMany(t *testing.T) {
 
 	ivs := MkSkipIntervals()
 	start := time.Now()
+
 	for i := uint64(0); i < N; i++ {
 		ivs.Insert(*sessp.MkInterval(i, i+1))
 	}
 	fmt.Printf("%d inserts took %v skipl %v\n", N, time.Since(start), ivs)
-	for i := uint64(0); i < N; i += B {
-		ivs.Delete(*sessp.MkInterval(i, i+B))
+	for i := uint64(0); i < N; i += 1 {
+		ivs.Delete(*sessp.MkInterval(i, i+1))
 	}
+	ivs = MkSkipIntervals()
+	start = time.Now()
+	for i := uint64(N * B); i > 1; i -= B {
+		ivs.Insert(*sessp.MkInterval(i-1, i))
+	}
+	fmt.Printf("%d reverse inserts took %v skipl %v\n", N, time.Since(start), ivs)
+
 }

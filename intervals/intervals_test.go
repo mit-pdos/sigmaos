@@ -225,7 +225,7 @@ func TestNextReset(t *testing.T) {
 func TestMany(t *testing.T) {
 	const (
 		N = 1000
-		B = 10
+		B = 3
 	)
 	ivs := intervals.MkIntervals(12345)
 	start := time.Now()
@@ -233,4 +233,10 @@ func TestMany(t *testing.T) {
 		ivs.Insert(sessp.MkInterval(i, i+1))
 	}
 	fmt.Printf("%d inserts took %v skipl %v\n", N, time.Since(start), ivs)
+	ivs = intervals.MkIntervals(12345)
+	start = time.Now()
+	for i := uint64(N * B); i > 1; i -= B {
+		ivs.Insert(sessp.MkInterval(i-1, i))
+	}
+	fmt.Printf("%d reverse inserts took %v skipl %v\n", N, time.Since(start), ivs)
 }

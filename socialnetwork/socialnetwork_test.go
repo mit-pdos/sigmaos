@@ -84,11 +84,13 @@ func TestUser(t *testing.T) {
 	err = pdc.RPC("User.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
+	created_userid := res_reg.Userid
 
-	// check user twice to use the cache
+	// check user
 	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_check.Ok)
+	assert.Equal(t, created_userid, res_check.Userid)
 
     // new user login
 	arg_login := proto.LoginRequest{Username: "test_user", Password: "xxyy"}
@@ -108,6 +110,7 @@ func TestUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Alice", user.Firstname)
 	assert.Equal(t, "Test", user.Lastname)
+	assert.Equal(t, created_userid, user.Userid)
 
 	//stop server
 	time.Sleep(2 * time.Second)

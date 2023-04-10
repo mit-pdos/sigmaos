@@ -9,6 +9,8 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"crypto/sha256"
+	"math/rand"
+	"sync"
 	"strconv"
 	"fmt"
 	"time"
@@ -21,6 +23,7 @@ const (
 )
 
 type User struct {
+	Userid int64 
 	Firstname string
 	Lastname string
 	Username string
@@ -28,13 +31,17 @@ type User struct {
 }
 
 type UserSrv struct {
+	mu sync.Mutex
 	dbc *dbclnt.DbClnt
 	cachec *cacheclnt.CacheClnt
+	sid int32  // sid is a random number between 0 and 2^30
+	ucount int32 //This server may overflow with over 2^31 users
 }
 
 func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
+	usrv.sid = rand.Int31n(536870912) // 2^29
 	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, public)
 	if err != nil {
 		return err
@@ -49,7 +56,7 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.cachec = cachec
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Initializing DB and starting user service\n")
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Initializing DB and starting user service %v\n", usrv.sid)
 	if err = usrv.initDB(); err != nil {
 		return err
 	}
@@ -58,38 +65,52 @@ func RunUserSrv(public bool, jobname string) error {
 }
 
 func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.UserResponse) error {
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user %v\n", req)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
-	exist, err := usrv.checkUserExist(req.Username)
+	user, err := usrv.getUserbyUname(req.Username)
 	if  err != nil {
 		return err
 	} 
-	if exist {
+	if user != nil {
+		res.Userid = user.Userid
 		res.Ok = USER_QUERY_OK
 	}
 	return nil
 }
 
 func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, res *proto.UserResponse) error {
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Register user %v\n", req)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Register user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
-	exist, err := usrv.checkUserExist(req.Username)
+	user, err := usrv.getUserbyUname(req.Username)
 	if  err != nil {
 		return err
 	} 
-	if exist {
+	if user != nil {
 		res.Ok = fmt.Sprintf("Username %v already exist", req.Username)
 		return nil
 	}
-	if err = usrv.createUser(req.Firstname, req.Lastname, req.Username, req.Password); err != nil {
+	var userid int64
+	if userid, err = usrv.createUser(req.Firstname, req.Lastname, req.Username, req.Password); err != nil {
 		return err
 	}	
 	res.Ok = USER_QUERY_OK
+	res.Userid = userid
 	return nil
 }
 
+func (usrv *UserSrv) incCountSafe() int32 {
+	usrv.mu.Lock()
+	defer usrv.mu.Unlock()
+	usrv.ucount++
+	return usrv.ucount
+}
+
+func (usrv *UserSrv) getNextUserId() int64 {
+	return int64(usrv.sid) * 1E10 + int64(usrv.incCountSafe())
+}
+
 func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserResponse) error {
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v\n", req)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v: %v\n", usrv.sid, req)
 	res.Ok = "Login Failure."
 	user, err := usrv.getUserbyUname(req.Username)
 	if  err != nil {
@@ -97,6 +118,8 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 	}
 	if user != nil && fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password))) == user.Password {
 		res.Ok = USER_QUERY_OK 			
+		res.Userid = user.Userid
+
 	}
 	return nil	
 }
@@ -120,7 +143,7 @@ func (usrv *UserSrv) initDB() error {
 		fname := "Firstname" + suffix
 		lname := "Lastname" + suffix
 		pswd := "p_" + uname
-		if err = usrv.createUser(fname, lname, uname, pswd); err != nil {
+		if _, err = usrv.createUser(fname, lname, uname, pswd); err != nil {
 			return err
 		}		
 	}
@@ -158,10 +181,11 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	return user, nil
 }
 
-func (usrv *UserSrv) createUser(fname, lname, uname, pswd string) error {
+func (usrv *UserSrv) createUser(fname, lname, uname, pswd string) (int64, error) {
 	pswd_hashed := sha256.Sum256([]byte(pswd))
+	userid := usrv.getNextUserId()
 	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_user (firstname, lastname, username, password)" + 
-		" VALUES ('%v', '%v', '%v', '%x');", fname, lname, uname, pswd_hashed)
-	return usrv.dbc.Exec(q)
+		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)" +
+		" VALUES ('%v', '%v', '%v', '%x', '%v');", fname, lname, uname, pswd_hashed, userid)
+	return userid, usrv.dbc.Exec(q)
 }

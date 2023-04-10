@@ -27,4 +27,5 @@ message LoginRequest {
 
 message UserResponse {
 	string ok = 1;
+	int64 userid = 2;
 }

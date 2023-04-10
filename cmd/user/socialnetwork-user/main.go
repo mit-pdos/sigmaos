@@ -8,15 +8,15 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Usage: %v public", os.Args[0])
+	if len(os.Args) != 3 {
+		dbg.DFatalf("Usage: %v public jobname", os.Args[0])
 		return
 	}
 	public, err := strconv.ParseBool(os.Args[1])
 	if err != nil {
 		dbg.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
-	if err := sn.RunUserSrv(public); err != nil {
+	if err := sn.RunUserSrv(public, os.Args[2]); err != nil {
 		dbg.DFatalf("RunUserSrv %v err %v\n", os.Args[0], err)
 	}
 }

@@ -54,6 +54,7 @@ func TestInsert(t *testing.T) {
 	for i, iv := range ivs {
 		siv.Insert(iv)
 		assert.Equal(t, lens[i], siv.Length(), i)
+		assert.True(t, siv.Present(iv))
 	}
 }
 
@@ -73,14 +74,17 @@ func TestDelete(t *testing.T) {
 	for i, iv := range ivs {
 		siv.Delete(iv)
 		assert.Equal(t, lens[i], siv.Length(), i)
+		assert.False(t, siv.Present(iv), i)
 	}
 	siv.Insert(iv0)
-	fmt.Printf("siv %v\n", siv)
 	siv.Delete(ivs[0])
-	fmt.Printf("siv %v\n", siv)
+	assert.True(t, siv.Present(ivs[4]))
 	assert.Equal(t, 2, siv.Length())
 	siv.Delete(iv0)
 	assert.Equal(t, 0, siv.Length())
+}
+
+func TestRandom(t *testing.T) {
 }
 
 func TestManyInOrder(t *testing.T) {

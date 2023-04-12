@@ -196,6 +196,9 @@ func (skipl *SkipIntervals) Present(iv *sessp.Tinterval) bool {
 	if elem := skipl.findNext(nil, iv.Start, skipl.prevElems); elem == nil {
 		return false
 	} else {
+		if iv.End <= elem.iv.Start {
+			return false
+		}
 		if iv.End > elem.iv.End {
 			iv.Start = elem.iv.End
 			return skipl.Present(iv)

@@ -43,6 +43,10 @@ const (
 	HOTELUSER    = HOTEL + "user"
 	HOTELPROF    = HOTEL + "prof"
 
+	SOCIAL_NETWORK          = NAMED + "socialnetwork/"
+	SOCIAL_NETWORK_MOL      = SOCIAL_NETWORK + "mol"
+	SOCIAL_NETWORK_USER     = SOCIAL_NETWORK + "user"
+
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 

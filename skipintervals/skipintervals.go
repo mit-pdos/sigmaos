@@ -40,7 +40,7 @@ func (skipl *SkipIntervals) Length() int {
 	return skipl.length
 }
 
-func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
+func (skipl *SkipIntervals) Insert(iv *sessp.Tinterval) {
 	next := skipl.findNext(nil, iv.Start, skipl.prevElems)
 
 	//db.DPrintf(db.TEST, "Insert %v next %v prevElem %v\n", iv.Marshal(), next, skipl.prevElems)
@@ -69,7 +69,7 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 	}
 }
 
-func (skipl *SkipIntervals) insert(iv sessp.Tinterval, prevElems levels, next *element) {
+func (skipl *SkipIntervals) insert(iv *sessp.Tinterval, prevElems levels, next *element) {
 	level := skipl.randLevel()
 	elem := mkElement(level, iv)
 
@@ -125,7 +125,7 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 			elem.iv.End = next.iv.End
 		}
 		next.iv.Start = elem.iv.Start
-		if !elem.iv.Eq(next.iv) {
+		if !elem.iv.Eq(&next.iv) {
 			panic(fmt.Sprintf("merge: %v %v\n", elem, next))
 		}
 		skipl.Prevs(next, prevElems)
@@ -133,7 +133,7 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 	}
 }
 
-func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
+func (skipl *SkipIntervals) Delete(iv *sessp.Tinterval) {
 	elem := skipl.findNext(nil, iv.Start, skipl.prevElems)
 	for elem != nil {
 		//db.DPrintf(db.TEST, "Delete: %v elem %v prevElems %v\n", iv.Marshal(), elem, skipl.prevElems)
@@ -151,7 +151,7 @@ func (skipl *SkipIntervals) Delete(iv sessp.Tinterval) {
 		} else if elem.iv.Start == iv.Start {
 			elem.iv.Start = iv.End
 		} else { // split iv
-			skipl.insert(*sessp.MkInterval(elem.iv.Start, iv.Start), skipl.prevElems, elem)
+			skipl.insert(sessp.MkInterval(elem.iv.Start, iv.Start), skipl.prevElems, elem)
 			elem.iv.Start = iv.End
 			break
 		}
@@ -192,7 +192,7 @@ func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 	skipl.length--
 }
 
-func (skipl *SkipIntervals) Present(iv sessp.Tinterval) bool {
+func (skipl *SkipIntervals) Present(iv *sessp.Tinterval) bool {
 	if elem := skipl.findNext(nil, iv.Start, skipl.prevElems); elem == nil {
 		return false
 	} else {
@@ -204,7 +204,7 @@ func (skipl *SkipIntervals) Present(iv sessp.Tinterval) bool {
 	}
 }
 
-func (skipl *SkipIntervals) Find(iv sessp.Tinterval) *element {
+func (skipl *SkipIntervals) Find(iv *sessp.Tinterval) *element {
 	return skipl.findNext(nil, iv.Start, skipl.prevElems)
 }
 

@@ -162,7 +162,7 @@ func MkInterval(start, end uint64) *Tinterval {
 	}
 }
 
-func (iv0 Tinterval) Eq(iv1 Tinterval) bool {
+func (iv0 Tinterval) Eq(iv1 *Tinterval) bool {
 	return iv0.Start == iv1.Start && iv0.End == iv1.End
 }
 

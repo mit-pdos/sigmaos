@@ -14,24 +14,24 @@ func TestBasic(t *testing.T) {
 	siv := MkSkipIntervals()
 	ivs := []*sessp.Tinterval{sessp.MkInterval(2, 4), sessp.MkInterval(10, 12),
 		sessp.MkInterval(5, 7), sessp.MkInterval(0, 1), sessp.MkInterval(20, 22)}
-	e := siv.Find(*sessp.MkInterval(10, 12))
+	e := siv.Find(sessp.MkInterval(10, 12))
 	assert.Nil(t, e)
 	for _, iv := range ivs {
-		siv.Insert(*iv)
+		siv.Insert(iv)
 	}
 	for _, iv := range ivs {
-		assert.True(t, siv.Present(*iv))
+		assert.True(t, siv.Present(iv))
 	}
-	e = siv.Find(*ivs[1])
+	e = siv.Find(ivs[1])
 	assert.NotNil(t, e)
 
-	siv.Delete(*ivs[3])
-	siv.Delete(*ivs[2])
-	siv.Delete(*ivs[1])
-	siv.Delete(*ivs[0])
-	siv.Delete(*ivs[4])
+	siv.Delete(ivs[3])
+	siv.Delete(ivs[2])
+	siv.Delete(ivs[1])
+	siv.Delete(ivs[0])
+	siv.Delete(ivs[4])
 	for _, iv := range ivs {
-		assert.False(t, siv.Present(*iv))
+		assert.False(t, siv.Present(iv))
 	}
 	assert.True(t, siv.Length() == 0)
 }
@@ -52,7 +52,7 @@ func TestInsert(t *testing.T) {
 	}
 	lens := []int{1, 1, 1, 2, 2, 3, 4, 3, 2, 1}
 	for i, iv := range ivs {
-		siv.Insert(*iv)
+		siv.Insert(iv)
 		assert.Equal(t, lens[i], siv.Length(), i)
 	}
 }
@@ -69,15 +69,17 @@ func TestDelete(t *testing.T) {
 		sessp.MkInterval(10, 20),
 	}
 	lens := []int{2, 3, 2, 2, 1, 0}
-	siv.Insert(*iv0)
+	siv.Insert(iv0)
 	for i, iv := range ivs {
-		siv.Delete(*iv)
+		siv.Delete(iv)
 		assert.Equal(t, lens[i], siv.Length(), i)
 	}
-	siv.Insert(*iv0)
-	siv.Delete(*ivs[0])
+	siv.Insert(iv0)
+	fmt.Printf("siv %v\n", siv)
+	siv.Delete(ivs[0])
+	fmt.Printf("siv %v\n", siv)
 	assert.Equal(t, 2, siv.Length())
-	siv.Delete(*iv0)
+	siv.Delete(iv0)
 	assert.Equal(t, 0, siv.Length())
 }
 
@@ -92,7 +94,7 @@ func TestManyInOrder(t *testing.T) {
 		ivs := MkSkipIntervals()
 		start := time.Now()
 		for i := uint64(0); i < N; i++ {
-			ivs.Insert(*sessp.MkInterval(i, i+1))
+			ivs.Insert(sessp.MkInterval(i, i+1))
 		}
 		tot += time.Since(start)
 	}
@@ -110,7 +112,7 @@ func TestManyGaps(t *testing.T) {
 		ivs := MkSkipIntervals()
 		start := time.Now()
 		for i := uint64(N * B); i > 1; i -= B {
-			ivs.Insert(*sessp.MkInterval(i-1, i))
+			ivs.Insert(sessp.MkInterval(i-1, i))
 		}
 		tot += time.Since(start)
 	}

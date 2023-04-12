@@ -26,10 +26,10 @@ type element struct {
 	prev    *element
 }
 
-func mkElement(l int, iv sessp.Tinterval) *element {
+func mkElement(l int, iv *sessp.Tinterval) *element {
 	return &element{
 		levels: mkLevels(l),
-		iv:     iv,
+		iv:     *iv,
 	}
 }
 

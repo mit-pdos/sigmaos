@@ -76,7 +76,7 @@ func main() {
 			}
 			db.DPrintf(db.TEST1, "Done %v", a.GetPid().String())
 			if !status.IsStatusOK() {
-				ch <- fmt.Errorf("status error %v", status.Error())
+				ch <- status.Error()
 				return
 			}
 			ch <- nil

@@ -57,7 +57,7 @@ func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter i
 
 func waitSpinPerf(ts *test.RealmTstate, pid proc.Tpid) time.Duration {
 	status, err := ts.WaitExit(pid)
-	assert.Nil(ts.T, err, "WaitExit error")
+	assert.Nil(ts.T, err)
 	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
 	return time.Duration(status.Data().(float64))
 }

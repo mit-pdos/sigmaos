@@ -13,7 +13,7 @@ import (
 
 func main() {
 	if len(os.Args) != 5 {
-		db.DFatalf("Usage: %v sigmaproc nthread niter id\nArgs: %v", os.Args[0], os.Args)
+		db.DFatalf("Usage: %v sigmaproc sigma nthread niter id\nArgs: %v", os.Args[0], os.Args)
 	}
 	isSigmaProc, err := strconv.ParseBool(os.Args[1])
 	if err != nil {
@@ -34,8 +34,7 @@ func main() {
 		if err != nil {
 			db.DFatalf("Error mkSigmaClnt: %v", err)
 		}
-		err = sc.Started()
-		if err != nil {
+		if err := sc.Started(); err != nil {
 			db.DFatalf("Error started: %v", err)
 		}
 	}
@@ -44,9 +43,6 @@ func main() {
 	db.DPrintf(db.ALWAYS, "%v:  %v", id, time.Since(start))
 	if isSigmaProc {
 		sc.Exited(proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(start)))
-		if err != nil {
-			db.DFatalf("Error exited: %v", err)
-		}
 	}
 }
 

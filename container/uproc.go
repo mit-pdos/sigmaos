@@ -34,10 +34,12 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 	}
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
 	defer cleanupJail(uproc.GetPid())
+	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	if err := cmd.Wait(); err != nil {
 		return err
 	}

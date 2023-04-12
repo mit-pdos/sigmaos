@@ -42,5 +42,5 @@ vma=($vms)
 MAIN="${vma[0]}"
 
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-  kubectl get svc | grep -wE "^$SVC_NAME" | tr -s " " | cut -d " " -f 3
+  kubectl get svc --all-namespaces | grep -wE "^$SVC_NAME" | tr -s " " | cut -d " " -f 3
 ENDSSH

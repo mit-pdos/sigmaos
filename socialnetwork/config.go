@@ -22,7 +22,7 @@ type Srv struct {
 func MakeMoLSrvs(public bool) []Srv {
 	return []Srv{
 		Srv{"socialnetwork-mol", public, 1},
-		Srv{"socialnetwork-user", public, 1},
+		Srv{"socialnetwork-user", public, 2},
 	}
 }
 

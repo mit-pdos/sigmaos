@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+// YH:
+// Toy server returning meaning of life
+// Will delete after complete social network implementation
+
 const (
 	MEANING = 42
 	HB_FREQ = 2

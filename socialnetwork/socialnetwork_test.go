@@ -6,20 +6,23 @@ import (
 	"sigmaos/rand"
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
+	dbg "sigmaos/debug"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/protdevclnt"
+	"sigmaos/linuxsched"
 	"github.com/stretchr/testify/assert"
 	"time"
 )
 
 const (
-	NSHARD = 2
+	NSHARD = 4
 )
 
 type TstateSN struct {
 	*test.Tstate
 	jobname string
-	snCfg   *sn.SocialNetworkConfig
+	snCfg *sn.SocialNetworkConfig
+	dbu *sn.DBUtil
 }
 
 func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
@@ -27,13 +30,21 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
-	assert.Nil(tssn.T, err, "test kernel should start properly.")
+	nMoreKernel := (len(srvs)*2+NSHARD*2) / int(linuxsched.NCores)
+	if nMoreKernel > 0 {
+		dbg.DPrintf(dbg.ALWAYS, "%v / %v = %v more kernels are needed", 
+			len(srvs)*2+NSHARD*2, linuxsched.NCores, nMoreKernel)	
+		err = tssn.BootNode(nMoreKernel)
+		assert.Nil(tssn.T, err)
+	}
 	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, test.Overlays)
-	assert.Nil(tssn.T, err, "config should be created properly.")
+	assert.Nil(tssn.T, err, "config should initialize properly.")
+	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
+	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")
 	return tssn
 }
 
-func TestFindMeanlingServer(t *testing.T) {
+func TestToyMeaningOfLife(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-mol", test.Overlays, 1}}, 0)
 	snCfg := tssn.snCfg
@@ -58,10 +69,11 @@ func TestFindMeanlingServer(t *testing.T) {
 
 func TestUser(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1}}, NSHARD)
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 2}}, NSHARD)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
+	tssn.dbu.InitUser()
 	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 

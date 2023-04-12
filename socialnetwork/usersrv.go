@@ -11,14 +11,16 @@ import (
 	"crypto/sha256"
 	"math/rand"
 	"sync"
-	"strconv"
 	"fmt"
 	"time"
 )
 
+// YH:
+// User service for social network
+// for now we use sql instead of MongoDB
+
 const (
 	USER_HB_FREQ = 1
-	NUSER = 10
 	USER_QUERY_OK = "OK"
 )
 
@@ -57,9 +59,6 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Initializing DB and starting user service %v\n", usrv.sid)
-	if err = usrv.initDB(); err != nil {
-		return err
-	}
 	go usrv.heartBeat(USER_HB_FREQ)
 	return pds.RunServer()
 }
@@ -89,10 +88,15 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 		res.Ok = fmt.Sprintf("Username %v already exist", req.Username)
 		return nil
 	}
-	var userid int64
-	if userid, err = usrv.createUser(req.Firstname, req.Lastname, req.Username, req.Password); err != nil {
-		return err
-	}	
+	pswd_hashed := sha256.Sum256([]byte(req.Password))
+	userid := usrv.getNextUserId()
+	q := fmt.Sprintf(
+		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)" +
+		" VALUES ('%v', '%v', '%v', '%x', '%v');", 
+		req.Firstname, req.Lastname, req.Username, pswd_hashed, userid)
+	if qErr := usrv.dbc.Exec(q); qErr != nil {
+		return qErr
+	}
 	res.Ok = USER_QUERY_OK
 	res.Userid = userid
 	return nil
@@ -131,25 +135,6 @@ func (usrv *UserSrv) heartBeat(freq int) {
 	}
 }
 
-func (usrv *UserSrv) initDB() error {
-	q := fmt.Sprintf("truncate socialnetwork_user;")
-	err := usrv.dbc.Exec(q)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < NUSER; i++ {
-		suffix := strconv.Itoa(i)
-		uname := "user_" + suffix
-		fname := "Firstname" + suffix
-		lname := "Lastname" + suffix
-		pswd := "p_" + uname
-		if _, err = usrv.createUser(fname, lname, uname, pswd); err != nil {
-			return err
-		}		
-	}
-	return nil
-}
-
 func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 	user, err := usrv.getUserbyUname(username)
 	if err != nil {
@@ -179,13 +164,4 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	}
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user for %v: %v\n", username, user)
 	return user, nil
-}
-
-func (usrv *UserSrv) createUser(fname, lname, uname, pswd string) (int64, error) {
-	pswd_hashed := sha256.Sum256([]byte(pswd))
-	userid := usrv.getNextUserId()
-	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)" +
-		" VALUES ('%v', '%v', '%v', '%x', '%v');", fname, lname, uname, pswd_hashed, userid)
-	return userid, usrv.dbc.Exec(q)
 }

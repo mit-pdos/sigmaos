@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -26,6 +27,7 @@ type Container struct {
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {
+	s := time.Now()
 	resp, err := c.cli.ContainerUpdate(c.ctx, c.container,
 		container.UpdateConfig{
 			Resources: container.Resources{
@@ -35,6 +37,7 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	if len(resp.Warnings) > 0 {
 		db.DPrintf(db.ALWAYS, "Set CPU shares warnings: %v", resp.Warnings)
 	}
+	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
 	return err
 }
 

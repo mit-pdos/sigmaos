@@ -79,11 +79,11 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, 0, ivs.Length())
 }
 
-func TestMany(t *testing.T) {
+func TestManyInOrder(t *testing.T) {
 	const (
 		N = 1000
 		B = 10
-		I = 10
+		I = 1000
 	)
 	tot := time.Duration(0)
 	for t := 0; t < I; t++ {
@@ -92,9 +92,7 @@ func TestMany(t *testing.T) {
 		for i := uint64(0); i < N; i++ {
 			ivs.Insert(*sessp.MkInterval(i, i+1))
 		}
-		e := time.Since(start)
-		tot += e
-		fmt.Printf("%d inserts took %v\n", N, e)
+		tot += time.Since(start)
 		//ivs = MkSkipIntervals()
 		//start = time.Now()
 		//for i := uint64(N * B); i > 1; i -= B {
@@ -102,5 +100,23 @@ func TestMany(t *testing.T) {
 		//}
 		//fmt.Printf("%d reverse inserts took %v\n", N, time.Since(start))
 	}
-	fmt.Printf("%d inserts took %v\n", N*I, tot/time.Duration(1000))
+	fmt.Printf("%d inserts took on avg %v\n", N, tot/time.Duration(I))
+}
+
+func TestManyGaps(t *testing.T) {
+	const (
+		N = 1000
+		B = 10
+		I = 1000
+	)
+	tot := time.Duration(0)
+	for t := 0; t < I; t++ {
+		ivs := MkSkipIntervals()
+		start := time.Now()
+		for i := uint64(N * B); i > 1; i -= B {
+			ivs.Insert(*sessp.MkInterval(i-1, i))
+		}
+		tot += time.Since(start)
+	}
+	fmt.Printf("%d reverse inserts took on avg %v\n", N, tot/time.Duration(I))
 }

@@ -58,26 +58,27 @@ func TestInsert(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	ivs := MkSkipIntervals()
-	ivs.Insert(*sessp.MkInterval(0, 100))
-	ivs.Delete(*sessp.MkInterval(5, 10))
-	assert.Equal(t, 2, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(30, 50))
-	assert.Equal(t, 3, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(50, 100))
-	assert.Equal(t, 2, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(20, 30))
-	assert.Equal(t, 2, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(0, 5))
-	assert.Equal(t, 1, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(10, 20))
-	assert.Equal(t, 0, ivs.Length())
-
-	ivs.Insert(*sessp.MkInterval(0, 100))
-	ivs.Delete(*sessp.MkInterval(5, 10))
-	assert.Equal(t, 2, ivs.Length())
-	ivs.Delete(*sessp.MkInterval(0, 100))
-	assert.Equal(t, 0, ivs.Length())
+	siv := MkSkipIntervals()
+	iv0 := sessp.MkInterval(0, 100)
+	ivs := []*sessp.Tinterval{
+		sessp.MkInterval(5, 10),
+		sessp.MkInterval(30, 50),
+		sessp.MkInterval(50, 100),
+		sessp.MkInterval(20, 30),
+		sessp.MkInterval(0, 5),
+		sessp.MkInterval(10, 20),
+	}
+	lens := []int{2, 3, 2, 2, 1, 0}
+	siv.Insert(*iv0)
+	for i, iv := range ivs {
+		siv.Delete(*iv)
+		assert.Equal(t, lens[i], siv.Length(), i)
+	}
+	siv.Insert(*iv0)
+	siv.Delete(*ivs[0])
+	assert.Equal(t, 2, siv.Length())
+	siv.Delete(*iv0)
+	assert.Equal(t, 0, siv.Length())
 }
 
 func TestManyInOrder(t *testing.T) {

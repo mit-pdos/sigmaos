@@ -22,11 +22,9 @@ func TestBasic(t *testing.T) {
 
 	e = siv.Find(*sessp.MkInterval(10, 12))
 	assert.NotNil(t, e)
-	siv.Prevs(e)
 
 	e = siv.Find(*sessp.MkInterval(5, 7))
 	assert.NotNil(t, e)
-	siv.Prevs(e)
 
 	siv.Delete(*sessp.MkInterval(0, 1))
 	siv.Delete(*sessp.MkInterval(5, 7))
@@ -86,22 +84,19 @@ func TestMany(t *testing.T) {
 		N = 1000
 		B = 10
 	)
+	for t := 0; t < 10; t++ {
+		ivs := MkSkipIntervals()
+		start := time.Now()
 
-	ivs := MkSkipIntervals()
-	start := time.Now()
-
-	for i := uint64(0); i < N; i++ {
-		ivs.Insert(*sessp.MkInterval(i, i+1))
+		for i := uint64(0); i < N; i++ {
+			ivs.Insert(*sessp.MkInterval(i, i+1))
+		}
+		fmt.Printf("%d inserts took %v\n", N, time.Since(start))
+		ivs = MkSkipIntervals()
+		start = time.Now()
+		for i := uint64(N * B); i > 1; i -= B {
+			ivs.Insert(*sessp.MkInterval(i-1, i))
+		}
+		fmt.Printf("%d reverse inserts took %v\n", N, time.Since(start))
 	}
-	fmt.Printf("%d inserts took %v skipl %v\n", N, time.Since(start), ivs)
-	for i := uint64(0); i < N; i += 1 {
-		ivs.Delete(*sessp.MkInterval(i, i+1))
-	}
-	ivs = MkSkipIntervals()
-	start = time.Now()
-	for i := uint64(N * B); i > 1; i -= B {
-		ivs.Insert(*sessp.MkInterval(i-1, i))
-	}
-	fmt.Printf("%d reverse inserts took %v skipl %v\n", N, time.Since(start), ivs)
-
 }

@@ -42,9 +42,6 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-DIR=$(dirname $0)
-. $DIR/../.env
-
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 vms_privaddr=`./lsvpc.py $VPC --privaddr | grep -w VMInstance | cut -d " " -f 6`
 
@@ -69,7 +66,8 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
-    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
+#    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
+    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config
@@ -86,11 +84,13 @@ for vm in $vms; do
 
     # Install dashboard
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+    kubectl create serviceaccount --namespace kubernetes-dashboard admin-user
+#    kubectl create clusterrolebinding admin-user -p '{"spec":{"roleRef":{"spec":{"serviceAccount":"tiller"}}}}'
 
     # Create service account
-    kubectl create serviceaccount --namespace kube-system tiller
-    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-    kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+#    kubectl create serviceaccount --namespace kube-system tiller
+#    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+#    kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
 
     # Register docker credentials
     kubectl create secret generic regcred --from-file=.dockerconfigjson=/home/ubuntu/.docker/config.json  --type=kubernetes.io/dockerconfigjson

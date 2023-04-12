@@ -12,25 +12,28 @@ import (
 // No overlapping intervals
 func TestBasic(t *testing.T) {
 	siv := MkSkipIntervals()
+	ivs := []*sessp.Tinterval{sessp.MkInterval(2, 4), sessp.MkInterval(10, 12),
+		sessp.MkInterval(5, 7), sessp.MkInterval(0, 1), sessp.MkInterval(20, 22)}
 	e := siv.Find(*sessp.MkInterval(10, 12))
 	assert.Nil(t, e)
-	siv.Insert(*sessp.MkInterval(2, 4))
-	siv.Insert(*sessp.MkInterval(10, 12))
-	siv.Insert(*sessp.MkInterval(5, 7))
-	siv.Insert(*sessp.MkInterval(0, 1))
-	siv.Insert(*sessp.MkInterval(20, 22))
-
-	e = siv.Find(*sessp.MkInterval(10, 12))
+	for _, iv := range ivs {
+		siv.Insert(*iv)
+	}
+	for _, iv := range ivs {
+		assert.True(t, siv.Present(*iv))
+	}
+	e = siv.Find(*ivs[1])
 	assert.NotNil(t, e)
 
-	e = siv.Find(*sessp.MkInterval(5, 7))
-	assert.NotNil(t, e)
-
-	siv.Delete(*sessp.MkInterval(0, 1))
-	siv.Delete(*sessp.MkInterval(5, 7))
-	siv.Delete(*sessp.MkInterval(10, 12))
-	siv.Delete(*sessp.MkInterval(2, 4))
-	siv.Delete(*sessp.MkInterval(20, 22))
+	siv.Delete(*ivs[3])
+	siv.Delete(*ivs[2])
+	siv.Delete(*ivs[1])
+	siv.Delete(*ivs[0])
+	siv.Delete(*ivs[4])
+	for _, iv := range ivs {
+		assert.False(t, siv.Present(*iv))
+	}
+	assert.True(t, siv.Length() == 0)
 }
 
 func TestInsert(t *testing.T) {
@@ -93,12 +96,6 @@ func TestManyInOrder(t *testing.T) {
 			ivs.Insert(*sessp.MkInterval(i, i+1))
 		}
 		tot += time.Since(start)
-		//ivs = MkSkipIntervals()
-		//start = time.Now()
-		//for i := uint64(N * B); i > 1; i -= B {
-		//	ivs.Insert(*sessp.MkInterval(i-1, i))
-		//}
-		//fmt.Printf("%d reverse inserts took %v\n", N, time.Since(start))
 	}
 	fmt.Printf("%d inserts took on avg %v\n", N, tot/time.Duration(I))
 }

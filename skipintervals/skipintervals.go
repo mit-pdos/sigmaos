@@ -192,6 +192,18 @@ func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 	skipl.length--
 }
 
+func (skipl *SkipIntervals) Present(iv sessp.Tinterval) bool {
+	if elem := skipl.findNext(nil, iv.Start, skipl.prevElems); elem == nil {
+		return false
+	} else {
+		if iv.End > elem.iv.End {
+			iv.Start = elem.iv.End
+			return skipl.Present(iv)
+		}
+		return true
+	}
+}
+
 func (skipl *SkipIntervals) Find(iv sessp.Tinterval) *element {
 	return skipl.findNext(nil, iv.Start, skipl.prevElems)
 }

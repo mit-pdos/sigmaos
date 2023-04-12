@@ -45,6 +45,14 @@ func (skipl *SkipIntervals) Insert(iv sessp.Tinterval) {
 
 	//db.DPrintf(db.TEST, "Insert %v next %v prevElem %v\n", iv.Marshal(), next, skipl.prevElems)
 	if next == nil || iv.End < next.iv.Start { // iv preceeds next
+		prev := skipl.prevElems[0]
+		if prev != nil && prev.iv.End >= iv.Start {
+			// absort iv or extend pev
+			if prev.iv.End < iv.End {
+				prev.iv.End = iv.End
+			}
+			return
+		}
 		skipl.insert(iv, skipl.prevElems, next)
 		skipl.merge(skipl.prevElems)
 	} else { // iv overlaps next
@@ -112,6 +120,7 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 	elem := prevElems[0]
 	next := elem.levels[0]
 	if elem.iv.End >= next.iv.Start { // merge  elem and next
+		fmt.Printf("merge %v %v\n", elem.iv, next.iv)
 		if next.iv.End > elem.iv.End {
 			elem.iv.End = next.iv.End
 		}

@@ -83,20 +83,24 @@ func TestMany(t *testing.T) {
 	const (
 		N = 1000
 		B = 10
+		I = 10
 	)
-	for t := 0; t < 10; t++ {
+	tot := time.Duration(0)
+	for t := 0; t < I; t++ {
 		ivs := MkSkipIntervals()
 		start := time.Now()
-
 		for i := uint64(0); i < N; i++ {
 			ivs.Insert(*sessp.MkInterval(i, i+1))
 		}
-		fmt.Printf("%d inserts took %v\n", N, time.Since(start))
-		ivs = MkSkipIntervals()
-		start = time.Now()
-		for i := uint64(N * B); i > 1; i -= B {
-			ivs.Insert(*sessp.MkInterval(i-1, i))
-		}
-		fmt.Printf("%d reverse inserts took %v\n", N, time.Since(start))
+		e := time.Since(start)
+		tot += e
+		fmt.Printf("%d inserts took %v\n", N, e)
+		//ivs = MkSkipIntervals()
+		//start = time.Now()
+		//for i := uint64(N * B); i > 1; i -= B {
+		//	ivs.Insert(*sessp.MkInterval(i-1, i))
+		//}
+		//fmt.Printf("%d reverse inserts took %v\n", N, time.Since(start))
 	}
+	fmt.Printf("%d inserts took %v\n", N*I, tot/time.Duration(1000))
 }

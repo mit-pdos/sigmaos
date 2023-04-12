@@ -183,6 +183,14 @@ ulimit -n 100000
 # Add to docker group
 sudo usermod -aG docker ubuntu
 
+# Increase root's open file ulimits.
+echo "root hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "root soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
+# Increase ubuntu user's open file ulimits.
+echo "ubuntu hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "ubuntu soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
 echo -n > ~/.hushlogin
 ENDSSH
 

@@ -103,12 +103,12 @@ func TestRandom(t *testing.T) {
 	}
 }
 
+const (
+	N = 1000
+	I = 1000
+)
+
 func testManyInorder(t *testing.T, mkiv func() intervals.IIntervals) {
-	const (
-		N = 1000
-		B = 10
-		I = 1000
-	)
 	tot := time.Duration(0)
 	var v reflect.Type
 	for t := 0; t < I; t++ {
@@ -130,9 +130,7 @@ func TestManyInOrder(t *testing.T) {
 
 func testManyGaps(t *testing.T, mkiv func() intervals.IIntervals) {
 	const (
-		N = 1000
 		B = 10
-		I = 1000
 	)
 	tot := time.Duration(0)
 	var v reflect.Type
@@ -154,11 +152,6 @@ func TestManyGaps(t *testing.T) {
 }
 
 func testManyRandom(t *testing.T, mkiv func() intervals.IIntervals) {
-	const (
-		N = 1000
-		B = 10
-		I = 1000
-	)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tot := time.Duration(0)
 	var v reflect.Type

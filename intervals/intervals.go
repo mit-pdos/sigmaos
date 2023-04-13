@@ -9,9 +9,14 @@ import (
 	"sort"
 	"sync"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/sessp"
 )
+
+type IIntervals interface {
+	Delete(*sessp.Tinterval)
+	Insert(*sessp.Tinterval)
+}
 
 type Intervals struct {
 	sync.Mutex
@@ -22,6 +27,10 @@ type Intervals struct {
 
 func (ivs *Intervals) String() string {
 	return fmt.Sprintf("{ entries:%v next:%v }", ivs.entries, ivs.next)
+}
+
+func MkIInterval() IIntervals {
+	return MkIntervals(sessp.Tsession(0))
 }
 
 func MkIntervals(sid sessp.Tsession) *Intervals {
@@ -41,15 +50,15 @@ func (ivs *Intervals) Next() *sessp.Tinterval {
 	defer ivs.Unlock()
 
 	if len(ivs.next) == 0 {
-		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: nil", ivs.sid)
+		//db.DPrintf(db.INTERVALS, "[%v] ivs.Next: nil", ivs.sid)
 		return nil
 	}
 	// Pop the next interval from the queue.
 	iv := ivs.next[0]
 	delidx(&ivs.next, 0)
-	if db.WillBePrinted(db.INTERVALS) {
-		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: %v", ivs.sid, iv)
-	}
+	//if db.WillBePrinted(db.INTERVALS) {
+	//db.DPrintf(db.INTERVALS, "[%v] ivs.Next: %v", ivs.sid, iv)
+	//}
 	return iv
 }
 
@@ -57,7 +66,7 @@ func (ivs *Intervals) ResetNext() {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	db.DPrintf(db.INTERVALS, "[%v] ivs.ResetNext", ivs.sid)
+	//db.DPrintf(db.INTERVALS, "[%v] ivs.ResetNext", ivs.sid)
 
 	// Copy entries to next, to resend all received intervals.
 	deepcopy(&ivs.entries, &ivs.next)
@@ -67,7 +76,7 @@ func (ivs *Intervals) Insert(n *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	db.DPrintf(db.INTERVALS, "[%v] ivs.Insert: %v", ivs.sid, n)
+	//db.DPrintf(db.INTERVALS, "[%v] ivs.Insert: %v", ivs.sid, n)
 
 	// Insert into next slice, so future calls to ivs.Next will return this
 	// interval. Must make a deep copy of n, because it may be modified during
@@ -88,7 +97,7 @@ func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	db.DPrintf(db.INTERVALS, "[%v] ivs.Delete: %v", ivs.sid, ivd)
+	//db.DPrintf(db.INTERVALS, "[%v] ivs.Delete: %v", ivs.sid, ivd)
 
 	// Delete from Next slice to ensure the interval isn't returned by ivs.Next.
 	del(&ivs.next, sessp.MkInterval(ivd.Start, ivd.End))

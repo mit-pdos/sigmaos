@@ -221,22 +221,3 @@ func TestNextReset(t *testing.T) {
 	ivs.Insert(sessp.MkInterval(50, 51))
 	doNext(t, ivs, newRetrieved, []uint64{0}, []uint64{100})
 }
-
-func TestMany(t *testing.T) {
-	const (
-		N = 1000
-		B = 3
-	)
-	ivs := intervals.MkIntervals(12345)
-	start := time.Now()
-	for i := uint64(0); i < N; i++ {
-		ivs.Insert(sessp.MkInterval(i, i+1))
-	}
-	fmt.Printf("%d inserts took %v skipl %v\n", N, time.Since(start), ivs)
-	ivs = intervals.MkIntervals(12345)
-	start = time.Now()
-	for i := uint64(N * B); i > 1; i -= B {
-		ivs.Insert(sessp.MkInterval(i-1, i))
-	}
-	fmt.Printf("%d reverse inserts took %v skipl %v\n", N, time.Since(start), ivs)
-}

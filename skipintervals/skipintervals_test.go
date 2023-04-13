@@ -3,9 +3,12 @@ package skipinterval
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
+	"sigmaos/intervals"
 	"sigmaos/sessp"
 )
 
@@ -100,55 +103,72 @@ func TestRandom(t *testing.T) {
 	}
 }
 
-func TestManyInOrder(t *testing.T) {
+func testManyInorder(t *testing.T, mkiv func() intervals.IIntervals) {
 	const (
 		N = 1000
 		B = 10
 		I = 1000
 	)
 	tot := time.Duration(0)
+	var v reflect.Type
 	for t := 0; t < I; t++ {
-		ivs := MkSkipIntervals()
+		ivs := mkiv()
+		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(0); i < N; i++ {
 			ivs.Insert(sessp.MkInterval(i, i+1))
 		}
 		tot += time.Since(start)
 	}
-	fmt.Printf("%d inserts took on avg %v\n", N, tot/time.Duration(I))
+	fmt.Printf("%v: %d inserts took on avg %v\n", v, N, tot/time.Duration(I))
 }
 
-func TestManyGaps(t *testing.T) {
+func TestManyInOrder(t *testing.T) {
+	testManyInorder(t, MkSkipIInterval)
+	testManyInorder(t, intervals.MkIInterval)
+}
+
+func testManyGaps(t *testing.T, mkiv func() intervals.IIntervals) {
 	const (
 		N = 1000
 		B = 10
 		I = 1000
 	)
 	tot := time.Duration(0)
+	var v reflect.Type
 	for t := 0; t < I; t++ {
-		ivs := MkSkipIntervals()
+		ivs := mkiv()
+		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(N * B); i > 1; i -= B {
 			ivs.Insert(sessp.MkInterval(i-1, i))
 		}
 		tot += time.Since(start)
 	}
-	fmt.Printf("%d reverse inserts took on avg %v\n", N, tot/time.Duration(I))
+	fmt.Printf("%v: %d reverse inserts took on avg %v\n", v, N, tot/time.Duration(I))
 }
 
-func TestManyRandom(t *testing.T) {
+func TestManyGaps(t *testing.T) {
+	testManyGaps(t, MkSkipIInterval)
+	testManyGaps(t, intervals.MkIInterval)
+}
+
+func testManyRandom(t *testing.T, mkiv func() intervals.IIntervals) {
 	const (
 		N = 1000
 		B = 10
 		I = 1000
 	)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tot := time.Duration(0)
+	var v reflect.Type
 	for t := 0; t < I; t++ {
-		siv := MkSkipIntervals()
+		siv := mkiv()
+		v = reflect.TypeOf(siv)
 		ivs := make([]*sessp.Tinterval, 0)
 		del := make([]*sessp.Tinterval, 0)
 		for i := 0; i < N; i++ {
-			s := siv.rand.Int31() % N
+			s := r.Int31() % N
 			ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
 			if s > 10 {
 				s -= 10
@@ -163,5 +183,11 @@ func TestManyRandom(t *testing.T) {
 		}
 		tot += time.Since(start)
 	}
-	fmt.Printf("%d random ins/del took on avg %v\n", N, tot/time.Duration(I))
+	fmt.Printf("%v: %d random ins/del took on avg %v\n", v, N, tot/time.Duration(I))
+}
+
+func TestManyRandom(t *testing.T) {
+	testManyRandom(t, MkSkipIInterval)
+	testManyRandom(t, intervals.MkIInterval)
+
 }

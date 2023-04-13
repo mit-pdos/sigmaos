@@ -6,6 +6,7 @@ import (
 	"time"
 
 	// db "sigmaos/debug"
+	"sigmaos/intervals"
 	"sigmaos/sessp"
 )
 
@@ -17,6 +18,10 @@ type SkipIntervals struct {
 	back      *element
 	prevElems levels
 	length    int
+}
+
+func MkSkipIInterval() intervals.IIntervals {
+	return MkSkipIntervals()
 }
 
 func MkSkipIntervals() *SkipIntervals {

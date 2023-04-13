@@ -120,7 +120,6 @@ func (skipl *SkipIntervals) merge(prevElems levels) {
 	elem := prevElems[0]
 	next := elem.levels[0]
 	if next != nil && elem.iv.End >= next.iv.Start { // merge  elem and next
-		fmt.Printf("merge %v %v\n", elem.iv, next.iv)
 		if next.iv.End > elem.iv.End {
 			elem.iv.End = next.iv.End
 		}

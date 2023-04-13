@@ -140,7 +140,7 @@ func TestManyRandom(t *testing.T) {
 	const (
 		N = 1000
 		B = 10
-		I = 1
+		I = 1000
 	)
 	tot := time.Duration(0)
 	for t := 0; t < I; t++ {

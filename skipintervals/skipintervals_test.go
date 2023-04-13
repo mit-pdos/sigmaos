@@ -85,6 +85,19 @@ func TestDelete(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
+	const N = 128
+	ivs := make([]*sessp.Tinterval, 0)
+	siv := MkSkipIntervals()
+	for i := 0; i < N; i++ {
+		s := siv.rand.Int31() % N
+		ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
+	}
+	for _, iv := range ivs {
+		siv.Insert(iv)
+	}
+	for _, iv := range ivs {
+		assert.True(t, siv.Present(iv), iv.Marshal())
+	}
 }
 
 func TestManyInOrder(t *testing.T) {
@@ -121,4 +134,34 @@ func TestManyGaps(t *testing.T) {
 		tot += time.Since(start)
 	}
 	fmt.Printf("%d reverse inserts took on avg %v\n", N, tot/time.Duration(I))
+}
+
+func TestManyRandom(t *testing.T) {
+	const (
+		N = 1000
+		B = 10
+		I = 1
+	)
+	tot := time.Duration(0)
+	for t := 0; t < I; t++ {
+		siv := MkSkipIntervals()
+		ivs := make([]*sessp.Tinterval, 0)
+		del := make([]*sessp.Tinterval, 0)
+		for i := 0; i < N; i++ {
+			s := siv.rand.Int31() % N
+			ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
+			if s > 10 {
+				s -= 10
+			}
+			del = append(del, sessp.MkInterval(uint64(s), uint64(s+5)))
+		}
+
+		start := time.Now()
+		for i, iv := range ivs {
+			siv.Insert(iv)
+			siv.Delete(del[i])
+		}
+		tot += time.Since(start)
+	}
+	fmt.Printf("%d random ins/del took on avg %v\n", N, tot/time.Duration(I))
 }

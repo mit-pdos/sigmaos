@@ -79,7 +79,7 @@ func (ivs *Intervals) Contains(e uint64) bool {
 	ivs.Lock()
 	defer ivs.Unlock()
 
-	return ivs.acked.contains(e)
+	return ivs.acked.Contains(e)
 }
 
 func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {

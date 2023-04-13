@@ -1,24 +1,32 @@
 package intervals_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
+	"reflect"
 	"testing"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/sessp"
+	"sigmaos/skipintervals"
 )
 
-func TestSimple(t *testing.T) {
-	ivs := intervals.MkIntervals(1234512345)
+func testSimple(t *testing.T, ivs intervals.IIntervals) {
 	ivs.Insert(sessp.MkInterval(1, 2))
 	ivs.Insert(sessp.MkInterval(2, 3))
 	ivs.Delete(sessp.MkInterval(1, 2))
 	assert.Equal(t, 1, ivs.Length())
 }
 
-func TestContains(t *testing.T) {
-	ivs := intervals.MkIntervals(12345)
+func TestSimple(t *testing.T) {
+	testSimple(t, intervals.MkIInterval())
+	testSimple(t, skipinterval.MkSkipIInterval())
+}
+
+func testContains(t *testing.T, ivs intervals.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(90, 100))
 	assert.True(t, ivs.Contains(0))
@@ -29,8 +37,12 @@ func TestContains(t *testing.T) {
 	assert.False(t, ivs.Contains(200))
 }
 
-func TestInsert(t *testing.T) {
-	ivs := intervals.MkIntervals(12345)
+func TestContains(t *testing.T) {
+	testContains(t, intervals.MkIInterval())
+	testContains(t, skipinterval.MkSkipIInterval())
+}
+
+func testInsert(t *testing.T, ivs intervals.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(10, 20))
 	assert.Equal(t, 1, ivs.Length())
@@ -52,8 +64,12 @@ func TestInsert(t *testing.T) {
 	assert.Equal(t, 1, ivs.Length())
 }
 
-func TestDelete(t *testing.T) {
-	ivs := intervals.MkIntervals(12345)
+func TestInsert(t *testing.T) {
+	testInsert(t, intervals.MkIInterval())
+	testInsert(t, skipinterval.MkSkipIInterval())
+}
+
+func testDelete(t *testing.T, ivs intervals.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	ivs.Delete(sessp.MkInterval(5, 10))
@@ -82,6 +98,93 @@ func TestDelete(t *testing.T) {
 	ivs.Delete(sessp.MkInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	assert.Equal(t, 0, ivs.Length())
+}
+
+func TestDelete(t *testing.T) {
+	testDelete(t, intervals.MkIInterval())
+	testDelete(t, skipinterval.MkSkipIInterval())
+}
+
+const (
+	N = 1000
+	I = 1000
+)
+
+func testManyInorder(t *testing.T, mkiv func() intervals.IIntervals) {
+	tot := time.Duration(0)
+	var v reflect.Type
+	for t := 0; t < I; t++ {
+		ivs := mkiv()
+		v = reflect.TypeOf(ivs)
+		start := time.Now()
+		for i := uint64(0); i < N; i++ {
+			ivs.Insert(sessp.MkInterval(i, i+1))
+		}
+		tot += time.Since(start)
+	}
+	fmt.Printf("%v: %d inserts took on avg %v\n", v, N, tot/time.Duration(I))
+}
+
+func TestManyInOrder(t *testing.T) {
+	testManyInorder(t, skipinterval.MkSkipIInterval)
+	testManyInorder(t, intervals.MkIInterval)
+}
+
+func testManyGaps(t *testing.T, mkiv func() intervals.IIntervals) {
+	const (
+		B = 10
+	)
+	tot := time.Duration(0)
+	var v reflect.Type
+	for t := 0; t < I; t++ {
+		ivs := mkiv()
+		v = reflect.TypeOf(ivs)
+		start := time.Now()
+		for i := uint64(N * B); i > 1; i -= B {
+			ivs.Insert(sessp.MkInterval(i-1, i))
+		}
+		tot += time.Since(start)
+	}
+	fmt.Printf("%v: %d reverse inserts took on avg %v\n", v, N, tot/time.Duration(I))
+}
+
+func TestManyGaps(t *testing.T) {
+	testManyGaps(t, skipinterval.MkSkipIInterval)
+	testManyGaps(t, intervals.MkIInterval)
+}
+
+func testManyRandom(t *testing.T, mkiv func() intervals.IIntervals) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	tot := time.Duration(0)
+	var v reflect.Type
+	for t := 0; t < I; t++ {
+		siv := mkiv()
+		v = reflect.TypeOf(siv)
+		ivs := make([]*sessp.Tinterval, 0)
+		del := make([]*sessp.Tinterval, 0)
+		for i := 0; i < N; i++ {
+			s := r.Int31() % N
+			ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
+			if s > 10 {
+				s -= 10
+			}
+			del = append(del, sessp.MkInterval(uint64(s), uint64(s+5)))
+		}
+
+		start := time.Now()
+		for i, iv := range ivs {
+			siv.Insert(iv)
+			siv.Delete(del[i])
+		}
+		tot += time.Since(start)
+	}
+	fmt.Printf("%v: %d random ins/del took on avg %v\n", v, N, tot/time.Duration(I))
+}
+
+func TestManyRandom(t *testing.T) {
+	testManyRandom(t, skipinterval.MkSkipIInterval)
+	testManyRandom(t, intervals.MkIInterval)
+
 }
 
 func processIV(t *testing.T, retrieved map[uint64]bool, iv *sessp.Tinterval) {

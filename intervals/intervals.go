@@ -15,6 +15,7 @@ type IIntervals interface {
 	Delete(*sessp.Tinterval)
 	Insert(*sessp.Tinterval)
 	Length() int
+	Contains(uint64) bool
 }
 
 type IvSlice struct {
@@ -33,7 +34,7 @@ func (ivs *IvSlice) Length() int {
 	return len(ivs.entries)
 }
 
-func (ivs *IvSlice) contains(e uint64) bool {
+func (ivs *IvSlice) Contains(e uint64) bool {
 	for _, iv := range ivs.entries {
 		if e < iv.Start {
 			return false

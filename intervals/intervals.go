@@ -21,6 +21,10 @@ type IvSlice struct {
 	entries []*sessp.Tinterval
 }
 
+func MkIInterval() IIntervals {
+	return mkIvSlice()
+}
+
 func mkIvSlice() *IvSlice {
 	return &IvSlice{make([]*sessp.Tinterval, 0)}
 }

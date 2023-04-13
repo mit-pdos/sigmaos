@@ -23,10 +23,6 @@ func (ivs *Intervals) String() string {
 	return fmt.Sprintf("{ acked:%v next:%v }", ivs.acked, ivs.next)
 }
 
-func MkIInterval() IIntervals {
-	return MkIntervals(sessp.Tsession(0))
-}
-
 func MkIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.sid = sid

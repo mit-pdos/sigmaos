@@ -219,8 +219,12 @@ func (skipl *SkipIntervals) Present(iv *sessp.Tinterval) bool {
 	}
 }
 
-func (skipl *SkipIntervals) Find(iv *sessp.Tinterval) *element {
-	return skipl.findNext(nil, iv.Start, skipl.prevElems)
+func (skipl *SkipIntervals) Find(iv *sessp.Tinterval) *sessp.Tinterval {
+	if elem := skipl.findNext(nil, iv.Start, skipl.prevElems); elem == nil {
+		return nil
+	} else {
+		return &elem.iv
+	}
 }
 
 // Return first interval whose end is passed start and its predecessors at each level

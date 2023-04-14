@@ -105,6 +105,114 @@ func TestDelete(t *testing.T) {
 	testDelete(t, skipinterval.MkSkipIInterval())
 }
 
+// No overlapping intervals
+func testBasic(t *testing.T, siv intervals.IIntervals) {
+	ivs := []*sessp.Tinterval{sessp.MkInterval(2, 4), sessp.MkInterval(10, 12),
+		sessp.MkInterval(5, 7), sessp.MkInterval(0, 1), sessp.MkInterval(20, 22)}
+	e := siv.Find(sessp.MkInterval(10, 12))
+	assert.Nil(t, e)
+	for _, iv := range ivs {
+		siv.Insert(iv)
+	}
+	for _, iv := range ivs {
+		assert.True(t, siv.Present(iv))
+	}
+	e = siv.Find(ivs[1])
+	assert.NotNil(t, e)
+
+	siv.Delete(ivs[3])
+	siv.Delete(ivs[2])
+	siv.Delete(ivs[1])
+	siv.Delete(ivs[0])
+	siv.Delete(ivs[4])
+	for _, iv := range ivs {
+		assert.False(t, siv.Present(iv))
+	}
+	assert.True(t, siv.Length() == 0)
+}
+
+func TestBasic(t *testing.T) {
+	testBasic(t, intervals.MkIInterval())
+	testBasic(t, skipinterval.MkSkipIntervals())
+}
+
+func testInsert1(t *testing.T, siv intervals.IIntervals) {
+	ivs := []*sessp.Tinterval{
+		sessp.MkInterval(0, 10),
+		sessp.MkInterval(10, 20),
+		sessp.MkInterval(15, 20),
+		sessp.MkInterval(30, 40),
+		sessp.MkInterval(20, 25),
+		sessp.MkInterval(50, 60),
+		sessp.MkInterval(70, 80),
+		sessp.MkInterval(40, 50),
+		sessp.MkInterval(25, 30),
+		sessp.MkInterval(60, 70),
+	}
+	lens := []int{1, 1, 1, 2, 2, 3, 4, 3, 2, 1}
+	for i, iv := range ivs {
+		siv.Insert(iv)
+		assert.Equal(t, lens[i], siv.Length(), i)
+		assert.True(t, siv.Present(iv))
+	}
+}
+
+func TestInsert1(t *testing.T) {
+	// testInsert1(t, intervals.MkIInterval())
+	testInsert1(t, skipinterval.MkSkipIntervals())
+}
+
+func testDelete1(t *testing.T, siv intervals.IIntervals) {
+	iv0 := sessp.MkInterval(0, 100)
+	ivs := []*sessp.Tinterval{
+		sessp.MkInterval(5, 10),
+		sessp.MkInterval(30, 50),
+		sessp.MkInterval(50, 100),
+		sessp.MkInterval(20, 30),
+		sessp.MkInterval(0, 5),
+		sessp.MkInterval(10, 20),
+	}
+	lens := []int{2, 3, 2, 2, 1, 0}
+	siv.Insert(iv0)
+	for i, iv := range ivs {
+		siv.Delete(iv)
+		assert.Equal(t, lens[i], siv.Length(), i)
+		assert.False(t, siv.Present(iv), i)
+	}
+	siv.Insert(iv0)
+	siv.Delete(ivs[0])
+	assert.True(t, siv.Present(ivs[4]))
+	assert.Equal(t, 2, siv.Length())
+	siv.Delete(iv0)
+	assert.Equal(t, 0, siv.Length())
+}
+
+func TestDelete1(t *testing.T) {
+	// testDelete1(t, intervals.MkIInterval())
+	testDelete1(t, skipinterval.MkSkipIntervals())
+}
+
+func testRandom(t *testing.T, siv intervals.IIntervals) {
+	const N = 128
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	ivs := make([]*sessp.Tinterval, 0)
+	for i := 0; i < N; i++ {
+		s := r.Int31() % N
+		ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
+	}
+	for _, iv := range ivs {
+		siv.Insert(iv)
+	}
+	for _, iv := range ivs {
+		assert.True(t, siv.Present(iv), iv.Marshal())
+	}
+}
+
+func TestRandom1(t *testing.T) {
+	// testRandom(t, intervals.MkIInterval())
+	testRandom(t, skipinterval.MkSkipIntervals())
+}
+
 const (
 	N = 1000
 	I = 1000

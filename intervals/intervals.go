@@ -16,6 +16,8 @@ type IIntervals interface {
 	Insert(*sessp.Tinterval)
 	Length() int
 	Contains(uint64) bool
+	Present(*sessp.Tinterval) bool
+	Find(*sessp.Tinterval) *sessp.Tinterval
 }
 
 type IvSlice struct {
@@ -35,15 +37,33 @@ func (ivs *IvSlice) Length() int {
 }
 
 func (ivs *IvSlice) Contains(e uint64) bool {
+	return ivs.Find(sessp.MkInterval(e, e+1)) != nil
+}
+
+func (ivs *IvSlice) Present(t *sessp.Tinterval) bool {
 	for _, iv := range ivs.entries {
-		if e < iv.Start {
+		if t.Start < iv.Start {
 			return false
 		}
-		if e >= iv.Start && e < iv.End {
+		if t.End < iv.End {
 			return true
 		}
+		t.Start = iv.End
+		return true
 	}
 	return false
+}
+
+func (ivs *IvSlice) Find(t *sessp.Tinterval) *sessp.Tinterval {
+	for _, iv := range ivs.entries {
+		if t.Start < iv.Start {
+			return nil
+		}
+		if t.Start >= iv.Start && t.End <= iv.End {
+			return iv
+		}
+	}
+	return nil
 }
 
 func (ivs *IvSlice) pop() *sessp.Tinterval {

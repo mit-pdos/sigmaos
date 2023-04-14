@@ -7,14 +7,14 @@ ARG tag
 ENV SIGMATAG=$tag
 
 # Install docker ce-cli
-RUN apt-get update
-RUN apt-get --yes install ca-certificates curl gnupg lsb-release
-RUN mkdir -m 0755 -p /etc/apt/keyrings
-RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-RUN echo \
+RUN apt-get update && \
+  apt-get --yes install ca-certificates curl gnupg lsb-release && \
+  mkdir -m 0755 -p /etc/apt/keyrings && \
+  curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+  echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get --yes update && apt-get --yes install docker-ce-cli
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+  apt-get --yes update && apt-get --yes install docker-ce-cli
 
 # Install apt packages & clean up apt cache
 RUN \
@@ -38,7 +38,8 @@ COPY seccomp seccomp
 # ========== binary builder image ==========
 FROM base AS builder
 # Install custom version of go with larger minimum stack size.
-RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
+RUN cd /go && \
+  git clone https://github.com/ArielSzekely/go.git go-custom && \
   cd go-custom && \
   git checkout bigstack && \
   git config pull.rebase false && \

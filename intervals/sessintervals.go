@@ -10,13 +10,14 @@ import (
 
 	// db "sigmaos/debug"
 	"sigmaos/sessp"
+	"sigmaos/sliceintervals"
 )
 
 type Intervals struct {
 	sync.Mutex
 	sid   sessp.Tsession
-	acked *IvSlice // intervals with seqnos for which the server replied
-	next  *IvSlice // intervals with seqnos to tell server we have received reply
+	acked *sliceintervals.IvSlice // intervals with seqnos for which the server replied
+	next  *sliceintervals.IvSlice // intervals with seqnos to tell server we have received reply
 }
 
 func (ivs *Intervals) String() string {
@@ -26,8 +27,8 @@ func (ivs *Intervals) String() string {
 func MkIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.sid = sid
-	ivs.acked = mkIvSlice()
-	ivs.next = mkIvSlice()
+	ivs.acked = sliceintervals.MkIvSlice()
+	ivs.next = sliceintervals.MkIvSlice()
 	return ivs
 }
 
@@ -44,7 +45,7 @@ func (ivs *Intervals) Next() *sessp.Tinterval {
 		return nil
 	}
 	// Pop the next interval from the queue.
-	iv := ivs.next.pop()
+	iv := ivs.next.Pop()
 	//if db.WillBePrinted(db.INTERVALS) {
 	//db.DPrintf(db.INTERVALS, "[%v] ivs.Next: %v", ivs.sid, iv)
 	//}
@@ -58,7 +59,7 @@ func (ivs *Intervals) ResetNext() {
 	//db.DPrintf(db.INTERVALS, "[%v] ivs.ResetNext", ivs.sid)
 
 	// Copy acked to next, to resend all received intervals.
-	ivs.next.deepcopy(ivs.acked)
+	ivs.next.Deepcopy(ivs.acked)
 }
 
 func (ivs *Intervals) Insert(n *sessp.Tinterval) {

@@ -12,9 +12,10 @@ import (
 	"sigmaos/intervals"
 	"sigmaos/sessp"
 	"sigmaos/skipintervals"
+	"sigmaos/sliceintervals"
 )
 
-func testSimple(t *testing.T, ivs intervals.IIntervals) {
+func testSimple(t *testing.T, ivs sessp.IIntervals) {
 	ivs.Insert(sessp.MkInterval(1, 2))
 	ivs.Insert(sessp.MkInterval(2, 3))
 	ivs.Delete(sessp.MkInterval(1, 2))
@@ -22,11 +23,11 @@ func testSimple(t *testing.T, ivs intervals.IIntervals) {
 }
 
 func TestSimple(t *testing.T) {
-	testSimple(t, intervals.MkIInterval())
+	testSimple(t, sliceintervals.MkIInterval())
 	testSimple(t, skipinterval.MkSkipIInterval())
 }
 
-func testContains(t *testing.T, ivs intervals.IIntervals) {
+func testContains(t *testing.T, ivs sessp.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(90, 100))
 	assert.True(t, ivs.Contains(0))
@@ -38,11 +39,11 @@ func testContains(t *testing.T, ivs intervals.IIntervals) {
 }
 
 func TestContains(t *testing.T) {
-	testContains(t, intervals.MkIInterval())
+	testContains(t, sliceintervals.MkIInterval())
 	testContains(t, skipinterval.MkSkipIInterval())
 }
 
-func testInsert(t *testing.T, ivs intervals.IIntervals) {
+func testInsert(t *testing.T, ivs sessp.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 10))
 	ivs.Insert(sessp.MkInterval(10, 20))
 	assert.Equal(t, 1, ivs.Length())
@@ -65,11 +66,11 @@ func testInsert(t *testing.T, ivs intervals.IIntervals) {
 }
 
 func TestInsert(t *testing.T) {
-	testInsert(t, intervals.MkIInterval())
+	testInsert(t, sliceintervals.MkIInterval())
 	testInsert(t, skipinterval.MkSkipIInterval())
 }
 
-func testDelete(t *testing.T, ivs intervals.IIntervals) {
+func testDelete(t *testing.T, ivs sessp.IIntervals) {
 	ivs.Insert(sessp.MkInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	ivs.Delete(sessp.MkInterval(5, 10))
@@ -101,12 +102,12 @@ func testDelete(t *testing.T, ivs intervals.IIntervals) {
 }
 
 func TestDelete(t *testing.T) {
-	testDelete(t, intervals.MkIInterval())
+	testDelete(t, sliceintervals.MkIInterval())
 	testDelete(t, skipinterval.MkSkipIInterval())
 }
 
 // No overlapping intervals
-func testBasic(t *testing.T, siv intervals.IIntervals) {
+func testBasic(t *testing.T, siv sessp.IIntervals) {
 	ivs := []*sessp.Tinterval{sessp.MkInterval(2, 4), sessp.MkInterval(10, 12),
 		sessp.MkInterval(5, 7), sessp.MkInterval(0, 1), sessp.MkInterval(20, 22)}
 	e := siv.Find(sessp.MkInterval(10, 12))
@@ -132,11 +133,11 @@ func testBasic(t *testing.T, siv intervals.IIntervals) {
 }
 
 func TestBasic(t *testing.T) {
-	testBasic(t, intervals.MkIInterval())
+	testBasic(t, sliceintervals.MkIInterval())
 	testBasic(t, skipinterval.MkSkipIntervals())
 }
 
-func testInsert1(t *testing.T, siv intervals.IIntervals) {
+func testInsert1(t *testing.T, siv sessp.IIntervals) {
 	ivs := []*sessp.Tinterval{
 		sessp.MkInterval(0, 10),
 		sessp.MkInterval(10, 20),
@@ -158,11 +159,11 @@ func testInsert1(t *testing.T, siv intervals.IIntervals) {
 }
 
 func TestInsert1(t *testing.T) {
-	// testInsert1(t, intervals.MkIInterval())
+	// testInsert1(t, sliceintervals.MkIInterval())
 	testInsert1(t, skipinterval.MkSkipIntervals())
 }
 
-func testDelete1(t *testing.T, siv intervals.IIntervals) {
+func testDelete1(t *testing.T, siv sessp.IIntervals) {
 	iv0 := sessp.MkInterval(0, 100)
 	ivs := []*sessp.Tinterval{
 		sessp.MkInterval(5, 10),
@@ -188,11 +189,11 @@ func testDelete1(t *testing.T, siv intervals.IIntervals) {
 }
 
 func TestDelete1(t *testing.T) {
-	// testDelete1(t, intervals.MkIInterval())
+	// testDelete1(t, sliceintervals.MkIInterval())
 	testDelete1(t, skipinterval.MkSkipIntervals())
 }
 
-func testRandom(t *testing.T, siv intervals.IIntervals) {
+func testRandom(t *testing.T, siv sessp.IIntervals) {
 	const N = 128
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ivs := make([]*sessp.Tinterval, 0)
@@ -209,7 +210,7 @@ func testRandom(t *testing.T, siv intervals.IIntervals) {
 }
 
 func TestRandom1(t *testing.T) {
-	// testRandom(t, intervals.MkIInterval())
+	// testRandom(t, sliceintervals.MkIInterval())
 	testRandom(t, skipinterval.MkSkipIntervals())
 }
 
@@ -218,7 +219,7 @@ const (
 	I = 1000
 )
 
-func testManyInorder(t *testing.T, mkiv func() intervals.IIntervals) {
+func testManyInorder(t *testing.T, mkiv func() sessp.IIntervals) {
 	tot := time.Duration(0)
 	var v reflect.Type
 	for t := 0; t < I; t++ {
@@ -235,10 +236,10 @@ func testManyInorder(t *testing.T, mkiv func() intervals.IIntervals) {
 
 func TestManyInOrder(t *testing.T) {
 	testManyInorder(t, skipinterval.MkSkipIInterval)
-	testManyInorder(t, intervals.MkIInterval)
+	testManyInorder(t, sliceintervals.MkIInterval)
 }
 
-func testManyGaps(t *testing.T, mkiv func() intervals.IIntervals) {
+func testManyGaps(t *testing.T, mkiv func() sessp.IIntervals) {
 	const (
 		B = 10
 	)
@@ -258,10 +259,10 @@ func testManyGaps(t *testing.T, mkiv func() intervals.IIntervals) {
 
 func TestManyGaps(t *testing.T) {
 	testManyGaps(t, skipinterval.MkSkipIInterval)
-	testManyGaps(t, intervals.MkIInterval)
+	testManyGaps(t, sliceintervals.MkIInterval)
 }
 
-func testManyRandom(t *testing.T, mkiv func() intervals.IIntervals) {
+func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tot := time.Duration(0)
 	var v reflect.Type
@@ -291,7 +292,7 @@ func testManyRandom(t *testing.T, mkiv func() intervals.IIntervals) {
 
 func TestManyRandom(t *testing.T) {
 	testManyRandom(t, skipinterval.MkSkipIInterval)
-	testManyRandom(t, intervals.MkIInterval)
+	testManyRandom(t, sliceintervals.MkIInterval)
 
 }
 

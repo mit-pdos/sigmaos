@@ -1,4 +1,4 @@
-package intervals
+package sliceintervals
 
 //
 // Package to maintain an ordered list of intervals
@@ -11,24 +11,15 @@ import (
 	"sigmaos/sessp"
 )
 
-type IIntervals interface {
-	Delete(*sessp.Tinterval)
-	Insert(*sessp.Tinterval)
-	Length() int
-	Contains(uint64) bool
-	Present(*sessp.Tinterval) bool
-	Find(*sessp.Tinterval) *sessp.Tinterval
-}
-
 type IvSlice struct {
 	entries []*sessp.Tinterval
 }
 
-func MkIInterval() IIntervals {
-	return mkIvSlice()
+func MkIInterval() sessp.IIntervals {
+	return MkIvSlice()
 }
 
-func mkIvSlice() *IvSlice {
+func MkIvSlice() *IvSlice {
 	return &IvSlice{make([]*sessp.Tinterval, 0)}
 }
 
@@ -66,7 +57,7 @@ func (ivs *IvSlice) Find(t *sessp.Tinterval) *sessp.Tinterval {
 	return nil
 }
 
-func (ivs *IvSlice) pop() *sessp.Tinterval {
+func (ivs *IvSlice) Pop() *sessp.Tinterval {
 	iv := ivs.entries[0]
 	ivs.delidx(0)
 	return iv
@@ -161,7 +152,7 @@ func (ivs *IvSlice) search(start uint64) int {
 	})
 }
 
-func (dst *IvSlice) deepcopy(src *IvSlice) {
+func (dst *IvSlice) Deepcopy(src *IvSlice) {
 	dst.entries = make([]*sessp.Tinterval, len(src.entries))
 	for i, iv := range src.entries {
 		dst.entries[i] = sessp.MkInterval(iv.Start, iv.End)

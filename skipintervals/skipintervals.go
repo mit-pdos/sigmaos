@@ -6,7 +6,6 @@ import (
 	"time"
 
 	// db "sigmaos/debug"
-	"sigmaos/intervals"
 	"sigmaos/sessp"
 )
 
@@ -20,7 +19,7 @@ type SkipIntervals struct {
 	length    int
 }
 
-func MkSkipIInterval() intervals.IIntervals {
+func MkSkipIInterval() sessp.IIntervals {
 	return MkSkipIntervals()
 }
 

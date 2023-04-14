@@ -191,6 +191,15 @@ func (iv *Tinterval) Marshal() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
 }
 
+type IIntervals interface {
+	Delete(*Tinterval)
+	Insert(*Tinterval)
+	Length() int
+	Contains(uint64) bool
+	Present(*Tinterval) bool
+	Find(*Tinterval) *Tinterval
+}
+
 const (
 
 	//

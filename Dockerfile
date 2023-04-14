@@ -6,15 +6,6 @@ ARG target=local
 ARG tag
 ENV SIGMATAG=$tag
 
-# Install custom version of go with larger minimum stack size.
-RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
-  cd go-custom && \
-  git checkout bigstack && \
-  git config pull.rebase false && \
-  git pull && \
-  cd src && \
-  ./all.bash
-
 # Install docker ce-cli
 RUN apt-get update
 RUN apt-get --yes install ca-certificates curl gnupg lsb-release
@@ -46,6 +37,15 @@ COPY seccomp seccomp
 
 # ========== binary builder image ==========
 FROM base AS builder
+# Install custom version of go with larger minimum stack size.
+RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
+  cd go-custom && \
+  git checkout bigstack && \
+  git config pull.rebase false && \
+  git pull && \
+  cd src && \
+  ./all.bash
+
 # Download go modules
 COPY go.mod ./
 COPY go.sum ./

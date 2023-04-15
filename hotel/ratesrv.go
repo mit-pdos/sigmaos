@@ -87,7 +87,8 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
 		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
-		err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
+		err := s.cachec.Get(key, r)
+		//		err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
 		span2.End()
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
@@ -101,7 +102,8 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 				return err
 			}
 			_, span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
-			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
+			err = s.cachec.Put(key, r)
+			//			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
 			span4.End()
 			if err != nil {
 				return err

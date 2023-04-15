@@ -144,8 +144,6 @@ func (c *SrvConn) write(fm *sessp.FcallMsg) {
 	start := time.Now()
 	if err := c.marshalframe(fm, c.bw); err != nil {
 		db.DPrintf(db.NETSRV_ERR, "%v writer %v err %v\n", c.sessid, c.Src(), err)
-		// XXX Remove
-		// continue
 		return
 	}
 	if time.Since(start) > 20*time.Millisecond {

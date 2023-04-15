@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "ulambda/socialnetwork/proto";
+
+service MeaningOfLife {
+  rpc FindMeaning(MoLRequest) returns (MoLResult);
+}
+
+message MoLRequest {
+  string name = 1;
+}
+
+message MoLResult {
+  float meaning = 1;
+}

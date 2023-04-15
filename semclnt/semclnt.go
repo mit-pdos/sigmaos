@@ -1,6 +1,7 @@
 package semclnt
 
 import (
+	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -44,9 +45,10 @@ func (c *SemClnt) Down() error {
 			}
 			signal <- err1
 		})
+		var serr *serr.Err
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
-		if err != nil && serr.IsErrNotfound(err) {
+		if errors.As(err, &serr) && serr.IsErrNotfound() {
 			db.DPrintf(db.SEMCLNT, "down %v ok err %v\n", c.path, err)
 			break
 		}
@@ -57,7 +59,7 @@ func (c *SemClnt) Down() error {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v err %v\n", c.path, err)
 			return err
 		}
-		if err != nil && serr.IsErrVersion(err) {
+		if errors.As(err, &serr) && serr.IsErrVersion() {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v retry err %v\n", c.path, err)
 			continue
 		}

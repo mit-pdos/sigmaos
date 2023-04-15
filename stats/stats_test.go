@@ -13,7 +13,7 @@ import (
 func TestStatsd(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	st := stats.StatInfo{}
+	st := stats.Stats{}
 	err := ts.GetFileJson("name/"+sp.STATSD, &st)
 	assert.Nil(t, err, "statsd")
 	nget := st.StatsCopy().Nget

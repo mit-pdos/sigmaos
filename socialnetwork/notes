@@ -1,0 +1,14 @@
+[1] SQL commands:
+=> docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb
+172.17.0.2
+=> mysql -h 172.17.0.2 -u root -psigmadb
+
+=> use sigmaos;
+=> show tables;
+=> INSERT INTO socialnetwork_user (userid, firstname, lastname, username, password) VALUES (00001, "Alice", "XXX", "axxx", "ps_axxx");
+=> INSERT INTO socialnetwork_user (userid, firstname, lastname, username, password) VALUES (00002, "Bob", "YYY", "bxxx", "ps_bxxx");
+=> select * from socialnetwork_user;
+  
+[2] Generate proto go files
+=> cd socialnetwork/proto/
+=> protoc --proto_path=./ --go_out=/home/yizheng/dev/ *.proto

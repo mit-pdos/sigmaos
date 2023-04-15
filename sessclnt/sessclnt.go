@@ -138,10 +138,9 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 	if msg.Type() == sessp.TRdetach {
 		return true
 	}
-	rerr, ok := msg.(*sp.Rerror)
-	if ok {
+	if rerr, ok := msg.(*sp.Rerror); ok {
 		err := sp.MkErr(rerr)
-		if serr.IsErrSessClosed(err) {
+		if err.IsErrSessClosed() {
 			return true
 		}
 	}

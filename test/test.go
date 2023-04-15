@@ -25,6 +25,7 @@ const (
 )
 
 var start bool
+var noShutdown bool
 var tag string
 var rootNamedIP string
 var Overlays bool
@@ -33,6 +34,7 @@ func init() {
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.StringVar(&rootNamedIP, "rootNamedIP", "", "IP of the root named server")
 	flag.BoolVar(&start, "start", false, "Start system")
+	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 }
 
@@ -180,12 +182,16 @@ func (ts *Tstate) MakeClnt(idx int, name string) (*sigmaclnt.SigmaClnt, error) {
 
 func (ts *Tstate) Shutdown() error {
 	db.DPrintf(db.TEST, "Shutdown")
-	db.DPrintf(db.TEST, "Done Shutdown")
+	defer db.DPrintf(db.TEST, "Done Shutdown")
 	db.DPrintf(db.SYSTEM, "Shutdown")
-	// Shut down other kernel running named last
-	for i := len(ts.kclnts) - 1; i >= 0; i-- {
-		if err := ts.kclnts[i].Shutdown(); err != nil {
-			return err
+	if noShutdown {
+		db.DPrintf(db.ALWAYS, "Skipping shutdown")
+	} else {
+		// Shut down other kernel running named last
+		for i := len(ts.kclnts) - 1; i >= 0; i-- {
+			if err := ts.kclnts[i].Shutdown(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

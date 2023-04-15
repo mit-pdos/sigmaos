@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
+	"sigmaos/mem"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -19,7 +20,7 @@ import (
 )
 
 // Start container for uprocd. If r is nil, don't use overlays.
-func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -36,12 +37,21 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		}
 	}
 
+	membytes := int64(mem.GetTotalMem()) * sp.MBYTE
+
+	score := 0
+	memswap := membytes
+	if ptype == proc.T_BE {
+		score = 1000
+		memswap = 0
+	}
+
 	// append uprocd's port
 	p.Args = append(p.Args, up.String())
 	p.AppendEnv(proc.SIGMANET, net)
 
 	cmd := append([]string{p.Program}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v %v\n", cmd, p.GetEnv(), r, realm)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v r %v s %v\n", cmd, p.GetEnv(), r, realm, score)
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
@@ -88,6 +98,13 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			},
 			Privileged:   true,
 			PortBindings: pmap,
+			OomScoreAdj:  score,
+			Resources: container.Resources{
+				// This also allows for GetTotalMem() of swap, if host
+				// has swap space
+				Memory:     membytes,
+				MemorySwap: memswap,
+			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-uprocd-"+realm.String()+"-"+p.GetPid().String())
@@ -109,5 +126,5 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	pm := port.MakePortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
-	return &Container{pm, ctx, cli, resp.ID, ip, nil}, nil
+	return &Container{pm, ctx, cli, resp.ID, ip, membytes, memswap, nil}, nil
 }

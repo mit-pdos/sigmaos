@@ -50,6 +50,7 @@ func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string)
 		s.cmd = cmd
 	} else {
 		realm := sp.Trealm(s.p.Args[0])
+		ptype := proc.ParseTtype(s.p.Args[1])
 		if err := s.MkProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
 			return err
 		}
@@ -63,7 +64,7 @@ func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string)
 			r = &port.Range{FPORT, LPORT}
 			up = r.Fport
 		}
-		c, err := container.StartPContainer(s.p, kernelId, realm, r, up)
+		c, err := container.StartPContainer(s.p, kernelId, realm, r, up, ptype)
 		if err != nil {
 			return err
 		}

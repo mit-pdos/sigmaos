@@ -1,6 +1,7 @@
 package bootkernelclnt_test
 
 import (
+	"errors"
 	"path"
 	"testing"
 	"time"
@@ -178,7 +179,8 @@ func TestEphemeral(t *testing.T) {
 			db.DPrintf(db.TEST, "retry")
 			continue
 		}
-		assert.True(t, serr.IsErrNotfound(err) || serr.IsErrUnreachable(err), "Wrong err %v", err)
+		var serr *serr.Err
+		assert.True(t, errors.As(err, &serr) && (serr.IsErrNotfound() || serr.IsErrUnreachable()), "Wrong err %v", err)
 		break
 	}
 	assert.Greater(t, 3*sp.Conf.Session.TIMEOUT, time.Since(start), "Waiting too long")

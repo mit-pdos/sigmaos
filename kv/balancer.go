@@ -170,8 +170,9 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, mfs string) error {
 		if err == nil {
 			return nil
 		}
-		if serr.IsErrUnavailable(err) || serr.IsErrRetry(err) {
-			// db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
+		var serr *serr.Err
+		if errors.As(err, &serr) && (serr.IsErrUnavailable() || serr.IsErrRetry()) {
+			db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
@@ -230,10 +231,9 @@ func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
-		if err != nil {
-			if serr.IsErrUnreachable(err) {
-				db.DFatalf("disconnected\n")
-			}
+		var serr *serr.Err
+		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+			db.DFatalf("disconnected\n")
 		}
 	}
 }
@@ -309,9 +309,10 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "runProc %v err %v status %v\n", args, err, status)
 		}
-		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
+		var serr *serr.Err
+		if errors.As(err, &serr) && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			serr.IsErrUnreachable(err)) {
+			serr.IsErrUnreachable()) {
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
@@ -408,9 +409,9 @@ func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
 	epoch, err := bl.lc.EnterNextEpoch([]string{})
 	if err != nil {
 		db.DPrintf(db.KVBAL_ERR, "EnterNextEpoch fail %v\n", err)
-		var nperr *serr.Err
-		if errors.As(err, &nperr) {
-			return nperr
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sr
 		}
 		return serr.MkErr(serr.TErrError, err)
 	}

@@ -1,7 +1,6 @@
 package sigmaprotsrv
 
 import (
-	"sigmaos/queue"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -14,7 +13,7 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyQueue() *queue.ReplyQueue
+	GetReplyChan() chan *sessp.FcallMsg
 }
 
 type Fsrvfcall func(*sessp.FcallMsg)

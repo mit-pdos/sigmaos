@@ -18,7 +18,7 @@ done
 # test with a kernel with just named
 #
 
-for T in reader writer stats reader writer stats fslib semclnt electclnt; do
+for T in reader writer stats fslib semclnt electclnt; do
     go test $@ sigmaos/$T -start
 done
 
@@ -59,6 +59,10 @@ go test $@ sigmaos/hotel
 
 go test $@ sigmaos/realmclnt -start
 
+#
+# Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
+#
+go test $@ sigmaos/container -start
 
 #
 # tests with overlays

@@ -1,10 +1,12 @@
 package uprocclnt
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"path"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -49,7 +51,9 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 		}
 		updm.kclnt = kclnt
 	}
+	s := time.Now()
 	pid, err := updm.kclnt.Boot("uprocd", []string{realm.String(), ptype.String(), updm.kernelId})
+	db.DPrintf(db.SPAWN_LAT, "[%v] Boot %v uprocd %v", realm, ptype, time.Since(s))
 	if err != nil {
 		return pid, err
 	}
@@ -60,15 +64,16 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
 	d1 := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL)
 	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
-	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrExists(err) {
+	var serr *serr.Err
+	if err := updm.fsl.MkDir(d1, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
 		return err
 	}
 	d2 := path.Join(d1, realm.String())
-	if err := updm.fsl.MkDir(d2, 0777); err != nil && !serr.IsErrExists(err) {
+	if err := updm.fsl.MkDir(d2, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
 		return err
 	}
 	d3 := path.Join(d2, ptype.String())
-	if err := updm.fsl.MkDir(d3, 0777); err != nil && !serr.IsErrExists(err) {
+	if err := updm.fsl.MkDir(d3, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
 		return err
 	}
 	return nil
@@ -108,19 +113,24 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 
 func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
+	s := time.Now()
 	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v", uproc.GetPid(), time.Since(s))
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
+	s = time.Now()
 	updm.startBalanceShares(uproc)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares %v", uproc.GetPid(), time.Since(s))
 	defer updm.exitBalanceShares(uproc)
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	if err := pdc.RPC("UprocSrv.Run", req, res); err != nil && serr.IsErrUnreachable(err) {
+	var serr *serr.Err
+	if err := pdc.RPC("UprocSrv.Run", req, res); errors.As(err, &serr) && serr.IsErrUnreachable() {
 		log.Printf("uprocsrv run err %v\n", err)
 		return err, nil
 	} else {

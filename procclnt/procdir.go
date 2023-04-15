@@ -1,6 +1,7 @@
 package procclnt
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"runtime/debug"
@@ -17,9 +18,10 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
-		if serr.IsErrUnreachable(err) {
+		var serr *serr.Err
+		if errors.As(err, &serr) && serr.IsErrUnreachable() {
 			debug.PrintStack()
-			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, serr)
 		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
@@ -56,9 +58,12 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 		procdir = clnt.procdir
 	}
 	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil && !serr.IsErrUnavailable(err) {
-		db.DPrintf(db.PROCCLNT_ERR, "Spawn Symlink child %v err %v\n", link, err)
-		return clnt.cleanupError(clnt.pid, clnt.procdir, err)
+	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
+		var serr *serr.Err
+		if errors.As(err, &serr) && !serr.IsErrUnavailable() {
+			db.DPrintf(db.PROCCLNT_ERR, "Spawn Symlink child %v err %v\n", link, err)
+			return clnt.cleanupError(clnt.pid, clnt.procdir, err)
+		}
 	}
 	return nil
 }

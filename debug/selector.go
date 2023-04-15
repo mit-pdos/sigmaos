@@ -21,6 +21,11 @@ const (
 	CPU_UTIL             = "CPU_UTIL"
 )
 
+// Latency break-down.
+const (
+	SPAWN_LAT Tselector = "SPAWN_LAT"
+)
+
 // Tests
 const (
 	TEST  Tselector = "TEST"
@@ -59,6 +64,9 @@ const (
 	KVMON                     = "KVMON"
 	KVMV                      = "KVMV"
 	KVMV_ERR                  = KVMV + ERR
+	SOCIAL_NETWORK			  = "SOCIAL_NETWORK"
+	SOCIAL_NETWORK_MOL        = SOCIAL_NETWORK + "_MOL"
+	SOCIAL_NETWORK_USER       = SOCIAL_NETWORK + "_USER"
 )
 
 // System

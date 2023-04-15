@@ -2,6 +2,7 @@ package kv
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"math/big"
@@ -115,7 +116,8 @@ func (kc *KvClerk) StartClerk() error {
 
 func (kc *KvClerk) IsMiss(err error) bool {
 	db.DPrintf(db.KVCLERK, "IsMiss err %v", err)
-	return serr.IsErrNotfound(err)
+	var serr *serr.Err
+	return errors.As(err, &serr) && serr.IsErrNotfound()
 }
 
 // Detach servers not in kvs
@@ -153,7 +155,8 @@ func (kc *KvClerk) switchConfig() error {
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
-			if serr.IsErrVersion(err) || serr.IsErrStale(err) {
+			var serr *serr.Err
+			if errors.As(err, &serr) && (serr.IsErrVersion() || serr.IsErrStale()) {
 				db.DPrintf(db.KVCLERK_ERR, "version mismatch; retry")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
@@ -171,15 +174,16 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	if serr.IsErrNotfound(err) && strings.HasPrefix(serr.ErrPath(err), "shard") {
+	var serr *serr.Err
+	if errors.As(err, &serr) && serr.IsErrNotfound() && strings.HasPrefix(serr.ErrPath(), "shard") {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", serr.ErrPath(err))
+		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", serr.ErrPath())
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if serr.IsErrStale(err) {
+	if errors.As(err, &serr) && serr.IsErrStale() {
 		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}
@@ -209,7 +213,6 @@ type opT int
 const (
 	GETVAL opT = iota + 1
 	PUT
-	SET
 	GETRD
 )
 

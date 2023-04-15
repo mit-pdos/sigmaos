@@ -29,7 +29,7 @@ func getTotalMem() proc.Tmem {
 			if err != nil {
 				db.DFatalf("Couldn't convert MemTotal: %v", err)
 			}
-			return proc.Tmem(kb / 1000)
+			return proc.Tmem(kb / 1024)
 		}
 	}
 	db.DFatalf("Couldn't find total mem")

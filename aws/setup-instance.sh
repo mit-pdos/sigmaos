@@ -183,12 +183,23 @@ ulimit -n 100000
 # Add to docker group
 sudo usermod -aG docker ubuntu
 
+# Increase root's open file ulimits.
+echo "root hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "root soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
+# Increase ubuntu user's open file ulimits.
+echo "ubuntu hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "ubuntu soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
 echo -n > ~/.hushlogin
 ENDSSH
 
 if [ $VPC == $K8S_VPC ]; then
   echo "Installing kubernetes components"
   ssh -i key-$VPC.pem $LOGIN@$VM <<'ENDSSH'
+    # Increase root's open file ulimits.
+    bash -c "echo \"root hard nofile 20000\" | sudo tee -a /etc/security/limits.conf"
+    bash -c "echo \"root soft nofile 20000\" | sudo tee -a /etc/security/limits.conf"
     bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
     bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
     bash -c "sudo apt update"
@@ -206,7 +217,7 @@ if [ $VPC == $K8S_VPC ]; then
     bash -c "sudo apt update"
     bash -c "sudo apt install -y helm"
     bash -c "helm repo add stable https://charts.helm.sh/stable"
-    bash -c "sudo swapoff -a"
+#    bash -c "sudo swapoff -a"
     bash -c "echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf"
     bash -c "printf \"net.bridge.bridge-nf-call-ip6tables = 1\nnet.bridge.bridge-nf-call-iptables = 1\" | sudo tee /etc/sysctl.d/k8s.conf"
     bash -c "sudo sysctl --system"

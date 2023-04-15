@@ -2,6 +2,7 @@ package fslib_test
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"log"
 	"net"
@@ -75,7 +76,8 @@ func TestCreateTwice(t *testing.T) {
 	assert.Equal(t, nil, err)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 	assert.NotNil(t, err)
-	assert.True(t, serr.IsErrExists(err))
+	var serr *serr.Err
+	assert.True(t, errors.As(err, &serr) && serr.IsErrExists())
 	ts.Shutdown()
 }
 
@@ -97,14 +99,15 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	db.DPrintf(db.TEST, "disconnected")
 
+	var serr *serr.Err
 	_, err = ts.Write(fd, d)
-	assert.True(t, serr.IsErrUnreachable(err))
+	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
 
 	err = ts.Close(fd)
-	assert.True(t, serr.IsErrUnreachable(err))
+	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrUnreachable(err))
+	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
 
 	ts.Shutdown()
 }
@@ -491,7 +494,8 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	defer fsl.Close(fd)
 
 	b, err := fsl.ReadV(fd, 1000)
-	if err != nil && serr.IsErrVersion(err) {
+	var serr *serr.Err
+	if errors.As(err, &serr) && serr.IsErrVersion() {
 		return true
 	}
 	assert.Nil(t, err)
@@ -505,7 +509,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 
 	b = []byte(strconv.Itoa(n))
 	_, err = fsl.WriteV(fd, b)
-	if err != nil && serr.IsErrVersion(err) {
+	if errors.As(err, &serr) && serr.IsErrVersion() {
 		return true
 	}
 	assert.Nil(t, err)
@@ -561,7 +565,8 @@ func TestWatchCreate(t *testing.T) {
 	})
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, -1, fd, err)
-	assert.True(t, serr.IsErrNotfound(err))
+	var serr *serr.Err
+	assert.True(t, errors.As(err, &serr) && serr.IsErrNotfound())
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
@@ -791,7 +796,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 				ch <- r
 			})
 			// Either no error, or remove already happened.
-			assert.True(ts.T, err == nil || serr.IsErrNotfound(err), "Unexpected RemoveWatch error: %v", err)
+			var serr *serr.Err
+			assert.True(ts.T, err == nil || errors.As(err, &serr) && serr.IsErrNotfound(), "Unexpected RemoveWatch error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {
@@ -857,7 +863,8 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 				i = i + 1
 				ok = true
 			} else {
-				assert.True(ts.T, serr.IsErrNotfound(err))
+				var serr *serr.Err
+				assert.True(ts.T, errors.As(err, &serr) && serr.IsErrNotfound())
 			}
 		}
 	}
@@ -1258,7 +1265,7 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
 
-	st := stats.StatInfo{}
+	st := stats.Stats{}
 	err = ts.GetFileJson(gopath.Join("name", sp.STATSD), &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
@@ -1352,7 +1359,8 @@ func TestFslibExit(t *testing.T) {
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
-	assert.True(t, serr.IsErrUnreachable(err))
+	var serr *serr.Err
+	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
 
 	ts.Shutdown()
 }

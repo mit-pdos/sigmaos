@@ -2,6 +2,7 @@ package procclnt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -152,8 +153,10 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protde
 			Realm:     clnt.Realm().String(),
 			ProcProto: p.GetProto(),
 		}
+		s := time.Now()
 		res := &schedd.SpawnResponse{}
 		err := pdc.RPC("Schedd.Spawn", req, res)
+		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		if err != nil {
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
@@ -257,7 +260,8 @@ func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
 	})
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-		if serr.IsErrUnreachable(err) {
+		var serr *serr.Err
+		if errors.As(err, &serr) && serr.IsErrUnreachable() {
 			return err
 		}
 	} else {
@@ -283,6 +287,8 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
 	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
+	s := time.Now()
+	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
 }
@@ -352,6 +358,7 @@ func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", proc.GetPid(), time.Now())
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
@@ -366,8 +373,9 @@ func (clnt *ProcClnt) Started() error {
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
 	}
+	var serr *serr.Err
 	// File may not be found if parent exited first or isn't reachable
-	if err != nil && !serr.IsErrUnavailable(err) {
+	if errors.As(err, &serr) && !serr.IsErrUnavailable() {
 		return fmt.Errorf("Started error %v", err)
 	}
 	return nil

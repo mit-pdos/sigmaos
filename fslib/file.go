@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 
@@ -98,7 +99,8 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			ch <- err
 		})
 		db.DPrintf(db.FSLIB, "OpenWatch %v err %v\n", path, err)
-		if err != nil && serr.IsErrNotfound(err) {
+		var serr *serr.Err
+		if errors.As(err, &serr) && serr.IsErrNotfound() {
 			r := <-ch
 			if r != nil {
 				db.DPrintf(db.FSLIB, "OpenWatch watch %v err %v\n", path, err)

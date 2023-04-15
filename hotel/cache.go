@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	//	"google.golang.org/protobuf/proto"
-
 	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/fslib"

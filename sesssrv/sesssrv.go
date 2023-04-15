@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"runtime/debug"
 
-	"time"
-
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -297,12 +295,7 @@ func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, s
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
 	if request.Fc.Seqno != 0 && ok {
-		// XXX Remove
-		start := time.Now()
 		sess.SendConn(reply)
-		if time.Since(start) > 20*time.Millisecond {
-			db.DPrintf(db.ALWAYS, "Long SendConn %v", time.Since(start))
-		}
 	}
 }
 

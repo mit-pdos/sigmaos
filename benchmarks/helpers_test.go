@@ -49,6 +49,13 @@ func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 
+func spawnProcs(ts *test.RealmTstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		err := ts.Spawn(p)
+		assert.Nil(ts.T, err, "WaitStart: %v", err)
+	}
+}
+
 func waitStartProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.WaitStart(p.GetPid())

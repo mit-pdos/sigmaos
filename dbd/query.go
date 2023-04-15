@@ -31,6 +31,8 @@ func doQuery(db *sql.DB, arg string) ([]byte, error) {
 		switch s.ScanType().Kind() {
 		case reflect.Int32:
 			valuePtrs[i] = new(int32)
+		case reflect.Int64:
+			valuePtrs[i] = new(int64)
 		case reflect.Float32:
 			valuePtrs[i] = new(float32)
 		default:
@@ -46,6 +48,8 @@ func doQuery(db *sql.DB, arg string) ([]byte, error) {
 			valptr := valuePtrs[i]
 			switch v := valptr.(type) {
 			case *int32:
+				val = *v
+			case *int64:
 				val = *v
 			case *float32:
 				val = *v

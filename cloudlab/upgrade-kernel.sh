@@ -9,7 +9,8 @@ fi
 echo "$0 $1"
 
 DIR=$(dirname $0)
-BLKDEV=/dev/sda4
+BLKDEV=/dev/nvme0n1p4
+KERNEL=6.1.24
 
 . $DIR/config
 
@@ -19,14 +20,15 @@ sudo chsh -s /bin/bash arielck
 ENDSSH
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
-BLKDEV=/dev/sda4
+BLKDEV=/dev/nvme0n1p4
+KERNEL=6.1.24
 sudo mkfs -t ext4 $BLKDEV
 sudo mount $BLKDEV /var/local
 sudo mkdir /var/local/$USER
 sudo chown $USER /var/local/$USER
 
 sudo blkid $BLKDEV | cut -d \" -f2
-echo -e UUID=$(sudo blkid /dev/sda4 | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
+echo -e UUID=$(sudo blkid $BLKDEV | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
 
 # Set max journal size
 sudo journalctl --vacuum-size=100M
@@ -38,19 +40,19 @@ cd /var/local/$USER
 mkdir kernel
 
 cd kernel
-mkdir kbuild
-wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.14.14.tar.xz
-tar -xvf linux-5.14.14.tar.xz
+mkdir kbuild-$KERNEL
+wget https://cdn.kernel.org/pub/linux/kernel/v$(printf %.1s "$KERNEL").x/linux-$KERNEL.tar.xz
+tar -xvf linux-$KERNEL.tar.xz
 
-cd kbuild
-yes "" | make -C ../linux-5.14.14 O=/var/local/$USER/kernel/kbuild config
+cd kbuild-$KERNEL
+yes "" | make -C ../linux-$KERNEL O=/var/local/$USER/kernel/kbuild-$KERNEL config
 sed -ri '/CONFIG_SYSTEM_TRUSTED_KEYS/s/=.+/=""/g' .config
 sed -ri 's/CONFIG_SATA_AHCI=m/CONFIG_SATA_AHCI=y/g' .config
 sed -ri 's/CONFIG_SYSTEM_REVOCATION_LIST=y/CONFIG_SYSTEM_REVOCATION_LIST=n/g' .config
-sudo make -j8 
-INSTALL_MOD_STRIP=1 sudo make -j8 modules_install
-INSTALL_MOD_STRIP=1 sudo make -j8 install
-sudo reboot
+sudo make -j$(nproc) 
+INSTALL_MOD_STRIP=1 sudo make -j$(nproc) modules_install
+INSTALL_MOD_STRIP=1 sudo make -j$(nproc) install
+#sudo reboot
 
 ENDSSH
 

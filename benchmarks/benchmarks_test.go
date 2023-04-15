@@ -155,9 +155,28 @@ func TestMicroDownSemaphore(t *testing.T) {
 }
 
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
+func TestMicroSpawnWaitStart(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
+	makeOutDir(ts1)
+	ps, _ := makeNProcs(1, "spinner", []string{OUT_DIR}, nil, 1)
+	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
+	printResultSummary(rs)
+	rmOutDir(ts1)
+	rootts.Shutdown()
+}
+
+// Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
 	_, ps := makeNProcs(N_TRIALS, "sleeper", []string{"5000us", OUT_DIR}, nil, 1)

@@ -1,6 +1,7 @@
 package www
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -90,7 +91,8 @@ func MakeWwwd(job, tree string) *Wwwd {
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrExists(err) {
+	var serr *serr.Err
+	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); errors.As(err, &serr) && !serr.IsErrExists() {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 

@@ -64,7 +64,7 @@ func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 		assert.Nil(ts.T, error, "MkMount")
 		addrs = append(addrs, mnt.Address())
 	}
-	db.DPrintf(db.ALWAYS, "Replica addrs: %v", addrs)
+	db.DPrintf(db.TEST, "Replica addrs: %v", addrs)
 	mnt := sp.MkMountService(addrs)
 	err := ts.MkMountSymlink(REPLICA_SYMLINK, mnt)
 	assert.Nil(ts.T, err, "Symlink")

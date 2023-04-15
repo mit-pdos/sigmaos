@@ -7,7 +7,7 @@ for P in sessp ; do
   protoc -I=. --go_out=../ $P/$P.proto
 done
 
-for PP in tracing cache kv hotel rpcbench ; do
+for PP in tracing cache kv hotel socialnetwork rpcbench ; do
   for P in $PP/proto/*.proto ; do
     echo "protoc $P"
     protoc -I=. --go_out=../ $P

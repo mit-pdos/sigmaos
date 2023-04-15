@@ -61,7 +61,9 @@ INIT_OUT=/tmp/init.out
 
 # Get the private IP address of the leader.
 cd $AWS_DIR
-LEADER_IP=$(./leader-ip.sh --vpc $VPC)
+LEADER_IP_SIGMA=$(./leader-ip.sh --vpc $VPC)
+LEADER_IP_K8S=$(./leader-ip.sh --vpc $KVPC)
+LEADER_IP=$LEADER_IP_SIGMA
 
 # cd to the sigmaos root directory
 cd $DIR
@@ -304,8 +306,8 @@ mr_vs_corral() {
 }
 
 hotel_tail() {
-  # Make sure to fill in new k8s addr.
-  k8saddr="10.108.117.18:5000"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
   for sys in Sigmaos ; do #K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
@@ -324,8 +326,8 @@ hotel_tail() {
 }
 
 rpcbench_tail_multi() {
-  # Make sure to fill in new k8s addr.
-  k8saddr="10.100.220.158:5000"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
@@ -378,17 +380,24 @@ rpcbench_tail_multi() {
 
 
 hotel_tail_multi() {
-  # Make sure to fill in new k8s addr.
-  k8saddr="10.100.220.158:5000"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
   rps=2500
-  sys="Sigmaos"
-#  sys="K8s"
+#  sys="Sigmaos"
+  sys="K8s"
   cache_type="cached"
 #  cache_type="kvd"
   driver_vm=8
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
-  for n in {1..1000} ; do
+  for n in {1..1} ; do
+    if [[ "$sys" == "Sigmaos" ]]; then
+      vpc=$VPC
+      LEADER_IP=$LEADER_IP_SIGMA
+    else
+      vpc=$KVPC
+      LEADER_IP=$LEADER_IP_K8S
+    fi
     # run=${FUNCNAME[0]}/$sys/$rps #-$n
     run=${FUNCNAME[0]}/$sys/ncache-3/$rps-$n
     echo "========== Running $run =========="
@@ -397,7 +406,7 @@ hotel_tail_multi() {
     if ! should_skip $perf_dir false ; then
       continue
     fi
-    for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
+    for cli_vm in $driver_vm ; do #9 10 ; do #11 12 ; do
       driver="false"
       if [[ $cli_vm == $driver_vm ]]; then
         testname=$testname_driver
@@ -405,7 +414,7 @@ hotel_tail_multi() {
       else
         testname=$testname_clnt
       fi
-      run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
+      run_hotel $testname $rps $cli_vm 1 $cache_type $k8saddr $perf_dir $driver true
       if [[ $cli_vm == $driver_vm ]]; then
         # Give the driver time to start up the realm.
         sleep 30s
@@ -414,7 +423,7 @@ hotel_tail_multi() {
     # Wait for all clients to terminate.
     wait
     # Copy results.
-    end_benchmark $VPC $perf_dir
+    end_benchmark $vpc $perf_dir
     echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
     if grep -r "file not found http" $perf_dir ; then
       echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
@@ -477,7 +486,7 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="10.108.117.18:5000"
+  k8saddr="10.96.81.233:5000"
   k8sleaderip="10.0.134.163"
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"

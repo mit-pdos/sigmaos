@@ -127,7 +127,8 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
 		_, span2 := ps.tracer.StartContextSpan(sctx, "Cache.Get")
-		err := ps.cachec.GetTraced(tracing.SpanToContext(span2), key, p)
+		err := ps.cachec.Get(key, p)
+		//		err := ps.cachec.GetTraced(tracing.SpanToContext(span2), key, p)
 		span2.End()
 		if err != nil {
 			if !ps.cachec.IsMiss(err) {
@@ -139,7 +140,8 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 				return err
 			}
 			_, span3 := ps.tracer.StartContextSpan(sctx, "Cache.Put")
-			err = ps.cachec.PutTraced(tracing.SpanToContext(span3), key, p)
+			err = ps.cachec.Put(key, p)
+			//			err = ps.cachec.PutTraced(tracing.SpanToContext(span3), key, p)
 			span3.End()
 			if err != nil {
 				return err

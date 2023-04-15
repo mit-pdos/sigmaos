@@ -57,6 +57,14 @@ func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func spawnWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ps := i.([]*proc.Proc)
+	start := time.Now()
+	spawnProcs(ts, ps)
+	waitStartProcs(ts, ps)
+	return time.Since(start), 1.0
+}
+
 func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ps := i.([]*proc.Proc)
 	per := len(ps) / N_THREADS

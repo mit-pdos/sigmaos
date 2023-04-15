@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -33,10 +34,12 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 	}
 	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
 	defer cleanupJail(uproc.GetPid())
+	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	if err := cmd.Wait(); err != nil {
 		return err
 	}
@@ -52,8 +55,10 @@ func ExecUProc() error {
 	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
 	args := os.Args[1:]
 	program := args[0]
+	s := time.Now()
 	// Isolate the user proc.
 	pn, err := isolateUserProc(program)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc jail creation %v", proc.GetPid(), time.Since(s))
 	if err != nil {
 		return err
 	}

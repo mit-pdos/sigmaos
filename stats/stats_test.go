@@ -16,7 +16,7 @@ func TestStatsd(t *testing.T) {
 	st := stats.StatInfo{}
 	err := ts.GetFileJson("name/"+sp.STATSD, &st)
 	assert.Nil(t, err, "statsd")
-	nget := st.Nget
+	nget := st.StatsCopy().Nget
 
 	for i := 0; i < 1000; i++ {
 		_, err := ts.GetFile("name/" + sp.STATSD)
@@ -26,7 +26,7 @@ func TestStatsd(t *testing.T) {
 	err = ts.GetFileJson("name/"+sp.STATSD, &st)
 	assert.Nil(t, err, "statsd")
 
-	assert.Equal(t, stats.Tcounter(1000)+nget+1, st.Nget, "statsd")
+	assert.Equal(t, stats.Tcounter(1000)+nget+1, st.StatsCopy().Nget, "statsd")
 
 	ts.Shutdown()
 }

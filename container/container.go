@@ -23,6 +23,8 @@ type Container struct {
 	cli          *client.Client
 	container    string
 	ip           string
+	membytes     int64
+	memswap      int64
 	prevCPUStats *types.CPUStats
 }
 
@@ -31,7 +33,9 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	resp, err := c.cli.ContainerUpdate(c.ctx, c.container,
 		container.UpdateConfig{
 			Resources: container.Resources{
-				CPUShares: cpu,
+				CPUShares:  cpu,
+				Memory:     c.membytes,
+				MemorySwap: c.memswap,
 			},
 		})
 	if len(resp.Warnings) > 0 {

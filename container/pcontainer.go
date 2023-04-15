@@ -37,11 +37,13 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		}
 	}
 
+	membytes := int64(mem.GetTotalMem()) * sp.MBYTE
+
 	score := 0
-	swappiness := int64(0)
+	memswap := membytes
 	if ptype == proc.T_BE {
 		score = 1000
-		swappiness = 100
+		memswap = 0
 	}
 
 	// append uprocd's port
@@ -100,8 +102,8 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Resources: container.Resources{
 				// This also allows for GetTotalMem() of swap, if host
 				// has swap space
-				Memory:           int64(mem.GetTotalMem()) * sp.MBYTE,
-				MemorySwappiness: &swappiness,
+				Memory:     membytes,
+				MemorySwap: memswap,
 			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
@@ -124,5 +126,5 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	pm := port.MakePortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
-	return &Container{pm, ctx, cli, resp.ID, ip, nil}, nil
+	return &Container{pm, ctx, cli, resp.ID, ip, membytes, memswap, nil}, nil
 }

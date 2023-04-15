@@ -8,7 +8,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/queue"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
@@ -22,7 +21,7 @@ type SrvConn struct {
 	sesssrv        sps.SessServer
 	br             *bufio.Reader
 	bw             *bufio.Writer
-	replies        *queue.ReplyQueue
+	replies        chan *sessp.FcallMsg
 	marshalframe   MarshalF
 	unmarshalframe UnmarshalF
 	clid           sessp.Tclient
@@ -38,7 +37,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		queue.MakeReplyQueue(),
+		make(chan *sessp.FcallMsg),
 		srv.marshal,
 		srv.unmarshal,
 		0,
@@ -67,7 +66,7 @@ func (c *SrvConn) Close() {
 	go func() {
 		c.wg.Wait()
 		db.DPrintf(db.NETSRV, "Cli %v Sess %v Close replies chan %p", c.clid, c.sessid, c.replies)
-		c.replies.Close()
+		close(c.replies)
 	}()
 }
 
@@ -98,7 +97,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyQueue() *queue.ReplyQueue {
+func (c *SrvConn) GetReplyChan() chan *sessp.FcallMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -121,8 +120,8 @@ func (c *SrvConn) reader() {
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
 				fm := sessp.MakeFcallMsgReply(fc, sp.MkRerror(err))
-				c.GetReplyQueue().Enqueue(fm)
-				c.replies.Close()
+				c.GetReplyChan() <- fm
+				close(c.replies)
 				return
 			} else {
 				// If we successfully registered, we'll have to unregister once the
@@ -155,13 +154,11 @@ func (c *SrvConn) writer() {
 	// Close the TCP connection once we return.
 	defer c.conn.Close()
 	for {
-		fms, ok := c.replies.Dequeue()
+		fm, ok := <-c.replies
 		if !ok {
 			db.DPrintf(db.NETSRV, "%v writer: close conn from %v\n", c.sessid, c.Src())
 			return
 		}
-		for _, fm := range fms {
-			c.write(fm)
-		}
+		c.write(fm)
 	}
 }

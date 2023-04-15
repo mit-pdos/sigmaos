@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/queue"
 	"sigmaos/replies"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -103,20 +102,20 @@ func (sess *Session) Close() {
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
 func (sess *Session) SendConn(fm *sessp.FcallMsg) {
-	var replies *queue.ReplyQueue = nil
+	var replies chan *sessp.FcallMsg
 
 	sess.Lock()
 	if sess.conn != nil {
 		// Must get replies channel under lock. This ensures that the connection's
 		// WaitGroup is added to before the connection is closed, and ensures the
 		// replies channel isn't closed from under our feet.
-		replies = sess.conn.GetReplyQueue()
+		replies = sess.conn.GetReplyChan()
 	}
 	sess.Unlock()
 
 	// If there was a connection associated with this session...
 	if replies != nil {
-		replies.Enqueue(fm)
+		replies <- fm
 	}
 }
 

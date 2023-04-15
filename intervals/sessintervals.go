@@ -1,7 +1,7 @@
 package intervals
 
 //
-// Package to maintain an ordered list of intervals
+// Package to maintain intervals for a session
 //
 
 import (

@@ -117,7 +117,7 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, "OK", res_login.Ok)
 
 	// verify cache contents
-	user := &sn.User{}
+	user := &proto.User{}
 	err = snCfg.CacheClnt.Get("user_by_uname_test_user", user)
 	assert.Nil(t, err)
 	assert.Equal(t, "Alice", user.Firstname)

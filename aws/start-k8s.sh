@@ -66,8 +66,8 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
-#    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
-    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
+    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
+#    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config

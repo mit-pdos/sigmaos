@@ -268,7 +268,7 @@ var clidir string = path.Join("name/", "clnts")
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
 	err := sem.Init(0)
-	if !assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error sem init %v", err) {
+	if !assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error sem init %v", err) {
 		return nil
 	}
 	db.DPrintf(db.TEST, "Create sem %v", sem)
@@ -280,7 +280,7 @@ func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
-	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error mkdir: %v", err)
 	// Wait for n - 1 clnts to register themselves.
 	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
@@ -298,7 +298,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
-	assert.True(rootts.T, err == nil || serr.IsErrExists(err), "Error mkdir: %v", err)
+	assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)
 	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)

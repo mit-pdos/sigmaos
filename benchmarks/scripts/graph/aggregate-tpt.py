@@ -114,9 +114,18 @@ def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
   return buckets
 
 def buckets_to_percentile(buckets, percentile):
+  buckets_perc = {}
   for t in buckets.keys():
     if len(buckets[t]) > 0:
-      buckets[t] = np.percentile(buckets[t], percentile)
+      buckets_perc[t] = np.percentile(buckets[t], percentile)
+    else:
+      buckets_perc[t] = 0.0
+  return buckets_perc
+
+def buckets_to_avg(buckets):
+  for t in buckets.keys():
+    if len(buckets[t]) > 0:
+      buckets[t] = np.mean(buckets[t])
     else:
       buckets[t] = 0.0
   return buckets
@@ -217,11 +226,15 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
-  hotel_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
+  hotel_tail_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
+  hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
-    x, y = buckets_to_lists(hotel_lat_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
-    plots.append(p)
+    x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
+    plots.append(p_tail_lat)
+    x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel Average Latency", "purple", "-", "")
+    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)

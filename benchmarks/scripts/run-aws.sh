@@ -308,12 +308,16 @@ mr_vs_corral() {
 hotel_tail() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   echo "Using k8s frontend addr $k8saddr"
-  for sys in Sigmaos ; do #K8s ; do
+  for sys in K8s ; do # Sigmaos ; do #K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
       cli_vm=9
+      vpc=$VPC
+      LEADER_IP=$LEADER_IP_SIGMA
     else
       cli_vm=0
+      vpc=$KVPC
+      LEADER_IP=$LEADER_IP_K8S
     fi
     # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
     for rps in 1000 ; do
@@ -728,10 +732,10 @@ echo "Running benchmarks with version: $VERSION"
 #realm_burst
 #kv_vs_cached
 #mr_vs_corral
-realm_balance
+#realm_balance
 #realm_balance_be
 #hotel_tail
-#hotel_tail_multi
+hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s

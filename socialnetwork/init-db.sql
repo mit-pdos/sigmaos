@@ -9,7 +9,7 @@ CREATE TABLE socialnetwork_user (
 
 CREATE TABLE socialnetwork_graph (
   followerid BIGINT NOT NULL,
-  follereeid BIGINT NOT NULL,
-  PRIMARY KEY (`follererid`, `follereeid`)
+  followeeid BIGINT NOT NULL,
+  PRIMARY KEY (`followerid`, `followeeid`)
 );
 

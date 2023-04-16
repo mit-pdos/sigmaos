@@ -55,7 +55,6 @@ mkdir -p $USRBIN
 
 # build and start db container
 if [ "${TARGET}" != "aws" ]; then
-    ./start-db.sh
     ./start-network.sh
 fi
 

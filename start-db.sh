@@ -18,9 +18,7 @@ usage() {
 
 PORT=4406  # use non-default port number on host
 
-if docker images mariadb | grep mariab; then
-    docker pull mariadb:10.4
-fi
+docker pull mariadb:10.4
 if ! docker ps | grep -q sigmadb; then
     echo "start db"
     docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb
@@ -32,6 +30,8 @@ until [ "`docker inspect -f {{.State.Running}} sigmadb`"=="true" ]; do
 done;
 
 ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+
+echo "db IP: $ip"
 
 until mysqlshow -h $ip -u root -psigmadb 2> /dev/null; do
     echo -n "." 1>&2

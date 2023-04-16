@@ -52,19 +52,23 @@ const (
 	HOTEL_GEO               = "HOTEL_GEO"
 	HOTEL_RESERVE           = "HOTEL_RESERVE"
 	HOTEL_SEARCH            = "HOTEL_SEARCH"
+	HOTEL_RATE              = "HOTEL_RATE"
 )
 
 // cache
 const (
 	CACHECLERK Tselector = "CACHECLERK"
+	CACHESRV             = "CACHESRV"
 )
 
 // microbenchmarks
 const (
-	WRITER     Tselector = "writer"
-	BUFWRITER            = "bufwriter"
-	ABUFWRITER           = "abufwriter"
-	READER               = "reader"
-	BUFREADER            = "bufreader"
-	ABUFREADER           = "abufreader"
+	WRITER         Tselector = "writer"
+	BUFWRITER                = "bufwriter"
+	ABUFWRITER               = "abufwriter"
+	READER                   = "reader"
+	BUFREADER                = "bufreader"
+	ABUFREADER               = "abufreader"
+	RPC_BENCH_SRV            = "RPC_BENCH_SRV"
+	RPC_BENCH_CLNT           = "RPC_BENCH_CLNT"
 )

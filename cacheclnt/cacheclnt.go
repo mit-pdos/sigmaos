@@ -1,12 +1,13 @@
 package cacheclnt
 
 import (
-	"encoding/json"
 	"hash/fnv"
 	"strconv"
 
+	"google.golang.org/protobuf/proto"
+
+	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cachesrv"
-	"sigmaos/cachesrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/protdev"
@@ -14,6 +15,7 @@ import (
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
 	sp "sigmaos/sigmap"
+	tproto "sigmaos/tracing/proto"
 )
 
 var (
@@ -55,37 +57,51 @@ func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nshard, err)
 }
 
-func (cc *CacheClnt) RPC(m string, arg *proto.CacheRequest, res *proto.CacheResult) error {
+func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
 	n := key2shard(arg.Key, cc.Nshard())
 	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 
-func (c *CacheClnt) Put(key string, val any) error {
-	req := &proto.CacheRequest{}
-	req.Key = key
-	b, err := json.Marshal(val)
-	if err != nil {
-		return nil
+func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	req := &cacheproto.CacheRequest{
+		SpanContextConfig: sctx,
 	}
+	req.Key = key
+
+	b, err := proto.Marshal(val)
+	if err != nil {
+		return err
+	}
+
 	req.Value = b
-	var res proto.CacheResult
+	var res cacheproto.CacheResult
 	if err := c.RPC("Cache.Put", req, &res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CacheClnt) Get(key string, val any) error {
-	req := &proto.CacheRequest{}
+func (c *CacheClnt) Put(key string, val proto.Message) error {
+	return c.PutTraced(nil, key, val)
+}
+
+func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	req := &cacheproto.CacheRequest{
+		SpanContextConfig: sctx,
+	}
 	req.Key = key
-	var res proto.CacheResult
+	var res cacheproto.CacheResult
 	if err := c.RPC("Cache.Get", req, &res); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(res.Value, val); err != nil {
+	if err := proto.Unmarshal(res.Value, val); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *CacheClnt) Get(key string, val proto.Message) error {
+	return c.GetTraced(nil, key, val)
 }
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
@@ -101,9 +117,13 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := map[string]string{}
-	if err := json.Unmarshal(b, &m); err != nil {
+	dump := &cacheproto.CacheDump{}
+	if err := proto.Unmarshal(b, dump); err != nil {
 		return nil, err
+	}
+	m := map[string]string{}
+	for k, v := range dump.Vals {
+		m[k] = string(v)
 	}
 	return m, nil
 }

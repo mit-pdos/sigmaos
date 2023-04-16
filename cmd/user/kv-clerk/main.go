@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
+	"sigmaos/kv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -125,12 +126,6 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 	pclnt.Exited(status)
 }
 
-type Value struct {
-	Pid proc.Tpid
-	Key kv.Tkey
-	N   uint64
-}
-
 func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	n := uint64(0)
 	rdr, err := kc.GetReader(key)
@@ -139,14 +134,14 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	}
 	rdr.Unfence()
 	defer rdr.Close()
-	err = fslib.JsonReader(rdr, func() interface{} { return new(Value) }, func(a interface{}) error {
+	err = fslib.JsonReader(rdr, func() interface{} { return new(proto.KVTestVal) }, func(a interface{}) error {
 		// Record op for throughput calculation.
 		p.TptTick(1.0)
-		val := a.(*Value)
-		if val.Pid != proc.GetPid() {
+		val := a.(*proto.KVTestVal)
+		if val.Pid != proc.GetPid().String() {
 			return nil
 		}
-		if val.Key != key {
+		if val.Key != string(key) {
 			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), key, val.Key)
 		}
 		if val.N != n {
@@ -170,7 +165,7 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := kv.MkKey(i + keyOffset)
-		v := Value{proc.GetPid(), key, ntest}
+		v := proto.KVTestVal{Pid: proc.GetPid().String(), Key: string(key), N: ntest}
 		if setget {
 			// If running against redis.
 			if rcli != nil {
@@ -203,7 +198,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 			}
 		} else {
 			// If doing appends (unbounded clerk)
-			if err := kc.AppendJson(key, v); err != nil {
+			if err := kc.AppendJson(key, &v); err != nil {
 				return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

@@ -60,6 +60,7 @@ do
         rm /tmp/make.out > /dev/null 2>&1
         rm /tmp/machine.out > /dev/null 2>&1
         yes | docker system prune
+        yes | docker volume prune
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$stop"

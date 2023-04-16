@@ -8,6 +8,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 type ProtSrvSnapshot struct {
@@ -41,7 +42,7 @@ func (fos *ProtSrv) snapshot() []byte {
 	return b
 }
 
-func Restore(srv sp.SessServer, b []byte) sp.Protsrv {
+func Restore(srv sps.SessServer, b []byte) sps.Protsrv {
 	ssrv := srv.(*sesssrv.SessSrv)
 	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)

@@ -46,7 +46,7 @@ func makeSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt
 		return nil, err
 	}
 	c.nc = nc
-	c.ivs = intervals.MkIntervals()
+	c.ivs = intervals.MkIntervals(c.sid)
 	go c.writer()
 	return c, nil
 }
@@ -87,6 +87,8 @@ func (c *SessClnt) Reset() {
 	// Reset outstanding request queue.
 	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
+	// Reset intervals "next" slice so we can resend message acks.
+	c.ivs.ResetNext()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
 }
@@ -152,7 +154,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.First(), f))
+	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

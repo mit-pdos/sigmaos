@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service User {
   rpc MakeReservation(UserRequest) returns (UserResult);
@@ -10,6 +12,7 @@ service User {
 message UserRequest {
 	string name = 1;
 	string password = 2;
+  SpanContextConfig spanContextConfig = 3;
 }
 
 message UserResult {

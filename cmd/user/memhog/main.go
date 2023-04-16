@@ -71,7 +71,7 @@ func main() {
 		db.DFatalf("Error PageFaults: %v", err)
 	}
 	tput := float64(iter) / time.Since(t).Seconds()
-	db.DPrintf(db.ALWAYS, "%v: done %v %v %.2f %v %v", id, time.Since(t), iter, tput, pf, pf1)
+	db.DPrintf(db.ALWAYS, "%v: done dur %v iter %v tpt %.2fMOps/sec pf-pre %v pf-post %v", id, time.Since(t), iter, tput/1_000_000, pf, pf1)
 	if id == "BE" {
 		time.Sleep(d)
 	}

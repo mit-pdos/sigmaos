@@ -4,18 +4,13 @@ import (
 	"fmt"
 	"log"
 
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/fslib"
 	"sigmaos/kv"
 )
 
-type CacheClnt interface {
-	Get(string, any) error
-	Put(string, any) error
-	IsMiss(error) bool
-}
-
-func MkCacheClnt(cache string, fsl *fslib.FsLib, job string) (CacheClnt, error) {
+func MkCacheClnt(cache string, fsl *fslib.FsLib, job string) (cache.CacheClnt, error) {
 	if cache == "cached" {
 		cc, err := cacheclnt.MkCacheClnt(fsl, job)
 		if err != nil {

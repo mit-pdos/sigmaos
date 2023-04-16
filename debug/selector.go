@@ -21,6 +21,11 @@ const (
 	CPU_UTIL             = "CPU_UTIL"
 )
 
+// Latency break-down.
+const (
+	SPAWN_LAT Tselector = "SPAWN_LAT"
+)
+
 // Tests
 const (
 	TEST  Tselector = "TEST"
@@ -36,6 +41,8 @@ const (
 	MATMUL                    = "MATMUL"
 	CACHESRV                  = "CACHESRV"
 	CACHECLERK                = "CACHECLERK"
+	RPC_BENCH_SRV             = "RPC_BENCH_SRV"
+	RPC_BENCH_CLNT            = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                = "HOTEL_CLNT"
 	HOTEL_GEO                 = "HOTEL_GEO"
 	HOTEL_PROF                = "HOTEL_PROF"
@@ -165,6 +172,7 @@ const (
 	REPLRAFT                     = "REPLRAFT"
 	RAFT_TIMING                  = "RAFT_TIMING"
 	REPLY_TABLE                  = "REPLY_TABLE"
+	INTERVALS                    = "INTERVALS"
 	SESSSRV                      = "SESSSRV"
 	WATCH                        = "WATCH"
 	WATCH_ERR                    = WATCH + ERR

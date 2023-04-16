@@ -49,4 +49,7 @@ fi
 
 wait
 
+yes | docker system prune
+yes | docker volume prune
+
 sudo rm -rf /tmp/sigmaos-bin

@@ -153,8 +153,10 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protde
 			Realm:     clnt.Realm().String(),
 			ProcProto: p.GetProto(),
 		}
+		s := time.Now()
 		res := &schedd.SpawnResponse{}
 		err := pdc.RPC("Schedd.Spawn", req, res)
+		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		if err != nil {
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
@@ -285,6 +287,8 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
 	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
+	s := time.Now()
+	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
 }
@@ -354,6 +358,7 @@ func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", proc.GetPid(), time.Now())
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
@@ -427,7 +432,7 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, s
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
-		db.DFatalf("exited %v err %v", proc.GetPid(), err)
+		db.DPrintf(db.ALWAYS, "exited %v err %v", proc.GetPid(), err)
 	}
 	clnt.FsLib.Exit()
 }

@@ -1,28 +1,32 @@
 package cachesrv
 
 import (
-	"encoding/json"
 	"errors"
 	"hash/fnv"
 	"strconv"
 	"sync"
+	"time"
 
-	"sigmaos/cachesrv/proto"
+	"google.golang.org/protobuf/proto"
+
+	cacheproto "sigmaos/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/serr"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/tracing"
 )
 
 const (
 	DUMP = "dump"
-	NBIN = 13
+	NBIN = 1009
 )
 
 var (
@@ -42,8 +46,9 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	bins []cache
-	shrd string
+	bins   []cache
+	shrd   string
+	tracer *tracing.Tracer
 }
 
 func RunCacheSrv(args []string) error {
@@ -67,28 +72,56 @@ func RunCacheSrv(args []string) error {
 	if err := sessdevsrv.MkSessDev(pds.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}
+
+	s.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
+	defer s.tracer.Flush()
+
+	p, err := perf.MakePerf(perf.CACHESRV)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
 	return pds.RunServer()
 }
 
 // XXX support timeout
-func (s *CacheSrv) Put(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Put %v\n", proc.GetName(), req)
+func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	if false {
+		_, span := s.tracer.StartRPCSpan(&req, "Put")
+		defer span.End()
+	}
+
+	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
 	b := key2bin(req.Key)
 
+	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	}
 
 	s.bins[b].cache[req.Key] = req.Value
 	return nil
 }
 
-func (s *CacheSrv) Get(ctx fs.CtxI, req proto.CacheRequest, rep *proto.CacheResult) error {
-	db.DPrintf(db.CACHESRV, "%v: Get %v\n", proc.GetName(), req)
+func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	if false {
+		_, span := s.tracer.StartRPCSpan(&req, "Get")
+		defer span.End()
+	}
+
+	db.DPrintf(db.CACHESRV, "Get %v", req)
 	b := key2bin(req.Key)
 
+	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	}
 
 	v, ok := s.bins[b].cache[req.Key]
 	if ok {
@@ -125,7 +158,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 		cs.bins[i].Unlock()
 	}
 
-	b, err := json.Marshal(m)
+	b, err := proto.Marshal(&cacheproto.CacheDump{Vals: m})
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
@@ -137,6 +170,6 @@ func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQvers
 }
 
 func (cs *cacheSession) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	db.DPrintf(db.CACHESRV, "%v: Close %v\n", proc.GetName(), cs.sid)
+	db.DPrintf(db.CACHESRV, "Close %v\n", cs.sid)
 	return nil
 }

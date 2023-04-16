@@ -22,19 +22,25 @@ allowed:
   - connect
   - epoll_create1
   - epoll_ctl
+  - epoll_ctl_old
   - epoll_pwait
+  - epoll_pwait2
   - execve
   - exit_group
   - fcntl
   - fstat
+  - fsync
   - futex
   - getdents64
   - getpeername
   - getpid
+  - getrandom
+  - getrlimit
   - getsockname
   - getsockopt
   - gettid
   - listen
+  - madvise
   - mkdirat
   - mmap
   - mprotect
@@ -49,16 +55,23 @@ allowed:
   - read
   - readlinkat
   - recvfrom
+  - restart_syscall
   - rt_sigaction
   - rt_sigprocmask
   - rt_sigreturn
   - sched_getaffinity
   - sched_yield
   - sendto
+  - setitimer
   - set_robust_list
   - set_tid_address
   - setsockopt
   - sigaltstack
+  - sync
+  - timer_create
+  - timer_delete
+  - timer_settime
+  - tgkill
   - write
   - writev
 

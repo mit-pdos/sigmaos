@@ -1,17 +1,17 @@
 package socialnetwork
 
 import (
-	"sigmaos/socialnetwork/proto"
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/protdevsrv"
-	"sigmaos/dbclnt"
-	"sigmaos/cacheclnt"
-	"sigmaos/fs"
 	"crypto/sha256"
-	"math/rand"
-	"sync"
 	"fmt"
+	"math/rand"
+	"sigmaos/cacheclnt"
+	"sigmaos/dbclnt"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"sync"
 	"time"
 )
 
@@ -20,23 +20,15 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	USER_HB_FREQ = 1
+	USER_HB_FREQ  = 1
 	USER_QUERY_OK = "OK"
 )
 
-type User struct {
-	Userid int64 
-	Firstname string
-	Lastname string
-	Username string
-	Password string
-}
-
 type UserSrv struct {
-	mu sync.Mutex
-	dbc *dbclnt.DbClnt
+	mu     sync.Mutex
+	dbc    *dbclnt.DbClnt
 	cachec *cacheclnt.CacheClnt
-	sid int32  // sid is a random number between 0 and 2^30
+	sid    int32 // sid is a random number between 0 and 2^30
 	ucount int32 //This server may overflow with over 2^31 users
 }
 
@@ -67,9 +59,9 @@ func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *pro
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(req.Username)
-	if  err != nil {
+	if err != nil {
 		return err
-	} 
+	}
 	if user != nil {
 		res.Userid = user.Userid
 		res.Ok = USER_QUERY_OK
@@ -81,9 +73,9 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Register user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(req.Username)
-	if  err != nil {
+	if err != nil {
 		return err
-	} 
+	}
 	if user != nil {
 		res.Ok = fmt.Sprintf("Username %v already exist", req.Username)
 		return nil
@@ -91,8 +83,8 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 	pswd_hashed := sha256.Sum256([]byte(req.Password))
 	userid := usrv.getNextUserId()
 	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)" +
-		" VALUES ('%v', '%v', '%v', '%x', '%v');", 
+		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)"+
+			" VALUES ('%v', '%v', '%v', '%x', '%v');",
 		req.Firstname, req.Lastname, req.Username, pswd_hashed, userid)
 	if qErr := usrv.dbc.Exec(q); qErr != nil {
 		return qErr
@@ -110,22 +102,22 @@ func (usrv *UserSrv) incCountSafe() int32 {
 }
 
 func (usrv *UserSrv) getNextUserId() int64 {
-	return int64(usrv.sid) * 1E10 + int64(usrv.incCountSafe())
+	return int64(usrv.sid)*1e10 + int64(usrv.incCountSafe())
 }
 
 func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserResponse) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v: %v\n", usrv.sid, req)
 	res.Ok = "Login Failure."
 	user, err := usrv.getUserbyUname(req.Username)
-	if  err != nil {
+	if err != nil {
 		return err
 	}
 	if user != nil && fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password))) == user.Password {
-		res.Ok = USER_QUERY_OK 			
+		res.Ok = USER_QUERY_OK
 		res.Userid = user.Userid
 
 	}
-	return nil	
+	return nil
 }
 
 func (usrv *UserSrv) heartBeat() {
@@ -143,16 +135,16 @@ func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 	return user != nil, nil
 }
 
-func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
+func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
 	key := "user_by_uname_" + username
-	user := &User{}
+	user := &proto.User{}
 	if err := usrv.cachec.Get(key, user); err != nil {
 		if !usrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User cache miss: key %v\n", key)
 		q := fmt.Sprintf("SELECT * from socialnetwork_user where username='%s';", username)
-		var users []User
+		var users []proto.User
 		if err := usrv.dbc.Query(q, &users); err != nil {
 			return nil, err
 		}

@@ -11,11 +11,17 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 6 {
-		db.DFatalf("%v: usage kernelid srvs nameds dbip overlays\n", os.Args[0])
+	if len(os.Args) < 7 {
+		db.DFatalf("%v: usage kernelid srvs nameds dbip jaegerip overlays\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[3], ";")
-	param := kernel.Param{os.Args[1], srvs, os.Args[4], os.Args[5] == "true"}
+	param := kernel.Param{
+		KernelId: os.Args[1],
+		Services: srvs,
+		Dbip:     os.Args[4],
+		Jaegerip: os.Args[5],
+		Overlays: os.Args[6] == "true",
+	}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")

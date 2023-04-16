@@ -28,6 +28,7 @@ const (
 	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMAREALM          = "SIGMAREALM"
 	SIGMANET            = "SIGMANET"
+	SIGMAJAEGERIP       = "SIGMAJAEGERIP"
 	SIGMAKERNEL         = "SIGMAKERNEL"
 	SIGMAUPROCD         = "SIGMAUPROCD"
 )
@@ -121,6 +122,14 @@ func SetSigmaLocal(ip string) {
 
 func GetSigmaRootFs() string {
 	return os.Getenv(SIGMAROOTFS)
+}
+
+func SetSigmaJaegerIP(ip string) {
+	os.Setenv(SIGMAJAEGERIP, ip)
+}
+
+func GetSigmaJaegerIP() string {
+	return os.Getenv(SIGMAJAEGERIP)
 }
 
 func GetRealm() sp.Trealm {

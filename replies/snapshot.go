@@ -5,13 +5,25 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/spcodec"
 )
 
+type ReplyTableSnapshot struct {
+	Entries map[sessp.Tseqno][]byte
+	Sid     sessp.Tsession
+}
+
+func MakeReplyTableSnapshot() *ReplyTableSnapshot {
+	return &ReplyTableSnapshot{
+		Entries: make(map[sessp.Tseqno][]byte),
+	}
+}
+
 func (rt *ReplyTable) Snapshot() []byte {
-	entries := make(map[sessp.Tseqno][]byte)
+	rts := MakeReplyTableSnapshot()
+	rts.Sid = rt.sid
 	for seqno, rf := range rt.entries {
 		var b []byte
 		var err1 *serr.Err
@@ -21,9 +33,9 @@ func (rt *ReplyTable) Snapshot() []byte {
 				db.DFatalf("Error marshal sp.Fcall in ReplyTable.Snapshot: %v, %v", err1, rf.reply)
 			}
 		}
-		entries[seqno] = b
+		rts.Entries[seqno] = b
 	}
-	b, err := json.Marshal(entries)
+	b, err := json.Marshal(rts)
 	if err != nil {
 		db.DFatalf("Error snapshot encoding reply cache: %v", err)
 	}
@@ -31,13 +43,13 @@ func (rt *ReplyTable) Snapshot() []byte {
 }
 
 func Restore(b []byte) *ReplyTable {
-	entries := make(map[sessp.Tseqno][]byte)
-	err := json.Unmarshal(b, &entries)
+	rts := MakeReplyTableSnapshot()
+	err := json.Unmarshal(b, &rts)
 	if err != nil {
 		db.DFatalf("error unmarshal ReplyTable in restore: %v", err)
 	}
-	rt := MakeReplyTable()
-	for seqno, b := range entries {
+	rt := MakeReplyTable(rts.Sid)
+	for seqno, b := range rts.Entries {
 		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(b))
 		if len(b) != 0 && err1 != nil {
 			db.DFatalf("Error unmarshal sp.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))

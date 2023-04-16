@@ -15,12 +15,13 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/stats"
 	"sigmaos/threadmgr"
 )
 
 type Snapshot struct {
-	sesssrv      sp.SessServer
+	sesssrv      sps.SessServer
 	Imap         map[sessp.Tpath]ObjSnapshot
 	DirOverlay   sessp.Tpath
 	St           []byte
@@ -29,7 +30,7 @@ type Snapshot struct {
 	restoreCache map[sessp.Tpath]fs.Inode
 }
 
-func MakeSnapshot(sesssrv sp.SessServer) *Snapshot {
+func MakeSnapshot(sesssrv sps.SessServer) *Snapshot {
 	s := &Snapshot{}
 	s.sesssrv = sesssrv
 	s.Imap = make(map[sessp.Tpath]ObjSnapshot)
@@ -76,7 +77,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) sessp.Tpath {
 	return i.Path()
 }
 
-func (s *Snapshot) Restore(mkps sp.MkProtServer, rps sp.RestoreProtServer, sesssrv sp.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.StatInfo, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
+func (s *Snapshot) Restore(mkps sps.MkProtServer, rps sps.RestoreProtServer, sesssrv sps.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.StatInfo, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)

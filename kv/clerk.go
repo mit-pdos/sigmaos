@@ -2,7 +2,6 @@ package kv
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
@@ -18,6 +19,7 @@ import (
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	tproto "sigmaos/tracing/proto"
 )
 
 //
@@ -240,12 +242,16 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(key string, val any) error {
+func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	return kc.Get(key, val)
+}
+
+func (kc *KvClerk) Get(key string, val proto.Message) error {
 	b, err := kc.GetRaw(Tkey(key), 0)
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(b, val); err != nil {
+	if err := proto.Unmarshal(b, val); err != nil {
 		return err
 	}
 	return nil
@@ -269,8 +275,12 @@ func (kc *KvClerk) Append(k Tkey, b []byte) error {
 	return op.err
 }
 
-func (kc *KvClerk) Put(k string, val any) error {
-	b, err := json.Marshal(val)
+func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	return kc.Put(key, val)
+}
+
+func (kc *KvClerk) Put(k string, val proto.Message) error {
+	b, err := proto.Marshal(val)
 	if err != nil {
 		return nil
 	}
@@ -283,8 +293,8 @@ func (kc *KvClerk) PutRaw(k Tkey, b []byte, off sp.Toffset) error {
 	return op.err
 }
 
-func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
-	b, err := json.Marshal(v)
+func (kc *KvClerk) AppendJson(k Tkey, v proto.Message) error {
+	b, err := proto.Marshal(v)
 	if err != nil {
 		return err
 	}

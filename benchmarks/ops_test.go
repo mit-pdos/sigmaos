@@ -57,6 +57,14 @@ func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func spawnWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ps := i.([]*proc.Proc)
+	start := time.Now()
+	spawnProcs(ts, ps)
+	waitStartProcs(ts, ps)
+	return time.Since(start), 1.0
+}
+
 func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ps := i.([]*proc.Proc)
 	per := len(ps) / N_THREADS
@@ -173,6 +181,22 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	defer pdc.Done()
 	start := time.Now()
 	ji.StartWwwJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
+func runRPCBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*RPCBenchJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc.MonitorSchedds()
+		defer pdc.Done()
+	}
+	start := time.Now()
+	ji.StartRPCBenchJob()
 	ji.Wait()
 	return time.Since(start), 1.0
 }

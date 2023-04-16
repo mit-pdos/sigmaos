@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service Search {
   rpc Nearby(SearchRequest) returns (SearchResult);
@@ -11,6 +13,7 @@ message SearchRequest {
   float lon = 2;
   string inDate = 3;
   string outDate = 4;
+  SpanContextConfig spanContextConfig = 5;
 }
 
 message SearchResult {

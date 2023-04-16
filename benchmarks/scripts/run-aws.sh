@@ -61,7 +61,9 @@ INIT_OUT=/tmp/init.out
 
 # Get the private IP address of the leader.
 cd $AWS_DIR
-LEADER_IP=$(./leader-ip.sh --vpc $VPC)
+LEADER_IP_SIGMA=$(./leader-ip.sh --vpc $VPC)
+LEADER_IP_K8S=$(./leader-ip.sh --vpc $KVPC)
+LEADER_IP=$LEADER_IP_SIGMA
 
 # cd to the sigmaos root directory
 cd $DIR
@@ -179,12 +181,42 @@ run_hotel() {
   perf_dir=$7
   driver=$8
   async=$9
-  hotel_ncache=6
+  hotel_ncache=3
+  hotel_cache_ncore=2
   cmd="
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+  "
+  if [ "$sys" = "Sigmaos" ]; then
+    vpc=$VPC
+  else
+    # If running against k8s, pass through k8s VPC
+    vpc=$KVPC
+  fi
+  n_cores=4
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async
+}
+
+run_rpcbench() {
+  if [ $# -ne 7 ]; then
+    echo "run_rpcbench args: testname rps cli_vm nclnt perf_dir driver async " 1>&2
+    exit 1
+  fi
+  testname=$1
+  rps=$2
+  cli_vm=$3
+  nclnt=$4
+  perf_dir=$5
+  driver=$6
+  async=$7
+  cmd="
+    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
+    export SIGMAJAEGERIP=\"$LEADER_IP\"; \
+    go clean -testcache; \
+    ulimit -n 100000; \
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --rpcbench_dur 60s --rpcbench_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -274,8 +306,8 @@ mr_vs_corral() {
 }
 
 hotel_tail() {
-  # Make sure to fill in new k8s addr.
-  k8saddr="10.108.117.18:5000"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
   for sys in Sigmaos ; do #K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
@@ -293,24 +325,24 @@ hotel_tail() {
   done
 }
 
-hotel_tail_multi() {
-  # Make sure to fill in new k8s addr.
-  k8saddr="10.100.220.158:5000"
+rpcbench_tail_multi() {
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
-  cache_type="cached"
 #  cache_type="kvd"
   driver_vm=8
-  testname_driver="Hotel${sys}Search"
-  testname_clnt="Hotel${sys}JustCliSearch"
-#  for n in {1..10} ; do
-    run=${FUNCNAME[0]}/$sys/$rps #-$n
+  testname_driver="RPCBench${sys}Sleep"
+  testname_clnt="RPCBench${sys}JustCliSleep"
+  for n in {1..1000} ; do
+    # run=${FUNCNAME[0]}/$sys/$rps #-$n
+    run=${FUNCNAME[0]}/$rps-$n
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/"$run"
     # Avoid doing duplicate work.
     if ! should_skip $perf_dir false ; then
-      return 0
+      continue
     fi
     for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
       driver="false"
@@ -320,7 +352,69 @@ hotel_tail_multi() {
       else
         testname=$testname_clnt
       fi
-      run_hotel $testname $rps $cli_vm 5 $cache_type $k8saddr $perf_dir $driver true
+      run_rpcbench $testname $rps $cli_vm 5 $perf_dir $driver true
+      if [[ $cli_vm == $driver_vm ]]; then
+        # Give the driver time to start up the realm.
+        sleep 10s
+      fi
+    done
+    # Wait for all clients to terminate.
+    wait
+    # Copy results.
+    end_benchmark $VPC $perf_dir
+    echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
+    if grep -r "file not found http" $perf_dir ; then
+      echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
+      continue
+    fi
+    if grep -r "server-side" $perf_dir ; then
+      if grep -r "concurrent map writes" /tmp/*.out ; then
+        echo "----------------- Error concurrent map writes -----------------"
+        continue
+      fi
+      echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
+      return
+    fi
+  done
+}
+
+
+hotel_tail_multi() {
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  echo "Using k8s frontend addr $k8saddr"
+  rps=2500
+#  sys="Sigmaos"
+  sys="K8s"
+  cache_type="cached"
+#  cache_type="kvd"
+  driver_vm=8
+  testname_driver="Hotel${sys}Search"
+  testname_clnt="Hotel${sys}JustCliSearch"
+  for n in {1..1} ; do
+    if [[ "$sys" == "Sigmaos" ]]; then
+      vpc=$VPC
+      LEADER_IP=$LEADER_IP_SIGMA
+    else
+      vpc=$KVPC
+      LEADER_IP=$LEADER_IP_K8S
+    fi
+    # run=${FUNCNAME[0]}/$sys/$rps #-$n
+    run=${FUNCNAME[0]}/$sys/ncache-3/$rps-$n
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/"$run"
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    for cli_vm in $driver_vm ; do #9 10 ; do #11 12 ; do
+      driver="false"
+      if [[ $cli_vm == $driver_vm ]]; then
+        testname=$testname_driver
+        driver="true"
+      else
+        testname=$testname_clnt
+      fi
+      run_hotel $testname $rps $cli_vm 1 $cache_type $k8saddr $perf_dir $driver true
       if [[ $cli_vm == $driver_vm ]]; then
         # Give the driver time to start up the realm.
         sleep 30s
@@ -329,8 +423,27 @@ hotel_tail_multi() {
     # Wait for all clients to terminate.
     wait
     # Copy results.
-    end_benchmark $VPC $perf_dir
-#  done
+    end_benchmark $vpc $perf_dir
+    echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
+    if grep -r "file not found http" $perf_dir ; then
+      echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
+      continue
+    fi
+    if grep -r "concurrent map reads" /tmp/*.out ; then
+      echo "----------------- Error concurrent map reads -----------------"
+      return
+      continue
+    fi
+    if grep -r "concurrent map writes" /tmp/*.out ; then
+      echo "----------------- Error concurrent map writes -----------------"
+      return
+      continue
+    fi
+    if grep -r "server-side" $perf_dir ; then
+      echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
+      return
+    fi
+  done
 }
 
 realm_balance() {
@@ -373,7 +486,7 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="10.108.117.18:5000"
+  k8saddr="10.96.81.233:5000"
   k8sleaderip="10.0.134.163"
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
@@ -619,6 +732,7 @@ realm_balance
 realm_balance_be
 hotel_tail
 hotel_tail_multi
+#rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
 #k8s_balance

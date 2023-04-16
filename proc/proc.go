@@ -144,6 +144,7 @@ func (p *Proc) Finalize(kernelId string) {
 	p.AppendEnv(SIGMALOCAL, GetSigmaLocal())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
+	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
 }
 
 func (p *Proc) IsPrivilegedProc() bool {

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--host] [--overlays] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--jaeger JAEGERIP] [--host] [--overlays] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -13,6 +13,7 @@ TAG=""
 BOOT="named"
 NAMED=":1111"
 DBIP="x.x.x.x"
+JAEGERIP="$(hostname -i | cut -f 1 -d ' ')"
 NET="host"
 KERNELID=""
 OVERLAYS="false"
@@ -57,6 +58,11 @@ while [[ "$#" -gt 1 ]]; do
   --named)
     shift
     NAMED=$1
+    shift
+    ;;
+  --jaeger)
+    shift
+    JAEGERIP=$1
     shift
     ;;
   -help)
@@ -108,6 +114,7 @@ CID=$(docker run -dit\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
+             -e jaegerip=${JAEGERIP}\
              -e overlays=${OVERLAYS}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              sigmaos)

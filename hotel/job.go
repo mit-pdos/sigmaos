@@ -55,6 +55,7 @@ type Srv struct {
 	Ncore  proc.Tcore
 }
 
+// XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func MkHotelSvc(public bool) []Srv {
 	return []Srv{
 		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2},
@@ -67,8 +68,6 @@ func MkHotelSvc(public bool) []Srv {
 //var ncores = []int{0, 1,
 //	1, 1, 3,
 //	3, 0, 2}
-
-var cacheNcore = 2
 
 //var ncores = []int{0, 2,
 //	2, 2, 3,
@@ -83,7 +82,7 @@ type HotelJob struct {
 	kvf       *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, nsrv int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, cacheNcore proc.Tcore, nsrv int) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -93,9 +92,10 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	// Create a cache clnt.
 	if nsrv > 0 {
-		if cache == "cached" {
+		switch cache {
+		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, proc.Tcore(cacheNcore), test.Overlays)
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
@@ -105,9 +105,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err
 			}
-		} else {
+		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, proc.Tcore(cacheNcore), "0", "manual")
+			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, cacheNcore, "0", "manual")
 			if err != nil {
 				return nil, err
 			}
@@ -115,6 +115,8 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 			if err != nil {
 				return nil, err
 			}
+		default:
+			db.DFatalf("Unrecognized hotel cache type: %v", cache)
 		}
 	}
 

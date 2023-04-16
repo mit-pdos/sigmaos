@@ -10,7 +10,7 @@ go clean -testcache
 # test some support package
 #
 
-for T in path serr linuxsched perf sigmap memfs; do
+for T in path intervals serr linuxsched perf sigmap memfs; do
     go test $@ sigmaos/$T
 done
 
@@ -32,7 +32,7 @@ go test $@ sigmaos/proxy -start
 # tests a full kernel using root realm
 #
 
-for T in procclnt container ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
     go test $@ sigmaos/$T -start
 done
     
@@ -59,6 +59,10 @@ go test $@ sigmaos/hotel
 
 go test $@ sigmaos/realmclnt -start
 
+#
+# Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
+#
+go test $@ sigmaos/container -start
 
 #
 # tests with overlays

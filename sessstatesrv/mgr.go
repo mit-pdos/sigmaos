@@ -6,15 +6,16 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 type SessionMgr struct {
 	st       *SessionTable
-	srvfcall sp.Fsrvfcall
+	srvfcall sps.Fsrvfcall
 	done     bool
 }
 
-func MakeSessionMgr(st *SessionTable, pfn sp.Fsrvfcall) *SessionMgr {
+func MakeSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn

@@ -408,7 +408,13 @@ func (p *Perf) teardownPprof() {
 		// Avoid double-closing
 		p.pprof = false
 		pprof.StopCPUProfile()
-		p.pprofFile.Close()
+		if err := p.pprofFile.Sync(); err != nil {
+			db.DFatalf("Error sync pprof file: %v", err)
+		}
+		if err := p.pprofFile.Close(); err != nil {
+			db.DFatalf("Error close pprof file: %v", err)
+		}
+		db.DPrintf(db.ALWAYS, "Done flushing and closing pprof file")
 	}
 }
 

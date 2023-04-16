@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service Rate {
   rpc GetRates(RateRequest) returns (RateResult);
@@ -10,6 +12,7 @@ message RateRequest {
   repeated string hotelIds = 1;
   string inDate = 2;
   string outDate = 3;
+  SpanContextConfig spanContextConfig = 4;
 }
 
 message RoomType {

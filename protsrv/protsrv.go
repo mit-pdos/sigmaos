@@ -11,6 +11,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/stats"
 	"sigmaos/version"
 	"sigmaos/watch"
@@ -33,7 +34,7 @@ type ProtSrv struct {
 	sid   sessp.Tsession
 }
 
-func MakeProtServer(s sp.SessServer, sid sessp.Tsession) sp.Protsrv {
+func MakeProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps := &ProtSrv{}
 	srv := s.(*sesssrv.SessSrv)
 	ps.ssrv = srv
@@ -91,7 +92,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 }
 
 // Delete ephemeral files created on this session.
-func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sp.DetachF) *sp.Rerror {
+func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sps.DetachF) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "Detach %v eph %v", ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess

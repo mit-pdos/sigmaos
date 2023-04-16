@@ -26,4 +26,3 @@ message Fcall {
         Tinterval received = 6;
         Tfence fence = 7;       
 }
-

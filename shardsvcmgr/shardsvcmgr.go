@@ -31,6 +31,8 @@ type ShardMgr struct {
 func (sm *ShardMgr) addShard(i int) error {
 	// SpawnBurst to spread shards across procds.
 	p := proc.MakeProc(sm.bin, []string{sm.job, strconv.FormatBool(sm.public), SHRDDIR + strconv.Itoa(i)})
+	//	p.AppendEnv("GODEBUG", "gctrace=1")
+	p.AppendEnv("GOGC", "off")
 	p.SetNcore(sm.ncore)
 	_, errs := sm.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {

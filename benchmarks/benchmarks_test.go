@@ -15,6 +15,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rpcbench"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -43,9 +44,13 @@ var WWWD_NCORE int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
+var HOTEL_CACHE_NCORE int
 var CACHE_TYPE string
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var RPCBENCH_NCORE int
+var RPCBENCH_DURS string
+var RPCBENCH_MAX_RPS string
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -77,9 +82,13 @@ func init() {
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
+	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
+	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
+	flag.IntVar(&RPCBENCH_NCORE, "rpcbench_ncore", 3, "RPCbench Ncore")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
@@ -146,9 +155,28 @@ func TestMicroDownSemaphore(t *testing.T) {
 }
 
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
+func TestMicroSpawnWaitStart(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
+	makeOutDir(ts1)
+	ps, _ := makeNProcs(1, "spinner", []string{OUT_DIR}, nil, 1)
+	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
+	printResultSummary(rs)
+	rmOutDir(ts1)
+	rootts.Shutdown()
+}
+
+// Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
 	_, ps := makeNProcs(N_TRIALS, "sleeper", []string{"5000us", OUT_DIR}, nil, 1)
@@ -329,7 +357,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, p1, 1, MR_APP)
 	// Prep Hotel job
-	hotelJobs, ji := makeHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := makeHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -509,6 +537,60 @@ func TestWwwK8s(t *testing.T) {
 	testWww(t, false)
 }
 
+func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn rpcbenchFn) {
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	jobs, ji := makeRPCBenchJobs(ts1, p, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				waitForClnts(rootts, N_CLNT)
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	p2 := makeRealmPerf(ts1)
+	defer p2.Done()
+	monitorCoresAssigned(ts1, p2)
+	runOps(ts1, ji, runRPCBench, rs)
+	//	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
+func TestRPCBenchSigmaosSleep(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	testRPCBench(rootts, ts1, nil, func(c *rpcbench.Clnt) {
+		err := c.Sleep(int64(SLEEP / time.Millisecond))
+		assert.Nil(t, err, "Error sleep req: %v", err)
+	})
+}
+
+func TestRPCBenchSigmaosJustCliSleep(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	clientReady(rootts)
+	jobs, ji := makeRPCBenchJobsCli(ts1, nil, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, func(c *rpcbench.Clnt) {
+		err := c.Sleep(int64(SLEEP / time.Millisecond))
+		assert.Nil(t, err, "Error sleep req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	go func() {
@@ -520,14 +602,16 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
 		}
 	}()
-	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, fn)
+	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
 			<-j.ready
 			if N_CLNT > 1 {
 				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
 				waitForClnts(rootts, N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 			}
 			// Ack to allow the job to proceed.
 			j.ready <- true
@@ -541,7 +625,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
 	if sigmaos {
-		rootts.Shutdown()
+		//		rootts.Shutdown()
 	} else {
 		jobs[0].requestK8sStats()
 	}
@@ -564,8 +648,10 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
 		rootts.Shutdown()
 		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
+	} else {
+		db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
 	}
-	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -586,8 +672,12 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RandSearchReq(wc, r)
+	db.DPrintf(db.ALWAYS, "Clnt ready")
+	clientReady(rootts)
+	db.DPrintf(db.ALWAYS, "Clnt done waiting")
+	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "Error search req: %v", err)
 	})
 	go func() {
 		for _, j := range jobs {
@@ -606,7 +696,8 @@ func TestHotelK8sSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RandSearchReq(wc, r)
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
 

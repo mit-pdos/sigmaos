@@ -47,6 +47,8 @@ MAIN="${vma[0]}"
 
 LOG_DIR=/tmp
 mkdir -p $PERF_DIR
+# Remove old logs
+rm /tmp/*.out
 
 idx=0
 for vm in $vms; do

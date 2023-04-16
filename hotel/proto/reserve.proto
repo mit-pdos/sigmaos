@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-option go_package = "ulambda/hotel/proto";
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/hotel/proto";
 
 service Reserve {
   rpc MakeReservation(ReserveRequest) returns (ReserveResult);
@@ -13,6 +15,7 @@ message ReserveRequest {
 	string          inDate = 3;
 	string          outDate = 4;
 	int32           number = 5;
+  SpanContextConfig spanContextConfig = 6;
 }
 
 message ReserveResult {

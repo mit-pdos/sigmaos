@@ -5,24 +5,22 @@ import (
 	"sort"
 	"sync"
 
+	db "sigmaos/debug"
 	"sigmaos/sessp"
-	"sigmaos/intervals"
 )
 
 // Reply table for a given session.
 type ReplyTable struct {
 	sync.Mutex
-	closed  bool
+	sid     sessp.Tsession
 	entries map[sessp.Tseqno]*ReplyFuture
-	// pruned has seqnos pruned from entries; client has received
-	// the response for those.
-	pruned *intervals.Intervals
+	closed  bool
 }
 
-func MakeReplyTable() *ReplyTable {
+func MakeReplyTable(sid sessp.Tsession) *ReplyTable {
 	rt := &ReplyTable{}
+	rt.sid = sid
 	rt.entries = make(map[sessp.Tseqno]*ReplyFuture)
-	rt.pruned = intervals.MkIntervals()
 	return rt
 }
 
@@ -60,13 +58,12 @@ func (rt *ReplyTable) Register(request *sessp.FcallMsg) bool {
 	if rt.closed {
 		return false
 	}
+	// Remove stored replies which the client has already received. The reply is
+	// always expected to be present, unless there has been a partition and the
+	// client has to resend some RPCs.
 	for s := request.Fc.Received.Start; s < request.Fc.Received.End; s++ {
+		db.DPrintf(db.REPLY_TABLE, "[%v][%v] Remove seqno %v", rt.sid, request.Fc.Seqno, s)
 		delete(rt.entries, sessp.Tseqno(s))
-	}
-	rt.pruned.Insert(request.Fc.Received)
-	// if seqno in pruned, then drop
-	if request.Fc.Seqno != 0 && rt.pruned.Contains(request.Fc.Seqno) {
-		return false
 	}
 	rt.entries[request.Seqno()] = MakeReplyFuture()
 	return true

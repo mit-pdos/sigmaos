@@ -58,9 +58,12 @@ for vm in $vms; do
     if [ -z "$NSWAP" ]; then
        echo 'Disable swap'
     else
-       sudo dd if=/dev/zero of=/swapfile bs=1024 count=$NSWAP
-       sudo chmod 600 /swapfile
-       sudo mkswap /swapfile
+       if [ ! -f /swapfile ]; then
+         sudo dd if=/dev/zero of=/swapfile bs=1024 count=$NSWAP
+#         sudo fallocate -l $NSWAP /swapfile
+         sudo chmod 600 /swapfile
+         sudo mkswap /swapfile
+       fi
        sudo swapon /swapfile
     fi
 ENDSSH"

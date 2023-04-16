@@ -46,6 +46,7 @@ const (
 	SOCIAL_NETWORK          = NAMED + "socialnetwork/"
 	SOCIAL_NETWORK_MOL      = SOCIAL_NETWORK + "mol"
 	SOCIAL_NETWORK_USER     = SOCIAL_NETWORK + "user"
+	SOCIAL_NETWORK_GRAPH    = SOCIAL_NETWORK + "graph"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

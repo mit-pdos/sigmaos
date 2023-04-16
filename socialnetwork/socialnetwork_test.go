@@ -44,6 +44,13 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	return tssn
 }
 
+func (tssn *TstateSN) Shutdown() error {
+	if stopErr := tssn.snCfg.Stop(); stopErr != nil {
+		return stopErr
+	}
+	return tssn.Tstate.Shutdown()
+}
+
 func TestToyMeaningOfLife(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-mol", test.Overlays, 1}}, 0)
@@ -62,9 +69,7 @@ func TestToyMeaningOfLife(t *testing.T) {
 
 	// sleep a while to print heartbeats then stop
 	time.Sleep(2 * time.Second)
-	stopErr := snCfg.Stop()
-	assert.Nil(t, stopErr, "Procs should stop properly")
-	tssn.Shutdown()
+	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestUser(t *testing.T) {
@@ -125,9 +130,18 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, created_userid, user.Userid)
 
 	//stop server
-	time.Sleep(2 * time.Second)
-	stopErr := snCfg.Stop()
-	assert.Nil(t, stopErr, "Procs should stop properly")
-	tssn.Shutdown()
+	assert.Nil(t, tssn.Shutdown())
+}
 
+func TestGraph(t *testing.T) {
+	// start server
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
+	snCfg := tssn.snCfg
+
+	// create a RPC client and query
+	_, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_GRAPH)
+	assert.Nil(t, err)
+	
+	//stop server
+	assert.Nil(t, tssn.Shutdown())
 }

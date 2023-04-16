@@ -58,8 +58,8 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.cachec = cachec
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Initializing DB and starting user service %v\n", usrv.sid)
-	go usrv.heartBeat(USER_HB_FREQ)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
+	go usrv.heartBeat()
 	return pds.RunServer()
 }
 
@@ -128,9 +128,9 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 	return nil	
 }
 
-func (usrv *UserSrv) heartBeat(freq int) {
+func (usrv *UserSrv) heartBeat() {
 	for {
-		time.Sleep(time.Duration(freq) * time.Second)
+		time.Sleep(time.Duration(USER_HB_FREQ) * time.Second)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "ALIVE!\n")
 	}
 }

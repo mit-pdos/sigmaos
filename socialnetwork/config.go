@@ -23,6 +23,7 @@ func MakeMoLSrvs(public bool) []Srv {
 	return []Srv{
 		Srv{"socialnetwork-mol", public, 1},
 		Srv{"socialnetwork-user", public, 2},
+		Srv{"socialnetwork-graph", public, 2},
 	}
 }
 
@@ -50,7 +51,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	if nshard > 0 {
-		dbg.DPrintf(dbg.ALWAYS, "social network running with cached")
+		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
 		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)

@@ -34,8 +34,17 @@ func WillBePrinted(label Tselector) bool {
 	return ok || label == ALWAYS
 }
 
+func checkLabel(label Tselector) bool {
+	for l, _ := range labels {
+		if strings.HasPrefix(string(label), string(l)) {
+			return true
+		}
+	}
+	return false
+}
+
 func DPrintf(label Tselector, format string, v ...interface{}) {
-	if _, ok := labels[label]; ok || label == ALWAYS {
+	if label == ALWAYS || checkLabel(label) {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}
 }

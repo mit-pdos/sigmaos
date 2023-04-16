@@ -486,8 +486,8 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="10.96.81.233:5000"
-  k8sleaderip="10.0.134.163"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8sleaderip=$LEADER_IP_K8S
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
   s3dir="corralperf/k8s"
@@ -511,7 +511,7 @@ k8s_balance() {
 
 mr_k8s() {
   n_vm=1
-  k8saddr="10.0.134.163"
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   s3dir="corralperf/k8s"
   app="mr-k8s-grep"
   run=${FUNCNAME[0]}/$app

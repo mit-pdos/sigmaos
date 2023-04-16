@@ -387,14 +387,16 @@ hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   echo "Using k8s frontend addr $k8saddr"
   rps=2500
-  n_clnt_vms=3
 #  sys="Sigmaos"
   sys="K8s"
   cache_type="cached"
 #  cache_type="kvd"
+  n_clnt_vms=4
   driver_vm=8
-  clnt_vma=("$driver_vm 9 10 11 12")
+  clnt_vma=($(echo "$driver_vm 9 10 11 12"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
+  echo "Clnt vms $clnt_vms"
+  exit 0
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
   if [[ "$sys" == "Sigmaos" ]]; then
@@ -404,7 +406,7 @@ hotel_tail_multi() {
     vpc=$KVPC
     LEADER_IP=$LEADER_IP_K8S
   fi
-  run=${FUNCNAME[0]}/$sys/"rps-$rpsnclnt-$n_clnt_vms"
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"
   # Avoid doing duplicate work.

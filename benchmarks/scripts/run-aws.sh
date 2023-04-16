@@ -307,7 +307,6 @@ mr_vs_corral() {
 
 hotel_tail() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  echo "Using k8s frontend addr $k8saddr"
   for sys in K8s ; do # Sigmaos ; do #K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
@@ -331,7 +330,6 @@ hotel_tail() {
 
 rpcbench_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  echo "Using k8s frontend addr $k8saddr"
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
@@ -385,7 +383,6 @@ rpcbench_tail_multi() {
 
 hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  echo "Using k8s frontend addr $k8saddr"
   rps=2500
 #  sys="Sigmaos"
   sys="K8s"
@@ -395,8 +392,6 @@ hotel_tail_multi() {
   driver_vm=8
   clnt_vma=($(echo "$driver_vm 9 10 11 12"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
-  echo "Clnt vms $clnt_vms"
-  exit 0
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
   if [[ "$sys" == "Sigmaos" ]]; then

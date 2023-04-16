@@ -387,67 +387,67 @@ hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   echo "Using k8s frontend addr $k8saddr"
   rps=2500
+  n_clnt_vms=3
 #  sys="Sigmaos"
   sys="K8s"
   cache_type="cached"
 #  cache_type="kvd"
   driver_vm=8
+  clnt_vma=("$driver_vm 9 10 11 12")
+  clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
-  for n in {1..1} ; do
-    if [[ "$sys" == "Sigmaos" ]]; then
-      vpc=$VPC
-      LEADER_IP=$LEADER_IP_SIGMA
+  if [[ "$sys" == "Sigmaos" ]]; then
+    vpc=$VPC
+    LEADER_IP=$LEADER_IP_SIGMA
+  else
+    vpc=$KVPC
+    LEADER_IP=$LEADER_IP_K8S
+  fi
+  run=${FUNCNAME[0]}/$sys/"rps-$rpsnclnt-$n_clnt_vms"
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/"$run"
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    continue
+  fi
+  for cli_vm in $clnt_vms ; do
+    driver="false"
+    if [[ $cli_vm == $driver_vm ]]; then
+      testname=$testname_driver
+      driver="true"
     else
-      vpc=$KVPC
-      LEADER_IP=$LEADER_IP_K8S
+      testname=$testname_clnt
     fi
-    # run=${FUNCNAME[0]}/$sys/$rps #-$n
-    run=${FUNCNAME[0]}/$sys/ncache-3/$rps-$n
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/"$run"
-    # Avoid doing duplicate work.
-    if ! should_skip $perf_dir false ; then
-      continue
-    fi
-    for cli_vm in $driver_vm ; do #9 10 ; do #11 12 ; do
-      driver="false"
-      if [[ $cli_vm == $driver_vm ]]; then
-        testname=$testname_driver
-        driver="true"
-      else
-        testname=$testname_clnt
-      fi
-      run_hotel $testname $rps $cli_vm 1 $cache_type $k8saddr $perf_dir $driver true
-      if [[ $cli_vm == $driver_vm ]]; then
-        # Give the driver time to start up the realm.
-        sleep 30s
-      fi
-    done
-    # Wait for all clients to terminate.
-    wait
-    # Copy results.
-    end_benchmark $vpc $perf_dir
-    echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
-    if grep -r "file not found http" $perf_dir ; then
-      echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
-      continue
-    fi
-    if grep -r "concurrent map reads" /tmp/*.out ; then
-      echo "----------------- Error concurrent map reads -----------------"
-      return
-      continue
-    fi
-    if grep -r "concurrent map writes" /tmp/*.out ; then
-      echo "----------------- Error concurrent map writes -----------------"
-      return
-      continue
-    fi
-    if grep -r "server-side" $perf_dir ; then
-      echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
-      return
+    run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $perf_dir $driver true
+    if [[ $cli_vm == $driver_vm ]]; then
+      # Give the driver time to start up the realm.
+      sleep 30s
     fi
   done
+  # Wait for all clients to terminate.
+  wait
+  # Copy results.
+  end_benchmark $vpc $perf_dir
+  echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
+  if grep -r "file not found http" $perf_dir ; then
+    echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
+    continue
+  fi
+  if grep -r "concurrent map reads" /tmp/*.out ; then
+    echo "----------------- Error concurrent map reads -----------------"
+    return
+    continue
+  fi
+  if grep -r "concurrent map writes" /tmp/*.out ; then
+    echo "----------------- Error concurrent map writes -----------------"
+    return
+    continue
+  fi
+  if grep -r "server-side" $perf_dir ; then
+    echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
+    return
+  fi
 }
 
 realm_balance() {

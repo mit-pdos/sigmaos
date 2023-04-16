@@ -452,7 +452,7 @@ realm_balance() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="20s,20s,40s"
   hotel_max_rps="1000,3000,1000"
-  hotel_ncache=6
+  hotel_ncache=3
   sl="20s"
   n_vm=8
   driver_vm=8
@@ -726,12 +726,12 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #mr_replicated_named
 #realm_burst
-kv_vs_cached
-mr_vs_corral
+#kv_vs_cached
+#mr_vs_corral
 realm_balance
-realm_balance_be
-hotel_tail
-hotel_tail_multi
+#realm_balance_be
+#hotel_tail
+#hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
@@ -740,9 +740,9 @@ hotel_tail_multi
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
-graph_realm_balance_be
+#graph_realm_balance_be
 graph_realm_balance
-graph_mr_vs_corral
+#graph_mr_vs_corral
 #graph_k8s_balance
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability

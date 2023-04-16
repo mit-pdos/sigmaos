@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"errors"
 	"io"
 	"net/rpc"
 	"os"
@@ -267,6 +268,7 @@ var clidir string = path.Join("name/", "clnts")
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	var serr *serr.Err
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error sem init %v", err) {
 		return nil
@@ -280,6 +282,7 @@ func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
+	var serr *serr.Err
 	assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error mkdir: %v", err)
 	// Wait for n - 1 clnts to register themselves.
 	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
@@ -298,6 +301,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
+	var serr *serr.Err
 	assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)

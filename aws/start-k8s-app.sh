@@ -64,8 +64,6 @@ envsubst '$APP_PATH:$N_RUNNING' <<'ENDSSH'
 ENDSSH
 )
 
-cat "$CMD"
-
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
   $CMD
 ENDSSH

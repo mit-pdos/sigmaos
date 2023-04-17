@@ -493,7 +493,7 @@ k8s_balance() {
   hotel_max_rps="1000,3000,1000"
   s3dir="corralperf/k8s"
   n_vm=1
-  driver_vm=0
+  driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
@@ -687,7 +687,7 @@ graph_k8s_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 0 --k8s --xmin 200000 --xmax 400000
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "99% Lat (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
 }
 
 #graph_mr_overlap() {

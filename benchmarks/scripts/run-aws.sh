@@ -495,6 +495,14 @@ k8s_balance() {
   n_vm=1
   driver_vm=8
   run=${FUNCNAME[0]}
+  # Stop Hotel
+  ./aws/stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  # Start Hotel
+  ./aws/start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
+  # Stop MR
+  ./aws/stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+  # Start MR
+  ./aws/start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
@@ -505,7 +513,7 @@ k8s_balance() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --rootNamedIP $k8sleaderip --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
 }
@@ -742,7 +750,7 @@ k8s_balance
 source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
 #graph_realm_balance_be
-graph_realm_balance
+#graph_realm_balance
 #graph_mr_vs_corral
 graph_k8s_balance
 # XXX graph_mr_aggregate_tpt

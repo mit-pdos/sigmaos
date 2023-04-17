@@ -499,9 +499,9 @@ k8s_balance() {
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
-    aws s3 rm --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
-    aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
+    aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir > /dev/null; \
+    aws s3 rm --profile me-mit --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    aws s3 rm --profile me-mit --recursive s3://9ps3/ouptut > /dev/null; \
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
@@ -732,11 +732,11 @@ echo "Running benchmarks with version: $VERSION"
 #realm_balance
 #realm_balance_be
 #hotel_tail
-hotel_tail_multi
+#hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
-#k8s_balance
+k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
@@ -744,7 +744,7 @@ source ~/env/3.10/bin/activate
 #graph_realm_balance_be
 graph_realm_balance
 #graph_mr_vs_corral
-#graph_k8s_balance
+graph_k8s_balance
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability
 #graph_k8s_mr_aggregate_tpt

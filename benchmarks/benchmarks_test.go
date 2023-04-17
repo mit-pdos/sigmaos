@@ -760,6 +760,6 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	waitK8sMR(rootts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"perf-output")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"perf-output")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }

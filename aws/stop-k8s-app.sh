@@ -45,5 +45,5 @@ MAIN="${vma[0]}"
 MAIN_PRIVADDR="${vma_privaddr[0]}"
 
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-  kubectl delete -Rf $APP_PATH
+  kubectl delete -Rf $APP_PATH > /dev/null 2>&1
 ENDSSH

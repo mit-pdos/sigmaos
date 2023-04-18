@@ -5,8 +5,6 @@ import (
 	"net"
 	"sync"
 
-	"time"
-
 	db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -140,13 +138,9 @@ func (c *SrvConn) write(fm *sessp.FcallMsg) {
 	// Mark that the sender is no longer waiting to send on the replies channel.
 	c.wg.Done()
 	db.DPrintf(db.NETSRV, "rep %v\n", fm)
-	start := time.Now()
 	if err := c.marshalframe(fm, c.bw); err != nil {
 		db.DPrintf(db.NETSRV_ERR, "%v writer %v err %v\n", c.sessid, c.Src(), err)
 		return
-	}
-	if time.Since(start) > 20*time.Millisecond {
-		db.DPrintf(db.ALWAYS, "Long marshal time %v", time.Since(start))
 	}
 }
 

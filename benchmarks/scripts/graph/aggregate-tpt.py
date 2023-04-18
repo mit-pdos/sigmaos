@@ -253,10 +253,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm CPU", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores", "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "MR Realm CPU", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

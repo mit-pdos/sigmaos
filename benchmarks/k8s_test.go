@@ -41,7 +41,6 @@ func parseK8sUtil(utilStr, app string) float64 {
 		default:
 			db.DFatalf("unknown k8s app to parse: %v", app)
 		}
-		db.DPrintf(db.ALWAYS, "Monitoring app %v, include pod %v", app, podName)
 		// Iterate backwards to find CPU util information.
 		for i := len(words) - 1; i >= 0; i-- {
 			word := words[i]

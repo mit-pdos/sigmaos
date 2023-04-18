@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/spcodec"
 )
 
 type SrvConn struct {
@@ -20,7 +20,7 @@ type SrvConn struct {
 	sesssrv        sps.SessServer
 	br             *bufio.Reader
 	bw             *bufio.Writer
-	replies        chan *sessp.SessReply
+	replies        chan *sessconn.PartMarshaledMsg
 	writefcall     WriteF
 	unmarshalframe UnmarshalF
 	clid           sessp.Tclient
@@ -36,7 +36,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		make(chan *sessp.SessReply),
+		make(chan *sessconn.PartMarshaledMsg),
 		srv.writefcall,
 		srv.unmarshal,
 		0,
@@ -96,7 +96,7 @@ func (c *SrvConn) Dst() string {
 // the caller *must* send something on the replies channel, otherwise the
 // WaitGroup counter will be wrong. This ensures that the channel isn't closed
 // out from under a sender's feet.
-func (c *SrvConn) GetReplyChan() chan *sessp.SessReply {
+func (c *SrvConn) GetReplyChan() chan *sessconn.PartMarshaledMsg {
 	// XXX grab lock?
 	c.wg.Add(1)
 	return c.replies
@@ -119,7 +119,7 @@ func (c *SrvConn) reader() {
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
 				fm := sessp.MakeFcallMsgReply(fc, sp.MkRerror(err))
-				c.GetReplyChan() <- sessp.MakeSessReply(fm, spcodec.MarshalFcallWithoutData(fm))
+				c.GetReplyChan() <- sessconn.MakePartMarshaledMsg(fm)
 				close(c.replies)
 				return
 			} else {

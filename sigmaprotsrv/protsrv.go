@@ -2,6 +2,7 @@ package sigmaprotsrv
 
 import (
 	"sigmaos/serr"
+	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -13,7 +14,7 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyChan() chan *sessp.SessReply
+	GetReplyChan() chan *sessconn.PartMarshaledMsg
 }
 
 type Fsrvfcall func(*sessp.FcallMsg)

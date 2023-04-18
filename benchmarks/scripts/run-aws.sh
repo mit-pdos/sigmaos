@@ -487,7 +487,6 @@ realm_balance_be() {
 }
 
 k8s_balance() {
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   k8sleaderip=$LEADER_IP_K8S
   hotel_dur="40s,20s,50s"
   hotel_max_rps="1000,3000,1000"
@@ -495,22 +494,23 @@ k8s_balance() {
   n_vm=1
   driver_vm=8
   run=${FUNCNAME[0]}
-  echo "Stopping hotel"
   echo "========== Running $run =========="
   # Stop Hotel
   cd aws
+  echo "Stopping hotel"
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
-  sleep 10
-  echo "Starting hotel"
-  # Start Hotel
-  ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
-  echo "Stopping mr"
   # Stop MR
+  echo "Stopping mr"
   ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
-  echo "Starting mr"
+  sleep 10
+  # Start Hotel
+  echo "Starting hotel"
+  ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
+  echo "Starting mr"
   ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
   cd ..
+  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \

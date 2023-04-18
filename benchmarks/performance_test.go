@@ -14,6 +14,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	CPU_MONITOR_INTERVAL = 1 * time.Second
+)
+
 //
 // Functions we use to record and output performance.
 //
@@ -70,7 +74,19 @@ func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
 			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
-			time.Sleep(1 * time.Second)
+			time.Sleep(CPU_MONITOR_INTERVAL)
+		}
+	}()
+}
+
+func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string) {
+	go func() {
+		for {
+			top := k8sTop()
+			util := parseK8sUtil(top, app)
+			p.TptTick(util)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), util)
+			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()
 }

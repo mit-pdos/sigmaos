@@ -740,7 +740,18 @@ func TestMRK8s(t *testing.T) {
 
 func TestK8sBalanceHotelMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
+	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for hotel
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Monitor cores assigned to MR.
+	monitorCPUUtil(ts1, p1)
+	// Monitor cores assigned to Hotel.
+	monitorCPUUtil(ts2, p2)
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
 	db.DPrintf(db.TEST, "Starting hotel")

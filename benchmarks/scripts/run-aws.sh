@@ -495,15 +495,22 @@ k8s_balance() {
   n_vm=1
   driver_vm=8
   run=${FUNCNAME[0]}
-  # Stop Hotel
-  ./aws/stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
-  # Start Hotel
-  ./aws/start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
-  # Stop MR
-  ./aws/stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
-  # Start MR
-  ./aws/start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
+  echo "Stopping hotel"
   echo "========== Running $run =========="
+  # Stop Hotel
+  cd aws
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  sleep 10
+  echo "Starting hotel"
+  # Start Hotel
+  ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
+  echo "Stopping mr"
+  # Stop MR
+  ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+  echo "Starting mr"
+  # Start MR
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
+  cd ..
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \

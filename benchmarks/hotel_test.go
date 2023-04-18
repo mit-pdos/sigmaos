@@ -42,6 +42,7 @@ type HotelJobInstance struct {
 	hj         *hotel.HotelJob
 	lgs        []*loadgen.LoadGenerator
 	p          *perf.Perf
+	wc         *hotel.WebClnt
 	*test.RealmTstate
 }
 
@@ -120,13 +121,13 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 	}
 
-	wc := hotel.MakeWebClnt(ts.FsLib, ji.job)
+	ji.wc = hotel.MakeWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
 			// Run a single request.
-			ji.fn(wc, r)
+			ji.fn(ji.wc, r)
 		}))
 	}
 	return ji
@@ -188,8 +189,7 @@ func (ji *HotelJobInstance) Wait() {
 }
 
 func (ji *HotelJobInstance) requestK8sStats() {
-	wc := hotel.MakeWebClnt(ji.FsLib, ji.job)
-	rep, err := wc.SaveResults()
+	rep, err := ji.wc.SaveResults()
 	assert.Nil(ji.T, err, "Save results: %v", err)
 	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
 }

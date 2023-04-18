@@ -55,7 +55,7 @@ func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
 }
 
 // Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.RealmTstate, p *perf.Perf) {
+func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	go func() {
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {

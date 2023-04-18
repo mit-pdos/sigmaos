@@ -217,7 +217,7 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, apps, runMR, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -240,7 +240,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	db.DPrintf(db.TEST, "runOps")
 	runOps(ts1, ji, runKV, rs)
 	printResultSummary(rs)
@@ -272,7 +272,7 @@ func TestAppCached(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, ji, runCached, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -292,7 +292,7 @@ func TestRealmBurst(t *testing.T) {
 	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
@@ -363,9 +363,9 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	// Monitor cores assigned to MR.
-	monitorCoresAssigned(ts1, p1)
+	monitorCPUUtil(ts1, p1)
 	// Monitor cores assigned to Hotel.
-	monitorCoresAssigned(ts2, p2)
+	monitorCPUUtil(ts2, p2)
 	// Run Hotel job
 	go func() {
 		runOps(ts2, ji, runHotel, rs2)
@@ -418,8 +418,8 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	mrjobs1, mrapps1 := makeNMRJobs(ts1, p1, 1, MR_APP)
 	// Prep MR job
 	mrjobs2, mrapps2 := makeNMRJobs(ts2, p2, 1, MR_APP)
-	monitorCoresAssigned(ts1, p1)
-	monitorCoresAssigned(ts2, p2)
+	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(ts2, p2)
 	// Run MR job
 	go func() {
 		runOps(ts2, mrapps2, runMR, rs2)
@@ -473,8 +473,8 @@ func TestKVMRRRB(t *testing.T) {
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	monitorCoresAssigned(ts1, p1)
-	monitorCoresAssigned(ts2, p2)
+	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(ts2, p2)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)
@@ -520,7 +520,7 @@ func testWww(t *testing.T, sigmaos bool) {
 	if sigmaos {
 		p := makeRealmPerf(ts1)
 		defer p.Done()
-		monitorCoresAssigned(ts1, p)
+		monitorCPUUtil(ts1, p)
 	}
 	runOps(ts1, ji, runWww, rs)
 	printResultSummary(rs)
@@ -554,7 +554,7 @@ func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn r
 	}()
 	p2 := makeRealmPerf(ts1)
 	defer p2.Done()
-	monitorCoresAssigned(ts1, p2)
+	monitorCPUUtil(ts1, p2)
 	runOps(ts1, ji, runRPCBench, rs)
 	//	printResultSummary(rs)
 	rootts.Shutdown()
@@ -620,7 +620,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	if sigmaos {
 		p := makeRealmPerf(ts1)
 		defer p.Done()
-		monitorCoresAssigned(ts1, p)
+		monitorCPUUtil(ts1, p)
 	}
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)

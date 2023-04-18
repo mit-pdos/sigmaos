@@ -231,12 +231,12 @@ func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
 			stop = true
 		default:
 			var serr *serr.Err
-			if err := fsl.Remove(fn); err != nil && errors.As(err, &serr) && serr.IsErrUnreachable() {
+			if err := fsl.Remove(fn); errors.As(err, &serr) && serr.IsErrUnreachable() {
 				break
 			}
 			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-			if err != nil {
-				assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+			if errors.As(err, &serr) {
+				assert.True(t, serr.IsErrUnreachable())
 				break
 			}
 			nfile += 1
@@ -244,8 +244,8 @@ func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				break
 			}
-			if err := w.Close(); err != nil {
-				assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+			if err := w.Close(); errors.As(err, &serr) {
+				assert.True(t, serr.IsErrUnreachable())
 				break
 			}
 		}

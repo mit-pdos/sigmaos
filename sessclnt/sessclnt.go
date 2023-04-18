@@ -59,11 +59,11 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 	}
 	rep, err1 := c.recv(rpc)
 	if err1 != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, err1, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
 	if db.WillBePrinted(db.SESS_STATE_CLNT) {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, rep.Type(), rep, c.addrs)
 	}
 	return rep, err1
 }

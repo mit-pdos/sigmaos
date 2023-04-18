@@ -2,6 +2,7 @@ package netclnt
 
 import (
 	"sigmaos/serr"
+	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -13,14 +14,14 @@ type Reply struct {
 
 type Rpc struct {
 	addrs  sp.Taddrs
-	Req    *sessp.FcallMsg
+	Req    *sessconn.PartMarshaledMsg
 	ReplyC chan *Reply
 }
 
 func MakeRpc(addrs sp.Taddrs, fc *sessp.FcallMsg) *Rpc {
 	rpc := &Rpc{}
 	rpc.addrs = addrs
-	rpc.Req = fc
+	rpc.Req = sessconn.MakePartMarshaledMsg(fc)
 	rpc.ReplyC = make(chan *Reply)
 	return rpc
 }

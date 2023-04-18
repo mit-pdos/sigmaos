@@ -101,7 +101,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
-	db.DPrintf(db.NETCLNT, "Send %v to %v\n", rpc.Req, nc.Dst())
+	db.DPrintf(db.NETCLNT, "Send %v to %v\n", rpc.Req.Fcm, nc.Dst())
 
 	// If the connection has already been closed, return immediately.
 	if nc.isClosed() {
@@ -110,7 +110,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 
 	// Otherwise, marshall and write the sessp.
-	err := spcodec.MarshalFrame(rpc.Req, nc.bw)
+	err := spcodec.WriteFcallAndData(rpc.Req.Fcm, rpc.Req.MarshaledFcm, nc.bw)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable

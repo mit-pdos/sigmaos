@@ -46,7 +46,7 @@ func parseK8sUtil(utilStr, app string) float64 {
 		for i := len(words) - 1; i >= 0; i-- {
 			word := words[i]
 			// If this is the CPU util information.
-			if word[len(word)-1] == 'm' {
+			if len(word) > 0 && word[len(word)-1] == 'm' {
 				mcpu, err := strconv.Atoi(word[:len(word)-1])
 				if err != nil {
 					db.DFatalf("Can't parse mili-CPU: %v", err)

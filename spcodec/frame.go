@@ -7,23 +7,35 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/frame"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
+	b, err := MarshalFcallWithoutData(fcm)
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(b), len(fcm.Data))
+	return WriteFcallAndData(fcm, b, bwr)
+}
+
+func MarshalFcallWithoutData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
-		return serr.MkErr(serr.TErrBadFcall, error.Error())
+		return nil, serr.MkErr(serr.TErrBadFcall, error.Error())
 	}
-	if err := frame.WriteFrame(bwr, f.Bytes()); err != nil {
+	return f.Bytes(), nil
+}
+
+func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
+	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
 		return err
 	}
 	if error := binary.Write(bwr, binary.LittleEndian, uint32(len(fcm.Data))); error != nil {
 		return serr.MkErr(serr.TErrUnreachable, error.Error())
 	}
-	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(f.Bytes()), len(fcm.Data))
 	if len(fcm.Data) > 0 {
 		if err := frame.WriteRawBuffer(bwr, fcm.Data); err != nil {
 			return serr.MkErr(serr.TErrUnreachable, err.Error())
@@ -31,6 +43,7 @@ func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
 	}
 	if error := bwr.Flush(); error != nil {
 		db.DPrintf(db.SPCODEC, "flush %v err %v", fcm, error)
+		return serr.MkErr(serr.TErrUnreachable, error.Error())
 	}
 	return nil
 }

@@ -14,17 +14,17 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type MarshalF func(*sessp.FcallMsg, *bufio.Writer) *serr.Err
+type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
 type UnmarshalF func(rdr io.Reader) (*sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
-	addr      string
-	sesssrv   sps.SessServer
-	marshal   MarshalF
-	unmarshal UnmarshalF
+	addr       string
+	sesssrv    sps.SessServer
+	writefcall WriteF
+	unmarshal  UnmarshalF
 }
 
-func MakeNetServer(ss sps.SessServer, address string, m MarshalF, u UnmarshalF) *NetServer {
+func MakeNetServer(ss sps.SessServer, address string, m WriteF, u UnmarshalF) *NetServer {
 	srv := &NetServer{"",
 		ss,
 		m,

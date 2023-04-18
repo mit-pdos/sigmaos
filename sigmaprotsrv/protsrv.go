@@ -13,7 +13,7 @@ type Conn interface {
 	IsClosed() bool
 	Close()
 	CloseConnTest()
-	GetReplyChan() chan *sessp.FcallMsg
+	GetReplyChan() chan *sessp.SessReply
 }
 
 type Fsrvfcall func(*sessp.FcallMsg)

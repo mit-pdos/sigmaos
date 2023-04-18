@@ -14,6 +14,7 @@ import (
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
+	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
 )
 
@@ -102,7 +103,7 @@ func (sess *Session) Close() {
 // raft; in this case, a reply is not needed. Conn maybe also be nil
 // because server closed session unilaterally.
 func (sess *Session) SendConn(fm *sessp.FcallMsg) {
-	var replies chan *sessp.FcallMsg
+	var replies chan *sessp.SessReply
 
 	sess.Lock()
 	if sess.conn != nil {
@@ -115,7 +116,7 @@ func (sess *Session) SendConn(fm *sessp.FcallMsg) {
 
 	// If there was a connection associated with this session...
 	if replies != nil {
-		replies <- fm
+		replies <- sessp.MakeSessReply(fm, spcodec.MarshalFcallWithoutData(fm))
 	}
 }
 

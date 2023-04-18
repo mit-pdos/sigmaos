@@ -5,12 +5,12 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/frame"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
-func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
+func MarshalFrame(fcm *sessp.FcallMsg, b []byte, bwr *bufio.Writer) *serr.Err {
 	sp2NpMsg(fcm)
 	fc9P := to9P(fcm)
 	db.DPrintf(db.NPCODEC, "MarshalFrame %v\n", fc9P)

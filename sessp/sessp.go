@@ -70,6 +70,18 @@ type Tmsg interface {
 	Type() Tfcall
 }
 
+type SessReply struct {
+	Fcm          *FcallMsg
+	MarshaledFcm []byte
+}
+
+func MakeSessReply(fcm *FcallMsg, b []byte) *SessReply {
+	return &SessReply{
+		fcm,
+		b,
+	}
+}
+
 type FcallMsg struct {
 	Fc   *Fcall
 	Msg  Tmsg

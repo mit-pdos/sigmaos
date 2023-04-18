@@ -13,20 +13,17 @@ import (
 )
 
 func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
-	b, err := MarshalFcallWithoutData(fcm)
-	if err != nil {
-		return err
-	}
+	b := MarshalFcallWithoutData(fcm)
 	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(b), len(fcm.Data))
 	return WriteFcallAndData(fcm, b, bwr)
 }
 
-func MarshalFcallWithoutData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
+func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
-		return nil, serr.MkErr(serr.TErrBadFcall, error.Error())
+		db.DFatalf("error encoding fcall %v", error)
 	}
-	return f.Bytes(), nil
+	return f.Bytes()
 }
 
 func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {

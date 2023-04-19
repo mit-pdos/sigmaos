@@ -125,14 +125,15 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*sessp.FcallMsg, *serr.Err) {
-	_, fm, err := spcodec.ReadUnmarshalFcallAndData(nc.br)
+func (nc *NetClnt) recv() (seqno sessp.Tseqno, fcbytes []byte, dbytes []byte, e *serr.Err) {
+	//	_, fm, err := spcodec.ReadUnmarshalFcallAndData(nc.br)
+	sn, f, d, err := spcodec.ReadFcallAndDataFrames(nc.br)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return nil, err
+		return 0, nil, nil, err
 	}
-	return fm, nil
+	return sn, f, d, nil
 }
 
 // Reader loop. The reader is in charge of resetting the connection if an error
@@ -140,13 +141,14 @@ func (nc *NetClnt) recv() (*sessp.FcallMsg, *serr.Err) {
 func (nc *NetClnt) reader() {
 	for true {
 		// Receive the next reply.
-		reply, err := nc.recv()
+		seqno, f, d, err := nc.recv()
 		if err != nil {
 			db.DPrintf(db.NETCLNT_ERR, "error %v reader RPC to %v, trying reconnect", err, nc.addr)
 			nc.reset()
 			break
 		}
-		go nc.sconn.CompleteRPC(reply, err)
+		// TODO: don't start a separate goroutine.
+		go nc.sconn.CompleteRPC(seqno, f, d, err)
 		if nc.isClosed() {
 			db.DPrintf(db.NETCLNT_ERR, "reader from %v to %v, closed", nc.Src(), nc.Dst())
 			break

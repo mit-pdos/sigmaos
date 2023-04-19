@@ -13,6 +13,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 // A session from a client to a logical server (either one server or a
@@ -95,7 +96,8 @@ func (c *SessClnt) Reset() {
 }
 
 // Complete an RPC and pass the response up the stack.
-func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *serr.Err) {
+func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr.Err) {
+	reply := spcodec.UnmarshalFcallAndData(f, d)
 	s := reply.Seqno()
 	rpc, ok := c.queue.Remove(s)
 	// the outstanding request may have been cleared if the conn is closing, or

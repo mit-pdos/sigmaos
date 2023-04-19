@@ -15,16 +15,16 @@ import (
 )
 
 type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
-type UnmarshalF func(rdr io.Reader) (*sessp.FcallMsg, *serr.Err)
+type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
 	addr       string
 	sesssrv    sps.SessServer
 	writefcall WriteF
-	unmarshal  UnmarshalF
+	readframe  ReadF
 }
 
-func MakeNetServer(ss sps.SessServer, address string, m WriteF, u UnmarshalF) *NetServer {
+func MakeNetServer(ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{"",
 		ss,
 		m,

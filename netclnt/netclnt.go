@@ -126,7 +126,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 }
 
 func (nc *NetClnt) recv() (*sessp.FcallMsg, *serr.Err) {
-	fm, err := spcodec.UnmarshalFrame(nc.br)
+	_, fm, err := spcodec.ReadUnmarshalFcallAndData(nc.br)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
@@ -146,7 +146,7 @@ func (nc *NetClnt) reader() {
 			nc.reset()
 			break
 		}
-		nc.sconn.CompleteRPC(reply, err)
+		go nc.sconn.CompleteRPC(reply, err)
 		if nc.isClosed() {
 			db.DPrintf(db.NETCLNT_ERR, "reader from %v to %v, closed", nc.Src(), nc.Dst())
 			break

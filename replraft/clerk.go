@@ -7,8 +7,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 	"sigmaos/threadmgr"
@@ -56,7 +56,7 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				if req, err := spcodec.UnmarshalFrame(bytes.NewReader(frame)); err != nil {
+				if _, req, err := spcodec.ReadUnmarshalFcallAndData(bytes.NewReader(frame)); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf(db.REPLRAFT, "Serve request %v\n", req)

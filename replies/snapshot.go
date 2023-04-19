@@ -50,7 +50,7 @@ func Restore(b []byte) *ReplyTable {
 	}
 	rt := MakeReplyTable(rts.Sid)
 	for seqno, b := range rts.Entries {
-		fm, err1 := spcodec.UnmarshalFrame(bytes.NewReader(b))
+		_, fm, err1 := spcodec.ReadUnmarshalFcallAndData(bytes.NewReader(b))
 		if len(b) != 0 && err1 != nil {
 			db.DFatalf("Error unmarshal sp.Fcall in ReplyTable.Restore: %v, %v", err1, string(b))
 		}

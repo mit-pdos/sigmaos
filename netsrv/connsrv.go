@@ -14,17 +14,17 @@ import (
 
 type SrvConn struct {
 	*sync.Mutex
-	wg             *sync.WaitGroup
-	conn           net.Conn
-	closed         bool
-	sesssrv        sps.SessServer
-	br             *bufio.Reader
-	bw             *bufio.Writer
-	replies        chan *sessconn.PartMarshaledMsg
-	writefcall     WriteF
-	unmarshalframe UnmarshalF
-	clid           sessp.Tclient
-	sessid         sessp.Tsession
+	wg         *sync.WaitGroup
+	conn       net.Conn
+	closed     bool
+	sesssrv    sps.SessServer
+	br         *bufio.Reader
+	bw         *bufio.Writer
+	replies    chan *sessconn.PartMarshaledMsg
+	writefcall WriteF
+	readframe  ReadF
+	clid       sessp.Tclient
+	sessid     sessp.Tsession
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
@@ -38,7 +38,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		make(chan *sessconn.PartMarshaledMsg),
 		srv.writefcall,
-		srv.unmarshal,
+		srv.readframe,
 		0,
 		0,
 	}
@@ -105,7 +105,7 @@ func (c *SrvConn) GetReplyChan() chan *sessconn.PartMarshaledMsg {
 func (c *SrvConn) reader() {
 	db.DPrintf(db.NETSRV, "Cli %v Sess %v (%v) Reader conn from %v\n", c.clid, c.sessid, c.Dst(), c.Src())
 	for {
-		fc, err := c.unmarshalframe(c.br)
+		_, fc, err := c.readframe(c.br)
 		if err != nil {
 			db.DPrintf(db.NETSRV_ERR, "%v reader from %v: bad frame: %v", c.sessid, c.Src(), err)
 			return

@@ -85,7 +85,6 @@ type Stats struct {
 
 func MkStats() *Stats {
 	sti := &Stats{}
-	sti.Paths = make(map[string]int)
 	return sti
 }
 
@@ -149,7 +148,7 @@ func MkStatsDev(parent fs.Dir) *StatInfo {
 	sti := &StatInfo{}
 	sti.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
 	sti.st = MkStats()
-	sti.pathCnts = true
+	sti.pathCnts = false
 	return sti
 }
 
@@ -186,8 +185,8 @@ func (sti *StatInfo) DisablePathCnts() {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
-	sti.pathCnts = false
-	sti.st.Paths = nil
+	sti.pathCnts = true
+	sti.st.Paths = make(map[string]int)
 }
 
 func (sti *StatInfo) IncPath(path path.Path) {

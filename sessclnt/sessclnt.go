@@ -9,6 +9,7 @@ import (
 	"sigmaos/netclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
+	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
@@ -154,7 +155,16 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f))
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f)
+
+	// TODO: Ideally, we shouldn't martial the message at all while holding the
+	// lock, since this blocks the sending/writer thread and stops other
+	// marshaling from happening in parallel. However, we need to make the fcall
+	// & enqueue it while holding the lock to ensure in-order RPC/seqno delivery.
+	// Probably the right thing to do is have some future scheme for the marshaled
+	// RPC bytes.
+
+	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

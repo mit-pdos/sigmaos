@@ -18,10 +18,10 @@ type Rpc struct {
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs sp.Taddrs, fc *sessp.FcallMsg) *Rpc {
+func MakeRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg) *Rpc {
 	rpc := &Rpc{}
 	rpc.addrs = addrs
-	rpc.Req = sessconn.MakePartMarshaledMsg(fc)
+	rpc.Req = req
 	rpc.ReplyC = make(chan *Reply)
 	return rpc
 }

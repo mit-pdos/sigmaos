@@ -5,10 +5,12 @@ import (
 	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 type Reply struct {
-	fm  *sessp.FcallMsg
+	f   []byte
+	d   []byte
 	err *serr.Err
 }
 
@@ -32,12 +34,15 @@ func (rpc *Rpc) Await() (*sessp.FcallMsg, *serr.Err) {
 	if !ok {
 		return nil, serr.MkErr(serr.TErrUnreachable, rpc.addrs)
 	}
-	return reply.fm, reply.err
+
+	// Unmarshal reply, now on the receiver thread.
+	fm := spcodec.UnmarshalFcallAndData(reply.f, reply.d)
+	return fm, reply.err
 }
 
 // Complete a reply
-func (rpc *Rpc) Complete(reply *sessp.FcallMsg, err *serr.Err) {
-	rpc.ReplyC <- &Reply{reply, err}
+func (rpc *Rpc) Complete(f []byte, d []byte, err *serr.Err) {
+	rpc.ReplyC <- &Reply{f, d, err}
 	close(rpc.ReplyC)
 }
 

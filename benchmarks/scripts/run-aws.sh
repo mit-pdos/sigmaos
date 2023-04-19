@@ -307,14 +307,14 @@ mr_vs_corral() {
 
 hotel_tail() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  for sys in K8s ; do # Sigmaos ; do #K8s ; do
+  for sys in Sigmaos ; do #K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
-      cli_vm=9
+      cli_vm=8
       vpc=$VPC
       LEADER_IP=$LEADER_IP_SIGMA
     else
-      cli_vm=0
+      cli_vm=8
       vpc=$KVPC
       LEADER_IP=$LEADER_IP_K8S
     fi
@@ -461,7 +461,7 @@ realm_balance() {
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
-    export SIGMADEBUG=\"TEST;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
@@ -479,7 +479,7 @@ realm_balance_be() {
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
-    export SIGMADEBUG=\"TEST;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
   "
@@ -746,12 +746,12 @@ echo "Running benchmarks with version: $VERSION"
 #mr_vs_corral
 #realm_balance
 #realm_balance_be
-#hotel_tail
+hotel_tail
 #hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
-k8s_balance
+#k8s_balance
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate

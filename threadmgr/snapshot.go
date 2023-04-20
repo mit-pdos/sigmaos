@@ -16,7 +16,7 @@ type OpSnapshot struct {
 }
 
 func MakeOpSnapshot(fc *sessp.FcallMsg, n uint64) *OpSnapshot {
-	b, err := spcodec.MarshalFrameByte(fc)
+	b, err := spcodec.MarshalFcallAndData(fc)
 	if err != nil {
 		db.DFatalf("error marshalling fcall in MakeOpSnapshot: %v", err)
 	}

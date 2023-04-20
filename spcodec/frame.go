@@ -58,8 +58,7 @@ func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Wr
 	return nil
 }
 
-// TODO: rename to MarshallFcallWithData
-func MarshalFrameByte(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
+func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	var f bytes.Buffer
 	wr := bufio.NewWriter(&f)
 	b := MarshalFcallWithoutData(fcm)

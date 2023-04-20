@@ -28,7 +28,7 @@ func (rt *ReplyTable) Snapshot() []byte {
 		var b []byte
 		var err1 *serr.Err
 		if rf.reply != nil {
-			b, err1 = spcodec.MarshalFrameByte(rf.reply)
+			b, err1 = spcodec.MarshalFcallAndData(rf.reply)
 			if err1 != nil {
 				db.DFatalf("Error marshal sp.Fcall in ReplyTable.Snapshot: %v, %v", err1, rf.reply)
 			}

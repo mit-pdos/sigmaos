@@ -763,6 +763,7 @@ echo "Running benchmarks with version: $VERSION"
 realm_balance
 #realm_balance_be
 hotel_tail
+hotel_tail_reserve
 #hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability

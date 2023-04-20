@@ -125,7 +125,6 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.SetNcore(srv.Ncore)
-		p.AppendEnv("GOGC", "off")
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err

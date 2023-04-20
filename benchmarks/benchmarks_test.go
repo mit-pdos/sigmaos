@@ -631,6 +631,15 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	}
 }
 
+func TestHotelSigmaosReserve(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		err := hotel.RandReserveReq(wc, r)
+		assert.Nil(t, err, "Error search req: %v", err)
+	})
+}
+
 func TestHotelSigmaosSearch(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)

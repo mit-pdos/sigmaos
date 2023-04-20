@@ -328,6 +328,22 @@ hotel_tail() {
   done
 }
 
+hotel_tail_reserve() {
+  for sys in Sigmaos ; do
+    testname="Hotel${sys}Reserve"
+    cli_vm=8
+    vpc=$VPC
+    LEADER_IP=$LEADER_IP_SIGMA
+    # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
+    for rps in 1000 ; do
+      run=${FUNCNAME[0]}/$sys/$rps
+      echo "========== Running $run =========="
+      perf_dir=$OUT_DIR/$run
+      run_hotel $testname $rps $cli_vm 1 "cached" "x.x.x.x" $perf_dir true false
+    done
+  done
+}
+
 rpcbench_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps=2500
@@ -744,7 +760,7 @@ echo "Running benchmarks with version: $VERSION"
 #realm_burst
 #kv_vs_cached
 #mr_vs_corral
-#realm_balance
+realm_balance
 #realm_balance_be
 hotel_tail
 #hotel_tail_multi
@@ -757,7 +773,7 @@ hotel_tail
 source ~/env/3.10/bin/activate
 #graph_mr_replicated_named
 #graph_realm_balance_be
-#graph_realm_balance
+graph_realm_balance
 #graph_mr_vs_corral
 graph_k8s_balance
 # XXX graph_mr_aggregate_tpt

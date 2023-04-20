@@ -9,6 +9,8 @@ import (
 	"sigmaos/sessp"
 )
 
+const ALLOC = true
+
 var MaxLevel = 7
 
 type SkipIntervals struct {
@@ -17,6 +19,7 @@ type SkipIntervals struct {
 	back      *element
 	prevElems levels
 	length    int
+	freelist  *element
 }
 
 func MkSkipIInterval() sessp.IIntervals {
@@ -25,11 +28,16 @@ func MkSkipIInterval() sessp.IIntervals {
 
 func MkSkipIntervals() *SkipIntervals {
 	source := rand.NewSource(time.Now().UnixNano())
-	return &SkipIntervals{
+	skipl := &SkipIntervals{
 		levels:    mkLevels(MaxLevel),
 		rand:      rand.New(source),
 		prevElems: mkLevels(MaxLevel),
 	}
+	for i := 0; i < 2000; i++ {
+		e := mkElement(0, nil)
+		skipl.freeElem(e)
+	}
+	return skipl
 }
 
 func (skipl *SkipIntervals) String() string {
@@ -38,6 +46,24 @@ func (skipl *SkipIntervals) String() string {
 		s += fmt.Sprintf("level %d %v\n", i, skipl.levels[i].Level(i))
 	}
 	return s
+}
+
+func (skipl *SkipIntervals) allocElem(level int, iv *sessp.Tinterval) *element {
+	e := skipl.freelist
+	skipl.freelist = e.levels[0]
+	for i := 1; i < level; i++ {
+		e.levels = append(e.levels, nil)
+	}
+	e.iv = *iv
+	return e
+}
+
+func (skipl *SkipIntervals) freeElem(elem *element) {
+	elem.topPrev = nil
+	elem.prev = nil
+	elem.levels = elem.levels[:1]
+	elem.levels[0] = skipl.freelist
+	skipl.freelist = elem
 }
 
 func (skipl *SkipIntervals) Length() int {
@@ -75,7 +101,12 @@ func (skipl *SkipIntervals) Insert(iv *sessp.Tinterval) {
 
 func (skipl *SkipIntervals) insert(iv *sessp.Tinterval, prevElems levels, next *element) {
 	level := skipl.randLevel()
-	elem := mkElement(level, iv)
+	var elem *element
+	if ALLOC {
+		elem = skipl.allocElem(level, iv)
+	} else {
+		elem = mkElement(level, iv)
+	}
 
 	//db.DPrintf(db.TEST, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)
 
@@ -191,7 +222,9 @@ func (skipl *SkipIntervals) del(prevElems levels, elem *element) {
 	if skipl.back == elem {
 		skipl.back = elem.prev
 	}
-
+	if ALLOC {
+		skipl.freeElem(elem)
+	}
 	skipl.length--
 }
 

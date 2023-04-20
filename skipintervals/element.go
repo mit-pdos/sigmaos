@@ -27,10 +27,11 @@ type element struct {
 }
 
 func mkElement(l int, iv *sessp.Tinterval) *element {
-	return &element{
-		levels: mkLevels(l),
-		iv:     *iv,
+	e := &element{levels: make([]*element, l, MaxLevel)}
+	if iv != nil {
+		e.iv = *iv
 	}
+	return e
 }
 
 func (elem *element) String() string {

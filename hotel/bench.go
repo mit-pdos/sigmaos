@@ -83,7 +83,7 @@ func RandCheckAvailabilityReq(pdc *protdevclnt.ProtDevClnt, r *rand.Rand) error 
 	if out_date <= 9 {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
-	nids := rand.Intn(10)
+	nids := rand.Intn(5)
 	ids := make([]string, 0, nids)
 	for i := 0; i < nids; i++ {
 		ids = append(ids, strconv.Itoa(rand.Intn(NHOTEL-7)+7))

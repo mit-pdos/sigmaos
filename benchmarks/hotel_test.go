@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/protdevclnt"
+
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
@@ -107,6 +109,13 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			}
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
+		if sigmaos {
+			pdc, err := protdevclnt.MkProtDevClnt(ts.SigmaClnt.FsLib, sp.HOTELRESERVE)
+			if err != nil {
+				db.DFatalf("Error make reserve pdc: %v", err)
+			}
+			reservec = pdc
+		}
 	}
 
 	if !sigmaos {

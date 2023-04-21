@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"sigmaos/hotel/proto"
+	"sigmaos/protdevclnt"
 )
 
 func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
@@ -67,6 +70,33 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
 	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
 	return wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
+}
+
+func RandCheckAvailabilityReq(pdc *protdevclnt.ProtDevClnt, r *rand.Rand) error {
+	in_date := r.Intn(14) + 9
+	out_date := in_date + r.Intn(5) + 1
+	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
+	if in_date <= 9 {
+		in_date_str = fmt.Sprintf("2015-04-0%d", in_date)
+	}
+	out_date_str := fmt.Sprintf("2015-04-%d", out_date)
+	if out_date <= 9 {
+		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
+	}
+	nids := rand.Intn(10)
+	ids := make([]string, 0, nids)
+	for i := 0; i < nids; i++ {
+		ids = append(ids, strconv.Itoa(rand.Intn(NHOTEL)))
+	}
+	arg := &proto.ReserveRequest{
+		HotelId:      ids,
+		CustomerName: "Cornell_0",
+		InDate:       in_date_str,
+		OutDate:      out_date_str,
+		Number:       1,
+	}
+	var res proto.ReserveResult
+	return pdc.RPC("Reserve.CheckAvailability", arg, &res)
 }
 
 func GeoReq(wc *WebClnt) (string, error) {

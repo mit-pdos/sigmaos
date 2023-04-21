@@ -19,11 +19,16 @@ usage() {
 img_name=memcached
 img=$img_name
 
+conts=$(docker ps -a -q --filter="name=mcd")
+docker stop $conts
+docker rm $conts
+
 if ! docker ps | grep -q sigmajaeger; then
   echo "start memcached"
   docker run -d --name mcd \
     --network host \
-    $img
+    $img \
+    -c 8192 -m 4096 -t 4
 fi
 
 until [ "`docker inspect -f {{.State.Running}} mcd`"=="true" ]; do

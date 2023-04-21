@@ -19,9 +19,9 @@ type MemcachedClnt struct {
 
 func MakeMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
 	var addrs []string
-	err := fsl.GetFileJson(sp.MEMCACHED, addrs)
+	err := fsl.GetFileJson(sp.MEMCACHED, &addrs)
 	if err != nil {
-		db.DFatalf("Error get memcache addr file")
+		db.DFatalf("Error get memcache addr file: %v", err)
 	}
 	return &MemcachedClnt{
 		memcache.NewFromSelector(makeServerSelector(addrs)),

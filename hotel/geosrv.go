@@ -3,6 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 	"strconv"
 	"sync"
 
@@ -16,13 +17,13 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
-	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
 
 const (
-	N_INDEX = 1000
+	N_INDEX   = 1000
+	RAND_SEED = 12345
 )
 
 const (
@@ -74,6 +75,7 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, public bool) error {
+	rand.Seed(RAND_SEED)
 	geo := &Geo{}
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
@@ -115,7 +117,7 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plon: lon,
 	}
 
-	r := rand.Int64(N_INDEX)
+	r := rand.Int63() % N_INDEX
 
 	si := s.indexes[r]
 

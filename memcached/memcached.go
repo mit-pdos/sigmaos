@@ -23,9 +23,11 @@ func MakeMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
 	if err != nil {
 		db.DFatalf("Error get memcache addr file: %v", err)
 	}
-	return &MemcachedClnt{
+	mc := &MemcachedClnt{
 		memcache.NewFromSelector(makeServerSelector(addrs)),
-	}, nil
+	}
+	mc.cc.MaxIdleConns = 10000
+	return mc, nil
 }
 
 func (mc *MemcachedClnt) Get(key string, m proto.Message) error {

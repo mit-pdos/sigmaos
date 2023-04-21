@@ -86,7 +86,7 @@ func RandCheckAvailabilityReq(pdc *protdevclnt.ProtDevClnt, r *rand.Rand) error 
 	nids := rand.Intn(10)
 	ids := make([]string, 0, nids)
 	for i := 0; i < nids; i++ {
-		ids = append(ids, strconv.Itoa(rand.Intn(NHOTEL)))
+		ids = append(ids, strconv.Itoa(rand.Intn(NHOTEL-7)+7))
 	}
 	arg := &proto.ReserveRequest{
 		HotelId:      ids,

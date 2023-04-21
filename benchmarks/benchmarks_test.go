@@ -47,6 +47,9 @@ var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
 var HOTEL_CACHE_NCORE int
 var CACHE_TYPE string
+
+// XXX Remove
+var MEMCACHED_ADDRS string
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
 var RPCBENCH_NCORE int
@@ -85,6 +88,7 @@ func init() {
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
+	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")

@@ -110,6 +110,13 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
+			if CACHE_TYPE == "memcached" {
+				addrs := strings.Split(MEMCACHED_ADDRS, ",")
+				err := ts.SigmaClnt.PutFileJson(sp.MEMCACHED, 0777, addrs)
+				if err != nil {
+					db.DFatalf("Error put memcached file")
+				}
+			}
 			pdc, err := protdevclnt.MkProtDevClnt(ts.SigmaClnt.FsLib, sp.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)

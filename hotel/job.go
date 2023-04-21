@@ -115,6 +115,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 			if err != nil {
 				return nil, err
 			}
+		// XXX Remove
+		case "memcached":
+			db.DPrintf(db.ALWAYS, "Hotel running with memcached")
 		default:
 			db.DFatalf("Unrecognized hotel cache type: %v", cache)
 		}
@@ -124,6 +127,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p.AppendEnv("GOGC", "off")
 		p.SetNcore(srv.Ncore)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

@@ -29,7 +29,6 @@ func MakeMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
 }
 
 func (mc *MemcachedClnt) Get(key string, m proto.Message) error {
-	db.DFatalf("Unimplemented")
 	i, err := mc.cc.Get(key)
 	if err != nil {
 		return err

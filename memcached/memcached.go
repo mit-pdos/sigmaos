@@ -26,7 +26,7 @@ func MakeMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
 	mc := &MemcachedClnt{
 		memcache.NewFromSelector(makeServerSelector(addrs)),
 	}
-	mc.cc.MaxIdleConns = 10000
+	mc.cc.MaxIdleConns = 8000
 	return mc, nil
 }
 

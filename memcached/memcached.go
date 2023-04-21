@@ -79,9 +79,9 @@ func makeServerSelector(addrs []string) *serverSelector {
 	// TCP or UDP?
 	as := make([]net.Addr, 0, len(addrs))
 	for _, addr := range addrs {
-		a, err := net.ResolveUDPAddr("udp", addr)
+		a, err := net.ResolveTCPAddr("tcp", addr)
 		if err != nil {
-			db.DFatalf("Error resovlve UDP addr")
+			db.DFatalf("Error resovlve TCP addr")
 		}
 		as = append(as, a)
 	}

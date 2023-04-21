@@ -21,16 +21,16 @@ img=$img_name
 
 if ! docker ps | grep -q sigmajaeger; then
   echo "start memcached"
-  docker run -d --name sigmamemcached \
+  docker run -d --name mcd \
     --network host \
     $img
 fi
 
-until [ "`docker inspect -f {{.State.Running}} sigmamemcached`"=="true" ]; do
+until [ "`docker inspect -f {{.State.Running}} mcd`"=="true" ]; do
     echo -n "." 1>&2
     sleep 0.1;
 done;
 
-ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamemcached)
+ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mcd)
 
 echo "jaeger IP: $ip"

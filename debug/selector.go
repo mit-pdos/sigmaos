@@ -24,6 +24,8 @@ const (
 // Latency break-down.
 const (
 	SPAWN_LAT Tselector = "SPAWN_LAT"
+	SESS_LAT            = "SESS_LAT"
+	CACHE_LAT           = "CACHE_LAT"
 )
 
 // Tests
@@ -35,38 +37,38 @@ const (
 
 // Apps
 const (
-	WWW             Tselector = "WWW"
-	WWW_ERR                   = WWW + ERR
-	WWW_CLNT                  = WWW + "_CLNT"
-	MATMUL                    = "MATMUL"
-	CACHESRV                  = "CACHESRV"
-	CACHECLERK                = "CACHECLERK"
-	RPC_BENCH_SRV             = "RPC_BENCH_SRV"
-	RPC_BENCH_CLNT            = "RPC_BENCH_CLNT"
-	HOTEL_CLNT                = "HOTEL_CLNT"
-	HOTEL_GEO                 = "HOTEL_GEO"
-	HOTEL_PROF                = "HOTEL_PROF"
-	HOTEL_RATE                = "HOTEL_RATE"
-	HOTEL_RESERVE             = "HOTEL_RESERVE"
-	HOTEL_SEARCH              = "HOTEL_SEARCH"
-	HOTEL_WWW                 = "HOTEL_WWW"
-	HOTEL_WWW_STATS           = "HOTEL_WWW_STATS"
-	SLEEPER                   = "SLEEPER"
-	SPINNER                   = "SPINNER"
-	FSREADER                  = "FSREADER"
-	SLEEPER_TIMING            = "SLEEPER_TIMING"
-	MR                        = "MR"
-	MR_TPT                    = "MR_TPT"
-	KVBAL                     = "KVBAL"
-	KVBAL_ERR                 = KVBAL + ERR
-	KVCLERK                   = "KVCLERK"
-	KVCLERK_ERR               = KVCLERK + ERR
-	KVMON                     = "KVMON"
-	KVMV                      = "KVMV"
-	KVMV_ERR                  = KVMV + ERR
-	SOCIAL_NETWORK			  = "SOCIAL_NETWORK"
-	SOCIAL_NETWORK_MOL        = SOCIAL_NETWORK + "_MOL"
-	SOCIAL_NETWORK_USER       = SOCIAL_NETWORK + "_USER"
+	WWW                 Tselector = "WWW"
+	WWW_ERR                       = WWW + ERR
+	WWW_CLNT                      = WWW + "_CLNT"
+	MATMUL                        = "MATMUL"
+	CACHESRV                      = "CACHESRV"
+	CACHECLERK                    = "CACHECLERK"
+	RPC_BENCH_SRV                 = "RPC_BENCH_SRV"
+	RPC_BENCH_CLNT                = "RPC_BENCH_CLNT"
+	HOTEL_CLNT                    = "HOTEL_CLNT"
+	HOTEL_GEO                     = "HOTEL_GEO"
+	HOTEL_PROF                    = "HOTEL_PROF"
+	HOTEL_RATE                    = "HOTEL_RATE"
+	HOTEL_RESERVE                 = "HOTEL_RESERVE"
+	HOTEL_SEARCH                  = "HOTEL_SEARCH"
+	HOTEL_WWW                     = "HOTEL_WWW"
+	HOTEL_WWW_STATS               = "HOTEL_WWW_STATS"
+	SLEEPER                       = "SLEEPER"
+	SPINNER                       = "SPINNER"
+	FSREADER                      = "FSREADER"
+	SLEEPER_TIMING                = "SLEEPER_TIMING"
+	MR                            = "MR"
+	MR_TPT                        = "MR_TPT"
+	KVBAL                         = "KVBAL"
+	KVBAL_ERR                     = KVBAL + ERR
+	KVCLERK                       = "KVCLERK"
+	KVCLERK_ERR                   = KVCLERK + ERR
+	KVMON                         = "KVMON"
+	KVMV                          = "KVMV"
+	KVMV_ERR                      = KVMV + ERR
+	SOCIAL_NETWORK                = "SOCIAL_NETWORK"
+	SOCIAL_NETWORK_MOL            = SOCIAL_NETWORK + "_MOL"
+	SOCIAL_NETWORK_USER           = SOCIAL_NETWORK + "_USER"
 )
 
 // System

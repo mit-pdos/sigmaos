@@ -1,6 +1,8 @@
 package netclnt
 
 import (
+	"time"
+
 	"sigmaos/serr"
 	"sigmaos/sessconn"
 	"sigmaos/sessp"
@@ -15,16 +17,19 @@ type Reply struct {
 }
 
 type Rpc struct {
+	start  time.Time
 	addrs  sp.Taddrs
 	Req    *sessconn.PartMarshaledMsg
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg) *Rpc {
-	rpc := &Rpc{}
-	rpc.addrs = addrs
-	rpc.Req = req
-	rpc.ReplyC = make(chan *Reply)
+func MakeRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg, start time.Time) *Rpc {
+	rpc := &Rpc{
+		start:  start,
+		addrs:  addrs,
+		Req:    req,
+		ReplyC: make(chan *Reply),
+	}
 	return rpc
 }
 
@@ -49,4 +54,9 @@ func (rpc *Rpc) Complete(f []byte, d []byte, err *serr.Err) {
 // Abort an RPC, because the connection has closed.
 func (rpc *Rpc) Abort() {
 	close(rpc.ReplyC)
+}
+
+// Total delay since the sessclnt layer first saw this RPC.
+func (rpc *Rpc) TotalDelay() time.Duration {
+	return time.Since(rpc.start)
 }

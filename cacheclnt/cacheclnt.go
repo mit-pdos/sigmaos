@@ -4,6 +4,8 @@ import (
 	"hash/fnv"
 	"strconv"
 
+	"time"
+
 	"google.golang.org/protobuf/proto"
 
 	cacheproto "sigmaos/cache/proto"
@@ -90,9 +92,13 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val pr
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
+	s := time.Now()
 	var res cacheproto.CacheResult
 	if err := c.RPC("Cache.Get", req, &res); err != nil {
 		return err
+	}
+	if time.Since(s) > 150*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache get: %v", time.Since(s))
 	}
 	if err := proto.Unmarshal(res.Value, val); err != nil {
 		return err

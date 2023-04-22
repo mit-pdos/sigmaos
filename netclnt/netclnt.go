@@ -5,6 +5,8 @@ import (
 	"net"
 	"sync"
 
+	"time"
+
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/delay"
@@ -107,6 +109,11 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	if nc.isClosed() {
 		db.DPrintf(db.NETCLNT_ERR, "Error Send on closed channel to %v\n", nc.Dst())
 		return
+	}
+
+	delay := rpc.TotalDelay()
+	if delay > 150*time.Microsecond {
+		db.DPrintf(db.SESS_LAT, "Long delay in sessclnt layer: %v", delay)
 	}
 
 	// Otherwise, marshall and write the sessp.

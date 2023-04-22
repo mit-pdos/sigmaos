@@ -4,6 +4,8 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
 
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
@@ -139,6 +141,8 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 }
 
 func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *serr.Err) {
+	s := time.Now()
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -152,7 +156,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	// & enqueue it while holding the lock to ensure in-order RPC/seqno delivery.
 	// Probably the right thing to do is have some future scheme for the marshaled
 	// RPC bytes.
-	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc))
+	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil
@@ -237,7 +241,11 @@ func (c *SessClnt) writer() {
 			break
 		}
 
+		s := time.Now()
 		nc, err := c.getConn()
+		if time.Since(s) > 100*time.Microsecond {
+			db.DPrintf(db.SESS_LAT, "Long getconn %v", time.Since(s))
+		}
 
 		// If we can't connect to the replica group, return.
 		if err != nil {

@@ -99,8 +99,8 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
-	if time.Since(start) > 20*time.Millisecond {
-		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	if time.Since(start) > 300*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache lock put: %v", time.Since(start))
 	}
 
 	s.bins[b].cache[req.Key] = req.Value
@@ -108,6 +108,7 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 }
 
 func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	e2e := time.Now()
 	if false {
 		_, span := s.tracer.StartRPCSpan(&req, "Get")
 		defer span.End()
@@ -119,14 +120,17 @@ func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
-	if time.Since(start) > 20*time.Millisecond {
-		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	if time.Since(start) > 300*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache lock get: %v", time.Since(start))
 	}
 
 	v, ok := s.bins[b].cache[req.Key]
 	if ok {
 		rep.Value = v
 		return nil
+	}
+	if time.Since(e2e) > 1*time.Millisecond {
+		db.DPrintf(db.CACHE_LAT, "Long e2e get: %v", time.Since(e2e))
 	}
 	return ErrMiss
 }

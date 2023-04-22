@@ -143,20 +143,37 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *serr.Err) {
 	s := time.Now()
 
-	c.Lock()
-	defer c.Unlock()
+	// If the request is not an RPC, we need to ensure strict ordering by seqno.
+	// So, hold the lock between incrementing the seqno (which happens in
+	// sessp.MakeFcallMsg) and enqueueing the message. This holds the lock during
+	// marshaling.
+	if req.Type() != sessp.TTwriteread {
+		c.Lock()
+		defer c.Unlock()
+	}
+
+	// For TTwriteread (RPCs) we make no ordering guarantees. This allows us to
+	// avoid holding the lock between the Fcall message creation step (which
+	// allocates a sequence number), the marshaling step (which often takes a
+	// long time), and the request enqueue step (which ordinarily expects fcalls
+	// to be enqueued in order).
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f)
+	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
+
+	// If the request is an RPC, then we don't have strict ordering requirements.
+	// We haven't taken the lock yet in order to avoid holding the lock while
+	// marshaling the message, which may take a long time. However, we need to
+	// take the lock here to ensure the status of the session (c.closed) is
+	// checked atomically with the RPC enqueueing.
+	if req.Type() == sessp.TTwriteread {
+		c.Lock()
+		defer c.Unlock()
+	}
 
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f)
-	// TODO: Ideally, we shouldn't martial the message at all while holding the
-	// lock, since this blocks the sending/writer thread and stops other
-	// marshaling from happening in parallel. However, we need to make the fcall
-	// & enqueue it while holding the lock to ensure in-order RPC/seqno delivery.
-	// Probably the right thing to do is have some future scheme for the marshaled
-	// RPC bytes.
-	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
+
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

@@ -293,7 +293,6 @@ func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 func TestManyRandom(t *testing.T) {
 	testManyRandom(t, skipinterval.MkSkipIInterval)
 	testManyRandom(t, sliceintervals.MkIInterval)
-
 }
 
 func processIV(t *testing.T, retrieved map[uint64]bool, iv *sessp.Tinterval) {

@@ -20,6 +20,7 @@ const (
 	HOTELDIR   = "name/hotel/"
 	MEMFS      = "memfs"
 	HTTP_ADDRS = "http-addr"
+	TRACING    = false
 )
 
 func JobDir(job string) string {

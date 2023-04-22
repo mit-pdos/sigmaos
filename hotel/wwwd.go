@@ -6,6 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
+	//	"context"
+	//	"go.opentelemetry.io/otel/trace"
+	//	tproto "sigmaos/tracing/proto"
+
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
@@ -73,12 +77,23 @@ func RunWww(job string, public bool) error {
 	www.geoc = pdc
 
 	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
-	mux := tracing.MakeHTTPMux()
+	var mux *http.ServeMux
+	//	var tmux *tracing.TracedHTTPMux
+	//	if TRACING {
+	//		tmux = tracing.MakeHTTPMux()
+	//		tmux.HandleFunc("/user", www.userHandler)
+	//		tmux.HandleFunc("/hotels", www.searchHandler)
+	//		tmux.HandleFunc("/recommendations", www.recommendHandler)
+	//		tmux.HandleFunc("/reservation", www.reservationHandler)
+	//		tmux.HandleFunc("/geo", www.geoHandler)
+	//	} else {
+	mux = http.NewServeMux()
 	mux.HandleFunc("/user", www.userHandler)
 	mux.HandleFunc("/hotels", www.searchHandler)
 	mux.HandleFunc("/recommendations", www.recommendHandler)
 	mux.HandleFunc("/reservation", www.reservationHandler)
 	mux.HandleFunc("/geo", www.geoHandler)
+	//	}
 
 	if public {
 		pc, pi, err := portclnt.MkPortClntPort(www.FsLib)
@@ -90,7 +105,11 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
-		go mux.Serve(l)
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		//		}
 		a, err := container.QualifyAddr(l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
@@ -103,7 +122,11 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
-		go mux.Serve(l)
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		//		}
 
 		a, err := container.QualifyAddr(l.Addr().String())
 		if err != nil {
@@ -147,8 +170,13 @@ func (s *Www) done() error {
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	_, span := s.tracer.StartContextSpan(r.Context(), "User")
-	defer span.End()
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "User")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -167,7 +195,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
 		Name:              username,
 		Password:          password,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -188,8 +216,12 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	sctx, span := s.tracer.StartContextSpan(r.Context(), "Search")
-	defer span.End()
+	//	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartContextSpan(r.Context(), "Search")
+	//		defer span.End()
+	//	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -222,18 +254,25 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
-	_, span2 := s.tracer.StartContextSpan(sctx, "Search.Nearby")
+	//	var span2 trace.Span
+	//	var sctx2 *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span2 = s.tracer.StartContextSpan(sctx, "Search.Nearby")
+	//		sctx2 = tracing.SpanToContext(span2)
+	//	}
 	var searchRes proto.SearchResult
 	searchReq := &proto.SearchRequest{
 		Lat:               lat,
 		Lon:               lon,
 		InDate:            inDate,
 		OutDate:           outDate,
-		SpanContextConfig: tracing.SpanToContext(span2),
+		SpanContextConfig: nil, //sctx2,
 	}
 	// search for best hotels
 	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
-	span2.End()
+	//	if TRACING {
+	//		span2.End()
+	//	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -248,17 +287,23 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var reserveRes proto.ReserveResult
-
-	_, span3 := s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
+	//	var span3 trace.Span
+	//	var sctx3 *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span3 = s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
+	//		sctx3 = tracing.SpanToContext(span3)
+	//	}
 	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
 		CustomerName:      "",
 		HotelId:           searchRes.HotelIds,
 		InDate:            inDate,
 		OutDate:           outDate,
 		Number:            1,
-		SpanContextConfig: tracing.SpanToContext(span3),
+		SpanContextConfig: nil, //sctx3,
 	}, &reserveRes)
-	span3.End()
+	//	if TRACING {
+	//		span3.End()
+	//	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -266,13 +311,20 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// hotel profiles
 	var profRes proto.ProfResult
-	_, span4 := s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
+	//	var span4 trace.Span
+	//	var sctx4 *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span4 = s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
+	//		sctx4 = tracing.SpanToContext(span4)
+	//	}
 	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds:          reserveRes.HotelIds,
 		Locale:            locale,
-		SpanContextConfig: tracing.SpanToContext(span4),
+		SpanContextConfig: nil, //sctx4,
 	}, &profRes)
-	span4.End()
+	//	if TRACING {
+	//		span4.End()
+	//	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -282,8 +334,13 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	_, span := s.tracer.StartContextSpan(r.Context(), "Recommend")
-	defer span.End()
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "Recommend")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -314,7 +371,7 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 		Require:           require,
 		Lat:               lat,
 		Lon:               lon,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}, &recResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -333,7 +390,7 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
 		HotelIds:          recResp.HotelIds,
 		Locale:            locale,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}, &profResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -345,8 +402,13 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	_, span := s.tracer.StartContextSpan(r.Context(), "Reservation")
-	defer span.End()
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "Reservation")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -398,7 +460,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
 		Name:              username,
 		Password:          password,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -419,7 +481,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		InDate:            inDate,
 		OutDate:           outDate,
 		Number:            int32(numberOfRoom),
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}, &resResp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -438,8 +500,13 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.p.TptTick(1.0)
-	_, span := s.tracer.StartContextSpan(r.Context(), "Geo")
-	defer span.End()
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "Geo")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -462,7 +529,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	greq := proto.GeoRequest{
 		Lat:               lat,
 		Lon:               lon,
-		SpanContextConfig: tracing.SpanToContext(span),
+		SpanContextConfig: nil, //sctx,
 	}
 	err := s.geoc.RPC("Geo.Nearby", &greq, &gres)
 	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)

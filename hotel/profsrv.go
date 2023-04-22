@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
@@ -69,9 +71,14 @@ func (ps *ProfSrv) getProf(sctx context.Context, id string) (*proto.ProfileFlat,
 	q := fmt.Sprintf("SELECT * from profile where hotelid='%s';", id)
 	var profs []proto.ProfileFlat
 
-	_, dbspan := ps.tracer.StartContextSpan(sctx, "db.Query")
+	//	var dbspan trace.Span
+	//	if TRACING {
+	//		_, dbspan = ps.tracer.StartContextSpan(sctx, "db.Query")
+	//	}
 	error := ps.dbc.Query(q, &profs)
-	dbspan.End()
+	//	if TRACING {
+	//		dbspan.End()
+	//	}
 	if error != nil {
 		return nil, error
 	}
@@ -119,17 +126,28 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 }
 
 func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
-	sctx, span := ps.tracer.StartRPCSpan(&req, "GetProfiles")
-	defer span.End()
+	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = ps.tracer.StartRPCSpan(&req, "GetProfiles")
+	//		defer span.End()
+	//	} else {
+	sctx = context.TODO()
+	//}
 
 	db.DPrintf(db.HOTEL_PROF, "Req %v\n", req)
 	for _, id := range req.HotelIds {
 		p := &proto.ProfileFlat{}
 		key := id + "_prof"
-		_, span2 := ps.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		var span2 trace.Span
+		//		if TRACING {
+		//			_, span2 = ps.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		}
 		err := ps.cachec.Get(key, p)
-		//		err := ps.cachec.GetTraced(tracing.SpanToContext(span2), key, p)
-		span2.End()
+		//		if TRACING {
+		//			//		err := ps.cachec.GetTraced(tracing.SpanToContext(span2), key, p)
+		//			span2.End()
+		//		}
 		if err != nil {
 			if !ps.cachec.IsMiss(err) {
 				return err
@@ -139,10 +157,15 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 			if err != nil {
 				return err
 			}
-			_, span3 := ps.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			var span3 trace.Span
+			//			if TRACING {
+			//				_, span3 = ps.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			}
 			err = ps.cachec.Put(key, p)
-			//			err = ps.cachec.PutTraced(tracing.SpanToContext(span3), key, p)
-			span3.End()
+			//			if TRACING {
+			//				//			err = ps.cachec.PutTraced(tracing.SpanToContext(span3), key, p)
+			//				span3.End()
+			//			}
 			if err != nil {
 				return err
 			}

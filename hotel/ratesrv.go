@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
@@ -79,32 +81,53 @@ func RunRateSrv(job string, public bool, cache string) error {
 
 // GetRates gets rates for hotels
 func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
-	sctx, span := s.tracer.StartRPCSpan(&req, "GetRates")
-	defer span.End()
+	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "GetRates")
+	//		defer span.End()
+	//	} else {
+	sctx = context.TODO()
+	//	}
 
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
-		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		var span2 trace.Span
+		//		if TRACING {
+		//			_, span2 = s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		}
 		err := s.cachec.Get(key, r)
-		//		err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
-		span2.End()
+		//		if TRACING {
+		//			//				err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
+		//			span2.End()
+		//		}
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
-			_, span3 := s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			//			var span3 trace.Span
+			//			if TRACING {
+			//				_, span3 = s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			//			}
 			r, err = s.getRate(sctx, hotelId)
-			span3.End()
+			//			if TRACING {
+			//				span3.End()
+			//			}
 			if err != nil {
 				return err
 			}
-			_, span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			var span4 trace.Span
+			//			if TRACING {
+			//				_, span4 = s.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			}
 			err = s.cachec.Put(key, r)
-			//			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
-			span4.End()
+			//			if TRACING {
+			//				//			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
+			//				span4.End()
+			//			}
 			if err != nil {
 				return err
 			}
@@ -142,9 +165,14 @@ type RateFlat struct {
 func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error) {
 	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
 	var rates []RateFlat
-	_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	//	var dbspan trace.Span
+	//	if TRACING {
+	//		_, dbspan = s.tracer.StartContextSpan(sctx, "db.Query")
+	//	}
 	error := s.dbc.Query(q, &rates)
-	dbspan.End()
+	//	if TRACING {
+	//		dbspan.End()
+	//	}
 	if error != nil {
 		return nil, error
 	}

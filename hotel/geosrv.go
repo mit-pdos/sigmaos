@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"sync"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/harlow/go-micro-services/data"
 	"github.com/mit-pdos/go-geoindex"
-	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -99,8 +100,11 @@ func RunGeoSrv(job string, public bool) error {
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(ctx fs.CtxI, req proto.GeoRequest, rep *proto.GeoResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "Nearby")
-	defer span.End()
+	//	var span trace.Span
+	//	if TRACING {
+	//		_, span = s.tracer.StartRPCSpan(&req, "Nearby")
+	//		defer span.End()
+	//	}
 
 	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))

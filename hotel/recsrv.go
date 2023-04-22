@@ -6,6 +6,8 @@ import (
 	"math"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
@@ -56,8 +58,11 @@ func RunRecSrv(n string, public bool) error {
 
 // GiveRecommendation returns recommendations within a given requirement.
 func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "GetRecs")
-	defer span.End()
+	//	var span trace.Span
+	//	if TRACING {
+	//		_, span = s.tracer.StartRPCSpan(&req, "GetRecs")
+	//		defer span.End()
+	//	}
 
 	require := req.Require
 	if require == "dis" {

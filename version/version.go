@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/refmap"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -54,7 +54,6 @@ func (vt *VersionTable) Insert(path sessp.Tpath) {
 func (vt *VersionTable) Delete(p sessp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
-
 	vt.RefTable.Delete(p)
 }
 

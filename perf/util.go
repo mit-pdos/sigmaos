@@ -44,7 +44,7 @@ func Hz() int {
 
 const (
 	OUTPUT_PATH            = "/tmp/sigmaos-perf"
-	MUTEX_PROFILE_FRACTION = 100
+	MUTEX_PROFILE_FRACTION = 5
 )
 
 type Tload [3]float64

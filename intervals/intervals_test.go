@@ -24,7 +24,7 @@ func testSimple(t *testing.T, ivs sessp.IIntervals) {
 
 func TestSimple(t *testing.T) {
 	testSimple(t, sliceintervals.MkIInterval())
-	testSimple(t, skipinterval.MkSkipIInterval())
+	testSimple(t, skipintervals.MkSkipIInterval())
 }
 
 func testContains(t *testing.T, ivs sessp.IIntervals) {
@@ -40,7 +40,7 @@ func testContains(t *testing.T, ivs sessp.IIntervals) {
 
 func TestContains(t *testing.T) {
 	testContains(t, sliceintervals.MkIInterval())
-	testContains(t, skipinterval.MkSkipIInterval())
+	testContains(t, skipintervals.MkSkipIInterval())
 }
 
 func testInsert(t *testing.T, ivs sessp.IIntervals) {
@@ -67,7 +67,7 @@ func testInsert(t *testing.T, ivs sessp.IIntervals) {
 
 func TestInsert(t *testing.T) {
 	testInsert(t, sliceintervals.MkIInterval())
-	testInsert(t, skipinterval.MkSkipIInterval())
+	testInsert(t, skipintervals.MkSkipIInterval())
 }
 
 func testDelete(t *testing.T, ivs sessp.IIntervals) {
@@ -103,7 +103,7 @@ func testDelete(t *testing.T, ivs sessp.IIntervals) {
 
 func TestDelete(t *testing.T) {
 	testDelete(t, sliceintervals.MkIInterval())
-	testDelete(t, skipinterval.MkSkipIInterval())
+	testDelete(t, skipintervals.MkSkipIInterval())
 }
 
 // No overlapping intervals
@@ -134,7 +134,7 @@ func testBasic(t *testing.T, siv sessp.IIntervals) {
 
 func TestBasic(t *testing.T) {
 	testBasic(t, sliceintervals.MkIInterval())
-	testBasic(t, skipinterval.MkSkipIntervals())
+	testBasic(t, skipintervals.MkSkipIntervals())
 }
 
 func testInsert1(t *testing.T, siv sessp.IIntervals) {
@@ -160,7 +160,7 @@ func testInsert1(t *testing.T, siv sessp.IIntervals) {
 
 func TestInsert1(t *testing.T) {
 	// testInsert1(t, sliceintervals.MkIInterval())
-	testInsert1(t, skipinterval.MkSkipIntervals())
+	testInsert1(t, skipintervals.MkSkipIntervals())
 }
 
 func testDelete1(t *testing.T, siv sessp.IIntervals) {
@@ -190,7 +190,7 @@ func testDelete1(t *testing.T, siv sessp.IIntervals) {
 
 func TestDelete1(t *testing.T) {
 	// testDelete1(t, sliceintervals.MkIInterval())
-	testDelete1(t, skipinterval.MkSkipIntervals())
+	testDelete1(t, skipintervals.MkSkipIntervals())
 }
 
 func testRandom(t *testing.T, siv sessp.IIntervals) {
@@ -211,7 +211,7 @@ func testRandom(t *testing.T, siv sessp.IIntervals) {
 
 func TestRandom1(t *testing.T) {
 	// testRandom(t, sliceintervals.MkIInterval())
-	testRandom(t, skipinterval.MkSkipIntervals())
+	testRandom(t, skipintervals.MkSkipIntervals())
 }
 
 const (
@@ -235,7 +235,7 @@ func testManyInorder(t *testing.T, mkiv func() sessp.IIntervals) {
 }
 
 func TestManyInOrder(t *testing.T) {
-	testManyInorder(t, skipinterval.MkSkipIInterval)
+	testManyInorder(t, skipintervals.MkSkipIInterval)
 	testManyInorder(t, sliceintervals.MkIInterval)
 }
 
@@ -258,7 +258,7 @@ func testManyGaps(t *testing.T, mkiv func() sessp.IIntervals) {
 }
 
 func TestManyGaps(t *testing.T) {
-	testManyGaps(t, skipinterval.MkSkipIInterval)
+	testManyGaps(t, skipintervals.MkSkipIInterval)
 	testManyGaps(t, sliceintervals.MkIInterval)
 }
 
@@ -291,7 +291,7 @@ func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 }
 
 func TestManyRandom(t *testing.T) {
-	testManyRandom(t, skipinterval.MkSkipIInterval)
+	testManyRandom(t, skipintervals.MkSkipIInterval)
 	testManyRandom(t, sliceintervals.MkIInterval)
 }
 

@@ -29,7 +29,9 @@ func MkIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.sid = sid
 	ivs.acked = sliceintervals.MkIvSlice()
-	ivs.next = sliceintervals.MkIvSlice() //skipinterval.MkSkipIInterval()
+	ivs.next = sliceintervals.MkIvSlice()
+	// ivs.acked = skipintervals.MkSkipIInterval()
+	// ivs.next = skipintervals.MkSkipIInterval()
 	return ivs
 }
 

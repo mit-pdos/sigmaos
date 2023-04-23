@@ -1,4 +1,4 @@
-package skipinterval
+package skipintervals
 
 import (
 	"fmt"

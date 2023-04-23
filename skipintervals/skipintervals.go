@@ -1,4 +1,4 @@
-package skipinterval
+package skipintervals
 
 import (
 	"fmt"
@@ -307,13 +307,27 @@ func (skipl *SkipIntervals) Prevs(elem *element, prevElems levels) levels {
 	return prevElems
 }
 
-// XXX
 func (skipl *SkipIntervals) Pop() *sessp.Tinterval {
-	return nil
+	if skipl.levels[0] == nil {
+		return nil
+	}
+	elem := skipl.levels[0]
+	skipl.Prevs(elem, skipl.prevElems)
+	skipl.del(skipl.prevElems, elem)
+	return &elem.iv
 }
 
-// XXX
-func (skipl *SkipIntervals) Deepcopy(src sessp.IIntervals) {
+func (skipl *SkipIntervals) Deepcopy(s sessp.IIntervals) {
+	var next *element
+	for e := skipl.levels[0]; e != nil; e = next {
+		next = e.levels[0]
+		skipl.Prevs(e, skipl.prevElems)
+		skipl.del(skipl.prevElems, e)
+	}
+	src := s.(*SkipIntervals)
+	for e := src.levels[0]; e != nil; e = e.levels[0] {
+		skipl.Insert(&e.iv)
+	}
 }
 
 func (skipl *SkipIntervals) randLevel() int {

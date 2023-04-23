@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
@@ -42,7 +43,8 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = "/tmp/sigmaos-perf"
+	OUTPUT_PATH            = "/tmp/sigmaos-perf"
+	MUTEX_PROFILE_FRACTION = 100
 )
 
 type Tload [3]float64
@@ -73,6 +75,7 @@ type Perf struct {
 	util           bool
 	pprof          bool
 	pprofMem       bool
+	pprofLock      bool
 	tpt            bool
 	utilChan       chan bool
 	utilFile       *os.File
@@ -82,6 +85,7 @@ type Perf struct {
 	cores          map[string]bool
 	pprofFile      *os.File
 	pprofMemFile   *os.File
+	pprofLockFile  *os.File
 	tpts           []float64
 	times          []time.Time
 	tptFile        *os.File
@@ -125,6 +129,10 @@ func MakePerfMulti(s Tselector, s2 string) (*Perf, error) {
 	// Set up pprof caputre
 	if ok := labels[s+PPROF_MEM]; ok {
 		p.setupPprofMem(basePath + "-pprof-mem.out")
+	}
+	// Set up pprof caputre
+	if ok := labels[s+PPROF_LOCK]; ok {
+		p.setupPprofLock(basePath + "-pprof-lock.out")
 	}
 	// Set up cpu util capture
 	if ok := labels[s+CPU]; ok {
@@ -183,6 +191,7 @@ func (p *Perf) Done() {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
 		p.teardownPprofMem()
+		p.teardownPprofLock()
 		p.teardownUtil()
 		p.teardownTpt()
 	}
@@ -402,6 +411,20 @@ func (p *Perf) setupPprofMem(fpath string) {
 	p.pprofMemFile = f
 }
 
+func (p *Perf) setupPprofLock(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	runtime.SetMutexProfileFraction(MUTEX_PROFILE_FRACTION)
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprofLock profile file: %v, %v", fpath, err)
+	}
+	p.pprofLock = true
+	p.pprofLockFile = f
+}
+
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
@@ -430,6 +453,20 @@ func (p *Perf) teardownPprofMem() {
 			db.DFatalf("could not write memory profile: %v", err)
 		}
 		p.pprofMemFile.Close()
+	}
+}
+
+func (p *Perf) teardownPprofLock() {
+	if p.pprofLock {
+		// Avoid double-closing
+		p.pprofLock = false
+		// Don't do GC before collecting the heap profile.
+		// runtime.GC() // get up-to-date statistics
+		// Write a heap profile
+		if err := pprof.Lookup("mutex").WriteTo(p.pprofLockFile, 0); err != nil {
+			db.DFatalf("could not write lock profile: %v", err)
+		}
+		p.pprofLockFile.Close()
 	}
 }
 

@@ -198,6 +198,8 @@ type IIntervals interface {
 	Contains(uint64) bool
 	Present(*Tinterval) bool
 	Find(*Tinterval) *Tinterval
+	Pop() *Tinterval
+	Deepcopy(IIntervals)
 }
 
 const (

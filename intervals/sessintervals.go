@@ -10,14 +10,15 @@ import (
 
 	// db "sigmaos/debug"
 	"sigmaos/sessp"
+	// "sigmaos/skipintervals"
 	"sigmaos/sliceintervals"
 )
 
 type Intervals struct {
 	sync.Mutex
 	sid   sessp.Tsession
-	acked *sliceintervals.IvSlice // intervals with seqnos for which the server replied
-	next  *sliceintervals.IvSlice // intervals with seqnos to tell server we have received reply
+	acked sessp.IIntervals // intervals with seqnos for which the server replied
+	next  sessp.IIntervals // intervals with seqnos to tell server we have received reply
 }
 
 func (ivs *Intervals) String() string {
@@ -28,7 +29,7 @@ func MkIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.sid = sid
 	ivs.acked = sliceintervals.MkIvSlice()
-	ivs.next = sliceintervals.MkIvSlice()
+	ivs.next = sliceintervals.MkIvSlice() //skipinterval.MkSkipIInterval()
 	return ivs
 }
 

@@ -307,6 +307,15 @@ func (skipl *SkipIntervals) Prevs(elem *element, prevElems levels) levels {
 	return prevElems
 }
 
+// XXX
+func (skipl *SkipIntervals) Pop() *sessp.Tinterval {
+	return nil
+}
+
+// XXX
+func (skipl *SkipIntervals) Deepcopy(src sessp.IIntervals) {
+}
+
 func (skipl *SkipIntervals) randLevel() int {
 	const half = 1 << 30
 	i := 1

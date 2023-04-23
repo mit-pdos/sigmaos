@@ -152,7 +152,8 @@ func (ivs *IvSlice) search(start uint64) int {
 	})
 }
 
-func (dst *IvSlice) Deepcopy(src *IvSlice) {
+func (dst *IvSlice) Deepcopy(s sessp.IIntervals) {
+	src := s.(*IvSlice)
 	dst.entries = make([]*sessp.Tinterval, len(src.entries))
 	for i, iv := range src.entries {
 		dst.entries[i] = sessp.MkInterval(iv.Start, iv.End)

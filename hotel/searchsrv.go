@@ -11,7 +11,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -32,12 +31,13 @@ func RunSearchSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELRATE)
+	fsls := MakeFsLibs(sp.HOTELSEARCH)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELGEO)
 	if err != nil {
 		return err
 	}

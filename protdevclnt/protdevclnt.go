@@ -3,6 +3,7 @@ package protdevclnt
 import (
 	"fmt"
 	"path"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -17,24 +18,33 @@ import (
 )
 
 type ProtDevClnt struct {
-	*fslib.FsLib
-	fd  int
-	si  *protdev.StatInfo
-	sdc *sessdevclnt.SessDevClnt
-	pn  string
+	fsls []*fslib.FsLib
+	fds  []int
+	si   *protdev.StatInfo
+	sdc  *sessdevclnt.SessDevClnt
+	pn   string
+	idx  int32
 }
 
-func MkProtDevClnt(fsl *fslib.FsLib, pn string) (*ProtDevClnt, error) {
-	pdc := &ProtDevClnt{FsLib: fsl, si: protdev.MakeStatInfo(), pn: pn}
-	sdc, err := sessdevclnt.MkSessDevClnt(pdc.FsLib, pn, protdev.RPC)
+func MkProtDevClnt(fsls []*fslib.FsLib, pn string) (*ProtDevClnt, error) {
+	pdc := &ProtDevClnt{
+		fsls: make([]*fslib.FsLib, 0, len(fsls)),
+		fds:  make([]int, 0, len(fsls)),
+		si:   protdev.MakeStatInfo(),
+		pn:   pn,
+	}
+	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], pn, protdev.RPC)
 	if err != nil {
 		return nil, err
 	}
-	n, err := pdc.Open(sdc.DataPn(), sp.ORDWR)
-	if err != nil {
-		return nil, err
+	for _, fsl := range fsls {
+		pdc.fsls = append(pdc.fsls, fsl)
+		n, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
+		if err != nil {
+			return nil, err
+		}
+		pdc.fds = append(pdc.fds, n)
 	}
-	pdc.fd = n
 	return pdc, nil
 }
 
@@ -49,7 +59,8 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	}
 
 	start := time.Now()
-	b, err = pdc.WriteRead(pdc.fd, b)
+	idx := int(atomic.AddInt32(&pdc.idx, 1))
+	b, err = pdc.fsls[idx%len(pdc.fsls)].WriteRead(pdc.fds[idx%len(pdc.fds)], b)
 	if err != nil {
 		return nil, fmt.Errorf("rpc err %v", err)
 	}
@@ -88,7 +99,7 @@ func (pdc *ProtDevClnt) StatsClnt() *protdev.RPCStats {
 
 func (pdc *ProtDevClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
 	stats := &protdev.SigmaRPCStats{}
-	if err := pdc.GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
+	if err := pdc.fsls[0].GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

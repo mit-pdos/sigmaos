@@ -8,6 +8,7 @@ import (
 	"sigmaos/dbclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fslib"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -45,7 +46,7 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, jobname)
+	cachec, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{pds.MemFs.SigmaClnt().FsLib}, jobname)
 	if err != nil {
 		return err
 	}

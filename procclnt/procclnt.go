@@ -209,7 +209,7 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
 	if pdc, ok := clnt.schedds[kernelId]; ok {
 		return pdc
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(clnt.FsLib, path.Join(sp.SCHEDD, kernelId))
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.SCHEDD, kernelId))
 	if err != nil {
 		sts, _ := clnt.GetDir(sp.SCHEDD)
 		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt localIP:%v scheddIP:%v schedds:%v err:%v", clnt.GetLocalIP(), kernelId, sp.Names(sts), err)

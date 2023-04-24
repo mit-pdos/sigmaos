@@ -97,7 +97,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 			return nil, err
 		}
 		pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, realm.String(), ptype.String())
-		rc, err := protdevclnt.MkProtDevClnt(updm.fsl, pn)
+		rc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{updm.fsl}, pn)
 		if err != nil {
 			return nil, err
 		}

@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	HOTEL      = "hotel"
-	HOTELDIR   = "name/hotel/"
-	MEMFS      = "memfs"
-	HTTP_ADDRS = "http-addr"
-	TRACING    = false
+	HOTEL          = "hotel"
+	HOTELDIR       = "name/hotel/"
+	MEMFS          = "memfs"
+	HTTP_ADDRS     = "http-addr"
+	TRACING        = false
+	N_RPC_SESSIONS = 10
 )
 
 func JobDir(job string) string {
@@ -33,6 +34,18 @@ func JobHTTPAddrsPath(job string) string {
 
 func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
+}
+
+func MakeFsLibs(uname string) []*fslib.FsLib {
+	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
+	for i := 0; i < N_RPC_SESSIONS; i++ {
+		fsl, err := fslib.MakeFsLib(uname + "-" + strconv.Itoa(i))
+		if err != nil {
+			db.DFatalf("Error mkfsl: %v", err)
+		}
+		fsls = append(fsls, fsl)
+	}
+	return fsls
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -101,7 +114,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
+			cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, job)
 			if err != nil {
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err

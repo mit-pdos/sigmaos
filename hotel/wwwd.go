@@ -45,32 +45,33 @@ func RunWww(job string, public bool) error {
 		return err
 	}
 	www.SigmaClnt = sc
-	pdc, err := protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELUSER)
+	fsls := MakeFsLibs("hotel-wwwd")
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELSEARCH)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELPROF)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELRESERVE)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELREC)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(www.FsLib, sp.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELGEO)
 	if err != nil {
 		return err
 	}

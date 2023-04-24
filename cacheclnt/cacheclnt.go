@@ -37,13 +37,13 @@ func key2shard(key string, nshard int) int {
 
 type CacheClnt struct {
 	*shardsvcclnt.ShardSvcClnt
-	fsl *fslib.FsLib
+	fsls []*fslib.FsLib
 }
 
-func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
+func MkCacheClnt(fsls []*fslib.FsLib, job string) (*CacheClnt, error) {
 	cc := &CacheClnt{}
-	cc.fsl = fsl
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, sp.CACHE, cc.Watch)
+	cc.fsls = fsls
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, sp.CACHE, cc.Watch)
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +112,14 @@ func (c *CacheClnt) Get(key string, val proto.Message) error {
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
-	b, err := cc.fsl.GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
+	b, err := cc.fsls[0].GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
 	sidn := sessdev.SidName(sid, cachesrv.DUMP)
 	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
-	b, err = cc.fsl.GetFile(fn)
+	b, err = cc.fsls[0].GetFile(fn)
 	if err != nil {
 		return nil, err
 	}

@@ -1,14 +1,15 @@
 package socialnetwork
 
 import (
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
-	"sigmaos/cacheclnt"
 	"fmt"
 	"path"
-	"strconv"
+	"sigmaos/cacheclnt"
 	dbg "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"strconv"
 )
 
 const cacheNcore = 2
@@ -56,7 +57,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, jobname)
+		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 		if err != nil {
 			dbg.DFatalf("Error cacheclnt %v", err)
 			return nil, err
@@ -95,4 +96,3 @@ func (snCfg *SocialNetworkConfig) Stop() error {
 	}
 	return nil
 }
-

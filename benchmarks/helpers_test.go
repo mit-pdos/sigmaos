@@ -302,7 +302,7 @@ func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
 	var serr *serr.Err
-	assert.True(rootts.T, err == nil || errors.As(err, &serr) && !serr.IsErrExists(), "Error mkdir: %v", err)
+	assert.True(rootts.T, err == nil || errors.As(err, &serr) && serr.IsErrExists(), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)
 	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)

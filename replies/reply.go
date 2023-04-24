@@ -3,8 +3,8 @@ package replies
 import (
 	"sync"
 
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 

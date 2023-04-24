@@ -3,7 +3,7 @@ package protdevsrv
 import (
 	"reflect"
 	"strings"
-	"time"
+	//	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -46,10 +46,10 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
 
-	start := time.Now()
+	//	start := time.Now()
 	rep = rpc.pds.svc.dispatch(ctx, req.Method, &req)
-	t := time.Since(start).Microseconds()
-	rpc.pds.sti.Stat(req.Method, t)
+	//	t := time.Since(start).Microseconds()
+	//	rpc.pds.sti.Stat(req.Method, t)
 
 	b, err := proto.Marshal(rep)
 	if err != nil {

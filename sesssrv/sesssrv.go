@@ -344,8 +344,8 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "srvfcall %v reply not in cache", fc)
 	if ok := sess.GetReplyTable().Register(fc); ok {
 		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
-		qlen := ssrv.QueueLen()
-		ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
+		//		qlen := ssrv.QueueLen()
+		ssrv.stats.Stats().Inc(fc.Msg.Type(), 0) //qlen)
 		ssrv.fenceFcall(sess, fc)
 	} else {
 		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)

@@ -25,7 +25,7 @@ func MakeReplyTable(sid sessp.Tsession) *ReplyTable {
 	rt.sid = sid
 	rt.entries = make(map[sessp.Tseqno]*ReplyFuture)
 	rt.received = make([]*sessp.Tinterval, 0, 1000)
-	go rt.gc()
+	//	go rt.gc()
 	return rt
 }
 
@@ -66,7 +66,11 @@ func (rt *ReplyTable) Register(request *sessp.FcallMsg) bool {
 	// Marked replies which have been received by the client as ready for GC.
 	rt.received = append(rt.received, request.Fc.Received)
 	rt.cond.Signal()
-	db.DPrintf(db.REPLY_TABLE, "[%v][%v] Remove seqnos %v", rt.sid, request.Fc.Seqno, request.Fc.Received)
+	iv := request.Fc.Received
+	db.DPrintf(db.REPLY_TABLE, "[%v][%v] Remove seqnos %v", rt.sid, request.Fc.Seqno, iv)
+	for s := iv.Start; s < iv.End; s++ {
+		delete(rt.entries, sessp.Tseqno(s))
+	}
 	rt.entries[request.Seqno()] = MakeReplyFuture()
 	return true
 }
@@ -118,30 +122,30 @@ func (rt *ReplyTable) Merge(rt2 *ReplyTable) {
 	}
 }
 
-// Garbage-collect received replies.
-func (rt *ReplyTable) gc() {
-	rt.Lock()
-	defer rt.Unlock()
-
-	for !rt.closed {
-		// Wait for there to be replies to garbage-collect.
-		for len(rt.received) == 0 {
-			rt.cond.Wait()
-		}
-		// Pop the last interval.
-		iv := rt.received[len(rt.received)-1]
-		rt.received = rt.received[:len(rt.received)-1]
-		// Unlock, so other threads can make progress.
-		rt.Unlock()
-		// Remove stored replies which the client has already received. The reply is
-		// always expected to be present, unless there has been a partition and the
-		// client has to resend some RPCs.
-		for s := iv.Start; s < iv.End; s++ {
-			rt.Lock()
-			delete(rt.entries, sessp.Tseqno(s))
-			rt.Unlock()
-		}
-		// Lock for cond.Wait call.
-		rt.Lock()
-	}
-}
+//// Garbage-collect received replies.
+//func (rt *ReplyTable) gc() {
+//	rt.Lock()
+//	defer rt.Unlock()
+//
+//	for !rt.closed {
+//		// Wait for there to be replies to garbage-collect.
+//		for len(rt.received) == 0 {
+//			rt.cond.Wait()
+//		}
+//		// Pop the last interval.
+//		iv := rt.received[len(rt.received)-1]
+//		rt.received = rt.received[:len(rt.received)-1]
+//		// Unlock, so other threads can make progress.
+//		rt.Unlock()
+//		// Remove stored replies which the client has already received. The reply is
+//		// always expected to be present, unless there has been a partition and the
+//		// client has to resend some RPCs.
+//		for s := iv.Start; s < iv.End; s++ {
+//			rt.Lock()
+//			delete(rt.entries, sessp.Tseqno(s))
+//			rt.Unlock()
+//		}
+//		// Lock for cond.Wait call.
+//		rt.Lock()
+//	}
+//}

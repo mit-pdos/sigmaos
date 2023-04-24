@@ -1,16 +1,17 @@
 package socialnetwork_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/rand"
-	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/socialnetwork/proto"
-	"sigmaos/protdevclnt"
-	"sigmaos/linuxsched"
 	"github.com/stretchr/testify/assert"
+	dbg "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/linuxsched"
+	"sigmaos/protdevclnt"
+	"sigmaos/rand"
+	sp "sigmaos/sigmap"
+	sn "sigmaos/socialnetwork"
+	"sigmaos/socialnetwork/proto"
+	"sigmaos/test"
+	"testing"
 	"time"
 )
 
@@ -21,8 +22,8 @@ const (
 type TstateSN struct {
 	*test.Tstate
 	jobname string
-	snCfg *sn.SocialNetworkConfig
-	dbu *sn.DBUtil
+	snCfg   *sn.SocialNetworkConfig
+	dbu     *sn.DBUtil
 }
 
 func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
@@ -30,10 +31,10 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
-	nMoreKernel := (len(srvs)*2+NSHARD*2) / int(linuxsched.NCores)
+	nMoreKernel := (len(srvs)*2 + NSHARD*2) / int(linuxsched.NCores)
 	if nMoreKernel > 0 {
-		dbg.DPrintf(dbg.ALWAYS, "%v / %v = %v more kernels are needed", 
-			len(srvs)*2+NSHARD*2, linuxsched.NCores, nMoreKernel)	
+		dbg.DPrintf(dbg.ALWAYS, "%v / %v = %v more kernels are needed",
+			len(srvs)*2+NSHARD*2, linuxsched.NCores, nMoreKernel)
 		err = tssn.BootNode(nMoreKernel)
 		assert.Nil(tssn.T, err)
 	}
@@ -50,7 +51,7 @@ func TestToyMeaningOfLife(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_MOL)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MOL)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := proto.MoLRequest{
 		Name: "test",
@@ -74,7 +75,7 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_USER)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user
@@ -104,7 +105,7 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, "OK", res_check.Ok)
 	assert.Equal(t, created_userid, res_check.Userid)
 
-    // new user login
+	// new user login
 	arg_login := proto.LoginRequest{Username: "test_user", Password: "xxyy"}
 	res_login := proto.UserResponse{}
 	err = pdc.RPC("User.Login", &arg_login, &res_login)

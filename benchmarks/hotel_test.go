@@ -13,6 +13,7 @@ import (
 	"sigmaos/protdevclnt"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
@@ -119,7 +120,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
-			pdc, err := protdevclnt.MkProtDevClnt(ts.SigmaClnt.FsLib, sp.HOTELRESERVE)
+			pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, sp.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
 			}

@@ -166,7 +166,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
-		ji.printStats()
+		//    ji.printStats()
 	}
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")
 }
@@ -195,6 +195,7 @@ func (ji *HotelJobInstance) Wait() {
 	}
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
+		ji.printStats()
 		err := ji.hj.Stop()
 		assert.Nil(ji.T, err, "stop %v", err)
 	}

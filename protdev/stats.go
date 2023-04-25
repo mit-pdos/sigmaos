@@ -3,6 +3,7 @@ package protdev
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"sigmaos/stats"
 )
@@ -19,7 +20,7 @@ func (ms *MethodStat) String() string {
 }
 
 type RPCStats struct {
-	MStats map[string]*MethodStat
+	MStats sync.Map
 }
 
 type SigmaRPCStats struct {
@@ -34,21 +35,21 @@ func (st *SigmaRPCStats) String() string {
 }
 
 func mkStats() *RPCStats {
-	st := &RPCStats{}
-	st.MStats = make(map[string]*MethodStat)
-	return st
+	return &RPCStats{}
 }
 
 func (st *RPCStats) String() string {
 	s := "RPC stats:\n methods:\n"
-	for k, st := range st.MStats {
+	st.MStats.Range(func(key, value any) bool {
+		k := key.(string)
+		st := value.(*MethodStat)
 		s += fmt.Sprintf("  %s: %s\n", k, st.String())
-	}
+		return true
+	})
 	return s
 }
 
 type StatInfo struct {
-	sync.Mutex
 	st *RPCStats
 }
 
@@ -60,26 +61,31 @@ func MakeStatInfo() *StatInfo {
 
 func (si *StatInfo) Stats() *RPCStats {
 	n := uint64(0)
-	for _, st := range si.st.MStats {
-		n += st.N
+	si.st.MStats.Range(func(key, value any) bool {
+		st := value.(*MethodStat)
+		stN := atomic.LoadUint64(&st.N)
+		stTot := atomic.LoadInt64(&st.Tot)
+		n += stN
 		if st.N > 0 {
-			st.Avg = float64(st.Tot) / float64(st.N) / 1000.0
+			st.Avg = float64(stTot) / float64(stN) / 1000.0
 		}
-	}
+		return true
+	})
 	return si.st
 }
 
 func (sts *StatInfo) Stat(m string, t int64) {
-	sts.Lock()
-	defer sts.Unlock()
-	st, ok := sts.st.MStats[m]
+	var st *MethodStat
+	stif, ok := sts.st.MStats.Load(m)
 	if !ok {
 		st = &MethodStat{}
-		sts.st.MStats[m] = st
+		stif, _ = sts.st.MStats.LoadOrStore(m, st)
 	}
-	st.N += 1
-	st.Tot += t
-	if st.Max == 0 || t > st.Max {
-		st.Max = t
+	st = stif.(*MethodStat)
+	atomic.AddUint64(&st.N, 1)
+	atomic.AddInt64(&st.Tot, t)
+	oldMax := atomic.LoadInt64(&st.Max)
+	if oldMax == 0 || t > oldMax {
+		atomic.StoreInt64(&st.Max, t)
 	}
 }

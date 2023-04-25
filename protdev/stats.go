@@ -30,7 +30,10 @@ type SigmaRPCStats struct {
 
 func (st *SigmaRPCStats) String() string {
 	s := "Sigma stats:\n" + st.SigmapStat.String() + "\n"
-	s += fmt.Sprintf("RPC stats:\n methods:\n%v", st.RpcStat)
+	s += "RPC stats:\n methods:\n"
+	for m, st := range st.RpcStat {
+		s += fmt.Sprintf("  %s: %s\n", m, st.String())
+	}
 	return s
 }
 

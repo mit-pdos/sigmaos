@@ -181,7 +181,7 @@ func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQvers
 	return b, nil
 }
 
-func (sti *StatInfo) DisablePathCnts() {
+func (sti *StatInfo) EnablePathCnts() {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 

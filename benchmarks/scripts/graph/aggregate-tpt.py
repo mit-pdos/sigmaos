@@ -59,6 +59,19 @@ def extend_tpts_to_range(tpts, r):
     if last_tick[i] <= r[1]:
       tpts[i].append((r[1], last_tick[1]))
 
+# For now, only truncates after not before.
+def truncate_tpts_to_range(tpts, r):
+  if len(tpts) == 0:
+    return
+  new_tpts = []
+  for i in range(len(tpts)):
+    inner = []
+    for j in range(len(tpts[i])):
+      if tpts[i][j][0] <= r[1] or tpts[i][j][1] > 0.5:
+        inner.append(tpts[i][j])
+    new_tpts.append(inner)
+  return new_tpts
+
 def get_overall_time_range(ranges):
   start = sys.maxsize
   end = 0
@@ -199,8 +212,9 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
-    procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
-    assert(len(procd_tpts) == 2)
+    if mr_realm != "":
+      procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
+      assert(len(procd_tpts) == 2)
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
   procd_range = get_time_range(procd_tpts)
@@ -209,8 +223,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_lats = read_latencies(input_dir, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
-  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
+  time_range = get_overall_time_range([mr_range, hotel_range, hotel_lat_range])
+#  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
+  procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
   hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
@@ -221,7 +237,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
     fig, tptax, coresax = setup_graph(3, units, total_ncore)
   else:
-    fig, tptax, coresax = setup_graph(1, units, total_ncore)
+    if len(hotel_lats) > 0 and len(hotel_tpts) > 0:
+      fig, tptax, coresax = setup_graph(2, units, total_ncore)
+    else:
+      fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)

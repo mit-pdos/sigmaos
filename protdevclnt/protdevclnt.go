@@ -93,7 +93,7 @@ func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message)
 	return nil
 }
 
-func (pdc *ProtDevClnt) StatsClnt() *protdev.RPCStats {
+func (pdc *ProtDevClnt) StatsClnt() map[string]*protdev.MethodStat {
 	return pdc.si.Stats()
 }
 

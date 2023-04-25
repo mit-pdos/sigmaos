@@ -115,6 +115,6 @@ func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.SigmaRPCStats, error) {
 	return ssc.clnts[i].StatsSrv()
 }
 
-func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.RPCStats {
+func (ssc *ShardSvcClnt) StatsClnt(i int) map[string]*protdev.MethodStat {
 	return ssc.clnts[i].StatsClnt()
 }

@@ -25,12 +25,12 @@ type RPCStats struct {
 
 type SigmaRPCStats struct {
 	SigmapStat stats.Stats
-	RpcStat    RPCStats
+	RpcStat    map[string]*MethodStat
 }
 
 func (st *SigmaRPCStats) String() string {
 	s := "Sigma stats:\n" + st.SigmapStat.String() + "\n"
-	s += st.RpcStat.String()
+	s += fmt.Sprintf("RPC stats:\n methods:\n%v", st.RpcStat)
 	return s
 }
 
@@ -59,19 +59,29 @@ func MakeStatInfo() *StatInfo {
 	return si
 }
 
-func (si *StatInfo) Stats() *RPCStats {
+func (si *StatInfo) Stats() map[string]*MethodStat {
+	sto := make(map[string]*MethodStat)
 	n := uint64(0)
 	si.st.MStats.Range(func(key, value any) bool {
+		k := key.(string)
 		st := value.(*MethodStat)
 		stN := atomic.LoadUint64(&st.N)
 		stTot := atomic.LoadInt64(&st.Tot)
+		stMax := atomic.LoadInt64(&st.Max)
 		n += stN
+		var avg float64
 		if st.N > 0 {
-			st.Avg = float64(stTot) / float64(stN) / 1000.0
+			avg = float64(stTot) / float64(stN) / 1000.0
+		}
+		sto[k] = &MethodStat{
+			N:   stN,
+			Tot: stTot,
+			Max: stMax,
+			Avg: avg,
 		}
 		return true
 	})
-	return si.st
+	return sto
 }
 
 func (sts *StatInfo) Stat(m string, t int64) {

@@ -147,9 +147,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []*protdev.RPCStats {
+func (cc *CacheClnt) StatsClnt() []map[string]*protdev.MethodStat {
 	n := cc.Nshard()
-	stats := make([]*protdev.RPCStats, 0, n)
+	stats := make([]map[string]*protdev.MethodStat, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

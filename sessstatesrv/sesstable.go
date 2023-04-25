@@ -31,16 +31,6 @@ func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadm
 	return st
 }
 
-func (st *SessionTable) QueueLen() int64 {
-	st.RLock()
-	defer st.RUnlock()
-	len := int64(0)
-	for _, s := range st.sessions {
-		len += s.QueueLen()
-	}
-	return len
-}
-
 func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	st.RLock()
 	defer st.RUnlock()

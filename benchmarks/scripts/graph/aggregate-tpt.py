@@ -66,8 +66,15 @@ def truncate_tpts_to_range(tpts, r):
   new_tpts = []
   for i in range(len(tpts)):
     inner = []
+    # Allow for the util graph to go to zero for a bit.
+    runway = 10
+    already_increased = False
     for j in range(len(tpts[i])):
-      if tpts[i][j][0] <= r[1] or tpts[i][j][1] > 0.5:
+      if tpts[i][j][1] > 1.0:
+        already_increased = True
+      if tpts[i][j][0] <= r[1] or tpts[i][j][1] > 0.5 or (already_increased and runway > 0):
+        if already_increased and tpts[i][j][1] < 0.5:
+          runway = runway - 1
         inner.append(tpts[i][j])
     new_tpts.append(inner)
   return new_tpts

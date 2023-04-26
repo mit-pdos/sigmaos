@@ -81,7 +81,9 @@ fi
 
 for vm in $vms; do
     echo $vm
-    KERNELID="sigma-$(hosname)-$(echo $RANDOM | md5sum | head -c 8)"
+    # Get hostname.
+    HN=$(ssh -i key-$VPC.pem ubuntu@$vm hostname)
+    KERNELID="sigma-$HN-$(echo $RANDOM | md5sum | head -c 8)"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"

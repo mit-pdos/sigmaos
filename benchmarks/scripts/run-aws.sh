@@ -830,10 +830,7 @@ realm_balance_multi
 #hotel_tail
 #hotel_tail_reserve
 #hotel_tail_multi
-
-
-
-
+# XXX
 #mr_replicated_named
 #realm_burst
 #kv_vs_cached
@@ -846,11 +843,11 @@ realm_balance_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_realm_balance
-#graph_realm_balance_multi
-#graph_k8s_balance
-#graph_hotel_tail_tpt_over_time
-
+graph_realm_balance
+graph_realm_balance_multi
+graph_k8s_balance
+graph_hotel_tail_tpt_over_time
+# XXX
 #graph_mr_replicated_named
 #graph_realm_balance_be
 #graph_mr_vs_corral

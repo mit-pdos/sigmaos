@@ -47,7 +47,7 @@ if [ -z "$VPC" ] || [ -z "$KVPC" ] || [ -z "$TAG" ] || [ -z "$VERSION" ] || [ $#
     exit 1
 fi
 
-# REALM1 is always the BE realm, REALM2 is always the LC realm.
+# REALM1 is always the LC realm, REALM2 is always the BE realm.
 REALM1="benchrealm1"
 REALM2="benchrealm2"
 
@@ -473,10 +473,10 @@ realm_balance_multi() {
   hotel_dur="5s,5s,10s,15s,15s,20s,10s"
   hotel_max_rps="250,500,1000,1500,2000,2500,1000"
   hotel_ncache=3
-  sl="20s"
+  sl="10s"
   n_vm=8
   driver_vm=8
-###
+### Hotel client params
   n_clnt_vms=2
   sys="Sigmaos"
   cache_type="cached"
@@ -501,7 +501,7 @@ realm_balance_multi() {
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true
-  sleep 20s
+  sleep 10s
   for cli_vm in $clnt_vms ; do
     driver="false"
     if [[ $cli_vm == $driver_vm ]]; then
@@ -766,7 +766,7 @@ graph_realm_balance_multi() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
 }
 
 graph_realm_balance_be() {
@@ -787,7 +787,7 @@ graph_k8s_balance() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
 }
 
 #graph_mr_overlap() {

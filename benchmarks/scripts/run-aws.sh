@@ -168,8 +168,8 @@ run_mr() {
 }
 
 run_hotel() {
-  if [ $# -ne 10 ]; then
-    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr dur perf_dir driver async" 1>&2
+  if [ $# -ne 11 ]; then
+    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr dur sleep perf_dir driver async" 1>&2
     exit 1
   fi
   testname=$1
@@ -179,16 +179,17 @@ run_hotel() {
   cache_type=$5
   k8saddr=$6
   dur=$7
-  perf_dir=$8
-  driver=$9
-  async=${10}
+  slp=$8
+  perf_dir=$9
+  driver=${10}
+  async=${11}
   hotel_ncache=3
   hotel_cache_ncore=2
   cmd="
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur $dur --hotel_max_rps $rps --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
   "
 #    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   if [ "$sys" = "Sigmaos" ]; then
@@ -325,7 +326,7 @@ hotel_tail() {
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr "60s" $perf_dir true false
+      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr "60s" "0s" $perf_dir true false
 #      run_hotel $testname $rps $cli_vm 1 "memcached" $k8saddr "60s" $perf_dir true false
     done
   done
@@ -342,7 +343,7 @@ hotel_tail_reserve() {
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $testname $rps $cli_vm 1 "cached" "x.x.x.x" "60s" $perf_dir true false
+      run_hotel $testname $rps $cli_vm 1 "cached" "x.x.x.x" "60s" "0s" $perf_dir true false
 #      run_hotel $testname $rps $cli_vm 1 "memcached" "x.x.x.x" "60s" $perf_dir true false
     done
   done
@@ -437,7 +438,7 @@ hotel_tail_multi() {
     else
       testname=$testname_clnt
     fi
-    run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $dur $perf_dir $driver true
+    run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $dur "0s" $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
       sleep 30s
@@ -510,7 +511,7 @@ realm_balance_multi() {
     else
       testname=$testname_clnt
     fi
-    run_hotel $testname $hotel_max_rps $cli_vm $n_clnt_vms $cache_type $k8saddr $hotel_dur $perf_dir $driver true
+    run_hotel $testname $hotel_max_rps $cli_vm $n_clnt_vms $cache_type $k8saddr $hotel_dur $sl $perf_dir $driver true
   done
   # Wait for all clients to terminate.
   wait

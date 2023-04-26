@@ -407,7 +407,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "MR and Hotel done.")
 	_ = rs1
 	printResultSummary(rs1)
-	// rootts.Shutdown()
+	time.Sleep(20 * time.Second)
+	rootts.Shutdown()
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC

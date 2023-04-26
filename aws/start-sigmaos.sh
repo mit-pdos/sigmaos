@@ -60,8 +60,9 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
-vms_privaddr=`./lsvpc.py --privaddr $VPC | grep -w VMInstance | cut -d " " -f 6`
+vms_full=$(./lsvpc.py  --privaddr $VPC)
+vms=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 5`
+vms_privaddr=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
 vma_privaddr=($vms_privaddr)
@@ -82,8 +83,9 @@ fi
 for vm in $vms; do
     echo $vm
     # Get hostname.
-    HN=$(ssh -i key-$VPC.pem ubuntu@$vm hostname)
-    KERNELID="sigma-$HN-$(echo $RANDOM | md5sum | head -c 8)"
+    VM_IP=$(ssh -i key-$VPC.pem ubuntu@$vm hostname -i)
+    VM_NAME=$(echo "$vms_full" | grep $VM_IP | cut -d " " -f 2)
+    KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 8)"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"

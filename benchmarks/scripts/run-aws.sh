@@ -168,8 +168,8 @@ run_mr() {
 }
 
 run_hotel() {
-  if [ $# -ne 9 ]; then
-    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr perf_dir driver async " 1>&2
+  if [ $# -ne 10 ]; then
+    echo "run_hotel args: testname rps cli_vm nclnt cache_type k8saddr dur perf_dir driver async" 1>&2
     exit 1
   fi
   testname=$1
@@ -178,17 +178,19 @@ run_hotel() {
   nclnt=$4
   cache_type=$5
   k8saddr=$6
-  perf_dir=$7
-  driver=$8
-  async=$9
+  dur=$7
+  perf_dir=$8
+  driver=$9
+  async=${10}
   hotel_ncache=3
   hotel_cache_ncore=2
   cmd="
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur $dur --hotel_max_rps $rps --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
   "
+#    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
   else
@@ -307,7 +309,7 @@ mr_vs_corral() {
 
 hotel_tail() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  for sys in Sigmaos ; do #K8s ; do
+  for sys in Sigmaos K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
       cli_vm=8
@@ -319,11 +321,12 @@ hotel_tail() {
       LEADER_IP=$LEADER_IP_K8S
     fi
     # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
-    for rps in 1000 ; do
+    for rps in 1000 3000 ; do #3000 ; do
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr $perf_dir true false
+      run_hotel $testname $rps $cli_vm 1 "cached" $k8saddr "60s" $perf_dir true false
+#      run_hotel $testname $rps $cli_vm 1 "memcached" $k8saddr "60s" $perf_dir true false
     done
   done
 }
@@ -339,7 +342,8 @@ hotel_tail_reserve() {
       run=${FUNCNAME[0]}/$sys/$rps
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
-      run_hotel $testname $rps $cli_vm 1 "cached" "x.x.x.x" $perf_dir true false
+      run_hotel $testname $rps $cli_vm 1 "cached" "x.x.x.x" "60s" $perf_dir true false
+#      run_hotel $testname $rps $cli_vm 1 "memcached" "x.x.x.x" "60s" $perf_dir true false
     done
   done
 }
@@ -399,14 +403,15 @@ rpcbench_tail_multi() {
 
 hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  rps=2500
-#  sys="Sigmaos"
-  sys="K8s"
+  rps="250,500,1000,2000,2500,1000"
+  dur="10s,20s,20s,20s,20s,10s"
+  sys="Sigmaos"
+#  sys="K8s"
   cache_type="cached"
 #  cache_type="kvd"
   n_clnt_vms=4
   driver_vm=8
-  clnt_vma=($(echo "$driver_vm 9 10 11 12"))
+  clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
@@ -417,12 +422,12 @@ hotel_tail_multi() {
     vpc=$KVPC
     LEADER_IP=$LEADER_IP_K8S
   fi
-  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms"
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms-REDO"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"
   # Avoid doing duplicate work.
   if ! should_skip $perf_dir false ; then
-    continue
+    return
   fi
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -432,7 +437,7 @@ hotel_tail_multi() {
     else
       testname=$testname_clnt
     fi
-    run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $perf_dir $driver true
+    run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $dur $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
       sleep 30s
@@ -461,6 +466,55 @@ hotel_tail_multi() {
     echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
     return
   fi
+}
+
+realm_balance_multi() {
+  mrapp=mr-grep-wiki20G.yml
+  hotel_dur="5s,5s,10s,15s,15s,20s,10s"
+  hotel_max_rps="250,500,1000,1500,2000,2500,1000"
+  hotel_ncache=3
+  sl="20s"
+  n_vm=8
+  driver_vm=8
+###
+  n_clnt_vms=2
+  sys="Sigmaos"
+  cache_type="cached"
+  clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
+  clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
+  testname_clnt="HotelSigmaosJustCliSearch"
+  LEADER_IP=$LEADER_IP_SIGMA
+  vpc=$VPC
+  k8saddr="x.x.x.x"
+###
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
+  cmd="
+    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;\"; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+  "
+  # Start driver VM asynchronously.
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true
+  sleep 20s
+  for cli_vm in $clnt_vms ; do
+    driver="false"
+    if [[ $cli_vm == $driver_vm ]]; then
+      # Already started above.
+      continue
+    else
+      testname=$testname_clnt
+    fi
+    run_hotel $testname $hotel_max_rps $cli_vm $n_clnt_vms $cache_type $k8saddr $hotel_dur $perf_dir $driver true
+  done
+  # Wait for all clients to terminate.
+  wait
+  end_benchmark $vpc $perf_dir
 }
 
 realm_balance() {
@@ -684,6 +738,14 @@ graph_hotel_tail() {
   $GRAPH_SCRIPTS_DIR/tail_latency.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf 
 }
 
+graph_hotel_tail_tpt_over_time() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,2500,1000-nclnt-4-REDO"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
+}
+
 scrape_realm_burst() {
   fname=${FUNCNAME[0]}
   graph="${fname##scrape_}"
@@ -694,6 +756,13 @@ scrape_realm_burst() {
 }
 
 graph_realm_balance() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM1 --hotel_realm $REALM2 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+}
+
+graph_realm_balance_multi() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
@@ -756,15 +825,20 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+realm_balance_multi
+#realm_balance
+#hotel_tail
+#hotel_tail_reserve
+#hotel_tail_multi
+
+
+
+
 #mr_replicated_named
 #realm_burst
 #kv_vs_cached
 #mr_vs_corral
-realm_balance
 #realm_balance_be
-hotel_tail
-hotel_tail_reserve
-#hotel_tail_multi
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
@@ -772,11 +846,14 @@ hotel_tail_reserve
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+#graph_realm_balance
+#graph_realm_balance_multi
+#graph_k8s_balance
+#graph_hotel_tail_tpt_over_time
+
 #graph_mr_replicated_named
 #graph_realm_balance_be
-graph_realm_balance
 #graph_mr_vs_corral
-graph_k8s_balance
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability
 #graph_k8s_mr_aggregate_tpt

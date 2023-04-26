@@ -350,12 +350,12 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
 	// Structures for mr
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts1 := test.MakeRealmTstate(rootts, REALM2)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	p1 := makeRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for hotel
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	ts2 := test.MakeRealmTstate(rootts, REALM1)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
@@ -767,11 +767,11 @@ func TestMRK8s(t *testing.T) {
 func TestK8sBalanceHotelMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	// Structures for mr
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts1 := test.MakeRealmTstate(rootts, REALM2)
 	p1 := makeRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for hotel
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	ts2 := test.MakeRealmTstate(rootts, REALM1)
 	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
 	// Monitor cores assigned to MR.

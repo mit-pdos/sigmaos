@@ -84,7 +84,7 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
-	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
+	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
@@ -388,6 +388,13 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	<-mrjobs[0].ready
 	db.DPrintf(db.TEST, "MR setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
+	if N_CLNT > 1 {
+		// Wait for hotel clients to start up on other machines.
+		db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+		waitForClnts(rootts, N_CLNT)
+		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+	}
+	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	// Sleep for a bit
@@ -400,7 +407,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "MR and Hotel done.")
 	_ = rs1
 	printResultSummary(rs1)
-	rootts.Shutdown()
+	// rootts.Shutdown()
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -662,6 +669,8 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
+	// Sleep for a bit
+	time.Sleep(SLEEP)
 	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
 		rootts.Shutdown()
 		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))

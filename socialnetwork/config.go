@@ -52,7 +52,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	var cm *cacheclnt.CacheMgr
 	if nshard > 0 {
 		dbg.DPrintf(dbg.ALWAYS, "social network running with cached")
-		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), public)
+		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), true, public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err

@@ -46,6 +46,7 @@ var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
 var HOTEL_CACHE_NCORE int
+var HOTEL_IMG_SZ_MB string
 var CACHE_TYPE string
 var CACHE_GC bool
 
@@ -88,6 +89,7 @@ func init() {
 	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
+	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")

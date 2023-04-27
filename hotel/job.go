@@ -1,6 +1,7 @@
 package hotel
 
 import (
+	"os"
 	"path"
 	"strconv"
 
@@ -23,6 +24,37 @@ const (
 	TRACING        = false
 	N_RPC_SESSIONS = 10
 )
+
+var (
+	nhotel    int
+	imgSizeMB int
+)
+
+func init() {
+	nh := os.Getenv("NHOTEL")
+	if nh == "" {
+		// Defaults to 80, same as original DSB.
+		nhotel = 80
+	} else {
+		i, err := strconv.Atoi(nh)
+		if err != nil {
+			db.DFatalf("Can't parse nhotel: %v", err)
+		}
+		setNHotel(i)
+	}
+	isb := os.Getenv("HOTEL_IMG_SZ_MB")
+	if isb != "" {
+		i, err := strconv.Atoi(isb)
+		if err != nil {
+			db.DFatalf("Can't parse imgSize: %v", err)
+		}
+		imgSizeMB = i
+	}
+}
+
+func setNHotel(nh int) {
+	nhotel = nh
+}
 
 func JobDir(job string) string {
 	return path.Join(HOTELDIR, job)
@@ -96,7 +128,9 @@ type HotelJob struct {
 	kvf       *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, cacheNcore proc.Tcore, nsrv int, gc bool) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheNcore proc.Tcore, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+	setNHotel(nhotel)
+
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -141,7 +175,8 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
-		//		p.AppendEnv("GOGC", "off")
+		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
+		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetNcore(srv.Ncore)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

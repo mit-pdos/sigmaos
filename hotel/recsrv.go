@@ -169,7 +169,7 @@ func loadRecTable(path string) map[string]*Hotel {
 		h.HPrice = prices[i]
 		hs[h.HId] = h
 	}
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		hotel_id := strconv.Itoa(i)
 		lat := 37.7835 + float64(i)/500.0*3
 		lon := -122.41 + float64(i)/500.0*4

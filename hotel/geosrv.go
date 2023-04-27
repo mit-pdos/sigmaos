@@ -144,7 +144,7 @@ func newGeoIndex(path string) *geoindex.ClusteringIndex {
 	for _, point := range points {
 		index.Add(point)
 	}
-	for i := 7; i < NHOTEL; i++ {
+	for i := 7; i < nhotel; i++ {
 		p := &geoindex.GeoPoint{
 			Pid:  strconv.Itoa(i),
 			Plat: 37.7835 + float64(i)/500.0*3,

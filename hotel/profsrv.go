@@ -21,10 +21,6 @@ import (
 	"sigmaos/tracing"
 )
 
-const (
-	NHOTEL = 80
-)
-
 type ProfSrv struct {
 	dbc    *dbclnt.DbClnt
 	cachec cache.CacheClnt
@@ -99,7 +95,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 		}
 	}
 
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		p := Profile{
 			strconv.Itoa(i),
 			"St. Regis San Francisco",

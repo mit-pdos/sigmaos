@@ -9,6 +9,8 @@ import (
 
 	//	"go.opentelemetry.io/otel/trace"
 
+	gproto "google.golang.org/protobuf/proto"
+
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
@@ -21,6 +23,10 @@ import (
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
+)
+
+var (
+	sampleImg []byte
 )
 
 type RatePlans []*proto.RatePlan
@@ -68,6 +74,10 @@ func RunRateSrv(job string, public bool, cache string) error {
 	}
 	if err := r.initDB(rates); err != nil {
 		return err
+	}
+	sampleImg = make([]byte, imgSizeMB*sp.MBYTE)
+	for i := range sampleImg {
+		sampleImg[i] = 'A'
 	}
 	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	defer r.tracer.Flush()
@@ -119,6 +129,13 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 			if err != nil {
 				return err
 			}
+
+			b, err := gproto.Marshal(r)
+			if err != nil {
+				return err
+			}
+			db.DPrintf(db.ALWAYS, "Rate: Put %v bytes in cache for hotelID %v", len(b)+len(key), hotelId)
+
 			//			var span4 trace.Span
 			//			if TRACING {
 			//				_, span4 = s.tracer.StartContextSpan(sctx, "Cache.Put")
@@ -192,6 +209,7 @@ func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error)
 			Code:               rf.RoomCode,
 			Currency:           rf.RoomCurrency,
 			RoomDescription:    rf.RoomDescription,
+			Image:              sampleImg,
 		},
 	}
 	return r, nil
@@ -208,7 +226,7 @@ func (s *Rate) initDB(rates []*proto.RatePlan) error {
 			return err
 		}
 	}
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		if i%3 == 0 {
 			end_date := "2015-04-"
 			rate := 109.00

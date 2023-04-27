@@ -58,7 +58,7 @@ func makeTstate(t *testing.T, srvs []hotel.Srv, nshard int) *Tstate {
 	}
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, proc.Tcore(2), nshard)
+	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, cache, proc.Tcore(2), nshard, true)
 	assert.Nil(ts.T, err)
 	return ts
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -280,7 +281,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	cc, err := cacheclnt.MkCacheClnt(ts1.FsLib, job)
 	assert.Nil(t, err)
 
-	err = cc.Put("hello", "hello")
+	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	_, err = cacheclnt.MkCacheClnt(rootts.FsLib, job)
@@ -325,7 +326,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	cc, err := cacheclnt.MkCacheClnt(ts1.FsLib, job)
 	assert.Nil(t, err)
 
-	err = cc.Put("hello", "hello")
+	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	_, err = cacheclnt.MkCacheClnt(rootts.FsLib, job)

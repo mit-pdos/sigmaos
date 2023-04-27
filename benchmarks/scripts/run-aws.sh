@@ -406,6 +406,8 @@ hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps="250,500,1000,2000,2500,1000"
   dur="10s,20s,20s,20s,20s,10s"
+#  rps="2500"
+#  dur="60s"
   sys="Sigmaos"
 #  sys="K8s"
   cache_type="cached"
@@ -471,14 +473,14 @@ hotel_tail_multi() {
 
 realm_balance_multi() {
   mrapp=mr-grep-wiki20G.yml
-  hotel_dur="5s,5s,10s,15s,15s,20s,10s"
-  hotel_max_rps="250,500,1000,1500,2000,2500,1000"
+  hotel_dur="5s,5s,10s,15s,20s,15s"
+  hotel_max_rps="250,500,1000,1500,2000,1000"
   hotel_ncache=3
   sl="10s"
   n_vm=8
   driver_vm=8
 ### Hotel client params
-  n_clnt_vms=2
+  n_clnt_vms=3
   sys="Sigmaos"
   cache_type="cached"
   clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
@@ -827,10 +829,10 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 realm_balance_multi
+hotel_tail_multi
 #realm_balance
 #hotel_tail
 #hotel_tail_reserve
-#hotel_tail_multi
 # XXX
 #mr_replicated_named
 #realm_burst

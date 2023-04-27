@@ -107,7 +107,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 				}
 			}
 		}
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, cacheNcore, ncache)
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, cacheNcore, ncache, CACHE_GC)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		procs := sdc.GetRunningProcs()

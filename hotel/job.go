@@ -96,7 +96,7 @@ type HotelJob struct {
 	kvf       *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, cacheNcore proc.Tcore, nsrv int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, cacheNcore proc.Tcore, nsrv int, gc bool) (*HotelJob, error) {
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
 	var err error
@@ -109,7 +109,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, test.Overlays)
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, gc, test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err

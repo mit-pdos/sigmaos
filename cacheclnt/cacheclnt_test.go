@@ -34,7 +34,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tcore(CACHE_NCORE), test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tcore(CACHE_NCORE), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"

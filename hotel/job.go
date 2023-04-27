@@ -121,18 +121,21 @@ func MkHotelSvc(public bool) []Srv {
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
-	cacheClnt *cacheclnt.CacheClnt
-	cacheMgr  *cacheclnt.CacheMgr
-	pids      []proc.Tpid
-	cache     string
-	kvf       *kv.KVFleet
+	cacheClnt       *cacheclnt.CacheClnt
+	cacheMgr        *cacheclnt.CacheMgr
+	CacheAutoscaler *cacheclnt.Autoscaler
+	pids            []proc.Tpid
+	cache           string
+	kvf             *kv.KVFleet
 }
 
 func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheNcore proc.Tcore, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
+	var ca *cacheclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
 	// Init fs.
@@ -153,6 +156,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err
 			}
+			ca = cacheclnt.MakeAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, cacheNcore, "0", "manual")
@@ -189,10 +193,11 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 		pids = append(pids, p.GetPid())
 	}
 
-	return &HotelJob{sc, cc, cm, pids, cache, kvf}, nil
+	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf}, nil
 }
 
 func (hj *HotelJob) Stop() error {
+	hj.CacheAutoscaler.Stop()
 	for _, pid := range hj.pids {
 		if err := hj.Evict(pid); err != nil {
 			return err

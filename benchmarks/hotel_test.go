@@ -107,7 +107,12 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 				}
 			}
 		}
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheNcore, ncache, CACHE_GC, HOTEL_IMG_SZ_MB)
+		var nc = ncache
+		// Only start one cache if autoscaling.
+		if sigmaos && CACHE_TYPE == "cached" && HOTEL_CACHE_AUTOSCALE {
+			nc = 1
+		}
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheNcore, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		procs := sdc.GetRunningProcs()
@@ -137,6 +142,12 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			if err = ts.MountService(p, mnt); err != nil {
 				db.DFatalf("MountService %v", err)
 			}
+		}
+	}
+
+	if sigmaos {
+		if HOTEL_CACHE_AUTOSCALE && cachetype == "cached" {
+			ji.hj.CacheAutoscaler.Run(1*time.Second, ncache)
 		}
 	}
 

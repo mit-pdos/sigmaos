@@ -1,0 +1,59 @@
+package cacheclnt
+
+import (
+	"sync"
+	"time"
+
+	db "sigmaos/debug"
+	"sigmaos/protdev"
+)
+
+type Autoscaler struct {
+	sync.Mutex
+	cm   *CacheMgr
+	cc   *CacheClnt
+	done bool
+}
+
+func MakeAutoscaler(cm *CacheMgr, cc *CacheClnt) *Autoscaler {
+	return &Autoscaler{
+		cm: cm,
+		cc: cc,
+	}
+}
+
+func (a *Autoscaler) Run(freq time.Duration, max int) {
+	for !a.isDone() {
+		sts, err := a.cc.StatsSrv()
+		if err != nil {
+			db.DFatalf("Error stats srv: %v", err)
+		}
+		qlen := globalAvgQlen(sts)
+		db.DPrintf(db.ALWAYS, "Global avg cache Qlen %v\n%v", qlen, sts)
+		if qlen > 75.0 && len(sts) < max {
+			db.DPrintf(db.ALWAYS, "Scale caches up")
+			a.cm.AddShard()
+		}
+		time.Sleep(freq)
+	}
+}
+
+func (a *Autoscaler) isDone() bool {
+	a.Lock()
+	defer a.Unlock()
+	return a.done
+}
+
+func (a *Autoscaler) Stop() {
+	a.Lock()
+	defer a.Unlock()
+	a.done = true
+}
+
+func globalAvgQlen(sts []*protdev.SigmaRPCStats) float64 {
+	avg := float64(0.0)
+	for _, st := range sts {
+		avg += st.SigmapStat.AvgQlen
+	}
+	return avg / float64(len(sts))
+}

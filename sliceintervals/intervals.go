@@ -5,6 +5,7 @@ package sliceintervals
 //
 
 import (
+	"fmt"
 	"sort"
 
 	// db "sigmaos/debug"
@@ -21,6 +22,10 @@ func MkIInterval() sessp.IIntervals {
 
 func MkIvSlice() *IvSlice {
 	return &IvSlice{make([]*sessp.Tinterval, 0)}
+}
+
+func (ivs *IvSlice) String() string {
+	return fmt.Sprintf("start %v\n", ivs.entries[0])
 }
 
 func (ivs *IvSlice) Length() int {

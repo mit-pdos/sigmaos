@@ -9,7 +9,7 @@ import (
 	"sigmaos/sessp"
 )
 
-const ALLOC = true
+const ALLOC = false
 
 var MaxLevel = 7
 

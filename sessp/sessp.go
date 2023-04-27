@@ -192,6 +192,7 @@ func (iv *Tinterval) Marshal() string {
 }
 
 type IIntervals interface {
+	String() string
 	Delete(*Tinterval)
 	Insert(*Tinterval)
 	Length() int

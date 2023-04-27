@@ -23,8 +23,10 @@ func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
 	if out_date <= 9 {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
-	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
-	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	//	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
+	//	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	lat := 38.0235 + (float64(r.Intn(481*NHOTEL/80))-240.5)/1000.0
+	lon := -122.095 + (float64(r.Intn(325*NHOTEL/80))-157.0)/1000.0
 	return wc.Search(in_date_str, out_date_str, lat, lon)
 }
 
@@ -61,7 +63,7 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	if out_date <= 9 {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
-	hotelid := strconv.Itoa(r.Intn(80) + 1)
+	hotelid := strconv.Itoa(r.Intn(NHOTEL) + 1)
 	suffix := strconv.Itoa(r.Intn(500))
 	user := "Cornell_" + suffix
 	pw := MkPassword(suffix)

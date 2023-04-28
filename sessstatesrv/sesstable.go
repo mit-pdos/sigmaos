@@ -13,7 +13,7 @@ import (
 )
 
 type SessionTable struct {
-	sync.RWMutex
+	mu sync.RWMutex
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
 	mkps     sps.MkProtServer
@@ -32,15 +32,15 @@ func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadm
 }
 
 func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
-	st.RLock()
-	defer st.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 	sess, ok := st.sessions[sid]
 	return sess, ok
 }
 
 func (st *SessionTable) Alloc(cid sessp.Tclient, sid sessp.Tsession) *Session {
-	st.RLock()
-	defer st.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 
 	return st.allocRL(cid, sid)
 }
@@ -58,14 +58,14 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 		} else {
 			if i == 0 {
 				// Session not in the session table. Upgrade to write lock.
-				st.RUnlock()
-				st.Lock()
+				st.mu.RUnlock()
+				st.mu.Lock()
 				// Make sure to re-lock the reader lock, as the caller expects it to be
 				// held.
-				defer st.RLock()
+				defer st.mu.RLock()
 				// Defer statements happen in LIFO order, so make sure to unlock the
 				// writer lock before the reader lock is taken.
-				defer st.Unlock()
+				defer st.mu.Unlock()
 				// Retry to see if the session is now in the table. This may happen if
 				// between releasing the reader lock and grabbing the writer lock another
 				// caller sneaked in, grabbed the writer lock, and allocated the session.
@@ -83,8 +83,8 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 }
 
 func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
-	st.RLock()
-	defer st.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 
 	for sid, _ := range hbs.Sids {
 		sess := st.allocRL(0, sessp.Tsession(sid))
@@ -107,14 +107,14 @@ func (st *SessionTable) SessThread(sid sessp.Tsession) *threadmgr.ThreadMgr {
 
 func (st *SessionTable) KillSessThread(sid sessp.Tsession) {
 	t := st.SessThread(sid)
-	st.RLock()
-	defer st.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 	st.tm.RemoveThread(t)
 }
 
 func (st *SessionTable) LastSession() *Session {
-	st.RLock()
-	defer st.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 	if st.last != nil {
 		return st.last
 	}

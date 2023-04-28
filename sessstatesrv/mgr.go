@@ -44,8 +44,8 @@ func (sm *SessionMgr) CloseConn() {
 // Find connected sessions.
 func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
 	// Lock the session table.
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 	sess := make(map[uint64]bool, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
@@ -60,8 +60,8 @@ func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 	sess := make([]*Session, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
@@ -99,15 +99,15 @@ func (sm *SessionMgr) runDetaches() {
 }
 
 func (sm *SessionMgr) Done() bool {
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 
 	return sm.done
 }
 
 func (sm *SessionMgr) Stop() {
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.Lock()
+	defer sm.st.mu.Unlock()
 
 	sm.done = true
 }

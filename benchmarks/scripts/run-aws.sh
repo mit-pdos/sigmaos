@@ -72,15 +72,22 @@ mkdir $OUT_DIR
 # ========== Helpers ==========
 
 start_cluster() {
-  if [ $# -ne 3 ]; then
-    echo "start_cluster args: vpc n_cores n_vm" 1>&2
+  if [ $# -ne 4 ]; then
+    echo "start_cluster args: vpc n_cores n_vm swap" 1>&2
     exit 1
   fi
   vpc=$1
   n_cores=$2
   n_vm=$3
+  swap=$4
   cd $AWS_DIR
   echo "" > $INIT_OUT
+  if [[ $swap == "swapon" ]]; then
+    # Enable 16GiB of swap.
+    ./setup-swap.sh --vpc $vpc --parallel --n 16777216 >> $INIT_OUT 2>&1
+  else
+    ./setup-swap.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
+  fi
   ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
   ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
   cd $DIR
@@ -119,8 +126,8 @@ end_benchmark() {
 }
 
 run_benchmark() {
-  if [ $# -ne 8 ]; then
-    echo "run_benchmark args: vpc n_cores n_vm perf_dir cmd vm is_driver async" 1>&2
+  if [ $# -ne 9 ]; then
+    echo "run_benchmark args: vpc n_cores n_vm perf_dir cmd vm is_driver async swap" 1>&2
     exit 1
   fi
   vpc=$1
@@ -131,13 +138,14 @@ run_benchmark() {
   vm=$6 # benchmark driver vm index (usually 0)
   is_driver=$7
   async=$8
+  swap=$9
   # Start the cluster if this is the benchmark driver.
   if [[ $is_driver == "true" ]]; then
     # Avoid doing duplicate work.
     if ! should_skip $perf_dir true ; then
       return 0
     fi
-    start_cluster $vpc $n_cores $n_vm
+    start_cluster $vpc $n_cores $n_vm $swap
   fi
   cd $AWS_DIR
   # Start the benchmark as a background task.
@@ -164,7 +172,7 @@ run_mr() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 run_hotel() {
@@ -204,7 +212,7 @@ run_hotel() {
     vpc=$KVPC
   fi
   n_cores=4
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
 run_rpcbench() {
@@ -233,7 +241,7 @@ run_rpcbench() {
     vpc=$KVPC
   fi
   n_cores=4
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
 run_kv() {
@@ -253,7 +261,7 @@ run_kv() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 run_cached() {
@@ -271,7 +279,7 @@ run_cached() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false
+  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 # ========== Top-level benchmarks ==========
@@ -515,7 +523,7 @@ realm_balance_multi() {
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
   sleep 10s
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -550,7 +558,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance_be() {
@@ -568,7 +576,7 @@ realm_balance_be() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 k8s_balance() {
@@ -607,7 +615,7 @@ k8s_balance() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --rootNamedIP $k8sleaderip --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 mr_k8s() {
@@ -626,7 +634,7 @@ mr_k8s() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 #mr_overlap() {
@@ -712,7 +720,7 @@ realm_burst() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false
+  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 # ========== Make Graphs ==========

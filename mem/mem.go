@@ -12,17 +12,17 @@ import (
 var totalMem proc.Tmem
 
 func init() {
-	totalMem = getTotalMem()
+	totalMem = getMem("MemTotal")
 }
 
-func getTotalMem() proc.Tmem {
+func getMem(pat string) proc.Tmem {
 	b, err := ioutil.ReadFile("/proc/meminfo")
 	if err != nil {
 		db.DFatalf("Can't read /proc/meminfo: %v", err)
 	}
 	lines := strings.Split(string(b), "\n")
 	for _, l := range lines {
-		if strings.Contains(l, "MemTotal") {
+		if strings.Contains(l, pat) {
 			s := strings.Split(l, " ")
 			kbStr := s[len(s)-2]
 			kb, err := strconv.Atoi(kbStr)
@@ -39,4 +39,9 @@ func getTotalMem() proc.Tmem {
 // Total amount of memory, in MB.
 func GetTotalMem() proc.Tmem {
 	return totalMem
+}
+
+// Available amount of memory, in MB.
+func GetAvailableMem() proc.Tmem {
+	return getMem("MemAvailable")
 }

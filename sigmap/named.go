@@ -33,8 +33,8 @@ const (
 	CACHEREL = "cache"
 	CACHE    = NAMED + CACHEREL + "/"
 
-	// XXX Remove
 	MEMCACHED = "name/memcached"
+	MEMBLOCK  = "name/memblock"
 
 	HOTELREL     = "hotel"
 	HOTEL        = NAMED + HOTELREL + "/"

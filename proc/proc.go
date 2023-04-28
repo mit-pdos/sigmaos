@@ -190,6 +190,10 @@ func (p *Proc) GetRealm() sp.Trealm {
 	return sp.Trealm(p.ProcProto.RealmStr)
 }
 
+func (p *Proc) SetType(t Ttype) {
+	p.ProcProto.TypeInt = uint32(t)
+}
+
 func (p *Proc) SetRealm(r sp.Trealm) {
 	p.ProcProto.RealmStr = r.String()
 }

@@ -299,6 +299,7 @@ func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, s
 }
 
 func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
+	defer ssrv.qlen.Dec()
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).
@@ -307,9 +308,6 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
 	}
-
-	defer ssrv.qlen.Dec()
-
 	// If this is a replicated op received through raft (not
 	// directly from a client), the first time Alloc is called
 	// will be in this function, so the conn will be set to

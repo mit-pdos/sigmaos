@@ -146,7 +146,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	}
 
 	if sigmaos {
-		if HOTEL_CACHE_AUTOSCALE && cachetype == "cached" {
+		if HOTEL_CACHE_AUTOSCALE && cachetype == "cached" && !ji.justCli {
 			ji.hj.CacheAutoscaler.Run(1*time.Second, ncache)
 		}
 	}

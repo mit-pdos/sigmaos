@@ -96,6 +96,50 @@ func countClusterCores(rootts *test.Tstate) proc.Tcore {
 	return ncores
 }
 
+// Block off physical memory on every machine
+func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
+	if mem == "0MB" {
+		db.DPrintf(db.TEST, "No mem blocking")
+	}
+	sdc := scheddclnt.MakeScheddClnt(rootts.SigmaClnt, sp.ROOTREALM)
+	// Get the number of schedds.
+	n, err := sdc.Nschedd()
+	if err != nil {
+		db.DFatalf("Can't count nschedd: %v", err)
+	}
+	ps := make([]*proc.Proc, 0, n)
+	for i := 0; i < n; i++ {
+		db.DPrintf(db.TEST, "Spawning memblock %v for %v of memory", i, mem)
+		p := proc.MakeProc("memblock", []string{mem})
+		// Make it LC so it doesn't get swapped.
+		p.SetType(proc.T_LC)
+		_, errs := rootts.SpawnBurst([]*proc.Proc{p}, 1)
+		assert.True(rootts.T, len(errs) == 0, "Error spawn: %v", errs)
+		if len(errs) > 0 {
+			db.DFatalf("Can't spawn blockers: %v", err)
+		}
+		err := rootts.WaitStart(p.GetPid())
+		assert.Nil(rootts.T, err, "Error waitstart: %v", err)
+		if err != nil {
+			db.DFatalf("Error waitstart blocker: %v", err)
+		}
+		ps = append(ps, p)
+	}
+	db.DPrintf(db.TEST, "Done spawning memblockers")
+	return ps
+}
+
+func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
+	for _, p := range ps {
+		err := ts.Evict(p.GetPid())
+		assert.Nil(ts.T, err, "Evict: %v", err)
+		status, err := ts.WaitExit(p.GetPid())
+		if err != nil || !status.IsStatusEvicted() {
+			db.DFatalf("Err waitexit blockers: status %v err %v", status, err)
+		}
+	}
+}
+
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate) {
 	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())

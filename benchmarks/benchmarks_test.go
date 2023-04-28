@@ -51,6 +51,7 @@ var HOTEL_IMG_SZ_MB int
 var HOTEL_CACHE_AUTOSCALE bool
 var CACHE_TYPE string
 var CACHE_GC bool
+var BLOCK_MEM string
 
 // XXX Remove
 var MEMCACHED_ADDRS string
@@ -96,6 +97,7 @@ func init() {
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
+	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
@@ -357,6 +359,7 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
 	// Structures for mr
 	ts1 := test.MakeRealmTstate(rootts, REALM2)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
@@ -416,6 +419,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	_ = rs1
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
+	evictMemBlockers(rootts, blockers)
 	rootts.Shutdown()
 }
 

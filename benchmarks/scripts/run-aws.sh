@@ -518,7 +518,7 @@ realm_balance_multi() {
     return
   fi
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "

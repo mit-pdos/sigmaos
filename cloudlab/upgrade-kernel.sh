@@ -9,7 +9,7 @@ fi
 echo "$0 $1"
 
 DIR=$(dirname $0)
-BLKDEV=/dev/nvme0n1p4
+BLKDEV=/dev/sda4
 KERNEL=6.1.24
 
 . $DIR/config
@@ -20,8 +20,9 @@ sudo chsh -s /bin/bash arielck
 ENDSSH
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
-BLKDEV=/dev/nvme0n1p4
+BLKDEV=/dev/sda4
 KERNEL=6.1.24
+export USER=arielck
 sudo mkfs -t ext4 $BLKDEV
 sudo mount $BLKDEV /var/local
 sudo mkdir /var/local/$USER
@@ -49,10 +50,11 @@ yes "" | make -C ../linux-$KERNEL O=/var/local/$USER/kernel/kbuild-$KERNEL confi
 sed -ri '/CONFIG_SYSTEM_TRUSTED_KEYS/s/=.+/=""/g' .config
 sed -ri 's/CONFIG_SATA_AHCI=m/CONFIG_SATA_AHCI=y/g' .config
 sed -ri 's/CONFIG_SYSTEM_REVOCATION_LIST=y/CONFIG_SYSTEM_REVOCATION_LIST=n/g' .config
+sudo apt install -y dwarves
 sudo make -j$(nproc) 
 INSTALL_MOD_STRIP=1 sudo make -j$(nproc) modules_install
 INSTALL_MOD_STRIP=1 sudo make -j$(nproc) install
-#sudo reboot
+sudo reboot
 
 ENDSSH
 

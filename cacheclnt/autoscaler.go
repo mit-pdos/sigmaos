@@ -23,6 +23,16 @@ func MakeAutoscaler(cm *CacheMgr, cc *CacheClnt) *Autoscaler {
 }
 
 func (a *Autoscaler) Run(freq time.Duration, max int) {
+	go a.run(freq, max)
+}
+
+func (a *Autoscaler) Stop() {
+	a.Lock()
+	defer a.Unlock()
+	a.done = true
+}
+
+func (a *Autoscaler) run(freq time.Duration, max int) {
 	for !a.isDone() {
 		sts, err := a.cc.StatsSrv()
 		if err != nil {
@@ -42,12 +52,6 @@ func (a *Autoscaler) isDone() bool {
 	a.Lock()
 	defer a.Unlock()
 	return a.done
-}
-
-func (a *Autoscaler) Stop() {
-	a.Lock()
-	defer a.Unlock()
-	a.done = true
 }
 
 func globalAvgQlen(sts []*protdev.SigmaRPCStats) float64 {

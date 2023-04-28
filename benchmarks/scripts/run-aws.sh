@@ -409,8 +409,10 @@ rpcbench_tail_multi() {
 
 hotel_tail_multi() {
   k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  rps="250,500,1000,2000,2500,1000"
-  dur="10s,20s,20s,20s,20s,10s"
+  rps="250,500,1000,2000,1000"
+  dur="10s,20s,20s,20s,10s"
+#  rps="250,500,1000,2000,2500,1000"
+#  dur="10s,20s,20s,20s,20s,10s"
 #  rps="2500"
 #  dur="60s"
   sys="Sigmaos"
@@ -431,7 +433,11 @@ hotel_tail_multi() {
     vpc=$KVPC
     LEADER_IP=$LEADER_IP_K8S
   fi
-  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms-scalecache-$scale_cache-REDO"
+  pn=""
+  if [[ $scale_cache == "true" ]]; then
+    pn="-scalecache-true"
+  fi
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms$pn-REDO"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"
   # Avoid doing duplicate work.
@@ -750,7 +756,15 @@ graph_hotel_tail() {
 graph_hotel_tail_tpt_over_time() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
-  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,2500,1000-nclnt-4-REDO"
+  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4-REDO"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
+}
+
+graph_hotel_tail_tpt_over_time_autoscale() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4-scalecache-true-REDO"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
 }
@@ -856,6 +870,7 @@ graph_realm_balance
 graph_realm_balance_multi
 graph_k8s_balance
 graph_hotel_tail_tpt_over_time
+graph_hotel_tail_tpt_over_time_autoscale
 # XXX
 #graph_mr_replicated_named
 #graph_realm_balance_be

@@ -80,6 +80,8 @@ if [ ! -z "$TAG" ]; then
   ./update-repo.sh --vpc $VPC --parallel --branch jaeger # docker-dev
 fi
 
+vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
+
 for vm in $vms; do
     echo $vm
     # Get hostname.
@@ -90,7 +92,7 @@ for vm in $vms; do
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
-    ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
+    ./ulambda/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
     echo "ncores:"
     nproc
   else

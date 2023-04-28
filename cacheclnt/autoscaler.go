@@ -8,6 +8,10 @@ import (
 	"sigmaos/protdev"
 )
 
+const (
+	QLEN_SCALE_THRESHOLD = 2.0
+)
+
 type Autoscaler struct {
 	sync.Mutex
 	cm   *CacheMgr
@@ -39,8 +43,8 @@ func (a *Autoscaler) run(freq time.Duration, max int) {
 			db.DFatalf("Error stats srv: %v", err)
 		}
 		qlen := globalAvgQlen(sts)
-		db.DPrintf(db.ALWAYS, "Global avg cache Qlen %v\n%v", qlen, sts)
-		if qlen > 75.0 && len(sts) < max {
+		db.DPrintf(db.ALWAYS, "Global avg cache Qlen: %v", qlen)
+		if qlen > QLEN_SCALE_THRESHOLD && len(sts) < max {
 			db.DPrintf(db.ALWAYS, "Scale caches up")
 			a.cm.AddShard()
 		}

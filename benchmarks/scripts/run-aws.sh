@@ -495,6 +495,7 @@ realm_balance_multi() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
+  mem_pressure="true"
   hotel_ncache=3
   sl="10s"
   n_vm=8
@@ -510,7 +511,14 @@ realm_balance_multi() {
   vpc=$VPC
   k8saddr="x.x.x.x"
 ###
-  run=${FUNCNAME[0]}
+  swap="swapoff"
+  bmem=""
+  if [[ $mem_pressure == "true" ]]; then
+    memp="-mempressure"
+    swap="swapon"
+    bmem="--block_mem 12GiB"
+  fi
+  run=${FUNCNAME[0]}$memp
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   # Avoid doing duplicate work.
@@ -520,10 +528,10 @@ realm_balance_multi() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRHotel --rootNamedIP $LEADER_IP --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
   sleep 10s
   for cli_vm in $clnt_vms ; do
     driver="false"

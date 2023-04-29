@@ -52,11 +52,11 @@ REALM1="benchrealm1"
 REALM2="benchrealm2"
 
 # Set some variables
-DIR=$(realpath $(dirname $0)/../..)
-AWS_DIR=$DIR/aws
-OUT_DIR=$DIR/benchmarks/results/$VERSION
-GRAPH_SCRIPTS_DIR=$DIR/benchmarks/scripts/graph
-GRAPH_OUT_DIR=$DIR/benchmarks/results/graphs
+ROOT_DIR=$(realpath $(dirname $0)/../..)
+AWS_DIR=$ROOT_DIR/aws
+OUT_DIR=$ROOT_DIR/benchmarks/results/$VERSION
+GRAPH_SCRIPTS_DIR=$ROOT_DIR/benchmarks/scripts/graph
+GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 INIT_OUT=/tmp/init.out
 
 # Get the private IP address of the leader.
@@ -66,7 +66,7 @@ LEADER_IP_K8S=$(./leader-ip.sh --vpc $KVPC)
 LEADER_IP=$LEADER_IP_SIGMA
 
 # cd to the sigmaos root directory
-cd $DIR
+cd $ROOT_DIR
 mkdir $OUT_DIR
 
 # ========== Helpers ==========
@@ -90,7 +90,7 @@ start_cluster() {
   fi
   ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
   ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
-  cd $DIR
+  cd $ROOT_DIR
 }
 
 should_skip() {
@@ -122,7 +122,7 @@ end_benchmark() {
   perf_dir=$2
   cd $AWS_DIR
   ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
-  cd $DIR
+  cd $ROOT_DIR
 }
 
 run_benchmark() {
@@ -150,7 +150,7 @@ run_benchmark() {
   cd $AWS_DIR
   # Start the benchmark as a background task.
   ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm &
-  cd $DIR
+  cd $ROOT_DIR
   # Wait for it to complete, if this benchmark is being run synchronously.
   if [[ $async == "false" ]] ; then
     wait
@@ -322,7 +322,7 @@ mr_vs_corral() {
 }
 
 hotel_tail() {
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   for sys in Sigmaos K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
@@ -363,7 +363,7 @@ hotel_tail_reserve() {
 }
 
 rpcbench_tail_multi() {
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
@@ -416,7 +416,7 @@ rpcbench_tail_multi() {
 
 
 hotel_tail_multi() {
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps="250,500,1000,2000,1000"
   dur="10s,20s,20s,20s,10s"
 #  rps="250,500,1000,2000,2500,1000"
@@ -500,6 +500,7 @@ realm_balance_multi() {
   sl="10s"
   n_vm=8
   driver_vm=8
+  sl2="10s"
 ### Hotel client params
   n_clnt_vms=3
   sys="Sigmaos"
@@ -514,9 +515,10 @@ realm_balance_multi() {
   swap="swapoff"
   bmem=""
   if [[ $mem_pressure == "true" ]]; then
-    memp="-mempressure"
+    memp="_mempressure"
     swap="swapon"
     bmem="--block_mem 12GiB"
+    sl2="90s"
   fi
   run=${FUNCNAME[0]}$memp
   echo "========== Running $run =========="
@@ -532,7 +534,7 @@ realm_balance_multi() {
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
-  sleep 10s
+  sleep $sl2
   for cli_vm in $clnt_vms ; do
     driver="false"
     if [[ $cli_vm == $driver_vm ]]; then
@@ -597,7 +599,7 @@ k8s_balance() {
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   # Stop Hotel
-  cd aws
+  cd $AWS_DIR
   echo "Stopping hotel"
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
@@ -611,7 +613,7 @@ k8s_balance() {
   echo "Starting mr"
   ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
   cd ..
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
@@ -628,7 +630,7 @@ k8s_balance() {
 
 mr_k8s() {
   n_vm=1
-  k8saddr="$(cd aws; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   s3dir="corralperf/k8s"
   app="mr-k8s-grep"
   run=${FUNCNAME[0]}/$app
@@ -802,6 +804,13 @@ graph_realm_balance() {
 }
 
 graph_realm_balance_multi() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+}
+
+graph_realm_balance_multi_mempressure() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="

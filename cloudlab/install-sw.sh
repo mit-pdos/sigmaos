@@ -114,7 +114,6 @@ fi
 
 if [ ! -f ~/packages ];
 then
-  touch ~/packages
   sudo apt update
   sudo apt install -y gcc \
   make \
@@ -160,6 +159,7 @@ then
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
+  touch ~/packages
 fi
 
 # Add to docker group

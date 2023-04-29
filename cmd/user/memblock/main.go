@@ -34,6 +34,7 @@ func main() {
 	if _, err := sc.Create(path.Join(sp.MEMBLOCK, proc.GetKernelId()), 0777, 0); err != nil {
 		db.DFatalf("Unexpected putfile err: %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Allocating %v bytes of memory", m)
 	nthread := int(linuxsched.NCores)
 	ch := make(chan []byte)
 	// Allocate and write memory in parallel, to force OS allocation.

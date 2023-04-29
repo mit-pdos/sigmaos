@@ -87,7 +87,7 @@ for vm in $vms; do
     # Get hostname.
     VM_IP=$(ssh -i key-$VPC.pem ubuntu@$vm hostname -i)
     VM_NAME=$(echo "$vms_full" | grep $VM_IP | cut -d " " -f 2)
-    KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 8)"
+    KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"

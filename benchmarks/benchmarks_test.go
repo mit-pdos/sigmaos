@@ -646,6 +646,10 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 		p := makeRealmPerf(ts1)
 		defer p.Done()
 		monitorCPUUtil(ts1, p)
+	} else {
+		p := makeRealmPerf(ts1)
+		defer p.Done()
+		monitorK8sCPUUtil(ts1, p, "hotel")
 	}
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)

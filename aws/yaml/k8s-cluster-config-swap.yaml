@@ -9,7 +9,7 @@ bootstrapTokens:
   - authentication
 kind: InitConfiguration
 localAPIEndpoint:
-  advertiseAddress: 10.0.28.8
+  advertiseAddress: x.x.x.x
   bindPort: 6443
 nodeRegistration:
   criSocket: unix:///var/run/containerd/containerd.sock

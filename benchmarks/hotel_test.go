@@ -174,6 +174,10 @@ func (ji *HotelJobInstance) StartHotelJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
+	_, err := ji.wc.StartRecording()
+	if err != nil {
+		db.DFatalf("Can't start recording: %v", err)
+	}
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()

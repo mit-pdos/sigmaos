@@ -25,6 +25,7 @@ import (
 type Www struct {
 	*sigmaclnt.SigmaClnt
 	p        *perf.Perf
+	record   bool
 	job      string
 	tracer   *tracing.Tracer
 	userc    *protdevclnt.ProtDevClnt
@@ -94,6 +95,7 @@ func RunWww(job string, public bool) error {
 	mux.HandleFunc("/recommendations", www.recommendHandler)
 	mux.HandleFunc("/reservation", www.reservationHandler)
 	mux.HandleFunc("/geo", www.geoHandler)
+	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 	//	}
 
 	if public {
@@ -170,7 +172,9 @@ func (s *Www) done() error {
 }
 
 func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	//	var span trace.Span
 	//	var sctx *tproto.SpanContextConfig
 	//	if TRACING {
@@ -216,7 +220,9 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	//	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {
@@ -334,7 +340,9 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	//	var span trace.Span
 	//	var sctx *tproto.SpanContextConfig
 	//	if TRACING {
@@ -402,7 +410,9 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	//	var span trace.Span
 	//	var sctx *tproto.SpanContextConfig
 	//	if TRACING {
@@ -500,7 +510,9 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	//	var span trace.Span
 	//	var sctx *tproto.SpanContextConfig
 	//	if TRACING {
@@ -543,6 +555,30 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	db.DPrintf(db.HOTEL_WWW, "Geo Nearby: %v %v\n", greq, gres)
 
 	str := "Geo!"
+
+	reply := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(reply)
+}
+
+func (s *Www) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "Geo")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
+
+	s.record = true
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	db.DPrintf(db.HOTEL_WWW, "Start recording")
+
+	str := "Started recording!"
 
 	reply := map[string]interface{}{
 		"message": str,

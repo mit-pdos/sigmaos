@@ -796,7 +796,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	db.DPrintf(db.TEST, "Starting hotel")
 	done := make(chan bool)
 	go func() {
-		testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		testHotel(rootts, ts2, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 			hotel.RandSearchReq(wc, r)
 		})
 		done <- true

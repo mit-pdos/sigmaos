@@ -52,7 +52,7 @@ SSHVM="${vma[$VM]}"
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH
   # Make sure swap is off on the benchmark machines.
-  sudo swapoff /swapfile
+  sudo swapoff -a
   cd ulambda
   source ./env/env.sh
   export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;"

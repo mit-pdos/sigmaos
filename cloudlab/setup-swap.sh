@@ -55,18 +55,18 @@ for vm in $vms; do
   echo "Setup/disable swap $NSWAP for $vm"
   install="
     ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm /bin/bash <<ENDSSH
-    sudo swapoff /swapfile
+    sudo swapoff -a
     if [ -z "$NSWAP" ]; then
       echo 'Disable swap'
     else
        # Make swap file, if it hasn't been made already.
-       if [ ! -f /swapfile ]; then
-         sudo dd if=/dev/zero of=/swapfile bs=1024 count=$NSWAP
-         sudo chmod 600 /swapfile
-         sudo mkswap /swapfile
+       if [ ! -f /var/local/swapfile ]; then
+         sudo dd if=/dev/zero of=/var/local/swapfile bs=1024 count=$NSWAP
+         sudo chmod 600 /var/local/swapfile
+         sudo mkswap /var/local/swapfile
        fi
        echo 'Enable swap'
-       sudo swapon /swapfile
+       sudo swapon /var/local/swapfile
     fi
 ENDSSH"
   if [ -z "$PARALLEL" ]; then

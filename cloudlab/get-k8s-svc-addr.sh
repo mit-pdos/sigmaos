@@ -1,17 +1,15 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --svc SVC_NAME" 1>&2
+  echo "Usage: $0 --svc SVC_NAME" 1>&2
 }
 
-VPC=""
 SVC_NAME=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --vpc)
     shift
-    VPC=$1
     shift
     ;;
   --svc)
@@ -31,7 +29,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ -z "$SVC_NAME" ] || [ $# -gt 0 ]; then
+if [ -z "$SVC_NAME" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi

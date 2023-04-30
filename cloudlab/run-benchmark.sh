@@ -8,6 +8,10 @@ VM=0
 COMMAND=""
 while [[ $# -gt 0 ]]; do
   case $1 in
+  --vpc)
+    shift
+    shift
+    ;;
   --command)
     shift
     COMMAND=$1

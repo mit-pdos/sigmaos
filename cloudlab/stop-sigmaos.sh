@@ -9,6 +9,10 @@ PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --vpc)
+    shift
+    shift
+    ;;
   --n)
     shift
     N_VM=$1

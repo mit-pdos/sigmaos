@@ -11,9 +11,6 @@ DIR=$(dirname $0)
 
 echo "Installing kubernetes components"
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
-  # Increase root's open file ulimits.
-  bash -c "echo \"root hard nofile 20000\" | sudo tee -a /etc/security/limits.conf"
-  bash -c "echo \"root soft nofile 20000\" | sudo tee -a /etc/security/limits.conf"
   bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
   bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
   bash -c "sudo apt update"
@@ -31,7 +28,6 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
   bash -c "sudo apt update"
   bash -c "sudo apt install -y helm"
   bash -c "helm repo add stable https://charts.helm.sh/stable"
-#    bash -c "sudo swapoff -a"
   bash -c "echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf"
   bash -c "printf \"net.bridge.bridge-nf-call-ip6tables = 1\nnet.bridge.bridge-nf-call-iptables = 1\" | sudo tee /etc/sysctl.d/k8s.conf"
   bash -c "sudo sysctl --system"
@@ -47,8 +43,8 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
   bash -c "sudo systemctl restart kubelet"
   bash -c "sudo systemctl restart containerd"
   bash -c "sudo groupadd docker"
-  bash -c "sudo usermod -aG docker ubuntu"
-  bash -c "sudo usermod -aG docker ubuntu"
+  bash -c "sudo usermod -aG docker arielck"
+  bash -c "sudo usermod -aG docker arielck"
   # For DeathStarBench
   bash -c "sudo apt install -y docker-compose luarocks libssl-dev zlib1g-dev"
   bash -c "sudo luarocks install luasocket"

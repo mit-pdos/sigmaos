@@ -15,6 +15,10 @@ NSWAP=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --vpc)
+    shift
+    shift
+    ;;
   --n)
     shift
     NSWAP=$1

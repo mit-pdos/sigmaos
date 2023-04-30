@@ -7,6 +7,10 @@ usage() {
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --vpc)
+    shift
+    shift
+    ;;
   -help)
     usage
     exit 0

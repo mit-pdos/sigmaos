@@ -9,6 +9,10 @@ PERF_DIR=../benchmarks/results/$(date +%s)
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --vpc)
+    shift
+    shift
+    ;;
   --perfdir)
     shift
     PERF_DIR=$1

@@ -128,11 +128,11 @@ done
 if ! [ -z "$TAINT" ]; then
   x1=$(echo $TAINT | cut -d ":" -f1)
   x2=$(echo $TAINT | cut -d ":" -f2)
-  to_taint="${vma_privaddr[@]:$x1:$x2}"
-  to_taint=($to_taint)
-  for vm in $to_taint; do
+  to_taint="${vma[@]:$x1:$x2}"
+  to_taint_a=$(echo $to_taint)
+  for vm in $to_taint_a; do
     nodename=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname)
-    ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
+    ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
         echo "Tainting node $nodename"
         kubectl taint nodes $nodename t=benchdriver:NoSchedule
 ENDSSH

@@ -380,8 +380,8 @@ hotel_tail_multi() {
 #  dur="10s,20s,20s,20s,20s,10s"
 #  rps="2500"
 #  dur="60s"
-  sys="Sigmaos"
-#  sys="K8s"
+#  sys="Sigmaos"
+  sys="K8s"
   cache_type="cached"
   scale_cache="true"
 #  cache_type="kvd"
@@ -402,7 +402,7 @@ hotel_tail_multi() {
   if [[ $scale_cache == "true" ]]; then
     pn="-scalecache-true"
   fi
-  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms$pn-REDO"
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms$pn"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"
   # Avoid doing duplicate work.
@@ -555,6 +555,7 @@ k8s_balance() {
   n_vm=1
   driver_vm=8
   run=${FUNCNAME[0]}
+  perf_dir=$OUT_DIR/$run
   echo "========== Running $run =========="
   # Avoid doing duplicate work.
   if ! should_skip $perf_dir false ; then
@@ -573,10 +574,9 @@ k8s_balance() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 52
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
     aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir > /dev/null; \
@@ -629,7 +629,7 @@ k8s_balance_multi() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 52
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -805,7 +805,15 @@ graph_hotel_tail() {
 graph_hotel_tail_tpt_over_time() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
-  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4-REDO"
+  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
+}
+
+graph_k8s_hotel_tail_tpt_over_time() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  d="hotel_tail_multi/K8s/rps-250,500,1000,2000,1000-nclnt-4"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
 }
@@ -813,7 +821,7 @@ graph_hotel_tail_tpt_over_time() {
 graph_hotel_tail_tpt_over_time_autoscale() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
-  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4-scalecache-true-REDO"
+  d="hotel_tail_multi/Sigmaos/rps-250,500,1000,2000,1000-nclnt-4-scalecache-true"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
 }

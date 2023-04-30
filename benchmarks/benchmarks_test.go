@@ -642,13 +642,11 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 			j.ready <- true
 		}
 	}()
+	p := makeRealmPerf(ts1)
+	defer p.Done()
 	if sigmaos {
-		p := makeRealmPerf(ts1)
-		defer p.Done()
 		monitorCPUUtil(ts1, p)
 	} else {
-		p := makeRealmPerf(ts1)
-		defer p.Done()
 		monitorK8sCPUUtil(ts1, p, "hotel")
 	}
 	runOps(ts1, ji, runHotel, rs)
@@ -742,6 +740,7 @@ func TestHotelK8sSearch(t *testing.T) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearchCli(t *testing.T) {

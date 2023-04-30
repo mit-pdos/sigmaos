@@ -372,59 +372,6 @@ hotel_tail_reserve() {
   done
 }
 
-rpcbench_tail_multi() {
-  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
-  rps=2500
-  sys="Sigmaos"
-#  sys="K8s"
-#  cache_type="kvd"
-  driver_vm=8
-  testname_driver="RPCBench${sys}Sleep"
-  testname_clnt="RPCBench${sys}JustCliSleep"
-  for n in {1..1000} ; do
-    # run=${FUNCNAME[0]}/$sys/$rps #-$n
-    run=${FUNCNAME[0]}/$rps-$n
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/"$run"
-    # Avoid doing duplicate work.
-    if ! should_skip $perf_dir false ; then
-      continue
-    fi
-    for cli_vm in $driver_vm 9 10 11 12 ; do #11 ; do
-      driver="false"
-      if [[ $cli_vm == $driver_vm ]]; then
-        testname=$testname_driver
-        driver="true"
-      else
-        testname=$testname_clnt
-      fi
-      run_rpcbench $testname $rps $cli_vm 5 $perf_dir $driver true
-      if [[ $cli_vm == $driver_vm ]]; then
-        # Give the driver time to start up the realm.
-        sleep 10s
-      fi
-    done
-    # Wait for all clients to terminate.
-    wait
-    # Copy results.
-    end_benchmark $VPC $perf_dir
-    echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
-    if grep -r "file not found http" $perf_dir ; then
-      echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
-      continue
-    fi
-    if grep -r "server-side" $perf_dir ; then
-      if grep -r "concurrent map writes" /tmp/*.out ; then
-        echo "----------------- Error concurrent map writes -----------------"
-        continue
-      fi
-      echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
-      return
-    fi
-  done
-}
-
-
 hotel_tail_multi() {
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps="250,500,1000,2000,1000"
@@ -436,7 +383,7 @@ hotel_tail_multi() {
   sys="Sigmaos"
 #  sys="K8s"
   cache_type="cached"
-  scale_cache="true"
+  scale_cache="false"
 #  cache_type="kvd"
   n_clnt_vms=4
   driver_vm=8
@@ -505,7 +452,7 @@ realm_balance_multi() {
   mrapp=mr-grep-wiki20G.yml
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
-  mem_pressure="true"
+  mem_pressure="false"
   hotel_ncache=3
   sl="10s"
   n_vm=8
@@ -524,6 +471,7 @@ realm_balance_multi() {
 ###
   swap="swapoff"
   bmem=""
+  memp=""
   if [[ $mem_pressure == "true" ]]; then
     memp="_mempressure"
     swap="swapon"
@@ -901,11 +849,11 @@ hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_realm_balance
 graph_realm_balance_multi
-graph_k8s_balance
+#graph_k8s_balance
 graph_hotel_tail_tpt_over_time
-graph_hotel_tail_tpt_over_time_autoscale
+#graph_hotel_tail_tpt_over_time_autoscale
+#graph_realm_balance
 # XXX
 #graph_mr_replicated_named
 #graph_realm_balance_be

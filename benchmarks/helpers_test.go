@@ -100,7 +100,7 @@ func countClusterCores(rootts *test.Tstate) proc.Tcore {
 func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 	if mem == "0MB" {
 		db.DPrintf(db.TEST, "No mem blocking")
-		return
+		return nil
 	}
 	sdc := scheddclnt.MakeScheddClnt(rootts.SigmaClnt, sp.ROOTREALM)
 	// Get the number of schedds.

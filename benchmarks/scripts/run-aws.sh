@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --version VERSION" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --version VERSION [--cloudlab" 1>&2
 }
 
 VPC=""
 KVPC=""
+CLOUDLAB=""
 TAG=""
 VERSION=""
 while [[ "$#" -gt 0 ]]; do
@@ -28,6 +29,9 @@ while [[ "$#" -gt 0 ]]; do
   --version)
     shift
     VERSION=$1
+    shift
+    ;;
+  --cloudlab)
     shift
     ;;
   -help)
@@ -54,13 +58,19 @@ REALM2="benchrealm2"
 # Set some variables
 ROOT_DIR=$(realpath $(dirname $0)/../..)
 AWS_DIR=$ROOT_DIR/aws
+CLOUDLAB_DIR=$ROOT_DIR/cloudlab
 OUT_DIR=$ROOT_DIR/benchmarks/results/$VERSION
 GRAPH_SCRIPTS_DIR=$ROOT_DIR/benchmarks/scripts/graph
 GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 INIT_OUT=/tmp/init.out
 
+SCRIPT_DIR=$AWS_DIR
+if [ -z "$CLOUDLAB" ]; then
+  SCRIPT_DIR=$CLOUDLAB_DIR
+fi
+
 # Get the private IP address of the leader.
-cd $AWS_DIR
+cd $SCRIPT_DIR
 LEADER_IP_SIGMA=$(./leader-ip.sh --vpc $VPC)
 LEADER_IP_K8S=$(./leader-ip.sh --vpc $KVPC)
 LEADER_IP=$LEADER_IP_SIGMA
@@ -80,7 +90,7 @@ start_cluster() {
   n_cores=$2
   n_vm=$3
   swap=$4
-  cd $AWS_DIR
+  cd $SCRIPT_DIR
   echo "" > $INIT_OUT
   if [[ $swap == "swapon" ]]; then
     # Enable 16GiB of swap.
@@ -120,7 +130,7 @@ end_benchmark() {
   fi
   vpc=$1
   perf_dir=$2
-  cd $AWS_DIR
+  cd $SCRIPT_DIR
   ./collect-results.sh --vpc $vpc --perfdir $perf_dir --parallel >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
@@ -147,7 +157,7 @@ run_benchmark() {
     fi
     start_cluster $vpc $n_cores $n_vm $swap
   fi
-  cd $AWS_DIR
+  cd $SCRIPT_DIR
   # Start the benchmark as a background task.
   ./run-benchmark.sh --vpc $vpc --command "$cmd" --vm $vm &
   cd $ROOT_DIR
@@ -322,7 +332,7 @@ mr_vs_corral() {
 }
 
 hotel_tail() {
-  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   for sys in Sigmaos K8s ; do
     testname="Hotel${sys}Search"
     if [ "$sys" = "Sigmaos" ]; then
@@ -363,7 +373,7 @@ hotel_tail_reserve() {
 }
 
 rpcbench_tail_multi() {
-  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps=2500
   sys="Sigmaos"
 #  sys="K8s"
@@ -416,7 +426,7 @@ rpcbench_tail_multi() {
 
 
 hotel_tail_multi() {
-  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   rps="250,500,1000,2000,1000"
   dur="10s,20s,20s,20s,10s"
 #  rps="250,500,1000,2000,2500,1000"
@@ -599,7 +609,7 @@ k8s_balance() {
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   # Stop Hotel
-  cd $AWS_DIR
+  cd $SCRIPT_DIR
   echo "Stopping hotel"
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
@@ -612,8 +622,8 @@ k8s_balance() {
   # Start MR
   echo "Starting mr"
   ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 33
-  cd ..
-  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  cd $ROOT_DIR
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
@@ -630,7 +640,7 @@ k8s_balance() {
 
 mr_k8s() {
   n_vm=1
-  k8saddr="$(cd $AWS_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   s3dir="corralperf/k8s"
   app="mr-k8s-grep"
   run=${FUNCNAME[0]}/$app

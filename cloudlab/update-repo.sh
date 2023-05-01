@@ -61,6 +61,7 @@ for vm in $vms; do
   install="
     ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
       ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 ; git checkout $BRANCH; git pull >> /tmp/git.out 2>&1 )'
+      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd corral; git pull > /tmp/corral-git.out 2>&1 ; )'
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$install"

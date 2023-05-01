@@ -785,7 +785,7 @@ func TestMRK8s(t *testing.T) {
 	}
 	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"perf-output")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
 }
 
 func TestK8sMRMulti(t *testing.T) {
@@ -828,7 +828,7 @@ func TestK8sMRMulti(t *testing.T) {
 		downloadS3ResultsRealm(
 			rootts,
 			path.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
-			HOSTTMP+"perf-output",
+			HOSTTMP+"sigmaos-perf",
 			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
 		)
 	}

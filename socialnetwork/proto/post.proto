@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/socialnetwork/proto";
+
+service PostService {
+	rpc StorePost(StorePostRequest) returns (StorePostResponse);
+	rpc ReadPosts(ReadPostsRequest) returns (ReadPostsResponse);
+}
+
+message StorePostRequest {
+	Post post = 1;
+}
+
+message StorePostResponse {
+	string ok = 1;
+} 
+
+message ReadPostsRequest {
+	repeated int64 postids = 1;	
+}
+
+message ReadPostsResponse {
+	string ok = 1;
+	repeated Post posts = 2;
+}
+
+message Post {
+	int64             postid = 1;
+	POST_TYPE         posttype = 2;
+	int64             timestamp = 3; 
+	UserRef           creator = 4;
+	string            text = 5;
+	repeated UserRef  usermentions = 6;
+	repeated MediaRef medias = 7;
+	repeated Url      urls = 8; 
+}
+
+message PostEncode {
+	int64 postid = 1;
+	string postcontent = 2;
+}
+
+message UserRef {
+	int64  userid = 1;
+	string username = 2; 
+}
+
+message MediaRef {
+	int64  mediaid = 1;
+	string mediatype = 2;
+}
+
+message Url {
+	string shorturl = 1;
+	string extendedurl = 2;
+}
+
+enum POST_TYPE {
+	UNKNOWN = 0;
+	POST = 1;
+	REPOST = 2;
+	REPLY = 3;
+	DM = 4;
+}

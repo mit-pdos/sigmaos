@@ -13,3 +13,14 @@ CREATE TABLE socialnetwork_graph (
   PRIMARY KEY (`followerid`, `followeeid`)
 );
 
+CREATE TABLE socialnetwork_media (
+  medianame    VARCHAR(128) NOT NULL,
+  mediacontent LONGBLOB,
+  PRIMARY KEY (`medianame`)
+);
+
+CREATE TABLE socialnetwork_post (
+  postid      BIGINT NOT NULL,
+  postcontent MEDIUMBLOB,
+  PRIMARY KEY (`postid`)
+);

@@ -6,7 +6,6 @@ service UserService {
   rpc CheckUser(CheckUserRequest) returns (UserResponse);
   rpc RegisterUser(RegisterUserRequest) returns (UserResponse);
   rpc Login(LoginRequest) returns (UserResponse);
-
 }
 
 message CheckUserRequest {
@@ -31,9 +30,10 @@ message UserResponse {
 }
 
 message User {
-  int64 userid = 1;
-  string firstname = 2;
-  string lastname = 3;
-  string username = 4;
-  string password = 5;
+  	int64 userid = 1;
+  	string firstname = 2;
+  	string lastname = 3;
+  	string username = 4;
+  	string password = 5;
 }
+

@@ -7,6 +7,7 @@ option go_package = "sigmaos/cache/proto";
 service Cache {
   rpc Get(CacheRequest) returns (CacheResult);
   rpc Set(CacheRequest) returns (CacheResult);
+  rpc Delete(CacheRequest) returns (CacheResult);
 }
 
 message CacheRequest {

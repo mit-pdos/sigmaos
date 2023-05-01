@@ -22,6 +22,7 @@ import (
 const (
 	USER_HB_FREQ  = 1
 	USER_QUERY_OK = "OK"
+	USER_CACHE_PREFIX = "user_"
 )
 
 type UserSrv struct {
@@ -136,13 +137,13 @@ func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 }
 
 func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
-	key := "user_by_uname_" + username
+	key := USER_CACHE_PREFIX + username
 	user := &proto.User{}
 	if err := usrv.cachec.Get(key, user); err != nil {
 		if !usrv.cachec.IsMiss(err) {
 			return nil, err
 		}
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User cache miss: key %v\n", key)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User %v cache miss\n", key)
 		q := fmt.Sprintf("SELECT * from socialnetwork_user where username='%s';", username)
 		var users []proto.User
 		if err := usrv.dbc.Query(q, &users); err != nil {
@@ -152,8 +153,10 @@ func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
 			return nil, nil
 		}
 		user = &users[0]
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in DB: %v\n", username, user)
 		usrv.cachec.Put(key, user)
+	} else {
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in cache!\n", username)
 	}
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user for %v: %v\n", username, user)
 	return user, nil
 }

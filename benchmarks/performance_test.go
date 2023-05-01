@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/scheddclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -79,11 +80,11 @@ func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	}()
 }
 
-func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string) {
+func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string, realm sp.Trealm) {
 	go func() {
 		for {
 			top := k8sTop()
-			util := parseK8sUtil(top, app)
+			util := parseK8sUtil(top, app, realm)
 			p.TptTick(util)
 			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), util)
 			time.Sleep(CPU_MONITOR_INTERVAL)

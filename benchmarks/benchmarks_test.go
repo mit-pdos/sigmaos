@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"flag"
 	"math/rand"
+	"net/rpc"
 	"path"
 	"strconv"
 	"testing"
@@ -27,7 +28,9 @@ const (
 	REALM1                   = REALM_BASENAME + "1"
 	REALM2                   = REALM_BASENAME + "2"
 
-	HOSTTMP = "/tmp/"
+	MR_K8S_INIT_PORT int = 32585
+
+	HOSTTMP string = "/tmp/"
 )
 
 // Parameters
@@ -652,7 +655,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	} else {
 		p := makeRealmPerf(ts1)
 		defer p.Done()
-		monitorK8sCPUUtil(ts1, p, "hotel")
+		monitorK8sCPUUtil(ts1, p, "hotel", "")
 	}
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
@@ -775,14 +778,61 @@ func TestHotelK8sAll(t *testing.T) {
 func TestMRK8s(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
-	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 reulst dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, K8S_LEADER_NODE_IP+":32585")
+	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
 	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"perf-output")
+}
+
+func TestK8sMRMulti(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 result dir")
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	// Create realm structures.
+	ts := make([]*test.RealmTstate, 0, N_REALM)
+	ps := make([]*perf.Perf, 0, N_REALM)
+	for i := 0; i < N_REALM; i++ {
+		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
+		db.DPrintf(db.TEST, "Create realm srtructs for %v", rName)
+		ts = append(ts, test.MakeRealmTstate(rootts, rName))
+		ps = append(ps, makeRealmPerf(ts[i]))
+		defer ps[i].Done()
+	}
+	db.DPrintf(db.TEST, "Done creating realm srtructs")
+	cs := make([]*rpc.Client, 0, N_REALM)
+	for i := 0; i < N_REALM; i++ {
+		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
+		db.DPrintf(db.TEST, "Starting MR job for realm %v", rName)
+		// Start the next k8s job.
+		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
+		// Monitor cores assigned to this realm.
+		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		// Sleep for a bit before starting the next job
+		time.Sleep(SLEEP)
+	}
+	db.DPrintf(db.TEST, "Done starting MR jobs")
+	for i, c := range cs {
+		waitK8sMR(rootts, c)
+		db.DPrintf(db.TEST, "MR job %v finished", i)
+	}
+	db.DPrintf(db.TEST, "Done waiting for MR jobs.")
+	for i := 0; i < N_REALM; i++ {
+		downloadS3ResultsRealm(
+			rootts,
+			path.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
+			HOSTTMP+"perf-output",
+			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
+		)
+	}
+	db.DPrintf(db.TEST, "Done downloading results.")
 }
 
 func TestK8sBalanceHotelMR(t *testing.T) {
@@ -796,9 +846,9 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
 	// Monitor cores assigned to MR.
-	monitorK8sCPUUtil(ts1, p1, "mr")
+	monitorK8sCPUUtil(ts1, p1, "mr", "")
 	// Monitor cores assigned to Hotel.
-	monitorK8sCPUUtil(ts2, p2, "hotel")
+	monitorK8sCPUUtil(ts2, p2, "hotel", "")
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
 	db.DPrintf(db.TEST, "Starting hotel")
@@ -814,7 +864,7 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, K8S_LEADER_NODE_IP+":32585")
+	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")

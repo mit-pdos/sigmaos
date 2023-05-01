@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -361,8 +362,11 @@ func clientReady(rootts *test.Tstate) {
 
 // ========== Download Results Helpers ==========
 
-// downloadS3Results(ts , path.Join("name/s3/~any/9ps3/", outdir), test.HOSTTMP+ "perf-output")
 func downloadS3Results(ts *test.Tstate, src string, dst string) {
+	downloadS3ResultsRealm(ts, src, dst, "")
+}
+
+func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Trealm) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
 	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
@@ -371,7 +375,11 @@ func downloadS3Results(ts *test.Tstate, src string, dst string) {
 		assert.Nil(ts.T, err, "Error open reader %v", err)
 		b, err := io.ReadAll(rdr)
 		assert.Nil(ts.T, err, "Error read all %v", err)
-		err = os.WriteFile(path.Join(dst, st.Name), b, 0777)
+		name := st.Name
+		if realm.String() != "" {
+			name += "-" + realm.String() + "-tpt.out"
+		}
+		err = os.WriteFile(path.Join(dst, name), b, 0777)
 		assert.Nil(ts.T, err, "Error write file %v", err)
 		return false, nil
 	})
@@ -396,4 +404,8 @@ func waitK8sMR(ts *test.Tstate, c *rpc.Client) {
 	err := c.Call("K8sCoord.WaitDone", &req, &res)
 	assert.Nil(ts.T, err, "Error WaitDone coord: %v", err)
 	time.Sleep(10 * time.Second)
+}
+
+func k8sMRAddr(k8sLeaderNodeIP string, port int) string {
+	return k8sLeaderNodeIP + ":" + strconv.Itoa(port)
 }

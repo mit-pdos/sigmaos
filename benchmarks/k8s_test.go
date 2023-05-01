@@ -5,6 +5,8 @@ import (
 	db "sigmaos/debug"
 	"strconv"
 	"strings"
+
+	sp "sigmaos/sigmap"
 )
 
 func k8sTop() string {
@@ -20,7 +22,7 @@ func isMRPod(podName string) bool {
 	return strings.Contains(podName, "worker") || strings.Contains(podName, "coordinator")
 }
 
-func parseK8sUtil(utilStr, app string) float64 {
+func parseK8sUtil(utilStr, app string, realm sp.Trealm) float64 {
 	util := float64(0.0)
 	entries := strings.Split(utilStr, "\n")
 	// Skip the title line
@@ -40,6 +42,13 @@ func parseK8sUtil(utilStr, app string) float64 {
 			}
 		default:
 			db.DFatalf("unknown k8s app to parse: %v", app)
+		}
+		// If the benchmark specified a realm
+		if realm.String() != "" && app == "mr" {
+			// Skip workers not part of this realm.
+			if !strings.Contains(podName, realm.String()) {
+				continue
+			}
 		}
 		// Iterate backwards to find CPU util information.
 		for i := len(words) - 1; i >= 0; i-- {

@@ -19,7 +19,7 @@ def read_tpt(fpath):
 
 def read_tpts(input_dir, substr1, substr2, ignore="XXXXXXXXXXXXXXXXXX"):
   fnames = [ f for f in os.listdir(input_dir) if substr1 in f and substr2 in f and ignore not in f ]
-  tpts = [ read_tpt(os.path.join(input_dir, f)) for f in fnames ]
+  tpts = [ read_tpt(os.path.join(input_dir, f))[1:] for f in fnames ]
   return tpts
 
 def read_latency(fpath):
@@ -58,6 +58,26 @@ def extend_tpts_to_range(tpts, r):
     last_tick = tpts[i][len(tpts[i]) - 1]
     if last_tick[i] <= r[1]:
       tpts[i].append((r[1], last_tick[1]))
+
+# For now, only truncates after not before.
+def truncate_tpts_to_range(tpts, r):
+  if len(tpts) == 0:
+    return
+  new_tpts = []
+  for i in range(len(tpts)):
+    inner = []
+    # Allow for the util graph to go to zero for a bit.
+    runway = 10
+    already_increased = False
+    for j in range(len(tpts[i])):
+      if tpts[i][j][1] > 1.0:
+        already_increased = True
+      if tpts[i][j][0] <= r[1] or tpts[i][j][1] > 0.5 or (already_increased and runway > 0):
+        if already_increased and tpts[i][j][1] < 0.5:
+          runway = runway - 1
+        inner.append(tpts[i][j])
+    new_tpts.append(inner)
+  return new_tpts
 
 def get_overall_time_range(ranges):
   start = sys.maxsize
@@ -181,14 +201,19 @@ def graph_data(input_dir, title, out, nrealm, units, total_ncore, percentile, k8
     procd_tpts.append(read_tpts(input_dir, realm_name, "test-", ignore="mr-"))
     mr_tpts.append(read_tpts(input_dir, "mr-", realm_name))
     time_ranges.append(get_time_range(mr_tpts[i]))
-    time_ranges.append(get_time_range(procd_tpts[i]))
+#    time_ranges.append(get_time_range(procd_tpts[i]))
   assert(len(procd_tpts) == nrealm)
   assert(len(mr_tpts) == nrealm)
   # Time range for graph
   time_range = get_overall_time_range(time_ranges)
-  for procd_tpt in procd_tpts:
-    extend_tpts_to_range(procd_tpt, time_range)
+  time_range = (time_range[0] - 5000000.0, time_range[1])
+  for i in range(len(procd_tpts)):
+    extend_tpts_to_range(procd_tpts[i], time_range)
+    procd_tpts[i] = truncate_tpts_to_range(procd_tpts[i], time_range)
   for i in range(nrealm):
+    n_dummies = 10
+    for j in range(n_dummies):
+      mr_tpts[i][0].insert(0, (time_range[0] + 100.0 * j, 0.0))
     mr_tpts[i] = fit_times_to_range(mr_tpts[i], time_range)
   for i in range(nrealm):
     procd_tpts[i] = fit_times_to_range(procd_tpts[i], time_range)

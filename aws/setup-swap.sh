@@ -54,7 +54,7 @@ for vm in $vms; do
   echo "Setup/disable swap $NSWAP for $vm"
   install="
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    sudo swapoff /swapfile
+    sudo swapoff -a
     if [ -z "$NSWAP" ]; then
 #      sudo rm -f /swapfile
       echo 'Disable swap'

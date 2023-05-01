@@ -33,6 +33,7 @@ while [[ "$#" -gt 0 ]]; do
     ;;
   --cloudlab)
     shift
+    CLOUDLAB="true"
     ;;
   -help)
     usage
@@ -65,7 +66,7 @@ GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 INIT_OUT=/tmp/init.out
 
 SCRIPT_DIR=$AWS_DIR
-if [ -z "$CLOUDLAB" ]; then
+if ! [ -z "$CLOUDLAB" ]; then
   SCRIPT_DIR=$CLOUDLAB_DIR
 fi
 
@@ -209,6 +210,7 @@ run_hotel() {
      as_cache="--hotel_cache_autoscale"
   fi
   cmd="
+    aws s3 rm --profile me-mit --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
@@ -373,15 +375,15 @@ hotel_tail_reserve() {
 }
 
 hotel_tail_multi() {
-  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  k8saddr="x.x.x.x"
   rps="250,500,1000,2000,1000"
   dur="10s,20s,20s,20s,10s"
 #  rps="250,500,1000,2000,2500,1000"
 #  dur="10s,20s,20s,20s,20s,10s"
 #  rps="2500"
 #  dur="60s"
-#  sys="Sigmaos"
-  sys="K8s"
+  sys="Sigmaos"
+#  sys="K8s"
   cache_type="cached"
   scale_cache="true"
 #  cache_type="kvd"
@@ -391,13 +393,6 @@ hotel_tail_multi() {
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
-  if [[ "$sys" == "Sigmaos" ]]; then
-    vpc=$VPC
-    LEADER_IP=$LEADER_IP_SIGMA
-  else
-    vpc=$KVPC
-    LEADER_IP=$LEADER_IP_K8S
-  fi
   pn=""
   if [[ $scale_cache == "true" ]]; then
     pn="-scalecache-true"
@@ -408,6 +403,24 @@ hotel_tail_multi() {
   # Avoid doing duplicate work.
   if ! should_skip $perf_dir false ; then
     return
+  fi
+  if [[ "$sys" == "Sigmaos" ]]; then
+    vpc=$VPC
+    LEADER_IP=$LEADER_IP_SIGMA
+  else
+    vpc=$KVPC
+    LEADER_IP=$LEADER_IP_K8S
+    cd $SCRIPT_DIR
+    echo "Stopping hotel"
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+    echo "Stopping mr"
+    ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+    sleep 10
+    # Start Hotel
+    echo "Starting hotel"
+    ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
+    cd $ROOT_DIR
+    k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   fi
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -446,6 +459,13 @@ hotel_tail_multi() {
     echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
     return
   fi
+  cd $SCRIPT_DIR
+  echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  # Stop MR
+  echo "Stopping mr"
+  ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+  cd $ROOT_DIR
 }
 
 realm_balance_be() {
@@ -454,6 +474,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
+  n_realm=3
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -461,7 +482,7 @@ realm_balance_be() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp --nrealm 3 > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -498,7 +519,7 @@ realm_balance_multi() {
   driver_vm=8
   sl2="10s"
 ### Hotel client params
-  n_clnt_vms=3
+  n_clnt_vms=4
   sys="Sigmaos"
   cache_type="cached"
   clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
@@ -574,7 +595,7 @@ k8s_balance() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 52
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -588,6 +609,13 @@ k8s_balance() {
     go test -v sigmaos/benchmarks -timeout 0 --run K8sBalanceHotelMR --rootNamedIP $k8sleaderip --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  cd $SCRIPT_DIR
+  echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  # Stop MR
+  echo "Stopping mr"
+#  ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+  cd $ROOT_DIR
 }
 
 k8s_balance_multi() {
@@ -595,7 +623,7 @@ k8s_balance_multi() {
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
   ### Hotel cli params
-  n_clnt_vms=3
+  n_clnt_vms=4
   sys="K8s"
   cache_type="cached"
   clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
@@ -629,7 +657,7 @@ k8s_balance_multi() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 52
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -657,6 +685,13 @@ k8s_balance_multi() {
   # Wait for all clients to terminate.
   wait
   end_benchmark $vpc $perf_dir
+  cd $SCRIPT_DIR
+  echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  # Stop MR
+  echo "Stopping mr"
+  ./stop-k8s-app.sh --vpc $KVPC --path corral/k8s20G
+  cd $ROOT_DIR
 }
 
 mr_k8s() {
@@ -813,7 +848,7 @@ graph_hotel_tail_tpt_over_time() {
 graph_k8s_hotel_tail_tpt_over_time() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
-  d="hotel_tail_multi/K8s/rps-250,500,1000,2000,1000-nclnt-4"
+  d="hotel_tail_multi/K8s/rps-250,500,1000,2000,1000-nclnt-3"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
 }
@@ -860,7 +895,7 @@ graph_realm_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --realm1 $REALM1 --realm2 $REALM2 --units "MB/sec" --title "Aggregate Throughput Balancing 2 Realms' BE Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm 3 --units "MB/sec" --title "Aggregate Throughput Balancing 2 Realms' BE Applications" --total_ncore 32
 }
 
 graph_k8s_mr_aggregate_tpt() {
@@ -919,34 +954,35 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-realm_balance_multi
-hotel_tail_multi
-k8s_balance
-k8s_balance_multi
+realm_balance_be
+#realm_balance_multi
+#hotel_tail_multi
+#k8s_balance
+#k8s_balance_multi
+# XXX
 #realm_balance
 #hotel_tail
 #hotel_tail_reserve
-# XXX
 #mr_replicated_named
 #realm_burst
 #kv_vs_cached
 #mr_vs_corral
-#realm_balance_be
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_k8s_balance
-graph_k8s_balance_multi
-graph_realm_balance_multi
-graph_hotel_tail_tpt_over_time
-graph_hotel_tail_tpt_over_time_autoscale
-#graph_realm_balance
+graph_realm_balance_be
+#graph_k8s_balance_multi
+#graph_realm_balance_multi
+#graph_hotel_tail_tpt_over_time
+#graph_k8s_hotel_tail_tpt_over_time
+#graph_hotel_tail_tpt_over_time_autoscale
 # XXX
+#graph_k8s_balance
+#graph_realm_balance
 #graph_mr_replicated_named
-#graph_realm_balance_be
 #graph_mr_vs_corral
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability

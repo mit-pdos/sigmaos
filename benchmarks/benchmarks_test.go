@@ -4,6 +4,7 @@ import (
 	"flag"
 	"math/rand"
 	"path"
+	"strconv"
 	"testing"
 	"time"
 
@@ -22,8 +23,9 @@ import (
 )
 
 const (
-	REALM1 sp.Trealm = "benchrealm1"
-	REALM2           = "benchrealm2"
+	REALM_BASENAME sp.Trealm = "benchrealm"
+	REALM1                   = REALM_BASENAME + "1"
+	REALM2                   = REALM_BASENAME + "2"
 
 	HOSTTMP = "/tmp/"
 )
@@ -52,6 +54,7 @@ var HOTEL_CACHE_AUTOSCALE bool
 var CACHE_TYPE string
 var CACHE_GC bool
 var BLOCK_MEM string
+var N_REALM int
 
 // XXX Remove
 var MEMCACHED_ADDRS string
@@ -74,6 +77,7 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
+	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
@@ -429,50 +433,49 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
-	// Structures for mr
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
-	p1 := makeRealmPerf(ts1)
-	defer p1.Done()
-	// Structure for kv
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
-	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	p2 := makeRealmPerf(ts2)
-	defer p2.Done()
-	// Prep MR job
-	mrjobs1, mrapps1 := makeNMRJobs(ts1, p1, 1, MR_APP)
-	// Prep MR job
-	mrjobs2, mrapps2 := makeNMRJobs(ts2, p2, 1, MR_APP)
-	monitorCPUUtil(ts1, p1)
-	monitorCPUUtil(ts2, p2)
-	// Run MR job
-	go func() {
-		runOps(ts2, mrapps2, runMR, rs2)
-		done <- true
-	}()
-	// Wait for MR jobs to set up.
-	<-mrjobs2[0].ready
-	// Run MR job
-	go func() {
-		runOps(ts1, mrapps1, runMR, rs1)
-		done <- true
-	}()
-	// Wait for MR jobs to set up.
-	<-mrjobs1[0].ready
-	// Kick off MR jobs.
-	mrjobs2[0].ready <- true
-	db.DPrintf(db.TEST, "Start MR job 1")
-	// Sleep for a bit
-	time.Sleep(SLEEP)
-	db.DPrintf(db.TEST, "Start MR job 2")
-	// Kick off hotel jobs
-	mrjobs1[0].ready <- true
+	tses := make([]*test.RealmTstate, N_REALM)
+	rses := make([]*benchmarks.Results, N_REALM)
+	ps := make([]*perf.Perf, N_REALM)
+	mrjobs := make([][]*MRJobInstance, N_REALM)
+	mrapps := make([][]interface{}, N_REALM)
+	// Create structures for MR jobs.
+	for i := range tses {
+		tses[i] = test.MakeRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		rses[i] = benchmarks.MakeResults(1, benchmarks.E2E)
+		ps[i] = makeRealmPerf(tses[i])
+		defer ps[i].Done()
+		mrjob, mrapp := makeNMRJobs(tses[i], ps[i], 1, MR_APP)
+		mrjobs[i] = mrjob
+		mrapps[i] = mrapp
+	}
+	// Start CPU utilization monitoring.
+	for i := range tses {
+		monitorCPUUtil(tses[i], ps[i])
+	}
+	// Initialize MR jobs.
+	for i := range tses {
+		// Start MR job initialization.
+		go func(ts *test.RealmTstate, mrapp []interface{}, rs *benchmarks.Results) {
+			runOps(ts, mrapp, runMR, rs)
+			done <- true
+		}(tses[i], mrapps[i], rses[i])
+		// Wait for MR job to set up.
+		<-mrjobs[i][0].ready
+	}
+	// Start jobs running, with a small delay between each job start.
+	for i := range tses {
+		// Kick off MR jobs.
+		mrjobs[i][0].ready <- true
+		db.DPrintf(db.TEST, "Start MR job %v", i+1)
+		// Sleep for a bit before starting the next job
+		time.Sleep(SLEEP)
+	}
 	// Wait for both jobs to finish.
-	<-done
-	db.DPrintf(db.TEST, "Done MR job 1")
-	<-done
-	db.DPrintf(db.TEST, "Done MR job 2")
-	printResultSummary(rs1)
+	for i := range tses {
+		<-done
+		db.DPrintf(db.TEST, "Done MR job %v", i+1)
+	}
+	printResultSummary(rses[0])
 	rootts.Shutdown()
 }
 

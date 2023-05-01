@@ -490,7 +490,6 @@ realm_balance_be() {
 k8s_balance_be() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
-  mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
   # Config
@@ -529,7 +528,7 @@ k8s_balance_be() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 --run K8sMRMulti --rootNamedIP $k8sleaderip --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance() {
@@ -940,7 +939,16 @@ graph_realm_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm 3 --units "MB/sec" --title "Aggregate Throughput Balancing 2 Realms' BE Applications" --total_ncore 32
+  nrealm=3
+  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
+}
+
+graph_k8s_balance_be() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  nrealm=3
+  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
 }
 
 graph_k8s_mr_aggregate_tpt() {

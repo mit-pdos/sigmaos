@@ -206,12 +206,14 @@ def graph_data(input_dir, title, out, nrealm, units, total_ncore, percentile, k8
   assert(len(mr_tpts) == nrealm)
   # Time range for graph
   time_range = get_overall_time_range(time_ranges)
+  # Add some runway to the graph.
   time_range = (time_range[0] - 5000000.0, time_range[1])
   for i in range(len(procd_tpts)):
     extend_tpts_to_range(procd_tpts[i], time_range)
     procd_tpts[i] = truncate_tpts_to_range(procd_tpts[i], time_range)
   for i in range(nrealm):
     n_dummies = 10
+    # Add some runway to the graph.
     for j in range(n_dummies):
       mr_tpts[i][0].insert(0, (time_range[0] + 100.0 * j, 0.0))
     mr_tpts[i] = fit_times_to_range(mr_tpts[i], time_range)

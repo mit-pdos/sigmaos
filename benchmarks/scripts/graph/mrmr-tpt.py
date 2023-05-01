@@ -172,49 +172,50 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, realm1, realm2, units, total_ncore, percentile, k8s, xmin, xmax):
-  procd_tpts = read_tpts(input_dir, realm1, "test-", ignore="mr-")
-  procd_tpts.append(read_tpts(input_dir, realm2, "test-", ignore="mr-")[0])
-  assert(len(procd_tpts) == 2)
-  mr1_tpts = read_tpts(input_dir, "mr-", realm1)
-  mr1_range = get_time_range(mr1_tpts)
-  procd_range = get_time_range(procd_tpts)
-  mr2_tpts = read_tpts(input_dir, "mr-", realm2)
-  mr2_range = get_time_range(mr2_tpts)
+def graph_data(input_dir, title, out, nrealm, units, total_ncore, percentile, k8s, xmin, xmax):
+  procd_tpts = []
+  mr_tpts = []
+  time_ranges = []
+  for i in range(nrealm):
+    realm_name = "benchrealm" + str(i + 1)
+    procd_tpts.append(read_tpts(input_dir, realm_name, "test-", ignore="mr-"))
+    mr_tpts.append(read_tpts(input_dir, "mr-", realm_name))
+    time_ranges.append(get_time_range(mr_tpts[i]))
+    time_ranges.append(get_time_range(procd_tpts[i]))
+  assert(len(procd_tpts) == nrealm)
+  assert(len(mr_tpts) == nrealm)
   # Time range for graph
-  time_range = get_overall_time_range([procd_range, mr1_range, mr2_range])
-  extend_tpts_to_range(procd_tpts, time_range)
-  mr1_tpts = fit_times_to_range(mr1_tpts, time_range)
-  mr2_tpts = fit_times_to_range(mr2_tpts, time_range)
-  procd_tpts = fit_times_to_range(procd_tpts, time_range)
+  time_range = get_overall_time_range(time_ranges)
+  for procd_tpt in procd_tpts:
+    extend_tpts_to_range(procd_tpt, time_range)
+  for i in range(nrealm):
+    mr_tpts[i] = fit_times_to_range(mr_tpts[i], time_range)
+  for i in range(nrealm):
+    procd_tpts[i] = fit_times_to_range(procd_tpts[i], time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  mr1_buckets = bucketize(mr1_tpts, time_range, xmin, xmax, step_size=1000)
-  mr2_buckets = bucketize(mr2_tpts, time_range, xmin, xmax, step_size=1000)
+  buckets = []
+  for mr_tpt in mr_tpts:
+    buckets.append(bucketize(mr_tpt, time_range, xmin, xmax, step_size=1000))
   fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
+  colors = ["blue", "orange", "fuchsia", "green"]
   plots = []
-  if len(mr1_tpts) > 0:
-    x, y = buckets_to_lists(mr1_buckets)
+  for i in range(nrealm):
+    if len(mr_tpts[i]) == 0:
+      continue
+    x, y = buckets_to_lists(buckets[i])
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm 1 MR Throughput", "blue", "-", "")
-    plots.append(p)
-  if len(mr2_tpts) > 0:
-    x, y = buckets_to_lists(mr2_buckets)
-    if "MB" in units:
-      y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm 2 MR Throughput", "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm {} MR Throughput".format(i + 1), colors[i], "-", "")
     plots.append(p)
   # If we are dealing with multiple realms...
   line_style = "solid"
   marker = "D"
-  x, y = buckets_to_lists(dict(procd_tpts[0]))
-  p = add_data_to_graph(coresax[0], x, y, "MR Realm 1 Cores", "blue", line_style, marker)
-  plots.append(p)
-  x, y = buckets_to_lists(dict(procd_tpts[1]))
-  p = add_data_to_graph(coresax[0], x, y, "MR Realm 2 Cores", "orange", line_style, marker)
-  plots.append(p)
+  for i in range(nrealm):
+    x, y = buckets_to_lists(dict(procd_tpts[i][0]))
+    p = add_data_to_graph(coresax[0], x, y, "MR Realm {} Cores".format(i + 1), colors[i], line_style, marker)
+    plots.append(p)
   ta = [ ax for ax in tptax ]
   ta.append(coresax[0])
   tptax = ta
@@ -224,8 +225,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
-  parser.add_argument("--realm1", type=str, default=None)
-  parser.add_argument("--realm2", type=str, default=None)
+  parser.add_argument("--nrealm", type=int, default=2)
   parser.add_argument("--units", type=str, required=True)
   parser.add_argument("--total_ncore", type=int, required=True)
   parser.add_argument("--percentile", type=float, default=99.0)
@@ -235,4 +235,4 @@ if __name__ == "__main__":
   parser.add_argument("--xmax", type=int, default=-1)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.realm1, args.realm2, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax)
+  graph_data(args.measurement_dir, args.title, args.out, args.nrealm, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax)

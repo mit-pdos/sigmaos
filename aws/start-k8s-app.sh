@@ -55,7 +55,7 @@ export N_RUNNING=$N_RUNNING
 
 CMD=$(
 envsubst '$APP_PATH:$N_RUNNING' <<'ENDSSH'
-  kubectl apply -Rf $APP_PATH > /dev/null 2>&1
+  kubectl apply -Rf $APP_PATH > /tmp/k8sappinit.out 2>&1
   until [ $(kubectl get pods | grep -w "Running" | wc -l ) == "$N_RUNNING" ]; do
     echo "Missing pods" > /dev/null 2>&1
     sleep 2s

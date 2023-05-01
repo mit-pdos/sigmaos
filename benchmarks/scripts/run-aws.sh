@@ -414,7 +414,7 @@ hotel_tail_multi() {
     echo "Stopping hotel"
     ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
     echo "Stopping mr"
-    ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+    ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
     sleep 10
     # Start Hotel
     echo "Starting hotel"
@@ -464,7 +464,7 @@ hotel_tail_multi() {
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
-  ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
   cd $ROOT_DIR
 }
 
@@ -501,16 +501,33 @@ k8s_balance_be() {
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
+  cd $SCRIPT_DIR
+  echo "Stopping mr"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
+  sleep 10
+  cd $ROOT_DIR
+  npods=(17 25 26 27)
   for (( i=1; i<=$n_realm; i++)) do
+    idx=$((i - 1))
+    np="${npods[$idx]}"
+    # Start MR
+    echo "Starting mr $i"
     # Remove old results
     aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir-$i > /dev/null; \
+    cd $SCRIPT_DIR
+    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
+    cd $ROOT_DIR
+    sleep 5s
   done
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --run MRK8sMulti --rootNamedIP $k8sleaderip --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run K8sMRMulti --rootNamedIP $k8sleaderip --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -616,14 +633,14 @@ k8s_balance() {
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
-  ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
   sleep 10
   # Start Hotel
   echo "Starting hotel"
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*" --nrunning 30
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -642,7 +659,7 @@ k8s_balance() {
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
-  ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
   cd $ROOT_DIR
 }
 
@@ -678,14 +695,14 @@ k8s_balance_multi() {
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
-  ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
   sleep 10
   # Start Hotel
   echo "Starting hotel"
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*" --nrunning 30
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -718,7 +735,7 @@ k8s_balance_multi() {
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
-  ./stop-k8s-app.sh --vpc $KVPC --path "corral/k8s20G*"
+  ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
   cd $ROOT_DIR
 }
 
@@ -1003,7 +1020,8 @@ realm_balance_be
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_realm_balance_be
+graph_realm_balance_be
+graph_k8s_balance_be
 #graph_realm_balance_multi
 #graph_k8s_balance_multi
 #graph_hotel_tail_tpt_over_time

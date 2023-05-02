@@ -474,7 +474,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
-  n_realm=3
+  n_realm=4
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -482,7 +482,7 @@ realm_balance_be() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp --nrealm 3 > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run RealmBalanceMRMR --rootNamedIP $LEADER_IP --sleep $sl --mrapp $mrapp --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -493,7 +493,7 @@ k8s_balance_be() {
   sl="40s"
   n_vm=8
   # Config
-  n_realm=3
+  n_realm=4
   driver_vm=8
   s3dir="corralperf/k8s"
   k8sleaderip=$LEADER_IP_K8S
@@ -639,7 +639,7 @@ k8s_balance() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 24
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -701,7 +701,7 @@ k8s_balance_multi() {
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
-  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 30
+  ./start-k8s-app.sh --vpc $KVPC --path corral/k8s20G --nrunning 24
   cd $ROOT_DIR
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
@@ -939,7 +939,7 @@ graph_realm_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  nrealm=3
+  nrealm=4
   $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
 }
 
@@ -947,7 +947,7 @@ graph_k8s_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  nrealm=3
+  nrealm=4
   $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
 }
 
@@ -1007,10 +1007,10 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-k8s_balance_be
 realm_balance_be
-#realm_balance_multi
-#k8s_balance_multi
+realm_balance_multi
+k8s_balance_multi
+k8s_balance_be
 # XXX Try above next
 #hotel_tail_multi
 #k8s_balance
@@ -1030,8 +1030,8 @@ realm_balance_be
 source ~/env/3.10/bin/activate
 graph_realm_balance_be
 graph_k8s_balance_be
-#graph_realm_balance_multi
-#graph_k8s_balance_multi
+graph_realm_balance_multi
+graph_k8s_balance_multi
 #graph_hotel_tail_tpt_over_time
 #graph_k8s_hotel_tail_tpt_over_time
 #graph_hotel_tail_tpt_over_time_autoscale

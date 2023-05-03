@@ -47,7 +47,7 @@ func RunPostSrv(public bool, jobname string) error {
 		return err
 	}
 	psrv.cachec = cachec
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting graph service\n")
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
 	go psrv.heartBeat()
 	return pds.RunServer()
 }
@@ -143,5 +143,4 @@ func (psrv *PostSrv) getPost(postid int64) (*proto.Post, error) {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Found post %v in cache!\n", postid)
 	}
 	return post, nil
-
 }

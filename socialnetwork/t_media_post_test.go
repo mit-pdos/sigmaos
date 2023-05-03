@@ -10,6 +10,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func isUserRefEqual(a, b *proto.UserRef) bool {
+	return a.Userid == b.Userid && a.Username == b.Username
+}
+
+func isUrlEqual(a, b *proto.Url) bool {
+	return a.Shorturl == b.Shorturl && a.Extendedurl == b.Extendedurl
+}
+
+func isMediaRefEqual(a, b *proto.MediaRef) bool {
+	return a.Mediaid == b.Mediaid && a.Mediatype == b.Mediatype
+}
+
+func IsPostEqual(a, b *proto.Post) bool {
+	if a.Postid != b.Postid || a.Posttype != b.Posttype || 
+			a.Timestamp != b.Timestamp || a.Text != b.Text || 
+			!isUserRefEqual(a.Creator, b.Creator) || len(a.Medias) != len(a.Medias) || 
+			len(a.Usermentions) != len(b.Usermentions) || len(a.Urls) != len(b.Urls) {
+		return false
+	} 
+	for idx, _ := range a.Usermentions {
+		if !isUserRefEqual(a.Usermentions[idx], b.Usermentions[idx]) {
+			return false
+		}
+	}
+	for idx, _ := range a.Urls {
+		if !isUrlEqual(a.Urls[idx], b.Urls[idx]) {
+			return false
+		}
+	}
+	for idx, _ := range a.Medias {
+		if !isMediaRefEqual(a.Medias[idx], b.Medias[idx]) {
+			return false
+		}
+	}
+	return true
+}
+
 func TestPostEncode(t *testing.T) {
 	// encode 
 	postid := int64(377)
@@ -33,13 +70,7 @@ func TestPostEncode(t *testing.T) {
 	// decode
 	var postDecoded proto.Post
 	assert.Nil(t, sn.DecodePost(encode, &postDecoded))
-	assert.Equal(t, post.Text, postDecoded.Text)
-	assert.Equal(t, postid, postDecoded.Postid)
-	assert.Equal(t, post.Timestamp, postDecoded.Timestamp)
-	assert.Equal(t, post.Creator, postDecoded.Creator)
-	assert.Equal(t, post.Usermentions, postDecoded.Usermentions)
-	assert.Equal(t, post.Urls, postDecoded.Urls)
-	assert.Equal(t, 0, len(postDecoded.Medias))
+	assert.True(t, IsPostEqual(&post, &postDecoded))
 }
 
 func TestPost(t *testing.T) {
@@ -96,14 +127,8 @@ func TestPost(t *testing.T) {
 	assert.Equal(t, "OK", res_store.Ok)
 	assert.Nil(t, pdc.RPC("Post.ReadPosts", &arg_read, &res_read))
 	assert.Equal(t, "OK", res_read.Ok)
-	assert.Equal(t, post1.Text, res_read.Posts[0].Text)
-	assert.Equal(t, post1.Postid, res_read.Posts[0].Postid)
-	assert.Equal(t, post1.Timestamp, res_read.Posts[0].Timestamp)
-	assert.Equal(t, post1.Medias[0].Mediaid, res_read.Posts[0].Medias[0].Mediaid)
-	assert.Equal(t, post2.Creator.Userid, res_read.Posts[1].Creator.Userid)
-	assert.Equal(t, post2.Creator.Username, res_read.Posts[1].Creator.Username)
-	assert.Equal(t, post2.Usermentions[0].Username, res_read.Posts[1].Usermentions[0].Username)
-	assert.Equal(t, post2.Urls[0].Extendedurl, res_read.Posts[1].Urls[0].Extendedurl)
+	assert.True(t, IsPostEqual(&post1, res_read.Posts[0]))
+	assert.True(t, IsPostEqual(&post2, res_read.Posts[1]))
 
 	//stop server
 	assert.Nil(t, tssn.Shutdown())

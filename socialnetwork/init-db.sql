@@ -24,3 +24,10 @@ CREATE TABLE socialnetwork_post (
   postcontent MEDIUMBLOB,
   PRIMARY KEY (`postid`)
 );
+
+CREATE TABLE socialnetwork_timeline (
+  userid    BIGINT NOT NULL,
+  postid    BIGINT NOT NULL,
+  timestamp BIGINT NOT NULL,
+  PRIMARY KEY (`userid`, `postid`)
+);

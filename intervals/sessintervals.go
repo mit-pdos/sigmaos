@@ -14,7 +14,7 @@ import (
 	"sigmaos/sliceintervals"
 )
 
-const useSkip = true
+const useSkip = false
 
 type Intervals struct {
 	sync.Mutex

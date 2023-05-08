@@ -317,13 +317,13 @@ func checkRetrieved(t *testing.T, retrieved map[uint64]bool, prevend, start, end
 }
 
 func doNext(t *testing.T, ivs *intervals.Intervals, retrieved map[uint64]bool, starts, ends []uint64) {
-	var iv *sessp.Tinterval
+	var iv sessp.Tinterval
 	assert.Equal(t, len(starts), len(ends))
 	iv = ivs.Next()
 	if !assert.NotNil(t, iv) {
 		db.DFatalf("Error")
 	}
-	processIV(t, retrieved, iv)
+	processIV(t, retrieved, &iv)
 	for i := range starts {
 		start := starts[i]
 		end := ends[i]

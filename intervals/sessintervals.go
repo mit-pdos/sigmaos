@@ -44,13 +44,13 @@ func MkIntervals(sid sessp.Tsession) *Intervals {
 // * Unless ivs.ResetNext is called, the same number should never be returned
 // twice from ivs.Next, assuming it was never inserted twice.
 // * All intervals inserted in ivs will eventually be returned by Next.
-func (ivs *Intervals) Next() *sessp.Tinterval {
+func (ivs *Intervals) Next() sessp.Tinterval {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	if ivs.next.Length() == 0 {
 		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: nil", ivs.sid)
-		return nil
+		return sessp.Tinterval{}
 	}
 	// Pop the next interval from the queue.
 	iv := ivs.next.Pop()

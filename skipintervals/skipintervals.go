@@ -307,14 +307,14 @@ func (skipl *SkipIntervals) Prevs(elem *element, prevElems levels) levels {
 	return prevElems
 }
 
-func (skipl *SkipIntervals) Pop() *sessp.Tinterval {
+func (skipl *SkipIntervals) Pop() sessp.Tinterval {
 	if skipl.levels[0] == nil {
-		return nil
+		return sessp.Tinterval{}
 	}
 	elem := skipl.levels[0]
 	skipl.Prevs(elem, skipl.prevElems)
 	skipl.del(skipl.prevElems, elem)
-	return &elem.iv
+	return elem.iv
 }
 
 func (skipl *SkipIntervals) Deepcopy(s sessp.IIntervals) {

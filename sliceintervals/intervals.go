@@ -62,10 +62,10 @@ func (ivs *IvSlice) Find(t *sessp.Tinterval) *sessp.Tinterval {
 	return nil
 }
 
-func (ivs *IvSlice) Pop() *sessp.Tinterval {
+func (ivs *IvSlice) Pop() sessp.Tinterval {
 	iv := ivs.entries[0]
 	ivs.delidx(0)
-	return iv
+	return *iv
 }
 
 func (ivs *IvSlice) Delete(ivd *sessp.Tinterval) {

@@ -117,16 +117,13 @@ func (f *Tfence) Tepoch() Tepoch {
 	return Tepoch(f.Epoch)
 }
 
-func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv *Tinterval, f *Tfence) *FcallMsg {
-	if rcv == nil {
-		rcv = &Tinterval{}
-	}
+func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval, f *Tfence) *FcallMsg {
 	fcall := &Fcall{
 		Type:     uint32(msg.Type()),
 		Tag:      0,
 		Client:   uint64(cli),
 		Session:  uint64(sess),
-		Received: rcv,
+		Received: &rcv,
 		Fence:    f,
 	}
 	if seqno != nil {
@@ -136,7 +133,7 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, nil, MakeFenceNull())
+	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, MakeFenceNull())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -162,6 +159,10 @@ func MkInterval(start, end uint64) *Tinterval {
 	}
 }
 
+func (iv0 Tinterval) Eq(iv1 *Tinterval) bool {
+	return iv0.Start == iv1.Start && iv0.End == iv1.End
+}
+
 func (iv *Tinterval) Size() Tsize {
 	return Tsize(iv.End - iv.Start)
 }
@@ -185,6 +186,18 @@ func (iv *Tinterval) Unmarshal(s string) {
 
 func (iv *Tinterval) Marshal() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
+}
+
+type IIntervals interface {
+	String() string
+	Delete(*Tinterval)
+	Insert(*Tinterval)
+	Length() int
+	Contains(uint64) bool
+	Present(*Tinterval) bool
+	Find(*Tinterval) *Tinterval
+	Pop() Tinterval
+	Deepcopy(IIntervals)
 }
 
 const (

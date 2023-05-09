@@ -50,7 +50,7 @@ func (f *ReplyFuture) Abort(cli sessp.Tclient, sid sessp.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = sessp.MakeFcallMsg(sp.MkRerror(serr.MkErr(serr.TErrClosed, nil)), nil, cli, sid, nil, nil, sessp.MakeFenceNull())
+		f.reply = sessp.MakeFcallMsg(sp.MkRerror(serr.MkErr(serr.TErrClosed, nil)), nil, cli, sid, nil, sessp.Tinterval{}, sessp.MakeFenceNull())
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

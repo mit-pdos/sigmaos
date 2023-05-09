@@ -51,7 +51,7 @@ done
 # application with several kernels and db
 #
 
-go test $@ sigmaos/hotel
+go test $@ sigmaos/hotel -start
 
 #
 # test with realms

@@ -12,7 +12,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sync"
-	"time"
 )
 
 // YH:
@@ -20,7 +19,6 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	USER_HB_FREQ  = 1
 	USER_QUERY_OK = "OK"
 	USER_CACHE_PREFIX = "user_"
 )
@@ -52,7 +50,6 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
-	go usrv.heartBeat()
 	return pds.RunServer()
 }
 
@@ -119,13 +116,6 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 
 	}
 	return nil
-}
-
-func (usrv *UserSrv) heartBeat() {
-	for {
-		time.Sleep(time.Duration(USER_HB_FREQ) * time.Second)
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "ALIVE!\n")
-	}
 }
 
 func (usrv *UserSrv) checkUserExist(username string) (bool, error) {

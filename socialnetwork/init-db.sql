@@ -31,3 +31,9 @@ CREATE TABLE socialnetwork_timeline (
   timestamp BIGINT NOT NULL,
   PRIMARY KEY (`userid`, `postid`)
 );
+
+CREATE TABLE socialnetwork_url (
+  shorturl    VARCHAR(128) NOT NULL,
+  extendedurl VARCHAR(2048) NOT NULL,
+  PRIMARY KEY (`shorturl`)
+);

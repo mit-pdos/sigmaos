@@ -8,7 +8,6 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
-	"time"
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
@@ -20,7 +19,6 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	POST_HB_FREQ = 1
 	POST_QUERY_OK = "OK"
 	POST_CACHE_PREFIX = "post_"
 )
@@ -48,15 +46,7 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	psrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
-	go psrv.heartBeat()
 	return pds.RunServer()
-}
-
-func (psrv *PostSrv) heartBeat() {
-	for {
-		time.Sleep(time.Duration(POST_HB_FREQ) * time.Second)
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "ALIVE!\n")
-	}
 }
 
 func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *proto.StorePostResponse) error {
@@ -71,6 +61,7 @@ func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *pro
 		"INSERT INTO socialnetwork_post (postid, postcontent) VALUES ('%v', '%v')", 
 		post.Postid, encode)
 	if err = psrv.dbc.Exec(q); err != nil {
+		res.Ok = "DB Failure."
 		return nil
 	}
 	res.Ok = POST_QUERY_OK

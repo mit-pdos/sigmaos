@@ -9,7 +9,6 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
-	"time"
 	"strconv"
 	"fmt"
 )
@@ -19,7 +18,6 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	GRAPH_HB_FREQ = 1
 	GRAPH_QUERY_OK = "OK"
 	FOLLOWER_CACHE_PREFIX = "followers_"
 	FOLLOWEE_CACHE_PREFIX = "followees_"
@@ -54,15 +52,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	}
 	gsrv.userc = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
-	go gsrv.heartBeat()
 	return pds.RunServer()
-}
-
-func (gsrv *GraphSrv) heartBeat() {
-	for {
-		time.Sleep(time.Duration(GRAPH_HB_FREQ) * time.Second)
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "ALIVE!\n")
-	}
 }
 
 func (gsrv *GraphSrv) GetFollowers(

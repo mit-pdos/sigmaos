@@ -45,6 +45,9 @@ func (dbu *DBUtil) Clear() error {
 	if err := dbu.dbc.Exec("truncate socialnetwork_timeline;"); err != nil {
 		return err
 	}
+	if err := dbu.dbc.Exec("truncate socialnetwork_url;"); err != nil {
+		return err
+	}
 	return nil
 }
 

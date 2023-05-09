@@ -9,8 +9,18 @@ service TimelineService {
 	rpc ReadTimeline(ReadTimelineRequest) returns (ReadTimelineResponse);
 }
 
+service HomeService {
+	rpc WriteHomeTimeline(WriteHomeTimelineRequest) returns (WriteTimelineResponse);
+	rpc ReadHomeTimeline(ReadTimelineRequest) returns (ReadTimelineResponse);
+}
+
 message WriteTimelineRequest {
 	TimelineItem timelineitem = 1;
+}
+
+message WriteHomeTimelineRequest {
+	TimelineItem   timelineitem = 1;
+	repeated int64 usermentionids = 2;
 }
 
 message WriteTimelineResponse {
@@ -24,9 +34,8 @@ message ReadTimelineRequest {
 }
 
 message ReadTimelineResponse {
-	string ok = 1;
+	string   ok = 1;
 	repeated Post posts = 2;
-
 }
 
 message Timeline {

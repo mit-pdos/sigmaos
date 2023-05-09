@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "socialnetwork/proto/text.proto";
+
 option go_package = "sigmaos/socialnetwork/proto";
 
 service PostService {
@@ -38,21 +40,6 @@ message Post {
 message PostEncode {
 	int64 postid = 1;
 	string postcontent = 2;
-}
-
-message UserRef {
-	int64  userid = 1;
-	string username = 2; 
-}
-
-message MediaRef {
-	int64  mediaid = 1;
-	string mediatype = 2;
-}
-
-message Url {
-	string shorturl = 1;
-	string extendedurl = 2;
 }
 
 enum POST_TYPE {

@@ -9,7 +9,6 @@ import (
 	"sigmaos/protdevclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
-	"time"
 	"strconv"
 	"fmt"
 	"sort"
@@ -20,7 +19,6 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	TIMELINE_HB_FREQ = 5
 	TIMELINE_QUERY_OK = "OK"
 	TIMELINE_CACHE_PREFIX = "timeline_"
 )
@@ -53,16 +51,8 @@ func RunTimelineSrv(public bool, jobname string) error {
 		return err
 	}
 	tlsrv.postc = pdc
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting graph service\n")
-	go tlsrv.heartBeat()
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
 	return pds.RunServer()
-}
-
-func (tlsrv *TimelineSrv) heartBeat() {
-	for {
-		time.Sleep(time.Duration(TIMELINE_HB_FREQ) * time.Second)
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "ALIVE!\n")
-	}
 }
 
 func (tlsrv *TimelineSrv) WriteTimeline(

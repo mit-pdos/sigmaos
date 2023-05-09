@@ -262,6 +262,16 @@ func TestManyGaps(t *testing.T) {
 	testManyGaps(t, sliceintervals.MkIInterval)
 }
 
+func bench(siv sessp.IIntervals, ivs []*sessp.Tinterval) {
+	for i, iv := range ivs {
+		siv.Insert(iv)
+		d := i - len(ivs)/2
+		if d >= 0 {
+			siv.Delete(ivs[d])
+		}
+	}
+}
+
 func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tot := time.Duration(0)
@@ -281,13 +291,7 @@ func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 			ivs[j] = t
 		}
 		start := time.Now()
-		for i, iv := range ivs {
-			siv.Insert(iv)
-			d := i - len(ivs)/2
-			if d >= 0 {
-				siv.Delete(ivs[d])
-			}
-		}
+		bench(siv, ivs)
 		tot += time.Since(start)
 	}
 	fmt.Printf("%v: %d random ins/del took on avg %v\n", v, N, tot/time.Duration(I))

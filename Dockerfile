@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1-experimental
 
 FROM alpine as base
+ARG tag
 
 # Install some apt packages for debugging.
 #RUN \
@@ -22,6 +23,7 @@ RUN mkdir bin && \
     mkdir bin/linux
 # Copy some yaml files to the base image.
 COPY seccomp seccomp
+ENV SIGMATAG=$tag
 
 # ========== user image ==========
 FROM base AS sigmauser 

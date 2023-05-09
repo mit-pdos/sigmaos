@@ -4,7 +4,6 @@ FROM archlinux
 ARG parallel
 ARG target=local
 ARG tag
-ENV SIGMATAG=$tag
 
 RUN yes | pacman -Sy git libseccomp wget gcc pkg-config
 
@@ -23,6 +22,10 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git pull && \
   cd src && \
   ./all.bash
+
+# Set env after downlaoding and installing the custom Go version, so we don't
+# rebuild Go evey time we change tags.
+ENV SIGMATAG=$tag
 
 # Install some apt packages for debugging.
 #RUN \

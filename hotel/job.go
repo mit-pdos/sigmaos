@@ -197,7 +197,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 }
 
 func (hj *HotelJob) Stop() error {
-	hj.CacheAutoscaler.Stop()
+	if hj.CacheAutoscaler != nil {
+		hj.CacheAutoscaler.Stop()
+	}
 	for _, pid := range hj.pids {
 		if err := hj.Evict(pid); err != nil {
 			return err

@@ -269,21 +269,24 @@ func testManyRandom(t *testing.T, mkiv func() sessp.IIntervals) {
 	for t := 0; t < I; t++ {
 		siv := mkiv()
 		v = reflect.TypeOf(siv)
-		ivs := make([]*sessp.Tinterval, 0)
-		del := make([]*sessp.Tinterval, 0)
+		ivs := make([]*sessp.Tinterval, N)
 		for i := 0; i < N; i++ {
-			s := r.Int31() % N
-			ivs = append(ivs, sessp.MkInterval(uint64(s), uint64(s+1)))
-			if s > 10 {
-				s -= 10
-			}
-			del = append(del, sessp.MkInterval(uint64(s), uint64(s+5)))
+			ivs[i] = sessp.MkInterval(uint64(i), uint64(i+1))
 		}
-
+		// receive replies out of order
+		for i := 0; i < N; i++ {
+			j := r.Int31() % N
+			t := ivs[i]
+			ivs[i] = ivs[j]
+			ivs[j] = t
+		}
 		start := time.Now()
 		for i, iv := range ivs {
 			siv.Insert(iv)
-			siv.Delete(del[i])
+			d := i - len(ivs)/2
+			if d >= 0 {
+				siv.Delete(ivs[d])
+			}
 		}
 		tot += time.Since(start)
 	}

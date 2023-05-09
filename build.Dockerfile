@@ -1,10 +1,19 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM golang
+FROM archlinux
 ARG parallel
 ARG target=local
 ARG tag
 ENV SIGMATAG=$tag
+
+RUN yes | pacman -Sy git libseccomp wget gcc pkg-config
+
+# Download an initial version of Go
+RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \
+  tar -C /usr/local -xzf go1.20.4.linux-amd64.tar.gz
+
+# Set the PATH to include the new Go install.
+ENV PATH="${PATH}:/usr/local/go/bin"
 
 # Install custom version of go with larger minimum stack size.
 RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
@@ -26,15 +35,6 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install apt packages & clean up apt cache
-RUN \
-  apt-get update && \
-  apt-get --no-install-recommends --yes install libseccomp-dev && \
-  apt clean && \
-  apt autoclean && \
-  apt autoremove && \
-  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
     mkdir bin/user && \
@@ -50,8 +50,8 @@ RUN go mod download
 # Copy source
 COPY . .
 # Build all binaries.
-RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go/go-custom/bin/go --target $target $parallel kernel && \
-  ./make.sh --norace --gopath /go/go-custom/bin/go --target $target $parallel user && \
+RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
+  ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel user && \
   mkdir bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \

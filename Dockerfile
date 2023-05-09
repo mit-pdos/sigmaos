@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM golang as base
+FROM alpine as base
 
 # Install some apt packages for debugging.
 #RUN \
@@ -12,6 +12,8 @@ FROM golang as base
 #  apt autoclean && \
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN apk add --no-cache libseccomp gcompat libpthread-stubs musl-dev
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -45,7 +47,7 @@ COPY --from=sigmabuilder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
 COPY --from=sigmabuilder /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy linus bins
 COPY --from=sigmabuilder /home/sigmaos/bin/linux /home/sigmaos/bin/linux
-CMD ["sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${jaegerip} ${overlays}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${jaegerip} ${overlays}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmakernelclean AS sigmakernel

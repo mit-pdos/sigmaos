@@ -75,6 +75,8 @@ allowed:
   - tgkill
   - write
   - writev
+# Needed for MUSL/Alpine
+  - readlink
 
 cond_allowed:
   socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).

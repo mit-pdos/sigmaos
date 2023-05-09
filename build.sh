@@ -66,7 +66,7 @@ DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
   --build-arg parallel=$PARALLEL \
   --build-arg tag=$TAG \
-  --target builder \
+  -f build.Dockerfile \
   -t sigmabuilder .
 # Default to building the sigmakernel image with user binaries
 SIGMAKERNEL_TARGET="sigmakernel"

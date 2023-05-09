@@ -33,9 +33,11 @@ func MkSkipIntervals() *SkipIntervals {
 		rand:      rand.New(source),
 		prevElems: mkLevels(MaxLevel),
 	}
-	for i := 0; i < 2000; i++ {
-		e := mkElement(0, nil)
-		skipl.freeElem(e)
+	if ALLOC {
+		for i := 0; i < 2000; i++ {
+			e := mkElement(0, nil)
+			skipl.freeElem(e)
+		}
 	}
 	return skipl
 }

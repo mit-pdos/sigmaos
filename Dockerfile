@@ -13,15 +13,6 @@ FROM golang as base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install apt packages & clean up apt cache
-RUN \
-  apt-get update && \
-  apt-get --no-install-recommends --yes install libseccomp-dev && \
-  apt clean && \
-  apt autoclean && \
-  apt autoremove && \
-  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
     mkdir bin/user && \

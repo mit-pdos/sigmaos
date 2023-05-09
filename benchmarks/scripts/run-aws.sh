@@ -376,18 +376,19 @@ hotel_tail_reserve() {
 
 hotel_tail_multi() {
   k8saddr="x.x.x.x"
-  rps="250,500,1000,2000,1000"
-  dur="10s,20s,20s,20s,10s"
-#  rps="250,500,1000,2000,2500,1000"
-#  dur="10s,20s,20s,20s,20s,10s"
-#  rps="2500"
-#  dur="60s"
-  sys="Sigmaos"
-#  sys="K8s"
+#  rps="250,500,1000,2000,1000"
+#  dur="10s,20s,20s,20s,10s"
+  rps="250,500,1000,1500,1000"
+  dur="30s,30s,30s,30s,30s"
+#  rps="251"
+#  dur="10s"
+#  sys="Sigmaos"
+  sys="K8s"
   cache_type="cached"
-  scale_cache="true"
+  scale_cache="false"
+  cache_type2="cached"
 #  cache_type="kvd"
-  n_clnt_vms=4
+  n_clnt_vms=3
   driver_vm=8
   clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
@@ -397,7 +398,10 @@ hotel_tail_multi() {
   if [[ $scale_cache == "true" ]]; then
     pn="-scalecache-true"
   fi
-  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms$pn"
+  if [[ "$sys" != "K8s" ]]; then
+    cache_type2=""
+  fi
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms$pn$cache_type2"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"
   # Avoid doing duplicate work.
@@ -413,11 +417,15 @@ hotel_tail_multi() {
     cd $SCRIPT_DIR
     echo "Stopping hotel"
     ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
     echo "Stopping mr"
     ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
     sleep 10
     # Start Hotel
     echo "Starting hotel"
+#    ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
+    ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-$cache_type2 --nrunning 3
     ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
     cd $ROOT_DIR
     k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
@@ -462,6 +470,8 @@ hotel_tail_multi() {
   cd $SCRIPT_DIR
   echo "Stopping hotel"
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   # Stop MR
   echo "Stopping mr"
   ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
@@ -629,6 +639,8 @@ k8s_balance() {
   # Stop Hotel
   cd $SCRIPT_DIR
   echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
@@ -636,6 +648,7 @@ k8s_balance() {
   sleep 10
   # Start Hotel
   echo "Starting hotel"
+  ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached --nrunning 3
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
@@ -655,6 +668,8 @@ k8s_balance() {
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   cd $SCRIPT_DIR
   echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
@@ -691,6 +706,8 @@ k8s_balance_multi() {
   # Stop Hotel
   cd $SCRIPT_DIR
   echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
@@ -698,6 +715,7 @@ k8s_balance_multi() {
   sleep 10
   # Start Hotel
   echo "Starting hotel"
+  ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached --nrunning 3
   ./start-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes --nrunning 19
   # Start MR
   echo "Starting mr"
@@ -731,6 +749,8 @@ k8s_balance_multi() {
   end_benchmark $vpc $perf_dir
   cd $SCRIPT_DIR
   echo "Stopping hotel"
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
   # Stop MR
   echo "Stopping mr"
@@ -892,7 +912,8 @@ graph_hotel_tail_tpt_over_time() {
 graph_k8s_hotel_tail_tpt_over_time() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
-  d="hotel_tail_multi/K8s/rps-250,500,1000,2000,1000-nclnt-3"
+#  d="hotel_tail_multi/K8s/rps-250,500,1000,1000,1000-nclnt-3cached"
+  d="hotel_tail_multi/K8s/rps-250,500,1000,1500,1000-nclnt-3cached"
   echo "========== Graphing $graph =========="
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$d --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm "" --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Hotel Latency Under Changing Load $d" --total_ncore 32
 }
@@ -1007,12 +1028,12 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-realm_balance_be
-realm_balance_multi
-k8s_balance_multi
-k8s_balance_be
+hotel_tail_multi
+#realm_balance_be
+#realm_balance_multi
+#k8s_balance_multi
+#k8s_balance_be
 # XXX Try above next
-#hotel_tail_multi
 #k8s_balance
 # XXX
 #realm_balance
@@ -1028,12 +1049,16 @@ k8s_balance_be
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_realm_balance_be
-graph_k8s_balance_be
-graph_realm_balance_multi
-graph_k8s_balance_multi
+#graph_realm_balance_be
+#graph_k8s_balance_be
+#graph_realm_balance_multi
+#graph_k8s_balance_multi
+graph_k8s_hotel_tail_tpt_over_time
+
+
+
+
 #graph_hotel_tail_tpt_over_time
-#graph_k8s_hotel_tail_tpt_over_time
 #graph_hotel_tail_tpt_over_time_autoscale
 # XXX
 #graph_k8s_balance

@@ -14,7 +14,7 @@ type KernelClnt struct {
 }
 
 func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	pdc, err := protdevclnt.MkProtDevClnt(fsl, pn)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}

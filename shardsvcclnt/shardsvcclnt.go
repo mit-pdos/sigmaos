@@ -18,16 +18,20 @@ type ShardWatch func(string, int, error)
 
 type ShardSvcClnt struct {
 	sync.Mutex
-	*fslib.FsLib
+	fsls  []*fslib.FsLib
 	clnts []*protdevclnt.ProtDevClnt
 	pn    string
 	sw    ShardWatch
 	rdr   *reader.Reader
 }
 
-func MkShardSvcClnt(fsl *fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcClnt, error) {
-	ssc := &ShardSvcClnt{FsLib: fsl, pn: pn, sw: sw}
-	sts, err := ssc.GetDir(ssc.shardDir())
+func MkShardSvcClnt(fsls []*fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcClnt, error) {
+	ssc := &ShardSvcClnt{
+		fsls: fsls,
+		pn:   pn,
+		sw:   sw,
+	}
+	sts, err := ssc.fsls[0].GetDir(ssc.shardDir())
 	if err != nil {
 		return nil, err
 	}
@@ -50,12 +54,12 @@ func (ssc *ShardSvcClnt) shardDir() string {
 
 func (ssc *ShardSvcClnt) setWatch() error {
 	dir := ssc.shardDir()
-	_, rdr, err := ssc.ReadDir(dir)
+	_, rdr, err := ssc.fsls[0].ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	ssc.rdr = rdr
-	if err := ssc.SetDirWatch(ssc.rdr.Fid(), dir, ssc.Watch); err != nil {
+	if err := ssc.fsls[0].SetDirWatch(ssc.rdr.Fid(), dir, ssc.Watch); err != nil {
 		return err
 	}
 	return nil
@@ -66,7 +70,7 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 	defer ssc.Unlock()
 
 	sn := ssc.pn + shardsvcmgr.Shard(i)
-	pdc, err := protdevclnt.MkProtDevClnt(ssc.FsLib, sn)
+	pdc, err := protdevclnt.MkProtDevClnt(ssc.fsls, sn)
 	if err != nil {
 		return err
 	}
@@ -80,7 +84,7 @@ func (ssc *ShardSvcClnt) Watch(path string, err error) {
 		db.DPrintf(db.SHARDCLNT, "Watch err %v\n", err)
 		return
 	}
-	sts, err := ssc.GetDir(path)
+	sts, err := ssc.fsls[0].GetDir(path)
 	if len(sts) > len(ssc.clnts) {
 		if err := ssc.addClnt(len(sts) - 1); err != nil {
 			db.DPrintf(db.SHARDCLNT, "%v: addClnt err %v\n", proc.GetName(), err)
@@ -111,6 +115,6 @@ func (ssc *ShardSvcClnt) StatsSrv(i int) (*protdev.SigmaRPCStats, error) {
 	return ssc.clnts[i].StatsSrv()
 }
 
-func (ssc *ShardSvcClnt) StatsClnt(i int) *protdev.RPCStats {
+func (ssc *ShardSvcClnt) StatsClnt(i int) map[string]*protdev.MethodStat {
 	return ssc.clnts[i].StatsClnt()
 }

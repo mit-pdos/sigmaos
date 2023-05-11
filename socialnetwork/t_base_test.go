@@ -9,6 +9,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/protdevclnt"
+	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"github.com/stretchr/testify/assert"
 	"time"
@@ -30,14 +31,14 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
-	nMoreKernel := (len(srvs)*2 + NSHARD*2 - 1) / int(linuxsched.NCores)
+	nMoreKernel := ((len(srvs)*2 + NSHARD*2) - 1)  / int(linuxsched.NCores)
 	if nMoreKernel > 0 {
-		dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed", 
-			len(srvs)*2 + NSHARD*2, linuxsched.NCores, nMoreKernel)	
+		dbg.DPrintf(dbg.ALWAYS, "(%v * %v - 1) / %v = %v more kernels are needed", 
+			len(srvs)*2 + NSHARD*2, sn.N_RPC_SESSIONS, linuxsched.NCores, nMoreKernel)	
 		err = tssn.BootNode(nMoreKernel)
 		assert.Nil(tssn.T, err)
 	}
-	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, test.Overlays)
+	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, true, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
 	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")
@@ -59,7 +60,7 @@ func TestToyMeaningOfLife(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_MOL)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MOL)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := proto.MoLRequest{
 		Name: "test",

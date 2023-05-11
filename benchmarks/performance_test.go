@@ -11,7 +11,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/scheddclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
+)
+
+const (
+	CPU_MONITOR_INTERVAL = 1 * time.Second
 )
 
 //
@@ -55,7 +60,7 @@ func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
 }
 
 // Monitor how many cores have been assigned to a realm.
-func monitorCoresAssigned(ts *test.RealmTstate, p *perf.Perf) {
+func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	go func() {
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		for {
@@ -70,7 +75,19 @@ func monitorCoresAssigned(ts *test.RealmTstate, p *perf.Perf) {
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
 			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
-			time.Sleep(1 * time.Second)
+			time.Sleep(CPU_MONITOR_INTERVAL)
+		}
+	}()
+}
+
+func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string, realm sp.Trealm) {
+	go func() {
+		for {
+			top := k8sTop()
+			util := parseK8sUtil(top, app, realm)
+			p.TptTick(util)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), util)
+			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()
 }

@@ -16,14 +16,14 @@ func MakeHTTPMux() *TracedHTTPMux {
 }
 
 type TracedHTTPMux struct {
-	mux *http.ServeMux
+	*http.ServeMux
 }
 
 func (tm *TracedHTTPMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request)) {
 	// Tag request with route, and wrap the request in a span context.
-	tm.mux.Handle(pattern, otelhttp.WithRouteTag(pattern+"/:name", http.HandlerFunc(handler)))
+	tm.ServeMux.Handle(pattern, otelhttp.WithRouteTag(pattern+"/:name", http.HandlerFunc(handler)))
 }
 
 func (tm *TracedHTTPMux) Serve(l net.Listener) {
-	db.DFatalf("%v", http.Serve(l, tm.mux))
+	db.DFatalf("%v", http.Serve(l, tm.ServeMux))
 }

@@ -33,13 +33,10 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQv
 		return nil, nil
 	}
 
-	std.si.Lock()
-	defer std.si.Unlock()
-
 	db.DPrintf(db.PROTDEVSRV, "Read stats: %v\n", std.si)
 	st := &protdev.SigmaRPCStats{}
 	st.SigmapStat = std.mfs.GetStats().StatsCopy()
-	st.RpcStat = *std.si.Stats()
+	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)
 	if err != nil {
 		return nil, serr.MkErrError(err)

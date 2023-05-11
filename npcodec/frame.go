@@ -5,12 +5,12 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/frame"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
-func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
+func MarshalFrame(fcm *sessp.FcallMsg, b []byte, bwr *bufio.Writer) *serr.Err {
 	sp2NpMsg(fcm)
 	fc9P := to9P(fcm)
 	db.DPrintf(db.NPCODEC, "MarshalFrame %v\n", fc9P)
@@ -28,18 +28,18 @@ func MarshalFrame(fcm *sessp.FcallMsg, bwr *bufio.Writer) *serr.Err {
 	return nil
 }
 
-func UnmarshalFrame(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
+func UnmarshalFrame(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
-		return nil, err
+		return 0, nil, err
 	}
 	fc9p := &Fcall9P{}
 	if err := unmarshal(f, fc9p); err != nil {
 		db.DPrintf(db.NPCODEC, "unmarshal err %v\n", err)
-		return nil, serr.MkErr(serr.TErrBadFcall, err)
+		return 0, nil, serr.MkErr(serr.TErrBadFcall, err)
 	}
 	fc := toSP(fc9p)
 	np2SpMsg(fc)
-	return fc, nil
+	return 0, fc, nil
 }

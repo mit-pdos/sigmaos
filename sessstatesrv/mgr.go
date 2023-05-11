@@ -44,8 +44,8 @@ func (sm *SessionMgr) CloseConn() {
 // Find connected sessions.
 func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
 	// Lock the session table.
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 	sess := make(map[uint64]bool, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
@@ -60,8 +60,8 @@ func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 	sess := make([]*Session, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
@@ -79,7 +79,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := sessp.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil, nil, sessp.MakeFenceNull())
+		hbs := sessp.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil, sessp.Tinterval{}, sessp.MakeFenceNull())
 		sm.srvfcall(hbs)
 	}
 }
@@ -92,22 +92,22 @@ func (sm *SessionMgr) runDetaches() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := sessp.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil, nil, sessp.MakeFenceNull())
+			detach := sessp.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil, sessp.Tinterval{}, sessp.MakeFenceNull())
 			sm.srvfcall(detach)
 		}
 	}
 }
 
 func (sm *SessionMgr) Done() bool {
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.RLock()
+	defer sm.st.mu.RUnlock()
 
 	return sm.done
 }
 
 func (sm *SessionMgr) Stop() {
-	sm.st.Lock()
-	defer sm.st.Unlock()
+	sm.st.mu.Lock()
+	defer sm.st.mu.Unlock()
 
 	sm.done = true
 }

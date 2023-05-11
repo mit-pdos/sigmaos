@@ -11,13 +11,41 @@ echo "$0 $1"
 DIR=$(dirname $0)
 BLKDEV=/dev/sda4
 
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
+LOGIN=arielck
+SSHCMD=$1
+
+# Set up a few directories, and prepare to scp the aws secrets.
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+sudo mkdir -p /mnt/9p
+mkdir ~/.aws
+mkdir ~/.docker
+chmod 700 ~/.aws
+echo > ~/.aws/credentials
+chmod 600 ~/.aws/credentials
+ENDSSH
+
+# decrypt the aws and docker secrets.
+SECRETS="../aws/.aws/credentials ../aws/.docker/config.json"
+for F in $SECRETS
+do
+  yes | gpg --output $F --decrypt ${F}.gpg || exit 1
+done
+
+# scp the aws and docker secrets to the server and remove them locally.
+scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/config $SSHCMD:~/.aws/
+scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/credentials $SSHCMD:~/.aws/
+scp -i $DIR/keys/cloudlab-sigmaos ../aws/.docker/config.json $SSHCMD:~/.docker/
+rm $SECRETS
+
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
    UserKnownHostsFile=/dev/null
 EOF
+chmod go-w .ssh/config
+
 cat << EOF > ~/.ssh/aws-ulambda
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
@@ -60,13 +88,34 @@ IuzhbPSUS+OksAAAAOa2Fhc2hvZWtAZms2eDEBAgMEBQ==
 EOF
 chmod 600 ~/.ssh/aws-ulambda
 
+cat << EOF >> ~/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC4NF0v/XEFId9bJJ1KvzvIIfcFUPvvNJCWH35JJbpaCCRuguHAlim30WqeTG+Ru7Debl80AVuve+XrhL2uYY6R1SeBXQ6Vl6jGPzmmlTqJLi73e6oNWI13QJ1ALriS2Vy5xk1ckmS5epYS0OixerQJ/9gHTcdHWcNDbfUOi23jqdciNExSqjamrYvUwi14IhRNRqltrk2V4ephnRI+8S3ExansbZSwnu0XIz7j86e3PFMuuHwLJWv59UdO9roJl2B36dnzWp0lpqcXYrk3gbbXBCu6iV1Dv7XgvElTtmwqJJ50O2pzwJv2pBB/tw3LkWldF6FuYO3vjaTOgdm2gbCsw2DMJSa6oXJB4cRztXDe51ljbhdYptHxbJgM7+852soEma2uhuek80rRn3UEqrQ1MIsw0DJXx5k+tDbJAWyzy4k4opR583Go9UtRq/BY6qyaFHA/DY13c5QiJNapN5JameX3+wUvNmR22lX/SW61KFjXzYnn//77UCidNPr6SQs= kaashoek@fk6x1
+EOF
+
 sudo mkdir -p /mnt/9p
+
+if [ -d "ulambda" ] 
+then
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
+else
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download;)'
+  # Indicate that sigma has not been build yet on this instance
+  touch ~/.nobuild
+fi
+
+if [ -d "corral" ] 
+then
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd corral; git pull;)'
+else
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:corral; (cd corral; git checkout k8s; git pull; go mod download;)'
+  # Indicate that sigma has not been build yet on this instance
+  touch ~/.nobuild
+fi
 
 if [ ! -f ~/packages ];
 then
-  touch ~/packages
   sudo apt update
-  yes | sudo apt install gcc \
+  sudo apt install -y gcc \
   make \
   gcc-7 \
   gcc \
@@ -97,36 +146,36 @@ then
   libseccomp-dev \
   awscli \
   htop \
-  jq
+  jq \
+  docker.io \
+  mysql-client
 
   # For hadoop
-  yes | sudo apt install openjdk-8-jdk \
-  openjdk-8-jre-headless
+#  yes | sudo apt install openjdk-8-jdk \
+#  openjdk-8-jre-headless
 
-  wget 'https://golang.org/dl/go1.18.1.linux-amd64.tar.gz'
-  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.18.1.linux-amd64.tar.gz
+  wget 'https://golang.org/dl/go1.20.3.linux-amd64.tar.gz'
+  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.3.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
+  touch ~/packages
 fi
 
-if [ -d "ulambda" ]; then 
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh --norace --version CLOUDLAB --parallel; ./upload.sh --realm arielck --version CLOUDLAB; ./install.sh --from s3 --realm arielck)'
-else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda sigmaos; cd ulambda; go mod download;)'
-fi
+# Add to docker group
+sudo usermod -aG docker $LOGIN
 
-mkdir ~/.aws
-chmod 700 ~/.aws
-echo > ~/.aws/credentials
-chmod 600 ~/.aws/credentials
+# Increase root's open file ulimits.
+echo "root hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "root soft nofile 100000" | sudo tee -a /etc/security/limits.conf
 
+# Increase login user's open file ulimits.
+echo "$LOGIN hard nofile 100000" | sudo tee -a /etc/security/limits.conf
+echo "$LOGIN soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
+echo -n > ~/.hushlogin
 ENDSSH
-
-scp -i $DIR/keys/cloudlab-sigmaos ~/.aws/credentials $1:~/.aws/
-scp -i $DIR/keys/cloudlab-sigmaos ~/.aws/config $1:~/.aws/
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
 echo "ssh $1"
 echo "============================="
-

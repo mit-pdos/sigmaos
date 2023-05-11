@@ -60,8 +60,9 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
-vms_privaddr=`./lsvpc.py --privaddr $VPC | grep -w VMInstance | cut -d " " -f 6`
+vms_full=$(./lsvpc.py  --privaddr $VPC)
+vms=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 5`
+vms_privaddr=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
 vma_privaddr=($vms_privaddr)
@@ -76,17 +77,22 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch jaeger # docker-dev
+  ./update-repo.sh --vpc $VPC --parallel --branch master # docker-dev
 fi
+
+vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
 
 for vm in $vms; do
     echo $vm
-    KERNELID="sigma-$(echo $RANDOM | md5sum | head -c 8)"
+    # Get hostname.
+    VM_IP=$(ssh -i key-$VPC.pem ubuntu@$vm hostname -i)
+    VM_NAME=$(echo "$vms_full" | grep $VM_IP | cut -d " " -f 2)
+    KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
-    ./ulambda/set-cores.sh --set 0 --start 2 --end 3 > /dev/null
+    ./ulambda/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
     echo "ncores:"
     nproc
   else

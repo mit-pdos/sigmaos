@@ -44,7 +44,8 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, jobname)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER, pds.MemFs.SigmaClnt().FsLib)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}

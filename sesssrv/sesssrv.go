@@ -62,7 +62,7 @@ type SessSrv struct {
 	replicated bool
 	ch         chan bool
 	sc         *sigmaclnt.SigmaClnt
-	cnt        stats.Tcounter
+	qlen       stats.Tcounter
 	cpumon     *cpumon.CpuMon
 }
 
@@ -99,7 +99,7 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 		ssrv.replSrv.Start()
 		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
 	}
-	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.MarshalFrame, spcodec.UnmarshalFrame)
+	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.ch = make(chan bool)
@@ -224,7 +224,7 @@ func (ssrv *SessSrv) GetStats() *stats.StatInfo {
 }
 
 func (ssrv *SessSrv) QueueLen() int64 {
-	return ssrv.st.QueueLen() + ssrv.cnt.Read()
+	return ssrv.qlen.Read()
 }
 
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
@@ -261,6 +261,7 @@ func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.
 }
 
 func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
+	ssrv.qlen.Inc(1)
 	s := sessp.Tsession(fc.Fc.Session)
 	sess, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
@@ -273,10 +274,8 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 		if s == 0 {
 			ssrv.srvfcall(fc)
 		} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
-			ssrv.cnt.Inc(1)
 			go func() {
 				ssrv.srvfcall(fc)
-				ssrv.cnt.Dec()
 			}()
 		} else {
 			sess.GetThread().Process(fc)
@@ -300,6 +299,7 @@ func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, s
 }
 
 func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
+	defer ssrv.qlen.Dec()
 	// If this was a server-generated heartbeat message, heartbeat all of the
 	// contained sessions, and then return immediately (no further processing is
 	// necessary).

@@ -57,6 +57,7 @@ fi
 flannel_cidr="10.123.0.0"
 
 join_cmd=""
+kube_config=""
 
 id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
 key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
@@ -66,8 +67,8 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
-#    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
-    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
+    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
+#    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config
@@ -104,6 +105,9 @@ for vm in $vms; do
         exit 1
     fi
     eval "sudo $join_cmd"
+    mkdir -p ~/.kube
+    echo "$kube_config" > ~/.kube/config
+    sudo chown 1000:1000 ~/.kube/config
   fi
 ENDSSH
   # Get command for follower nodes to join the cluster
@@ -112,7 +116,12 @@ ENDSSH
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
         kubeadm token create --print-join-command
 ENDSSH"
+    print_kube_config="
+      ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+        cat ~/.kube/config
+ENDSSH"
     join_cmd=$(eval "$print_join_cmd")
+    kube_config=$(eval "$print_kube_config")
   fi
 done
 

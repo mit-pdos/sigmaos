@@ -75,6 +75,11 @@ func (clnt *WWWClnt) MatMul(n int) error {
 	return err
 }
 
+func (clnt *WWWClnt) ConsCPULocal(n int) error {
+	_, err := clnt.get(CONS_CPU_LOCAL + strconv.Itoa(n))
+	return err
+}
+
 // XXX Remove eventually, repalce with Evict
 func (clnt *WWWClnt) StopServer(pclnt *procclnt.ProcClnt, pid proc.Tpid) error {
 	ch := make(chan error)

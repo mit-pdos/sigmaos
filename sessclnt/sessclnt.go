@@ -4,11 +4,14 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
 
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
+	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
@@ -59,11 +62,11 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 	}
 	rep, err1 := c.recv(rpc)
 	if err1 != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, err1, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
 	if db.WillBePrinted(db.SESS_STATE_CLNT) {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fc.Seqno, req, rep.Type(), rep, c.addrs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, rep.Type(), rep, c.addrs)
 	}
 	return rep, err1
 }
@@ -94,26 +97,16 @@ func (c *SessClnt) Reset() {
 }
 
 // Complete an RPC and pass the response up the stack.
-func (c *SessClnt) CompleteRPC(reply *sessp.FcallMsg, err *serr.Err) {
-	s := reply.Seqno()
-	rpc, ok := c.queue.Remove(s)
+func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr.Err) {
+	rpc, ok := c.queue.Remove(seqno)
 	// the outstanding request may have been cleared if the conn is closing, or
 	// if a previous version of this request was sent and received, in which case
 	// rpc == nil and ok == false.
 	if ok {
-		o := reply.Fc.Seqno
-		c.ivs.Insert(sessp.MkInterval(o, o+1))
-		c.ivs.Delete(reply.Fc.Received)
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
-		rpc.Complete(reply, err)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v from %v", c.sid, rpc.Req, c.addrs)
+		rpc.Complete(f, d, err)
 	} else {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc reply %v from %v; seqnos %v\n", c.sid, reply, c.addrs, c.ivs)
-	}
-	// If the server closed the session (this is a sessclosed error or an
-	// Rdetach), close the SessClnt.
-	if srvClosedSess(reply.Msg, err) {
-		db.DPrintf(db.SESS_STATE_CLNT, "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, s)
-		c.close()
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc from %v; seqnos %v\n", c.sid, c.addrs, c.ivs)
 	}
 }
 
@@ -148,13 +141,39 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 }
 
 func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *serr.Err) {
-	c.Lock()
-	defer c.Unlock()
+	s := time.Now()
+
+	// If the request is not an RPC, we need to ensure strict ordering by seqno.
+	// So, hold the lock between incrementing the seqno (which happens in
+	// sessp.MakeFcallMsg) and enqueueing the message. This holds the lock during
+	// marshaling.
+	if req.Type() != sessp.TTwriteread {
+		c.Lock()
+		defer c.Unlock()
+	}
+
+	// For TTwriteread (RPCs) we make no ordering guarantees. This allows us to
+	// avoid holding the lock between the Fcall message creation step (which
+	// allocates a sequence number), the marshaling step (which often takes a
+	// long time), and the request enqueue step (which ordinarily expects fcalls
+	// to be enqueued in order).
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f)
+	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
+
+	// If the request is an RPC, then we don't have strict ordering requirements.
+	// We haven't taken the lock yet in order to avoid holding the lock while
+	// marshaling the message, which may take a long time. However, we need to
+	// take the lock here to ensure the status of the session (c.closed) is
+	// checked atomically with the RPC enqueueing.
+	if req.Type() == sessp.TTwriteread {
+		c.Lock()
+		defer c.Unlock()
+	}
 
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-	rpc := netclnt.MakeRpc(c.addrs, sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f))
+
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil
@@ -163,7 +182,22 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
 func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *serr.Err) {
-	return rpc.Await()
+	reply, err := rpc.Await()
+	// Reply may be nil if the server became unreachable, the session was closed,
+	// and outstanding RPCs were aborted.
+	if reply != nil {
+		o := uint64(reply.Seqno())
+		c.ivs.Insert(sessp.MkInterval(o, o+1))
+		c.ivs.Delete(reply.Fc.Received)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
+		// If the server closed the session (this is a sessclosed error or an
+		// Rdetach), close the SessClnt.
+		if srvClosedSess(reply.Msg, err) {
+			db.DPrintf(db.SESS_STATE_CLNT, "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, reply.Seqno())
+			c.close()
+		}
+	}
+	return reply, err
 }
 
 // Get a connection to the server. If it isn't possible to make a connection,
@@ -224,7 +258,11 @@ func (c *SessClnt) writer() {
 			break
 		}
 
+		s := time.Now()
 		nc, err := c.getConn()
+		if time.Since(s) > 100*time.Microsecond {
+			db.DPrintf(db.SESS_LAT, "Long getconn %v", time.Since(s))
+		}
 
 		// If we can't connect to the replica group, return.
 		if err != nil {

@@ -41,12 +41,13 @@ func RunGraphSrv(public bool, jobname string) error {
 		return err
 	}
 	gsrv.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, jobname)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH, pds.MemFs.SigmaClnt().FsLib)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	gsrv.cachec = cachec
-	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_USER)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}

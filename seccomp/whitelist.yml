@@ -18,6 +18,7 @@ allowed:
   - arch_prctl # Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
   - bind
   - brk
+  - clone3 # Needed by Go runtime on old versions of docker. See https://github.com/moby/moby/issues/42680
   - close
   - connect
   - epoll_create1
@@ -74,6 +75,8 @@ allowed:
   - tgkill
   - write
   - writev
+# Needed for MUSL/Alpine
+  - readlink
 
 cond_allowed:
   socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).

@@ -1,17 +1,27 @@
 package socialnetwork
 
 import (
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
-	"sigmaos/cacheclnt"
 	"fmt"
 	"path"
-	"strconv"
+	"sigmaos/cacheclnt"
 	dbg "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"strconv"
+	"flag"
 )
 
-const cacheNcore = 2
+const (
+	cacheNcore = 2
+)
+
+var N_RPC_SESSIONS int
+
+func init() {
+	flag.IntVar(&N_RPC_SESSIONS, "nrpc", 1, "Number of RPC sessions")
+}
 
 type Srv struct {
 	Name   string
@@ -27,6 +37,18 @@ func MakeMoLSrvs(public bool) []Srv {
 	}
 }
 
+func MakeFsLibs(uname string, base *fslib.FsLib) []*fslib.FsLib {
+	fsls := []*fslib.FsLib{base}
+	for i := 1; i < N_RPC_SESSIONS; i++ {
+		fsl, err := fslib.MakeFsLib(uname + "-" + strconv.Itoa(i))
+		if err != nil {
+			dbg.DFatalf("Error mkfsl: %v", err)
+		}
+		fsls = append(fsls, fsl)
+	}
+	return fsls
+}
+
 type SocialNetworkConfig struct {
 	*sigmaclnt.SigmaClnt
 	srvs      []Srv
@@ -39,7 +61,7 @@ func JobDir(job string) string {
 	return path.Join(sp.SOCIAL_NETWORK, job)
 }
 
-func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int, public bool) (*SocialNetworkConfig, error) {
+func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
 	fsl.MkDir(sp.SOCIAL_NETWORK, 0777)
@@ -52,12 +74,12 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	var cm *cacheclnt.CacheMgr
 	if nshard > 0 {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
-		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), public)
+		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), gc, public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cacheclnt.MkCacheClnt(sc.FsLib, jobname)
+		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 		if err != nil {
 			dbg.DFatalf("Error cacheclnt %v", err)
 			return nil, err
@@ -96,4 +118,3 @@ func (snCfg *SocialNetworkConfig) Stop() error {
 	}
 	return nil
 }
-

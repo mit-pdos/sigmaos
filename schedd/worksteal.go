@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	proto "sigmaos/schedd/proto"
@@ -17,7 +18,7 @@ func (sd *Schedd) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
 	var ok bool
 	if pdc, ok = sd.schedds[kernelId]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt(sd.mfs.SigmaClnt().FsLib, path.Join(sp.SCHEDD, kernelId))
+		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sd.mfs.SigmaClnt().FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
 			db.DFatalf("Error make procd clnt: %v", err)
 		}

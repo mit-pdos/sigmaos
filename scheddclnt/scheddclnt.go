@@ -7,6 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/schedd/proto"
@@ -202,7 +203,7 @@ func (sdc *ScheddClnt) getScheddClnt(scheddIp string) (*protdevclnt.ProtDevClnt,
 	var ok bool
 	if pdc, ok = sdc.schedds[scheddIp]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt(sdc.FsLib, path.Join(sp.SCHEDD, scheddIp))
+		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, scheddIp))
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
 			return nil, err

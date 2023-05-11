@@ -8,12 +8,14 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 
 	"net/http/pprof"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
+	"sigmaos/microbenchmarks"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -24,10 +26,11 @@ import (
 
 // HTTP server paths
 const (
-	STATIC = "/static/"
-	MATMUL = "/matmul/"
-	EXIT   = "/exit/"
-	HELLO  = "/hello"
+	STATIC         = "/static/"
+	MATMUL         = "/matmul/"
+	CONS_CPU_LOCAL = "/conscpulocal/"
+	EXIT           = "/exit/"
+	HELLO          = "/hello"
 )
 
 //
@@ -43,6 +46,7 @@ func RunWwwd(job, tree string) {
 	http.HandleFunc(HELLO, www.makeHandler(doHello))
 	http.HandleFunc(EXIT, www.makeHandler(doExit))
 	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
+	http.HandleFunc(CONS_CPU_LOCAL, www.makeHandler(doConsumeCPULocal))
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
@@ -236,4 +240,15 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
 	return www.spawnApp("matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
+}
+
+// Consume some CPU with a simple CPU-bound task
+func doConsumeCPULocal(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
+	db.DPrintf(db.ALWAYS, "consumeCPULocal: %v\n", args)
+	niter, err := strconv.Atoi(args)
+	if err != nil {
+		db.DFatalf("Can't convert niter %v", args)
+	}
+	microbenchmarks.ConsumeCPU(niter)
+	return proc.MakeStatus(proc.StatusOK), nil
 }

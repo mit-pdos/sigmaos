@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	//	"go.opentelemetry.io/otel/trace"
+	//	"sigmaos/proc"
+
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/dbclnt"
@@ -13,11 +16,12 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
+
+const ()
 
 type Reservation struct {
 	HotelID  string
@@ -64,7 +68,7 @@ func (s *Reserve) initDb() error {
 			return err
 		}
 	}
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		hotel_id := strconv.Itoa(i)
 		room_num := 200
 		if i%3 == 1 {
@@ -93,7 +97,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
+	cachec, err := MkCacheClnt(cache, MakeFsLibs(sp.HOTELRESERVE), job)
 	if err != nil {
 		return err
 	}
@@ -107,8 +111,10 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	defer p.Done()
-	r.tracer = tracing.Init("reserve", proc.GetSigmaJaegerIP())
-	defer r.tracer.Flush()
+	//	if TRACING {
+	//		r.tracer = tracing.Init("reserve", proc.GetSigmaJaegerIP())
+	//		defer r.tracer.Flush()
+	//	}
 	return pds.RunServer()
 }
 
@@ -133,31 +139,46 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		key := hotelId + "_" + indate + "_" + outdate
 
 		var reserves []Reservation
-		_, span := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		var span trace.Span
+		//		if TRACING {
+		//			_, span = s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		}
 		cnt := &cacheproto.CacheInt{}
 		err := s.cachec.Get(key, cnt)
-		//		err := s.cachec.GetTraced(tracing.SpanToContext(span), key, cnt)
+		//		if TRACING {
+		//			//			err = s.cachec.GetTraced(tracing.SpanToContext(span), key, cnt)
+		//			span.End()
+		//		}
 		count = int(cnt.Val)
-		span.End()
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
 			q := fmt.Sprintf("SELECT * from reservation where hotelid='%s' AND indate='%s' AND outdate='%s';", hotelId, indate, outdate)
-			_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+			//			var dbspan trace.Span
+			//			if TRACING {
+			//				_, dbspan = s.tracer.StartContextSpan(sctx, "db.Query")
+			//			}
 			err := s.dbc.Query(q, &reserves)
-			dbspan.End()
+			//			if TRACING {
+			//				dbspan.End()
+			//			}
 			if err != nil {
 				return false, nil, err
 			}
 			for _, r := range reserves {
 				count += r.Number
 			}
-			_, span := s.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			var span trace.Span
+			//			if TRACING {
+			//				_, span = s.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			}
 			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(count)})
-			//			err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(count)})
-			span.End()
+			//			if TRACING {
+			//				//				err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(count)})
+			//				span.End()
+			//			}
 			if err != nil {
 				return false, nil, err
 			}
@@ -168,12 +189,17 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		// check capacity
 		hotel_cap := 0
 		key = hotelId + "_cap"
-		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		var span2 trace.Span
+		//		if TRACING {
+		//			_, span2 = s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		}
 		hc := &cacheproto.CacheInt{}
 		err = s.cachec.Get(key, hc)
-		//		err = s.cachec.GetTraced(tracing.SpanToContext(span2), key, hc)
 		hotel_cap = int(hc.Val)
-		span2.End()
+		//		if TRACING {
+		//			//		err = s.cachec.GetTraced(tracing.SpanToContext(span2), key, hc)
+		//			span2.End()
+		//		}
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return false, nil, err
@@ -181,9 +207,14 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)
 			var nums []Number
 			q := fmt.Sprintf("SELECT * from number where hotelid='%s';", hotelId)
-			_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+			//			var dbspan trace.Span
+			//			if TRACING {
+			//				_, dbspan = s.tracer.StartContextSpan(sctx, "db.Query")
+			//			}
 			err = s.dbc.Query(q, &nums)
-			dbspan.End()
+			//			if TRACING {
+			//				dbspan.End()
+			//			}
 			if err != nil {
 				return false, nil, err
 			}
@@ -191,10 +222,15 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 				return false, nil, fmt.Errorf("Unknown %v", hotelId)
 			}
 			hotel_cap = nums[0].Number
-			_, span := s.tracer.StartContextSpan(sctx, "Cache.PUt")
+			//			var span trace.Span
+			//			if TRACING {
+			//				_, span = s.tracer.StartContextSpan(sctx, "Cache.PUt")
+			//			}
 			err = s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
-			//			err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
-			span.End()
+			//			if TRACING {
+			//				//			err = s.cachec.PutTraced(tracing.SpanToContext(span), key, &cacheproto.CacheInt{Val: int64(hotel_cap)})
+			//				span.End()
+			//			}
 			if err != nil {
 				return false, nil, err
 			}
@@ -210,8 +246,14 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 // MakeReservation makes a reservation based on given information
 // XXX make check and reservation atomic
 func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
-	sctx, span := s.tracer.StartRPCSpan(&req, "MakeReservation")
-	defer span.End()
+	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "MakeReservation")
+	//		defer span.End()
+	//	} else {
+	sctx = context.TODO()
+	//	}
 
 	hotelId := req.HotelId[0]
 	res.HotelIds = make([]string, 0)
@@ -226,10 +268,15 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 	// update reservation number
 	db.DPrintf(db.HOTEL_RESERVE, "Update cache %v\n", date_num)
 	for key, cnt := range date_num {
-		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+		//		var span2 trace.Span
+		//		if TRACING {
+		//			_, span2 = s.tracer.StartContextSpan(sctx, "Cache.Put")
+		//		}
 		err := s.cachec.Put(key, &cacheproto.CacheInt{Val: int64(cnt)})
-		//		err := s.cachec.PutTraced(tracing.SpanToContext(span2), key, &cacheproto.CacheInt{Val: int64(cnt)})
-		span2.End()
+		//		if TRACING {
+		//			//		err := s.cachec.PutTraced(tracing.SpanToContext(span2), key, &cacheproto.CacheInt{Val: int64(cnt)})
+		//			span2.End()
+		//		}
 		if err != nil {
 			return err
 		}
@@ -261,8 +308,14 @@ func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pr
 }
 
 func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
-	sctx, span := s.tracer.StartRPCSpan(&req, "CheckAvailability")
-	defer span.End()
+	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "CheckAvailability")
+	//		defer span.End()
+	//	} else {
+	sctx = context.TODO()
+	//	}
 
 	hotelids := make([]string, 0)
 	for _, hotelId := range req.HotelId {

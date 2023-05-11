@@ -10,7 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/protdevclnt"
+
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
@@ -42,6 +45,7 @@ type HotelJobInstance struct {
 	hj         *hotel.HotelJob
 	lgs        []*loadgen.LoadGenerator
 	p          *perf.Perf
+	wc         *hotel.WebClnt
 	*test.RealmTstate
 }
 
@@ -94,7 +98,21 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	}
 
 	if !ji.justCli {
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, cachetype, cacheNcore, ncache)
+		if sigmaos {
+			if CACHE_TYPE == "memcached" {
+				addrs := strings.Split(MEMCACHED_ADDRS, ",")
+				err := ts.SigmaClnt.PutFileJson(sp.MEMCACHED, 0777, addrs)
+				if err != nil {
+					db.DFatalf("Error put memcached file")
+				}
+			}
+		}
+		var nc = ncache
+		// Only start one cache if autoscaling.
+		if sigmaos && CACHE_TYPE == "cached" && HOTEL_CACHE_AUTOSCALE {
+			nc = 1
+		}
+		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheNcore, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		procs := sdc.GetRunningProcs()
@@ -106,6 +124,13 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			}
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
+		if sigmaos {
+			pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, sp.HOTELRESERVE)
+			if err != nil {
+				db.DFatalf("Error make reserve pdc: %v", err)
+			}
+			reservec = pdc
+		}
 	}
 
 	if !sigmaos {
@@ -120,13 +145,19 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 	}
 
-	wc := hotel.MakeWebClnt(ts.FsLib, ji.job)
+	if sigmaos {
+		if HOTEL_CACHE_AUTOSCALE && cachetype == "cached" && !ji.justCli {
+			ji.hj.CacheAutoscaler.Run(1*time.Second, ncache)
+		}
+	}
+
+	ji.wc = hotel.MakeWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
 			// Run a single request.
-			ji.fn(wc, r)
+			ji.fn(ji.wc, r)
 		}))
 	}
 	return ji
@@ -143,9 +174,14 @@ func (ji *HotelJobInstance) StartHotelJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
+	_, err := ji.wc.StartRecording()
+	if err != nil {
+		db.DFatalf("Can't start recording: %v", err)
+	}
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
+		//    ji.printStats()
 	}
 	db.DPrintf(db.ALWAYS, "Done running HotelJob")
 }
@@ -188,8 +224,7 @@ func (ji *HotelJobInstance) Wait() {
 }
 
 func (ji *HotelJobInstance) requestK8sStats() {
-	wc := hotel.MakeWebClnt(ji.FsLib, ji.job)
-	rep, err := wc.SaveResults()
+	rep, err := ji.wc.SaveResults()
 	assert.Nil(ji.T, err, "Save results: %v", err)
 	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
 }

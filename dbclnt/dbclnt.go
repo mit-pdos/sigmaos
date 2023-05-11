@@ -14,7 +14,7 @@ type DbClnt struct {
 
 func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	pdc, err := protdevclnt.MkProtDevClnt(fsl, fn)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, fn)
 	if err != nil {
 		return nil, err
 	}

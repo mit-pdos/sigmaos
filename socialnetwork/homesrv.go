@@ -34,17 +34,18 @@ func RunHomeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cacheclnt.MkCacheClnt(pds.MemFs.SigmaClnt().FsLib, jobname)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_HOME, pds.MemFs.SigmaClnt().FsLib)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	hsrv.cachec = cachec
-	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_GRAPH)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	hsrv.graphc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_POST)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}

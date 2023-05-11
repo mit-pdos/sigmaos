@@ -6,6 +6,8 @@ import (
 	"math"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
@@ -56,8 +58,11 @@ func RunRecSrv(n string, public bool) error {
 
 // GiveRecommendation returns recommendations within a given requirement.
 func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "GetRecs")
-	defer span.End()
+	//	var span trace.Span
+	//	if TRACING {
+	//		_, span = s.tracer.StartRPCSpan(&req, "GetRecs")
+	//		defer span.End()
+	//	}
 
 	require := req.Require
 	if require == "dis" {
@@ -164,7 +169,7 @@ func loadRecTable(path string) map[string]*Hotel {
 		h.HPrice = prices[i]
 		hs[h.HId] = h
 	}
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		hotel_id := strconv.Itoa(i)
 		lat := 37.7835 + float64(i)/500.0*3
 		lon := -122.41 + float64(i)/500.0*4

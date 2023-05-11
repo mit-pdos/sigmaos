@@ -3,6 +3,7 @@ package socialnetwork_test
 import (
 	"testing"
 	"sigmaos/test"
+	"sigmaos/fslib"
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -79,7 +80,7 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_POST)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// create two posts

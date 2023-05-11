@@ -3,12 +3,14 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 	"strconv"
 	"sync"
 
+	//	"go.opentelemetry.io/otel/trace"
+
 	"github.com/harlow/go-micro-services/data"
 	"github.com/mit-pdos/go-geoindex"
-	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -16,13 +18,13 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
-	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
 
 const (
-	N_INDEX = 1000
+	N_INDEX   = 1000
+	RAND_SEED = 12345
 )
 
 const (
@@ -74,6 +76,7 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, public bool) error {
+	rand.Seed(RAND_SEED)
 	geo := &Geo{}
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
@@ -97,8 +100,11 @@ func RunGeoSrv(job string, public bool) error {
 
 // Nearby returns all hotels within a given distance.
 func (s *Geo) Nearby(ctx fs.CtxI, req proto.GeoRequest, rep *proto.GeoResult) error {
-	_, span := s.tracer.StartRPCSpan(&req, "Nearby")
-	defer span.End()
+	//	var span trace.Span
+	//	if TRACING {
+	//		_, span = s.tracer.StartRPCSpan(&req, "Nearby")
+	//		defer span.End()
+	//	}
 
 	db.DPrintf(db.HOTEL_GEO, "Nearby %v\n", req)
 	points := s.getNearbyPoints(float64(req.Lat), float64(req.Lon))
@@ -115,7 +121,7 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plon: lon,
 	}
 
-	r := rand.Int64(N_INDEX)
+	r := rand.Int63() % N_INDEX
 
 	si := s.indexes[r]
 
@@ -138,7 +144,7 @@ func newGeoIndex(path string) *geoindex.ClusteringIndex {
 	for _, point := range points {
 		index.Add(point)
 	}
-	for i := 7; i < NHOTEL; i++ {
+	for i := 7; i < nhotel; i++ {
 		p := &geoindex.GeoPoint{
 			Pid:  strconv.Itoa(i),
 			Plat: 37.7835 + float64(i)/500.0*3,

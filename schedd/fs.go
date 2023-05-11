@@ -8,7 +8,6 @@ import (
 )
 
 func setupMemFsSrv(mfs *memfssrv.MemFs) {
-	mfs.GetStats().DisablePathCnts()
 	procclnt.MountPids(mfs.SigmaClnt().FsLib, mfs.SigmaClnt().NamedAddr())
 }
 

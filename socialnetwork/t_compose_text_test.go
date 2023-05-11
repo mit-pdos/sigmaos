@@ -3,6 +3,7 @@ package socialnetwork_test
 import (
 	"testing"
 	"sigmaos/test"
+	"sigmaos/fslib"
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -17,7 +18,7 @@ func TestUrl(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_URL)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_URL)
 	assert.Nil(t, err)
 
 	// compose urls
@@ -56,7 +57,7 @@ func TestText(t *testing.T) {
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_TEXT)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_TEXT)
 	assert.Nil(t, err)
 
 	// process text
@@ -103,7 +104,7 @@ func TestCompose(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_COMPOSE)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_COMPOSE)
 	assert.Nil(t, err)
 
 	// process text

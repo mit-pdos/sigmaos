@@ -37,22 +37,23 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_TEXT)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST, pds.MemFs.SigmaClnt().FsLib)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
 	csrv.textc = pdc	
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_POST)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	csrv.postc = pdc	
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_TIMELINE)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	csrv.tlc = pdc	
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_HOME)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}

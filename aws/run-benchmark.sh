@@ -51,8 +51,12 @@ SSHVM="${vms[$VM]}"
 
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i key-$VPC.pem ubuntu@$SSHVM /bin/bash <<ENDSSH
+  # Make sure swap is off on the benchmark machines.
+  ulimit -n 100000
+  sudo swapoff -a 
   cd ulambda
   source ./env/env.sh
   export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;"
+#  export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;HOTEL_RESERVE_PPROF_MUTEX;CACHESRV_PPROF_MUTEX;"
   $COMMAND
 ENDSSH

@@ -4,6 +4,8 @@ import (
 	"hash/fnv"
 	"strconv"
 
+	"time"
+
 	"google.golang.org/protobuf/proto"
 
 	cacheproto "sigmaos/cache/proto"
@@ -35,13 +37,13 @@ func key2shard(key string, nshard int) int {
 
 type CacheClnt struct {
 	*shardsvcclnt.ShardSvcClnt
-	fsl *fslib.FsLib
+	fsls []*fslib.FsLib
 }
 
-func MkCacheClnt(fsl *fslib.FsLib, job string) (*CacheClnt, error) {
+func MkCacheClnt(fsls []*fslib.FsLib, job string) (*CacheClnt, error) {
 	cc := &CacheClnt{}
-	cc.fsl = fsl
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsl, sp.CACHE, cc.Watch)
+	cc.fsls = fsls
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, sp.CACHE, cc.Watch)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +92,13 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val pr
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
+	s := time.Now()
 	var res cacheproto.CacheResult
 	if err := c.RPC("Cache.Get", req, &res); err != nil {
 		return err
+	}
+	if time.Since(s) > 150*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache get: %v", time.Since(s))
 	}
 	if err := proto.Unmarshal(res.Value, val); err != nil {
 		return err
@@ -122,14 +128,14 @@ func (c *CacheClnt) Delete(key string) error {
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
-	b, err := cc.fsl.GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
+	b, err := cc.fsls[0].GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
 	sidn := sessdev.SidName(sid, cachesrv.DUMP)
 	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
-	b, err = cc.fsl.GetFile(fn)
+	b, err = cc.fsls[0].GetFile(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -157,9 +163,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []*protdev.RPCStats {
+func (cc *CacheClnt) StatsClnt() []map[string]*protdev.MethodStat {
 	n := cc.Nshard()
-	stats := make([]*protdev.RPCStats, 0, n)
+	stats := make([]map[string]*protdev.MethodStat, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

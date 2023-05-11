@@ -33,6 +33,9 @@ const (
 	CACHEREL = "cache"
 	CACHE    = NAMED + CACHEREL + "/"
 
+	MEMCACHED = "name/memcached"
+	MEMBLOCK  = "name/memblock"
+
 	HOTELREL     = "hotel"
 	HOTEL        = NAMED + HOTELREL + "/"
 	HOTELGEO     = HOTEL + "geo"

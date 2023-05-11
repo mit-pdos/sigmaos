@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+	//	"sigmaos/proc"
+	//	"context"
+
 	"sigmaos/dbclnt"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
-	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
@@ -52,8 +55,8 @@ func RunUserSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	u.tracer = tracing.Init("user", proc.GetSigmaJaegerIP())
-	defer u.tracer.Flush()
+	//	u.tracer = tracing.Init("user", proc.GetSigmaJaegerIP())
+	//	defer u.tracer.Flush()
 	return pds.RunServer()
 }
 
@@ -86,14 +89,23 @@ func (s *Users) initDB() error {
 }
 
 func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
-	sctx, span := s.tracer.StartRPCSpan(&req, "CheckUser")
-	defer span.End()
+	//	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "CheckUser")
+	//		defer span.End()
+	//	}
 
 	q := fmt.Sprintf("SELECT * from user where username='%s';", req.Name)
 	var users []User
-	_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	//	var dbspan trace.Span
+	//	if TRACING {
+	//		_, dbspan = s.tracer.StartContextSpan(sctx, "db.Query")
+	//	}
 	error := s.dbc.Query(q, &users)
-	dbspan.End()
+	//	if TRACING {
+	//		dbspan.End()
+	//	}
 	res.OK = "False"
 	if error != nil {
 		return error

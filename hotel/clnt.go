@@ -167,3 +167,17 @@ func (wc *WebClnt) SaveResults() (string, error) {
 	}
 	return repl["message"].(string), nil
 }
+
+func (wc *WebClnt) StartRecording() (string, error) {
+	vals := url.Values{}
+	body, err := wc.request("/startrecording", vals)
+	if err != nil {
+		return "", err
+	}
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	if err != nil {
+		return "", err
+	}
+	return repl["message"].(string), nil
+}

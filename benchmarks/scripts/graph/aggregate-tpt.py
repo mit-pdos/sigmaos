@@ -59,6 +59,26 @@ def extend_tpts_to_range(tpts, r):
     if last_tick[i] <= r[1]:
       tpts[i].append((r[1], last_tick[1]))
 
+# For now, only truncates after not before.
+def truncate_tpts_to_range(tpts, r):
+  if len(tpts) == 0:
+    return
+  new_tpts = []
+  for i in range(len(tpts)):
+    inner = []
+    # Allow for the util graph to go to zero for a bit.
+    runway = 10
+    already_increased = False
+    for j in range(len(tpts[i])):
+      if tpts[i][j][1] > 1.0:
+        already_increased = True
+      if tpts[i][j][0] <= r[1] or tpts[i][j][1] > 0.5 or (already_increased and runway > 0):
+        if already_increased and tpts[i][j][1] < 0.5:
+          runway = runway - 1
+        inner.append(tpts[i][j])
+    new_tpts.append(inner)
+  return new_tpts
+
 def get_overall_time_range(ranges):
   start = sys.maxsize
   end = 0
@@ -114,9 +134,18 @@ def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
   return buckets
 
 def buckets_to_percentile(buckets, percentile):
+  buckets_perc = {}
   for t in buckets.keys():
     if len(buckets[t]) > 0:
-      buckets[t] = np.percentile(buckets[t], percentile)
+      buckets_perc[t] = np.percentile(buckets[t], percentile)
+    else:
+      buckets_perc[t] = 0.0
+  return buckets_perc
+
+def buckets_to_avg(buckets):
+  for t in buckets.keys():
+    if len(buckets[t]) > 0:
+      buckets[t] = np.mean(buckets[t])
     else:
       buckets[t] = 0.0
   return buckets
@@ -190,7 +219,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
-    if not k8s:
+    if mr_realm != "":
       procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
       assert(len(procd_tpts) == 2)
   mr_tpts = read_tpts(input_dir, "mr")
@@ -201,8 +230,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_lats = read_latencies(input_dir, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
-  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
+  time_range = get_overall_time_range([mr_range, hotel_range, hotel_lat_range])
+#  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
+  procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
   hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
@@ -213,15 +244,22 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
     fig, tptax, coresax = setup_graph(3, units, total_ncore)
   else:
-    fig, tptax, coresax = setup_graph(1, units, total_ncore)
+    if len(hotel_lats) > 0 and len(hotel_tpts) > 0:
+      fig, tptax, coresax = setup_graph(2, units, total_ncore)
+    else:
+      fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
-  hotel_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
+  hotel_tail_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
+  hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
-    x, y = buckets_to_lists(hotel_lat_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
-    plots.append(p)
+    x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
+    plots.append(p_tail_lat)
+    x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel Average Latency", "purple", "-", "")
+    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
@@ -241,10 +279,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm Cores", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm CPU", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR Realm Cores", "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "MR Realm CPU", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

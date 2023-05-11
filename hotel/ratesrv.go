@@ -7,6 +7,10 @@ import (
 	"sort"
 	"strconv"
 
+	//	"go.opentelemetry.io/otel/trace"
+
+	gproto "google.golang.org/protobuf/proto"
+
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
@@ -19,6 +23,10 @@ import (
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
+)
+
+var (
+	sampleImg []byte
 )
 
 type RatePlans []*proto.RatePlan
@@ -53,7 +61,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, pds.MemFs.SigmaClnt().FsLib, job)
+	cachec, err := MkCacheClnt(cache, MakeFsLibs(sp.HOTELRATE), job)
 	if err != nil {
 		return err
 	}
@@ -67,6 +75,10 @@ func RunRateSrv(job string, public bool, cache string) error {
 	if err := r.initDB(rates); err != nil {
 		return err
 	}
+	sampleImg = make([]byte, imgSizeMB*sp.MBYTE)
+	for i := range sampleImg {
+		sampleImg[i] = 'A'
+	}
 	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	defer r.tracer.Flush()
 	p, err := perf.MakePerf(perf.HOTEL_RATE)
@@ -79,32 +91,60 @@ func RunRateSrv(job string, public bool, cache string) error {
 
 // GetRates gets rates for hotels
 func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
-	sctx, span := s.tracer.StartRPCSpan(&req, "GetRates")
-	defer span.End()
+	var sctx context.Context
+	//	var span trace.Span
+	//	if TRACING {
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "GetRates")
+	//		defer span.End()
+	//	} else {
+	sctx = context.TODO()
+	//	}
 
 	ratePlans := make(RatePlans, 0)
 	for _, hotelId := range req.HotelIds {
 		r := &proto.RatePlan{}
 		key := hotelId + "_rate"
-		_, span2 := s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		var span2 trace.Span
+		//		if TRACING {
+		//			_, span2 = s.tracer.StartContextSpan(sctx, "Cache.Get")
+		//		}
 		err := s.cachec.Get(key, r)
-		//		err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
-		span2.End()
+		//		if TRACING {
+		//			//				err := s.cachec.GetTraced(tracing.SpanToContext(span2), key, r)
+		//			span2.End()
+		//		}
 		if err != nil {
 			if !s.cachec.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)
-			_, span3 := s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			//			var span3 trace.Span
+			//			if TRACING {
+			//				_, span3 = s.tracer.StartContextSpan(sctx, "DB.GetRate")
+			//			}
 			r, err = s.getRate(sctx, hotelId)
-			span3.End()
+			//			if TRACING {
+			//				span3.End()
+			//			}
 			if err != nil {
 				return err
 			}
-			_, span4 := s.tracer.StartContextSpan(sctx, "Cache.Put")
+
+			b, err := gproto.Marshal(r)
+			if err != nil {
+				return err
+			}
+			db.DPrintf(db.ALWAYS, "Rate: Put %v bytes in cache for hotelID %v", len(b)+len(key), hotelId)
+
+			//			var span4 trace.Span
+			//			if TRACING {
+			//				_, span4 = s.tracer.StartContextSpan(sctx, "Cache.Put")
+			//			}
 			err = s.cachec.Put(key, r)
-			//			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
-			span4.End()
+			//			if TRACING {
+			//				//			err = s.cachec.PutTraced(tracing.SpanToContext(span4), key, r)
+			//				span4.End()
+			//			}
 			if err != nil {
 				return err
 			}
@@ -142,9 +182,14 @@ type RateFlat struct {
 func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error) {
 	q := fmt.Sprintf("SELECT * from rate where hotelid='%s';", id)
 	var rates []RateFlat
-	_, dbspan := s.tracer.StartContextSpan(sctx, "db.Query")
+	//	var dbspan trace.Span
+	//	if TRACING {
+	//		_, dbspan = s.tracer.StartContextSpan(sctx, "db.Query")
+	//	}
 	error := s.dbc.Query(q, &rates)
-	dbspan.End()
+	//	if TRACING {
+	//		dbspan.End()
+	//	}
 	if error != nil {
 		return nil, error
 	}
@@ -164,6 +209,7 @@ func (s *Rate) getRate(sctx context.Context, id string) (*proto.RatePlan, error)
 			Code:               rf.RoomCode,
 			Currency:           rf.RoomCurrency,
 			RoomDescription:    rf.RoomDescription,
+			Image:              sampleImg,
 		},
 	}
 	return r, nil
@@ -180,7 +226,7 @@ func (s *Rate) initDB(rates []*proto.RatePlan) error {
 			return err
 		}
 	}
-	for i := 7; i <= NHOTEL; i++ {
+	for i := 7; i <= nhotel; i++ {
 		if i%3 == 0 {
 			end_date := "2015-04-"
 			rate := 109.00

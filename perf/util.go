@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
@@ -42,7 +43,9 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH = "/tmp/sigmaos-perf"
+	OUTPUT_PATH            = "/tmp/sigmaos-perf"
+	MUTEX_PROFILE_FRACTION = 1
+	BLOCK_PROFILE_FRACTION = 5
 )
 
 type Tload [3]float64
@@ -73,6 +76,8 @@ type Perf struct {
 	util           bool
 	pprof          bool
 	pprofMem       bool
+	pprofMutex     bool
+	pprofBlock     bool
 	tpt            bool
 	utilChan       chan bool
 	utilFile       *os.File
@@ -82,6 +87,8 @@ type Perf struct {
 	cores          map[string]bool
 	pprofFile      *os.File
 	pprofMemFile   *os.File
+	pprofMutexFile *os.File
+	pprofBlockFile *os.File
 	tpts           []float64
 	times          []time.Time
 	tptFile        *os.File
@@ -125,6 +132,14 @@ func MakePerfMulti(s Tselector, s2 string) (*Perf, error) {
 	// Set up pprof caputre
 	if ok := labels[s+PPROF_MEM]; ok {
 		p.setupPprofMem(basePath + "-pprof-mem.out")
+	}
+	// Set up pprof caputre
+	if ok := labels[s+PPROF_MUTEX]; ok {
+		p.setupPprofMutex(basePath + "-pprof-mutex.out")
+	}
+	// Set up pprof caputre
+	if ok := labels[s+PPROF_BLOCK]; ok {
+		p.setupPprofBlock(basePath + "-pprof-block.out")
 	}
 	// Set up cpu util capture
 	if ok := labels[s+CPU]; ok {
@@ -183,6 +198,8 @@ func (p *Perf) Done() {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
 		p.teardownPprofMem()
+		p.teardownPprofMutex()
+		p.teardownPprofBlock()
 		p.teardownUtil()
 		p.teardownTpt()
 	}
@@ -402,6 +419,34 @@ func (p *Perf) setupPprofMem(fpath string) {
 	p.pprofMemFile = f
 }
 
+func (p *Perf) setupPprofMutex(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	runtime.SetMutexProfileFraction(MUTEX_PROFILE_FRACTION)
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprofMutex profile file: %v, %v", fpath, err)
+	}
+	p.pprofMutex = true
+	p.pprofMutexFile = f
+}
+
+func (p *Perf) setupPprofBlock(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	runtime.SetBlockProfileRate(BLOCK_PROFILE_FRACTION)
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprofBlock profile file: %v, %v", fpath, err)
+	}
+	p.pprofBlock = true
+	p.pprofBlockFile = f
+}
+
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
@@ -430,6 +475,34 @@ func (p *Perf) teardownPprofMem() {
 			db.DFatalf("could not write memory profile: %v", err)
 		}
 		p.pprofMemFile.Close()
+	}
+}
+
+func (p *Perf) teardownPprofMutex() {
+	if p.pprofMutex {
+		// Avoid double-closing
+		p.pprofMutex = false
+		// Don't do GC before collecting the heap profile.
+		// runtime.GC() // get up-to-date statistics
+		// Write a heap profile
+		if err := pprof.Lookup("mutex").WriteTo(p.pprofMutexFile, 0); err != nil {
+			db.DFatalf("could not write mutex profile: %v", err)
+		}
+		p.pprofMutexFile.Close()
+	}
+}
+
+func (p *Perf) teardownPprofBlock() {
+	if p.pprofBlock {
+		// Avoid double-closing
+		p.pprofBlock = false
+		// Don't do GC before collecting the heap profile.
+		// runtime.GC() // get up-to-date statistics
+		// Write a heap profile
+		if err := pprof.Lookup("mutex").WriteTo(p.pprofBlockFile, 0); err != nil {
+			db.DFatalf("could not write mutex profile: %v", err)
+		}
+		p.pprofBlockFile.Close()
 	}
 }
 

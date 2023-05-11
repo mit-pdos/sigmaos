@@ -45,11 +45,11 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 	defer rq.Unlock()
 
 	if rq.closed {
-		db.DFatalf("Tried to enqueue a request on a closed request queue %v", rpc.Req)
+		db.DFatalf("Tried to enqueue a request on a closed request queue %v", rpc.Req.Fcm)
 	}
-	s := rpc.Req.Seqno()
+	s := rpc.Req.Fcm.Seqno()
 	if _, ok := rq.outstanding[s]; ok {
-		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req)
+		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req.Fcm)
 	}
 	if db.WillBePrinted(db.SESS_CLNT_Q) {
 		db.DPrintf(db.SESS_CLNT_Q, "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
@@ -107,7 +107,7 @@ func (rq *RequestQueue) Reset() {
 		idx++
 	}
 	sort.Slice(new, func(i, j int) bool {
-		return new[i].Req.Fc.Seqno < new[j].Req.Fc.Seqno
+		return new[i].Req.Fcm.Fc.Seqno < new[j].Req.Fcm.Fc.Seqno
 	})
 	rq.queue = new
 	// Signal that there are queued requests ready to be processed.

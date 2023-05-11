@@ -3,7 +3,9 @@ package benchmarks_test
 import (
 	"flag"
 	"math/rand"
+	"net/rpc"
 	"path"
+	"strconv"
 	"testing"
 	"time"
 
@@ -15,16 +17,20 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/protdevclnt"
 	"sigmaos/rpcbench"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
-	REALM1 sp.Trealm = "benchrealm1"
-	REALM2           = "benchrealm2"
+	REALM_BASENAME sp.Trealm = "benchrealm"
+	REALM1                   = REALM_BASENAME + "1"
+	REALM2                   = REALM_BASENAME + "2"
 
-	HOSTTMP = "/tmp/"
+	MR_K8S_INIT_PORT int = 32585
+
+	HOSTTMP string = "/tmp/"
 )
 
 // Parameters
@@ -45,7 +51,16 @@ var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
 var HOTEL_CACHE_NCORE int
+var N_HOTEL int
+var HOTEL_IMG_SZ_MB int
+var HOTEL_CACHE_AUTOSCALE bool
 var CACHE_TYPE string
+var CACHE_GC bool
+var BLOCK_MEM string
+var N_REALM int
+
+// XXX Remove
+var MEMCACHED_ADDRS string
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
 var RPCBENCH_NCORE int
@@ -65,6 +80,7 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
+	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
@@ -80,10 +96,16 @@ func init() {
 	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
-	flag.DurationVar(&SLEEP, "sleep", 20*time.Second, "Sleep length.")
+	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
+	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
+	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
+	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
+	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
+	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
+	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
@@ -217,7 +239,7 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, apps, runMR, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -240,7 +262,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	db.DPrintf(db.TEST, "runOps")
 	runOps(ts1, ji, runKV, rs)
 	printResultSummary(rs)
@@ -272,7 +294,7 @@ func TestAppCached(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, ji, runCached, rs)
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -292,7 +314,7 @@ func TestRealmBurst(t *testing.T) {
 	ps, _ := makeNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
-	monitorCoresAssigned(ts1, p)
+	monitorCPUUtil(ts1, p)
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
@@ -344,13 +366,14 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
 	// Structures for mr
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts1 := test.MakeRealmTstate(rootts, REALM2)
 	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
 	p1 := makeRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for hotel
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	ts2 := test.MakeRealmTstate(rootts, REALM1)
 	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
 	p2 := makeRealmPerf(ts2)
 	defer p2.Done()
@@ -363,9 +386,9 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	// Monitor cores assigned to MR.
-	monitorCoresAssigned(ts1, p1)
+	monitorCPUUtil(ts1, p1)
 	// Monitor cores assigned to Hotel.
-	monitorCoresAssigned(ts2, p2)
+	monitorCPUUtil(ts2, p2)
 	// Run Hotel job
 	go func() {
 		runOps(ts2, ji, runHotel, rs2)
@@ -383,6 +406,13 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	<-mrjobs[0].ready
 	db.DPrintf(db.TEST, "MR setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
+	if N_CLNT > 1 {
+		// Wait for hotel clients to start up on other machines.
+		db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+		waitForClnts(rootts, N_CLNT)
+		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+	}
+	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
 	// Kick off MR jobs.
 	mrjobs[0].ready <- true
 	// Sleep for a bit
@@ -395,6 +425,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "MR and Hotel done.")
 	_ = rs1
 	printResultSummary(rs1)
+	time.Sleep(20 * time.Second)
+	evictMemBlockers(rootts, blockers)
 	rootts.Shutdown()
 }
 
@@ -404,50 +436,49 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.MakeTstateWithRealms(t)
-	// Structures for mr
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
-	p1 := makeRealmPerf(ts1)
-	defer p1.Done()
-	// Structure for kv
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
-	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
-	p2 := makeRealmPerf(ts2)
-	defer p2.Done()
-	// Prep MR job
-	mrjobs1, mrapps1 := makeNMRJobs(ts1, p1, 1, MR_APP)
-	// Prep MR job
-	mrjobs2, mrapps2 := makeNMRJobs(ts2, p2, 1, MR_APP)
-	monitorCoresAssigned(ts1, p1)
-	monitorCoresAssigned(ts2, p2)
-	// Run MR job
-	go func() {
-		runOps(ts2, mrapps2, runMR, rs2)
-		done <- true
-	}()
-	// Wait for MR jobs to set up.
-	<-mrjobs2[0].ready
-	// Run MR job
-	go func() {
-		runOps(ts1, mrapps1, runMR, rs1)
-		done <- true
-	}()
-	// Wait for MR jobs to set up.
-	<-mrjobs1[0].ready
-	// Kick off MR jobs.
-	mrjobs2[0].ready <- true
-	db.DPrintf(db.TEST, "Start MR job 1")
-	// Sleep for a bit
-	time.Sleep(SLEEP)
-	db.DPrintf(db.TEST, "Start MR job 2")
-	// Kick off hotel jobs
-	mrjobs1[0].ready <- true
+	tses := make([]*test.RealmTstate, N_REALM)
+	rses := make([]*benchmarks.Results, N_REALM)
+	ps := make([]*perf.Perf, N_REALM)
+	mrjobs := make([][]*MRJobInstance, N_REALM)
+	mrapps := make([][]interface{}, N_REALM)
+	// Create structures for MR jobs.
+	for i := range tses {
+		tses[i] = test.MakeRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		rses[i] = benchmarks.MakeResults(1, benchmarks.E2E)
+		ps[i] = makeRealmPerf(tses[i])
+		defer ps[i].Done()
+		mrjob, mrapp := makeNMRJobs(tses[i], ps[i], 1, MR_APP)
+		mrjobs[i] = mrjob
+		mrapps[i] = mrapp
+	}
+	// Start CPU utilization monitoring.
+	for i := range tses {
+		monitorCPUUtil(tses[i], ps[i])
+	}
+	// Initialize MR jobs.
+	for i := range tses {
+		// Start MR job initialization.
+		go func(ts *test.RealmTstate, mrapp []interface{}, rs *benchmarks.Results) {
+			runOps(ts, mrapp, runMR, rs)
+			done <- true
+		}(tses[i], mrapps[i], rses[i])
+		// Wait for MR job to set up.
+		<-mrjobs[i][0].ready
+	}
+	// Start jobs running, with a small delay between each job start.
+	for i := range tses {
+		// Kick off MR jobs.
+		mrjobs[i][0].ready <- true
+		db.DPrintf(db.TEST, "Start MR job %v", i+1)
+		// Sleep for a bit before starting the next job
+		time.Sleep(SLEEP)
+	}
 	// Wait for both jobs to finish.
-	<-done
-	db.DPrintf(db.TEST, "Done MR job 1")
-	<-done
-	db.DPrintf(db.TEST, "Done MR job 2")
-	printResultSummary(rs1)
+	for i := range tses {
+		<-done
+		db.DPrintf(db.TEST, "Done MR job %v", i+1)
+	}
+	printResultSummary(rses[0])
 	rootts.Shutdown()
 }
 
@@ -473,8 +504,8 @@ func TestKVMRRRB(t *testing.T) {
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
-	monitorCoresAssigned(ts1, p1)
-	monitorCoresAssigned(ts2, p2)
+	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(ts2, p2)
 	// Run KV job
 	go func() {
 		runOps(ts2, ji, runKV, rs2)
@@ -520,7 +551,7 @@ func testWww(t *testing.T, sigmaos bool) {
 	if sigmaos {
 		p := makeRealmPerf(ts1)
 		defer p.Done()
-		monitorCoresAssigned(ts1, p)
+		monitorCPUUtil(ts1, p)
 	}
 	runOps(ts1, ji, runWww, rs)
 	printResultSummary(rs)
@@ -554,7 +585,7 @@ func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn r
 	}()
 	p2 := makeRealmPerf(ts1)
 	defer p2.Done()
-	monitorCoresAssigned(ts1, p2)
+	monitorCPUUtil(ts1, p2)
 	runOps(ts1, ji, runRPCBench, rs)
 	//	printResultSummary(rs)
 	rootts.Shutdown()
@@ -620,7 +651,11 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	if sigmaos {
 		p := makeRealmPerf(ts1)
 		defer p.Done()
-		monitorCoresAssigned(ts1, p)
+		monitorCPUUtil(ts1, p)
+	} else {
+		p := makeRealmPerf(ts1)
+		defer p.Done()
+		monitorK8sCPUUtil(ts1, p, "hotel", "")
 	}
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
@@ -629,6 +664,18 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	} else {
 		jobs[0].requestK8sStats()
 	}
+}
+
+// XXX Messy, get rid of this.
+var reservec *protdevclnt.ProtDevClnt
+
+func TestHotelSigmaosReserve(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		err := hotel.RandCheckAvailabilityReq(reservec, r)
+		assert.Nil(t, err, "Error reserve req: %v", err)
+	})
 }
 
 func TestHotelSigmaosSearch(t *testing.T) {
@@ -645,6 +692,8 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
+	// Sleep for a bit
+	time.Sleep(SLEEP)
 	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
 		rootts.Shutdown()
 		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
@@ -699,6 +748,7 @@ func TestHotelK8sSearch(t *testing.T) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearchCli(t *testing.T) {
@@ -728,25 +778,83 @@ func TestHotelK8sAll(t *testing.T) {
 func TestMRK8s(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
-	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 reulst dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, K8S_LEADER_NODE_IP+":32585")
+	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"perf-output")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+}
+
+func TestK8sMRMulti(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 result dir")
+	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
+		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
+		return
+	}
+	// Create realm structures.
+	ts := make([]*test.RealmTstate, 0, N_REALM)
+	ps := make([]*perf.Perf, 0, N_REALM)
+	for i := 0; i < N_REALM; i++ {
+		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
+		db.DPrintf(db.TEST, "Create realm srtructs for %v", rName)
+		ts = append(ts, test.MakeRealmTstate(rootts, rName))
+		ps = append(ps, makeRealmPerf(ts[i]))
+		defer ps[i].Done()
+	}
+	db.DPrintf(db.TEST, "Done creating realm srtructs")
+	cs := make([]*rpc.Client, 0, N_REALM)
+	for i := 0; i < N_REALM; i++ {
+		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
+		db.DPrintf(db.TEST, "Starting MR job for realm %v", rName)
+		// Start the next k8s job.
+		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
+		// Monitor cores assigned to this realm.
+		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		// Sleep for a bit before starting the next job
+		time.Sleep(SLEEP)
+	}
+	db.DPrintf(db.TEST, "Done starting MR jobs")
+	for i, c := range cs {
+		waitK8sMR(rootts, c)
+		db.DPrintf(db.TEST, "MR job %v finished", i)
+	}
+	db.DPrintf(db.TEST, "Done waiting for MR jobs.")
+	for i := 0; i < N_REALM; i++ {
+		downloadS3ResultsRealm(
+			rootts,
+			path.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
+			HOSTTMP+"sigmaos-perf",
+			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
+		)
+	}
+	db.DPrintf(db.TEST, "Done downloading results.")
 }
 
 func TestK8sBalanceHotelMR(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	// Structures for mr
+	ts1 := test.MakeRealmTstate(rootts, REALM2)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for hotel
+	ts2 := test.MakeRealmTstate(rootts, REALM1)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Monitor cores assigned to MR.
+	monitorK8sCPUUtil(ts1, p1, "mr", "")
+	// Monitor cores assigned to Hotel.
+	monitorK8sCPUUtil(ts2, p2, "hotel", "")
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
 	db.DPrintf(db.TEST, "Starting hotel")
 	done := make(chan bool)
 	go func() {
-		testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		testHotel(rootts, ts2, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 			hotel.RandSearchReq(wc, r)
 		})
 		done <- true
@@ -756,10 +864,10 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, K8S_LEADER_NODE_IP+":32585")
+	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"perf-output")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"perf-output")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }

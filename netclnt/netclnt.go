@@ -5,6 +5,8 @@ import (
 	"net"
 	"sync"
 
+	"time"
+
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/delay"
@@ -101,7 +103,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
-	db.DPrintf(db.NETCLNT, "Send %v to %v\n", rpc.Req, nc.Dst())
+	db.DPrintf(db.NETCLNT, "Send %v to %v\n", rpc.Req.Fcm, nc.Dst())
 
 	// If the connection has already been closed, return immediately.
 	if nc.isClosed() {
@@ -109,8 +111,13 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 		return
 	}
 
+	delay := rpc.TotalDelay()
+	if delay > 150*time.Microsecond {
+		db.DPrintf(db.SESS_LAT, "Long delay in sessclnt layer: %v", delay)
+	}
+
 	// Otherwise, marshall and write the sessp.
-	err := spcodec.MarshalFrame(rpc.Req, nc.bw)
+	err := spcodec.WriteFcallAndData(rpc.Req.Fcm, rpc.Req.MarshaledFcm, nc.bw)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "Send: NetClnt error to %v: %v", nc.Dst(), err)
 		// The only error code we expect here is TErrUnreachable
@@ -125,14 +132,14 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	}
 }
 
-func (nc *NetClnt) recv() (*sessp.FcallMsg, *serr.Err) {
-	fm, err := spcodec.UnmarshalFrame(nc.br)
+func (nc *NetClnt) recv() (seqno sessp.Tseqno, fcbytes []byte, dbytes []byte, e *serr.Err) {
+	sn, f, d, err := spcodec.ReadFcallAndDataFrames(nc.br)
 	if err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return nil, err
+		return 0, nil, nil, err
 	}
-	return fm, nil
+	return sn, f, d, nil
 }
 
 // Reader loop. The reader is in charge of resetting the connection if an error
@@ -140,13 +147,13 @@ func (nc *NetClnt) recv() (*sessp.FcallMsg, *serr.Err) {
 func (nc *NetClnt) reader() {
 	for true {
 		// Receive the next reply.
-		reply, err := nc.recv()
+		seqno, f, d, err := nc.recv()
 		if err != nil {
 			db.DPrintf(db.NETCLNT_ERR, "error %v reader RPC to %v, trying reconnect", err, nc.addr)
 			nc.reset()
 			break
 		}
-		nc.sconn.CompleteRPC(reply, err)
+		nc.sconn.CompleteRPC(seqno, f, d, err)
 		if nc.isClosed() {
 			db.DPrintf(db.NETCLNT_ERR, "reader from %v to %v, closed", nc.Src(), nc.Dst())
 			break

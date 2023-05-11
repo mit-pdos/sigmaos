@@ -3,6 +3,7 @@ package socialnetwork_test
 import (
 	"testing"
 	"sigmaos/test"
+	"sigmaos/fslib"
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -70,9 +71,9 @@ func TestTimeline(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
-	tpdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_TIMELINE)
+	tpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_TIMELINE)
 	assert.Nil(t, err)
-	ppdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_POST)
+	ppdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err)
 
 	// create and store N posts
@@ -122,9 +123,9 @@ func TestHome(t *testing.T) {
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
-	hpdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_HOME)
+	hpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_HOME)
 	assert.Nil(t, err)
-	ppdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_POST)
+	ppdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err)
 
 	// create and store N posts

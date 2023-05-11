@@ -1,6 +1,7 @@
 package hotel
 
 import (
+	"os"
 	"path"
 	"strconv"
 
@@ -16,11 +17,44 @@ import (
 )
 
 const (
-	HOTEL      = "hotel"
-	HOTELDIR   = "name/hotel/"
-	MEMFS      = "memfs"
-	HTTP_ADDRS = "http-addr"
+	HOTEL          = "hotel"
+	HOTELDIR       = "name/hotel/"
+	MEMFS          = "memfs"
+	HTTP_ADDRS     = "http-addr"
+	TRACING        = false
+	N_RPC_SESSIONS = 10
 )
+
+var (
+	nhotel    int
+	imgSizeMB int
+)
+
+func init() {
+	nh := os.Getenv("NHOTEL")
+	if nh == "" {
+		// Defaults to 80, same as original DSB.
+		nhotel = 80
+	} else {
+		i, err := strconv.Atoi(nh)
+		if err != nil {
+			db.DFatalf("Can't parse nhotel: %v", err)
+		}
+		setNHotel(i)
+	}
+	isb := os.Getenv("HOTEL_IMG_SZ_MB")
+	if isb != "" {
+		i, err := strconv.Atoi(isb)
+		if err != nil {
+			db.DFatalf("Can't parse imgSize: %v", err)
+		}
+		imgSizeMB = i
+	}
+}
+
+func setNHotel(nh int) {
+	nhotel = nh
+}
 
 func JobDir(job string) string {
 	return path.Join(HOTELDIR, job)
@@ -32,6 +66,18 @@ func JobHTTPAddrsPath(job string) string {
 
 func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
+}
+
+func MakeFsLibs(uname string) []*fslib.FsLib {
+	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
+	for i := 0; i < N_RPC_SESSIONS; i++ {
+		fsl, err := fslib.MakeFsLib(uname + "-" + strconv.Itoa(i))
+		if err != nil {
+			db.DFatalf("Error mkfsl: %v", err)
+		}
+		fsls = append(fsls, fsl)
+	}
+	return fsls
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -75,16 +121,21 @@ func MkHotelSvc(public bool) []Srv {
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
-	cacheClnt *cacheclnt.CacheClnt
-	cacheMgr  *cacheclnt.CacheMgr
-	pids      []proc.Tpid
-	cache     string
-	kvf       *kv.KVFleet
+	cacheClnt       *cacheclnt.CacheClnt
+	cacheMgr        *cacheclnt.CacheMgr
+	CacheAutoscaler *cacheclnt.Autoscaler
+	pids            []proc.Tpid
+	cache           string
+	kvf             *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string, cacheNcore proc.Tcore, nsrv int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheNcore proc.Tcore, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+	// Set number of hotels before doing anything.
+	setNHotel(nhotel)
+
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
+	var ca *cacheclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
 	// Init fs.
@@ -95,16 +146,17 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, test.Overlays)
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, gc, test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cacheclnt.MkCacheClnt(sc.FsLib, job)
+			cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, job)
 			if err != nil {
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err
 			}
+			ca = cacheclnt.MakeAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, cacheNcore, "0", "manual")
@@ -115,6 +167,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 			if err != nil {
 				return nil, err
 			}
+		// XXX Remove
+		case "memcached":
+			db.DPrintf(db.ALWAYS, "Hotel running with memcached")
 		default:
 			db.DFatalf("Unrecognized hotel cache type: %v", cache)
 		}
@@ -124,6 +179,8 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
+		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetNcore(srv.Ncore)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
@@ -136,10 +193,13 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, cache string,
 		pids = append(pids, p.GetPid())
 	}
 
-	return &HotelJob{sc, cc, cm, pids, cache, kvf}, nil
+	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf}, nil
 }
 
 func (hj *HotelJob) Stop() error {
+	if hj.CacheAutoscaler != nil {
+		hj.CacheAutoscaler.Stop()
+	}
 	for _, pid := range hj.pids {
 		if err := hj.Evict(pid); err != nil {
 			return err

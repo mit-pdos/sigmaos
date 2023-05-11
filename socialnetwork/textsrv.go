@@ -34,12 +34,13 @@ func RunTextSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_USER)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT, pds.MemFs.SigmaClnt().FsLib)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(pds.SigmaClnt().FsLib, sp.SOCIAL_NETWORK_URL)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}

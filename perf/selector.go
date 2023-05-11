@@ -8,10 +8,12 @@ func (t Tselector) String() string {
 
 // Suffixes
 const (
-	PPROF     Tselector = "_PPROF"
-	PPROF_MEM           = "_PPROF_MEM"
-	CPU                 = "_CPU"
-	TPT                 = "_TPT"
+	PPROF       Tselector = "_PPROF"
+	PPROF_MEM             = "_PPROF_MEM"
+	PPROF_MUTEX           = "_PPROF_MUTEX"
+	PPROF_BLOCK           = "_PPROF_BLOCK"
+	CPU                   = "_CPU"
+	TPT                   = "_TPT"
 )
 
 // Tests & benchmarking

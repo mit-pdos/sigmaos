@@ -10,6 +10,7 @@ import (
 	"sigmaos/protdevclnt"
 	"github.com/stretchr/testify/assert"
 	"fmt"
+	"strings"
 )
 
 func TestUrl(t *testing.T) {
@@ -104,15 +105,69 @@ func TestCompose(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
+	tssn.dbu.InitUser()
+	tssn.dbu.InitGraph()
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_COMPOSE)
 	assert.Nil(t, err)
+	tpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_TIMELINE)
+	assert.Nil(t, err)
+	hpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_HOME)
+	assert.Nil(t, err)
 
-	// process text
+	// compose empty post not allowed
 	arg_compose := proto.ComposePostRequest{}
 	res_compose := proto.ComposePostResponse{}
 	assert.Nil(t, pdc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
-	assert.Equal(t, "OK", res_compose.Ok)
+	assert.Equal(t, "Cannot compose empty post!", res_compose.Ok)
 	
+	// compose 2 posts
+	arg_compose.Posttype = proto.POST_TYPE_REPOST
+	arg_compose.Username = "user_1"
+	arg_compose.Userid = int64(1)
+	arg_compose.Text = "First post! @user_3 http://www.google.com/q=apple"
+	arg_compose.Mediaids = []int64{int64(77), int64(78)}
+	arg_compose.Mediatypes = []string{"video", "picture"}
+	assert.Nil(t, pdc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Equal(t, "OK", res_compose.Ok)
+
+	arg_compose.Posttype = proto.POST_TYPE_REPOST
+	arg_compose.Username = "user_1"
+	arg_compose.Userid = int64(1)
+	arg_compose.Text = "Second post! https://www.bing.com/ @user_2"
+	assert.Nil(t, pdc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Equal(t, "OK", res_compose.Ok)
+
+	// check timelines: user_1 has two items
+	arg_tl := proto.ReadTimelineRequest{Userid: int64(1), Start: int32(0), Stop: int32(2)}
+	res_tl := proto.ReadTimelineResponse{}
+	assert.Nil(t, tpdc.RPC("Timeline.ReadTimeline", &arg_tl, &res_tl))
+	assert.Equal(t, 2, len(res_tl.Posts))
+	assert.Equal(t, "OK", res_tl.Ok)
+	post1 := res_tl.Posts[1]
+	post2 := res_tl.Posts[0]
+	assert.True(t, strings.HasPrefix(post1.Text, "First post! @user_3 "))
+	assert.True(t, strings.HasPrefix(post2.Text, "Second post! "))
+
+	// check hometimelines: 
+	// user_0 has two items (follower), user_0 and user_3 have one item (mentioned)
+	arg_home := proto.ReadTimelineRequest{Userid: int64(0), Start: int32(0), Stop: int32(2)}
+	res_home := proto.ReadTimelineResponse{}
+	assert.Nil(t, hpdc.RPC("Home.ReadHomeTimeline", &arg_home, &res_home))
+	assert.Equal(t, 2, len(res_home.Posts))
+	assert.Equal(t, "OK", res_home.Ok)
+	assert.True(t, IsPostEqual(post2, res_home.Posts[0])) 
+	assert.True(t, IsPostEqual(post1, res_home.Posts[1])) 
+
+	arg_home = proto.ReadTimelineRequest{Userid: int64(2), Start: int32(0), Stop: int32(1)}
+	assert.Nil(t, hpdc.RPC("Home.ReadHomeTimeline", &arg_home, &res_home))
+	assert.Equal(t, "OK", res_home.Ok)
+	assert.True(t, IsPostEqual(post2, res_home.Posts[0])) 
+
+	arg_home = proto.ReadTimelineRequest{Userid: int64(3), Start: int32(0), Stop: int32(1)}
+	assert.Nil(t, hpdc.RPC("Home.ReadHomeTimeline", &arg_home, &res_home))
+	assert.Equal(t, "OK", res_home.Ok)
+	assert.True(t, IsPostEqual(post1, res_home.Posts[0])) 
+
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
 }

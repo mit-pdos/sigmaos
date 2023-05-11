@@ -33,8 +33,8 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	tssn.Tstate = test.MakeTstateAll(t)
 	nMoreKernel := ((len(srvs)*2 + NSHARD*2) - 1)  / int(linuxsched.NCores)
 	if nMoreKernel > 0 {
-		dbg.DPrintf(dbg.ALWAYS, "(%v * %v - 1) / %v = %v more kernels are needed", 
-			len(srvs)*2 + NSHARD*2, sn.N_RPC_SESSIONS, linuxsched.NCores, nMoreKernel)	
+		dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed", 
+			len(srvs)*2 + NSHARD*2, linuxsched.NCores, nMoreKernel)	
 		err = tssn.BootNode(nMoreKernel)
 		assert.Nil(tssn.T, err)
 	}

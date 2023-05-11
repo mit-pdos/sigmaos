@@ -75,7 +75,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --parallel --branch jaeger # docker-dev
+  ./update-repo.sh --parallel --branch master # docker-dev
 fi
 
 vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)

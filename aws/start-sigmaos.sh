@@ -77,7 +77,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch jaeger # docker-dev
+  ./update-repo.sh --vpc $VPC --parallel --branch master # docker-dev
 fi
 
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)

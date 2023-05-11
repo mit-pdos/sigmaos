@@ -84,6 +84,34 @@ func TestText(t *testing.T) {
 	sUrl2 := res_text.Urls[1].Shorturl
 	expectedText := fmt.Sprintf("First post! @user_1@user_2 %v @user_4 %v Over!", sUrl1, sUrl2)
 	assert.Equal(t, expectedText, res_text.Text)
+
+	//stop server
+	assert.Nil(t, tssn.Shutdown())
+}
+
+func TestCompose(t *testing.T) {
+	// start server
+	tssn := makeTstateSN(t, []sn.Srv{
+		sn.Srv{"socialnetwork-user", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-graph", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-post", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-home", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-url", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-text", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-compose", test.Overlays, 2}}, NSHARD)
+	snCfg := tssn.snCfg
+
+	// create RPC clients text
+	pdc, err := protdevclnt.MkProtDevClnt(snCfg.FsLib, sp.SOCIAL_NETWORK_COMPOSE)
+	assert.Nil(t, err)
+
+	// process text
+	arg_compose := proto.ComposePostRequest{}
+	res_compose := proto.ComposePostResponse{}
+	assert.Nil(t, pdc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Equal(t, "OK", res_compose.Ok)
+	
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
 }

@@ -15,7 +15,6 @@ import (
 // No db or cache connection. 
 
 const (
-	TEXT_CACHE_PREFIX = "text_"
 	TEXT_QUERY_OK = "OK"
 )
 

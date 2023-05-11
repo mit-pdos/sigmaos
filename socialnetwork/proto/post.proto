@@ -9,6 +9,10 @@ service PostService {
 	rpc ReadPosts(ReadPostsRequest) returns (ReadPostsResponse);
 }
 
+service ComposeService {
+	rpc ComposePost(ComposePostRequest) returns (ComposePostResponse);
+}
+
 message StorePostRequest {
 	Post post = 1;
 }
@@ -24,6 +28,19 @@ message ReadPostsRequest {
 message ReadPostsResponse {
 	string ok = 1;
 	repeated Post posts = 2;
+}
+
+message ComposePostRequest {
+	string          username = 1;
+	int64           userid = 2;
+	string          text = 3;
+	POST_TYPE       posttype = 4;
+    repeated int64  mediaids = 5;
+	repeated string mediatypes = 6;
+}
+
+message ComposePostResponse {
+	string ok = 1;
 }
 
 message Post {

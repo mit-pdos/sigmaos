@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"image"
 	"image/jpeg"
 	"log"
 	"os"
+
+	"github.com/nfnt/resize"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -65,14 +66,11 @@ func (t *Trans) Work() *proc.Status {
 	}
 	defer wrt.Close()
 
-	my_image, err := jpeg.Decode(rdr)
+	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.MakeStatusErr("Decode", err)
 	}
-	my_sub_image := my_image.(interface {
-		SubImage(r image.Rectangle) image.Image
-	}).SubImage(image.Rect(0, 0, 10, 10))
-	jpeg.Encode(wrt, my_sub_image, nil)
-
+	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
+	jpeg.Encode(wrt, img1, nil)
 	return proc.MakeStatus(proc.StatusOK)
 }

@@ -202,6 +202,7 @@ func TestCrop(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	in := path.Join(sp.S3, "~local/9ps3/desk.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/thumb.jpg")
+	ts.Remove(out)
 	p := proc.MakeProc("transcode", []string{in, out})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")

@@ -1,4 +1,4 @@
-# 01. Getting started
+# 01. Local develpment
 
 This tutorial describes how to start up SigmaOS locally. By the end of this
 walkthrough, you should be able to build, run, and test SigmaOS. All commands

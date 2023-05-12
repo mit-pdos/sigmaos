@@ -107,7 +107,7 @@ $ go test -v sigmaos/<pkg_name> --start --run <test_name>
 
 The --start flag indicates to the test program that an instance of SigmaOS is
 not already running. When benchmarking and testing remotely, you will likely
-omit the `--start` flag. [Lesson 2](./02.md) explains the remote development
+omit the `--start` flag. [Lesson 2](./02_remote_dev.md) explains the remote development
 and benchmarking workflow in detail.
 
 ## Debugging SigmaOS

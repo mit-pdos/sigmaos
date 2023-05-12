@@ -52,12 +52,21 @@ func (mc *MemcachedClnt) Put(key string, m proto.Message) error {
 	})
 }
 
+func (mc *MemcachedClnt) Delete(key string) error {
+	return mc.cc.Delete(key)
+}
+
 func (mc *MemcachedClnt) GetTraced(s *tproto.SpanContextConfig, key string, m proto.Message) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
 func (mc *MemcachedClnt) PutTraced(s *tproto.SpanContextConfig, key string, m proto.Message) error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (mc *MemcachedClnt) DeleteTraced(s *tproto.SpanContextConfig, key string) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }

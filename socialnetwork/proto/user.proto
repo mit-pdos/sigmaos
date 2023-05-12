@@ -3,14 +3,18 @@ syntax = "proto3";
 option go_package = "sigmaos/socialnetwork/proto";
 
 service UserService {
-  rpc CheckUser(CheckUserRequest) returns (UserResponse);
+  rpc CheckUser(CheckUserRequest) returns (CheckUserResponse);
   rpc RegisterUser(RegisterUserRequest) returns (UserResponse);
   rpc Login(LoginRequest) returns (UserResponse);
-
 }
 
 message CheckUserRequest {
-	string username = 1;
+	repeated string usernames = 1;
+}
+
+message CheckUserResponse {
+	string         ok = 1;
+	repeated int64 userids = 2;
 }
 
 message RegisterUserRequest {
@@ -31,9 +35,10 @@ message UserResponse {
 }
 
 message User {
-  int64 userid = 1;
-  string firstname = 2;
-  string lastname = 3;
-  string username = 4;
-  string password = 5;
+  	int64 userid = 1;
+  	string firstname = 2;
+  	string lastname = 3;
+  	string username = 4;
+  	string password = 5;
 }
+

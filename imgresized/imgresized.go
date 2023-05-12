@@ -60,6 +60,14 @@ func SubmitTask(fsl *fslib.FsLib, job string, fn string) error {
 	return err
 }
 
+func NTaskDone(fsl *fslib.FsLib, job string) (int, error) {
+	sts, err := fsl.GetDir(path.Join(sp.IMG, job, "done"))
+	if err != nil {
+		return -1, err
+	}
+	return len(sts), nil
+}
+
 func MakeImgd(args []string) (*ImgSrv, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeImgSrv: wrong number of arguments")
@@ -163,9 +171,6 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 	tasks := []task{}
 	ch := make(chan Tresult)
 	for _, st := range sts {
-		if st.Name == STOP {
-			return false
-		}
 		t, err := imgd.claimEntry(st.Name)
 		if err != nil || t == "" {
 			continue
@@ -173,6 +178,9 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 		s3fn, err := imgd.GetFile(path.Join(imgd.wip, t))
 		if err != nil {
 			continue
+		}
+		if string(s3fn) == STOP {
+			return false
 		}
 		tasks = append(tasks, task{t, string(s3fn)})
 	}

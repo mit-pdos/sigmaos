@@ -8,12 +8,10 @@ import (
 	"sigmaos/dbclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sync"
-	"time"
 )
 
 // YH:
@@ -21,8 +19,8 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	USER_HB_FREQ  = 1
 	USER_QUERY_OK = "OK"
+	USER_CACHE_PREFIX = "user_"
 )
 
 type UserSrv struct {
@@ -46,25 +44,35 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.dbc = dbc
-	cachec, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{pds.MemFs.SigmaClnt().FsLib}, jobname)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER, pds.MemFs.SigmaClnt().FsLib)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	usrv.cachec = cachec
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Initializing DB and starting user service %v\n", usrv.sid)
-	go usrv.heartBeat(USER_HB_FREQ)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
 	return pds.RunServer()
 }
 
-func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.UserResponse) error {
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req)
+func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.CheckUserResponse) error {
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req.Usernames)
+	userids := make([]int64, len(req.Usernames))
 	res.Ok = "No"
-	user, err := usrv.getUserbyUname(req.Username)
-	if err != nil {
-		return err
+	missing := false
+	for idx, username := range req.Usernames {
+		user, err := usrv.getUserbyUname(username)
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			userids[idx] = int64(-1)
+			missing = true
+		} else {
+			userids[idx] = user.Userid
+		}
 	}
-	if user != nil {
-		res.Userid = user.Userid
+	res.Userids = userids
+	if !missing {
 		res.Ok = USER_QUERY_OK
 	}
 	return nil
@@ -121,13 +129,6 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 	return nil
 }
 
-func (usrv *UserSrv) heartBeat(freq int) {
-	for {
-		time.Sleep(time.Duration(freq) * time.Second)
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "ALIVE!\n")
-	}
-}
-
 func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 	user, err := usrv.getUserbyUname(username)
 	if err != nil {
@@ -137,13 +138,13 @@ func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 }
 
 func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
-	key := "user_by_uname_" + username
+	key := USER_CACHE_PREFIX + username
 	user := &proto.User{}
 	if err := usrv.cachec.Get(key, user); err != nil {
 		if !usrv.cachec.IsMiss(err) {
 			return nil, err
 		}
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User cache miss: key %v\n", key)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User %v cache miss\n", key)
 		q := fmt.Sprintf("SELECT * from socialnetwork_user where username='%s';", username)
 		var users []proto.User
 		if err := usrv.dbc.Query(q, &users); err != nil {
@@ -153,8 +154,10 @@ func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
 			return nil, nil
 		}
 		user = &users[0]
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in DB: %v\n", username, user)
 		usrv.cachec.Put(key, user)
+	} else {
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in cache!\n", username)
 	}
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user for %v: %v\n", username, user)
 	return user, nil
 }

@@ -110,6 +110,22 @@ func (c *CacheClnt) Get(key string, val proto.Message) error {
 	return c.GetTraced(nil, key, val)
 }
 
+func (c *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
+	req := &cacheproto.CacheRequest{
+		SpanContextConfig: sctx,
+	}
+	req.Key = key
+	var res cacheproto.CacheResult
+	if err := c.RPC("Cache.Delete", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CacheClnt) Delete(key string) error {
+	return c.DeleteTraced(nil, key)
+}
+
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
 	b, err := cc.fsls[0].GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))

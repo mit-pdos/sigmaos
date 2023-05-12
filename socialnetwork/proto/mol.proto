@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "ulambda/socialnetwork/proto";
+option go_package = "sigmaos/socialnetwork/proto";
 
 service MeaningOfLife {
   rpc FindMeaning(MoLRequest) returns (MoLResult);

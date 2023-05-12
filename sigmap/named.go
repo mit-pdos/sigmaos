@@ -33,6 +33,9 @@ const (
 	CACHEREL = "cache"
 	CACHE    = NAMED + CACHEREL + "/"
 
+	IMGREL = "img"
+	IMG    = NAMED + IMGREL + "/"
+
 	MEMCACHED = "name/memcached"
 	MEMBLOCK  = "name/memblock"
 

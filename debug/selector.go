@@ -57,6 +57,7 @@ const (
 	SPINNER                       = "SPINNER"
 	FSREADER                      = "FSREADER"
 	SLEEPER_TIMING                = "SLEEPER_TIMING"
+	IMGD                          = "IMGD"
 	MR                            = "MR"
 	MR_TPT                        = "MR_TPT"
 	KVBAL                         = "KVBAL"

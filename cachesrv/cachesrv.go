@@ -135,6 +135,30 @@ func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 	return ErrMiss
 }
 
+func (s *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+	if false {
+		_, span := s.tracer.StartRPCSpan(&req, "Delete")
+		defer span.End()
+	}
+
+	db.DPrintf(db.CACHESRV, "Delete %v", req)
+	b := key2bin(req.Key)
+
+	start := time.Now()
+	s.bins[b].Lock()
+	defer s.bins[b].Unlock()
+	if time.Since(start) > 20*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
+	}
+
+	_, ok := s.bins[b].cache[req.Key]
+	if ok {
+		delete(s.bins[b].cache, req.Key)
+		return nil
+	}
+	return ErrMiss
+}
+
 type cacheSession struct {
 	*inode.Inode
 	bins []cache

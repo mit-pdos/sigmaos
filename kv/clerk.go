@@ -293,6 +293,15 @@ func (kc *KvClerk) PutRaw(k Tkey, b []byte, off sp.Toffset) error {
 	return op.err
 }
 
+func (kc *KvClerk) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
+	return kc.Delete(key)
+}
+
+func (kc *KvClerk) Delete(k string) error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
 func (kc *KvClerk) AppendJson(k Tkey, v proto.Message) error {
 	b, err := proto.Marshal(v)
 	if err != nil {

@@ -84,7 +84,7 @@ func TestCacheSingle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
-
+	
 	m, err := cc.Dump(0)
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
@@ -92,6 +92,16 @@ func TestCacheSingle(t *testing.T) {
 	m, err = cc.Dump(0)
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
+	
+	// Delete and get
+	for k := 0; k < N; k++ {
+		key := strconv.Itoa(k)
+		res := &proto.CacheString{}
+		err = cc.Delete(key)
+		assert.Nil(t, err)
+		err = cc.Get(key, res)
+		assert.True(t, cc.IsMiss(err))
+	}
 
 	ts.Shutdown()
 }
@@ -123,6 +133,16 @@ func testCacheSharded(t *testing.T, nshard int) {
 		m, err := cc.Dump(g)
 		assert.Nil(t, err)
 		assert.True(t, len(m) >= 1)
+	}
+
+	// Delete and get
+	for k := 0; k < N; k++ {
+		key := strconv.Itoa(k)
+		res := &proto.CacheString{}
+		err = cc.Delete(key)
+		assert.Nil(t, err)
+		err = cc.Get(key, res)
+		assert.True(t, cc.IsMiss(err))
 	}
 
 	ts.stop()

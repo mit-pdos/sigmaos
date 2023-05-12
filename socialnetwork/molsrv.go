@@ -31,7 +31,7 @@ func RunMoLSrv(public bool) error {
 		return err
 	}
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MOL, "==%v== Starting to run MoL service\n", mol.sid)
-	go mol.heartBeat(HB_FREQ)
+	go mol.heartBeat()
 	return pds.RunServer()
 }
 
@@ -42,9 +42,9 @@ func (mol *MeaningOfLife) FindMeaning(ctx fs.CtxI, req proto.MoLRequest, rep *pr
 	return nil
 }
 
-func (mol *MeaningOfLife) heartBeat(freq int) {
+func (mol *MeaningOfLife) heartBeat() {
 	for {
-		time.Sleep(time.Duration(freq) * time.Second)
+		time.Sleep(time.Duration(HB_FREQ) * time.Second)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_MOL, "==%v== IS ALIVE\n", mol.sid)
 	}
 }

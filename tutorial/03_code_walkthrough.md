@@ -1,7 +1,10 @@
 # 03. Code walkthrough
 
 The SigmaOS codebase is large. This tutorial is a short walkthrough of the code
-from both the client and server perspective.
+from both the client and server perspective. By the end of this tutorial you
+should be able to use the SigmaOS API to manipulate files and directories,
+create and manage `procs`, and understand the different layers of SigmaOS
+clients and servers, and how the pacakges that implement them fit together.
 
 XXX TODO: insert diagram.
 
@@ -61,7 +64,6 @@ and libraries which may be useful for future projects based on SigmaOS.
     has handlers for each of teh `sigmap` messages, and deals with SigmaOS
     features like versions, ephemeral files, and watches.
 
-
 ## Shared libraries (used by client and server)
 
 This section describes some libraries shared by the SigmaOS client-side
@@ -73,20 +75,55 @@ implementing additional clients and servers:
     performance (such as `Put`, `Get`, and `WriteRead`).
   - `sessp`: This library defines messages for the session layer of SigmaOS.
 
+## Exercise 1: Create, write, and read files.
 
-## Exercise: Add a protocol message to SigmaP 
+In this exercise, you will learn how to use the SigmaOS client API to
+manipulate files and directories. In order to do so, you will create a file,
+write data to it, and read data from it. You will need to complete the
+following steps:
+  - [ ] Create an `fslib.FsLib` object.
+  - [ ] Create a file in `named`. Write a string of your choice to it, and
+    close the file.
+  - [ ] List the contents of the directory in which you created the file.
+    Ensure the file is present.
+  - [ ] Open the file, and read the contents back. Make sure that the contents
+    you read match the contents you wrote.
 
-As an exercise, add a new type of `sigmap` message to SigmaOS. It can be a
-no-op, or print something on the server-side. In order to do so, you'll need to
-complete the following major steps (with some details left out):
+## Exercise 2: Add a protocol message to SigmaP 
+
+In this exercise, you will add a new type of `sigmap` message to SigmaOS. It
+can be a no-op, or print something on the server-side. In order to do so,
+you'll need to complete the following major steps (with some details left out):
   - [ ] Create a new type of `sigmap` message, and add it to the `sigmap`
     package.
   - [ ] Add an API call for the new RPC to the `fslib.FsLib` struct, and the
     lower layers it calls into, in order to invoke your RPC. You should be able
     to trace your way all the way down from the `fslib` layer to the `netclnt`
     layer.
-  - [ ] Add a handler for your new `sigmap` message to `protsrv`. You should
-  be able to trace your RPC's flow all the way from the `netsrv` layer to the
-  `protsrv` layer.
+  - [ ] Add a handler for your new `sigmap` message to `protsrv`. You should be
+    able to trace your RPC's flow all the way from the `netsrv` layer to the
+    `protsrv` layer.
   - [ ] Invoke your new `sigmap` message on `named` in a test, and ensure that
     it works.
+
+## Exercise 3: Spawn a `proc`
+
+In this exercise, you will familiarize yourself with the `procclnt` API. In
+order to do so, you will learn how to write a basic `proc`, spawn it, and wait
+for it to exit. You will need to complete the following steps:
+  - [ ] Create the main function for your new `proc`, by adding a new directory
+    (with whatever name you choose for your `proc`) in the `cmd/` directory in
+    the root of the repo, and creating a `main.go` file.
+  - [ ] In the `proc`'s main file, create an `fslib.FsLib` object, and a
+    `procclnt.ProcClnt` object, and put them in a `sigmaclnt.SigmaClnt` object.
+  - [ ] Have the `proc` create a file, with a path of your choice, in `named`.
+  - [ ] Mark the `proc` as started, to indicate to its parent that it has begun
+    executing.
+  - [ ] Have the `proc` log something (like "Hello World").
+  - [ ] Have the `proc` mark itself  as exited, and return an exit status
+    "Goodbye World" to its parent.
+  - [ ] Write a test program which spawns your `proc`.
+  - [ ] Have the test program wait for your `proc` to start, and look for the
+    file your `proc` created in `named`. Ensure that the file is present.
+  - [ ] Wait for the child `proc` to exit, and ensure that the exit status says
+    "Goodbye World".

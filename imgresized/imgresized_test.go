@@ -27,7 +27,7 @@ func TestResizeImg(t *testing.T) {
 
 	os.Remove(fn)
 
-	in, err := os.Open("/home/kaashoek/Downloads/desk.jpg")
+	in, err := os.Open("1.jpg")
 	assert.Nil(t, err)
 	img, err := jpeg.Decode(in)
 	assert.Nil(t, err)
@@ -45,8 +45,8 @@ func TestResizeImg(t *testing.T) {
 
 func TestResizeProc(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	in := path.Join(sp.S3, "~local/9ps3/desk.jpg")
-	out := path.Join(sp.S3, "~local/9ps3/thumb.jpg")
+	in := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
+	out := path.Join(sp.S3, "~local/9ps3/img/1-thumb.jpg")
 	ts.Remove(out)
 	p := proc.MakeProc("imgresize", []string{in, out})
 	err := ts.Spawn(p)

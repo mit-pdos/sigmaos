@@ -82,7 +82,11 @@ complete the following major steps (with some details left out):
   - [ ] Create a new type of `sigmap` message, and add it to the `sigmap`
     package.
   - [ ] Add an API call for the new RPC to the `fslib.FsLib` struct, and the
-    lower layers it calls into, in order to invoke your RPC.
-  - [ ] Add a handler for your new `sigmap` message to `protsrv`.
+    lower layers it calls into, in order to invoke your RPC. You should be able
+    to trace your way all the way down from the `fslib` layer to the `netclnt`
+    layer.
+  - [ ] Add a handler for your new `sigmap` message to `protsrv`. You should
+  be able to trace your RPC's flow all the way from the `netsrv` layer to the
+  `protsrv` layer.
   - [ ] Invoke your new `sigmap` message on `named` in a test, and ensure that
     it works.

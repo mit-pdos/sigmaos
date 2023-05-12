@@ -1,0 +1,202 @@
+package imgresized
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"path"
+	"strconv"
+	"strings"
+	"time"
+
+	"sigmaos/crash"
+	db "sigmaos/debug"
+	"sigmaos/electclnt"
+	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
+)
+
+const (
+	STOP   = "_STOP"
+	NCOORD = 1
+)
+
+type ImgSrv struct {
+	*sigmaclnt.SigmaClnt
+	job       string
+	done      string
+	wip       string
+	todo      string
+	crash     int
+	electclnt *electclnt.ElectClnt
+}
+
+func MakeImgd(args []string) (*ImgSrv, error) {
+	log.Printf("args %v\n", args)
+	if len(args) != 2 {
+		return nil, errors.New("MakeImgSrv: wrong number of arguments")
+	}
+	imgd := &ImgSrv{}
+	imgd.job = args[0]
+	sc, err := sigmaclnt.MkSigmaClnt("imgd-" + proc.GetPid().String())
+	if err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.IMGD, "Made fslib job %v, addr %v", imgd.job, sc.NamedAddr())
+	imgd.SigmaClnt = sc
+	imgd.job = args[0]
+	crashing, err := strconv.Atoi(args[1])
+	if err != nil {
+		return nil, fmt.Errorf("MakeImgSrv: crash %v isn't int", args[5])
+	}
+	imgd.crash = crashing
+	imgd.done = path.Join(sp.IMG, imgd.job, "done")
+	imgd.todo = path.Join(sp.IMG, imgd.job, "todo")
+	imgd.wip = path.Join(sp.IMG, imgd.job, "wip")
+
+	imgd.Started()
+
+	imgd.electclnt = electclnt.MakeElectClnt(imgd.FsLib, path.Join(sp.IMG, imgd.job, "imgd-leader"), 0777)
+
+	crash.Crasher(imgd.FsLib)
+
+	return imgd, nil
+}
+
+func (imgd *ImgSrv) claimEntry(name string) (string, error) {
+	if err := imgd.Rename(imgd.todo+"/"+name, imgd.wip+"/"+name); err != nil {
+		var serr *serr.Err
+		if errors.As(err, &serr) && serr.IsErrUnreachable() { // partitioned?
+			return "", err
+		}
+		// another thread claimed the task before us
+		return "", nil
+	}
+	return name, nil
+}
+
+type task struct {
+	name string
+	fn   string
+}
+
+type Tresult struct {
+	t   string
+	ok  bool
+	ms  int64
+	msg string
+}
+
+func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, t task) {
+	status, err := imgd.WaitExit(p.GetPid())
+	ms := time.Since(start).Milliseconds()
+	if err == nil && status.IsStatusOK() {
+		// mark task as done
+		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
+			db.DFatalf("rename task %v done err %v\n", t, err)
+		}
+		ch <- Tresult{t.name, true, ms, status.Msg()}
+	} else { // task failed; make it runnable again
+		db.DPrintf(db.IMGD, "task %v failed %v err %v\n", t, status, err)
+		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
+			db.DFatalf("rename task %v todo err %v\n", t, err)
+		}
+		ch <- Tresult{t.name, false, ms, ""}
+	}
+}
+
+func ThumbName(fn string) string {
+	ext := path.Ext(fn)
+	fn1 := strings.TrimSuffix(fn, ext) + "-thumb" + path.Ext(fn)
+	return fn1
+}
+
+func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
+	procs := make([]*proc.Proc, len(tasks))
+	log.Printf("tasks %v\n", tasks)
+	for i, t := range tasks {
+		procs[i] = proc.MakeProc("imgresize", []string{t.fn, ThumbName(t.fn)})
+		if imgd.crash > 0 {
+			procs[i].AppendEnv("SIGMACRASH", strconv.Itoa(imgd.crash))
+		}
+		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
+	}
+	start := time.Now()
+	// Burst-spawn procs.
+	failed, errs := imgd.SpawnBurst(procs, 1)
+	if len(failed) > 0 {
+		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
+	}
+	for i := range procs {
+		go imgd.waitForTask(start, ch, procs[i], tasks[i])
+	}
+}
+
+func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
+	tasks := []task{}
+	ch := make(chan Tresult)
+	for _, st := range sts {
+		if st.Name == STOP {
+			return false
+		}
+		t, err := imgd.claimEntry(st.Name)
+		if err != nil || t == "" {
+			continue
+		}
+		s3fn, err := imgd.GetFile(path.Join(imgd.wip, t))
+		if err != nil {
+			continue
+		}
+		tasks = append(tasks, task{t, string(s3fn)})
+	}
+	go imgd.runTasks(ch, tasks)
+	for i := len(tasks); i > 0; i-- {
+		res := <-ch
+		if res.ok {
+			db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
+			//if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
+			//	db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
+			//}
+		}
+	}
+	return true
+}
+
+// Consider all tasks in progress as failed (too aggressive, but
+// correct), and make them runnable
+func (imgd *ImgSrv) recover() {
+	if _, err := imgd.MoveFiles(imgd.wip, imgd.todo); err != nil {
+		db.DFatalf("MoveFiles %v err %v\n", imgd.wip, err)
+	}
+}
+
+func (imgd *ImgSrv) Work() {
+
+	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", proc.GetPid(), imgd.job)
+
+	// Try to become the leading coordinator.  If we get
+	// partitioned, we cannot write the todo directories either,
+	// so need to set a fence.
+	imgd.electclnt.AcquireLeadership(nil)
+
+	db.DPrintf(db.ALWAYS, "leader %s\n", imgd.job)
+
+	imgd.recover()
+
+	work := true
+	for work {
+		sts, err := imgd.ReadDirWatch(imgd.todo, func(sts []*sp.Stat) bool {
+			return len(sts) == 0
+		})
+		if err != nil {
+			db.DFatalf("ReadDirWatch %v err %v\n", imgd.todo, err)
+		}
+		work = imgd.work(sts)
+	}
+
+	db.DPrintf(db.ALWAYS, "imgresized exit\n")
+
+	imgd.ExitedOK()
+}

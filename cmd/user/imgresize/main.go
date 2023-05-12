@@ -60,17 +60,19 @@ func (t *Trans) Work() *proc.Status {
 		return proc.MakeStatusErr("File not found", err)
 	}
 	defer rdr.Close()
-	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
-	if err != nil {
-		db.DFatalf("%v: Open error: %v", proc.GetProgram(), err)
-	}
-	defer wrt.Close()
 
 	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.MakeStatusErr("Decode", err)
 	}
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
+
+	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
+	if err != nil {
+		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
+	}
+	defer wrt.Close()
+
 	jpeg.Encode(wrt, img1, nil)
 	return proc.MakeStatus(proc.StatusOK)
 }

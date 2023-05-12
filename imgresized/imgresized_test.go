@@ -70,6 +70,20 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) WaitDone() {
+	for true {
+		time.Sleep(1 * time.Second)
+		if n, err := imgresized.NTask(ts.SigmaClnt.FsLib, ts.job); err != nil {
+			break
+		} else if n == 0 {
+			break
+		} else {
+			fmt.Printf("%d..", n)
+		}
+	}
+	fmt.Printf("\n")
+}
+
 func startImgd(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, 1, "imgresized", []string{strconv.Itoa(0)}, job, 0, 1, 0, 0, 0)
 }
@@ -88,7 +102,7 @@ func TestImgdOne(t *testing.T) {
 
 	imgd := startImgd(ts.SigmaClnt, ts.job)
 
-	time.Sleep(5 * time.Second)
+	ts.WaitDone()
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
@@ -124,17 +138,7 @@ func TestImgdMany(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	for true {
-		time.Sleep(1 * time.Second)
-		if n, err := imgresized.NTask(ts.SigmaClnt.FsLib, ts.job); err != nil {
-			break
-		} else if n == 0 {
-			break
-		} else {
-			fmt.Printf("%d..", n)
-		}
-	}
-	fmt.Printf("\n")
+	ts.WaitDone()
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)

@@ -3,7 +3,6 @@ package imgresized
 import (
 	"errors"
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"strings"
@@ -12,13 +11,16 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
+	"sigmaos/fslib"
 	"sigmaos/proc"
+	rd "sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 const (
+	IMG    = "name/img"
 	STOP   = "_STOP"
 	NCOORD = 1
 )
@@ -33,8 +35,32 @@ type ImgSrv struct {
 	electclnt *electclnt.ElectClnt
 }
 
+func MkDirs(fsl *fslib.FsLib, job string) error {
+	if err := fsl.MkDir(IMG, 0777); err != nil {
+		return err
+	}
+	if err := fsl.MkDir(path.Join(IMG, job), 0777); err != nil {
+		return err
+	}
+	if err := fsl.MkDir(path.Join(IMG, job, "done"), 0777); err != nil {
+		return err
+	}
+	if err := fsl.MkDir(path.Join(IMG, job, "todo"), 0777); err != nil {
+		return err
+	}
+	if err := fsl.MkDir(path.Join(IMG, job, "wip"), 0777); err != nil {
+		return err
+	}
+	return nil
+}
+
+func SubmitTask(fsl *fslib.FsLib, job string, fn string) error {
+	t := path.Join(sp.IMG, job, "todo", rd.String(4))
+	_, err := fsl.PutFile(t, 0777, sp.OREAD, []byte(fn))
+	return err
+}
+
 func MakeImgd(args []string) (*ImgSrv, error) {
-	log.Printf("args %v\n", args)
 	if len(args) != 2 {
 		return nil, errors.New("MakeImgSrv: wrong number of arguments")
 	}
@@ -52,13 +78,13 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("MakeImgSrv: crash %v isn't int", args[5])
 	}
 	imgd.crash = crashing
-	imgd.done = path.Join(sp.IMG, imgd.job, "done")
-	imgd.todo = path.Join(sp.IMG, imgd.job, "todo")
-	imgd.wip = path.Join(sp.IMG, imgd.job, "wip")
+	imgd.done = path.Join(IMG, imgd.job, "done")
+	imgd.todo = path.Join(IMG, imgd.job, "todo")
+	imgd.wip = path.Join(IMG, imgd.job, "wip")
 
 	imgd.Started()
 
-	imgd.electclnt = electclnt.MakeElectClnt(imgd.FsLib, path.Join(sp.IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.electclnt = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
 
 	crash.Crasher(imgd.FsLib)
 
@@ -115,7 +141,6 @@ func ThumbName(fn string) string {
 
 func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 	procs := make([]*proc.Proc, len(tasks))
-	log.Printf("tasks %v\n", tasks)
 	for i, t := range tasks {
 		procs[i] = proc.MakeProc("imgresize", []string{t.fn, ThumbName(t.fn)})
 		if imgd.crash > 0 {

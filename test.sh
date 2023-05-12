@@ -43,7 +43,7 @@ go test $@ sigmaos/fslib -start -path "name/s3/~local/9ps3/fslibtest/" -run Read
 # applications
 #
 
-for T in mr kv; do
+for T in imgresized mr kv; do
     go test $@ sigmaos/$T -start
 done
 

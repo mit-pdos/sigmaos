@@ -70,12 +70,12 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) WaitDone() {
+func (ts *Tstate) WaitDone(t int) {
 	for true {
 		time.Sleep(1 * time.Second)
-		if n, err := imgresized.NTask(ts.SigmaClnt.FsLib, ts.job); err != nil {
+		if n, err := imgresized.NTaskDone(ts.SigmaClnt.FsLib, ts.job); err != nil {
 			break
-		} else if n == 0 {
+		} else if n == t {
 			break
 		} else {
 			fmt.Printf("%d..", n)
@@ -102,7 +102,7 @@ func TestImgdOne(t *testing.T) {
 
 	imgd := startImgd(ts.SigmaClnt, ts.job)
 
-	ts.WaitDone()
+	ts.WaitDone(1)
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
@@ -138,7 +138,7 @@ func TestImgdMany(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	ts.WaitDone()
+	ts.WaitDone(len(sts))
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)

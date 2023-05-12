@@ -60,16 +60,12 @@ func SubmitTask(fsl *fslib.FsLib, job string, fn string) error {
 	return err
 }
 
-func NTask(fsl *fslib.FsLib, job string) (int, error) {
-	sts, err := fsl.GetDir(path.Join(sp.IMG, job, "todo"))
+func NTaskDone(fsl *fslib.FsLib, job string) (int, error) {
+	sts, err := fsl.GetDir(path.Join(sp.IMG, job, "done"))
 	if err != nil {
 		return -1, err
 	}
-	sts1, err := fsl.GetDir(path.Join(sp.IMG, job, "wip"))
-	if err != nil {
-		return -1, err
-	}
-	return len(sts) + len(sts1), nil
+	return len(sts), nil
 }
 
 func MakeImgd(args []string) (*ImgSrv, error) {

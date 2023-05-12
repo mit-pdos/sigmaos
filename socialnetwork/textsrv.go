@@ -8,6 +8,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
 	"regexp"
+	"sync"
+	"fmt"
 )
 
 // YH:
@@ -51,42 +53,69 @@ func RunTextSrv(public bool, jobname string) error {
 
 func (tsrv *TextSrv) ProcessText(
 		ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
+	res.Ok = "No. "
 	if req.Text == "" {
 		res.Ok = "Cannot process empty text." 
 		return nil
 	}
-	// process mentions
+	// find mentions and urls
 	mentions := mentionRegex.FindAllString(req.Text, -1)
-	for _, mention := range mentions {
-		username := mention[1:]
-		userArg := proto.CheckUserRequest{Username: username}
-		userRes := proto.UserResponse{}
-		if err := tsrv.userc.RPC("User.CheckUser", &userArg, &userRes); err != nil {
-			return err
-		}
-		if userRes.Ok != USER_QUERY_OK {
-			dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "cannot find mentioned user %v!\n", username)
-			continue
-		}
-		res.Usermentions = append(
-			res.Usermentions, &proto.UserRef{Userid: userRes.Userid, Username: username})
+	mentionsL := len(mentions)
+	usernames := make([]string, mentionsL)
+	for idx, mention := range mentions {
+		usernames[idx] = mention[1:]
 	}
-	// process urls and text
+	userArg := proto.CheckUserRequest{Usernames: usernames}
+	userRes := proto.CheckUserResponse{}
+
 	urlIndices := urlRegex.FindAllStringIndex(req.Text, -1)
 	urlIndicesL := len(urlIndices)
+	extendedUrls := make([]string, urlIndicesL)
+	for idx, loc := range urlIndices {
+		extendedUrls[idx] = req.Text[loc[0]:loc[1]]
+	}
+	urlArg := proto.ComposeUrlsRequest{Extendedurls: extendedUrls}
+	urlRes := proto.ComposeUrlsResponse{}
+
+	// concurrent RPC calls
+	var wg sync.WaitGroup
+	var userErr, urlErr error
+	if mentionsL > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			userErr = tsrv.userc.RPC("User.CheckUser", &userArg, &userRes)
+		}()
+	}
 	if urlIndicesL > 0 {
-		extendedUrls := make([]string, urlIndicesL)
-		for idx, loc := range urlIndices {
-			extendedUrls[idx] = req.Text[loc[0]:loc[1]]
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			urlErr = tsrv.urlc.RPC("Url.ComposeUrls", &urlArg, &urlRes)
+		}()
+	}
+	wg.Wait()
+	res.Text = req.Text
+	if userErr != nil || urlErr != nil {
+		return fmt.Errorf("%w; %w", userErr, urlErr)
+	} 
+
+	// process mentions
+	for idx, userid := range userRes.Userids {
+		if userid > 0 {
+			res.Usermentions = append(
+				res.Usermentions, &proto.UserRef{Userid: userid, Username: usernames[idx]})
+		} else {
+			dbg.DPrintf("User %v does not exist!", usernames[idx])
 		}
-		urlArg := proto.ComposeUrlsRequest{Extendedurls: extendedUrls}
-		urlRes := proto.ComposeUrlsResponse{}
-		if err := tsrv.urlc.RPC("Url.ComposeUrls", &urlArg, &urlRes); err != nil {
-			res.Text = req.Text
-			return err
-		}
+	}
+
+	// process urls and text
+	if urlIndicesL > 0 { 
 		if urlRes.Ok != URL_QUERY_OK {
 			dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "cannot process urls %v!\n", extendedUrls)
+			res.Ok += urlRes.Ok
+			return nil
 		} else {
 			res.Urls = urlRes.Urls
 			res.Text = ""

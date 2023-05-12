@@ -22,11 +22,12 @@ func TestUser(t *testing.T) {
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user
-	arg_check := proto.CheckUserRequest{Username: "test_user"}
-	res_check := proto.UserResponse{}
+	arg_check := proto.CheckUserRequest{Usernames: []string{"test_user"}}
+	res_check := proto.CheckUserResponse{}
 	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "No", res_check.Ok)
+	assert.Equal(t, int64(-1), res_check.Userids[0])
 
 	// register user
 	arg_reg := proto.RegisterUserRequest{
@@ -43,10 +44,13 @@ func TestUser(t *testing.T) {
 	created_userid := res_reg.Userid
 
 	// check user
+	arg_check.Usernames = []string{"test_user", "user_1", "user_2"} 
 	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_check.Ok)
-	assert.Equal(t, created_userid, res_check.Userid)
+	assert.Equal(t, created_userid, res_check.Userids[0])
+	assert.Equal(t, int64(1), res_check.Userids[1])
+	assert.Equal(t, int64(2), res_check.Userids[2])
 
     // new user login
 	arg_login := proto.LoginRequest{Username: "test_user", Password: "xxyy"}

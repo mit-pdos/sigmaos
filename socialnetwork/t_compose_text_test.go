@@ -67,6 +67,13 @@ func TestText(t *testing.T) {
 	assert.Nil(t, pdc.RPC("Text.ProcessText", &arg_text, &res_text))	
 	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
 	
+	arg_text.Text = "Hello World!"
+	assert.Nil(t, pdc.RPC("Text.ProcessText", &arg_text, &res_text))	
+	assert.Equal(t, "OK", res_text.Ok)
+	assert.Equal(t, 0, len(res_text.Usermentions))
+	assert.Equal(t, 0, len(res_text.Urls))
+	assert.Equal(t, "Hello World!", res_text.Text)
+
 	arg_text.Text = 
 		"First post! @user_1@user_2 http://www.google.com/q=apple @user_4 https://www.bing.com Over!"
 	assert.Nil(t, pdc.RPC("Text.ProcessText", &arg_text, &res_text))	

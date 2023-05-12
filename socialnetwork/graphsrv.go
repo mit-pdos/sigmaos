@@ -134,25 +134,25 @@ func (gsrv *GraphSrv) updateGraphWithUname(
 		follwer_uname, followee_uname string, isFollow bool, res *proto.GraphUpdateResponse) error {
 	res.Ok = "No"
 	// get follower
-	follower_arg := &proto.CheckUserRequest{Username: follwer_uname}
-	follower_res := &proto.UserResponse{}
+	follower_arg := &proto.CheckUserRequest{Usernames: []string{follwer_uname}}
+	follower_res := &proto.CheckUserResponse{}
 	if err := gsrv.userc.RPC("User.CheckUser", follower_arg, follower_res); err != nil {
 		return err
 	} else if follower_res.Ok != USER_QUERY_OK {
 		res.Ok = "Follower does not exist"
 		return nil
 	}
-	followerid := follower_res.Userid
+	followerid := follower_res.Userids[0]
 	// get followee id
-	followee_arg := &proto.CheckUserRequest{Username: followee_uname}
-	followee_res := &proto.UserResponse{}
+	followee_arg := &proto.CheckUserRequest{Usernames: []string{followee_uname}}
+	followee_res := &proto.CheckUserResponse{}
 	if err := gsrv.userc.RPC("User.CheckUser", followee_arg, followee_res); err != nil {
 		return err
 	} else 	if followee_res.Ok != USER_QUERY_OK {
 		res.Ok = "Followee does not exist"
 		return nil
 	}
-	followeeid := followee_res.Userid
+	followeeid := followee_res.Userids[0]
 	return gsrv.updateGraph(followerid, followeeid, isFollow, res)
 }
 

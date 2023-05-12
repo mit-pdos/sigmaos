@@ -54,15 +54,25 @@ func RunUserSrv(public bool, jobname string) error {
 	return pds.RunServer()
 }
 
-func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.UserResponse) error {
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req)
+func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.CheckUserResponse) error {
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req.Usernames)
+	userids := make([]int64, len(req.Usernames))
 	res.Ok = "No"
-	user, err := usrv.getUserbyUname(req.Username)
-	if err != nil {
-		return err
+	missing := false
+	for idx, username := range req.Usernames {
+		user, err := usrv.getUserbyUname(username)
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			userids[idx] = int64(-1)
+			missing = true
+		} else {
+			userids[idx] = user.Userid
+		}
 	}
-	if user != nil {
-		res.Userid = user.Userid
+	res.Userids = userids
+	if !missing {
 		res.Ok = USER_QUERY_OK
 	}
 	return nil

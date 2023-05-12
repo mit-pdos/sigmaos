@@ -7,7 +7,7 @@ usage() {
 VPC=""
 REALM=""
 N_VM=""
-BRANCH="master"
+BRANCH=""
 PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"

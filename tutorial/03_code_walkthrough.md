@@ -75,7 +75,12 @@ implementing additional clients and servers:
     performance (such as `Put`, `Get`, and `WriteRead`).
   - `sessp`: This library defines messages for the session layer of SigmaOS.
 
-## Exercise 1: Create, write, and read files.
+## Exercises
+
+The following exercises will help you get familiar with the core of the SigmaOS
+codebase.
+
+### Exercise 1: Create, write, and read files.
 
 In this exercise, you will learn how to use the SigmaOS client API to
 manipulate files and directories. In order to do so, you will create a file,
@@ -89,7 +94,7 @@ following steps:
   - [ ] Open the file, and read the contents back. Make sure that the contents
     you read match the contents you wrote.
 
-## Exercise 2: Describe SigmaOS librarly layers
+### Exercise 2: Describe SigmaOS librarly layers
 
 In this exercise, you will draw a diagram of how the SigmaOS client and server
 libraries stack together, and explain what their purposes are. You should hit
@@ -104,7 +109,7 @@ the following waypoints in your traversal:
   - [ ] Now, draw a diagram of how all of the libraries stack and fit together.
   - [ ] Finally, describe, at a high level, what each library does.
 
-## Exercise 3: Add a protocol message to SigmaP 
+### Exercise 3: Add a protocol message to SigmaP 
 
 In this exercise, you will add a new type of `sigmap` message to SigmaOS. It
 can be a no-op, or print something on the server-side. In order to do so,
@@ -121,7 +126,7 @@ you'll need to complete the following major steps (with some details left out):
   - [ ] Invoke your new `sigmap` message on `named` in a test, and ensure that
     it works.
 
-## Exercise 4: Spawn a `proc`
+### Exercise 4: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt` API. In
 order to do so, you will learn how to write a basic `proc`, spawn it, and wait

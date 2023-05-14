@@ -147,3 +147,34 @@ for it to exit. You will need to complete the following steps:
     file your `proc` created in `named`. Ensure that the file is present.
   - [ ] Wait for the child `proc` to exit, and ensure that the exit status says
     "Goodbye World".
+
+### Exercise 5: Set up a RPC server. 
+In this exercise, you will familiarize with the application layer APIs of SigmOS, 
+specifically `protdevclnt` and `protdevsrv`. In order to do so, you will learn 
+how to set up a basic RPC server, and explore existing utilities that provide 
+database and cache proxies. 
+  - [ ] Navigate to the `example_echo_server` directory. Check the files and 
+	try running the test cases. If you have already built SigmaOS through `build.sh`, 
+	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test
+	case starts an instance of the Echo server, then starts a client sending request
+	to the server. By default, all operations are local. 
+  - [ ] To see the logs, source the environment variable file `example_echo_server/env.sh`
+	before running test, and run `logs.sh` afterwards. You may modify the content
+	of the environment variable file to turn on/off logging for different modules. 
+	After finishing test and logging, you may run `stop.sh` to clear up.
+  - [ ] Try to figure out how custome RPCs work. You may start with the `RPC` method
+	in `protdevclnt.ProtDevClnt` and will eventually end up in `protclnt` and
+	`netclnt` as in the previous exercises. On the server side, check how 
+	`protdevsrv.ProtDevSrv` is implemented and eventually you will reach `sesssrv`
+	and `netsrv` 
+  - [ ] Try to figure out how the test case initializes the SigmaOS kernel and 
+	a proc for the Echo server. You may check utilities in the `test` directory, 
+	and also a `main` function defined at `cmd/user/example_echo` 
+  - [ ] Try to modify the echo server so that it caches results by connecting to 
+	some caching client. Existing caching implementations can be found at `cacheclnt`,
+	 `memcached`, and `kv`. Example usage can be found at `hotel` and `socialnetwork`, 
+	which are two major example applications built on top of SigmaOS.
+  - [ ] Try to modify the echo server so that it reads and writes to a database by
+	connecting to a database proxy. Existing implementations can be found at `dbd`
+	and `dbclnt`.  
+  - [ ] Try to profile the echo server through `perf` package. 

@@ -64,7 +64,7 @@ S3 with:
 $ ./build.sh --parallel --target aws --push TAG
 ```
 
-## Installing, updating, and deploying SigmaOS on a remote Cluster
+## Installing, updating, and deploying SigmaOS on a remote cluster
 
 The following scripts need to be run from the directory corresponding to the
 deployment platform: either `cloudlab` or `aws`. Make sure to replace
@@ -88,7 +88,56 @@ XXX TODO.
 
 #### CloudLab.
 
-XXX TODO.
+CloudLab runs an old version of the Linux Kernel, so you need to upgrade the
+kernel before you can install SigmaOS. Also, CloudLab sets up its machines with
+a very small root partition (usually 15G) and a large, unmounted partition. In
+order to run SigmaOS and install the new kernel (both of which can use a
+significant amount of disk space), you will need to mount and format the new
+disk partition. The `./upgrade-linux.sh` script takes care of both setting up
+the new partition and installing the new version of the kernel.
+
+For the remainder of this section,
+replace USER and HOSTNAME with your username and the DNS name of the machine
+you wish to run the script on.
+
+First, find the name of the large, unused partition on the cloudlab machines
+you are using by logging into one of them and running:
+
+```
+$ lsblk
+```
+
+Then, in the `cloudlab/upgrade-linux.sh` script, replace all occurrences of the
+default value of the variable `BLKDEV` with the path to the unused partition.
+For example, on `c220g5` machines, this is `/dev/sda4`.
+
+Then, upgrade the Linux Kernel on each machine by running:
+
+```
+$ cd cloudlab
+$ ./upgrade-linux.sh USER@HOSTNAME
+```
+
+If you are setting up a multi-machine clutser, it may be convenient to run this
+script in parallel in a bash for loop, like so:
+
+```
+$ cd cloudlab
+$ for h in $(cat servers.txt | cut -d " " -f 2); do
+./upgrade-linux.sh USER@$h > /tmp/$h.out 2>&1 &
+done
+```
+
+Note: for some reason, this doesn't always work on the first try. You may need
+to try to install the kernel twice, by rerunning the `upgrade-linux.sh` script.
+
+Then, install the SigmaOS software, credentials, and its dependencies by
+running:
+
+```
+$ cd cloudlab
+$ ./setup-instance.sh USER@HOSTNAME
+```
 
 ### Updating SigmaOS
 

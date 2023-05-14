@@ -185,3 +185,26 @@ In order to stop the SigmaOS deployment, run:
 $ cd PLATFORM
 $ ./stop-sigmaos.sh --vpc VPCID --parallel
 ```
+
+## Quirks
+
+Both AWS and CloudLab have some quirks which are important to know about when
+deploying SigmaOS. This section describes some of them.
+
+## CloudLab Quirks
+
+I have run into quite a few quirks while working with CloudLab. Their users
+Google group is very active and useful, and this is the best way to reach the
+support team, in my experience. You can access it
+[here](https://groups.google.com/g/cloudlab-users).
+
+Some specific examples of issues I've run into (and solutions) can be found
+here:
+
+- Some of the CloudLab hardware is faulty. In particular, I've had issues where
+  the top-of-rack network switch sometimes fails unexpectedly, and some
+  machines are unable to talk to each other for a short time while the switch
+  reboots. Other lab members (e.g., Zain), have run into bad NICs which
+  sometimes drop packets of fail entirely. The best thing to do is run a "Link
+  Test" as soon as you get your cluster, to make sure the network is fully
+  functional. You can start a link test from the home page of your experiment.

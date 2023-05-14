@@ -70,34 +70,77 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) WaitDone(t int) {
+	for true {
+		time.Sleep(1 * time.Second)
+		if n, err := imgresized.NTaskDone(ts.SigmaClnt.FsLib, ts.job); err != nil {
+			break
+		} else if n == t {
+			break
+		} else {
+			fmt.Printf("%d..", n)
+		}
+	}
+	fmt.Printf("\n")
+}
+
 func startImgd(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, 1, "imgresized", []string{strconv.Itoa(0)}, job, 0, 1, 0, 0, 0)
 }
 
-func TestImgd(t *testing.T) {
+func TestImgdOne(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.MkDir(path.Join(sp.IMG, ts.job), 0777)
-	assert.Nil(t, err)
-	err = ts.MkDir(path.Join(sp.IMG, ts.job, "done"), 0777)
-	assert.Nil(t, err)
-	err = ts.MkDir(path.Join(sp.IMG, ts.job, "todo"), 0777)
-	assert.Nil(t, err)
-	err = ts.MkDir(path.Join(sp.IMG, ts.job, "wip"), 0777)
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	fn := path.Join(sp.S3, "~local/9ps3/desk.jpg")
+	fn := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
 	ts.Remove(imgresized.ThumbName(fn))
 
-	f := path.Join(sp.IMG, ts.job, "todo", "x")
-	_, err = ts.PutFile(f, 0777, sp.OREAD, []byte(fn))
+	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
 	imgd := startImgd(ts.SigmaClnt, ts.job)
 
-	time.Sleep(5 * time.Second)
+	ts.WaitDone(1)
 
-	_, err = ts.PutFile(path.Join(sp.IMG, ts.job, "todo", imgresized.STOP), 0777, sp.OREAD, nil)
+	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
+	assert.Nil(t, err)
+
+	imgd.Wait()
+
+	ts.Shutdown()
+}
+
+func TestImgdMany(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
+	assert.Nil(t, err)
+
+	imgd := startImgd(ts.SigmaClnt, ts.job)
+
+	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
+	assert.Nil(t, err)
+
+	for _, st := range sts {
+		fn := path.Join(sp.S3, "~local/9ps3/img/", st.Name)
+		ts.Remove(imgresized.ThumbName(fn))
+	}
+
+	sts, err = ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
+	assert.Nil(t, err)
+
+	for _, st := range sts {
+		fmt.Printf("submit %v\n", st.Name)
+		fn := path.Join(sp.S3, "~local/9ps3/img/", st.Name)
+		err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
+		assert.Nil(t, err)
+	}
+
+	ts.WaitDone(len(sts))
+
+	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
 
 	imgd.Wait()

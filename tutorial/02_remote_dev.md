@@ -208,3 +208,10 @@ here:
   sometimes drop packets of fail entirely. The best thing to do is run a "Link
   Test" as soon as you get your cluster, to make sure the network is fully
   functional. You can start a link test from the home page of your experiment.
+- CloudLab sets up its machines to have a very small root partition, which
+  fills up easily. Any data or logging should make sure to be written to a
+  larger partition.
+- Many CloudLab machines have multiple CPUs/NUMA nodes. However, the Linux
+  Scheduler has bugs which cause unexpected performance issues which manifest
+  in multi-NUMA node configurations. As such, it's important to turn off the
+  second CPU when benchmarking.

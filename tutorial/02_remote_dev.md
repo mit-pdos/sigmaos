@@ -215,3 +215,9 @@ here:
   Scheduler has bugs which cause unexpected performance issues which manifest
   in multi-NUMA node configurations. As such, it's important to turn off the
   second CPU when benchmarking.
+- CloudLab machines have many network interfaces. In order to avoid being
+  throttled, make sure to always use the local cluster IP range, 10.10.0.0/16.
+
+## AWS Quirks
+
+- 

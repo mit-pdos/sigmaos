@@ -149,6 +149,24 @@ output elsewhere. In order to scrape all containers' logging output, run:
 $ ./logs.sh
 ```
 
+Additionally, you can debug SigmaOS by directly introspecting its realms.
+SigmaOS leverage's Linux's 9P VFS layer to allow interaction with SigmaOS
+realms via the command line. In order to do so, we implemented a 9P-to-SigmaP
+proxy. First find your machine's local IP by running:
+
+```
+$ hostname -I
+```
+
+Then, you can start the proxy by running:
+
+```
+$ ./mount.sh LOCAL_IP
+```
+
+This mounts the realm file system at `/mnt/9p`. You can interact with it to
+read, write, and create files and directories.
+
 ## Performance debugging
 
 We have developed a variety of performance measurement tools for SigmaOS, built

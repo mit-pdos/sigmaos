@@ -191,7 +191,7 @@ $ ./stop-sigmaos.sh --vpc VPCID --parallel
 Both AWS and CloudLab have some quirks which are important to know about when
 deploying SigmaOS. This section describes some of them.
 
-## CloudLab Quirks
+### CloudLab Quirks
 
 I have run into quite a few quirks while working with CloudLab. Their users
 Google group is very active and useful, and this is the best way to reach the
@@ -218,6 +218,9 @@ here:
 - CloudLab machines have many network interfaces. In order to avoid being
   throttled, make sure to always use the local cluster IP range, 10.10.0.0/16.
 
-## AWS Quirks
+### AWS Quirks
 
-- 
+- AWS VMs are hyperthreaded, which may increase interference between threads on
+  the same machine.
+- In my experience, it seems that AWS VM and network performance fluctuates
+  slightly with the time of day.

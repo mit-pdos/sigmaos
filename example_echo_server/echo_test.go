@@ -14,10 +14,6 @@ import (
 	"strconv"
 )
 
-const (
-	NSHARD = 4
-)
-
 type TstateEcho struct {
 	*test.Tstate
 	jobname string

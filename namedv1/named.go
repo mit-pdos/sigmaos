@@ -1,22 +1,21 @@
 package namedv1
 
 import (
-	"context"
-	"log"
+	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+
 	// "sigmaos/ctx"
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	// "sigmaos/fs"
-	// "sigmaos/memfssrv"
+	"sigmaos/memfssrv"
 	// "sigmaos/perf"
 	// "sigmaos/proc"
 	// "sigmaos/repl"
 	// "sigmaos/repldummy"
 	// "sigmaos/replraft"
-	// sp "sigmaos/sigmap"
-	// // "sigmaos/seccomp"
+	sp "sigmaos/sigmap"
 )
 
 var (
@@ -25,18 +24,31 @@ var (
 	endpoints = []string{"localhost:2379", "localhost:22379", "localhost:32379"}
 )
 
+type Named struct {
+	*memfssrv.MemFs
+	mu   sync.Mutex
+	clnt *clientv3.Client
+}
+
 func Run(args []string) {
+	nd := &Named{}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
 	})
 	if err != nil {
-		log.Fatal(err)
+		db.DFatalf("Error New %v\n", err)
 	}
-	defer cli.Close() // make sure to close the client
+	nd.clnt = cli
 
-	_, err = cli.Put(context.TODO(), "foo", "bar")
+	mfs, err := memfssrv.MakeMemFs(sp.NAMEDV1, sp.NAMEDV1REL)
 	if err != nil {
-		log.Fatal(err)
+		db.DFatalf("Error MakeMemFs: %v", err)
 	}
+	nd.MemFs = mfs
+
+	mfs.Serve()
+	mfs.Done()
+
+	cli.Close() // make sure to close the client
 }

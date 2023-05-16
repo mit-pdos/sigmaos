@@ -16,6 +16,8 @@ const (
 	UPROCDREL   = "uprocd"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
+	NAMEDV1REL  = "namedv1"
+	NAMEDV1     = NAMED + NAMEDV1REL + "/"
 	UXREL       = "ux"
 	UX          = NAMED + UXREL + "/"
 	SCHEDDREL   = "schedd"

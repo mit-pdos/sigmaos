@@ -6,7 +6,7 @@ import (
 	"sigmaos/namedv1"
 )
 
-// Usage: <named> address realmId pn [<peerId> <peers>]
+// Usage: <named>
 
 func main() {
 	namedv1.Run(os.Args)

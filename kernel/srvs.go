@@ -37,6 +37,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	var err error
 	var ss *Subsystem
 	switch s {
+	case sp.NAMEDV1REL:
+		ss, err = k.bootNamedv1()
 	case sp.S3REL:
 		ss, err = k.bootS3d()
 	case sp.UXREL:
@@ -115,6 +117,10 @@ func (k *Kernel) bootRealmd() (*Subsystem, error) {
 func (k *Kernel) bootUxd() (*Subsystem, error) {
 	// XXX ignore realm for now
 	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, procclnt.HSCHEDD)
+}
+
+func (k *Kernel) bootNamedv1() (*Subsystem, error) {
+	return k.bootSubsystem("namedv1", []string{""}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {

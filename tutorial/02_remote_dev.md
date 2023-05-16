@@ -107,15 +107,14 @@ you are using by logging into one of them and running:
 $ lsblk
 ```
 
-Then, in the `cloudlab/upgrade-linux.sh` script, replace all occurrences of the
-default value of the variable `BLKDEV` with the path to the unused partition.
-For example, on `c220g5` machines, this is `/dev/sda4`.
+Then, run the `cloudlab/upgrade-linux.sh` with your cloudlab username, machine 
+name, and partition block name. For example, on `c220g5` machines, this is `/dev/sda4`.
 
 Then, upgrade the Linux Kernel on each machine by running:
 
 ```
 $ cd cloudlab
-$ ./upgrade-linux.sh USER@HOSTNAME
+$ ./upgrade-linux.sh USER HOSTNAME BLKDEV
 ```
 
 If you are setting up a multi-machine clutser, it may be convenient to run this
@@ -124,7 +123,8 @@ script in parallel in a bash for loop, like so:
 ```
 $ cd cloudlab
 $ for h in $(cat servers.txt | cut -d " " -f 2); do
-./upgrade-linux.sh USER@$h > /tmp/$h.out 2>&1 &
+echo "=========== Upgrading linux for $h";
+./upgrade-linux.sh arielck $h /dev/sda4 >& /tmp/$h.out;
 done
 ```
 

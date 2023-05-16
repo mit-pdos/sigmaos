@@ -13,6 +13,11 @@ service ComposeService {
 	rpc ComposePost(ComposePostRequest) returns (ComposePostResponse);
 }
 
+service MediaService {
+	rpc StoreMedia(StoreMediaRequest) returns (StoreMediaResponse);
+	rpc ReadMedia(ReadMediaRequest) returns (ReadMediaResponse);
+}
+
 message StorePostRequest {
 	Post post = 1;
 }
@@ -30,6 +35,25 @@ message ReadPostsResponse {
 	repeated Post posts = 2;
 }
 
+message StoreMediaRequest {
+	string mediatype = 1;
+	bytes  mediadata = 2;
+}
+
+message StoreMediaResponse {
+	string ok = 1;
+	int64  mediaid = 2;
+}
+
+message ReadMediaRequest {
+	repeated int64 mediaids = 1;
+}
+
+message ReadMediaResponse {
+	string         ok = 1;
+	repeated Media medias = 2;
+}
+
 message ComposePostRequest {
 	string          username = 1;
 	int64           userid = 2;
@@ -41,6 +65,18 @@ message ComposePostRequest {
 
 message ComposePostResponse {
 	string ok = 1;
+}
+
+message Media {
+	int64  mediaid = 1;
+	string mediatype = 2;
+	bytes  mediadata = 3;
+}
+
+message MediaEncode {
+	int64  mediaid = 1;
+	string mediatype = 2;
+	string mediacontent = 3;
 }
 
 message Post {

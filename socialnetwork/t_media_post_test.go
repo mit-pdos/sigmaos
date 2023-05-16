@@ -74,6 +74,43 @@ func TestPostEncode(t *testing.T) {
 	assert.True(t, IsPostEqual(&post, &postDecoded))
 }
 
+func TestMedia(t *testing.T) {
+	// start server
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 2}}, NSHARD)
+	snCfg := tssn.snCfg
+
+	// create a RPC client and query
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MEDIA)
+	assert.Nil(t, err, "RPC client should be created properly")
+	
+	// store two media
+	mdata1 := []byte{1, 3, 5, 7, 9, 11, 13, 15}
+	mdata2 := []byte{2, 3, 5, 7, 11, 13, 17, 19}
+	arg_store := proto.StoreMediaRequest{Mediatype: "File", Mediadata: mdata1}
+	res_store := proto.StoreMediaResponse{}
+	assert.Nil(t, pdc.RPC("Media.StoreMedia", &arg_store, &res_store))
+	assert.Equal(t, "OK", res_store.Ok)
+	mId1 := res_store.Mediaid
+	arg_store = proto.StoreMediaRequest{Mediatype: "Video", Mediadata: mdata2}
+	assert.Nil(t, pdc.RPC("Media.StoreMedia", &arg_store, &res_store))
+	assert.Equal(t, "OK", res_store.Ok)
+	mId2 := res_store.Mediaid
+
+	// read the medias
+	arg_read := proto.ReadMediaRequest{Mediaids: []int64{mId1, mId2}}
+	res_read := proto.ReadMediaResponse{}
+	assert.Nil(t, pdc.RPC("Media.ReadMedia", &arg_read, &res_read))
+	assert.Equal(t, "OK", res_read.Ok)
+	assert.Equal(t, 2, len(res_read.Medias))
+	assert.Equal(t, "File", res_read.Medias[0].Mediatype)
+	assert.Equal(t, mdata1, res_read.Medias[0].Mediadata)
+	assert.Equal(t, "Video", res_read.Medias[1].Mediatype)
+	assert.Equal(t, mdata2, res_read.Medias[1].Mediadata)
+	
+	// stop server
+	assert.Nil(t, tssn.Shutdown())
+}
+
 func TestPost(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 2}}, NSHARD)

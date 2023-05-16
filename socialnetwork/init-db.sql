@@ -14,9 +14,10 @@ CREATE TABLE socialnetwork_graph (
 );
 
 CREATE TABLE socialnetwork_media (
-  medianame    VARCHAR(128) NOT NULL,
+  mediaid      BIGINT NOT NULL,
+  mediatype    VARCHAR(128) NOT NULL,
   mediacontent LONGBLOB,
-  PRIMARY KEY (`medianame`)
+  PRIMARY KEY (`mediaid`)
 );
 
 CREATE TABLE socialnetwork_post (

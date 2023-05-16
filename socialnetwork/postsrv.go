@@ -92,7 +92,6 @@ func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *pro
 	return nil
 }
 
-
 func EncodePost(post proto.Post) (string, error) {
 	postBytes, err := json.Marshal(post)
 	if err != nil {

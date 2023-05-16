@@ -7,7 +7,6 @@ then
 fi
 
 LOGIN=$1
-ADDR=$2
 SSHCMD="$1@$2"
 
 DIR=$(dirname $0)

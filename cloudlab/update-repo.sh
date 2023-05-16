@@ -1,13 +1,15 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel] [--n N] [--branch BRANCH]" 1>&2
+  echo "Usage: $0 username [--parallel] [--n N] [--branch BRANCH]" 1>&2
 }
 
 REALM=""
 N_VM=""
 BRANCH=""
 PARALLEL=""
+LOGIN=$1
+shift
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -46,7 +48,6 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
 
 vms=`cat servers.txt | cut -d " " -f2` 

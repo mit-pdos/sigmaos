@@ -100,6 +100,13 @@ For the remainder of this section,
 replace USER and HOSTNAME with your username and the DNS name of the machine
 you wish to run the script on.
 
+You may update the content of `servers.txt` to match your cluster on cloudlab. 
+Check the linux version of each machine by
+
+```
+for h in $(cat servers.txt | cut -d " " -f 2); do echo $h; ssh USER@$h 'uname -r'; done
+``` 
+
 First, find the name of the large, unused partition on the cloudlab machines
 you are using by logging into one of them and running:
 
@@ -123,21 +130,28 @@ script in parallel in a bash for loop, like so:
 ```
 $ cd cloudlab
 $ for h in $(cat servers.txt | cut -d " " -f 2); do
-echo "=========== Upgrading linux for $h";
-./upgrade-linux.sh arielck $h /dev/sda4 >& /tmp/$h.out;
+	echo "=========== Upgrading linux for $h";
+	./upgrade-linux.sh USER $h /dev/sda4 >& /tmp/$h.out;
 done
 ```
 
+To verify that linux has been installed properly, run `uname -r` on each machine. The 
+result should match the `KERNEL` variable in `upgrade-linux.sh`.
+
 Note: for some reason, this doesn't always work on the first try. You may need
 to try to install the kernel twice, by rerunning the `upgrade-linux.sh` script.
+Besides, if this is the first time you connect to any of the cloudlab machines, ssh
+ may ask your permission on the command prompt. 
 
 Then, install the SigmaOS software, credentials, and its dependencies by
 running:
 
 ```
 $ cd cloudlab
-$ ./setup-instance.sh USER@HOSTNAME
+$ ./setup-instance.sh USER HOSTNAME >& /tmp/setup_$h.out
 ```
+
+On the target machine, there should be a sigmaos repo, plus docker runnables. 
 
 ### Updating SigmaOS
 
@@ -146,20 +160,20 @@ restarting the cluster, the SigmaOS software and scripts should take care of
 updating the cluster to the newest version.  However, changes to the SigmaOS
 git repo will not be automatically reflected on remote machines. This is
 particularly relevant to benchmarks, which are implemented as `go` files
-included in the repo.
+included in the repo. 
 
-In order to update the repo on a remote cluster, run:
+In order to update the repo on a remote cluster, run (you only need VPCID for AWS): 
 
 ```
 $ cd PLATFORM
-$ ./update-repo.sh --vpc VPCID --parallel
+$ ./update-repo.sh USER --vpc VPCID --parallel
 ```
 
 If you wish to switch to a different branch `BRANCH` before pulling, run:
 
 ```
 $ cd PLATFORM
-$ ./update-repo.sh --vpc VPCID --parallel --branch BRANCH
+$ ./update-repo.sh USER --vpc VPCID --parallel --branch BRANCH
 ```
 
 ### Deploying SigmaOS
@@ -168,7 +182,7 @@ In order to start a SigmaOS cluster, run:
 
 ```
 $ cd PLATFORM
-$ ./start-sigmaos.sh --vpc VPCID --pull TAG
+$ ./start-sigmaos.sh USER --vpc VPCID --pull TAG
 ```
 
 If you wish to only start SigmaOS on a subset `N` of the machines in the
@@ -176,14 +190,23 @@ cluster, run:
 
 ```
 $ cd PLATFORM
-$ ./start-sigmaos.sh --vpc VPCID --pull TAG --n N
+$ ./start-sigmaos.sh USER --vpc VPCID --pull TAG --n N
 ```
+
+To verify SigmaOS status on each machine, run
+
+```
+for h in $(cat servers.txt | cut -d " " -f 2); do echo $h; ssh USER@$h "docker ps -a"; done
+```
+
+Each node should be running an instance of sigmaos image. Plus, node 0, should have mariadb 
+and sigmajaeger images. 
 
 In order to stop the SigmaOS deployment, run:
 
 ```
 $ cd PLATFORM
-$ ./stop-sigmaos.sh --vpc VPCID --parallel
+$ ./stop-sigmaos.sh USER --vpc VPCID --parallel
 ```
 
 ## Quirks

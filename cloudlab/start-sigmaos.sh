@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 username [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 N_VM=""
@@ -10,6 +10,8 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
+LOGIN=$1
+shift
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -58,14 +60,13 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
 
 vms=`cat servers.txt | cut -d " " -f2` 
 
 vma=($vms)
 MAIN="${vma[0]}"
-MAIN_PRIVADDR=$(./leader-ip.sh)
+MAIN_PRIVADDR=$(./leader-ip.sh $LOGIN)
 SIGMANAMED="${vma[0]}:1111"
 IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
@@ -75,13 +76,13 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --parallel
+  ./update-repo.sh $LOGIN --parallel
 fi
 
 vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 
 for vm in $vms; do
-  echo $vm
+  echo "starting SigmaOS on $vm!"
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"

@@ -23,7 +23,7 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 for vm in $vms; do
   echo $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
-    sudo swapoff -a
-    sudo rm -f /swapfile
+    cd ulambda
+    ./set-cores.sh --set 0 --start 4 --end 39
 ENDSSH
 done

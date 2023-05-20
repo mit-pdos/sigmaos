@@ -101,8 +101,12 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	return nil
 }
 
+// XXX check if from and to are files in d
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
-	return serr.MkErr(serr.TErrNotSupported, "Rename")
+	db.DPrintf(db.NAMEDV1, "Rename %v: %v %v\n", d, from, to)
+	f := d.pn.Copy().Append(from)
+	t := d.pn.Copy().Append(to)
+	return mvObj(f, t)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {

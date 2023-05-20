@@ -149,6 +149,28 @@ func mkObj(pn path.Path, perm sp.Tperm) (*Obj, *serr.Err) {
 	}
 }
 
+func mvObj(from, to path.Path) *serr.Err {
+	get, err := nd.clnt.Get(context.TODO(), path2key(from))
+	if err != nil {
+		return serr.MkErrError(err)
+	}
+	if len(get.Kvs) == 0 {
+		return serr.MkErr(serr.TErrNotfound, from)
+	}
+	b := get.Kvs[0].Value
+	v := get.Kvs[0].Version
+	txn, err := nd.clnt.Txn(context.TODO()).
+		If(clientv3.Compare(clientv3.Version(path2key(from)), "=", v)).Then(clientv3.OpPut(path2key(to), string(b)), clientv3.OpDelete(path2key(from))).Commit()
+	if err != nil {
+		return serr.MkErrError(err)
+	}
+	if !txn.Succeeded { // XXX retry?
+		return serr.MkErr(serr.TErrVersion, from)
+	}
+	db.DPrintf(db.NAMEDV1, "mvObj %v %v %v\n", from, to, txn)
+	return nil
+}
+
 func rmObj(pn path.Path) (int64, *serr.Err) {
 	resp, err := nd.clnt.Delete(context.TODO(), path2key(pn))
 	if err != nil {

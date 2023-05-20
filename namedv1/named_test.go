@@ -72,14 +72,16 @@ func TestTxn(t *testing.T) {
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
 	})
-	tresp, err := cli.Txn(context.TODO()).
-		// txn value comparisons are lexical
-		If(clientv3.Compare(clientv3.Version("f"), "=", 0)).Then(clientv3.OpPut("f", "XYZ")).Commit()
+
+	resp, err := cli.Put(context.TODO(), "f", "hello")
 	assert.Nil(t, err)
-	log.Printf("txn resp %v\n", tresp)
-	tresp, err = cli.Txn(context.TODO()).
-		// txn value comparisons are lexical
-		If(clientv3.Compare(clientv3.Version("f"), "=", 0)).Then(clientv3.OpPut("f", "XYZ")).Commit()
+	log.Printf("put resp %v\n", resp)
+	gresp, err := cli.Get(context.TODO(), "f")
+	log.Printf("get resp %v\n", gresp)
+	b := gresp.Kvs[0].Value
+	v := gresp.Kvs[0].Version
+	tresp, err := cli.Txn(context.TODO()).
+		If(clientv3.Compare(clientv3.Version("f"), "=", v)).Then(clientv3.OpPut("g", string(b)), clientv3.OpDelete("f")).Commit()
 	assert.Nil(t, err)
 	log.Printf("txn resp %v\n", tresp)
 }

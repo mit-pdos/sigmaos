@@ -145,16 +145,20 @@ func mkObj(pn path.Path, perm sp.Tperm) (*Obj, *serr.Err) {
 	}
 }
 
-func readDir(pn path.Path) ([]string, *serr.Err) {
+func readDir(pn path.Path) ([]*Obj, *serr.Err) {
 	db.DPrintf(db.NAMEDV1, "readDir %v\n", path2key(pn))
 	resp, err := nd.clnt.Get(context.TODO(), path2key(pn), clientv3.WithPrefix())
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
 	log.Printf("resp %v\n", resp)
-	ss := make([]string, len(resp.Kvs))
+	ss := make([]*Obj, len(resp.Kvs))
 	for i, ev := range resp.Kvs {
-		ss[i] = string(ev.Key)
+		ns := &NamedState{}
+		if err := proto.Unmarshal(ev.Value, ns); err != nil {
+			return nil, serr.MkErrError(err)
+		}
+		ss[i] = makeObj(key2path(string(ev.Key)), sp.Tperm(ns.Perm), sp.TQversion(resp.Kvs[0].Version), ns.Data)
 	}
 	return ss, nil
 }

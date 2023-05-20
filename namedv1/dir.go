@@ -62,17 +62,19 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
-	if ss, err := readDir(d.pn); err != nil {
+	if objs, err := readDir(d.pn); err != nil {
 		return nil, err
 	} else {
-		for _, s := range ss {
-			d.dents.Insert(s, &sp.Stat{Name: s})
+		for _, o := range objs {
+			st := o.stat()
+			d.dents.Insert(st.Name, st)
 		}
 	}
 	db.DPrintf(db.NAMEDV1, "ReadDir %v\n", d.dents)
 	if cursor > d.dents.Len() {
 		return nil, nil
 	} else {
+		// XXX move into sorteddir
 		ns := d.dents.Slice(cursor)
 		sts := make([]*sp.Stat, len(ns))
 		for i, n := range ns {

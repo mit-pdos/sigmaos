@@ -84,7 +84,7 @@ func TestOne(t *testing.T) {
 	assert.Nil(t, err, "GetDir")
 
 	log.Printf("%v dirents %v\n", sp.NAMEDV1, sts)
-	assert.Equal(t, 1, len(sts))
+	assert.Equal(t, 3, len(sts))
 
 	ts.Shutdown()
 }

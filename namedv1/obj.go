@@ -136,11 +136,15 @@ func mkObj(pn path.Path, perm sp.Tperm) (*Obj, *serr.Err) {
 	if b, err := proto.Marshal(ns); err != nil {
 		return nil, serr.MkErrError(err)
 	} else {
-		resp, err := nd.clnt.Put(context.TODO(), path2key(pn), string(b))
+		resp, err := nd.clnt.Txn(context.TODO()).
+			If(clientv3.Compare(clientv3.Version(path2key(pn)), "=", 0)).Then(clientv3.OpPut(path2key(pn), string(b))).Commit()
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
-		db.DPrintf(db.NAMEDV1, "putObj %v %v\n", path2key(pn), resp)
+		if !resp.Succeeded {
+			return nil, serr.MkErr(serr.TErrExists, pn)
+		}
+		db.DPrintf(db.NAMEDV1, "mkObj %v %v\n", path2key(pn), resp)
 		return makeObj(pn, perm, 0, nil), nil
 	}
 }

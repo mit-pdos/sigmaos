@@ -41,12 +41,13 @@ func TestInitFs(t *testing.T) {
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
+		sts, err = ts.GetDir(pathname + "/boot")
+		assert.Nil(t, err)
+		log.Printf("named %v\n", sp.Names(sts))
 	} else {
-		assert.True(t, len(sts) == 0, "initfs")
+		log.Printf("%v %v\n", pathname, sp.Names(sts))
+		assert.True(t, len(sts) == 2, "initfs")
 	}
-	sts, err = ts.GetDir(pathname + "/boot")
-	assert.Nil(t, err)
-	log.Printf("boot %v\n", sp.Names(sts))
 	ts.Shutdown()
 }
 
@@ -73,7 +74,7 @@ func TestCreateTwice(t *testing.T) {
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 	assert.NotNil(t, err)
 	var serr *serr.Err

@@ -67,6 +67,23 @@ func TestEtcdDir(t *testing.T) {
 	}
 }
 
+func TestTxn(t *testing.T) {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: dialTimeout,
+	})
+	tresp, err := cli.Txn(context.TODO()).
+		// txn value comparisons are lexical
+		If(clientv3.Compare(clientv3.Version("f"), "=", 0)).Then(clientv3.OpPut("f", "XYZ")).Commit()
+	assert.Nil(t, err)
+	log.Printf("txn resp %v\n", tresp)
+	tresp, err = cli.Txn(context.TODO()).
+		// txn value comparisons are lexical
+		If(clientv3.Compare(clientv3.Version("f"), "=", 0)).Then(clientv3.OpPut("f", "XYZ")).Commit()
+	assert.Nil(t, err)
+	log.Printf("txn resp %v\n", tresp)
+}
+
 func TestOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 

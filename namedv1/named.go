@@ -7,14 +7,12 @@ import (
 	"github.com/coreos/etcd/clientv3"
 
 	// "sigmaos/ctx"
+	"sigmaos/container"
 	db "sigmaos/debug"
 	// "sigmaos/fs"
-	"sigmaos/memfssrv"
-	// "sigmaos/perf"
-	// "sigmaos/proc"
-	// "sigmaos/repl"
-	// "sigmaos/repldummy"
-	// "sigmaos/replraft"
+	"sigmaos/fslibsrv"
+	"sigmaos/path"
+	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,14 +22,16 @@ var (
 	endpoints = []string{"localhost:2379", "localhost:22379", "localhost:32379"}
 )
 
+var nd *Named
+
 type Named struct {
-	*memfssrv.MemFs
+	*sesssrv.SessSrv
 	mu   sync.Mutex
 	clnt *clientv3.Client
 }
 
 func Run(args []string) {
-	nd := &Named{}
+	nd = &Named{}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
@@ -41,14 +41,21 @@ func Run(args []string) {
 	}
 	nd.clnt = cli
 
-	mfs, err := memfssrv.MakeMemFs(sp.NAMEDV1, sp.NAMEDV1REL)
+	root := makeDir(makeObj(path.Path{}, sp.DMDIR, 0, nil))
+
+	ip, err := container.LocalIP()
+	if err != nil {
+		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
+	}
+
+	srv, err := fslibsrv.MakeReplServer(root, ip+":0", sp.NAMEDV1, "namedv1", nil)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	nd.MemFs = mfs
+	nd.SessSrv = srv
 
-	mfs.Serve()
-	mfs.Done()
+	srv.Serve()
+	srv.Done()
 
 	cli.Close() // make sure to close the client
 }

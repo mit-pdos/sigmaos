@@ -52,6 +52,10 @@ func (sd *SortedDir) Lookup(n string) (interface{}, bool) {
 	return e, ok
 }
 
+func (sd *SortedDir) Slice(s int) []string {
+	return sd.sorted[s:]
+}
+
 func (sd *SortedDir) insertSort(name string) {
 	i := sort.SearchStrings(sd.sorted, name)
 	sd.sorted = append(sd.sorted, "")

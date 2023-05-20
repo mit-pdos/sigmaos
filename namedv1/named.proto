@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/namedv1";
+
+message NamedState {
+        uint32  perm = 1;
+        bytes   data = 2;
+}

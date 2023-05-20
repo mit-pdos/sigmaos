@@ -1,7 +1,6 @@
 package sigmap
 
-// if name ends in "/", it is the root directory for that service (XXX
-// it is a union directory?)
+// if name ends in "/", it is the union directory for that service
 const (
 	NAMED       = "name/"
 	NAMEDREL    = "named"
@@ -17,7 +16,7 @@ const (
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
 	NAMEDV1REL  = "namedv1"
-	NAMEDV1     = NAMED + NAMEDV1REL + "/"
+	NAMEDV1     = NAMED + NAMEDV1REL
 	UXREL       = "ux"
 	UX          = NAMED + UXREL + "/"
 	SCHEDDREL   = "schedd"

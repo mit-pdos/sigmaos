@@ -86,5 +86,14 @@ func TestOne(t *testing.T) {
 	log.Printf("%v dirents %v\n", sp.NAMEDV1, sts)
 	assert.Equal(t, 3, len(sts))
 
+	err = ts.Remove(path.Join(pn, "f"))
+	assert.Nil(t, err)
+
+	sts, err = ts.GetDir(pn)
+	assert.Nil(t, err, "GetDir")
+
+	log.Printf("%v dirents %v\n", sp.NAMEDV1, sts)
+	assert.Equal(t, 2, len(sts))
+
 	ts.Shutdown()
 }

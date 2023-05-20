@@ -1,9 +1,6 @@
 package namedv1
 
 import (
-	"fmt"
-	"sync"
-
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
@@ -15,19 +12,15 @@ import (
 
 type Dir struct {
 	*Obj
-	sync.Mutex
-	dents *sorteddir.SortedDir
 }
 
 func (d *Dir) String() string {
-	s := d.Obj.String()
-	return s + fmt.Sprintf(" dents %v", d.dents)
+	return d.Obj.String()
 }
 
 func makeDir(o *Obj) *Dir {
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sorteddir.MkSortedDir()
 	return dir
 }
 
@@ -62,23 +55,24 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
+	dents := sorteddir.MkSortedDir()
 	if objs, err := readDir(d.pn); err != nil {
 		return nil, err
 	} else {
 		for _, o := range objs {
 			st := o.stat()
-			d.dents.Insert(st.Name, st)
+			dents.Insert(st.Name, st)
 		}
 	}
-	db.DPrintf(db.NAMEDV1, "ReadDir %v\n", d.dents)
-	if cursor > d.dents.Len() {
+	db.DPrintf(db.NAMEDV1, "ReadDir %v\n", dents)
+	if cursor > dents.Len() {
 		return nil, nil
 	} else {
 		// XXX move into sorteddir
-		ns := d.dents.Slice(cursor)
+		ns := dents.Slice(cursor)
 		sts := make([]*sp.Stat, len(ns))
 		for i, n := range ns {
-			e, _ := d.dents.Lookup(n)
+			e, _ := dents.Lookup(n)
 			sts[i] = e.(*sp.Stat)
 		}
 		return sts, nil
@@ -97,6 +91,13 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	db.DPrintf(db.NAMEDV1, "Delete %v name %v\n", d, name)
+	n, err := rmObj(d.pn.Append(name))
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return serr.MkErr(serr.TErrNotfound, name)
+	}
 	return nil
 }
 

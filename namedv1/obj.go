@@ -145,6 +145,15 @@ func mkObj(pn path.Path, perm sp.Tperm) (*Obj, *serr.Err) {
 	}
 }
 
+func rmObj(pn path.Path) (int64, *serr.Err) {
+	resp, err := nd.clnt.Delete(context.TODO(), path2key(pn))
+	if err != nil {
+		return 0, serr.MkErrError(err)
+	}
+	db.DPrintf(db.NAMEDV1, "rmObj %v %v\n", path2key(pn), resp)
+	return resp.Deleted, nil
+}
+
 func readDir(pn path.Path) ([]*Obj, *serr.Err) {
 	db.DPrintf(db.NAMEDV1, "readDir %v\n", path2key(pn))
 	resp, err := nd.clnt.Get(context.TODO(), path2key(pn), clientv3.WithPrefix())

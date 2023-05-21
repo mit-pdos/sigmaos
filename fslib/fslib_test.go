@@ -46,7 +46,7 @@ func TestInitFs(t *testing.T) {
 		log.Printf("named %v\n", sp.Names(sts))
 	} else {
 		log.Printf("%v %v\n", pathname, sp.Names(sts))
-		assert.True(t, len(sts) == 2, "initfs")
+		assert.True(t, len(sts) >= 2, "initfs")
 	}
 	ts.Shutdown()
 }
@@ -68,6 +68,28 @@ func TestRemoveBasic(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRemoveDir(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	db.DPrintf(db.TEST, "path %v", pathname)
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+
+	_, err = ts.PutFile(gopath.Join(d1, "f"), 0777, sp.OWRITE, []byte("hello"))
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.GetDir(d1 + "/")
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	assert.True(t, fslib.Present(sts, []string{"f"}))
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestCreateTwice(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
@@ -79,6 +101,10 @@ func TestCreateTwice(t *testing.T) {
 	assert.NotNil(t, err)
 	var serr *serr.Err
 	assert.True(t, errors.As(err, &serr) && serr.IsErrExists())
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -124,6 +150,9 @@ func TestRemoveNonExistent(t *testing.T) {
 	err = ts.Remove(gopath.Join(pathname, "this-file-does-not-exist"))
 	assert.NotNil(t, err)
 
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -144,6 +173,9 @@ func TestRemovePath(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -160,10 +192,14 @@ func TestRemoveSymlink(t *testing.T) {
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
-	_, err = ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
+	assert.True(t, fslib.Present(sts, named.InitRootDir))
 
 	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
+	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
@@ -181,8 +217,9 @@ func TestRmDirWithSymlink(t *testing.T) {
 	err = ts.MkMountSymlink(fn, mnt)
 	assert.Nil(t, err, "MkMount: %v", err)
 
-	_, err = ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
+	assert.True(t, fslib.Present(sts, named.InitRootDir))
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)

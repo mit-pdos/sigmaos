@@ -34,8 +34,16 @@ func path2key(pn path.Path) string {
 	return strconv.Itoa(d-1) + ":" + pn.String()
 }
 
+func path2prefix(pn path.Path) string {
+	d := len(pn)
+	if d == 0 {
+		return strconv.Itoa(d) + ":"
+	}
+	return strconv.Itoa(d) + ":" + pn.String()
+}
+
 func key2path(key string) path.Path {
-	pn := key[strings.Index(key, ":"):]
+	pn := key[strings.Index(key, ":")+1:]
 	return path.Split(pn)
 }
 
@@ -181,8 +189,8 @@ func rmObj(pn path.Path) (int64, *serr.Err) {
 }
 
 func readDir(pn path.Path) ([]*Obj, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "readDir %v\n", path2key(pn))
-	resp, err := nd.clnt.Get(context.TODO(), path2key(pn), clientv3.WithPrefix())
+	db.DPrintf(db.NAMEDV1, "readDir %v\n", path2prefix(pn))
+	resp, err := nd.clnt.Get(context.TODO(), path2prefix(pn), clientv3.WithPrefix())
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}

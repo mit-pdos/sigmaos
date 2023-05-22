@@ -11,7 +11,6 @@ import (
 	db "sigmaos/debug"
 	// "sigmaos/fs"
 	"sigmaos/fslibsrv"
-	"sigmaos/path"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 )
@@ -41,7 +40,7 @@ func Run(args []string) {
 	}
 	nd.clnt = cli
 
-	root := makeDir(makeObj(path.Path{}, sp.DMDIR, 0, nil))
+	root := rootDir()
 
 	ip, err := container.LocalIP()
 	if err != nil {

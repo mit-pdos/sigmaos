@@ -45,7 +45,7 @@ func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (ses
 	if off == sp.NoOffset {
 		db.DFatalf("Unimplemented")
 	}
-	f.Obj.data = b
+	f.Obj.data = b // XXX update right part
 	if err := f.Obj.putObj(); err != nil {
 		return 0, err
 	}

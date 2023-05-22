@@ -2,7 +2,17 @@ syntax = "proto3";
 
 option go_package = "sigmaos/namedv1";
 
-message NamedState {
+message NamedFile {
         uint32  perm = 1;
         bytes   data = 2;
 }
+
+message DirEnt {
+        string name = 1;
+        uint64 path = 2;
+}
+
+message NamedDir {
+        repeated DirEnt ents = 3;
+}
+

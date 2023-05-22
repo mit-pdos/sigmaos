@@ -179,6 +179,33 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestRenameInDir(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	d1 := gopath.Join(pathname, "d1")
+	err := ts.MkDir(d1, 0777)
+	assert.Nil(t, err, "Mkdir %v", err)
+	from := gopath.Join(d1, "f")
+
+	d := []byte("hello")
+	_, err = ts.PutFile(from, 0777, sp.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	to := gopath.Join(d1, "g")
+	err = ts.Rename(from, to)
+
+	sts, err := ts.GetDir(d1)
+	assert.Nil(t, err, "GetDir: %v", err)
+	assert.True(t, fslib.Present(sts, []string{"g"}))
+	b, err := ts.GetFile(to)
+	assert.Equal(t, b, d)
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
 func TestRemoveSymlink(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
@@ -247,6 +274,9 @@ func TestReadSymlink(t *testing.T) {
 
 	assert.Equal(t, mnt.Addr[0].Addr, mnt1.Addr[0].Addr)
 
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -267,13 +297,18 @@ func TestReadOff(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
 
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
-func TestRenameBasic(t *testing.T) {
+func TestRenameAcrossDir(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
 	d1 := gopath.Join(pathname, "d1")
 	d2 := gopath.Join(pathname, "d2")
-	ts := test.MakeTstatePath(t, pathname)
+
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)

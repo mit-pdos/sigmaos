@@ -131,7 +131,7 @@ func getObj(pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err
 }
 
 func mkRootDir() *serr.Err {
-	b, r := marshalObj(sp.DMDIR)
+	b, r := marshalObj(sp.DMDIR, ROOT)
 	if r != nil {
 		return r
 	}
@@ -165,10 +165,12 @@ func unmarshalDir(b []byte) (*NamedDir, *serr.Err) {
 }
 
 // Marshal empty file or directory
-func marshalObj(perm sp.Tperm) ([]byte, *serr.Err) {
+func marshalObj(perm sp.Tperm, path sessp.Tpath) ([]byte, *serr.Err) {
 	var fdata []byte
 	if perm.IsDir() {
-		d, err := proto.Marshal(&NamedDir{})
+		nd := &NamedDir{}
+		nd.Ents = append(nd.Ents, &DirEnt{Name: ".", Path: uint64(path)})
+		d, err := proto.Marshal(nd)
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
@@ -184,7 +186,7 @@ func marshalObj(perm sp.Tperm) ([]byte, *serr.Err) {
 
 // XXX retry
 func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp.Tpath, perm sp.Tperm) (*Obj, *serr.Err) {
-	b, r := marshalObj(perm)
+	b, r := marshalObj(perm, p)
 	if r != nil {
 		return nil, r
 	}

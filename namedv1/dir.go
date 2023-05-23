@@ -95,8 +95,10 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 		return nil, err
 	} else {
 		for _, e := range dir.Ents {
-			st := &sp.Stat{Name: e.Name}
-			dents.Insert(st.Name, st)
+			if e.Name != "." {
+				st := &sp.Stat{Name: e.Name}
+				dents.Insert(st.Name, st)
+			}
 		}
 	}
 	db.DPrintf(db.NAMEDV1, "ReadDir %v\n", dents)
@@ -277,7 +279,7 @@ func isNonemptyDir(obj *Obj) bool {
 	if obj.perm.IsDir() {
 		if dir, err := unmarshalDir(obj.data); err != nil {
 			db.DFatalf("Remove: unmarshalDir %v err %v\n", obj.pn, err)
-		} else if len(dir.Ents) > 0 {
+		} else if len(dir.Ents) > 1 {
 			return true
 		}
 	}

@@ -1088,6 +1088,9 @@ func TestSymlinkPath(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
 
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -1104,18 +1107,24 @@ func mkMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	return mnt
 }
 
-func TestMount(t *testing.T) {
+func TestMountSimple(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MountService(gopath.Join(pathname, "namedself"), mkMount(t, ts, pathname))
+	pn := gopath.Join(pathname, "namedself")
+	err = ts.MountService(pn, mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
-	sts, err := ts.GetDir(gopath.Join(pathname, "namedself") + "/")
+	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+	err = ts.Remove(pn)
+	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }
@@ -1151,20 +1160,30 @@ func TestUnionDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
 func TestUnionRoot(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	err := ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
+	pn0 := gopath.Join(pathname, "namedself0")
+	pn1 := gopath.Join(pathname, "namedself1")
+	err := ts.MountService(pn0, mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
-	err = ts.MountService(gopath.Join(pathname, "namedself1"), sp.MkMountServer("xxx"))
+	err = ts.MountService(pn1, sp.MkMountServer("xxx"))
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
+
+	err = ts.Remove(pn0)
+	assert.Nil(t, err)
+	err = ts.Remove(pn1)
+	assert.Nil(t, err)
 
 	ts.Shutdown()
 }
@@ -1172,8 +1191,9 @@ func TestUnionRoot(t *testing.T) {
 func TestUnionSymlinkRead(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
+	pn0 := gopath.Join(pathname, "namedself0")
 	mnt := mkMount(t, ts, pathname)
-	err := ts.MountService(gopath.Join(pathname, "namedself0"), mnt)
+	err := ts.MountService(pn0, mnt)
 	assert.Nil(ts.T, err, "MountService")
 
 	dn := gopath.Join(pathname, "d")
@@ -1191,13 +1211,20 @@ func TestUnionSymlinkRead(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself1"}), "d wrong")
 
+	err = ts.Remove(pn0)
+	assert.Nil(t, err)
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
 func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	err := ts.MountService(gopath.Join(pathname, "namedself0"), mkMount(t, ts, pathname))
+	pn0 := gopath.Join(pathname, "namedself0")
+	err := ts.MountService(pn0, mkMount(t, ts, pathname))
 	assert.Nil(ts.T, err, "MountService")
 
 	b := []byte("hello")
@@ -1220,6 +1247,9 @@ func TestUnionSymlinkPut(t *testing.T) {
 	d, err = ts.GetFile(gopath.Join(pathname, "~any/namedself0/g"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
+
+	err = ts.Remove(pn0)
+	assert.Nil(t, err)
 
 	ts.Shutdown()
 }
@@ -1260,6 +1290,9 @@ func TestSetFileSymlink(t *testing.T) {
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
 
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 
@@ -1273,12 +1306,18 @@ func TestMountUnion(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.MkMountServer(":1111"))
 	assert.Nil(ts.T, err, "MountService")
 
-	err = ts.MountService(gopath.Join(pathname, "mount"), mkMount(t, ts, dn))
+	pn := gopath.Join(pathname, "mount")
+	err = ts.MountService(pn, mkMount(t, ts, dn))
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
+
+	err = ts.Remove(pn)
+	assert.Nil(t, err, "Remove %v", err)
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
 }

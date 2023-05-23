@@ -84,6 +84,8 @@ func (o *Obj) Parent() fs.Dir {
 	return makeDir(makeObj(dir, sp.DMDIR, 0, o.parent, 0, nil))
 }
 
+// XXX SetParent
+
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMEDV1, "Stat: %v\n", o)
 	if o, err := getObj(o.pn, o.path, o.parent); err != nil {

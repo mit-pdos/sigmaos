@@ -29,23 +29,55 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 }
 
 // XXX maybe do get
-func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "%v: Read: %v off %v cnt %v\n", ctx, f, off, cnt)
-	n := int(cnt)
-	if n > len(f.Obj.data) {
-		n = len(f.Obj.data)
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+	db.DPrintf(db.NAMEDV1, "%v: Read: %v off %v cnt %v\n", ctx, f, offset, n)
+	if offset >= f.LenOff() {
+		return nil, nil
+	} else {
+		// XXX overflow?
+		end := offset + sp.Toffset(n)
+		if end >= f.LenOff() {
+			end = f.LenOff()
+		}
+		b := f.data[offset:end]
+		return b, nil
 	}
-	b := make([]byte, n-int(off))
-	copy(b, f.Obj.data[off:])
-	return b, nil
 }
 
-func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "%v: Write: off %v cnt %v\n", f, off, len(b))
-	if off == sp.NoOffset {
-		db.DFatalf("Unimplemented")
+func (f *File) LenOff() sp.Toffset {
+	return sp.Toffset(len(f.Obj.data))
+}
+
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+	db.DPrintf(db.NAMEDV1, "%v: Write: off %v cnt %v\n", f, offset, len(b))
+	cnt := sessp.Tsize(len(b))
+	sz := sp.Toffset(len(b))
+
+	if offset == sp.NoOffset { // OAPPEND
+		offset = f.LenOff()
 	}
-	f.Obj.data = b // XXX update right part
+
+	if offset >= f.LenOff() { // passed end of file?
+		n := f.LenOff() - offset
+
+		f.Obj.data = append(f.Obj.data, make([]byte, n)...)
+		f.Obj.data = append(f.Obj.data, b...)
+
+		if err := f.Obj.putObj(); err != nil {
+			return 0, err
+		}
+
+		return cnt, nil
+	}
+
+	var d []byte
+	if offset+sz < f.LenOff() { // in the middle of the file?
+		d = f.Obj.data[offset+sz:]
+	}
+	f.Obj.data = f.Obj.data[0:offset]
+	f.Obj.data = append(f.Obj.data, b...)
+	f.Obj.data = append(f.data, d...)
+
 	if err := f.Obj.putObj(); err != nil {
 		return 0, err
 	}

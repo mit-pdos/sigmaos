@@ -38,7 +38,10 @@ go test $@ sigmaos/proxy -start
 for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
     go test $@ sigmaos/$T -start
 done
-    
+
+
+go test $@ sigmaos/fslib -start -path "name/namedv1/"
+
 go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/fslibtest/" -run ReadPerf
 go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 

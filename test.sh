@@ -10,7 +10,7 @@ go clean -testcache
 # test some support package
 #
 
-for T in path intervals serr linuxsched perf sigmap memfs; do
+for T in path intervals serr linuxsched perf sigmap; do
     go test $@ sigmaos/$T
 done
 
@@ -21,6 +21,9 @@ done
 for T in reader writer stats fslib semclnt electclnt; do
     go test $@ sigmaos/$T -start
 done
+
+go test $@ sigmaos/memfs -start
+go test $@ sigmaos/fslibsrv -start
 
 #
 # test proxy
@@ -36,8 +39,8 @@ for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sess
     go test $@ sigmaos/$T -start
 done
     
-go test $@ sigmaos/fslib -start -path "name/ux/~local/fslibtest/" -run ReadPerf
-go test $@ sigmaos/fslib -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
 
 #
 # applications

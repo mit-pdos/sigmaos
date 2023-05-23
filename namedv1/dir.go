@@ -45,20 +45,19 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	if err != nil {
 		return nil, nil, path, err
 	}
-	for _, e := range dir.Ents {
-		if e.Name == path[0] {
-			pn := d.pn.Copy().Append(e.Name)
-			if obj, err := getObj(pn, sessp.Tpath(e.Path), d.Obj.path); err != nil {
-				return nil, nil, path, err
+	e, ok := lookup(dir, path[0])
+	if ok {
+		pn := d.pn.Copy().Append(e.Name)
+		if obj, err := getObj(pn, sessp.Tpath(e.Path), d.Obj.path); err != nil {
+			return nil, nil, path, err
+		} else {
+			var o fs.FsObj
+			if obj.perm.IsDir() {
+				o = makeDir(obj)
 			} else {
-				var o fs.FsObj
-				if obj.perm.IsDir() {
-					o = makeDir(obj)
-				} else {
-					o = makeFile(obj)
-				}
-				return []fs.FsObj{o}, o, path[1:], nil
+				o = makeFile(obj)
 			}
+			return []fs.FsObj{o}, o, path[1:], nil
 		}
 	}
 	return nil, nil, path, serr.MkErr(serr.TErrNotfound, path[0])
@@ -117,19 +116,8 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	db.DPrintf(db.NAMEDV1, "%p: Close dir %v\n", d, m)
+	db.DPrintf(db.NAMEDV1, "%p: Close dir %v %v\n", d, d, m)
 	return nil
-}
-
-func remove(dir *NamedDir, name string) (sessp.Tpath, bool) {
-	for i, e := range dir.Ents {
-		if e.Name == name {
-			p := e.Path
-			dir.Ents = append(dir.Ents[:i], dir.Ents[i+1:]...)
-			return sessp.Tpath(p), true
-		}
-	}
-	return 0, false
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
@@ -147,12 +135,8 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	if err != nil {
 		return serr.MkErr(serr.TErrNotfound, name)
 	}
-	if obj.perm.IsDir() {
-		if dir, err := unmarshalDir(obj.data); err != nil {
-			db.DFatalf("Remove: unmarshalDir %v err %v\n", name, err)
-		} else if len(dir.Ents) > 0 {
-			return serr.MkErr(serr.TErrNotEmpty, name)
-		}
+	if isNonemptyDir(obj) {
+		return serr.MkErr(serr.TErrNotEmpty, name)
 	}
 	if err := rmObj(d.Obj.path, dir, v, path); err != nil {
 		return err
@@ -160,12 +144,36 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	return nil
 }
 
-// XXX check if from and to are files in d
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	db.DPrintf(db.NAMEDV1, "Rename %v: %v %v\n", d, from, to)
-	f := d.pn.Copy().Append(from)
-	t := d.pn.Copy().Append(to)
-	return mvObj(f, t)
+	dir, v, err := readDir(d.Obj.path)
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.NAMEDV1, "Rename %v dir: %v v %v\n", d, dir, v)
+	frompath, ok := remove(dir, from)
+	if !ok {
+		return serr.MkErr(serr.TErrNotfound, from)
+	}
+	toent, ok := lookup(dir, to)
+	if ok {
+		obj, err := getObj(d.pn.Append(to), sessp.Tpath(toent.Path), d.Obj.path)
+		if err != nil {
+			db.DFatalf("Rename: getObj %v %v\n", to, err)
+		}
+		if isNonemptyDir(obj) {
+			return serr.MkErr(serr.TErrNotEmpty, to)
+		}
+	}
+	topath := sessp.Tpath(0)
+	if ok {
+		topath, ok = remove(dir, to)
+		if !ok {
+			db.DFatalf("Rename: remove %v not present\n", to)
+		}
+	}
+	dir.Ents = append(dir.Ents, &DirEnt{Name: to, Path: uint64(frompath)})
+	return mvObj(d.Obj.path, dir, v, topath)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
@@ -176,7 +184,7 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (s
 	return 0, serr.MkErr(serr.TErrIsdir, d)
 }
 
-// ===== The following functions are needed to make an s3 dir of type fs.Inode
+// ===== The following functions are needed to make an named dir of type fs.Inode
 
 func (d *Dir) SetMtime(mtime int64) {
 	db.DFatalf("Unimplemented")
@@ -202,4 +210,39 @@ func (d *Dir) Unlink() {
 
 func (d *Dir) VersionInc() {
 	db.DFatalf("Unimplemented")
+}
+
+//
+// Helpers
+//
+
+func remove(dir *NamedDir, name string) (sessp.Tpath, bool) {
+	for i, e := range dir.Ents {
+		if e.Name == name {
+			p := e.Path
+			dir.Ents = append(dir.Ents[:i], dir.Ents[i+1:]...)
+			return sessp.Tpath(p), true
+		}
+	}
+	return 0, false
+}
+
+func lookup(dir *NamedDir, name string) (*DirEnt, bool) {
+	for _, e := range dir.Ents {
+		if e.Name == name {
+			return e, true
+		}
+	}
+	return nil, false
+}
+
+func isNonemptyDir(obj *Obj) bool {
+	if obj.perm.IsDir() {
+		if dir, err := unmarshalDir(obj.data); err != nil {
+			db.DFatalf("Remove: unmarshalDir %v err %v\n", obj.pn, err)
+		} else if len(dir.Ents) > 0 {
+			return true
+		}
+	}
+	return false
 }

@@ -71,7 +71,7 @@ func (o *Obj) SetSize(sz sp.Tlength) {
 }
 
 func (o *Obj) Path() sessp.Tpath {
-	return mkTpath(o.pn)
+	return o.path
 }
 
 func (o *Obj) Perm() sp.Tperm {
@@ -97,7 +97,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (o *Obj) stat() *sp.Stat {
 	st := &sp.Stat{}
 	st.Name = o.pn.Base()
-	st.Qid = sp.MakeQidPerm(o.perm, o.version, mkTpath(o.pn))
+	st.Qid = sp.MakeQidPerm(o.perm, o.version, o.path)
 	st.Length = uint64(len(o.data))
 	return st
 }
@@ -197,8 +197,7 @@ func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp
 	ops := []clientv3.Op{
 		clientv3.OpPut(path2key(p), string(b)),
 		clientv3.OpPut(path2key(dp), string(d1))}
-	resp, err := nd.clnt.Txn(context.TODO()).
-		If(cmp...).Then(ops...).Commit()
+	resp, err := nd.clnt.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
@@ -209,25 +208,34 @@ func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp
 	return makeObj(pn, perm, 0, p, dp, nil), nil
 }
 
-func mvObj(from, to path.Path) *serr.Err {
-	// get, err := nd.clnt.Get(context.TODO(), path2key(from))
-	// if err != nil {
-	// 	return serr.MkErrError(err)
-	// }
-	// if len(get.Kvs) == 0 {
-	// 	return serr.MkErr(serr.TErrNotfound, from)
-	// }
-	// b := get.Kvs[0].Value
-	// v := get.Kvs[0].Version
-	// txn, err := nd.clnt.Txn(context.TODO()).
-	// 	If(clientv3.Compare(clientv3.Version(path2key(from)), "=", v)).Then(clientv3.OpPut(path2key(to), string(b)), clientv3.OpDelete(path2key(from))).Commit()
-	// if err != nil {
-	// 	return serr.MkErrError(err)
-	// }
-	// if !txn.Succeeded { // XXX retry?
-	// 	return serr.MkErr(serr.TErrVersion, from)
-	// }
-	//db.DPrintf(db.NAMEDV1, "mvObj %v %v %v\n", from, to, txn)
+func mvObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := marshalDir(dir)
+	if r != nil {
+		return r
+	}
+	var cmp []clientv3.Cmp
+	var ops []clientv3.Op
+	if del != 0 {
+		cmp = []clientv3.Cmp{
+			clientv3.Compare(clientv3.Version(path2key(del)), ">", 0),
+			clientv3.Compare(clientv3.Version(path2key(d)), "=", int64(v))}
+		ops = []clientv3.Op{
+			clientv3.OpDelete(path2key(del)),
+			clientv3.OpPut(path2key(d), string(d1))}
+	} else {
+		cmp = []clientv3.Cmp{
+			clientv3.Compare(clientv3.Version(path2key(d)), "=", int64(v))}
+		ops = []clientv3.Op{
+			clientv3.OpPut(path2key(d), string(d1))}
+	}
+	resp, err := nd.clnt.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	if err != nil {
+		return serr.MkErrError(err)
+	}
+	if !resp.Succeeded {
+		return serr.MkErr(serr.TErrNotfound, d)
+	}
+	db.DPrintf(db.NAMEDV1, "mvObj %v %v\n", d, resp)
 	return nil
 }
 

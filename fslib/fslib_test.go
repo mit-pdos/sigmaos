@@ -90,6 +90,31 @@ func TestRemoveDir(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestDirBasic(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+	dn := gopath.Join(pathname, "d")
+	err := ts.MkDir(dn, 0777)
+	assert.Equal(t, nil, err)
+	b, err := ts.IsDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, b)
+
+	d := []byte("hello")
+	_, err = ts.PutFile(gopath.Join(dn, "f"), 0777, sp.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.GetDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 1, len(sts))
+	assert.Equal(t, "f", sts[0].Name)
+
+	err = ts.RmDir(dn)
+	_, err = ts.Stat(dn)
+	assert.NotNil(t, err)
+
+	ts.Shutdown()
+}
+
 func TestCreateTwice(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
@@ -325,6 +350,13 @@ func TestRenameAcrossDir(t *testing.T) {
 
 	b, err := ts.GetFile(fn1)
 	assert.Equal(t, "hello", string(b))
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	err = ts.RmDir(d2)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -355,6 +387,13 @@ func TestRenameAndRemove(t *testing.T) {
 
 	err = ts.Remove(fn1)
 	assert.Equal(t, nil, err)
+
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	err = ts.RmDir(d2)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -379,6 +418,12 @@ func TestNonEmpty(t *testing.T) {
 	err = ts.Rename(d2, d1)
 	assert.NotNil(t, err, "Rename")
 
+	err = ts.RmDir(d1)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	err = ts.RmDir(d2)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -395,6 +440,10 @@ func TestSetAppend(t *testing.T) {
 	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -412,30 +461,11 @@ func TestCopy(t *testing.T) {
 	d1, err := ts.GetFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
-	ts.Shutdown()
-}
+	err = ts.Remove(src)
+	assert.Nil(t, err, "Remove: %v", err)
 
-func TestDirBasic(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-	dn := gopath.Join(pathname, "d")
-	err := ts.MkDir(dn, 0777)
-	assert.Equal(t, nil, err)
-	b, err := ts.IsDir(dn)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, b)
-
-	d := []byte("hello")
-	_, err = ts.PutFile(gopath.Join(dn, "f"), 0777, sp.OWRITE, d)
-	assert.Equal(t, nil, err)
-
-	sts, err := ts.GetDir(dn)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, 1, len(sts))
-	assert.Equal(t, "f", sts[0].Name)
-
-	err = ts.RmDir(dn)
-	_, err = ts.Stat(dn)
-	assert.NotNil(t, err)
+	err = ts.Remove(dst)
+	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }
@@ -456,6 +486,10 @@ func TestDirDot(t *testing.T) {
 	assert.NotNil(t, err)
 	_, err = ts.Stat(pathname + "/.")
 	assert.Nil(t, err, "Couldn't stat %v", err)
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -484,6 +518,10 @@ func TestPageDir(t *testing.T) {
 
 	})
 	assert.Equal(t, i, n)
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -557,6 +595,9 @@ func TestDirConcur(t *testing.T) {
 		ch <- true
 	}
 
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -625,6 +666,9 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
+	err = ts.Remove(cnt)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -648,6 +692,9 @@ func TestWatchCreate(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	<-ch
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }
@@ -700,6 +747,9 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	<-ch
+
+	err = ts.RmDir(fn)
+	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
 }

@@ -70,6 +70,10 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	if err != nil {
 		return nil, err
 	}
+	_, ok := lookup(dir, name)
+	if ok {
+		return nil, serr.MkErr(serr.TErrExists, name)
+	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
 	db.DPrintf(db.NAMEDV1, "Create %v dir: %v v %v p %v\n", d, dir, v, path)

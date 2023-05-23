@@ -206,10 +206,10 @@ func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
+	db.DPrintf(db.NAMEDV1, "addObj %v %v\n", p, resp)
 	if !resp.Succeeded {
 		return nil, serr.MkErr(serr.TErrExists, p)
 	}
-	db.DPrintf(db.NAMEDV1, "addObj %v %v\n", p, resp)
 	return makeObj(pn, perm, 0, p, dp, nil), nil
 }
 
@@ -229,10 +229,10 @@ func rmObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.
 	if err != nil {
 		return serr.MkErrError(err)
 	}
+	db.DPrintf(db.NAMEDV1, "rmObj %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, del)
 	}
-	db.DPrintf(db.NAMEDV1, "rmObj %v %v\n", del, resp)
 	return nil
 }
 
@@ -261,10 +261,10 @@ func mvObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.
 	if err != nil {
 		return serr.MkErrError(err)
 	}
+	db.DPrintf(db.NAMEDV1, "mvObj %v %v\n", d, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, d)
 	}
-	db.DPrintf(db.NAMEDV1, "mvObj %v %v\n", d, resp)
 	return nil
 }
 
@@ -301,15 +301,14 @@ func mvObjat(df sessp.Tpath, dirf *NamedDir, vf sp.TQversion, dt sessp.Tpath, di
 			clientv3.OpPut(path2key(dt), string(bt)),
 		}
 	}
-	resp, err := nd.clnt.Txn(context.TODO()).
-		If(cmp...).Then(ops...).Commit()
+	resp, err := nd.clnt.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.MkErrError(err)
 	}
+	db.DPrintf(db.NAMEDV1, "mvObjAt %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, del)
 	}
-	db.DPrintf(db.NAMEDV1, "mvObjAt %v %v\n", del, resp)
 	return nil
 }
 

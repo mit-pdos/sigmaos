@@ -183,7 +183,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
-	db.DPrintf(db.NAMEDV1, "Rename %v: %v %v\n", d, from, to)
+	db.DPrintf(db.NAMEDV1, "Renameat %v: %v %v\n", d, from, to)
 	dirf, vf, err := readDir(d.Obj.path)
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.NAMEDV1, "Rename %v dir: %v v %v\n", d, dirf, dirt, vt, vf)
+	db.DPrintf(db.NAMEDV1, "Renameat %v dir: %v v %v\n", d, dirf, dirt, vt, vf)
 	frompath, ok := remove(dirf, from)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, from)
@@ -212,7 +212,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 	if ok {
 		topath, ok = remove(dirt, to)
 		if !ok {
-			db.DFatalf("Rename: remove %v not present\n", to)
+			db.DFatalf("Renameat: remove %v not present\n", to)
 		}
 	}
 	dirt.Ents = append(dirt.Ents, &DirEnt{Name: to, Path: uint64(frompath)})

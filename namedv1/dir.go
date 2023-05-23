@@ -181,7 +181,40 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
-	return serr.MkErr(serr.TErrNotSupported, "Renameat")
+	db.DPrintf(db.NAMEDV1, "Rename %v: %v %v\n", d, from, to)
+	dirf, vf, err := readDir(d.Obj.path)
+	if err != nil {
+		return err
+	}
+	dt := od.(*Dir)
+	dirt, vt, err := readDir(dt.Obj.path)
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.NAMEDV1, "Rename %v dir: %v v %v\n", d, dirf, dirt, vt, vf)
+	frompath, ok := remove(dirf, from)
+	if !ok {
+		return serr.MkErr(serr.TErrNotfound, from)
+	}
+	toent, ok := lookup(dirt, to)
+	if ok {
+		obj, err := getObj(dt.pn.Append(to), sessp.Tpath(toent.Path), dt.Obj.path)
+		if err != nil {
+			db.DFatalf("Renameat: getObj %v %v\n", to, err)
+		}
+		if isNonemptyDir(obj) {
+			return serr.MkErr(serr.TErrNotEmpty, to)
+		}
+	}
+	topath := sessp.Tpath(0)
+	if ok {
+		topath, ok = remove(dirt, to)
+		if !ok {
+			db.DFatalf("Rename: remove %v not present\n", to)
+		}
+	}
+	dirt.Ents = append(dirt.Ents, &DirEnt{Name: to, Path: uint64(frompath)})
+	return mvObjat(d.Obj.path, dirf, vf, dt.Obj.path, dirt, vt, topath)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {

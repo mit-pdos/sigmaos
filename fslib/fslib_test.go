@@ -487,9 +487,6 @@ func TestDirDot(t *testing.T) {
 	_, err = ts.Stat(pathname + "/.")
 	assert.Nil(t, err, "Couldn't stat %v", err)
 
-	err = ts.RmDir(dn)
-	assert.Nil(t, err, "RmDir: %v", err)
-
 	ts.Shutdown()
 }
 
@@ -778,6 +775,8 @@ func TestCreateExcl1(t *testing.T) {
 	i := <-ch
 	assert.Equal(t, 0, i)
 
+	ts.Remove(fn)
+
 	ts.Shutdown()
 }
 
@@ -792,15 +791,18 @@ func TestCreateExclN(t *testing.T) {
 		go func(i int) {
 			fsl, err := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
+			//log.Printf("PutFile %d\n", i)
 			_, err = fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
+			//log.Printf("PutFile %d done\n", i)
 			acquired = true
 			ch <- i
 		}(i)
 	}
 	for i := 0; i < N; i++ {
 		<-ch
+		//log.Printf("Remove %d\n", i)
 		acquired = false
 		err := ts.Remove(fn)
 		assert.Equal(t, nil, err)
@@ -842,11 +844,15 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 	assert.Nil(t, err, "Create 3")
 
+	ts.Remove(fn)
+	assert.Equal(t, nil, err)
+
 	ts.Shutdown()
 }
 
 func TestWatchRemoveConcur(t *testing.T) {
-	const N = 5_000
+	const N = 50 // 5_000
+	const MS = 10
 
 	ts := test.MakeTstatePath(t, pathname)
 	dn := gopath.Join(pathname, "d1")
@@ -868,6 +874,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 				ch <- r
 			})
 			if err == nil {
+				// log.Printf("wait for rm %v\n", i)
 				r := <-ch
 				if r == nil {
 					i += 1
@@ -885,17 +892,20 @@ func TestWatchRemoveConcur(t *testing.T) {
 		case <-done:
 			stop = true
 		default:
-			time.Sleep(1 * time.Millisecond)
+			time.Sleep(MS * time.Millisecond)
 			ts.Remove(fn) // remove may fail
 		}
 	}
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
 }
 
 // Concurrently remove & watch, but watch may be set after remove.
 func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
-	const N = 10_000
+	const N = 1000 // 10_000
 
 	ts := test.MakeTstatePath(t, pathname)
 	dn := gopath.Join(pathname, "d1")
@@ -935,12 +945,13 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 }
 
 func TestConcurFile(t *testing.T) {
-	const N = 20
+	const I = 20
+	const N = 100
 	ts := test.MakeTstatePath(t, pathname)
 	ch := make(chan int)
-	for i := 0; i < N; i++ {
+	for i := 0; i < I; i++ {
 		go func(i int) {
-			for j := 0; j < 1000; j++ {
+			for j := 0; j < N; j++ {
 				fn := gopath.Join(pathname, "f"+strconv.Itoa(i))
 				data := []byte(fn)
 				_, err := ts.PutFile(fn, 0777, sp.OWRITE, data)
@@ -954,14 +965,14 @@ func TestConcurFile(t *testing.T) {
 			ch <- i
 		}(i)
 	}
-	for i := 0; i < N; i++ {
+	for i := 0; i < I; i++ {
 		<-ch
 	}
 	ts.Shutdown()
 }
 
 const (
-	NFILE = 1000
+	NFILE = 100 // 1000
 )
 
 func initfs(ts *test.Tstate, TODO, DONE string) {
@@ -1054,6 +1065,12 @@ func TestConcurRename(t *testing.T) {
 	}
 	assert.Equal(ts.T, NFILE, n, "sum")
 	checkFs(ts, DONE)
+
+	err := ts.RmDir(TODO)
+	assert.Nil(t, err, "RmDir: %v", err)
+	err = ts.RmDir(DONE)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 

@@ -94,6 +94,10 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 			return sp.NullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
+	} else if s, p, err := fsl.PathLastSymlink(pn); err == nil {
+		if mnt, err := fsl.ReadMount(s); err == nil {
+			return mnt, p.String(), nil
+		}
 	}
 	return sp.NullMount(), "", serr.MkErr(serr.TErrInval, pn)
 }

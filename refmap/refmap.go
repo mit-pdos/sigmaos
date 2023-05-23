@@ -67,7 +67,7 @@ func (rf *RefTable[K, T]) Delete(k K) bool {
 	del := false
 	e, ok := rf.refs[k]
 	if !ok {
-		db.DFatalf("delete %v", k)
+		db.DFatalf("delete %v %v", rf.debug, k)
 	}
 	e.n -= 1
 	if e.n <= 0 {

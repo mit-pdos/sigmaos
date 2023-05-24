@@ -1,10 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0" 1>&2
+  echo "Usage: $0 username" 1>&2
 }
 
-while [[ $# -gt 0 ]]; do
+LOGIN=$1
+shift
+while [[ $# -gt 1 ]]; do
   key="$1"
   case $key in
   --vpc)
@@ -28,7 +30,6 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
 
 vms=`cat servers.txt | cut -d " " -f2` 

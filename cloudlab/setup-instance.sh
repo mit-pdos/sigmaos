@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]
+if [ "$#" -ne 2 ]
 then
-  echo "Usage: ./install-sw.sh user@address"
+  echo "Usage: ./install-sw.sh user address"
   exit 1
 fi
 
@@ -11,8 +11,8 @@ echo "$0 $1"
 DIR=$(dirname $0)
 BLKDEV=/dev/sda4
 
-LOGIN=arielck
-SSHCMD=$1
+LOGIN=$1
+SSHCMD=$1@$2
 
 # Set up a few directories, and prepare to scp the aws secrets.
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
@@ -177,5 +177,5 @@ echo -n > ~/.hushlogin
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh $1"
+echo "ssh $SSHCMD"
 echo "============================="

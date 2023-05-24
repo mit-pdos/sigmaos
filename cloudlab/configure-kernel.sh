@@ -1,32 +1,31 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]
+if [ "$#" -ne 3 ]
 then
-  echo "Usage: $0 user@address"
+  echo "Usage: $0 user address blkdev"
   exit 1
 fi
 
-echo "$0 $1"
+LOGIN=$1
+SSHCMD="$1@$2"
 
 DIR=$(dirname $0)
-BLKDEV=/dev/sda4
+BLKDEV=$3
 KERNEL=6.1.24
 
 . $DIR/config
 
 # Set up bash as the primary shell
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
-sudo chsh -s /bin/bash arielck
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+sudo chsh -s /bin/bash $LOGIN
 ENDSSH
 
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
-BLKDEV=/dev/sda4
-KERNEL=6.1.24
-export USER=arielck
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+echo "##### $0: user is $LOGIN; block is $BLKDEV; kernel version is $KERNEL. #####"
 sudo mkfs -t ext4 $BLKDEV
 sudo mount $BLKDEV /var/local
-sudo mkdir /var/local/$USER
-sudo chown $USER /var/local/$USER
+sudo mkdir /var/local/$LOGIN
+sudo chown $LOGIN /var/local/$LOGIN
 
 sudo blkid $BLKDEV | cut -d \" -f2
 echo -e UUID=$(sudo blkid $BLKDEV | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
@@ -37,7 +36,7 @@ sudo journalctl --vacuum-size=100M
 sudo apt update
 sudo apt install libelf-dev
 
-cd /var/local/$USER
+cd /var/local/$LOGIN
 #mkdir kernel
 #
 #cd kernel
@@ -65,10 +64,6 @@ sudo apt install -y linux-tools-$(uname -r)
 # Disable automatic frequency-scaling and switch off cstates
 sudo sed -i s/GRUB_CMDLINE_LINUX_DEFAULT=\"\"/GRUB_CMDLINE_LINUX_DEFAULT=\"intel_pstate=passive intel_idle.max_cstate=0\"/g  /etc/default/grub
 sudo update-grub
-
-# Turn off turbo boost
-echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="

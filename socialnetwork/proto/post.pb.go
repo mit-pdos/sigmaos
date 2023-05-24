@@ -271,6 +271,218 @@ func (x *ReadPostsResponse) GetPosts() []*Post {
 	return nil
 }
 
+type StoreMediaRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mediatype string `protobuf:"bytes,1,opt,name=mediatype,proto3" json:"mediatype,omitempty"`
+	Mediadata []byte `protobuf:"bytes,2,opt,name=mediadata,proto3" json:"mediadata,omitempty"`
+}
+
+func (x *StoreMediaRequest) Reset() {
+	*x = StoreMediaRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StoreMediaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreMediaRequest) ProtoMessage() {}
+
+func (x *StoreMediaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreMediaRequest.ProtoReflect.Descriptor instead.
+func (*StoreMediaRequest) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *StoreMediaRequest) GetMediatype() string {
+	if x != nil {
+		return x.Mediatype
+	}
+	return ""
+}
+
+func (x *StoreMediaRequest) GetMediadata() []byte {
+	if x != nil {
+		return x.Mediadata
+	}
+	return nil
+}
+
+type StoreMediaResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok      string `protobuf:"bytes,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Mediaid int64  `protobuf:"varint,2,opt,name=mediaid,proto3" json:"mediaid,omitempty"`
+}
+
+func (x *StoreMediaResponse) Reset() {
+	*x = StoreMediaResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StoreMediaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreMediaResponse) ProtoMessage() {}
+
+func (x *StoreMediaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreMediaResponse.ProtoReflect.Descriptor instead.
+func (*StoreMediaResponse) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *StoreMediaResponse) GetOk() string {
+	if x != nil {
+		return x.Ok
+	}
+	return ""
+}
+
+func (x *StoreMediaResponse) GetMediaid() int64 {
+	if x != nil {
+		return x.Mediaid
+	}
+	return 0
+}
+
+type ReadMediaRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mediaids []int64 `protobuf:"varint,1,rep,packed,name=mediaids,proto3" json:"mediaids,omitempty"`
+}
+
+func (x *ReadMediaRequest) Reset() {
+	*x = ReadMediaRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReadMediaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadMediaRequest) ProtoMessage() {}
+
+func (x *ReadMediaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadMediaRequest.ProtoReflect.Descriptor instead.
+func (*ReadMediaRequest) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ReadMediaRequest) GetMediaids() []int64 {
+	if x != nil {
+		return x.Mediaids
+	}
+	return nil
+}
+
+type ReadMediaResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok     string   `protobuf:"bytes,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Medias []*Media `protobuf:"bytes,2,rep,name=medias,proto3" json:"medias,omitempty"`
+}
+
+func (x *ReadMediaResponse) Reset() {
+	*x = ReadMediaResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReadMediaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadMediaResponse) ProtoMessage() {}
+
+func (x *ReadMediaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadMediaResponse.ProtoReflect.Descriptor instead.
+func (*ReadMediaResponse) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ReadMediaResponse) GetOk() string {
+	if x != nil {
+		return x.Ok
+	}
+	return ""
+}
+
+func (x *ReadMediaResponse) GetMedias() []*Media {
+	if x != nil {
+		return x.Medias
+	}
+	return nil
+}
+
 type ComposePostRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -287,7 +499,7 @@ type ComposePostRequest struct {
 func (x *ComposePostRequest) Reset() {
 	*x = ComposePostRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_socialnetwork_proto_post_proto_msgTypes[4]
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -300,7 +512,7 @@ func (x *ComposePostRequest) String() string {
 func (*ComposePostRequest) ProtoMessage() {}
 
 func (x *ComposePostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_socialnetwork_proto_post_proto_msgTypes[4]
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,7 +525,7 @@ func (x *ComposePostRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComposePostRequest.ProtoReflect.Descriptor instead.
 func (*ComposePostRequest) Descriptor() ([]byte, []int) {
-	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{4}
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ComposePostRequest) GetUsername() string {
@@ -369,7 +581,7 @@ type ComposePostResponse struct {
 func (x *ComposePostResponse) Reset() {
 	*x = ComposePostResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_socialnetwork_proto_post_proto_msgTypes[5]
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -382,7 +594,7 @@ func (x *ComposePostResponse) String() string {
 func (*ComposePostResponse) ProtoMessage() {}
 
 func (x *ComposePostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_socialnetwork_proto_post_proto_msgTypes[5]
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,12 +607,138 @@ func (x *ComposePostResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComposePostResponse.ProtoReflect.Descriptor instead.
 func (*ComposePostResponse) Descriptor() ([]byte, []int) {
-	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{5}
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ComposePostResponse) GetOk() string {
 	if x != nil {
 		return x.Ok
+	}
+	return ""
+}
+
+type Media struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mediaid   int64  `protobuf:"varint,1,opt,name=mediaid,proto3" json:"mediaid,omitempty"`
+	Mediatype string `protobuf:"bytes,2,opt,name=mediatype,proto3" json:"mediatype,omitempty"`
+	Mediadata []byte `protobuf:"bytes,3,opt,name=mediadata,proto3" json:"mediadata,omitempty"`
+}
+
+func (x *Media) Reset() {
+	*x = Media{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Media) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Media) ProtoMessage() {}
+
+func (x *Media) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Media.ProtoReflect.Descriptor instead.
+func (*Media) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Media) GetMediaid() int64 {
+	if x != nil {
+		return x.Mediaid
+	}
+	return 0
+}
+
+func (x *Media) GetMediatype() string {
+	if x != nil {
+		return x.Mediatype
+	}
+	return ""
+}
+
+func (x *Media) GetMediadata() []byte {
+	if x != nil {
+		return x.Mediadata
+	}
+	return nil
+}
+
+type MediaEncode struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mediaid      int64  `protobuf:"varint,1,opt,name=mediaid,proto3" json:"mediaid,omitempty"`
+	Mediatype    string `protobuf:"bytes,2,opt,name=mediatype,proto3" json:"mediatype,omitempty"`
+	Mediacontent string `protobuf:"bytes,3,opt,name=mediacontent,proto3" json:"mediacontent,omitempty"`
+}
+
+func (x *MediaEncode) Reset() {
+	*x = MediaEncode{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MediaEncode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MediaEncode) ProtoMessage() {}
+
+func (x *MediaEncode) ProtoReflect() protoreflect.Message {
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MediaEncode.ProtoReflect.Descriptor instead.
+func (*MediaEncode) Descriptor() ([]byte, []int) {
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *MediaEncode) GetMediaid() int64 {
+	if x != nil {
+		return x.Mediaid
+	}
+	return 0
+}
+
+func (x *MediaEncode) GetMediatype() string {
+	if x != nil {
+		return x.Mediatype
+	}
+	return ""
+}
+
+func (x *MediaEncode) GetMediacontent() string {
+	if x != nil {
+		return x.Mediacontent
 	}
 	return ""
 }
@@ -423,7 +761,7 @@ type Post struct {
 func (x *Post) Reset() {
 	*x = Post{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_socialnetwork_proto_post_proto_msgTypes[6]
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -436,7 +774,7 @@ func (x *Post) String() string {
 func (*Post) ProtoMessage() {}
 
 func (x *Post) ProtoReflect() protoreflect.Message {
-	mi := &file_socialnetwork_proto_post_proto_msgTypes[6]
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +787,7 @@ func (x *Post) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Post.ProtoReflect.Descriptor instead.
 func (*Post) Descriptor() ([]byte, []int) {
-	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{6}
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Post) GetPostid() int64 {
@@ -520,7 +858,7 @@ type PostEncode struct {
 func (x *PostEncode) Reset() {
 	*x = PostEncode{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_socialnetwork_proto_post_proto_msgTypes[7]
+		mi := &file_socialnetwork_proto_post_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -533,7 +871,7 @@ func (x *PostEncode) String() string {
 func (*PostEncode) ProtoMessage() {}
 
 func (x *PostEncode) ProtoReflect() protoreflect.Message {
-	mi := &file_socialnetwork_proto_post_proto_msgTypes[7]
+	mi := &file_socialnetwork_proto_post_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -546,7 +884,7 @@ func (x *PostEncode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostEncode.ProtoReflect.Descriptor instead.
 func (*PostEncode) Descriptor() ([]byte, []int) {
-	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{7}
+	return file_socialnetwork_proto_post_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PostEncode) GetPostid() int64 {
@@ -582,21 +920,50 @@ var file_socialnetwork_proto_post_proto_rawDesc = []byte{
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x02, 0x6f, 0x6b, 0x12, 0x1b, 0x0a, 0x05, 0x70, 0x6f, 0x73, 0x74, 0x73,
 	0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x05, 0x70,
-	0x6f, 0x73, 0x74, 0x73, 0x22, 0xc0, 0x01, 0x0a, 0x12, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x73, 0x65,
-	0x50, 0x6f, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x75,
-	0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75,
-	0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69,
-	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x12,
-	0x12, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74,
-	0x65, 0x78, 0x74, 0x12, 0x26, 0x0a, 0x08, 0x70, 0x6f, 0x73, 0x74, 0x74, 0x79, 0x70, 0x65, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0a, 0x2e, 0x50, 0x4f, 0x53, 0x54, 0x5f, 0x54, 0x59, 0x50,
-	0x45, 0x52, 0x08, 0x70, 0x6f, 0x73, 0x74, 0x74, 0x79, 0x70, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d,
-	0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x03, 0x52, 0x08, 0x6d,
-	0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x6d, 0x65, 0x64, 0x69, 0x61,
-	0x74, 0x79, 0x70, 0x65, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0a, 0x6d, 0x65, 0x64,
-	0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x73, 0x22, 0x25, 0x0a, 0x13, 0x43, 0x6f, 0x6d, 0x70, 0x6f,
-	0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e,
-	0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x87,
+	0x6f, 0x73, 0x74, 0x73, 0x22, 0x4f, 0x0a, 0x11, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x4d, 0x65, 0x64,
+	0x69, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x6d, 0x65, 0x64,
+	0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x65,
+	0x64, 0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x6d, 0x65, 0x64, 0x69, 0x61,
+	0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x6d, 0x65, 0x64, 0x69,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0x22, 0x3e, 0x0a, 0x12, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x4d, 0x65,
+	0x64, 0x69, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f,
+	0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x6f, 0x6b, 0x12, 0x18, 0x0a, 0x07, 0x6d,
+	0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x6d, 0x65,
+	0x64, 0x69, 0x61, 0x69, 0x64, 0x22, 0x2e, 0x0a, 0x10, 0x52, 0x65, 0x61, 0x64, 0x4d, 0x65, 0x64,
+	0x69, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x65, 0x64,
+	0x69, 0x61, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x03, 0x52, 0x08, 0x6d, 0x65, 0x64,
+	0x69, 0x61, 0x69, 0x64, 0x73, 0x22, 0x43, 0x0a, 0x11, 0x52, 0x65, 0x61, 0x64, 0x4d, 0x65, 0x64,
+	0x69, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x6f, 0x6b, 0x12, 0x1e, 0x0a, 0x06, 0x6d, 0x65,
+	0x64, 0x69, 0x61, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x4d, 0x65, 0x64,
+	0x69, 0x61, 0x52, 0x06, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x73, 0x22, 0xc0, 0x01, 0x0a, 0x12, 0x43,
+	0x6f, 0x6d, 0x70, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x16, 0x0a,
+	0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75,
+	0x73, 0x65, 0x72, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x65, 0x78, 0x74, 0x12, 0x26, 0x0a, 0x08, 0x70, 0x6f, 0x73,
+	0x74, 0x74, 0x79, 0x70, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0a, 0x2e, 0x50, 0x4f,
+	0x53, 0x54, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x52, 0x08, 0x70, 0x6f, 0x73, 0x74, 0x74, 0x79, 0x70,
+	0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x73, 0x18, 0x05, 0x20,
+	0x03, 0x28, 0x03, 0x52, 0x08, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x73, 0x12, 0x1e, 0x0a,
+	0x0a, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28,
+	0x09, 0x52, 0x0a, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x73, 0x22, 0x25, 0x0a,
+	0x13, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x02, 0x6f, 0x6b, 0x22, 0x5d, 0x0a, 0x05, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x12, 0x18, 0x0a,
+	0x07, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07,
+	0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x6d, 0x65, 0x64, 0x69, 0x61,
+	0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x65, 0x64, 0x69,
+	0x61, 0x74, 0x79, 0x70, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x64, 0x61,
+	0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x64,
+	0x61, 0x74, 0x61, 0x22, 0x69, 0x0a, 0x0b, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x45, 0x6e, 0x63, 0x6f,
+	0x64, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x03, 0x52, 0x07, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x69, 0x64, 0x12, 0x1c, 0x0a, 0x09,
+	0x6d, 0x65, 0x64, 0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x09, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x74, 0x79, 0x70, 0x65, 0x12, 0x22, 0x0a, 0x0c, 0x6d, 0x65,
+	0x64, 0x69, 0x61, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0c, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0x87,
 	0x02, 0x0a, 0x04, 0x50, 0x6f, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x6f, 0x73, 0x74, 0x69,
 	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x70, 0x6f, 0x73, 0x74, 0x69, 0x64, 0x12,
 	0x26, 0x0a, 0x08, 0x70, 0x6f, 0x73, 0x74, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
@@ -634,9 +1001,17 @@ var file_socialnetwork_proto_post_proto_rawDesc = []byte{
 	0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x12, 0x13, 0x2e, 0x43, 0x6f,
 	0x6d, 0x70, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x1a, 0x14, 0x2e, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x73, 0x74, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x1d, 0x5a, 0x1b, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f,
-	0x73, 0x2f, 0x73, 0x6f, 0x63, 0x69, 0x61, 0x6c, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x2f,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0x79, 0x0a, 0x0c, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x53,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x35, 0x0a, 0x0a, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x4d,
+	0x65, 0x64, 0x69, 0x61, 0x12, 0x12, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x4d, 0x65, 0x64, 0x69,
+	0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x65,
+	0x4d, 0x65, 0x64, 0x69, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x32, 0x0a,
+	0x09, 0x52, 0x65, 0x61, 0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x12, 0x11, 0x2e, 0x52, 0x65, 0x61,
+	0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x12, 0x2e,
+	0x52, 0x65, 0x61, 0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x42, 0x1d, 0x5a, 0x1b, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x6f, 0x63,
+	0x69, 0x61, 0x6c, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -652,41 +1027,52 @@ func file_socialnetwork_proto_post_proto_rawDescGZIP() []byte {
 }
 
 var file_socialnetwork_proto_post_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_socialnetwork_proto_post_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_socialnetwork_proto_post_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_socialnetwork_proto_post_proto_goTypes = []interface{}{
 	(POST_TYPE)(0),              // 0: POST_TYPE
 	(*StorePostRequest)(nil),    // 1: StorePostRequest
 	(*StorePostResponse)(nil),   // 2: StorePostResponse
 	(*ReadPostsRequest)(nil),    // 3: ReadPostsRequest
 	(*ReadPostsResponse)(nil),   // 4: ReadPostsResponse
-	(*ComposePostRequest)(nil),  // 5: ComposePostRequest
-	(*ComposePostResponse)(nil), // 6: ComposePostResponse
-	(*Post)(nil),                // 7: Post
-	(*PostEncode)(nil),          // 8: PostEncode
-	(*UserRef)(nil),             // 9: UserRef
-	(*MediaRef)(nil),            // 10: MediaRef
-	(*Url)(nil),                 // 11: Url
+	(*StoreMediaRequest)(nil),   // 5: StoreMediaRequest
+	(*StoreMediaResponse)(nil),  // 6: StoreMediaResponse
+	(*ReadMediaRequest)(nil),    // 7: ReadMediaRequest
+	(*ReadMediaResponse)(nil),   // 8: ReadMediaResponse
+	(*ComposePostRequest)(nil),  // 9: ComposePostRequest
+	(*ComposePostResponse)(nil), // 10: ComposePostResponse
+	(*Media)(nil),               // 11: Media
+	(*MediaEncode)(nil),         // 12: MediaEncode
+	(*Post)(nil),                // 13: Post
+	(*PostEncode)(nil),          // 14: PostEncode
+	(*UserRef)(nil),             // 15: UserRef
+	(*MediaRef)(nil),            // 16: MediaRef
+	(*Url)(nil),                 // 17: Url
 }
 var file_socialnetwork_proto_post_proto_depIdxs = []int32{
-	7,  // 0: StorePostRequest.post:type_name -> Post
-	7,  // 1: ReadPostsResponse.posts:type_name -> Post
-	0,  // 2: ComposePostRequest.posttype:type_name -> POST_TYPE
-	0,  // 3: Post.posttype:type_name -> POST_TYPE
-	9,  // 4: Post.creator:type_name -> UserRef
-	9,  // 5: Post.usermentions:type_name -> UserRef
-	10, // 6: Post.medias:type_name -> MediaRef
-	11, // 7: Post.urls:type_name -> Url
-	1,  // 8: PostService.StorePost:input_type -> StorePostRequest
-	3,  // 9: PostService.ReadPosts:input_type -> ReadPostsRequest
-	5,  // 10: ComposeService.ComposePost:input_type -> ComposePostRequest
-	2,  // 11: PostService.StorePost:output_type -> StorePostResponse
-	4,  // 12: PostService.ReadPosts:output_type -> ReadPostsResponse
-	6,  // 13: ComposeService.ComposePost:output_type -> ComposePostResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	13, // 0: StorePostRequest.post:type_name -> Post
+	13, // 1: ReadPostsResponse.posts:type_name -> Post
+	11, // 2: ReadMediaResponse.medias:type_name -> Media
+	0,  // 3: ComposePostRequest.posttype:type_name -> POST_TYPE
+	0,  // 4: Post.posttype:type_name -> POST_TYPE
+	15, // 5: Post.creator:type_name -> UserRef
+	15, // 6: Post.usermentions:type_name -> UserRef
+	16, // 7: Post.medias:type_name -> MediaRef
+	17, // 8: Post.urls:type_name -> Url
+	1,  // 9: PostService.StorePost:input_type -> StorePostRequest
+	3,  // 10: PostService.ReadPosts:input_type -> ReadPostsRequest
+	9,  // 11: ComposeService.ComposePost:input_type -> ComposePostRequest
+	5,  // 12: MediaService.StoreMedia:input_type -> StoreMediaRequest
+	7,  // 13: MediaService.ReadMedia:input_type -> ReadMediaRequest
+	2,  // 14: PostService.StorePost:output_type -> StorePostResponse
+	4,  // 15: PostService.ReadPosts:output_type -> ReadPostsResponse
+	10, // 16: ComposeService.ComposePost:output_type -> ComposePostResponse
+	6,  // 17: MediaService.StoreMedia:output_type -> StoreMediaResponse
+	8,  // 18: MediaService.ReadMedia:output_type -> ReadMediaResponse
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_socialnetwork_proto_post_proto_init() }
@@ -745,7 +1131,7 @@ func file_socialnetwork_proto_post_proto_init() {
 			}
 		}
 		file_socialnetwork_proto_post_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ComposePostRequest); i {
+			switch v := v.(*StoreMediaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -757,7 +1143,7 @@ func file_socialnetwork_proto_post_proto_init() {
 			}
 		}
 		file_socialnetwork_proto_post_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ComposePostResponse); i {
+			switch v := v.(*StoreMediaResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -769,7 +1155,7 @@ func file_socialnetwork_proto_post_proto_init() {
 			}
 		}
 		file_socialnetwork_proto_post_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Post); i {
+			switch v := v.(*ReadMediaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -781,6 +1167,78 @@ func file_socialnetwork_proto_post_proto_init() {
 			}
 		}
 		file_socialnetwork_proto_post_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ReadMediaResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ComposePostRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ComposePostResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Media); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MediaEncode); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Post); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_socialnetwork_proto_post_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PostEncode); i {
 			case 0:
 				return &v.state
@@ -799,9 +1257,9 @@ func file_socialnetwork_proto_post_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_socialnetwork_proto_post_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   14,
 			NumExtensions: 0,
-			NumServices:   2,
+			NumServices:   3,
 		},
 		GoTypes:           file_socialnetwork_proto_post_proto_goTypes,
 		DependencyIndexes: file_socialnetwork_proto_post_proto_depIdxs,

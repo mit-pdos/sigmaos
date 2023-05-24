@@ -48,6 +48,9 @@ func (dbu *DBUtil) Clear() error {
 	if err := dbu.dbc.Exec("truncate socialnetwork_url;"); err != nil {
 		return err
 	}
+	if err := dbu.dbc.Exec("truncate socialnetwork_media;"); err != nil {
+		return err
+	}
 	return nil
 }
 

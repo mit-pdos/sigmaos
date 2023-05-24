@@ -61,6 +61,9 @@ var N_REALM int
 
 // XXX Remove
 var MEMCACHED_ADDRS string
+var HTTP_URL string
+var DURATION time.Duration
+var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
 var RPCBENCH_NCORE int
@@ -106,6 +109,9 @@ func init() {
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
+	flag.StringVar(&HTTP_URL, "http_url", "http://x.x.x.x", "HTTP url.")
+	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration.")
+	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
@@ -219,6 +225,11 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	printResultSummary(rs)
 	waitExitProcs(ts1, ps)
 	rootts.Shutdown()
+}
+
+// Test the throughput of spawning procs.
+func TestMicroHTTPLoadGen(t *testing.T) {
+	RunHTTPLoadGen(HTTP_URL, DURATION, MAX_RPS)
 }
 
 func TestAppMR(t *testing.T) {

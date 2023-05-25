@@ -24,9 +24,11 @@ func RunHTTPLoadGen(url string, dur time.Duration, maxrps int) {
 			db.DFatalf("Error HTTPLoadGen.Get: %v", err)
 		}
 	})
+	db.DPrintf(db.TEST, "Calibrating loadgen")
 	lg.Calibrate()
 	db.DPrintf(db.TEST, "Running loadgen url %v dur %v maxrps %v", url, dur, maxrps)
 	lg.Run()
+	db.DPrintf(db.TEST, "Done generating load", url, dur, maxrps)
 	lg.Stats()
 }
 

@@ -7,7 +7,7 @@ vms=`cat servers.txt | cut -d " " -f2`
 
 vma=($vms)
 MAIN="${vma[0]}"
-MAIN_PRIVADDR=$(./leader-ip.sh)
+MAIN_PRIVADDR=$(./leader-ip.sh $LOGIN)
 #export SIGMANAMED="${SIGMANAMED}"
 
 if ! [ -z "$N_VM" ]; then
@@ -23,7 +23,6 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 for vm in $vms; do
   echo $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
-    cd ulambda
-    ./set-cores.sh --set 0 --start 4 --end 39
+  ls /tmp/sigmaos-perf
 ENDSSH
 done

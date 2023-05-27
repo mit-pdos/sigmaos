@@ -15,6 +15,7 @@ import (
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -27,6 +28,7 @@ var (
 var nd *Named
 
 type Named struct {
+	*sigmaclnt.SigmaClnt
 	*sesssrv.SessSrv
 	mu    sync.Mutex
 	clnt  *clientv3.Client
@@ -48,6 +50,7 @@ func Run(args []string) error {
 			return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 		}
 		nd.crash = crashing
+		nd.Started()
 	}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,

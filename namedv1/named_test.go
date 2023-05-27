@@ -80,7 +80,7 @@ func startNamed(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 func TestNamedLeader(t *testing.T) {
 	ts := makeTstate(t)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	startNamed(ts.SigmaClnt, ts.job)
 

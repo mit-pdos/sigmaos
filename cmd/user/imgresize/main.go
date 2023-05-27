@@ -6,6 +6,7 @@ import (
 	"image/jpeg"
 	"log"
 	"os"
+	"time"
 
 	"github.com/nfnt/resize"
 
@@ -26,7 +27,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
+	start := time.Now()
 	s := t.Work()
+	db.DPrintf(db.ALWAYS, "Time e2e resize: %v", time.Since(start))
 	t.Exited(s)
 }
 
@@ -61,11 +64,15 @@ func (t *Trans) Work() *proc.Status {
 	}
 	defer rdr.Close()
 
+	ds := time.Now()
 	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.MakeStatusErr("Decode", err)
 	}
+	db.DPrintf(db.ALWAYS, "Time read/decode: %v", time.Since(ds))
+	dr := time.Now()
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
+	db.DPrintf(db.ALWAYS, "Time resize: %v", time.Since(dr))
 
 	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
 	if err != nil {
@@ -73,6 +80,8 @@ func (t *Trans) Work() *proc.Status {
 	}
 	defer wrt.Close()
 
+	dw := time.Now()
 	jpeg.Encode(wrt, img1, nil)
+	db.DPrintf(db.ALWAYS, "Time write/encode: %v", time.Since(dw))
 	return proc.MakeStatus(proc.StatusOK)
 }

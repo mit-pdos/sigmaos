@@ -193,7 +193,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.NAMEDV1, "Renameat %v dir: %v v %v\n", d, dirf, dirt, vt, vf)
+	db.DPrintf(db.NAMEDV1, "Renameat %v dir: %v %v %v %v\n", d, dirf, dirt, vt, vf)
 	frompath, ok := remove(dirf, from)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, from)

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"

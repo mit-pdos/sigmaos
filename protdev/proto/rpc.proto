@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/protdev";
+option go_package = "sigmaos/protdev/proto";
 
 message Request {
         string method = 1;

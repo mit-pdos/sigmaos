@@ -84,10 +84,11 @@ func TestNamedLeader(t *testing.T) {
 
 	ndg := startNamed(ts.SigmaClnt, ts.job)
 
-	pn := sp.NAMEDV1 + "/"
+	time.Sleep(10 * time.Second)
 
+	pn := sp.NAMEDV1 + "/"
 	for i := 0; i < 30; i++ {
-		log.Printf("%d\n", i)
+		log.Printf("put %v %d\n", path.Join(pn, "f"), i)
 		d := []byte("iter-" + strconv.Itoa(i))
 		_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
 		assert.Nil(t, err)

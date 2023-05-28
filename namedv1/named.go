@@ -40,7 +40,7 @@ type Named struct {
 
 func Run(args []string) error {
 	bootNamed := len(args) == 1
-	db.DPrintf(db.NAMEDV1, "BootNamed %v\n", bootNamed)
+	db.DPrintf(db.NAMEDV1, "%v: BootNamed %v %d\n", proc.GetPid(), bootNamed, len(args))
 	if !(len(args) == 1 || len(args) == 3) {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -52,15 +52,15 @@ func Run(args []string) error {
 			return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 		}
 		nd.crash = crashing
-		sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
-		if err != nil {
-			return err
-		}
-		nd.SigmaClnt = sc
-		db.DPrintf(db.NAMEDV1, "start %d\n", len(args))
-		nd.Started()
-		db.DPrintf(db.NAMEDV1, "started %d\n", len(args))
 	}
+	sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
+	if err != nil {
+		return err
+	}
+	nd.SigmaClnt = sc
+	nd.Started()
+	db.DPrintf(db.NAMEDV1, "started %v\n", proc.GetPid())
+
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
@@ -69,7 +69,7 @@ func Run(args []string) error {
 		db.DFatalf("Error clientv3 %v\n", err)
 	}
 	nd.clnt = cli
-	s, err := concurrency.NewSession(cli)
+	s, err := concurrency.NewSession(cli, concurrency.WithTTL(5))
 	if err != nil {
 		db.DFatalf("Error sess %v\n", err)
 	}
@@ -104,9 +104,13 @@ func Run(args []string) error {
 	}
 	nd.SessSrv = srv
 
+	if bootNamed {
+		go nd.exit()
+	}
+
 	srv.Serve()
 
-	db.DPrintf(db.NAMEDV1, "terminate\n")
+	db.DPrintf(db.NAMEDV1, "done\n")
 
 	srv.Done()
 
@@ -119,6 +123,13 @@ func (nd *Named) waitExit() {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
 	db.DPrintf(db.NAMEDV1, "candidate %v evicted\n", proc.GetPid().String())
+	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
+	os.Exit(0)
+}
+
+func (nd *Named) exit() {
+	time.Sleep(2 * time.Second)
+	db.DPrintf(db.NAMEDV1, "boot named exit\n")
 	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 }

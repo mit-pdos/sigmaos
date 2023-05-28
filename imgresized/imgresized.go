@@ -23,6 +23,7 @@ const (
 	IMG    = "name/img"
 	STOP   = "_STOP"
 	NCOORD = 1
+	NCORE  = 1
 )
 
 type ImgSrv struct {
@@ -154,6 +155,7 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 		if imgd.crash > 0 {
 			procs[i].AppendEnv("SIGMACRASH", strconv.Itoa(imgd.crash))
 		}
+		procs[i].SetNcore(NCORE)
 		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
 	}
 	start := time.Now()

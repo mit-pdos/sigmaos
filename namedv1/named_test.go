@@ -2,6 +2,7 @@ package namedv1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"path"
@@ -16,6 +17,7 @@ import (
 
 	"sigmaos/groupmgr"
 	rd "sigmaos/rand"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -94,11 +96,32 @@ func TestNamedLeader(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		log.Printf("put %v %d\n", path.Join(pn, "f"), i)
 		d := []byte("iter-" + strconv.Itoa(i))
-		_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
-		assert.Nil(t, err)
-		d1, err := ts.GetFile(path.Join(pn, "f"))
-		assert.Nil(t, err)
-		assert.Equal(t, d, d1)
+		for {
+			_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
+			var sr *serr.Err
+			if errors.As(err, &sr) && sr.IsErrUnavailable() {
+				log.Printf("retry err %v\n", err)
+				time.Sleep(1 * time.Second)
+			} else {
+				log.Printf("err %v\n", err)
+				assert.Nil(t, err)
+				break
+			}
+		}
+
+		for {
+			d1, err := ts.GetFile(path.Join(pn, "f"))
+			var sr *serr.Err
+			if errors.As(err, &sr) && sr.IsErrUnavailable() {
+				log.Printf("retry err %v\n", err)
+			} else {
+				log.Printf("err %v\n", err)
+				log.Printf("err %v\n", err)
+				assert.Nil(t, err)
+				assert.Equal(t, d, d1)
+				break
+			}
+		}
 
 		time.Sleep(1)
 	}

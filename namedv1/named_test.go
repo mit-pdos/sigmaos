@@ -82,7 +82,7 @@ func TestNamedLeader(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	startNamed(ts.SigmaClnt, ts.job)
+	ndg := startNamed(ts.SigmaClnt, ts.job)
 
 	pn := sp.NAMEDV1 + "/"
 
@@ -102,7 +102,9 @@ func TestNamedLeader(t *testing.T) {
 	err := ts.Remove(path.Join(pn, "f"))
 	assert.Nil(t, err)
 
-	// ndg.Wait()
+	ndg.Stop()
+
+	log.Printf("nameds stopped\n")
 
 	ts.Shutdown()
 }

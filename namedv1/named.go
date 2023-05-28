@@ -3,6 +3,7 @@ package namedv1
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -38,19 +39,27 @@ type Named struct {
 }
 
 func Run(args []string) error {
-	db.DPrintf(db.NAMEDV1, "len %d\n", len(args))
+	bootNamed := len(args) == 1
+	db.DPrintf(db.NAMEDV1, "BootNamed %v\n", bootNamed)
 	if !(len(args) == 1 || len(args) == 3) {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd = &Named{}
-	if len(args) == 3 {
+	if !bootNamed {
 		nd.job = args[1]
 		crashing, err := strconv.Atoi(args[2])
 		if err != nil {
 			return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 		}
 		nd.crash = crashing
+		sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
+		if err != nil {
+			return err
+		}
+		nd.SigmaClnt = sc
+		db.DPrintf(db.NAMEDV1, "start %d\n", len(args))
 		nd.Started()
+		db.DPrintf(db.NAMEDV1, "started %d\n", len(args))
 	}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
@@ -64,6 +73,8 @@ func Run(args []string) error {
 	if err != nil {
 		db.DFatalf("Error sess %v\n", err)
 	}
+	defer cli.Close()
+
 	nd.sess = s
 
 	ip, err := container.LocalIP()
@@ -71,14 +82,17 @@ func Run(args []string) error {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
 
+	go nd.waitExit()
+
 	fn := "named-election"
 	// fn := fmt.Sprintf("job-%s-election", nd.job))
-
 	db.DPrintf(db.NAMEDV1, "candidate %v %v\n", proc.GetPid().String(), fn)
 
 	electclnt := concurrency.NewElection(nd.sess, fn)
 
-	err = electclnt.Campaign(context.TODO(), proc.GetPid().String())
+	if err := electclnt.Campaign(context.TODO(), proc.GetPid().String()); err != nil {
+		db.DFatalf("Campaign err %v\n", err)
+	}
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
 
@@ -91,8 +105,20 @@ func Run(args []string) error {
 	nd.SessSrv = srv
 
 	srv.Serve()
+
+	db.DPrintf(db.NAMEDV1, "terminate\n")
+
 	srv.Done()
 
-	cli.Close() // make sure to close the client
 	return nil
+}
+
+func (nd *Named) waitExit() {
+	err := nd.WaitEvict(proc.GetPid())
+	if err != nil {
+		db.DFatalf("Error WaitEvict: %v", err)
+	}
+	db.DPrintf(db.NAMEDV1, "candidate %v evicted\n", proc.GetPid().String())
+	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
+	os.Exit(0)
 }

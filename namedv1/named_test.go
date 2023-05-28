@@ -105,7 +105,7 @@ func TestNamedLeader(t *testing.T) {
 
 	ndg.Stop()
 
-	log.Printf("nameds stopped\n")
+	log.Printf("namedv1 stopped\n")
 
 	ts.Shutdown()
 }

@@ -3,7 +3,6 @@ package namedv1
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -82,7 +81,8 @@ func Run(args []string) error {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
 
-	go nd.waitExit()
+	ch := make(chan struct{})
+	go nd.waitExit(ch)
 
 	fn := "named-election"
 	// fn := fmt.Sprintf("job-%s-election", nd.job))
@@ -105,31 +105,28 @@ func Run(args []string) error {
 	nd.SessSrv = srv
 
 	if bootNamed {
-		go nd.exit()
+		go nd.exit(ch)
 	}
 
-	srv.Serve()
+	<-ch
 
-	db.DPrintf(db.NAMEDV1, "done\n")
-
-	srv.Done()
+	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
 
 	return nil
 }
 
-func (nd *Named) waitExit() {
+func (nd *Named) waitExit(ch chan struct{}) {
 	err := nd.WaitEvict(proc.GetPid())
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
 	db.DPrintf(db.NAMEDV1, "candidate %v evicted\n", proc.GetPid().String())
-	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
-	os.Exit(0)
+	ch <- struct{}{}
 }
 
-func (nd *Named) exit() {
+// for testing
+func (nd *Named) exit(ch chan struct{}) {
 	time.Sleep(2 * time.Second)
 	db.DPrintf(db.NAMEDV1, "boot named exit\n")
-	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
-	os.Exit(0)
+	ch <- struct{}{}
 }

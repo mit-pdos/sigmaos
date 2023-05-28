@@ -28,6 +28,7 @@ func GetEnv(name string) int64 {
 
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)
+	db.DPrintf(db.CRASH, "randSleep %dms\n", ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	r := rand.Int64(1000)
 	return r

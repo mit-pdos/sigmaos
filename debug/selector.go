@@ -33,6 +33,7 @@ const (
 	TEST  Tselector = "TEST"
 	TEST1           = "TEST1"
 	DELAY           = "DELAY"
+	CRASH           = "CRASH"
 )
 
 // Apps

@@ -29,7 +29,7 @@ func main() {
 	}
 	start := time.Now()
 	s := t.Work()
-	db.DPrintf(db.ALWAYS, "Time e2e resize: %v", time.Since(start))
+	db.DPrintf(db.ALWAYS, "Time %v e2e resize: %v", os.Args, time.Since(start))
 	t.Exited(s)
 }
 
@@ -58,30 +58,39 @@ func MakeTrans(args []string) (*Trans, error) {
 }
 
 func (t *Trans) Work() *proc.Status {
+	do := time.Now()
 	rdr, err := t.OpenReader(t.input)
 	if err != nil {
 		return proc.MakeStatusErr("File not found", err)
 	}
-	defer rdr.Close()
+	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.input, time.Since(do))
+	var dc time.Time
+	defer func() {
+		rdr.Close()
+		db.DPrintf(db.ALWAYS, "Time %v close reader: %v", t.input, time.Since(dc))
+	}()
 
 	ds := time.Now()
 	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.MakeStatusErr("Decode", err)
 	}
-	db.DPrintf(db.ALWAYS, "Time read/decode: %v", time.Since(ds))
+	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", t.input, time.Since(ds))
 	dr := time.Now()
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
-	db.DPrintf(db.ALWAYS, "Time resize: %v", time.Since(dr))
+	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.input, time.Since(dr))
 
 	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
 	}
-	defer wrt.Close()
-
 	dw := time.Now()
+	defer func() {
+		wrt.Close()
+		db.DPrintf(db.ALWAYS, "Time %v write/encode: %v", t.input, time.Since(dw))
+		dc = time.Now()
+	}()
+
 	jpeg.Encode(wrt, img1, nil)
-	db.DPrintf(db.ALWAYS, "Time write/encode: %v", time.Since(dw))
 	return proc.MakeStatus(proc.StatusOK)
 }

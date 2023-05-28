@@ -80,10 +80,12 @@ func (t *Trans) Work() *proc.Status {
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
 	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.input, time.Since(dr))
 
+	dcw := time.Now()
 	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
 	}
+	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.input, time.Since(dcw))
 	dw := time.Now()
 	defer func() {
 		wrt.Close()

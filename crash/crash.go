@@ -7,10 +7,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sesssrv"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -42,7 +42,7 @@ func Crasher(fsl *fslib.FsLib) {
 		for true {
 			r := randSleep(crash)
 			if r < 330 {
-				Crash(fsl)
+				Crash()
 			} else if r < 660 {
 				Partition(fsl)
 			}
@@ -80,7 +80,7 @@ func NetFailer(ss *sesssrv.SessSrv) {
 	}()
 }
 
-func Crash(fsl *fslib.FsLib) {
+func Crash() {
 	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", os.Args)
 	os.Exit(1)
 }

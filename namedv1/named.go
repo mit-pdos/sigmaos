@@ -11,6 +11,7 @@ import (
 	"go.etcd.io/etcd/client/v3/concurrency"
 
 	"sigmaos/container"
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
@@ -19,9 +20,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var (
+const (
 	dialTimeout = 5 * time.Second
+	sessionTTL  = 5
+)
 
+var (
 	endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
 )
 
@@ -39,7 +43,7 @@ type Named struct {
 
 func Run(args []string) error {
 	bootNamed := len(args) == 1
-	db.DPrintf(db.NAMEDV1, "%v: BootNamed %v %d\n", proc.GetPid(), bootNamed, len(args))
+	db.DPrintf(db.NAMEDV1, "%v: BootNamed %v %v\n", proc.GetPid(), bootNamed, args)
 	if !(len(args) == 1 || len(args) == 3) {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -68,7 +72,7 @@ func Run(args []string) error {
 		db.DFatalf("Error clientv3 %v\n", err)
 	}
 	nd.clnt = cli
-	s, err := concurrency.NewSession(cli, concurrency.WithTTL(5))
+	s, err := concurrency.NewSession(cli, concurrency.WithTTL(sessionTTL))
 	if err != nil {
 		db.DFatalf("Error sess %v\n", err)
 	}
@@ -97,7 +101,6 @@ func Run(args []string) error {
 	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
 
 	root := rootDir()
-
 	srv, err := fslibsrv.MakeReplServer(root, ip+":0", sp.NAMEDV1, "namedv1", nil)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
@@ -106,6 +109,8 @@ func Run(args []string) error {
 
 	if bootNamed {
 		go nd.exit(ch)
+	} else if nd.crash > 0 {
+		crash.Crasher(nd.SigmaClnt.FsLib)
 	}
 
 	<-ch

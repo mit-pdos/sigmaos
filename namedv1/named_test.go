@@ -74,17 +74,21 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func startNamed(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(0)}, job, 0, 1, 0, 0, 0)
+	crash := 1
+	crashinterval := 200
+	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, job, 0, crash, crashinterval, 0, 0)
 }
 
 func TestNamedLeader(t *testing.T) {
 	ts := makeTstate(t)
 
+	// give kernel-started named time to start
 	time.Sleep(1 * time.Second)
 
 	ndg := startNamed(ts.SigmaClnt, ts.job)
 
-	time.Sleep(10 * time.Second)
+	// wait until kernel-started named exited and its lease expired
+	time.Sleep(6 * time.Second)
 
 	pn := sp.NAMEDV1 + "/"
 	for i := 0; i < 30; i++ {
@@ -92,7 +96,6 @@ func TestNamedLeader(t *testing.T) {
 		d := []byte("iter-" + strconv.Itoa(i))
 		_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
 		assert.Nil(t, err)
-
 		d1, err := ts.GetFile(path.Join(pn, "f"))
 		assert.Nil(t, err)
 		assert.Equal(t, d, d1)

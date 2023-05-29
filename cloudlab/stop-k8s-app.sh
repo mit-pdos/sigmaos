@@ -34,8 +34,8 @@ if [ -z "$APP_PATH" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 

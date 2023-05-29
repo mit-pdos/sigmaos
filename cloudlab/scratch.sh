@@ -1,7 +1,7 @@
 #!/bin/bash
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 

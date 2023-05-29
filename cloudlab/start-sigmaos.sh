@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 username [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 N_VM=""
@@ -10,8 +10,6 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
-LOGIN=$1
-shift
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -61,6 +59,7 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
 fi
 
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 

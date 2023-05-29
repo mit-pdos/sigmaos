@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]
+if [ "$#" -ne 1 ]
 then
   echo "Usage: $0 address"
   exit 1
@@ -35,7 +35,7 @@ envsubst '$BLKDEV' <<'ENDSSH'
   echo -e UUID=$(sudo blkid $BLKDEV | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
 ENDSSH
 )
-ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN <<ENDSSH
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
   $CMD
 ENDSSH
 

@@ -1,18 +1,15 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]
+if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./install-sw.sh user address"
+  echo "Usage: ./install-sw.sh address"
   exit 1
 fi
 
-echo "$0 $1"
-
 DIR=$(dirname $0)
-BLKDEV=/dev/sda4
+source $DIR/env.sh
 
-LOGIN=$1
-SSHCMD=$1@$2
+SSHCMD=$LOGIN@$2
 
 # Set up a few directories, and prepare to scp the aws secrets.
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH

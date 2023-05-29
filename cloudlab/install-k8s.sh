@@ -2,15 +2,15 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: $0 user@address"
+  echo "Usage: $0 address"
   exit 1
 fi
-DIR=$(dirname $0)
 
-. $DIR/config
+DIR=$(dirname $0)
+source $DIR/env.sh
 
 echo "Installing kubernetes components"
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
+ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
   bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
   bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
   bash -c "sudo apt update"

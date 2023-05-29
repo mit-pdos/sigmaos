@@ -1,13 +1,11 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 username [--n N] [--parallel]" 1>&2
+  echo "Usage: $0 [--n N] [--parallel]" 1>&2
 }
 
 N_VM=""
 PARALLEL=""
-LOGIN=$1
-shift
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -42,6 +40,7 @@ if [ $# -gt 0 ]; then
 fi
 
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 vma=($vms)

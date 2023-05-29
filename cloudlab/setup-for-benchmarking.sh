@@ -2,17 +2,14 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: $0 user@address"
+  echo "Usage: $0 address"
   exit 1
 fi
 
-echo "$0 $1"
-
 DIR=$(dirname $0)
+source $DIR/env.sh
 
-. $DIR/config
-
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
+ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
 # Turn off turbo boost.
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 

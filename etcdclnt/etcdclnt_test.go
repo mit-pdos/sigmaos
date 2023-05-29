@@ -15,7 +15,6 @@ import (
 
 	"sigmaos/groupmgr"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -99,25 +98,6 @@ func TestEtcdLeader(t *testing.T) {
 
 }
 
-func waitNamed(ts *test.Tstate, t *testing.T) {
-	cont := true
-	for cont {
-		sts, err := ts.GetDir(sp.NAMED)
-		assert.Nil(t, err)
-		for _, st := range sts {
-			if st.Name == "namedv1" {
-				log.Printf("namedv1 %v\n", st)
-				cont = false
-			}
-		}
-		if cont {
-			time.Sleep(1 * time.Second)
-		}
-	}
-	mnt1, err := ts.ReadMount(sp.NAMEDV1)
-	log.Printf("read mount err %v %v\n", err, mnt1)
-}
-
 func startNamed(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 	crash := 1
 	crashinterval := 0
@@ -132,7 +112,6 @@ func TestGetNamed(t *testing.T) {
 	// wait until kernel-started named exited and its lease expired
 	time.Sleep((SessionTTL + 1) * time.Second)
 
-	waitNamed(ts, t)
 	err := GetNamed()
 	assert.Nil(t, err)
 

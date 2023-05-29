@@ -2,18 +2,16 @@
 
 if [ "$#" -ne 3 ]
 then
-  echo "Usage: $0 user address blkdev"
+  echo "Usage: $0 address"
   exit 1
 fi
 
-LOGIN=$1
-SSHCMD="$1@$2"
-
 DIR=$(dirname $0)
-BLKDEV=$3
-KERNEL=6.1.24
+source $DIR/env.sh
 
-. $DIR/config
+SSHCMD="$LOGIN@$1"
+
+KERNEL=6.1.24
 
 # Set up bash as the primary shell
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
@@ -28,8 +26,20 @@ sudo mkdir /var/local/$LOGIN
 sudo chown $LOGIN /var/local/$LOGIN
 
 sudo blkid $BLKDEV | cut -d \" -f2
-echo -e UUID=$(sudo blkid $BLKDEV | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
+ENDSSH
 
+# Use envsubst to ensure the "sudo blkid ...." isn't run locally, but rather is
+# run on the remote machine.
+CMD=$(
+envsubst '$BLKDEV' <<'ENDSSH'
+  echo -e UUID=$(sudo blkid $BLKDEV | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
+ENDSSH
+)
+ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN <<ENDSSH
+  $CMD
+ENDSSH
+
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 # Set max journal size
 sudo journalctl --vacuum-size=100M
 
@@ -57,16 +67,17 @@ cd /var/local/$LOGIN
 #INSTALL_MOD_STRIP=1 sudo make modules_install -j$(nproc)
 #INSTALL_MOD_STRIP=1 sudo make install -j$(nproc)
 #sudo reboot
+ENDSSH
 
+# Run in heredoc without variable expansion to ensure $(uname -r) isn't run on
+# the local machine.
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<"ENDSSH"
 sudo apt update
 sudo apt install -y linux-tools-$(uname -r)
+ENDSSH
 
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 # Disable automatic frequency-scaling and switch off cstates
 sudo sed -i s/GRUB_CMDLINE_LINUX_DEFAULT=\"\"/GRUB_CMDLINE_LINUX_DEFAULT=\"intel_pstate=passive intel_idle.max_cstate=0\"/g  /etc/default/grub
 sudo update-grub
 ENDSSH
-
-echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh $1"
-echo "============================="
-

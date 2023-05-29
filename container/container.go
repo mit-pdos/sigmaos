@@ -34,7 +34,6 @@ type Container struct {
 func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	c.setCPUShares(cpu)
-	db.DPrintf(db.ALWAYS, "Set CPU shares: %v, got %v, lat %v", cpu, c.getCPUShares(), time.Since(s))
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
 	return nil
 }

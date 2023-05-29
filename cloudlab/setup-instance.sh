@@ -9,7 +9,7 @@ fi
 DIR=$(dirname $0)
 source $DIR/env.sh
 
-SSHCMD=$LOGIN@$2
+SSHCMD=$LOGIN@$1
 
 # Set up a few directories, and prepare to scp the aws secrets.
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH

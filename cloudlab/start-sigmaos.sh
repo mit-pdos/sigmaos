@@ -65,7 +65,7 @@ vms=`cat servers.txt | cut -d " " -f2`
 
 vma=($vms)
 MAIN="${vma[0]}"
-MAIN_PRIVADDR=$(./leader-ip.sh $LOGIN)
+MAIN_PRIVADDR=$(./leader-ip.sh)
 SIGMANAMED="${vma[0]}:1111"
 IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
@@ -75,7 +75,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh $LOGIN --parallel
+  ./update-repo.sh --parallel
 fi
 
 vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)

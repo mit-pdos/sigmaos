@@ -17,32 +17,26 @@ import (
 	"sigmaos/port"
 )
 
+const (
+	CGROUP_PATH_BASE = "/cgroup/system.slice"
+)
+
 type Container struct {
 	*port.PortMap
 	ctx          context.Context
 	cli          *client.Client
 	container    string
+	cgroupPath   string
 	ip           string
-	membytes     int64
-	memswap      int64
 	prevCPUStats *types.CPUStats
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
-	resp, err := c.cli.ContainerUpdate(c.ctx, c.container,
-		container.UpdateConfig{
-			Resources: container.Resources{
-				CPUShares:  cpu,
-				Memory:     c.membytes,
-				MemorySwap: c.memswap,
-			},
-		})
-	if len(resp.Warnings) > 0 {
-		db.DPrintf(db.ALWAYS, "Set CPU shares warnings: %v", resp.Warnings)
-	}
+	c.setCPUShares(cpu)
+	db.DPrintf(db.ALWAYS, "Set CPU shares: %v, got %v, lat %v", cpu, c.getCPUShares(), time.Since(s))
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
-	return err
+	return nil
 }
 
 func (c *Container) GetCPUUtil() (float64, error) {

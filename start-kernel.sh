@@ -104,6 +104,7 @@ fi
 # our case where kernel is trusted.
 CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
+             --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\

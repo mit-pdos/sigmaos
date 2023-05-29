@@ -76,7 +76,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
-	db.DPrintf(db.NAMEDV1, "Create %v dir: %v v %v p %v\n", d, dir, v, path)
+	db.DPrintf(db.NAMEDV1, "Create %v in %v dir: %v v %v p %v\n", name, d, dir, v, path)
 	dir.Ents = append(dir.Ents, &DirEnt{Name: name, Path: uint64(path)})
 	obj, err := addObj(pn, d.Obj.path, dir, v, path, perm)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/etcdclnt"
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -105,24 +106,8 @@ func (o *Obj) stat() *sp.Stat {
 	return st
 }
 
-func getFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
-	resp, err := nd.clnt.Get(context.TODO(), path2key(p))
-	if err != nil {
-		return nil, 0, serr.MkErrError(err)
-	}
-	db.DPrintf(db.NAMEDV1, "getObj %v %v\n", path2key(p), resp)
-	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.MkErr(serr.TErrNotfound, p)
-	}
-	nf := &NamedFile{}
-	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
-		return nil, 0, serr.MkErrError(err)
-	}
-	return nf, sp.TQversion(resp.Kvs[0].Version), nil
-}
-
 func getObj(pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
-	nf, v, err := getFile(path)
+	nf, v, err := etcdclnt.GetFile(nd.clnt, path)
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +116,11 @@ func getObj(pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err
 }
 
 func mkRootDir() *serr.Err {
-	b, r := marshalObj(sp.DMDIR, ROOT)
+	b, r := marshalObj(sp.DMDIR, etcdclnt.ROOT)
 	if r != nil {
 		return r
 	}
-	resp, err := nd.clnt.Put(context.TODO(), path2key(ROOT), string(b))
+	resp, err := nd.clnt.Put(context.TODO(), path2key(etcdclnt.ROOT), string(b))
 	if err != nil {
 		return serr.MkErrError(err)
 	}
@@ -143,40 +128,19 @@ func mkRootDir() *serr.Err {
 	return nil
 }
 
-func marshalDir(dir *NamedDir) ([]byte, *serr.Err) {
-	d, err := proto.Marshal(dir)
-	if err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	nfd := &NamedFile{Perm: uint32(sp.DMDIR), Data: d}
-	b, err := proto.Marshal(nfd)
-	if err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	return b, nil
-}
-
-func unmarshalDir(b []byte) (*NamedDir, *serr.Err) {
-	dir := &NamedDir{}
-	if err := proto.Unmarshal(b, dir); err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	return dir, nil
-}
-
 // Marshal empty file or directory
 func marshalObj(perm sp.Tperm, path sessp.Tpath) ([]byte, *serr.Err) {
 	var fdata []byte
 	if perm.IsDir() {
-		nd := &NamedDir{}
-		nd.Ents = append(nd.Ents, &DirEnt{Name: ".", Path: uint64(path)})
+		nd := &etcdclnt.NamedDir{}
+		nd.Ents = append(nd.Ents, &etcdclnt.DirEnt{Name: ".", Path: uint64(path)})
 		d, err := proto.Marshal(nd)
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
 		fdata = d
 	}
-	nf := &NamedFile{Perm: uint32(perm), Data: fdata}
+	nf := &etcdclnt.NamedFile{Perm: uint32(perm), Data: fdata}
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -185,12 +149,12 @@ func marshalObj(perm sp.Tperm, path sessp.Tpath) ([]byte, *serr.Err) {
 }
 
 // XXX retry
-func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp.Tpath, perm sp.Tperm) (*Obj, *serr.Err) {
+func addObj(pn path.Path, dp sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, p sessp.Tpath, perm sp.Tperm) (*Obj, *serr.Err) {
 	b, r := marshalObj(perm, p)
 	if r != nil {
 		return nil, r
 	}
-	d1, r := marshalDir(dir)
+	d1, r := etcdclnt.MarshalDir(dir)
 	if r != nil {
 		return nil, r
 	}
@@ -213,8 +177,8 @@ func addObj(pn path.Path, dp sessp.Tpath, dir *NamedDir, v sp.TQversion, p sessp
 	return makeObj(pn, perm, 0, p, dp, nil), nil
 }
 
-func rmObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := marshalDir(dir)
+func rmObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := etcdclnt.MarshalDir(dir)
 	if r != nil {
 		return r
 	}
@@ -237,8 +201,8 @@ func rmObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.
 }
 
 // XXX retry
-func mvObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := marshalDir(dir)
+func mvObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := etcdclnt.MarshalDir(dir)
 	if r != nil {
 		return r
 	}
@@ -269,12 +233,12 @@ func mvObj(d sessp.Tpath, dir *NamedDir, v sp.TQversion, del sessp.Tpath) *serr.
 }
 
 // XXX retry
-func mvObjat(df sessp.Tpath, dirf *NamedDir, vf sp.TQversion, dt sessp.Tpath, dirt *NamedDir, vt sp.TQversion, del sessp.Tpath) *serr.Err {
-	bf, r := marshalDir(dirf)
+func mvObjat(df sessp.Tpath, dirf *etcdclnt.NamedDir, vf sp.TQversion, dt sessp.Tpath, dirt *etcdclnt.NamedDir, vt sp.TQversion, del sessp.Tpath) *serr.Err {
+	bf, r := etcdclnt.MarshalDir(dirf)
 	if r != nil {
 		return r
 	}
-	bt, r := marshalDir(dirt)
+	bt, r := etcdclnt.MarshalDir(dirt)
 	if r != nil {
 		return r
 	}
@@ -312,29 +276,7 @@ func mvObjat(df sessp.Tpath, dirf *NamedDir, vf sp.TQversion, dt sessp.Tpath, di
 	return nil
 }
 
-func readDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "readDir %v\n", p)
-	nf, v, err := getFile(p)
-	if err != nil {
-		return nil, 0, err
-	}
-	dir, err := unmarshalDir(nf.Data)
-	if err != nil {
-		return nil, 0, err
-	}
-	return dir, v, nil
-}
-
 func (o *Obj) putObj() *serr.Err {
-	ns := &NamedFile{Perm: uint32(o.perm), Data: o.data}
-	if b, err := proto.Marshal(ns); err != nil {
-		return serr.MkErrError(err)
-	} else {
-		resp, err := nd.clnt.Put(context.TODO(), path2key(o.path), string(b))
-		if err != nil {
-			return serr.MkErrError(err)
-		}
-		db.DPrintf(db.NAMEDV1, "putObj %v\n", resp)
-		return nil
-	}
+	nf := &etcdclnt.NamedFile{Perm: uint32(o.perm), Data: o.data}
+	return etcdclnt.PutFile(nd.clnt, o.path, nf)
 }

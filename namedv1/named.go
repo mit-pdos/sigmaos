@@ -13,16 +13,12 @@ import (
 	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	"sigmaos/etcdclnt"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	dialTimeout = 5 * time.Second
-	sessionTTL  = 5
 )
 
 var (
@@ -66,13 +62,13 @@ func Run(args []string) error {
 
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
-		DialTimeout: dialTimeout,
+		DialTimeout: etcdclnt.DialTimeout,
 	})
 	if err != nil {
 		db.DFatalf("Error clientv3 %v\n", err)
 	}
 	nd.clnt = cli
-	s, err := concurrency.NewSession(cli, concurrency.WithTTL(sessionTTL))
+	s, err := concurrency.NewSession(cli, concurrency.WithTTL(etcdclnt.SessionTTL))
 	if err != nil {
 		db.DFatalf("Error sess %v\n", err)
 	}
@@ -100,14 +96,21 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
 
-	root := rootDir()
+	root := rootDir(cli)
 	srv, err := fslibsrv.MakeReplServer(root, ip+":0", sp.NAMEDV1, "namedv1", nil)
 	if err != nil {
-		db.DFatalf("Error MakeMemFs: %v", err)
+		db.DFatalf("MakeReplServer err %v", err)
 	}
 	nd.SessSrv = srv
 
-	db.DPrintf(db.NAMEDV1, "leader %v\n", srv.MyAddr())
+	mnt, err := sc.ReadMount(sp.NAMEDV1)
+	if err != nil {
+		db.DFatalf("ReadMount: %v", err)
+	}
+
+	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
+
+	etcdclnt.SetNamed(cli, mnt)
 
 	if bootNamed {
 		go nd.exit(ch)

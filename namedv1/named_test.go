@@ -2,7 +2,6 @@ package namedv1
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"path"
@@ -17,51 +16,10 @@ import (
 
 	"sigmaos/groupmgr"
 	rd "sigmaos/rand"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
-
-func TestEtcdLs(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: dialTimeout,
-	})
-	resp, err := cli.Get(context.TODO(), "\000", clientv3.WithRange("\000"), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
-	assert.Nil(t, err)
-	log.Printf("resp %v\n", resp)
-	for _, ev := range resp.Kvs {
-		fmt.Printf("%s : %s\n", ev.Key, ev.Value)
-	}
-}
-
-func TestEtcdDelAll(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: dialTimeout,
-	})
-	resp, err := cli.Delete(context.TODO(), "\000", clientv3.WithRange("\000"))
-	assert.Nil(t, err)
-	log.Printf("resp %v\n", resp)
-}
-
-func TestEtcdLeader(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: dialTimeout,
-	})
-	defer cli.Close()
-	var s *concurrency.Session
-	s, err = concurrency.NewSession(cli)
-	assert.Nil(t, err)
-	defer s.Close()
-
-	assert.Nil(t, err)
-	e := concurrency.NewElection(s, "/leader-election/")
-	err = e.Campaign(context.Background(), "0")
-	assert.Nil(t, err)
-}
 
 type Tstate struct {
 	job string
@@ -81,53 +39,47 @@ func startNamed(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, job, 0, crash, crashinterval, 0, 0)
 }
 
-func TestNamedLeader(t *testing.T) {
+func TestNamedWalk(t *testing.T) {
 	ts := makeTstate(t)
 
-	// give kernel-started named time to start
-	time.Sleep(1 * time.Second)
+	pn := sp.NAMEDV1 + "/"
+
+	ts.waitNamed(t)
+
+	d := []byte("hello")
+	_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
+	assert.Nil(t, err)
 
 	ndg := startNamed(ts.SigmaClnt, ts.job)
 
 	// wait until kernel-started named exited and its lease expired
-	time.Sleep(6 * time.Second)
+	time.Sleep((etcclnt.SessionTTL + 1) * time.Second)
+	ts.waitNamed(t)
 
-	pn := sp.NAMEDV1 + "/"
-	for i := 0; i < 30; i++ {
-		log.Printf("put %v %d\n", path.Join(pn, "f"), i)
-		d := []byte("iter-" + strconv.Itoa(i))
-		for {
-			_, err := ts.PutFile(path.Join(pn, "f"), 0777, sp.OWRITE, d)
-			var sr *serr.Err
-			if errors.As(err, &sr) && sr.IsErrUnavailable() {
-				log.Printf("retry err %v\n", err)
-				time.Sleep(1 * time.Second)
-			} else {
-				log.Printf("err %v\n", err)
-				assert.Nil(t, err)
-				break
-			}
+	start := time.Now()
+	for time.Since(start) < 10*time.Second {
+		d1, err := ts.GetFile(path.Join(pn, "f"))
+		if err != nil {
+			log.Printf("err %v\n", err)
+			assert.Nil(t, err)
+			break
 		}
-
-		for {
-			d1, err := ts.GetFile(path.Join(pn, "f"))
-			var sr *serr.Err
-			if errors.As(err, &sr) && sr.IsErrUnavailable() {
-				log.Printf("retry err %v\n", err)
-			} else {
-				log.Printf("err %v\n", err)
-				log.Printf("err %v\n", err)
-				assert.Nil(t, err)
-				assert.Equal(t, d, d1)
-				break
-			}
-		}
-
-		time.Sleep(1)
+		assert.Equal(t, d, d1)
 	}
 
-	err := ts.Remove(path.Join(pn, "f"))
-	assert.Nil(t, err)
+	log.Printf("remove f\n")
+
+	mnt1, err := ts.ReadMount(sp.NAMEDV1)
+	log.Printf("read mount err %v %v\n", err, mnt1)
+
+	for {
+		err := ts.Remove(path.Join(pn, "f"))
+		if err == nil {
+			break
+		}
+		log.Printf("remove f retry\n")
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	ndg.Stop()
 

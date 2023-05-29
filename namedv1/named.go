@@ -107,6 +107,8 @@ func Run(args []string) error {
 	}
 	nd.SessSrv = srv
 
+	db.DPrintf(db.NAMEDV1, "leader %v\n", srv.MyAddr())
+
 	if bootNamed {
 		go nd.exit(ch)
 	} else if nd.crash > 0 {

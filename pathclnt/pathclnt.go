@@ -349,10 +349,10 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 	}
 	// Optimistcally GetFile without doing a pathname
 	// walk; this may fail if rest contains an automount
-	// symlink.
+	// symlink or if server is unreachable.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
 	if err != nil {
-		if err.IsMaybeSpecialElem() {
+		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			fid, err = pathc.WalkPath(p, path.EndSlash(pn), nil)
 			if err != nil {
 				return nil, err
@@ -379,7 +379,7 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 	}
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount
-	// symlink.
+	// symlink or if server is unreachable.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
 	if err != nil {
 		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {

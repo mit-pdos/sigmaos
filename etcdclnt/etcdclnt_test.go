@@ -155,8 +155,8 @@ func makeTstate(t *testing.T) *Tstate {
 
 func TestNamedWalk(t *testing.T) {
 	crash := 1
-	// crashinterval := 200
-	crashinterval := 0
+	crashinterval := 200
+	// crashinterval := 0
 
 	ts := makeTstate(t)
 
@@ -172,6 +172,7 @@ func TestNamedWalk(t *testing.T) {
 	time.Sleep((etcdclnt.SessionTTL + 2) * time.Second)
 
 	start := time.Now()
+	i := 0
 	for time.Since(start) < 10*time.Second {
 		d1, err := ts.GetFile(path.Join(pn, "testf"))
 		if err != nil {
@@ -180,9 +181,10 @@ func TestNamedWalk(t *testing.T) {
 			break
 		}
 		assert.Equal(t, d, d1)
+		i += 1
 	}
 
-	log.Printf("remove testf\n")
+	log.Printf("#getfile %d\n", i)
 
 	for {
 		err := ts.Remove(path.Join(pn, "testf"))

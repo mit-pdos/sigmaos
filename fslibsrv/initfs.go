@@ -21,13 +21,8 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(root fs.Dir, addr, name string) (*sesssrv.SessSrv, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
-	if err != nil {
-		return nil, err
-	}
-	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil)
-	return srv, nil
+func BootSrv(root fs.Dir, addr, name string, sc *sigmaclnt.SigmaClnt) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil)
 }
 
 func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {

@@ -96,18 +96,19 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
 	root := rootDir(cli)
-	srv, err := fslibsrv.BootSrv(root, ip+":0", "namedv1")
-	if err != nil {
+	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", sc)
+	if srv == nil {
 		db.DFatalf("MakeReplServer err %v", err)
 	}
 	nd.SessSrv = srv
 
 	mnt := sp.MkMountServer(srv.MyAddr())
+
+	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
+
 	if err := etcdclnt.SetNamed(cli, mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
-
-	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
 
 	if bootNamed {
 		go nd.exit(ch)
@@ -116,6 +117,8 @@ func Run(args []string) error {
 	}
 
 	<-ch
+
+	db.DPrintf(db.NAMEDV1, "leader %v done\n", mnt)
 
 	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
 

@@ -28,16 +28,17 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *serr.Err) {
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for {
+		pathc.mountNamed(path)
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && err.IsErrUnreachable() {
 			done := len(path1) - len(left)
-			db.DPrintf(db.WALK, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			db.DPrintf(db.ALWAYS, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
 			if e := pathc.umountFree(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
 			// try again
-			db.DPrintf(db.WALK, "walkPathUmount: try again p %v r %v\n", path, resolve)
+			db.DPrintf(db.ALWAYS, "walkPathUmount: try again p %v r %v\n", path, resolve)
 			continue
 		}
 		if err != nil {

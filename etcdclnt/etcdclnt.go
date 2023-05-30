@@ -7,6 +7,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -20,10 +21,10 @@ var (
 	Endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
 )
 
-func SetNamed(cli *clientv3.Client, mnt sp.Tmount) error {
+func SetNamed(cli *clientv3.Client, mnt sp.Tmount) *serr.Err {
 	d, err := mnt.Marshal()
 	if err != nil {
-		return err
+		return serr.MkErrError(err)
 	}
 	nf := &NamedFile{Perm: uint32(sp.DMSYMLINK), Data: d}
 	if err := PutFile(cli, sessp.Tpath(BOOT), nf); err != nil {
@@ -33,13 +34,13 @@ func SetNamed(cli *clientv3.Client, mnt sp.Tmount) error {
 	return nil
 }
 
-func GetNamed() (sp.Tmount, error) {
+func GetNamed() (sp.Tmount, *serr.Err) {
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   Endpoints,
 		DialTimeout: DialTimeout,
 	})
 	if err != nil {
-		return sp.Tmount{}, err
+		return sp.Tmount{}, serr.MkErrError(err)
 	}
 	defer cli.Close()
 	nf, _, sr := GetFile(cli, sessp.Tpath(BOOT))

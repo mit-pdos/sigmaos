@@ -127,12 +127,16 @@ func TestBootNamed(t *testing.T) {
 	ndg := startNamed(ts.SigmaClnt, "xxx")
 
 	// wait until kernel-started named exited and its lease expired
-	time.Sleep((etcdclnt.SessionTTL + 1) * time.Second)
+	time.Sleep((etcdclnt.SessionTTL + 2) * time.Second)
 
 	mnt, err := etcdclnt.GetNamed()
 	assert.Nil(t, err)
 
 	log.Printf("mnt %v\n", mnt)
+
+	sts, err1 := ts.GetDir(sp.NAMEDV1 + "/")
+	assert.Nil(t, err1)
+	log.Printf("named %v\n", sp.Names(sts))
 
 	ndg.Stop()
 

@@ -76,7 +76,7 @@ func PutFile(cli *clientv3.Client, p sessp.Tpath, nf *NamedFile) *serr.Err {
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-		db.DPrintf(db.NAMEDV1, "putObj %v\n", resp)
+		db.DPrintf(db.NAMEDV1, "PutFile %v %v %v\n", p, nf, resp)
 		return nil
 	}
 }

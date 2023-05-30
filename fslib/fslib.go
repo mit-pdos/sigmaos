@@ -2,7 +2,6 @@ package fslib
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/etcdclnt"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -19,16 +18,6 @@ func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
 	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, lip, sessp.Tsize(10_000_000)), realm, addrs}
 	if err := fl.MountTree(addrs, "", sp.NAME); err != nil {
-		return nil, err
-	}
-	mnt, err := etcdclnt.GetNamed()
-	if err != nil {
-		// ignore error for now
-		db.DPrintf(db.NAMEDV1, "GetNamed err %v\n", err)
-		return fl, nil
-	}
-	db.DPrintf(db.NAMEDV1, "GetNamed mnt %v err %v\n", mnt, err)
-	if err := fl.MountTree(mnt.Addr, "", sp.NAMEDV1); err != nil {
 		return nil, err
 	}
 	return fl, nil

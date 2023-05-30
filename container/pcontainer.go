@@ -116,7 +116,7 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
-	db.DPrintf(db.ALWAYS, "Container ID %v", json.ID)
+	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
 	pm := port.MakePortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
 

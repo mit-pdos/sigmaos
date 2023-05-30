@@ -63,7 +63,7 @@ func (pathc *PathClnt) Mounts() []string {
 
 func (pathc *PathClnt) LastMount(pn string) (string, path.Path, error) {
 	p := path.Split(pn)
-	_, left, err := pathc.mnt.resolve(p, path.EndSlash(pn))
+	_, left, err := pathc.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
 		return "", nil, err
@@ -237,7 +237,7 @@ func (pathc *PathClnt) umountFree(path []string) *serr.Err {
 func (pathc *PathClnt) Remove(name string) error {
 	db.DPrintf(db.PATHCLNT, "Remove %v\n", name)
 	pn := path.Split(name)
-	fid, rest, err := pathc.mnt.resolve(pn, path.EndSlash(name))
+	fid, rest, err := pathc.resolve(pn, path.EndSlash(name))
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (pathc *PathClnt) Stat(name string) (*sp.Stat, error) {
 	db.DPrintf(db.PATHCLNT, "Stat %v\n", name)
 	pn := path.Split(name)
 	// XXX ignore err?
-	target, rest, _ := pathc.mnt.resolve(pn, true)
+	target, rest, _ := pathc.resolve(pn, true)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
 		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
@@ -343,7 +343,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, w Watch) error {
 func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
+	fid, rest, err := pathc.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (pathc *PathClnt) GetFile(pn string, mode sp.Tmode, off sp.Toffset, cnt ses
 func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
 	p := path.Split(pn)
-	fid, rest, err := pathc.mnt.resolve(p, path.EndSlash(pn))
+	fid, rest, err := pathc.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		return 0, err
 	}
@@ -405,4 +405,9 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 		}
 	}
 	return cnt, nil
+}
+
+func (pathc *PathClnt) resolve(p path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+	pathc.mountNamed(p)
+	return pathc.mnt.resolve(p, resolve)
 }

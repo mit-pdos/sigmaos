@@ -11,9 +11,9 @@ import (
 )
 
 func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
-	db.DPrintf(db.NAMEDV1, "mountNamed: %v\n", p)
 	_, rest, err := pathc.mnt.resolve(p, false)
 	if err != nil && len(rest) >= 1 && rest[0] == sp.NAMEDV1 {
+		db.DPrintf(db.NAMEDV1, "mountNamed: %v\n", p)
 		mnt, err := etcdclnt.GetNamed()
 		if err != nil {
 			db.DPrintf(db.NAMEDV1, "mountNamed: GetNamed err %v\n", err)

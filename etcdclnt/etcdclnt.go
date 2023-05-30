@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
+	Endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
 )
 
 func SetNamed(cli *clientv3.Client, mnt sp.Tmount) error {
@@ -26,30 +26,32 @@ func SetNamed(cli *clientv3.Client, mnt sp.Tmount) error {
 		return err
 	}
 	nf := &NamedFile{Perm: uint32(sp.DMSYMLINK), Data: d}
-	sr := PutFile(cli, sessp.Tpath(BOOT), nf)
-	if sr != nil {
-		return sr
+	if err := PutFile(cli, sessp.Tpath(BOOT), nf); err != nil {
+		db.DPrintf(db.NAMEDV1, "SetNamed %v err %v\n", BOOT, err)
+		return err
 	}
 	return nil
 }
 
-func GetNamed() error {
+func GetNamed() (sp.Tmount, error) {
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
+		Endpoints:   Endpoints,
 		DialTimeout: DialTimeout,
 	})
 	if err != nil {
-		db.DFatalf("clientv3.New err %v\n", err)
+		return sp.Tmount{}, err
 	}
 	defer cli.Close()
 	nf, _, sr := GetFile(cli, sessp.Tpath(BOOT))
 	if sr != nil {
-		db.DFatalf("ReadFile %v err %v\n", BOOT, sr)
+		db.DPrintf(db.NAMEDV1, "GetFile %v %v err %v\n", BOOT, nf, sr)
+		return sp.Tmount{}, sr
 	}
 	mnt, sr := sp.MkMount(nf.Data)
 	if sr != nil {
-		db.DFatalf("MkMount %v err %v\n", BOOT, sr)
+		db.DPrintf(db.NAMEDV1, "MkMount %v err %v\n", BOOT, err)
+		return sp.Tmount{}, sr
 	}
-	log.Printf("mnt %v\n", mnt)
-	return nil
+	log.Printf("GetNamed mnt %v\n", mnt)
+	return mnt, nil
 }

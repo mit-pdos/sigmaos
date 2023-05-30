@@ -64,6 +64,7 @@ func GetFile(cli *clientv3.Client, p sessp.Tpath) (*NamedFile, sp.TQversion, *se
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
+	db.DPrintf(db.NAMEDV1, "GetFile %v %v\n", path2key(p), nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
@@ -75,7 +76,7 @@ func PutFile(cli *clientv3.Client, p sessp.Tpath, nf *NamedFile) *serr.Err {
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-		db.DPrintf(db.NAMEDV1, "PutFile %v\n", resp)
+		db.DPrintf(db.NAMEDV1, "putObj %v\n", resp)
 		return nil
 	}
 }

@@ -37,7 +37,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	var err error
 	var ss *Subsystem
 	switch s {
-	case sp.NAMEDV1REL:
+	case sp.NAMEDV1:
 		ss, err = k.bootNamedv1()
 	case sp.S3REL:
 		ss, err = k.bootS3d()

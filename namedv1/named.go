@@ -95,22 +95,19 @@ func Run(args []string) error {
 	}
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
-
 	root := rootDir(cli)
-	srv, err := fslibsrv.MakeReplServer(root, ip+":0", sp.NAMEDV1, "namedv1", nil)
+	srv, err := fslibsrv.BootSrv(root, ip+":0", "namedv1")
 	if err != nil {
 		db.DFatalf("MakeReplServer err %v", err)
 	}
 	nd.SessSrv = srv
 
-	mnt, err := sc.ReadMount(sp.NAMEDV1)
-	if err != nil {
-		db.DFatalf("ReadMount: %v", err)
+	mnt := sp.MkMountServer(srv.MyAddr())
+	if err := etcdclnt.SetNamed(cli, mnt); err != nil {
+		db.DFatalf("SetNamed: %v", err)
 	}
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
-
-	etcdclnt.SetNamed(cli, mnt)
 
 	if bootNamed {
 		go nd.exit(ch)

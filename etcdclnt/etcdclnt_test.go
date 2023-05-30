@@ -1,4 +1,4 @@
-package etcdclnt
+package etcdclnt_test
 
 import (
 	"context"
@@ -13,15 +13,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/etcdclnt"
 	"sigmaos/groupmgr"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 func TestEtcdLs(t *testing.T) {
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: DialTimeout,
+		Endpoints:   etcdclnt.Endpoints,
+		DialTimeout: etcdclnt.DialTimeout,
 	})
 	resp, err := cli.Get(context.TODO(), "\000", clientv3.WithRange("\000"), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
 	assert.Nil(t, err)
@@ -33,8 +35,8 @@ func TestEtcdLs(t *testing.T) {
 
 func TestEtcdDelAll(t *testing.T) {
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: DialTimeout,
+		Endpoints:   etcdclnt.Endpoints,
+		DialTimeout: etcdclnt.DialTimeout,
 	})
 	resp, err := cli.Delete(context.TODO(), "\000", clientv3.WithRange("\000"))
 	assert.Nil(t, err)
@@ -43,8 +45,8 @@ func TestEtcdDelAll(t *testing.T) {
 
 func leader(ch chan struct{}, i int) {
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: DialTimeout,
+		Endpoints:   etcdclnt.Endpoints,
+		DialTimeout: etcdclnt.DialTimeout,
 	})
 	if err != nil {
 		log.Fatalf("new %v\n", err)
@@ -52,7 +54,7 @@ func leader(ch chan struct{}, i int) {
 	defer cli.Close()
 
 	var s *concurrency.Session
-	s, err = concurrency.NewSession(cli, concurrency.WithTTL(SessionTTL))
+	s, err = concurrency.NewSession(cli, concurrency.WithTTL(etcdclnt.SessionTTL))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,7 +79,7 @@ func leader(ch chan struct{}, i int) {
 
 	log.Printf("Leader %d:%v\n", i, leader)
 
-	time.Sleep((SessionTTL + 1) * time.Second)
+	time.Sleep((etcdclnt.SessionTTL + 1) * time.Second)
 
 	ch <- struct{}{}
 
@@ -98,22 +100,39 @@ func TestEtcdLeader(t *testing.T) {
 
 }
 
+func TestBootKey(t *testing.T) {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   etcdclnt.Endpoints,
+		DialTimeout: etcdclnt.DialTimeout,
+	})
+	assert.Nil(t, err)
+	defer cli.Close()
+	mnt := sp.Tmount{Root: "x"}
+	err = etcdclnt.SetNamed(cli, mnt)
+	assert.Nil(t, err)
+	mnt1, err := etcdclnt.GetNamed()
+	assert.Nil(t, err)
+	assert.Equal(t, mnt.Root, mnt1.Root)
+}
+
 func startNamed(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
 	crash := 1
 	crashinterval := 0
 	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, job, 0, crash, crashinterval, 0, 0)
 }
 
-func TestGetNamed(t *testing.T) {
+func TestBootNamed(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	ndg := startNamed(ts.SigmaClnt, "xxx")
 
 	// wait until kernel-started named exited and its lease expired
-	time.Sleep((SessionTTL + 1) * time.Second)
+	time.Sleep((etcdclnt.SessionTTL + 1) * time.Second)
 
-	err := GetNamed()
+	mnt, err := etcdclnt.GetNamed()
 	assert.Nil(t, err)
+
+	log.Printf("mnt %v\n", mnt)
 
 	ndg.Stop()
 

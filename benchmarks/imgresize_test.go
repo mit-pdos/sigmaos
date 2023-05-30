@@ -68,3 +68,9 @@ func (ji *ImgResizeJobInstance) Wait() {
 	ji.imgd.Wait()
 	db.DPrintf(db.TEST, "Imgd shutdown")
 }
+
+func (ji *ImgResizeJobInstance) Cleanup() {
+	dir := path.Join(sp.S3, "~local", path.Dir(ji.input))
+	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
+	imgresized.Cleanup(ji.FsLib, dir)
+}

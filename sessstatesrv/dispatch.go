@@ -104,6 +104,11 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		reply := &sp.Rread{}
 		data, err := s.protsrv.WriteRead(req, data, reply)
 		return reply, data, false, err
+	case *sp.Texercisethree:
+		db.DPrintf(db.TEST, "Exercise Three Reached the Server!!")
+		reply := &sp.Rexercisethree{}
+		s.protsrv.ExerciseThree(data)
+		return reply, nil, false, nil
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
 		return nil, nil, false, sp.MkRerror(serr.MkErr(serr.TErrUnknownMsg, msg))

@@ -159,6 +159,19 @@ func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmo
 	return fid, nil
 }
 
+func (fidc *FidClnt) ExerciseThree(fid sp.Tfid, data []byte) *serr.Err {
+	ch := fidc.fids.lookup(fid)
+	if ch == nil {
+		return serr.MkErr(serr.TErrUnreachable, "exercisethree")
+	}
+	err := ch.pc.ExerciseThree(fid, data)
+	if err != nil {
+		db.DPrintf(db.TEST, "FidClnt CHeck 4 %v", err)
+		return err
+	}
+	return nil
+}
+
 func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	reply, err := fidc.fids.lookup(fid).pc.Open(fid, mode)
 	if err != nil {

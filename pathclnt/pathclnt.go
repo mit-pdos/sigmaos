@@ -170,6 +170,17 @@ func (pathc *PathClnt) Create(p string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, 
 	return fid, nil
 }
 
+func (pathc *PathClnt) ExerciseThree(pn string, mode sp.Tmode, data []byte) error {
+	db.DPrintf(db.PATHCLNT, "Printing on server %v\n", data)
+	p := path.Split(pn)
+	fid, _, err := pathc.mnt.resolve(p, path.EndSlash(pn))
+	if err != nil {
+		return err
+	}
+	err = pathc.FidClnt.ExerciseThree(fid, data)
+	return err
+}
+
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
 func (pathc *PathClnt) Rename(old string, new string) error {

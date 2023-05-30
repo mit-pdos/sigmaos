@@ -14,6 +14,13 @@ can be installed by running:
 $ sudo apt install docker.io libseccomp-dev mysql-client
 ```
 
+You will need the Docker and AWS credentials on your computer, even for local development,
+to download updated container images. You can install these with:
+
+```
+./install-cred.sh
+```
+
 ## Building SigmaOS Locally
 
 We have two build configurations for SigmaOS: `local` and `aws`. `local` is

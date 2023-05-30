@@ -37,12 +37,6 @@ installed on your computer, so make sure to poke a member of the existing
 development team and tell them to complete their side of the [onboarding
 tasks](./onboarding.md) for you before continuing.
 
-Install the Docker and AWS credentials on your computer with:
-
-```
-./install-cred.sh
-```
-
 When building SigmaOS for remote deployment, we build once locally and upload
 the result. SigmaOS cluster then transparently downloads the latest build
 version. In order to build SigmaOS for remote deployment, you will need to use

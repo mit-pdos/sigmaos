@@ -1,6 +1,7 @@
 package protclnt
 
 import (
+	db "sigmaos/debug"
 	"sync/atomic"
 
 	"sigmaos/path"
@@ -42,10 +43,12 @@ func (clnt *Clnt) ReadSeqNo() sessp.Tseqno {
 func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, data, fence)
 	if err != nil {
+		db.DPrintf(db.TEST, "CallServer Check 2")
 		return nil, err
 	}
 	rmsg, ok := reply.Msg.(*sp.Rerror)
 	if ok {
+		db.DPrintf(db.TEST, "CallServer Check 3")
 		return nil, sp.MkErr(rmsg)
 	}
 	return reply, nil
@@ -141,6 +144,15 @@ func (pclnt *ProtClnt) Remove(fid sp.Tfid) *serr.Err {
 	_, ok := reply.Msg.(*sp.Rremove)
 	if !ok {
 		return serr.MkErr(serr.TErrBadFcall, "Rremove")
+	}
+	return nil
+}
+
+func (pclnt *ProtClnt) ExerciseThree(fid sp.Tfid, data []byte) *serr.Err {
+	args := sp.MkTexercisethree(fid)
+	_, err := pclnt.CallNoFenceData(args, data)
+	if err != nil {
+		return err
 	}
 	return nil
 }

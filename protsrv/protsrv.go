@@ -564,6 +564,11 @@ func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
 }
 
+func (ps *ProtSrv) ExerciseThree(data []byte) *sp.Rerror {
+	db.DPrintf(db.PROTSRV, "Received ExerciseThree Message: %v", string(data))
+	return nil
+}
+
 func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if args.Tcount() > sp.MAXGETSET {
 		return nil, sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))

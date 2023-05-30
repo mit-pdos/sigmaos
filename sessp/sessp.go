@@ -257,6 +257,8 @@ const (
 	TTheartbeat
 	TRheartbeat
 	TTwriteread
+	TTexercisethree
+	TRexercisethree
 )
 
 func (fct Tfcall) String() string {
@@ -352,6 +354,10 @@ func (fct Tfcall) String() string {
 		return "Rheartbeat"
 	case TTwriteread:
 		return "Twriteread"
+	case TTexercisethree:
+		return "TTexercisethree"
+	case TRexercisethree:
+		return "TRexercisethree"
 	default:
 		return "Tunknown"
 	}

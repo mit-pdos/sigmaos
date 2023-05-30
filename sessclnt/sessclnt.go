@@ -173,7 +173,6 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	if c.closed {
 		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
 	}
-
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

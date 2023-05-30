@@ -310,6 +310,10 @@ func (c *Tcreate) Tmode() Tmode {
 	return Tmode(c.Mode)
 }
 
+func MkTexercisethree(fid Tfid) *Texercisethree {
+	return &Texercisethree{Fid: uint32(fid)}
+}
+
 func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion) *TreadV {
 	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v)}
 }
@@ -533,16 +537,18 @@ func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 // sigmaP
 //
 
-func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
-func (TreadV) Type() sessp.Tfcall      { return sessp.TTreadV }
-func (TwriteV) Type() sessp.Tfcall     { return sessp.TTwriteV }
-func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
-func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
-func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }
-func (Tgetfile) Type() sessp.Tfcall    { return sessp.TTgetfile }
-func (Tputfile) Type() sessp.Tfcall    { return sessp.TTputfile }
-func (Tdetach) Type() sessp.Tfcall     { return sessp.TTdetach }
-func (Rdetach) Type() sessp.Tfcall     { return sessp.TRdetach }
-func (Theartbeat) Type() sessp.Tfcall  { return sessp.TTheartbeat }
-func (Rheartbeat) Type() sessp.Tfcall  { return sessp.TRheartbeat }
-func (Twriteread) Type() sessp.Tfcall  { return sessp.TTwriteread }
+func (Rstat) Type() sessp.Tfcall          { return sessp.TRstat }
+func (TreadV) Type() sessp.Tfcall         { return sessp.TTreadV }
+func (TwriteV) Type() sessp.Tfcall        { return sessp.TTwriteV }
+func (Trenameat) Type() sessp.Tfcall      { return sessp.TTrenameat }
+func (Rrenameat) Type() sessp.Tfcall      { return sessp.TRrenameat }
+func (Tremovefile) Type() sessp.Tfcall    { return sessp.TTremovefile }
+func (Tgetfile) Type() sessp.Tfcall       { return sessp.TTgetfile }
+func (Tputfile) Type() sessp.Tfcall       { return sessp.TTputfile }
+func (Tdetach) Type() sessp.Tfcall        { return sessp.TTdetach }
+func (Rdetach) Type() sessp.Tfcall        { return sessp.TRdetach }
+func (Theartbeat) Type() sessp.Tfcall     { return sessp.TTheartbeat }
+func (Rheartbeat) Type() sessp.Tfcall     { return sessp.TRheartbeat }
+func (Twriteread) Type() sessp.Tfcall     { return sessp.TTwriteread }
+func (Texercisethree) Type() sessp.Tfcall { return sessp.TTexercisethree }
+func (Rexercisethree) Type() sessp.Tfcall { return sessp.TRexercisethree }

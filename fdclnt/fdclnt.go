@@ -82,6 +82,15 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 	return fd, nil
 }
 
+func (fdc *FdClient) ExerciseThree(path string, data []byte) error {
+	mode := sp.OREAD
+	err := fdc.PathClnt.ExerciseThree(path, mode, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w pathclnt.Watch) (int, error) {
 	fid, err := fdc.PathClnt.OpenWatch(path, mode, w)
 	if err != nil {

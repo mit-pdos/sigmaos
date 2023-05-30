@@ -303,3 +303,8 @@ func (npc *NpConn) WriteRead(args *sp.Twriteread, d []byte, rets *sp.Rread) ([]b
 func (npc *NpConn) Snapshot() []byte {
 	return nil
 }
+
+func (npc *NpConn) ExerciseThree(d []byte) *sp.Rerror {
+	db.DPrintf(db.PROXY, "Received ExerciseThree Message: %v", string(d))
+	return nil
+}

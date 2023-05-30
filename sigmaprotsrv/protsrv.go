@@ -48,6 +48,7 @@ type Protsrv interface {
 	WriteRead(*sp.Twriteread, []byte, *sp.Rread) ([]byte, *sp.Rerror)
 	Detach(*sp.Rdetach, DetachF) *sp.Rerror
 	Snapshot() []byte
+	ExerciseThree([]byte) *sp.Rerror
 }
 
 type MkProtServer func(SessServer, sessp.Tsession) Protsrv

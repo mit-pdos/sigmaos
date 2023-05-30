@@ -280,7 +280,7 @@ func makeRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, d
 	return ws, is
 }
 
-// ========== Hotel Helpers ========
+// ========== Hotel Helpers ==========
 
 func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheNcore proc.Tcore, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
@@ -302,6 +302,20 @@ func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps str
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheNcore)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+// ========== ImgResize Helpers ==========
+func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int) ([]*ImgResizeJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ImgResizeJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeImgResizeJob(ts, p, sigmaos, input, ntasks)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

@@ -227,6 +227,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 		pdc.MonitorSchedds()
 		defer pdc.Done()
 	}
+	ji.Cleanup()
 	start := time.Now()
 	ji.StartImgResizeJob()
 	ji.Wait()

@@ -65,7 +65,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 		time.Sleep(1 * time.Second)
 	}
 	db.DPrintf(db.TEST, "Done waiting for ImgResizeJob to finish")
-	ji.imgd.Wait()
+	ji.imgd.Stop()
 	db.DPrintf(db.TEST, "Imgd shutdown")
 }
 

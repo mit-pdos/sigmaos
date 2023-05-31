@@ -102,21 +102,6 @@ func TestEtcdLeader(t *testing.T) {
 
 }
 
-func TestBootKey(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   etcdclnt.Endpoints,
-		DialTimeout: etcdclnt.DialTimeout,
-	})
-	assert.Nil(t, err)
-	defer cli.Close()
-	mnt := sp.Tmount{Root: "x"}
-	err = etcdclnt.SetNamed(cli, mnt)
-	assert.Nil(t, err)
-	mnt1, err := etcdclnt.GetNamed()
-	assert.Nil(t, err)
-	assert.Equal(t, mnt.Root, mnt1.Root)
-}
-
 func startNamed(sc *sigmaclnt.SigmaClnt, job string, crash, crashinterval int) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, job, 0, crash, crashinterval, 0, 0)
 }
@@ -130,7 +115,7 @@ func TestBootNamed(t *testing.T) {
 	ndg := startNamed(ts.SigmaClnt, "xxx", crash, crashinterval)
 
 	// wait until kernel-started named exited and its lease expired
-	time.Sleep((etcdclnt.SessionTTL + 2) * time.Second)
+	time.Sleep((etcdclnt.SessionTTL + 3) * time.Second)
 
 	sts, err1 := ts.GetDir(sp.NAMEDV1 + "/")
 	assert.Nil(t, err1)

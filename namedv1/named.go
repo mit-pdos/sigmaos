@@ -94,7 +94,12 @@ func Run(args []string) error {
 		db.DFatalf("Campaign err %v\n", err)
 	}
 
-	db.DPrintf(db.NAMEDV1, "leader %v\n", proc.GetPid().String())
+	resp, err := electclnt.Leader(context.TODO())
+	if err != nil {
+		db.DFatalf("Leader err %v\n", err)
+	}
+
+	db.DPrintf(db.NAMEDV1, "leader %v %v\n", proc.GetPid().String(), resp)
 	root := rootDir(cli)
 	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", sc)
 	if srv == nil {
@@ -106,7 +111,7 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
 
-	if err := etcdclnt.SetNamed(cli, mnt); err != nil {
+	if err := etcdclnt.SetNamed(cli, mnt, electclnt.Key(), electclnt.Rev()); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 

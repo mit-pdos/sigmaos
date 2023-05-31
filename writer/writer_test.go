@@ -1,6 +1,8 @@
 package writer_test
 
 import (
+	"flag"
+	gopath "path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,10 +11,16 @@ import (
 	"sigmaos/test"
 )
 
+var pathname string // e.g., --path "namedv1/"
+
+func init() {
+	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+}
+
 func TestWriter1(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	fn := "name/f"
+	fn := gopath.Join(pathname, "f")
 	d := []byte("abcdefg")
 	wrt, err := ts.CreateWriter(fn, 0777, sp.OWRITE)
 	assert.Nil(ts.T, err)
@@ -28,6 +36,9 @@ func TestWriter1(t *testing.T) {
 
 	d1, err := ts.GetFile(fn)
 	assert.Equal(t, d, d1)
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }

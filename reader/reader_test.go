@@ -1,7 +1,9 @@
 package reader_test
 
 import (
+	"flag"
 	"io"
+	gopath "path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,10 +12,16 @@ import (
 	"sigmaos/test"
 )
 
+var pathname string // e.g., --path "namedv1/"
+
+func init() {
+	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+}
+
 func TestReader1(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	fn := "name/f"
+	fn := gopath.Join(pathname, "f")
 	d := []byte("abcdefg")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -31,13 +39,17 @@ func TestReader1(t *testing.T) {
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
 	rdr.Close()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
 func TestReader2(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	fn := "name/f"
+	fn := gopath.Join(pathname, "f")
 	d := []byte("a")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -53,13 +65,17 @@ func TestReader2(t *testing.T) {
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
 	rdr.Close()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }
 
 func TestReaderLarge(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	fn := "name/f"
+	fn := gopath.Join(pathname, "f")
 	ts.SetChunkSz(4096)
 	sz := int(2*ts.GetChunkSz()) + 1
 	d := make([]byte, sz)
@@ -86,5 +102,9 @@ func TestReaderLarge(t *testing.T) {
 	}
 	assert.Equal(ts.T, sz, n)
 	rdr.Close()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err, "Remove: %v", err)
+
 	ts.Shutdown()
 }

@@ -1,8 +1,4 @@
-package main
-
-import (
-	"fmt"
-)
+package maze
 
 type neighbor struct {
 	n      *node
@@ -81,24 +77,25 @@ func (g *graph) HasEdge(i1 int, i2 int) bool {
 	return false
 }
 
-func getIndex(g *graph, n *node) int {
-	for i, node := range g.nodes {
-		if node == n {
-			return i
-		}
-	}
-	return -1
-}
-
-func (g *graph) Print() {
-	// TODO cut off excess ", "
-	for nodeIndex, currentNode := range g.nodes {
-		// Index and value of the node
-		fmt.Printf("%v (%v) | [", nodeIndex, currentNode.val)
-		for _, adj := range currentNode.neighbors {
-			// Index and value of each neighbor
-			fmt.Printf("%v, ", getIndex(g, adj.n))
-		}
-		fmt.Print("]\n")
-	}
-}
+// LEGACY PRINT FUNCTIONS
+//
+//	func getIndex(g *graph, n *node) int {
+//		for i, node := range g.nodes {
+//			if node == n {
+//				return i
+//			}
+//		}
+//		return -1
+//	}
+//
+//	func (g *graph) Print() {
+//		for nodeIndex, currentNode := range g.nodes {
+//			// Index and value of the node
+//			fmt.Printf("%v (%v) | [", nodeIndex, currentNode.val)
+//			for _, adj := range currentNode.neighbors {
+//				// Index and value of each neighbor
+//				fmt.Printf("%v, ", getIndex(g, adj.n))
+//			}
+//			fmt.Print("]\n")
+//		}
+//	}

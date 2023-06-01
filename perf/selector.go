@@ -74,3 +74,8 @@ const (
 	RPC_BENCH_SRV            = "RPC_BENCH_SRV"
 	RPC_BENCH_CLNT           = "RPC_BENCH_CLNT"
 )
+
+// Exercise Five
+const (
+	ECHO Tselector = "ECHO"
+)

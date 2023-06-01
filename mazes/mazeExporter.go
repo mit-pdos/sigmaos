@@ -1,4 +1,4 @@
-package main
+package maze
 
 type mazeNode struct {
 	val int

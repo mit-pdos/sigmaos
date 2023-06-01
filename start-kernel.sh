@@ -23,7 +23,7 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="named;schedd;ux;s3;db;namedv1"
+            BOOT="named;schedd;ux;s3;db;"
             ;;
         "node")
             BOOT="schedd;ux;s3;db"

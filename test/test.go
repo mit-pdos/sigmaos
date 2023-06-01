@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"sigmaos/bootkernelclnt"
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
@@ -14,6 +13,12 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
+
+//
+// If running test with --start, test will start sigmaos kernel.
+// Without --start, it will test create a kernelclnt without starting
+// kernel.
+//
 
 const (
 	BOOT_REALM = "realm"
@@ -27,12 +32,10 @@ const (
 var start bool
 var noShutdown bool
 var tag string
-var rootNamedIP string
 var Overlays bool
 
 func init() {
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
-	flag.StringVar(&rootNamedIP, "rootNamedIP", "", "IP of the root named server")
 	flag.BoolVar(&start, "start", false, "Start system")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
@@ -61,11 +64,11 @@ type Tstate struct {
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
-	b, err := makeSysClntPath(t, path)
+	ts, err := makeSysClntPath(t, path)
 	if err != nil {
 		db.DFatalf("MakeTstatePath: %v\n", err)
 	}
-	return b
+	return ts
 }
 
 func MakeTstate(t *testing.T) *Tstate {
@@ -105,8 +108,8 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 		if err != nil {
 			return nil, err
 		}
-		ts.RmDir(path)
-		ts.MkDir(path, 0777)
+		//ts.RmDir(path)
+		//ts.MkDir(path, 0777)
 		return ts, nil
 	}
 }
@@ -116,16 +119,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	kernelid := ""
 	var containerIP string
 	var err error
-	if rootNamedIP == "" {
-		// If no root named IP is specified, assume it is running locally.
-		containerIP, err = container.LocalIP()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Set root named IP to specified IP.
-		containerIP = rootNamedIP
-	}
+	var k *bootkernelclnt.Kernel
 	if start {
 		kernelid = bootkernelclnt.GenKernelId()
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
@@ -139,7 +133,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err != nil {
 		return nil, err
 	}
-	k, err := bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
+	k, err = bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +165,7 @@ func (ts *Tstate) BootFss3d() error {
 }
 
 func (ts *Tstate) BootNamedv1() error {
-	return ts.Boot(sp.NAMEDV1)
+	return ts.Boot(sp.NAMED)
 }
 
 func (ts *Tstate) KillOne(s string) error {

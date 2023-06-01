@@ -5,7 +5,6 @@ const (
 	NAME        = "name"
 	NAMED       = NAME + "/"
 	NAMEDREL    = "named"
-	NAMEDV1     = "namedv1"
 	REALMDREL   = "realmd"
 	REALMD      = NAMED + REALMDREL
 	REALMSREL   = "realms"

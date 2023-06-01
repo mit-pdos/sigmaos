@@ -37,7 +37,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	var err error
 	var ss *Subsystem
 	switch s {
-	case sp.NAMEDV1:
+	case sp.NAMED:
 		ss, err = k.bootNamedv1()
 	case sp.S3REL:
 		ss, err = k.bootS3d()
@@ -93,11 +93,8 @@ func (k *Kernel) KillOne(srv string) error {
 	return nil
 }
 
-// replicaId is used to index into the namedAddr slice and select
-// an address for this named.
-func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error {
-	// replicaId needs to be 1-indexed for replication library.
-	cmd, err := RunNamed(k.namedAddr[replicaId], len(k.namedAddr) > 1, replicaId+1, k.namedAddr, realmId)
+func (k *Kernel) bootNamed(uname string, realmId sp.Trealm) error {
+	cmd, err := RunNamed(k.namedAddr, realmId)
 	if err != nil {
 		return err
 	}
@@ -106,7 +103,7 @@ func bootNamed(k *Kernel, uname string, replicaId int, realmId sp.Trealm) error 
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
 
-	time.Sleep(SLEEP_MS * time.Millisecond)
+	time.Sleep(SLEEP_S * time.Second)
 	return err
 }
 

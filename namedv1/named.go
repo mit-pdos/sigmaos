@@ -12,6 +12,7 @@ import (
 
 	"sigmaos/container"
 	"sigmaos/crash"
+	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/etcdclnt"
 	"sigmaos/fslibsrv"
@@ -38,12 +39,13 @@ type Named struct {
 }
 
 func Run(args []string) error {
-	bootNamed := len(args) == 1
+	bootNamed := len(args) == 2 // XXX args[1] is realm
 	db.DPrintf(db.NAMEDV1, "%v: BootNamed %v %v\n", proc.GetPid(), bootNamed, args)
-	if !(len(args) == 1 || len(args) == 3) {
+	if !(len(args) == 2 || len(args) == 3) {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd = &Named{}
+	ch := make(chan struct{})
 	if !bootNamed {
 		nd.job = args[1]
 		crashing, err := strconv.Atoi(args[2])
@@ -51,13 +53,15 @@ func Run(args []string) error {
 			return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 		}
 		nd.crash = crashing
+		sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
+		if err != nil {
+			return err
+		}
+		nd.SigmaClnt = sc
+		nd.Started()
+		go nd.waitExit(ch)
 	}
-	sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
-	if err != nil {
-		return err
-	}
-	nd.SigmaClnt = sc
-	nd.Started()
+
 	db.DPrintf(db.NAMEDV1, "started %v\n", proc.GetPid())
 
 	cli, err := clientv3.New(clientv3.Config{
@@ -81,9 +85,6 @@ func Run(args []string) error {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
 
-	ch := make(chan struct{})
-	go nd.waitExit(ch)
-
 	fn := "named-election"
 	// fn := fmt.Sprintf("job-%s-election", nd.job))
 	db.DPrintf(db.NAMEDV1, "candidate %v %v\n", proc.GetPid().String(), fn)
@@ -101,7 +102,7 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "leader %v %v\n", proc.GetPid().String(), resp)
 	root := rootDir(cli)
-	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", sc)
+	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", nd.SigmaClnt)
 	if srv == nil {
 		db.DFatalf("MakeReplServer err %v", err)
 	}
@@ -116,7 +117,8 @@ func Run(args []string) error {
 	}
 
 	if bootNamed {
-		go nd.exit(ch)
+		// go nd.exit(ch)
+		initfs(root, InitRootDir)
 	} else if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}
@@ -144,4 +146,18 @@ func (nd *Named) exit(ch chan struct{}) {
 	time.Sleep(2 * time.Second)
 	db.DPrintf(db.NAMEDV1, "boot named exit\n")
 	ch <- struct{}{}
+}
+
+// XXX only kernel dirs?
+var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
+
+func initfs(root *Dir, rootDir []string) error {
+	for _, n := range rootDir {
+		_, err := root.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
+		if err != nil {
+			db.DPrintf("Error create [%v]: %v", n, err)
+			return err
+		}
+	}
+	return nil
 }

@@ -17,9 +17,6 @@ type FsLib struct {
 func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
 	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, lip, sessp.Tsize(10_000_000)), realm, addrs}
-	if err := fl.MountTree(addrs, "", sp.NAME); err != nil {
-		return nil, err
-	}
 	return fl, nil
 }
 
@@ -37,7 +34,8 @@ func MakeFsLib(uname string) (*FsLib, error) {
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {
-	return fl.namedAddr
+	mnt := fl.GetMntNamed()
+	return mnt.Addr
 }
 
 func (fl *FsLib) Realm() sp.Trealm {

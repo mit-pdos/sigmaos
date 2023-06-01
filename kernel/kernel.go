@@ -5,8 +5,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
-	"time"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -18,7 +16,7 @@ import (
 )
 
 const (
-	SLEEP_MS         = 200
+	SLEEP_S          = 2
 	REPL_PORT_OFFSET = 100
 	SUBSYSTEM_INFO   = "subsystem-info"
 
@@ -62,13 +60,10 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	k.ip = ip
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.NAMEDREL {
-		k.makeNameds()
-		nameds, err := SetNamedIP(k.ip, k.namedAddr)
-		log.Printf("NAMEDS: %v\n", nameds)
-		if err != nil {
+		k.namedAddr = nameds
+		if err := k.bootNamed("rootnamed", sp.ROOTREALM); err != nil {
 			return nil, err
 		}
-		k.namedAddr = nameds
 		p.Services = p.Services[1:]
 	}
 	proc.SetSigmaNamed(k.namedAddr)
@@ -101,32 +96,6 @@ func (k *Kernel) Shutdown() error {
 	}
 	db.DPrintf(db.KERNEL, "ShutDown %s done\n", k.Param.KernelId)
 	return nil
-}
-
-// Start nameds and wait until they have started
-func (k *Kernel) makeNameds() error {
-	n := len(k.namedAddr)
-	ch := make(chan error)
-	k.startNameds(ch, n)
-	var err error
-	for i := 0; i < n; i++ {
-		r := <-ch
-		if r != nil {
-			err = r
-		}
-	}
-	return err
-}
-
-func (k *Kernel) startNameds(ch chan error, n int) {
-	for i := 0; i < n; i++ {
-		// Must happen in a separate thread because MakeKernelNamed
-		// will block until the replicas are able to process requests.
-		go func(i int) {
-			err := bootNamed(k, "rootnamed", i, sp.ROOTREALM)
-			ch <- err
-		}(i)
-	}
 }
 
 // Start kernel services listed in p
@@ -176,39 +145,23 @@ func (k *Kernel) shutdown() {
 	}
 }
 
-func makeNamedProc(addr *sp.Taddr, replicate bool, id int, pe sp.Taddrs, realmId sp.Trealm) (*proc.Proc, error) {
-	args := []string{addr.Addr, realmId.String(), ""}
-	// If we're running replicated...
-	if replicate {
-		// Add an offset to the peers' port addresses.
-		peers := sp.Taddrs{}
-		for _, peer := range pe {
-			peers = append(peers, addReplPortOffset(peer.Addr))
-		}
-		args = append(args, strconv.Itoa(id))
-		s, err := peers.Taddrs2String()
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, s)
-	}
-
-	p := proc.MakePrivProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "named", args, true)
+func makeNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
+	args := []string{realmId.String()}
+	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "namedv1", args, true)
 	return p, nil
 }
 
-// Run a named (but not as a proc)
-func RunNamed(addr *sp.Taddr, replicate bool, id int, peers sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
-	p, err := makeNamedProc(addr, replicate, id, peers, realmId)
+// Run named (but not as a proc)
+func RunNamed(addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
+	p, err := makeNamedProc(realmId)
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(p, peers, realmId)
+	cmd, err := kproc.RunKernelProc(p, addr, realmId)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err
 	}
-	time.Sleep(SLEEP_MS * time.Millisecond)
 	return cmd, nil
 }
 
@@ -225,19 +178,4 @@ func SetNamedIP(ip string, ports sp.Taddrs) (sp.Taddrs, error) {
 		nameds[i] = sp.MkTaddr(net.JoinHostPort(ip, port))
 	}
 	return nameds, nil
-}
-
-func addReplPortOffset(peerAddr string) *sp.Taddr {
-	// Compute replica address as peerAddr + REPL_PORT_OFFSET
-	host, port, err := net.SplitHostPort(peerAddr)
-	if err != nil {
-		db.DFatalf("Error splitting host port: %v", err)
-	}
-	portI, err := strconv.Atoi(port)
-	if err != nil {
-		db.DFatalf("Error conv port: %v", err)
-	}
-	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
-
-	return sp.MkTaddr(host + ":" + newPort)
 }

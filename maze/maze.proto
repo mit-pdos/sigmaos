@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/maze";
+
+service MazeService {
+  rpc SolveMaze(MazeRequest) returns (MazeResponse);
+}
+
+message MazeRequest {
+}
+
+message MazeResponse {
+  string maze = 1;
+}

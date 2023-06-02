@@ -18,20 +18,19 @@ import (
 )
 
 type Npd struct {
-	lip   string
-	named sp.Taddrs
-	st    *sessstatesrv.SessionTable
+	lip string
+	st  *sessstatesrv.SessionTable
 }
 
-func MakeNpd(lip string, nds sp.Taddrs) *Npd {
-	npd := &Npd{lip, nds, nil}
+func MakeNpd(lip string) *Npd {
+	npd := &Npd{lip, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
 	return npd
 }
 
 func (npd *Npd) mkProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return makeNpConn(npd.lip, npd.named)
+	return makeNpConn(npd.lip)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -81,14 +80,12 @@ type NpConn struct {
 	uname string
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
-	named sp.Taddrs
 	fm    *fidMap
 }
 
-func makeNpConn(lip string, named sp.Taddrs) *NpConn {
+func makeNpConn(lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
-	npc.named = named
 	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
@@ -112,7 +109,8 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	}
 	npc.uname = u.Uid
 
-	fid, err := npc.fidc.Attach(npc.uname, npc.named, "", "")
+	mnt := npc.pc.GetMntNamed()
+	fid, err := npc.fidc.Attach(npc.uname, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.MkRerror(err)

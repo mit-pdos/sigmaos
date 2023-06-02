@@ -14,7 +14,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-./bin/linux/proxyd $1 $1:1111 &
+./bin/linux/proxyd $1 &
 
 sleep 1
 

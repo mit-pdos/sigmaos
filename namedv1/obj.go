@@ -82,7 +82,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObj(dir, sp.DMDIR, 0, o.parent, 0, nil))
+	return makeDir(makeObj(dir, sp.DMDIR|0777, 0, o.parent, 0, nil))
 }
 
 // XXX SetParent
@@ -149,12 +149,12 @@ func marshalObj(perm sp.Tperm, path sessp.Tpath) ([]byte, *serr.Err) {
 }
 
 // XXX retry
-func addObj(pn path.Path, dp sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, p sessp.Tpath, perm sp.Tperm) (*Obj, *serr.Err) {
+func addObj(pn path.Path, dp sessp.Tpath, dir *etcdclnt.NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, perm sp.Tperm) (*Obj, *serr.Err) {
 	b, r := marshalObj(perm, p)
 	if r != nil {
 		return nil, r
 	}
-	d1, r := etcdclnt.MarshalDir(dir)
+	d1, r := etcdclnt.MarshalDir(dir, dperm)
 	if r != nil {
 		return nil, r
 	}
@@ -177,8 +177,8 @@ func addObj(pn path.Path, dp sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion
 	return makeObj(pn, perm, 0, p, dp, nil), nil
 }
 
-func rmObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := etcdclnt.MarshalDir(dir)
+func rmObj(d sessp.Tpath, dir *etcdclnt.NamedDir, dperm sp.Tperm, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := etcdclnt.MarshalDir(dir, dperm)
 	if r != nil {
 		return r
 	}
@@ -201,8 +201,8 @@ func rmObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpat
 }
 
 // XXX retry
-func mvObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := etcdclnt.MarshalDir(dir)
+func mvObj(d sessp.Tpath, dir *etcdclnt.NamedDir, dperm sp.Tperm, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := etcdclnt.MarshalDir(dir, dperm)
 	if r != nil {
 		return r
 	}
@@ -233,12 +233,12 @@ func mvObj(d sessp.Tpath, dir *etcdclnt.NamedDir, v sp.TQversion, del sessp.Tpat
 }
 
 // XXX retry
-func mvObjat(df sessp.Tpath, dirf *etcdclnt.NamedDir, vf sp.TQversion, dt sessp.Tpath, dirt *etcdclnt.NamedDir, vt sp.TQversion, del sessp.Tpath) *serr.Err {
-	bf, r := etcdclnt.MarshalDir(dirf)
+func mvObjat(df sessp.Tpath, dirf *etcdclnt.NamedDir, dirfperm sp.Tperm, vf sp.TQversion, dt sessp.Tpath, dirt *etcdclnt.NamedDir, dirtperm sp.Tperm, vt sp.TQversion, del sessp.Tpath) *serr.Err {
+	bf, r := etcdclnt.MarshalDir(dirf, dirfperm)
 	if r != nil {
 		return r
 	}
-	bt, r := etcdclnt.MarshalDir(dirt)
+	bt, r := etcdclnt.MarshalDir(dirt, dirtperm)
 	if r != nil {
 		return r
 	}

@@ -31,7 +31,7 @@ func rootDir(cli *clientv3.Client) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: etcdclnt.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObj(path.Path{}, sp.DMDIR, 0, etcdclnt.ROOT, etcdclnt.ROOT, nil))
+	return makeDir(makeObj(path.Path{}, sp.DMDIR|0777, 0, etcdclnt.ROOT, etcdclnt.ROOT, nil))
 }
 
 func makeDir(o *Obj) *Dir {
@@ -79,7 +79,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	path := mkTpath(pn)
 	db.DPrintf(db.NAMEDV1, "Create %v in %v dir: %v v %v p %v\n", name, d, dir, v, path)
 	dir.Ents = append(dir.Ents, &etcdclnt.DirEnt{Name: name, Path: uint64(path)})
-	obj, err := addObj(pn, d.Obj.path, dir, v, path, perm)
+	obj, err := addObj(pn, d.Obj.path, dir, d.perm, v, path, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	if isNonemptyDir(obj) {
 		return serr.MkErr(serr.TErrNotEmpty, name)
 	}
-	if err := rmObj(d.Obj.path, dir, v, path); err != nil {
+	if err := rmObj(d.Obj.path, dir, d.perm, v, path); err != nil {
 		return err
 	}
 	return nil
@@ -184,7 +184,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 		}
 	}
 	dir.Ents = append(dir.Ents, &etcdclnt.DirEnt{Name: to, Path: uint64(frompath)})
-	return mvObj(d.Obj.path, dir, v, topath)
+	return mvObj(d.Obj.path, dir, d.perm, v, topath)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
@@ -221,7 +221,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 		}
 	}
 	dirt.Ents = append(dirt.Ents, &etcdclnt.DirEnt{Name: to, Path: uint64(frompath)})
-	return mvObjat(d.Obj.path, dirf, vf, dt.Obj.path, dirt, vt, topath)
+	return mvObjat(d.Obj.path, dirf, d.perm, vf, dt.Obj.path, dirt, dt.perm, vt, topath)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {

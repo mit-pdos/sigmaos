@@ -30,12 +30,12 @@ func key2path(key string) sessp.Tpath {
 	return sessp.Tpath(p)
 }
 
-func MarshalDir(dir *NamedDir) ([]byte, *serr.Err) {
+func MarshalDir(dir *NamedDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 	d, err := proto.Marshal(dir)
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	nfd := &NamedFile{Perm: uint32(sp.DMDIR), Data: d}
+	nfd := &NamedFile{Perm: uint32(dperm), Data: d}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
 		return nil, serr.MkErrError(err)

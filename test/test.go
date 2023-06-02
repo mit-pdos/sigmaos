@@ -127,7 +127,6 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	if start {
 		kernelid = bootkernelclnt.GenKernelId()
-		// time.Sleep(5 * time.Second)
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
 		if err != nil {
 			return nil, err

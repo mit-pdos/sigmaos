@@ -797,10 +797,12 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 	assert.Nil(t, err, "Create 1")
 
+	ch := make(chan struct{})
 	go func() {
 		// Should wait
 		_, err := fsl1.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
 		assert.NotNil(t, err, "Create 2")
+		ch <- struct{}{}
 	}()
 
 	time.Sleep(500 * time.Millisecond)
@@ -823,6 +825,8 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 
 	ts.Remove(fn)
 	assert.Equal(t, nil, err)
+
+	<-ch
 
 	ts.Shutdown()
 }

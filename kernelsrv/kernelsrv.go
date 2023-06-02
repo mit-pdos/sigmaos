@@ -21,13 +21,12 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv %v", proc.GetName(), k.Param.KernelId)
-	pds, err := protdevsrv.MakeProtDevSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
+	_, err := protdevsrv.MakeProtDevSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
 	if err != nil {
 		return err
 	}
-	go pds.RunServer()
 	<-ks.ch
-	pds.Done()
+	db.DPrintf(db.KERNEL, "%v: Run KernelSrv done %v", proc.GetName(), k.Param.KernelId)
 	return nil
 }
 

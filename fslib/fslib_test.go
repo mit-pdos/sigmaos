@@ -17,7 +17,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/named"
+	"sigmaos/namedv1"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -37,10 +37,10 @@ func TestInitFs(t *testing.T) {
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
-		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
+		log.Printf("named %v\n", sp.Names(sts))
+		assert.True(t, fslib.Present(sts, namedv1.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
 		assert.Nil(t, err)
-		log.Printf("named %v\n", sp.Names(sts))
 	} else {
 		log.Printf("%v %v\n", pathname, sp.Names(sts))
 		assert.True(t, len(sts) >= 2, "initfs")
@@ -65,28 +65,6 @@ func TestRemoveBasic(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRemoveDir(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-
-	d1 := gopath.Join(pathname, "d1")
-	db.DPrintf(db.TEST, "path %v", pathname)
-	err := ts.MkDir(d1, 0777)
-	assert.Nil(t, err, "Mkdir %v", err)
-
-	_, err = ts.PutFile(gopath.Join(d1, "f"), 0777, sp.OWRITE, []byte("hello"))
-	assert.Equal(t, nil, err)
-
-	sts, err := ts.GetDir(d1 + "/")
-	assert.Nil(t, err, "GetDir: %v", err)
-
-	assert.True(t, fslib.Present(sts, []string{"f"}))
-
-	err = ts.RmDir(d1)
-	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
-
 func TestDirBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	dn := gopath.Join(pathname, "d")
@@ -104,6 +82,8 @@ func TestDirBasic(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(sts))
 	assert.Equal(t, "f", sts[0].Name)
+	qt := sp.Tperm(sts[0].Qid.Ttype())
+	assert.Equal(t, sp.QTFILE, qt)
 
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn)
@@ -243,7 +223,7 @@ func TestRemoveSymlink(t *testing.T) {
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
-	assert.True(t, fslib.Present(sts, named.InitRootDir))
+	assert.True(t, fslib.Present(sts, namedv1.InitRootDir))
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)
@@ -268,7 +248,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
-	assert.True(t, fslib.Present(sts, named.InitRootDir))
+	assert.True(t, fslib.Present(sts, namedv1.InitRootDir))
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)

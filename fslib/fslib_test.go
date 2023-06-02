@@ -922,6 +922,9 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-done
 	}
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
 	ts.Shutdown()
 }
 
@@ -1232,6 +1235,9 @@ func TestUnionSymlinkPut(t *testing.T) {
 	err = ts.Remove(pn0)
 	assert.Nil(t, err)
 
+	err = ts.Remove(gopath.Join(pathname, "g"))
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 
@@ -1272,6 +1278,9 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
 
 	err = ts.Remove(fn)
+	assert.Nil(t, err)
+
+	err = ts.Remove(gopath.Join(pathname, "namedself0"))
 	assert.Nil(t, err)
 
 	ts.Shutdown()

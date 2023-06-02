@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -157,11 +158,26 @@ func RunNamed(addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(p, addr, realmId)
+	r, w, err := os.Pipe()
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error running named: %v", err)
 		return nil, err
 	}
+	cmd, err := kproc.RunKernelProc(p, addr, realmId, []*os.File{w})
+	if err != nil {
+		r.Close()
+		w.Close()
+		db.DPrintf(db.ALWAYS, "RunKernelProc named: %v", err)
+		return nil, err
+	}
+	w.Close()
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.ALWAYS, "named reports %v\n", string(data))
 	return cmd, nil
 }
 

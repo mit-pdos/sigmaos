@@ -3,6 +3,7 @@ package namedv1
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -119,6 +120,10 @@ func Run(args []string) error {
 	if bootNamed {
 		// go nd.exit(ch)
 		initfs(root, InitRootDir)
+
+		w := os.NewFile(uintptr(3), "pipe")
+		fmt.Fprintf(w, "started")
+		w.Close()
 	} else if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}
@@ -127,7 +132,11 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "leader %v done\n", mnt)
 
-	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
+	// XXX maybe clear boot block
+
+	if !bootNamed {
+		nd.Exited(proc.MakeStatus(proc.StatusEvicted))
+	}
 
 	return nil
 }
@@ -149,7 +158,7 @@ func (nd *Named) exit(ch chan struct{}) {
 }
 
 // XXX only kernel dirs?
-var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
+var InitRootDir = []string{sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL}
 
 func initfs(root *Dir, rootDir []string) error {
 	for _, n := range rootDir {

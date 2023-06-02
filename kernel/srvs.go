@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 	"sync"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/port"
@@ -103,7 +102,6 @@ func (k *Kernel) bootNamed(uname string, realmId sp.Trealm) error {
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
 
-	time.Sleep(SLEEP_S * time.Second)
 	return err
 }
 

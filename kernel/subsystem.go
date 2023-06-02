@@ -96,7 +96,7 @@ func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 
 // Send SIGTERM to a system.
 func (s *Subsystem) Terminate() error {
-	db.DPrintf(db.KERNEL, "Terminate %v\n", s.cmd.Process.Pid)
+	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
 	if s.how != procclnt.HLINUX {
 		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}

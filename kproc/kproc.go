@@ -11,7 +11,7 @@ import (
 )
 
 // To run kernel procs
-func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm) (*exec.Cmd, error) {
+func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	p.Finalize("")
 	env := p.GetEnv()
 	s, err := namedAddr.Taddrs2String()
@@ -28,6 +28,7 @@ func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm) (*exec.Cm
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.ExtraFiles = extra
 	cmd.Env = env
 
 	db.DPrintf(db.KERNEL, "RunKernelProc %v %v env %v\n", p, namedAddr, env)

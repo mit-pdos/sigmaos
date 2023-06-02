@@ -1,6 +1,8 @@
 package kernelsrv
 
 import (
+	"os"
+
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -25,6 +27,11 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	if err != nil {
 		return err
 	}
+	f, err := os.Create("/tmp/sigmaos/" + k.Param.KernelId)
+	if err != nil {
+		return err
+	}
+	f.Close()
 	go pds.RunServer()
 	<-ks.ch
 	pds.Done()

@@ -131,12 +131,17 @@ if [ -z  ${IP} ]; then
     IP=$(ip route get 8.8.8.8 | head -1 | cut -d ' ' -f 7)
 fi
 
-# XXX maybe use mount to see if name is up
 until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
     echo -n "." 1>&2
     sleep 0.1;
 done;
-sleep 1
+
+# Wait until kernel is ready
+while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
+    echo -n "." 1>&2
+    sleep 0.1
+done;
+rm -f "/tmp/sigmaos/${KERNELID}"
 
 echo -n $IP
 

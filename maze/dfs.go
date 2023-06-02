@@ -2,8 +2,8 @@ package maze
 
 import "sync"
 
-// GetSeekerLocations is a helper function to get DFS seekers' initial locations
-func GetSeekerLocations(m *maze, numSeekers int) []int {
+// getSeekerLocations is a helper function to get DFS seekers' initial locations
+func getSeekerLocations(m *maze, numSeekers int) []int {
 	// Math to place evenly spaced seekers in the middle of the maze
 	spacerForIndex := m.width / numSeekers
 	rowForIndex := m.height*m.width/2 - spacerForIndex/2
@@ -15,11 +15,11 @@ func GetSeekerLocations(m *maze, numSeekers int) []int {
 	return starts
 }
 
-// DFS finds the first node with a given value and returns:
+// dfs finds the first node with a given value and returns:
 // - a boolean which is true if the value is accessible
 // - a slice of indexes with the order of nodes to get there, starting with the
 // node of the desired value and ending with the starting node
-func DFS(g *graph, val int, startIndex int) (exists bool, path *[]int) {
+func dfs(g *graph, val int, startIndex int) (exists bool, path *[]int) {
 	pathOut := make([]int, 0)
 	visited := make([]bool, len(g.nodes), len(g.nodes))
 
@@ -55,11 +55,11 @@ type dfsShared struct {
 	sync.WaitGroup
 }
 
-// DFSMultithreaded finds a value in a graph using a number of simultaneous DFS searches with a shared visited list.
-// DFSMultithreaded knows whether a value exists in the maze but doesn't know a unified path from the start to the end.
+// dfsMultithreaded finds a value in a graph using a number of simultaneous DFS searches with a shared visited list.
+// dfsMultithreaded knows whether a value exists in the maze but doesn't know a unified path from the start to the end.
 // exists is an index which specifies which search ended up finding the value in the paths array.
 // If exists is -1, there is valid path to the solution from any starting index.
-func DFSMultithreaded(g *graph, val int, startIndecies []int) (exists int, p *[][]int) {
+func dfsMultithreaded(g *graph, val int, startIndecies []int) (exists bool, p *[][]int) {
 	pathsOut := make([][]int, len(startIndecies), len(startIndecies))
 
 	visitedArray := make([]bool, len(g.nodes), len(g.nodes))
@@ -75,7 +75,7 @@ func DFSMultithreaded(g *graph, val int, startIndecies []int) (exists int, p *[]
 	}
 
 	dfsData.Wait()
-	return dfsData.found, &pathsOut
+	return dfsData.found != -1, &pathsOut
 }
 
 func dfsRecursiveSynchronizer(n *node, val int, dfsData *dfsShared, myPath *[]int, index int) {

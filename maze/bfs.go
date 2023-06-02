@@ -9,11 +9,11 @@ import (
 // Time to run Multithreaded BFS before timing out.
 const timeoutMilliseconds = 1000
 
-// BFS finds the first node with a given value and returns:
+// bfs finds the first node with a given value and returns:
 // - a boolean which is true if the value is accessible
 // - a path slice of indexes covering everything the search algorithm covered, in the order they were visited
 // - a solution slice of indexes with the order of nodes to efficiently get to the value, starting with the node of the desired value and ending with the starting node
-func BFS(g *graph, val int, startIndex int) (exists bool, path *[][]int, solution *[]int) {
+func bfs(g *graph, val int, startIndex int) (exists bool, path *[][]int, solution *[]int) {
 	pathsOut := make([][]int, 0)
 	pathOut := make([]int, 0)
 	solutionOut := make([]int, 0)
@@ -72,7 +72,7 @@ func bfsRecursive(g *graph, queue chan int, val int, visited *[]bool, parents *[
 	return false, -1
 }
 
-func BFSIterative(g *graph, val int, startIndex int) (exists bool, path *[]int, solution *[]int) {
+func bfsIterative(g *graph, val int, startIndex int) (exists bool, path *[]int, solution *[]int) {
 	pathOut := make([]int, 0)
 	solutionOut := make([]int, 0)
 	visited := make([]bool, len(g.nodes), len(g.nodes))
@@ -136,8 +136,8 @@ type childParentPair struct {
 	threadID int
 }
 
-// BFSMultithreaded returns references to the success, the paths array, and the solution array
-func BFSMultithreaded(g *graph, goalVal int, startIndex int, maxThreads int) (bool, *[][]int, *[]int) {
+// bfsMultithreaded returns references to the success, the paths array, and the solution array
+func bfsMultithreaded(g *graph, goalVal int, startIndex int, maxThreads int) (bool, *[][]int, *[]int) {
 	// init
 	// Channels have arbitrary buffer sizes - maybe they should be the size of maxThreads?
 	parentIn := make(chan int, 1000)

@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+package mazesrv
+
+// MAZEHTML is a string because passing the path to a file
+// would get messed up when it is containerized.
+const MAZEHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -258,4 +262,4 @@
     </div>
     <h4 style="display: none" id="hint-best-path">Click on the maze to draw the solution!</h4>
 </body>
-</html>
+</html>`

@@ -6,7 +6,7 @@ import (
 	dbg "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
-	"sigmaos/maze"
+	"sigmaos/mazesrv"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/rand"
@@ -73,7 +73,7 @@ func TestEcho(t *testing.T) {
 	res := echo.EchoResult{}
 	err = pdc.RPC("Echo.Echo", &arg, &res)
 	assert.Nil(t, err, "RPC call should succeed")
-	dbg.DPrintf(maze.DEBUG_MAZE, "Maze Output: %v", res.GetText())
+	dbg.DPrintf(mazesrv.DEBUG_MAZE, "Maze Output: %v", res.GetText())
 
 	// Stop server
 	// assert.Nil(t, tse.Stop())

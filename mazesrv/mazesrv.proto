@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/mazesrv";
+
+service MazeService {
+  rpc Maze(MazeRequest) returns (MazeResponse);
+}
+
+message MazeRequest {
+  uint32 width = 1;
+  uint32 height = 2;
+  uint32 density = 3;
+  uint32 tickSpeed = 4;
+  uint32 repeats = 5;
+  string generateAlg = 6;
+  string solveAlg = 7;
+  uint64 startIndex = 8;
+}
+
+message MazeResponse {
+  string webpage = 1;
+}

@@ -4,6 +4,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/maze"
+	"sigmaos/mazesrv"
 	"sigmaos/protdevsrv"
 	"sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -35,18 +36,18 @@ func RunEchoSrv(public bool) error {
 // XXX WEIRD ERROR: making Req a pointer causes it to crash.
 func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req EchoRequest, rep *EchoResult) error {
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Received Echo Request: %v\n", echosrv.sid, req)
-	mazeReq := maze.MazeRequest{}
-	mazeReq.Height = 10
-	mazeReq.Width = 10
-	mazeReq.Density = 15
+	mazeReq := mazesrv.MazeRequest{}
+	mazeReq.Height = 100
+	mazeReq.Width = 100
 	mazeReq.GenerateAlg = maze.GEN_DFS
-	mazeReq.SolveAlg = maze.SOLVE_BFS_SINGLE
-	mazeRes := maze.MazeResponse{}
+	mazeReq.SolveAlg = maze.SOLVE_BFS_MULTI
+	mazeRes := mazesrv.MazeResponse{}
+
 	var err error
-	if err = maze.GetMaze(&mazeReq, &mazeRes); err != nil {
+	if err = mazesrv.GetMaze(&mazeReq, &mazeRes); err != nil {
 		return err
 	}
-	rep.Text = mazeRes.BestPath
+	rep.Text = mazeRes.GetWebpage()
 
 	//rep.Text = req.Text
 	return nil

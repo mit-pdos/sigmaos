@@ -3,13 +3,11 @@ package main
 import (
 	"os"
 	db "sigmaos/debug"
-	"sigmaos/mazesrv"
+	"sigmaos/maze"
 	"strconv"
 )
 
 func main() {
-	// TODO add call arguments (i.e. width, height)
-	// For now, all arguments are their defaults
 	if len(os.Args) != 2 {
 		db.DFatalf("Usage: %v public", os.Args[0])
 		return
@@ -18,7 +16,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
-	if err := mazesrv.RunMaze(public); err != nil {
-		db.DFatalf("RunMaze %v err %v\n", os.Args[0], err)
+	if err := maze.RunBFSSender(public); err != nil {
+		db.DFatalf("RunBFSSender %v err %v\n", os.Args[0], err)
 	}
 }

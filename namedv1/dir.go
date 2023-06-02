@@ -99,7 +99,8 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 			if e.Name != "." {
 				obj, err := getObj(d.pn.Append(e.Name), sessp.Tpath(e.Path), d.Obj.path)
 				if err != nil {
-					db.DFatalf("ReadDir: getObj %v %v\n", e.Name, err)
+					db.DPrintf(db.NAMEDV1, "ReadDir: getObj %v %v\n", e.Name, err)
+					continue
 				}
 				dents.Insert(e.Name, obj.stat())
 			}

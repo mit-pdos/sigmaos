@@ -1,8 +1,8 @@
 #!/bin/sh
 
 #
-# Start a proxy for the named in container with IP address <IPaddr>
-# and mount that named at /mnt/9p.
+# Start a rootrealm named and a proxy in container with IP address
+# <IPaddr> and mount the named at /mnt/9p.
 #
 
 usage() {
@@ -13,6 +13,8 @@ if [ $# -ne 1 ]; then
     usage
     exit 1
 fi
+
+./start-kernel.sh --boot named sigma-named
 
 ./bin/linux/proxyd $1 &
 

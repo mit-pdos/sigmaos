@@ -1,15 +1,12 @@
 package bootkernelclnt
 
 import (
-	"errors"
 	"os/exec"
 	"path"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/rand"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -83,22 +80,6 @@ func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, erro
 	}
 
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s %s\n", pn, kernelId)
-
-	for {
-		var serr *serr.Err
-		sts, err := sc.GetDir(pn + "/")
-		if errors.As(err, &serr) && serr.IsErrNotfound() {
-			db.DPrintf(db.SYSTEM, "MakeKernelClnt: try again %s\n", pn)
-			time.Sleep(1 * time.Second)
-		} else if err != nil {
-			db.DPrintf(db.SYSTEM, "MakeKernelClnt %s err %v\n", pn, err)
-			return nil, err
-		} else {
-			db.DPrintf(db.SYSTEM, "MakeKernelClnt %s %v\n", pn, sp.Names(sts))
-			break
-		}
-	}
-
 	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, pn)
 	if err != nil {
 		return nil, err

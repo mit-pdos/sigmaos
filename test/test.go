@@ -3,8 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"testing"
-
 	"sigmaos/bootkernelclnt"
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -13,6 +11,7 @@ import (
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"testing"
 )
 
 const (
@@ -128,6 +127,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	if start {
 		kernelid = bootkernelclnt.GenKernelId()
+		// time.Sleep(5 * time.Second)
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
 		if err != nil {
 			return nil, err

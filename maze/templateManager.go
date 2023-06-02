@@ -92,11 +92,11 @@ func pathsToJs(m *maze, paths *[][]int) template.JS {
 
 func fillTemplateBFS(m *maze, tickSpeed int, repeats int, formData string) *TemplateData {
 	// Run BFS to find a solution
-	bfsOk, bfsPath, bfsSolution := BFS(&m.g, 3, 0)
-
+	bfsOk, bfsPaths, bfsSolution := BFS(&m.g, 3, 0)
+	bfsPath := (*bfsPaths)[0]
 	var mazePath template.JS
 	// Even if it fails, show what it got before it failed
-	mazePath = "[" + pathToJs(m, bfsPath) + "]"
+	mazePath = "[" + pathToJs(m, &bfsPath) + "]"
 
 	var bestPath template.JS
 	if bfsOk {

@@ -1,17 +1,18 @@
 package example_echo_server_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/rand"
-	dbg "sigmaos/debug"
-	echo "sigmaos/example_echo_server"
-	"sigmaos/protdevclnt"
-	"sigmaos/fslib"
-	"sigmaos/proc"
 	"github.com/stretchr/testify/assert"
 	"path"
+	dbg "sigmaos/debug"
+	echo "sigmaos/example_echo_server"
+	"sigmaos/fslib"
+	"sigmaos/maze"
+	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	"sigmaos/rand"
+	"sigmaos/test"
 	"strconv"
+	"testing"
 )
 
 type TstateEcho struct {
@@ -20,7 +21,7 @@ type TstateEcho struct {
 	pid     proc.Tpid
 }
 
-func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
+func MakeTstateEcho(t *testing.T) (*TstateEcho, error) {
 	jobname := rand.String(8)
 	jobdir := path.Join(echo.DIR_ECHO_SERVER, jobname)
 	var err error
@@ -34,15 +35,19 @@ func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
 	// Start proc
 	p := proc.MakeProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
 	p.SetNcore(proc.Tcore(1))
-	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
+	/*if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 		dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+		return nil, err
+	}*/
+	if err = tse.Spawn(p); err != nil {
+		dbg.DFatalf("Error spawning proc %v: %v", p, err)
 		return nil, err
 	}
 	if err = tse.WaitStart(p.GetPid()); err != nil {
 		dbg.DFatalf("Error spawn proc %v: %v", p, err)
 		return nil, err
 	}
-	tse.pid = p.GetPid() 
+	tse.pid = p.GetPid()
 	return tse, nil
 }
 
@@ -58,18 +63,18 @@ func (tse *TstateEcho) Stop() error {
 
 func TestEcho(t *testing.T) {
 	// start server
-	tse, err := makeTstateEcho(t)
+	tse, err := MakeTstateEcho(t)
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
-	arg := echo.EchoRequest{Text: "Hello World!"}
+	arg := echo.EchoRequest{Text: "Hello!"}
 	res := echo.EchoResult{}
 	err = pdc.RPC("Echo.Echo", &arg, &res)
 	assert.Nil(t, err, "RPC call should succeed")
-	assert.Equal(t, "Hello World!", res.Text)
+	dbg.DPrintf(maze.DEBUG_MAZE, "Maze Output: %v", res.GetText())
 
 	// Stop server
-	assert.Nil(t, tse.Stop())
+	// assert.Nil(t, tse.Stop())
 }

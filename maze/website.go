@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-var tpl = template.Must(template.ParseFiles("templates/index.html"))
+// XXX TODO Error Handling
+var tpl, _ = template.ParseFiles("./templates/index.html")
 
 // makeMaze converts a http request into a http response
 func makeMazeResponse(w http.ResponseWriter, r *http.Request) {

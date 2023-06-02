@@ -13,7 +13,8 @@ const timeoutMilliseconds = 1000
 // - a boolean which is true if the value is accessible
 // - a path slice of indexes covering everything the search algorithm covered, in the order they were visited
 // - a solution slice of indexes with the order of nodes to efficiently get to the value, starting with the node of the desired value and ending with the starting node
-func BFS(g *graph, val int, startIndex int) (exists bool, path *[]int, solution *[]int) {
+func BFS(g *graph, val int, startIndex int) (exists bool, path *[][]int, solution *[]int) {
+	pathsOut := make([][]int, 0)
 	pathOut := make([]int, 0)
 	solutionOut := make([]int, 0)
 	visited := make([]bool, len(g.nodes), len(g.nodes))
@@ -39,7 +40,8 @@ func BFS(g *graph, val int, startIndex int) (exists bool, path *[]int, solution 
 
 	// Cut off the part of the path that overwrites the solution
 	pathOut = pathOut[:len(pathOut)-1]
-	return success, &pathOut, &solutionOut
+	pathsOut = append(pathsOut, pathOut)
+	return success, &pathsOut, &solutionOut
 }
 
 func bfsRecursive(g *graph, queue chan int, val int, visited *[]bool, parents *[]int, pathOut *[]int) (success bool, valIndex int) {

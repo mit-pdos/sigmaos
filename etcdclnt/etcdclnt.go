@@ -2,7 +2,6 @@ package etcdclnt
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.etcd.io/etcd/client/v3"
@@ -66,6 +65,6 @@ func GetNamed() (sp.Tmount, *serr.Err) {
 		db.DPrintf(db.NAMEDV1, "MkMount %v err %v\n", BOOT, err)
 		return sp.Tmount{}, sr
 	}
-	log.Printf("GetNamed mnt %v\n", mnt)
+	db.DPrintf(db.NAMEDV1, "GetNamed mnt %v\n", mnt)
 	return mnt, nil
 }

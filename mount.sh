@@ -14,7 +14,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-./start-kernel.sh --boot named sigma-named
+./start-kernel.sh --boot all sigma-named
 
 ./bin/linux/proxyd $1 &
 

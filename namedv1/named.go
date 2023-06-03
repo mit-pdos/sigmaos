@@ -16,6 +16,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/etcdclnt"
+	"sigmaos/fs"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"
@@ -120,6 +121,7 @@ func Run(args []string) error {
 	if bootNamed {
 		// go nd.exit(ch)
 		initfs(root, InitRootDir)
+		makews(root)
 
 		w := os.NewFile(uintptr(3), "pipe")
 		fmt.Fprintf(w, "started")
@@ -165,6 +167,22 @@ func initfs(root *Dir, rootDir []string) error {
 		_, err := root.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
 		if err != nil {
 			db.DPrintf("Error create [%v]: %v", n, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func makews(r *Dir) error {
+	ws, err := r.Create(ctx.MkCtx("", 0, nil), sp.WS_REL, 0777|sp.DMDIR, sp.OREAD|sp.OWRITE)
+	if err != nil {
+		db.DFatalf("Error create [%v]: %v", sp.WS_REL, err)
+		return err
+	}
+	for _, n := range []string{sp.WS_RUNQ_LC_REL, sp.WS_RUNQ_BE_REL} {
+		_, err := ws.(fs.Dir).Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
+		if err != nil {
+			db.DFatalf("Error create [%v]: %v", n, err)
 			return err
 		}
 	}

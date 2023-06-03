@@ -108,7 +108,6 @@ const (
 	UX                       = "UX"
 	DB                       = "DB"
 	PROXY                    = "PROXY"
-	FW                       = "FW"
 )
 
 // Realm

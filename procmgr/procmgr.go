@@ -32,7 +32,7 @@ type ProcMgr struct {
 
 // Manages the state and lifecycle of a proc.
 func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
-	return &ProcMgr{
+	mgr := &ProcMgr{
 		mfs:       mfs,
 		kernelId:  kernelId,
 		rootsc:    mfs.SigmaClnt(),
@@ -42,6 +42,16 @@ func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		running:   make(map[proc.Tpid]*proc.Proc),
 		pcache:    MakeProcCache(PROC_CACHE_SZ),
 		bintag:    proc.GetBuildTag(),
+	}
+	mgr.makews()
+	return mgr
+}
+
+// Create ws queue if it doesn't exist
+func (mgr *ProcMgr) makews() {
+	mgr.rootsc.MkDir(sp.WS, 0777)
+	for _, n := range []string{sp.WS_RUNQ_LC, sp.WS_RUNQ_BE} {
+		mgr.rootsc.MkDir(n, 0777)
 	}
 }
 

@@ -27,6 +27,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	if err != nil {
 		return err
 	}
+	// let start-kernel.sh know that the kernel is ready
 	f, err := os.Create("/tmp/sigmaos/" + k.Param.KernelId)
 	if err != nil {
 		return err

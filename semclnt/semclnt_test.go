@@ -48,6 +48,9 @@ func TestSemClntSimple(t *testing.T) {
 	ok := <-ch
 	assert.True(ts.T, ok, "down")
 
+	err = ts.RmDir(WAIT_PATH)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 
@@ -84,5 +87,7 @@ func TestSemClntConcur(t *testing.T) {
 			<-ch
 		}
 	}
+	err = ts.RmDir(WAIT_PATH)
+	assert.Nil(t, err, "RmDir: %v", err)
 	ts.Shutdown()
 }

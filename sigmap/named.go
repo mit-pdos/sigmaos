@@ -39,16 +39,6 @@ const (
 	MEMCACHED = "name/memcached"
 	MEMBLOCK  = "name/memblock"
 
-	HOTELREL     = "hotel"
-	HOTEL        = NAMED + HOTELREL + "/"
-	HOTELGEO     = HOTEL + "geo"
-	HOTELRATE    = HOTEL + "rate"
-	HOTELSEARCH  = HOTEL + "search"
-	HOTELREC     = HOTEL + "rec"
-	HOTELRESERVE = HOTEL + "reserve"
-	HOTELUSER    = HOTEL + "user"
-	HOTELPROF    = HOTEL + "prof"
-
 	SOCIAL_NETWORK          = NAMED + "socialnetwork/"
 	SOCIAL_NETWORK_MOL      = SOCIAL_NETWORK + "mol"
 	SOCIAL_NETWORK_USER     = SOCIAL_NETWORK + "user"
@@ -84,6 +74,3 @@ const (
 const (
 	SIGMAHOME = "/home/sigmaos"
 )
-
-var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
-	HOTELUSER, HOTELPROF, DB + "~any/"}

@@ -13,7 +13,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
-	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
 
@@ -27,17 +26,17 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELSEARCH, s, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELSEARCH, s, public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.HOTELSEARCH)
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.HOTELRATE)
+	fsls := MakeFsLibs(HOTELSEARCH)
+	pdc, err := protdevclnt.MkProtDevClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.HOTELGEO)
+	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}

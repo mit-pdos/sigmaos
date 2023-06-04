@@ -29,7 +29,7 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELPROF, ps, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELPROF, ps, public)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := MkCacheClnt(cache, MakeFsLibs(sp.HOTELPROF), job)
+	cachec, err := MkCacheClnt(cache, MakeFsLibs(HOTELPROF), job)
 	if err != nil {
 		return err
 	}

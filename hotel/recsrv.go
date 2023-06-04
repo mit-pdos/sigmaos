@@ -16,7 +16,6 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
-	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
 
@@ -47,7 +46,7 @@ type Rec struct {
 func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELREC, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELREC, r, public)
 	if err != nil {
 		return err
 	}

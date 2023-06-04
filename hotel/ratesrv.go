@@ -52,7 +52,7 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRATE, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRATE, r, public)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, MakeFsLibs(sp.HOTELRATE), job)
+	cachec, err := MkCacheClnt(cache, MakeFsLibs(HOTELRATE), job)
 	if err != nil {
 		return err
 	}

@@ -88,7 +88,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.HOTELRESERVE, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRESERVE, r, public)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, MakeFsLibs(sp.HOTELRESERVE), job)
+	cachec, err := MkCacheClnt(cache, MakeFsLibs(HOTELRESERVE), job)
 	if err != nil {
 		return err
 	}

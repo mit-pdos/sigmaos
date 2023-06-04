@@ -17,13 +17,24 @@ import (
 )
 
 const (
-	HOTEL          = "hotel"
-	HOTELDIR       = "name/hotel/"
+	HOTEL        = "hotel/"
+	HOTELDIR     = "name/" + HOTEL
+	HOTELGEO     = HOTELDIR + "geo"
+	HOTELRATE    = HOTELDIR + "rate"
+	HOTELSEARCH  = HOTELDIR + "search"
+	HOTELREC     = HOTELDIR + "rec"
+	HOTELRESERVE = HOTELDIR + "reserve"
+	HOTELUSER    = HOTELDIR + "user"
+	HOTELPROF    = HOTELDIR + "prof"
+
 	MEMFS          = "memfs"
 	HTTP_ADDRS     = "http-addr"
 	TRACING        = false
 	N_RPC_SESSIONS = 10
 )
+
+var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
+	HOTELUSER, HOTELPROF, sp.DB + "~any/"}
 
 var (
 	nhotel    int
@@ -90,6 +101,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	fsl.MkDir(HOTELDIR, 0777)
+	fsl.MkDir(sp.CACHE, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
 	}
@@ -138,6 +150,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 	var ca *cacheclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
+
 	// Init fs.
 	InitHotelFs(sc.FsLib, job)
 

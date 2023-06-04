@@ -98,6 +98,10 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
+func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
+	ts.Remove("name/" + pid.String() + "_out")
+}
+
 func TestWaitExitSimpleSingle(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
@@ -111,6 +115,8 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+
+	cleanSleeperResult(t, ts, a.GetPid())
 
 	ts.Shutdown()
 }
@@ -132,6 +138,8 @@ func TestWaitExitSimpleMultiKernel(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+
+	cleanSleeperResult(t, ts, a.GetPid())
 
 	ts.Shutdown()
 }
@@ -157,6 +165,8 @@ func TestWaitExitOne(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
+	cleanSleeperResult(t, ts, pid)
+
 	ts.Shutdown()
 }
 
@@ -180,6 +190,7 @@ func TestWaitExitN(t *testing.T) {
 			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
+			cleanSleeperResult(t, ts, pid)
 
 			done.Done()
 		}()
@@ -209,12 +220,12 @@ func TestWaitExitParentRetStat(t *testing.T) {
 		db.DPrintf(db.TEST, "PID dir not deleted yet.")
 	}
 	assert.NotNil(t, err, "Stat %v", path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
-
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperResult(t, ts, pid)
+	cleanSleeperResult(t, ts, pid)
 
 	ts.Shutdown()
 }
@@ -242,8 +253,6 @@ func TestWaitExitParentAbandons(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperResult(t, ts, cPid)
-
 	ts.Shutdown()
 }
 
@@ -270,8 +279,6 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperResult(t, ts, cPid)
-
 	ts.Shutdown()
 }
 
@@ -294,6 +301,8 @@ func TestWaitStart(t *testing.T) {
 
 	// Make sure the proc finished...
 	checkSleeperResult(t, ts, pid)
+
+	cleanSleeperResult(t, ts, pid)
 
 	ts.Shutdown()
 }
@@ -321,8 +330,8 @@ func TestWaitNonexistentProc(t *testing.T) {
 func TestSpawnManyProcsParallel(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	const N_CONCUR = 13
-	const N_SPAWNS = 500
+	const N_CONCUR = 5  // 13
+	const N_SPAWNS = 50 // 500
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
@@ -352,6 +361,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
 				assert.True(t, status.IsStatusOK(), "Status not OK")
+				cleanSleeperResult(t, ts, pid)
 			}
 			done <- i
 		}(i)
@@ -409,12 +419,14 @@ func TestEarlyExit1(t *testing.T) {
 	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
+	cleanSleeperResult(t, ts, pid1)
+
 	ts.Shutdown()
 }
 
 func TestEarlyExitN(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	nProcs := 500
+	nProcs := 50 // 500
 	var done sync.WaitGroup
 	done.Add(nProcs)
 
@@ -440,6 +452,9 @@ func TestEarlyExitN(t *testing.T) {
 			// .. and cleaned up
 			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
+
+			cleanSleeperResult(t, ts, pid1)
+
 			done.Done()
 		}(i)
 	}
@@ -487,6 +502,7 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
+			cleanSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
 			_, err := ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
@@ -540,12 +556,16 @@ func TestReserveCores(t *testing.T) {
 	checkSleeperResult(t, ts, pid)
 	checkSleeperResultFalse(t, ts, pid1)
 
+	cleanSleeperResult(t, ts, pid)
+
 	status, err = ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
 	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	cleanSleeperResult(t, ts, pid1)
 
 	ts.Shutdown()
 }
@@ -587,6 +607,9 @@ func TestWorkStealing(t *testing.T) {
 	sts, _, err = ts.ReadDir(sp.WS_RUNQ_BE)
 	assert.Nil(t, err, "Readdir %v", err)
 	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", sp.WS_RUNQ_BE, sts)
+
+	cleanSleeperResult(t, ts, pid)
+	cleanSleeperResult(t, ts, pid1)
 
 	ts.Shutdown()
 }

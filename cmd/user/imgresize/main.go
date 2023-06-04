@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"image/jpeg"
-	"log"
 	"os"
 	"time"
 
@@ -44,7 +43,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	log.Printf("MakeTrans %v: %v\n", proc.GetPid(), args)
+	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", proc.GetPid(), args)
 	t := &Trans{}
 	sc, err := sigmaclnt.MkSigmaClnt("fsreader")
 	if err != nil {

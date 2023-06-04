@@ -1,20 +1,38 @@
 #!/bin/sh
 
 #
-# Start a rootrealm named and a proxy in container with IP address
-# <IPaddr> and mount the named at /mnt/9p.
+# Start proxy and mount root named at /mnt/9p. Optionally boot a
+# rootrealm named.
+#
+# XXX keep IPaddr for now (maybe useful for overlays?)
 #
 
 usage() {
-  echo "Usage: $0 <IPaddr>"  1>&2
+  echo "Usage: $0 --boot <IPaddr>"  1>&2
 }
 
-if [ $# -ne 1 ]; then
-    usage
-    exit 1
-fi
+BOOT=""
+while [ $# -ne 1 ]; do
+    case "$1" in
+        --boot)
+            shift
+            BOOT="--boot"
+            ;;
+        -help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "unexpected argument $1"
+            usage
+            exit 1
+            
+    esac
+done
 
-./start-kernel.sh --boot all sigma-named
+if [[ "$BOOT" == "--boot" ]] ; then
+    ./start-kernel.sh --boot all sigma-named
+fi
 
 ./bin/linux/proxyd $1 &
 

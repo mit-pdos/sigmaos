@@ -40,7 +40,7 @@ func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs, overlays bool) (stri
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v IP %v\n", srvs, ip)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v\n", kernelId, srvs, ip)
 	return ip, nil
 }
 

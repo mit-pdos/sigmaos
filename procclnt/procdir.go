@@ -98,7 +98,7 @@ func removeProc(fsl *fslib.FsLib, procdir string) error {
 
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) error {
-	clnt.removeChild(pid)
+	clnt.RemoveChild(pid)
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
 	if len(procdir) > 0 {
@@ -151,18 +151,18 @@ func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir strin
 }
 
 // Remove a child from the current proc
-func (clnt *ProcClnt) removeChild(pid proc.Tpid) error {
+func (clnt *ProcClnt) RemoveChild(pid proc.Tpid) error {
 	procdir := proc.GetChildProcDir(clnt.procdir, pid)
 	childdir := path.Dir(procdir)
 	// Remove link.
 	if err := clnt.Remove(procdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in removeChild: %v", procdir, err)
-		return fmt.Errorf("removeChild link error %v", err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in RemoveChild: %v", procdir, err)
+		return fmt.Errorf("RemoveChild link error %v", err)
 	}
 
 	if err := clnt.RmDir(childdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in removeChild: %v", procdir, err)
-		return fmt.Errorf("removeChild dir error %v", err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in RemoveChild: %v", procdir, err)
+		return fmt.Errorf("RemoveChild dir error %v", err)
 	}
 	return nil
 }

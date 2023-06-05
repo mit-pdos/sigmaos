@@ -322,7 +322,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 		return nil, fmt.Errorf("Error semExit.Down: %v", err)
 	}
 
-	defer clnt.removeChild(pid)
+	defer clnt.RemoveChild(pid)
 
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))

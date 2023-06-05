@@ -129,6 +129,12 @@ func (k *Kernel) shutdown() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
+			if err := k.RemoveChild(pid); err != nil {
+				db.DPrintf(db.KERNEL, "Done evicting; rm err %v", pid)
+			} else {
+				db.DPrintf(db.KERNEL, "Done evicting; rm %v", pid)
+			}
+
 			db.DPrintf(db.KERNEL, "Done evicting %v", pid)
 		}
 	}

@@ -62,6 +62,9 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 }
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
+	if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelId); err != nil {
+		db.DPrintf(db.KERNEL, "%v: Shutdown remove err %v", ks.k.Param.KernelId, err)
+	}
 	if err := ks.k.Shutdown(); err != nil {
 		return err
 	}

@@ -186,6 +186,9 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
 		db.DPrintf(db.SYSTEM, "Shutdown")
+		if err := ts.RmDir(proc.GetProcDir()); err != nil {
+			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", proc.GetProcDir(), err)
+		}
 		// Shut down other kernel running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {
 			if err := ts.kclnts[i].Shutdown(); err != nil {

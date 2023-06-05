@@ -73,9 +73,9 @@ func Run(args []string) {
 	mfs.Done()
 }
 
-var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.HOTELREL, sp.CACHEREL}
+var InitRootDir = []string{sp.TMPREL, sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.CACHEREL}
 
-var InitDir = []string{sp.TMPREL, sp.HOTELREL, sp.CACHEREL}
+var InitDir = []string{sp.TMPREL, sp.CACHEREL}
 
 func initfs(mfs *memfssrv.MemFs, root []string) error {
 	r := mfs.Root()

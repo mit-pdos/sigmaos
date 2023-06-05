@@ -145,6 +145,9 @@ func (k *Kernel) shutdown() {
 			}
 		}
 	}
+	if err := k.RmDir(proc.GetProcDir()); err != nil {
+		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", proc.GetProcDir(), err)
+	}
 	for _, d := range k.svcs.svcs[sp.NAMEDREL] {
 		// kill it so that test terminates
 		d.Terminate()

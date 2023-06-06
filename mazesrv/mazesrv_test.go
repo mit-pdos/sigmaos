@@ -41,10 +41,10 @@ func makeTstateMaze(t *testing.T, job string) (*TstateMaze, error) {
 		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, jobDir, err)
 		return nil, err
 	}
-	/*if err = tse.MkDir(maze.NAMED_MAZE_SERVER, 0777); err != nil {
-		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, maze.NAMED_MAZE_SERVER, err)
+	if err = tse.MkDir(mazesrv.NAMED_MAZE_SERVER, 0777); err != nil {
+		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, mazesrv.NAMED_MAZE_SERVER, err)
 		return nil, err
-	}*/
+	}
 
 	// Setup main proc
 	db.DPrintf(mazesrv.DEBUG_MAZE, "|%v| Spawning Proc", job)
@@ -82,7 +82,7 @@ func TestMaze(t *testing.T) {
 	assert.Nil(t, err, "makeTstateMaze failed: %v", err)
 
 	// Create an RPC client
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsm.FsLib}, mazesrv.NAMED_MAZE_SERVER)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsm.FsLib}, path.Join(mazesrv.NAMED_MAZE_SERVER, "~any"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
 
 	// Request maze from server

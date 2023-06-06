@@ -29,7 +29,7 @@ func RunMaze(public bool) error {
 	ms := &SrvMaze{}
 	ms.sid = rand.String(8)
 	db.DPrintf(DEBUG_MAZE, "|%v| Creating maze server\n", ms.sid)
-	pds, err := protdevsrv.MakeProtDevSrvPublic(NAMED_MAZE_SERVER, ms, true)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(NAMED_MAZE_SERVER, ms, public)
 	if err != nil {
 		db.DPrintf(DEBUG_MAZE, "|%v| Failed to make ProtDevSrv: %v", ms.sid, err)
 		return err

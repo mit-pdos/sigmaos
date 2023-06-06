@@ -238,8 +238,9 @@ func TestQueryDev(t *testing.T) {
 	assert.Nil(t, err)
 	q := fmt.Sprintf("select * from reservation")
 	res := []hotel.Reservation{}
-	dbc.Query(q, &res)
-	assert.Equal(t, "Alice", res[0].Customer)
+	err = dbc.Query(q, &res)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(res))
 
 	ts.Shutdown()
 }

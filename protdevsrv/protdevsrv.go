@@ -39,7 +39,7 @@ type ProtDevSrv struct {
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	mfs, error := memfssrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+		db.DFatalf("protdevsrv.Run [%v]: %v\n", fn, error)
 	}
 	return MakeProtDevSrvMemFs(mfs, svci)
 }

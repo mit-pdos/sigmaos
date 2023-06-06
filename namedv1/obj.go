@@ -140,7 +140,7 @@ func marshalObj(perm sp.Tperm, path sessp.Tpath) ([]byte, *serr.Err) {
 		}
 		fdata = d
 	}
-	nf := &etcdclnt.NamedFile{Perm: uint32(perm), Data: fdata}
+	nf := &etcdclnt.NamedFile{Perm: uint32(perm | 0777), Data: fdata}
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return nil, serr.MkErrError(err)

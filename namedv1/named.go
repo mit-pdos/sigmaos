@@ -13,7 +13,6 @@ import (
 
 	"sigmaos/container"
 	"sigmaos/crash"
-	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/etcdclnt"
 	"sigmaos/fslibsrv"
@@ -118,8 +117,14 @@ func Run(args []string) error {
 	}
 
 	if bootNamed {
+		sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())
+		if err != nil {
+			db.DFatalf("MkSigmaClntFsLib: err %v", err)
+		}
+		nd.SigmaClnt = sc
+
 		// go nd.exit(ch)
-		initfs(root, InitRootDir)
+		nd.initfs()
 		w := os.NewFile(uintptr(3), "pipe")
 		fmt.Fprintf(w, "started")
 		w.Close()
@@ -156,14 +161,18 @@ func (nd *Named) exit(ch chan struct{}) {
 	ch <- struct{}{}
 }
 
-// XXX only kernel dirs?
-var InitRootDir = []string{sp.BOOTREL, sp.KPIDSREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.SCHEDD, sp.UX, sp.S3, sp.DB}
 
-func initfs(root *Dir, rootDir []string) error {
-	for _, n := range rootDir {
-		_, err := root.Create(ctx.MkCtx("", 0, nil), n, 0777|sp.DMDIR, sp.OREAD)
+// If initial root dir doesn't exist, create it.
+func (nd *Named) initfs() error {
+	// XXX clean up WS here for now
+	if err := nd.RmDir(sp.WS); err != nil {
+		db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", sp.WS, err)
+	}
+	for _, n := range InitRootDir {
+		_, err := nd.Create(n, 0777|sp.DMDIR, sp.OREAD)
 		if err != nil {
-			db.DPrintf("Error create [%v]: %v", n, err)
+			db.DPrintf(db.ALWAYS, "Error create [%v]: %v", n, err)
 			return err
 		}
 	}

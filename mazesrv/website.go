@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	db "sigmaos/debug"
+	"sigmaos/maze"
 	"strconv"
 	"time"
 )
@@ -48,6 +49,12 @@ func (in *MazeInputs) fix() {
 	if in.startIndex < 0 || in.startIndex > ((in.width*in.height)-1) {
 		in.startIndex = 0
 	}
+	if in.solveAlg != maze.SOLVE_BFS_MULTI && in.solveAlg != maze.SOLVE_BFS_SINGLE && in.solveAlg != maze.SOLVE_DFS_MULTI {
+		in.solveAlg = maze.SOLVE_BFS_MULTI
+	}
+	if in.genAlg != maze.GEN_DFS && in.genAlg != maze.GEN_RAND && in.genAlg != maze.GEN_NONE {
+		in.genAlg = maze.GEN_DFS
+	}
 }
 
 func (in *MazeInputs) getFormData() string {
@@ -55,7 +62,7 @@ func (in *MazeInputs) getFormData() string {
 	return "[\"" + in.genAlg + "\", \"" + in.solveAlg + "\", \"" + strconv.Itoa(in.width) + "\", \"" + strconv.Itoa(in.height) + "\", \"" + strconv.Itoa(in.tickSpeed) + "\", \"" + strconv.Itoa(in.repeats) + "\", \"" + strconv.Itoa(in.density) + "\"]"
 }
 
-func makeMaze(in *MazeInputs, wr io.Writer) error {
+func makeSolveMaze(in *MazeInputs, wr io.Writer) error {
 	in.fix()
 
 	timeStart := time.Now()
@@ -65,12 +72,12 @@ func makeMaze(in *MazeInputs, wr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	printTime(timeStart, timeEnd)
+	printTime(timeStart, timeEnd, "Served maze")
 	return tpl.Execute(wr, tplData)
 }
 
-// makeMazeResponse converts a http request into a http response
-func makeMazeResponse(wr http.ResponseWriter, rd *http.Request) {
+// MakeMazeResponse converts a http request into a http response
+func MakeMazeResponse(wr http.ResponseWriter, rd *http.Request) {
 	// Parse values from GET request, if they exist
 	w, err := strconv.Atoi(rd.URL.Query().Get("width"))
 	if err != nil {
@@ -107,26 +114,16 @@ func makeMazeResponse(wr http.ResponseWriter, rd *http.Request) {
 		genAlg:     ga,
 		startIndex: 0,
 	}
-	err = makeMaze(&in, wr)
+	err = makeSolveMaze(&in, wr)
 	if err != nil {
 		db.DPrintf(DEBUG_MAZE, "Maze error: %v\n", err)
 	}
 }
 
-func printTime(timeStart time.Time, timeEnd time.Time) {
+func printTime(timeStart time.Time, timeEnd time.Time, msg string) {
 	// Manually calculate times from nanoseconds to have control over rounding
 	timeEndNs := timeEnd.UnixNano() - timeStart.UnixNano()
 	timeEndUs := float64(timeEndNs) / 1000.0
 	timeEndMs := timeEndUs / 1000.0
-	db.DPrintf(DEBUG_MAZE, "Served maze in %.0f ms and %.0f us\n", timeEndMs, timeEndUs-(math.Floor(timeEndMs)*1000.0))
+	db.DPrintf(DEBUG_MAZE, "%v in %.0f ms and %.0f us\n", msg, timeEndMs, timeEndUs-(math.Floor(timeEndMs)*1000.0))
 }
-
-/*
-func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", makeMazeResponse)
-
-	port := "3000"
-	http.ListenAndServe(":"+port, mux)
-}
-*/

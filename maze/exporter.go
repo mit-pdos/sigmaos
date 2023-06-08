@@ -1,6 +1,9 @@
 package maze
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type MNode struct {
 	Val int
@@ -73,40 +76,88 @@ func mazeToSlice(m *maze) *[][]MNode {
 	return &nodes
 }
 
-/*
-func reverseMNode(m *maze, n MNode, row int, col int) {
-	m.setSquare(row, col, n.Val)
-	// Inverting the values because true for MNode means there is a wall,
-	// and false for setWall means add a wall
-	if row != 0 {
-		m.setWall(row, col, row-1, col, !n.Up)
-	}
-	if row != m.height-1 {
-		m.setWall(row, col, row+1, col, !n.Down)
-	}
-	if col != m.width-1 {
-		m.setWall(row, col, row, col+1, !n.Right)
-	}
-	if col != 0 {
-		m.setWall(row, col, row, col-1, !n.Left)
-	}
-}
-
-func sliceToMaze(nodes *[][]MNode) *maze {
-	m := initMaze(len(*nodes), len((*nodes)[0]))
-	for row := 0; row < m.height; row++ {
-		for col := 0; col < m.width; col++ {
-			reverseMNode(m, (*nodes)[row][col], row, col)
-		}
-	}
-	return m
-}
-*/
+//	UNUSED IMPORT/EXPORT FUNCTIONS
+//
+//	func reverseMNode(m *maze, n MNode, row int, col int) {
+//		m.setSquare(row, col, n.Val)
+//		// Inverting the values because true for MNode means there is a wall,
+//		// and false for setWall means add a wall
+//		if row != 0 {
+//			m.setWall(row, col, row-1, col, !n.Up)
+//		}
+//		if row != m.height-1 {
+//			m.setWall(row, col, row+1, col, !n.Down)
+//		}
+//		if col != m.width-1 {
+//			m.setWall(row, col, row, col+1, !n.Right)
+//		}
+//		if col != 0 {
+//			m.setWall(row, col, row, col-1, !n.Left)
+//		}
+//	}
+//
+//	func sliceToMaze(nodes *[][]MNode) *maze {
+//		m := initMaze(len(*nodes), len((*nodes)[0]))
+//		for row := 0; row < m.height; row++ {
+//			for col := 0; col < m.width; col++ {
+//				reverseMNode(m, (*nodes)[row][col], row, col)
+//			}
+//		}
+//		return m
+//	}
+//
+//
+//	func graphToSlice(g *graph) *[][]int {
+//		out := make([][]int, len(g.nodes))
+//		for _, node := range g.nodes {
+//			n := make([]int, len(node.neighbors))
+//			for _, neighbor := range node.neighbors {
+//				n = append(n, neighbor.n.index)
+//			}
+//			out = append(out, n)
+//		}
+//		return &out
+//	}
+//
+//	func sliceToGraph(s *[][]int) *graph {
+//		g := graph{
+//			nodes: make([]*node, len(*s)),
+//		}
+//		for range *s {
+//			g.addNode(1)
+//		}
+//		for i, node := range *s {
+//			for _, adj := range node {
+//				g.addEdge(i, adj)
+//			}
+//		}
+//		return &g
+//	}
+//
+//
+//	func marshal(g *graph) (*[]byte, error) {
+//		s := graphToSlice(g)
+//		out, err := json.Marshal(s)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return &out, nil
+//	}
+//
+//	func unmarshal(s []byte, g *graph) error {
+//		var gr *[][]int
+//		if err := json.Unmarshal(s, gr); err != nil {
+//			return err
+//		}
+//		*g = *sliceToGraph(gr)
+//		return nil
+//	}
+//
 
 func makeMaze(width int, height int, density int, generateAlg string) (*maze, error) {
 	// Init maze with a given algorithm
 	maze := initMaze(height, width)
-	maze.setSquare(height-1, width-1, 3)
+	maze.setSquare(height-1, width-1, NODE_GOAL)
 	switch generateAlg {
 	case GEN_RAND:
 		randomizeMaze(maze, density)
@@ -125,6 +176,7 @@ func solveMaze(m *maze, solveAlg string, startIndex int) (*[][]int, *[]int, erro
 		return nil, nil, mkErr("invalid maze")
 	}
 	var ok bool
+	var err error
 	var searchPaths *[][]int
 	var best *[]int
 	switch solveAlg {
@@ -138,9 +190,9 @@ func solveMaze(m *maze, solveAlg string, startIndex int) (*[][]int, *[]int, erro
 			return nil, nil, mkErr("DFS multithreaded failed")
 		}
 	case SOLVE_BFS_MULTI:
-		ok, searchPaths, best = bfsMultithreaded(&m.g, 3, startIndex, 4)
-		if !ok {
-			return nil, nil, mkErr("BFS multithreaded failed")
+		searchPaths, best, err = bfsMultithreaded(&m.g, 3, startIndex, 4)
+		if err != nil {
+			return nil, nil, mkErr(fmt.Sprintf("BFS multithreaded failed: %v", err))
 		}
 	case SOLVE_BFS_SINGLE:
 		ok, searchPaths, best = bfs(&m.g, 3, startIndex)
@@ -152,20 +204,6 @@ func solveMaze(m *maze, solveAlg string, startIndex int) (*[][]int, *[]int, erro
 	}
 	return searchPaths, best, nil
 }
-
-/*
-func MakeMaze(width int, height int, density int, generateAlg string) (*[][]MNode, error) {
-	m, err := makeMaze(width, height, density, generateAlg)
-	return mazeToSlice(m), err
-}
-
-func SolveMaze(nodes *[][]MNode, solveAlg string, startIndex int) (*[][]int, *[]int, error) {
-	if nodes == nil {
-		return nil, nil, mkErr("invalid maze")
-	}
-	return solveMaze(sliceToMaze(nodes), solveAlg, startIndex)
-}
-*/
 
 // MakeSolveMaze returns (maze as slice, all paths, best path, error)
 func MakeSolveMaze(width int, height int, density int, generateAlg string, solveAlg string, startIndex int) (*[][]MNode, *[][]int, *[]int, error) {
@@ -179,3 +217,29 @@ func MakeSolveMaze(width int, height int, density int, generateAlg string, solve
 	}
 	return mazeToSlice(m), p, b, nil
 }
+
+//
+//	func MakeMaze(width int, height int, density int, generateAlg string) (*[]byte, error) {
+//		m, err := makeMaze(width, height, density, generateAlg)
+//		if err != nil {
+//			return nil, err
+//		}
+//		marshaled, err := marshal(&m.g)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return marshaled, nil
+//	}
+//
+//	func SolveMaze(maze *[]byte, solveAlg string, startIndex int) (*[][]int, *[]int, error) {
+//				var g *graph
+//		if err := unmarshal(*maze, g); err != nil {
+//			return nil, nil, err
+//		}
+//		p, b, err := solveMaze(g, solveAlg, startIndex)
+//		if err != nil {
+//			return nil, nil, err
+//		}
+//		return p, b, nil
+//	}
+//

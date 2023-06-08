@@ -128,7 +128,8 @@ func bfsIterative(g *graph, val int, startIndex int) (exists bool, path *[]int, 
 // If they are not, it will put them into the parents array and back into the input queue.
 // Once the solution is found, the thread manager will close the input queue which kills the senders.
 // The thread manager will calculate the solution path and return.
-// If there are no more items in the channel that the senders output into and it's been more than a preset time, the BFSMultithreaded cancels, because either there is no solution or the maze is too big.
+// If there are no more items in the channel that the senders output into and it's been more than a preset time,
+// the BFSMultithreaded cancels, because either there is no solution or the maze is too big.
 
 type childParentPair struct {
 	parent   int
@@ -137,7 +138,7 @@ type childParentPair struct {
 }
 
 // bfsMultithreaded returns references to the success, the paths array, and the solution array
-func bfsMultithreaded(g *graph, goalVal int, startIndex int, maxThreads int) (bool, *[][]int, *[]int) {
+func bfsMultithreaded(g *graph, goalVal int, startIndex int, maxThreads int) (*[][]int, *[]int, error) {
 	// init
 	// Channels have arbitrary buffer sizes - maybe they should be the size of maxThreads?
 	parentIn := make(chan int, 1000)
@@ -200,8 +201,9 @@ func bfsMultithreaded(g *graph, goalVal int, startIndex int, maxThreads int) (bo
 			solution = append(solution, i)
 			i = parents[i]
 		}
+		return &paths, &solution, nil
 	}
-	return indexOfGoalNode != -1, &paths, &solution
+	return nil, nil, mkErr("No Solution to BFS")
 }
 
 func bfsThread(ctx context.Context, g *graph, parentIn chan int, childOut chan childParentPair, val int, tracker *sync.WaitGroup, Id int) {
@@ -214,7 +216,6 @@ func bfsThread(ctx context.Context, g *graph, parentIn chan int, childOut chan c
 			if !ok {
 				return
 			}
-
 			currentNode := g.nodes[p]
 			for _, currentNeighbor := range currentNode.neighbors {
 				childOut <- childParentPair{parent: p, child: currentNeighbor.n.index, threadID: Id}

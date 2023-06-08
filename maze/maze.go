@@ -4,11 +4,12 @@ import (
 	"math/rand"
 )
 
-// Each node in a maze has an integer value representing its state
-// 0 is empty
-// 1 is filled by the user (which overrides any empty node)
-// 2 is filled by the solution (which overrides any user filled node)
-// 3 is filled by the goal (which overrides any user or solution node)
+const (
+	NODE_EMPTY = iota
+	NODE_PATHS
+	NODE_BEST
+	NODE_GOAL
+)
 
 type maze struct {
 	g      graph
@@ -26,7 +27,7 @@ func initMaze(height int, width int) *maze {
 	var m maze
 	g := &(m.g)
 	for i := 0; i < totalNodes; i++ {
-		g.addNode(0)
+		g.addNode(NODE_EMPTY)
 	}
 
 	m.height = height
@@ -163,11 +164,11 @@ func createDFSMazeRecursive(m *maze, row int, col int, visited *[][]bool) {
 	}
 }
 
-func (m *maze) fillPath(path []int) {
+func (m *maze) fillPath(path []int, val int) {
 	// Reverse path to draw from starting location
 	// Skip the first item which would overwrite the solution
 	for i := len(path) - 1; i >= 1; i-- {
 		row, col := getMazeCoords(m, path[i])
-		m.setSquare(row, col, 2)
+		m.setSquare(row, col, val)
 	}
 }

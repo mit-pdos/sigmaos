@@ -1,7 +1,10 @@
 package mazesrv_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"os/exec"
 	"path"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -15,9 +18,6 @@ import (
 	"testing"
 )
 
-// I'm not going to cache or database this, even though it's extremely network intensive,
-// because I want a new maze every time the request is called.
-
 type TstateMaze struct {
 	*test.Tstate
 	jobname string
@@ -29,28 +29,18 @@ func makeTstateMaze(t *testing.T, job string) (*TstateMaze, error) {
 	tse := TstateMaze{}
 	tse.jobname = job
 	tse.Tstate = test.MakeTstateAll(t)
-	jobDir := path.Join(mazesrv.DIR_MAZE, tse.jobname)
 	var err error
-	db.DPrintf(mazesrv.DEBUG_MAZE, "|%v| Setting up namespace", job)
-	// Setup working namespace
-	if err = tse.MkDir(mazesrv.DIR_MAZE, 0777); err != nil {
-		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, mazesrv.DIR_MAZE, err)
+	if err = mazesrv.InitMazeNamespace(tse.Tstate.SigmaClnt.FsLib, job); err != nil {
+		db.DFatalf("|%v| Error initializing Maze namespace: %v", job, err)
 		return nil, err
 	}
-	if err = tse.MkDir(jobDir, 0777); err != nil {
-		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, jobDir, err)
-		return nil, err
-	}
-	if err = tse.MkDir(mazesrv.NAMED_MAZE_SERVER, 0777); err != nil {
-		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, mazesrv.NAMED_MAZE_SERVER, err)
-		return nil, err
-	}
-
+	//if err = maze.InitBFSNamespace(tse.Tstate.SigmaClnt.FsLib, job); err != nil {
+	//	db.DFatalf("|%v| Error initializing BFS namespace: %v", job, err)
+	//	return nil, err
+	//}
 	// Setup main proc
 	db.DPrintf(mazesrv.DEBUG_MAZE, "|%v| Spawning Proc", job)
-	// XXX I have no idea why we use test.Overlays as the public bool
 	p := proc.MakeProc("maze-main", []string{strconv.FormatBool(test.Overlays)})
-	// XXX Should this be more because it's kind of resource intensive?
 	p.SetNcore(proc.Tcore(1))
 	if err = tse.Spawn(p); err != nil {
 		db.DFatalf("|%v| Error spawning proc %v: %v", job, p, err)
@@ -61,7 +51,6 @@ func makeTstateMaze(t *testing.T, job string) (*TstateMaze, error) {
 		return nil, err
 	}
 	db.DPrintf(mazesrv.DEBUG_MAZE, "|%v| Done with Initialization", job)
-	// XXX why do we need this?
 	tse.pid = p.GetPid()
 	return &tse, nil
 }
@@ -74,6 +63,21 @@ func (tsm *TstateMaze) Stop() error {
 		return err
 	}
 	return tsm.Shutdown()
+}
+
+func viewHTML(t *testing.T, html []byte) {
+	fn := "maze.html"
+	fo, err := os.Create(fn)
+	assert.Nil(t, err, "Failed to create file %v", fn)
+	defer func(fo *os.File) {
+		err := fo.Close()
+		assert.Nil(t, err, "Failed to close file %v", fn)
+	}(fo)
+
+	_, err = fo.Write(html)
+	assert.Nil(t, err, "Failed to write to file %v", fn)
+	err = exec.Command("xdg-open", fmt.Sprintf("%v", fn)).Run()
+	assert.Nil(t, err, "Failed to run command 'xdg-open %v'", fn)
 }
 
 func TestMaze(t *testing.T) {
@@ -94,10 +98,21 @@ func TestMaze(t *testing.T) {
 		Repeats:     50,
 	}
 	res := mazesrv.MazeResponse{}
-	err = pdc.RPC("Maze.Maze", &arg, &res)
+	err = pdc.RPC("Maze.GetMaze", &arg, &res)
 	assert.Nil(t, err, "Maze RPC call failed with arg: %v and err: %v", arg, err)
-	db.DPrintf(mazesrv.DEBUG_MAZE, "Maze Output: %v", res.GetWebpage())
-
+	// Both ways to view output interrupt testing, so are commented out
+	// db.DPrintf(mazesrv.DEBUG_MAZE, "Maze Output: %v", res.GetWebpage())
+	// viewHTML(t, []byte(res.GetWebpage()))
 	// Stop server
-	// assert.Nil(t, tsm.Stop())
+	assert.Nil(t, tsm.Stop())
 }
+
+//
+//	func TestWebsite(t *testing.T) {
+//		mux := http.NewServeMux()
+//		mux.HandleFunc("/", mazesrv.MakeMazeResponse)
+//
+//		port := "3000"
+//		http.ListenAndServe(":"+port, mux)
+//	}
+//

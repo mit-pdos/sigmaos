@@ -3,7 +3,7 @@ syntax = "proto3";
 option go_package = "sigmaos/mazesrv";
 
 service MazeService {
-  rpc Maze(MazeRequest) returns (MazeResponse);
+  rpc GetMaze(MazeRequest) returns (MazeResponse);
 }
 
 message MazeRequest {

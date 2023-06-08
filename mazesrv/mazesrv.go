@@ -3,15 +3,18 @@ package mazesrv
 import (
 	"bytes"
 	"errors"
+	"path"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fslib"
 	"sigmaos/protdevsrv"
 	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 )
 
 type SrvMaze struct {
-	sid string
+	sid  string
+	maze *[]byte
 }
 
 const DEBUG_MAZE = "MAZE"
@@ -22,9 +25,28 @@ func mkErr(message string) error {
 	return errors.New("MazeSrv: " + message)
 }
 
-// XXX I have no idea what the public bool does.
-// XXX TODO Problem with creation of protdevsrv; doesn't make clone-rpc.
-// - Do I need to initialize some sort of directory?
+// XXX Is this the right place for this function? I feel like it's
+// better than in mazesrv_test.go
+func InitMazeNamespace(fs *fslib.FsLib, job string) error {
+	db.DPrintf(DEBUG_MAZE, "|%v| Setting up maze namespace", job)
+	var err error
+	jobDir := path.Join(DIR_MAZE, job)
+	// Setup working namespace
+	if err = fs.MkDir(DIR_MAZE, 0777); err != nil {
+		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, DIR_MAZE, err)
+		return err
+	}
+	if err = fs.MkDir(jobDir, 0777); err != nil {
+		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, jobDir, err)
+		return err
+	}
+	if err = fs.MkDir(NAMED_MAZE_SERVER, 0777); err != nil {
+		db.DFatalf("|%v| Error setting up the working namespace for Maze when creating %v directory: %v", job, NAMED_MAZE_SERVER, err)
+		return err
+	}
+	return nil
+}
+
 func RunMaze(public bool) error {
 	ms := &SrvMaze{}
 	ms.sid = rand.String(8)
@@ -34,20 +56,14 @@ func RunMaze(public bool) error {
 		db.DPrintf(DEBUG_MAZE, "|%v| Failed to make ProtDevSrv: %v", ms.sid, err)
 		return err
 	}
+	db.DPrintf(DEBUG_MAZE, "|%v| Generating Maze\n", ms.sid)
+
 	return pds.RunServer()
 }
 
-func (ms *SrvMaze) Maze(ctx fs.CtxI, req MazeRequest, rep *MazeResponse) error {
+// XXX Why is MazeRequest not a pointer?
+func (ms *SrvMaze) GetMaze(ctx fs.CtxI, req MazeRequest, rep *MazeResponse) error {
 	db.DPrintf(DEBUG_MAZE, "|%v| Received Maze Request: %v\n", ms.sid, req)
-	// This is weirdly split so that I can call GetMaze from echosrv for
-	// debugging while I'm working on fixing the maze proc.
-	return GetMaze(&req, rep)
-}
-
-func GetMaze(req *MazeRequest, rep *MazeResponse) error {
-	if req == nil {
-		return mkErr("invalid request (empty)")
-	}
 
 	in := MazeInputs{
 		width:      int(req.GetWidth()),
@@ -61,7 +77,7 @@ func GetMaze(req *MazeRequest, rep *MazeResponse) error {
 	}
 
 	buf := new(bytes.Buffer)
-	err := makeMaze(&in, buf)
+	err := makeSolveMaze(&in, buf)
 	if err != nil {
 		return err
 	}

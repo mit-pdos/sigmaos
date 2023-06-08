@@ -1,8 +1,11 @@
 package mazesrv
 
+import "sigmaos/maze"
+
 // MAZEHTML is a string because passing the path to a file
 // would get messed up when it is containerized.
-const MAZEHTML = `<!DOCTYPE html>
+const MAZEHTML = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -80,6 +83,14 @@ const MAZEHTML = `<!DOCTYPE html>
         let halt = false;
         let formData = {{ .FormData }} ;
 
+        let gen_dfs = "` + maze.GEN_DFS + `"
+        let gen_none = "` + maze.GEN_NONE + `"
+        let gen_rand = "` + maze.GEN_RAND + `"
+
+        let solve_bfs_multi = "` + maze.SOLVE_BFS_MULTI + `"
+        let solve_bfs_single = "` + maze.SOLVE_BFS_SINGLE + `"
+        let solve_dfs_multi = "` + maze.SOLVE_DFS_MULTI + `"
+
         const timer = ms => new Promise(res => setTimeout(res, ms))
         window.addEventListener("load", async function () {
             document.getElementById("overlay").style.display = "none"
@@ -99,10 +110,10 @@ const MAZEHTML = `<!DOCTYPE html>
             let formStart = document.getElementById("buttons").firstElementChild.nextElementSibling
             let genStart = formStart.firstElementChild
             switch (formData[0]) {
-                case "dfs":
+                case gen_dfs:
                     genStart.selected = true
                     break
-                case "random":
+                case gen_rand:
                     genStart.nextElementSibling.selected = true
                     break
                 default:
@@ -111,13 +122,13 @@ const MAZEHTML = `<!DOCTYPE html>
             }
             let solveStart = formStart.nextElementSibling.nextElementSibling.nextElementSibling.firstElementChild
             switch (formData[1]) {
-                case "bfs":
-                    solveStart.selecte = true
+                case solve_bfs_single:
+                    solveStart.selected = true
                     break
-                case "bfsmulti":
+                case solve_bfs_multi:
                     solveStart.nextElementSibling.selected = true
                     break
-                case "dfs":
+                case solve_dfs_multi:
                     solveStart.nextElementSibling.nextElementSibling.selected = true
                     break
             }
@@ -221,16 +232,16 @@ const MAZEHTML = `<!DOCTYPE html>
         <form action="/" id="buttons">
             <label for="generateAlgorithm">Generation algorithm:</label>
             <select name="generateAlgorithm" id="generateAlgorithm">
-                <option value="dfs" selected>DFS</option>
-                <option value="random">Random</option>
-                <option value="none">None</option>
+                <option value="` + maze.GEN_DFS + `" selected>DFS</option>
+                <option value="` + maze.GEN_RAND + `">Random</option>
+                <option value="` + maze.GEN_NONE + `">None</option>
             </select>
             <br>
             <label for="solveAlgorithm">Solving algorithm:</label>
             <select name="solveAlgorithm" id="solveAlgorithm">
-                <option value="bfs" selected>BFS</option>
-                <option value="bfsmulti">BFS Multithreaded</option>
-                <option value="dfs">DFS Multithreaded</option>
+                <option value="` + maze.SOLVE_BFS_SINGLE + `" selected>BFS</option>
+                <option value="` + maze.SOLVE_BFS_MULTI + `">BFS Multithreaded</option>
+                <option value="` + maze.SOLVE_DFS_MULTI + `">DFS Multithreaded</option>
             </select>
             <br>
             <label for="width">Width:</label>
@@ -262,4 +273,5 @@ const MAZEHTML = `<!DOCTYPE html>
     </div>
     <h4 style="display: none" id="hint-best-path">Click on the maze to draw the solution!</h4>
 </body>
-</html>`
+</html>
+`

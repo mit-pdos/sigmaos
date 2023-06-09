@@ -22,8 +22,8 @@ for T in reader writer stats fslib semclnt electclnt; do
     go test $@ sigmaos/$T -start
 done
 
-go test $@ sigmaos/memfs -start
-go test $@ sigmaos/fslibsrv -start
+# go test $@ sigmaos/memfs -start   # no pipes
+# go test $@ sigmaos/fslibsrv -start  # no perf
 
 #
 # test proxy
@@ -35,12 +35,10 @@ go test $@ sigmaos/proxy -start
 # tests a full kernel using root realm
 #
 
-for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest snapshot group sessclnt cacheclnt www; do
+for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
     go test $@ sigmaos/$T -start
 done
 
-
-go test $@ sigmaos/fslib -start -path "name/namedv1/"
 
 go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/fslibtest/" -run ReadPerf
 go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf

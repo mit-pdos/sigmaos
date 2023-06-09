@@ -7,7 +7,45 @@ import (
 	"time"
 )
 
+//
+// SEARCH UTILS
+//
+
 const NOT_VISITED = -1
+
+const MAX_THREADS = 4
+
+type pair struct {
+	child  int
+	parent int
+}
+
+// findPath finds the shortest path from n1 to n2.
+func findPath(parents *[]int, n1 int, n2 int) *[]int {
+	solution := make([]int, 0)
+	i := n2
+	for i != n1 {
+		solution = append(solution, i)
+		i = (*parents)[i]
+	}
+	solution = append(solution, n1)
+	return &solution
+}
+
+func findPathPartitioned(parents *[]map[int]int, n1 int, n2 int) *[]int {
+	solution := make([]int, 0)
+	i := n2
+	for i != n1 {
+		solution = append(solution, i)
+		i = (*parents)[getOwner(i, MAX_THREADS)][i]
+	}
+	solution = append(solution, n1)
+	return &solution
+}
+
+//
+// DEBUG / BENCH UTILS
+//
 
 const DEBUG_GRAPH = "GRAPH"
 
@@ -29,18 +67,6 @@ var (
 	ERR_SEARCH_OOR  = mkErr(SEARCH_OOR)
 )
 
-// findPath finds the shortest path from n1 to n2.
-func findPath(parents *[]int, n1 int, n2 int) *[]int {
-	solution := make([]int, 0)
-	i := n2
-	for i != n1 {
-		solution = append(solution, i)
-		i = (*parents)[i]
-	}
-	solution = append(solution, n1)
-	return &solution
-}
-
 func IsNoPath(e error) bool {
 	if e == nil {
 		return false
@@ -54,4 +80,48 @@ func printTime(timeStart time.Time, timeEnd time.Time, msg string) {
 	timeEndUs := float64(timeEndNs) / 1000.0
 	timeEndMs := timeEndUs / 1000.0
 	db.DPrintf(DEBUG_GRAPH, "%v in %.0f ms %.0f us\n", msg, timeEndMs, timeEndUs-(math.Floor(timeEndMs)*1000.0))
+}
+
+//
+// PARTITIONING UTILS
+//
+
+type graphPartition struct {
+	// This is a map instead of a slice so that the key equals the index
+	// of the node on the original graph.
+	n        map[int][]int
+	numNodes int
+	numEdges int
+}
+
+func (g *graphPartition) getNeighbors(index int) []int {
+	return (*g).n[index]
+}
+
+// partition naively partitions equal nodes to each thread.
+// Partitions don't know the total number of nodes or edges.
+// As a result, there may be edges to nodes that don't exist.
+// XXX Add smart partitioning to ensure load balance between threads.
+func (g *Graph) partition(numThreads int) []*graphPartition {
+	graphs := make([]*graphPartition, numThreads)
+	for i := 0; i < numThreads; i++ {
+		graphs[i] = &graphPartition{
+			n:        make(map[int][]int, 0),
+			numNodes: 0,
+			numEdges: 0,
+		}
+	}
+	for i := 0; i < g.NumNodes(); i++ {
+		partition := graphs[getOwner(i, numThreads)]
+		partition.n[i] = *g.GetNeighbors(i)
+		partition.numNodes++
+		partition.numEdges += len(*g.n[i])
+	}
+	return graphs
+}
+
+func getOwner(index int, numThreads int) int {
+	// For now, this is reliable without any data about
+	// the graph since partitioning is not smart.
+	return index % numThreads
 }

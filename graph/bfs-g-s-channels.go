@@ -6,7 +6,7 @@ import "time"
 
 func BfsSingleChannels(g *Graph, n1 int, n2 int) (*[]int, error) {
 	ts := time.Now()
-	path, err := g.bfsSingleChannels(n1, n2)
+	path, err := g.BfsSingleChannels(n1, n2)
 	te := time.Now()
 	printTime(ts, te, "BfsSingleChannels ran")
 	return path, err
@@ -14,7 +14,7 @@ func BfsSingleChannels(g *Graph, n1 int, n2 int) (*[]int, error) {
 
 // BfsSingleChannels is a single-threaded, iterative breadth first search
 // between two given nodes which works continuously via channels.
-func (g *Graph) bfsSingleChannels(n1 int, n2 int) (*[]int, error) {
+func (g *Graph) BfsSingleChannels(n1 int, n2 int) (*[]int, error) {
 	if n1 == n2 {
 		return &[]int{n1}, nil
 	}

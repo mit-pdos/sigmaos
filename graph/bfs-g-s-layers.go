@@ -6,7 +6,7 @@ import "time"
 
 func BfsSingleLayers(g *Graph, n1 int, n2 int) (*[]int, error) {
 	ts := time.Now()
-	path, err := g.bfsSingleLayers(n1, n2)
+	path, err := g.BfsSingleLayers(n1, n2)
 	te := time.Now()
 	printTime(ts, te, "BfsSingleLayers ran")
 	return path, err
@@ -14,7 +14,7 @@ func BfsSingleLayers(g *Graph, n1 int, n2 int) (*[]int, error) {
 
 // BfsSingleLayers is a single-threaded, iterative breadth first search
 // between two given nodes which works in layers.
-func (g *Graph) bfsSingleLayers(n1 int, n2 int) (*[]int, error) {
+func (g *Graph) BfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 	if n1 == n2 {
 		return &[]int{n1}, nil
 	}
@@ -26,7 +26,6 @@ func (g *Graph) bfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 		p[i] = -1
 	}
 	p[n1] = n1
-	level := 1
 	// XXX Replace with variable length queue
 	// so all this memory doesn't need to be pre-allocated
 	// Frontier Set (current nodes)
@@ -54,7 +53,6 @@ func (g *Graph) bfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 		*FS = *NS
 		ns = make(chan int, g.NumEdges())
 		NS = &ns
-		level++
 	}
 	return nil, ERR_NOPATH
 }

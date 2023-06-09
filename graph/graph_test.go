@@ -56,3 +56,8 @@ func TestBFSSingleChannels(t *testing.T) {
 	g := initGraph(t, graph.DATA_FACEBOOK_FN)
 	testAlgRepeated(t, g, graph.BfsSingleChannels)
 }
+
+func TestBFSMultiLayers(t *testing.T) {
+	g := initGraph(t, graph.DATA_FACEBOOK_FN)
+	testAlgRepeated(t, g, graph.BfsMultiChannels)
+}

@@ -3,6 +3,7 @@ package fslib
 import (
 	"errors"
 	"fmt"
+	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/reader"
@@ -149,7 +150,7 @@ func Present(sts []*sp.Stat, names []string) bool {
 	n := 0
 	m := make(map[string]bool)
 	for _, n := range names {
-		m[n] = true
+		m[path.Base(n)] = true
 	}
 	for _, st := range sts {
 		if _, ok := m[st.Name]; ok {

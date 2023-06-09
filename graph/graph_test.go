@@ -28,6 +28,14 @@ func testAlg(t *testing.T, g *graph.Graph, alg searchAlg, n1 int, n2 int) {
 	}
 }
 
+func testAlgRepeated(t *testing.T, g *graph.Graph, alg searchAlg) {
+	n1s := []int{-1, 0, 5, 0, 1, 3, 2}
+	n2s := []int{0, 0, 5, 3, 3, 3420, 10000000}
+	for i := range n1s {
+		testAlg(t, g, alg, n1s[i], n2s[i])
+	}
+}
+
 func TestImportExport(t *testing.T) {
 	g := initGraph(t, graph.DATA_FACEBOOK_FN)
 	// db.DPrintf(graph.DEBUG_GRAPH, g.Print())
@@ -41,12 +49,10 @@ func TestImportExport(t *testing.T) {
 
 func TestBFSSingleLayers(t *testing.T) {
 	g := initGraph(t, graph.DATA_FACEBOOK_FN)
-	testAlg(t, g, graph.BfsSingleLayers, 0, 3)
-	testAlg(t, g, graph.BfsSingleLayers, 3, 3420)
+	testAlgRepeated(t, g, graph.BfsSingleLayers)
 }
 
 func TestBFSSingleChannels(t *testing.T) {
 	g := initGraph(t, graph.DATA_FACEBOOK_FN)
-	testAlg(t, g, graph.BfsSingleChannels, 0, 3)
-	testAlg(t, g, graph.BfsSingleChannels, 3, 3420)
+	testAlgRepeated(t, g, graph.BfsSingleChannels)
 }

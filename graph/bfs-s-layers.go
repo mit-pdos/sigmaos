@@ -15,6 +15,9 @@ func BfsSingleLayers(g *Graph, n1 int, n2 int) (*[]int, error) {
 // BfsSingleLayers is a single-threaded, iterative breadth first search
 // between two given nodes which works in layers.
 func (g *Graph) bfsSingleLayers(n1 int, n2 int) (*[]int, error) {
+	if n1 == n2 {
+		return &[]int{n1}, nil
+	}
 	if n1 > g.NumNodes()-1 || n2 > g.NumNodes()-1 || n1 < 0 || n2 < 0 {
 		return nil, ERR_SEARCH_OOR
 	}

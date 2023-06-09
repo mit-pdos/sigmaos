@@ -16,7 +16,6 @@ import (
 
 	"sigmaos/etcdclnt"
 	"sigmaos/groupmgr"
-	rd "sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -102,8 +101,8 @@ func TestEtcdLeader(t *testing.T) {
 
 }
 
-func startNamed(sc *sigmaclnt.SigmaClnt, job string, crash, crashinterval int) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, job, 0, crash, crashinterval, 0, 0)
+func startNamed(sc *sigmaclnt.SigmaClnt, realm string, crash, crashinterval int) *groupmgr.GroupMgr {
+	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, realm, 0, crash, crashinterval, 0, 0)
 }
 
 func TestBootNamed(t *testing.T) {
@@ -117,7 +116,7 @@ func TestBootNamed(t *testing.T) {
 	// wait until kernel-started named exited and its lease expired
 	time.Sleep((etcdclnt.SessionTTL + 3) * time.Second)
 
-	sts, err1 := ts.GetDir(sp.NAMEDV1 + "/")
+	sts, err1 := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err1)
 	log.Printf("named %v\n", sp.Names(sts))
 
@@ -127,14 +126,12 @@ func TestBootNamed(t *testing.T) {
 }
 
 type Tstate struct {
-	job string
 	*test.Tstate
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.job = rd.String(4)
 	return ts
 }
 
@@ -145,13 +142,13 @@ func TestNamedWalk(t *testing.T) {
 
 	ts := makeTstate(t)
 
-	pn := sp.NAMEDV1 + "/"
+	pn := sp.NAMED + "/"
 
 	d := []byte("hello")
 	_, err := ts.PutFile(path.Join(pn, "testf"), 0777, sp.OWRITE, d)
 	assert.Nil(t, err)
 
-	ndg := startNamed(ts.SigmaClnt, ts.job, crash, crashinterval)
+	ndg := startNamed(ts.SigmaClnt, "rootrealm", crash, crashinterval)
 
 	// wait until kernel-started named exited and its lease expired
 	time.Sleep((etcdclnt.SessionTTL + 2) * time.Second)

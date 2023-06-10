@@ -56,7 +56,7 @@ func GetFile(cli *clientv3.Client, p sessp.Tpath) (*NamedFile, sp.TQversion, *se
 	if err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "GetFile %v %v\n", path2key(p), resp)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", path2key(p), resp)
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.MkErr(serr.TErrNotfound, p)
 	}
@@ -64,7 +64,7 @@ func GetFile(cli *clientv3.Client, p sessp.Tpath) (*NamedFile, sp.TQversion, *se
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "GetFile %v %v\n", path2key(p), nf)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", path2key(p), nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
@@ -76,13 +76,13 @@ func PutFile(cli *clientv3.Client, p sessp.Tpath, nf *NamedFile) *serr.Err {
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-		db.DPrintf(db.NAMEDV1, "PutFile %v %v %v\n", p, nf, resp)
+		db.DPrintf(db.ETCDCLNT, "PutFile %v %v %v\n", p, nf, resp)
 		return nil
 	}
 }
 
 func ReadDir(cli *clientv3.Client, p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "readDir %v\n", p)
+	db.DPrintf(db.ETCDCLNT, "readDir %v\n", p)
 	nf, v, err := GetFile(cli, p)
 	if err != nil {
 		return nil, 0, err

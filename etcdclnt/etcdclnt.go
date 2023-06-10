@@ -22,7 +22,7 @@ var (
 	Endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
 )
 
-func SetNamed(cli *clientv3.Client, mnt sp.Tmount, key string, rev int64) *serr.Err {
+func SetRootNamed(cli *clientv3.Client, mnt sp.Tmount, key string, rev int64) *serr.Err {
 	d, err := mnt.Marshal()
 	if err != nil {
 		return serr.MkErrError(err)
@@ -41,12 +41,12 @@ func SetNamed(cli *clientv3.Client, mnt sp.Tmount, key string, rev int64) *serr.
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-		db.DPrintf(db.NAMEDV1, "SetNamed txn %v %v\n", nf, resp)
+		db.DPrintf(db.ETCDCLNT, "SetNamed txn %v %v\n", nf, resp)
 		return nil
 	}
 }
 
-func GetNamed() (sp.Tmount, *serr.Err) {
+func GetRootNamed() (sp.Tmount, *serr.Err) {
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   Endpoints,
 		DialTimeout: DialTimeout,
@@ -57,14 +57,14 @@ func GetNamed() (sp.Tmount, *serr.Err) {
 	defer cli.Close()
 	nf, _, sr := GetFile(cli, sessp.Tpath(BOOT))
 	if sr != nil {
-		db.DPrintf(db.NAMEDV1, "GetFile %v %v err %v\n", BOOT, nf, sr)
+		db.DPrintf(db.ETCDCLNT, "GetFile %v %v err %v\n", BOOT, nf, sr)
 		return sp.Tmount{}, sr
 	}
 	mnt, sr := sp.MkMount(nf.Data)
 	if sr != nil {
-		db.DPrintf(db.NAMEDV1, "MkMount %v err %v\n", BOOT, err)
+		db.DPrintf(db.ETCDCLNT, "MkMount %v err %v\n", BOOT, err)
 		return sp.Tmount{}, sr
 	}
-	db.DPrintf(db.NAMEDV1, "GetNamed mnt %v\n", mnt)
+	db.DPrintf(db.ETCDCLNT, "GetNamed mnt %v\n", mnt)
 	return mnt, nil
 }

@@ -94,7 +94,7 @@ func MakeTstateWithRealms(t *testing.T) *Tstate {
 	}
 	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
 	if err != nil {
-		db.DFatalf("MakeTstateRealm make realmclnt: %v\n", err)
+		db.DFatalf("MakeRealmClnt make realmclnt: %v\n", err)
 	}
 	ts.rc = rc
 	return ts

@@ -10,13 +10,12 @@ import (
 
 type FsLib struct {
 	*fdclnt.FdClient
-	realm     sp.Trealm
 	namedAddr sp.Taddrs
 }
 
 func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
-	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, lip, sessp.Tsize(10_000_000)), realm, addrs}
+	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, realm, lip, sessp.Tsize(10_000_000)), addrs}
 	return fl, nil
 }
 
@@ -36,10 +35,6 @@ func MakeFsLib(uname string) (*FsLib, error) {
 func (fl *FsLib) NamedAddr() sp.Taddrs {
 	mnt := fl.GetMntNamed()
 	return mnt.Addr
-}
-
-func (fl *FsLib) Realm() sp.Trealm {
-	return fl.realm
 }
 
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {

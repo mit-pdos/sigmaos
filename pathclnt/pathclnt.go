@@ -26,11 +26,12 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	chunkSz sessp.Tsize
+	realm   sp.Trealm
 	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, clntnet, lip string, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, lip: lip}
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, realm: realm, lip: lip}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
 	} else {
@@ -43,6 +44,10 @@ func (pathc *PathClnt) String() string {
 	str := fmt.Sprintf("Pathclnt mount table:\n")
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
+}
+
+func (pathc *PathClnt) Realm() sp.Trealm {
+	return pathc.realm
 }
 
 func (pathc *PathClnt) GetLocalIP() string {
@@ -408,6 +413,6 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 }
 
 func (pathc *PathClnt) resolve(p path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	pathc.mountNamed(p)
+	pathc.resolveNamed(p)
 	return pathc.mnt.resolve(p, resolve)
 }

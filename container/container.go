@@ -1,9 +1,8 @@
 package container
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
-	"io"
 	"os"
 	"time"
 
@@ -28,7 +27,47 @@ type Container struct {
 	container    string
 	cgroupPath   string
 	ip           string
-	prevCPUStats *types.CPUStats
+	cpustatf     *os.File
+	sysstatf     *os.File
+	br           *bufio.Reader
+	prevCPUStats cpustats
+}
+
+type cpustats struct {
+	totalSysUsecs       uint64
+	totalContainerUsecs uint64
+	util                float64
+}
+
+func (c *Container) GetCPUUtil() (float64, error) {
+	// Read total CPU time for cgroup.
+	t1 := c.getContainerCPUUsecs()
+	// Save previous total CPU time for cgroup.
+	t0 := c.prevCPUStats.totalContainerUsecs
+	// Read total CPU time for the entire system
+	s1 := c.getSystemCPUUsecs()
+	// Save previous total CPU time for the entire system.
+	s0 := c.prevCPUStats.totalSysUsecs
+	// Update saved times.
+	c.prevCPUStats.totalSysUsecs = s1
+	c.prevCPUStats.totalContainerUsecs = t1
+	// If this is the first attempt to collect CPU utilization, bail out early
+	// (we don't have any "previous" times yet)
+	if t0 == 0 {
+		return 0.0, nil
+	}
+	ctrDelta := t1 - t0
+	sysDelta := s1 - s0
+	// CPU util calculation based on
+	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
+	if sysDelta > 0 && ctrDelta > 0 {
+		c.prevCPUStats.util = float64(ctrDelta) / float64(sysDelta) * float64(linuxsched.NCores) * 100.0
+	} else {
+		db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", sysDelta, ctrDelta)
+	}
+	db.DPrintf(db.CONTAINER, "GetCPUUtil ctrDelta %v sysDelta %v util %v", ctrDelta, sysDelta, c.prevCPUStats.util)
+
+	return c.prevCPUStats.util, nil
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {
@@ -36,51 +75,6 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	c.setCPUShares(cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
 	return nil
-}
-
-func (c *Container) GetCPUUtil() (float64, error) {
-	var resp types.ContainerStats
-	var err error
-	if c.prevCPUStats == nil {
-		// Wait for docker to "prime the stats" on the first attempt to read CPU
-		// util.
-		resp, err = c.cli.ContainerStats(c.ctx, c.container, false)
-	} else {
-		resp, err = c.cli.ContainerStatsOneShot(c.ctx, c.container)
-	}
-	if err != nil {
-		db.DFatalf("Error ContainerStats: %v", err)
-		return 0.0, err
-	}
-	// Read the response
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		db.DFatalf("Error ReadAll: %v", err)
-		return 0.0, err
-	}
-	resp.Body.Close()
-	st := &types.Stats{}
-	err = json.Unmarshal(b, st)
-	if err != nil {
-		db.DFatalf("Error Unmarshal: %v", err)
-		return 0.0, err
-	}
-	if c.prevCPUStats == nil {
-		c.prevCPUStats = &st.PreCPUStats
-	}
-	// CPU util calculation taken from
-	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
-	cpuPercent := 0.0
-	cpuDelta := float64(st.CPUStats.CPUUsage.TotalUsage) - float64(c.prevCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(st.CPUStats.SystemUsage) - float64(c.prevCPUStats.SystemUsage)
-	db.DPrintf(db.CONTAINER, "sysdelta %v cpudelta %v percpuUsage %v\nstats %v", systemDelta, cpuDelta, st.CPUStats.CPUUsage.PercpuUsage, st)
-	if systemDelta > 0.0 && cpuDelta > 0.0 {
-		cpuPercent = (cpuDelta / systemDelta) * float64(linuxsched.NCores) * 100.0
-	} else {
-		db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", systemDelta, cpuDelta)
-	}
-	c.prevCPUStats = &st.CPUStats
-	return cpuPercent, nil
 }
 
 func (c *Container) String() string {

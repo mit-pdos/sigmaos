@@ -122,7 +122,15 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
 	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
-	c := &Container{pm, ctx, cli, resp.ID, cgroupPath, ip, nil}
+	c := &Container{
+		PortMap:    pm,
+		ctx:        ctx,
+		cli:        cli,
+		container:  resp.ID,
+		cgroupPath: cgroupPath,
+		ip:         ip,
+		cpustatf:   nil,
+	}
 	c.setMemoryLimit(membytes, memswap)
 	return c, nil
 }

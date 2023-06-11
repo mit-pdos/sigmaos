@@ -88,24 +88,24 @@ XXX TODO.
 
 #### CloudLab.
 
-CloudLab runs an old version of the Linux Kernel, so you need to upgrade the
-kernel before you can install SigmaOS. Also, CloudLab sets up its machines with
-a very small root partition (usually 15G) and a large, unmounted partition. In
-order to run SigmaOS and install the new kernel (both of which can use a
-significant amount of disk space), you will need to mount and format the new
-disk partition. The `./upgrade-linux.sh` script takes care of both setting up
-the new partition and installing the new version of the kernel.
+CloudLab sets up its machines with a very small root partition (usually 15G)
+and a large, unmounted partition. This causes problems for both SigmaOS and
+Kubernetes, since Docker and Kubernetes store container logs, images, and other
+data in the root partition by default, which fills up quickly.  Additionally,
+CloudLab's default kernel configuration runs with CPU frequency scaling and
+c-states on, which can cause performance variablity during benchmarking, and
+runs with cgroupsv1 by default (whereas SigmaOS requires cgroupsv2).
+
+The `./configure-kernel.sh` script takes care of configuring the kernel,
+formatting, and mounting a large data volume for SigmaOS, Kubernetes, and
+Docker to use. Make sure that each machine successfully restarts after running
+the kernel configuration script on it.
 
 For the remainder of this section,
 replace USER and HOSTNAME with your username and the DNS name of the machine
 you wish to run the script on.
 
 You may update the content of `servers.txt` to match your cluster on cloudlab. 
-Check the linux version of each machine by
-
-```
-for h in $(cat servers.txt | cut -d " " -f 2); do echo $h; ssh USER@$h 'uname -r'; done
-``` 
 
 First, find the name of the large, unused partition on the cloudlab machines
 you are using by logging into one of them and running:
@@ -114,14 +114,17 @@ you are using by logging into one of them and running:
 $ lsblk
 ```
 
-Then, run the `cloudlab/upgrade-linux.sh` with your cloudlab username, machine 
-name, and partition block name. For example, on `c220g5` machines, this is `/dev/sda4`.
+For example, on `c220g5` machines, this is `/dev/sda4`.
 
-Then, upgrade the Linux Kernel on each machine by running:
+Once you have this information, use it to fill in the `cloudlab/env.sh`
+environment file with your username and the path to the large, unmounted block
+device.
+
+Then, run the `cloudlab/configure-kernel.sh` with each machine name as follows:
 
 ```
 $ cd cloudlab
-$ ./upgrade-linux.sh USER HOSTNAME BLKDEV
+$ ./configure-kernel.sh HOSTNAME
 ```
 
 If you are setting up a multi-machine clutser, it may be convenient to run this
@@ -131,17 +134,9 @@ script in parallel in a bash for loop, like so:
 $ cd cloudlab
 $ for h in $(cat servers.txt | cut -d " " -f 2); do
 	echo "=========== Upgrading linux for $h";
-	./upgrade-linux.sh USER $h /dev/sda4 >& /tmp/$h.out;
+	./configure-kernel.sh $h >& /tmp/$h.out;
 done
 ```
-
-To verify that linux has been installed properly, run `uname -r` on each machine. The 
-result should match the `KERNEL` variable in `upgrade-linux.sh`.
-
-Note: for some reason, this doesn't always work on the first try. You may need
-to try to install the kernel twice, by rerunning the `upgrade-linux.sh` script.
-Besides, if this is the first time you connect to any of the cloudlab machines, ssh
- may ask your permission on the command prompt. 
 
 Then, install the SigmaOS software, credentials, and its dependencies by
 running:

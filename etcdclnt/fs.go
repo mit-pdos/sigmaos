@@ -3,6 +3,7 @@ package etcdclnt
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
@@ -18,12 +19,13 @@ const (
 	BOOT sessp.Tpath = 0
 )
 
-func path2key(path sessp.Tpath) string {
-	return strconv.FormatUint(uint64(path), 16)
+func (ec *EtcdClnt) path2key(path sessp.Tpath) string {
+	return string(ec.realm) + ":" + strconv.FormatUint(uint64(path), 16)
 }
 
 func key2path(key string) sessp.Tpath {
-	p, err := strconv.ParseUint(key, 16, 64)
+	parts := strings.Split(key, ":")
+	p, err := strconv.ParseUint(parts[1], 16, 64)
 	if err != nil {
 		db.DFatalf("ParseUint %v err %v\n", key, err)
 	}
@@ -31,11 +33,11 @@ func key2path(key string) sessp.Tpath {
 }
 
 func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
-	resp, err := ec.Get(context.TODO(), path2key(p))
+	resp, err := ec.Get(context.TODO(), ec.path2key(p))
 	if err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", path2key(p), resp)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", ec.path2key(p), resp)
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.MkErr(serr.TErrNotfound, p)
 	}
@@ -43,7 +45,7 @@ func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err)
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", path2key(p), nf)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", ec.path2key(p), nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
@@ -51,7 +53,7 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {
-		resp, err := ec.Put(context.TODO(), path2key(p), string(b))
+		resp, err := ec.Put(context.TODO(), ec.path2key(p), string(b))
 		if err != nil {
 			return serr.MkErrError(err)
 		}
@@ -86,11 +88,11 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
-		clientv3.Compare(clientv3.Version(path2key(p)), "=", 0),
-		clientv3.Compare(clientv3.Version(path2key(dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(ec.path2key(p)), "=", 0),
+		clientv3.Compare(clientv3.Version(ec.path2key(dp)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(path2key(p), string(b)),
-		clientv3.OpPut(path2key(dp), string(d1))}
+		clientv3.OpPut(ec.path2key(p), string(b)),
+		clientv3.OpPut(ec.path2key(dp), string(d1))}
 	resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.MkErrError(err)
@@ -108,11 +110,11 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 		return r
 	}
 	cmp := []clientv3.Cmp{
-		clientv3.Compare(clientv3.Version(path2key(del)), ">", 0),
-		clientv3.Compare(clientv3.Version(path2key(d)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
+		clientv3.Compare(clientv3.Version(ec.path2key(d)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpDelete(path2key(del)),
-		clientv3.OpPut(path2key(d), string(d1))}
+		clientv3.OpDelete(ec.path2key(del)),
+		clientv3.OpPut(ec.path2key(d), string(d1))}
 	resp, err := ec.Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
 	if err != nil {
@@ -135,16 +137,16 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 	var ops []clientv3.Op
 	if del != 0 {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(path2key(del)), ">", 0),
-			clientv3.Compare(clientv3.Version(path2key(d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
+			clientv3.Compare(clientv3.Version(ec.path2key(d)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpDelete(path2key(del)),
-			clientv3.OpPut(path2key(d), string(d1))}
+			clientv3.OpDelete(ec.path2key(del)),
+			clientv3.OpPut(ec.path2key(d), string(d1))}
 	} else {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(path2key(d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(ec.path2key(d)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpPut(path2key(d), string(d1))}
+			clientv3.OpPut(ec.path2key(d), string(d1))}
 	}
 	resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
@@ -171,23 +173,23 @@ func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, 
 	var ops []clientv3.Op
 	if del != 0 {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(path2key(del)), ">", 0),
-			clientv3.Compare(clientv3.Version(path2key(df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(path2key(dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
+			clientv3.Compare(clientv3.Version(ec.path2key(df)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(ec.path2key(dt)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpDelete(path2key(del)),
-			clientv3.OpPut(path2key(df), string(bf)),
-			clientv3.OpPut(path2key(dt), string(bt)),
+			clientv3.OpDelete(ec.path2key(del)),
+			clientv3.OpPut(ec.path2key(df), string(bf)),
+			clientv3.OpPut(ec.path2key(dt), string(bt)),
 		}
 	} else {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(path2key(df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(path2key(dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(ec.path2key(df)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(ec.path2key(dt)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpPut(path2key(df), string(bf)),
-			clientv3.OpPut(path2key(dt), string(bt)),
+			clientv3.OpPut(ec.path2key(df), string(bf)),
+			clientv3.OpPut(ec.path2key(dt), string(bt)),
 		}
 	}
 	resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()

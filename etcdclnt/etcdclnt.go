@@ -51,7 +51,7 @@ func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount, key string, rev int64) *serr.Err
 			clientv3.Compare(clientv3.CreateRevision(key), "=", rev),
 		}
 		ops := []clientv3.Op{
-			clientv3.OpPut(path2key(BOOT), string(b)),
+			clientv3.OpPut(ec.path2key(BOOT), string(b)),
 		}
 		resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {

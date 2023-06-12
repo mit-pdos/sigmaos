@@ -3,8 +3,8 @@ kind: Job
 metadata:
   name: thumbnail-benchrealm1
 spec:
-  completions: 16
-  parallelism: 16
+  completions: 240
+  parallelism: 240
   template:
     spec:
       restartPolicy: OnFailure

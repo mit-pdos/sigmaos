@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 
 	"sigmaos/container"
@@ -23,17 +22,13 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var (
-	endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
-)
-
 var nd *Named
 
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sesssrv.SessSrv
 	mu    sync.Mutex
-	clnt  *clientv3.Client
+	ec    *etcdclnt.EtcdClnt
 	sess  *concurrency.Session
 	job   string
 	realm sp.Trealm
@@ -69,19 +64,17 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMEDV1, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
 
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: etcdclnt.DialTimeout,
-	})
+	ec, err := etcdclnt.MkEtcdClnt(nd.realm)
 	if err != nil {
-		db.DFatalf("Error clientv3 %v\n", err)
+		db.DFatalf("Error MkEtcdClnt %v\n", err)
 	}
-	nd.clnt = cli
-	s, err := concurrency.NewSession(cli, concurrency.WithTTL(etcdclnt.SessionTTL))
+	nd.ec = ec
+
+	s, err := concurrency.NewSession(ec.Client, concurrency.WithTTL(etcdclnt.SessionTTL))
 	if err != nil {
 		db.DFatalf("Error sess %v\n", err)
 	}
-	defer cli.Close()
+	defer ec.Close()
 
 	nd.sess = s
 
@@ -105,7 +98,7 @@ func Run(args []string) error {
 	}
 
 	db.DPrintf(db.NAMEDV1, "leader %v %v\n", proc.GetPid().String(), resp)
-	root := rootDir(cli, nd.realm)
+	root := rootDir(ec, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", nd.SigmaClnt)
 	if srv == nil {
 		db.DFatalf("MakeReplServer err %v", err)
@@ -117,7 +110,7 @@ func Run(args []string) error {
 	db.DPrintf(db.NAMEDV1, "leader %v %v\n", nd.realm, mnt)
 
 	if nd.realm == sp.ROOTREALM {
-		if err := etcdclnt.SetRootNamed(cli, mnt, electclnt.Key(), electclnt.Rev()); err != nil {
+		if err := ec.SetRootNamed(mnt, electclnt.Key(), electclnt.Rev()); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 		sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())

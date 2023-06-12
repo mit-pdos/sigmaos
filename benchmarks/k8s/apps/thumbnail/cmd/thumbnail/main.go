@@ -40,6 +40,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	log.Printf("MakeTrans: %v", args)
 	t := &Trans{}
 	t.input = args[1]
+	rand.Seed(time.Now().UnixNano())
 	t.output = args[1] + "-thumbnail-" + strconv.Itoa(rand.Int())
 	log.Printf("Output %v", t.output)
 	return t, nil

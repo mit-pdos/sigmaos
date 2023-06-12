@@ -17,7 +17,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/named"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -90,7 +89,7 @@ func TestBasicSimple(t *testing.T) {
 
 	db.DPrintf(db.TEST, "realm named root %v\n", sp.Names(sts))
 
-	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
+	assert.True(t, fslib.Present(sts, []string{sp.UXREL}), "initfs")
 
 	sts, err = ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)

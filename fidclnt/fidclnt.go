@@ -250,7 +250,7 @@ func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
 func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize, resolve bool) ([]byte, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
-		return nil, serr.MkErr(serr.TErrUnreachable, "getfile")
+		return nil, serr.MkErr(serr.TErrUnreachable, "GetFile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
 	data, err := ch.pc.GetFile(fid, path, mode, off, cnt, resolve, f)
@@ -263,7 +263,7 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
-		return 0, serr.MkErr(serr.TErrUnreachable, "putfile")
+		return 0, serr.MkErr(serr.TErrUnreachable, "PutFile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
 	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data)

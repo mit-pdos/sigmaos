@@ -3,9 +3,6 @@ package namedv1
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
-	"strconv"
-	"time"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
@@ -18,25 +15,6 @@ import (
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
-
-func mkTpath(pn path.Path) sessp.Tpath {
-	h := fnv.New64a()
-	t := time.Now() // maybe use revision
-	h.Write([]byte(pn.String() + t.String()))
-	return sessp.Tpath(h.Sum64())
-}
-
-func path2key(path sessp.Tpath) string {
-	return strconv.FormatUint(uint64(path), 16)
-}
-
-func key2path(key string) sessp.Tpath {
-	p, err := strconv.ParseUint(key, 16, 64)
-	if err != nil {
-		db.DFatalf("ParseUint %v err %v\n", key, err)
-	}
-	return sessp.Tpath(p)
-}
 
 type Obj struct {
 	pn      path.Path

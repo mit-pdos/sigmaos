@@ -21,7 +21,7 @@ func (d *Dir) String() string {
 	return d.Obj.String()
 }
 
-func rootDir(cli *clientv3.Client) *Dir {
+func rootDir(cli *clientv3.Client, realm sp.Trealm) *Dir {
 	_, _, err := etcdclnt.ReadDir(cli, sessp.Tpath(1))
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMEDV1, "etcdclnt.ReadDir err %v; make root dir\n", err)

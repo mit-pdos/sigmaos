@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: thumbnail-benchrealm1
+spec:
+  completions: 16
+  parallelism: 16
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: mr
+        image: arielszekely/thumbnail
+        imagePullPolicy: Always
+        resources:
+#          limits:
+#            cpu: 1.0
+          requests:
+            cpu: 800m
+        env:
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds
+                key: aws-id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds
+                key: aws-secret
+          - name: AWS_DEFAULT_REGION
+            value: "us-east-1"
+        args:
+        - "s3://9ps3/img/6.jpg"
+      imagePullSecrets:
+      - name: regcred

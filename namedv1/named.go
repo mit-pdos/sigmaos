@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"sync"
 	"time"
@@ -35,6 +36,7 @@ type Named struct {
 	clnt  *clientv3.Client
 	sess  *concurrency.Session
 	job   string
+	realm sp.Trealm
 	crash int
 }
 
@@ -46,8 +48,10 @@ func Run(args []string) error {
 	}
 	nd = &Named{}
 	ch := make(chan struct{})
-	if !bootNamed {
-		nd.job = args[1]
+	if bootNamed {
+		nd.realm = sp.Trealm(args[1])
+	} else {
+		nd.realm = sp.Trealm(args[1])
 		crashing, err := strconv.Atoi(args[2])
 		if err != nil {
 			return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
@@ -58,11 +62,12 @@ func Run(args []string) error {
 			return err
 		}
 		nd.SigmaClnt = sc
-		nd.Started()
-		go nd.waitExit(ch)
+		// XXX nd.Started too soon for first named
+		// nd.Started()
+		// go nd.waitExit(ch)
 	}
 
-	db.DPrintf(db.NAMEDV1, "started %v\n", proc.GetPid())
+	db.DPrintf(db.NAMEDV1, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
 
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
@@ -85,8 +90,7 @@ func Run(args []string) error {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
 
-	fn := "named-election"
-	// fn := fmt.Sprintf("job-%s-election", nd.job))
+	fn := fmt.Sprintf("named-election-%s", nd.realm)
 	db.DPrintf(db.NAMEDV1, "candidate %v %v\n", proc.GetPid().String(), fn)
 
 	electclnt := concurrency.NewElection(nd.sess, fn)
@@ -101,7 +105,7 @@ func Run(args []string) error {
 	}
 
 	db.DPrintf(db.NAMEDV1, "leader %v %v\n", proc.GetPid().String(), resp)
-	root := rootDir(cli)
+	root := rootDir(cli, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "namedv1", nd.SigmaClnt)
 	if srv == nil {
 		db.DFatalf("MakeReplServer err %v", err)
@@ -110,26 +114,45 @@ func Run(args []string) error {
 
 	mnt := sp.MkMountServer(srv.MyAddr())
 
-	db.DPrintf(db.NAMEDV1, "leader %v\n", mnt)
+	db.DPrintf(db.NAMEDV1, "leader %v %v\n", nd.realm, mnt)
 
-	if err := etcdclnt.SetNamed(cli, mnt, electclnt.Key(), electclnt.Rev()); err != nil {
-		db.DFatalf("SetNamed: %v", err)
-	}
-
-	if bootNamed {
+	if nd.realm == sp.ROOTREALM {
+		if err := etcdclnt.SetRootNamed(cli, mnt, electclnt.Key(), electclnt.Rev()); err != nil {
+			db.DFatalf("SetNamed: %v", err)
+		}
 		sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())
 		if err != nil {
 			db.DFatalf("MkSigmaClntFsLib: err %v", err)
 		}
 		nd.SigmaClnt = sc
+	} else {
+		// note: the named proc runs in rootrealm
+		pn := path.Join(sp.REALMS, nd.realm.String())
+		db.DPrintf(db.NAMEDV1, "mount %v at %v\n", nd.realm, pn)
+		if err := nd.MkMountSymlink(pn, mnt); err != nil {
+			db.DPrintf(db.NAMEDV1, "mount %v at %v err %v\n", nd.realm, pn, err)
+			return err
+		}
+		sts, err := nd.GetDir(sp.REALMS)
+		if err != nil {
+			db.DPrintf(db.NAMEDV1, "getdir %v err %v\n", sp.REALMS, err)
+			return err
+		}
+		db.DPrintf(db.NAMEDV1, "getdir %v sts %v\n", sp.REALMS, sp.Names(sts))
+	}
 
+	if bootNamed {
 		// go nd.exit(ch)
 		nd.initfs()
 		w := os.NewFile(uintptr(3), "pipe")
 		fmt.Fprintf(w, "started")
 		w.Close()
-	} else if nd.crash > 0 {
-		crash.Crasher(nd.SigmaClnt.FsLib)
+	} else {
+		nd.Started()
+		go nd.waitExit(ch)
+		if nd.crash > 0 {
+			crash.Crasher(nd.SigmaClnt.FsLib)
+		}
 	}
 
 	<-ch

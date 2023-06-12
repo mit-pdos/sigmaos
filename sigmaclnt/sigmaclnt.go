@@ -1,8 +1,6 @@
 package sigmaclnt
 
 import (
-	"path"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -37,19 +35,10 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 
 // Create only an FsLib, relative to a realm, but with the client being in the root realm
 func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
-	pn := path.Join(sp.REALMS, rid.String())
-	target, err := rootrealm.GetFile(pn)
+	db.DPrintf(db.SIGMACLNT, "Realm %v NamedAddr %v\n", rid, nil)
+	realm, err := fslib.MakeFsLibAddrNet(name, rid, rootrealm.GetLocalIP(), nil, sp.ROOTREALM.String())
 	if err != nil {
-		return nil, err
-	}
-	mnt, r := sp.MkMount(target)
-	if r != nil {
-		return nil, err
-	}
-	db.DPrintf(db.SIGMACLNT, "Realm %v NamedAddr %v\n", rid, mnt.Addr)
-	realm, err := fslib.MakeFsLibAddrNet(name, rid, rootrealm.GetLocalIP(), mnt.Addr, sp.ROOTREALM.String())
-	if err != nil {
-		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", mnt.Addr, err)
+		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", nil, err)
 		return nil, err
 	}
 	return &SigmaClnt{realm, nil}, nil

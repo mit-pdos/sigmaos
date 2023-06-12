@@ -75,13 +75,13 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	rm.realms[rid] = true
 
-	pn := path.Join(sp.REALMS, req.Realm)
+	// pn := path.Join(sp.REALMS, req.Realm)
 
 	if err := MkNet(req.Network); err != nil {
 		return err
 	}
 
-	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
+	p := proc.MakeProc("namedv1", []string{req.Realm, "0"})
 	p.SetNcore(1)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])

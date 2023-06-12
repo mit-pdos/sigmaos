@@ -79,7 +79,7 @@ func matchexact(mp path.Path, path path.Path) bool {
 	return true
 }
 
-func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.Path, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -88,10 +88,10 @@ func (mnt *MntTable) resolve(path path.Path, resolve bool) (sp.Tfid, path.Path, 
 	}
 
 	for _, p := range mnt.mounts {
-		// db.DPrintf(db.MOUNT, "mnt %v path %v\n", p.path, path)
 		ok, left := match(p.path, path)
+		db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
-			if len(left) == 0 && !resolve {
+			if len(left) == 0 && !allowResolve {
 				continue
 			}
 			return p.fid, left, nil

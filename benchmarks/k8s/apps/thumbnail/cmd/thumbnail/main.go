@@ -34,13 +34,14 @@ type Trans struct {
 }
 
 func MakeTrans(args []string) (*Trans, error) {
-	if len(args) != 3 {
+	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeTrans: %v", args)
 	t := &Trans{}
 	t.input = args[1]
 	t.output = args[1] + "-thumbnail-" + strconv.Itoa(rand.Int())
+	log.Printf("Output %v", t.output)
 	return t, nil
 }
 
@@ -49,6 +50,9 @@ func (t *Trans) Work() {
 	fs := corfs.InitFilesystem(corfs.S3)
 	rdr, err := fs.OpenReader(t.input, 0)
 	log.Printf("Time %v open: %v", t.input, time.Since(do))
+	if err != nil {
+		log.Fatalf("Error OpenReader: %v", err)
+	}
 	var dc time.Time
 	defer func() {
 		rdr.Close()
@@ -57,6 +61,9 @@ func (t *Trans) Work() {
 
 	ds := time.Now()
 	img, err := jpeg.Decode(rdr)
+	if err != nil {
+		log.Fatalf("Error decode jpeg: %v", err)
+	}
 	log.Printf("Time %v read/decode: %v", t.input, time.Since(ds))
 	dr := time.Now()
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
@@ -76,4 +83,5 @@ func (t *Trans) Work() {
 	}()
 
 	jpeg.Encode(wrt, img1, nil)
+	log.Printf("Success!")
 }

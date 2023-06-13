@@ -126,6 +126,11 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
 	}
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+	err = ts2.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
@@ -157,6 +162,11 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
 	}
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+	err = ts2.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
@@ -182,6 +192,9 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+
+	err = ts1.Remove()
+	assert.Nil(t, err)
 
 	rootts.Shutdown()
 }
@@ -219,13 +232,16 @@ func TestEvictSingle(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
 func TestEvictMultiRealm(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	// Make a second realm
-	test.MakeRealmTstate(rootts, REALM2)
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
@@ -256,6 +272,11 @@ func TestEvictMultiRealm(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
+
+	err = ts1.Remove()
+	assert.Nil(t, err)
+	err = ts2.Remove()
+	assert.Nil(t, err)
 
 	rootts.Shutdown()
 }
@@ -312,6 +333,9 @@ func TestRealmNetIsolationOK(t *testing.T) {
 
 	cm.Stop()
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
@@ -358,6 +382,11 @@ func TestRealmNetIsolationFail(t *testing.T) {
 
 	cm.Stop()
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+	err = ts2.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
@@ -374,6 +403,9 @@ func TestSpinPerfCalibrate(t *testing.T) {
 	// -1 for named
 	ctimeL := calibrateCTimeLinux(ts1, linuxsched.NCores-1, N_ITER)
 	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
+
+	err := ts1.Remove()
+	assert.Nil(t, err)
 
 	rootts.Shutdown()
 }
@@ -414,6 +446,9 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	assert.True(rootts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))
 	assert.True(rootts.T, d2sd > tsd, "Spin perf 2 not enough slowdown (%v): %v <= %v", d1sd, d2, targetTime(ctimeS, tsd))
 
+	err := ts1.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 
@@ -448,6 +483,9 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
 	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
 	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+
+	err := ts1.Remove()
+	assert.Nil(t, err)
 
 	rootts.Shutdown()
 }
@@ -484,6 +522,9 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
 	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
 	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+
+	err := ts1.Remove()
+	assert.Nil(t, err)
 
 	rootts.Shutdown()
 }

@@ -11,6 +11,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -71,11 +72,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	rid := sp.Trealm(req.Realm)
 	// If realm already exists
 	if rm.realms[rid] {
-		db.DFatalf("Error: Realm already exists")
+		return serr.MkErr(serr.TErrExists, rid)
 	}
 	rm.realms[rid] = true
-
-	// pn := path.Join(sp.REALMS, req.Realm)
 
 	if err := MkNet(req.Network); err != nil {
 		return err
@@ -118,5 +117,19 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			return err
 		}
 	}
+	return nil
+}
+
+func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.RemoveResult) error {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	db.DPrintf(db.REALMD, "RealmSrv.Remove %v\n", req.Realm)
+	rid := sp.Trealm(req.Realm)
+	if !rm.realms[rid] {
+		return serr.MkErr(serr.TErrNotfound, rid)
+	}
+	rm.realms[rid] = false
+
 	return nil
 }

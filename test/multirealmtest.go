@@ -1,8 +1,6 @@
 package test
 
 import (
-	"testing"
-
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -12,7 +10,7 @@ import (
 type RealmTstate struct {
 	realm sp.Trealm
 	*sigmaclnt.SigmaClnt
-	T *testing.T
+	Ts *Tstate
 }
 
 // Creates a realm, and a tstate relative to that realm.
@@ -26,27 +24,31 @@ func MakeRealmTstateClnt(ts *Tstate, realm sp.Trealm) *RealmTstate {
 }
 
 func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTstate {
-	var err error
 	if makerealm {
 		net := ""
 		if Overlays {
 			net = realm.String()
 		}
-		if err = ts.rc.MakeRealm(realm, net); err != nil {
+		if err := ts.rc.MakeRealm(realm, net); err != nil {
 			db.DFatalf("Error MakeRealmTstate MkRealm: %v", err)
 		}
 	}
-	var sc *sigmaclnt.SigmaClnt
-	if sc, err = sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test", realm); err != nil {
+	if sc, err := sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test", realm); err != nil {
 		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
+	} else {
+		return &RealmTstate{
+			realm:     realm,
+			SigmaClnt: sc,
+			Ts:        ts,
+		}
 	}
-	return &RealmTstate{
-		realm:     realm,
-		SigmaClnt: sc,
-		T:         ts.T,
-	}
+	return nil
 }
 
 func (rts *RealmTstate) GetRealm() sp.Trealm {
 	return rts.realm
+}
+
+func (rts *RealmTstate) Remove() error {
+	return rts.Ts.rc.RemoveRealm(rts.realm)
 }

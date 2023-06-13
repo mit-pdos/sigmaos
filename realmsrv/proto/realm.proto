@@ -11,3 +11,10 @@ message MakeResult {
   repeated string namedAddr = 1;
 }
 
+message RemoveRequest {
+  string realm = 1;
+}
+
+message RemoveResult {
+}
+

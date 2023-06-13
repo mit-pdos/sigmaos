@@ -41,9 +41,9 @@ func calibrateCTimeLinux(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	cmd := exec.Command("../bin/user/spinperf", []string{"false", strconv.Itoa(int(nthread)), strconv.Itoa(niter), "linux-baseline"}...)
 	start := time.Now()
 	err := cmd.Start()
-	assert.Nil(ts.T, err, "Err start: %v", err)
+	assert.Nil(ts.Ts.T, err, "Err start: %v", err)
 	err = cmd.Wait()
-	assert.Nil(ts.T, err, "Err wait: %v", err)
+	assert.Nil(ts.Ts.T, err, "Err wait: %v", err)
 	return time.Since(start)
 }
 
@@ -51,14 +51,14 @@ func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter i
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetNcore(ncore)
 	err := ts.Spawn(p)
-	assert.Nil(ts.T, err, "Error spawn: %v", err)
+	assert.Nil(ts.Ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
 }
 
 func waitSpinPerf(ts *test.RealmTstate, pid proc.Tpid) time.Duration {
 	status, err := ts.WaitExit(pid)
-	assert.Nil(ts.T, err)
-	assert.True(ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
+	assert.Nil(ts.Ts.T, err)
+	assert.True(ts.Ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)
 	return time.Duration(status.Data().(float64))
 }
 
@@ -97,6 +97,8 @@ func TestBasicSimple(t *testing.T) {
 	db.DPrintf(db.TEST, "realm names sched %v\n", sp.Names(sts))
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
+
+	ts1.Remove()
 
 	rootts.Shutdown()
 }
@@ -260,11 +262,11 @@ func TestEvictMultiRealm(t *testing.T) {
 func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 	a := proc.MakeProc("dirreader", []string{pn})
 	err := r.Spawn(a)
-	assert.Nil(r.T, err, "Error spawn: %v", err)
+	assert.Nil(r.Ts.T, err, "Error spawn: %v", err)
 	err = r.WaitStart(a.GetPid())
-	assert.Nil(r.T, err, "waitstart error")
+	assert.Nil(r.Ts.T, err, "waitstart error")
 	status, err := r.WaitExit(a.GetPid())
-	assert.Nil(r.T, err, "WaitExit error")
+	assert.Nil(r.Ts.T, err, "WaitExit error")
 	return status
 }
 

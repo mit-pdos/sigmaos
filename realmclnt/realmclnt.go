@@ -33,3 +33,14 @@ func (rc *RealmClnt) MakeRealm(realm sp.Trealm, net string) error {
 	}
 	return nil
 }
+
+func (rc *RealmClnt) RemoveRealm(realm sp.Trealm) error {
+	req := &proto.RemoveRequest{
+		Realm: realm.String(),
+	}
+	res := &proto.RemoveResult{}
+	if err := rc.pdc.RPC("RealmSrv.Remove", req, res); err != nil {
+		return err
+	}
+	return nil
+}

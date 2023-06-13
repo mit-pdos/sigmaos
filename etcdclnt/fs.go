@@ -97,7 +97,7 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "addObj %v %v\n", p, resp)
+	db.DPrintf(db.ETCDCLNT, "Create %v %v\n", p, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrExists, p)
 	}
@@ -120,7 +120,7 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "rmObj %v %v\n", del, resp)
+	db.DPrintf(db.ETCDCLNT, "Remove %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, del)
 	}
@@ -152,7 +152,7 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "mvObj %v %v\n", d, resp)
+	db.DPrintf(db.ETCDCLNT, "Rename %v %v\n", d, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, d)
 	}
@@ -196,7 +196,7 @@ func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, 
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	db.DPrintf(db.NAMEDV1, "mvObjAt %v %v\n", del, resp)
+	db.DPrintf(db.ETCDCLNT, "RenameAt %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrNotfound, del)
 	}

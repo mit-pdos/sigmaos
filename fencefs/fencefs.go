@@ -6,10 +6,10 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/inode"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -59,8 +59,8 @@ func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.Make
 	}
 }
 
-func MakeRoot(ctx fs.CtxI) fs.Dir {
-	dir := dir.MkRootDir(ctx, makeInode)
+func MakeRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
+	dir := dir.MkRootDir(ctx, makeInode, parent)
 	return dir
 }
 

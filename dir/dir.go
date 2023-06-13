@@ -47,8 +47,8 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
-	i, _ := mi(ctx, sp.DMDIR, 0, nil, MakeDirF)
+func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF, parent fs.Dir) fs.Dir {
+	i, _ := mi(ctx, sp.DMDIR, 0, parent, MakeDirF)
 	return i.(fs.Dir)
 }
 

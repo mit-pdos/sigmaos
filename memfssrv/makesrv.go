@@ -56,7 +56,7 @@ func MakeMemFsPort(pn, port string, name string) (*MemFs, error) {
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
 func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
-	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
+	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode, nil)
 	srv, err := fslibsrv.MakeSrv(root, pn, port, sc)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func MakeMemFsPublic(pn, name string) (*MemFs, error) {
 //
 
 func MakeReplMemFsFsl(addr, path string, sc *sigmaclnt.SigmaClnt, conf repl.Config) (*MemFs, error) {
-	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
+	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode, nil)
 	return MakeMemFsReplServerFsl(root, addr, path, sc, conf)
 }
 
@@ -117,7 +117,7 @@ func MakeMemFsReplServer(root fs.Dir, addr string, path, name string, config rep
 // This version is for a replicated named, including handling if this
 // is the initial named for the root realm.
 func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
-	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
+	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode, nil)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
 	as, e := proc.Named()
@@ -187,6 +187,6 @@ func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt,
 
 // Make MemFs with a public port but don't advertise the port (yet)
 func MakeReplMemFsFslPublic(path string, sc *sigmaclnt.SigmaClnt, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
-	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
+	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode, nil)
 	return MakeReplServerClntPublic(root, "", sc, conf, realm)
 }

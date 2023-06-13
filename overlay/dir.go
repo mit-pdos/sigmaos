@@ -55,6 +55,19 @@ func (dir *DirOverlay) lookupMount(name string) fs.FsObj {
 	return nil
 }
 
+func (dir *DirOverlay) removeMount(name string) bool {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	db.DPrintf(db.OVERLAYDIR, "removeMount %v %v\n", name, dir.entries)
+
+	if _, ok := dir.entries[name]; ok {
+		delete(dir.entries, name)
+		return true
+	}
+	return false
+}
+
 func (dir *DirOverlay) ls() []*sp.Stat {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
@@ -74,14 +87,6 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 		return i, nil
 	}
 	return nil, serr.MkErr(serr.TErrNotfound, name)
-	// else {
-	// 	db.DPrintf(db.OVERLAYDIR, "Lookup underlay %v\n", name)
-	// 	o, err := dir.underlay.Lookup(ctx, name)
-	// 	if o == dir.underlay {
-	// 		o = dir
-	// 	}
-	// 	return o, err
-	// }
 }
 
 func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
@@ -104,7 +109,7 @@ func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmod
 }
 
 // XXX account for extra entries in cursor, and sort
-// XXX ignoressy size
+// XXX ignores size
 func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
@@ -123,14 +128,23 @@ func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.T
 }
 
 func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+	if i := dir.lookupMount(from); i != nil {
+		return serr.MkErr(serr.TErrNotSupported, from)
+	}
 	return dir.underlay.Rename(ctx, from, to)
 }
 
 func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *serr.Err {
+	if i := dir.lookupMount(old); i != nil {
+		return serr.MkErr(serr.TErrNotSupported, old)
+	}
 	return dir.underlay.Renameat(ctx, old, nd, new)
 }
 
 func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *serr.Err {
+	if dir.removeMount(n) {
+		return nil
+	}
 	return dir.underlay.Remove(ctx, n)
 }
 

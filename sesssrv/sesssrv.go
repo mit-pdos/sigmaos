@@ -84,7 +84,7 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	ssrv.vt = version.MkVersionTable()
 	ssrv.vt.Insert(ssrv.root.Path())
 
-	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
+	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil), ssrv.root)
 
 	dirover.Mount(sp.STATSD, ssrv.stats)
 	dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))

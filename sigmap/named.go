@@ -2,29 +2,25 @@ package sigmap
 
 // if name ends in "/", it is the union directory for that service
 const (
-	NAME        = "name"
-	NAMED       = NAME + "/"
-	NAMEDREL    = "named"
-	REALMDREL   = "realmd"
-	REALMD      = NAMED + REALMDREL
-	REALMSREL   = "realms"
-	REALMS      = NAMED + REALMDREL + "/" + REALMSREL
-	BOOTREL     = "boot"
-	BOOT        = NAMED + BOOTREL + "/"
-	TMPREL      = "tmp"
-	TMP         = NAMED + TMPREL
-	UPROCDREL   = "uprocd"
-	S3REL       = "s3"
-	S3          = NAMED + S3REL + "/"
-	UXREL       = "ux"
-	UX          = NAMED + UXREL + "/"
-	SCHEDDREL   = "schedd"
-	SCHEDD      = NAMED + SCHEDDREL + "/"
-	SIGMAMGRREL = "sigmamgr"
-	SIGMAMGR    = NAMED + SIGMAMGRREL + "/"
-	DBREL       = "db"
-	DB          = NAMED + DBREL + "/"
-	DBD         = DB + "~any/"
+	NAME      = "name"
+	NAMED     = NAME + "/"
+	NAMEDREL  = "named"
+	REALMDREL = "realmd"
+	REALMD    = NAMED + REALMDREL
+	REALMSREL = "realms"
+	REALMS    = NAMED + REALMDREL + "/" + REALMSREL
+	BOOTREL   = "boot"
+	BOOT      = NAMED + BOOTREL + "/"
+	UPROCDREL = "uprocd"
+	S3REL     = "s3"
+	S3        = NAMED + S3REL + "/"
+	UXREL     = "ux"
+	UX        = NAMED + UXREL + "/"
+	SCHEDDREL = "schedd"
+	SCHEDD    = NAMED + SCHEDDREL + "/"
+	DBREL     = "db"
+	DB        = NAMED + DBREL + "/"
+	DBD       = DB + "~any/"
 
 	UXBIN = UX + "~local/bin/"
 

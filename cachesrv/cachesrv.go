@@ -65,7 +65,7 @@ func RunCacheSrv(args []string) error {
 		s.bins[i].cache = make(map[string][]byte)
 	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.CACHE+s.shrd, s, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(args[1]+s.shrd, s, public)
 	if err != nil {
 		return err
 	}

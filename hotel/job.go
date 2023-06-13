@@ -101,7 +101,6 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 	fsl.MkDir(HOTELDIR, 0777)
-	fsl.MkDir(sp.CACHE, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
 	}

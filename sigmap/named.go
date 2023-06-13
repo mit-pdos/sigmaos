@@ -30,9 +30,6 @@ const (
 
 	MEMFS = NAMED + "memfsd/"
 
-	CACHEREL = "cache"
-	CACHE    = NAMED + CACHEREL + "/"
-
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 

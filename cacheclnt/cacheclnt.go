@@ -16,7 +16,6 @@ import (
 	"sigmaos/reader"
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
-	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
 
@@ -43,7 +42,7 @@ type CacheClnt struct {
 func MkCacheClnt(fsls []*fslib.FsLib, job string) (*CacheClnt, error) {
 	cc := &CacheClnt{}
 	cc.fsls = fsls
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, sp.CACHE, cc.Watch)
+	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, CACHE, cc.Watch)
 	if err != nil {
 		return nil, err
 	}

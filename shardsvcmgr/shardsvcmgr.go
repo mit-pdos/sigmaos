@@ -20,7 +20,6 @@ type ShardMgr struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	bin    string
-	job    string
 	shards []proc.Tpid
 	nshard int
 	ncore  proc.Tcore
@@ -31,7 +30,7 @@ type ShardMgr struct {
 
 func (sm *ShardMgr) addShard(i int) error {
 	// SpawnBurst to spread shards across procds.
-	p := proc.MakeProc(sm.bin, []string{sm.job, strconv.FormatBool(sm.public), SHRDDIR + strconv.Itoa(i)})
+	p := proc.MakeProc(sm.bin, []string{sm.pn, strconv.FormatBool(sm.public), SHRDDIR + strconv.Itoa(i)})
 	//	p.AppendEnv("GODEBUG", "gctrace=1")
 	if !sm.gc {
 		p.AppendEnv("GOGC", "off")
@@ -49,6 +48,7 @@ func (sm *ShardMgr) addShard(i int) error {
 }
 
 func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, ncore proc.Tcore, job, bin, pn string, gc, public bool) (*ShardMgr, error) {
+	sc.MkDir(pn, 0777)
 	if _, err := sc.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
@@ -57,7 +57,6 @@ func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, ncore proc.Tcore, job, bin, pn s
 	sm := &ShardMgr{
 		SigmaClnt: sc,
 		bin:       bin,
-		job:       job,
 		shards:    make([]proc.Tpid, 0),
 		nshard:    n,
 		ncore:     ncore,

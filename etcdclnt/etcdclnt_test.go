@@ -2,7 +2,6 @@ package etcdclnt_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"path"
 	"strconv"
@@ -21,41 +20,15 @@ import (
 	"sigmaos/test"
 )
 
-func TestEtcdLs(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   etcdclnt.Endpoints,
-		DialTimeout: etcdclnt.DialTimeout,
-	})
-	resp, err := cli.Get(context.TODO(), "\000", clientv3.WithRange("\000"), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
-	assert.Nil(t, err)
-	log.Printf("resp %v\n", resp)
-	for _, ev := range resp.Kvs {
-		fmt.Printf("%s : %s\n", ev.Key, ev.Value)
-	}
-}
-
-func TestEtcdDelAll(t *testing.T) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   etcdclnt.Endpoints,
-		DialTimeout: etcdclnt.DialTimeout,
-	})
-	resp, err := cli.Delete(context.TODO(), "\000", clientv3.WithRange("\000"))
-	assert.Nil(t, err)
-	log.Printf("resp %v\n", resp)
-}
-
 func leader(ch chan struct{}, i int) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   etcdclnt.Endpoints,
-		DialTimeout: etcdclnt.DialTimeout,
-	})
+	cli, err := etcdclnt.MkEtcdClnt(sp.ROOTREALM)
 	if err != nil {
 		log.Fatalf("new %v\n", err)
 	}
 	defer cli.Close()
 
 	var s *concurrency.Session
-	s, err = concurrency.NewSession(cli, concurrency.WithTTL(etcdclnt.SessionTTL))
+	s, err = concurrency.NewSession(cli.Client, concurrency.WithTTL(etcdclnt.SessionTTL))
 	if err != nil {
 		log.Fatal(err)
 	}

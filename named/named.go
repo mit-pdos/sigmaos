@@ -37,7 +37,7 @@ type Named struct {
 
 func Run(args []string) error {
 	bootNamed := len(args) == 2 // XXX args[1] is realm
-	db.DPrintf(db.NAMEDV1, "%v: BootNamed %v %v\n", proc.GetPid(), bootNamed, args)
+	db.DPrintf(db.NAMED, "%v: BootNamed %v %v\n", proc.GetPid(), bootNamed, args)
 	if !(len(args) == 2 || len(args) == 3) {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -62,7 +62,7 @@ func Run(args []string) error {
 		// go nd.waitExit(ch)
 	}
 
-	db.DPrintf(db.NAMEDV1, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
 
 	ec, err := etcdclnt.MkEtcdClnt(nd.realm)
 	if err != nil {
@@ -84,7 +84,7 @@ func Run(args []string) error {
 	}
 
 	fn := fmt.Sprintf("named-election-%s", nd.realm)
-	db.DPrintf(db.NAMEDV1, "candidate %v %v\n", proc.GetPid().String(), fn)
+	db.DPrintf(db.NAMED, "candidate %v %v\n", proc.GetPid().String(), fn)
 
 	electclnt := concurrency.NewElection(nd.sess, fn)
 
@@ -97,7 +97,7 @@ func Run(args []string) error {
 		db.DFatalf("Leader err %v\n", err)
 	}
 
-	db.DPrintf(db.NAMEDV1, "leader %v %v\n", proc.GetPid().String(), resp)
+	db.DPrintf(db.NAMED, "leader %v %v\n", proc.GetPid().String(), resp)
 	root := rootDir(ec, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt)
 	if srv == nil {
@@ -107,7 +107,7 @@ func Run(args []string) error {
 
 	mnt := sp.MkMountServer(srv.MyAddr())
 
-	db.DPrintf(db.NAMEDV1, "leader %v %v\n", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, mnt)
 
 	if nd.realm == sp.ROOTREALM {
 		if err := ec.SetRootNamed(mnt, electclnt.Key(), electclnt.Rev()); err != nil {
@@ -121,17 +121,17 @@ func Run(args []string) error {
 	} else {
 		// note: the named proc runs in rootrealm
 		pn := path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.NAMEDV1, "mount %v at %v\n", nd.realm, pn)
+		db.DPrintf(db.NAMED, "mount %v at %v\n", nd.realm, pn)
 		if err := nd.MkMountSymlink(pn, mnt); err != nil {
-			db.DPrintf(db.NAMEDV1, "mount %v at %v err %v\n", nd.realm, pn, err)
+			db.DPrintf(db.NAMED, "mount %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}
 		sts, err := nd.GetDir(sp.REALMS)
 		if err != nil {
-			db.DPrintf(db.NAMEDV1, "getdir %v err %v\n", sp.REALMS, err)
+			db.DPrintf(db.NAMED, "getdir %v err %v\n", sp.REALMS, err)
 			return err
 		}
-		db.DPrintf(db.NAMEDV1, "getdir %v sts %v\n", sp.REALMS, sp.Names(sts))
+		db.DPrintf(db.NAMED, "getdir %v sts %v\n", sp.REALMS, sp.Names(sts))
 	}
 
 	if bootNamed {
@@ -150,7 +150,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMEDV1, "leader %v %v done\n", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "leader %v %v done\n", nd.realm, mnt)
 
 	// XXX maybe clear boot block
 
@@ -166,14 +166,14 @@ func (nd *Named) waitExit(ch chan struct{}) {
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
-	db.DPrintf(db.NAMEDV1, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
+	db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
 	ch <- struct{}{}
 }
 
 // for testing
 func (nd *Named) exit(ch chan struct{}) {
 	time.Sleep(2 * time.Second)
-	db.DPrintf(db.NAMEDV1, "boot named exit\n")
+	db.DPrintf(db.NAMED, "boot named exit\n")
 	ch <- struct{}{}
 }
 

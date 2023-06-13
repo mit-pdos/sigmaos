@@ -20,21 +20,21 @@ func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 		if err != nil {
 			db.DFatalf("GetMntNamed() %v err %v\n", pathc.realm, err)
 		}
-		db.DPrintf(db.NAMEDV1, "GetMntNamed %v %v\n", pathc.realm, mnt)
+		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.realm, mnt)
 		return mnt
 	} else {
 		mnt, err := pathc.getRealmNamed()
 		if err != nil {
 			db.DFatalf("GetMntNamed() %v err %v\n", pathc.realm, err)
 		}
-		db.DPrintf(db.NAMEDV1, "GetMntNamed %v %v\n", pathc.realm, mnt)
+		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.realm, mnt)
 		return mnt
 	}
 }
 
 func (pathc *PathClnt) resolveNamed(p path.Path) *serr.Err {
 	_, rest, err := pathc.mnt.resolve(p, true)
-	// db.DPrintf(db.NAMEDV1, "%p: resolveNamed: %v r %v err %v\n", pathc, p, rest, err)
+	// db.DPrintf(db.NAMED, "%p: resolveNamed: %v r %v err %v\n", pathc, p, rest, err)
 	if err != nil && len(rest) >= 1 && rest[0] == sp.NAME {
 		pathc.mountNamed(p)
 	}
@@ -42,7 +42,7 @@ func (pathc *PathClnt) resolveNamed(p path.Path) *serr.Err {
 }
 
 func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
-	db.DPrintf(db.NAMEDV1, "mountNamed %v: %v\n", pathc.realm, p)
+	db.DPrintf(db.NAMED, "mountNamed %v: %v\n", pathc.realm, p)
 	if pathc.realm == sp.ROOTREALM {
 		return pathc.mountRootNamed(sp.NAME)
 	} else {
@@ -53,17 +53,17 @@ func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
 
 func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
 	for i := 0; i < MAXRETRY; i++ {
-		db.DPrintf(db.NAMEDV1, "mountRootNamed %d: %v\n", i, name)
+		db.DPrintf(db.NAMED, "mountRootNamed %d: %v\n", i, name)
 		mnt, err := etcdclnt.GetRootNamed()
 		if err == nil {
 			pn := path.Path{name}
 			if err := pathc.autoMount("", mnt, pn); err == nil {
-				db.DPrintf(db.NAMEDV1, "mountRootNamed: automount %v at %v\n", mnt, pn)
+				db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
 				return nil
 			}
-			db.DPrintf(db.NAMEDV1, "mountRootNamed: automount err %v\n", err)
+			db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
 		} else {
-			db.DPrintf(db.NAMEDV1, "mountRootNamed: GetNamed err %v\n", err)
+			db.DPrintf(db.NAMED, "mountRootNamed: GetNamed err %v\n", err)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -80,27 +80,27 @@ func (pathc *PathClnt) getRealmNamed() (sp.Tmount, *serr.Err) {
 	pn := gpath.Join("root", sp.REALMDREL, sp.REALMSREL, pathc.realm.String())
 	target, err := pathc.GetFile(pn, sp.OREAD, 0, sp.MAXGETSET)
 	if err != nil {
-		db.DPrintf(db.NAMEDV1, "getRealmNamed %v err %v\n", pathc.realm, err)
+		db.DPrintf(db.NAMED, "getRealmNamed %v err %v\n", pathc.realm, err)
 		return sp.Tmount{}, serr.MkErrError(err)
 	}
 	mnt, sr := sp.MkMount(target)
 	if sr != nil {
 		return sp.Tmount{}, sr
 	}
-	db.DPrintf(db.NAMEDV1, "getRealmNamed %v %v\n", pathc.realm, mnt)
+	db.DPrintf(db.NAMED, "getRealmNamed %v %v\n", pathc.realm, mnt)
 	return mnt, nil
 }
 
 func (pathc *PathClnt) mountRealmNamed() *serr.Err {
 	mnt, err := pathc.getRealmNamed()
 	if err != nil {
-		db.DPrintf(db.NAMEDV1, "mountRealmNamed: getRrealmNamed err %v\n", err)
+		db.DPrintf(db.NAMED, "mountRealmNamed: getRrealmNamed err %v\n", err)
 		return err
 	}
 	if err := pathc.autoMount("", mnt, path.Path{sp.NAME}); err == nil {
-		db.DPrintf(db.NAMEDV1, "mountRealmNamed: automount mnt %v at %v\n", mnt, sp.NAME)
+		db.DPrintf(db.NAMED, "mountRealmNamed: automount mnt %v at %v\n", mnt, sp.NAME)
 		return nil
 	}
-	db.DPrintf(db.NAMEDV1, "mountRealmNamed: automount err %v\n", err)
+	db.DPrintf(db.NAMED, "mountRealmNamed: automount err %v\n", err)
 	return serr.MkErr(serr.TErrRetry, fmt.Sprintf("%v realm failure", pathc.realm))
 }

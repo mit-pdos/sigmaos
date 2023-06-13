@@ -69,7 +69,7 @@ func (o *Obj) Parent() fs.Dir {
 // XXX SetParent
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "Stat: %v\n", o)
+	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 	if o, err := getObj(o.ec, o.pn, o.path, o.parent); err != nil {
 		return nil, err
 	} else {

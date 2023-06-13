@@ -19,18 +19,18 @@ func makeFile(o *Obj) *File {
 }
 
 func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "%v: FileOpen %v m 0x%x path %v\n", ctx, f, m, f.Obj.pn)
+	db.DPrintf(db.NAMED, "%v: FileOpen %v m 0x%x path %v\n", ctx, f, m, f.Obj.pn)
 	return nil, nil
 }
 
 func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
-	db.DPrintf(db.NAMEDV1, "%v: FileClose %v\n", ctx, f)
+	db.DPrintf(db.NAMED, "%v: FileClose %v\n", ctx, f)
 	return nil
 }
 
 // XXX maybe do get
 func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "%v: Read: %v off %v cnt %v\n", ctx, f, offset, n)
+	db.DPrintf(db.NAMED, "%v: Read: %v off %v cnt %v\n", ctx, f, offset, n)
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {
@@ -49,7 +49,7 @@ func (f *File) LenOff() sp.Toffset {
 }
 
 func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	db.DPrintf(db.NAMEDV1, "%v: Write: off %v cnt %v\n", f, offset, len(b))
+	db.DPrintf(db.NAMED, "%v: Write: off %v cnt %v\n", f, offset, len(b))
 	cnt := sessp.Tsize(len(b))
 	sz := sp.Toffset(len(b))
 

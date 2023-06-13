@@ -93,7 +93,6 @@ const (
 	BOOT                     = "BOOT"
 	CONTAINER                = "CONTAINER"
 	NAMED                    = "NAMED"
-	NAMEDV1                  = "NAMEDV1"
 	ETCDCLNT                 = "ETCDCLNT"
 	PROCMGR                  = "PROCMGR"
 	UPROCDMGR                = "UPROCDMGR"

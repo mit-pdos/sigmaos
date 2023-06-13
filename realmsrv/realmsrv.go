@@ -21,9 +21,14 @@ const (
 	MIN_PORT = 30000
 )
 
+type Realm struct {
+	named *proc.Proc // XXX groupmgr for fault tolerance
+	sc    *sigmaclnt.SigmaClnt
+}
+
 type RealmSrv struct {
 	mu         sync.Mutex
-	realms     map[sp.Trealm]bool
+	realms     map[sp.Trealm]*Realm
 	sc         *sigmaclnt.SigmaClnt
 	lastNDPort int
 	ch         chan struct{}
@@ -32,7 +37,7 @@ type RealmSrv struct {
 func RunRealmSrv() error {
 	rs := &RealmSrv{
 		lastNDPort: MIN_PORT,
-		realms:     make(map[sp.Trealm]bool),
+		realms:     make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
@@ -64,6 +69,7 @@ func MkNet(net string) error {
 	return nil
 }
 
+// XXX clean up if fail during Make
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -71,17 +77,16 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v %v\n", req.Realm, req.Network)
 	rid := sp.Trealm(req.Realm)
 	// If realm already exists
-	if rm.realms[rid] {
+	if _, ok := rm.realms[rid]; ok {
 		return serr.MkErr(serr.TErrExists, rid)
 	}
-	rm.realms[rid] = true
-
 	if err := MkNet(req.Network); err != nil {
 		return err
 	}
 
 	p := proc.MakeProc("namedv1", []string{req.Realm, "0"})
 	p.SetNcore(1)
+
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])
 		return errs[0]
@@ -92,7 +97,6 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
-
 	sc, err := sigmaclnt.MkSigmaClntRealmFsLib(rm.sc.FsLib, "realmd", rid)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)
@@ -117,6 +121,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			return err
 		}
 	}
+	rm.realms[rid] = &Realm{named: p, sc: sc}
 	return nil
 }
 
@@ -126,10 +131,20 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 
 	db.DPrintf(db.REALMD, "RealmSrv.Remove %v\n", req.Realm)
 	rid := sp.Trealm(req.Realm)
-	if !rm.realms[rid] {
+	r, ok := rm.realms[rid]
+	if !ok {
 		return serr.MkErr(serr.TErrNotfound, rid)
 	}
-	rm.realms[rid] = false
 
+	if err := r.sc.RmDirEntries(sp.NAMED); err != nil {
+		return err
+	}
+
+	// XXX remove root dir
+
+	if err := rm.sc.Evict(r.named.GetPid()); err != nil {
+		return err
+	}
+	delete(rm.realms, rid)
 	return nil
 }

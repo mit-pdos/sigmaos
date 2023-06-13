@@ -150,7 +150,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMEDV1, "leader %v done\n", mnt)
+	db.DPrintf(db.NAMEDV1, "leader %v %v done\n", nd.realm, mnt)
 
 	// XXX maybe clear boot block
 
@@ -166,7 +166,7 @@ func (nd *Named) waitExit(ch chan struct{}) {
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
-	db.DPrintf(db.NAMEDV1, "candidate %v evicted\n", proc.GetPid().String())
+	db.DPrintf(db.NAMEDV1, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
 	ch <- struct{}{}
 }
 

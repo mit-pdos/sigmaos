@@ -75,7 +75,7 @@ func TestEtcdLeader(t *testing.T) {
 }
 
 func startNamed(sc *sigmaclnt.SigmaClnt, realm string, crash, crashinterval int) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, 1, "namedv1", []string{strconv.Itoa(crash)}, realm, 0, crash, crashinterval, 0, 0)
+	return groupmgr.Start(sc, 1, "named", []string{strconv.Itoa(crash)}, realm, 0, crash, crashinterval, 0, 0)
 }
 
 func TestBootNamed(t *testing.T) {
@@ -152,7 +152,7 @@ func TestNamedWalk(t *testing.T) {
 
 	ndg.Stop()
 
-	log.Printf("namedv1 stopped\n")
+	log.Printf("named stopped\n")
 
 	ts.Shutdown()
 }

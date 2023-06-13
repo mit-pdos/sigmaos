@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fslib"
-	"sigmaos/namedv1"
+	"sigmaos/named"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -27,7 +27,7 @@ func initTest(t *testing.T) *Tstate {
 	ts.Tstate = test.MakeTstatePath(t, sp.NAMED)
 	sts, err := ts.GetDir(sp.NAMED)
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, namedv1.InitRootDir))
+	assert.True(t, fslib.Present(sts, named.InitRootDir))
 
 	// start proxy
 

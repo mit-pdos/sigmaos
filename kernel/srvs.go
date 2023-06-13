@@ -115,7 +115,7 @@ func (k *Kernel) bootUxd() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootNamedv1() (*Subsystem, error) {
-	return k.bootSubsystem("namedv1", []string{}, procclnt.HSCHEDD)
+	return k.bootSubsystem("named", []string{}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {

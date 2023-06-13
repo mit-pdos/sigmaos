@@ -2,11 +2,13 @@ package main
 
 import (
 	"os"
+
+	db "sigmaos/debug"
 	"sigmaos/named"
 )
 
-// Usage: <named> address realmId pn [<peerId> <peers>]
-
 func main() {
-	named.Run(os.Args)
+	if err := named.Run(os.Args); err != nil {
+		db.DFatalf("%v: err %v\n", os.Args[0], err)
+	}
 }

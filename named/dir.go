@@ -1,4 +1,4 @@
-package namedv1
+package named
 
 import (
 	db "sigmaos/debug"

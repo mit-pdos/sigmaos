@@ -157,7 +157,7 @@ func (k *Kernel) shutdown() {
 
 func makeNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
 	args := []string{realmId.String()}
-	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "namedv1", args, true)
+	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "named", args, true)
 	return p, nil
 }
 

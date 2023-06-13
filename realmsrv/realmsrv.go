@@ -84,7 +84,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 
-	p := proc.MakeProc("namedv1", []string{req.Realm, "0"})
+	p := proc.MakeProc("named", []string{req.Realm, "0"})
 	p.SetNcore(1)
 
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {

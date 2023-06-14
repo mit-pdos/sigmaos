@@ -40,7 +40,7 @@ func RunPostSrv(public bool, jobname string) error {
 		return err
 	}
 	psrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err

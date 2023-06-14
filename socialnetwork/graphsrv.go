@@ -41,7 +41,7 @@ func RunGraphSrv(public bool, jobname string) error {
 		return err
 	}
 	gsrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err

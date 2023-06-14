@@ -44,7 +44,7 @@ func RunMediaSrv(public bool, jobname string) error {
 		return err
 	}
 	msrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_MEDIA, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_MEDIA)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err

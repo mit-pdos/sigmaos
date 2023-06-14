@@ -11,7 +11,7 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	ec, err := etcdclnt.MkEtcdClnt(nd.realm)
+	ec, err := fsetcd.MkEtcdClnt(nd.realm)
 	if err != nil {
 		return err
 	}
@@ -31,6 +31,9 @@ func (nd *Named) startLeader() error {
 	if err != nil {
 		return err
 	}
+
+	ec.Fence(nd.elect.Key(), nd.elect.Rev())
+
 	root := rootDir(ec, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt)
 	if srv == nil {

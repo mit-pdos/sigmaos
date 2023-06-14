@@ -1,4 +1,4 @@
-package etcdclnt
+package fsetcd
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -24,7 +25,9 @@ var (
 
 type EtcdClnt struct {
 	*clientv3.Client
-	realm sp.Trealm
+	realm    sp.Trealm
+	fencekey string
+	fencerev int64
 }
 
 func MkEtcdClnt(r sp.Trealm) (*EtcdClnt, error) {
@@ -38,7 +41,14 @@ func MkEtcdClnt(r sp.Trealm) (*EtcdClnt, error) {
 	return &EtcdClnt{realm: r, Client: cli}, nil
 }
 
-func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount, key string, rev int64) *serr.Err {
+func (ec *EtcdClnt) Fence(key string, rev int64) {
+	db.DPrintf(db.ETCDCLNT, "%v: Fence key %v rev %d\n", proc.GetPid(), key, rev)
+
+	ec.fencekey = key
+	ec.fencerev = rev
+}
+
+func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	d, err := mnt.Marshal()
 	if err != nil {
 		return serr.MkErrError(err)
@@ -48,13 +58,14 @@ func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount, key string, rev int64) *serr.Err
 		return serr.MkErrError(err)
 	} else {
 		cmp := []clientv3.Cmp{
-			clientv3.Compare(clientv3.CreateRevision(key), "=", rev),
+			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 		}
 		ops := []clientv3.Op{
 			clientv3.OpPut(ec.path2key(BOOT), string(b)),
 		}
 		resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
+			db.DPrintf(db.ETCDCLNT, "SetNamed txn %v err %v\n", nf, err)
 			return serr.MkErrError(err)
 		}
 		db.DPrintf(db.ETCDCLNT, "SetNamed txn %v %v\n", nf, resp)

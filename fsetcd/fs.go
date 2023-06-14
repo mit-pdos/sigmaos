@@ -1,4 +1,4 @@
-package etcdclnt
+package fsetcd
 
 import (
 	"context"
@@ -53,10 +53,17 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {
-		resp, err := ec.Put(context.TODO(), ec.path2key(p), string(b))
+		cmp := []clientv3.Cmp{
+			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
+		}
+		ops := []clientv3.Op{
+			clientv3.OpPut(ec.path2key(p), string(b)),
+		}
+		resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
 			return serr.MkErrError(err)
 		}
+
 		db.DPrintf(db.ETCDCLNT, "PutFile %v %v %v\n", p, nf, resp)
 		return nil
 	}
@@ -88,6 +95,7 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
+		clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 		clientv3.Compare(clientv3.Version(ec.path2key(p)), "=", 0),
 		clientv3.Compare(clientv3.Version(ec.path2key(dp)), "=", int64(v))}
 	ops := []clientv3.Op{
@@ -110,6 +118,7 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 		return r
 	}
 	cmp := []clientv3.Cmp{
+		clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 		clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
 		clientv3.Compare(clientv3.Version(ec.path2key(d)), "=", int64(v))}
 	ops := []clientv3.Op{
@@ -137,6 +146,7 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 	var ops []clientv3.Op
 	if del != 0 {
 		cmp = []clientv3.Cmp{
+			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 			clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
 			clientv3.Compare(clientv3.Version(ec.path2key(d)), "=", int64(v))}
 		ops = []clientv3.Op{
@@ -173,6 +183,7 @@ func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, 
 	var ops []clientv3.Op
 	if del != 0 {
 		cmp = []clientv3.Cmp{
+			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 			clientv3.Compare(clientv3.Version(ec.path2key(del)), ">", 0),
 			clientv3.Compare(clientv3.Version(ec.path2key(df)), "=", int64(vf)),
 			clientv3.Compare(clientv3.Version(ec.path2key(dt)), "=", int64(vt)),
@@ -184,6 +195,7 @@ func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, 
 		}
 	} else {
 		cmp = []clientv3.Cmp{
+			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 			clientv3.Compare(clientv3.Version(ec.path2key(df)), "=", int64(vf)),
 			clientv3.Compare(clientv3.Version(ec.path2key(dt)), "=", int64(vt)),
 		}

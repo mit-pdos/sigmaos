@@ -2,8 +2,8 @@ package named
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/etcdclnt"
 	"sigmaos/fs"
+	"sigmaos/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessp"

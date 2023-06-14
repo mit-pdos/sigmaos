@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/etcdclnt"
+	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"

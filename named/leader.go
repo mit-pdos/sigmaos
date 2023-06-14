@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/etcdclnt"
+	"sigmaos/fsetcd"
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
 )

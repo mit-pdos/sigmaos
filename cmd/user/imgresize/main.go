@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"image/jpeg"
+	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/nfnt/resize"
@@ -36,11 +38,18 @@ func main() {
 	}
 	defer p.Done()
 
+	rand.Seed(time.Now().UnixNano())
+
 	var s *proc.Status
 	for i := 0; i < N_ITER; i++ {
 		start := time.Now()
-		s = t.Work()
-		db.DPrintf(db.ALWAYS, "Time %v e2e resize: %v", os.Args, time.Since(start))
+		output := t.output
+		// Create a new file name for iterations > 0
+		if i > 0 {
+			output += strconv.Itoa(rand.Int())
+		}
+		s = t.Work(output)
+		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
 	t.Exited(s)
 }
@@ -69,7 +78,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	return t, nil
 }
 
-func (t *Trans) Work() *proc.Status {
+func (t *Trans) Work(output string) *proc.Status {
 	do := time.Now()
 	rdr, err := t.OpenReader(t.input)
 	if err != nil {
@@ -93,7 +102,7 @@ func (t *Trans) Work() *proc.Status {
 	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.input, time.Since(dr))
 
 	dcw := time.Now()
-	wrt, err := t.CreateWriter(t.output, 0777, sp.OWRITE)
+	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
 	}

@@ -12,6 +12,7 @@ source $DIR/env.sh
 echo "Installing kubernetes components"
 ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
   bash -c "sudo apt-get install -y apt-transport-https ca-certificates curl"
+  bash -c "sudo mkdir -p /etc/apt/keyrings/"
   bash -c "curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg"
   bash -c "echo \"deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
   bash -c "sudo apt update"

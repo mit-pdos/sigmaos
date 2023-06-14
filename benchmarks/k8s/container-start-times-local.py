@@ -43,7 +43,7 @@ def parse_pod_stats(s):
 
   return stats
 
-def parse_kubelet_logs(log, pod_names):
+def parse_kubelet_log(log, pod_names):
   pod_data = [ l for l in log.split("\n") if "Observed pod startup duration" in l ]
   pod_stats = [ parse_pod_stats(p) for p in pod_data ]
   # Filter pods from other runs.

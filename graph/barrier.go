@@ -20,8 +20,8 @@ type Barrier struct {
 	waiter *sync.RWMutex
 }
 
-// NewBarrier creates a new barrier of size N.  Subsequent calls to Wait will
-// block all goroutines that have called it until Wait is called N times.
+// NewBarrier creates a new barrier of size n.  Subsequent calls to Wait will
+// block all goroutines that have called it until Wait is called n  times.
 func NewBarrier(n int) *Barrier {
 	if n <= 0 {
 		panic("Group must be >= 1")
@@ -31,7 +31,7 @@ func NewBarrier(n int) *Barrier {
 	return &Barrier{n, &sync.Mutex{}, waiter}
 }
 
-// Wait blocks until all the members of the group (size N from NewBarrier) have
+// Wait blocks until all the members of the group (size n from NewBarrier) have
 // "checked in".
 func (b *Barrier) Wait() {
 	b.l.Lock()

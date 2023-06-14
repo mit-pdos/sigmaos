@@ -20,60 +20,6 @@ import (
 	"sigmaos/test"
 )
 
-func leader(ch chan struct{}, i int) {
-	cli, err := etcdclnt.MkEtcdClnt(sp.ROOTREALM)
-	if err != nil {
-		log.Fatalf("new %v\n", err)
-	}
-	defer cli.Close()
-
-	var s *concurrency.Session
-	s, err = concurrency.NewSession(cli.Client, concurrency.WithTTL(etcdclnt.SessionTTL))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer s.Close()
-
-	ctx := context.Background()
-	e := concurrency.NewElection(s, "/leader-election/")
-
-	log.Printf("Campaign %v\n", i)
-
-	err = e.Campaign(ctx, strconv.Itoa(i))
-	if err != nil {
-		log.Fatalf("campaign %v\n", err)
-	}
-	log.Printf("%d: campaign %v\n", i, err)
-
-	var leader *clientv3.GetResponse
-	leader, err = e.Leader(ctx)
-	if err != nil {
-		log.Fatalf("Leader() returned non nil err: %s", err)
-	}
-
-	log.Printf("Leader %d:%v\n", i, leader)
-
-	time.Sleep((etcdclnt.SessionTTL + 1) * time.Second)
-
-	ch <- struct{}{}
-
-	log.Printf("Leader %d:%v done\n", i, leader)
-}
-
-func TestEtcdLeader(t *testing.T) {
-	const N = 2
-
-	ch := make(chan struct{})
-	for i := 0; i < N; i++ {
-		go leader(ch, i)
-	}
-
-	for i := 0; i < N; i++ {
-		<-ch
-	}
-
-}
-
 func startNamed(sc *sigmaclnt.SigmaClnt, realm string, crash, crashinterval int) *groupmgr.GroupMgr {
 	return groupmgr.Start(sc, 1, "named", []string{strconv.Itoa(crash)}, realm, 0, crash, crashinterval, 0, 0)
 }

@@ -39,7 +39,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
 	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err

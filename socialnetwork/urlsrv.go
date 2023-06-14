@@ -57,7 +57,7 @@ func RunUrlSrv(public bool, jobname string) error {
 		return err
 	}
 	urlsrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err

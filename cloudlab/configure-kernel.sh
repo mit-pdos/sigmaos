@@ -21,10 +21,11 @@ ENDSSH
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 echo "##### $0: user is $LOGIN; block is $BLKDEV; kernel version is $KERNEL. #####"
 sudo mkfs -t ext4 $BLKDEV
+sudo mkdir /data
+sudo mount $BLKDEV /data
 sudo mount $BLKDEV /var/local
 sudo mkdir /var/local/$LOGIN
 sudo chown $LOGIN /var/local/$LOGIN
-
 sudo blkid $BLKDEV | cut -d \" -f2
 ENDSSH
 
@@ -74,11 +75,11 @@ ENDSSH
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<"ENDSSH"
 sudo apt update
 sudo apt install -y linux-tools-$(uname -r)
+sudo apt install -y linux-tools-common
 ENDSSH
 
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 # Disable automatic frequency-scaling and switch off cstates
 sudo sed -i s/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="\"intel_pstate=passive intel_idle.max_cstate=0 systemd.unified_cgroup_hierarchy=1\""/g  /etc/default/grub
 sudo update-grub
-sudo reboot
 ENDSSH

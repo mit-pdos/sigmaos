@@ -31,12 +31,14 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
-	nMoreKernel := ((len(srvs)*2 + NSHARD*2) - 1)  / int(linuxsched.NCores)
-	if nMoreKernel > 0 {
-		dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed", 
-			len(srvs)*2 + NSHARD*2, linuxsched.NCores, nMoreKernel)	
-		err = tssn.BootNode(nMoreKernel)
-		assert.Nil(tssn.T, err)
+	if test.Start {
+		nMoreKernel := ((len(srvs)*2 + NSHARD*2) - 1)  / int(linuxsched.NCores)
+		if nMoreKernel > 0 {
+			dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed",
+				len(srvs)*2 + NSHARD*2, linuxsched.NCores, nMoreKernel)
+			err = tssn.BootNode(nMoreKernel)
+			assert.Nil(tssn.T, err)
+		}
 	}
 	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, true, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")

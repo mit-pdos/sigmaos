@@ -44,7 +44,7 @@ func RunUserSrv(public bool, jobname string) error {
 		return err
 	}
 	usrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -124,7 +124,6 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 	if user != nil && fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password))) == user.Password {
 		res.Ok = USER_QUERY_OK
 		res.Userid = user.Userid
-
 	}
 	return nil
 }

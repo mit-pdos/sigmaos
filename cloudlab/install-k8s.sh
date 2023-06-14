@@ -11,8 +11,9 @@ source $DIR/env.sh
 
 echo "Installing kubernetes components"
 ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
-  bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
-  bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
+  bash -c "sudo apt-get install -y apt-transport-https ca-certificates curl"
+  bash -c "curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg"
+  bash -c "echo \"deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
   bash -c "sudo apt update"
 #    bash -c "sudo apt-mark unhold kubelet kubeadm kubectl"
 #    bash -c "sudo apt remove -y kubelet kubeadm kubectl"
@@ -53,8 +54,9 @@ ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
   sudo systemctl stop containerd
   sudo rm -rf /var/local/arielck/containerd
   sudo mv /var/lib/containerd /var/local/arielck
-  sudo rm /etc/containerd/config.toml
-  echo 'root = "/var/local/arielck/containerd"' | sudo tee /etc/containerd/config.toml
+  #sudo rm /etc/containerd/config.toml
+  #echo 'root = "/var/local/arielck/containerd"' | sudo tee /etc/containerd/config.toml
+  bash -c "sudo sed -i 's/\/var\/lib\/containerd/\/var\/local\/arielck\/containerd/g' /etc/containerd/config.toml"
   sudo systemctl restart containerd
   
   sudo rm -rf /var/local/arielck/docker

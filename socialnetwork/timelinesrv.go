@@ -41,7 +41,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 		return err
 	}
 	tlsrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err

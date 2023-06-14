@@ -137,7 +137,8 @@ const (
 	SEMCLNT_ERR             = SEMCLNT + ERR
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
-	LEADER_ERR              = "LEADER" + ERR
+	LEADER                  = "LEADER"
+	LEADER_ERR              = LEADER + ERR
 	GROUPMGR                = "GROUPMGR"
 	GROUPMGR_ERR            = GROUPMGR + ERR
 	PROCCLNT                = "PROCCLNT"

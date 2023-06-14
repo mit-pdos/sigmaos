@@ -1,17 +1,12 @@
 package named
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
 
-	"go.etcd.io/etcd/client/v3/concurrency"
-
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/etcdclnt"
-	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -23,7 +18,6 @@ func RunKNamed(args []string) error {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd = &Named{}
-	ch := make(chan struct{})
 	nd.realm = sp.Trealm(args[1])
 
 	ec, err := etcdclnt.MkEtcdClnt(nd.realm)
@@ -32,46 +26,15 @@ func RunKNamed(args []string) error {
 	}
 	nd.ec = ec
 
-	s, err := concurrency.NewSession(ec.Client, concurrency.WithTTL(etcdclnt.SessionTTL))
-	if err != nil {
-		db.DFatalf("Error sess %v\n", err)
+	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
+
+	if err := nd.startLeader(); err != nil {
+		db.DFatalf("Error startLeader %v\n", err)
 	}
 	defer ec.Close()
 
-	nd.sess = s
-
-	ip, err := container.LocalIP()
-	if err != nil {
-		db.DFatalf("%v: LocalIP %v %v\n", proc.GetPid(), err)
-	}
-
-	fn := fmt.Sprintf("named-election-%s", nd.realm)
-	db.DPrintf(db.NAMED, "candidate %v %v\n", proc.GetPid().String(), fn)
-
-	electclnt := concurrency.NewElection(nd.sess, fn)
-
-	if err := electclnt.Campaign(context.TODO(), proc.GetPid().String()); err != nil {
-		db.DFatalf("Campaign err %v\n", err)
-	}
-
-	resp, err := electclnt.Leader(context.TODO())
-	if err != nil {
-		db.DFatalf("Leader err %v\n", err)
-	}
-
-	db.DPrintf(db.NAMED, "leader %v %v\n", proc.GetPid().String(), resp)
-	root := rootDir(ec, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt)
-	if srv == nil {
-		db.DFatalf("MakeReplServer err %v", err)
-	}
-	nd.SessSrv = srv
-
-	mnt := sp.MkMountServer(srv.MyAddr())
-
-	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, mnt)
-
-	if err := ec.SetRootNamed(mnt, electclnt.Key(), electclnt.Rev()); err != nil {
+	mnt := sp.MkMountServer(nd.MyAddr())
+	if err := ec.SetRootNamed(mnt, nd.elect.Key(), nd.elect.Rev()); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 	sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())
@@ -80,6 +43,7 @@ func RunKNamed(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
+	ch := make(chan struct{})
 	// go nd.exit(ch)
 	nd.initfs()
 	w := os.NewFile(uintptr(3), "pipe")
@@ -88,7 +52,7 @@ func RunKNamed(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMED, "leader %v %v done\n", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "%v: leader %v %v done\n", proc.GetPid(), nd.realm, mnt)
 
 	// XXX maybe clear boot block
 

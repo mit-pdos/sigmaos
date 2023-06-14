@@ -14,6 +14,8 @@ import (
 	"github.com/nfnt/resize"
 )
 
+const N_ITER = 1
+
 func main() {
 	if len(os.Args) != 2 {
 		log.Fatalf("Usage: %v FILE_PATH\nArgs passed: %v", os.Args[0], os.Args)
@@ -23,14 +25,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	start := time.Now()
-	t.Work()
-	log.Printf("Time %v e2e resize: %v", os.Args, time.Since(start))
+	for i := 0; i < N_ITER; i++ {
+		start := time.Now()
+		t.Work(t.outputbase + strconv.Itoa(rand.Int()))
+		log.Printf("Time %v e2e resize: %v", os.Args, time.Since(start))
+	}
 }
 
 type Trans struct {
-	input  string
-	output string
+	input      string
+	outputbase string
 }
 
 func MakeTrans(args []string) (*Trans, error) {
@@ -41,14 +45,14 @@ func MakeTrans(args []string) (*Trans, error) {
 	t := &Trans{}
 	t.input = args[1]
 	rand.Seed(time.Now().UnixNano())
-	t.output = args[1] + "-thumbnail-" + strconv.Itoa(rand.Int())
-	log.Printf("Output %v", t.output)
+	t.outputbase = args[1] + "-thumbnail-"
 	return t, nil
 }
 
-func (t *Trans) Work() {
-	do := time.Now()
+func (t *Trans) Work(output string) {
+	log.Printf("Output %v", output)
 	fs := corfs.InitFilesystem(corfs.S3)
+	do := time.Now()
 	rdr, err := fs.OpenReader(t.input, 0)
 	log.Printf("Time %v open: %v", t.input, time.Since(do))
 	if err != nil {
@@ -71,9 +75,9 @@ func (t *Trans) Work() {
 	log.Printf("Time %v resize: %v", t.input, time.Since(dr))
 
 	dcw := time.Now()
-	wrt, err := fs.OpenWriter(t.output)
+	wrt, err := fs.OpenWriter(output)
 	if err != nil {
-		log.Fatalf("Open %v error: %v", t.output, err)
+		log.Fatalf("Open %v error: %v", output, err)
 	}
 	log.Printf("Time %v create writer: %v", t.input, time.Since(dcw))
 	dw := time.Now()

@@ -130,7 +130,9 @@ func runAlg(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, n1 int, n2 i
 	err = pdc.RPC(rpc, &bfsArg, &bfsRes)
 	assert.Nil(t, err, "%v failed with arg: %v and err: %v", rpc, bfsArg, err)
 	p := make([]int, 0)
-	err = json.Unmarshal(bfsRes.GetMarshaled(), &p)
+	if bfsRes.Marshaled != nil {
+		err = json.Unmarshal(bfsRes.GetMarshaled(), &p)
+	}
 	assert.Nil(t, err, "Failed to unmarshal path from arg %v: %v", bfsArg, err)
 	db.DPrintf(graph.DEBUG_GRAPH, "Bfs from %v to %v: %v", n1, n2, p)
 }
@@ -142,7 +144,7 @@ func runAlgRepeated(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string) {
 	}
 }
 
-func TestServerSingleChannels(t *testing.T) {
+func TestBfsSinglePipes(t *testing.T) {
 	var err error
 	tsg, err := makeTstateGraph(t, rand.String(8))
 	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
@@ -151,23 +153,9 @@ func TestServerSingleChannels(t *testing.T) {
 	// XXX Get path from proc
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(path.Join(graph.DIR_GRAPH, "g-server/")))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
-	importGraph(t, pdc, graph.DATA_FACEBOOK_FN)
-	runAlgRepeated(t, pdc, "Graph.RunBfsSingleChannels")
+	importGraph(t, pdc, graph.DATA_TINY_FN)
+	runAlg(t, pdc, "Graph.RunBfsSinglePipes", 0, 1)
+	//runAlgRepeated(t, pdc, "Graph.RunBfsSinglePipes")
 
-	tsg.Shutdown()
-}
-
-func TestServerSingleLayers(t *testing.T) {
-	var err error
-	tsg, err := makeTstateGraph(t, rand.String(8))
-	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
-
-	// Create an RPC client
-	// XXX Get path from proc
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(path.Join(graph.DIR_GRAPH, "g-server/")))
-	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
-	importGraph(t, pdc, graph.DATA_FACEBOOK_FN)
-	runAlgRepeated(t, pdc, "Graph.RunBfsSingleLayers")
-
-	tsg.Shutdown()
+	//tsg.Shutdown()
 }

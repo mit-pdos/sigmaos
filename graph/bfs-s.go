@@ -32,7 +32,7 @@ type GraphSrv struct {
 //    │ └─t-server
 //    │...
 //
-// Later, to have multiple graphs, I'd wrap everything under name/graph/ in
+// To have multiple graphs, I'd wrap everything under name/graph/ in
 // a new directory for each job.
 //
 
@@ -75,6 +75,7 @@ func InitThreadNamespace(fs *fslib.FsLib, job string) (string, error) {
 func StartGraphSrv(public bool, jobname string) error {
 	g := &GraphSrv{}
 	g.job = jobname
+	g.g = &Graph{}
 
 	// Init Namespace
 	sc, err := sigmaclnt.MkSigmaClnt(rand.String(8))
@@ -95,19 +96,37 @@ func StartGraphSrv(public bool, jobname string) error {
 }
 
 func (g *GraphSrv) ImportGraph(ctx fs.CtxI, req proto.GraphIn, res *proto.GraphOut) error {
-	if err := json.Unmarshal(req.GetMarshaled(), g.g); err != nil {
+	// Make sure it's reset; I'm unsure what the behavior is when json unmarshals into
+	// an existing data structure.
+	g.g = &Graph{}
+	if err := json.Unmarshal(req.Marshaled, g.g); err != nil {
 		return err
 	}
-	res.Nodes = int64(g.g.NumNodes())
-	res.Edges = int64(g.g.NumEdges())
+	res.Nodes = int64(g.g.NumNodes)
+	res.Edges = int64(g.g.NumEdges)
 	return nil
 }
 
-func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) error {
+func (g *GraphSrv) RunBfsSingleChannels(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) error {
 	out, err := BfsSingleChannels(g.g, int(req.GetN1()), int(req.GetN2()))
-	if err != nil {
+	if IsNoPath(err) {
+		db.DPrintf(DEBUG_GRAPH, "No Valid Path from %v to %v in graph of size %v", req.GetN1(), req.GetN2(), g.g.NumNodes)
+	} else if err != nil {
 		return err
 	}
+
+	res.Marshaled, err = json.Marshal(out)
+	return err
+}
+
+func (g *GraphSrv) RunBfsSingleLayers(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) error {
+	out, err := BfsSingleLayers(g.g, int(req.GetN1()), int(req.GetN2()))
+	if IsNoPath(err) {
+		db.DPrintf(DEBUG_GRAPH, "No Valid Path from %v to %v in graph of size %v", req.GetN1(), req.GetN2(), g.g.NumNodes)
+	} else if err != nil {
+		return err
+	}
+
 	res.Marshaled, err = json.Marshal(out)
 	return err
 }

@@ -11,9 +11,9 @@ import (
 
 // Graph is a simple adjacency list implementation of a graph.
 type Graph struct {
-	n        []*[]int
-	numNodes int
-	numEdges int
+	N        []*[]int `json:"N"`
+	NumNodes int      `json:"NumNodes"`
+	NumEdges int      `json:"NumEdges"`
 }
 
 // Nodes contain the indecies of their neighbors rather than pointers
@@ -22,26 +22,18 @@ type Graph struct {
 // Graph assumes all edges are undirected and unweighted.
 
 func (g *Graph) GetNeighbors(index int) *[]int {
-	return (*g).n[index]
-}
-
-func (g *Graph) NumNodes() int {
-	return g.numNodes
-}
-
-func (g *Graph) NumEdges() int {
-	return g.numEdges
+	return (*g).N[index]
 }
 
 func initGraph(numNodes int) *Graph {
 	g := Graph{
-		n:        make([]*[]int, numNodes),
-		numNodes: numNodes,
-		numEdges: 0,
+		N:        make([]*[]int, numNodes),
+		NumNodes: numNodes,
+		NumEdges: 0,
 	}
-	for i := range g.n {
+	for i := range g.N {
 		n := make([]int, 0)
-		g.n[i] = &n
+		g.N[i] = &n
 	}
 	return &g
 }
@@ -84,10 +76,10 @@ func (g *Graph) Export() string {
 	}
 	var out strings.Builder
 	// Add the number of nodes
-	out.WriteString(strconv.Itoa(g.NumNodes()))
+	out.WriteString(strconv.Itoa(g.NumNodes))
 	out.WriteString(";")
 	// Add all edges
-	for i, adjacencies := range (*g).n {
+	for i, adjacencies := range (*g).N {
 		for _, adj := range *adjacencies {
 			out.WriteString(strconv.Itoa(i))
 			out.WriteString(",")
@@ -101,22 +93,22 @@ func (g *Graph) Export() string {
 
 // addEdge assumes edges are sorted and inserts in sorted order
 func (g *Graph) addEdge(n1 int, n2 int) error {
-	if n1 > g.NumNodes() || n1 < 0 {
-		db.DPrintf(DEBUG_GRAPH, "addEdge out of range: %v in graph with %v nodes\n", n1, g.NumNodes())
+	if n1 > g.NumNodes || n1 < 0 {
+		db.DPrintf(DEBUG_GRAPH, "addEdge out of range: %v in graph with %v nodes\n", n1, g.NumNodes)
 		return ERR_ADDEDGE_OOR
 	}
-	if n2 > g.NumNodes() || n1 < 0 {
-		db.DPrintf(DEBUG_GRAPH, "addEdge out of range: %v in graph with %v nodes\n", n2, g.NumNodes())
+	if n2 > g.NumNodes || n1 < 0 {
+		db.DPrintf(DEBUG_GRAPH, "addEdge out of range: %v in graph with %v nodes\n", n2, g.NumNodes)
 		return ERR_ADDEDGE_OOR
 	}
 
 	var err error
 	// addEdge trusts that there are no directed edges and arbitrarily assigns
-	// the role of incrementing numEdges to the first append.
-	if err = sAppend((*g).n[n1], n2, &g.numEdges); err != nil {
+	// the role of incrementing NumEdges to the first append.
+	if err = sAppend((*g).N[n1], n2, &g.NumEdges); err != nil {
 		return err
 	}
-	if err = sAppend((*g).n[n2], n1, nil); err != nil {
+	if err = sAppend((*g).N[n2], n1, nil); err != nil {
 		return err
 	}
 	return nil
@@ -146,7 +138,7 @@ func (g *Graph) Print() string {
 		return ""
 	}
 	out := ""
-	for i, adj := range (*g).n {
+	for i, adj := range (*g).N {
 		out += fmt.Sprintf("(%v) %v\n", strconv.Itoa(i), adj)
 	}
 	return out

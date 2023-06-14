@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		db.DFatalf("Usage: %v public jobname", os.Args[0])
+	if len(os.Args) != 3 {
+		db.DFatalf("Usage: %v public jobname.", os.Args[0])
 		return
 	}
 	public, err := strconv.ParseBool(os.Args[1])

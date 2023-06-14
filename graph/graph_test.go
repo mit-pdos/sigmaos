@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"path"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -13,9 +14,9 @@ import (
 	"sigmaos/test"
 	"strconv"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
+
+var tests = [][]int{{-1, 0}, {0, 0}, {5, 5}, {0, 3}, {1, 3}, {3, 3420}, {508, 1080}, {217, 3456}, {2, 10000000}}
 
 //
 // RAW GRAPH TESTS
@@ -34,7 +35,7 @@ func initGraph(t *testing.T, fn string) *graph.Graph {
 func testAlg(t *testing.T, g *graph.Graph, alg searchAlg, n1 int, n2 int) {
 	path, err := alg(g, n1, n2)
 	if graph.IsNoPath(err) {
-		db.DPrintf(graph.DEBUG_GRAPH, "No Valid Path from %v to %v in graph of size %v", n1, n2, g.NumNodes())
+		db.DPrintf(graph.DEBUG_GRAPH, "No Valid Path from %v to %v in graph of size %v", n1, n2, g.NumNodes)
 	} else {
 		assert.Nil(t, err, "Failed to run search algorithm %v", alg)
 		db.DPrintf(graph.DEBUG_GRAPH, "Path from %v to %v: %v", n1, n2, path)
@@ -43,10 +44,9 @@ func testAlg(t *testing.T, g *graph.Graph, alg searchAlg, n1 int, n2 int) {
 
 func testAlgRepeated(t *testing.T, g *graph.Graph, alg searchAlg) {
 	// XXX Make better tests and actually check if the outputs are correct
-	tests := [][]int{{-1, 0}, {0, 0}, {5, 5}, {0, 3}, {1, 3}, {3, 3420}, {508, 1080}, {217, 3456}, {2, 10000000}}
-	for _, test := range tests {
-		testAlg(t, g, alg, test[0], test[1])
-		testAlg(t, g, alg, test[1], test[0])
+	for _, n := range tests {
+		testAlg(t, g, alg, n[0], n[1])
+		testAlg(t, g, alg, n[1], n[0])
 	}
 }
 
@@ -58,7 +58,7 @@ func TestImportExport(t *testing.T) {
 	assert.Nil(t, err, "Failed to import graph 2")
 	exp2 := g2.Export()
 	assert.Equal(t, exp1, exp2)
-	db.DPrintf(graph.DEBUG_GRAPH, "NumNodes: %v, NumEdges: %v", g2.NumNodes(), g2.NumEdges())
+	db.DPrintf(graph.DEBUG_GRAPH, "NumNodes: %v, NumEdges: %v", g2.NumNodes, g2.NumEdges)
 }
 
 func TestBFSSingleLayers(t *testing.T) {
@@ -98,7 +98,7 @@ func makeTstateGraph(t *testing.T, j string) (*TstateGraph, error) {
 	tse.Tstate = test.MakeTstateAll(t)
 	var err error
 
-	p := proc.MakeProc("graph", []string{strconv.FormatBool(test.Overlays)})
+	p := proc.MakeProc("graph", []string{strconv.FormatBool(test.Overlays), j})
 	p.SetNcore(proc.Tcore(1))
 	if err = tse.Spawn(p); err != nil {
 		db.DFatalf("|%v| Error spawning proc %v: %v", j, p, err)
@@ -108,12 +108,42 @@ func makeTstateGraph(t *testing.T, j string) (*TstateGraph, error) {
 		db.DFatalf("|%v| Error waiting for proc %v to start: %v", j, p, err)
 		return nil, err
 	}
-	db.DPrintf(graph.DEBUG_GRAPH, "|%v| Done with Initialization", j)
 	tse.pid = p.GetPid()
 	return &tse, nil
 }
 
-func TestServerInit(t *testing.T) {
+func importGraph(t *testing.T, pdc *protdevclnt.ProtDevClnt, fn string) {
+	var err error
+	g := initGraph(t, fn)
+	marshalled, err := json.Marshal(g)
+	assert.Nil(t, err, "Failed to marshal graph at path %v: %v", fn, err)
+	importArg := proto.GraphIn{Marshaled: marshalled}
+	importRes := proto.GraphOut{}
+	err = pdc.RPC("Graph.ImportGraph", &importArg, &importRes)
+	assert.Nil(t, err, "Graph.ImportGraph failed with arg: %v and err: %v", importArg, err)
+}
+
+func runAlg(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, n1 int, n2 int) {
+	var err error
+	bfsArg := proto.BfsInput{N1: int64(n1), N2: int64(n2)}
+	bfsRes := proto.Path{}
+	err = pdc.RPC(rpc, &bfsArg, &bfsRes)
+	assert.Nil(t, err, "%v failed with arg: %v and err: %v", rpc, bfsArg, err)
+	p := make([]int, 0)
+	err = json.Unmarshal(bfsRes.GetMarshaled(), &p)
+	assert.Nil(t, err, "Failed to unmarshal path from arg %v: %v", bfsArg, err)
+	db.DPrintf(graph.DEBUG_GRAPH, "Bfs from %v to %v: %v", n1, n2, p)
+}
+
+func runAlgRepeated(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string) {
+	for _, n := range tests {
+		runAlg(t, pdc, rpc, n[0], n[1])
+		runAlg(t, pdc, rpc, n[1], n[0])
+	}
+}
+
+func TestServerSingleChannels(t *testing.T) {
+	var err error
 	tsg, err := makeTstateGraph(t, rand.String(8))
 	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
 
@@ -121,25 +151,23 @@ func TestServerInit(t *testing.T) {
 	// XXX Get path from proc
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(path.Join(graph.DIR_GRAPH, "g-server/")))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
+	importGraph(t, pdc, graph.DATA_FACEBOOK_FN)
+	runAlgRepeated(t, pdc, "Graph.RunBfsSingleChannels")
 
-	// Import graph
-	fn := graph.DATA_TINY_FN
-	marshalled, err := json.Marshal(initGraph(t, fn))
-	assert.Nil(t, err, "Failed to marshal graph at path %v: %v", fn, err)
-	importArg := proto.GraphIn{Marshaled: marshalled}
-	importRes := proto.GraphOut{}
-	err = pdc.RPC("Graph.ImportGraph", &importArg, &importRes)
-	assert.Nil(t, err, "Graph.ImportGraph failed with arg: %v and err: %v", importArg, err)
+	tsg.Shutdown()
+}
 
-	// Run BFS
-	bfsArg := proto.BfsInput{N1: 0, N2: 1}
-	bfsRes := proto.Path{}
-	err = pdc.RPC("Graph.RunBfs", &bfsArg, &bfsRes)
-	assert.Nil(t, err, "Graph.RunBfs failed with arg: %v and err: %v", bfsArg, err)
-	var p *[]int
-	err = json.Unmarshal(bfsRes.GetMarshaled(), p)
-	assert.Nil(t, err, "Failed to unmarshal path from arg %v: %v", bfsArg, err)
-	db.DPrintf(graph.DEBUG_GRAPH, "Bfs Output: %v", p)
+func TestServerSingleLayers(t *testing.T) {
+	var err error
+	tsg, err := makeTstateGraph(t, rand.String(8))
+	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
+
+	// Create an RPC client
+	// XXX Get path from proc
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(path.Join(graph.DIR_GRAPH, "g-server/")))
+	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
+	importGraph(t, pdc, graph.DATA_FACEBOOK_FN)
+	runAlgRepeated(t, pdc, "Graph.RunBfsSingleLayers")
 
 	tsg.Shutdown()
 }

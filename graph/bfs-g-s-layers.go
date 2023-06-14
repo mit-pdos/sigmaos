@@ -18,10 +18,10 @@ func (g *Graph) BfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 	if n1 == n2 {
 		return &[]int{n1}, nil
 	}
-	if n1 > g.NumNodes()-1 || n2 > g.NumNodes()-1 || n1 < 0 || n2 < 0 {
+	if n1 > g.NumNodes-1 || n2 > g.NumNodes-1 || n1 < 0 || n2 < 0 {
 		return nil, ERR_SEARCH_OOR
 	}
-	p := make([]int, g.NumNodes())
+	p := make([]int, g.NumNodes)
 	for i := range p {
 		p[i] = -1
 	}
@@ -29,10 +29,10 @@ func (g *Graph) BfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 	// XXX Replace with variable length queue
 	// so all this memory doesn't need to be pre-allocated
 	// Frontier Set (current nodes)
-	fs := make(chan int, g.NumEdges())
+	fs := make(chan int, g.NumEdges)
 	FS := &fs
 	// New Set (one hop away nodes)
-	ns := make(chan int, g.NumEdges())
+	ns := make(chan int, g.NumEdges)
 	NS := &ns
 
 	*FS <- n1
@@ -51,7 +51,7 @@ func (g *Graph) BfsSingleLayers(n1 int, n2 int) (*[]int, error) {
 			}
 		}
 		*FS = *NS
-		ns = make(chan int, g.NumEdges())
+		ns = make(chan int, g.NumEdges)
 		NS = &ns
 	}
 	return nil, ERR_NOPATH

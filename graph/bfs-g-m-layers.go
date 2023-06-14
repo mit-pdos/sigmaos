@@ -30,7 +30,7 @@ func (g *Graph) BfsMultiLayers(n1 int, n2 int) (*[]int, error) {
 	if n1 == n2 {
 		return &[]int{n1}, nil
 	}
-	if n1 > g.NumNodes()-1 || n2 > g.NumNodes()-1 || n1 < 0 || n2 < 0 {
+	if n1 > g.NumNodes-1 || n2 > g.NumNodes-1 || n1 < 0 || n2 < 0 {
 		return nil, ERR_SEARCH_OOR
 	}
 
@@ -39,8 +39,8 @@ func (g *Graph) BfsMultiLayers(n1 int, n2 int) (*[]int, error) {
 	// New Sets (one hop away nodes)
 	NSs := make([]chan pair, MAX_THREADS)
 	for i := 0; i < MAX_THREADS; i++ {
-		FSs[i] = make(chan int, g.NumEdges())
-		NSs[i] = make(chan pair, g.NumEdges())
+		FSs[i] = make(chan int, g.NumEdges)
+		NSs[i] = make(chan pair, g.NumEdges)
 	}
 	NSs[getOwner(n1, MAX_THREADS)] <- pair{child: n1, parent: n1}
 

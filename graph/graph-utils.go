@@ -14,7 +14,7 @@ import (
 
 const NOT_VISITED = -1
 
-const MAX_THREADS = 2
+const MAX_THREADS = 4
 
 type pair struct {
 	child  int
@@ -115,11 +115,11 @@ func (g *Graph) partition(numThreads int) []*graphPartition {
 			numEdges: 0,
 		}
 	}
-	for i := 0; i < g.NumNodes(); i++ {
+	for i := 0; i < g.NumNodes; i++ {
 		partition := graphs[getOwner(i, numThreads)]
 		partition.n[i] = *g.GetNeighbors(i)
 		partition.numNodes++
-		partition.numEdges += len(*g.n[i])
+		partition.numEdges += len(*g.N[i])
 	}
 	return graphs
 }

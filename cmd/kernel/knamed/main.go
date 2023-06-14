@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := named.Run(os.Args); err != nil {
+	if err := named.RunKNamed(os.Args); err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
 }

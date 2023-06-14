@@ -164,10 +164,6 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) BootNamedv1() error {
-	return ts.Boot(sp.NAMED)
-}
-
 func (ts *Tstate) KillOne(s string) error {
 	idx := ts.killidx
 	ts.killidx++

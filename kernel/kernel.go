@@ -62,7 +62,7 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.NAMEDREL {
 		k.namedAddr = nameds
-		if err := k.bootNamed("rootnamed", sp.ROOTREALM); err != nil {
+		if err := k.bootKNamed("knamed", sp.ROOTREALM); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
@@ -157,12 +157,12 @@ func (k *Kernel) shutdown() {
 
 func makeNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
 	args := []string{realmId.String()}
-	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "named", args, true)
+	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "knamed", args, true)
 	return p, nil
 }
 
 // Run named (but not as a proc)
-func RunNamed(addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
+func RunKNamed(addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
 	p, err := makeNamedProc(realmId)
 	if err != nil {
 		return nil, err

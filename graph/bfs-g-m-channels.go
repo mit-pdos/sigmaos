@@ -52,7 +52,6 @@ func (g *Graph) BfsMultiChannels(n1 int, n2 int) (*[]int, error) {
 	// This defer should never matter, but is there just in case something goes wrong to avoid
 	//  a context leak.
 	defer cancel()
-	// Only adding 1 because the solution will only be found by one thread.
 	for j := 0; j < MAX_THREADS; j++ {
 		i := j
 		wg.Add(1)
@@ -62,7 +61,6 @@ func (g *Graph) BfsMultiChannels(n1 int, n2 int) (*[]int, error) {
 		}()
 	}
 	wg.Wait()
-	// time.Sleep(1 * time.Millisecond)
 	return findPathPartitioned(&parents, n1, n2), nil
 }
 

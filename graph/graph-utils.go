@@ -13,7 +13,7 @@ import (
 
 const NOT_VISITED = -1
 
-const MAX_THREADS = 4
+const MAX_THREADS = 2
 
 type pair struct {
 	child  int
@@ -48,6 +48,7 @@ func findPathPartitioned(parents *[]map[int]int, n1 int, n2 int) *[]int {
 //
 
 const DEBUG_GRAPH = "GRAPH"
+const PERF_GRAPH = DEBUG_GRAPH + "_PERF"
 
 const (
 	NOPATH      = "No valid path"
@@ -79,7 +80,7 @@ func printTime(timeStart time.Time, timeEnd time.Time, msg string) {
 	timeEndNs := timeEnd.UnixNano() - timeStart.UnixNano()
 	timeEndUs := float64(timeEndNs) / 1000.0
 	timeEndMs := timeEndUs / 1000.0
-	db.DPrintf(DEBUG_GRAPH, "%v in %.0f ms %.0f us\n", msg, timeEndMs, timeEndUs-(math.Floor(timeEndMs)*1000.0))
+	db.DPrintf(PERF_GRAPH, "%v in %.0f ms %.0f us\n", msg, timeEndMs, timeEndUs-(math.Floor(timeEndMs)*1000.0))
 }
 
 //
@@ -89,6 +90,8 @@ func printTime(timeStart time.Time, timeEnd time.Time, msg string) {
 type graphPartition struct {
 	// This is a map instead of a slice so that the key equals the index
 	// of the node on the original graph.
+	// XXX Make custom data structure which stores original int to avoid
+	// wasting cache misses on a map.
 	n        map[int][]int
 	numNodes int
 	numEdges int

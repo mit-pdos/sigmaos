@@ -26,7 +26,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/fslibtest"
+var pathname string // e.g., --path "name/ux/~local/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")

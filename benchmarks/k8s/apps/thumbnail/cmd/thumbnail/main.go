@@ -51,7 +51,9 @@ func MakeTrans(args []string) (*Trans, error) {
 
 func (t *Trans) Work(output string) {
 	log.Printf("Output %v", output)
+	si := time.Now()
 	fs := corfs.InitFilesystem(corfs.S3)
+	log.Printf("Time %v init fs: %v", t.input, time.Since(si))
 	do := time.Now()
 	rdr, err := fs.OpenReader(t.input, 0)
 	log.Printf("Time %v open: %v", t.input, time.Since(do))

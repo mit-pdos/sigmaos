@@ -23,6 +23,12 @@ def start_time_stats(depname):
     print("Mean pod startup time:", np.mean(pod_startup_times))
     print("Std dev pod startup time:", np.std(pod_startup_times))
     print(np.mean(pod_startup_times))
+    # Calculate mean scheduling latency
+    sorted_pod_scheduled_times = sorted(pod_scheduled_times)
+    total_scheduling_latency = 0.0
+    for i in range(1, len(sorted_pod_scheduled_times)):
+      total_scheduling_latency += (sorted_pod_scheduled_times[i] - sorted_pod_scheduled_times[i - 1]).total_seconds()
+    print("Mean latency between scheduling events:", total_scheduling_latency / len(sorted_pod_scheduled_times))
      
 if __name__ == "__main__":                                                    
     parser = argparse.ArgumentParser()                                        

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -17,24 +16,18 @@ func RunKNamed(args []string) error {
 	if len(args) != 2 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	nd = &Named{}
+	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
-
-	ec, err := etcdclnt.MkEtcdClnt(nd.realm)
-	if err != nil {
-		db.DFatalf("Error MkEtcdClnt %v\n", err)
-	}
-	nd.ec = ec
 
 	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
 
 	if err := nd.startLeader(); err != nil {
 		db.DFatalf("Error startLeader %v\n", err)
 	}
-	defer ec.Close()
+	defer nd.ec.Close()
 
 	mnt := sp.MkMountServer(nd.MyAddr())
-	if err := ec.SetRootNamed(mnt, nd.elect.Key(), nd.elect.Rev()); err != nil {
+	if err := nd.ec.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 	sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())

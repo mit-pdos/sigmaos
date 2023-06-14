@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/etcdclnt";
+option go_package = "sigmaos/fsetcd";
 
 message NamedFile {
         uint32  perm = 1;

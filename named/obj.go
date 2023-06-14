@@ -25,7 +25,7 @@ func mkTpath(pn path.Path) sessp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	ec      *etcdclnt.EtcdClnt
+	ec      *fsetcd.EtcdClnt
 	pn      path.Path
 	path    sessp.Tpath
 	perm    sp.Tperm
@@ -35,7 +35,7 @@ type Obj struct {
 	mtime   int64
 }
 
-func makeObj(ec *etcdclnt.EtcdClnt, pn path.Path, perm sp.Tperm, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
+func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
 	o := &Obj{ec: ec, pn: pn, perm: perm, version: v, path: p, data: data, parent: parent}
 	return o
 }
@@ -87,7 +87,7 @@ func (o *Obj) stat() *sp.Stat {
 	return st
 }
 
-func getObj(ec *etcdclnt.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
+func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
 	nf, v, err := ec.GetFile(path)
 	if err != nil {
 		return nil, err
@@ -97,21 +97,21 @@ func getObj(ec *etcdclnt.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.
 }
 
 // Marshal empty file or directory
-func marshalObj(perm sp.Tperm, path sessp.Tpath) (*etcdclnt.NamedFile, *serr.Err) {
+func marshalObj(perm sp.Tperm, path sessp.Tpath) (*fsetcd.NamedFile, *serr.Err) {
 	var fdata []byte
 	if perm.IsDir() {
-		nd := &etcdclnt.NamedDir{}
-		nd.Ents = append(nd.Ents, &etcdclnt.DirEnt{Name: ".", Path: uint64(path)})
+		nd := &fsetcd.NamedDir{}
+		nd.Ents = append(nd.Ents, &fsetcd.DirEnt{Name: ".", Path: uint64(path)})
 		d, err := proto.Marshal(nd)
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
 		fdata = d
 	}
-	return &etcdclnt.NamedFile{Perm: uint32(perm | 0777), Data: fdata}, nil
+	return &fsetcd.NamedFile{Perm: uint32(perm | 0777), Data: fdata}, nil
 }
 
 func (o *Obj) putObj() *serr.Err {
-	nf := &etcdclnt.NamedFile{Perm: uint32(o.perm), Data: o.data}
+	nf := &fsetcd.NamedFile{Perm: uint32(o.perm), Data: o.data}
 	return o.ec.PutFile(o.path, nf)
 }

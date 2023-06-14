@@ -16,7 +16,7 @@ const MAXRETRY = 10
 
 func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 	if pathc.realm == sp.ROOTREALM {
-		mnt, err := etcdclnt.GetRootNamed()
+		mnt, err := fsetcd.GetRootNamed()
 		if err != nil {
 			db.DFatalf("GetMntNamed() %v err %v\n", pathc.realm, err)
 		}
@@ -54,7 +54,7 @@ func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
 func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
 	for i := 0; i < MAXRETRY; i++ {
 		db.DPrintf(db.NAMED, "mountRootNamed %d: %v\n", i, name)
-		mnt, err := etcdclnt.GetRootNamed()
+		mnt, err := fsetcd.GetRootNamed()
 		if err == nil {
 			pn := path.Path{name}
 			if err := pathc.autoMount("", mnt, pn); err == nil {

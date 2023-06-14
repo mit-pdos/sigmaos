@@ -16,13 +16,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var nd *Named
-
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sesssrv.SessSrv
 	mu    sync.Mutex
-	ec    *etcdclnt.EtcdClnt
+	ec    *fsetcd.EtcdClnt
 	elect *leaderetcd.Election
 	job   string
 	realm sp.Trealm
@@ -34,7 +32,7 @@ func Run(args []string) error {
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	nd = &Named{}
+	nd := &Named{}
 	ch := make(chan struct{})
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])

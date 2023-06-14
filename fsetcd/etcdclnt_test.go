@@ -1,4 +1,4 @@
-package etcdclnt_test
+package fsetcd_test
 
 import (
 	"context"

@@ -67,7 +67,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
 	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v\n", name, d, dir, v, path)
-	dir.Ents = append(dir.Ents, &etcdclnt.DirEnt{Name: name, Path: uint64(path)})
+	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
 	nf, r := marshalObj(perm, path)
 	if r != nil {
 		return nil, r
@@ -99,7 +99,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 			}
 		}
 	}
-	db.DPrintf(db.NAMED, "etcdclnt.ReadDir %v\n", dents)
+	db.DPrintf(db.NAMED, "fsetcd.ReadDir %v\n", dents)
 	if cursor > dents.Len() {
 		return nil, nil
 	} else {
@@ -176,7 +176,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 			db.DFatalf("Rename: remove %v not present\n", to)
 		}
 	}
-	dir.Ents = append(dir.Ents, &etcdclnt.DirEnt{Name: to, Path: uint64(frompath)})
+	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: to, Path: uint64(frompath)})
 	return d.ec.Rename(d.Obj.path, dir, d.perm, v, topath)
 }
 
@@ -213,7 +213,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 			db.DFatalf("Renameat: remove %v not present\n", to)
 		}
 	}
-	dirt.Ents = append(dirt.Ents, &etcdclnt.DirEnt{Name: to, Path: uint64(frompath)})
+	dirt.Ents = append(dirt.Ents, &fsetcd.DirEnt{Name: to, Path: uint64(frompath)})
 	return d.ec.RenameAt(d.Obj.path, dirf, d.perm, vf, dt.Obj.path, dirt, dt.perm, vt, topath)
 }
 
@@ -253,7 +253,7 @@ func (d *Dir) VersionInc() {
 // Helpers
 //
 
-func remove(dir *etcdclnt.NamedDir, name string) (sessp.Tpath, bool) {
+func remove(dir *fsetcd.NamedDir, name string) (sessp.Tpath, bool) {
 	for i, e := range dir.Ents {
 		if e.Name == name {
 			p := e.Path
@@ -264,7 +264,7 @@ func remove(dir *etcdclnt.NamedDir, name string) (sessp.Tpath, bool) {
 	return 0, false
 }
 
-func lookup(dir *etcdclnt.NamedDir, name string) (*etcdclnt.DirEnt, bool) {
+func lookup(dir *fsetcd.NamedDir, name string) (*fsetcd.DirEnt, bool) {
 	for _, e := range dir.Ents {
 		if e.Name == name {
 			return e, true
@@ -275,7 +275,7 @@ func lookup(dir *etcdclnt.NamedDir, name string) (*etcdclnt.DirEnt, bool) {
 
 func isNonemptyDir(obj *Obj) bool {
 	if obj.perm.IsDir() {
-		if dir, err := etcdclnt.UnmarshalDir(obj.data); err != nil {
+		if dir, err := fsetcd.UnmarshalDir(obj.data); err != nil {
 			db.DFatalf("Remove: unmarshalDir %v err %v\n", obj.pn, err)
 		} else if len(dir.Ents) > 1 {
 			return true
@@ -284,20 +284,20 @@ func isNonemptyDir(obj *Obj) bool {
 	return false
 }
 
-func rootDir(ec *etcdclnt.EtcdClnt, realm sp.Trealm) *Dir {
+func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
 	_, _, err := ec.ReadDir(sessp.Tpath(1))
 	if err != nil && err.IsErrNotfound() { // make root dir
-		db.DPrintf(db.NAMED, "etcdclnt.ReadDir err %v; make root dir\n", err)
+		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
 		if err := mkRootDir(ec); err != nil {
 			db.DFatalf("rootDir: mkRootDir err %v\n", err)
 		}
 	} else if err != nil {
-		db.DFatalf("rootDir: etcdclnt.ReadDir err %v\n", err)
+		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
 	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, 0, ROOT, ROOT, nil))
 }
 
-func mkRootDir(ec *etcdclnt.EtcdClnt) *serr.Err {
+func mkRootDir(ec *fsetcd.EtcdClnt) *serr.Err {
 	nf, r := marshalObj(sp.DMDIR, ROOT)
 	if r != nil {
 		return r

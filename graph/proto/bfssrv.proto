@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/graph/proto";
+
+service BfsService {
+  rpc ImportMaze(GraphIn) returns (GraphOut);
+  rpc RunBfs(BfsInput) returns (Path);
+}
+
+message GraphIn {
+  bytes marshaled = 1;
+}
+
+message GraphOut {
+  int64 nodes = 1;
+  int64 edges = 2;
+}
+
+message BfsInput {
+  int64 n1 = 1;
+  int64 n2 = 2;
+}
+
+message Path {
+  bytes marshaled = 1;
+}

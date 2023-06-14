@@ -3,6 +3,7 @@ package graph
 import (
 	"errors"
 	"math"
+	"os"
 	db "sigmaos/debug"
 	"time"
 )
@@ -127,4 +128,27 @@ func getOwner(index int, numThreads int) int {
 	// For now, this is reliable without any data about
 	// the graph since partitioning is not smart.
 	return index % numThreads
+}
+
+//
+// IMPORT UTILS
+//
+
+// XXX Make sure these are accessible in sigmaOS
+
+const DATA_TINY_FN = "data/tiny.txt"
+
+// FACEBOOK is from https://snap.stanford.edu/data/ego-Facebook.html
+const DATA_FACEBOOK_FN = "data/facebook.txt"
+
+// I run into problems using a graph this big, so for now I'm not testing with it.
+// TWITCH is from https://snap.stanford.edu/data/twitch_gamers.html
+const DATA_TWITCH_FN = "data/twitch.txt"
+
+func ReadGraph(fn string) (*[]byte, error) {
+	b, err := os.ReadFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	return &b, nil
 }

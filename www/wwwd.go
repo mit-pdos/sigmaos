@@ -26,6 +26,7 @@ import (
 
 // HTTP server paths
 const (
+	TMP            = "name/tmp"
 	STATIC         = "/static/"
 	MATMUL         = "/matmul/"
 	CONS_CPU_LOCAL = "/conscpulocal/"
@@ -96,7 +97,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
 	var serr *serr.Err
-	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(sp.TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); errors.As(err, &serr) && !serr.IsErrExists() {
+	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); errors.As(err, &serr) && !serr.IsErrExists() {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
@@ -219,7 +220,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
-	file := path.Join(sp.TMP, args)
+	file := path.Join(TMP, args)
 	return www.spawnApp("fsreader", w, r, true, []string{file}, nil, 0)
 }
 

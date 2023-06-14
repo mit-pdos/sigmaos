@@ -43,6 +43,11 @@ const (
 	SEQWC               = "SEQWC"
 )
 
+// mr
+const (
+	THUMBNAIL Tselector = "THUMBNAIL"
+)
+
 // kv
 const (
 	KVCLERK Tselector = "KVCLERK"

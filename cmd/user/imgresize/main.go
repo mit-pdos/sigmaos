@@ -11,10 +11,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
+
+const N_ITER = 1
 
 //
 // Crop picture <in> to <out>
@@ -26,9 +29,19 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	start := time.Now()
-	s := t.Work()
-	db.DPrintf(db.ALWAYS, "Time %v e2e resize: %v", os.Args, time.Since(start))
+
+	p, err := perf.MakePerf(perf.THUMBNAIL)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
+	var s *proc.Status
+	for i := 0; i < N_ITER; i++ {
+		start := time.Now()
+		s = t.Work()
+		db.DPrintf(db.ALWAYS, "Time %v e2e resize: %v", os.Args, time.Since(start))
+	}
 	t.Exited(s)
 }
 

@@ -2,8 +2,9 @@
 
 app=$(basename $(pwd))
 
-rm ./bin/*
+rm -rf ./bin
 
 cd ..
-docker build -t arielszekely/$app --build-arg APP_NAME=$app -f Dockerfile .
+DOCKER_BUILDKIT=1 docker build --progress=plain -t arielszekely/appbuilder --build-arg APP_NAME=$app -f build.Dockerfile .
+DOCKER_BUILDKIT=1 docker build --progress=plain -t arielszekely/${app} --build-arg APP_NAME=$app -f Dockerfile .
 docker push arielszekely/$app

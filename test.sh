@@ -10,7 +10,7 @@ go clean -testcache
 # test some support package
 #
 
-for T in path intervals serr linuxsched perf sigmap; do
+for T in path intervals serr linuxsched perf sigmap leaderetcd; do
     go test $@ sigmaos/$T
 done
 

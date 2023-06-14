@@ -11,8 +11,8 @@ def run_process_get_output(command):
     return str(process.communicate()[0]).replace('\\n', '\n')[2:-1]
 
 def start_time_stats(depname):
-    out = run_process_get_output(["kubectl", "get", "pods", "--all-namespaces"])
-    pod_names = [ n for n in out.split() if depname in n ]
+    get_pods_out = run_process_get_output(["kubectl", "get", "pods", "--all-namespaces"])
+    pod_names = [ n for n in get_pods_out.split() if depname in n ]
     pod_details = [ yaml.load(run_process_get_output(["kubectl", "get", "pods", pn, "-o", "yaml"])) for pn in pod_names ]
     pod_transitions = [ pd["status"]["conditions"] for pd in pod_details ]
     pod_scheduled_time_strs = [ [ t["lastTransitionTime"] for t in pts if t["type"] == "PodScheduled" ][0] for pts in pod_transitions ]

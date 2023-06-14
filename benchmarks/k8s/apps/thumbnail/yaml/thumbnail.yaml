@@ -9,7 +9,7 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-      - name: mr
+      - name: thumbnail-compute
         image: arielszekely/thumbnail
         imagePullPolicy: Always
         resources:

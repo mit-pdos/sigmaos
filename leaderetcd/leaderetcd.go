@@ -21,7 +21,6 @@ type Election struct {
 
 func MkElection(ec *clientv3.Client, pn string) (*Election, error) {
 	el := &Election{Client: ec, pn: pn}
-
 	s, err := concurrency.NewSession(ec, concurrency.WithTTL(fsetcd.SessionTTL))
 	if err != nil {
 		return nil, err
@@ -46,4 +45,9 @@ func (el *Election) Candidate() error {
 
 	db.DPrintf(db.LEADER, "leader %v %v\n", proc.GetPid().String(), resp)
 	return nil
+}
+
+func (el *Election) Resign() error {
+	return el.Election.Resign(context.TODO())
+
 }

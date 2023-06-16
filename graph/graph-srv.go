@@ -7,25 +7,35 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/graph/proto"
+	"sigmaos/proc"
+	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/test"
+	"strconv"
 )
 
 const DIR_GRAPH = sp.NAMED + "graph/"
 
+const (
+	BFS_SINGLE_RPC = iota + 1
+	BFS_MULTI_RPC
+)
+
 type GraphSrv struct {
-	job string
-	sc  *sigmaclnt.SigmaClnt
-	g   *Graph
-	// XXX Store the parents slice for caching
+	sc         *sigmaclnt.SigmaClnt
+	g          *Graph
+	job        string
+	serverPath string
+	// XXX Cache the parents slice
 }
 
 type Thread struct {
 	*sigmaclnt.SigmaClnt
-	Pipe   string
-	Server string
+	job        string
+	serverPath string
 }
 
 //
@@ -33,15 +43,12 @@ type Thread struct {
 //  └─graph
 //    ├─g-server
 //    ├─job1
-//    │ ├─pipe
 //    │ └─server
 //    │   └─...
 //    ├─job2
-//    │ ├─pipe
 //    │ └─server
 //    │   └─...
 //    ├─job3
-//    │ ├─pipe
 //    │ └─server
 //    │   └─...
 //    │...
@@ -69,9 +76,10 @@ func initGraphNamespace(fs *fslib.FsLib, job string) (string, error) {
 
 func initThread(job string) (Thread, error) {
 	thread := Thread{}
+	thread.job = job
 	db.DPrintf(DEBUG_GRAPH, "|%v| Setting up thread namespace", job)
 	var err error
-	sc, err := sigmaclnt.MkSigmaClnt(rand.String(8))
+	sc, err := sigmaclnt.MkSigmaClnt(job)
 	if err != nil {
 		return thread, err
 	}
@@ -86,15 +94,9 @@ func initThread(job string) (Thread, error) {
 		db.DFatalf("|%v| Graph error creating %v directory: %v", job, serverPath, err)
 		return thread, err
 	}
-	// Pipe
-	pipePath := path.Join(jobPath, "pipe")
-	if err = sc.MakePipe(pipePath, 0777); err != nil {
-		return thread, err
-	}
 
 	thread.SigmaClnt = sc
-	thread.Server = serverPath
-	thread.Pipe = pipePath
+	thread.serverPath = serverPath
 	return thread, nil
 }
 
@@ -113,6 +115,7 @@ func StartGraphSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
+	g.serverPath = graphServer
 
 	pds, err := protdevsrv.MakeProtDevSrvPublic(graphServer, g, public)
 	if err != nil {
@@ -123,8 +126,7 @@ func StartGraphSrv(public bool, jobname string) error {
 }
 
 func (g *GraphSrv) ImportGraph(ctx fs.CtxI, req proto.GraphIn, res *proto.GraphOut) error {
-	// Make sure it's reset; I'm unsure what the behavior is when json unmarshals into
-	// an existing data structure.
+	// XXX Store graph data in s3 and get based on filename
 	g.g = &Graph{}
 	if err := json.Unmarshal(req.Marshaled, g.g); err != nil {
 		return err
@@ -134,21 +136,44 @@ func (g *GraphSrv) ImportGraph(ctx fs.CtxI, req proto.GraphIn, res *proto.GraphO
 	return nil
 }
 
-func (g *GraphSrv) RunBfsSinglePipes(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) error {
-	// Init
-	_, err := initThread(rand.String(8))
-	if err != nil {
-		return err
-	}
-	// Don't run the test; something's going wrong with initialization.
-	/*db.DPrintf(DEBUG_GRAPH, "Running Test")
-	out, err := g.g.BfsSinglePipes(int(req.GetN1()), int(req.GetN2()), thread)
-	if IsNoPath(err) {
-		db.DPrintf(DEBUG_GRAPH, "No Valid Path from %v to %v in graph of size %v", req.GetN1(), req.GetN2(), g.g.NumNodes)
-	} else if err != nil {
-		return err
-	}
+func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) error {
+	var err error
 
-	res.Marshaled, err = json.Marshal(out)*/
-	return err
+	switch req.Alg {
+	case BFS_SINGLE_RPC:
+		var marshaled []byte
+		if marshaled, err = json.Marshal(g.g); err != nil {
+			return err
+		}
+		p := proc.MakeProc("graph-thread-single", []string{strconv.FormatBool(test.Overlays), "single", string(marshaled)})
+		p.SetNcore(proc.Tcore(1))
+		if err = g.sc.Spawn(p); err != nil {
+			db.DFatalf("|%v| Error spawning proc %v: %v", g.job, p, err)
+			return err
+		}
+		if err = g.sc.WaitStart(p.GetPid()); err != nil {
+			db.DFatalf("|%v| Error waiting for proc %v to start: %v", g.job, p, err)
+			return err
+		}
+		pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{g.sc.FsLib}, path.Join(DIR_GRAPH, "single"))
+		if err != nil {
+			return err
+		}
+		bfsReq := proto.BfsIn{N1: req.N1, N2: req.N2}
+		bfsRes := proto.BfsPath{}
+		if err = pdc.RPC("BfsSingle.BfsSingle", &bfsReq, &bfsRes); err != nil {
+			return err
+		}
+		res.Marshaled, err = json.Marshal(bfsRes.Val)
+		return err
+	case BFS_MULTI_RPC:
+		out := make([]int, 0)
+		if out, err = g.BfsMultiRPC(ctx, int(req.N1), int(req.N2)); err != nil {
+			return nil
+		}
+		res.Marshaled, err = json.Marshal(&out)
+		return err
+	default:
+		return mkErr("Invalid BFS Request")
+	}
 }

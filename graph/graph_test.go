@@ -123,9 +123,9 @@ func importGraph(t *testing.T, pdc *protdevclnt.ProtDevClnt, fn string) {
 	assert.Nil(t, err, "Graph.ImportGraph failed with arg: %v and err: %v", importArg, err)
 }
 
-func runAlg(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, n1 int, n2 int) {
+func runAlg(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, alg int, n1 int, n2 int) {
 	var err error
-	bfsArg := proto.BfsInput{N1: int64(n1), N2: int64(n2)}
+	bfsArg := proto.BfsInput{N1: int64(n1), N2: int64(n2), Alg: int64(alg)}
 	bfsRes := proto.Path{}
 	err = pdc.RPC(rpc, &bfsArg, &bfsRes)
 	assert.Nil(t, err, "%v failed with arg: %v and err: %v", rpc, bfsArg, err)
@@ -137,24 +137,24 @@ func runAlg(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, n1 int, n2 i
 	db.DPrintf(graph.DEBUG_GRAPH, "Bfs from %v to %v: %v", n1, n2, p)
 }
 
-func runAlgRepeated(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string) {
+func runAlgRepeated(t *testing.T, pdc *protdevclnt.ProtDevClnt, rpc string, alg int) {
 	for _, n := range tests {
-		runAlg(t, pdc, rpc, n[0], n[1])
-		runAlg(t, pdc, rpc, n[1], n[0])
+		runAlg(t, pdc, rpc, alg, n[0], n[1])
+		runAlg(t, pdc, rpc, alg, n[1], n[0])
 	}
 }
 
-func TestBfsSinglePipes(t *testing.T) {
+func TestBfsSingleRPC(t *testing.T) {
 	var err error
 	tsg, err := makeTstateGraph(t, rand.String(8))
 	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
 
 	// Create an RPC client
 	// XXX Get path from proc
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(path.Join(graph.DIR_GRAPH, "g-server/")))
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.DIR_GRAPH, "g-server/"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
 	importGraph(t, pdc, graph.DATA_TINY_FN)
-	runAlg(t, pdc, "Graph.RunBfsSinglePipes", 0, 1)
+	runAlg(t, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC, 0, 1)
 	//runAlgRepeated(t, pdc, "Graph.RunBfsSinglePipes")
 
 	//tsg.Shutdown()

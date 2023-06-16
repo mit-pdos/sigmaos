@@ -1,1 +1,1 @@
-protoc -I=. --go_out=../../../ bfssrv.proto
+protoc -I=. --go_out=../../../ graphsrv.proto bfssrv.proto

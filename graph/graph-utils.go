@@ -33,6 +33,17 @@ func findPath(parents *[]int, n1 int, n2 int) *[]int {
 	return &solution
 }
 
+func findPath64(parents *[]int, n1 int, n2 int) *[]int64 {
+	solution := make([]int64, 0)
+	i := n2
+	for i != n1 {
+		solution = append(solution, int64(i))
+		i = (*parents)[i]
+	}
+	solution = append(solution, int64(n1))
+	return &solution
+}
+
 func findPathPartitioned(parents *[]map[int]int, n1 int, n2 int) *[]int {
 	solution := make([]int, 0)
 	i := n2

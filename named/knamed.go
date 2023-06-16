@@ -2,8 +2,8 @@ package named
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -36,27 +36,27 @@ func RunKNamed(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	ch := make(chan struct{})
-	// go nd.exit(ch)
+	w := os.NewFile(uintptr(3), "pipew")
+	r := os.NewFile(uintptr(4), "piper")
+	w2 := os.NewFile(uintptr(5), "pipew")
+	w2.Close()
+
 	nd.initfs()
-	w := os.NewFile(uintptr(3), "pipe")
+
 	fmt.Fprintf(w, "started")
 	w.Close()
 
-	<-ch
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
+		return err
+	}
+	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: leader %v %v done\n", proc.GetPid(), nd.realm, mnt)
-
-	// XXX maybe clear boot block
+	db.DPrintf(db.NAMED, "%v: exit %v %v %v\n", proc.GetPid(), nd.realm, mnt, string(data))
+	nd.elect.Resign()
 
 	return nil
-}
-
-// for testing
-func (nd *Named) exit(ch chan struct{}) {
-	time.Sleep(2 * time.Second)
-	db.DPrintf(db.NAMED, "boot named exit\n")
-	ch <- struct{}{}
 }
 
 var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.SCHEDD, sp.UX, sp.S3, sp.DB}

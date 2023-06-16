@@ -3,6 +3,7 @@ package test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"testing"
 
 	"sigmaos/bootkernelclnt"
@@ -61,6 +62,7 @@ type Tstate struct {
 	kclnts  []*bootkernelclnt.Kernel
 	killidx int
 	T       *testing.T
+	proc    *proc.Proc
 }
 
 func MakeTstatePath(t *testing.T, path string) *Tstate {
@@ -72,19 +74,11 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
-	ts, err := makeSysClnt(t, BOOT_NAMED)
-	if err != nil {
-		db.DFatalf("MakeTstate: %v\n", err)
-	}
-	return ts
+	return MakeTstatePath(t, sp.NAMED)
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
-	ts, err := makeSysClnt(t, BOOT_ALL)
-	if err != nil {
-		db.DFatalf("MakeTstateAll: %v\n", err)
-	}
-	return ts
+	return MakeTstatePath(t, "all")
 }
 
 func MakeTstateWithRealms(t *testing.T) *Tstate {
@@ -108,10 +102,30 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 		if err != nil {
 			return nil, err
 		}
-		//ts.RmDir(path)
-		//ts.MkDir(path, 0777)
+		//if err := ts.switchNamed(); err != nil {
+		//	ts.Shutdown()
+		//	return nil, err
+		//}
 		return ts, nil
 	}
+}
+
+func (ts *Tstate) switchNamed() error {
+	ts.proc = proc.MakeProc("named", []string{sp.ROOTREALM.String(), "0"})
+	if err := ts.Spawn(ts.proc); err != nil {
+		log.Printf("spawn failure %v\n", err)
+		return err
+	}
+	log.Printf("wait for start named\n")
+	if err := ts.WaitStart(ts.proc.GetPid()); err != nil {
+		return err
+	}
+	log.Printf("named started\n")
+	if err := ts.KillKNamed(); err != nil {
+		log.Printf("killed named err %v\n", err)
+	}
+	log.Printf("killed named\n")
+	return nil
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
@@ -164,6 +178,10 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
+func (ts *Tstate) KillKNamed() error {
+	return ts.kclnts[0].Kill(sp.NAMEDREL)
+}
+
 func (ts *Tstate) KillOne(s string) error {
 	idx := ts.killidx
 	ts.killidx++
@@ -185,7 +203,7 @@ func (ts *Tstate) Shutdown() error {
 		if err := ts.RmDir(proc.GetProcDir()); err != nil {
 			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", proc.GetProcDir(), err)
 		}
-		// Shut down other kernel running named last
+		// Shut down other kernel; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
 				return err

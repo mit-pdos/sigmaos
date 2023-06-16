@@ -106,6 +106,10 @@ func (s *Subsystem) Terminate() error {
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
 	s.crashed = true
+	db.DPrintf(db.KERNEL, "kill %v %v\n", s.cmd, s.p)
+	if s.p.Program == "knamed" {
+		return StopKNamed(s.cmd)
+	}
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.Evict(s.p.GetPid())
@@ -114,8 +118,11 @@ func (s *Subsystem) Kill() error {
 		}
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "kill %v %v", s.cmd.Process.Pid, s.p.GetPid())
-	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
+	db.DPrintf(db.ALWAYS, "kill %v\n", s.cmd.Process.Pid)
+	if err := syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL); err != nil {
+		return err
+	}
+	return s.cmd.Wait()
 }
 
 func (s *Subsystem) Wait() {

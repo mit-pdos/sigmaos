@@ -75,27 +75,35 @@ func (k *Kernel) KillOne(srv string) error {
 	defer k.Unlock()
 
 	var ss *Subsystem
+	if _, ok := k.svcs.svcs[srv]; !ok {
+		return fmt.Errorf("Unknown kernel service %v", srv)
+	}
 	if len(k.svcs.svcs[srv]) > 0 {
 		ss = k.svcs.svcs[srv][0]
 		k.svcs.svcs[srv] = k.svcs.svcs[srv][1:]
 	} else {
-		db.DPrintf(db.ALWAYS, "Tried to kill %s, nothing to kill", srv)
+		return fmt.Errorf("Tried to kill %s, nothing to kill", srv)
 	}
+	db.DPrintf(db.KERNEL, "Kill %v %v %v\n", srv, ss.cmd.ExtraFiles)
 	err := ss.Kill()
 	if err == nil {
 		ss.Wait()
 	} else {
-		db.DFatalf("%v kill failed %v\n", srv, err)
+		return fmt.Errorf("Kill %v err %v", srv, err)
 	}
 	return nil
 }
 
 func (k *Kernel) bootKNamed(uname string, realmId sp.Trealm) error {
-	cmd, err := RunKNamed(k.namedAddr, realmId)
+	p, err := makeKNamedProc(realmId)
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, k, nil, procclnt.HLINUX, cmd)
+	cmd, err := runKNamed(p, k.namedAddr, realmId)
+	if err != nil {
+		return err
+	}
+	ss := makeSubsystemCmd(nil, k, p, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)

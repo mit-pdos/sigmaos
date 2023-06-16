@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -140,54 +141,67 @@ func (k *Kernel) shutdown() {
 	}
 	for key, val := range k.svcs.svcs {
 		if key != sp.NAMEDREL {
-			for _, d := range val {
-				d.Wait()
+			for _, ss := range val {
+				ss.Wait()
 			}
 		}
 	}
 	if err := k.RmDir(proc.GetProcDir()); err != nil {
 		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", proc.GetProcDir(), err)
 	}
-	for _, d := range k.svcs.svcs[sp.NAMEDREL] {
-		// kill it so that test terminates
-		d.Terminate()
-		d.Wait()
+	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.NAMEDREL]))
+	for _, ss := range k.svcs.svcs[sp.NAMEDREL] {
+		// kill it so that test terminates;  XXX should this be  d.Terminate()?
+		db.DPrintf(db.KERNEL, "Kill %v %d %T\n", sp.NAMEDREL, len(ss.cmd.ExtraFiles), ss)
+		ss.Kill()
+		// d.Wait()
 	}
 }
 
-func makeNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
+func makeKNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
 	args := []string{realmId.String()}
 	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "knamed", args, true)
 	return p, nil
 }
 
 // Run named (but not as a proc)
-func RunKNamed(addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
-	p, err := makeNamedProc(realmId)
+func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
+	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	r, w, err := os.Pipe()
+	r2, w2, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(p, addr, realmId, []*os.File{w})
+	cmd, err := kproc.RunKernelProc(p, addr, realmId, []*os.File{w1, r2, w2})
 	if err != nil {
-		r.Close()
-		w.Close()
+		r1.Close()
+		w1.Close()
+		r2.Close()
+		w2.Close()
 		db.DPrintf(db.ALWAYS, "RunKernelProc named: %v", err)
 		return nil, err
 	}
-	w.Close()
-	defer r.Close()
+	w1.Close()
+	r2.Close()
+	defer r1.Close()
 
-	data, err := ioutil.ReadAll(r)
+	data, err := ioutil.ReadAll(r1)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "named reports %v\n", string(data))
 	return cmd, nil
+}
+
+func StopKNamed(cmd *exec.Cmd) error {
+	db.DPrintf(db.KERNEL, "StopKNamed %v\n", cmd)
+	w2 := cmd.ExtraFiles[2]
+	fmt.Fprintf(w2, "stop")
+	w2.Close()
+	return cmd.Wait()
 }
 
 func SetNamedIP(ip string, ports sp.Taddrs) (sp.Taddrs, error) {

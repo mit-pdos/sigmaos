@@ -47,9 +47,8 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	// XXX nd.Started too soon for first named
-	// nd.Started()
-	// go nd.waitExit(ch)
+	nd.Started()
+	go nd.waitExit(ch)
 
 	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
 
@@ -74,8 +73,6 @@ func Run(args []string) error {
 	}
 	db.DPrintf(db.NAMED, "getdir %v sts %v\n", sp.REALMS, sp.Names(sts))
 
-	nd.Started()
-	go nd.waitExit(ch)
 	if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}
@@ -90,10 +87,13 @@ func Run(args []string) error {
 }
 
 func (nd *Named) waitExit(ch chan struct{}) {
-	err := nd.WaitEvict(proc.GetPid())
-	if err != nil {
-		db.DFatalf("Error WaitEvict: %v", err)
+	for {
+		err := nd.WaitEvict(proc.GetPid())
+		if err != nil {
+			db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
+			continue
+		}
+		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
+		ch <- struct{}{}
 	}
-	db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
-	ch <- struct{}{}
 }

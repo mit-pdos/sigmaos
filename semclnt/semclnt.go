@@ -49,7 +49,7 @@ func (c *SemClnt) Down() error {
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
 		if errors.As(err, &serr) && serr.IsErrNotfound() {
-			db.DPrintf(db.SEMCLNT, "down %v ok err %v\n", c.path, err)
+			db.DPrintf(db.SEMCLNT, "down notfound %v ok err %v\n", c.path, err)
 			break
 		}
 		if err == nil {
@@ -61,6 +61,10 @@ func (c *SemClnt) Down() error {
 		}
 		if errors.As(err, &serr) && serr.IsErrVersion() {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v retry err %v\n", c.path, err)
+			continue
+		}
+		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
 			continue
 		}
 		if err != nil {

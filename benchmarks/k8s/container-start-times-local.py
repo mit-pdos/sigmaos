@@ -65,7 +65,7 @@ def start_time_stats(depname):
   kubelet_log = run_process_get_output(["sudo", "journalctl", "-xeu", "kubelet"])
   pod_stats = parse_kubelet_log(kubelet_log, set(pod_names))
   
-  pod_startup_times = [ (s["lastFinishedPulling"] - s["observedRunningTime"]).total_seconds() for s in pod_stats ]
+  pod_startup_times = [ (s["observedRunningTime"] - s["lastFinishedPulling"]).total_seconds() for s in pod_stats ]
   print("Mean pod startup time:", np.mean(pod_startup_times))
   print("Std dev pod startup time:", np.std(pod_startup_times))
   print("pod startup times:", pod_startup_times)

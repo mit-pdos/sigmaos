@@ -68,7 +68,13 @@ def start_time_stats(depname):
   pod_startup_times = [ (s["observedRunningTime"] - s["lastFinishedPulling"]).total_seconds() for s in pod_stats ]
   print("=== Pod startup time\n\tmedian:{}, mean:{}, std:{}".format(np.median(pod_startup_times), np.mean(pod_startup_times), np.std(pod_startup_times)))
 
+  # Sort by time scheduled.
   pod_stats = sorted(pod_stats, key=lambda p: p["firstStartedPulling"])
+
+  pod_pull_latency = [ (s["lastFinishedPulling"] - s["firstStartedPulling"]).total_seconds() for s in pod_stats ]
+  print("=== Pod pull latency\n\tmedian:{}, mean:{}, std:{}".format(np.median(pod_pull_latency), np.mean(pod_pull_latency), np.std(pod_pull_latency)))
+  print(diff_pod_scheduled_times)
+
 
   diff_pod_scheduled_times = []
   for i in range(1, len(pod_stats)):

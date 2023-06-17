@@ -73,6 +73,7 @@ def start_time_stats(depname):
     diff = (pod_stats[i]["firstStartedPulling"] - pod_stats[i - 1]["firstStartedPulling"]).total_seconds()
     diff_pod_scheduled_times.append(diff)
   print("=== Time between scheduling events\n\tmedian:{}, mean:{}, std:{}".format(np.median(diff_pod_scheduled_times), np.mean(diff_pod_scheduled_times), np.std(diff_pod_scheduled_times)))
+  print(diff_pod_scheduled_times)
  
 if __name__ == "__main__":                                                    
   parser = argparse.ArgumentParser()                                        

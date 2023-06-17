@@ -19,7 +19,7 @@ Jun 14 12:40:58 node0.test-thumb-util.ulambda-pg0.wisc.cloudlab.us kubelet[16475
 def parse_pod_stats(s):
 
   # Ignore everything before fields
-  s = s[s.index("pod=")]
+  s = s[s.index("pod="):]
 
   lexer = shlex.shlex(s)
   lexer.whitespace_split = True
@@ -33,7 +33,7 @@ def parse_pod_stats(s):
     value = tokens[i+1].strip('"')
     stats[key] = value
   
-  stats["pod"] = stats["pod"].removeprefix("default/")
+  stats["pod"] = stats["pod"].lstrip("default/")
   stats["podStartSLOduration"] = float(stats["podStartSLOduration"])
   stats["podCreationTimestamp"] = dateparser.parse(stats["podCreationTimestamp"])
   stats["firstStartedPulling"] = dateparser.parse(stats["firstStartedPulling"])

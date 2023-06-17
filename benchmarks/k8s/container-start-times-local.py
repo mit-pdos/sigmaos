@@ -5,11 +5,19 @@ import argparse
 import yaml
 import shlex
 import numpy as np
-from dateutil import parser as dateparser
+from datetime import datetime
 
 def run_process_get_output(command):
   process = subprocess.Popen(command, stdout=subprocess.PIPE) 
   return str(process.communicate()[0]).replace('\\n', '\n')[2:-1]
+
+def clean_date_string(s):
+  # Trim monotonic clock suffix
+  s = s[:s.index(" m=+")]
+  # Round to microseconds
+  di = s.index(".")
+  nsi = s.index(" ", di + 1)
+  return s[ : di + 1 ] + s[ di + 1 : di + 7 ] + s[ nsi : ]
 
 '''
 Parsing strings of the form:
@@ -33,13 +41,13 @@ def parse_pod_stats(s):
     value = tokens[i+1].strip('"')
     stats[key] = value
   
-  stats["pod"] = stats["pod"].lstrip("default/")
+  stats["pod"] = stats["pod"][stats["pod"].index("/") + 1:]
   stats["podStartSLOduration"] = float(stats["podStartSLOduration"])
-  stats["podCreationTimestamp"] = dateparser.parse(stats["podCreationTimestamp"])
-  stats["firstStartedPulling"] = dateparser.parse(stats["firstStartedPulling"])
-  stats["lastFinishedPulling"] = dateparser.parse(stats["lastFinishedPulling"])
-  stats["observedRunningTime"] = dateparser.parse(stats["observedRunningTime"])
-  stats["watchObservedRunningTime"] = dateparser.parse(stats["watchObservedRunningTime"])
+  stats["podCreationTimestamp"] = datetime.strptime(stats["podCreationTimestamp"], "%Y-%m-%d %H:%M:%S %z %Z")
+  stats["firstStartedPulling"] = datetime.strptime(clean_date_string(stats["firstStartedPulling"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["lastFinishedPulling"] = datetime.strptime(clean_date_string(stats["lastFinishedPulling"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["observedRunningTime"] = datetime.strptime(clean_date_string(stats["observedRunningTime"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["watchObservedRunningTime"] = datetime.strptime(clean_date_string(stats["watchObservedRunningTime"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
 
   return stats
 

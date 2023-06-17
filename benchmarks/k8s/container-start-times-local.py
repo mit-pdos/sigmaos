@@ -64,30 +64,20 @@ def start_time_stats(depname):
 
   kubelet_log = run_process_get_output(["sudo", "journalctl", "-xeu", "kubelet"])
   pod_stats = parse_kubelet_log(kubelet_log, set(pod_names))
-  print(pod_stats)
-#
-#
-#
-#  pod_details = [ yaml.load(run_process_get_output(["kubectl", "get", "pods", pn, "-o", "yaml"])) for pn in pod_names ]
-#  pod_transitions = [ pd["status"]["conditions"] for pd in pod_details ]
-#  pod_scheduled_time_strs = [ [ t["lastTransitionTime"] for t in pts if t["type"] == "PodScheduled" ][0] for pts in pod_transitions ]
-#  pod_ready_time_strs = [ [ t["lastTransitionTime"] for t in pts if t["type"] == "Ready" ][0] for pts in pod_transitions ]
-#  pod_scheduled_times = [ dateparser.parse(s) for s in pod_scheduled_time_strs ]
-#  pod_ready_times = [ dateparser.parse(s) for s in pod_ready_time_strs ]
-#  pod_startup_times = [ (pod_ready_times[i] - pod_scheduled_times[i]).total_seconds() for i in range(len(pod_ready_times)) ]
-#  print("Mean pod startup time:", np.mean(pod_startup_times))
-#  print("Std dev pod startup time:", np.std(pod_startup_times))
-#  print(np.mean(pod_startup_times))
-#  # Calculate mean scheduling latency
-#  sorted_pod_scheduled_times = sorted(pod_scheduled_times)
-#  diff_pod_scheduled_times = []
-#  for i in range(1, len(sorted_pod_scheduled_times)):
-#    diff = (sorted_pod_scheduled_times[i] - sorted_pod_scheduled_times[i - 1]).total_seconds()
-#    diff_pod_scheduled_times.append(diff)
-#  print("Diff sched events:", diff_pod_scheduled_times)
-#  print("Mean latency between scheduling events:", np.mean(diff_pod_scheduled_times))
-#  print("Std dev between scheduling events:", np.std(diff_pod_scheduled_times))
-     
+  
+  pod_startup_times = [ (s["lastFinishedPulling"] - s["observedRunningTime"]).total_seconds() for s in pod_stats ]
+  print("Mean pod startup time:", np.mean(pod_startup_times))
+  print("Std dev pod startup time:", np.std(pod_startup_times))
+  print("pod startup times:", pod_startup_times)
+
+  diff_pod_scheduled_times = []
+  for i in range(1, len(pod_stats)):
+    diff = (pod_stats[i]["firstStartedPulling"] - pod_stats[i - 1]["firstStartedPulling"]).total_seconds()
+    diff_pod_scheduled_times.append(diff)
+  print("Mean latency between scheduling events:", np.mean(diff_pod_scheduled_times))
+  print("Std dev between scheduling events:", np.std(diff_pod_scheduled_times))
+  print("Diff sched events:", diff_pod_scheduled_times)
+ 
 if __name__ == "__main__":                                                    
   parser = argparse.ArgumentParser()                                        
   parser.add_argument("--depname", type=str, required=True)

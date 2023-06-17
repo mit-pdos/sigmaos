@@ -32,7 +32,7 @@ type GraphSrv struct {
 	// XXX Cache the parents slice
 }
 
-type Thread struct {
+type thread struct {
 	*sigmaclnt.SigmaClnt
 	job        string
 	serverPath string
@@ -74,8 +74,8 @@ func initGraphNamespace(fs *fslib.FsLib, job string) (string, error) {
 	return jobServer, nil
 }
 
-func initThread(job string) (Thread, error) {
-	thread := Thread{}
+func initThread(job string) (thread, error) {
+	thread := thread{}
 	thread.job = job
 	db.DPrintf(DEBUG_GRAPH, "|%v| Setting up thread namespace", job)
 	var err error
@@ -155,22 +155,24 @@ func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) erro
 			db.DFatalf("|%v| Error waiting for proc %v to start: %v", g.job, p, err)
 			return err
 		}
-		pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{g.sc.FsLib}, path.Join(DIR_GRAPH, "single"))
+		// XXX Get path from proc
+		pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{g.sc.FsLib}, path.Join(DIR_GRAPH, "single", "server"))
 		if err != nil {
 			return err
 		}
 		bfsReq := proto.BfsIn{N1: req.N1, N2: req.N2}
 		bfsRes := proto.BfsPath{}
-		if err = pdc.RPC("BfsSingle.BfsSingle", &bfsReq, &bfsRes); err != nil {
+		if err = pdc.RPC("BfsSingle.RunBfsSingle", &bfsReq, &bfsRes); err != nil {
+			db.DFatalf("|%v| Error running BFS proc %v: %v", g.job, p, err)
 			return err
 		}
 		res.Marshaled, err = json.Marshal(bfsRes.Val)
 		return err
 	case BFS_MULTI_RPC:
 		out := make([]int, 0)
-		if out, err = g.BfsMultiRPC(ctx, int(req.N1), int(req.N2)); err != nil {
+		/*if out, err = g.BfsMultiRPC(ctx, int(req.N1), int(req.N2)); err != nil {
 			return nil
-		}
+		}*/
 		res.Marshaled, err = json.Marshal(&out)
 		return err
 	default:

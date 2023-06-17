@@ -3,8 +3,10 @@ syntax = "proto3";
 option go_package = "sigmaos/graph/proto";
 
 service BfsService {
-  rpc BfsSingle(BfsIn) returns (BfsPath);
+  rpc RunBfsSingle(BfsIn) returns (BfsPath);
   rpc Put(Index) returns (None);
+  rpc RunBfsMulti(BfsIn) returns (BfsPath);
+  rpc RunBfsMultiThread(ThreadIn) returns (ThreadOut);
 }
 
 message Index{
@@ -21,4 +23,12 @@ message BfsIn {
 
 message BfsPath {
   repeated int64 val = 1;
+}
+
+message ThreadIn {
+  int64 n2 = 1;
+}
+
+message ThreadOut {
+  map<int64, int64> parentPartition = 1;
 }

@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
-	if err := graph.StartThreadSingle(public, os.Args[2], os.Args[3]); err != nil {
-		db.DFatalf("StartThreadSingle %v err %v\n", os.Args[0], err)
+	if err := graph.StartBfsMultiMain(public, os.Args[2], os.Args[3]); err != nil {
+		db.DFatalf("StartBfsMultiMain %v err %v\n", os.Args[0], err)
 	}
 }

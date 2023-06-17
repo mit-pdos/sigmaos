@@ -11,37 +11,41 @@ import (
 )
 
 type BfsSingle struct {
-	Thread
+	t       thread
 	g       *Graph
 	parents []int
-	CS      chan int
+	cs      chan int
 	pdc     *protdevclnt.ProtDevClnt
 }
 
-func StartThread(public bool, jobname string, graph string) error {
+func StartThreadSingle(public bool, jobname string, graph string) error {
 	var err error
 	b := BfsSingle{}
-	if b.Thread, err = initThread(jobname); err != nil {
+	if b.t, err = initThread(jobname); err != nil {
 		return err
 	}
 	b.g = &Graph{}
 	if err = json.Unmarshal([]byte(graph), b.g); err != nil {
 		return err
 	}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(b.serverPath, b, public)
-	if err != nil {
-		db.DPrintf(DEBUG_GRAPH, "|%v| Failed to make ProtDevSrv: %v", b.job, err)
-		return err
-	}
-	if b.pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{b.FsLib}, b.serverPath); err != nil {
-		return err
-	}
 	// XXX Replace with variable length queue
-	b.CS = make(chan int, b.g.NumEdges)
+	b.cs = make(chan int, b.g.NumEdges)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(b.t.serverPath, b, public)
+	if err != nil {
+		db.DPrintf(DEBUG_GRAPH, "|%v| Failed to make ProtDevSrv: %v", b.t.job, err)
+		return err
+	}
+	db.DPrintf(DEBUG_GRAPH, "Created Single Thread: %v", b)
 	return pds.RunServer()
 }
 
-func (b *BfsSingle) BfsSingle(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) error {
+func (b *BfsSingle) RunBfsSingle(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) error {
+	db.DPrintf(DEBUG_GRAPH, "Running BFS Single from %v to %v", req.N1, req.N2)
+	var err error
+	// This is done here instead of in StartThreadSingle because the rpc server must be initialized first.
+	if b.pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{b.t.FsLib}, b.t.serverPath); err != nil {
+		return err
+	}
 	n1 := int(req.N1)
 	n2 := int(req.N2)
 	b.parents = make([]int, b.g.NumNodes)
@@ -57,7 +61,7 @@ func (b *BfsSingle) BfsSingle(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) 
 
 	// XXX End Condition for No Path
 	for {
-		index := <-b.CS
+		index := <-b.cs
 		adj := b.g.GetNeighbors(index)
 		for _, a := range *adj {
 			if b.parents[a] == NOT_VISITED {
@@ -79,6 +83,6 @@ func (b *BfsSingle) BfsSingle(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) 
 }
 
 func (b *BfsSingle) Put(ctx fs.CtxI, req proto.Index, res *proto.None) error {
-	b.CS <- int(req.Val)
+	b.cs <- int(req.Val)
 	return nil
 }

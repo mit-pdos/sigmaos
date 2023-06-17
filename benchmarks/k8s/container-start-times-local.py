@@ -17,7 +17,7 @@ def clean_date_string(s):
   # Round to microseconds
   di = s.index(".")
   nsi = s.index(" ", di + 1)
-  return s[ : di + 1 ] + s[ di + 1 : di + 7 ] + s[ nsi : ]
+  return s[:di + 1] + s[di + 1:di + 7] + s[nsi:]
 
 '''
 Parsing strings of the form:

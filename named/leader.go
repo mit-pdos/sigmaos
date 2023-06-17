@@ -37,7 +37,7 @@ func (nd *Named) startLeader() error {
 	root := rootDir(ec, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt)
 	if srv == nil {
-		db.DFatalf("MakeReplServer err %v", err)
+		return fmt.Errorf("BootSrv err %v\n", err)
 	}
 	nd.SessSrv = srv
 

@@ -104,12 +104,13 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 		}
 		//if err := ts.switchNamed(); err != nil {
 		//	ts.Shutdown()
-		//	return nil, err
+		//return nil, err
 		//}
 		return ts, nil
 	}
 }
 
+// Replace knamed with a proc-based named
 func (ts *Tstate) switchNamed() error {
 	ts.proc = proc.MakeProc("named", []string{sp.ROOTREALM.String(), "0"})
 	if err := ts.Spawn(ts.proc); err != nil {
@@ -121,7 +122,7 @@ func (ts *Tstate) switchNamed() error {
 		return err
 	}
 	log.Printf("named started\n")
-	if err := ts.KillKNamed(); err != nil {
+	if err := ts.StopKNamed(); err != nil {
 		log.Printf("killed named err %v\n", err)
 	}
 	log.Printf("killed named\n")
@@ -178,7 +179,7 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) KillKNamed() error {
+func (ts *Tstate) StopKNamed() error {
 	return ts.kclnts[0].Kill(sp.NAMEDREL)
 }
 

@@ -60,8 +60,9 @@ func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
 			if err := pathc.autoMount("", mnt, pn); err == nil {
 				db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
 				return nil
+			} else {
+				db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
 			}
-			db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
 		} else {
 			db.DPrintf(db.NAMED, "mountRootNamed: GetNamed err %v\n", err)
 		}

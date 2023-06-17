@@ -66,13 +66,13 @@ def start_time_stats(depname):
   pod_stats = parse_kubelet_log(kubelet_log, set(pod_names))
   
   pod_startup_times = [ (s["observedRunningTime"] - s["lastFinishedPulling"]).total_seconds() for s in pod_stats ]
-  print("=== Pod startup time\n\tmedian:{}, mean:{}, std:{}".format(np.median(pod_startup_times), np.mean(pod_startup_times), np.std(pod_startup_times))
+  print("=== Pod startup time\n\tmedian:{}, mean:{}, std:{}".format(np.median(pod_startup_times), np.mean(pod_startup_times), np.std(pod_startup_times)))
 
   diff_pod_scheduled_times = []
   for i in range(1, len(pod_stats)):
     diff = (pod_stats[i]["firstStartedPulling"] - pod_stats[i - 1]["firstStartedPulling"]).total_seconds()
     diff_pod_scheduled_times.append(diff)
-  print("=== Time between scheduling events\n\tmedian:{}, mean:{}, std:{}".format(np.median(diff_pod_scheduled_times), np.mean(diff_pod_scheduled_times), np.std(diff_pod_scheduled_times))
+  print("=== Time between scheduling events\n\tmedian:{}, mean:{}, std:{}".format(np.median(diff_pod_scheduled_times), np.mean(diff_pod_scheduled_times), np.std(diff_pod_scheduled_times)))
  
 if __name__ == "__main__":                                                    
   parser = argparse.ArgumentParser()                                        

@@ -20,6 +20,9 @@ def clean_date_string(s):
     di = s.index(".")
     nsi = s.index(" ", di + 1)
     s = s[:di + 1] + s[di + 1:di + 7] + s[nsi:] 
+  else:
+    si = s.rfind(":")
+    s = s[:si + 3] + ".000000" + s[si + 3:]
   return s
 
 '''

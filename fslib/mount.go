@@ -95,21 +95,11 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 		}
 		return mnt, left[1:].String(), nil
 	} else if s, p, err := fsl.PathLastSymlink(pn); err == nil {
-		if mnt, err := fsl.ReadMount(s); err == nil {
+		if mnt, err := fsl.ReadMount(s.String()); err == nil {
 			return mnt, p.String(), nil
 		}
 	}
 	return sp.NullMount(), "", serr.MkErr(serr.TErrInval, pn)
-}
-
-// Return path to the symlink for the last server on this path and the
-// the rest of the path on the server.
-func (fsl *FsLib) PathLastSymlink(pn string) (string, path.Path, error) {
-	// Make sure the server is automounted:
-	if _, err := fsl.Stat(pn + "/"); err != nil {
-		return "", nil, err
-	}
-	return fsl.LastMount(pn)
 }
 
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {

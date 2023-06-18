@@ -38,11 +38,7 @@ func (fl *FsLib) NamedAddr() sp.Taddrs {
 }
 
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
-		return fl.Mount(fd, mount)
-	} else {
-		return err
-	}
+	return fl.FdClient.MountTree(fl.Uname(), addrs, tree, mount)
 }
 
 func (fl *FsLib) Exit() error {

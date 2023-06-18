@@ -89,7 +89,7 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
-		db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
+		// db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
 			if len(left) == 0 && !allowResolve {
 				continue

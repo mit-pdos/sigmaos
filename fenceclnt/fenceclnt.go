@@ -3,8 +3,8 @@ package fenceclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/epochclnt"
-	"sigmaos/sessp"
 	"sigmaos/fslib"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -78,7 +78,7 @@ func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
 		db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", p, err)
 		return nil, err
 	}
-	dn := srv + "/" + sp.FENCEDIR
+	dn := srv.String() + "/" + sp.FENCEDIR
 	sts, err := fc.GetDir(dn)
 	if err != nil {
 		db.DPrintf(db.FENCECLNT_ERR, "GetDir %v err %v", dn, err)
@@ -103,7 +103,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 			db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", d, err)
 			return err
 		}
-		fn := srv + "/" + sp.FENCEDIR + "/" + f.Fenceid.Tpath().String()
+		fn := srv.String() + "/" + sp.FENCEDIR + "/" + f.Fenceid.Tpath().String()
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf(db.FENCECLNT_ERR, "Remove %v err %v", fn, err)
 			return err

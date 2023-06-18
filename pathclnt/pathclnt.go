@@ -25,6 +25,7 @@ type Watch func(string, error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
+	rootmt  *RootMountTable
 	chunkSz sessp.Tsize
 	realm   sp.Trealm
 	lip     string
@@ -37,6 +38,7 @@ func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip st
 	} else {
 		pathc.FidClnt = fidc
 	}
+	pathc.rootmt = mkRootMountTable()
 	return pathc
 }
 
@@ -66,15 +68,33 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
-func (pathc *PathClnt) LastMount(pn string) (string, path.Path, error) {
+func (pathc *PathClnt) MountTree(uname string, addrs sp.Taddrs, tree, mnt string) error {
+	if fd, err := pathc.Attach(uname, addrs, "", tree); err == nil {
+		return pathc.Mount(fd, mnt)
+	} else {
+		return err
+	}
+}
+
+// Return path to the symlink for the last server on this path and the
+// the rest of the path on the server.
+func (pathc *PathClnt) PathLastSymlink(pn string) (path.Path, path.Path, error) {
+	// Make sure the server is automounted:
+	if _, err := pathc.Stat(pn + "/"); err != nil {
+		return nil, nil, err
+	}
+	return pathc.LastMount(pn)
+}
+
+func (pathc *PathClnt) LastMount(pn string) (path.Path, path.Path, error) {
 	p := path.Split(pn)
 	_, left, err := pathc.resolve(p, path.EndSlash(pn))
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "resolve  %v err %v\n", pn, err)
-		return "", nil, err
+		return nil, nil, err
 	}
 	p = p[0 : len(p)-len(left)]
-	return p.String(), left, nil
+	return p, left, nil
 }
 
 // Exit the path client, closing all sessions
@@ -413,6 +433,6 @@ func (pathc *PathClnt) PutFile(pn string, mode sp.Tmode, perm sp.Tperm, data []b
 }
 
 func (pathc *PathClnt) resolve(p path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	pathc.resolveNamed(p)
+	pathc.resolveRoot(p)
 	return pathc.mnt.resolve(p, resolve)
 }

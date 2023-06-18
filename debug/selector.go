@@ -175,6 +175,7 @@ const (
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR
 	WALK                          = "WALK"
+	SVCMOUNT                      = "SVCMOUNT"
 )
 
 // Server-side Infrastructure

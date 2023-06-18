@@ -28,7 +28,7 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *serr.Err) {
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for {
-		pathc.resolveNamed(path)
+		pathc.resolveRoot(path)
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && err.IsErrUnreachable() {

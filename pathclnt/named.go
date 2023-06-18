@@ -32,15 +32,6 @@ func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 	}
 }
 
-func (pathc *PathClnt) resolveNamed(p path.Path) *serr.Err {
-	_, rest, err := pathc.mnt.resolve(p, true)
-	// db.DPrintf(db.NAMED, "%p: resolveNamed: %v r %v err %v\n", pathc, p, rest, err)
-	if err != nil && len(rest) >= 1 && rest[0] == sp.NAME {
-		pathc.mountNamed(p)
-	}
-	return nil
-}
-
 func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
 	db.DPrintf(db.NAMED, "mountNamed %v: %v\n", pathc.realm, p)
 	if pathc.realm == sp.ROOTREALM {

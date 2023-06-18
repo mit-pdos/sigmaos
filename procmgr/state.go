@@ -166,6 +166,10 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
 		return nil, false
 	}
+	if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
+		return nil, false
+	}
 	if err != nil {
 		db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
 	}

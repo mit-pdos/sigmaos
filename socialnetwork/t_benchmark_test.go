@@ -3,13 +3,47 @@ package socialnetwork_test
 import (
 	"testing"
 	"sigmaos/test"
+	dbg "sigmaos/debug"
 	sn "sigmaos/socialnetwork"
+	sp "sigmaos/sigmap"
 	"github.com/stretchr/testify/assert"
 	"strings"
+	"flag"
 )
 
+var K8S_ADDR string
+
+func init() {
+	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
+}
+
+func setupK8sState(tssn *TstateSN) {
+	// Advertise server address
+	p := sn.JobHTTPAddrsPath(tssn.jobname)
+	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
+	if err := tssn.MountService(p, mnt); err != nil {
+		dbg.DFatalf("MountService %v", err)
+	}
+}
+
+func TestFrontendK8s(t *testing.T) {
+	if K8S_ADDR == "" {
+		dbg.DPrintf(dbg.ALWAYS, "No k8s addr supplied")
+		return
+	}
+	tssn := makeTstateSN(t, nil, 0)
+	setupK8sState(tssn)
+	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+
+	// run tests
+	testFrontEndInner(t, wc)
+
+	//stop server
+	assert.Nil(t, tssn.Shutdown())
+}
+
 func TestFrontend(t *testing.T) {
-	// start server
+	// start server and creat web client
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1}, 
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1}, 
@@ -22,9 +56,17 @@ func TestFrontend(t *testing.T) {
 		sn.Srv{"socialnetwork-frontend", test.Overlays, 1}}, NSHARD)
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
-
-	// create web clients and log in
 	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+
+	// run tests
+	testFrontEndInner(t, wc)
+
+	//stop server
+	assert.Nil(t, tssn.Shutdown())
+}
+
+func testFrontEndInner(t *testing.T, wc *sn.WebClnt) {
+	// log in
 	s, err := wc.Login("user_0", "p_user_0")
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
@@ -71,8 +113,6 @@ func TestFrontend(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Timeline successfully!", repl["message"].(string))
 	assert.True(t, strings.HasPrefix(repl["contents"].(string), "First post!"))
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
+
 

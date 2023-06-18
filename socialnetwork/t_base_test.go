@@ -5,14 +5,9 @@ import (
 	"sigmaos/test"
 	"sigmaos/rand"
 	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
-	"sigmaos/socialnetwork/proto"
-	"sigmaos/protdevclnt"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 const (
@@ -54,25 +49,4 @@ func (tssn *TstateSN) Shutdown() error {
 		return stopErr
 	}
 	return tssn.Tstate.Shutdown()
-}
-
-func TestToyMeaningOfLife(t *testing.T) {
-	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-mol", test.Overlays, 1}}, 0)
-	snCfg := tssn.snCfg
-
-	// create a RPC client and query
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MOL)
-	assert.Nil(t, err, "RPC client should be created properly")
-	arg := proto.MoLRequest{
-		Name: "test",
-	}
-	res := proto.MoLResult{}
-	err = pdc.RPC("MeaningOfLife.FindMeaning", &arg, &res)
-	assert.Nil(t, err, "RPC call should succeed")
-	assert.Equal(t, float32(42), res.Meaning)
-
-	// sleep a while to print heartbeats then stop
-	time.Sleep(2 * time.Second)
-	assert.Nil(t, tssn.Shutdown())
 }

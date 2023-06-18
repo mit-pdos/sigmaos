@@ -5,14 +5,9 @@ import (
 	"sigmaos/test"
 	"sigmaos/rand"
 	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
-	"sigmaos/socialnetwork/proto"
-	"sigmaos/protdevclnt"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 const (

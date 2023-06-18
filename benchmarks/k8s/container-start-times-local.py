@@ -13,10 +13,8 @@ def run_process_get_output(command):
 
 def clean_date_string(s):
   # Trim monotonic clock suffix
-  try:
+  if " m=+" in s:
     s = s[:s.index(" m=+")]
-  except ValueError:
-    return None
   # Round to microseconds
   di = s.index(".")
   nsi = s.index(" ", di + 1)
@@ -28,6 +26,7 @@ Parsing strings of the form:
 Jun 14 12:40:58 node0.test-thumb-util.ulambda-pg0.wisc.cloudlab.us kubelet[164755]: I0614 12:40:58.105976  164755 pod_startup_latency_tracker.go:102] "Observed pod startup duration" pod="default/thumbnail-benchrealm1-tp8gd" podStartSLOduration=1.849267303 podCreationTimestamp="2023-06-14 12:40:56 -0500 CDT" firstStartedPulling="2023-06-14 12:40:56.799351441 -0500 CDT m=+812.079319978" lastFinishedPulling="2023-06-14 12:40:57.056010141 -0500 CDT m=+812.335978677" observedRunningTime="2023-06-14 12:40:58.099206616 -0500 CDT m=+813.379175152" watchObservedRunningTime="2023-06-14 12:40:58.105926002 -0500 CDT m=+813.385894538"
 '''
 def parse_pod_stats(s):
+
   # Ignore everything before fields
   s = s[s.index("pod="):]
 
@@ -46,33 +45,16 @@ def parse_pod_stats(s):
   stats["pod"] = stats["pod"][stats["pod"].index("/") + 1:]
   stats["podStartSLOduration"] = float(stats["podStartSLOduration"])
   stats["podCreationTimestamp"] = datetime.strptime(stats["podCreationTimestamp"], "%Y-%m-%d %H:%M:%S %z %Z")
-  dstr = clean_date_string(stats["firstStartedPulling"])
-  if dstr is None:
-    print("Warning, skipping line[{}]".format(s))
-    return None
-  stats["firstStartedPulling"] = datetime.strptime(dstr, "%Y-%m-%d %H:%M:%S.%f %z %Z")
-  dstr = clean_date_string(stats["lastFinishedPulling"])
-  if dstr is None:
-    print("Warning, skipping line[{}]".format(s))
-    return None
-  stats["lastFinishedPulling"] = datetime.strptime(dstr, "%Y-%m-%d %H:%M:%S.%f %z %Z")
-  dstr = clean_date_string(stats["observedRunningTime"])
-  if dstr is None:
-    print("Warning, skipping line[{}]".format(s))
-    return None
-  stats["observedRunningTime"] = datetime.strptime(dstr, "%Y-%m-%d %H:%M:%S.%f %z %Z")
-  dstr = clean_date_string(stats["watchObservedRunningTime"])
-  if dstr is None:
-    print("Warning, skipping line[{}]".format(s))
-    return None
-  stats["watchObservedRunningTime"] = datetime.strptime(dstr, "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["firstStartedPulling"] = datetime.strptime(clean_date_string(stats["firstStartedPulling"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["lastFinishedPulling"] = datetime.strptime(clean_date_string(stats["lastFinishedPulling"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["observedRunningTime"] = datetime.strptime(clean_date_string(stats["observedRunningTime"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
+  stats["watchObservedRunningTime"] = datetime.strptime(clean_date_string(stats["watchObservedRunningTime"]), "%Y-%m-%d %H:%M:%S.%f %z %Z")
 
   return stats
 
 def parse_kubelet_log(log, pod_names):
   pod_data = [ l for l in log.split("\n") if "Observed pod startup duration" in l ]
   pod_stats = [ parse_pod_stats(p) for p in pod_data ]
-  pod_stats = [ p for p in pod_stats if p is not None ]
   # Filter pods from other runs.
   pod_stats = [ ps for ps in pod_stats if ps["pod"] in pod_names ]
   return pod_stats

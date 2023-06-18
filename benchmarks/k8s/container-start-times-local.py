@@ -13,7 +13,10 @@ def run_process_get_output(command):
 
 def clean_date_string(s):
   # Trim monotonic clock suffix
-  s = s[:s.index(" m=+")]
+  try:
+    s = s[:s.index(" m=+")]
+  except ValueError:
+    print(s)
   # Round to microseconds
   di = s.index(".")
   nsi = s.index(" ", di + 1)

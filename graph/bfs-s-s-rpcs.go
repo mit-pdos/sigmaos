@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"encoding/json"
+	"path"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -18,16 +18,19 @@ type BfsSingle struct {
 	pdc     *protdevclnt.ProtDevClnt
 }
 
-func StartThreadSingle(public bool, jobname string, graph string) error {
+func StartThreadSingle(public bool, jobname string) error {
 	var err error
 	b := &BfsSingle{}
 	if b.t, err = initThread(jobname); err != nil {
 		return err
 	}
-	b.g = &Graph{}
-	if err = json.Unmarshal([]byte(graph), b.g); err != nil {
+
+	data, err := b.t.GetFile(path.Join(NAMED_GRAPH_DATA, "full"))
+	if err != nil {
 		return err
 	}
+	b.g, err = ImportGraph(string(data))
+
 	// XXX Replace with variable length queue
 	b.cs = make(chan int, b.g.NumEdges)
 	pds, err := protdevsrv.MakeProtDevSrvPublic(b.t.serverPath, b, public)
@@ -41,13 +44,14 @@ func StartThreadSingle(public bool, jobname string, graph string) error {
 
 func (b *BfsSingle) RunBfsSingle(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) error {
 	db.DPrintf(DEBUG_GRAPH, "Running BFS Single from %v to %v", req.N1, req.N2)
+
+	n1 := int(req.N1)
+	n2 := int(req.N2)
 	var err error
 	// This is done here instead of in StartThreadSingle because the rpc server must be initialized first.
 	if b.pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{b.t.FsLib}, b.t.serverPath); err != nil {
 		return err
 	}
-	n1 := int(req.N1)
-	n2 := int(req.N2)
 	b.parents = make([]int, b.g.NumNodes)
 	for i := range b.parents {
 		b.parents[i] = NOT_VISITED

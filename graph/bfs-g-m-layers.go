@@ -64,10 +64,10 @@ func (g *Graph) BfsMultiLayers(n1 int, n2 int) (*[]int, error) {
 	return findPathPartitioned(&parents, n1, n2), nil
 }
 
-func (g *graphPartition) bfsMultiLayersThread(ctx context.Context, cancel context.CancelFunc, n2 int, FSs []chan int, NSs []chan pair, thread int, barrier *Barrier) map[int]int {
+func (g *GraphPartition) bfsMultiLayersThread(ctx context.Context, cancel context.CancelFunc, n2 int, FSs []chan int, NSs []chan pair, thread int, barrier *Barrier) map[int]int {
 	//db.DPrintf(DEBUG_GRAPH, "Graph thread %v has partition %v", thread, g)
 	p := make(map[int]int, 0)
-	for key := range g.n {
+	for key := range g.N {
 		p[key] = -1
 	}
 	for {
@@ -95,9 +95,9 @@ func (g *graphPartition) bfsMultiLayersThread(ctx context.Context, cancel contex
 	}
 }
 
-func (g *graphPartition) pushNS(NSs []chan pair, node int, wg *sync.WaitGroup) {
+func (g *GraphPartition) pushNS(NSs []chan pair, node int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for _, neighbor := range g.n[node] {
+	for _, neighbor := range g.N[node] {
 		NSs[getOwner(neighbor, MAX_THREADS)] <- pair{child: neighbor, parent: node}
 	}
 }

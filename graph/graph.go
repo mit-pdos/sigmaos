@@ -38,6 +38,7 @@ func initGraph(numNodes int) *Graph {
 	return &g
 }
 
+// XXX Add version which reads bytes
 func ImportGraph(in string) (*Graph, error) {
 	var err error
 	var numNodes int

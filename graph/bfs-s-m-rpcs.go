@@ -6,8 +6,11 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/graph/proto"
+	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
+	"sigmaos/test"
+	"strconv"
 )
 
 type BfsMultiMain struct {
@@ -17,7 +20,7 @@ type BfsMultiMain struct {
 
 type BfsMultiThread struct {
 	t        thread
-	g        *graphPartition
+	g        *GraphPartition
 	parents  map[int64]int64
 	NS       chan int
 	FS       chan int
@@ -45,8 +48,38 @@ func StartBfsMultiMain(public bool, jobname string, graph string) error {
 }
 
 func (b *BfsMultiMain) RunBfsMulti(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) error {
-	for i := 0; i < MAX_THREADS; i++ {
+	graphs := b.g.partition(MAX_THREADS)
 
+	for i := 0; i < MAX_THREADS; i++ {
+		marshaled, err := json.Marshal(graphs[i])
+		if err != nil {
+			return err
+		}
+		// XXX Write partition to S3 and then read it back
+		// XXX ADD threadpaths
+		p := proc.MakeProc("graph-thread-multi", []string{strconv.FormatBool(test.Overlays), "multi-" + strconv.Itoa(i), string(marshaled), strconv.Itoa(i)})
+		p.SetNcore(proc.Tcore(1))
+		if err = b.t.Spawn(p); err != nil {
+			db.DFatalf("|%v| Error spawning proc %v: %v", b.t.job, p, err)
+			return err
+		}
+		if err = b.t.WaitStart(p.GetPid()); err != nil {
+			db.DFatalf("|%v| Error waiting for proc %v to start: %v", b.t.job, p, err)
+			return err
+		}
+		/////////////////////////////////////////////////////
+		// XXX Get path from proc B.T.SERVERPATH IS WRONG  //
+		/////////////////////////////////////////////////////
+		pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{b.t.FsLib}, b.t.serverPath)
+		if err != nil {
+			return err
+		}
+		in := proto.ThreadIn{N2: req.N2}
+		out := proto.ThreadOut{}
+		if err = pdc.RPC("BfsMultiThread.RunBfsMultiThread", &in, &out); err != nil {
+			db.DFatalf("|%v| Error running BFS proc %v: %v", b.t.job, p, err)
+			return err
+		}
 	}
 	return nil
 }
@@ -57,7 +90,7 @@ func StartBfsMultiThread(public bool, jobname string, partition string, threadID
 	if t.t, err = initThread(jobname); err != nil {
 		return err
 	}
-	t.g = &graphPartition{}
+	t.g = &GraphPartition{}
 	if err = json.Unmarshal([]byte(partition), t.g); err != nil {
 		return err
 	}
@@ -67,7 +100,7 @@ func StartBfsMultiThread(public bool, jobname string, partition string, threadID
 			return err
 		}
 	}
-	t.parents = make(map[int64]int64, t.g.numNodes)
+	t.parents = make(map[int64]int64, t.g.NumNodes)
 	t.NS = make(chan int, 0)
 	t.FS = make(chan int, 0)
 	pds, err := protdevsrv.MakeProtDevSrvPublic(t.t.serverPath, t, public)

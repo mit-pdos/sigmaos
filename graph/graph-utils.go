@@ -99,38 +99,38 @@ func printTime(timeStart time.Time, timeEnd time.Time, msg string) {
 // PARTITIONING UTILS
 //
 
-type graphPartition struct {
+type GraphPartition struct {
 	// This is a map instead of a slice so that the key equals the index
 	// of the node on the original graph.
 	// XXX Make custom data structure which stores original int to avoid
 	// wasting cache misses on a map.
-	n        map[int][]int
-	numNodes int
-	numEdges int
+	N        map[int][]int `json:"N"`
+	NumNodes int           `json:"NumNodes"`
+	NumEdges int           `json:"NumEdges"`
 }
 
-func (g *graphPartition) getNeighbors(index int) []int {
-	return (*g).n[index]
+func (g *GraphPartition) getNeighbors(index int) []int {
+	return (*g).N[index]
 }
 
 // partition naively partitions equal nodes to each thread.
 // Partitions don't know the total number of nodes or edges.
 // As a result, there may be edges to nodes that don't exist.
 // XXX Add smart partitioning to ensure load balance between threads.
-func (g *Graph) partition(numThreads int) []*graphPartition {
-	graphs := make([]*graphPartition, numThreads)
+func (g *Graph) partition(numThreads int) []*GraphPartition {
+	graphs := make([]*GraphPartition, numThreads)
 	for i := 0; i < numThreads; i++ {
-		graphs[i] = &graphPartition{
-			n:        make(map[int][]int, 0),
-			numNodes: 0,
-			numEdges: 0,
+		graphs[i] = &GraphPartition{
+			N:        make(map[int][]int, 0),
+			NumNodes: 0,
+			NumEdges: 0,
 		}
 	}
 	for i := 0; i < g.NumNodes; i++ {
 		partition := graphs[getOwner(i, numThreads)]
-		partition.n[i] = *g.GetNeighbors(i)
-		partition.numNodes++
-		partition.numEdges += len(*g.N[i])
+		partition.N[i] = *g.GetNeighbors(i)
+		partition.NumNodes++
+		partition.NumEdges += len(*g.N[i])
 	}
 	return graphs
 }

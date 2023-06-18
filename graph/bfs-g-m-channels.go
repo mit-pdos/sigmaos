@@ -65,10 +65,10 @@ func (g *Graph) BfsMultiChannels(n1 int, n2 int) (*[]int, error) {
 }
 
 // If there is no valid path from n1 to n2, bfsMultiChannelsThread will hang forever.
-func (g *graphPartition) bfsMultiChannelsThread(ctx context.Context, cancel context.CancelFunc, n2 int, FSs []chan int, NSs []chan pair, thread int) map[int]int {
+func (g *GraphPartition) bfsMultiChannelsThread(ctx context.Context, cancel context.CancelFunc, n2 int, FSs []chan int, NSs []chan pair, thread int) map[int]int {
 	// db.DPrintf(DEBUG_GRAPH, "Graph thread %v has partition %v", thread, g)
 	p := make(map[int]int, 0)
-	for key := range g.n {
+	for key := range g.N {
 		p[key] = -1
 	}
 	for {

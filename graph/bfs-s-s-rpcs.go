@@ -20,7 +20,7 @@ type BfsSingle struct {
 
 func StartThreadSingle(public bool, jobname string, graph string) error {
 	var err error
-	b := BfsSingle{}
+	b := &BfsSingle{}
 	if b.t, err = initThread(jobname); err != nil {
 		return err
 	}

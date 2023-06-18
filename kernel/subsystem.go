@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"fmt"
 	"os/exec"
 	"path"
 	"syscall"
@@ -24,6 +25,11 @@ type Subsystem struct {
 	cmd       *exec.Cmd
 	container *container.Container
 	crashed   bool
+}
+
+func (ss *Subsystem) String() string {
+	s := fmt.Sprintf("subsystem %p: [proc %v how %v]", ss, ss.p, ss.how)
+	return s
 }
 
 func makeSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
@@ -106,7 +112,7 @@ func (s *Subsystem) Terminate() error {
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
 	s.crashed = true
-	db.DPrintf(db.KERNEL, "kill %v %v\n", s.cmd, s.p)
+	db.DPrintf(db.KERNEL, "kill %v\n", s)
 	if s.p.Program == "knamed" {
 		return StopKNamed(s.cmd)
 	}
@@ -126,6 +132,7 @@ func (s *Subsystem) Kill() error {
 }
 
 func (s *Subsystem) Wait() {
+	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		status, err := s.WaitExit(s.p.GetPid())
 		if err != nil || !status.IsStatusOK() {

@@ -16,9 +16,11 @@ def clean_date_string(s):
   if " m=+" in s:
     s = s[:s.index(" m=+")]
   # Round to microseconds
-  di = s.index(".")
-  nsi = s.index(" ", di + 1)
-  return s[:di + 1] + s[di + 1:di + 7] + s[nsi:]
+  if "." in s:
+    di = s.index(".")
+    nsi = s.index(" ", di + 1)
+    s = s[:di + 1] + s[di + 1:di + 7] + s[nsi:] 
+  return s
 
 '''
 Parsing strings of the form:

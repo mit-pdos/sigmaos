@@ -123,7 +123,7 @@ func TestConnect(t *testing.T) {
 	srv, _, err := ts.PathLastSymlink(pathname)
 	assert.Nil(t, err)
 
-	err = ts.Disconnect(srv)
+	err = ts.Disconnect(srv.String())
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
 	db.DPrintf(db.TEST, "disconnected")
@@ -812,7 +812,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Disconnect fsl")
-	err = fsl1.Disconnect(srv)
+	err = fsl1.Disconnect(srv.String())
 	assert.Nil(t, err, "Disconnect")
 
 	// Remove the ephemeral file

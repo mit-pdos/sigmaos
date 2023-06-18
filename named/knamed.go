@@ -68,8 +68,7 @@ func (nd *Named) initfs() error {
 		db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", sp.WS, err)
 	}
 	for _, n := range InitRootDir {
-		_, err := nd.Create(n, 0777|sp.DMDIR, sp.OREAD)
-		if err != nil {
+		if _, err := nd.Create(n, 0777|sp.DMDIR, sp.OREAD); err != nil {
 			db.DPrintf(db.ALWAYS, "Error create [%v]: %v", n, err)
 			return err
 		}

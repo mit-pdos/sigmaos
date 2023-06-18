@@ -131,7 +131,7 @@ func (k *Kernel) shutdown() {
 				}
 			}
 			if err := k.RemoveChild(pid); err != nil {
-				db.DPrintf(db.KERNEL, "Done evicting; rm err %v", pid)
+				db.DPrintf(db.KERNEL, "Done evicting; rm %v err %v", pid, err)
 			} else {
 				db.DPrintf(db.KERNEL, "Done evicting; rm %v", pid)
 			}
@@ -152,7 +152,7 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.NAMEDREL]))
 	for _, ss := range k.svcs.svcs[sp.NAMEDREL] {
 		// kill it so that test terminates;  XXX should this be  d.Terminate()?
-		db.DPrintf(db.KERNEL, "Kill %v %d %T\n", sp.NAMEDREL, len(ss.cmd.ExtraFiles), ss)
+		db.DPrintf(db.KERNEL, "Kill %v %v\n", sp.NAMEDREL, ss)
 		ss.Kill()
 		// d.Wait()
 	}

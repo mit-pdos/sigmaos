@@ -48,6 +48,7 @@ func (el *Election) Candidate() error {
 }
 
 func (el *Election) Resign() error {
+	db.DPrintf(db.LEADER, "leader %v resign %v\n", proc.GetPid().String(), el.pn)
 	return el.Election.Resign(context.TODO())
 
 }

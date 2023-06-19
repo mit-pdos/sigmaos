@@ -8,6 +8,7 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sps "sigmaos/sigmaprotsrv"
@@ -57,7 +58,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Accept %v error: %v", srv.addr, err)
+			db.DPrintf(db.ALWAYS, "%v: Accept err %v", proc.GetPid(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)

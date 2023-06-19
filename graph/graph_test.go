@@ -158,8 +158,22 @@ func TestBfsSingleRPC(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.NAMED_GRAPH_SERVER, "~any/"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
 	importGraph(tsg, pdc, graph.DATA_FACEBOOK_FN)
-	//runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC, 0, 1)
 	runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC)
+
+	tsg.Shutdown()
+}
+
+func TestBfsMultiRPC(t *testing.T) {
+	var err error
+	tsg, err := makeTstateGraph(t, rand.String(8))
+	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
+
+	// Create an RPC client
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.NAMED_GRAPH_SERVER, "~any/"))
+	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
+	importGraph(tsg, pdc, graph.DATA_TINY_FN)
+	runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC, 0, 1)
+	//runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC)
 
 	//tsg.Shutdown()
 }

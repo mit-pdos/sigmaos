@@ -188,40 +188,45 @@ func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) erro
 		return ERR_SEARCH_OOR
 	}
 
+	var job string
+	var procName string
+	var pdcName string
+
 	switch req.Alg {
 	case BFS_SINGLE_RPC:
-		job := "single-" + rand.String(8)
-		p := proc.MakeProc("graph-thread-single", []string{strconv.FormatBool(test.Overlays), job})
-		p.SetNcore(proc.Tcore(1))
-		if err = g.sc.Spawn(p); err != nil {
-			db.DFatalf("|%v| Error spawning proc %v: %v", g.job, p, err)
-			return err
-		}
-		if err = g.sc.WaitStart(p.GetPid()); err != nil {
-			db.DFatalf("|%v| Error waiting for proc %v to start: %v", g.job, p, err)
-			return err
-		}
-		// XXX Get path from proc
-		pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{g.sc.FsLib}, path.Join(DIR_GRAPH, job, "server"))
-		if err != nil {
-			return err
-		}
-		bfsReq := proto.BfsIn{N1: req.N1, N2: req.N2}
-		bfsRes := proto.BfsPath{}
-		if err = pdc.RPC("BfsSingle.RunBfsSingle", &bfsReq, &bfsRes); err != nil {
-			db.DFatalf("|%v| Error running BFS proc %v: %v", g.job, p, err)
-			return err
-		}
-		res.Marshaled, err = json.Marshal(bfsRes.Val)
-		return err
+		job = "single-" + rand.String(8)
+		procName = "graph-thread-single"
+		pdcName = "BfsSingle.RunBfsSingle"
 	case BFS_MULTI_RPC:
-		out := make([]int, 0)
-		/*if out, err = g.BfsMultiRPC(ctx, int(req.N1), int(req.N2)); err != nil {
-			return nil
-		}*/
-		res.Marshaled, err = json.Marshal(&out)
-		return err
+		job = "multi-main-" + rand.String(8)
+		procName = "graph-bfs-multi"
+		pdcName = "BfsMultiMain.RunBfsMulti"
 	default:
 		return mkErr("Invalid BFS Request")
 	}
+
+	p := proc.MakeProc(procName, []string{strconv.FormatBool(test.Overlays), job})
+	p.SetNcore(proc.Tcore(1))
+	if err = g.sc.Spawn(p); err != nil {
+		db.DFatalf("|%v| Error spawning proc %v: %v", g.job, p, err)
+		return err
+	}
+	if err = g.sc.WaitStart(p.GetPid()); err != nil {
+		db.DFatalf("|%v| Error waiting for proc %v to start: %v", g.job, p, err)
+		return err
+	}
+	// XXX Get path from proc
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{g.sc.FsLib}, path.Join(DIR_GRAPH, job, "server"))
+	if err != nil {
+		return err
+	}
+	bfsReq := proto.BfsIn{N1: req.N1, N2: req.N2}
+	bfsRes := proto.BfsPath{}
+	if err = pdc.RPC(pdcName, &bfsReq, &bfsRes); err != nil {
+		db.DFatalf("|%v| Error running BFS proc %v: %v", g.job, p, err)
+		return err
+	}
+	res.Marshaled, err = json.Marshal(bfsRes.Val)
+
+	return err
 }

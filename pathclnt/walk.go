@@ -12,6 +12,7 @@ import (
 const (
 	MAXSYMLINK = 8
 	MAXRETRY   = 10
+	TIMEOUT    = 100 // ms  (XXX belongs in hyperparam?)
 )
 
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *serr.Err) {
@@ -34,7 +35,7 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 		if err, cont := pathc.resolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
 				db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
-				time.Sleep(1 * time.Second)
+				time.Sleep(TIMEOUT * time.Millisecond)
 				continue
 			}
 			return sp.NoFid, err
@@ -49,7 +50,7 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 			}
 			// try again
 			db.DPrintf(db.ALWAYS, "walkPathUmount: try again p %v r %v\n", path, resolve)
-			time.Sleep(1 * time.Second)
+			time.Sleep(TIMEOUT * time.Millisecond)
 			continue
 		}
 		if err != nil {

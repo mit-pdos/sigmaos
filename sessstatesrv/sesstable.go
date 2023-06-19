@@ -31,6 +31,16 @@ func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadm
 	return st
 }
 
+func (st *SessionTable) CloseSessions() error {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	for _, sess := range st.sessions {
+		sess.Close()
+	}
+	return nil
+}
+
 func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()

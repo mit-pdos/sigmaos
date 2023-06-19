@@ -8,7 +8,6 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sps "sigmaos/sigmaprotsrv"
@@ -22,14 +21,11 @@ type NetServer struct {
 	sesssrv    sps.SessServer
 	writefcall WriteF
 	readframe  ReadF
+	l          net.Listener
 }
 
 func MakeNetServer(ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
-	srv := &NetServer{"",
-		ss,
-		m,
-		u,
-	}
+	srv := &NetServer{sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener
 	var l net.Listener
@@ -42,6 +38,7 @@ func MakeNetServer(ss sps.SessServer, address string, m WriteF, u ReadF) *NetSer
 		db.DFatalf("QualifyAddr %v error: %v", a, err)
 	}
 	srv.addr = a
+	srv.l = l
 	db.DPrintf(db.PORT, "listen %v myaddr %v\n", address, a)
 	go srv.runsrv(l)
 	return srv
@@ -51,12 +48,17 @@ func (srv *NetServer) MyAddr() string {
 	return srv.addr
 }
 
+func (srv *NetServer) CloseListener() error {
+	db.DPrintf(db.ALWAYS, "Close %v\n", srv.addr)
+	return srv.l.Close()
+}
+
 func (srv *NetServer) runsrv(l net.Listener) {
-	defer l.Close()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DFatalf("%v: Accept error: %v", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "Accept %v error: %v", srv.addr, err)
+			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
 		MakeSrvConn(srv, conn)

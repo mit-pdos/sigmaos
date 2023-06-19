@@ -219,6 +219,16 @@ func (ssrv *SessSrv) MyAddr() string {
 	return ssrv.srv.MyAddr()
 }
 
+func (ssrv *SessSrv) StopServing() error {
+	if err := ssrv.srv.CloseListener(); err != nil {
+		return err
+	}
+	if err := ssrv.st.CloseSessions(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ssrv *SessSrv) GetStats() *stats.StatInfo {
 	return ssrv.stats
 }

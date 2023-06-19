@@ -85,11 +85,22 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMED, "leader %v %v done\n", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "%v: named done %v %v\n", proc.GetPid(), nd.realm, mnt)
+
+	if err := nd.resign(); err != nil {
+		db.DPrintf(db.NAMED, "resign %v err %v\n", proc.GetPid(), err)
+	}
 
 	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
 
 	return nil
+}
+
+func (nd *Named) resign() error {
+	if err := nd.SessSrv.StopServing(); err != nil {
+		return err
+	}
+	return nd.elect.Resign()
 }
 
 func (nd *Named) getRoot(pn string) error {

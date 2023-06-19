@@ -114,7 +114,7 @@ func (s *Subsystem) Kill() error {
 	s.crashed = true
 	db.DPrintf(db.KERNEL, "kill %v\n", s)
 	if s.p.Program == "knamed" {
-		return StopKNamed(s.cmd)
+		return stopKNamed(s.cmd)
 	}
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)

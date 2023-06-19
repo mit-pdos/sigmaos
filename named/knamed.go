@@ -13,13 +13,24 @@ import (
 
 func RunKNamed(args []string) error {
 	db.DPrintf(db.NAMED, "%v: knamed %v\n", proc.GetPid(), args)
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
+	init := args[2]
 
 	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
+
+	w := os.NewFile(uintptr(3), "pipew")
+	r := os.NewFile(uintptr(4), "piper")
+	w2 := os.NewFile(uintptr(5), "pipew")
+	w2.Close()
+
+	if init == "start" {
+		fmt.Fprintf(w, init)
+		w.Close()
+	}
 
 	if err := nd.startLeader(); err != nil {
 		db.DFatalf("Error startLeader %v\n", err)
@@ -36,15 +47,11 @@ func RunKNamed(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	w := os.NewFile(uintptr(3), "pipew")
-	r := os.NewFile(uintptr(4), "piper")
-	w2 := os.NewFile(uintptr(5), "pipew")
-	w2.Close()
-
-	nd.initfs()
-
-	fmt.Fprintf(w, "started")
-	w.Close()
+	if init == "init" {
+		nd.initfs()
+		fmt.Fprintf(w, init)
+		w.Close()
+	}
 
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -53,8 +60,9 @@ func RunKNamed(args []string) error {
 	}
 	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: exit %v %v %v\n", proc.GetPid(), nd.realm, mnt, string(data))
-	nd.elect.Resign()
+	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", proc.GetPid(), nd.realm, mnt, string(data))
+
+	nd.resign()
 
 	return nil
 }

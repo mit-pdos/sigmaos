@@ -26,5 +26,6 @@ func BootUp(param *kernel.Param, nameds sp.Taddrs) error {
 	if err := kernelsrv.RunKernelSrv(k); err != nil {
 		return err
 	}
+
 	return nil
 }

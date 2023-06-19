@@ -61,9 +61,9 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	db.DPrintf(db.KERNEL, "MakeKernel ip %v", ip)
 	k.ip = ip
 	proc.SetSigmaLocal(ip)
-	if p.Services[0] == sp.NAMEDREL {
+	if p.Services[0] == sp.KNAMED {
 		k.namedAddr = nameds
-		if err := k.bootKNamed("knamed", sp.ROOTREALM); err != nil {
+		if err := k.bootKNamed(true); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
@@ -81,6 +81,14 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
 	}
+	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
+		// a kernel with knamed and named; stop knamed
+		if err := k.KillOne(sp.KNAMED); err != nil {
+			db.DPrintf(db.KERNEL, "MakeKernel: stop knamed err %v\n", err)
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "MakeKernel: switch to named\n")
+	}
 	return k, err
 }
 
@@ -89,7 +97,7 @@ func (k *Kernel) Ip() string {
 }
 
 func (k *Kernel) Shutdown() error {
-	db.DPrintf(db.KERNEL, "ShutDown\n")
+	db.DPrintf(db.KERNEL, "Shutdown\n")
 	k.shutdown()
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
 	n := k.PathClnt.FidClnt.Len()
@@ -114,6 +122,11 @@ func startSrvs(k *Kernel) error {
 }
 
 func (k *Kernel) shutdown() {
+	if len(k.svcs.svcs[sp.KNAMED]) == 0 { // start knamed to shutdown kernel
+		if err := k.bootKNamed(false); err != nil {
+			db.DFatalf("shutdown: bootKnamed err %v\n", err)
+		}
+	}
 	if len(k.Param.Services) > 0 {
 		db.DPrintf(db.KERNEL, "Get children %v", proc.GetPid())
 		cpids, err := k.GetChildren()
@@ -130,6 +143,7 @@ func (k *Kernel) shutdown() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
+			db.DPrintf(db.KERNEL, "RemoveChild %v", pid)
 			if err := k.RemoveChild(pid); err != nil {
 				db.DPrintf(db.KERNEL, "Done evicting; rm %v err %v", pid, err)
 			} else {
@@ -140,7 +154,7 @@ func (k *Kernel) shutdown() {
 		}
 	}
 	for key, val := range k.svcs.svcs {
-		if key != sp.NAMEDREL {
+		if key != sp.KNAMED {
 			for _, ss := range val {
 				ss.Wait()
 			}
@@ -149,23 +163,27 @@ func (k *Kernel) shutdown() {
 	if err := k.RmDir(proc.GetProcDir()); err != nil {
 		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", proc.GetProcDir(), err)
 	}
-	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.NAMEDREL]))
-	for _, ss := range k.svcs.svcs[sp.NAMEDREL] {
+	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.KNAMED]))
+	for _, ss := range k.svcs.svcs[sp.KNAMED] {
 		// kill it so that test terminates;  XXX should this be  d.Terminate()?
-		db.DPrintf(db.KERNEL, "Kill %v %v\n", sp.NAMEDREL, ss)
+		db.DPrintf(db.KERNEL, "Kill %v %v\n", sp.KNAMED, ss)
 		ss.Kill()
 		// d.Wait()
 	}
 }
 
-func makeKNamedProc(realmId sp.Trealm) (*proc.Proc, error) {
-	args := []string{realmId.String()}
+func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
+	i := "start"
+	if init {
+		i = "init"
+	}
+	args := []string{realmId.String(), i}
 	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "knamed", args, true)
 	return p, nil
 }
 
-// Run named (but not as a proc)
-func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, error) {
+// Run knamed (but not as a proc)
+func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -192,11 +210,11 @@ func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm) (*exec.Cmd, erro
 		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "named reports %v\n", string(data))
+	db.DPrintf(db.ALWAYS, "knamed reports %v\n", string(data))
 	return cmd, nil
 }
 
-func StopKNamed(cmd *exec.Cmd) error {
+func stopKNamed(cmd *exec.Cmd) error {
 	db.DPrintf(db.KERNEL, "StopKNamed %v\n", cmd)
 	w2 := cmd.ExtraFiles[2]
 	fmt.Fprintf(w2, "stop")

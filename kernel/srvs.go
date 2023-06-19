@@ -36,6 +36,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 	var err error
 	var ss *Subsystem
 	switch s {
+	case sp.NAMEDREL:
+		ss, err = k.bootNamed()
 	case sp.S3REL:
 		ss, err = k.bootS3d()
 	case sp.UXREL:
@@ -94,20 +96,19 @@ func (k *Kernel) KillOne(srv string) error {
 	return nil
 }
 
-func (k *Kernel) bootKNamed(uname string, realmId sp.Trealm) error {
-	p, err := makeKNamedProc(realmId)
+func (k *Kernel) bootKNamed(init bool) error {
+	p, err := makeKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
-	cmd, err := runKNamed(p, k.namedAddr, realmId)
+	cmd, err := runKNamed(p, k.namedAddr, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
 	ss := makeSubsystemCmd(nil, k, p, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
-	k.svcs.svcs[sp.NAMEDREL] = append(k.svcs.svcs[sp.NAMEDREL], ss)
-
+	k.svcs.svcs[sp.KNAMED] = append(k.svcs.svcs[sp.KNAMED], ss)
 	return err
 }
 
@@ -131,6 +132,10 @@ func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
 	return k.bootSubsystem("schedd", []string{k.Param.KernelId}, procclnt.HLINUX)
+}
+
+func (k *Kernel) bootNamed() (*Subsystem, error) {
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, procclnt.HSCHEDD)
 }
 
 // Start uprocd in a sigmauser container and post the mount for

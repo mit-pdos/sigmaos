@@ -2,6 +2,7 @@ package sigmap
 
 // if name ends in "/", it is the union directory for that service
 const (
+	KNAMED    = "knamed"
 	NAME      = "name"
 	NAMED     = NAME + "/"
 	NAMEDREL  = "named"

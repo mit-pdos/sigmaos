@@ -3,7 +3,6 @@ package named_test
 import (
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -18,8 +17,6 @@ func TestBootNamed(t *testing.T) {
 	// crashinterval := 0
 
 	ts := test.MakeTstateAll(t)
-
-	time.Sleep(4 * time.Second)
 
 	sts, err1 := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err1)

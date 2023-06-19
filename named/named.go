@@ -63,14 +63,14 @@ func Run(args []string) error {
 
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
-		db.DPrintf(db.NAMED, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
+		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
 		if err := nd.ec.SetRootNamed(mnt); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.NAMED, "mount %v at %v\n", nd.realm, pn)
+		db.DPrintf(db.ALWAYS, "mount %v at %v\n", nd.realm, pn)
 		if err := nd.MkMountSymlink(pn, mnt); err != nil {
 			db.DPrintf(db.NAMED, "mount %v at %v err %v\n", nd.realm, pn, err)
 			return err

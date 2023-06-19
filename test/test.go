@@ -3,7 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"log"
 	"testing"
 
 	"sigmaos/bootkernelclnt"
@@ -98,35 +97,8 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
 		return makeSysClnt(t, BOOT_NAMED)
 	} else {
-		ts, err := makeSysClnt(t, BOOT_ALL)
-		if err != nil {
-			return nil, err
-		}
-		//if err := ts.switchNamed(); err != nil {
-		//	ts.Shutdown()
-		//return nil, err
-		//}
-		return ts, nil
+		return makeSysClnt(t, BOOT_ALL)
 	}
-}
-
-// Replace knamed with a proc-based named
-func (ts *Tstate) switchNamed() error {
-	ts.proc = proc.MakeProc("named", []string{sp.ROOTREALM.String(), "0"})
-	if err := ts.Spawn(ts.proc); err != nil {
-		log.Printf("spawn failure %v\n", err)
-		return err
-	}
-	log.Printf("wait for start named\n")
-	if err := ts.WaitStart(ts.proc.GetPid()); err != nil {
-		return err
-	}
-	log.Printf("named started\n")
-	if err := ts.StopKNamed(); err != nil {
-		log.Printf("killed named err %v\n", err)
-	}
-	log.Printf("killed named\n")
-	return nil
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {

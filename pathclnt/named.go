@@ -3,7 +3,6 @@ package pathclnt
 import (
 	"fmt"
 	gpath "path"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
@@ -11,8 +10,6 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-const MAXRETRY = 10
 
 func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 	if pathc.realm == sp.ROOTREALM {
@@ -43,26 +40,23 @@ func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
 }
 
 func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
-	for i := 0; i < MAXRETRY; i++ {
-		db.DPrintf(db.NAMED, "mountRootNamed %d: %v\n", i, name)
-		mnt, err := fsetcd.GetRootNamed()
-		if err == nil {
-			pn := path.Path{name}
-			if err := pathc.autoMount("", mnt, pn); err == nil {
-				db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
-				return nil
-			} else {
-				db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
-			}
+	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
+	mnt, err := fsetcd.GetRootNamed()
+	if err == nil {
+		pn := path.Path{name}
+		if err := pathc.autoMount("", mnt, pn); err == nil {
+			db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
+			return nil
 		} else {
-			db.DPrintf(db.NAMED, "mountRootNamed: GetNamed err %v\n", err)
+			db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
+			return err
 		}
-		time.Sleep(1 * time.Second)
+		return nil
 	}
-	return serr.MkErr(serr.TErrRetry, fmt.Sprintf("%v failure", sp.ROOTREALM))
+	db.DPrintf(db.NAMED, "mountRootNamed: GetNamed err %v\n", err)
+	return err
 }
 
-// XXX retry mounting realm's named on error
 func (pathc *PathClnt) getRealmNamed() (sp.Tmount, *serr.Err) {
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 		if err := pathc.mountRootNamed("root"); err != nil {

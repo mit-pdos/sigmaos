@@ -1,6 +1,8 @@
 package pathclnt
 
 import (
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -9,6 +11,7 @@ import (
 
 const (
 	MAXSYMLINK = 8
+	MAXRETRY   = 10
 )
 
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *serr.Err) {
@@ -27,18 +30,26 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path) (sp.Tfid, *serr.Err) {
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
-	for {
-		pathc.resolveRoot(path)
+	for i := 0; i < MAXRETRY; i++ {
+		if err, cont := pathc.resolveRoot(path); err != nil {
+			if cont && err.IsErrUnreachable() {
+				db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			return sp.NoFid, err
+		}
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && err.IsErrUnreachable() {
 			done := len(path1) - len(left)
-			db.DPrintf(db.ALWAYS, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			db.DPrintf(db.WALK, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
 			if e := pathc.umountFree(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
 			// try again
 			db.DPrintf(db.ALWAYS, "walkPathUmount: try again p %v r %v\n", path, resolve)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		if err != nil {
@@ -46,6 +57,7 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 		}
 		return fid, nil
 	}
+	return sp.NoFid, serr.MkErr(serr.TErrUnreachable, path)
 }
 
 // Walks path. If success, returns the fid for the path.  If failure,

@@ -35,7 +35,7 @@ go test $@ sigmaos/proxy -start
 # tests a full kernel using root realm
 #
 
-for T in procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
+for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
     go test $@ sigmaos/$T -start
 done
 

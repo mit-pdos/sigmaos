@@ -5,12 +5,19 @@ option go_package = "sigmaos/graph/proto";
 service BfsService {
   rpc RunBfsSingle(BfsIn) returns (BfsPath);
   rpc Put(Index) returns (None);
+  rpc PutPair(Pair) returns (None);
   rpc RunBfsMulti(BfsIn) returns (BfsPath);
   rpc RunBfsMultiThread(ThreadIn) returns (ThreadOut);
+  rpc Done(None) returns (None);
 }
 
 message Index{
   int64 val = 1;
+}
+
+message Pair {
+  int64 child = 1;
+  int64 parent = 2;
 }
 
 message None{

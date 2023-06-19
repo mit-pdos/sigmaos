@@ -21,6 +21,11 @@ type pair struct {
 	parent int
 }
 
+type pair64 struct {
+	child  int64
+	parent int64
+}
+
 // findPath finds the shortest path from n1 to n2.
 func findPath(parents *[]int, n1 int, n2 int) *[]int {
 	solution := make([]int, 0)
@@ -50,6 +55,17 @@ func findPathPartitioned(parents *[]map[int]int, n1 int, n2 int) *[]int {
 	for i != n1 {
 		solution = append(solution, i)
 		i = (*parents)[getOwner(i, MAX_THREADS)][i]
+	}
+	solution = append(solution, n1)
+	return &solution
+}
+
+func findPathPartitioned64(parents *[]map[int64]int64, n1 int64, n2 int64) *[]int64 {
+	solution := make([]int64, 0)
+	i := n2
+	for i != n1 {
+		solution = append(solution, i)
+		i = (*parents)[getOwner(int(i), MAX_THREADS)][i]
 	}
 	solution = append(solution, n1)
 	return &solution

@@ -143,9 +143,15 @@ func runAlg(tsg *TstateGraph, pdc *protdevclnt.ProtDevClnt, rpc string, alg int,
 }
 
 func runAlgRepeated(tsg *TstateGraph, pdc *protdevclnt.ProtDevClnt, rpc string, alg int) {
+	// NORMAL ORDER
 	for _, n := range tests {
 		runAlg(tsg, pdc, rpc, alg, n[0], n[1])
 		runAlg(tsg, pdc, rpc, alg, n[1], n[0])
+	}
+	// OPPOSITE ORDER
+	for i := len(tests) - 1; i >= 0; i-- {
+		runAlg(tsg, pdc, rpc, alg, tests[i][0], tests[i][1])
+		runAlg(tsg, pdc, rpc, alg, tests[i][1], tests[i][0])
 	}
 }
 
@@ -171,9 +177,9 @@ func TestBfsMultiRPC(t *testing.T) {
 	// Create an RPC client
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.NAMED_GRAPH_SERVER, "~any/"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
-	importGraph(tsg, pdc, graph.DATA_TINY_FN)
-	runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC, 0, 1)
-	//runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC)
+	importGraph(tsg, pdc, graph.DATA_FACEBOOK_FN)
+	//runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC, 3, 3420)
+	runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC)
 
 	//tsg.Shutdown()
 }

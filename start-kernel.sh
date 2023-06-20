@@ -27,7 +27,7 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="named;schedd;ux;s3;db;mongo"
             ;;
         "node")
-            BOOT="schedd;ux;s3;db"
+            BOOT="schedd;ux;s3;db;mongo"
             ;;
         "named")
             BOOT="named"

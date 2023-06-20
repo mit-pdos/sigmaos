@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/cacheclnt"
 	"sigmaos/protdevclnt"
@@ -51,6 +52,12 @@ func RunHomeSrv(public bool, jobname string) error {
 	}
 	hsrv.postc = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_HOME)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
+
 	return pds.RunServer()
 }
 

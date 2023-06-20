@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/protdevclnt"
 	"sigmaos/dbclnt"
@@ -53,6 +54,11 @@ func RunGraphSrv(public bool, jobname string) error {
 	}
 	gsrv.userc = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_GRAPH)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
 	return pds.RunServer()
 }
 

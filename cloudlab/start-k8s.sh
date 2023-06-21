@@ -78,7 +78,7 @@ for vm in $vms; do
       sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
       sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
     else
-      cp ~/ulambda/cloudlab/yaml/k8s-cluster-config-epleg.yaml
+      cp ~/ulambda/cloudlab/yaml/k8s-cluster-config-epleg.yaml /tmp/kubelet.yaml
       sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
       sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
 #      sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out

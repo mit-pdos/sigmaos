@@ -72,7 +72,8 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	if r != nil {
 		return nil, r
 	}
-	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, perm, nf); err != nil {
+	sid := ctx.SessionId()
+	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, perm, nf, sid); err != nil {
 		return nil, err
 	}
 	obj := makeObj(d.ec, pn, perm, 0, path, d.Obj.path, nil)

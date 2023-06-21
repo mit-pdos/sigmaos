@@ -83,7 +83,7 @@ func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) 
 }
 
 // XXX retry
-func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, perm sp.Tperm, nf *NamedFile) *serr.Err {
+func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, perm sp.Tperm, nf *NamedFile, sid sessp.Tsession) *serr.Err {
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return serr.MkErrError(err)
@@ -92,6 +92,15 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	if r != nil {
 		return r
 	}
+	opts := make([]clientv3.OpOption, 0)
+	if perm.IsEphemeral() {
+		lid, err := ec.lmgr.getLeaseID(sid)
+		if err != nil {
+			return serr.MkErrError(err)
+		}
+		opts = append(opts, clientv3.WithLease(lid))
+	}
+
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
@@ -99,7 +108,7 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 		clientv3.Compare(clientv3.Version(ec.path2key(p)), "=", 0),
 		clientv3.Compare(clientv3.Version(ec.path2key(dp)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(ec.path2key(p), string(b)),
+		clientv3.OpPut(ec.path2key(p), string(b), opts...),
 		clientv3.OpPut(ec.path2key(dp), string(d1))}
 	resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {

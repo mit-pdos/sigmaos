@@ -202,6 +202,7 @@ const (
 	SESSCOND                     = "SESSCOND"
 	SESS_STATE_SRV               = "SESS_STATE_SRV"
 	SESS_STATE_SRV_ERR           = SESS_STATE_SRV + ERR
+	NAMEDLEASE                   = "NAMEDLEASE"
 )
 
 // 9P

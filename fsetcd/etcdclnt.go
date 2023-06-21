@@ -12,6 +12,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
 const (
@@ -28,6 +29,7 @@ type EtcdClnt struct {
 	realm    sp.Trealm
 	fencekey string
 	fencerev int64
+	lmgr     *leaseMgr
 }
 
 func MkEtcdClnt(r sp.Trealm) (*EtcdClnt, error) {
@@ -38,14 +40,17 @@ func MkEtcdClnt(r sp.Trealm) (*EtcdClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EtcdClnt{realm: r, Client: cli}, nil
+	return &EtcdClnt{realm: r, Client: cli, lmgr: mkLeaseMgr(cli)}, nil
 }
 
 func (ec *EtcdClnt) Fence(key string, rev int64) {
 	db.DPrintf(db.ETCDCLNT, "%v: Fence key %v rev %d\n", proc.GetPid(), key, rev)
-
 	ec.fencekey = key
 	ec.fencerev = rev
+}
+
+func (ec *EtcdClnt) GetDetach() sps.DetachF {
+	return ec.lmgr.detach
 }
 
 func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount) *serr.Err {

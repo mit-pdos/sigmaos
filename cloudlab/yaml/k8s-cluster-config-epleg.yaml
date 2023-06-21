@@ -70,8 +70,6 @@ logging:
     json:
       infoBufferSize: "0"
   verbosity: 6
-memorySwap:
-  swapBehavior: UnlimitedSwap
 nodeStatusReportFrequency: 0s
 nodeStatusUpdateFrequency: 0s
 podCIDR: 10.123.0.0/16

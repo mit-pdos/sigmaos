@@ -29,7 +29,7 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		return reply, nil, false, err
 	case *sp.Tattach:
 		reply := &sp.Rattach{}
-		err := s.protsrv.Attach(req, reply)
+		err := s.protsrv.Attach(req, reply, s.attach)
 		return reply, nil, false, err
 	case *sp.Twalk:
 		reply := &sp.Rwalk{}

@@ -30,7 +30,7 @@ type SessServer interface {
 type Protsrv interface {
 	Version(*sp.Tversion, *sp.Rversion) *sp.Rerror
 	Auth(*sp.Tauth, *sp.Rauth) *sp.Rerror
-	Attach(*sp.Tattach, *sp.Rattach) *sp.Rerror
+	Attach(*sp.Tattach, *sp.Rattach, AttachF) *sp.Rerror
 	Walk(*sp.Twalk, *sp.Rwalk) *sp.Rerror
 	Create(*sp.Tcreate, *sp.Rcreate) *sp.Rerror
 	Open(*sp.Topen, *sp.Ropen) *sp.Rerror
@@ -54,3 +54,4 @@ type MkProtServer func(SessServer, sessp.Tsession) Protsrv
 type RestoreProtServer func(SessServer, []byte) Protsrv
 
 type DetachF func(sessp.Tsession)
+type AttachF func(sessp.Tsession)

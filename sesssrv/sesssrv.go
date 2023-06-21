@@ -67,7 +67,8 @@ type SessSrv struct {
 }
 
 func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
-	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config) *SessSrv {
+	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config,
+	attachf sps.AttachF) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -77,7 +78,7 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	ssrv.rps = rps
 	ssrv.stats = stats.MkStatsDev(ssrv.root)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
-	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt)
+	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
@@ -249,7 +250,7 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 	return ssrv.snap
 }
 
-func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid sessp.Tsession) (fs.Dir, fs.CtxI) {
+func (ssrv *SessSrv) GetRootCtx(uname string, aname string, sessid sessp.Tsession) (fs.Dir, fs.CtxI) {
 	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
 }
 

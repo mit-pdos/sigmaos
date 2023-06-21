@@ -20,14 +20,16 @@ type SessionTable struct {
 	sesssrv  sps.SessServer
 	sessions map[sessp.Tsession]*Session
 	last     *Session // for tests
+	attachf  sps.AttachF
 }
 
-func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadmgr.ThreadMgrTable, attachf sps.AttachF) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.sesssrv = sesssrv
 	st.mkps = mkps
 	st.tm = tm
+	st.attachf = attachf
 	return st
 }
 
@@ -86,7 +88,7 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 			}
 		}
 	}
-	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread())
+	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf)
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess

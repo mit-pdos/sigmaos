@@ -38,10 +38,11 @@ type Session struct {
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
+	attach        sps.AttachF
 	detach        sps.DetachF
 }
 
-func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr, attachf sps.AttachF) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.rt = replies.MakeReplyTable(sid)
@@ -50,6 +51,7 @@ func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *
 	sess.Sid = sid
 	sess.ClientId = cid
 	sess.lastHeartbeat = time.Now()
+	sess.attach = attachf
 	return sess
 }
 

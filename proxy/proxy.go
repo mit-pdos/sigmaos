@@ -25,7 +25,7 @@ type Npd struct {
 func MakeNpd(lip string) *Npd {
 	npd := &Npd{lip, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
-	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm)
+	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil)
 	return npd
 }
 
@@ -102,7 +102,7 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
+func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF) *sp.Rerror {
 	u, error := user.Current()
 	if error != nil {
 		return sp.MkRerror(serr.MkErrError(error))

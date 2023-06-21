@@ -64,10 +64,10 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.MkRerror(serr.MkErr(serr.TErrNotSupported, "Auth"))
 }
 
-func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
-	db.DPrintf(db.PROTSRV, "Attach %v", args)
+func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF) *sp.Rerror {
+	db.DPrintf(db.PROTSRV, "Attach %v %p", args, attach)
 	p := path.Split(args.Aname)
-	root, ctx := ps.ssrv.AttachTree(args.Uname, args.Aname, ps.sid)
+	root, ctx := ps.ssrv.GetRootCtx(args.Uname, args.Aname, ps.sid)
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
@@ -88,6 +88,9 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) *sp.Rerror {
 	}
 	ps.ft.Add(args.Tfid(), fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
+	if attach != nil {
+		attach(ctx.SessionId())
+	}
 	return nil
 }
 

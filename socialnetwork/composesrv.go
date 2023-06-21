@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/protdevclnt"
 	"sigmaos/fs"
@@ -61,6 +62,11 @@ func RunComposeSrv(public bool, jobname string) error {
 	}
 	csrv.homec = pdc	
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_COMPOSE)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
 	return pds.RunServer()
 }
 

@@ -7,6 +7,7 @@ import (
 	"sigmaos/cacheclnt"
 	"sigmaos/dbclnt"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/fs"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
@@ -51,6 +52,11 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_USER)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
 	return pds.RunServer()
 }
 

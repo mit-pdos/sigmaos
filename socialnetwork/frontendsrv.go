@@ -97,7 +97,7 @@ func RunFrontendSrv(public bool, job string) error {
 	mux.HandleFunc("/compose", frontend.composeHandler)
 	mux.HandleFunc("/timeline", frontend.timelineHandler)
 	mux.HandleFunc("/home", frontend.homeHandler)
-
+	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
 
 	if public {
@@ -144,7 +144,7 @@ func RunFrontendSrv(public bool, job string) error {
 		}
 	}
 
-	perf, err := perf.MakePerf(perf.HOTEL_WWW)
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_FRONTEND)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}
@@ -345,19 +345,13 @@ func (s *FrontEnd) startRecordingHandler(w http.ResponseWriter, r *http.Request)
 	//		defer span.End()
 	//		sctx = tracing.SpanToContext(span)
 	//	}
-
 	s.record = true
-
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Start recording")
-
 	str := "Started recording!"
-
 	reply := map[string]interface{}{
 		"message": str,
 	}
-
 	json.NewEncoder(w).Encode(reply)
 }
 

@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/dbclnt"
 	"sigmaos/cacheclnt"
@@ -53,6 +54,12 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	tlsrv.postc = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_TIMELINE)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
+
 	return pds.RunServer()
 }
 

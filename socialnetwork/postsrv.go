@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/dbclnt"
 	"sigmaos/cacheclnt"
@@ -47,6 +48,12 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	psrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_POST)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
+
 	return pds.RunServer()
 }
 

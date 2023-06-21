@@ -56,9 +56,8 @@ clusterDNS:
 clusterDomain: cluster.local
 cpuManagerReconcilePeriod: 0s
 evictionPressureTransitionPeriod: 0s
-failSwapOn: false
 featureGates:
-  NodeSwap: true
+  EventedPLEG: true
 fileCheckFrequency: 0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248

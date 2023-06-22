@@ -1,6 +1,9 @@
 package named
 
 import (
+	"fmt"
+	"log"
+
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
@@ -286,7 +289,7 @@ func isNonemptyDir(obj *Obj) bool {
 }
 
 func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
-	_, _, err := ec.ReadDir(sessp.Tpath(1))
+	_, _, err := ec.ReadDir(ROOT)
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
 		if err := mkRootDir(ec); err != nil {
@@ -307,5 +310,31 @@ func mkRootDir(ec *fsetcd.EtcdClnt) *serr.Err {
 		return err
 	}
 	db.DPrintf(db.NAMED, "mkRoot: PutFile %v\n", nf)
+	return nil
+}
+
+func Dump(l int, ec *fsetcd.EtcdClnt, dir *fsetcd.NamedDir, pn path.Path, p sessp.Tpath) error {
+	s := ""
+	for i := 0; i < l*4; i++ {
+		s += " "
+	}
+	for _, e := range dir.Ents {
+		if e.Name != "." {
+			o, err := getObj(ec, pn.Append(e.Name), sessp.Tpath(e.Path), p)
+			if err != nil {
+				log.Printf("dumpDir: getObj %v %v\n", e.Name, err)
+				continue
+			}
+			fmt.Printf("%v%v\n", s, o)
+			if o.perm.IsDir() {
+				nd, _, err := ec.ReadDir(o.path)
+				if err != nil {
+					log.Printf("dumpDir: getObj %v %v\n", e.Name, err)
+					continue
+				}
+				Dump(l+1, ec, nd, pn.Append(e.Name), o.path)
+			}
+		}
+	}
 	return nil
 }

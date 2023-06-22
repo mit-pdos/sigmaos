@@ -8,9 +8,21 @@ import (
 
 	// "sigmaos/groupmgr"
 	// "sigmaos/sigmaclnt"
+	"sigmaos/fsetcd"
+	"sigmaos/named"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
+
+func TestDump(t *testing.T) {
+	ec, err := fsetcd.MkEtcdClnt(sp.ROOTREALM)
+	assert.Nil(t, err)
+	nd, _, err := ec.ReadDir(named.ROOT)
+	assert.Nil(t, err)
+	err = named.Dump(0, ec, nd, path.Path{}, named.ROOT)
+	assert.Nil(t, err)
+}
 
 func TestBootNamed(t *testing.T) {
 	// crash := 1

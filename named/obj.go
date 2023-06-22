@@ -41,7 +41,7 @@ func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, v sp.TQversion, p
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn '%v' perm %v v %v %d", o.pn, o.perm, o.version, len(o.data))
+	return fmt.Sprintf("pn %q perm %v p %v v %v sz %d", o.pn, o.perm, o.path, o.version, len(o.data))
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {

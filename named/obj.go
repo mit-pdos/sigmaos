@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"time"
 
+	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
@@ -29,19 +30,21 @@ type Obj struct {
 	pn      path.Path
 	path    sessp.Tpath
 	perm    sp.Tperm
+	sid     sessp.Tsession
+	lid     clientv3.Lease
 	version sp.TQversion
 	parent  sessp.Tpath
 	data    []byte
 	mtime   int64
 }
 
-func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
+func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, sid sessp.Tsession, lid clientv3.LeaseID, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
 	o := &Obj{ec: ec, pn: pn, perm: perm, version: v, path: p, data: data, parent: parent}
 	return o
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn %q perm %v p %v v %v sz %d", o.pn, o.perm, o.path, o.version, len(o.data))
+	return fmt.Sprintf("pn %q perm %v p %v/%d v %v sz %d", o.pn, o.perm, o.path, o.path, o.version, len(o.data))
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {
@@ -63,7 +66,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, 0, o.parent, 0, nil))
+	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sessp.NoSession, clientv3.NoLease, 0, o.parent, 0, nil))
 }
 
 // XXX SetParent
@@ -92,12 +95,12 @@ func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tp
 	if err != nil {
 		return nil, err
 	}
-	o := makeObj(ec, pn, sp.Tperm(nf.Perm), sp.TQversion(v), path, parent, nf.Data)
+	o := makeObj(ec, pn, sp.Tperm(nf.Perm), sessp.Tsession(nf.SessionId), clientv3.LeaseID(nf.LeaseId), sp.TQversion(v), path, parent, nf.Data)
 	return o, nil
 }
 
 // Marshal empty file or directory
-func marshalObj(perm sp.Tperm, path sessp.Tpath) (*fsetcd.NamedFile, *serr.Err) {
+func mkNamedFile(perm sp.Tperm, path sessp.Tpath, sid sessp.Tsession) (*fsetcd.NamedFile, *serr.Err) {
 	var fdata []byte
 	if perm.IsDir() {
 		nd := &fsetcd.NamedDir{}
@@ -108,7 +111,7 @@ func marshalObj(perm sp.Tperm, path sessp.Tpath) (*fsetcd.NamedFile, *serr.Err) 
 		}
 		fdata = d
 	}
-	return &fsetcd.NamedFile{Perm: uint32(perm | 0777), Data: fdata}, nil
+	return &fsetcd.NamedFile{Perm: uint32(perm | 0777), Data: fdata, SessionId: uint64(sid)}, nil
 }
 
 func (o *Obj) putObj() *serr.Err {

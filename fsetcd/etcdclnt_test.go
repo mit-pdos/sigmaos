@@ -22,7 +22,9 @@ func TestLease(t *testing.T) {
 	assert.Nil(t, err)
 	log.Printf("resp %x %v\n", respg.ID, respg.TTL)
 	respl, err := l.Leases(context.TODO())
-	log.Printf("resp %v\n", respl.Leases)
+	for _, lid := range respl.Leases {
+		log.Printf("resp lid %x\n", lid)
+	}
 	respttl, err := l.TimeToLive(context.TODO(), respg.ID)
 	log.Printf("resp %v\n", respttl.TTL)
 	ch, err := l.KeepAlive(context.TODO(), respg.ID)
@@ -31,6 +33,17 @@ func TestLease(t *testing.T) {
 			log.Printf("respa %v\n", respa.TTL)
 		}
 	}()
+	opts := make([]clientv3.OpOption, 0)
+	opts = append(opts, clientv3.WithLease(respg.ID))
+	respp, err := ec.Put(context.TODO(), "xxxx", "hello", opts...)
+	assert.Nil(t, err)
+	log.Printf("put %v\n", respp)
+	lopts := make([]clientv3.LeaseOption, 0)
+	lopts = append(lopts, clientv3.WithAttachedKeys())
+	respttl, err = l.TimeToLive(context.TODO(), respg.ID, lopts...)
+	for _, k := range respttl.Keys {
+		log.Printf("respttl %v %v\n", respttl.TTL, string(k))
+	}
 	time.Sleep(60 * time.Second)
 
 	err = l.Close()

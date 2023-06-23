@@ -32,21 +32,26 @@ func key2path(key string) sessp.Tpath {
 	return sessp.Tpath(p)
 }
 
-func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
-	resp, err := ec.Get(context.TODO(), ec.path2key(p))
+func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
+	resp, err := ec.Get(context.TODO(), key)
 	if err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", ec.path2key(p), resp)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", key, resp)
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.MkErr(serr.TErrNotfound, p)
+		return nil, 0, serr.MkErr(serr.TErrNotfound, key2path(key))
 	}
 	nf := &NamedFile{}
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
-	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", ec.path2key(p), nf)
+	db.DPrintf(db.ETCDCLNT, "GetFile %v %v\n", key, nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
+}
+
+func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
+	return ec.getFile(ec.path2key(p))
+
 }
 
 func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
@@ -83,7 +88,19 @@ func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) 
 }
 
 // XXX retry
-func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, perm sp.Tperm, nf *NamedFile, sid sessp.Tsession) *serr.Err {
+func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, nf *NamedFile) *serr.Err {
+	opts := make([]clientv3.OpOption, 0)
+	sid := sessp.Tsession(nf.SessionId)
+	if sid != sessp.NoSession {
+		lid, err := ec.lmgr.getLeaseID(sid)
+		if err != nil {
+			db.DPrintf(db.ETCDCLNT, "getLeaseID %v err %v\n", sid, err)
+			return serr.MkErrError(err)
+		}
+		opts = append(opts, clientv3.WithLease(lid))
+		nf.LeaseId = int64(lid)
+	}
+
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return serr.MkErrError(err)
@@ -92,15 +109,6 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	if r != nil {
 		return r
 	}
-	opts := make([]clientv3.OpOption, 0)
-	if perm.IsEphemeral() {
-		lid, err := ec.lmgr.getLeaseID(sid)
-		if err != nil {
-			return serr.MkErrError(err)
-		}
-		opts = append(opts, clientv3.WithLease(lid))
-	}
-
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
@@ -114,7 +122,7 @@ func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	db.DPrintf(db.ETCDCLNT, "Create %v %v\n", p, resp)
+	db.DPrintf(db.ETCDCLNT, "Create %v %v with lease %x\n", p, resp, nf.LeaseId)
 	if !resp.Succeeded {
 		return serr.MkErr(serr.TErrExists, p)
 	}

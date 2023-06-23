@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"go.etcd.io/etcd/client/v3"
+
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
@@ -71,15 +73,18 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	path := mkTpath(pn)
 	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v\n", name, d, dir, v, path)
 	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
-	nf, r := marshalObj(perm, path)
+	sid := sessp.NoSession
+	if perm.IsEphemeral() {
+		sid = ctx.SessionId()
+	}
+	nf, r := mkNamedFile(perm, path, sid)
 	if r != nil {
 		return nil, r
 	}
-	sid := ctx.SessionId()
-	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, perm, nf, sid); err != nil {
+	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, nf); err != nil {
 		return nil, err
 	}
-	obj := makeObj(d.ec, pn, perm, 0, path, d.Obj.path, nil)
+	obj := makeObj(d.ec, pn, perm, sid, clientv3.LeaseID(nf.LeaseId), 0, path, d.Obj.path, nil)
 	if obj.perm.IsDir() {
 		return makeDir(obj), nil
 	} else {
@@ -298,11 +303,11 @@ func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, 0, ROOT, ROOT, nil))
+	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sessp.NoSession, clientv3.NoLease, 0, ROOT, ROOT, nil))
 }
 
 func mkRootDir(ec *fsetcd.EtcdClnt) *serr.Err {
-	nf, r := marshalObj(sp.DMDIR, ROOT)
+	nf, r := mkNamedFile(sp.DMDIR, ROOT, sessp.NoSession)
 	if r != nil {
 		return r
 	}

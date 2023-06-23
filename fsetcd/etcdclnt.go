@@ -40,7 +40,18 @@ func MkEtcdClnt(r sp.Trealm) (*EtcdClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EtcdClnt{realm: r, Client: cli, lmgr: mkLeaseMgr(cli)}, nil
+	ec := &EtcdClnt{realm: r, Client: cli}
+	ec.lmgr = mkLeaseMgr(ec)
+	return ec, nil
+}
+
+func (ec *EtcdClnt) Close() error {
+	ec.lmgr.lc.Close()
+	return ec.Client.Close()
+}
+
+func (ec *EtcdClnt) Recover(sid sessp.Tsession) error {
+	return ec.lmgr.recoverLeases(sid)
 }
 
 func (ec *EtcdClnt) Fence(key string, rev int64) {

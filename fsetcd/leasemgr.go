@@ -7,6 +7,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
 )
 
@@ -67,10 +68,9 @@ func (lmgr *leaseMgr) recoverLeases(sid sessp.Tsession) error {
 	lopts := make([]clientv3.LeaseOption, 0)
 	lopts = append(lopts, clientv3.WithAttachedKeys())
 	for _, ls := range respl.Leases {
-		lid := ls.ID
-		respttl, err := lmgr.lc.TimeToLive(context.TODO(), lid, lopts...)
+		respttl, err := lmgr.lc.TimeToLive(context.TODO(), ls.ID, lopts...)
 		if err != nil {
-			db.DPrintf(db.NAMEDLEASE, "respttl %v err %v\n", lid, err)
+			db.DPrintf(db.NAMEDLEASE, "respttl %v err %v\n", ls.ID, err)
 			continue
 		}
 		for _, k := range respttl.Keys {
@@ -80,7 +80,9 @@ func (lmgr *leaseMgr) recoverLeases(sid sessp.Tsession) error {
 				continue
 			}
 			db.DPrintf(db.NAMEDLEASE, "getFile %v %v\n", string(k), nf)
-			lmgr.keepAlive(sessp.Tsession(nf.SessionId), lid)
+			if nf.Tsession() == sid {
+				return lmgr.keepAlive(nf.Tsession(), ls.ID)
+			}
 		}
 	}
 	return nil
@@ -95,4 +97,19 @@ func (lmgr *leaseMgr) detach(sid sessp.Tsession) {
 	if lid != clientv3.NoLease {
 		lmgr.lc.Revoke(context.TODO(), lid)
 	}
+}
+
+func (lmgr *leaseMgr) LeaseOpts(nf *NamedFile) ([]clientv3.OpOption, *serr.Err) {
+	opts := make([]clientv3.OpOption, 0)
+	sid := nf.Tsession()
+	if sid != sessp.NoSession {
+		lid, err := lmgr.getLeaseID(sid)
+		if err != nil {
+			db.DPrintf(db.ETCDCLNT, "getLeaseID %v err %v\n", sid, err)
+			return nil, serr.MkErrError(err)
+		}
+		opts = append(opts, clientv3.WithLease(lid))
+		nf.SetLeaseId(lid)
+	}
+	return opts, nil
 }

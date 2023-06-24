@@ -107,7 +107,6 @@ for vm in $vms; do
     ./make.sh --norace linux
     ./start-network.sh --addr $MAIN_PRIVADDR
     ./start-db.sh
-    ./start-mongo.sh
     ./start-jaeger.sh
     ./start-kernel.sh --boot realm --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else

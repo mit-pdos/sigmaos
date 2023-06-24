@@ -4,15 +4,15 @@ import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
 	"sigmaos/protdevsrv"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
-	"encoding/hex"
 	"strconv"
 	"fmt"
 	"sync"
 	"math/rand"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
@@ -24,7 +24,7 @@ const (
 )
 
 type MediaSrv struct {
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
 	sid    int32
 	ucount int32
@@ -39,11 +39,12 @@ func RunMediaSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	msrv.dbc = dbc
+	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
+	msrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_MEDIA)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
@@ -57,11 +58,9 @@ func RunMediaSrv(public bool, jobname string) error {
 func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *proto.StoreMediaResponse) error {
 	res.Ok = "No"
 	mId := msrv.getNextMediaId()
-	mContent := hex.EncodeToString(req.Mediadata) 
-	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_media (mediaid,mediatype,mediacontent) VALUES ('%v','%v','%v')", 
-		mId, req.Mediatype, mContent)
-	if err := msrv.dbc.Exec(q); err != nil {
+	newMedia := Media{mId, req.Mediatype, req.Mediadata}
+	if err := msrv.mongoc.Insert(SN_DB, MEDIA_COL, newMedia); err != nil {
+		dbg.DFatalf("Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = POST_QUERY_OK
@@ -71,52 +70,51 @@ func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *
 
 func (msrv *MediaSrv) ReadMedia(ctx fs.CtxI, req proto.ReadMediaRequest, res *proto.ReadMediaResponse) error {
 	res.Ok = "No."
-	medias := make([]*proto.Media, len(req.Mediaids))
+	mediatypes := make([]string, len(req.Mediaids))
+	mediadatas := make([][]byte, len(req.Mediaids))
 	missing := false
 	for idx, mediaid := range req.Mediaids {
 		media, err := msrv.getMedia(mediaid)
 		if err != nil {
 			return err
-		} 
+		}
 		if media == nil {
 			missing = true
 			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", mediaid)
 		} else {
-			medias[idx] = media
+			mediatypes[idx] = media.Type
+			mediadatas[idx] = media.Data
 		}
 	}
-	res.Medias = medias
+	res.Mediatypes = mediatypes
+	res.Mediadatas = mediadatas
 	if !missing {
 		res.Ok = MEDIA_QUERY_OK
 	}
 	return nil
 }
 
-func (msrv *MediaSrv) getMedia(mediaid int64) (*proto.Media, error) {
-	key := MEDIA_CACHE_PREFIX + strconv.FormatInt(mediaid, 10) 
-	media := &proto.Media{}
-	if err := msrv.cachec.Get(key, media); err != nil {
+func (msrv *MediaSrv) getMedia(mediaid int64) (*Media, error) {
+	key := MEDIA_CACHE_PREFIX + strconv.FormatInt(mediaid, 10)
+	media := &Media{}
+	cacheItem := &proto.CacheItem{}
+	if err := msrv.cachec.Get(key, cacheItem); err != nil {
 		if !msrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Media %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_media where mediaid='%v';", mediaid)
-		var mEncodes []proto.MediaEncode
-		if err := msrv.dbc.Query(q, &mEncodes); err != nil {
-			return nil, err
-		}
-		if len(mEncodes) == 0 {
-			return nil, nil
-		}
-		mEncode := &mEncodes[0]
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Found encoded media for %v in DB\n", mediaid)
-		data, err := hex.DecodeString(mEncode.Mediacontent)
+		found, err := msrv.mongoc.FindOne(SN_DB, MEDIA_COL, bson.M{"mediaid": mediaid}, media)
 		if err != nil {
 			return nil, err
 		}
-		media.Mediadata, media.Mediaid, media.Mediatype = data, mEncode.Mediaid, mEncode.Mediatype 
-		msrv.cachec.Put(key, media)
+		if !found {
+			return nil, nil
+		}
+		encoded, _ := bson.Marshal(media)
+		msrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Found media for %v in DB: %v", mediaid, media)
 	} else {
+		bson.Unmarshal(cacheItem.Val, media)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Found media %v in cache!\n", mediaid)
 	}
 	return media, nil
@@ -131,4 +129,10 @@ func (msrv *MediaSrv) incCountSafe() int32 {
 
 func (msrv *MediaSrv) getNextMediaId() int64 {
 	return int64(msrv.sid)*1e10 + int64(msrv.incCountSafe())
+}
+
+type Media struct {
+	Mediaid int64  `bson:mediaid`
+	Type    string `bson:type`
+	Data    []byte `bson:data`
 }

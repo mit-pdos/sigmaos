@@ -35,18 +35,19 @@ func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {
 	return mongoc.pdc.RPC("Mongo.Insert", req, res);
 } 
 
-func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any) error {
+func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any) (bool, error) {
 	allBytes, err := mongoc.FindAllEncoded(db, collection, query)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if len(allBytes) > 0 {
 		if err := bson.Unmarshal(allBytes[0], result); err != nil {
 			dbg.DFatalf("cannot decode result:%v", allBytes[0])
-			return err
+			return false, err
 		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 } 
 
 //TODO use reflection to handle find all

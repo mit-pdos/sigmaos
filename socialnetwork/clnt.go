@@ -117,7 +117,7 @@ func (wc *WebClnt) ReadTimeline(uid, count string) (map[string]interface{}, erro
 	}
 	return repl, nil
 }
- 
+
 func (wc *WebClnt) ReadHome(uid, count string) (map[string]interface{}, error) {
 	vals := url.Values{}
 	vals.Set("userid", uid)

@@ -16,8 +16,8 @@ message ComposeUrlsRequest {
 }
 
 message ComposeUrlsResponse {
-	string       ok = 1;
-	repeated Url urls = 2;
+	string          ok = 1;
+	repeated string shorturls = 2;
 }
 
 message GetUrlsRequest {
@@ -34,25 +34,10 @@ message ProcessTextRequest {
 }
 
 message ProcessTextResponse {
-	string           ok = 1;
-	string           text = 2;
-	repeated UserRef usermentions = 3;
-	repeated Url     urls = 4; 
-}
-
-message UserRef {
-	int64  userid = 1;
-	string username = 2; 
-}
-
-message MediaRef {
-	int64  mediaid = 1;
-	string mediatype = 2;
-}
-
-message Url {
-	string shorturl = 1;
-	string extendedurl = 2;
+	string          ok = 1;
+	string          text = 2;
+	repeated int64  usermentions = 3;
+	repeated string urls = 4;
 }
 
 

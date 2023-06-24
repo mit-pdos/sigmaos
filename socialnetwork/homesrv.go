@@ -11,11 +11,12 @@ import (
 	"sigmaos/socialnetwork/proto"
 	"fmt"
 	"strconv"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
 // Home timeline service for social network
-// No db connection. Only use cache. 
+// No db connection. Only use cache.
 
 const (
 	HOME_CACHE_PREFIX = "home_"
@@ -65,7 +66,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 		ctx fs.CtxI, req proto.WriteHomeTimelineRequest, res *proto.WriteTimelineResponse) error {
 	res.Ok = "No."
 	otherUserIds := make(map[int64]bool, 0)
-	argFollower := proto.GetFollowersRequest{Followeeid: req.Timelineitem.Userid}
+	argFollower := proto.GetFollowersRequest{Followeeid: req.Userid}
 	resFollower := proto.GraphGetResponse{}
 	err := hsrv.graphc.RPC("Graph.GetFollowers", &argFollower, &resFollower)
 	if err != nil {
@@ -86,18 +87,16 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 			missing = true
 			continue
 		}
-		hometl.Postids = append([]int64{req.Timelineitem.Postid}, hometl.Postids...)	
-		hometl.Timestamps = append([]int64{req.Timelineitem.Timestamp}, hometl.Timestamps...)	
-		key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10) 
-		if err := hsrv.cachec.Put(key, hometl); err != nil {
-			res.Ok = res.Ok + fmt.Sprintf(" Error updating home timeline for %v.", userid)	
-			missing = true
-		}
+		hometl.Postids = append(hometl.Postids, req.Postid)	
+		hometl.Timestamps = append(hometl.Timestamps, req.Timestamp)	
+		key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10)
+		encoded, _ := bson.Marshal(hometl)	
+		hsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 	}
 	if !missing {
 		res.Ok = HOME_QUERY_OK
 	}
-	return nil 
+	return nil
 }
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
@@ -114,25 +113,30 @@ func (hsrv *HomeSrv) ReadHomeTimeline(
 	}	
 	postids := make([]int64, stop-start)
 	for i := start; i < stop; i++ {
-		postids[i-start] = timeline.Postids[i]
+		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
 	readPostReq := proto.ReadPostsRequest{Postids: postids}
 	readPostRes := proto.ReadPostsResponse{}
 	if err := hsrv.postc.RPC("Post.ReadPosts", &readPostReq, &readPostRes); err != nil {
-		return err 
+		return err
 	}
 	res.Ok = readPostRes.Ok
 	res.Posts = readPostRes.Posts
 	return nil
 }
 
-func (hsrv *HomeSrv) getHomeTimeline(userid int64) (*proto.Timeline, error) {
-	key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10) 
-	timeline := &proto.Timeline{}
-	if err := hsrv.cachec.Get(key, timeline); err != nil {
+func (hsrv *HomeSrv) getHomeTimeline(userid int64) (*Timeline, error) {
+	key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10)
+	timeline := &Timeline{}
+	cacheItem := &proto.CacheItem{}
+	if err := hsrv.cachec.Get(key, cacheItem); err != nil {
 		if !hsrv.cachec.IsMiss(err) {
 			return nil, err
 		}
+		timeline.Userid = userid
+	} else {
+		bson.Unmarshal(cacheItem.Val, timeline)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Found home timeline %v in cache! %v", userid, timeline)
 	}
 	return timeline, nil
 }

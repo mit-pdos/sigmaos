@@ -6,7 +6,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/test"
 	"sigmaos/mongoclnt"
-	//"fmt"
 )
 
 type MyObj struct {
@@ -33,24 +32,31 @@ func TestMongoClnt(t *testing.T) {
 	
 	// Find
 	var result MyObj
-	assert.Nil(t, mongoc.FindOne(db, col, bson.M{"key": "k1"}, &result))
+	f, err := mongoc.FindOne(db, col, bson.M{"key": "k1"}, &result)
+	assert.Nil(t, err)
+	assert.True(t, f)
 	assert.Equal(t, []string{"v1"}, result.Val)
 	
 	// Update
 	var result1 MyObj
 	assert.Nil(t, mongoc.Update(db, col, bson.M{"key": "k1"}, bson.M{"$push": bson.M{"val": "v2"}}))
 	assert.Nil(t, mongoc.Update(db, col, bson.M{"key": "k1"}, bson.M{"$pull": bson.M{"val": "v1"}}))
-	assert.Nil(t, mongoc.FindOne(db, col, bson.M{"key": "k1"}, &result1))
+	f, err = mongoc.FindOne(db, col, bson.M{"key": "k1"}, &result1)
+	assert.Nil(t, err)
+	assert.True(t, f)
 	assert.Equal(t, []string{"v2"}, result1.Val)
 	
 	// Upsert
 	var result2 MyObj
 	assert.Nil(t, mongoc.Upsert(db, col, bson.M{"key": "k2"}, bson.M{"$push": bson.M{"val": "vv1"}}))
 	assert.Nil(t, mongoc.Upsert(db, col, bson.M{"key": "k2"}, bson.M{"$push": bson.M{"val": "vv2"}}))
-	assert.Nil(t, mongoc.FindOne(db, col, bson.M{"key": "k2"}, &result2))
+	f, err = mongoc.FindOne(db, col, bson.M{"key": "k2"}, &result2)
+	assert.Nil(t, err)
+	assert.True(t, f)
 	assert.Equal(t, []string{"vv1", "vv2"}, result2.Val)
 
 	// shutdown test system
 	assert.Nil(t, ts.Shutdown())
 }
+
 

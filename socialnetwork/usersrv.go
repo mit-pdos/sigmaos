@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"sigmaos/cacheclnt"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/fs"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
+	"gopkg.in/mgo.v2/bson"
 	"sigmaos/socialnetwork/proto"
 	"sync"
 )
@@ -26,7 +27,7 @@ const (
 
 type UserSrv struct {
 	mu     sync.Mutex
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
 	sid    int32 // sid is a random number between 0 and 2^30
 	ucount int32 //This server may overflow with over 2^31 users
@@ -40,11 +41,12 @@ func RunUserSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	usrv.dbc = dbc
+	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"userid"})
+	usrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
@@ -95,14 +97,17 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 		res.Ok = fmt.Sprintf("Username %v already exist", req.Username)
 		return nil
 	}
-	pswd_hashed := sha256.Sum256([]byte(req.Password))
+	pswd_hashed := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
 	userid := usrv.getNextUserId()
-	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_user (firstname, lastname, username, password, userid)"+
-			" VALUES ('%v', '%v', '%v', '%x', '%v');",
-		req.Firstname, req.Lastname, req.Username, pswd_hashed, userid)
-	if qErr := usrv.dbc.Exec(q); qErr != nil {
-		return qErr
+	newUser := User{
+		Userid: userid,
+		Username: req.Username,
+		Lastname: req.Lastname,
+		Firstname: req.Firstname,
+		Password: pswd_hashed}
+	if err := usrv.mongoc.Insert(SN_DB, USER_COL, newUser); err != nil {
+		dbg.DFatalf("Mongo Error: %v", err)
+		return err
 	}
 	res.Ok = USER_QUERY_OK
 	res.Userid = userid
@@ -142,27 +147,36 @@ func (usrv *UserSrv) checkUserExist(username string) (bool, error) {
 	return user != nil, nil
 }
 
-func (usrv *UserSrv) getUserbyUname(username string) (*proto.User, error) {
+func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	key := USER_CACHE_PREFIX + username
-	user := &proto.User{}
-	if err := usrv.cachec.Get(key, user); err != nil {
+	user := &User{}
+	cacheItem := &proto.CacheItem{}
+	if err := usrv.cachec.Get(key, cacheItem); err != nil {
 		if !usrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_user where username='%s';", username)
-		var users []proto.User
-		if err := usrv.dbc.Query(q, &users); err != nil {
+		found, err := usrv.mongoc.FindOne(SN_DB, USER_COL, bson.M{"username": username}, user)
+		if err != nil {
 			return nil, err
-		}
-		if len(users) == 0 {
+		} 
+		if !found {
 			return nil, nil
 		}
-		user = &users[0]
+		encoded, _ := bson.Marshal(user)
+		usrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in DB: %v\n", username, user)
-		usrv.cachec.Put(key, user)
 	} else {
+		bson.Unmarshal(cacheItem.Val, user)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in cache!\n", username)
 	}
 	return user, nil
+}
+
+type User struct {
+	Userid    int64  `bson:userid`
+	Firstname string `bson:firstname`
+	Lastname  string `bson:lastname`
+	Username  string `bson:username`
+	Password  string `bson:password`
 }

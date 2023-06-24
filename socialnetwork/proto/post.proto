@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "socialnetwork/proto/text.proto";
-
 option go_package = "sigmaos/socialnetwork/proto";
 
 service PostService {
@@ -24,7 +22,7 @@ message StorePostRequest {
 
 message StorePostResponse {
 	string ok = 1;
-} 
+}
 
 message ReadPostsRequest {
 	repeated int64 postids = 1;	
@@ -50,8 +48,9 @@ message ReadMediaRequest {
 }
 
 message ReadMediaResponse {
-	string         ok = 1;
-	repeated Media medias = 2;
+	string          ok = 1;
+	repeated string mediatypes = 2;
+	repeated bytes  mediadatas = 3;
 }
 
 message ComposePostRequest {
@@ -60,39 +59,22 @@ message ComposePostRequest {
 	string          text = 3;
 	POST_TYPE       posttype = 4;
     repeated int64  mediaids = 5;
-	repeated string mediatypes = 6;
 }
 
 message ComposePostResponse {
 	string ok = 1;
 }
 
-message Media {
-	int64  mediaid = 1;
-	string mediatype = 2;
-	bytes  mediadata = 3;
-}
-
-message MediaEncode {
-	int64  mediaid = 1;
-	string mediatype = 2;
-	string mediacontent = 3;
-}
-
 message Post {
-	int64             postid = 1;
-	POST_TYPE         posttype = 2;
-	int64             timestamp = 3; 
-	UserRef           creator = 4;
-	string            text = 5;
-	repeated UserRef  usermentions = 6;
-	repeated MediaRef medias = 7;
-	repeated Url      urls = 8; 
-}
-
-message PostEncode {
-	int64 postid = 1;
-	string postcontent = 2;
+	int64           postid = 1;
+	POST_TYPE       posttype = 2;
+	int64           timestamp = 3;
+	int64           creator = 4;
+	string          creatoruname = 5;
+	string          text = 6;
+	repeated int64  usermentions = 7;
+	repeated int64  medias = 8;
+	repeated string urls = 9;
 }
 
 enum POST_TYPE {

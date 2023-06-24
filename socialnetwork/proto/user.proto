@@ -34,11 +34,7 @@ message UserResponse {
 	int64 userid = 2;
 }
 
-message User {
-  	int64 userid = 1;
-  	string firstname = 2;
-  	string lastname = 3;
-  	string username = 4;
-  	string password = 5;
+message CacheItem {
+	string key = 1;
+	bytes  val = 2;
 }
-

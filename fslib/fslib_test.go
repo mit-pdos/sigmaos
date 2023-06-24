@@ -500,7 +500,7 @@ func TestPageDir(t *testing.T) {
 }
 
 func dirwriter(t *testing.T, dn, name, lip string, nds sp.Taddrs, ch chan bool) {
-	fsl, err := fslib.MakeFsLibAddr("fslibtest-"+name, sp.ROOTREALM, lip, nds)
+	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest-"+name), sp.ROOTREALM, lip, nds)
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -735,7 +735,7 @@ func TestCreateExcl1(t *testing.T) {
 	fn := gopath.Join(pathname, "exclusive")
 	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OCEXEC, []byte{})
 	assert.Nil(t, err)
-	fsl, err := fslib.MakeFsLibAddr("fslibtest0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest0"), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	go func() {
 		_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
@@ -766,7 +766,7 @@ func TestCreateExclN(t *testing.T) {
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			fsl, err := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
 			//log.Printf("PutFile %d\n", i)
 			_, err = fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
@@ -1020,7 +1020,7 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		fsl, err := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr(sp.Tuname("thread"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0

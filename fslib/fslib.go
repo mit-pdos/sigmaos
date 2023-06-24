@@ -13,18 +13,18 @@ type FsLib struct {
 	namedAddr sp.Taddrs
 }
 
-func MakeFsLibAddrNet(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
+func MakeFsLibAddrNet(uname sp.Tuname, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
 	fl := &FsLib{fdclnt.MakeFdClient(nil, uname, clntnet, realm, lip, sessp.Tsize(10_000_000)), addrs}
 	return fl, nil
 }
 
-func MakeFsLibAddr(uname string, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
+func MakeFsLibAddr(uname sp.Tuname, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
 	return MakeFsLibAddrNet(uname, realm, lip, addrs, proc.GetNet())
 }
 
 // Only to be called by procs.
-func MakeFsLib(uname string) (*FsLib, error) {
+func MakeFsLib(uname sp.Tuname) (*FsLib, error) {
 	as, err := proc.Named()
 	if err != nil {
 		return nil, err

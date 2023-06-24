@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -18,7 +19,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage msec pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(os.Args[0] + "-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}

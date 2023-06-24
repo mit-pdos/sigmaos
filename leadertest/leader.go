@@ -22,7 +22,7 @@ const (
 
 func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
-	sc, err := sigmaclnt.MkSigmaClnt("leader-" + pid.String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("leader-" + pid.String()))
 	if err != nil {
 		db.DFatalf("%v SigmaClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}

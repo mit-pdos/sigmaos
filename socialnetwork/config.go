@@ -1,6 +1,7 @@
 package socialnetwork
 
 import (
+	"flag"
 	"fmt"
 	"path"
 	"sigmaos/cacheclnt"
@@ -10,7 +11,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"strconv"
-	"flag"
 )
 
 const (
@@ -40,7 +40,7 @@ func MakeMoLSrvs(public bool) []Srv {
 func MakeFsLibs(uname string, base *fslib.FsLib) []*fslib.FsLib {
 	fsls := []*fslib.FsLib{base}
 	for i := 1; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.MakeFsLib(uname + "-" + strconv.Itoa(i))
+		fsl, err := fslib.MakeFsLib(sp.Tuname(uname + "-" + strconv.Itoa(i)))
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)
 		}

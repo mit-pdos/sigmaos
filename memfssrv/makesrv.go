@@ -38,13 +38,13 @@ type MemFs struct {
 //
 
 // Make an MemFs and advertise it at pn
-func MakeMemFs(pn, name string) (*MemFs, error) {
-	return MakeMemFsPort(pn, ":0", name)
+func MakeMemFs(pn string, uname sp.Tuname) (*MemFs, error) {
+	return MakeMemFsPort(pn, ":0", uname)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func MakeMemFsPort(pn, port string, name string) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
+func MakeMemFsPort(pn, port string, uname sp.Tuname) (*MemFs, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 }
 
 // Allocate server with public port and advertise it
-func MakeMemFsPublic(pn, name string) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
+func MakeMemFsPublic(pn string, uname sp.Tuname) (*MemFs, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func MakeMemFsReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt
 	return &MemFs{SessSrv: srv, root: root, sc: sc}, nil
 }
 
-func MakeMemFsReplServer(root fs.Dir, addr string, path, name string, config repl.Config) (*MemFs, error) {
-	srv, err := fslibsrv.MakeReplServer(root, addr, path, name, config)
+func MakeMemFsReplServer(root fs.Dir, addr, path string, uname sp.Tuname, config repl.Config) (*MemFs, error) {
+	srv, err := fslibsrv.MakeReplServer(root, addr, path, uname, config)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func MakeMemFsReplServer(root fs.Dir, addr string, path, name string, config rep
 
 // This version is for a replicated named, including handling if this
 // is the initial named for the root realm.
-func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
+func MakeReplMemFs(addr, path string, uname sp.Tuname, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode, nil)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
@@ -135,12 +135,12 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	if isInitNamed {
 		mfs, err = MakeMemFsReplServerFsl(root, addr, path, nil, conf)
 	} else {
-		db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, name, conf)
+		db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, uname, conf)
 		// If this is not the init named, initialize sigma clnt
 		if proc.GetNet() == sp.ROOTREALM.String() {
-			mfs, err = MakeMemFsReplServer(root, addr, path, name, conf)
+			mfs, err = MakeMemFsReplServer(root, addr, path, uname, conf)
 		} else {
-			mfs, err = MakeReplServerPublic(root, path, name, conf, realm)
+			mfs, err = MakeReplServerPublic(root, path, uname, conf, realm)
 		}
 	}
 	if err != nil {
@@ -148,7 +148,7 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 	}
 	// If this *was* the init named, we now can make sigma clnt
 	if isInitNamed {
-		sc, err := sigmaclnt.MkSigmaClntFsLib(name)
+		sc, err := sigmaclnt.MkSigmaClntFsLib(uname)
 		if err != nil {
 			return nil, serr.MkErrError(err)
 		}
@@ -159,8 +159,8 @@ func MakeReplMemFs(addr, path, name string, conf repl.Config, realm sp.Trealm) (
 }
 
 // Make replicated memfs with a public port
-func MakeReplServerPublic(root fs.Dir, path, name string, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
+func MakeReplServerPublic(root fs.Dir, path string, uname sp.Tuname, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
 	if err != nil {
 		return nil, err
 	}

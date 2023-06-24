@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error strconv: %v", err)
 	}
-	sc, err := sigmaclnt.MkSigmaClnt("memhog-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("memhog-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}

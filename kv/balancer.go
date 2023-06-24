@@ -71,7 +71,7 @@ func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	sc, err := sigmaclnt.MkSigmaClnt("balancer-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("balancer-" + proc.GetPid().String()))
 	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)

@@ -41,7 +41,7 @@ type Www struct {
 func RunWww(job string, public bool) error {
 	www := &Www{}
 	www.job = job
-	sc, err := sigmaclnt.MkSigmaClnt("hotel-wwwd-" + job)
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("hotel-wwwd-" + job))
 	if err != nil {
 		return err
 	}

@@ -92,7 +92,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname string, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(uname sp.Tuname, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
 	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
 	if err != nil {

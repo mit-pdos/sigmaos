@@ -14,6 +14,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -51,7 +52,7 @@ func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) err
 func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	mv := &Mover{}
 	mv.epochstr = epochstr
-	sc, err := sigmaclnt.MkSigmaClnt("mover-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
 	}

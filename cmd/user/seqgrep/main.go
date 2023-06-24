@@ -10,10 +10,11 @@ import (
 	"sigmaos/proc"
 	"sigmaos/seqgrep"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
-	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(os.Args[0] + "-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}

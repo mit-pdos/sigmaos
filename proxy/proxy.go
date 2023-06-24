@@ -77,7 +77,7 @@ func (npd *Npd) Restore(b []byte) {
 type NpConn struct {
 	mu    sync.Mutex
 	clnt  *protclnt.Clnt
-	uname string
+	uname sp.Tuname
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
 	fm    *fidMap
@@ -107,7 +107,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF
 	if error != nil {
 		return sp.MkRerror(serr.MkErrError(error))
 	}
-	npc.uname = u.Uid
+	npc.uname = sp.Tuname(u.Uid)
 
 	mnt := npc.pc.GetMntNamed("proxy")
 	fid, err := npc.fidc.Attach(npc.uname, mnt.Addr, "", "")

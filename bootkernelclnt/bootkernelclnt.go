@@ -54,18 +54,18 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(tag, name, conf string, namedAddr sp.Taddrs, overlays bool) (*Kernel, error) {
+func MkKernelClntStart(tag string, uname sp.Tuname, conf string, namedAddr sp.Taddrs, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
 	ip, err := Start(kernelId, tag, conf, namedAddr, overlays)
 	if err != nil {
 		return nil, err
 	}
-	return MkKernelClnt(kernelId, name, ip, namedAddr)
+	return MkKernelClnt(kernelId, uname, ip, namedAddr)
 }
 
-func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s\n", kernelId)
-	sc, err := sigmaclnt.MkSigmaClntRootInit(name, ip, namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntRootInit(uname, ip, namedAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +88,8 @@ func MkKernelClnt(kernelId, name, ip string, namedAddr sp.Taddrs) (*Kernel, erro
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
-func (k *Kernel) MkSigmaClnt(name string) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.MkSigmaClntRootInit(name, k.GetLocalIP(), k.SigmaClnt.NamedAddr())
+func (k *Kernel) MkSigmaClnt(uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
+	return sigmaclnt.MkSigmaClntRootInit(uname, k.GetLocalIP(), k.SigmaClnt.NamedAddr())
 }
 
 func (k *Kernel) Shutdown() error {

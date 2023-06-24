@@ -81,7 +81,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	sc, err := sigmaclnt.MkSigmaClnt("coord-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("coord-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
 	}

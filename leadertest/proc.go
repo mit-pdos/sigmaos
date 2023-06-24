@@ -18,7 +18,7 @@ import (
 func RunProc(epochstr, dir string) {
 	pid := proc.GetPid()
 
-	fsl, err := fslib.MakeFsLib("proc-" + pid.String())
+	fsl, err := fslib.MakeFsLib(sp.Tuname("proc-" + pid.String()))
 	if err != nil {
 		db.DFatalf("%v MakeFsLib err %v\n", proc.GetName(), err)
 	}

@@ -161,8 +161,8 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, name string) (*sigmaclnt.SigmaClnt, error) {
-	return ts.kclnts[idx].MkSigmaClnt(name)
+func (ts *Tstate) MakeClnt(idx int, uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].MkSigmaClnt(uname)
 }
 
 func (ts *Tstate) Shutdown() error {

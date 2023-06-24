@@ -11,7 +11,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) GetMntNamed(uname string) sp.Tmount {
+func (pathc *PathClnt) GetMntNamed(uname sp.Tuname) sp.Tmount {
 	if pathc.realm == sp.ROOTREALM {
 		mnt, err := fsetcd.GetRootNamed()
 		if err != nil {
@@ -29,7 +29,7 @@ func (pathc *PathClnt) GetMntNamed(uname string) sp.Tmount {
 	}
 }
 
-func (pathc *PathClnt) mountNamed(p path.Path, uname string) *serr.Err {
+func (pathc *PathClnt) mountNamed(p path.Path, uname sp.Tuname) *serr.Err {
 	db.DPrintf(db.NAMED, "mountNamed %v: %v\n", pathc.realm, p)
 	if pathc.realm == sp.ROOTREALM {
 		return pathc.mountRootNamed(sp.NAME, uname)
@@ -39,7 +39,7 @@ func (pathc *PathClnt) mountNamed(p path.Path, uname string) *serr.Err {
 	return nil
 }
 
-func (pathc *PathClnt) mountRootNamed(name, uname string) *serr.Err {
+func (pathc *PathClnt) mountRootNamed(name string, uname sp.Tuname) *serr.Err {
 	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
 	mnt, err := fsetcd.GetRootNamed()
 	if err == nil {
@@ -57,7 +57,7 @@ func (pathc *PathClnt) mountRootNamed(name, uname string) *serr.Err {
 	return err
 }
 
-func (pathc *PathClnt) getRealmNamed(uname string) (sp.Tmount, *serr.Err) {
+func (pathc *PathClnt) getRealmNamed(uname sp.Tuname) (sp.Tmount, *serr.Err) {
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 		if err := pathc.mountRootNamed("root", uname); err != nil {
 			return sp.Tmount{}, err
@@ -77,7 +77,7 @@ func (pathc *PathClnt) getRealmNamed(uname string) (sp.Tmount, *serr.Err) {
 	return mnt, nil
 }
 
-func (pathc *PathClnt) mountRealmNamed(uname string) *serr.Err {
+func (pathc *PathClnt) mountRealmNamed(uname sp.Tuname) *serr.Err {
 	mnt, err := pathc.getRealmNamed(uname)
 	if err != nil {
 		db.DPrintf(db.NAMED, "mountRealmNamed: getRrealmNamed err %v\n", err)

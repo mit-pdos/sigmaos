@@ -275,8 +275,8 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-func MkTattach(fid, afid Tfid, uname string, path path.Path) *Tattach {
-	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: uname, Aname: path.String()}
+func MkTattach(fid, afid Tfid, uname Tuname, path path.Path) *Tattach {
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: string(uname), Aname: path.String()}
 }
 
 func (a *Tattach) Tfid() Tfid {

@@ -15,7 +15,7 @@ import (
 type RootMount struct {
 	svcpn path.Path
 	tree  path.Path
-	uname string
+	uname sp.Tuname
 }
 
 type RootMountTable struct {
@@ -40,7 +40,7 @@ func (rootmt *RootMountTable) lookup(name string) (*RootMount, *serr.Err) {
 	return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
-func (rootmt *RootMountTable) add(uname string, svcpn, tree path.Path, mntname string) *serr.Err {
+func (rootmt *RootMountTable) add(uname sp.Tuname, svcpn, tree path.Path, mntname string) *serr.Err {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -63,7 +63,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 	return ok
 }
 
-func (pathc *PathClnt) resolveRoot(pn path.Path, uname string) (*serr.Err, bool) {
+func (pathc *PathClnt) resolveRoot(pn path.Path, uname sp.Tuname) (*serr.Err, bool) {
 	if len(pn) == 0 {
 		return serr.MkErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
 	}
@@ -96,7 +96,7 @@ func (pathc *PathClnt) resolveRoot(pn path.Path, uname string) (*serr.Err, bool)
 	return nil, false
 }
 
-func (pathc *PathClnt) MakeRootMount(uname, pn, mntname string) error {
+func (pathc *PathClnt) MakeRootMount(uname sp.Tuname, pn, mntname string) error {
 	if !strings.HasPrefix(pn, sp.NAME) {
 		pn = sp.NAMED + pn
 	}
@@ -116,7 +116,7 @@ func (pathc *PathClnt) MakeRootMount(uname, pn, mntname string) error {
 	return nil
 }
 
-func (pathc *PathClnt) mountRoot(uname string, svc, rest path.Path, mntname string) *serr.Err {
+func (pathc *PathClnt) mountRoot(uname sp.Tuname, svc, rest path.Path, mntname string) *serr.Err {
 	db.DPrintf(db.SVCMOUNT, "mountRoot: %v %v %v %v\n", uname, svc, rest, mntname)
 	fid, _, err := pathc.mnt.resolve(svc, true)
 	if err != nil {

@@ -31,7 +31,7 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 	return p, nil
 }
 
-func (pathc *PathClnt) autoMount(uname string, mnt sp.Tmount, path path.Path) *serr.Err {
+func (pathc *PathClnt) autoMount(uname sp.Tuname, mnt sp.Tmount, path path.Path) *serr.Err {
 	var fid sp.Tfid
 	var err *serr.Err
 

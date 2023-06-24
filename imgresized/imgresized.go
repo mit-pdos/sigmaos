@@ -74,7 +74,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	}
 	imgd := &ImgSrv{}
 	imgd.job = args[0]
-	sc, err := sigmaclnt.MkSigmaClnt("imgd-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("imgd-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
 	}

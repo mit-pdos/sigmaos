@@ -41,7 +41,7 @@ func RunKNamed(args []string) error {
 	if err := nd.ec.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
-	sc, err := sigmaclnt.MkSigmaClntFsLib(proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname(proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClntFsLib: err %v", err)
 	}

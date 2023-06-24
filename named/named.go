@@ -43,7 +43,7 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	sc, err := sigmaclnt.MkSigmaClnt(proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(proc.GetPid().String()))
 	if err != nil {
 		return err
 	}

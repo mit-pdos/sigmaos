@@ -218,7 +218,7 @@ func RunMember(jobdir, grp string, public bool) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	sc, err := sigmaclnt.MkSigmaClnt("kv-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("kv-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}

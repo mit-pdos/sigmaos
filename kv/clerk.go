@@ -81,8 +81,8 @@ func MakeClerkFslOnly(fsl *fslib.FsLib, job string) *KvClerk {
 	return makeClerk(fsl, job)
 }
 
-func MakeClerk(name, job string) (*KvClerk, error) {
-	fsl, err := fslib.MakeFsLib(name)
+func MakeClerk(uname sp.Tuname, job string) (*KvClerk, error) {
+	fsl, err := fslib.MakeFsLib(uname)
 	if err != nil {
 		return nil, err
 	}

@@ -15,7 +15,7 @@ const (
 	TIMEOUT    = 100 // ms  (XXX belongs in hyperparam?)
 )
 
-func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname string) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname sp.Tuname) (sp.Tfid, *serr.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
 		return sp.NoFid, serr.MkErr(serr.TErrNotfound, fid)
@@ -30,7 +30,7 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname string) (sp.Tfid,
 // unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) walk(path path.Path, uname string, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < MAXRETRY; i++ {
 		if err, cont := pathc.resolveRoot(path, uname); err != nil {
 			if cont && err.IsErrUnreachable() {

@@ -44,7 +44,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
-	sc, err := sigmaclnt.MkSigmaClnt("sleeper-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("sleeper-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClient: %v", err)
 	}

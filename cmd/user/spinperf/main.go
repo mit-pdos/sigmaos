@@ -10,6 +10,7 @@ import (
 	"sigmaos/microbenchmarks"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 	id := os.Args[4]
 	var sc *sigmaclnt.SigmaClnt
 	if isSigmaProc {
-		sc, err = sigmaclnt.MkSigmaClnt("spinperf-" + proc.GetPid().String())
+		sc, err = sigmaclnt.MkSigmaClnt(sp.Tuname("spinperf-" + proc.GetPid().String()))
 		if err != nil {
 			db.DFatalf("Error mkSigmaClnt: %v", err)
 		}

@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -14,7 +15,7 @@ import (
 //
 
 func main() {
-	sc, err := sigmaclnt.MkSigmaClnt(os.Args[0] + "-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(os.Args[0] + "-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}

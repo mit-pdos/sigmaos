@@ -19,6 +19,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 var done = int32(0)
@@ -46,7 +47,7 @@ func main() {
 		}
 		sempath = os.Args[4]
 	}
-	sc, err := sigmaclnt.MkSigmaClnt("clerk-" + proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("clerk-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

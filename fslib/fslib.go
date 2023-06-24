@@ -33,7 +33,7 @@ func MakeFsLib(uname string) (*FsLib, error) {
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {
-	mnt := fl.GetMntNamed()
+	mnt := fl.GetMntNamed(fl.Uname())
 	return mnt.Addr
 }
 

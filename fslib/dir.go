@@ -22,7 +22,7 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 }
 
 func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.Stat(name)
+	st, err := fl.FdClient.Stat(name)
 	if err != nil {
 		return false, err
 	}

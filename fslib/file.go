@@ -26,15 +26,15 @@ func (fl *FsLib) ReadSeqNo() sessp.Tseqno {
 //
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FdClient.GetFile(fname, sp.OREAD, 0, sp.MAXGETSET)
+	return fl.FdClient.GetFile(fname)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sessp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, m, 0777, data, off)
+	return fl.FdClient.PutFile(fname, 0777, m, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sessp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, mode|sp.OWRITE, perm, data, 0)
+	return fl.FdClient.PutFile(fname, perm, mode, data, 0)
 }
 
 //

@@ -11,7 +11,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) GetMntNamed() sp.Tmount {
+func (pathc *PathClnt) GetMntNamed(uname string) sp.Tmount {
 	if pathc.realm == sp.ROOTREALM {
 		mnt, err := fsetcd.GetRootNamed()
 		if err != nil {
@@ -20,7 +20,7 @@ func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.realm, mnt)
 		return mnt
 	} else {
-		mnt, err := pathc.getRealmNamed()
+		mnt, err := pathc.getRealmNamed(uname)
 		if err != nil {
 			db.DFatalf("GetMntNamed() %v err %v\n", pathc.realm, err)
 		}
@@ -29,22 +29,22 @@ func (pathc *PathClnt) GetMntNamed() sp.Tmount {
 	}
 }
 
-func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
+func (pathc *PathClnt) mountNamed(p path.Path, uname string) *serr.Err {
 	db.DPrintf(db.NAMED, "mountNamed %v: %v\n", pathc.realm, p)
 	if pathc.realm == sp.ROOTREALM {
-		return pathc.mountRootNamed(sp.NAME)
+		return pathc.mountRootNamed(sp.NAME, uname)
 	} else {
-		return pathc.mountRealmNamed()
+		return pathc.mountRealmNamed(uname)
 	}
 	return nil
 }
 
-func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
+func (pathc *PathClnt) mountRootNamed(name, uname string) *serr.Err {
 	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
 	mnt, err := fsetcd.GetRootNamed()
 	if err == nil {
 		pn := path.Path{name}
-		if err := pathc.autoMount("", mnt, pn); err == nil {
+		if err := pathc.autoMount(uname, mnt, pn); err == nil {
 			db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
 			return nil
 		} else {
@@ -57,14 +57,14 @@ func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
 	return err
 }
 
-func (pathc *PathClnt) getRealmNamed() (sp.Tmount, *serr.Err) {
+func (pathc *PathClnt) getRealmNamed(uname string) (sp.Tmount, *serr.Err) {
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
-		if err := pathc.mountRootNamed("root"); err != nil {
+		if err := pathc.mountRootNamed("root", uname); err != nil {
 			return sp.Tmount{}, err
 		}
 	}
 	pn := gpath.Join("root", sp.REALMDREL, sp.REALMSREL, pathc.realm.String())
-	target, err := pathc.GetFile(pn, sp.OREAD, 0, sp.MAXGETSET)
+	target, err := pathc.GetFile(pn, uname, sp.OREAD, 0, sp.MAXGETSET)
 	if err != nil {
 		db.DPrintf(db.NAMED, "getRealmNamed %v err %v\n", pathc.realm, err)
 		return sp.Tmount{}, serr.MkErrError(err)
@@ -77,13 +77,13 @@ func (pathc *PathClnt) getRealmNamed() (sp.Tmount, *serr.Err) {
 	return mnt, nil
 }
 
-func (pathc *PathClnt) mountRealmNamed() *serr.Err {
-	mnt, err := pathc.getRealmNamed()
+func (pathc *PathClnt) mountRealmNamed(uname string) *serr.Err {
+	mnt, err := pathc.getRealmNamed(uname)
 	if err != nil {
 		db.DPrintf(db.NAMED, "mountRealmNamed: getRrealmNamed err %v\n", err)
 		return err
 	}
-	if err := pathc.autoMount("", mnt, path.Path{sp.NAME}); err == nil {
+	if err := pathc.autoMount(uname, mnt, path.Path{sp.NAME}); err == nil {
 		db.DPrintf(db.NAMED, "mountRealmNamed: automount mnt %v at %v\n", mnt, sp.NAME)
 		return nil
 	}

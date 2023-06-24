@@ -20,6 +20,7 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 type Trealm string
+type Tuname string
 
 const ROOTREALM Trealm = "rootrealm"
 

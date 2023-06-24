@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/reader"
 	"sigmaos/serr"
@@ -16,16 +17,18 @@ import (
 
 //
 // Procs interact with servers using Unix-like file descriptor
-// interface and pathnames. The file descriptor operation are here,
-// while pathname operations are inherited from PathClnt.
+// interface and pathnames.
 //
 // A hypothetical kernel could multiplex multiple procs over one
 // FidClnt, which allows a shared TCP connection to a server. A kernel
 // could also use fds to share file descriptors state (e.g., offset)
 // between parent and child.  Since we have no kernel implementing
-// procs, these use cases are speculative. Our use case is one
-// FdClient per proc, and each FdClient with their own FidClnt (i.e.,
-// no sharing).
+// procs, these use cases are speculative.
+//
+// The FdClient is per user, while a single pathclnt can be shared
+// between many FdClients since pathclnt requires a uname being passed
+// in. The standard use case is, however, to have one pathclnt per
+// FdClient.
 //
 
 type FdClient struct {
@@ -73,8 +76,12 @@ func (fdc *FdClient) Qid(fd int) (*sp.Tqid, error) {
 	return fdc.PathClnt.Qid(fid), nil
 }
 
+func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
+	return fdc.PathClnt.Stat(name, fdc.uname)
+}
+
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, perm, mode)
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -83,7 +90,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 }
 
 func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w pathclnt.Watch) (int, error) {
-	fid, err := fdc.PathClnt.OpenWatch(path, mode, w)
+	fid, err := fdc.PathClnt.OpenWatch(path, fdc.uname, mode, w)
 	if err != nil {
 		return -1, err
 	}
@@ -110,6 +117,26 @@ func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int,
 		}
 	}
 	return fd, nil
+}
+
+func (fdc *FdClient) SetRemoveWatch(pn string, w pathclnt.Watch) error {
+	return fdc.PathClnt.SetRemoveWatch(pn, fdc.uname, w)
+}
+
+func (fdc *FdClient) Rename(old, new string) error {
+	return fdc.PathClnt.Rename(old, new, fdc.uname)
+}
+
+func (fdc *FdClient) Remove(pn string) error {
+	return fdc.PathClnt.Remove(pn, fdc.uname)
+}
+
+func (fdc *FdClient) GetFile(fname string) ([]byte, error) {
+	return fdc.PathClnt.GetFile(fname, fdc.uname, sp.OREAD, 0, sp.MAXGETSET)
+}
+
+func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
+	return fdc.PathClnt.PutFile(fname, fdc.uname, mode|sp.OWRITE, perm, data, off)
 }
 
 func (fdc *FdClient) MakeReader(fd int, path string, chunksz sessp.Tsize) *reader.Reader {
@@ -198,4 +225,8 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 		return err
 	}
 	return nil
+}
+
+func (fdc *FdClient) PathLastSymlink(pn string) (path.Path, path.Path, error) {
+	return fdc.PathClnt.PathLastSymlink(pn, fdc.uname)
 }

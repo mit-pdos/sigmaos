@@ -30,13 +30,15 @@ import (
 
 type FdClient struct {
 	*pathclnt.PathClnt
-	fds *FdTable
+	fds   *FdTable
+	uname string // the principal associated with this FdClient
 }
 
 func MakeFdClient(fsc *fidclnt.FidClnt, uname, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{}
-	fdc.PathClnt = pathclnt.MakePathClnt(fsc, clntnet, realm, uname, lip, sz)
+	fdc.PathClnt = pathclnt.MakePathClnt(fsc, clntnet, realm, lip, sz)
 	fdc.fds = mkFdTable()
+	fdc.uname = uname
 	return fdc
 }
 
@@ -45,6 +47,10 @@ func (fdc *FdClient) String() string {
 	str += fmt.Sprintf("fds %v\n", fdc.fds)
 	str += fmt.Sprintf("fsc %v\n", fdc.PathClnt)
 	return str
+}
+
+func (fdc *FdClient) Uname() string {
+	return fdc.uname
 }
 
 func (fdc *FdClient) Close(fd int) error {

@@ -28,12 +28,11 @@ type PathClnt struct {
 	rootmt  *RootMountTable
 	chunkSz sessp.Tsize
 	realm   sp.Trealm
-	uname   string // the principal associated with this path client
 	lip     string
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, uname, lip string, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, realm: realm, uname: uname, lip: lip}
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, realm: realm, lip: lip}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
 	} else {
@@ -47,10 +46,6 @@ func (pathc *PathClnt) String() string {
 	str := fmt.Sprintf("Pathclnt mount table:\n")
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
-}
-
-func (pathc *PathClnt) Uname() string {
-	return pathc.uname
 }
 
 func (pathc *PathClnt) Realm() sp.Trealm {

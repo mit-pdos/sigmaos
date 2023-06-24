@@ -60,6 +60,10 @@ func (lmgr *leaseMgr) recoverLeases(sid sessp.Tsession) error {
 	lmgr.Lock()
 	defer lmgr.Unlock()
 
+	if lid := lmgr.lt.lookup(sid); lid != clientv3.NoLease {
+		return nil
+	}
+
 	respl, err := lmgr.lc.Leases(context.TODO())
 	if err != nil {
 		return err

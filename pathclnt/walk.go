@@ -49,7 +49,7 @@ func (pathc *PathClnt) WalkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 				return sp.NoFid, e
 			}
 			// try again
-			db.DPrintf(db.ALWAYS, "walkPathUmount: try again p %v r %v\n", path, resolve)
+			db.DPrintf(db.WALK, "walkPathUmount: try again p %v r %v\n", path, resolve)
 			time.Sleep(TIMEOUT * time.Millisecond)
 			continue
 		}

@@ -3,7 +3,6 @@ package fsetcd
 import (
 	"context"
 	"strconv"
-	"strings"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
@@ -21,15 +20,6 @@ const (
 
 func (ec *EtcdClnt) path2key(path sessp.Tpath) string {
 	return string(ec.realm) + ":" + strconv.FormatUint(uint64(path), 16)
-}
-
-func key2path(key string) sessp.Tpath {
-	parts := strings.Split(key, ":")
-	p, err := strconv.ParseUint(parts[1], 16, 64)
-	if err != nil {
-		db.DFatalf("ParseUint %v err %v\n", key, err)
-	}
-	return sessp.Tpath(p)
 }
 
 func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
@@ -51,10 +41,13 @@ func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
 
 func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
 	return ec.getFile(ec.path2key(p))
-
 }
 
 func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
+	opts, sr := ec.lmgr.LeaseOpts(nf)
+	if sr != nil {
+		return sr
+	}
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {
@@ -62,7 +55,7 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 			clientv3.Compare(clientv3.CreateRevision(ec.fencekey), "=", ec.fencerev),
 		}
 		ops := []clientv3.Op{
-			clientv3.OpPut(ec.path2key(p), string(b)),
+			clientv3.OpPut(ec.path2key(p), string(b), opts...),
 		}
 		resp, err := ec.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
@@ -89,18 +82,10 @@ func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) 
 
 // XXX retry
 func (ec *EtcdClnt) Create(pn path.Path, dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, nf *NamedFile) *serr.Err {
-	opts := make([]clientv3.OpOption, 0)
-	sid := sessp.Tsession(nf.SessionId)
-	if sid != sessp.NoSession {
-		lid, err := ec.lmgr.getLeaseID(sid)
-		if err != nil {
-			db.DPrintf(db.ETCDCLNT, "getLeaseID %v err %v\n", sid, err)
-			return serr.MkErrError(err)
-		}
-		opts = append(opts, clientv3.WithLease(lid))
-		nf.LeaseId = int64(lid)
+	opts, sr := ec.lmgr.LeaseOpts(nf)
+	if sr != nil {
+		return sr
 	}
-
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return serr.MkErrError(err)
@@ -230,25 +215,4 @@ func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, 
 		return serr.MkErr(serr.TErrNotfound, del)
 	}
 	return nil
-}
-
-func MarshalDir(dir *NamedDir, dperm sp.Tperm) ([]byte, *serr.Err) {
-	d, err := proto.Marshal(dir)
-	if err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	nfd := &NamedFile{Perm: uint32(dperm), Data: d}
-	b, err := proto.Marshal(nfd)
-	if err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	return b, nil
-}
-
-func UnmarshalDir(b []byte) (*NamedDir, *serr.Err) {
-	dir := &NamedDir{}
-	if err := proto.Unmarshal(b, dir); err != nil {
-		return nil, serr.MkErrError(err)
-	}
-	return dir, nil
 }

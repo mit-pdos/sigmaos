@@ -31,7 +31,7 @@ type Obj struct {
 	path    sessp.Tpath
 	perm    sp.Tperm
 	sid     sessp.Tsession
-	lid     clientv3.Lease
+	lid     clientv3.LeaseID
 	version sp.TQversion
 	parent  sessp.Tpath
 	data    []byte
@@ -39,7 +39,7 @@ type Obj struct {
 }
 
 func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, sid sessp.Tsession, lid clientv3.LeaseID, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
-	o := &Obj{ec: ec, pn: pn, perm: perm, version: v, path: p, data: data, parent: parent}
+	o := &Obj{ec: ec, pn: pn, perm: perm, sid: sid, lid: lid, version: v, path: p, data: data, parent: parent}
 	return o
 }
 
@@ -95,7 +95,7 @@ func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tp
 	if err != nil {
 		return nil, err
 	}
-	o := makeObj(ec, pn, sp.Tperm(nf.Perm), sessp.Tsession(nf.SessionId), clientv3.LeaseID(nf.LeaseId), sp.TQversion(v), path, parent, nf.Data)
+	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.Tsession(), nf.TLeaseID(), sp.TQversion(v), path, parent, nf.Data)
 	return o, nil
 }
 
@@ -111,10 +111,10 @@ func mkNamedFile(perm sp.Tperm, path sessp.Tpath, sid sessp.Tsession) (*fsetcd.N
 		}
 		fdata = d
 	}
-	return &fsetcd.NamedFile{Perm: uint32(perm | 0777), Data: fdata, SessionId: uint64(sid)}, nil
+	return fsetcd.MkNamedFile(perm|0777, sid, fdata), nil
 }
 
 func (o *Obj) putObj() *serr.Err {
-	nf := &fsetcd.NamedFile{Perm: uint32(o.perm), Data: o.data}
+	nf := fsetcd.MkNamedFile(o.perm|0777, o.sid, o.data)
 	return o.ec.PutFile(o.path, nf)
 }

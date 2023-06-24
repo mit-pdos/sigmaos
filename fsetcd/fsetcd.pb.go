@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.28.1
 // 	protoc        v3.21.12
-// source: fsetcd/named.proto
+// source: fsetcd/fsetcd.proto
 
 package fsetcd
 
@@ -34,7 +34,7 @@ type NamedFile struct {
 func (x *NamedFile) Reset() {
 	*x = NamedFile{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_fsetcd_named_proto_msgTypes[0]
+		mi := &file_fsetcd_fsetcd_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -47,7 +47,7 @@ func (x *NamedFile) String() string {
 func (*NamedFile) ProtoMessage() {}
 
 func (x *NamedFile) ProtoReflect() protoreflect.Message {
-	mi := &file_fsetcd_named_proto_msgTypes[0]
+	mi := &file_fsetcd_fsetcd_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +60,7 @@ func (x *NamedFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedFile.ProtoReflect.Descriptor instead.
 func (*NamedFile) Descriptor() ([]byte, []int) {
-	return file_fsetcd_named_proto_rawDescGZIP(), []int{0}
+	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *NamedFile) GetPerm() uint32 {
@@ -103,7 +103,7 @@ type DirEnt struct {
 func (x *DirEnt) Reset() {
 	*x = DirEnt{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_fsetcd_named_proto_msgTypes[1]
+		mi := &file_fsetcd_fsetcd_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -116,7 +116,7 @@ func (x *DirEnt) String() string {
 func (*DirEnt) ProtoMessage() {}
 
 func (x *DirEnt) ProtoReflect() protoreflect.Message {
-	mi := &file_fsetcd_named_proto_msgTypes[1]
+	mi := &file_fsetcd_fsetcd_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -129,7 +129,7 @@ func (x *DirEnt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DirEnt.ProtoReflect.Descriptor instead.
 func (*DirEnt) Descriptor() ([]byte, []int) {
-	return file_fsetcd_named_proto_rawDescGZIP(), []int{1}
+	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DirEnt) GetName() string {
@@ -157,7 +157,7 @@ type NamedDir struct {
 func (x *NamedDir) Reset() {
 	*x = NamedDir{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_fsetcd_named_proto_msgTypes[2]
+		mi := &file_fsetcd_fsetcd_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -170,7 +170,7 @@ func (x *NamedDir) String() string {
 func (*NamedDir) ProtoMessage() {}
 
 func (x *NamedDir) ProtoReflect() protoreflect.Message {
-	mi := &file_fsetcd_named_proto_msgTypes[2]
+	mi := &file_fsetcd_fsetcd_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -183,7 +183,7 @@ func (x *NamedDir) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedDir.ProtoReflect.Descriptor instead.
 func (*NamedDir) Descriptor() ([]byte, []int) {
-	return file_fsetcd_named_proto_rawDescGZIP(), []int{2}
+	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *NamedDir) GetEnts() []*DirEnt {
@@ -193,46 +193,46 @@ func (x *NamedDir) GetEnts() []*DirEnt {
 	return nil
 }
 
-var File_fsetcd_named_proto protoreflect.FileDescriptor
+var File_fsetcd_fsetcd_proto protoreflect.FileDescriptor
 
-var file_fsetcd_named_proto_rawDesc = []byte{
-	0x0a, 0x12, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x2f, 0x6e, 0x61, 0x6d, 0x65, 0x64, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6b, 0x0a, 0x09, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x46, 0x69, 0x6c,
-	0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52,
-	0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65, 0x61,
-	0x73, 0x65, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x6c, 0x65, 0x61, 0x73,
-	0x65, 0x49, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x64,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x09, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x49,
-	0x64, 0x22, 0x30, 0x0a, 0x06, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e,
-	0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12,
-	0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x70,
-	0x61, 0x74, 0x68, 0x22, 0x27, 0x0a, 0x08, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x44, 0x69, 0x72, 0x12,
-	0x1b, 0x0a, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e,
-	0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x52, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x42, 0x10, 0x5a, 0x0e,
-	0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+var file_fsetcd_fsetcd_proto_rawDesc = []byte{
+	0x0a, 0x13, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6b, 0x0a, 0x09, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x46, 0x69,
+	0x6c, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d,
+	0x52, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65,
+	0x61, 0x73, 0x65, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x6c, 0x65, 0x61,
+	0x73, 0x65, 0x49, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x49,
+	0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x09, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e,
+	0x49, 0x64, 0x22, 0x30, 0x0a, 0x06, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x12, 0x12, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04,
+	0x70, 0x61, 0x74, 0x68, 0x22, 0x27, 0x0a, 0x08, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x44, 0x69, 0x72,
+	0x12, 0x1b, 0x0a, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07,
+	0x2e, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x52, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x42, 0x10, 0x5a,
+	0x0e, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
-	file_fsetcd_named_proto_rawDescOnce sync.Once
-	file_fsetcd_named_proto_rawDescData = file_fsetcd_named_proto_rawDesc
+	file_fsetcd_fsetcd_proto_rawDescOnce sync.Once
+	file_fsetcd_fsetcd_proto_rawDescData = file_fsetcd_fsetcd_proto_rawDesc
 )
 
-func file_fsetcd_named_proto_rawDescGZIP() []byte {
-	file_fsetcd_named_proto_rawDescOnce.Do(func() {
-		file_fsetcd_named_proto_rawDescData = protoimpl.X.CompressGZIP(file_fsetcd_named_proto_rawDescData)
+func file_fsetcd_fsetcd_proto_rawDescGZIP() []byte {
+	file_fsetcd_fsetcd_proto_rawDescOnce.Do(func() {
+		file_fsetcd_fsetcd_proto_rawDescData = protoimpl.X.CompressGZIP(file_fsetcd_fsetcd_proto_rawDescData)
 	})
-	return file_fsetcd_named_proto_rawDescData
+	return file_fsetcd_fsetcd_proto_rawDescData
 }
 
-var file_fsetcd_named_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_fsetcd_named_proto_goTypes = []interface{}{
+var file_fsetcd_fsetcd_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_fsetcd_fsetcd_proto_goTypes = []interface{}{
 	(*NamedFile)(nil), // 0: NamedFile
 	(*DirEnt)(nil),    // 1: DirEnt
 	(*NamedDir)(nil),  // 2: NamedDir
 }
-var file_fsetcd_named_proto_depIdxs = []int32{
+var file_fsetcd_fsetcd_proto_depIdxs = []int32{
 	1, // 0: NamedDir.ents:type_name -> DirEnt
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -241,13 +241,13 @@ var file_fsetcd_named_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_fsetcd_named_proto_init() }
-func file_fsetcd_named_proto_init() {
-	if File_fsetcd_named_proto != nil {
+func init() { file_fsetcd_fsetcd_proto_init() }
+func file_fsetcd_fsetcd_proto_init() {
+	if File_fsetcd_fsetcd_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_fsetcd_named_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_fsetcd_fsetcd_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*NamedFile); i {
 			case 0:
 				return &v.state
@@ -259,7 +259,7 @@ func file_fsetcd_named_proto_init() {
 				return nil
 			}
 		}
-		file_fsetcd_named_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_fsetcd_fsetcd_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DirEnt); i {
 			case 0:
 				return &v.state
@@ -271,7 +271,7 @@ func file_fsetcd_named_proto_init() {
 				return nil
 			}
 		}
-		file_fsetcd_named_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_fsetcd_fsetcd_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*NamedDir); i {
 			case 0:
 				return &v.state
@@ -288,18 +288,18 @@ func file_fsetcd_named_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_fsetcd_named_proto_rawDesc,
+			RawDescriptor: file_fsetcd_fsetcd_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_fsetcd_named_proto_goTypes,
-		DependencyIndexes: file_fsetcd_named_proto_depIdxs,
-		MessageInfos:      file_fsetcd_named_proto_msgTypes,
+		GoTypes:           file_fsetcd_fsetcd_proto_goTypes,
+		DependencyIndexes: file_fsetcd_fsetcd_proto_depIdxs,
+		MessageInfos:      file_fsetcd_fsetcd_proto_msgTypes,
 	}.Build()
-	File_fsetcd_named_proto = out.File
-	file_fsetcd_named_proto_rawDesc = nil
-	file_fsetcd_named_proto_goTypes = nil
-	file_fsetcd_named_proto_depIdxs = nil
+	File_fsetcd_fsetcd_proto = out.File
+	file_fsetcd_fsetcd_proto_rawDesc = nil
+	file_fsetcd_fsetcd_proto_goTypes = nil
+	file_fsetcd_fsetcd_proto_depIdxs = nil
 }

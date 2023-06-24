@@ -71,12 +71,12 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
-	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v\n", name, d, dir, v, path)
-	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
 	sid := sessp.NoSession
 	if perm.IsEphemeral() {
 		sid = ctx.SessionId()
 	}
+	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v sid %v\n", name, d, dir, v, path, sid)
+	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
 	nf, r := mkNamedFile(perm, path, sid)
 	if r != nil {
 		return nil, r

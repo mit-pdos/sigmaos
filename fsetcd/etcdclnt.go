@@ -69,7 +69,7 @@ func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	nf := &NamedFile{Perm: uint32(sp.DMSYMLINK), Data: d}
+	nf := MkNamedFile(sp.DMSYMLINK, sessp.NoSession, d)
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {

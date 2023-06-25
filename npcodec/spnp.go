@@ -2,6 +2,7 @@ package npcodec
 
 import (
 	np "sigmaos/ninep"
+	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -81,6 +82,10 @@ func toSP(fcall9P *Fcall9P) *sessp.FcallMsg {
 
 func np2SpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
+	case sessp.TTattach9P:
+		m := fcm.Msg.(*np.Tattach9P)
+		r := sp.MkTattach(sp.Tfid(m.Fid), sp.Tfid(m.Afid), sp.Tuname(m.Uname), 0, path.Split(m.Aname))
+		fcm.Msg = r
 	case sessp.TTread:
 		m := fcm.Msg.(*np.Tread)
 		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sessp.Tsize(m.Count), 0)

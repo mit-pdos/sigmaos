@@ -210,7 +210,7 @@ const (
 	TRversion
 	TTauth
 	TRauth
-	TTattach
+	TTattach9P
 	TRattach
 	TTerror
 	TRerror9P
@@ -238,6 +238,7 @@ const (
 	//
 	// SigmaP
 	//
+	TTattach
 	TRerror
 	TTopen
 	TTcreate
@@ -269,7 +270,7 @@ func (fct Tfcall) String() string {
 		return "Tauth"
 	case TRauth:
 		return "Rauth"
-	case TTattach:
+	case TTattach9P:
 		return "Tattach"
 	case TRattach:
 		return "Rattach"
@@ -316,6 +317,8 @@ func (fct Tfcall) String() string {
 	case TRwstat:
 		return "Rwstat"
 
+	case TTattach:
+		return "Tattach"
 	case TRerror:
 		return "Rerror"
 	case TTopen:

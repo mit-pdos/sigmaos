@@ -237,14 +237,14 @@ type Rauth struct {
 	Aqid Tqid9P
 }
 
-type Tattach struct {
+type Tattach9P struct {
 	Fid   Tfid
 	Afid  Tfid
 	Uname string
 	Aname string
 }
 
-func (m Tattach) String() string {
+func (m Tattach9P) String() string {
 	return fmt.Sprintf("{%v a %v u %v a '%v'}", m.Fid, m.Afid, m.Uname, m.Aname)
 }
 
@@ -384,6 +384,7 @@ type Twstat9P struct {
 type Rwstat struct{}
 
 func (Rerror9P) Type() sessp.Tfcall  { return sessp.TRerror9P }
+func (Tattach9P) Type() sessp.Tfcall { return sessp.TTattach }
 func (Tflush) Type() sessp.Tfcall    { return sessp.TTflush }
 func (Rflush) Type() sessp.Tfcall    { return sessp.TRflush }
 func (Tcreate9P) Type() sessp.Tfcall { return sessp.TTcreate }

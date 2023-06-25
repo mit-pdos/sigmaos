@@ -274,7 +274,9 @@ func (d *decoder) decode(vs ...interface{}) error {
 			}
 			var msg sessp.Tmsg
 			// XXX maybe also TTflush
-			if v.Type == sessp.TTread {
+			if v.Type == sessp.TTattach9P {
+				msg = &np.Tattach9P{}
+			} else if v.Type == sessp.TTread {
 				msg = &np.Tread{}
 			} else if v.Type == sessp.TTwrite {
 				msg = &np.Twrite{}

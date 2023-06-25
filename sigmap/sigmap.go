@@ -540,10 +540,7 @@ func (Tstat) Type() sessp.Tfcall    { return sessp.TTstat }
 func (Twstat) Type() sessp.Tfcall   { return sessp.TTwstat }
 func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
-//
 // sigmaP
-//
-
 func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
 func (TreadV) Type() sessp.Tfcall      { return sessp.TTreadV }
 func (TwriteV) Type() sessp.Tfcall     { return sessp.TTwriteV }

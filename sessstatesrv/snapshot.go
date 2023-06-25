@@ -27,7 +27,7 @@ func RestoreTable(oldSt *SessionTable, mkps sps.MkProtServer, rps sps.RestorePro
 	if err != nil {
 		db.DFatalf("error unmarshal session table in restore: %v", err)
 	}
-	st := MakeSessionTable(mkps, sesssrv, tm, nil)
+	st := MakeSessionTable(mkps, sesssrv, tm, nil, nil)
 	for sid, b := range sessions {
 		st.sessions[sid] = RestoreSession(sid, sesssrv, rps, tm, b)
 		// Set the replies channel if this sesison already exists at this replica
@@ -68,7 +68,7 @@ func RestoreSession(sid sessp.Tsession, sesssrv sps.SessServer, rps sps.RestoreP
 	}
 	fos := rps(sesssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
-	sess := makeSession(fos, ss.ClientId, sid, tmt.AddThread(), nil)
+	sess := makeSession(fos, ss.ClientId, sid, tmt.AddThread(), nil, nil)
 	sess.closed = ss.closed
 	return sess
 }

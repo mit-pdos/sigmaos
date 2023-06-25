@@ -12,7 +12,6 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
 const (
@@ -50,8 +49,8 @@ func (ec *EtcdClnt) Close() error {
 	return ec.Client.Close()
 }
 
-func (ec *EtcdClnt) Recover(sid sessp.Tsession) error {
-	return ec.lmgr.recoverLeases(sid)
+func (ec *EtcdClnt) Recover(cid sp.TclntId) error {
+	return ec.lmgr.recoverLeases(cid)
 }
 
 func (ec *EtcdClnt) Fence(key string, rev int64) {
@@ -60,8 +59,8 @@ func (ec *EtcdClnt) Fence(key string, rev int64) {
 	ec.fencerev = rev
 }
 
-func (ec *EtcdClnt) GetDetach() sps.DetachF {
-	return ec.lmgr.detach
+func (ec *EtcdClnt) Detach(cid sp.TclntId) {
+	ec.lmgr.detach(cid)
 }
 
 func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount) *serr.Err {
@@ -69,7 +68,7 @@ func (ec *EtcdClnt) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	nf := MkNamedFile(sp.DMSYMLINK, sessp.NoSession, d)
+	nf := MkNamedFile(sp.DMSYMLINK, sp.NoClntId, d)
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {

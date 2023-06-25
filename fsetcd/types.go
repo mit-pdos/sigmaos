@@ -27,7 +27,7 @@ func MarshalDir(dir *NamedDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	nfd := &NamedFile{Perm: uint32(dperm), Data: d, SessionId: uint64(sessp.NoSession)}
+	nfd := &NamedFile{Perm: uint32(dperm), Data: d, ClientId: uint64(sp.NoClntId)}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -43,12 +43,12 @@ func UnmarshalDir(b []byte) (*NamedDir, *serr.Err) {
 	return dir, nil
 }
 
-func MkNamedFile(perm sp.Tperm, sid sessp.Tsession, data []byte) *NamedFile {
-	return &NamedFile{Perm: uint32(perm), Data: data, SessionId: uint64(sid)}
+func MkNamedFile(perm sp.Tperm, cid sp.TclntId, data []byte) *NamedFile {
+	return &NamedFile{Perm: uint32(perm), Data: data, ClientId: uint64(cid)}
 }
 
-func (nf *NamedFile) Tsession() sessp.Tsession {
-	return sessp.Tsession(nf.SessionId)
+func (nf *NamedFile) TclntId() sp.TclntId {
+	return sp.TclntId(nf.ClientId)
 }
 
 func (nf *NamedFile) TLeaseID() clientv3.LeaseID {

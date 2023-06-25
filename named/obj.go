@@ -30,7 +30,7 @@ type Obj struct {
 	pn      path.Path
 	path    sessp.Tpath
 	perm    sp.Tperm
-	sid     sessp.Tsession
+	cid     sp.TclntId
 	lid     clientv3.LeaseID
 	version sp.TQversion
 	parent  sessp.Tpath
@@ -38,8 +38,8 @@ type Obj struct {
 	mtime   int64
 }
 
-func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, sid sessp.Tsession, lid clientv3.LeaseID, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
-	o := &Obj{ec: ec, pn: pn, perm: perm, sid: sid, lid: lid, version: v, path: p, data: data, parent: parent}
+func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, cid sp.TclntId, lid clientv3.LeaseID, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
+	o := &Obj{ec: ec, pn: pn, perm: perm, cid: cid, lid: lid, version: v, path: p, data: data, parent: parent}
 	return o
 }
 
@@ -66,7 +66,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sessp.NoSession, clientv3.NoLease, 0, o.parent, 0, nil))
+	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, 0, o.parent, 0, nil))
 }
 
 // XXX SetParent
@@ -95,12 +95,12 @@ func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tp
 	if err != nil {
 		return nil, err
 	}
-	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.Tsession(), nf.TLeaseID(), sp.TQversion(v), path, parent, nf.Data)
+	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.TclntId(), nf.TLeaseID(), sp.TQversion(v), path, parent, nf.Data)
 	return o, nil
 }
 
 // Marshal empty file or directory
-func mkNamedFile(perm sp.Tperm, path sessp.Tpath, sid sessp.Tsession) (*fsetcd.NamedFile, *serr.Err) {
+func mkNamedFile(perm sp.Tperm, path sessp.Tpath, cid sp.TclntId) (*fsetcd.NamedFile, *serr.Err) {
 	var fdata []byte
 	if perm.IsDir() {
 		nd := &fsetcd.NamedDir{}
@@ -111,10 +111,10 @@ func mkNamedFile(perm sp.Tperm, path sessp.Tpath, sid sessp.Tsession) (*fsetcd.N
 		}
 		fdata = d
 	}
-	return fsetcd.MkNamedFile(perm|0777, sid, fdata), nil
+	return fsetcd.MkNamedFile(perm|0777, cid, fdata), nil
 }
 
 func (o *Obj) putObj() *serr.Err {
-	nf := fsetcd.MkNamedFile(o.perm|0777, o.sid, o.data)
+	nf := fsetcd.MkNamedFile(o.perm|0777, o.cid, o.data)
 	return o.ec.PutFile(o.path, nf)
 }

@@ -22,8 +22,8 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(root fs.Dir, addr, name string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachF) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil, attachf)
+func BootSrv(root fs.Dir, addr, name string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil, attachf, detachf)
 }
 
 func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
@@ -31,7 +31,7 @@ func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.
 }
 
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
-	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil)
+	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil)
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)

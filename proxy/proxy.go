@@ -9,6 +9,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/protclnt"
+	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
@@ -25,7 +26,7 @@ type Npd struct {
 func MakeNpd(lip string) *Npd {
 	npd := &Npd{lip, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
-	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil)
+	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
 	return npd
 }
 
@@ -81,6 +82,7 @@ type NpConn struct {
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
 	fm    *fidMap
+	cid   sp.TclntId
 }
 
 func makeNpConn(lip string) *NpConn {
@@ -89,6 +91,7 @@ func makeNpConn(lip string) *NpConn {
 	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), sp.ROOTREALM, lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
+	npc.cid = sp.TclntId(rand.Uint64())
 	return npc
 }
 
@@ -102,7 +105,7 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF) *sp.Rerror {
+func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
 	u, error := user.Current()
 	if error != nil {
 		return sp.MkRerror(serr.MkErrError(error))
@@ -110,7 +113,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF
 	npc.uname = sp.Tuname(u.Uid)
 
 	mnt := npc.pc.GetMntNamed("proxy")
-	fid, err := npc.fidc.Attach(npc.uname, mnt.Addr, "", "")
+	fid, err := npc.fidc.Attach(npc.uname, npc.cid, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.MkRerror(err)
@@ -126,7 +129,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF
 	return nil
 }
 
-func (npc *NpConn) Detach(rets *sp.Rdetach, detach sps.DetachF) *sp.Rerror {
+func (npc *NpConn) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
 	db.DPrintf(db.PROXY, "Detach\n")
 	return nil
 }

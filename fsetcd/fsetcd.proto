@@ -6,7 +6,7 @@ message NamedFile {
         uint32  perm = 1;
         bytes   data = 2;
         int64   leaseId = 3;
-        uint64  sessionId = 4;
+        uint64  clientId = 4;
 }
 
 message DirEnt {

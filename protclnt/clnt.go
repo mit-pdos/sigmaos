@@ -51,8 +51,8 @@ func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fenc
 	return reply, nil
 }
 
-func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
-	args := sp.MkTattach(fid, sp.NoFid, uname, path)
+func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+	args := sp.MkTattach(fid, sp.NoFid, uname, cid, path)
 	reply, err := clnt.CallServer(addrs, args, nil, sessp.MakeFenceNull())
 	if err != nil {
 		return nil, err
@@ -64,10 +64,10 @@ func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, fid sp.Tfid, path pat
 	return msg, nil
 }
 
-func (clnt *Clnt) Exit() *serr.Err {
+func (clnt *Clnt) Exit(cid sp.TclntId) *serr.Err {
 	scs := clnt.sm.SessClnts()
 	for _, sc := range scs {
-		sc.Detach()
+		sc.Detach(cid)
 	}
 	return nil
 }
@@ -327,8 +327,8 @@ func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Detach() *serr.Err {
-	args := sp.MkTdetach(0, 0)
+func (pclnt *ProtClnt) Detach(cid sp.TclntId) *serr.Err {
+	args := sp.MkTdetach(0, 0, cid)
 	_, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return err

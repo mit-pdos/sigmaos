@@ -66,7 +66,7 @@ func MakeRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
-	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, sp.OWRITE)
+	i, err := root.Create(ctx.MkCtxNull(), name, 0777, sp.OWRITE)
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()

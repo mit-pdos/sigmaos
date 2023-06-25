@@ -21,6 +21,7 @@ type Tlength uint64
 type Tgid uint32
 type Trealm string
 type Tuname string
+type TclntId uint64
 
 const ROOTREALM Trealm = "rootrealm"
 
@@ -40,6 +41,7 @@ func (fid Tfid) String() string {
 // this session.
 const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
+const NoClntId TclntId = ^TclntId(0)
 
 // If need more than MaxGetSet, use Open/Read/Close interface
 const MAXGETSET sessp.Tsize = 1_000_000
@@ -275,12 +277,16 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-func MkTattach(fid, afid Tfid, uname Tuname, path path.Path) *Tattach {
-	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: string(uname), Aname: path.String()}
+func MkTattach(fid, afid Tfid, uname Tuname, cid TclntId, path path.Path) *Tattach {
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: string(uname), Aname: path.String(), ClntId: uint64(cid)}
 }
 
 func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
+}
+
+func (a *Tattach) TclntId() TclntId {
+	return TclntId(a.ClntId)
 }
 
 func MkTopen(fid Tfid, mode Tmode) *Topen {
@@ -494,8 +500,12 @@ func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 
-func MkTdetach(pid, lid uint32) *Tdetach {
-	return &Tdetach{PropId: pid, LeadId: lid}
+func MkTdetach(pid, lid uint32, cid TclntId) *Tdetach {
+	return &Tdetach{PropId: pid, LeadId: lid, ClntId: uint64(cid)}
+}
+
+func (d *Tdetach) TclntId() TclntId {
+	return TclntId(d.ClntId)
 }
 
 func MkTwriteread(fid Tfid) *Twriteread {

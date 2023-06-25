@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessconn"
@@ -111,8 +112,9 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 }
 
 // Send a detach.
-func (c *SessClnt) Detach() *serr.Err {
-	rep, err := c.RPC(sp.MkTdetach(0, 0), nil, sessp.MakeFenceNull())
+func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
+	db.DPrintf(db.ALWAYS, "%v: Send detach %v\n", proc.GetPid(), c.sid)
+	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil, sessp.MakeFenceNull())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err

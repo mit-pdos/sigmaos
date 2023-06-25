@@ -71,20 +71,20 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
-	sid := sessp.NoSession
+	cid := sp.NoClntId
 	if perm.IsEphemeral() {
-		sid = ctx.SessionId()
+		cid = ctx.ClntId()
 	}
-	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v sid %v\n", name, d, dir, v, path, sid)
+	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v cid %v\n", name, d, dir, v, path, cid)
 	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
-	nf, r := mkNamedFile(perm, path, sid)
+	nf, r := mkNamedFile(perm, path, cid)
 	if r != nil {
 		return nil, r
 	}
 	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, nf); err != nil {
 		return nil, err
 	}
-	obj := makeObj(d.ec, pn, perm, sid, clientv3.LeaseID(nf.LeaseId), 0, path, d.Obj.path, nil)
+	obj := makeObj(d.ec, pn, perm, cid, clientv3.LeaseID(nf.LeaseId), 0, path, d.Obj.path, nil)
 	if obj.perm.IsDir() {
 		return makeDir(obj), nil
 	} else {
@@ -303,11 +303,11 @@ func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sessp.NoSession, clientv3.NoLease, 0, ROOT, ROOT, nil))
+	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, 0, ROOT, ROOT, nil))
 }
 
 func mkRootDir(ec *fsetcd.EtcdClnt) *serr.Err {
-	nf, r := mkNamedFile(sp.DMDIR, ROOT, sessp.NoSession)
+	nf, r := mkNamedFile(sp.DMDIR, ROOT, sp.NoClntId)
 	if r != nil {
 		return r
 	}

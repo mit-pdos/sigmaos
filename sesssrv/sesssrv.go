@@ -68,7 +68,7 @@ type SessSrv struct {
 
 func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config,
-	attachf sps.AttachF) *SessSrv {
+	attachf sps.AttachClntF, detachf sps.DetachClntF) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
@@ -78,14 +78,14 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	ssrv.rps = rps
 	ssrv.stats = stats.MkStatsDev(ssrv.root)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
-	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf)
+	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
 	ssrv.vt.Insert(ssrv.root.Path())
 
-	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil), ssrv.root)
+	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtxNull(), ssrv.root)
 
 	dirover.Mount(sp.STATSD, ssrv.stats)
 	dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
@@ -128,12 +128,12 @@ func (ssrv *SessSrv) Root() fs.Dir {
 	return ssrv.root
 }
 
-func (sssrv *SessSrv) RegisterDetach(f sps.DetachF, sid sessp.Tsession) *serr.Err {
+func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) *serr.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, sid)
 	}
-	sess.RegisterDetach(f)
+	sess.RegisterDetachSess(f)
 	return nil
 }
 
@@ -250,8 +250,8 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 	return ssrv.snap
 }
 
-func (ssrv *SessSrv) GetRootCtx(uname string, aname string, sessid sessp.Tsession) (fs.Dir, fs.CtxI) {
-	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
+func (ssrv *SessSrv) GetRootCtx(uname string, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+	return ssrv.root, ctx.MkCtx(uname, sessid, clntid, ssrv.sct)
 }
 
 // New session or new connection for existing session

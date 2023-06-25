@@ -95,7 +95,7 @@ func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
-	ctx := ctx.MkCtx("balancer", 0, nil)
+	ctx := ctx.MkCtx("balancer", 0, sp.NoClntId, nil)
 	err1 := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err1 != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err1)

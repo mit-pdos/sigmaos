@@ -35,7 +35,7 @@ func (nd *Named) startLeader() error {
 	ec.Fence(nd.elect.Key(), nd.elect.Rev())
 
 	root := rootDir(ec, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt, nd.attach)
+	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt, nd.attach, nd.detach)
 	if srv == nil {
 		return fmt.Errorf("BootSrv err %v\n", err)
 	}

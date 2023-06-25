@@ -38,20 +38,15 @@ type Session struct {
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
-	attach        sps.AttachF
-	detach        sps.DetachF
+	attachClnt    sps.AttachClntF
+	detachSess    sps.DetachSessF
+	detachClnt    sps.DetachClntF
 }
 
-func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr, attachf sps.AttachF) *Session {
-	sess := &Session{}
-	sess.threadmgr = t
-	sess.rt = replies.MakeReplyTable(sid)
-	sess.protsrv = protsrv
-	sess.lastHeartbeat = time.Now()
-	sess.Sid = sid
-	sess.ClientId = cid
-	sess.lastHeartbeat = time.Now()
-	sess.attach = attachf
+func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
+	sess := &Session{threadmgr: t, rt: replies.MakeReplyTable(sid), protsrv: protsrv,
+		lastHeartbeat: time.Now(), Sid: sid, ClientId: cid, attachClnt: attachf,
+		detachClnt: detachf}
 	return sess
 }
 
@@ -195,14 +190,20 @@ func (sess *Session) timedOut() (bool, time.Time) {
 	return sess.timedout || time.Since(sess.lastHeartbeat) > sp.Conf.Session.TIMEOUT, sess.lastHeartbeat
 }
 
-func (sess *Session) RegisterDetach(f sps.DetachF) {
+func (sess *Session) RegisterDetachSess(f sps.DetachSessF) {
 	sess.Lock()
 	defer sess.Unlock()
-	sess.detach = f
+	sess.detachSess = f
 }
 
-func (sess *Session) GetDetach() sps.DetachF {
+func (sess *Session) GetDetachSess() sps.DetachSessF {
 	sess.Lock()
 	defer sess.Unlock()
-	return sess.detach
+	return sess.detachSess
+}
+
+func (sess *Session) RegisterDetachClnt(f sps.DetachClntF) {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.detachClnt = f
 }

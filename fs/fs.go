@@ -2,12 +2,12 @@ package fs
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
 	"sigmaos/path"
+	"sigmaos/serr"
 	"sigmaos/sesscond"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -19,6 +19,7 @@ type CtxI interface {
 	Uname() string
 	SessionId() sessp.Tsession
 	SessCondTable() *sesscond.SessCondTable
+	ClntId() sp.TclntId
 	Snapshot() []byte
 }
 

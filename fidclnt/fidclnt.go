@@ -47,8 +47,8 @@ func (fidc *FidClnt) ReadSeqNo() sessp.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }
 
-func (fidc *FidClnt) Exit() *serr.Err {
-	return fidc.pc.Exit()
+func (fidc *FidClnt) Exit(cid sp.TclntId) *serr.Err {
+	return fidc.pc.Exit(cid)
 }
 
 func (fidc *FidClnt) allocFid() sp.Tfid {
@@ -92,9 +92,9 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname sp.Tuname, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(uname sp.Tuname, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
-	reply, err := fidc.pc.Attach(addrs, uname, fid, path.Split(tree))
+	reply, err := fidc.pc.Attach(addrs, uname, cid, fid, path.Split(tree))
 	if err != nil {
 		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
 		fidc.freeFid(fid)
@@ -105,12 +105,12 @@ func (fidc *FidClnt) Attach(uname sp.Tuname, addrs sp.Taddrs, pn, tree string) (
 	return fid, nil
 }
 
-func (fidc *FidClnt) Detach(fid sp.Tfid) *serr.Err {
+func (fidc *FidClnt) Detach(fid sp.Tfid, cid sp.TclntId) *serr.Err {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return serr.MkErr(serr.TErrUnreachable, "detach")
 	}
-	if err := ch.pc.Detach(); err != nil {
+	if err := ch.pc.Detach(cid); err != nil {
 		return err
 	}
 	return nil

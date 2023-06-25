@@ -42,5 +42,6 @@ func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 }
 
 func (fl *FsLib) Exit() error {
+	db.DPrintf(db.ALWAYS, "%v: exit fslib\n", proc.GetPid())
 	return fl.PathClnt.Exit()
 }

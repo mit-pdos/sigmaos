@@ -12,7 +12,6 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -97,10 +96,14 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) attach(sid sessp.Tsession) {
-	db.DPrintf(db.NAMED, "named: attach %v\n", sid)
-	nd.SessSrv.RegisterDetach(nd.ec.GetDetach(), sid)
-	nd.ec.Recover(sid)
+func (nd *Named) attach(cid sp.TclntId) {
+	db.DPrintf(db.NAMED, "named: attach %v\n", cid)
+	nd.ec.Recover(cid)
+}
+
+func (nd *Named) detach(cid sp.TclntId) {
+	db.DPrintf(db.NAMED, "named: detach %v\n", cid)
+	nd.ec.Detach(cid)
 }
 
 func (nd *Named) resign() error {

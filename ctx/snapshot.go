@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/sesscond"
+	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 type CtxSnapshot struct {
@@ -35,6 +36,6 @@ func Restore(sct *sesscond.SessCondTable, b []byte) *Ctx {
 	if err != nil {
 		db.DFatalf("error unmarshal ctx in restore: %v", err)
 	}
-	ctx := MkCtx(cs.Uname, cs.Sessid, sct)
+	ctx := MkCtx(cs.Uname, cs.Sessid, sp.NoClntId, sct)
 	return ctx
 }

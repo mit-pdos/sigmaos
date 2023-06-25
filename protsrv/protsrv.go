@@ -64,10 +64,10 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.MkRerror(serr.MkErr(serr.TErrNotSupported, "Auth"))
 }
 
-func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF) *sp.Rerror {
+func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
 	db.DPrintf(db.ALWAYS, "Attach %v sid %v", args, ps.sid)
 	p := path.Split(args.Aname)
-	root, ctx := ps.ssrv.GetRootCtx(args.Uname, args.Aname, ps.sid)
+	root, ctx := ps.ssrv.GetRootCtx(args.Uname, args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.mkQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
@@ -89,14 +89,14 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachF
 	ps.ft.Add(args.Tfid(), fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	if attach != nil {
-		attach(ctx.SessionId())
+		attach(args.TclntId())
 	}
 	return nil
 }
 
 // Delete ephemeral files created on this session.
-func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sps.DetachF) *sp.Rerror {
-	db.DPrintf(db.PROTSRV, "Detach %v eph %v", ps.sid, ps.et.Get())
+func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
+	db.DPrintf(db.ALWAYS, "Detach cid %v sess %v eph %v", args.TclntId(), ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
@@ -109,7 +109,7 @@ func (ps *ProtSrv) Detach(rets *sp.Rdetach, detach sps.DetachF) *sp.Rerror {
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	if detach != nil {
-		detach(ps.sid)
+		detach(args.TclntId())
 	}
 	return nil
 }

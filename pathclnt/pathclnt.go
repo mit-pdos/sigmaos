@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
+	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -29,6 +30,7 @@ type PathClnt struct {
 	chunkSz sessp.Tsize
 	realm   sp.Trealm
 	lip     string
+	cid     sp.TclntId
 }
 
 func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
@@ -39,6 +41,7 @@ func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip st
 		pathc.FidClnt = fidc
 	}
 	pathc.rootmt = mkRootMountTable()
+	pathc.cid = sp.TclntId(rand.Uint64())
 	return pathc
 }
 
@@ -69,7 +72,7 @@ func (pathc *PathClnt) Mounts() []string {
 }
 
 func (pathc *PathClnt) MountTree(uname sp.Tuname, addrs sp.Taddrs, tree, mnt string) error {
-	if fd, err := pathc.Attach(uname, addrs, "", tree); err == nil {
+	if fd, err := pathc.Attach(uname, pathc.cid, addrs, "", tree); err == nil {
 		return pathc.Mount(fd, mnt)
 	} else {
 		return err
@@ -88,7 +91,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 
 // Exit the path client, closing all sessions
 func (pathc *PathClnt) Exit() error {
-	return pathc.FidClnt.Exit()
+	return pathc.FidClnt.Exit(pathc.cid)
 }
 
 // Detach from server. XXX Mixes up umount a file system at server and
@@ -100,7 +103,7 @@ func (pathc *PathClnt) Detach(pn string) error {
 		return err
 	}
 	defer pathc.FidClnt.Free(fid)
-	if err := pathc.FidClnt.Detach(fid); err != nil {
+	if err := pathc.FidClnt.Detach(fid, pathc.cid); err != nil {
 		return err
 	}
 	return nil

@@ -20,12 +20,12 @@ type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
-	detach    sps.DetachF
+	detach    sps.DetachSessF
 	fn        string
 	wctl      WriteCtlF
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sps.DetachF, w WriteCtlF) *serr.Err {
+func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
 	err := mfs.MkDev(sessdev.CloneName(fn), cl) // put clone file into root dir
@@ -59,7 +59,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 			db.DPrintf(db.CLONEDEV, "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
 			return nil, err
 		}
-		if err := c.mfs.RegisterDetach(c.Detach, sid); err != nil {
+		if err := c.mfs.RegisterDetachSess(c.Detach, sid); err != nil {
 			db.DPrintf(db.CLONEDEV, "%v: RegisterDetach err %v\n", proc.GetName(), err)
 		}
 		if err := c.mksession(c.mfs, sid); err != nil {
@@ -97,7 +97,7 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sps.DetachF, w WriteCtlF) error {
+func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
 	if err := makeClone(mfs, fn, f, d, w); err != nil {
 		return err
 	}

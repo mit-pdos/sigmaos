@@ -61,6 +61,7 @@ message Tattach {
         uint32 afid = 2;
         string uname = 3;
         string aname = 4;
+        uint64 clntId = 5;
 }
 
 message Rattach {
@@ -190,6 +191,7 @@ message Tputfile {
 message Tdetach {
         uint32 propId = 1;
         uint32 leadId = 2;
+        uint64 clntId = 3;
 }
 
 message Rdetach {

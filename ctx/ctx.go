@@ -7,13 +7,13 @@ import (
 )
 
 type Ctx struct {
-	uname  string
+	uname  sp.Tuname
 	sessid sessp.Tsession
 	clntid sp.TclntId
 	sct    *sesscond.SessCondTable
 }
 
-func MkCtx(uname string, sessid sessp.Tsession, clntid sp.TclntId, sct *sesscond.SessCondTable) *Ctx {
+func MkCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *sesscond.SessCondTable) *Ctx {
 	return &Ctx{uname, sessid, clntid, sct}
 }
 
@@ -21,7 +21,7 @@ func MkCtxNull() *Ctx {
 	return MkCtx("", 0, sp.NoClntId, nil)
 }
 
-func (ctx *Ctx) Uname() string {
+func (ctx *Ctx) Uname() sp.Tuname {
 	return ctx.uname
 }
 

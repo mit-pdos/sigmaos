@@ -61,7 +61,7 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 	if err != nil {
 		return nil, err
 	}
-	mfs := &MemFs{SessSrv: srv, root: root, ctx: ctx.MkCtx(pn, 0, sp.NoClntId, nil),
+	mfs := &MemFs{SessSrv: srv, root: root, ctx: ctx.MkCtx(sp.Tuname(pn), 0, sp.NoClntId, nil),
 		plt: srv.GetPathLockTable(), sc: sc}
 	return mfs, nil
 }

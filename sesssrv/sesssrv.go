@@ -250,7 +250,7 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 	return ssrv.snap
 }
 
-func (ssrv *SessSrv) GetRootCtx(uname string, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return ssrv.root, ctx.MkCtx(uname, sessid, clntid, ssrv.sct)
 }
 

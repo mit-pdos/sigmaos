@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -18,7 +18,7 @@ type Inode struct {
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
-	owner  string
+	owner  sp.Tuname
 }
 
 var NextInum = uint64(0)
@@ -102,7 +102,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	defer inode.mu.Unlock()
 
 	st := sp.MkStat(sp.MakeQidPerm(inode.perm, 0, inode.inum),
-		inode.Mode(), uint32(inode.mtime), "", inode.owner)
+		inode.Mode(), uint32(inode.mtime), "", string(inode.owner))
 	return st, nil
 }
 

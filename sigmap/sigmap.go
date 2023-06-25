@@ -285,6 +285,10 @@ func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
 }
 
+func (a *Tattach) Tuname() Tuname {
+	return Tuname(a.Uname)
+}
+
 func (a *Tattach) TclntId() TclntId {
 	return TclntId(a.ClntId)
 }

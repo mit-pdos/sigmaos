@@ -10,7 +10,7 @@ import (
 )
 
 type CtxSnapshot struct {
-	Uname  string
+	Uname  sp.Tuname
 	Sessid sessp.Tsession
 }
 

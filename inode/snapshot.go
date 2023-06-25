@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fs"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -13,7 +13,7 @@ type InodeSnapshot struct {
 	Perm   sp.Tperm
 	Mtime  int64
 	Parent sessp.Tpath
-	Owner  string
+	Owner  sp.Tuname
 	Nlink  int
 }
 

@@ -112,7 +112,7 @@ func (s *Subsystem) Terminate() error {
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *Subsystem) Kill() error {
 	s.crashed = true
-	db.DPrintf(db.KERNEL, "kill %v\n", s)
+	db.DPrintf(db.KERNEL, "Kill %v\n", s)
 	if s.p.Program == "knamed" {
 		return stopKNamed(s.cmd)
 	}
@@ -125,10 +125,7 @@ func (s *Subsystem) Kill() error {
 		return err
 	}
 	db.DPrintf(db.ALWAYS, "kill %v\n", s.cmd.Process.Pid)
-	if err := syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL); err != nil {
-		return err
-	}
-	return s.cmd.Wait()
+	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
 }
 
 func (s *Subsystem) Wait() {

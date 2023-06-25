@@ -76,6 +76,8 @@ func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()
 
+	db.DPrintf(db.KERNEL, "KillOne %v\n", srv)
+
 	var ss *Subsystem
 	if _, ok := k.svcs.svcs[srv]; !ok {
 		return fmt.Errorf("Unknown kernel service %v", srv)
@@ -86,9 +88,7 @@ func (k *Kernel) KillOne(srv string) error {
 	} else {
 		return fmt.Errorf("Tried to kill %s, nothing to kill", srv)
 	}
-	db.DPrintf(db.KERNEL, "Kill %v %v %v\n", srv, ss.cmd.ExtraFiles)
-	err := ss.Kill()
-	if err == nil {
+	if err := ss.Kill(); err == nil {
 		ss.Wait()
 	} else {
 		return fmt.Errorf("Kill %v err %v", srv, err)

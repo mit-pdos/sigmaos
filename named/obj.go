@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/client/v3"
-	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -29,7 +28,7 @@ type Obj struct {
 	ec   *fsetcd.EtcdClnt
 	pn   path.Path
 	path sessp.Tpath
-	// nf     *fsetcd.NamedFile
+	// nf     *fsetcd.NamgedFile
 	perm   sp.Tperm
 	cid    sp.TclntId
 	lid    clientv3.LeaseID
@@ -102,21 +101,6 @@ func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tp
 	}
 	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.TclntId(), nf.TLeaseID(), path, parent, nf.Data)
 	return o, nil
-}
-
-// Marshal empty file or directory
-func mkNamedFile(perm sp.Tperm, path sessp.Tpath, cid sp.TclntId) (*fsetcd.NamedFile, *serr.Err) {
-	var fdata []byte
-	if perm.IsDir() {
-		nd := &fsetcd.NamedDir{}
-		nd.Ents = append(nd.Ents, &fsetcd.DirEnt{Name: ".", Path: uint64(path)})
-		d, err := proto.Marshal(nd)
-		if err != nil {
-			return nil, serr.MkErrError(err)
-		}
-		fdata = d
-	}
-	return fsetcd.MkNamedFile(perm|0777, cid, fdata), nil
 }
 
 func (o *Obj) putObj() *serr.Err {

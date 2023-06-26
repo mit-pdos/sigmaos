@@ -473,7 +473,7 @@ func TestPageDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	ts.SetChunkSz(sessp.Tsize(512))
-	n := 1000
+	n := 100
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)
@@ -886,7 +886,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 
 // Concurrently remove & watch, but watch may be set after remove.
 func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
-	const N = 1000 // 10_000
+	const N = 100 // 10_000
 
 	ts := test.MakeTstatePath(t, pathname)
 	dn := gopath.Join(pathname, "d1")

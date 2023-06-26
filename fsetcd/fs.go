@@ -11,6 +11,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/sorteddir"
 )
 
 const (
@@ -66,7 +67,7 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 	}
 }
 
-func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) {
+func (ec *EtcdClnt) readDir(p sessp.Tpath) (*DirInfo, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.ETCDCLNT, "readDir %v\n", p)
 	nf, v, err := ec.GetFile(p)
 	if err != nil {
@@ -76,11 +77,23 @@ func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) 
 	if err != nil {
 		return nil, 0, err
 	}
-	return dir, v, nil
+	dents := sorteddir.MkSortedDir()
+	for _, e := range dir.Ents {
+		if e.Name == "." {
+			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath()})
+		} else {
+			nf, _, err := ec.GetFile(e.Tpath())
+			if err != nil {
+				db.DPrintf(db.ETCDCLNT, "readDir: GetFile %v %v\n", e.Name, err)
+				continue
+			}
+			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath()})
+		}
+	}
+	return &DirInfo{dents, nf.Tperm()}, v, nil
 }
 
-// XXX retry
-func (ec *EtcdClnt) create(dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, p sessp.Tpath, nf *NamedFile) *serr.Err {
+func (ec *EtcdClnt) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.Tpath, nf *NamedFile) *serr.Err {
 	opts, sr := ec.lmgr.LeaseOpts(nf)
 	if sr != nil {
 		return sr
@@ -89,7 +102,7 @@ func (ec *EtcdClnt) create(dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.T
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	d1, r := MarshalDir(dir, dperm)
+	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
 	}
@@ -113,8 +126,8 @@ func (ec *EtcdClnt) create(dp sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.T
 	return nil
 }
 
-func (ec *EtcdClnt) Remove(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := MarshalDir(dir, dperm)
+func (ec *EtcdClnt) remove(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
 	}
@@ -138,8 +151,8 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 }
 
 // XXX retry
-func (ec *EtcdClnt) Rename(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQversion, del sessp.Tpath) *serr.Err {
-	d1, r := MarshalDir(dir, dperm)
+func (ec *EtcdClnt) rename(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.Tpath) *serr.Err {
+	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
 	}
@@ -171,12 +184,12 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, dir *NamedDir, dperm sp.Tperm, v sp.TQ
 }
 
 // XXX retry
-func (ec *EtcdClnt) RenameAt(df sessp.Tpath, dirf *NamedDir, dirfperm sp.Tperm, vf sp.TQversion, dt sessp.Tpath, dirt *NamedDir, dirtperm sp.Tperm, vt sp.TQversion, del sessp.Tpath) *serr.Err {
-	bf, r := MarshalDir(dirf, dirfperm)
+func (ec *EtcdClnt) renameAt(df sessp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sessp.Tpath, dirt *DirInfo, vt sp.TQversion, del sessp.Tpath) *serr.Err {
+	bf, r := marshalDirInfo(dirf)
 	if r != nil {
 		return r
 	}
-	bt, r := MarshalDir(dirt, dirtperm)
+	bt, r := marshalDirInfo(dirt)
 	if r != nil {
 		return r
 	}

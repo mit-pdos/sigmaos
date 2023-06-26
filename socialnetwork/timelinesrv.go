@@ -5,14 +5,14 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	"sigmaos/cacheclnt"
 	"sigmaos/protdevclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 	"fmt"
-	"sort"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
@@ -25,7 +25,7 @@ const (
 )
 
 type TimelineSrv struct {
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
 	postc  *protdevclnt.ProtDevClnt
 }
@@ -37,11 +37,12 @@ func RunTimelineSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	tlsrv.dbc = dbc
+	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
+	tlsrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
@@ -66,21 +67,20 @@ func RunTimelineSrv(public bool, jobname string) error {
 func (tlsrv *TimelineSrv) WriteTimeline(
 		ctx fs.CtxI, req proto.WriteTimelineRequest, res *proto.WriteTimelineResponse) error {
 	res.Ok = "No"
-	item := req.Timelineitem
-	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_timeline (userid, postid, timestamp) VALUES ('%v', '%v', '%v')", 
-		item.Userid, item.Postid, item.Timestamp)
-	if err := tlsrv.dbc.Exec(q); err != nil {
-		return nil
+	err := tlsrv.mongoc.Upsert(
+		SN_DB, TIMELINE_COL, bson.M{"userid": req.Userid},
+		bson.M{"$push": bson.M{"postids": req.Postid, "timestamps": req.Timestamp}})
+	if err != nil {
+		return err
 	}
 	res.Ok = TIMELINE_QUERY_OK
-	key := TIMELINE_CACHE_PREFIX + strconv.FormatInt(item.Userid, 10)
+	key := TIMELINE_CACHE_PREFIX + strconv.FormatInt(req.Userid, 10)
 	if err := tlsrv.cachec.Delete(key); err != nil {
 		if !tlsrv.cachec.IsMiss(err) {
 			return err
-		} 
+		}
 	}
-	return nil 
+	return nil
 }
 
 func (tlsrv *TimelineSrv) ReadTimeline(
@@ -101,49 +101,46 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 	}	
 	postids := make([]int64, stop-start)
 	for i := start; i < stop; i++ {
-		postids[i-start] = timeline.Postids[i]
+		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
 	readPostReq := proto.ReadPostsRequest{Postids: postids}
 	readPostRes := proto.ReadPostsResponse{}
 	if err := tlsrv.postc.RPC("Post.ReadPosts", &readPostReq, &readPostRes); err != nil {
-		return err 
+		return err
 	}
 	res.Ok = readPostRes.Ok
 	res.Posts = readPostRes.Posts
 	return nil
 }
 
-func (tlsrv *TimelineSrv) getUserTimeline(userid int64) (*proto.Timeline, error) {
-	key := TIMELINE_CACHE_PREFIX + strconv.FormatInt(userid, 10) 
-	timeline := &proto.Timeline{}
-	if err := tlsrv.cachec.Get(key, timeline); err != nil {
+func (tlsrv *TimelineSrv) getUserTimeline(userid int64) (*Timeline, error) {
+	key := TIMELINE_CACHE_PREFIX + strconv.FormatInt(userid, 10)
+	timeline := &Timeline{}
+	cacheItem := &proto.CacheItem{}
+	if err := tlsrv.cachec.Get(key, cacheItem); err != nil {
 		if !tlsrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Timeline %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_timeline where userid='%v';", userid)
-		var timelineItems []proto.TimelineItem
-		if err := tlsrv.dbc.Query(q, &timelineItems); err != nil {
+		found, err := tlsrv.mongoc.FindOne(SN_DB, TIMELINE_COL, bson.M{"userid": userid}, timeline)
+		if err != nil {
 			return nil, err
 		}
-		nItems := len(timelineItems)
-		if nItems == 0 {
+		if !found {
 			return nil, nil
 		}
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Found %v items for %v in DB.", nItems, userid)
-		// sort timeline items in reverse order
-		sort.Slice(timelineItems, func(i, j int) bool {
-			return timelineItems[i].Timestamp > timelineItems[j].Timestamp})
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "sorted items: %v\n", timelineItems)
-		timeline.Userid = userid
-		timeline.Postids = make([]int64, nItems)
-		timeline.Timestamps = make([]int64, nItems)
-		for i, item := range(timelineItems) {
-			timeline.Postids[i], timeline.Timestamps[i] = item.Postid, item.Timestamp
-		}
-		tlsrv.cachec.Put(key, timeline)
+		encoded, _ := bson.Marshal(timeline)	
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Found timeline %v in DB: %v", userid, timeline)
+		tlsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 	} else {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Found timeline %v in cache!\n", userid)
+		bson.Unmarshal(cacheItem.Val, timeline)
 	}
 	return timeline, nil
+}
+
+type Timeline struct {
+	Userid     int64   `bson:userid`
+	Postids    []int64 `bson:postids`
+	Timestamps []int64 `bson:timestamps`
 }

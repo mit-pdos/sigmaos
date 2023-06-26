@@ -6,12 +6,13 @@ import (
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/protdevclnt"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 	"fmt"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
@@ -25,7 +26,7 @@ const (
 )
 
 type GraphSrv struct {
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
 	userc  *protdevclnt.ProtDevClnt
 }
@@ -37,11 +38,14 @@ func RunGraphSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	gsrv.dbc = dbc
+	mongoc.EnsureIndex(SN_DB, GRAPH_FLWER_COL, []string{"userid"})
+	mongoc.EnsureIndex(SN_DB, GRAPH_FLWEE_COL, []string{"userid"})
+	gsrv.mongoc = mongoc
+
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
@@ -119,18 +123,24 @@ func (gsrv *GraphSrv) updateGraph(
 		}
 		return nil
 	}
-	var q string
+	var err1, err2 error
 	if isFollow {
-		q = fmt.Sprintf(
-			"INSERT INTO socialnetwork_graph (followerid, followeeid) VALUES ('%v', '%v');", 
-			followerid, followeeid)
+		err1 = gsrv.mongoc.Upsert(
+			SN_DB, GRAPH_FLWER_COL, bson.M{"userid": followeeid},
+			bson.M{"$addToSet": bson.M{"edges": followerid}})
+		err2 = gsrv.mongoc.Upsert(
+			SN_DB, GRAPH_FLWEE_COL, bson.M{"userid": followerid},
+			bson.M{"$addToSet": bson.M{"edges": followeeid}})
 	} else {
-		q = fmt.Sprintf(
-			"DELETE FROM socialnetwork_graph WHERE followerid='%v' AND followeeid='%v';", 
-			followerid, followeeid)
+		err1 = gsrv.mongoc.Update(
+			SN_DB, GRAPH_FLWER_COL, bson.M{"userid": followeeid},
+			bson.M{"$pull": bson.M{"edges": followerid}})
+		err2 = gsrv.mongoc.Update(
+			SN_DB, GRAPH_FLWEE_COL, bson.M{"userid": followerid},
+			bson.M{"$pull": bson.M{"edges": followeeid}})
 	}
-	if err := gsrv.dbc.Exec(q); err != nil {
-		return err
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("error updating graph %v %v", err1, err2)
 	}
 	res.Ok = GRAPH_QUERY_OK
 	return gsrv.clearCache(followerid, followeeid)
@@ -168,12 +178,12 @@ func (gsrv *GraphSrv) clearCache(followerid, followeeid int64) error {
 	if err := gsrv.cachec.Delete(follower_key); err != nil {
 		if !gsrv.cachec.IsMiss(err) {
 			return err
-		} 
+		}
 	}	
 	if err := gsrv.cachec.Delete(followee_key); err != nil {
 		if !gsrv.cachec.IsMiss(err) {
 			return err
-		} 
+		}
 	}
 	return nil
 }
@@ -181,54 +191,57 @@ func (gsrv *GraphSrv) clearCache(followerid, followeeid int64) error {
 // Define getFollowers and getFollowees explicitly for clarity
 func (gsrv *GraphSrv) getFollowers(userid int64) ([]int64, error) {
 	key := FOLLOWER_CACHE_PREFIX + strconv.FormatInt(userid, 10)
-	followers := &proto.UseridList{}
-	if err := gsrv.cachec.Get(key, followers); err != nil {
+	flwERInfo := &EdgeInfo{}
+	cacheItem := &proto.CacheItem{}
+	if err := gsrv.cachec.Get(key, cacheItem); err != nil {
 		if !gsrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "FollowER %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_graph where followeeid='%v';", userid)
-		var edges []proto.Edge
-		if err := gsrv.dbc.Query(q, &edges); err != nil {
+		f, err := gsrv.mongoc.FindOne(SN_DB, GRAPH_FLWER_COL, bson.M{"userid": userid}, flwERInfo)
+		if err != nil {
 			return nil, err
 		}
-		if len(edges) == 0 {
+		if !f {
 			return make([]int64, 0), nil
 		}
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followERs for  %v in DB: %v\n", userid, edges)
-		for _, edge := range(edges) {
-			followers.Userids = append(followers.Userids, edge.Followerid)
-		}
-		gsrv.cachec.Put(key, followers)
+		encoded, _ := bson.Marshal(flwERInfo)
+		gsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followERs for %v in DB: %v", userid, flwERInfo)
 	} else {
+		bson.Unmarshal(cacheItem.Val, flwERInfo)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followERs for %v in cache!\n", userid)
 	}	
-	return followers.Userids, nil
+	return flwERInfo.Edges, nil
 }
 
 func (gsrv *GraphSrv) getFollowees(userid int64) ([]int64, error) {
 	key := FOLLOWEE_CACHE_PREFIX + strconv.FormatInt(userid, 10)
-	followees := &proto.UseridList{}
-	if err := gsrv.cachec.Get(key, followees); err != nil {
+	flwEEInfo := &EdgeInfo{}
+	cacheItem := &proto.CacheItem{}
+	if err := gsrv.cachec.Get(key, cacheItem); err != nil {
 		if !gsrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "FollowEE %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_graph where followerid='%v';", userid)
-		var edges []proto.Edge
-		if err := gsrv.dbc.Query(q, &edges); err != nil {
+		f, err := gsrv.mongoc.FindOne(SN_DB, GRAPH_FLWEE_COL, bson.M{"userid": userid}, flwEEInfo)
+		if err != nil {
 			return nil, err
 		}
-		if len(edges) == 0 {
+		if !f {
 			return make([]int64, 0), nil
 		}
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followEEs for  %v in DB: %v\n", userid, edges)
-		for _, edge := range(edges) {
-			followees.Userids = append(followees.Userids, edge.Followeeid)
-		}
-		gsrv.cachec.Put(key, followees)
+		encoded, _ := bson.Marshal(flwEEInfo)
+		gsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followEEs for  %v in DB: %v", userid, flwEEInfo)
 	} else {
+		bson.Unmarshal(cacheItem.Val, flwEEInfo)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followEEs for %v in cache!\n", userid)
 	}	
-	return followees.Userids, nil
+	return flwEEInfo.Edges, nil
+}
+
+type EdgeInfo struct {
+	Userid int64   `bson:userid`
+	Edges  []int64 `bson:edges`
 }

@@ -225,10 +225,10 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		if username == "" {
 			http.Error(w, "Please specify username or id", http.StatusBadRequest)
 			return
-		} 
+		}
 		var res proto.CheckUserResponse
 		// retrieve userid
-		err := s.userc.RPC("User.CheckUser", 
+		err := s.userc.RPC("User.CheckUser",
 			&proto.CheckUserRequest{Usernames: []string{username}}, &res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -288,7 +288,7 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 		debugInfo = "Home timeline request"
 	}
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "%s: %v\n", debugInfo, urlQuery)
-	useridstr, startstr, stopstr := 
+	useridstr, startstr, stopstr :=
 		urlQuery.Get("userid"), urlQuery.Get("start"),urlQuery.Get("stop")
 	var err, err1, err2, err3 error
 	var start, stop int64
@@ -328,7 +328,7 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 	} else {
 		for _, post := range res.Posts {
 			postTimes += time.Unix(0, post.Timestamp).Format(time.UnixDate) + "; "
-			postCreators += post.Creator.Username + "; "
+			postCreators += post.Creatoruname + "; "
 			postContents += post.Text + "; "
 		}
 	}

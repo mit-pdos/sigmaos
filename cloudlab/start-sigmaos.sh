@@ -61,7 +61,7 @@ fi
 DIR=$(dirname $0)
 source $DIR/env.sh
 
-vms=`cat servers.txt | cut -d " " -f2` 
+vms=`cat sigma-servers.txt | cut -d " " -f2`
 
 vma=($vms)
 MAIN="${vma[0]}"

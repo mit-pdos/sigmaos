@@ -22,7 +22,7 @@ message GetFolloweesRequest {
 message GraphGetResponse {
 	string ok = 1;
 	repeated int64 userids = 2;
-} 
+}
 
 message FollowRequest { int64 followerid = 1;
 	int64 followeeid = 2;
@@ -45,13 +45,4 @@ message UnfollowWithUnameRequest {
 
 message GraphUpdateResponse {
 	string ok = 1;
-}
-
-message Edge {
-	int64 followerid = 1;
-	int64 followeeid = 2;
-}
-
-message UseridList {
-	repeated int64 userids = 1;
 }

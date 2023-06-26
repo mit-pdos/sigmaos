@@ -47,19 +47,37 @@ func makeFullTstateSN(t *testing.T) *TstateSN {
 	return tssn
 }
 
-func TestBenchmarkSigmaOS(t *testing.T) {
-	if !BENCH_TEST {
+func testTemplate(t *testing.T, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
+	if isBenchTest && !BENCH_TEST {
 		dbg.DPrintf(dbg.ALWAYS, "Skipping benchmark test")
 		return
 	}
-	tssn := makeFullTstateSN(t)
-	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+	var wc *sn.WebClnt
+	var tssn *TstateSN
+	if K8S_ADDR == "" {
+		dbg.DPrintf(dbg.ALWAYS, "No k8s addr. Running SigmaOS")
+		tssn = makeFullTstateSN(t)
+		wc = sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+	} else {
+		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
+		tssn = makeTstateSN(t, nil, 0)
+		setupK8sState(tssn)
+		wc = sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+	}
 
 	// run tests
-	testBenchmarkInner(t, wc)
+	testFunc(t, wc)
 
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
+}
+
+func TestFrontend(t *testing.T) {
+	testTemplate(t, false, testFrontEndInner)
+}
+
+func TestBenchmark(t *testing.T) {
+	testTemplate(t, true, testBenchmarkInner)
 }
 
 func testBenchmarkInner(t *testing.T, wc *sn.WebClnt) {
@@ -83,9 +101,9 @@ func testBenchmarkInner(t *testing.T, wc *sn.WebClnt) {
 		if i % (N_COMPOSE/10) == 0 {
 			dbg.DPrintf(dbg.TEST, "Check point at %v: %v", i, time.Since(t0).Microseconds())
 		}
-		meStr := users[i%sn.NUSER] 
+		meStr := users[i%sn.NUSER]
 		msg := fmt.Sprintf(
-			"My post #%d! @user_%d@user_%d https://www.google.com/?search=%d", 
+			"My post #%d! @user_%d@user_%d https://www.google.com/?search=%d",
 			i, (i+2)%sn.NUSER, (i+7)%sn.NUSER, i)
 		s, err := wc.ComposePost("user_"+meStr, "", msg, "post")
 		assert.Nil(t, err)
@@ -100,34 +118,6 @@ func testBenchmarkInner(t *testing.T, wc *sn.WebClnt) {
 		}
 	}
 	dbg.DPrintf(dbg.TEST, "Finish time : %v", time.Since(t0).Microseconds())
-}
-
-func TestFrontendK8s(t *testing.T) {
-	if K8S_ADDR == "" {
-		dbg.DPrintf(dbg.ALWAYS, "No k8s addr supplied")
-		return
-	}
-	tssn := makeTstateSN(t, nil, 0)
-	setupK8sState(tssn)
-	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
-
-	// run tests
-	testFrontEndInner(t, wc)
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
-}
-
-func TestFrontend(t *testing.T) {
-	// start server and creat web client
-	tssn := makeFullTstateSN(t)
-	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
-
-	// run tests
-	testFrontEndInner(t, wc)
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func testFrontEndInner(t *testing.T, wc *sn.WebClnt) {
@@ -179,5 +169,3 @@ func testFrontEndInner(t *testing.T, wc *sn.WebClnt) {
 	assert.Equal(t, "Timeline successfully!", repl["message"].(string))
 	assert.True(t, strings.HasPrefix(repl["contents"].(string), "First post!"))
 }
-
-

@@ -109,6 +109,7 @@ const (
 	S3                       = "S3"
 	UX                       = "UX"
 	DB                       = "DB"
+	MONGO                    = "MONGO"
 	PROXY                    = "PROXY"
 	FW                       = "FW"
 )

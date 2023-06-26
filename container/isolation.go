@@ -81,7 +81,7 @@ func finishIsolation() {
 func jailProcess() error {
 	newRoot := jailPath(proc.GetPid())
 	// Create directories to use as mount points, as well as the new root directory itself.
-	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH} {
+	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH, "cgroup"} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {
 			db.DPrintf(db.ALWAYS, "failed to mkdir [%v]: %v", d, err)
 			return err
@@ -125,6 +125,11 @@ func jailProcess() error {
 	// Mount realm's seccomp directory as /seccomp
 	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "seccomp"), "seccomp", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount seccomp: %v", err)
+		return err
+	}
+	// Mount cgroups.
+	if err := syscall.Mount("/cgroup", "cgroup", "none", syscall.MS_BIND, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount cgroup: %v", err)
 		return err
 	}
 	// Mount perf dir (remove starting first slash)

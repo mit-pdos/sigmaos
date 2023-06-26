@@ -1,16 +1,21 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel]" 1>&2
+  echo "Usage: $0 [--parallel] [--nopurge]" 1>&2
 }
 
 PARALLEL=""
+PURGE="true"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --parallel)
     shift
     PARALLEL="--parallel"
+    ;;
+  --nopurge)
+    shift
+    PURGE=""
     ;;
   -help)
     usage
@@ -49,7 +54,9 @@ fi
 
 wait
 
-yes | docker system prune
-yes | docker volume prune
+if ! [ -z $PURGE ]; then
+  yes | docker system prune
+  yes | docker volume prune
+fi
 
 sudo rm -rf /tmp/sigmaos-bin

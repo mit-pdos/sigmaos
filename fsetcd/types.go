@@ -43,8 +43,21 @@ func UnmarshalDir(b []byte) (*NamedDir, *serr.Err) {
 	return dir, nil
 }
 
+func (dir *NamedDir) lookup(name string) (*DirEnt, bool) {
+	for _, e := range dir.Ents {
+		if e.Name == name {
+			return e, true
+		}
+	}
+	return nil, false
+}
+
 func MkNamedFile(perm sp.Tperm, cid sp.TclntId, data []byte) *NamedFile {
 	return &NamedFile{Perm: uint32(perm), Data: data, ClientId: uint64(cid)}
+}
+
+func (nf *NamedFile) Tperm() sp.Tperm {
+	return sp.Tperm(nf.Perm)
 }
 
 func (nf *NamedFile) TclntId() sp.TclntId {

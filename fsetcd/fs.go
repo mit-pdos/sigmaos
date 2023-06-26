@@ -67,6 +67,22 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 	}
 }
 
+func (ec *EtcdClnt) Lookup(d sessp.Tpath, name string) (sessp.Tpath, *NamedFile, *serr.Err) {
+	dir, _, err := ec.ReadDir(d)
+	if err != nil {
+		return sessp.NoPath, nil, err
+	}
+	e, ok := dir.lookup(name)
+	if ok {
+		nf, _, err := ec.GetFile(sessp.Tpath(e.Path))
+		if err != nil {
+			return sessp.NoPath, nil, err
+		}
+		return sessp.Tpath(e.Path), nf, nil
+	}
+	return sessp.NoPath, nil, serr.MkErr(serr.TErrNotfound, name)
+}
+
 func (ec *EtcdClnt) ReadDir(p sessp.Tpath) (*NamedDir, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.ETCDCLNT, "readDir %v\n", p)
 	nf, v, err := ec.GetFile(p)

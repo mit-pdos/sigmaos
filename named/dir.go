@@ -34,31 +34,24 @@ func makeDir(o *Obj) *Dir {
 	return dir
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
-	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, path, d)
-	dir, _, err := d.ec.ReadDir(d.Obj.path)
-	if err != nil {
-		return nil, nil, path, err
-	}
-	e, ok := lookup(dir, path[0])
-	if ok {
-		pn := d.pn.Copy().Append(e.Name)
-		if obj, err := getObj(d.ec, pn, sessp.Tpath(e.Path), d.Obj.path); err != nil {
-			return nil, nil, path, err
+func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
+	name := pn[0]
+	p, nf, err := d.ec.Lookup(d.Obj.path, name)
+	if err == nil {
+		pn1 := d.pn.Copy().Append(name)
+		obj := makeObjNf(d.ec, pn1, p, nf, d.Obj.path)
+		var o fs.FsObj
+		if obj.perm.IsDir() {
+			o = makeDir(obj)
 		} else {
-			var o fs.FsObj
-			if obj.perm.IsDir() {
-				o = makeDir(obj)
-			} else {
-				o = makeFile(obj)
-			}
-			return []fs.FsObj{o}, o, path[1:], nil
+			o = makeFile(obj)
 		}
+		return []fs.FsObj{o}, o, pn[1:], nil
 	}
-	return nil, nil, path, serr.MkErr(serr.TErrNotfound, path[0])
+	return nil, nil, pn, err
 }
 
-// XXX hold lock?
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "Create %v name: %v %v\n", d, name, perm)
 	dir, v, err := d.ec.ReadDir(d.Obj.path)
@@ -84,7 +77,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, nf); err != nil {
 		return nil, err
 	}
-	obj := makeObj(d.ec, pn, perm, cid, clientv3.LeaseID(nf.LeaseId), 0, path, d.Obj.path, nil)
+	obj := makeObj(d.ec, pn, perm, cid, clientv3.LeaseID(nf.LeaseId), path, d.Obj.path, nil)
 	if obj.perm.IsDir() {
 		return makeDir(obj), nil
 	} else {
@@ -303,7 +296,7 @@ func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, 0, ROOT, ROOT, nil))
+	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, ROOT, ROOT, nil))
 }
 
 func mkRootDir(ec *fsetcd.EtcdClnt) *serr.Err {

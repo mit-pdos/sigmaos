@@ -26,25 +26,30 @@ func mkTpath(pn path.Path) sessp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	ec      *fsetcd.EtcdClnt
-	pn      path.Path
-	path    sessp.Tpath
-	perm    sp.Tperm
-	cid     sp.TclntId
-	lid     clientv3.LeaseID
-	version sp.TQversion
-	parent  sessp.Tpath
-	data    []byte
-	mtime   int64
+	ec   *fsetcd.EtcdClnt
+	pn   path.Path
+	path sessp.Tpath
+	// nf     *fsetcd.NamedFile
+	perm   sp.Tperm
+	cid    sp.TclntId
+	lid    clientv3.LeaseID
+	parent sessp.Tpath
+	data   []byte
+	mtime  int64
 }
 
-func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, cid sp.TclntId, lid clientv3.LeaseID, v sp.TQversion, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
-	o := &Obj{ec: ec, pn: pn, perm: perm, cid: cid, lid: lid, version: v, path: p, data: data, parent: parent}
+func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, cid sp.TclntId, lid clientv3.LeaseID, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
+	o := &Obj{ec: ec, pn: pn, perm: perm, cid: cid, lid: lid, path: p, data: data, parent: parent}
+	return o
+}
+
+func makeObjNf(ec *fsetcd.EtcdClnt, pn path.Path, p sessp.Tpath, nf *fsetcd.NamedFile, parent sessp.Tpath) *Obj {
+	o := &Obj{ec: ec, pn: pn, perm: nf.Tperm(), cid: nf.TclntId(), lid: nf.TLeaseID(), path: p, data: nf.Data, parent: parent}
 	return o
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn %q perm %v p %v/%d v %v sz %d", o.pn, o.perm, o.path, o.path, o.version, len(o.data))
+	return fmt.Sprintf("pn %q perm %v p %v/%d sz %d", o.pn, o.perm, o.path, o.path, len(o.data))
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {
@@ -66,7 +71,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, 0, o.parent, 0, nil))
+	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, o.parent, 0, nil))
 }
 
 // XXX SetParent
@@ -84,18 +89,18 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (o *Obj) stat() *sp.Stat {
 	st := &sp.Stat{}
 	st.Name = o.pn.Base()
-	st.Qid = sp.MakeQidPerm(o.perm, o.version, o.path)
+	st.Qid = sp.MakeQidPerm(o.perm, 0, o.path)
 	st.Mode = uint32(o.perm)
 	st.Length = uint64(len(o.data))
 	return st
 }
 
 func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
-	nf, v, err := ec.GetFile(path)
+	nf, _, err := ec.GetFile(path)
 	if err != nil {
 		return nil, err
 	}
-	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.TclntId(), nf.TLeaseID(), sp.TQversion(v), path, parent, nf.Data)
+	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.TclntId(), nf.TLeaseID(), path, parent, nf.Data)
 	return o, nil
 }
 

@@ -36,6 +36,9 @@ func (cmon *CgroupMonitor) GetCPUShares(cgroupPath string) (int64, error) {
 }
 
 func (cmon *CgroupMonitor) GetCPUUsecs(cgroupPath string) (uint64, error) {
+	cmon.Lock()
+	defer cmon.Unlock()
+
 	n, err := cmon.cfs.readFile(path.Join(cgroupPath, "cpu.stat"), parseCgroupCpuStat)
 	if err != nil {
 		db.DPrintf(db.CGROUP_ERR, "Error readFile: %v", err)
@@ -45,6 +48,9 @@ func (cmon *CgroupMonitor) GetCPUUsecs(cgroupPath string) (uint64, error) {
 }
 
 func (cmon *CgroupMonitor) GetSystemCPUUsecs() uint64 {
+	cmon.Lock()
+	defer cmon.Unlock()
+
 	n, err := cmon.cfs.readFile(SYS_CPU_STAT, cmon.cfs.parseSysCpuStat)
 	if err != nil {
 		db.DFatalf("Error readFile: %v", err)

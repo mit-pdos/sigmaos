@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
@@ -690,6 +691,8 @@ func TestSpawnCrashSchedd(t *testing.T) {
 
 	_, err = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
+
+	time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
 
 	ts.Shutdown()
 }

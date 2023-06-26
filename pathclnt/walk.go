@@ -4,6 +4,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -11,8 +12,8 @@ import (
 
 const (
 	MAXSYMLINK = 8
-	MAXRETRY   = 10
-	TIMEOUT    = 100 // ms  (XXX belongs in hyperparam?)
+	TIMEOUT    = 200 // ms  (XXX belongs in hyperparam?)
+	MAXRETRY   = (fsetcd.SessionTTL + 1) * (1000 / TIMEOUT)
 )
 
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname sp.Tuname) (sp.Tfid, *serr.Err) {

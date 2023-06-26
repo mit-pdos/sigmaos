@@ -40,7 +40,7 @@ func (c *SemClnt) Init(perm sp.Tperm) error {
 func (c *SemClnt) Down() error {
 	signal := make(chan error)
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		db.DPrintf(db.ALWAYS, "Down %d %v\n", i, c.path)
+		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
 		err := c.SetRemoveWatch(c.path, func(p string, err1 error) {
 			if err1 != nil {
 				db.DPrintf(db.SEMCLNT_ERR, "watch %v err %v\n", c.path, err1)
@@ -81,6 +81,7 @@ func (c *SemClnt) Down() error {
 		}
 		return nil
 	}
+	db.DPrintf(db.ALWAYS, "Down failed after %d retries\n", pathclnt.MAXRETRY)
 	return serr.MkErr(serr.TErrUnreachable, c.path)
 }
 

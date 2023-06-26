@@ -13,10 +13,12 @@ spec:
         image: arielszekely/thumbnail@sha256:e9f29c94d264fa5bb6301fbcc8594e855a391ef345abc481bd063f5d90b83b1f
         imagePullPolicy: Always
         resources:
-#          limits:
-#            cpu: 1.0
+          limits:
+            cpu: 800m
+            memory: 256Mi
           requests:
             cpu: 800m
+            memory: 256Mi
         env:
           - name: HOST_IP
             valueFrom:

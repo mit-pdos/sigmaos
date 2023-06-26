@@ -85,6 +85,13 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 				// user bin dir.
 				mount.Mount{
 					Type:     mount.TypeBind,
+					Source:   "/sys/fs/cgroup",
+					Target:   "/cgroup",
+					ReadOnly: true,
+				},
+				// user bin dir.
+				mount.Mount{
+					Type:     mount.TypeBind,
 					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
 					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
 					ReadOnly: true,

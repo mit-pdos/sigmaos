@@ -54,30 +54,20 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "Create %v name: %v %v\n", d, name, perm)
-	dir, v, err := d.ec.ReadDir(d.Obj.path)
-	if err != nil {
-		return nil, err
-	}
-	_, ok := lookup(dir, name)
-	if ok {
-		return nil, serr.MkErr(serr.TErrExists, name)
-	}
-	pn := d.pn.Copy().Append(name)
-	path := mkTpath(pn)
 	cid := sp.NoClntId
 	if perm.IsEphemeral() {
 		cid = ctx.ClntId()
 	}
-	db.DPrintf(db.NAMED, "Create %v in %v dir: %v v %v p %v cid %v\n", name, d, dir, v, path, cid)
-	dir.Ents = append(dir.Ents, &fsetcd.DirEnt{Name: name, Path: uint64(path)})
+	pn := d.pn.Copy().Append(name)
+	path := mkTpath(pn)
 	nf, r := mkNamedFile(perm, path, cid)
 	if r != nil {
 		return nil, r
 	}
-	if err := d.ec.Create(pn, d.Obj.path, dir, d.perm, v, path, nf); err != nil {
+	if err := d.ec.Create(d.Obj.path, d.perm, name, path, nf); err != nil {
 		return nil, err
 	}
-	obj := makeObj(d.ec, pn, perm, cid, clientv3.LeaseID(nf.LeaseId), path, d.Obj.path, nil)
+	obj := makeObjNf(d.ec, pn, path, nf, d.Obj.path)
 	if obj.perm.IsDir() {
 		return makeDir(obj), nil
 	} else {

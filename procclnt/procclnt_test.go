@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
@@ -692,8 +691,6 @@ func TestSpawnCrashSchedd(t *testing.T) {
 	_, err = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
 
-	time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
-
 	ts.Shutdown()
 }
 
@@ -712,6 +709,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	// Count number of children.
 	nChildren := getNChildren(ts)
 
+	ts.RmDir(OUTDIR)
 	err = ts.MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
 

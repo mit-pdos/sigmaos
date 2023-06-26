@@ -3,9 +3,11 @@ package semclnt
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/pathclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -36,9 +38,9 @@ func (c *SemClnt) Init(perm sp.Tperm) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *SemClnt) Down() error {
-	db.DPrintf(db.SEMCLNT, "Down %v\n", c.path)
 	signal := make(chan error)
-	for {
+	for i := 0; i < pathclnt.MAXRETRY; i++ {
+		db.DPrintf(db.ALWAYS, "Down %d %v\n", i, c.path)
 		err := c.SetRemoveWatch(c.path, func(p string, err1 error) {
 			if err1 != nil {
 				db.DPrintf(db.SEMCLNT_ERR, "watch %v err %v\n", c.path, err1)
@@ -50,10 +52,11 @@ func (c *SemClnt) Down() error {
 		// semaphore has been "upped".
 		if errors.As(err, &serr) && serr.IsErrNotfound() {
 			db.DPrintf(db.SEMCLNT_ERR, "down notfound %v ok err %v\n", c.path, err)
-			break
+			return nil
 		}
 		if errors.As(err, &serr) && serr.IsErrUnreachable() {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
+			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
 			continue
 		}
 		if err == nil {
@@ -69,15 +72,16 @@ func (c *SemClnt) Down() error {
 		}
 		if errors.As(err, &serr) && serr.IsErrUnreachable() {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
+			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
 			continue
 		}
 		if err != nil {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v watch err %v\n", c.path, err)
 			return err
 		}
-		break
+		return nil
 	}
-	return nil
+	return serr.MkErr(serr.TErrUnreachable, c.path)
 }
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has

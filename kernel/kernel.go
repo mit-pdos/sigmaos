@@ -216,11 +216,11 @@ func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm, init bool) (*exe
 }
 
 func stopKNamed(cmd *exec.Cmd) error {
-	db.DPrintf(db.KERNEL, "StopKNamed %v\n", cmd)
+	db.DPrintf(db.KERNEL, "stopKNamed %v\n", cmd)
 	w2 := cmd.ExtraFiles[2]
-	fmt.Fprintf(w2, "stop")
+	_, err := fmt.Fprintf(w2, "stop")
 	w2.Close()
-	return cmd.Wait()
+	return err
 }
 
 func SetNamedIP(ip string, ports sp.Taddrs) (sp.Taddrs, error) {

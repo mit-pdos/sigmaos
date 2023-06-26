@@ -89,11 +89,13 @@ func (k *Kernel) KillOne(srv string) error {
 		return fmt.Errorf("Tried to kill %s, nothing to kill", srv)
 	}
 	if err := ss.Kill(); err == nil {
-		ss.Wait()
+		if err := ss.Wait(); err != nil {
+			db.DPrintf(db.ALWAYS, "KillOne: Kill %v err %v\n", ss, err)
+		}
+		return nil
 	} else {
 		return fmt.Errorf("Kill %v err %v", srv, err)
 	}
-	return nil
 }
 
 func (k *Kernel) bootKNamed(init bool) error {

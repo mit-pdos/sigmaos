@@ -128,19 +128,24 @@ func (s *Subsystem) Kill() error {
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
 }
 
-func (s *Subsystem) Wait() {
+func (s *Subsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
 		status, err := s.WaitExit(s.p.GetPid())
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
+			return err
 		}
+		return nil
 	} else {
-		s.cmd.Wait()
+		if err := s.cmd.Wait(); err != nil {
+			return err
+		}
 	}
 	if s.container != nil {
-		s.container.Shutdown()
+		return s.container.Shutdown()
 	}
+	return nil
 }
 
 type SubsystemInfo struct {

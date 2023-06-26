@@ -68,7 +68,7 @@ def start_time_stats(depname, since):
   get_pods_out = run_process_get_output(["kubectl", "get", "pods", "--all-namespaces"])
   pod_names = [ n for n in get_pods_out.split() if depname in n ]
 
-  kubelet_log = run_process_get_output(["sudo", "journalctl", "-xeu", "kubelet", "-n", "100000", "-S", since])
+  kubelet_log = run_process_get_output(["sudo", "journalctl", "-xeu", "kubelet", "-nall", "-S", since])
   pod_stats = parse_kubelet_log(kubelet_log, set(pod_names))
   
   pod_startup_times = [ (s["observedRunningTime"] - s["lastFinishedPulling"]).total_seconds() for s in pod_stats ]

@@ -11,10 +11,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	TTL = 30 // seconds
-)
-
 type leaseMgr struct {
 	sync.Mutex
 	ec *EtcdClnt
@@ -32,7 +28,7 @@ func (lmgr *leaseMgr) getLeaseID(cid sp.TclntId) (clientv3.LeaseID, error) {
 
 	lid := lmgr.lt.lookup(cid)
 	if lid == clientv3.NoLease {
-		resp, err := lmgr.lc.Grant(context.TODO(), TTL)
+		resp, err := lmgr.lc.Grant(context.TODO(), SessionTTL)
 		if err != nil {
 			return clientv3.NoLease, err
 		}

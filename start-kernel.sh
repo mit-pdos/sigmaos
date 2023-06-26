@@ -32,7 +32,7 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="knamed"
             ;;
         "realm")
-            BOOT="named;schedd;realmd;ux;s3;db"
+            BOOT="knamed;schedd;realmd;ux;s3;db;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"

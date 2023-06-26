@@ -57,6 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath 
   ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel user && \
   mkdir bin/common && \
   mv bin/user/* bin/common && \
-  mv bin/common bin/user/common
+  mv bin/common bin/user/common && \
+  cp bin/kernel/named bin/user/common/named
 # Copy bins to host
 CMD ["sh", "-c", "cp -r --no-preserve=mode,ownership bin/user/* /tmp/bin"]

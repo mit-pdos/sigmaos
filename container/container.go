@@ -1,7 +1,6 @@
 package container
 
 import (
-	"bufio"
 	"context"
 	"os"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
+	"sigmaos/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/port"
@@ -27,9 +27,7 @@ type Container struct {
 	container    string
 	cgroupPath   string
 	ip           string
-	cpustatf     *os.File
-	sysstatf     *os.File
-	br           *bufio.Reader
+	cmgr         *cgroup.CgroupMgr
 	prevCPUStats cpustats
 }
 
@@ -41,11 +39,14 @@ type cpustats struct {
 
 func (c *Container) GetCPUUtil() (float64, error) {
 	// Read total CPU time for cgroup.
-	t1 := c.getContainerCPUUsecs()
+	t1, err := c.cmgr.GetCPUUsecs(c.cgroupPath)
+	if err != nil {
+		db.DFatalf("Error get CPU usecs container: %v", err)
+	}
 	// Save previous total CPU time for cgroup.
 	t0 := c.prevCPUStats.totalContainerUsecs
 	// Read total CPU time for the entire system
-	s1 := c.getSystemCPUUsecs()
+	s1 := c.cmgr.GetSystemCPUUsecs()
 	// Save previous total CPU time for the entire system.
 	s0 := c.prevCPUStats.totalSysUsecs
 	// Update saved times.
@@ -72,7 +73,7 @@ func (c *Container) GetCPUUtil() (float64, error) {
 
 func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
-	c.setCPUShares(cpu)
+	c.cmgr.SetCPUShares(c.cgroupPath, cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
 	return nil
 }

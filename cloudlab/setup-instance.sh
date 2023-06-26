@@ -35,7 +35,6 @@ scp -i $DIR/keys/cloudlab-sigmaos ../aws/.docker/config.json $SSHCMD:~/.docker/
 rm $SECRETS
 
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
-
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no

@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
+	"sigmaos/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/perf"
@@ -129,8 +130,8 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		container:  resp.ID,
 		cgroupPath: cgroupPath,
 		ip:         ip,
-		cpustatf:   nil,
+		cmgr:       cgroup.NewCgroupMgr(),
 	}
-	c.setMemoryLimit(membytes, memswap)
+	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
 	return c, nil
 }

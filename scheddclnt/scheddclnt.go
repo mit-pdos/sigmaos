@@ -208,6 +208,7 @@ func (sdc *ScheddClnt) getScheddClnt(scheddIp string) (*protdevclnt.ProtDevClnt,
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
 			return nil, err
 		}
+		sdc.schedds[scheddIp] = pdc
 	}
 	return pdc, nil
 }

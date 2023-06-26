@@ -206,6 +206,11 @@ func applyAppArmorProfile(prof string) error {
 		// Apply the apparmor profile. Will take effect after the next exec.
 		if err := apparmor.ApplyProfile(prof); err != nil {
 			db.DPrintf(db.CONTAINER, "Error apply AppArmor profile %v: %v", prof, err)
+			// If AppArmor is unloaded, ignore the error.
+			if _, err := os.Stat("/sys/kernel/security/apparmor/profiles"); err != nil {
+				db.DPrintf(db.CONTAINER, "AppArmor disabled.")
+				return nil
+			}
 			return err
 		}
 		db.DPrintf(db.CONTAINER, "Successfully applied AppArmor profile %v", prof)

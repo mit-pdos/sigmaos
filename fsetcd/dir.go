@@ -30,20 +30,33 @@ func (di DirEntInfo) String() string {
 	}
 }
 
-func (di *DirEntInfo) isNotEmpty() bool {
-	if di.Nf.Tperm().IsDir() {
+func (di *DirEntInfo) isEmpty() bool {
+	if di.Perm.IsDir() {
 		if dir, err := UnmarshalDir(di.Nf.Data); err != nil {
-			db.DFatalf("isNonEmptyDir: unmarshalDir %v err %v\n", di.Path, err)
-		} else if len(dir.Ents) > 1 {
+			db.DFatalf("isEmptyDir: unmarshalDir %v err %v\n", di.Path, err)
+		} else if len(dir.Ents) <= 1 { // don't count "."
 			return true
+		} else {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 type DirInfo struct {
 	Ents *sorteddir.SortedDir
 	Perm sp.Tperm
+}
+
+func (ec *EtcdClnt) isEmpty(di DirEntInfo) (bool, *serr.Err) {
+	if di.Nf == nil {
+		nf, _, err := ec.GetFile(di.Path)
+		if err != nil {
+			return false, err
+		}
+		di.Nf = nf
+	}
+	return di.isEmpty(), nil
 }
 
 func (ec *EtcdClnt) MkRootDir() *serr.Err {
@@ -116,7 +129,11 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, name string) *serr.Err {
 	di := e.(DirEntInfo)
 	db.DPrintf(db.ETCDCLNT, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
 
-	if di.isNotEmpty() {
+	empty, err := ec.isEmpty(di)
+	if err != nil {
+		return err
+	}
+	if !empty {
 		return serr.MkErr(serr.TErrNotEmpty, name)
 	}
 
@@ -143,7 +160,11 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, from, to string) *serr.Err {
 	toi, ok := dir.Ents.Lookup(to)
 	if ok {
 		di := toi.(DirEntInfo)
-		if di.isNotEmpty() {
+		empty, err := ec.isEmpty(di)
+		if err != nil {
+			return err
+		}
+		if !empty {
 			return serr.MkErr(serr.TErrNotEmpty, to)
 		}
 		topath = di.Path
@@ -175,7 +196,11 @@ func (ec *EtcdClnt) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to str
 	ti, ok := dirt.Ents.Lookup(to)
 	if ok {
 		di := ti.(DirEntInfo)
-		if di.isNotEmpty() {
+		empty, err := ec.isEmpty(di)
+		if err != nil {
+			return err
+		}
+		if !empty {
 			return serr.MkErr(serr.TErrNotEmpty, to)
 		}
 		topath = di.Path

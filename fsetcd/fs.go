@@ -82,7 +82,7 @@ func (ec *EtcdClnt) readDir(p sessp.Tpath, stat bool) (*DirInfo, sp.TQversion, *
 		if e.Name == "." {
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
-			if e.Tperm().IsEphemeral() || true {
+			if e.Tperm().IsEphemeral() || stat {
 				// if file is emphemeral, etcd may have expired it, so
 				// check if it still exists; if not, don't return the
 				// entry.

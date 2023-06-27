@@ -146,6 +146,9 @@ func TestRemoveNonExistent(t *testing.T) {
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
+
+	ts.Remove(fn) // remove from last test
+
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
@@ -473,7 +476,7 @@ func TestPageDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	ts.SetChunkSz(sessp.Tsize(512))
-	n := 100
+	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)

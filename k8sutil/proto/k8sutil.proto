@@ -7,5 +7,5 @@ message CPUUtilRequest {
 }
 
 message CPUUtilResult {
-  uint64 util = 1;
+  double util = 1;
 }

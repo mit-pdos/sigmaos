@@ -125,11 +125,11 @@ func (k *Kernel) bootS3d() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, procclnt.HSCHEDD)
+	return k.bootSubsystem("dbd", []string{hostip}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("mongod", []string{hostip + ":27017"}, procclnt.HSCHEDD)
+	return k.bootSubsystem("mongod", []string{hostip}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

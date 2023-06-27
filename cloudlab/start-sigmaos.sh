@@ -61,7 +61,7 @@ fi
 DIR=$(dirname $0)
 source $DIR/env.sh
 
-vms=`cat sigma-servers.txt | cut -d " " -f2`
+vms=`cat servers.txt | cut -d " " -f2`
 
 vma=($vms)
 MAIN="${vma[0]}"
@@ -112,7 +112,7 @@ for vm in $vms; do
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --dbip 10.10.1.1:4406 --mongoip 10.10.1.1:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

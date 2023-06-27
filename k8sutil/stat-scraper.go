@@ -42,5 +42,21 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	if req.QoSClass != "Guaranteed" {
 		return fmt.Errorf("Error: QoS class \"%v\" unsupported", req.QoSClass)
 	}
+	var total float64
+	var be float64
+	var burst float64
+	var err error
+	if be, err = s.cmon.GetCPUUtil(QOS_BE_CGROUP); err != nil {
+		db.DFatalf("Error BE: %v", err)
+	}
+	if burst, err = s.cmon.GetCPUUtil(QOS_BURSTABLE_CGROUP); err != nil {
+		db.DFatalf("Error burstable: %v", err)
+	}
+	if total, err = s.cmon.GetCPUUtil(QOS_BURSTABLE_CGROUP); err != nil {
+		db.DFatalf("Error total: %v", err)
+	}
+	// Guaranteed QoS class is total CPU utillzation, minus BE & Burstable
+	// classes' utilization.
+	res.Util = total - be - burst
 	return nil
 }

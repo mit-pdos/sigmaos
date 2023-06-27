@@ -63,6 +63,8 @@ const (
 	SOCIAL_NETWORK_COMPOSE  = SOCIAL_NETWORK + "compose"
 	SOCIAL_NETWORK_MEDIA    = SOCIAL_NETWORK + "media"
 
+	K8S_SCRAPER = NAMED + "k8sscraper/"
+
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 

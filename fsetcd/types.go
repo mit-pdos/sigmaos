@@ -23,23 +23,23 @@ func key2path(key string) sessp.Tpath {
 }
 
 func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
-	d := &NamedDir{Ents: make([]*DirEnt, dir.Ents.Len())}
+	d := &EtcdDir{Ents: make([]*EtcdDirEnt, dir.Ents.Len())}
 	idx := 0
 	dir.Ents.Iter(func(name string, i interface{}) bool {
 		di := i.(DirEntInfo)
-		d.Ents[idx] = &DirEnt{Name: name, Path: uint64(di.Path)}
+		d.Ents[idx] = &EtcdDirEnt{Name: name, Path: uint64(di.Path), Perm: uint32(di.Perm)}
 		idx += 1
 		return true
 	})
 	return marshalDir(d, dir.Perm)
 }
 
-func marshalDir(dir *NamedDir, dperm sp.Tperm) ([]byte, *serr.Err) {
+func marshalDir(dir *EtcdDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 	d, err := proto.Marshal(dir)
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	nfd := &NamedFile{Perm: uint32(dperm), Data: d, ClientId: uint64(sp.NoClntId)}
+	nfd := &EtcdFile{Perm: uint32(dperm), Data: d, ClientId: uint64(sp.NoClntId)}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
 		return nil, serr.MkErrError(err)
@@ -47,15 +47,15 @@ func marshalDir(dir *NamedDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 	return b, nil
 }
 
-func UnmarshalDir(b []byte) (*NamedDir, *serr.Err) {
-	dir := &NamedDir{}
+func UnmarshalDir(b []byte) (*EtcdDir, *serr.Err) {
+	dir := &EtcdDir{}
 	if err := proto.Unmarshal(b, dir); err != nil {
 		return nil, serr.MkErrError(err)
 	}
 	return dir, nil
 }
 
-func (dir *NamedDir) lookup(name string) (*DirEnt, bool) {
+func (dir *EtcdDir) lookup(name string) (*EtcdDirEnt, bool) {
 	for _, e := range dir.Ents {
 		if e.Name == name {
 			return e, true
@@ -64,41 +64,46 @@ func (dir *NamedDir) lookup(name string) (*DirEnt, bool) {
 	return nil, false
 }
 
-func MkNamedFile(perm sp.Tperm, cid sp.TclntId, data []byte) *NamedFile {
-	return &NamedFile{Perm: uint32(perm), Data: data, ClientId: uint64(cid)}
+func MkEtcdFile(perm sp.Tperm, cid sp.TclntId, data []byte) *EtcdFile {
+	return &EtcdFile{Perm: uint32(perm), Data: data, ClientId: uint64(cid)}
 }
 
 // Make empty file or directory
-func MkNamedFileDir(perm sp.Tperm, path sessp.Tpath, cid sp.TclntId) (*NamedFile, error) {
+func MkEtcdFileDir(perm sp.Tperm, path sessp.Tpath, cid sp.TclntId) (*EtcdFile, error) {
 	var fdata []byte
+	perm = perm | 0777
 	if perm.IsDir() {
-		nd := &NamedDir{}
-		nd.Ents = append(nd.Ents, &DirEnt{Name: ".", Path: uint64(path)})
+		nd := &EtcdDir{}
+		nd.Ents = append(nd.Ents, &EtcdDirEnt{Name: ".", Path: uint64(path), Perm: uint32(perm)})
 		d, err := proto.Marshal(nd)
 		if err != nil {
 			return nil, err
 		}
 		fdata = d
 	}
-	return MkNamedFile(perm|0777, cid, fdata), nil
+	return MkEtcdFile(perm, cid, fdata), nil
 }
 
-func (nf *NamedFile) Tperm() sp.Tperm {
+func (nf *EtcdFile) Tperm() sp.Tperm {
 	return sp.Tperm(nf.Perm)
 }
 
-func (nf *NamedFile) TclntId() sp.TclntId {
+func (nf *EtcdFile) TclntId() sp.TclntId {
 	return sp.TclntId(nf.ClientId)
 }
 
-func (nf *NamedFile) TLeaseID() clientv3.LeaseID {
+func (nf *EtcdFile) TLeaseID() clientv3.LeaseID {
 	return clientv3.LeaseID(nf.LeaseId)
 }
 
-func (nf *NamedFile) SetLeaseId(lid clientv3.LeaseID) {
+func (nf *EtcdFile) SetLeaseId(lid clientv3.LeaseID) {
 	nf.LeaseId = int64(lid)
 }
 
-func (e *DirEnt) Tpath() sessp.Tpath {
+func (e *EtcdDirEnt) Tpath() sessp.Tpath {
 	return sessp.Tpath(e.Path)
+}
+
+func (e *EtcdDirEnt) Tperm() sp.Tperm {
+	return sp.Tperm(e.Perm)
 }

@@ -99,7 +99,7 @@ func (lmgr *leaseMgr) detach(cid sp.TclntId) {
 	}
 }
 
-func (lmgr *leaseMgr) LeaseOpts(nf *NamedFile) ([]clientv3.OpOption, *serr.Err) {
+func (lmgr *leaseMgr) LeaseOpts(nf *EtcdFile) ([]clientv3.OpOption, *serr.Err) {
 	opts := make([]clientv3.OpOption, 0)
 	cid := nf.TclntId()
 	if cid != sp.NoClntId {

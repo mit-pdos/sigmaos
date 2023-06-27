@@ -13,8 +13,7 @@ type File struct {
 }
 
 func makeFile(o *Obj) *File {
-	f := &File{}
-	f.Obj = o
+	f := &File{Obj: o}
 	return f
 }
 
@@ -39,13 +38,13 @@ func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversio
 		if end >= f.LenOff() {
 			end = f.LenOff()
 		}
-		b := f.data[offset:end]
+		b := f.di.Nf.Data[offset:end]
 		return b, nil
 	}
 }
 
 func (f *File) LenOff() sp.Toffset {
-	return sp.Toffset(len(f.Obj.data))
+	return sp.Toffset(len(f.Obj.di.Nf.Data))
 }
 
 func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
@@ -60,8 +59,8 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (
 	if offset >= f.LenOff() { // passed end of file?
 		n := f.LenOff() - offset
 
-		f.Obj.data = append(f.Obj.data, make([]byte, n)...)
-		f.Obj.data = append(f.Obj.data, b...)
+		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, make([]byte, n)...)
+		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
 
 		if err := f.Obj.putObj(); err != nil {
 			return 0, err
@@ -72,11 +71,11 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (
 
 	var d []byte
 	if offset+sz < f.LenOff() { // in the middle of the file?
-		d = f.Obj.data[offset+sz:]
+		d = f.Obj.di.Nf.Data[offset+sz:]
 	}
-	f.Obj.data = f.Obj.data[0:offset]
-	f.Obj.data = append(f.Obj.data, b...)
-	f.Obj.data = append(f.data, d...)
+	f.Obj.di.Nf.Data = f.Obj.di.Nf.Data[0:offset]
+	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
+	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, d...)
 
 	if err := f.Obj.putObj(); err != nil {
 		return 0, err

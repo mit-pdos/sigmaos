@@ -5,8 +5,6 @@ import (
 	"hash/fnv"
 	"time"
 
-	"go.etcd.io/etcd/client/v3"
-
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
@@ -25,34 +23,24 @@ func mkTpath(pn path.Path) sessp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	ec   *fsetcd.EtcdClnt
-	pn   path.Path
-	path sessp.Tpath
-	// nf     *fsetcd.NamgedFile
-	perm   sp.Tperm
-	cid    sp.TclntId
-	lid    clientv3.LeaseID
+	ec     *fsetcd.EtcdClnt
+	pn     path.Path
+	di     fsetcd.DirEntInfo
 	parent sessp.Tpath
-	data   []byte
 	mtime  int64
 }
 
-func makeObj(ec *fsetcd.EtcdClnt, pn path.Path, perm sp.Tperm, cid sp.TclntId, lid clientv3.LeaseID, p sessp.Tpath, parent sessp.Tpath, data []byte) *Obj {
-	o := &Obj{ec: ec, pn: pn, perm: perm, cid: cid, lid: lid, path: p, data: data, parent: parent}
-	return o
-}
-
-func makeObjNf(ec *fsetcd.EtcdClnt, pn path.Path, p sessp.Tpath, nf *fsetcd.NamedFile, parent sessp.Tpath) *Obj {
-	o := &Obj{ec: ec, pn: pn, perm: nf.Tperm(), cid: nf.TclntId(), lid: nf.TLeaseID(), path: p, data: nf.Data, parent: parent}
+func makeObjDi(ec *fsetcd.EtcdClnt, pn path.Path, di fsetcd.DirEntInfo, parent sessp.Tpath) *Obj {
+	o := &Obj{ec: ec, pn: pn, di: di, parent: parent}
 	return o
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn %q perm %v p %v/%d sz %d", o.pn, o.perm, o.path, o.path, len(o.data))
+	return fmt.Sprintf("pn %q di %v parent %v", o.pn, o.di, o.parent)
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {
-	return sp.Tlength(len(o.data)), nil
+	return sp.Tlength(len(o.di.Nf.Data)), nil
 }
 
 func (o *Obj) SetSize(sz sp.Tlength) {
@@ -60,24 +48,24 @@ func (o *Obj) SetSize(sz sp.Tlength) {
 }
 
 func (o *Obj) Path() sessp.Tpath {
-	return o.path
+	return o.di.Path
 }
 
 func (o *Obj) Perm() sp.Tperm {
-	return o.perm
+	return o.di.Perm
 }
 
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObj(o.ec, dir, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, o.parent, 0, nil))
+	return makeDir(makeObjDi(o.ec, dir, fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: o.parent}, 0))
 }
 
 // XXX SetParent
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
-	if o, err := getObj(o.ec, o.pn, o.path, o.parent); err != nil {
+	if o, err := getObj(o.ec, o.pn, o.di.Path, o.parent); err != nil {
 		return nil, err
 	} else {
 		st := o.stat()
@@ -88,9 +76,9 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (o *Obj) stat() *sp.Stat {
 	st := &sp.Stat{}
 	st.Name = o.pn.Base()
-	st.Qid = sp.MakeQidPerm(o.perm, 0, o.path)
-	st.Mode = uint32(o.perm)
-	st.Length = uint64(len(o.data))
+	st.Qid = sp.MakeQidPerm(o.di.Perm, 0, o.di.Path)
+	st.Mode = uint32(o.di.Perm)
+	st.Length = uint64(len(o.di.Nf.Data))
 	return st
 }
 
@@ -99,11 +87,11 @@ func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tp
 	if err != nil {
 		return nil, err
 	}
-	o := makeObj(ec, pn, sp.Tperm(nf.Perm), nf.TclntId(), nf.TLeaseID(), path, parent, nf.Data)
+	o := makeObjDi(ec, pn, fsetcd.DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}, parent)
 	return o, nil
 }
 
 func (o *Obj) putObj() *serr.Err {
-	nf := fsetcd.MkNamedFile(o.perm|0777, o.cid, o.data)
-	return o.ec.PutFile(o.path, nf)
+	nf := fsetcd.MkEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.Data)
+	return o.ec.PutFile(o.di.Path, nf)
 }

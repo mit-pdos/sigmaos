@@ -22,7 +22,7 @@ func (ec *EtcdClnt) path2key(path sessp.Tpath) string {
 	return string(ec.realm) + ":" + strconv.FormatUint(uint64(path), 16)
 }
 
-func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
+func (ec *EtcdClnt) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	resp, err := ec.Get(context.TODO(), key)
 	if err != nil {
 		return nil, 0, serr.MkErrError(err)
@@ -31,7 +31,7 @@ func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.MkErr(serr.TErrNotfound, key2path(key))
 	}
-	nf := &NamedFile{}
+	nf := &EtcdFile{}
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.MkErrError(err)
 	}
@@ -39,11 +39,11 @@ func (ec *EtcdClnt) getFile(key string) (*NamedFile, sp.TQversion, *serr.Err) {
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
-func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*NamedFile, sp.TQversion, *serr.Err) {
+func (ec *EtcdClnt) GetFile(p sessp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
 	return ec.getFile(ec.path2key(p))
 }
 
-func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
+func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *EtcdFile) *serr.Err {
 	opts, sr := ec.lmgr.LeaseOpts(nf)
 	if sr != nil {
 		return sr
@@ -67,7 +67,7 @@ func (ec *EtcdClnt) PutFile(p sessp.Tpath, nf *NamedFile) *serr.Err {
 	}
 }
 
-func (ec *EtcdClnt) readDir(p sessp.Tpath) (*DirInfo, sp.TQversion, *serr.Err) {
+func (ec *EtcdClnt) readDir(p sessp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.ETCDCLNT, "readDir %v\n", p)
 	nf, v, err := ec.GetFile(p)
 	if err != nil {
@@ -80,20 +80,27 @@ func (ec *EtcdClnt) readDir(p sessp.Tpath) (*DirInfo, sp.TQversion, *serr.Err) {
 	dents := sorteddir.MkSortedDir()
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath()})
+			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
-			nf, _, err := ec.GetFile(e.Tpath())
-			if err != nil {
-				db.DPrintf(db.ETCDCLNT, "readDir: GetFile %v %v\n", e.Name, err)
-				continue
+			if e.Tperm().IsEphemeral() || true {
+				// if file is emphemeral, etcd may have expired it, so
+				// check if it still exists; if not, don't return the
+				// entry.
+				nf, _, err := ec.GetFile(e.Tpath())
+				if err != nil {
+					db.DPrintf(db.ETCDCLNT, "readDir: GetFile %v %v\n", e.Name, err)
+					continue
+				}
+				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
+			} else {
+				dents.Insert(e.Name, DirEntInfo{nil, e.Tpath(), e.Tperm()})
 			}
-			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath()})
 		}
 	}
 	return &DirInfo{dents, nf.Tperm()}, v, nil
 }
 
-func (ec *EtcdClnt) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.Tpath, nf *NamedFile) *serr.Err {
+func (ec *EtcdClnt) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.Tpath, nf *EtcdFile) *serr.Err {
 	opts, sr := ec.lmgr.LeaseOpts(nf)
 	if sr != nil {
 		return sr

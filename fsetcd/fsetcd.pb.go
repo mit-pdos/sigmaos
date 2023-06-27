@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type NamedFile struct {
+type EtcdFile struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -31,8 +31,8 @@ type NamedFile struct {
 	ClientId uint64 `protobuf:"varint,4,opt,name=clientId,proto3" json:"clientId,omitempty"`
 }
 
-func (x *NamedFile) Reset() {
-	*x = NamedFile{}
+func (x *EtcdFile) Reset() {
+	*x = EtcdFile{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_fsetcd_fsetcd_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -40,13 +40,13 @@ func (x *NamedFile) Reset() {
 	}
 }
 
-func (x *NamedFile) String() string {
+func (x *EtcdFile) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NamedFile) ProtoMessage() {}
+func (*EtcdFile) ProtoMessage() {}
 
-func (x *NamedFile) ProtoReflect() protoreflect.Message {
+func (x *EtcdFile) ProtoReflect() protoreflect.Message {
 	mi := &file_fsetcd_fsetcd_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -58,50 +58,51 @@ func (x *NamedFile) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NamedFile.ProtoReflect.Descriptor instead.
-func (*NamedFile) Descriptor() ([]byte, []int) {
+// Deprecated: Use EtcdFile.ProtoReflect.Descriptor instead.
+func (*EtcdFile) Descriptor() ([]byte, []int) {
 	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *NamedFile) GetPerm() uint32 {
+func (x *EtcdFile) GetPerm() uint32 {
 	if x != nil {
 		return x.Perm
 	}
 	return 0
 }
 
-func (x *NamedFile) GetData() []byte {
+func (x *EtcdFile) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-func (x *NamedFile) GetLeaseId() int64 {
+func (x *EtcdFile) GetLeaseId() int64 {
 	if x != nil {
 		return x.LeaseId
 	}
 	return 0
 }
 
-func (x *NamedFile) GetClientId() uint64 {
+func (x *EtcdFile) GetClientId() uint64 {
 	if x != nil {
 		return x.ClientId
 	}
 	return 0
 }
 
-type DirEnt struct {
+type EtcdDirEnt struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Path uint64 `protobuf:"varint,2,opt,name=path,proto3" json:"path,omitempty"`
+	Perm uint32 `protobuf:"varint,3,opt,name=perm,proto3" json:"perm,omitempty"`
 }
 
-func (x *DirEnt) Reset() {
-	*x = DirEnt{}
+func (x *EtcdDirEnt) Reset() {
+	*x = EtcdDirEnt{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_fsetcd_fsetcd_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -109,13 +110,13 @@ func (x *DirEnt) Reset() {
 	}
 }
 
-func (x *DirEnt) String() string {
+func (x *EtcdDirEnt) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DirEnt) ProtoMessage() {}
+func (*EtcdDirEnt) ProtoMessage() {}
 
-func (x *DirEnt) ProtoReflect() protoreflect.Message {
+func (x *EtcdDirEnt) ProtoReflect() protoreflect.Message {
 	mi := &file_fsetcd_fsetcd_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -127,35 +128,42 @@ func (x *DirEnt) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DirEnt.ProtoReflect.Descriptor instead.
-func (*DirEnt) Descriptor() ([]byte, []int) {
+// Deprecated: Use EtcdDirEnt.ProtoReflect.Descriptor instead.
+func (*EtcdDirEnt) Descriptor() ([]byte, []int) {
 	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *DirEnt) GetName() string {
+func (x *EtcdDirEnt) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *DirEnt) GetPath() uint64 {
+func (x *EtcdDirEnt) GetPath() uint64 {
 	if x != nil {
 		return x.Path
 	}
 	return 0
 }
 
-type NamedDir struct {
+func (x *EtcdDirEnt) GetPerm() uint32 {
+	if x != nil {
+		return x.Perm
+	}
+	return 0
+}
+
+type EtcdDir struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ents []*DirEnt `protobuf:"bytes,3,rep,name=ents,proto3" json:"ents,omitempty"`
+	Ents []*EtcdDirEnt `protobuf:"bytes,3,rep,name=ents,proto3" json:"ents,omitempty"`
 }
 
-func (x *NamedDir) Reset() {
-	*x = NamedDir{}
+func (x *EtcdDir) Reset() {
+	*x = EtcdDir{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_fsetcd_fsetcd_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -163,13 +171,13 @@ func (x *NamedDir) Reset() {
 	}
 }
 
-func (x *NamedDir) String() string {
+func (x *EtcdDir) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NamedDir) ProtoMessage() {}
+func (*EtcdDir) ProtoMessage() {}
 
-func (x *NamedDir) ProtoReflect() protoreflect.Message {
+func (x *EtcdDir) ProtoReflect() protoreflect.Message {
 	mi := &file_fsetcd_fsetcd_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -181,12 +189,12 @@ func (x *NamedDir) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NamedDir.ProtoReflect.Descriptor instead.
-func (*NamedDir) Descriptor() ([]byte, []int) {
+// Deprecated: Use EtcdDir.ProtoReflect.Descriptor instead.
+func (*EtcdDir) Descriptor() ([]byte, []int) {
 	return file_fsetcd_fsetcd_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *NamedDir) GetEnts() []*DirEnt {
+func (x *EtcdDir) GetEnts() []*EtcdDirEnt {
 	if x != nil {
 		return x.Ents
 	}
@@ -197,21 +205,22 @@ var File_fsetcd_fsetcd_proto protoreflect.FileDescriptor
 
 var file_fsetcd_fsetcd_proto_rawDesc = []byte{
 	0x0a, 0x13, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x69, 0x0a, 0x09, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x46, 0x69,
-	0x6c, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d,
-	0x52, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65,
-	0x61, 0x73, 0x65, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x6c, 0x65, 0x61,
-	0x73, 0x65, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64,
-	0x22, 0x30, 0x0a, 0x06, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
-	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12,
-	0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x70, 0x61,
-	0x74, 0x68, 0x22, 0x27, 0x0a, 0x08, 0x4e, 0x61, 0x6d, 0x65, 0x64, 0x44, 0x69, 0x72, 0x12, 0x1b,
-	0x0a, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x44,
-	0x69, 0x72, 0x45, 0x6e, 0x74, 0x52, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x42, 0x10, 0x5a, 0x0e, 0x73,
-	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x68, 0x0a, 0x08, 0x45, 0x74, 0x63, 0x64, 0x46, 0x69, 0x6c,
+	0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65, 0x61,
+	0x73, 0x65, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x6c, 0x65, 0x61, 0x73,
+	0x65, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x22,
+	0x48, 0x0a, 0x0a, 0x45, 0x74, 0x63, 0x64, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x12, 0x12, 0x0a,
+	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x22, 0x2a, 0x0a, 0x07, 0x45, 0x74, 0x63,
+	0x64, 0x44, 0x69, 0x72, 0x12, 0x1f, 0x0a, 0x04, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x03, 0x20, 0x03,
+	0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x45, 0x74, 0x63, 0x64, 0x44, 0x69, 0x72, 0x45, 0x6e, 0x74, 0x52,
+	0x04, 0x65, 0x6e, 0x74, 0x73, 0x42, 0x10, 0x5a, 0x0e, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73,
+	0x2f, 0x66, 0x73, 0x65, 0x74, 0x63, 0x64, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -228,12 +237,12 @@ func file_fsetcd_fsetcd_proto_rawDescGZIP() []byte {
 
 var file_fsetcd_fsetcd_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_fsetcd_fsetcd_proto_goTypes = []interface{}{
-	(*NamedFile)(nil), // 0: NamedFile
-	(*DirEnt)(nil),    // 1: DirEnt
-	(*NamedDir)(nil),  // 2: NamedDir
+	(*EtcdFile)(nil),   // 0: EtcdFile
+	(*EtcdDirEnt)(nil), // 1: EtcdDirEnt
+	(*EtcdDir)(nil),    // 2: EtcdDir
 }
 var file_fsetcd_fsetcd_proto_depIdxs = []int32{
-	1, // 0: NamedDir.ents:type_name -> DirEnt
+	1, // 0: EtcdDir.ents:type_name -> EtcdDirEnt
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -248,7 +257,7 @@ func file_fsetcd_fsetcd_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_fsetcd_fsetcd_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NamedFile); i {
+			switch v := v.(*EtcdFile); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -260,7 +269,7 @@ func file_fsetcd_fsetcd_proto_init() {
 			}
 		}
 		file_fsetcd_fsetcd_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DirEnt); i {
+			switch v := v.(*EtcdDirEnt); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -272,7 +281,7 @@ func file_fsetcd_fsetcd_proto_init() {
 			}
 		}
 		file_fsetcd_fsetcd_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NamedDir); i {
+			switch v := v.(*EtcdDir); i {
 			case 0:
 				return &v.state
 			case 1:

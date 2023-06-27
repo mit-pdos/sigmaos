@@ -1,8 +1,6 @@
 package named
 
 import (
-	"go.etcd.io/etcd/client/v3"
-
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
@@ -21,20 +19,19 @@ func (d *Dir) String() string {
 }
 
 func makeDir(o *Obj) *Dir {
-	dir := &Dir{}
-	dir.Obj = o
+	dir := &Dir{Obj: o}
 	return dir
 }
 
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
 	name := pn[0]
-	p, nf, err := d.ec.Lookup(d.Obj.path, name)
+	di, err := d.ec.Lookup(d.Obj.di.Path, name)
 	if err == nil {
 		pn1 := d.pn.Copy().Append(name)
-		obj := makeObjNf(d.ec, pn1, p, nf, d.Obj.path)
+		obj := makeObjDi(d.ec, pn1, di, d.Obj.di.Path)
 		var o fs.FsObj
-		if obj.perm.IsDir() {
+		if obj.di.Perm.IsDir() {
 			o = makeDir(obj)
 		} else {
 			o = makeFile(obj)
@@ -52,15 +49,16 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
-	nf, err := fsetcd.MkNamedFileDir(perm, path, cid)
-	if err != nil {
-		return nil, serr.MkErrError(err)
+	nf, r := fsetcd.MkEtcdFileDir(perm, path, cid)
+	if r != nil {
+		return nil, serr.MkErrError(r)
 	}
-	if err := d.ec.Create(d.Obj.path, name, path, nf); err != nil {
+	di, err := d.ec.Create(d.Obj.di.Path, name, path, nf)
+	if err != nil {
 		return nil, err
 	}
-	obj := makeObjNf(d.ec, pn, path, nf, d.Obj.path)
-	if obj.perm.IsDir() {
+	obj := makeObjDi(d.ec, pn, di, d.Obj.di.Path)
+	if obj.di.Perm.IsDir() {
 		return makeDir(obj), nil
 	} else {
 		return makeFile(obj), nil
@@ -68,7 +66,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
-	dir, err := d.ec.ReadDir(d.Obj.path)
+	dir, err := d.ec.ReadDir(d.Obj.di.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +80,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 		for i, n := range ns {
 			e, _ := dir.Ents.Lookup(n)
 			di := e.(fsetcd.DirEntInfo)
-			o := makeObjNf(d.ec, d.pn.Append(n), di.Path, di.Nf, d.Obj.path)
+			o := makeObjDi(d.ec, d.pn.Append(n), di, d.Obj.di.Path)
 			sts[i] = o.stat()
 		}
 		return sts, nil
@@ -101,18 +99,18 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.ec.Remove(d.Obj.path, name)
+	return d.ec.Remove(d.Obj.di.Path, name)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	db.DPrintf(db.NAMED, "Rename %v: %v %v\n", d, from, to)
-	return d.ec.Rename(d.Obj.path, from, to)
+	return d.ec.Rename(d.Obj.di.Path, from, to)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
 	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
 	dt := od.(*Dir)
-	return d.ec.Renameat(d.Obj.path, from, dt.Obj.path, to)
+	return d.ec.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
@@ -161,5 +159,7 @@ func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObj(ec, path.Path{}, sp.DMDIR|0777, sp.NoClntId, clientv3.NoLease, fsetcd.ROOT, fsetcd.ROOT, nil))
+	return makeDir(makeObjDi(ec, path.Path{},
+		fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: fsetcd.ROOT},
+		fsetcd.ROOT))
 }

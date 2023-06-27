@@ -2,19 +2,20 @@ syntax = "proto3";
 
 option go_package = "sigmaos/fsetcd";
 
-message NamedFile {
+message EtcdFile {
         uint32  perm = 1;
         bytes   data = 2;
         int64   leaseId = 3;
         uint64  clientId = 4;
 }
 
-message DirEnt {
+message EtcdDirEnt {
         string name = 1;
         uint64 path = 2;
-}
+        uint32 perm = 3;
+}       
 
-message NamedDir {
-        repeated DirEnt ents = 3;
+message EtcdDir {
+        repeated EtcdDirEnt ents = 3;
 }
 

@@ -12,7 +12,6 @@ import (
 
 	"sigmaos/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/port"
 )
 
@@ -38,37 +37,11 @@ type cpustats struct {
 }
 
 func (c *Container) GetCPUUtil() (float64, error) {
-	// Read total CPU time for cgroup.
-	t1, err := c.cmgr.GetCPUUsecs(c.cgroupPath)
+	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {
-		db.DFatalf("Error get CPU usecs container: %v", err)
+		db.DFatalf("Err get cpu stats: %v", err)
 	}
-	// Save previous total CPU time for cgroup.
-	t0 := c.prevCPUStats.totalContainerUsecs
-	// Read total CPU time for the entire system
-	s1 := c.cmgr.GetSystemCPUUsecs()
-	// Save previous total CPU time for the entire system.
-	s0 := c.prevCPUStats.totalSysUsecs
-	// Update saved times.
-	c.prevCPUStats.totalSysUsecs = s1
-	c.prevCPUStats.totalContainerUsecs = t1
-	// If this is the first attempt to collect CPU utilization, bail out early
-	// (we don't have any "previous" times yet)
-	if t0 == 0 {
-		return 0.0, nil
-	}
-	ctrDelta := t1 - t0
-	sysDelta := s1 - s0
-	// CPU util calculation based on
-	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
-	if sysDelta > 0 && ctrDelta > 0 {
-		c.prevCPUStats.util = float64(ctrDelta) / float64(sysDelta) * float64(linuxsched.NCores) * 100.0
-	} else {
-		db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", sysDelta, ctrDelta)
-	}
-	db.DPrintf(db.CONTAINER, "GetCPUUtil ctrDelta %v sysDelta %v util %v", ctrDelta, sysDelta, c.prevCPUStats.util)
-
-	return c.prevCPUStats.util, nil
+	return st.Util, nil
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {

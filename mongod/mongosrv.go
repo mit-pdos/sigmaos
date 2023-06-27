@@ -8,11 +8,13 @@ import (
 	"sigmaos/fs"
 	"sigmaos/protdevsrv"
 	"sigmaos/mongod/proto"
+	"time"
 )
 
 const (
 	MONGO_NO = "No"
 	MONGO_OK = "OK"
+	DIAL_TIMEOUT = 1
 )
 
 type Server struct {
@@ -21,13 +23,14 @@ type Server struct {
 
 func makeServer(mongodUrl string) (*Server, error) {
 	s := &Server{}
-	session, err := mgo.Dial(mongodUrl)
+	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT * time.Second)
 	if err != nil {
+		dbg.DFatalf("mongo dial err %v\n", err)
 		return nil, err
 	}
 	s.session = session
 	if err = s.session.Ping(); err != nil {
-		dbg.DFatalf("mongo session.Ping err %v\n", err)
+		dbg.DFatalf("mongo ping err %v\n", err)
 	}
 	return s, nil
 }

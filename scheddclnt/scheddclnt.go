@@ -11,7 +11,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/schedd/proto"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
 )
@@ -19,7 +18,7 @@ import (
 type ScheddClnt struct {
 	done  int32
 	realm sp.Trealm
-	*sigmaclnt.SigmaClnt
+	*fslib.FsLib
 	schedds map[string]*protdevclnt.ProtDevClnt
 }
 
@@ -29,8 +28,8 @@ func (t Tload) String() string {
 	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
-func MakeScheddClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *ScheddClnt {
-	return &ScheddClnt{0, realm, sc, make(map[string]*protdevclnt.ProtDevClnt)}
+func MakeScheddClnt(fsl *fslib.FsLib, realm sp.Trealm) *ScheddClnt {
+	return &ScheddClnt{0, realm, fsl, make(map[string]*protdevclnt.ProtDevClnt)}
 }
 
 func (sdc *ScheddClnt) Nschedd() (int, error) {

@@ -198,17 +198,17 @@ func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) getScheddClnt(scheddIp string) (*protdevclnt.ProtDevClnt, error) {
+func (sdc *ScheddClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
 	var pdc *protdevclnt.ProtDevClnt
 	var ok bool
-	if pdc, ok = sdc.schedds[scheddIp]; !ok {
+	if pdc, ok = sdc.schedds[kernelId]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, scheddIp))
+		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", scheddIp, err)
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", kernelId, err)
 			return nil, err
 		}
-		sdc.schedds[scheddIp] = pdc
+		sdc.schedds[kernelId] = pdc
 	}
 	return pdc, nil
 }

@@ -8,9 +8,6 @@ import (
 
 	// "sigmaos/groupmgr"
 	// "sigmaos/sigmaclnt"
-	"sigmaos/fsetcd"
-	"sigmaos/named"
-	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

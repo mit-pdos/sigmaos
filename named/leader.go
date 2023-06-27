@@ -11,14 +11,14 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	ec, err := fsetcd.MkEtcdClnt(nd.realm)
+	fs, err := fsetcd.MkFsEtcd(nd.realm)
 	if err != nil {
 		return err
 	}
-	nd.ec = ec
+	nd.fs = fs
 	fn := fmt.Sprintf("named-election-%s", nd.realm)
 
-	nd.elect, err = leaderetcd.MkElection(nd.ec.Client, fn)
+	nd.elect, err = leaderetcd.MkElection(nd.fs.Client, fn)
 	if err != nil {
 		return err
 	}
@@ -32,9 +32,9 @@ func (nd *Named) startLeader() error {
 		return err
 	}
 
-	ec.Fence(nd.elect.Key(), nd.elect.Rev())
+	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 
-	root := rootDir(ec, nd.realm)
+	root := rootDir(fs, nd.realm)
 	srv := fslibsrv.BootSrv(root, ip+":0", "named", nd.SigmaClnt, nd.attach, nd.detach)
 	if srv == nil {
 		return fmt.Errorf("BootSrv err %v\n", err)

@@ -23,15 +23,15 @@ func mkTpath(pn path.Path) sessp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	ec     *fsetcd.EtcdClnt
+	fs     *fsetcd.FsEtcd
 	pn     path.Path
 	di     fsetcd.DirEntInfo
 	parent sessp.Tpath
 	mtime  int64
 }
 
-func makeObjDi(ec *fsetcd.EtcdClnt, pn path.Path, di fsetcd.DirEntInfo, parent sessp.Tpath) *Obj {
-	o := &Obj{ec: ec, pn: pn, di: di, parent: parent}
+func makeObjDi(fs *fsetcd.FsEtcd, pn path.Path, di fsetcd.DirEntInfo, parent sessp.Tpath) *Obj {
+	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
 	return o
 }
 
@@ -58,14 +58,14 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return makeDir(makeObjDi(o.ec, dir, fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: o.parent}, 0))
+	return makeDir(makeObjDi(o.fs, dir, fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: o.parent}, 0))
 }
 
 // XXX SetParent
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
-	if o, err := getObj(o.ec, o.pn, o.di.Path, o.parent); err != nil {
+	if o, err := getObj(o.fs, o.pn, o.di.Path, o.parent); err != nil {
 		return nil, err
 	} else {
 		st := o.stat()
@@ -82,16 +82,16 @@ func (o *Obj) stat() *sp.Stat {
 	return st
 }
 
-func getObj(ec *fsetcd.EtcdClnt, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
-	nf, _, err := ec.GetFile(path)
+func getObj(fs *fsetcd.FsEtcd, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
+	nf, _, err := fs.GetFile(path)
 	if err != nil {
 		return nil, err
 	}
-	o := makeObjDi(ec, pn, fsetcd.DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}, parent)
+	o := makeObjDi(fs, pn, fsetcd.DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}, parent)
 	return o, nil
 }
 
 func (o *Obj) putObj() *serr.Err {
 	nf := fsetcd.MkEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.Data)
-	return o.ec.PutFile(o.di.Path, nf)
+	return o.fs.PutFile(o.di.Path, nf)
 }

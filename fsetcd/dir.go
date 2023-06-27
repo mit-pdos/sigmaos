@@ -48,9 +48,9 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
-func (ec *EtcdClnt) isEmpty(di DirEntInfo) (bool, *serr.Err) {
+func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 	if di.Nf == nil {
-		nf, _, err := ec.GetFile(di.Path)
+		nf, _, err := fs.GetFile(di.Path)
 		if err != nil {
 			return false, err
 		}
@@ -59,24 +59,24 @@ func (ec *EtcdClnt) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 	return di.isEmpty(), nil
 }
 
-func (ec *EtcdClnt) MkRootDir() *serr.Err {
+func (fs *FsEtcd) MkRootDir() *serr.Err {
 	nf, r := MkEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId)
 	if r != nil {
 		return serr.MkErrError(r)
 	}
-	if err := ec.PutFile(ROOT, nf); err != nil {
+	if err := fs.PutFile(ROOT, nf); err != nil {
 		return err
 	}
-	db.DPrintf(db.ETCDCLNT, "mkRoot: PutFile %v\n", nf)
+	db.DPrintf(db.FSETCD, "mkRoot: PutFile %v\n", nf)
 	return nil
 }
 
-func (ec *EtcdClnt) ReadRootDir() (*DirInfo, *serr.Err) {
-	return ec.ReadDir(ROOT)
+func (fs *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
+	return fs.ReadDir(ROOT)
 }
 
-func (ec *EtcdClnt) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
-	dir, _, err := ec.readDir(d, false)
+func (fs *FsEtcd) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
+	dir, _, err := fs.readDir(d, false)
 	if err != nil {
 		return DirEntInfo{}, err
 	}
@@ -88,8 +88,8 @@ func (ec *EtcdClnt) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
 }
 
 // XXX retry on version mismatch
-func (ec *EtcdClnt) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
-	dir, v, err := ec.readDir(d, false)
+func (fs *FsEtcd) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
+	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return DirEntInfo{}, err
 	}
@@ -98,8 +98,8 @@ func (ec *EtcdClnt) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *Etc
 		return DirEntInfo{}, serr.MkErr(serr.TErrExists, name)
 	}
 	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
-	db.DPrintf(db.ETCDCLNT, "Create %v dir %v nf %v\n", name, dir, nf)
-	if err := ec.create(d, dir, v, path, nf); err == nil {
+	db.DPrintf(db.FSETCD, "Create %v dir %v nf %v\n", name, dir, nf)
+	if err := fs.create(d, dir, v, path, nf); err == nil {
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
 		return di, nil
 	} else {
@@ -107,8 +107,8 @@ func (ec *EtcdClnt) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *Etc
 	}
 }
 
-func (ec *EtcdClnt) ReadDir(d sessp.Tpath) (*DirInfo, *serr.Err) {
-	dir, _, err := ec.readDir(d, true)
+func (fs *FsEtcd) ReadDir(d sessp.Tpath) (*DirInfo, *serr.Err) {
+	dir, _, err := fs.readDir(d, true)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +116,8 @@ func (ec *EtcdClnt) ReadDir(d sessp.Tpath) (*DirInfo, *serr.Err) {
 	return dir, nil
 }
 
-func (ec *EtcdClnt) Remove(d sessp.Tpath, name string) *serr.Err {
-	dir, v, err := ec.readDir(d, false)
+func (fs *FsEtcd) Remove(d sessp.Tpath, name string) *serr.Err {
+	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
 	}
@@ -127,9 +127,9 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, name string) *serr.Err {
 	}
 
 	di := e.(DirEntInfo)
-	db.DPrintf(db.ETCDCLNT, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
+	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
 
-	empty, err := ec.isEmpty(di)
+	empty, err := fs.isEmpty(di)
 	if err != nil {
 		return err
 	}
@@ -139,18 +139,18 @@ func (ec *EtcdClnt) Remove(d sessp.Tpath, name string) *serr.Err {
 
 	dir.Ents.Delete(name)
 
-	if err := ec.remove(d, dir, v, di.Path); err != nil {
+	if err := fs.remove(d, dir, v, di.Path); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ec *EtcdClnt) Rename(d sessp.Tpath, from, to string) *serr.Err {
-	dir, v, err := ec.readDir(d, false)
+func (fs *FsEtcd) Rename(d sessp.Tpath, from, to string) *serr.Err {
+	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ETCDCLNT, "Rename in %v from %v to %v\n", dir, from, to)
+	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v\n", dir, from, to)
 	fromi, ok := dir.Ents.Lookup(from)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, from)
@@ -160,7 +160,7 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, from, to string) *serr.Err {
 	toi, ok := dir.Ents.Lookup(to)
 	if ok {
 		di := toi.(DirEntInfo)
-		empty, err := ec.isEmpty(di)
+		empty, err := fs.isEmpty(di)
 		if err != nil {
 			return err
 		}
@@ -174,19 +174,19 @@ func (ec *EtcdClnt) Rename(d sessp.Tpath, from, to string) *serr.Err {
 	}
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
-	return ec.rename(d, dir, v, topath)
+	return fs.rename(d, dir, v, topath)
 }
 
-func (ec *EtcdClnt) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to string) *serr.Err {
-	dirf, vf, err := ec.readDir(df, false)
+func (fs *FsEtcd) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to string) *serr.Err {
+	dirf, vf, err := fs.readDir(df, false)
 	if err != nil {
 		return err
 	}
-	dirt, vt, err := ec.readDir(dt, false)
+	dirt, vt, err := fs.readDir(dt, false)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ETCDCLNT, "Renameat %v dir: %v %v %v %v\n", df, dirf, dirt, vt, vf)
+	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", df, dirf, dirt, vt, vf)
 	fi, ok := dirf.Ents.Lookup(from)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, from)
@@ -196,7 +196,7 @@ func (ec *EtcdClnt) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to str
 	ti, ok := dirt.Ents.Lookup(to)
 	if ok {
 		di := ti.(DirEntInfo)
-		empty, err := ec.isEmpty(di)
+		empty, err := fs.isEmpty(di)
 		if err != nil {
 			return err
 		}
@@ -210,10 +210,10 @@ func (ec *EtcdClnt) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to str
 	}
 	dirf.Ents.Delete(from)
 	dirt.Ents.Insert(to, difrom)
-	return ec.renameAt(df, dirf, vf, dt, dirt, vt, topath)
+	return fs.renameAt(df, dirf, vf, dt, dirt, vt, topath)
 }
 
-func (ec *EtcdClnt) Dump(l int, dir *DirInfo, pn path.Path, p sessp.Tpath) error {
+func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sessp.Tpath) error {
 	s := ""
 	for i := 0; i < l*4; i++ {
 		s += " "
@@ -223,9 +223,9 @@ func (ec *EtcdClnt) Dump(l int, dir *DirInfo, pn path.Path, p sessp.Tpath) error
 			di := v.(DirEntInfo)
 			fmt.Printf("%v%v %v\n", s, pn.Append(name), di)
 			if di.Perm.IsDir() {
-				nd, _, err := ec.readDir(di.Path, false)
+				nd, _, err := fs.readDir(di.Path, false)
 				if err == nil {
-					ec.Dump(l+1, nd, pn.Append(name), di.Path)
+					fs.Dump(l+1, nd, pn.Append(name), di.Path)
 				} else {
 					log.Printf("dumpDir: getObj %v %v\n", name, err)
 				}

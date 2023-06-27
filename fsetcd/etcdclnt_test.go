@@ -15,7 +15,7 @@ import (
 )
 
 func TestLease(t *testing.T) {
-	ec, err := fsetcd.MkEtcdClnt(sp.ROOTREALM)
+	ec, err := fsetcd.MkFsEtcd(sp.ROOTREALM)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)
 	respg, err := l.Grant(context.TODO(), 30)

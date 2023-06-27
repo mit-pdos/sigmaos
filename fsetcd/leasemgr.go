@@ -13,13 +13,13 @@ import (
 
 type leaseMgr struct {
 	sync.Mutex
-	ec *EtcdClnt
+	fs *FsEtcd
 	lc clientv3.Lease
 	lt *leaseTable
 }
 
-func mkLeaseMgr(ec *EtcdClnt) *leaseMgr {
-	return &leaseMgr{ec: ec, lc: clientv3.NewLease(ec.Client), lt: mkLeaseTable()}
+func mkLeaseMgr(fs *FsEtcd) *leaseMgr {
+	return &leaseMgr{fs: fs, lc: clientv3.NewLease(fs.Client), lt: mkLeaseTable()}
 }
 
 func (lmgr *leaseMgr) getLeaseID(cid sp.TclntId) (clientv3.LeaseID, error) {
@@ -38,7 +38,7 @@ func (lmgr *leaseMgr) getLeaseID(cid sp.TclntId) (clientv3.LeaseID, error) {
 }
 
 func (lmgr *leaseMgr) keepAlive(cid sp.TclntId, lid clientv3.LeaseID) error {
-	db.DPrintf(db.ETCDLEASE, "keepAlive cid %v lid %x\n", cid, lid)
+	db.DPrintf(db.FSETCDLEASE, "keepAlive cid %v lid %x\n", cid, lid)
 	lmgr.lt.add(cid, lid)
 	ch, err := lmgr.lc.KeepAlive(context.TODO(), lid)
 	if err != nil {
@@ -46,7 +46,7 @@ func (lmgr *leaseMgr) keepAlive(cid sp.TclntId, lid clientv3.LeaseID) error {
 	}
 	go func() {
 		for respa := range ch {
-			db.DPrintf(db.ETCDLEASE, "%v %x respa %v\n", cid, lid, respa.TTL)
+			db.DPrintf(db.FSETCDLEASE, "%v %x respa %v\n", cid, lid, respa.TTL)
 		}
 	}()
 	return nil
@@ -64,22 +64,22 @@ func (lmgr *leaseMgr) recoverLeases(cid sp.TclntId) error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ETCDLEASE, "recoverLeases cid %v %v\n", cid, respl.Leases)
+	db.DPrintf(db.FSETCDLEASE, "recoverLeases cid %v %v\n", cid, respl.Leases)
 	lopts := make([]clientv3.LeaseOption, 0)
 	lopts = append(lopts, clientv3.WithAttachedKeys())
 	for _, ls := range respl.Leases {
 		respttl, err := lmgr.lc.TimeToLive(context.TODO(), ls.ID, lopts...)
 		if err != nil {
-			db.DPrintf(db.ETCDLEASE, "respttl %v err %v\n", ls.ID, err)
+			db.DPrintf(db.FSETCDLEASE, "respttl %v err %v\n", ls.ID, err)
 			continue
 		}
 		for _, k := range respttl.Keys {
-			db.DPrintf(db.ETCDLEASE, "respttl %v %v %v\n", cid, respttl.TTL, string(k))
-			nf, _, err := lmgr.ec.getFile(string(k))
+			db.DPrintf(db.FSETCDLEASE, "respttl %v %v %v\n", cid, respttl.TTL, string(k))
+			nf, _, err := lmgr.fs.getFile(string(k))
 			if err != nil {
 				continue
 			}
-			db.DPrintf(db.ETCDLEASE, "getFile %v %v\n", string(k), nf)
+			db.DPrintf(db.FSETCDLEASE, "getFile %v %v\n", string(k), nf)
 			if nf.TclntId() == cid {
 				return lmgr.keepAlive(nf.TclntId(), ls.ID)
 			}
@@ -93,7 +93,7 @@ func (lmgr *leaseMgr) detach(cid sp.TclntId) {
 	defer lmgr.Unlock()
 
 	lid := lmgr.lt.lookup(cid)
-	db.DPrintf(db.ETCDLEASE, "named detach %v; revoke %x\n", cid, lid)
+	db.DPrintf(db.FSETCDLEASE, "named detach %v; revoke %x\n", cid, lid)
 	if lid != clientv3.NoLease {
 		lmgr.lc.Revoke(context.TODO(), lid)
 	}
@@ -105,7 +105,7 @@ func (lmgr *leaseMgr) LeaseOpts(nf *EtcdFile) ([]clientv3.OpOption, *serr.Err) {
 	if cid != sp.NoClntId {
 		lid, err := lmgr.getLeaseID(cid)
 		if err != nil {
-			db.DPrintf(db.ETCDCLNT, "getLeaseID %v err %v\n", cid, err)
+			db.DPrintf(db.FSETCD, "getLeaseID %v err %v\n", cid, err)
 			return nil, serr.MkErrError(err)
 		}
 		opts = append(opts, clientv3.WithLease(lid))

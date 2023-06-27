@@ -11,10 +11,10 @@ import (
 )
 
 func TestDump(t *testing.T) {
-	ec, err := fsetcd.MkEtcdClnt(sp.ROOTREALM)
+	fs, err := fsetcd.MkFsEtcd(sp.ROOTREALM)
 	assert.Nil(t, err)
-	nd, err := ec.ReadDir(fsetcd.ROOT)
+	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)
-	err = ec.Dump(0, nd, path.Path{}, fsetcd.ROOT)
+	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
 	assert.Nil(t, err)
 }

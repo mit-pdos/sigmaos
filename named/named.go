@@ -21,7 +21,7 @@ type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sesssrv.SessSrv
 	mu    sync.Mutex
-	ec    *fsetcd.EtcdClnt
+	fs    *fsetcd.FsEtcd
 	elect *leaderetcd.Election
 	job   string
 	realm sp.Trealm
@@ -57,14 +57,14 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", proc.GetPid(), nd.realm, err)
 		return err
 	}
-	defer nd.ec.Close()
+	defer nd.fs.Close()
 
 	mnt := sp.MkMountServer(nd.MyAddr())
 
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
-		if err := nd.ec.SetRootNamed(mnt); err != nil {
+		if err := nd.fs.SetRootNamed(mnt); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
@@ -98,12 +98,12 @@ func Run(args []string) error {
 
 func (nd *Named) attach(cid sp.TclntId) {
 	db.DPrintf(db.NAMED, "named: attach %v\n", cid)
-	nd.ec.Recover(cid)
+	nd.fs.Recover(cid)
 }
 
 func (nd *Named) detach(cid sp.TclntId) {
 	db.DPrintf(db.NAMED, "named: detach %v\n", cid)
-	nd.ec.Detach(cid)
+	nd.fs.Detach(cid)
 }
 
 func (nd *Named) resign() error {

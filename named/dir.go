@@ -26,10 +26,10 @@ func makeDir(o *Obj) *Dir {
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
 	name := pn[0]
-	di, err := d.ec.Lookup(d.Obj.di.Path, name)
+	di, err := d.fs.Lookup(d.Obj.di.Path, name)
 	if err == nil {
 		pn1 := d.pn.Copy().Append(name)
-		obj := makeObjDi(d.ec, pn1, di, d.Obj.di.Path)
+		obj := makeObjDi(d.fs, pn1, di, d.Obj.di.Path)
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {
 			o = makeDir(obj)
@@ -53,11 +53,11 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	if r != nil {
 		return nil, serr.MkErrError(r)
 	}
-	di, err := d.ec.Create(d.Obj.di.Path, name, path, nf)
+	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf)
 	if err != nil {
 		return nil, err
 	}
-	obj := makeObjDi(d.ec, pn, di, d.Obj.di.Path)
+	obj := makeObjDi(d.fs, pn, di, d.Obj.di.Path)
 	if obj.di.Perm.IsDir() {
 		return makeDir(obj), nil
 	} else {
@@ -66,7 +66,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
-	dir, err := d.ec.ReadDir(d.Obj.di.Path)
+	dir, err := d.fs.ReadDir(d.Obj.di.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 		for i, n := range ns {
 			e, _ := dir.Ents.Lookup(n)
 			di := e.(fsetcd.DirEntInfo)
-			o := makeObjDi(d.ec, d.pn.Append(n), di, d.Obj.di.Path)
+			o := makeObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
 			sts[i] = o.stat()
 		}
 		return sts, nil
@@ -99,18 +99,18 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.ec.Remove(d.Obj.di.Path, name)
+	return d.fs.Remove(d.Obj.di.Path, name)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	db.DPrintf(db.NAMED, "Rename %v: %v %v\n", d, from, to)
-	return d.ec.Rename(d.Obj.di.Path, from, to)
+	return d.fs.Rename(d.Obj.di.Path, from, to)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
 	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
 	dt := od.(*Dir)
-	return d.ec.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to)
+	return d.fs.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
@@ -149,17 +149,17 @@ func (d *Dir) VersionInc() {
 // Helpers
 //
 
-func rootDir(ec *fsetcd.EtcdClnt, realm sp.Trealm) *Dir {
-	_, err := ec.ReadRootDir()
+func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
+	_, err := fs.ReadRootDir()
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
-		if err := ec.MkRootDir(); err != nil {
+		if err := fs.MkRootDir(); err != nil {
 			db.DFatalf("rootDir: mkRootDir err %v\n", err)
 		}
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObjDi(ec, path.Path{},
+	return makeDir(makeObjDi(fs, path.Path{},
 		fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: fsetcd.ROOT},
 		fsetcd.ROOT))
 }

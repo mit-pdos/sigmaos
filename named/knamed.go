@@ -35,10 +35,10 @@ func RunKNamed(args []string) error {
 	if err := nd.startLeader(); err != nil {
 		db.DFatalf("Error startLeader %v\n", err)
 	}
-	defer nd.ec.Close()
+	defer nd.fs.Close()
 
 	mnt := sp.MkMountServer(nd.MyAddr())
-	if err := nd.ec.SetRootNamed(mnt); err != nil {
+	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname(proc.GetPid().String()))

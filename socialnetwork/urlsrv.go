@@ -5,13 +5,14 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/protdevsrv"
 	"sigmaos/cacheclnt"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
 	"fmt"
 	"strings"
 	"math/rand"
 	"time"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
@@ -42,7 +43,7 @@ func RandStringRunes(n int) string {
 
 type UrlSrv struct {
 	cachec *cacheclnt.CacheClnt
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 }
 
 func RunUrlSrv(public bool, jobname string) error {
@@ -52,12 +53,13 @@ func RunUrlSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	urlsrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL, pds.MemFs.SigmaClnt().FsLib)
+	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
+	urlsrv.mongoc = mongoc
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -74,23 +76,19 @@ func (urlsrv *UrlSrv) ComposeUrls(
 		res.Ok = "Empty input"
 		return nil
 	}
-	res.Urls = make([]*proto.Url, nUrls)
-	q := "INSERT INTO socialnetwork_url (shorturl, extendedurl) VALUES"
+	res.Shorturls = make([]string, nUrls)
 	for idx, extendedurl := range req.Extendedurls {
 		shorturl := RandStringRunes(URL_LENGTH)
-		q += fmt.Sprintf(" ('%v', '%v'),", shorturl, extendedurl)
-		res.Urls[idx] = &proto.Url{Extendedurl: extendedurl, Shorturl: URL_HOSTNAME + shorturl}
-	} 
-	// remove the last ","
-	q = q[0:len(q)-1]
-	if err := urlsrv.dbc.Exec(q); err != nil {
-		res.Ok = "DB Failure."
-		return nil
+		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
+		if err := urlsrv.mongoc.Insert(SN_DB, URL_COL, url); err != nil {
+			dbg.DFatalf("Mongo error: %v", err)
+			return err
+		}
+		res.Shorturls[idx] = URL_HOSTNAME + shorturl
 	}
 	res.Ok = URL_QUERY_OK
 	return nil
 }
-
 
 func (urlsrv *UrlSrv) GetUrls(
 		ctx fs.CtxI, req proto.GetUrlsRequest, res *proto.GetUrlsResponse) error {
@@ -101,7 +99,7 @@ func (urlsrv *UrlSrv) GetUrls(
 		extendedurl, err := urlsrv.getExtendedUrl(shorturl)
 		if err != nil {
 			return err
-		} 
+		}
 		if extendedurl == "" {
 			missing = true
 			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", shorturl)
@@ -116,7 +114,7 @@ func (urlsrv *UrlSrv) GetUrls(
 	return nil
 }
 
-// The following function is not optimized. But it's not used yet. 
+// The following function is not optimized. But it's not used yet.
 func (urlsrv *UrlSrv) getExtendedUrl(shortUrl string) (string, error) {
 	if !strings.HasPrefix(shortUrl, URL_HOSTNAME) {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Url %v does not start with %v!", shortUrl, URL_HOSTNAME)
@@ -124,26 +122,31 @@ func (urlsrv *UrlSrv) getExtendedUrl(shortUrl string) (string, error) {
 	}
 	urlKey := shortUrl[urlPrefixL:]
 	key := URL_CACHE_PREFIX + urlKey
-	url := proto.Url{}
-	if err := urlsrv.cachec.Get(key, &url); err != nil {
+	cacheItem := &proto.CacheItem{}
+	url := &Url{}
+	if err := urlsrv.cachec.Get(key, cacheItem); err != nil {
 		if !urlsrv.cachec.IsMiss(err) {
 			return "", err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Url %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_url where shorturl='%v';", urlKey)
-		var urls []proto.Url
-		if err := urlsrv.dbc.Query(q, &urls); err != nil {
+		found, err := urlsrv.mongoc.FindOne(SN_DB, URL_COL, bson.M{"shorturl": urlKey}, url)
+		if err != nil {
 			return "", err
 		}
-		if len(urls) == 0 {
+		if !found {
 			return "", nil
 		}
-		url = urls[0]
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Found %v for %v in DB.", url, urlKey)
-		urlsrv.cachec.Put(key, &url)
+		encoded, _ := bson.Marshal(url)
+		urlsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 	} else {
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Found %v in cache!\n", url)
+		bson.Unmarshal(cacheItem.Val, url)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Found %v in cache!\n", cacheItem)
 	}
 	return url.Extendedurl, nil
 }
 
+type Url struct {
+	Shorturl string    `bson:shorturl`
+	Extendedurl string `bson:extendedurl`
+}

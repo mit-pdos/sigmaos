@@ -1,5 +1,0 @@
-#!/bin/bash
-
-USER=arielck
-LEADER=node0
-SERVERS=servers.txt

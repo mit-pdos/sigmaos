@@ -44,7 +44,6 @@ if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
 CREATE database sigmaos;
 USE sigmaos;
 source hotel/init-db.sql;
-source socialnetwork/init-db.sql;
 CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
 CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';
@@ -53,3 +52,18 @@ FLUSH PRIVILEGES;
 SET GLOBAL max_connections = 100000;
 ENDOFSQL
 fi
+
+docker pull mongo:4.4.6
+if ! docker ps | grep -q sigmamongo; then
+    echo "start mongodb"
+    docker run --name sigmamongo -d mongo:4.4.6
+fi
+
+until [ "`docker inspect -f {{.State.Running}} sigmamongo`"=="true" ]; do
+    echo -n "." 1>&2
+    sleep 0.1;
+done;
+
+ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo)
+
+echo "mongo IP: $ip"

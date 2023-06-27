@@ -70,7 +70,6 @@ const (
 	KVMV                              = "KVMV"
 	KVMV_ERR                          = KVMV + ERR
 	SOCIAL_NETWORK                    = "SOCIAL_NETWORK"
-	SOCIAL_NETWORK_MOL                = SOCIAL_NETWORK + "_MOL"
 	SOCIAL_NETWORK_USER               = SOCIAL_NETWORK + "_USER"
 	SOCIAL_NETWORK_GRAPH              = SOCIAL_NETWORK + "_GRAPH"
 	SOCIAL_NETWORK_POST               = SOCIAL_NETWORK + "_POST"
@@ -79,6 +78,9 @@ const (
 	SOCIAL_NETWORK_COMPOSE            = SOCIAL_NETWORK + "_COMPOSE"
 	SOCIAL_NETWORK_TEXT               = SOCIAL_NETWORK + "_TEXT"
 	SOCIAL_NETWORK_URL                = SOCIAL_NETWORK + "_URL"
+	SOCIAL_NETWORK_MEDIA              = SOCIAL_NETWORK + "_MEDIA"
+	SOCIAL_NETWORK_FRONTEND           = SOCIAL_NETWORK + "_FRONTEND"
+	SOCIAL_NETWORK_CLNT               = SOCIAL_NETWORK + "_CLNT"
 )
 
 // System
@@ -104,9 +106,12 @@ const (
 	SCHEDDCLNT_ERR           = "SCHEDDCLNT" + ERR
 	PROCMGR_ERR              = PROCMGR + ERR
 	PROCCACHE                = "PROCCACHE"
+	CGROUP                   = "CGROUP"
+	CGROUP_ERR               = "CGROUP_ERR"
 	S3                       = "S3"
 	UX                       = "UX"
 	DB                       = "DB"
+	MONGO                    = "MONGO"
 	PROXY                    = "PROXY"
 )
 

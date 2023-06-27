@@ -61,11 +61,16 @@ var N_REALM int
 
 // XXX Remove
 var MEMCACHED_ADDRS string
+var HTTP_URL string
+var DURATION time.Duration
+var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
 var RPCBENCH_NCORE int
 var RPCBENCH_DURS string
 var RPCBENCH_MAX_RPS string
+var IMG_RESIZE_INPUT_PATH string
+var N_IMG_RESIZE_JOBS int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -106,6 +111,9 @@ func init() {
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
+	flag.StringVar(&HTTP_URL, "http_url", "http://x.x.x.x", "HTTP url.")
+	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration.")
+	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
@@ -121,6 +129,8 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
+	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
+	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
 }
 
 // ========== Common parameters ==========
@@ -219,6 +229,11 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	printResultSummary(rs)
 	waitExitProcs(ts1, ps)
 	rootts.Shutdown()
+}
+
+// Test the throughput of spawning procs.
+func TestMicroHTTPLoadGen(t *testing.T) {
+	RunHTTPLoadGen(HTTP_URL, DURATION, MAX_RPS)
 }
 
 func TestAppMR(t *testing.T) {
@@ -870,4 +885,28 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	db.DPrintf(db.TEST, "Downloading results")
 	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
 	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+}
+
+func TestImgResize(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS)
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	monitorCPUUtil(ts1, p)
+	runOps(ts1, apps, runImgResize, rs)
+	printResultSummary(rs)
+	rootts.Shutdown()
 }

@@ -43,6 +43,11 @@ const (
 	SEQWC               = "SEQWC"
 )
 
+// mr
+const (
+	THUMBNAIL Tselector = "THUMBNAIL"
+)
+
 // kv
 const (
 	KVCLERK Tselector = "KVCLERK"
@@ -55,6 +60,17 @@ const (
 	HOTEL_RESERVE           = "HOTEL_RESERVE"
 	HOTEL_SEARCH            = "HOTEL_SEARCH"
 	HOTEL_RATE              = "HOTEL_RATE"
+)
+
+// socialnetwork
+const (
+	SOCIAL_NETWORK_FRONTEND Tselector = "SOCIAL_NETWORK_FRONTEND"
+	SOCIAL_NETWORK_USER               = "SOCIAL_NETWORK_USER"
+	SOCIAL_NETWORK_GRAPH              = "SOCIAL_NETWORK_GRAPH"
+	SOCIAL_NETWORK_POST               = "SOCIAL_NETWORK_POST"
+	SOCIAL_NETWORK_TIMELINE           = "SOCIAL_NETWORK_TIMELINE"
+	SOCIAL_NETWORK_HOME               = "SOCIAL_NETWORK_HOME"
+	SOCIAL_NETWORK_COMPOSE            = "SOCIAL_NETWORK_COMPOSE"
 )
 
 // cache

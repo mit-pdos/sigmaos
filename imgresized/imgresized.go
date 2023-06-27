@@ -3,6 +3,7 @@ package imgresized
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ const (
 	IMG    = "name/img"
 	STOP   = "_STOP"
 	NCOORD = 1
+	NCORE  = 1
 )
 
 type ImgSrv struct {
@@ -31,6 +33,7 @@ type ImgSrv struct {
 	done      string
 	wip       string
 	todo      string
+	isDone    bool
 	crash     int
 	electclnt *electclnt.ElectClnt
 }
@@ -68,6 +71,20 @@ func NTaskDone(fsl *fslib.FsLib, job string) (int, error) {
 	return len(sts), nil
 }
 
+func Cleanup(fsl *fslib.FsLib, dir string) error {
+	_, err := fsl.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
+		if strings.Contains(st.Name, "thumb") {
+			err := fsl.Remove(path.Join(dir, st.Name))
+			if err != nil {
+				return true, err
+			}
+			return false, nil
+		}
+		return false, nil
+	})
+	return err
+}
+
 func MakeImgd(args []string) (*ImgSrv, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeImgSrv: wrong number of arguments")
@@ -95,6 +112,12 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	imgd.electclnt = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
 
 	crash.Crasher(imgd.FsLib)
+
+	go func() {
+		imgd.WaitEvict(proc.GetPid())
+		imgd.ExitedOK()
+		os.Exit(0)
+	}()
 
 	return imgd, nil
 }
@@ -143,7 +166,7 @@ func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, 
 
 func ThumbName(fn string) string {
 	ext := path.Ext(fn)
-	fn1 := strings.TrimSuffix(fn, ext) + "-thumb" + path.Ext(fn)
+	fn1 := strings.TrimSuffix(fn, ext) + "-" + rd.String(4) + "-thumb" + path.Ext(fn)
 	return fn1
 }
 
@@ -154,6 +177,7 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 		if imgd.crash > 0 {
 			procs[i].AppendEnv("SIGMACRASH", strconv.Itoa(imgd.crash))
 		}
+		procs[i].SetNcore(NCORE)
 		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
 	}
 	start := time.Now()
@@ -168,6 +192,9 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 }
 
 func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
+	if imgd.isDone {
+		return false
+	}
 	tasks := []task{}
 	ch := make(chan Tresult)
 	for _, st := range sts {

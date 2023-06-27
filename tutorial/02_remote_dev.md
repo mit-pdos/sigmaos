@@ -88,17 +88,24 @@ XXX TODO.
 
 #### CloudLab.
 
-CloudLab runs an old version of the Linux Kernel, so you need to upgrade the
-kernel before you can install SigmaOS. Also, CloudLab sets up its machines with
-a very small root partition (usually 15G) and a large, unmounted partition. In
-order to run SigmaOS and install the new kernel (both of which can use a
-significant amount of disk space), you will need to mount and format the new
-disk partition. The `./upgrade-linux.sh` script takes care of both setting up
-the new partition and installing the new version of the kernel.
+CloudLab sets up its machines with a very small root partition (usually 15G)
+and a large, unmounted partition. This causes problems for both SigmaOS and
+Kubernetes, since Docker and Kubernetes store container logs, images, and other
+data in the root partition by default, which fills up quickly.  Additionally,
+CloudLab's default kernel configuration runs with CPU frequency scaling and
+c-states on, which can cause performance variablity during benchmarking, and
+runs with cgroupsv1 by default (whereas SigmaOS requires cgroupsv2).
+
+The `./configure-kernel.sh` script takes care of configuring the kernel,
+formatting, and mounting a large data volume for SigmaOS, Kubernetes, and
+Docker to use. Make sure that each machine successfully restarts after running
+the kernel configuration script on it.
 
 For the remainder of this section,
 replace USER and HOSTNAME with your username and the DNS name of the machine
 you wish to run the script on.
+
+You may update the content of `servers.txt` to match your cluster on cloudlab. 
 
 First, find the name of the large, unused partition on the cloudlab machines
 you are using by logging into one of them and running:
@@ -107,15 +114,17 @@ you are using by logging into one of them and running:
 $ lsblk
 ```
 
-Then, in the `cloudlab/upgrade-linux.sh` script, replace all occurrences of the
-default value of the variable `BLKDEV` with the path to the unused partition.
 For example, on `c220g5` machines, this is `/dev/sda4`.
 
-Then, upgrade the Linux Kernel on each machine by running:
+Once you have this information, use it to fill in the `cloudlab/env.sh`
+environment file with your username and the path to the large, unmounted block
+device.
+
+Then, run the `cloudlab/configure-kernel.sh` with each machine name as follows:
 
 ```
 $ cd cloudlab
-$ ./upgrade-linux.sh USER@HOSTNAME
+$ ./configure-kernel.sh HOSTNAME
 ```
 
 If you are setting up a multi-machine clutser, it may be convenient to run this
@@ -124,20 +133,20 @@ script in parallel in a bash for loop, like so:
 ```
 $ cd cloudlab
 $ for h in $(cat servers.txt | cut -d " " -f 2); do
-./upgrade-linux.sh USER@$h > /tmp/$h.out 2>&1 &
+	echo "=========== Upgrading linux for $h";
+	./configure-kernel.sh $h >& /tmp/$h.out;
 done
 ```
-
-Note: for some reason, this doesn't always work on the first try. You may need
-to try to install the kernel twice, by rerunning the `upgrade-linux.sh` script.
 
 Then, install the SigmaOS software, credentials, and its dependencies by
 running:
 
 ```
 $ cd cloudlab
-$ ./setup-instance.sh USER@HOSTNAME
+$ ./setup-instance.sh USER HOSTNAME >& /tmp/setup_$h.out
 ```
+
+On the target machine, there should be a sigmaos repo, plus docker runnables. 
 
 ### Updating SigmaOS
 
@@ -146,20 +155,20 @@ restarting the cluster, the SigmaOS software and scripts should take care of
 updating the cluster to the newest version.  However, changes to the SigmaOS
 git repo will not be automatically reflected on remote machines. This is
 particularly relevant to benchmarks, which are implemented as `go` files
-included in the repo.
+included in the repo. 
 
-In order to update the repo on a remote cluster, run:
+In order to update the repo on a remote cluster, run (you only need VPCID for AWS): 
 
 ```
 $ cd PLATFORM
-$ ./update-repo.sh --vpc VPCID --parallel
+$ ./update-repo.sh USER --vpc VPCID --parallel
 ```
 
 If you wish to switch to a different branch `BRANCH` before pulling, run:
 
 ```
 $ cd PLATFORM
-$ ./update-repo.sh --vpc VPCID --parallel --branch BRANCH
+$ ./update-repo.sh USER --vpc VPCID --parallel --branch BRANCH
 ```
 
 ### Deploying SigmaOS
@@ -168,7 +177,7 @@ In order to start a SigmaOS cluster, run:
 
 ```
 $ cd PLATFORM
-$ ./start-sigmaos.sh --vpc VPCID --pull TAG
+$ ./start-sigmaos.sh USER --vpc VPCID --pull TAG
 ```
 
 If you wish to only start SigmaOS on a subset `N` of the machines in the
@@ -176,12 +185,60 @@ cluster, run:
 
 ```
 $ cd PLATFORM
-$ ./start-sigmaos.sh --vpc VPCID --pull TAG --n N
+$ ./start-sigmaos.sh USER --vpc VPCID --pull TAG --n N
 ```
+
+To verify SigmaOS status on each machine, run
+
+```
+for h in $(cat servers.txt | cut -d " " -f 2); do echo $h; ssh USER@$h "docker ps -a"; done
+```
+
+Each node should be running an instance of sigmaos image. Plus, node 0, should have mariadb 
+and sigmajaeger images. 
 
 In order to stop the SigmaOS deployment, run:
 
 ```
 $ cd PLATFORM
-$ ./stop-sigmaos.sh --vpc VPCID --parallel
+$ ./stop-sigmaos.sh USER --vpc VPCID --parallel
 ```
+
+## Quirks
+
+Both AWS and CloudLab have some quirks which are important to know about when
+deploying SigmaOS. This section describes some of them.
+
+### CloudLab Quirks
+
+I have run into quite a few quirks while working with CloudLab. Their users
+Google group is very active and useful, and this is the best way to reach the
+support team, in my experience. You can access it
+[here](https://groups.google.com/g/cloudlab-users).
+
+Some specific examples of issues I've run into (and solutions) can be found
+here:
+
+- Some of the CloudLab hardware is faulty. In particular, I've had issues where
+  the top-of-rack network switch sometimes fails unexpectedly, and some
+  machines are unable to talk to each other for a short time while the switch
+  reboots. Other lab members (e.g., Zain), have run into bad NICs which
+  sometimes drop packets of fail entirely. The best thing to do is run a "Link
+  Test" as soon as you get your cluster, to make sure the network is fully
+  functional. You can start a link test from the home page of your experiment.
+- CloudLab sets up its machines to have a very small root partition, which
+  fills up easily. Any data or logging should make sure to be written to a
+  larger partition.
+- Many CloudLab machines have multiple CPUs/NUMA nodes. However, the Linux
+  Scheduler has bugs which cause unexpected performance issues which manifest
+  in multi-NUMA node configurations. As such, it's important to turn off the
+  second CPU when benchmarking.
+- CloudLab machines have many network interfaces. In order to avoid being
+  throttled, make sure to always use the local cluster IP range, 10.10.0.0/16.
+
+### AWS Quirks
+
+- AWS VMs are hyperthreaded, which may increase interference between threads on
+  the same machine.
+- In my experience, it seems that AWS VM and network performance fluctuates
+  slightly with the time of day.

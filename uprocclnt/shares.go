@@ -16,8 +16,8 @@ type Tshare int64
 // realm's BE procs will get .5 cores' worth of shares.
 
 const (
-	SHARE_PER_CORE Tshare = 1000
-	BE_SHARES             = 100 // shares split by BE procs.
+	SHARE_PER_CORE Tshare = 500
+	BE_SHARES             = 50 // shares split by BE procs.
 	MIN_SHARE             = SHARE_PER_CORE / 100
 )
 
@@ -84,6 +84,9 @@ func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
 		return
 	}
 	pdc.share = share
+	if pdc.share > 10000 {
+		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", pdc.share)
+	}
 	if err := updm.kclnt.SetCPUShares(pdc.pid, int64(share)); err != nil {
 		db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
 	}

@@ -58,10 +58,10 @@ if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
-vms=`cat servers.txt | cut -d " " -f2` 
+vms=`cat sigma-servers.txt | cut -d " " -f2`
 
 vma=($vms)
 MAIN="${vma[0]}"
@@ -81,7 +81,8 @@ fi
 vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 
 for vm in $vms; do
-  echo $vm
+  echo "starting SigmaOS on $vm!"
+  $DIR/setup-for-benchmarking.sh $LOGIN@$vm
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"

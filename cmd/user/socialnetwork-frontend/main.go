@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 	dbg "sigmaos/debug"
-	"sigmaos/socialnetwork"
+	sn "sigmaos/socialnetwork"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		dbg.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}
-	if err := socialnetwork.RunMoLSrv(public); err != nil {
-		dbg.DFatalf("RunMoLSrv %v err %v\n", os.Args[0], err)
+	if err := sn.RunFrontendSrv(public, os.Args[2]); err != nil {
+		dbg.DFatalf("RunFrontendSrv %v err %v\n", os.Args[0], err)
 	}
 }

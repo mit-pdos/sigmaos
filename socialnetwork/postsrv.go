@@ -3,14 +3,14 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
-	"sigmaos/dbclnt"
+	"sigmaos/mongoclnt"
 	"sigmaos/cacheclnt"
 	"sigmaos/fs"
 	"sigmaos/socialnetwork/proto"
-	"encoding/hex"
-	"encoding/json"
 	"strconv"
+	"gopkg.in/mgo.v2/bson"
 	"fmt"
 )
 
@@ -24,7 +24,7 @@ const (
 )
 
 type PostSrv struct {
-	dbc    *dbclnt.DbClnt
+	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
 }
 
@@ -35,35 +35,34 @@ func RunPostSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
-	psrv.dbc = dbc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST, pds.MemFs.SigmaClnt().FsLib)
+	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
+	psrv.mongoc = mongoc
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	psrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_POST)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
+
 	return pds.RunServer()
 }
 
 func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *proto.StorePostResponse) error {
 	res.Ok = "No"
-	post := req.Post
-	encode, err := EncodePost(*post) 
-	if err != nil {
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Error enconding post %v\n", post)
+	postBson := postToBson(req.Post)
+	if err := psrv.mongoc.Insert(SN_DB, POST_COL, postBson); err != nil {
+		dbg.DFatalf("Error storing post %v", err)
 		return err
-	} 
-	q := fmt.Sprintf(
-		"INSERT INTO socialnetwork_post (postid, postcontent) VALUES ('%v', '%v')", 
-		post.Postid, encode)
-	if err = psrv.dbc.Exec(q); err != nil {
-		res.Ok = "DB Failure."
-		return nil
 	}
 	res.Ok = POST_QUERY_OK
 	return nil
@@ -74,15 +73,15 @@ func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *pro
 	posts := make([]*proto.Post, len(req.Postids))
 	missing := false
 	for idx, postid := range req.Postids {
-		post, err := psrv.getPost(postid)
+		postBson, err := psrv.getPost(postid)
 		if err != nil {
 			return err
 		} 
-		if post == nil {
+		if postBson == nil {
 			missing = true
 			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", postid)
 		} else {
-			posts[idx] = post
+			posts[idx] = bsonToPost(postBson)
 		}
 	}
 	res.Posts = posts
@@ -92,47 +91,68 @@ func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *pro
 	return nil
 }
 
-
-func EncodePost(post proto.Post) (string, error) {
-	postBytes, err := json.Marshal(post)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(postBytes), nil
-}
-
-func DecodePost(encoded string, postDecoded *proto.Post) error {
-	postBytesDecoded, err := hex.DecodeString(encoded)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(postBytesDecoded, postDecoded)
-}
-
-func (psrv *PostSrv) getPost(postid int64) (*proto.Post, error) {
+func (psrv *PostSrv) getPost(postid int64) (*PostBson, error) {
 	key := POST_CACHE_PREFIX + strconv.FormatInt(postid, 10) 
-	post := &proto.Post{}
-	if err := psrv.cachec.Get(key, post); err != nil {
+	postBson := &PostBson{}
+	cacheItem := &proto.CacheItem{}
+	if err := psrv.cachec.Get(key, cacheItem); err != nil {
 		if !psrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Post %v cache miss\n", key)
-		q := fmt.Sprintf("SELECT * from socialnetwork_post where postid='%v';", postid)
-		var postEncodes []proto.PostEncode
-		if err := psrv.dbc.Query(q, &postEncodes); err != nil {
+		found, err := psrv.mongoc.FindOne(SN_DB, POST_COL, bson.M{"postid": postid}, postBson)
+		if err != nil {
 			return nil, err
-		}
-		if len(postEncodes) == 0 {
+		} 
+		if !found {
 			return nil, nil
 		}
-		postEncode := &postEncodes[0]
-		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Found encoded post %v in DB: %v\n", postid, postEncode)
-		if err := DecodePost(postEncode.Postcontent, post); err != nil {
-			return nil, err
-		}	
-		psrv.cachec.Put(key, post)
+		encoded, _ := bson.Marshal(postBson)
+		psrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Found post %v in DB: %v", postid, postBson)
 	} else {
+		bson.Unmarshal(cacheItem.Val, postBson)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Found post %v in cache!\n", postid)
 	}
-	return post, nil
+	return postBson, nil
+}
+
+func postToBson(post *proto.Post) *PostBson {
+	return &PostBson{
+		Postid: post.Postid,
+		Posttype: int32(post.Posttype),
+		Timestamp: post.Timestamp,
+		Creator: post.Creator,
+		CreatorUname: post.Creatoruname,
+		Text: post.Text,
+		Usermentions: post.Usermentions,
+		Medias: post.Medias,
+		Urls: post.Urls,
+	}
+}
+
+func bsonToPost(bson *PostBson) *proto.Post {
+	return &proto.Post{
+		Postid: bson.Postid,
+		Posttype: proto.POST_TYPE(bson.Posttype),
+		Timestamp: bson.Timestamp,
+		Creator: bson.Creator,
+		Creatoruname: bson.CreatorUname,
+		Text: bson.Text,
+		Usermentions: bson.Usermentions,
+		Medias: bson.Medias,
+		Urls: bson.Urls,
+	}
+}
+
+type PostBson struct {
+	Postid int64         `bson:postid`
+	Posttype int32       `bson:posttype`
+	Timestamp int64      `bson:timestamp`
+	Creator int64        `bson:creator`
+	CreatorUname string  `bson:creatoruname`
+	Text string          `bson:text`
+	Usermentions []int64 `bson:usermentions`
+	Medias []int64       `bson:medias`
+	Urls []string        `bson:urls`
 }

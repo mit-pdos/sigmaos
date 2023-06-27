@@ -5,7 +5,6 @@ import (
 	"image/jpeg"
 	"os"
 	"path"
-	"strconv"
 	"testing"
 	"time"
 
@@ -13,11 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// db "sigmaos/debug"
-	"sigmaos/groupmgr"
 	"sigmaos/imgresized"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -84,10 +81,6 @@ func (ts *Tstate) WaitDone(t int) {
 	fmt.Printf("\n")
 }
 
-func startImgd(sc *sigmaclnt.SigmaClnt, job string) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, 1, "imgresized", []string{strconv.Itoa(0)}, job, 0, 1, 0, 0, 0)
-}
-
 func TestImgdOne(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -100,7 +93,7 @@ func TestImgdOne(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := startImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
 
 	ts.WaitDone(1)
 
@@ -118,7 +111,7 @@ func TestImgdMany(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	imgd := startImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
 	assert.Nil(t, err)

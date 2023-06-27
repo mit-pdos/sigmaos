@@ -29,14 +29,14 @@ const (
 	NAMEDPORT = ":1111"
 )
 
-var start bool
+var Start bool
 var noShutdown bool
 var tag string
 var Overlays bool
 
 func init() {
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
-	flag.BoolVar(&start, "start", false, "Start system")
+	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 }
@@ -107,7 +107,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var containerIP string
 	var err error
 	var k *bootkernelclnt.Kernel
-	if start {
+	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
 		if err != nil {

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"sigmaos/test"
 	"sigmaos/fslib"
+	"gopkg.in/mgo.v2/bson"
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -44,7 +45,7 @@ func TestUser(t *testing.T) {
 	created_userid := res_reg.Userid
 
 	// check user
-	arg_check.Usernames = []string{"test_user", "user_1", "user_2"} 
+	arg_check.Usernames = []string{"test_user", "user_1", "user_2"}
 	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_check.Ok)
@@ -65,9 +66,11 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, "OK", res_login.Ok)
 
 	// verify cache contents
-	user := &proto.User{}
-	err = snCfg.CacheClnt.Get(sn.USER_CACHE_PREFIX + "test_user", user)
+	user := &sn.User{}
+	cacheItem := &proto.CacheItem{}
+	err = snCfg.CacheClnt.Get(sn.USER_CACHE_PREFIX + "test_user", cacheItem)
 	assert.Nil(t, err)
+	bson.Unmarshal(cacheItem.Val, user)
 	assert.Equal(t, "Alice", user.Firstname)
 	assert.Equal(t, "Test", user.Lastname)
 	assert.Equal(t, created_userid, user.Userid)
@@ -79,7 +82,7 @@ func TestUser(t *testing.T) {
 func TestGraph(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-user", test.Overlays, 2},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
 	snCfg := tssn.snCfg
 
@@ -91,14 +94,14 @@ func TestGraph(t *testing.T) {
 	// get follower and followee list
 	arg_get_fler := proto.GetFollowersRequest{}
 	arg_get_fler.Followeeid = 0
-	res_get := proto.GraphGetResponse{} 
+	res_get := proto.GraphGetResponse{}
 	err = pdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids)) // user 0 has no follower
 	
 	arg_get_flee := proto.GetFolloweesRequest{}
-	arg_get_flee.Followerid = 1 
+	arg_get_flee.Followerid = 1
 	err = pdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
@@ -124,8 +127,8 @@ func TestGraph(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 2, len(res_get.Userids))
-	assert.Equal(t, int64(0), res_get.Userids[0]) // user 1 has two followees user 0 & 2
-	assert.Equal(t, int64(2), res_get.Userids[1]) // user 1 has two followees user 0 & 2
+	assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has two followees user 0 & 2
+	assert.Equal(t, int64(0), res_get.Userids[1]) // user 1 has two followees user 0 & 2
 
 	// Unfollow
 	arg_unfollow := proto.UnfollowRequest{}
@@ -153,14 +156,14 @@ func TestGraph(t *testing.T) {
 func TestUserAndGraph(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 2}, 
+		sn.Srv{"socialnetwork-user", test.Overlays, 2},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
 	snCfg := tssn.snCfg
 	updc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
 	gpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
-	// Create two users Alice and Bob 
+	// Create two users Alice and Bob
 	arg_reg1 := proto.RegisterUserRequest{
 		Firstname: "Alice", Lastname: "Test", Username: "atest", Password: "xyz"}
 	arg_reg2 := proto.RegisterUserRequest{
@@ -186,15 +189,15 @@ func TestUserAndGraph(t *testing.T) {
 
 	arg_get_fler := proto.GetFollowersRequest{}
 	arg_get_fler.Followeeid = buserid
-	res_get := proto.GraphGetResponse{} 
+	res_get := proto.GraphGetResponse{}
 	err = gpdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
-	assert.Equal(t, 1, len(res_get.Userids)) 
+	assert.Equal(t, 1, len(res_get.Userids))
 	assert.Equal(t, auserid, res_get.Userids[0])
 	
 	arg_get_flee := proto.GetFolloweesRequest{}
-	arg_get_flee.Followerid = auserid 
+	arg_get_flee.Followerid = auserid
 	err = gpdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)

@@ -1,7 +1,6 @@
 package socialnetwork
 
 import (
-	"flag"
 	"fmt"
 	"path"
 	"sigmaos/cacheclnt"
@@ -14,19 +13,27 @@ import (
 )
 
 const (
-	cacheNcore = 2
+	cacheNcore     = 2
+	HTTP_ADDRS     = "http-addr"
+	N_RPC_SESSIONS = 10
 )
-
-var N_RPC_SESSIONS int
-
-func init() {
-	flag.IntVar(&N_RPC_SESSIONS, "nrpc", 1, "Number of RPC sessions")
-}
 
 type Srv struct {
 	Name   string
 	Public bool
 	Ncore  proc.Tcore
+}
+
+func JobHTTPAddrsPath(job string) string {
+	return path.Join(JobDir(job), HTTP_ADDRS)
+}
+
+func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
+	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	if err != nil {
+		return nil, err
+	}
+	return mnt.Addr, err
 }
 
 func MakeMoLSrvs(public bool) []Srv {
@@ -37,9 +44,9 @@ func MakeMoLSrvs(public bool) []Srv {
 	}
 }
 
-func MakeFsLibs(uname string, base *fslib.FsLib) []*fslib.FsLib {
-	fsls := []*fslib.FsLib{base}
-	for i := 1; i < N_RPC_SESSIONS; i++ {
+func MakeFsLibs(uname string) []*fslib.FsLib {
+	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
+	for i := 0; i < N_RPC_SESSIONS; i++ {
 		fsl, err := fslib.MakeFsLib(sp.Tuname(uname + "-" + strconv.Itoa(i)))
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)

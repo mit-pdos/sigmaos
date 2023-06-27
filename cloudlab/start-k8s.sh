@@ -45,8 +45,8 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 
@@ -67,6 +67,7 @@ id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
 key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
 
 for vm in $vms; do
+  $DIR/setup-for-benchmarking.sh $LOGIN@$vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
@@ -77,6 +78,9 @@ for vm in $vms; do
       sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
       sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
     else
+#      cp ~/ulambda/cloudlab/yaml/k8s-cluster-config-epleg.yaml /tmp/kubelet.yaml
+#      sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
+#      sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
       sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
     fi
     mkdir -p ~/.kube

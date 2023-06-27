@@ -14,14 +14,14 @@ import (
 
 // YH:
 // Text service for social network
-// No db or cache connection. 
+// No db or cache connection.
 
 const (
 	TEXT_QUERY_OK = "OK"
 )
 
 
-var mentionRegex = regexp.MustCompile("@[a-zA-Z0-9-_]+") 
+var mentionRegex = regexp.MustCompile("@[a-zA-Z0-9-_]+")
 var urlRegex = regexp.MustCompile("(http://|https://)([a-zA-Z0-9_!~*'().&=+$%-/]+)")
 
 type TextSrv struct {
@@ -36,7 +36,7 @@ func RunTextSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT)
 	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (tsrv *TextSrv) ProcessText(
 		ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
 	res.Ok = "No. "
 	if req.Text == "" {
-		res.Ok = "Cannot process empty text." 
+		res.Ok = "Cannot process empty text."
 		return nil
 	}
 	// find mentions and urls
@@ -98,30 +98,29 @@ func (tsrv *TextSrv) ProcessText(
 	res.Text = req.Text
 	if userErr != nil || urlErr != nil {
 		return fmt.Errorf("%w; %w", userErr, urlErr)
-	} 
+	}
 
 	// process mentions
 	for idx, userid := range userRes.Userids {
 		if userid > 0 {
-			res.Usermentions = append(
-				res.Usermentions, &proto.UserRef{Userid: userid, Username: usernames[idx]})
+			res.Usermentions = append(res.Usermentions, userid)
 		} else {
 			dbg.DPrintf("User %v does not exist!", usernames[idx])
 		}
 	}
 
 	// process urls and text
-	if urlIndicesL > 0 { 
+	if urlIndicesL > 0 {
 		if urlRes.Ok != URL_QUERY_OK {
 			dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "cannot process urls %v!\n", extendedUrls)
 			res.Ok += urlRes.Ok
 			return nil
 		} else {
-			res.Urls = urlRes.Urls
+			res.Urls = urlRes.Shorturls
 			res.Text = ""
 			prevLoc := 0
 			for idx, loc := range urlIndices {
-				res.Text += req.Text[prevLoc : loc[0]] + urlRes.Urls[idx].Shorturl
+				res.Text += req.Text[prevLoc : loc[0]] + urlRes.Shorturls[idx]
 				prevLoc = loc[1]
 			}
 			res.Text += req.Text[urlIndices[urlIndicesL-1][1]:]

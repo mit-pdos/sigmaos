@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
+	"sigmaos/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/perf"
@@ -40,10 +41,10 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	membytes := int64(mem.GetTotalMem()) * sp.MBYTE
 
 	score := 0
-	memswap := membytes
+	memswap := int64(0)
 	if ptype == proc.T_BE {
 		score = 1000
-		memswap = 0
+		memswap = membytes
 	}
 
 	// append uprocd's port
@@ -84,6 +85,13 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 				// user bin dir.
 				mount.Mount{
 					Type:     mount.TypeBind,
+					Source:   "/sys/fs/cgroup",
+					Target:   "/cgroup",
+					ReadOnly: true,
+				},
+				// user bin dir.
+				mount.Mount{
+					Type:     mount.TypeBind,
 					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
 					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
 					ReadOnly: true,
@@ -99,12 +107,6 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,
-			Resources: container.Resources{
-				// This also allows for GetTotalMem() of swap, if host
-				// has swap space
-				Memory:     membytes,
-				MemorySwap: memswap,
-			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-uprocd-"+realm.String()+"-"+p.GetPid().String())
@@ -122,9 +124,21 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		return nil, err
 	}
 	ip := json.NetworkSettings.IPAddress
+	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
 	pm := port.MakePortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
-	return &Container{pm, ctx, cli, resp.ID, ip, membytes, memswap, nil}, nil
+	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
+	c := &Container{
+		PortMap:    pm,
+		ctx:        ctx,
+		cli:        cli,
+		container:  resp.ID,
+		cgroupPath: cgroupPath,
+		ip:         ip,
+		cmgr:       cgroup.NewCgroupMgr(),
+	}
+	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
+	return c, nil
 }

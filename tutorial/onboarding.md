@@ -13,9 +13,9 @@ onboard a new team member:
 
 ```
 $ cd aws/.aws
-$ gpg --recipient sigma-kaashoek --recipient arielck --recipient --recipient heyizheng2011 --encrypt-files credentials
+$ gpg --recipient sigma-kaashoek --recipient arielck --recipient heyizheng2011 --recipient gideon.witchel@gmail.com --encrypt-files credentials
 $ cd ../.docker
-$ gpg --recipient sigma-kaashoek --recipient arielck --recipient --recipient heyizheng2011 --encrypt-files config.json
+$ gpg --recipient sigma-kaashoek --recipient arielck --recipient heyizheng2011 --recipient gideon.witchel@gmail.com --encrypt-files config.json
 ```
 
   2. Add the member to the `git@g.csail.mit.edu:ulambda:` repo and the to the

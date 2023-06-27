@@ -2,8 +2,6 @@ package container
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"os"
 	"time"
 
@@ -12,9 +10,13 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
+	"sigmaos/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/port"
+)
+
+const (
+	CGROUP_PATH_BASE = "/cgroup/system.slice"
 )
 
 type Container struct {
@@ -22,72 +24,31 @@ type Container struct {
 	ctx          context.Context
 	cli          *client.Client
 	container    string
+	cgroupPath   string
 	ip           string
-	membytes     int64
-	memswap      int64
-	prevCPUStats *types.CPUStats
+	cmgr         *cgroup.CgroupMgr
+	prevCPUStats cpustats
+}
+
+type cpustats struct {
+	totalSysUsecs       uint64
+	totalContainerUsecs uint64
+	util                float64
+}
+
+func (c *Container) GetCPUUtil() (float64, error) {
+	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
+	if err != nil {
+		db.DFatalf("Err get cpu stats: %v", err)
+	}
+	return st.Util, nil
 }
 
 func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
-	resp, err := c.cli.ContainerUpdate(c.ctx, c.container,
-		container.UpdateConfig{
-			Resources: container.Resources{
-				CPUShares:  cpu,
-				Memory:     c.membytes,
-				MemorySwap: c.memswap,
-			},
-		})
-	if len(resp.Warnings) > 0 {
-		db.DPrintf(db.ALWAYS, "Set CPU shares warnings: %v", resp.Warnings)
-	}
+	c.cmgr.SetCPUShares(c.cgroupPath, cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
-	return err
-}
-
-func (c *Container) GetCPUUtil() (float64, error) {
-	var resp types.ContainerStats
-	var err error
-	if c.prevCPUStats == nil {
-		// Wait for docker to "prime the stats" on the first attempt to read CPU
-		// util.
-		resp, err = c.cli.ContainerStats(c.ctx, c.container, false)
-	} else {
-		resp, err = c.cli.ContainerStatsOneShot(c.ctx, c.container)
-	}
-	if err != nil {
-		db.DFatalf("Error ContainerStats: %v", err)
-		return 0.0, err
-	}
-	// Read the response
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		db.DFatalf("Error ReadAll: %v", err)
-		return 0.0, err
-	}
-	resp.Body.Close()
-	st := &types.Stats{}
-	err = json.Unmarshal(b, st)
-	if err != nil {
-		db.DFatalf("Error Unmarshal: %v", err)
-		return 0.0, err
-	}
-	if c.prevCPUStats == nil {
-		c.prevCPUStats = &st.PreCPUStats
-	}
-	// CPU util calculation taken from
-	// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
-	cpuPercent := 0.0
-	cpuDelta := float64(st.CPUStats.CPUUsage.TotalUsage) - float64(c.prevCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(st.CPUStats.SystemUsage) - float64(c.prevCPUStats.SystemUsage)
-	db.DPrintf(db.CONTAINER, "sysdelta %v cpudelta %v percpuUsage %v\nstats %v", systemDelta, cpuDelta, st.CPUStats.CPUUsage.PercpuUsage, st)
-	if systemDelta > 0.0 && cpuDelta > 0.0 {
-		cpuPercent = (cpuDelta / systemDelta) * float64(linuxsched.NCores) * 100.0
-	} else {
-		db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", systemDelta, cpuDelta)
-	}
-	c.prevCPUStats = &st.CPUStats
-	return cpuPercent, nil
+	return nil
 }
 
 func (c *Container) String() string {

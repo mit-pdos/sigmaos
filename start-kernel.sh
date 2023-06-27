@@ -13,6 +13,7 @@ TAG=""
 BOOT="named"
 NAMED=":1111"
 DBIP="x.x.x.x"
+MONGOIP="x.x.x.x"
 JAEGERIP="$(hostname -i | cut -f 1 -d ' ')"
 NET="host"
 KERNELID=""
@@ -23,16 +24,16 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;schedd;ux;s3;db;named"
+            BOOT="knamed;schedd;ux;s3;db;mongo;named"
             ;;
         "node")
-            BOOT="schedd;ux;s3;db"
+            BOOT="schedd;ux;s3;db;mongo"
             ;;
         "named")
             BOOT="knamed"
             ;;
         "realm")
-            BOOT="knamed;schedd;realmd;ux;s3;db;named"
+            BOOT="knamed;schedd;realmd;ux;s3;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -99,11 +100,16 @@ if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 fi
 
+if docker ps | grep -q sigmamongo; then
+    MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo)
+fi
+
 # Mounting docker.sock is bad idea in general because it requires to
 # give rw permission on host to privileged daemon.  But maybe ok in
 # our case where kernel is trusted.
 CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
+             --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
@@ -114,6 +120,7 @@ CID=$(docker run -dit\
              -e named=${NAMED}\
              -e boot=${BOOT}\
              -e dbip=${DBIP}\
+             -e mongoip=${MONGOIP}\
              -e jaegerip=${JAEGERIP}\
              -e overlays=${OVERLAYS}\
              -e SIGMADEBUG=${SIGMADEBUG}\
@@ -144,4 +151,4 @@ rm -f "/tmp/sigmaos/${KERNELID}"
 
 echo -n $IP
 
-echo " container ${CID:0:10}" dbIP $DBIP 1>&2
+echo " container ${CID:0:10}" dbIP $DBIP  mongoIP $MONGOIP 1>&2

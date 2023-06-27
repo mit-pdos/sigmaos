@@ -2,14 +2,13 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: $0 user@address"
+  echo "Usage: $0 address"
   exit 1
 fi
 DIR=$(dirname $0)
+source $DIR/env.sh
 
-. $DIR/config
-
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH"
+ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<"ENDSSH"
 ## Set minikube memory & CPU limits
 #minikube --memory 4096 --cpus 2 start
 

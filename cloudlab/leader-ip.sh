@@ -4,7 +4,7 @@ usage() {
   echo "Usage: $0" 1>&2
 }
 
-while [[ $# -gt 0 ]]; do
+while [[ $# -gt 1 ]]; do
   key="$1"
   case $key in
   --vpc)
@@ -28,8 +28,8 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 

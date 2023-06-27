@@ -216,3 +216,24 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.Wait()
 	return time.Since(start), 1.0
 }
+
+func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*ImgResizeJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc.MonitorSchedds()
+		defer pdc.Done()
+	}
+	ji.Cleanup()
+	start := time.Now()
+	ji.StartImgResizeJob()
+	ji.Wait()
+	t := time.Since(start)
+	db.DPrintf(db.TEST, "Cleaning up imgresize")
+	ji.Cleanup()
+	db.DPrintf(db.TEST, "Done cleaning up imgresize")
+	return t, 1.0
+}

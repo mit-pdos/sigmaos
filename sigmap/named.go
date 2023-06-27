@@ -22,6 +22,9 @@ const (
 	DBREL     = "db"
 	DB        = NAMED + DBREL + "/"
 	DBD       = DB + "~any/"
+	MONGOREL  = "mongo"
+	MONGO     = NAMED + MONGOREL + "/"
+	MONGOD    = MONGO + "~any/"
 
 	UXBIN = UX + "~local/bin/"
 
@@ -34,7 +37,6 @@ const (
 	MEMBLOCK  = "name/memblock"
 
 	SOCIAL_NETWORK          = NAMED + "socialnetwork/"
-	SOCIAL_NETWORK_MOL      = SOCIAL_NETWORK + "mol"
 	SOCIAL_NETWORK_USER     = SOCIAL_NETWORK + "user"
 	SOCIAL_NETWORK_GRAPH    = SOCIAL_NETWORK + "graph"
 	SOCIAL_NETWORK_POST     = SOCIAL_NETWORK + "post"
@@ -43,6 +45,9 @@ const (
 	SOCIAL_NETWORK_URL      = SOCIAL_NETWORK + "url"
 	SOCIAL_NETWORK_TEXT     = SOCIAL_NETWORK + "text"
 	SOCIAL_NETWORK_COMPOSE  = SOCIAL_NETWORK + "compose"
+	SOCIAL_NETWORK_MEDIA    = SOCIAL_NETWORK + "media"
+
+	K8S_SCRAPER = NAMED + "k8sscraper/"
 
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL

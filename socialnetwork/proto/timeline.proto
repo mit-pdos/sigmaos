@@ -15,12 +15,16 @@ service HomeService {
 }
 
 message WriteTimelineRequest {
-	TimelineItem timelineitem = 1;
+	int64 userid = 1;
+	int64 postid = 2;
+	int64 timestamp = 3;
 }
 
 message WriteHomeTimelineRequest {
-	TimelineItem   timelineitem = 1;
-	repeated int64 usermentionids = 2;
+	int64          userid = 1;
+	int64          postid = 2;
+	int64          timestamp = 3;
+	repeated int64 usermentionids = 4;
 }
 
 message WriteTimelineResponse {
@@ -38,14 +42,3 @@ message ReadTimelineResponse {
 	repeated Post posts = 2;
 }
 
-message Timeline {
-	int64 userid = 1;
-	repeated int64 postids = 2;
-	repeated int64 timestamps = 3;
-}
-
-message TimelineItem {
-	int64 userid = 1;
-	int64 postid = 2;
-	int64 timestamp = 3; 
-}

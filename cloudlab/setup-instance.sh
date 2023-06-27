@@ -2,17 +2,14 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./install-sw.sh user@address"
+  echo "Usage: ./install-sw.sh address"
   exit 1
 fi
 
-echo "$0 $1"
-
 DIR=$(dirname $0)
-BLKDEV=/dev/sda4
+source $DIR/env.sh
 
-LOGIN=arielck
-SSHCMD=$1
+SSHCMD=$LOGIN@$1
 
 # Set up a few directories, and prepare to scp the aws secrets.
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
@@ -38,7 +35,6 @@ scp -i $DIR/keys/cloudlab-sigmaos ../aws/.docker/config.json $SSHCMD:~/.docker/
 rm $SECRETS
 
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
-
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
@@ -177,5 +173,5 @@ echo -n > ~/.hushlogin
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh $1"
+echo "ssh $SSHCMD"
 echo "============================="

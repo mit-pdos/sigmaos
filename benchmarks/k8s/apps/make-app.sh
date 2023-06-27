@@ -7,12 +7,18 @@ usage() {
 }
 
 CMD="build"
+GO="go"
 PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
     shift
     PARALLEL="parallel"
+    ;;
+  --gopath)
+    shift
+    GO="$1"
+    shift
     ;;
   --vet)
     shift
@@ -42,9 +48,9 @@ mkdir -p bin/
 for f in `ls cmd`; do
   if [ $CMD == "vet" ]; then
   echo "go vet cmd/$f/main.go"
-    go vet cmd/$f/main.go
+    $GO vet cmd/$f/main.go
   else 
-    build="go build -o bin/$f cmd/$f/main.go"
+    build="$GO build -o bin/$f cmd/$f/main.go"
     echo $build
     if [ -z "$PARALLEL" ]; then
       eval "$build"

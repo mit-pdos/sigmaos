@@ -39,8 +39,8 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-LOGIN="arielck"
 DIR=$(dirname $0)
+source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
 vma=($vms)
@@ -62,6 +62,7 @@ do
         rm /tmp/machine.out > /dev/null 2>&1
         yes | docker system prune
         yes | docker volume prune
+        docker swarm leave --force
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$stop"

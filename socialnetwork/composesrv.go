@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	"sigmaos/protdevclnt"
 	"sigmaos/fs"
@@ -15,7 +16,7 @@ import (
 
 // YH:
 // Compose post service for social network
-// No db or cache connection. 
+// No db or cache connection.
 
 const (
 	COMPOSE_QUERY_OK = "OK"
@@ -39,7 +40,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST, pds.MemFs.SigmaClnt().FsLib)
+	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
 	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
@@ -61,6 +62,11 @@ func RunComposeSrv(public bool, jobname string) error {
 	}
 	csrv.homec = pdc	
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
+	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_COMPOSE)
+	if err != nil {
+		dbg.DFatalf("MakePerf err %v\n", err)
+	}
+	defer perf.Done()
 	return pds.RunServer()
 }
 
@@ -81,20 +87,18 @@ func (csrv *ComposeSrv) ComposePost(
 	if textRes.Ok != TEXT_QUERY_OK {
 		res.Ok += " Text Error: " + textRes.Ok
 		return nil
-	} 
+	}
 	// create post
 	post := &proto.Post{}
 	post.Postid = csrv.getNextPostId()
 	post.Posttype = req.Posttype
 	post.Timestamp = timestamp
-	post.Creator = &proto.UserRef{Userid: req.Userid, Username: req.Username}
+	post.Creator = req.Userid
+	post.Creatoruname = req.Username
 	post.Text = textRes.Text
 	post.Usermentions = textRes.Usermentions
 	post.Urls = textRes.Urls
-	for idx, mid := range req.Mediaids {
-		post.Medias = append(
-			post.Medias, &proto.MediaRef{Mediaid: mid, Mediatype: req.Mediatypes[idx]})
-	}
+	post.Medias = req.Mediaids
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "composing post: %v\n", post)
 	
 	// concurrently add post to storage and timelines
@@ -104,17 +108,11 @@ func (csrv *ComposeSrv) ComposePost(
 	postReq := proto.StorePostRequest{Post: post}
 	postRes := proto.StorePostResponse{}
 	tlReq := proto.WriteTimelineRequest{
-		Timelineitem: &proto.TimelineItem{
-			Userid: post.Creator.Userid, Postid: post.Postid, Timestamp: post.Timestamp}}
+		Userid: req.Userid, Postid: post.Postid, Timestamp: post.Timestamp}
 	tlRes := proto.WriteTimelineResponse{}
-	mentionids := make([]int64, len(post.Usermentions))
-	for idx, mention := range post.Usermentions {
-		mentionids[idx] = mention.Userid
-	}
 	homeReq := proto.WriteHomeTimelineRequest{
-		Usermentionids: mentionids,
-		Timelineitem: &proto.TimelineItem{
-			Userid: post.Creator.Userid, Postid: post.Postid, Timestamp: post.Timestamp}}
+		Usermentionids: post.Usermentions, Userid: req.Userid,
+		Postid: post.Postid, Timestamp: post.Timestamp}
 	homeRes := proto.WriteTimelineResponse{}
 	wg.Add(3)
 	go func() {
@@ -123,7 +121,7 @@ func (csrv *ComposeSrv) ComposePost(
 	}()
 	go func() {
 		defer wg.Done()
-		tlErr = csrv.tlc.RPC("Timeline.WriteTimeline", &tlReq, &tlRes) 
+		tlErr = csrv.tlc.RPC("Timeline.WriteTimeline", &tlReq, &tlRes)
 	}()
 	go func() {
 		defer wg.Done()
@@ -136,7 +134,7 @@ func (csrv *ComposeSrv) ComposePost(
 	if postRes.Ok != POST_QUERY_OK {
 		res.Ok += " Post Error: " + postRes.Ok
 		return nil
-	} 
+	}
 	if tlRes.Ok != TIMELINE_QUERY_OK {
 		res.Ok += " Timeline Error: " + tlRes.Ok
 		return nil

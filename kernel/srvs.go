@@ -44,6 +44,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 		ss, err = k.bootUxd()
 	case sp.DBREL:
 		ss, err = k.bootDbd(p.Dbip)
+	case sp.MONGOREL:
+		ss, err = k.bootMongod(p.Mongoip)
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
 	case sp.REALMDREL:
@@ -125,11 +127,15 @@ func (k *Kernel) bootUxd() (*Subsystem, error) {
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
 	// XXX Mount realm buckets dynamically.
-	return k.bootSubsystem("fss3d", []string{"arielck", "kaashoek", "fkaashoek"}, procclnt.HSCHEDD)
+	return k.bootSubsystem("fss3d", []string{"arielck", "kaashoek", "fkaashoek", "yizhengh"}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 	return k.bootSubsystem("dbd", []string{hostip + ":3306"}, procclnt.HSCHEDD)
+}
+
+func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
+	return k.bootSubsystem("mongod", []string{hostip + ":27017"}, procclnt.HSCHEDD)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

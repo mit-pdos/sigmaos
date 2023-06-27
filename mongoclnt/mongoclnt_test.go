@@ -36,6 +36,13 @@ func TestMongoClnt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, f)
 	assert.Equal(t, []string{"v1"}, result.Val)
+
+	// Remove
+	mongoc.RemoveAll(db, col)
+	f, err = mongoc.FindOne(db, col, bson.M{}, &result)
+	assert.Nil(t, err)
+	assert.False(t, f)
+	assert.Nil(t, mongoc.Insert(db, col, obj))
 	
 	// Update
 	var result1 MyObj

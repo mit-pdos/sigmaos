@@ -95,6 +95,12 @@ func (mongoc *MongoClnt) DropCollection(db, collection string) error {
 	return mongoc.pdc.RPC("Mongo.Drop", req, res)
 }
 
+func (mongoc *MongoClnt) RemoveAll(db, collection string) error {
+	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
+	res := &proto.MongoResponse{}
+	return mongoc.pdc.RPC("Mongo.Remove", req, res)
+}
+
 func (mongoc *MongoClnt) EnsureIndex(db, collection string, indexkeys []string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection, Indexkeys: indexkeys}
 	res := &proto.MongoResponse{}

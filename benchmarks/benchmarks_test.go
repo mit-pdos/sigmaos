@@ -82,6 +82,7 @@ var GO_MAX_PROCS int
 var MAX_PARALLEL int
 var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
+var K8S_JOB_NAME string
 var S3_RES_DIR string
 
 // Read & set the proc version.
@@ -122,6 +123,7 @@ func init() {
 	flag.IntVar(&RPCBENCH_NCORE, "rpcbench_ncore", 3, "RPCbench Ncore")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
+	flag.StringVar(&K8S_JOB_NAME, "k8sjobname", "thumbnail-benchrealm1", "Name of k8s job")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -934,7 +936,9 @@ func TestK8sImgResize(t *testing.T) {
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
 	monitorK8sCPUUtilScraper(rootts, p)
-	time.Sleep(100 * time.Second)
+	for !k8sJobHasCompleted(K8S_JOB_NAME) {
+		time.Sleep(500 * time.Millisecond)
+	}
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)

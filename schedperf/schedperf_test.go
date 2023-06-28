@@ -66,7 +66,7 @@ func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib, ts1.GetRealm())
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)
@@ -95,7 +95,7 @@ func TestGetCPUUtilLatencyHighLoad(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib, ts1.GetRealm())
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)

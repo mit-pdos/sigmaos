@@ -116,7 +116,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 	sdc.MonitorSchedds()
 	defer sdc.Done()
 	start := time.Now()
@@ -133,7 +133,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 	pdc.MonitorSchedds()
 	defer pdc.Done()
 	// Start some balancers
@@ -176,7 +176,7 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 	pdc.MonitorSchedds()
 	defer pdc.Done()
 	start := time.Now()
@@ -191,7 +191,7 @@ func runRPCBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 		pdc.MonitorSchedds()
 		defer pdc.Done()
 	}
@@ -207,7 +207,7 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 		pdc.MonitorSchedds()
 		defer pdc.Done()
 	}
@@ -223,7 +223,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
 		pdc.MonitorSchedds()
 		defer pdc.Done()
 	}

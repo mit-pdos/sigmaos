@@ -280,7 +280,7 @@ func (ts *Tstate) checkJob() {
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
 	ts := makeTstate(t)
 
-	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.Realm())
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.Realm())
 	if monitor {
 		sdc.MonitorSchedds()
 		defer sdc.Done()

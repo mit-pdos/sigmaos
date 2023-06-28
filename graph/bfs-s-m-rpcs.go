@@ -8,6 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/graph/proto"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
@@ -35,6 +36,12 @@ type BfsMultiThread struct {
 
 func StartBfsMultiMain(public bool, jobname string) error {
 	var err error
+	profiler, err := perf.MakePerf(perf.BENCH)
+	if err != nil {
+		db.DPrintf(DEBUG_GRAPH, "|%v| Failed to MakePerf: %v", jobname, err)
+		return err
+	}
+	defer profiler.Done()
 	b := &BfsMultiMain{}
 	if b.t, err = initThread(jobname); err != nil {
 		return err
@@ -48,6 +55,7 @@ func StartBfsMultiMain(public bool, jobname string) error {
 }
 
 func (b *BfsMultiMain) RunBfsMulti(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsPath) error {
+	db.DPrintf(DEBUG_GRAPH, "Creating new BFS multi from %v to %v", req.N1, req.N2)
 	jobs := make([]string, MAX_THREADS)
 	for j := range jobs {
 		jobs[j] = fmt.Sprintf("multi-%v-%v", j, rand.String(8))
@@ -108,12 +116,29 @@ func (b *BfsMultiMain) RunBfsMulti(ctx fs.CtxI, req proto.BfsIn, res *proto.BfsP
 	for i := range outs {
 		parents[i] = outs[i].ParentPartition
 	}
+	for _, pid := range pids {
+		if err := b.t.Evict(pid); err != nil {
+			db.DFatalf("|%v| Error evicting proc %v: %v", b.t.job, pid, err)
+			return err
+		}
+		if _, err := b.t.WaitExit(pid); err != nil {
+			db.DFatalf("|%v| Error waiting for proc %v to exit: %v", b.t.job, pid, err)
+			return err
+		}
+	}
 	res.Val = *findPathPartitioned64(&parents, req.N1, req.N2)
 	return nil
 }
 
 func StartBfsMultiThread(public bool, threadID int, jobs []string) error {
 	var err error
+	profiler, err := perf.MakePerf(perf.BENCH)
+	if err != nil {
+		db.DPrintf(DEBUG_GRAPH, "|%v| Failed to MakePerf: %v", jobs[threadID], err)
+		return err
+	}
+	defer profiler.Done()
+
 	t := &BfsMultiThread{}
 	if t.t, err = initThread(jobs[threadID]); err != nil {
 		return err
@@ -147,6 +172,7 @@ func StartBfsMultiThread(public bool, threadID int, jobs []string) error {
 
 func (t *BfsMultiThread) RunBfsMultiThread(ctx fs.CtxI, req proto.ThreadIn, res *proto.ThreadOut) error {
 	var err error
+	db.DPrintf(DEBUG_GRAPH, "Running new BFS Multi thread (%v), N2: %v", t.threadID, req.N2)
 	// Done here because the servers need to be running first
 	for i, job := range t.jobs {
 		if t.pdcs[i], err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{t.t.FsLib}, path.Join(DIR_GRAPH, job, "server")); err != nil {

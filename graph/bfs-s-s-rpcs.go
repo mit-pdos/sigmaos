@@ -6,6 +6,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/graph/proto"
+	"sigmaos/perf"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
 )
@@ -20,6 +21,12 @@ type BfsSingle struct {
 
 func StartThreadSingle(public bool, jobname string) error {
 	var err error
+	profiler, err := perf.MakePerf(perf.BENCH)
+	if err != nil {
+		db.DPrintf(DEBUG_GRAPH, "|%v| Failed to MakePerf: %v", jobname, err)
+		return err
+	}
+	defer profiler.Done()
 	b := &BfsSingle{}
 	if b.t, err = initThread(jobname); err != nil {
 		return err

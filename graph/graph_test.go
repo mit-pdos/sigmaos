@@ -19,6 +19,8 @@ import (
 
 var tests = [][]int{{-1, 0}, {0, 0}, {5, 5}, {0, 3}, {1, 3}, {3, 3420}, {508, 1080}, {217, 3456}, {2, 10000000}}
 
+//var tests = [][]int{{1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}}
+
 //
 // RAW GRAPH TESTS
 //
@@ -125,6 +127,7 @@ func importGraph(tsg *TstateGraph, pdc *protdevclnt.ProtDevClnt, fn string) {
 }
 
 func runAlg(tsg *TstateGraph, pdc *protdevclnt.ProtDevClnt, rpc string, alg int, n1 int, n2 int) {
+	db.DPrintf(graph.DEBUG_GRAPH, "Running %v alg %v from %v to %v", rpc, alg, n1, n2)
 	var err error
 	bfsArg := proto.BfsInput{N1: int64(n1), N2: int64(n2), Alg: int64(alg)}
 	bfsRes := proto.Path{}
@@ -155,6 +158,14 @@ func runAlgRepeated(tsg *TstateGraph, pdc *protdevclnt.ProtDevClnt, rpc string, 
 	}
 }
 
+func exit(tsg *TstateGraph) {
+	err := tsg.Evict(tsg.pid)
+	assert.Nil(tsg.Tstate.T, err, "Problem evicting")
+	_, err = tsg.WaitExit(tsg.pid)
+	assert.Nil(tsg.Tstate.T, err, "Problem waiting for exit")
+	//tsg.Shutdown()
+}
+
 func TestBfsSingleRPC(t *testing.T) {
 	var err error
 	tsg, err := makeTstateGraph(t, rand.String(8))
@@ -164,13 +175,13 @@ func TestBfsSingleRPC(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.NAMED_GRAPH_SERVER, "~any/"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
 	importGraph(tsg, pdc, graph.DATA_FACEBOOK_FN)
-	runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC)
+	runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC, 3, 3420)
+	//runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_SINGLE_RPC)
 
-	tsg.Shutdown()
+	exit(tsg)
 }
 
 func TestBfsMultiRPC(t *testing.T) {
-	var err error
 	tsg, err := makeTstateGraph(t, rand.String(8))
 	assert.Nil(t, err, "Failed to makeTstateGraph: %v", err)
 
@@ -178,8 +189,8 @@ func TestBfsMultiRPC(t *testing.T) {
 	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tsg.FsLib}, path.Join(graph.NAMED_GRAPH_SERVER, "~any/"))
 	assert.Nil(t, err, "ProtDevClnt creation failed: %v", err)
 	importGraph(tsg, pdc, graph.DATA_FACEBOOK_FN)
-	//runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC, 3, 3420)
-	runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC)
+	runAlg(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC, 3, 3420)
+	//runAlgRepeated(tsg, pdc, "Graph.RunBfs", graph.BFS_MULTI_RPC)
 
-	//tsg.Shutdown()
+	exit(tsg)
 }

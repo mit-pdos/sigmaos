@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/graph/proto"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/protdevsrv"
@@ -116,6 +117,12 @@ func initThread(job string) (thread, error) {
 }
 
 func StartGraphSrv(public bool, jobname string) error {
+	profiler, err := perf.MakePerf(perf.BENCH)
+	if err != nil {
+		panic(err)
+	}
+	defer profiler.Done()
+
 	g := &GraphSrv{}
 	g.job = jobname
 
@@ -204,7 +211,6 @@ func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) erro
 	default:
 		return mkErr("Invalid BFS Request")
 	}
-
 	p := proc.MakeProc(procName, []string{strconv.FormatBool(test.Overlays), job})
 	p.SetNcore(proc.Tcore(1))
 	if err = g.sc.Spawn(p); err != nil {
@@ -226,7 +232,13 @@ func (g *GraphSrv) RunBfs(ctx fs.CtxI, req proto.BfsInput, res *proto.Path) erro
 		db.DFatalf("|%v| Error running BFS proc %v: %v", g.job, p, err)
 		return err
 	}
+	if err := g.sc.Evict(p.GetPid()); err != nil {
+		db.DFatalf("|%v| Error evicting BFS proc %v: %v", g.job, p, err)
+		return err
+	}
+	if _, err := g.sc.WaitExit(p.GetPid()); err != nil {
+		db.DFatalf("|%v| Error waiting for BFS proc %v to exit: %v", g.job, p, err)
+	}
 	res.Marshaled, err = json.Marshal(bfsRes.Val)
-
 	return err
 }

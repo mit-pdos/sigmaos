@@ -17,6 +17,7 @@ import (
 	"sigmaos/uprocclnt"
 )
 
+// XXX separate out realm methods
 type ScheddClnt struct {
 	done  int32
 	realm sp.Trealm

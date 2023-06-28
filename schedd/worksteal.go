@@ -2,30 +2,13 @@ package schedd
 
 import (
 	"math/rand"
-	"path"
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
 	proto "sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 )
-
-func (sd *Schedd) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
-	var pdc *protdevclnt.ProtDevClnt
-	var ok bool
-	if pdc, ok = sd.schedds[kernelId]; !ok {
-		var err error
-		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sd.mfs.SigmaClnt().FsLib}, path.Join(sp.SCHEDD, kernelId))
-		if err != nil {
-			db.DFatalf("Error make procd clnt: %v", err)
-		}
-		sd.schedds[kernelId] = pdc
-	}
-	return pdc
-}
 
 // Try to steal a proc from another schedd. Returns true if successful.
 func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
@@ -36,8 +19,13 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 		PidStr:   p.GetPid().String(),
 	}
 	sres := &proto.StealProcResponse{}
-	err := sd.getScheddClnt(p.KernelId).RPC("Procd.StealProc", sreq, sres)
+	pdc, err := sd.scheddclnt.GetScheddClnt(p.KernelId)
 	if err != nil {
+		// XXX FK: just return false?
+		db.DFatalf("Error make getScheddClnt: %v", err)
+	}
+	if err := pdc.RPC("Procd.StealProc", sreq, sres); err != nil {
+		// XXX FK: just return false?
 		db.DFatalf("Error StealProc schedd: %v", err)
 	}
 	if sres.OK {

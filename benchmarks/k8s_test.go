@@ -70,7 +70,7 @@ func parseK8sUtil(utilStr, app string, realm sp.Trealm) float64 {
 func k8sJobHasCompleted(jobname string) bool {
 	b, err := exec.Command("kubectl", "get", "job", jobname).Output()
 	if err != nil {
-		db.DFatalf("Error exec get job: %v", err)
+		db.DPrintf(db.ALWAYS, "Error exec get job: %v", err)
 	}
 	jstr := string(b)
 	jline := strings.Split(jstr, "\n")[1]

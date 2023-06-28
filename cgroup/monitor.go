@@ -56,7 +56,7 @@ func (cmon *CgroupMonitor) GetCPUStats(cgroupPath string) (*CPUStat, error) {
 		if sysDelta > 0 && ctrDelta > 0 {
 			util = float64(ctrDelta) / float64(sysDelta) * float64(linuxsched.NCores) * 100.0
 		} else {
-			db.DPrintf(db.ALWAYS, "GetCPUUtil no delta %v %v", sysDelta, ctrDelta)
+			db.DPrintf(db.ALWAYS, "GetCPUUtil [%v] no delta %v %v", cgroupPath, sysDelta, ctrDelta)
 		}
 		db.DPrintf(db.CGROUP, "GetCPUUtil ctrDelta %v sysDelta %v util %v", ctrDelta, sysDelta, util)
 	}

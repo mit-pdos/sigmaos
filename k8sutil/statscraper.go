@@ -14,8 +14,8 @@ import (
 // Kubernetes cgroups paths.
 const (
 	K8S_CGROUP           = "/cgroup/kubepods.slice"
-	QOS_BE_CGROUP        = K8S_CGROUP + "/" + "kubepods.besteffort"
-	QOS_BURSTABLE_CGROUP = K8S_CGROUP + "/" + "kubepods.burstable"
+	QOS_BE_CGROUP        = K8S_CGROUP + "/" + "kubepods-besteffort.slice"
+	QOS_BURSTABLE_CGROUP = K8S_CGROUP + "/" + "kubepods-burstable.slice"
 )
 
 type scraper struct {

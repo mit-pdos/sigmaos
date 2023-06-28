@@ -71,6 +71,7 @@ func k8sJobHasCompleted(jobname string) bool {
 	b, err := exec.Command("kubectl", "get", "job", jobname).Output()
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error exec get job: %v", err)
+		return false
 	}
 	jstr := string(b)
 	jline := strings.Split(jstr, "\n")[1]

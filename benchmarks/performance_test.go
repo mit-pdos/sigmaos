@@ -110,7 +110,9 @@ func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
 				// 200 = 2 cores, etc.). So, convert no # of cores by dividing by 100.
 				ncores := perc / 100.0
 				sumUtil += ncores
-				db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", s, sumUtil)
+			}
+			if sumUtil < 0.0 {
+				sumUtil = 0.0
 			}
 			p.TptTick(sumUtil)
 			db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", sp.ROOTREALM, sumUtil)

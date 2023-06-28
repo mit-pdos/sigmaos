@@ -3,6 +3,7 @@ package scheddclnt
 import (
 	"fmt"
 	"path"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,7 +22,10 @@ type ScheddClnt struct {
 	realm sp.Trealm
 	*fslib.FsLib
 	sync.Mutex
-	schedds map[string]*protdevclnt.ProtDevClnt
+	schedds         map[string]*protdevclnt.ProtDevClnt
+	scheddKernelIds []string
+	lastUpdate      time.Time
+	burstOffset     int
 }
 
 type Tload [2]int
@@ -32,9 +36,10 @@ func (t Tload) String() string {
 
 func MakeScheddClnt(fsl *fslib.FsLib, realm sp.Trealm) *ScheddClnt {
 	return &ScheddClnt{
-		realm:   realm,
-		FsLib:   fsl,
-		schedds: make(map[string]*protdevclnt.ProtDevClnt),
+		realm:           realm,
+		FsLib:           fsl,
+		schedds:         make(map[string]*protdevclnt.ProtDevClnt),
+		scheddKernelIds: make([]string, 0),
 	}
 }
 
@@ -243,4 +248,44 @@ func (sdc *ScheddClnt) getSchedds() ([]string, error) {
 		return nil, err
 	}
 	return sp.Names(sts), nil
+}
+
+// Update the list of active procds.
+func (sdc *ScheddClnt) UpdateSchedds() {
+	sdc.Lock()
+	defer sdc.Unlock()
+
+	// If we updated the list of active procds recently, return immediately. The
+	// list will change at most as quickly as the realm resizes.
+	if time.Since(sdc.lastUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(sdc.scheddKernelIds) > 0 {
+		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
+		return
+	}
+	sdc.lastUpdate = time.Now()
+	// Read the procd union dir.
+	schedds, _, err := sdc.ReadDir(sp.SCHEDD)
+	if err != nil {
+		db.DFatalf("Error ReadDir procd: %v", err)
+	}
+	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
+	// Alloc enough space for the list of schedds.
+	sdc.scheddKernelIds = make([]string, 0, len(schedds))
+	for _, schedd := range schedds {
+		sdc.scheddKernelIds = append(sdc.scheddKernelIds, schedd.Name)
+	}
+}
+
+// Get the next procd to burst on.
+func (sdc *ScheddClnt) NextSchedd(spread int) string {
+	sdc.Lock()
+	defer sdc.Unlock()
+
+	if len(sdc.scheddKernelIds) == 0 {
+		debug.PrintStack()
+		db.DFatalf("Error: no schedds to spawn on")
+	}
+
+	sdip := sdc.scheddKernelIds[(sdc.burstOffset/spread)%len(sdc.scheddKernelIds)]
+	sdc.burstOffset++
+	return sdip
 }

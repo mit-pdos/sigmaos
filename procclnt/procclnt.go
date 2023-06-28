@@ -33,13 +33,10 @@ const (
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
-	pid             proc.Tpid
-	isExited        proc.Tpid
-	procdir         string
-	scheddclnt      *scheddclnt.ScheddClnt
-	scheddIps       []string
-	lastProcdUpdate time.Time
-	burstOffset     int
+	pid        proc.Tpid
+	isExited   proc.Tpid
+	procdir    string
+	scheddclnt *scheddclnt.ScheddClnt
 }
 
 func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
@@ -48,7 +45,6 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt.pid = pid
 	clnt.procdir = procdir
 	clnt.scheddclnt = scheddclnt.MakeScheddClnt(fsl, clnt.Realm())
-	clnt.scheddIps = make([]string, 0)
 	return clnt
 }
 
@@ -87,8 +83,8 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.P
 	errs := []error{}
 	for i := range ps {
 		// Update the list of active procds.
-		clnt.updateSchedds()
-		kernelId := clnt.nextSchedd(procsPerSchedd)
+		clnt.scheddclnt.UpdateSchedds()
+		kernelId := clnt.scheddclnt.NextSchedd(procsPerSchedd)
 		pdc, err := clnt.getScheddClnt(kernelId)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "SpawnBurst: getScheddClnt err %v\n", err)
@@ -160,7 +156,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protde
 	// If this is not a privileged proc, spawn it through procd.
 	if how == HSCHEDD {
 		if pdc == nil {
-			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\n%v", kernelId, p, clnt.scheddIps)
+			db.DFatalf("Spawn proc with no schedd clnt for (%v): %v\n", kernelId, p)
 		}
 		req := &schedd.SpawnRequest{
 			Realm:     clnt.Realm().String(),
@@ -189,31 +185,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protde
 	return nil
 }
 
-// Update the list of active procds.
-func (clnt *ProcClnt) updateSchedds() {
-	clnt.Lock()
-	defer clnt.Unlock()
-
-	// If we updated the list of active procds recently, return immediately. The
-	// list will change at most as quickly as the realm resizes.
-	if time.Since(clnt.lastProcdUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(clnt.scheddIps) > 0 {
-		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
-		return
-	}
-	clnt.lastProcdUpdate = time.Now()
-	// Read the procd union dir.
-	schedds, _, err := clnt.ReadDir(sp.SCHEDD)
-	if err != nil {
-		db.DFatalf("Error ReadDir procd: %v", err)
-	}
-	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
-	// Alloc enough space for the list of schedds.
-	clnt.scheddIps = make([]string, 0, len(schedds))
-	for _, schedd := range schedds {
-		clnt.scheddIps = append(clnt.scheddIps, schedd.Name)
-	}
-}
-
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
 	pdc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
 	if err != nil {
@@ -229,21 +200,6 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, 
 		}
 	}
 	return pdc, nil
-}
-
-// Get the next procd to burst on.
-func (clnt *ProcClnt) nextSchedd(spread int) string {
-	clnt.Lock()
-	defer clnt.Unlock()
-
-	if len(clnt.scheddIps) == 0 {
-		debug.PrintStack()
-		db.DFatalf("Error: no schedds to spawn on")
-	}
-
-	sdip := clnt.scheddIps[(clnt.burstOffset/spread)%len(clnt.scheddIps)]
-	clnt.burstOffset++
-	return sdip
 }
 
 // ========== WAIT ==========

@@ -41,6 +41,7 @@ allowed:
   - getsockopt
   - gettid
   - listen
+  - lseek
   - madvise
   - mkdirat
   - mmap

@@ -52,7 +52,7 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	if burst, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
 		db.DFatalf("Error burstable: %v", err)
 	}
-	if total, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
+	if total, err = s.cmon.GetCPUStats(K8S_CGROUP); err != nil {
 		db.DFatalf("Error total: %v", err)
 	}
 	db.DPrintf(db.K8S_UTIL, "Total %v BE %v Burst %v", total.Util, be.Util, burst.Util)

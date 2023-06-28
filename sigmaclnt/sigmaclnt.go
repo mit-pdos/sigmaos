@@ -41,7 +41,7 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (
 		return &SigmaClnt{
 			rootrealm,
 			nil,
-		}
+		}, nil
 	}
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)

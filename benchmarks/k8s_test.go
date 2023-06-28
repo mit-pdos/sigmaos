@@ -76,6 +76,5 @@ func k8sJobHasCompleted(jobname string) bool {
 	jline := strings.Split(jstr, "\n")[1]
 	jstatestr := strings.Fields(jline)[1]
 	jstate := strings.Split(jstatestr, "/")
-	db.DPrintf(db.ALWAYS, "%v =?= %v", jstate[0], jstate[1])
 	return jstate[0] == jstate[1]
 }

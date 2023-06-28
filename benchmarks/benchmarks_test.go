@@ -19,6 +19,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/rpcbench"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -908,5 +909,32 @@ func TestImgResize(t *testing.T) {
 	monitorCPUUtil(ts1, p)
 	runOps(ts1, apps, runImgResize, rs)
 	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
+func TestK8sImgResize(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstateClnt(rootts, test.ROOT_REALM)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	nSchedd, err := sdc.NSchedd()
+	assert.Nil(ts.T, err, "Error nschedd %v", err)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	// Start up the stat scraper procs.
+	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, linuxsched.NCores-1)
+	spawnBurstProcs(ts1, ps)
+	waitStartProcs(ts1, ps)
+	// NOte start time
+	start := time.Now()
+	// Monitor CPU utilization via the stat scraper procs.
+	monitorK8sCPUUtilScraper(ts, p)
+	time.Sleep(100 * time.Second)
+	rs.Append(time.Since(start), 1)
+	printResultSummary(rs)
+	evictProcs(ts1, ps)
 	rootts.Shutdown()
 }

@@ -55,6 +55,7 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	if total, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
 		db.DFatalf("Error total: %v", err)
 	}
+	db.DPrintf(db.K8S_UTIL, "Total %v BE %v Burst %v", total.Util, be.Util, burst.Util)
 	// Guaranteed QoS class is total CPU utillzation, minus BE & Burstable
 	// classes' utilization.
 	res.Util = total.Util - be.Util - burst.Util

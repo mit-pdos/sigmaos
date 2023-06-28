@@ -8,11 +8,13 @@ import (
 	"sigmaos/fs"
 	"sigmaos/protdevsrv"
 	"sigmaos/mongod/proto"
+	"time"
 )
 
 const (
 	MONGO_NO = "No"
 	MONGO_OK = "OK"
+	DIAL_TIMEOUT = 1
 )
 
 type Server struct {
@@ -21,13 +23,16 @@ type Server struct {
 
 func makeServer(mongodUrl string) (*Server, error) {
 	s := &Server{}
-	session, err := mgo.Dial(mongodUrl)
+	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT * time.Second)
 	if err != nil {
+		dbg.DFatalf("mongo dial err %v\n", err)
 		return nil, err
 	}
+	session.SetSocketTimeout(1 * time.Minute)
+	session.SetSyncTimeout(10 * time.Second)
 	s.session = session
 	if err = s.session.Ping(); err != nil {
-		dbg.DFatalf("mongo session.Ping err %v\n", err)
+		dbg.DFatalf("mongo ping err %v\n", err)
 	}
 	return s, nil
 }
@@ -55,7 +60,7 @@ func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 	}
 	dbg.DPrintf(dbg.MONGO, "Received insert request: %v, %v, %v", req.Db, req.Collection, m)
 	if err := s.session.DB(req.Db).C(req.Collection).Insert(&m); err != nil {
-		dbg.DFatalf("Cannot insert %v", err)
+		dbg.DFatalf("Cannot insert: %v", err)
 		return err
 	}
 	res.Ok = MONGO_OK
@@ -127,6 +132,16 @@ func (s *Server) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.Mong
 	dbg.DPrintf(dbg.MONGO, "Received drop request: %v", req)
 	res.Ok = MONGO_NO
 	if err := s.session.DB(req.Db).C(req.Collection).DropCollection(); err != nil {
+		return err
+	}
+	res.Ok = MONGO_OK
+	return nil
+}
+
+func (s *Server) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+	dbg.DPrintf(dbg.MONGO, "Received remove request: %v", req)
+	res.Ok = MONGO_NO
+	if _, err := s.session.DB(req.Db).C(req.Collection).RemoveAll(&bson.M{}); err != nil {
 		return err
 	}
 	res.Ok = MONGO_OK

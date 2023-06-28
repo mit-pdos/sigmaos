@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--jaeger JAEGERIP] [--host] [--overlays] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--jaeger JAEGERIP] [--host] [--overlays] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -66,6 +66,16 @@ while [[ "$#" -gt 1 ]]; do
     JAEGERIP=$1
     shift
     ;;
+  --dbip)
+    shift
+    DBIP=$1
+    shift
+    ;;
+  --mongoip)
+    shift
+    MONGOIP=$1
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -96,12 +106,12 @@ if ! [ -z "$TAG" ]; then
   docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
 fi
 
-if docker ps | grep -q sigmadb; then
-    DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q sigmadb; then
+    DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb):3306
 fi
 
-if docker ps | grep -q sigmamongo; then
-    MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo)
+if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
+    MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
 # Mounting docker.sock is bad idea in general because it requires to

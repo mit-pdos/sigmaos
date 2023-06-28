@@ -158,6 +158,8 @@ func TestUserAndGraph(t *testing.T) {
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 2},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
+	tssn.dbu.InitGraph()
+	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
 	updc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
 	gpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)

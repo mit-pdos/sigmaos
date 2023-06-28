@@ -32,6 +32,8 @@ type FrontEnd struct {
 	homec    *protdevclnt.ProtDevClnt
 	composec *protdevclnt.ProtDevClnt
 	pc       *portclnt.PortClnt
+	uCounter *Counter
+	iCounter *Counter
 }
 
 const SERVER_NAME = "socialnetwork-frontend"
@@ -82,6 +84,9 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	frontend.composec = pdc
 	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
+	frontend.uCounter = MakeCounter("User")
+	frontend.iCounter = MakeCounter("User-Inner")
+
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
 	//	if TRACING {
@@ -170,6 +175,7 @@ func (s *FrontEnd) done() error {
 
 
 func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
 	if s.record {
 		defer s.p.TptTick(1.0)
 	}
@@ -193,10 +199,12 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var res proto.UserResponse
 	// Check username and password
+	t1 := time.Now()
 	err := s.userc.RPC("User.Login", &proto.LoginRequest{
 		Username: username,
 		Password: password,
 	}, &res)
+	s.iCounter.AddTimeSince(t1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -209,6 +217,7 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		"message": str,
 	}
 	json.NewEncoder(w).Encode(reply)
+	s.uCounter.AddTimeSince(t0)
 }
 
 func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {

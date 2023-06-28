@@ -43,7 +43,7 @@ func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 		kernelId:  kernelId,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
-	sd.scheddclnt = scheddclnt.MakeScheddClnt(mfs.SigmaClnt().FsLib, sp.ROOTREALM)
+	sd.scheddclnt = scheddclnt.MakeScheddClnt(mfs.SigmaClnt().FsLib, "")
 	return sd
 }
 

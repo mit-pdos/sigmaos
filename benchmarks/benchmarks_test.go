@@ -914,24 +914,24 @@ func TestImgResize(t *testing.T) {
 
 func TestK8sImgResize(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstateClnt(rootts, test.ROOT_REALM)
+	ts1 := test.MakeRealmTstateClnt(rootts, sp.ROOTREALM)
 	if PREWARM_REALM {
 		warmupRealm(ts1)
 	}
 	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
-	nSchedd, err := sdc.NSchedd()
-	assert.Nil(ts.T, err, "Error nschedd %v", err)
+	nSchedd, err := sdc.Nschedd()
+	assert.Nil(ts1.T, err, "Error nschedd %v", err)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
 	// Start up the stat scraper procs.
-	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, linuxsched.NCores-1)
+	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tcore(linuxsched.NCores-1))
 	spawnBurstProcs(ts1, ps)
 	waitStartProcs(ts1, ps)
 	// NOte start time
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
-	monitorK8sCPUUtilScraper(ts, p)
+	monitorK8sCPUUtilScraper(rootts, p)
 	time.Sleep(100 * time.Second)
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)

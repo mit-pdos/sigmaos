@@ -113,7 +113,7 @@ func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
 				db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", s, sumUtil)
 			}
 			p.TptTick(sumUtil)
-			db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", test.ROOT_REALM, sumUtil)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", sp.ROOTREALM, sumUtil)
 			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()

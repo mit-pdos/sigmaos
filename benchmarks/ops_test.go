@@ -116,8 +116,8 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-	sdc.MonitorSchedds()
+	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	sdc.MonitorSchedds(ts.GetRealm())
 	defer sdc.Done()
 	start := time.Now()
 	ji.StartMRJob()
@@ -133,8 +133,8 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-	pdc.MonitorSchedds()
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	pdc.MonitorSchedds(ts.GetRealm())
 	defer pdc.Done()
 	// Start some balancers
 	start := time.Now()
@@ -176,8 +176,8 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-	pdc.MonitorSchedds()
+	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	pdc.MonitorSchedds(ts.GetRealm())
 	defer pdc.Done()
 	start := time.Now()
 	ji.StartWwwJob()
@@ -191,8 +191,8 @@ func runRPCBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-		pdc.MonitorSchedds()
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		pdc.MonitorSchedds(ts.GetRealm())
 		defer pdc.Done()
 	}
 	start := time.Now()
@@ -207,8 +207,8 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-		pdc.MonitorSchedds()
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		pdc.MonitorSchedds(ts.GetRealm())
 		defer pdc.Done()
 	}
 	start := time.Now()
@@ -223,8 +223,8 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
-		pdc.MonitorSchedds()
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		pdc.MonitorSchedds(ts.GetRealm())
 		defer pdc.Done()
 	}
 	ji.Cleanup()

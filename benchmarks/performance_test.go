@@ -62,9 +62,9 @@ func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
 // Monitor how many cores have been assigned to a realm.
 func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	go func() {
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		for {
-			perc, err := sdc.GetCPUUtil()
+			perc, err := sdc.GetCPUUtil(ts.GetRealm())
 			if err != nil {
 				db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
 				return

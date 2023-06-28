@@ -69,7 +69,7 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, durs 
 		var err error
 		ji.rj, err = rpcbench.MakeRPCBenchJob(ts.SigmaClnt, ji.jobpath, ncore, test.Overlays)
 		assert.Nil(ts.T, err, "Error MakeRPCBenchJob: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {

@@ -66,7 +66,7 @@ func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib, ts1.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)
@@ -80,7 +80,7 @@ func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
 			done = true
 		default:
 			start := time.Now()
-			perc, err := sdc.GetCPUUtil()
+			perc, err := sdc.GetCPUUtil(ts1.GetRealm())
 			// Calculate latency of GetCPUUtil RPC.
 			db.DPrintf(db.TEST, "GetCPUUtil lat:%v util:%v cores", time.Since(start), perc/100.0)
 			assert.Nil(rootts.T, err, "Error get CPU util: %v", err)
@@ -95,7 +95,7 @@ func TestGetCPUUtilLatencyHighLoad(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib, ts1.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)
@@ -109,7 +109,7 @@ func TestGetCPUUtilLatencyHighLoad(t *testing.T) {
 			done = true
 		default:
 			start := time.Now()
-			perc, err := sdc.GetCPUUtil()
+			perc, err := sdc.GetCPUUtil(ts1.GetRealm())
 			// Calculate latency of GetCPUUtil RPC.
 			db.DPrintf(db.TEST, "GetCPUUtil lat:%v util:%v cores", time.Since(start), perc/100.0)
 			assert.Nil(rootts.T, err, "Error get CPU util: %v", err)

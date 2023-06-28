@@ -44,7 +44,7 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.procdir = procdir
-	clnt.scheddclnt = scheddclnt.MakeScheddClnt(fsl, clnt.Realm())
+	clnt.scheddclnt = scheddclnt.MakeScheddClnt(fsl)
 	return clnt
 }
 

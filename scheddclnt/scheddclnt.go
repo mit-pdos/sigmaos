@@ -17,10 +17,8 @@ import (
 	"sigmaos/uprocclnt"
 )
 
-// XXX separate out realm methods
 type ScheddClnt struct {
-	done  int32
-	realm sp.Trealm
+	done int32
 	*fslib.FsLib
 	sync.Mutex
 	schedds         map[string]*protdevclnt.ProtDevClnt
@@ -35,9 +33,8 @@ func (t Tload) String() string {
 	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
-func MakeScheddClnt(fsl *fslib.FsLib, realm sp.Trealm) *ScheddClnt {
+func MakeScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 	return &ScheddClnt{
-		realm:           realm,
 		FsLib:           fsl,
 		schedds:         make(map[string]*protdevclnt.ProtDevClnt),
 		scheddKernelIds: make([]string, 0),
@@ -94,13 +91,13 @@ func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
 	return r, sdloads, err
 }
 
-func (sdc *ScheddClnt) MonitorSchedds() {
+func (sdc *ScheddClnt) MonitorSchedds(realm sp.Trealm) {
 	if true {
 		return
 	}
 	var realmstr string
-	if sdc.realm != "" {
-		realmstr = "[" + sdc.realm.String() + "] "
+	if realm != "" {
+		realmstr = "[" + realm.String() + "] "
 	}
 	go func() {
 		for atomic.LoadInt32(&sdc.done) == 0 {
@@ -119,7 +116,7 @@ func (sdc *ScheddClnt) MonitorSchedds() {
 
 // Return the CPU shares assigned to this realm, and the total CPU shares in
 // the cluster
-func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.Tshare) {
+func (sdc *ScheddClnt) GetCPUShares(realm sp.Trealm) (rshare uprocclnt.Tshare, total uprocclnt.Tshare) {
 	// Total CPU shares in the system
 	total = 0
 	// Target realm's share
@@ -141,7 +138,7 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 		if err != nil {
 			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
 		}
-		rshare += uprocclnt.Tshare(res.Shares[sdc.realm.String()])
+		rshare += uprocclnt.Tshare(res.Shares[realm.String()])
 		for _, share := range res.Shares {
 			total += uprocclnt.Tshare(share)
 		}
@@ -149,7 +146,7 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 	return rshare, total
 }
 
-func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
+func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
@@ -160,7 +157,7 @@ func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 	}
 	for _, sd := range sds {
 		// Get the CPU shares on this schedd.
-		req := &proto.GetCPUUtilRequest{RealmStr: sdc.realm.String()}
+		req := &proto.GetCPUUtilRequest{RealmStr: realm.String()}
 		res := &proto.GetCPUUtilResponse{}
 		sclnt, err := sdc.GetScheddClnt(sd)
 		if err != nil {

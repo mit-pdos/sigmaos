@@ -16,6 +16,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	schedd "sigmaos/schedd/proto"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -35,7 +36,7 @@ type ProcClnt struct {
 	pid             proc.Tpid
 	isExited        proc.Tpid
 	procdir         string
-	schedds         map[string]*protdevclnt.ProtDevClnt
+	scheddclnt      *scheddclnt.ScheddClnt
 	scheddIps       []string
 	lastProcdUpdate time.Time
 	burstOffset     int
@@ -46,7 +47,7 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.procdir = procdir
-	clnt.schedds = make(map[string]*protdevclnt.ProtDevClnt)
+	clnt.scheddclnt = scheddclnt.MakeScheddClnt(fsl, clnt.Realm())
 	clnt.scheddIps = make([]string, 0)
 	return clnt
 }
@@ -56,7 +57,11 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 // Create the named state the proc (and its parent) expects.
 func (clnt *ProcClnt) MkProc(p *proc.Proc, how Thow, kernelId string) error {
 	// Always spawn kernel procs on the local kernel.
-	return clnt.spawn(kernelId, how, p, clnt.getScheddClnt(kernelId))
+	pdc, err := clnt.getScheddClnt(kernelId)
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "MkProc: getScheddClnt err %v\n", err)
+	}
+	return clnt.spawn(kernelId, how, p, pdc)
 }
 
 func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (*exec.Cmd, error) {
@@ -84,7 +89,11 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.P
 		// Update the list of active procds.
 		clnt.updateSchedds()
 		kernelId := clnt.nextSchedd(procsPerSchedd)
-		err := clnt.spawn(kernelId, HSCHEDD, ps[i], clnt.getScheddClnt(kernelId))
+		pdc, err := clnt.getScheddClnt(kernelId)
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "SpawnBurst: getScheddClnt err %v\n", err)
+		}
+		err = clnt.spawn(kernelId, HSCHEDD, ps[i], pdc)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
@@ -100,7 +109,11 @@ type errTuple struct {
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", HSCHEDD, p, clnt.getScheddClnt("~local"))
+	pdc, err := clnt.getScheddClnt("~local")
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Spawn: getScheddClnt err %v\n", err)
+	}
+	return clnt.spawn("~local", HSCHEDD, p, pdc)
 }
 
 func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
@@ -147,7 +160,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, pdc *protde
 	// If this is not a privileged proc, spawn it through procd.
 	if how == HSCHEDD {
 		if pdc == nil {
-			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\nschedds:%v, %v", kernelId, p, clnt.schedds, clnt.scheddIps)
+			db.DFatalf("Try to spawn proc with no schedd clnt for (%v): %v\n%v", kernelId, p, clnt.scheddIps)
 		}
 		req := &schedd.SpawnRequest{
 			Realm:     clnt.Realm().String(),
@@ -201,36 +214,21 @@ func (clnt *ProcClnt) updateSchedds() {
 	}
 }
 
-func (clnt *ProcClnt) getScheddClnt(kernelId string) *protdevclnt.ProtDevClnt {
-	clnt.Lock()
-	defer clnt.Unlock()
-
-	// See if we already have a client for this procd.
-	if pdc, ok := clnt.schedds[kernelId]; ok {
-		return pdc
-	}
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.SCHEDD, kernelId))
+func (clnt *ProcClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
+	pdc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
 	if err != nil {
-		sts, _ := clnt.GetDir(sp.SCHEDD)
-		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt localIP:%v scheddIP:%v schedds:%v err:%v", clnt.GetLocalIP(), kernelId, sp.Names(sts), err)
-		db.DPrintf(db.PROCCLNT_ERR, "Error make protdevclnt: %v", err)
-		return nil
+		db.DPrintf(db.PROCCLNT_ERR, "Error GetScheddClnt: %v", err)
+		return nil, err
 	}
-	clnt.schedds[kernelId] = pdc
-	// Local procd is special: it has 2 entries, one under its IP and the other
-	// under ~local.
+	// Local procd is special: it has 2 entries, one under its
+	// kernelId and the other under ~local.
 	if kernelId == "~local" {
-		p, ok, err := clnt.ResolveUnion(path.Join(sp.SCHEDD, "~local"))
-		if !ok || err != nil {
-			// If ~local hasn't registered itself yet, this method should've bailed
-			// out earlier.
-			db.DFatalf("Couldn't resolve schedd ~local: %v, %v, %v", p, ok, err)
+		if err := clnt.scheddclnt.RegisterLocalClnt(pdc); err != nil {
+			db.DFatalf("RegisterLocalClnt err %v\n", err)
+			return pdc, err
 		}
-		kernelId = path.Base(p)
-		db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", kernelId)
-		clnt.schedds[kernelId] = pdc
 	}
-	return pdc
+	return pdc, nil
 }
 
 // Get the next procd to burst on.

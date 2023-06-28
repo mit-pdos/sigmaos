@@ -3,6 +3,7 @@ package scheddclnt
 import (
 	"fmt"
 	"path"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,7 @@ type ScheddClnt struct {
 	done  int32
 	realm sp.Trealm
 	*fslib.FsLib
+	sync.Mutex
 	schedds map[string]*protdevclnt.ProtDevClnt
 }
 
@@ -29,7 +31,11 @@ func (t Tload) String() string {
 }
 
 func MakeScheddClnt(fsl *fslib.FsLib, realm sp.Trealm) *ScheddClnt {
-	return &ScheddClnt{0, realm, fsl, make(map[string]*protdevclnt.ProtDevClnt)}
+	return &ScheddClnt{
+		realm:   realm,
+		FsLib:   fsl,
+		schedds: make(map[string]*protdevclnt.ProtDevClnt),
+	}
 }
 
 func (sdc *ScheddClnt) Nschedd() (int, error) {
@@ -121,7 +127,7 @@ func (sdc *ScheddClnt) GetCPUShares() (rshare uprocclnt.Tshare, total uprocclnt.
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUSharesRequest{}
 		res := &proto.GetCPUSharesResponse{}
-		sclnt, err := sdc.getScheddClnt(sd)
+		sclnt, err := sdc.GetScheddClnt(sd)
 		if err != nil {
 			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
 		}
@@ -150,9 +156,9 @@ func (sdc *ScheddClnt) GetCPUUtil() (float64, error) {
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUUtilRequest{RealmStr: sdc.realm.String()}
 		res := &proto.GetCPUUtilResponse{}
-		sclnt, err := sdc.getScheddClnt(sd)
+		sclnt, err := sdc.GetScheddClnt(sd)
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil getScheddClnt: %v", err)
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil GetScheddClnt: %v", err)
 			return 0, err
 		}
 		err = sclnt.RPC("Schedd.GetCPUUtil", req, res)
@@ -197,7 +203,10 @@ func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
+func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
+	sdc.Lock()
+	defer sdc.Unlock()
+
 	var pdc *protdevclnt.ProtDevClnt
 	var ok bool
 	if pdc, ok = sdc.schedds[kernelId]; !ok {
@@ -210,6 +219,22 @@ func (sdc *ScheddClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt,
 		sdc.schedds[kernelId] = pdc
 	}
 	return pdc, nil
+}
+
+func (sdc *ScheddClnt) RegisterLocalClnt(pdc *protdevclnt.ProtDevClnt) error {
+	sdc.Lock()
+	defer sdc.Unlock()
+
+	p, ok, err := sdc.ResolveUnion(path.Join(sp.SCHEDD, "~local"))
+	if !ok || err != nil {
+		// If ~local hasn't registered itself yet, this method should've bailed
+		// out earlier.
+		return fmt.Errorf("Couldn't register schedd ~local: %v, %v, %v", p, ok, err)
+	}
+	kernelId := path.Base(p)
+	db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", kernelId)
+	sdc.schedds[kernelId] = pdc
+	return nil
 }
 
 func (sdc *ScheddClnt) getSchedds() ([]string, error) {

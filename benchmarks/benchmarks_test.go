@@ -925,7 +925,7 @@ func TestK8sImgResize(t *testing.T) {
 	p := makeRealmPerf(ts1)
 	defer p.Done()
 	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts.T, err, "Error mkdir %v", err)
+	assert.Nil(ts1.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tcore(linuxsched.NCores-1))
 	spawnBurstProcs(ts1, ps)

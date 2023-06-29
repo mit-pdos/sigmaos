@@ -3,7 +3,9 @@ package serr
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"syscall"
 
 	"sigmaos/path"
 )
@@ -233,4 +235,28 @@ func IsErrCode(error error, code Terror) bool {
 		return err.Code() == code
 	}
 	return false
+}
+
+func errnoToErr(errno syscall.Errno, err error, name string) *Err {
+	switch errno {
+	case syscall.ENOENT:
+		return MkErr(TErrNotfound, name)
+	case syscall.EEXIST:
+		return MkErr(TErrExists, name)
+	default:
+		return MkErrError(err)
+	}
+}
+
+func UxErrnoToErr(err error, name string) *Err {
+	switch e := err.(type) {
+	case *os.LinkError:
+		return errnoToErr(e.Err.(syscall.Errno), err, name)
+	case *os.PathError:
+		return errnoToErr(e.Err.(syscall.Errno), err, name)
+	case syscall.Errno:
+		return errnoToErr(e, err, name)
+	default:
+		return MkErrError(err)
+	}
 }

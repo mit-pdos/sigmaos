@@ -1,16 +1,13 @@
 package fsux
 
 import (
-	"os"
 	"sync"
-	"syscall"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslibsrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
-	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -53,28 +50,4 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	fsux.SessSrv = srv
 	fsux.SigmaClnt = srv.SigmaClnt()
 	return fsux
-}
-
-func ErrnoToNp(errno syscall.Errno, err error, name string) *serr.Err {
-	switch errno {
-	case syscall.ENOENT:
-		return serr.MkErr(serr.TErrNotfound, name)
-	case syscall.EEXIST:
-		return serr.MkErr(serr.TErrExists, name)
-	default:
-		return serr.MkErrError(err)
-	}
-}
-
-func UxTo9PError(err error, name string) *serr.Err {
-	switch e := err.(type) {
-	case *os.LinkError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
-	case *os.PathError:
-		return ErrnoToNp(e.Err.(syscall.Errno), err, name)
-	case syscall.Errno:
-		return ErrnoToNp(e, err, name)
-	default:
-		return serr.MkErrError(err)
-	}
 }

@@ -11,10 +11,10 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -47,7 +47,7 @@ func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
 		db.DPrintf(db.UX, "ustat %v err %v\n", path, error)
-		return nil, UxTo9PError(error, path.Base())
+		return nil, serr.UxErrnoToErr(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
 	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, sessp.Tpath(statx.Ino)),

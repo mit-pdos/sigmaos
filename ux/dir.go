@@ -8,10 +8,10 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 )
@@ -39,7 +39,7 @@ func makeDir(path path.Path) (*Dir, *serr.Err) {
 func (d *Dir) uxReadDir() *serr.Err {
 	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
-		return UxTo9PError(err, d.pathName.Base())
+		return serr.UxErrnoToErr(err, d.pathName.Base())
 	}
 	for _, e := range dirents {
 		if st, err := ustat(d.pathName.Copy().Append(e.Name())); err != nil {
@@ -84,7 +84,7 @@ func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, 
 	p := d.pathName.Append(name).String()
 	error := os.Mkdir(p, os.FileMode(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error, name)
+		return nil, serr.UxErrnoToErr(error, name)
 	}
 	d1, err := makeDir(append(d.pathName, name))
 	if err != nil {
@@ -97,7 +97,7 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	p := d.pathName.Append(name).String()
 	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error, name)
+		return nil, serr.UxErrnoToErr(error, name)
 	}
 	f, err := makeFile(append(d.pathName, name))
 	if err != nil {
@@ -111,7 +111,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
-		return nil, UxTo9PError(error, name)
+		return nil, serr.UxErrnoToErr(error, name)
 	}
 	f, err := makePipe(ctx, append(d.pathName, name))
 	if err != nil {
@@ -188,7 +188,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *serr.Err
 	db.DPrintf(db.UX, "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return UxTo9PError(err, to)
+		return serr.UxErrnoToErr(err, to)
 	}
 	return nil
 }
@@ -202,7 +202,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	}
 	error := os.Remove(p.String())
 	if error != nil {
-		return UxTo9PError(error, name)
+		return serr.UxErrnoToErr(error, name)
 	}
 	if o.Perm().IsPipe() {
 		pipe := fsux.ot.AllocRef(o.path, nil)
@@ -219,7 +219,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	db.DPrintf(db.UX, "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {
-		return UxTo9PError(error, to)
+		return serr.UxErrnoToErr(error, to)
 	}
 	// XXX unlink on pipe, if pipe
 	return nil

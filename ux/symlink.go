@@ -41,7 +41,7 @@ func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		// so that Read() can read it.
 		target, error := os.Readlink(s.Obj.pathName.String())
 		if error != nil {
-			return nil, UxTo9PError(error, s.Obj.pathName.Base())
+			return nil, serr.UxErrnoToErr(error, s.Obj.pathName.Base())
 		}
 		db.DPrintf(db.UX, "Readlink target='%s'\n", target)
 		d := []byte(target)
@@ -64,7 +64,7 @@ func (s *Symlink) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 		error := syscall.Symlink(string(d), s.Obj.pathName.String())
 		if error != nil {
 			db.DPrintf(db.UX, "symlink %s err %v\n", s, error)
-			UxTo9PError(error, s.Obj.pathName.Base())
+			serr.UxErrnoToErr(error, s.Obj.pathName.Base())
 		}
 	}
 	return nil

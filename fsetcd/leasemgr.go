@@ -28,7 +28,7 @@ func (lmgr *leaseMgr) getLeaseID(cid sp.TclntId) (clientv3.LeaseID, error) {
 
 	lid := lmgr.lt.lookup(cid)
 	if lid == clientv3.NoLease {
-		resp, err := lmgr.lc.Grant(context.TODO(), SessionTTL)
+		resp, err := lmgr.lc.Grant(context.TODO(), LeaseTTL)
 		if err != nil {
 			return clientv3.NoLease, err
 		}

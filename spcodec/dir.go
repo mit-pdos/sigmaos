@@ -50,10 +50,5 @@ func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *serr.Err) {
 	if err := proto.Unmarshal(b, st); err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	//var nperr *serr.Err
-	//if errors.As(error, &nperr) {
-	//		return nil, nperr
-	//	}
-	//	return nil, serr.MkErrError(error)
 	return st, nil
 }

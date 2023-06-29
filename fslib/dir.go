@@ -1,7 +1,6 @@
 package fslib
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
@@ -176,8 +175,7 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 				ch <- r
 			}); err != nil {
 				rdr.Close()
-				var serr *serr.Err
-				if errors.As(err, &serr) && serr.IsErrVersion() {
+				if serr.IsErrCode(err, serr.TErrVersion) {
 					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
 					continue
 				}

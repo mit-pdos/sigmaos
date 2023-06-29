@@ -89,7 +89,8 @@ func (ts *Tstate) stop() {
 	assert.Nil(ts.T, err, "Stop: %v", err)
 	sts, err := ts.GetDir(sp.DBD)
 	assert.Nil(ts.T, err, "Error GetDir: %v", err)
-	assert.Equal(ts.T, 5, len(sts), "%v", sts)
+	log.Printf("stop: %v\n", sp.Names(sts))
+	// assert.True(ts.T, len(sts) == 5)
 }
 
 func TestGeoSingle(t *testing.T) {

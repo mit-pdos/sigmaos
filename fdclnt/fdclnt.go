@@ -1,7 +1,6 @@
 package fdclnt
 
 import (
-	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -104,8 +103,7 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
 
 func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
 	fd, err := fdc.Create(path, perm, mode)
-	var serr *serr.Err
-	if errors.As(err, &serr) && !serr.IsErrExists() {
+	if err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DPrintf(db.FDCLNT_ERR, "Create %v err %v", path, err)
 		return -1, err
 	}

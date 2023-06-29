@@ -14,7 +14,7 @@ import (
 )
 
 func leader(t *testing.T, ch chan struct{}, i int) {
-	cli, err := fsetcd.MkEtcdClnt(sp.ROOTREALM)
+	cli, err := fsetcd.MkFsEtcd(sp.ROOTREALM)
 	if err != nil {
 		log.Fatalf("new %v\n", err)
 	}

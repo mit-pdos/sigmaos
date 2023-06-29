@@ -19,13 +19,11 @@ func f() error {
 }
 
 func TestErr(t *testing.T) {
-	var serr *Err
 	var err error
-	assert.False(t, errors.As(err, &serr) && serr.IsErrNotfound())
+	assert.False(t, IsErrCode(err, TErrNotfound))
 	err = f()
 	assert.NotNil(t, err)
-	assert.True(t, errors.As(err, &serr) && serr.IsErrNotfound())
-
+	assert.True(t, IsErrCode(err, TErrNotfound))
 }
 
 func TestError(t *testing.T) {

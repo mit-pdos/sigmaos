@@ -116,8 +116,7 @@ func (kc *KvClerk) StartClerk() error {
 
 func (kc *KvClerk) IsMiss(err error) bool {
 	db.DPrintf(db.KVCLERK, "IsMiss err %v", err)
-	var serr *serr.Err
-	return errors.As(err, &serr) && serr.IsErrNotfound()
+	return serr.IsErrCode(err, serr.TErrNotfound)
 }
 
 // Detach servers not in kvs
@@ -174,16 +173,16 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	var serr *serr.Err
-	if errors.As(err, &serr) && serr.IsErrNotfound() && strings.HasPrefix(serr.ErrPath(), "shard") {
+	var sr *serr.Err
+	if errors.As(err, &sr) && sr.IsErrNotfound() && strings.HasPrefix(sr.ErrPath(), "shard") {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", serr.ErrPath())
+		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", sr.ErrPath())
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if errors.As(err, &serr) && serr.IsErrStale() {
+	if serr.IsErrCode(err, serr.TErrStale) {
 		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}

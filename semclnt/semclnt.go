@@ -1,7 +1,6 @@
 package semclnt
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -47,14 +46,13 @@ func (c *SemClnt) Down() error {
 			}
 			signal <- err1
 		})
-		var serr *serr.Err
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
-		if errors.As(err, &serr) && serr.IsErrNotfound() {
+		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.SEMCLNT_ERR, "down notfound %v ok err %v\n", c.path, err)
 			return nil
 		}
-		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
 			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
 			continue
@@ -66,11 +64,11 @@ func (c *SemClnt) Down() error {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v err %v\n", c.path, err)
 			return err
 		}
-		if errors.As(err, &serr) && serr.IsErrVersion() {
+		if serr.IsErrCode(err, serr.TErrVersion) {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v retry err %v\n", c.path, err)
 			continue
 		}
-		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
 			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
 			continue

@@ -2,7 +2,6 @@ package procclnt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -222,8 +221,7 @@ func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
 	})
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			return err
 		}
 	} else {
@@ -335,9 +333,8 @@ func (clnt *ProcClnt) Started() error {
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
 	}
-	var serr *serr.Err
 	// File may not be found if parent exited first or isn't reachable
-	if errors.As(err, &serr) && !serr.IsErrUnavailable() {
+	if err != nil && !serr.IsErrorUnavailable(err) {
 		return fmt.Errorf("Started error %v", err)
 	}
 	return nil

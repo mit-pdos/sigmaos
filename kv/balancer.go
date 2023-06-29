@@ -231,8 +231,7 @@ func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DFatalf("disconnected\n")
 		}
 	}
@@ -309,10 +308,9 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "runProc %v err %v status %v\n", args, err, status)
 		}
-		var serr *serr.Err
-		if errors.As(err, &serr) && (strings.HasPrefix(err.Error(), "Spawn error") ||
+		if strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			serr.IsErrUnreachable()) {
+			serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {

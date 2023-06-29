@@ -124,8 +124,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 
 func (imgd *ImgSrv) claimEntry(name string) (string, error) {
 	if err := imgd.Rename(imgd.todo+"/"+name, imgd.wip+"/"+name); err != nil {
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrUnreachable() { // partitioned?
+		if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
 			return "", err
 		}
 		// another thread claimed the task before us

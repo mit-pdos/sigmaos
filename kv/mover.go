@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"sync"
@@ -116,8 +115,7 @@ func (mv *Mover) delShard(sharddir string) {
 
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.
-	var serr *serr.Err
-	if _, err := mv.Stat(sharddir); errors.As(err, &serr) && serr.IsErrNotfound() {
+	if _, err := mv.Stat(sharddir); serr.IsErrCode(err, serr.TErrNotfound) {
 		db.DPrintf(db.KVMV_ERR, "Delete conf %v not found %v\n", mv.epochstr, sharddir)
 		mv.ExitedOK()
 		return

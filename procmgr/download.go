@@ -1,7 +1,6 @@
 package procmgr
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"time"
@@ -35,9 +34,8 @@ func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
 	if _, ok := mgr.cachedirs[p.GetRealm()]; !ok {
 		cachePn := path.Dir(cachePath(p.GetRealm(), p.Program))
 		// Make a dir to cache the realm's binaries.
-		var serr *serr.Err
-		if err := mgr.rootsc.MkDir(cachePn, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
-			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, serr)
+		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
 		}
 		mgr.cachedirs[proc.GetRealm()] = true
 	}
@@ -102,14 +100,13 @@ func (mgr *ProcMgr) downloadProcPath(realm sp.Trealm, from, prog string) error {
 	// May need to retry if ux crashes.
 	var i int
 	var err error
-	var serr *serr.Err
 	for i = 0; i < N_DOWNLOAD_RETRIES; i++ {
 		// Return if successful. Else, retry
 		if err = mgr.tryDownloadProcPath(realm, from, prog); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.PROCMGR_ERR, "Error tryDownloadProcBin [%v]: %v", path.Join(from, prog), err)
-			if errors.As(err, &serr) && serr.IsErrNotfound() {
+			if serr.IsErrCode(err, serr.TErrNotfound) {
 				break
 			}
 		}
@@ -133,8 +130,7 @@ func (mgr *ProcMgr) tryDownloadProcPath(realm sp.Trealm, from, prog string) erro
 		// If another schedd (or another thread on this schedd) already completed the
 		// download, then we consider the download successful. Any other error
 		// (e.g. ux crashed) is unexpected.
-		var serr *serr.Err
-		if errors.As(err, &serr) && !serr.IsErrExists() {
+		if err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 			return err
 		}
 		// If someone else completed the download before us, remove the temp file.

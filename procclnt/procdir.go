@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"runtime/debug"
@@ -58,8 +57,7 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 	}
 	// May return file not found if parent exited.
 	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
-		var serr *serr.Err
-		if errors.As(err, &serr) && !serr.IsErrUnavailable() {
+		if !serr.IsErrorUnavailable(err) {
 			db.DPrintf(db.PROCCLNT_ERR, "Spawn Symlink child %v err %v\n", link, err)
 			return clnt.cleanupError(clnt.pid, clnt.procdir, err)
 		}

@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	"errors"
 	"sync"
 	"testing"
 
@@ -57,8 +56,7 @@ func (ts *TestState) testRename(t int) {
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
 		if err != nil {
-			var serr *serr.Err
-			assert.True(ts.t, errors.As(err, &serr) && serr.IsErrNotfound())
+			assert.True(ts.t, serr.IsErrCode(err, serr.TErrNotfound)
 		}
 	}
 }

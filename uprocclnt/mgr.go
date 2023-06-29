@@ -1,7 +1,6 @@
 package uprocclnt
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"path"
@@ -64,16 +63,15 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid
 func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
 	d1 := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL)
 	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
-	var serr *serr.Err
-	if err := updm.fsl.MkDir(d1, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
+	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	d2 := path.Join(d1, realm.String())
-	if err := updm.fsl.MkDir(d2, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
+	if err := updm.fsl.MkDir(d2, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	d3 := path.Join(d2, ptype.String())
-	if err := updm.fsl.MkDir(d3, 0777); errors.As(err, &serr) && !serr.IsErrExists() {
+	if err := updm.fsl.MkDir(d3, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	return nil
@@ -129,8 +127,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	var serr *serr.Err
-	if err := pdc.RPC("UprocSrv.Run", req, res); errors.As(err, &serr) && serr.IsErrUnreachable() {
+	if err := pdc.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		log.Printf("uprocsrv run err %v\n", err)
 		return err, nil
 	} else {

@@ -1,7 +1,6 @@
 package procmgr
 
 import (
-	"errors"
 	"path"
 
 	db "sigmaos/debug"
@@ -161,12 +160,11 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 	})
 	// Since many schedds may be modifying the WS dir, we may get version
 	// errors.
-	var serr *serr.Err
-	if errors.As(err, &serr) && serr.IsErrVersion() {
+	if serr.IsErrCode(err, serr.TErrVersion) {
 		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
 		return nil, false
 	}
-	if errors.As(err, &serr) && serr.IsErrUnreachable() {
+	if serr.IsErrCode(err, serr.TErrUnreachable) {
 		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
 		return nil, false
 	}

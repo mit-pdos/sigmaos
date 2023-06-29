@@ -145,8 +145,7 @@ func (c *Coord) reducerProc(task string) *proc.Proc {
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := c.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrUnreachable() { // partitioned?
+		if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
 			return "", err
 		}
 		// another thread claimed the task before us

@@ -5,7 +5,6 @@ package group
 //
 
 import (
-	"errors"
 	"log"
 	"os"
 	"path"
@@ -120,8 +119,7 @@ func (g *Group) waitForClusterConfig() {
 func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
 	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); err != nil {
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrNotfound() {
+		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.GROUP, "found conf path %v", grpConfPath(g.jobdir, g.grp))
 			return false
 		}

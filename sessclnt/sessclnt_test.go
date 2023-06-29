@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -167,7 +166,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			fsl, err := fslib.MakeFsLibAddr(fmt.Sprintf("test-fsl-%v", i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			fsl, err := fslib.MakeFsLibAddr(sp.Tuname(fmt.Sprintf("test-fsl-%v", i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(DIRGRP0)
@@ -220,7 +219,7 @@ const (
 )
 
 func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
-	fsl, err := fslib.MakeFsLibAddr("writer-"+name, sp.ROOTREALM, lip, nds)
+	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("writer-"+name), sp.ROOTREALM, lip, nds)
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + name
 	stop := false
@@ -230,13 +229,12 @@ func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
 		case <-ch:
 			stop = true
 		default:
-			var serr *serr.Err
-			if err := fsl.Remove(fn); errors.As(err, &serr) && serr.IsErrUnreachable() {
+			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
 				break
 			}
 			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-			if errors.As(err, &serr) {
-				assert.True(t, serr.IsErrUnreachable())
+			if err != nil {
+				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 				break
 			}
 			nfile += 1
@@ -244,8 +242,8 @@ func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				break
 			}
-			if err := w.Close(); errors.As(err, &serr) {
-				assert.True(t, serr.IsErrUnreachable())
+			if err := w.Close(); err != nil {
+				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 				break
 			}
 		}

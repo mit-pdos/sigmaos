@@ -1,7 +1,6 @@
 package fslib_test
 
 import (
-	"errors"
 	"flag"
 	"log"
 	"net"
@@ -101,8 +100,7 @@ func TestCreateTwice(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 	assert.NotNil(t, err)
-	var serr *serr.Err
-	assert.True(t, errors.As(err, &serr) && serr.IsErrExists())
+	assert.True(t, serr.IsErrCode(err, serr.TErrExists))
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)
@@ -128,15 +126,14 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	db.DPrintf(db.TEST, "disconnected")
 
-	var serr *serr.Err
 	_, err = ts.Write(fd, d)
-	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	err = ts.Close(fd)
-	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	ts.Shutdown()
 }
@@ -585,8 +582,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	defer fsl.Close(fd)
 
 	b, err := fsl.ReadV(fd, 1000)
-	var serr *serr.Err
-	if errors.As(err, &serr) && serr.IsErrVersion() {
+	if serr.IsErrCode(err, serr.TErrVersion) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -600,7 +596,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 
 	b = []byte(strconv.Itoa(n))
 	_, err = fsl.WriteV(fd, b)
-	if errors.As(err, &serr) && serr.IsErrVersion() {
+	if serr.IsErrCode(err, serr.TErrVersion) {
 		return true
 	}
 	assert.Nil(t, err)
@@ -659,8 +655,8 @@ func TestWatchCreate(t *testing.T) {
 	})
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, -1, fd, err)
-	var serr *serr.Err
-	assert.True(t, errors.As(err, &serr) && serr.IsErrNotfound())
+
+	assert.True(t, serr.IsErrCode(err, serr.TErrNotfound))
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
@@ -913,8 +909,7 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 				ch <- r
 			})
 			// Either no error, or remove already happened.
-			var serr *serr.Err
-			assert.True(ts.T, err == nil || errors.As(err, &serr) && serr.IsErrNotfound(), "Unexpected RemoveWatch error: %v", err)
+			assert.True(ts.T, err == nil || serr.IsErrCode(err, serr.TErrNotfound), "Unexpected RemoveWatch error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {
@@ -984,8 +979,7 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 				i = i + 1
 				ok = true
 			} else {
-				var serr *serr.Err
-				assert.True(ts.T, errors.As(err, &serr) && serr.IsErrNotfound())
+				assert.True(ts.T, serr.IsErrCode(err, serr.TErrNotfound))
 			}
 		}
 	}
@@ -1361,8 +1355,7 @@ func TestFslibExit(t *testing.T) {
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
-	var serr *serr.Err
-	assert.True(t, errors.As(err, &serr) && serr.IsErrUnreachable())
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	ts.Shutdown()
 }

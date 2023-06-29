@@ -166,19 +166,29 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
-	pdc, err := clnt.getScheddClnt(kernelId)
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
-		return err
-	}
-	req := &schedd.SpawnRequest{
-		Realm:     clnt.Realm().String(),
-		ProcProto: p.GetProto(),
-	}
 	s := time.Now()
-	res := &schedd.SpawnResponse{}
-	if err := pdc.RPC("Schedd.Spawn", req, res); err != nil {
-		return err
+	// This loop will be executed once or twice
+	for {
+		pdc, err := clnt.getScheddClnt(kernelId)
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
+			return err
+		}
+		req := &schedd.SpawnRequest{
+			Realm:     clnt.Realm().String(),
+			ProcProto: p.GetProto(),
+		}
+		res := &schedd.SpawnResponse{}
+		if err := pdc.RPC("Schedd.Spawn", req, res); err != nil {
+			db.DPrintf(db.ALWAYS, "Schedd.Spawn %v err %v\n", kernelId, err)
+			if serr.IsErrCode(err, serr.TErrUnreachable) {
+				db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
+				clnt.scheddclnt.UnregisterClnt(kernelId)
+				continue
+			}
+			return err
+		}
+		break
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 	return nil

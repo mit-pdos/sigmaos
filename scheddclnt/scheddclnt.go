@@ -240,6 +240,12 @@ func (sdc *ScheddClnt) RegisterLocalClnt(pdc *protdevclnt.ProtDevClnt) error {
 	return nil
 }
 
+func (sdc *ScheddClnt) UnregisterClnt(kernelId string) {
+	sdc.Lock()
+	defer sdc.Unlock()
+	delete(sdc.schedds, kernelId)
+}
+
 func (sdc *ScheddClnt) getSchedds() ([]string, error) {
 	sts, err := sdc.GetDir(sp.SCHEDD)
 	if err != nil {

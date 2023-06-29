@@ -62,7 +62,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	idx := int(atomic.AddInt32(&pdc.idx, 1))
 	b, err = pdc.fsls[idx%len(pdc.fsls)].WriteRead(pdc.fds[idx%len(pdc.fds)], b)
 	if err != nil {
-		return nil, fmt.Errorf("rpc err %v", err)
+		return nil, err
 	}
 	// Record stats
 	pdc.si.Stat(method, time.Since(start).Microseconds())

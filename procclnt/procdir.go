@@ -18,10 +18,9 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
-		var serr *serr.Err
-		if errors.As(err, &serr) && serr.IsErrUnreachable() {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
-			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, serr)
+			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
@@ -124,7 +123,7 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir string, how Thow) error {
+func (clnt *ProcClnt) addChild(kernelId string, p *proc.Proc, childProcdir string, how Thow) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
@@ -134,7 +133,7 @@ func (clnt *ProcClnt) addChild(scheddIp string, p *proc.Proc, childProcdir strin
 	// Only create procfile link for procs spawned via procd.
 	var procfileLink string
 	if how == HSCHEDD {
-		procfileLink = path.Join(sp.SCHEDD, scheddIp, sp.QUEUE, p.GetPid().String())
+		procfileLink = path.Join(sp.SCHEDD, kernelId, sp.QUEUE, p.GetPid().String())
 	}
 	// Add a file telling WaitStart where to look for this child proc file in
 	// this procd's runq.

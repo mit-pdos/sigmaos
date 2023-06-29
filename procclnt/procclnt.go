@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
+	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	schedd "sigmaos/schedd/proto"
@@ -167,8 +168,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 	s := time.Now()
-	// This loop will be executed once or twice
-	for {
+	for i := 0; i < pathclnt.MAXRETRY; i++ {
 		pdc, err := clnt.getScheddClnt(kernelId)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
@@ -188,10 +188,10 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 			}
 			return err
 		}
-		break
+		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
+		return nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
-	return nil
+	return serr.MkErr(serr.TErrUnreachable, kernelId)
 }
 
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {

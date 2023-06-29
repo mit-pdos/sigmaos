@@ -8,6 +8,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
@@ -112,24 +113,16 @@ func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string
 		gm.members[i] = makeMember(sc, bin, args, job, ncore, crashMember, n, partition, netfail)
 	}
 	done := make(chan *procret)
-	starts := make([]chan error, len(gm.members))
-	for i, m := range gm.members {
-		start := make(chan error)
-		starts[i] = start
-		go m.run(i, start, done)
-	}
-	for _, start := range starts {
-		err := <-start
-		if err != nil {
-			db.DFatalf("Start %v\n", err)
-		}
-
-	}
 	go gm.manager(done, N)
+
+	// make the manager start the members
+	for i := 0; i < N; i++ {
+		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
+	}
 	return gm
 }
 
-func (gm *GroupMgr) restart(i int, done chan *procret) {
+func (gm *GroupMgr) start(i int, done chan *procret) {
 	// XXX hack
 	if gm.members[i].bin == "kvd" {
 		// For now, we don't restart kvds
@@ -145,7 +138,7 @@ func (gm *GroupMgr) restart(i int, done chan *procret) {
 	if err != nil {
 		go func() {
 			db.DPrintf(db.GROUPMGR_ERR, "failed to start %v: %v; try again\n", i, err)
-			time.Sleep(time.Duration(10) * time.Millisecond)
+			time.Sleep(time.Duration(pathclnt.TIMEOUT) * time.Millisecond)
 			done <- &procret{i, err, nil}
 		}()
 	}
@@ -153,21 +146,21 @@ func (gm *GroupMgr) restart(i int, done chan *procret) {
 
 func (gm *GroupMgr) manager(done chan *procret, n int) {
 	for n > 0 {
-		st := <-done
+		pr := <-done
 		// XXX hack
-		if st == nil {
+		if pr == nil {
 			break
 		}
 		if atomic.LoadInt32(&gm.done) == 1 {
-			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[st.member].bin, st.member, n)
+			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].bin, pr.member, n)
 			n--
-		} else if st.err == nil && st.status.IsStatusOK() { // done?
-			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[st.member].bin, st.member)
+		} else if pr.err == nil && pr.status.IsStatusOK() { // done?
+			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].bin, pr.member)
 			atomic.StoreInt32(&gm.done, 1)
 			n--
 		} else { // restart member i
-			db.DPrintf(db.GROUPMGR, "%v restart %v\n", gm.members[st.member].bin, st)
-			gm.restart(st.member, done)
+			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].bin, pr)
+			gm.start(pr.member, done)
 		}
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].bin)

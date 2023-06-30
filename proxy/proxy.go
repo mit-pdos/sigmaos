@@ -262,15 +262,17 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.MkRerror(err)
 	}
-	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v %d\n", args, rets, len(d))
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
-		d, err = Sp2NpDir(d, args.Tcount())
+		d1, err1 := Sp2NpDir(d, args.Tcount())
 		if err != nil {
-			return nil, sp.MkRerror(err)
+			db.DPrintf(db.PROXY, "Read: Sp2NpDir err %v\n", err1)
+			return nil, sp.MkRerror(serr.MkErrError(err1))
 		}
+		d = d1
 	}
-	db.DPrintf(db.PROXY, "Read: args %v rets %v\n", args, rets)
+	db.DPrintf(db.PROXY, "Read: args %v rets %v %v\n", args, rets, len(d))
 	return d, nil
 }
 

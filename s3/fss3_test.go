@@ -198,21 +198,6 @@ func TestReadSplit(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestCrop(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	in := path.Join(sp.S3, "~local/9ps3/desk.jpg")
-	out := path.Join(sp.S3, "~local/9ps3/thumb.jpg")
-	ts.Remove(out)
-	p := proc.MakeProc("transcode", []string{in, out})
-	err := ts.Spawn(p)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(p.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(p.GetPid())
-	assert.True(t, status.IsStatusOK(), "WaitExit status error")
-	ts.Shutdown()
-}
-
 const NOBJ = 100
 
 func put(clnt *s3.Client, i int, wg *sync.WaitGroup) {

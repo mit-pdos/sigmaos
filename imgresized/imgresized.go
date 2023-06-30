@@ -39,6 +39,7 @@ type ImgSrv struct {
 }
 
 func MkDirs(fsl *fslib.FsLib, job string) error {
+	fsl.RmDir(IMG)
 	if err := fsl.MkDir(IMG, 0777); err != nil {
 		return err
 	}

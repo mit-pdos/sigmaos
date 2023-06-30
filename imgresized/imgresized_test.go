@@ -33,7 +33,7 @@ func TestResizeImg(t *testing.T) {
 
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
 
-	fmt.Printf("resize %v\v", time.Since(start))
+	fmt.Printf("resize %v\n", time.Since(start))
 
 	out, err := os.Create(fn)
 	assert.Nil(t, err)

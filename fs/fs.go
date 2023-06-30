@@ -81,7 +81,7 @@ func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sessp.Tsize, dir []Dir) ([]byte, 
 		case *sp.Stat:
 			b, e = spcodec.MarshalDirEnt(any(st).(*sp.Stat), uint64(cnt))
 		default:
-			db.DFatalf("MARSHAL", "MarshalDir unknown type %T\n", st)
+			db.DFatalf("MarshalDir unknown type %T\n", st)
 		}
 		if e != nil {
 			return nil, 0, e

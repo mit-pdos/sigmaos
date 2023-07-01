@@ -75,7 +75,7 @@ func PopFromFrame(rd io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	b := make([]byte, int(l))
-	if _, err := rd.Read(b); err != nil && !(err == io.EOF && l == 0) {
+	if _, err := io.ReadFull(rd, b); err != nil && !(err == io.EOF && l == 0) {
 		return nil, err
 	}
 	return b, nil

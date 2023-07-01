@@ -750,6 +750,9 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 
 	sm.Stop()
 
+	err = ts.RmDir(OUTDIR)
+	assert.Nil(t, err, "RmDir: %v", err)
+
 	ts.Shutdown()
 }
 

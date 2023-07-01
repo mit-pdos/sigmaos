@@ -84,12 +84,13 @@ func (wc *WebClnt) Login(u, p string) (string, error) {
 	return repl["message"].(string), nil
 }
 
-func (wc *WebClnt) ComposePost(u, uid, text, ptype string) (string, error) {
+func (wc *WebClnt) ComposePost(u, uid, text, ptype string, mediastr string) (string, error) {
 	vals := url.Values{}
 	vals.Set("username", u)
 	vals.Set("userid", uid)
 	vals.Set("text", text)
 	vals.Set("posttype", ptype)
+	vals.Set("media", mediastr)
 	body, err := wc.request("/compose", vals)
 	if err != nil {
 		return "", err

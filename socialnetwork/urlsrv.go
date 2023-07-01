@@ -26,24 +26,11 @@ const (
 )
 
 var urlPrefixL = len(URL_HOSTNAME)
-	
-var letterRunes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func init() {
-    rand.Seed(time.Now().UnixNano())
-}
-
-func RandStringRunes(n int) string {
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letterRunes[rand.Intn(len(letterRunes))]
-    }
-    return string(b)
-}
 
 type UrlSrv struct {
 	cachec *cacheclnt.CacheClnt
 	mongoc *mongoclnt.MongoClnt
+	random *rand.Rand
 }
 
 func RunUrlSrv(public bool, jobname string) error {
@@ -65,6 +52,7 @@ func RunUrlSrv(public bool, jobname string) error {
 		return err
 	}
 	urlsrv.cachec = cachec
+	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
 	return pds.RunServer()
 }
@@ -78,7 +66,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 	}
 	res.Shorturls = make([]string, nUrls)
 	for idx, extendedurl := range req.Extendedurls {
-		shorturl := RandStringRunes(URL_LENGTH)
+		shorturl := RandString(URL_LENGTH, urlsrv.random)
 		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
 		if err := urlsrv.mongoc.Insert(SN_DB, URL_COL, url); err != nil {
 			dbg.DFatalf("Mongo error: %v", err)

@@ -34,6 +34,11 @@ func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) Shutdown() {
+	// g.RmDir(JobDir(jobdir), 0777)
+	ts.Tstate.Shutdown()
+}
+
 func (ts *Tstate) setupKeys(nkeys int) {
 	db.DPrintf(db.TEST, "setupKeys")
 	for i := 0; i < nkeys; i++ {

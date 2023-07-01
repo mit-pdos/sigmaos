@@ -22,8 +22,8 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(root fs.Dir, addr, name string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil, attachf, detachf)
+func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf)
 }
 
 func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {

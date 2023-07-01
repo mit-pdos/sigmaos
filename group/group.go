@@ -10,17 +10,22 @@ import (
 	"path"
 	"strconv"
 	"sync"
+	"time"
 
 	"sigmaos/container"
 	"sigmaos/crash"
+	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/dir"
 	"sigmaos/electclnt"
-	"sigmaos/memfssrv"
+	"sigmaos/fslibsrv"
+	"sigmaos/memfs"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
+	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -75,6 +80,7 @@ type Group struct {
 	grp    string
 	ip     string
 	*sigmaclnt.SigmaClnt
+	srv    *sesssrv.SessSrv
 	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
 	isBusy bool
 }
@@ -243,6 +249,10 @@ func RunMember(jobdir, grp string, public bool) {
 
 	db.DPrintf(db.GROUP, "Starting replica with replication level %v", nReplicas)
 
+	g.Started()
+	ch := make(chan struct{})
+	go g.waitExit(ch)
+
 	g.AcquireLeadership()
 
 	var raftCfg *replraft.RaftConfig = nil
@@ -285,31 +295,21 @@ func RunMember(jobdir, grp string, public bool) {
 
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
-	// start server but don't publish its existence
-	var mfs *memfssrv.MemFs
-	var err1 error
-	if public {
-		mfs, err1 = memfssrv.MakeReplMemFsFslPublic("", g.SigmaClnt, raftCfg, proc.GetRealm())
-	} else {
-		mfs, err1 = memfssrv.MakeReplMemFsFsl(g.ip+":0", "", g.SigmaClnt, raftCfg)
+	root := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
+	srv := fslibsrv.BootSrv(root, g.ip+":0", g.SigmaClnt, nil, nil, raftCfg)
+	if srv == nil {
+		db.DFatalf("Bootsrv\n")
 	}
-	if err1 != nil {
-		db.DFatalf("StartMemFs %v\n", err1)
-	}
+	g.srv = srv
 
-	crash.Partitioner(mfs.SessSrv)
-	crash.NetFailer(mfs.SessSrv)
+	crash.Partitioner(g.srv)
+	crash.NetFailer(g.srv)
 
 	sigmaAddrs := make([]sp.Taddrs, 0)
 
 	// If running replicated...
 	if nReplicas > 0 {
-		// Get the final sigma addr
-		if public {
-			clusterCfg.SigmaAddrs[id-1] = mfs.MyAddrsPublic(proc.GetNet())
-		} else {
-			clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{mfs.MyAddr()})
-		}
+		clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{srv.MyAddr()})
 		db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
 
 		if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
@@ -317,11 +317,7 @@ func RunMember(jobdir, grp string, public bool) {
 		}
 		sigmaAddrs = clusterCfg.SigmaAddrs
 	} else {
-		if public {
-			sigmaAddrs = append(sigmaAddrs, mfs.MyAddrsPublic(proc.GetNet()))
-		} else {
-			sigmaAddrs = append(sigmaAddrs, sp.MkTaddrs([]string{mfs.MyAddr()}))
-		}
+		sigmaAddrs = append(sigmaAddrs, sp.MkTaddrs([]string{g.srv.MyAddr()}))
 	}
 
 	g.writeSymlink(sigmaAddrs)
@@ -336,8 +332,23 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	defer p.Done()
 
-	mfs.MonitorCPU(nil)
+	g.srv.MonitorCPU(nil)
 
-	mfs.Serve()
-	mfs.Done()
+	<-ch
+
+	db.DPrintf(db.GROUP, "%v: group done\n", proc.GetPid())
+}
+
+// XXX move to procclnt?
+func (g *Group) waitExit(ch chan struct{}) {
+	for {
+		err := g.WaitEvict(proc.GetPid())
+		if err != nil {
+			db.DPrintf(db.GROUP, "Error WaitEvict: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		db.DPrintf(db.GROUP, "candidate %v %v evicted\n", g, proc.GetPid().String())
+		ch <- struct{}{}
+	}
 }

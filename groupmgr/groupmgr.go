@@ -38,6 +38,7 @@ type member struct {
 	nReplicas int
 	partition int
 	netfail   int
+	started   bool
 }
 
 type procret struct {
@@ -51,7 +52,7 @@ func (pr procret) String() string {
 }
 
 func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, ncore proc.Tcore, crash int, nReplicas int, partition, netfail int) *member {
-	return &member{sc, "", bin, append([]string{job}, args...), job, ncore, crash, nReplicas, partition, netfail}
+	return &member{SigmaClnt: sc, bin: bin, args: append([]string{job}, args...), job: job, ncore: ncore, crash: crash, nReplicas: nReplicas, partition: partition, netfail: netfail}
 }
 
 func (m *member) spawn() error {
@@ -86,6 +87,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 	}
 	start <- nil
 	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.bin, i, m.pid)
+	m.started = true
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
 	done <- &procret{i, err, status}
@@ -119,12 +121,13 @@ func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string
 	for i := 0; i < N; i++ {
 		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
 	}
+	// wait until all members are running?
 	return gm
 }
 
 func (gm *GroupMgr) start(i int, done chan *procret) {
 	// XXX hack
-	if gm.members[i].bin == "kvd" {
+	if gm.members[i].bin == "kvd" && gm.members[i].started {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		go func() {

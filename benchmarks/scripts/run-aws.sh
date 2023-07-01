@@ -82,9 +82,33 @@ mkdir $OUT_DIR
 
 # ========== Helpers ==========
 
-start_cluster() {
+stop_sigmaos_cluster() {
+  if [ $# -ne 1 ]; then
+    echo "start_sigmaos_cluster args: vpc" 1>&2
+    exit 1
+  fi
+  vpc=$1
+  cd $SCRIPT_DIR
+  ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
+  cd $ROOT_DIR
+}
+
+stop_k8s_cluster() {
+  if [ $# -ne 1 ]; then
+    echo "start_k8s_cluster args: vpc" 1>&2
+    exit 1
+  fi
+  vpc=$1
+  cd $SCRIPT_DIR
+  ./stop-k8s.sh --vpc $vpc >> $INIT_OUT 2>&1
+  cd $ROOT_DIR
+}
+
+# Make sure to always start SigmaOS before K8s, as internally this function
+# stops k8s (because k8s generates a lot of interference).
+start_sigmaos_cluster() {
   if [ $# -ne 4 ]; then
-    echo "start_cluster args: vpc n_cores n_vm swap" 1>&2
+    echo "start_sigmaos_cluster args: vpc n_cores n_vm swap" 1>&2
     exit 1
   fi
   vpc=$1
@@ -99,8 +123,33 @@ start_cluster() {
   else
     ./setup-swap.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
   fi
-  ./stop-sigmaos.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
+  # k8s takes up a lot of CPU, so always stop it before starting SigmaOS.
+  stop_k8s_cluster $vpc
+  stop_sigmaos_cluster $vpc
   ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
+  cd $ROOT_DIR
+}
+
+# Make sure to always start SigmaOS before K8s, as internally the SigmaOS start
+# function stops k8s (because k8s generates a lot of interference).
+start_k8s_cluster() {
+  if [ $# -ne 3 ]; then
+    echo "start_k8s_cluster args: vpc n_vm swap" 1>&2
+    exit 1
+  fi
+  vpc=$1
+  n_vm=$2
+  swap=$3
+  cd $SCRIPT_DIR
+  echo "" > $INIT_OUT
+  if [[ $swap == "swapon" ]]; then
+    # Enable 16GiB of swap.
+    ./setup-swap.sh --vpc $vpc --parallel --n 16777216 >> $INIT_OUT 2>&1
+  else
+    ./setup-swap.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
+  fi
+  stop_k8s_cluster $vpc
+  ./start-k8s.sh --vpc $vpc --n $n_vm >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 
@@ -156,7 +205,7 @@ run_benchmark() {
     if ! should_skip $perf_dir true ; then
       return 0
     fi
-    start_cluster $vpc $n_cores $n_vm $swap
+    start_sigmaos_cluster $vpc $n_cores $n_vm $swap
   fi
   cd $SCRIPT_DIR
   # Start the benchmark as a background task.
@@ -777,6 +826,48 @@ mr_k8s() {
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
+img_resize() {
+  imgpath="9ps3/img/6.jpg"
+  n_imgresize=100
+  n_vm=2
+  driver_vm=0
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run/SigmaOS
+  cmd="
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --imgresize_path $imgpath > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+}
+
+k8s_img_resize() {
+  n_vm=2
+  ncore=4
+  swap="swapoff"
+  fname=${FUNCNAME[0]}
+  run="${fname##k8s_}"
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run/K8s
+  driver_vm=0
+  # Start the SigmaOS cluster.
+  start_sigmaos_cluster $KVPC 4 $n_vm $swap
+  # Start the K8s cluster.
+  start_k8s_cluster $KVPC $n_vm $swap
+  # Stop any previous run.
+  cd $SCRIPT_DIR
+  ./stop-k8s-app.sh --vpc $KVPC --path "ulambda/benchmarks/k8s/apps/thumbnail/yaml/"
+  cd $ROOT_DIR
+  cmd="
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    go clean -testcache; \
+    kubectl apply -Rf benchmarks/k8s/apps/thumbnail/yaml; \
+    go test -v sigmaos/benchmarks -timeout 0 --run TestK8sImgResize > /tmp/bench.out 2>&1
+  "
+  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+}
+
 #mr_overlap() {
 #  mrapp=mr-wc-wiki4G.yml
 #  n_vm=16
@@ -993,6 +1084,13 @@ graph_k8s_balance_multi() {
   $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
 }
 
+graph_img_resize() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -1028,7 +1126,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-hotel_tail_multi
+#img_resize
+k8s_img_resize
+#hotel_tail_multi
 #realm_balance_be
 #realm_balance_multi
 #k8s_balance_multi
@@ -1053,10 +1153,7 @@ source ~/env/3.10/bin/activate
 #graph_k8s_balance_be
 #graph_realm_balance_multi
 #graph_k8s_balance_multi
-graph_k8s_hotel_tail_tpt_over_time
-
-
-
+#graph_k8s_hotel_tail_tpt_over_time
 
 #graph_hotel_tail_tpt_over_time
 #graph_hotel_tail_tpt_over_time_autoscale

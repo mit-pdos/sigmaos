@@ -1088,7 +1088,7 @@ graph_img_resize() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --k8s # --xmin 200000 --xmax 400000
+  $GRAPH_SCRIPTS_DIR/imgresize-util.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "CPU Utilization" --title "Image Resizing CPU Utilization" --total_ncore 8 # --xmin 200000 --xmax 400000
 }
 
 #graph_mr_overlap() {
@@ -1127,7 +1127,7 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #img_resize
-k8s_img_resize
+#k8s_img_resize
 #hotel_tail_multi
 #realm_balance_be
 #realm_balance_multi
@@ -1149,6 +1149,7 @@ k8s_img_resize
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+graph_img_resize
 #graph_realm_balance_be
 #graph_k8s_balance_be
 #graph_realm_balance_multi

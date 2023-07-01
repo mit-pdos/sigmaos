@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"log"
 
 	"google.golang.org/protobuf/proto"
 
@@ -31,7 +32,7 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	sz := binary.Size(uint64(len(b)))
+	sz := binary.Size(uint32(len(b)))
 	if cnt < uint64(len(b)+sz) {
 		return nil, nil
 	}

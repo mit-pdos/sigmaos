@@ -21,9 +21,9 @@ func Sp2NpDir(d []byte, cnt sessp.Tsize) ([]byte, error) {
 		return false, nil
 	})
 	if error != nil {
-		db.DPrintf(db.PROXY, "Sp2NpDir: %v errror %v\n", npsts, error)
+		db.DPrintf(db.PROXY, "Sp2NpDir: %d errror %v\n", len(npsts), error)
 		return nil, error
 	}
-	d, _, err := fs.MarshalDir(cnt, npsts)
-	return d, err
+	d1, _, err := fs.MarshalDir(cnt, npsts)
+	return d1, err
 }

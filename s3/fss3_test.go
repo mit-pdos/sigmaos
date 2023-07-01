@@ -19,7 +19,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

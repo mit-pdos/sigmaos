@@ -198,7 +198,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
-	db.DPrintf(db.S3, "ReadDir %v\n", d)
+	db.DPrintf(db.S3, "ReadDir %v %d cursor %d cnt %v\n", d, len(d.sts), cursor, cnt)
 
 	if cursor > len(d.sts) {
 		return nil, nil

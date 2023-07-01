@@ -37,6 +37,12 @@ func MkSigmaClnt(name string) (*SigmaClnt, error) {
 
 // Create only an FsLib, relative to a realm, but with the client being in the root realm
 func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, name string, rid sp.Trealm) (*SigmaClnt, error) {
+	if rid == sp.ROOTREALM {
+		return &SigmaClnt{
+			rootrealm,
+			nil,
+		}, nil
+	}
 	pn := path.Join(sp.REALMS, rid.String())
 	target, err := rootrealm.GetFile(pn)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
+	"sigmaos/k8sutil"
 	"sigmaos/perf"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
@@ -87,6 +88,34 @@ func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string, realm sp.
 			util := parseK8sUtil(top, app, realm)
 			p.TptTick(util)
 			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), util)
+			time.Sleep(CPU_MONITOR_INTERVAL)
+		}
+	}()
+}
+
+func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
+	clnt := k8sutil.NewStatScraperClnt(ts.SigmaClnt)
+	scrapers := clnt.GetStatScrapers()
+	db.DPrintf(db.BENCH, "Got %v scrapers: %v", len(scrapers), scrapers)
+	go func() {
+		for {
+			sumUtil := float64(0.0)
+			for _, s := range scrapers {
+				perc, err := clnt.GetGuaranteedPodCPUUtil(s)
+				if err != nil {
+					db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
+					return
+				}
+				// Util is returned as a percentage (e.g. 100 = 1 core fully utilized,
+				// 200 = 2 cores, etc.). So, convert no # of cores by dividing by 100.
+				ncores := perc / 100.0
+				sumUtil += ncores
+			}
+			if sumUtil < 0.0 {
+				sumUtil = 0.0
+			}
+			p.TptTick(sumUtil)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", sp.ROOTREALM, sumUtil)
 			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()

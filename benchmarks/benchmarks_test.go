@@ -19,6 +19,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/rpcbench"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -81,6 +82,7 @@ var GO_MAX_PROCS int
 var MAX_PARALLEL int
 var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
+var K8S_JOB_NAME string
 var S3_RES_DIR string
 
 // Read & set the proc version.
@@ -121,6 +123,7 @@ func init() {
 	flag.IntVar(&RPCBENCH_NCORE, "rpcbench_ncore", 3, "RPCbench Ncore")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
+	flag.StringVar(&K8S_JOB_NAME, "k8sjobname", "thumbnail-benchrealm1", "Name of k8s job")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
@@ -908,5 +911,36 @@ func TestImgResize(t *testing.T) {
 	monitorCPUUtil(ts1, p)
 	runOps(ts1, apps, runImgResize, rs)
 	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
+func TestK8sImgResize(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstateClnt(rootts, sp.ROOTREALM)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	nSchedd, err := sdc.Nschedd()
+	assert.Nil(ts1.T, err, "Error nschedd %v", err)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(ts1.T, err, "Error mkdir %v", err)
+	// Start up the stat scraper procs.
+	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tcore(linuxsched.NCores-1))
+	spawnBurstProcs(ts1, ps)
+	waitStartProcs(ts1, ps)
+	// NOte start time
+	start := time.Now()
+	// Monitor CPU utilization via the stat scraper procs.
+	monitorK8sCPUUtilScraper(rootts, p)
+	for !k8sJobHasCompleted(K8S_JOB_NAME) {
+		time.Sleep(500 * time.Millisecond)
+	}
+	rs.Append(time.Since(start), 1)
+	printResultSummary(rs)
+	evictProcs(ts1, ps)
 	rootts.Shutdown()
 }

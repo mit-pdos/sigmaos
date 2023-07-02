@@ -121,7 +121,6 @@ func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string
 	for i := 0; i < N; i++ {
 		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
 	}
-	// wait until all members are running?
 	return gm
 }
 

@@ -51,7 +51,7 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, ncore proc.Tcore, crash int, nReplicas int, partition, netfail int) *member {
+func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, ncore proc.Tcore, crash, nReplicas, partition, netfail int) *member {
 	return &member{SigmaClnt: sc, bin: bin, args: append([]string{job}, args...), job: job, ncore: ncore, crash: crash, nReplicas: nReplicas, partition: partition, netfail: netfail}
 }
 
@@ -93,7 +93,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 	done <- &procret{i, err, status}
 }
 
-// If n == 0, run only one member, unreplicated.
+// If n == 0, run only one member (i.e., no hot standby's or replication)
 // ncrash = number of group members which may crash.
 func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string, ncore proc.Tcore, ncrash, crash, partition, netfail int) *GroupMgr {
 	var N int

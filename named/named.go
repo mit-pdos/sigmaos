@@ -34,7 +34,6 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd := &Named{}
-	ch := make(chan struct{})
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -49,6 +48,7 @@ func Run(args []string) error {
 	nd.SigmaClnt = sc
 
 	nd.Started()
+	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
 	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())

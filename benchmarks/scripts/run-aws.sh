@@ -832,9 +832,9 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=800
+  n_imgresize=200
   n_vm=2
-  mcpu=100
+  mcpu=1000
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="

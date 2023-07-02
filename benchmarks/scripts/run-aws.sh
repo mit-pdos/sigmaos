@@ -257,7 +257,7 @@ run_hotel() {
   driver=${11}
   async=${12}
   hotel_ncache=3
-  hotel_cache_ncore=2
+  hotel_cache_mcpu=2000
   as_cache=""
   if [[ $autoscale_cache == "true" ]]; then
      as_cache="--hotel_cache_autoscale"
@@ -267,9 +267,9 @@ run_hotel() {
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
   "
-#    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_ncore $hotel_cache_ncore --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+#    go test -v sigmaos/benchmarks -timeout 0 --run $testname --rootNamedIP $LEADER_IP --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
   else
@@ -311,38 +311,38 @@ run_rpcbench() {
 
 run_kv() {
   if [ $# -ne 8 ]; then
-    echo "run_kv args: n_cores n_vm nkvd kvd_ncore nclerk auto redisaddr perf_dir" 1>&2
+    echo "run_kv args: n_cores n_vm nkvd kvd_mcpu nclerk auto redisaddr perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
   nkvd=$3
-  nkvd_ncore=$4
+  nkvd_mcpu=$4
   nclerk=$5
   auto=$6
   redisaddr=$7
   perf_dir=$8
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 run_cached() {
   if [ $# -ne 6 ]; then
-    echo "run_cached args: n_cores n_vm nkvd kvd_ncore nclerk perf_dir" 1>&2
+    echo "run_cached args: n_cores n_vm nkvd kvd_mcpu nclerk perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
   nkvd=$3
-  nkvd_ncore=$4
+  nkvd_mcpu=$4
   nclerk=$5
   perf_dir=$6
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_ncore $kvd_ncore --nclerk $nclerk > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -889,14 +889,14 @@ k8s_img_resize() {
 #  # First, run against our KV.
 #  auto="manual"
 #  nkvd=1
-#  kvd_ncore=1
+#  kvd_mcpu=1000
 #  redisaddr=""
 #  n_vm=16
 #  for nclerk in 1 2 4 8 16 ; do
 #    run=${FUNCNAME[0]}/sigmaOS/$nclerk
 #    echo "========== Running $run =========="
 #    perf_dir=$OUT_DIR/$run
-#    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+#    run_kv $n_vm $nkvd $kvd_mcpu $nclerk $auto "$redisaddr" $perf_dir
 #  done
 #
 #  # Then, run against a redis instance started on the last VM.
@@ -907,21 +907,21 @@ k8s_img_resize() {
 #    run=${FUNCNAME[0]}/redis/$nclerk
 #    echo "========== Running $run =========="
 #    perf_dir=$OUT_DIR/$run
-#    run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto $redisaddr $perf_dir
+#    run_kv $n_vm $nkvd $kvd_mcpu $nclerk $auto $redisaddr $perf_dir
 #  done
 #}
 
 #kv_elasticity() {
 #  auto="auto"
 #  nkvd=1
-#  kvd_ncore=2
+#  kvd_mcpu=2000
 #  nclerk=16
 #  redisaddr=""
 #  n_vm=16
 #  run=${FUNCNAME[0]}
 #  echo "========== Running $run =========="
 #  perf_dir=$OUT_DIR/$run
-#  run_kv $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+#  run_kv $n_vm $nkvd $kvd_mcpu $nclerk $auto "$redisaddr" $perf_dir
 #}
 
 kv_vs_cached() {
@@ -930,13 +930,13 @@ kv_vs_cached() {
   nkvd=1
   nclerk=1
   n_core=4
-  kvd_ncore=4
+  kvd_mcpu=4000
   redisaddr=""
   n_vm=8
   run=${FUNCNAME[0]}/kvd/
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_kv $n_core $n_vm $nkvd $kvd_ncore $nclerk $auto "$redisaddr" $perf_dir
+  run_kv $n_core $n_vm $nkvd $kvd_mcpu $nclerk $auto "$redisaddr" $perf_dir
 
   # Then, run against cached.
   nkvd=1
@@ -945,7 +945,7 @@ kv_vs_cached() {
   run=${FUNCNAME[0]}/cached
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_cached $n_core $n_vm $nkvd $kvd_ncore $nclerk $perf_dir
+  run_cached $n_core $n_vm $nkvd $kvd_mcpu $nclerk $perf_dir
 }
 
 realm_burst() {

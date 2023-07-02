@@ -834,6 +834,7 @@ img_resize() {
   imgpath="9ps3/img/6.jpg"
   n_imgresize=800
   n_vm=2
+  mcpu=100
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -846,7 +847,7 @@ img_resize() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --imgresize_path $imgpath > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }

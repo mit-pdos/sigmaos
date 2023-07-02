@@ -71,6 +71,7 @@ var RPCBENCH_DURS string
 var RPCBENCH_MAX_RPS string
 var IMG_RESIZE_INPUT_PATH string
 var N_IMG_RESIZE_JOBS int
+var IMG_RESIZE_MCPU int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -133,6 +134,7 @@ func init() {
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
 	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
+	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
 }
 
 // ========== Common parameters ==========
@@ -898,7 +900,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS)
+	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, proc.Tmcpu(IMG_RESIZE_MCPU))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

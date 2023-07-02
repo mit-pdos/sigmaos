@@ -10,6 +10,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/imgresized"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -18,6 +19,7 @@ import (
 type ImgResizeJobInstance struct {
 	sigmaos bool
 	job     string
+	mcpu    proc.Tmcpu
 	ntasks  int
 	input   string
 	ready   chan bool
@@ -26,7 +28,7 @@ type ImgResizeJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int) *ImgResizeJobInstance {
+func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, mcpu proc.Tmcpu) *ImgResizeJobInstance {
 	ji := &ImgResizeJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + rd.String(4)
@@ -35,6 +37,7 @@ func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 	ji.ready = make(chan bool)
 	ji.RealmTstate = ts
 	ji.p = p
+	ji.mcpu = mcpu
 
 	err := imgresized.MkDirs(ji.FsLib, ji.job)
 	assert.Nil(ts.T, err, "Error MkDirs: %v", err)
@@ -43,8 +46,8 @@ func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 }
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
-	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v", ji.input, ji.ntasks)
-	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job)
+	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v", ji.input, ji.ntasks, ji.mcpu)
+	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu)
 	fn := path.Join(sp.S3, "~local", ji.input)
 	for i := 0; i < ji.ntasks; i++ {
 		err := imgresized.SubmitTask(ji.SigmaClnt.FsLib, ji.job, fn)

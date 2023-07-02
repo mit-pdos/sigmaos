@@ -87,7 +87,7 @@ func Cleanup(fsl *fslib.FsLib, dir string) error {
 
 func MakeImgd(args []string) (*ImgSrv, error) {
 	if len(args) != 3 {
-		return nil, errors.New("MakeImgSrv: wrong number of arguments: %v", args)
+		return nil, fmt.Errorf("MakeImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
 	imgd.job = args[0]
@@ -110,7 +110,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeImgSrv: Error parse MCPU %v", err)
 	}
-	imgd.workerMcpu = mcpu
+	imgd.workerMcpu = proc.Tmcpu(mcpu)
 
 	imgd.Started()
 

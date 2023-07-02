@@ -19,6 +19,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	IMGD_WORKER_MCPU_STR = "1000"
+)
+
 func TestResizeImg(t *testing.T) {
 	fn := "/tmp/thumb.jpeg"
 
@@ -45,7 +49,7 @@ func TestResizeProc(t *testing.T) {
 	in := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img/1-thumb.jpg")
 	ts.Remove(out)
-	p := proc.MakeProc("imgresize", []string{in, out})
+	p := proc.MakeProc("imgresize", []string{in, out, IMG_WORKER_MCPU_STR})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.GetPid())

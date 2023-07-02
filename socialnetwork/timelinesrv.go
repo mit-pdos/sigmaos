@@ -95,10 +95,13 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 		return nil
 	}
 	start, stop, nItems := req.Start, req.Stop, int32(len(timeline.Postids))
-	if start >= int32(nItems) || start >= stop || stop > nItems {
+	if start >= int32(nItems) || start >= stop {
 		res.Ok = fmt.Sprintf("Cannot process start=%v end=%v for %v items", start, stop, nItems)
 		return nil
 	}	
+	if stop > nItems {
+		stop = nItems
+	}
 	postids := make([]int64, stop-start)
 	for i := start; i < stop; i++ {
 		postids[i-start] = timeline.Postids[nItems-i-1]

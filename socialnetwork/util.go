@@ -9,6 +9,7 @@ import (
 	"time"
 	"fmt"
 	"math"
+	"math/rand"
 	"sync"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -27,6 +28,23 @@ const (
 	TIMELINE_COL    = "timeline"
 	MEDIA_COL       = "media"
 )
+
+var letterRunes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randString(n, l int, r *rand.Rand) string {
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = letterRunes[r.Intn(l)]
+    }
+    return string(b)
+}
+func RandString(n int, r *rand.Rand) string {
+	return randString(n, len(letterRunes), r)
+}
+
+func RandNumberString(n int, r *rand.Rand) string {
+	return randString(n, 10, r)
+}
 
 type DBUtil struct {
 	mongoc *mongoclnt.MongoClnt

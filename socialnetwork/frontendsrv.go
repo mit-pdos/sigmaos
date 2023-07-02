@@ -257,13 +257,25 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// compose a post
-	text, posttype := urlQuery.Get("text"), urlQuery.Get("posttype")
+	text, posttype, mediastr := urlQuery.Get("text"), urlQuery.Get("posttype"), urlQuery.Get("media")
+	mediaids := make([]int64, 0)
+	if mediastr != "" {
+		for _, idstr := range strings.Split(mediastr, ",") {
+			mediaid, err := strconv.ParseInt(idstr, 10, 64)
+			if err != nil {
+				dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Cannot parse media: %v", idstr)
+			} else {
+				mediaids = append(mediaids, mediaid)
+			}
+		}
+	}
 	var res proto.ComposePostResponse
 	err := s.composec.RPC("Compose.ComposePost", &proto.ComposePostRequest{
 		Username: username,
 		Userid: userid,
 		Text: text,
 		Posttype: parsePostTypeString(posttype),
+		Mediaids: mediaids,
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

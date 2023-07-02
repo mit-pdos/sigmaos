@@ -44,7 +44,7 @@ func DFatalf(format string, v ...interface{}) {
 	// Get info for the caller.
 	pc, _, _, ok := runtime.Caller(1)
 	fnDetails := runtime.FuncForPC(pc)
-	fnName := strings.TrimLeft(fnDetails.Name(), "sigmaos/")
+	fnName := strings.TrimPrefix(fnDetails.Name(), "sigmaos/")
 	if ok && fnDetails != nil {
 		log.Fatalf("FATAL %v %v Err: %v", proc.GetName(), fnName, fmt.Sprintf(format, v...))
 	} else {

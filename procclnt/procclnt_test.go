@@ -530,7 +530,7 @@ func TestReserveCores(t *testing.T) {
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
 	pid1 := proc.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(t, ts, pid1, 1, SLEEP_MSECS)
+	spawnSleeperMcpu(t, ts, pid1, 1000, SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")

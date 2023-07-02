@@ -82,12 +82,12 @@ func NetFailer(ss *sesssrv.SessSrv) {
 }
 
 func Crash() {
-	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", os.Args)
+	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", GetEnv(proc.SIGMACRASH))
 	os.Exit(1)
 }
 
 func Partition(fsl *fslib.FsLib) {
-	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", os.Args)
+	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", GetEnv(proc.SIGMAPARTITION))
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
 	}

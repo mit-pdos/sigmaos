@@ -50,7 +50,7 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
 		p := proc.MakeProc("spinner", []string{"name/"})
-		p.SetMcpu(1)
+		p.SetMcpu(1000)
 		ps = append(ps, p)
 	}
 	failed, errs := ts.SpawnBurst(ps, 1)

@@ -78,9 +78,12 @@ sudo apt install -y linux-tools-$(uname -r)
 sudo apt install -y linux-tools-common
 ENDSSH
 
-ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+{ ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 # Disable automatic frequency-scaling and switch off cstates
 sudo sed -i s/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="\"intel_pstate=passive intel_idle.max_cstate=0 systemd.unified_cgroup_hierarchy=1\""/g  /etc/default/grub
 sudo update-grub
 sudo reboot
 ENDSSH
+} || true # Ignore error from broken SSH connection due to reboot.
+
+echo "Success!"

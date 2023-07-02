@@ -844,6 +844,9 @@ img_resize() {
     return
   fi
   stop_k8s_cluster $KVPC
+  # Clear out s3 dir
+  aws s3 rm --recursive s3://9ps3/img/
+  aws s3 cp --recursive s3://9ps3/img-save/ s3://9ps3/img/
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \

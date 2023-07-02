@@ -55,7 +55,7 @@ func TestRearrange(t *testing.T) {
 func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {
 	p := proc.MakeProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
 	if id == "LC" {
-		p.SetNcore(2)
+		p.SetMcpu(2000)
 	}
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)

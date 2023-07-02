@@ -98,16 +98,16 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) {
 type Srv struct {
 	Name   string
 	Public bool
-	Ncore  proc.Tcore
+	Mcpu   proc.Tmcpu
 }
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func MkHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2},
-		Srv{"hotel-geod", public, 2}, Srv{"hotel-profd", public, 2},
-		Srv{"hotel-searchd", public, 3}, Srv{"hotel-reserved", public, 3},
-		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 3},
+		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2000},
+		Srv{"hotel-geod", public, 2000}, Srv{"hotel-profd", public, 2000},
+		Srv{"hotel-searchd", public, 3000}, Srv{"hotel-reserved", public, 3000},
+		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 3000},
 	}
 }
 
@@ -129,7 +129,7 @@ type HotelJob struct {
 	kvf             *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheNcore proc.Tcore, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 
@@ -146,7 +146,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheNcore, gc, test.Overlays)
+			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
@@ -159,7 +159,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 			ca = cacheclnt.MakeAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, cacheNcore, "0", "manual")
+			kvf, err = kv.MakeKvdFleet(sc, job, nsrv, 0, cacheMcpu, "0", "manual")
 			if err != nil {
 				return nil, err
 			}
@@ -181,7 +181,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
-		p.SetNcore(srv.Ncore)
+		p.SetMcpu(srv.Mcpu)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err

@@ -9,9 +9,9 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
-func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duration, keyOffset int, sempn string, ncore proc.Tcore) (proc.Tpid, error) {
+func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duration, keyOffset int, sempn string, mcpu proc.Tmcpu) (proc.Tpid, error) {
 	p := proc.MakeProc("cache-clerk", []string{job, strconv.Itoa(nkeys), dur.String(), strconv.Itoa(keyOffset), sempn})
-	p.SetNcore(ncore)
+	p.SetMcpu(mcpu)
 	// SpawnBurst to spread clerks across procds.
 	_, errs := sc.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {

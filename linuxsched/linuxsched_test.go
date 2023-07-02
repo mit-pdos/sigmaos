@@ -20,5 +20,5 @@ func TestBasic(t *testing.T) {
 			core = true
 		}
 	}
-	assert.True(t, core, "Ncore")
+	assert.True(t, core, "Nnumber of cores")
 }

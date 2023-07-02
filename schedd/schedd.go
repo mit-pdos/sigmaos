@@ -20,28 +20,28 @@ import (
 )
 
 type Schedd struct {
-	mu        sync.Mutex
-	cond      *sync.Cond
-	pmgr      *procmgr.ProcMgr
-	schedds   map[string]*protdevclnt.ProtDevClnt
-	coresfree proc.Tcore
-	memfree   proc.Tmem
-	mfs       *memfssrv.MemFs
-	qs        map[sp.Trealm]*Queue
-	kernelId  string
-	realms    []sp.Trealm
+	mu       sync.Mutex
+	cond     *sync.Cond
+	pmgr     *procmgr.ProcMgr
+	schedds  map[string]*protdevclnt.ProtDevClnt
+	mcpufree proc.Tmcpu
+	memfree  proc.Tmem
+	mfs      *memfssrv.MemFs
+	qs       map[sp.Trealm]*Queue
+	kernelId string
+	realms   []sp.Trealm
 }
 
 func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 	sd := &Schedd{
-		mfs:       mfs,
-		pmgr:      procmgr.MakeProcMgr(mfs, kernelId),
-		qs:        make(map[sp.Trealm]*Queue),
-		realms:    make([]sp.Trealm, 0),
-		schedds:   make(map[string]*protdevclnt.ProtDevClnt),
-		coresfree: proc.Tcore(linuxsched.NCores), //- 1, // 1 core is reserved for BE procs.
-		memfree:   mem.GetTotalMem(),
-		kernelId:  kernelId,
+		mfs:      mfs,
+		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
+		qs:       make(map[sp.Trealm]*Queue),
+		realms:   make([]sp.Trealm, 0),
+		schedds:  make(map[string]*protdevclnt.ProtDevClnt),
+		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores),
+		memfree:  mem.GetTotalMem(),
+		kernelId: kernelId,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	return sd
@@ -136,7 +136,7 @@ func (sd *Schedd) schedule() {
 		}
 		// If unable to schedule a proc from any realm, wait.
 		if !ok {
-			db.DPrintf(db.SCHEDD, "No procs runnable cores:%v mem:%v qs:%v", sd.coresfree, sd.memfree, sd.qs)
+			db.DPrintf(db.SCHEDD, "No procs runnable mcpu:%v mem:%v qs:%v", sd.mcpufree, sd.memfree, sd.qs)
 			sd.cond.Wait()
 		}
 	}
@@ -148,7 +148,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(ptype, sd.coresfree, sd.memfree); ok {
+		if p, stolen, ok := q.Dequeue(ptype, sd.mcpufree, sd.memfree); ok {
 			// If the proc was stolen...
 			if stolen {
 				// Try to claim the proc.

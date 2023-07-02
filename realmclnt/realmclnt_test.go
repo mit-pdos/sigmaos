@@ -48,9 +48,9 @@ func calibrateCTimeLinux(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	return time.Since(start)
 }
 
-func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
+func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) proc.Tpid {
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
-	p.SetNcore(ncore)
+	p.SetMcpu(mcpu)
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
@@ -69,8 +69,8 @@ func calibrateCTimeSigma(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	return <-c
 }
 
-func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
-	pid := spawnSpinPerf(ts, ncore, nthread, niter, id)
+func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, mcpu proc.Tmcpu, nthread uint, niter int, id string) {
+	pid := spawnSpinPerf(ts, mcpu, nthread, niter, id)
 	c <- waitSpinPerf(ts, pid)
 }
 
@@ -427,7 +427,7 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
 	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts1, lcC, proc.Tmcpu(1000*(linuxsched.NCores-2)), linuxsched.NCores-2, N_ITER, "lcspin")
 	go runSpinPerf(ts1, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC
@@ -463,7 +463,7 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
 	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tcore(linuxsched.NCores-2), linuxsched.NCores-2, N_ITER, "lcspin")
+	go runSpinPerf(ts1, lcC, proc.Tmcpu(1000*(linuxsched.NCores-2)), linuxsched.NCores-2, N_ITER, "lcspin")
 	go runSpinPerf(ts2, beC, 0, linuxsched.NCores-2, N_ITER, "bespin")
 
 	durBE := <-beC

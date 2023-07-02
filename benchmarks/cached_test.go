@@ -14,30 +14,30 @@ import (
 )
 
 type CachedJobInstance struct {
-	dur        time.Duration
-	ncache     int
-	job        string
-	ckncore    proc.Tcore
-	cachencore proc.Tcore
-	nclerks    int
-	nkeys      int
-	ready      chan bool
-	clerks     []proc.Tpid
-	cm         *cacheclnt.CacheMgr
-	sempn      string
-	sem        *semclnt.SemClnt
+	dur       time.Duration
+	ncache    int
+	job       string
+	ckmcpu    proc.Tmcpu
+	cachemcpu proc.Tmcpu
+	nclerks   int
+	nkeys     int
+	ready     chan bool
+	clerks    []proc.Tpid
+	cm        *cacheclnt.CacheMgr
+	sempn     string
+	sem       *semclnt.SemClnt
 	*test.RealmTstate
 }
 
-func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Duration, ckncore, cachencore proc.Tcore) *CachedJobInstance {
+func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Duration, ckmcpu, cachemcpu proc.Tmcpu) *CachedJobInstance {
 	ji := &CachedJobInstance{}
 	ji.dur = dur
 	ji.ncache = ncache
 	ji.dur = dur
 	ji.job = rand.String(8)
-	ji.ckncore = ckncore
+	ji.ckmcpu = ckmcpu
 	ji.nkeys = nkeys
-	ji.cachencore = cachencore
+	ji.cachemcpu = cachemcpu
 	ji.ready = make(chan bool)
 	ji.nclerks = nclerks
 	ji.clerks = make([]proc.Tpid, 0, nclerks)
@@ -46,7 +46,7 @@ func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Du
 }
 
 func (ji *CachedJobInstance) RunCachedJob() {
-	cm, err := cacheclnt.MkCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachencore, CACHE_GC, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC, test.Overlays)
 	assert.Nil(ji.T, err, "Error MkCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"
@@ -56,7 +56,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 
 	// Start clerks
 	for i := 0; i < ji.nclerks; i++ {
-		ck, err := cacheclnt.StartClerk(ji.SigmaClnt, ji.job, ji.nkeys, ji.dur, i*ji.nkeys, ji.sempn, ji.ckncore)
+		ck, err := cacheclnt.StartClerk(ji.SigmaClnt, ji.job, ji.nkeys, ji.dur, i*ji.nkeys, ji.sempn, ji.ckmcpu)
 		assert.Nil(ji.T, err, "Err StartClerk: %v", err)
 		ji.clerks = append(ji.clerks, ck)
 	}

@@ -24,9 +24,9 @@ const (
 	REALM1 = "testrealm"
 )
 
-func spawnSpinPerf(ts *test.RealmTstate, ncore proc.Tcore, nthread uint, niter int, id string) proc.Tpid {
+func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) proc.Tpid {
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
-	p.SetNcore(ncore)
+	p.SetMcpu(mcpu)
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
@@ -52,8 +52,8 @@ func calibrateCTimeSigma(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	return <-c
 }
 
-func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, ncore proc.Tcore, nthread uint, niter int, id string) {
-	pid := spawnSpinPerf(ts, ncore, nthread, niter, id)
+func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, mcpu proc.Tmcpu, nthread uint, niter int, id string) {
+	pid := spawnSpinPerf(ts, mcpu, nthread, niter, id)
 	c <- wait(ts, pid)
 }
 

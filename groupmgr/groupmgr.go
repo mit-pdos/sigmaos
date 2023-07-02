@@ -32,7 +32,7 @@ type member struct {
 	bin       string
 	args      []string
 	job       string
-	ncore     proc.Tcore
+	mcpu      proc.Tmcpu
 	crash     int
 	nReplicas int
 	partition int
@@ -49,20 +49,20 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, ncore proc.Tcore, crash int, nReplicas int, partition, netfail int) *member {
-	return &member{sc, "", bin, append([]string{job}, args...), job, ncore, crash, nReplicas, partition, netfail}
+func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, mcpu proc.Tmcpu, crash int, nReplicas int, partition, netfail int) *member {
+	return &member{sc, "", bin, append([]string{job}, args...), job, mcpu, crash, nReplicas, partition, netfail}
 }
 
 func (m *member) spawn() error {
 	p := proc.MakeProc(m.bin, m.args)
-	p.SetNcore(m.ncore)
+	p.SetMcpu(m.mcpu)
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
 	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
-	// If we are specifically setting kvd's ncore=1, then set GOMAXPROCS to 1
+	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).
-	if m.ncore == 1 && strings.Contains(m.bin, "kvd") {
+	if m.mcpu == 1000 && strings.Contains(m.bin, "kvd") {
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
 	}
 	db.DPrintf(db.GROUPMGR, "SpawnBurst p %v", p)
@@ -92,7 +92,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 
 // If n == 0, run only one member, unreplicated.
 // ncrash = number of group members which may crash.
-func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string, ncore proc.Tcore, ncrash, crash, partition, netfail int) *GroupMgr {
+func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string, mcpu proc.Tmcpu, ncrash, crash, partition, netfail int) *GroupMgr {
 	var N int
 	if n > 0 {
 		N = n
@@ -109,7 +109,7 @@ func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string
 		} else {
 			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", args, i, crashMember)
 		}
-		gm.members[i] = makeMember(sc, bin, args, job, ncore, crashMember, n, partition, netfail)
+		gm.members[i] = makeMember(sc, bin, args, job, mcpu, crashMember, n, partition, netfail)
 	}
 	done := make(chan *procret)
 	starts := make([]chan error, len(gm.members))

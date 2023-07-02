@@ -18,6 +18,7 @@ import (
 const (
 	MKNET    = "./bin/kernel/create-net.sh"
 	MIN_PORT = 30000
+	NAMED_MCPU
 )
 
 type RealmSrv struct {
@@ -82,7 +83,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 
 	p := proc.MakeProc("named", []string{":0", req.Realm, pn})
-	p.SetNcore(1)
+	p.SetMcpu(NAMED_MCPU)
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])
 		return errs[0]

@@ -68,19 +68,19 @@ func (gm *grpMap) groups() []*groupmgr.GroupMgr {
 type Monitor struct {
 	*sigmaclnt.SigmaClnt
 
-	mu       sync.Mutex
-	job      string
-	group    int
-	kvdncore proc.Tcore
-	gm       *grpMap
+	mu      sync.Mutex
+	job     string
+	group   int
+	kvdmcpu proc.Tmcpu
+	gm      *grpMap
 }
 
-func MakeMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdncore proc.Tcore) *Monitor {
+func MakeMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu) *Monitor {
 	mo := &Monitor{}
 	mo.SigmaClnt = sc
 	mo.group = 1
 	mo.job = job
-	mo.kvdncore = kvdncore
+	mo.kvdmcpu = kvdmcpu
 	mo.gm = mkGrpMap()
 	return mo
 }
@@ -96,7 +96,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp := SpawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
+	grp := SpawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdmcpu, KVD_NO_REPL, 0)
 	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
 	if err != nil {
 		grp.Stop()

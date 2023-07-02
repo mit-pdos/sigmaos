@@ -40,7 +40,7 @@ type RPCBenchJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, durs string, maxrpss string, fn rpcbenchFn, justCli bool) *RPCBenchJobInstance {
+func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs string, maxrpss string, fn rpcbenchFn, justCli bool) *RPCBenchJobInstance {
 	ji := &RPCBenchJobInstance{}
 	ji.jobpath = "name/rpcbench"
 	ji.ready = make(chan bool)
@@ -67,7 +67,7 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, ncore proc.Tcore, durs 
 
 	if !ji.justCli {
 		var err error
-		ji.rj, err = rpcbench.MakeRPCBenchJob(ts.SigmaClnt, ji.jobpath, ncore, test.Overlays)
+		ji.rj, err = rpcbench.MakeRPCBenchJob(ts.SigmaClnt, ji.jobpath, mcpu, test.Overlays)
 		assert.Nil(ts.T, err, "Error MakeRPCBenchJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
 		procs := sdc.GetRunningProcs()

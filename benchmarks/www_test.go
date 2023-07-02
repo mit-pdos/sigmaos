@@ -22,7 +22,7 @@ const (
 type WwwJobInstance struct {
 	sigmaos    bool
 	k8ssrvaddr string
-	wwwncore   proc.Tcore // Number of exclusive cores allocated to each wwwd
+	wwwmcpu    proc.Tmcpu // Number of exclusive cores allocated to each wwwd
 	job        string
 	ntrials    int
 	nclnt      int
@@ -36,7 +36,7 @@ type WwwJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwncore proc.Tcore, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
+func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
 	ji := &WwwJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rand.String(16)

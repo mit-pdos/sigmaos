@@ -16,7 +16,7 @@ import (
 
 type Tpid string
 type Ttype uint32 // If this type changes, make sure to change the typecasts below.
-type Tcore uint32 // If this type changes, make sure to change the typecasts below.
+type Tmcpu uint32 // If this type changes, make sure to change the typecasts below.
 type Tmem uint32  // If this type changes, make sure to change the typecasts below.
 
 const (
@@ -74,7 +74,7 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	p.Program = program
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
-	p.NcoreInt = uint32(0)
+	p.McpuInt = uint32(0)
 	p.Privileged = priv
 	if p.Privileged {
 		p.TypeInt = uint32(T_LC)
@@ -152,7 +152,7 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t KernelId:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t KernelId:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Mcpu:%v Mem:%v }",
 		p.Program,
 		p.GetPid(),
 		p.Privileged,
@@ -163,7 +163,7 @@ func (p *Proc) String() string {
 		p.Args,
 		p.GetEnv(),
 		p.GetType(),
-		p.GetNcore(),
+		p.GetMcpu(),
 		p.GetMem(),
 	)
 }
@@ -178,8 +178,12 @@ func (p *Proc) GetType() Ttype {
 	return Ttype(p.ProcProto.TypeInt)
 }
 
-func (p *Proc) GetNcore() Tcore {
-	return Tcore(p.ProcProto.NcoreInt)
+func (p *Proc) GetMcpu() Tmcpu {
+	mcpu := p.ProcProto.McpuInt
+	if mcpu > 0 && mcpu%10 != 0 {
+		log.Fatalf("Error! Suspected missed MCPU conversion in GetMcpu: %v", mcpu)
+	}
+	return Tmcpu(p.ProcProto.McpuInt)
 }
 
 func (p *Proc) GetMem() Tmem {
@@ -225,10 +229,13 @@ func (p *Proc) GetEnv() []string {
 
 // Set the number of cores on this proc. If > 0, then this proc is LC. For now,
 // LC procs necessarily must specify LC > 1.
-func (p *Proc) SetNcore(ncore Tcore) {
-	if ncore > Tcore(0) {
+func (p *Proc) SetMcpu(mcpu Tmcpu) {
+	if mcpu > Tmcpu(0) {
+		if mcpu%10 != 0 {
+			log.Fatalf("Error! Suspected missed MCPU conversion: %v", mcpu)
+		}
 		p.TypeInt = uint32(T_LC)
-		p.NcoreInt = uint32(ncore)
+		p.McpuInt = uint32(mcpu)
 	}
 }
 

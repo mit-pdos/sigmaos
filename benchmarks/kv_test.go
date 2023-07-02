@@ -31,14 +31,14 @@ type KVJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdncore, ckncore proc.Tcore, auto string, redisaddr string) *KVJobInstance {
+func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) *KVJobInstance {
 	ji := &KVJobInstance{RealmTstate: ts, job: rand.String(16)}
 
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdncore, "0", auto)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdmcpu, "0", auto)
 	assert.Nil(ts.T, err)
 	ji.kvf = kvf
 
-	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job, ckncore)
+	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job, ckmcpu)
 	assert.Nil(ts.T, err)
 	ji.cm = cm
 

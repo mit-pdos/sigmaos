@@ -18,6 +18,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/electclnt"
+	"sigmaos/fslib"
 	"sigmaos/fslibsrv"
 	"sigmaos/memfs"
 	"sigmaos/perf"
@@ -37,8 +38,8 @@ const (
 	TMP          = ".tmp"
 	GRPCONF      = "-conf"
 	GRPELECT     = "-elect"
-	GRPCONFNXT   = "-conf-next"
-	GRPCONFNXTBK = GRPCONFNXT + "#"
+	GRPCONFNXT   = "-conf-next"     // XXX
+	GRPCONFNXTBK = GRPCONFNXT + "#" // XXX
 	CTL          = "ctl"
 )
 
@@ -50,7 +51,7 @@ func GrpPath(jobdir string, grp string) string {
 	return path.Join(JobDir(jobdir), grp)
 }
 
-func GrpSym(jobdir, grp string) string {
+func grpSym(jobdir, grp string) string {
 	return GrpPath(jobdir, grp)
 }
 
@@ -119,6 +120,13 @@ func (g *Group) waitForClusterConfig() {
 	if err := g.GetFileJsonWatch(grpConfPath(g.jobdir, g.grp), cfg); err != nil {
 		db.DFatalf("Error wait for cluster config: %v", err)
 	}
+}
+
+func WaitStarted(fsl *fslib.FsLib, job, grp string) *GroupConfig {
+	cfg := &GroupConfig{}
+	db.DPrintf(db.GROUP, "WaitStarted %s\n", grpSym(job, grp))
+	fsl.GetFileJsonWatch(grpSym(job, grp), cfg)
+	return cfg
 }
 
 // Find out if the initial cluster has started by looking for the group config.
@@ -203,7 +211,7 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 	}
 	db.DPrintf(db.GROUP, "Advertise %v", srvAddrs)
 	mnt := sp.MkMountService(srvAddrs)
-	if err := g.MkMountSymlink(GrpSym(g.jobdir, g.grp), mnt); err != nil {
+	if err := g.MkMountSymlink(grpSym(g.jobdir, g.grp), mnt); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -236,10 +244,6 @@ func RunMember(jobdir, grp string, public bool) {
 	g.jobdir = jobdir
 
 	crash.Crasher(g.FsLib)
-
-	// XXX need this?
-	g.MkDir(_GRPDIR, 0777)
-	g.MkDir(JobDir(jobdir), 0777)
 
 	var nReplicas int
 	nReplicas, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
@@ -291,6 +295,9 @@ func RunMember(jobdir, grp string, public bool) {
 			id, clusterCfg, raftCfg = g.registerInClusterConfig()
 			db.DPrintf(db.GROUP, "%v cluster already started: %v", id, clusterCfg)
 		}
+	} else {
+		id, clusterCfg, raftCfg = g.registerInClusterConfig()
+		db.DPrintf(db.GROUP, "%v start cluster: %v", id, clusterCfg)
 	}
 
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
@@ -305,22 +312,16 @@ func RunMember(jobdir, grp string, public bool) {
 	crash.Partitioner(g.srv)
 	crash.NetFailer(g.srv)
 
-	sigmaAddrs := make([]sp.Taddrs, 0)
+	clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{srv.MyAddr()})
 
-	// If running replicated...
-	if nReplicas > 0 {
-		clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{srv.MyAddr()})
-		db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
+	db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v at %v", grp, id, clusterCfg,
+		grpConfPath(g.jobdir, grp))
 
-		if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
-			db.DFatalf("Write final group config: %v", err)
-		}
-		sigmaAddrs = clusterCfg.SigmaAddrs
-	} else {
-		sigmaAddrs = append(sigmaAddrs, sp.MkTaddrs([]string{g.srv.MyAddr()}))
+	if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
+		db.DFatalf("Write final group config: %v", err)
 	}
 
-	g.writeSymlink(sigmaAddrs)
+	g.writeSymlink(clusterCfg.SigmaAddrs)
 
 	// Release leadership.
 	g.ReleaseLeadership()
@@ -337,6 +338,8 @@ func RunMember(jobdir, grp string, public bool) {
 	<-ch
 
 	db.DPrintf(db.GROUP, "%v: group done\n", proc.GetPid())
+
+	g.Exited(proc.MakeStatus(proc.StatusEvicted))
 }
 
 // XXX move to procclnt?

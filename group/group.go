@@ -33,7 +33,6 @@ import (
 
 const (
 	_GRPDIR     = "group"
-	GRP         = "grp-"
 	GRPRAFTCONF = "-raft-conf"
 	TMP         = ".tmp"
 	GRPCONF     = "-conf"
@@ -47,10 +46,6 @@ func JobDir(jobdir string) string {
 
 func GrpPath(jobdir string, grp string) string {
 	return path.Join(JobDir(jobdir), grp)
-}
-
-func grpSym(jobdir, grp string) string {
-	return GrpPath(jobdir, grp)
 }
 
 func grpConfPath(jobdir, grp string) string {
@@ -112,11 +107,17 @@ func (g *Group) waitForClusterConfig() {
 	}
 }
 
-func WaitStarted(fsl *fslib.FsLib, job, grp string) *GroupConfig {
+func WaitStarted(fsl *fslib.FsLib, job, grp string) (*GroupConfig, error) {
+	_, err := fsl.GetFileWatch(GrpPath(job, grp))
+	if err != nil {
+		db.DPrintf(db.GROUP, "WaitStarted: GetFileWatch %s err %v\n", GrpPath(job, grp), err)
+		return nil, err
+	}
 	cfg := &GroupConfig{}
-	db.DPrintf(db.GROUP, "WaitStarted %s\n", grpSym(job, grp))
-	fsl.GetFileJsonWatch(grpSym(job, grp), cfg)
-	return cfg
+	if err := fsl.GetFileJson(grpConfPath(job, grp), cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // Find out if the initial cluster has started by looking for the group config.
@@ -166,6 +167,12 @@ func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *re
 	return id, clusterCfg, raftCfg
 }
 
+func (g *Group) newConfig() (int, *GroupConfig, *replraft.RaftConfig) {
+	cfg := &GroupConfig{}
+	cfg.SigmaAddrs = append(cfg.SigmaAddrs, sp.MkTaddrs([]string{repl.PLACEHOLDER_ADDR}))
+	return 1, cfg, nil
+}
+
 func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
 	cfg := &GroupConfig{}
 	err := g.GetFileJson(path, cfg)
@@ -199,9 +206,9 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 			srvAddrs = append(srvAddrs, addrs...)
 		}
 	}
-	db.DPrintf(db.GROUP, "Advertise %v", srvAddrs)
 	mnt := sp.MkMountService(srvAddrs)
-	if err := g.MkMountSymlink(grpSym(g.jobdir, g.grp), mnt); err != nil {
+	db.DPrintf(db.GROUP, "Advertise %v/%v at %v", mnt, srvAddrs, GrpPath(g.jobdir, g.grp))
+	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -281,8 +288,8 @@ func RunMember(jobdir, grp string, public bool) {
 		}
 	} else {
 		// Register self in the cluster config, and create it, if nReplicas == 0)
-		id, clusterCfg, raftCfg = g.registerInClusterConfig()
-		db.DPrintf(db.GROUP, "%v join cluster: %v", id, clusterCfg)
+		id, clusterCfg, raftCfg = g.newConfig()
+		db.DPrintf(db.GROUP, "%v new cluster: %v", id, clusterCfg)
 	}
 
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)

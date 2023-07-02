@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	GRP       = "grp-0"
 	CRASH_KVD = 5000
 	N_REPL    = 3
 	N_KEYS    = 10000
@@ -28,12 +29,13 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
-	ts := &Tstate{grp: group.GRP + "0"}
+	ts := &Tstate{grp: GRP}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.RmDir(group.JobDir(JOBDIR))
 	ts.MkDir(group.JobDir(JOBDIR), 0777)
 	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
-	cfg := group.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
+	cfg, err := group.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
+	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
 }
@@ -71,14 +73,28 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 
 func TestStartStopRepl0(t *testing.T) {
 	ts := makeTstate(t, 0, 0)
-	err := ts.gm.Stop()
+
+	sts, _, err := ts.ReadDir(group.GrpPath(JOBDIR, ts.grp) + "/")
+	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
+	assert.Nil(t, err, "stat")
+
+	err = ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }
 
 func TestStartStopRepl1(t *testing.T) {
 	ts := makeTstate(t, 1, 0)
-	err := ts.gm.Stop()
+
+	st, err := ts.Stat(group.GrpPath(JOBDIR, ts.grp) + "/")
+	db.DPrintf(db.TEST, "Stat: %v %v\n", st, err)
+	assert.Nil(t, err, "stat")
+
+	sts, _, err := ts.ReadDir(group.GrpPath(JOBDIR, ts.grp) + "/")
+	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
+	assert.Nil(t, err, "stat")
+
+	err = ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }

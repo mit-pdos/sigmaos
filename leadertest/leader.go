@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -74,7 +75,7 @@ func RunLeader(dir, last, child string) {
 		}
 
 		// wait a little before starting to write
-		time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+		time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/epochclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -25,9 +26,12 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 	dir := sp.UX + "/~local/outdir/"
 	fn := dir + "out"
 	ts.RmDir(dir)
+	ts.Remove(LEADERFN)
 	err := ts.MkDir(dir, 0777)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "putfile")
+
+	epochclnt.Remove(ts.FsLib, LEADERFN)
 
 	for i := 0; i < N; i++ {
 		last := ""
@@ -85,7 +89,6 @@ func TestOldPrimary(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
-
 	ts.Shutdown()
 }
 
@@ -93,8 +96,5 @@ func TestOldProc(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runLeaders(t, ts, "child")
 	check(t, ts, fn, pids)
-
-	log.Printf("exit\n")
-
 	ts.Shutdown()
 }

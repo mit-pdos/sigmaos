@@ -29,6 +29,8 @@ func TestOldLeaderFail(t *testing.T) {
 	ts.Remove(dirux + "/f")
 	ts.Remove(dirux + "/g")
 
+	ts.Remove(epochname)
+
 	_, err := ts.PutFile(epochname, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "PutFile")
 
@@ -49,9 +51,9 @@ func TestOldLeaderFail(t *testing.T) {
 
 		crash.Partition(fsl)
 
-		time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+		time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
 
-		// fsl lost primary status, and ts should have it by
+		// Fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(t, err, "Write")

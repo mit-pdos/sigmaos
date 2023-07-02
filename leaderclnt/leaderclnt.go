@@ -3,9 +3,9 @@ package leaderclnt
 import (
 	"sigmaos/electclnt"
 	"sigmaos/epochclnt"
-	"sigmaos/sessp"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 

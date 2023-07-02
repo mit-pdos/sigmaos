@@ -2,9 +2,9 @@ package epochclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fslib"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -29,6 +29,10 @@ func MakeEpochClnt(fsl *fslib.FsLib, leaderfn string, perm sp.Tperm) *EpochClnt 
 
 func (ec *EpochClnt) Name() string {
 	return ec.path
+}
+
+func Remove(fsl *fslib.FsLib, leaderfn string) error {
+	return fsl.Remove(leaderfn + "-epoch")
 }
 
 func (ec *EpochClnt) AdvanceEpoch() (sessp.Tepoch, error) {

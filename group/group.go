@@ -32,15 +32,13 @@ import (
 )
 
 const (
-	_GRPDIR      = "group"
-	GRP          = "grp-"
-	GRPRAFTCONF  = "-raft-conf"
-	TMP          = ".tmp"
-	GRPCONF      = "-conf"
-	GRPELECT     = "-elect"
-	GRPCONFNXT   = "-conf-next"     // XXX
-	GRPCONFNXTBK = GRPCONFNXT + "#" // XXX
-	CTL          = "ctl"
+	_GRPDIR     = "group"
+	GRP         = "grp-"
+	GRPRAFTCONF = "-raft-conf"
+	TMP         = ".tmp"
+	GRPCONF     = "-conf"
+	GRPELECT    = "-elect"
+	CTL         = "ctl"
 )
 
 func JobDir(jobdir string) string {
@@ -65,14 +63,6 @@ func grpTmpConfPath(jobdir, grp string) string {
 
 func grpElectPath(jobdir, grp string) string {
 	return GrpPath(jobdir, grp) + GRPELECT
-}
-
-func grpConfNxt(jobdir, grp string) string {
-	return GrpPath(jobdir, grp) + GRPCONFNXT
-}
-
-func grpConfNxtBk(jobdir, grp string) string {
-	return GrpPath(jobdir, grp) + GRPCONFNXTBK
 }
 
 type Group struct {
@@ -264,40 +254,35 @@ func RunMember(jobdir, grp string, public bool) {
 	var id int
 	var clusterCfg *GroupConfig
 
-	// If running replicated...
-	if nReplicas > 0 {
+	if nReplicas > 0 && !g.clusterStarted() {
 		// If the final cluster config hasn't been publisherd yet, this replica is
 		// part of the initial cluster. Register self as part of the initial cluster
 		// in the temporary cluster config, and wait for nReplicas to register
 		// themselves as well.
-		if !g.clusterStarted() {
-			db.DPrintf(db.GROUP, "Cluster hasn't started, reading temp config")
-			id, clusterCfg, raftCfg = g.registerInTmpConfig()
-			// If we don't yet have enough replicas to start the cluster, wait for them
-			// to register themselves.
-			if id < nReplicas {
-				db.DPrintf(db.GROUP, "%v < %v: Wait for more replicas", id, nReplicas)
-				g.ReleaseLeadership()
-				// Wait for enough memebers of the original cluster to register
-				// themselves, and get the updated config.
-				g.waitForClusterConfig()
-				g.AcquireLeadership()
-				// Get the updated cluster config.
-				var err error
-				if clusterCfg, err = g.readGroupConfig(grpConfPath(g.jobdir, grp)); err != nil {
-					db.DFatalf("Error read group config: %v", err)
-				}
-				raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
-				db.DPrintf(db.GROUP, "%v done waiting for replicas, config: %v", id, clusterCfg)
+
+		db.DPrintf(db.GROUP, "Cluster hasn't started, reading temp config")
+		id, clusterCfg, raftCfg = g.registerInTmpConfig()
+		// If we don't yet have enough replicas to start the cluster, wait for them
+		// to register themselves.
+		if id < nReplicas {
+			db.DPrintf(db.GROUP, "%v < %v: Wait for more replicas", id, nReplicas)
+			g.ReleaseLeadership()
+			// Wait for enough memebers of the original cluster to register
+			// themselves, and get the updated config.
+			g.waitForClusterConfig()
+			g.AcquireLeadership()
+			// Get the updated cluster config.
+			var err error
+			if clusterCfg, err = g.readGroupConfig(grpConfPath(g.jobdir, grp)); err != nil {
+				db.DFatalf("Error read group config: %v", err)
 			}
-		} else {
-			// Register self in the cluster config.
-			id, clusterCfg, raftCfg = g.registerInClusterConfig()
-			db.DPrintf(db.GROUP, "%v cluster already started: %v", id, clusterCfg)
+			raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
+			db.DPrintf(db.GROUP, "%v done waiting for replicas, config: %v", id, clusterCfg)
 		}
 	} else {
+		// Register self in the cluster config, and create it, if nReplicas == 0)
 		id, clusterCfg, raftCfg = g.registerInClusterConfig()
-		db.DPrintf(db.GROUP, "%v start cluster: %v", id, clusterCfg)
+		db.DPrintf(db.GROUP, "%v join cluster: %v", id, clusterCfg)
 	}
 
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)

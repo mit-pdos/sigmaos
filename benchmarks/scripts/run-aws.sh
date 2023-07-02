@@ -832,12 +832,17 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=100
+  n_imgresize=800
   n_vm=2
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run/SigmaOS
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
+  stop_k8s_cluster $KVPC
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
@@ -1132,7 +1137,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#img_resize
+img_resize
 k8s_img_resize
 #hotel_tail_multi
 #realm_balance_be

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-)
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/hotel"

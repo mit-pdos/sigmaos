@@ -32,9 +32,11 @@ func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTsta
 		if Overlays {
 			net = realm.String()
 		}
+		db.DPrintf(db.TEST, "Make realm %v", realm)
 		if err = ts.rc.MakeRealm(realm, net); err != nil {
 			db.DFatalf("Error MakeRealmTstate MkRealm: %v", err)
 		}
+		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
 	var sc *sigmaclnt.SigmaClnt
 	if sc, err = sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test", realm); err != nil {

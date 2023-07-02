@@ -132,7 +132,7 @@ def setup_graph(nplots, units, total_ncore):
 
   plt.xlabel("Time (sec)")
   tptax.set_ylabel(units)
-#  tptax.set_ylim((0, total_ncore + 5))
+  tptax.set_ylim((0, total_ncore + 1))
   return fig, tptax
 
 def graph_data(input_dir, title, out, units, total_ncore, xmin, xmax):

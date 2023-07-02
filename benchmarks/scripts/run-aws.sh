@@ -84,7 +84,7 @@ mkdir $OUT_DIR
 
 stop_sigmaos_cluster() {
   if [ $# -ne 1 ]; then
-    echo "start_sigmaos_cluster args: vpc" 1>&2
+    echo "stop_sigmaos_cluster args: vpc" 1>&2
     exit 1
   fi
   vpc=$1
@@ -95,7 +95,7 @@ stop_sigmaos_cluster() {
 
 stop_k8s_cluster() {
   if [ $# -ne 1 ]; then
-    echo "start_k8s_cluster args: vpc" 1>&2
+    echo "stop_k8s_cluster args: vpc" 1>&2
     exit 1
   fi
   vpc=$1
@@ -123,9 +123,11 @@ start_sigmaos_cluster() {
   else
     ./setup-swap.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
   fi
-  # k8s takes up a lot of CPU, so always stop it before starting SigmaOS.
-  stop_k8s_cluster $vpc
+  cd $ROOT_DIR
+#  # k8s takes up a lot of CPU, so always stop it before starting SigmaOS.
+#  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
+  cd $SCRIPT_DIR
   ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
@@ -148,7 +150,9 @@ start_k8s_cluster() {
   else
     ./setup-swap.sh --vpc $vpc --parallel >> $INIT_OUT 2>&1
   fi
+  cd $ROOT_DIR
   stop_k8s_cluster $vpc
+  cd $SCRIPT_DIR
   ./start-k8s.sh --vpc $vpc --n $n_vm >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
@@ -851,8 +855,10 @@ k8s_img_resize() {
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run/K8s
   driver_vm=0
-  # Start the SigmaOS cluster.
-  start_sigmaos_cluster $KVPC 4 $n_vm $swap
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
   # Start the K8s cluster.
   start_k8s_cluster $KVPC $n_vm $swap
   # Stop any previous run.
@@ -1127,7 +1133,7 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #img_resize
-#k8s_img_resize
+k8s_img_resize
 #hotel_tail_multi
 #realm_balance_be
 #realm_balance_multi

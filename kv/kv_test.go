@@ -73,7 +73,8 @@ type Tstate struct {
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	job := rand.String(16)
+	job := rand.String(4)
+
 	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf

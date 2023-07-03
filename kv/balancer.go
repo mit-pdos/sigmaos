@@ -84,13 +84,8 @@ func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	}
 	bl.kvdncore = proc.Tcore(kvdnc)
 
-	// may fail if already exist
-	bl.MkDir(KVDIR, 07)
-	bl.MkDir(JobDir(bl.job), 0777)
-
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
-	// start server but don't publish its existence
 	mfs, err := memfssrv.MakeMemFsPortClnt("", ":0", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
@@ -272,6 +267,7 @@ func (bl *Balancer) recover(epoch sessp.Tepoch) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
+		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		dst := kvShardPath(bl.job, kvd, Tshard(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error

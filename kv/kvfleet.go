@@ -4,6 +4,7 @@ import (
 	"path"
 	"strconv"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
@@ -13,6 +14,7 @@ import (
 )
 
 const (
+	GRP           = "grp-"
 	NKV           = 10
 	NSHARD        = 10 * NKV
 	NBALANCER     = 3
@@ -38,9 +40,12 @@ func KVBalancerCtl(job string) string {
 	return path.Join(KVBalancer(job), KVBALANCERCTL)
 }
 
-// TODO make grpdir a subdir of this job.
+func kvGrpPath(job, kvd string) string {
+	return path.Join(JobDir(job), kvd)
+}
+
 func kvShardPath(job, kvd string, shard Tshard) string {
-	return path.Join(group.GrpPath(JobDir(job), kvd), "shard"+shard.String())
+	return path.Join(kvGrpPath(job, kvd), "shard"+shard.String())
 }
 
 type KVFleet struct {
@@ -75,7 +80,6 @@ func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kv
 	if err := kvf.MkDir(JobDir(kvf.job), 0777); err != nil {
 		return nil, err
 	}
-
 	kvf.kvdgms = []*groupmgr.GroupMgr{}
 	kvf.cpids = []proc.Tpid{}
 	return kvf, nil
@@ -90,7 +94,7 @@ func (kvf *KVFleet) Nkvd() int {
 }
 
 func (kvf *KVFleet) Start() error {
-	kvf.balgm = StartBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, kvf.crashhelper, kvf.auto)
+	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, kvf.crashhelper, kvf.auto)
 	for i := 0; i < kvf.nkvd; i++ {
 		if err := kvf.AddKVDGroup(); err != nil {
 			return err
@@ -101,9 +105,13 @@ func (kvf *KVFleet) Start() error {
 
 func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
-	grp := group.GRP + strconv.Itoa(len(kvf.kvdgms))
+	grp := GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	kvf.kvdgms = append(kvf.kvdgms, SpawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0))
+	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0)
+	if err != nil {
+		return err
+	}
+	kvf.kvdgms = append(kvf.kvdgms, gm)
 	// Get balancer to add the group
 	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "add", grp); err != nil {
 		return err
@@ -114,7 +122,7 @@ func (kvf *KVFleet) AddKVDGroup() error {
 func (kvf *KVFleet) RemoveKVDGroup() error {
 	n := len(kvf.kvdgms) - 1
 	// Get group nambe
-	grp := group.GRP + strconv.Itoa(n)
+	grp := GRP + strconv.Itoa(n)
 	// Get balancer to remove the group
 	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "del", grp); err != nil {
 		return err
@@ -144,13 +152,20 @@ func (kvf *KVFleet) Stop() error {
 	return nil
 }
 
-func StartBalancers(sc *sigmaclnt.SigmaClnt, jobname string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
+func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdncore))
-	return groupmgr.Start(sc, nbal, "balancer", []string{crashhelper, kvdnc, auto}, jobname, 0, nbal, crashbal, 0, 0)
+	gm := groupmgr.Start(sc, nbal, "balancer", []string{crashhelper, kvdnc, auto}, job, 0, nbal, crashbal, 0, 0)
+	return gm
 }
 
-func SpawnGrp(sc *sigmaclnt.SigmaClnt, jobname, grp string, ncore proc.Tcore, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(jobname), ncore, ncrash, CRASHKVD, 0, 0)
+func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, ncore proc.Tcore, repl, ncrash int) (*groupmgr.GroupMgr, error) {
+	gm := groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(job), ncore, ncrash, CRASHKVD, 0, 0)
+	cfg, err := group.WaitStarted(sc.FsLib, JobDir(job), grp)
+	if err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.ALWAYS, "spawnGrp %v cfg %v\n", grp, cfg)
+	return gm, nil
 }
 
 func RemoveJob(fsl *fslib.FsLib, job string) error {

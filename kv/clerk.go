@@ -123,11 +123,12 @@ func (kc *KvClerk) IsMiss(err error) bool {
 func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	mnts := kc.Mounts()
 	for _, mnt := range mnts {
-		if strings.HasPrefix(mnt, group.JobDir(JobDir(kc.job))) {
-			kvd := strings.TrimPrefix(mnt, group.JobDir(JobDir(kc.job))+"/")
+		db.DPrintf(db.KVCLERK, "mnt kv %v", mnt)
+		if strings.HasPrefix(mnt, JobDir(kc.job)+"/grp") {
+			kvd := strings.TrimPrefix(mnt, JobDir(kc.job)+"/")
 			if !kvs.present(kvd) {
 				db.DPrintf(db.KVCLERK, "Detach kv %v", kvd)
-				kc.Detach(group.GrpPath(JobDir(kc.job), kvd))
+				kc.Detach(kvGrpPath(kc.job, kvd))
 			}
 		}
 	}

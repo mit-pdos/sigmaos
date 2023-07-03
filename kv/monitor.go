@@ -90,18 +90,22 @@ func (mo *Monitor) nextGroup() string {
 	defer mo.mu.Unlock()
 	gn := strconv.Itoa(mo.group)
 	mo.group += 1
-	return group.GRP + gn
+	return GRP + gn
 }
 
-func (mo *Monitor) grow() {
+func (mo *Monitor) grow() error {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp := SpawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
-	err := BalancerOp(mo.FsLib, mo.job, "add", gn)
+	grp, err := spawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdncore, KVD_NO_REPL, 0)
 	if err != nil {
+		return err
+	}
+	if err := BalancerOp(mo.FsLib, mo.job, "add", gn); err != nil {
 		grp.Stop()
+		return err
 	}
 	mo.gm.insert(gn, grp)
+	return nil
 }
 
 func (mo *Monitor) shrink(gn string) {

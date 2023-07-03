@@ -35,6 +35,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
+	ts.Remove(cacheclnt.CACHE)
 	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tcore(CACHE_NCORE), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
@@ -84,7 +85,7 @@ func TestCacheSingle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
-	
+
 	m, err := cc.Dump(0)
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
@@ -92,7 +93,7 @@ func TestCacheSingle(t *testing.T) {
 	m, err = cc.Dump(0)
 	assert.Nil(t, err)
 	assert.Equal(t, N, len(m))
-	
+
 	// Delete and get
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)

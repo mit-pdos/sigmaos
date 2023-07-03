@@ -96,6 +96,10 @@ if ! [ -z "$TAG" ]; then
   docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
 fi
 
+if ! docker ps | grep -q etcd; then
+    ./start-etcd.sh
+fi
+
 if docker ps | grep -q sigmadb; then
     DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
 fi

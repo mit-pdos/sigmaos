@@ -32,7 +32,6 @@ import (
 )
 
 const (
-	_GRPDIR     = "group"
 	GRPRAFTCONF = "-raft-conf"
 	TMP         = ".tmp"
 	GRPCONF     = "-conf"
@@ -40,12 +39,8 @@ const (
 	CTL         = "ctl"
 )
 
-func JobDir(jobdir string) string {
-	return path.Join(jobdir, _GRPDIR)
-}
-
 func GrpPath(jobdir string, grp string) string {
-	return path.Join(JobDir(jobdir), grp)
+	return path.Join(jobdir, grp)
 }
 
 func grpConfPath(jobdir, grp string) string {

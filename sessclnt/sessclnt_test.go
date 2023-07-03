@@ -25,7 +25,7 @@ const (
 	PARTITION = 200
 	NETFAIL   = 200
 	NTRIALS   = "3001"
-	JOBDIR    = "name/"
+	JOBDIR    = "name/group"
 	GRP       = "grp-0"
 )
 
@@ -38,8 +38,8 @@ type Tstate struct {
 func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	ts := &Tstate{grp: GRP}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.RmDir(group.JobDir(JOBDIR))
-	ts.MkDir(group.JobDir(JOBDIR), 0777)
+	ts.RmDir(JOBDIR)
+	ts.MkDir(JOBDIR, 0777)
 	ts.gm = groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, crash, partition, netfail)
 	cfg, err := group.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
 	assert.Nil(t, err)

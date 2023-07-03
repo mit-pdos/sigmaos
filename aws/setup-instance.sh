@@ -44,7 +44,7 @@ if [ -z "$VPC" ] || [ -z "$VM" ] || [ $# -gt 0 ]; then
 fi
 
 DIR=$(realpath $(dirname $0))
-. $DIR/.env
+source $DIR/env.sh
 
 KEY="key-$VPC.pem"
 LOGIN=ubuntu

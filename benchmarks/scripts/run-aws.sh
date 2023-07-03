@@ -652,6 +652,7 @@ realm_balance_multi() {
   if ! should_skip $perf_dir false ; then
     return
   fi
+  stop_k8s_cluster $KVPC
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
@@ -1145,7 +1146,7 @@ img_resize
 k8s_img_resize
 #hotel_tail_multi
 #realm_balance_be
-#realm_balance_multi
+realm_balance_multi
 #k8s_balance_multi
 #k8s_balance_be
 # XXX Try above next
@@ -1167,7 +1168,7 @@ source ~/env/3.10/bin/activate
 graph_img_resize
 #graph_realm_balance_be
 #graph_k8s_balance_be
-#graph_realm_balance_multi
+graph_realm_balance_multi
 #graph_k8s_balance_multi
 #graph_k8s_hotel_tail_tpt_over_time
 

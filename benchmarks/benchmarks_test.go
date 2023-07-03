@@ -442,7 +442,6 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	<-done
 	<-done
 	db.DPrintf(db.TEST, "MR and Hotel done.")
-	_ = rs1
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
 	evictMemBlockers(rootts, blockers)

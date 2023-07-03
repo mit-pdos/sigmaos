@@ -8,6 +8,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/linuxsched"
 	"sigmaos/proc"
 )
 
@@ -40,11 +41,30 @@ func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) e
 		return err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
+	if uproc.GetType() == proc.T_BE {
+		s := time.Now()
+		setSchedPolicy(cmd.Process.Pid, linuxsched.SCHED_IDLE)
+		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Get/Set sched attr %v", uproc.GetPid(), time.Since(s))
+	}
+
 	if err := cmd.Wait(); err != nil {
 		return err
 	}
 	db.DPrintf(db.CONTAINER, "ExecUProc done  %v\n", uproc)
 	return nil
+}
+
+func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) {
+	attr, err := linuxsched.SchedGetAttr(pid)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error Getattr %v: %v", pid, err)
+		return
+	}
+	attr.Policy = policy
+	err = linuxsched.SchedSetAttr(pid, attr)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error Setattr %v: %v", pid, err)
+	}
 }
 
 //

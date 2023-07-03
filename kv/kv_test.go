@@ -129,10 +129,10 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	ts := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
-	err := ts.cm.StartClerks("", NCLERK)
+	err := ts.cm.StartClerks("", nclerk)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 
-	db.DPrintf(db.TEST, "Done startClerks")
+	db.DPrintf(db.TEST, "Done StartClerks")
 
 	for i := 0; i < kv.NKV; i++ {
 		err := ts.kvf.AddKVDGroup()

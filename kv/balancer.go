@@ -304,9 +304,9 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "runProc %v err %v status %v\n", args, err, status)
 		}
-		if strings.HasPrefix(err.Error(), "Spawn error") ||
+		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			serr.IsErrCode(err, serr.TErrUnreachable) {
+			serr.IsErrCode(err, serr.TErrUnreachable)) {
 			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {

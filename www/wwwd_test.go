@@ -32,6 +32,8 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 
+	ts.Tstate.MkDir(www.TMP, 0777)
+
 	ts.job = rd.String(4)
 
 	www.InitWwwFs(ts.Tstate.FsLib, ts.job)

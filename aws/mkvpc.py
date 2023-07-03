@@ -66,8 +66,6 @@ def setup_instance(ec2, vpc, sg, sn, kpn, storage, instance_type):
     script=''
     with open('vm-packages', 'r') as fin:
       script = fin.read()
-    else:
-      raise ValueError("Unknown instance setup script for instance name", args["name"])
 
     instance = instance_type
         

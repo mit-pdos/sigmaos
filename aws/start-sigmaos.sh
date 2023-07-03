@@ -83,12 +83,12 @@ fi
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
 
 for vm in $vms; do
-    echo $vm
-    # Get hostname.
-    VM_IP=$(ssh -i key-$VPC.pem ubuntu@$vm hostname -i)
-    VM_NAME=$(echo "$vms_full" | grep $VM_IP | cut -d " " -f 2)
-    KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
-    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+  echo "starting SigmaOS on $vm!"
+  # No benchmarking setup needed for AWS.
+  # Get hostname.
+  VM_NAME=$(echo "$vms_full" | grep $vm | cut -d " " -f 2)
+  KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
+  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
@@ -107,14 +107,14 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${SIGMANAMED} ${KERNELID}"
     ./make.sh --norace linux
-    ./start-network.sh
+    ./start-network.sh --addr $MAIN_PRIVADDR
     ./start-db.sh
     ./start-jaeger.sh
     ./start-kernel.sh --boot realm --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

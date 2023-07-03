@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/crash"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	sp "sigmaos/sigmap"

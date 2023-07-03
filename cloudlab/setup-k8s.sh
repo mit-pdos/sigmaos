@@ -30,6 +30,7 @@ ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$1 <<'ENDSSH'
   bash -c "sudo apt update"
   bash -c "sudo apt install -y helm"
   bash -c "helm repo add stable https://charts.helm.sh/stable"
+  bash -c "sudo swapoff -a"
   bash -c "echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf"
   bash -c "printf \"net.bridge.bridge-nf-call-ip6tables = 1\nnet.bridge.bridge-nf-call-iptables = 1\" | sudo tee /etc/sysctl.d/k8s.conf"
   bash -c "sudo sysctl --system"

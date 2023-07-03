@@ -151,10 +151,13 @@ IuzhbPSUS+OksAAAAOa2Fhc2hvZWtAZms2eDEBAgMEBQ==
 -----END OPENSSH PRIVATE KEY-----
 EOF
 chmod 600 ~/.ssh/aws-ulambda
+cp ~/.ssh/aws-ulambda ~/.ssh/id_rsa
 
 cat << EOF >> ~/.ssh/authorized_keys
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC4NF0v/XEFId9bJJ1KvzvIIfcFUPvvNJCWH35JJbpaCCRuguHAlim30WqeTG+Ru7Debl80AVuve+XrhL2uYY6R1SeBXQ6Vl6jGPzmmlTqJLi73e6oNWI13QJ1ALriS2Vy5xk1ckmS5epYS0OixerQJ/9gHTcdHWcNDbfUOi23jqdciNExSqjamrYvUwi14IhRNRqltrk2V4ephnRI+8S3ExansbZSwnu0XIz7j86e3PFMuuHwLJWv59UdO9roJl2B36dnzWp0lpqcXYrk3gbbXBCu6iV1Dv7XgvElTtmwqJJ50O2pzwJv2pBB/tw3LkWldF6FuYO3vjaTOgdm2gbCsw2DMJSa6oXJB4cRztXDe51ljbhdYptHxbJgM7+852soEma2uhuek80rRn3UEqrQ1MIsw0DJXx5k+tDbJAWyzy4k4opR583Go9UtRq/BY6qyaFHA/DY13c5QiJNapN5JameX3+wUvNmR22lX/SW61KFjXzYnn//77UCidNPr6SQs= kaashoek@fk6x1
 EOF
+
+sudo mkdir -p /mnt/9p
 
 if [ -d "ulambda" ] 
 then
@@ -174,12 +177,6 @@ else
   touch ~/.nobuild
 fi
 
-# If cloud-init is interrupted, run the following to fix errors caused by dpkg interruption.
-# sudo dpkg --configure -a
-# sudo apt install -y golang make emacs net-tools python3 python3-boto3 awscli jq
-
-ulimit -n 100000
-
 # Add to docker group
 sudo usermod -aG docker ubuntu
 
@@ -194,54 +191,51 @@ echo "ubuntu soft nofile 100000" | sudo tee -a /etc/security/limits.conf
 echo -n > ~/.hushlogin
 ENDSSH
 
-if [ $VPC == $K8S_VPC ]; then
-  echo "Installing kubernetes components"
-  ssh -i key-$VPC.pem $LOGIN@$VM <<'ENDSSH'
-    # Increase root's open file ulimits.
-    bash -c "echo \"root hard nofile 20000\" | sudo tee -a /etc/security/limits.conf"
-    bash -c "echo \"root soft nofile 20000\" | sudo tee -a /etc/security/limits.conf"
-    bash -c "sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg"
-    bash -c "echo \"deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main\" | sudo tee /etc/apt/sources.list.d/kubernetes.list"
-    bash -c "sudo apt update"
-#    bash -c "sudo apt-mark unhold kubelet kubeadm kubectl"
-#    bash -c "sudo apt remove -y kubelet kubeadm kubectl"
-    bash -c "sudo apt install -y kubelet kubeadm kubectl"
-    bash -c "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg"
-    bash -c "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null"
-    bash -c "sudo apt update"
-    bash -c "yes | sudo apt install docker-ce docker-ce-cli containerd.io"
-    bash -c "sudo usermod -aG docker $USER && newgrp docker"
-    bash -c "curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -"
-    bash -c "sudo apt install apt-transport-https --yes"
-    bash -c "echo \"deb https://baltocdn.com/helm/stable/debian/ all main\" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list"
-    bash -c "sudo apt update"
-    bash -c "sudo apt install -y helm"
-    bash -c "helm repo add stable https://charts.helm.sh/stable"
-#    bash -c "sudo swapoff -a"
-    bash -c "echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf"
-    bash -c "printf \"net.bridge.bridge-nf-call-ip6tables = 1\nnet.bridge.bridge-nf-call-iptables = 1\" | sudo tee /etc/sysctl.d/k8s.conf"
-    bash -c "sudo sysctl --system"
-    bash -c 'printf "{\n\"exec-opts\": [\"native.cgroupdriver=systemd\"]\n}" | sudo tee /etc/docker/daemon.json'
-    bash -c "sudo systemctl daemon-reload"
-    bash -c "sudo systemctl restart docker"
-    bash -c "sudo systemctl restart kubelet"
-    bash -c "sudo containerd config default | sudo tee /etc/containerd/config.toml"
-    bash -c "sudo sed -i 's/            SystemdCgroup = false/            SystemdCgroup = true/' /etc/containerd/config.toml"
-    bash -c "sudo systemctl daemon-reload"
-    bash -c "sudo systemctl restart docker"
-    bash -c "sudo systemctl restart containerd"
-    bash -c "sudo systemctl restart kubelet"
-    bash -c "sudo systemctl restart containerd"
-    bash -c "sudo groupadd docker"
-    bash -c "sudo usermod -aG docker ubuntu"
-    bash -c "sudo usermod -aG docker ubuntu"
-    # For DeathStarBench
-    bash -c "sudo apt install -y docker-compose luarocks libssl-dev zlib1g-dev"
-    bash -c "sudo luarocks install luasocket"
+echo "Installing kubernetes components"
+ssh -i key-$VPC.pem $LOGIN@$VM <<'ENDSSH'
+  sudo apt-get install -y apt-transport-https ca-certificates curl
+  sudo mkdir -p /etc/apt/keyrings/
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  sudo apt update
+#    sudo apt-mark unhold kubelet kubeadm kubectl
+#    sudo apt remove -y kubelet kubeadm kubectl
+  sudo apt install -y kubelet kubeadm kubectl
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt update
+  yes | sudo apt install docker-ce docker-ce-cli containerd.io
+  sudo usermod -aG docker $USER && newgrp docker
+  curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+  sudo apt install apt-transport-https --yes
+  echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+  sudo apt update
+  sudo apt install -y helm
+  helm repo add stable https://charts.helm.sh/stable
+  sudo swapoff -a
+  echo br_netfliter | sudo tee /etc/modules-load.d/k8s.conf
+  printf "net.bridge.bridge-nf-call-ip6tables = 1\nnet.bridge.bridge-nf-call-iptables = 1" | sudo tee /etc/sysctl.d/k8s.conf
+  sudo sysctl --system
+  printf "{\n\"exec-opts\": [\"native.cgroupdriver=systemd\"]\n}" | sudo tee /etc/docker/daemon.json
+  sudo systemctl daemon-reload
+  sudo systemctl restart docker
+  sudo systemctl restart kubelet
+  sudo containerd config default | sudo tee /etc/containerd/config.toml
+  sudo sed -i 's/            SystemdCgroup = false/            SystemdCgroup = true/' /etc/containerd/config.toml
+  sudo systemctl daemon-reload
+  sudo systemctl restart docker
+  sudo systemctl restart containerd
+  sudo systemctl restart kubelet
+  sudo systemctl restart containerd
+  sudo groupadd docker
+  sudo usermod -aG docker ubuntu
+  sudo usermod -aG docker ubuntu
+  # For DeathStarBench
+  sudo apt install -y docker-compose luarocks libssl-dev zlib1g-dev
+  sudo luarocks install luasocket
+
+  sudo swapoff -a
+  sudo sed -i '/\tswap\t/ s/^/#/' /etc/fstab
 ENDSSH
-fi
 
-echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh -i key-$VPC.pem $LOGIN@$VM"
-echo "============================="
-
+echo "Done setting up instance $VM"

@@ -2,6 +2,7 @@ package schedd
 
 import (
 	"fmt"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -12,6 +13,7 @@ const (
 )
 
 type Queue struct {
+	sync.Mutex
 	lc   []*proc.Proc
 	lcws []*proc.Proc
 	be   []*proc.Proc
@@ -30,6 +32,9 @@ func makeQueue() *Queue {
 }
 
 func (q *Queue) Enqueue(p *proc.Proc) {
+	q.Lock()
+	defer q.Unlock()
+
 	q.pmap[p.GetPid()] = p
 	switch p.GetType() {
 	case proc.T_LC:
@@ -44,6 +49,9 @@ func (q *Queue) Enqueue(p *proc.Proc) {
 // Dequeue a proc with certain resource requirements. LC procs have absolute
 // priority.
 func (q *Queue) Dequeue(ptype proc.Ttype, maxmcpu proc.Tmcpu, maxmem proc.Tmem) (p *proc.Proc, worksteal bool, ok bool) {
+	q.Lock()
+	defer q.Unlock()
+
 	// Get queues holding procs of type ptype.
 	qs := q.getQs(ptype)
 	for i, queue := range qs {
@@ -61,6 +69,9 @@ func (q *Queue) Dequeue(ptype proc.Ttype, maxmcpu proc.Tmcpu, maxmem proc.Tmem) 
 
 // Remove a stolen proc from the corresponding queue.
 func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
+	q.Lock()
+	defer q.Unlock()
+
 	// If proc is still queued at this schedd
 	if p, ok := q.pmap[pid]; ok {
 		// Select queue
@@ -119,5 +130,8 @@ func (q *Queue) getQs(ptype proc.Ttype) []*[]*proc.Proc {
 }
 
 func (q *Queue) String() string {
+	q.Lock()
+	defer q.Unlock()
+
 	return fmt.Sprintf("{ lc:%v be:%v lcws:%v bews:%v }", q.lc, q.be, q.lcws, q.bews)
 }

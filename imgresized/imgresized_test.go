@@ -49,13 +49,14 @@ func TestResizeProc(t *testing.T) {
 	in := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img/1-thumb.jpg")
 	ts.Remove(out)
-	p := proc.MakeProc("imgresize", []string{in, out, IMG_WORKER_MCPU_STR})
+	p := proc.MakeProc("imgresize", []string{in, out})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(p.GetPid())
-	assert.True(t, status.IsStatusOK(), "WaitExit status error")
+	assert.Nil(t, err, "WaitExit error %v", err)
+	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
 	ts.Shutdown()
 }
 
@@ -97,7 +98,7 @@ func TestImgdOne(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, 1000)
 
 	ts.WaitDone(1)
 
@@ -115,7 +116,7 @@ func TestImgdMany(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, 1000)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
 	assert.Nil(t, err)

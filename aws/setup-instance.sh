@@ -159,6 +159,11 @@ EOF
 
 sudo mkdir -p /mnt/9p
 
+if [ -d "DeathStarBench" ] 
+then
+  git clone https://github.com/mit-pdos/DeathStarBench.git
+fi
+
 if [ -d "ulambda" ] 
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'

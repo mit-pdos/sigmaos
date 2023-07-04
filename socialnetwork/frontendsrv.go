@@ -32,6 +32,8 @@ type FrontEnd struct {
 	homec    *protdevclnt.ProtDevClnt
 	composec *protdevclnt.ProtDevClnt
 	pc       *portclnt.PortClnt
+	uCounter *Counter
+	iCounter *Counter
 }
 
 const SERVER_NAME = "socialnetwork-frontend"
@@ -82,6 +84,9 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	frontend.composec = pdc
 	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
+	frontend.uCounter = MakeCounter("User")
+	frontend.iCounter = MakeCounter("User-Inner")
+
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
 	//	if TRACING {
@@ -169,6 +174,7 @@ func (s *FrontEnd) done() error {
 }
 
 func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
 	if s.record {
 		defer s.p.TptTick(1.0)
 	}
@@ -192,10 +198,12 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var res proto.UserResponse
 	// Check username and password
+	t1 := time.Now()
 	err := s.userc.RPC("User.Login", &proto.LoginRequest{
 		Username: username,
 		Password: password,
 	}, &res)
+	s.iCounter.AddTimeSince(t1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -208,6 +216,7 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		"message": str,
 	}
 	json.NewEncoder(w).Encode(reply)
+	s.uCounter.AddTimeSince(t0)
 }
 
 func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
@@ -247,13 +256,25 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// compose a post
-	text, posttype := urlQuery.Get("text"), urlQuery.Get("posttype")
+	text, posttype, mediastr := urlQuery.Get("text"), urlQuery.Get("posttype"), urlQuery.Get("media")
+	mediaids := make([]int64, 0)
+	if mediastr != "" {
+		for _, idstr := range strings.Split(mediastr, ",") {
+			mediaid, err := strconv.ParseInt(idstr, 10, 64)
+			if err != nil {
+				dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Cannot parse media: %v", idstr)
+			} else {
+				mediaids = append(mediaids, mediaid)
+			}
+		}
+	}
 	var res proto.ComposePostResponse
 	err := s.composec.RPC("Compose.ComposePost", &proto.ComposePostRequest{
 		Username: username,
 		Userid:   userid,
 		Text:     text,
 		Posttype: parsePostTypeString(posttype),
+		Mediaids: mediaids,
 	}, &res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -111,9 +111,9 @@ func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
 
 // Spawn a proc on kernelId. If spread > 0, p is part of SpawnBurt().
 func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int) error {
-	if p.GetNcore() > 0 && p.GetType() != proc.T_LC {
-		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
-		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
+	if p.GetMcpu() > 0 && p.GetType() != proc.T_LC {
+		db.DFatalf("Spawn non-LC proc with Mcpu set %v", p)
+		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
 	clnt.extendBaseEnv(p)

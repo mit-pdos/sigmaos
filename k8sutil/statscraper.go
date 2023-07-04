@@ -14,8 +14,8 @@ import (
 // Kubernetes cgroups paths.
 const (
 	K8S_CGROUP           = "/cgroup/kubepods.slice"
-	QOS_BE_CGROUP        = K8S_CGROUP + "/" + "kubepods.besteffort"
-	QOS_BURSTABLE_CGROUP = K8S_CGROUP + "/" + "kubepods.burstable"
+	QOS_BE_CGROUP        = K8S_CGROUP + "/" + "kubepods-besteffort.slice"
+	QOS_BURSTABLE_CGROUP = K8S_CGROUP + "/" + "kubepods-burstable.slice"
 )
 
 type scraper struct {
@@ -52,9 +52,10 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	if burst, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
 		db.DFatalf("Error burstable: %v", err)
 	}
-	if total, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
+	if total, err = s.cmon.GetCPUStats(K8S_CGROUP); err != nil {
 		db.DFatalf("Error total: %v", err)
 	}
+	db.DPrintf(db.K8S_UTIL, "Total %v BE %v Burst %v", total.Util, be.Util, burst.Util)
 	// Guaranteed QoS class is total CPU utillzation, minus BE & Burstable
 	// classes' utilization.
 	res.Util = total.Util - be.Util - burst.Util

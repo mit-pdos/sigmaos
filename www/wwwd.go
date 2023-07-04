@@ -172,11 +172,11 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	}
 }
 
-func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pipe bool, args []string, env map[string]string, ncore proc.Tcore) (*proc.Status, error) {
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pipe bool, args []string, env map[string]string, mcpu proc.Tmcpu) (*proc.Status, error) {
 	var pipeName string
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, args)
-	a.SetNcore(ncore)
+	a.SetMcpu(mcpu)
 	for k, v := range env {
 		a.AppendEnv(k, v)
 	}

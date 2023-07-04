@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
@@ -19,6 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevclnt"
 	"sigmaos/rpcbench"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -42,15 +42,15 @@ var KV_AUTO string
 var N_KVD int
 var N_CLERK int
 var CLERK_DURATION string
-var CLERK_NCORE int
+var CLERK_MCPU int
 var N_CLNT int
 var N_CLNT_REQ int
-var KVD_NCORE int
-var WWWD_NCORE int
+var KVD_MCPU int
+var WWWD_MCPU int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
-var HOTEL_CACHE_NCORE int
+var HOTEL_CACHE_MCPU int
 var N_HOTEL int
 var HOTEL_IMG_SZ_MB int
 var HOTEL_CACHE_AUTOSCALE bool
@@ -66,21 +66,23 @@ var DURATION time.Duration
 var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
-var RPCBENCH_NCORE int
+var RPCBENCH_MCPU int
 var RPCBENCH_DURS string
 var RPCBENCH_MAX_RPS string
 var IMG_RESIZE_INPUT_PATH string
 var N_IMG_RESIZE_JOBS int
+var IMG_RESIZE_MCPU int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
-var N_CORE int
+var MCPU int
 var MAT_SIZE int
 var CONTENDERS_FRAC float64
 var GO_MAX_PROCS int
 var MAX_PARALLEL int
 var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
+var K8S_JOB_NAME string
 var S3_RES_DIR string
 
 // Read & set the proc version.
@@ -96,14 +98,14 @@ func init() {
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client makes.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
-	flag.IntVar(&CLERK_NCORE, "clerk_ncore", 1, "Clerk Ncore")
-	flag.IntVar(&KVD_NCORE, "kvd_ncore", 2, "KVD Ncore")
-	flag.IntVar(&WWWD_NCORE, "wwwd_ncore", 2, "WWWD Ncore")
+	flag.IntVar(&CLERK_MCPU, "clerk_mcpu", 1000, "Clerk mCPU")
+	flag.IntVar(&KVD_MCPU, "kvd_mcpu", 2000, "KVD mCPU")
+	flag.IntVar(&WWWD_MCPU, "wwwd_mcpu", 2000, "WWWD mCPU")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
-	flag.IntVar(&HOTEL_CACHE_NCORE, "hotel_cache_ncore", 2, "Hotel cache ncore")
+	flag.IntVar(&HOTEL_CACHE_MCPU, "hotel_cache_mcpu", 2000, "Hotel cache mcpu")
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
@@ -118,19 +120,21 @@ func init() {
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
-	flag.IntVar(&RPCBENCH_NCORE, "rpcbench_ncore", 3, "RPCbench Ncore")
+	flag.IntVar(&RPCBENCH_MCPU, "rpcbench_mcpu", 3000, "RPCbench mCPU")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
+	flag.StringVar(&K8S_JOB_NAME, "k8sjobname", "thumbnail-benchrealm1", "Name of k8s job")
 	flag.StringVar(&S3_RES_DIR, "s3resdir", "", "Results dir in s3.")
 	flag.StringVar(&REDIS_ADDR, "redisaddr", "", "Redis server address")
 	flag.IntVar(&N_PROC, "nproc", 1, "Number of procs per trial.")
-	flag.IntVar(&N_CORE, "ncore", 1, "Generic proc test Ncore")
+	flag.IntVar(&MCPU, "mcpu", 1000, "Generic proc test MCPU")
 	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
 	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
+	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
 }
 
 // ========== Common parameters ==========
@@ -223,8 +227,8 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
-	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, N_CORE, MAX_PARALLEL)
-	ps, _ := makeNProcs(N_PROC, "sleeper", []string{"0s", ""}, nil, proc.Tcore(N_CORE))
+	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, MCPU, MAX_PARALLEL)
+	ps, _ := makeNProcs(N_PROC, "sleeper", []string{"0s", ""}, nil, proc.Tmcpu(MCPU))
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	waitExitProcs(ts1, ps)
@@ -268,7 +272,7 @@ func runKVTest(t *testing.T, nReplicas int) {
 	defer p.Done()
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := makeNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
+	jobs, ji := makeNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -300,7 +304,7 @@ func TestAppCached(t *testing.T) {
 	defer p.Done()
 	const NKEYS = 100
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := makeNCachedJobs(ts1, 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tcore(CLERK_NCORE), proc.Tcore(KVD_NCORE))
+	jobs, ji := makeNCachedJobs(ts1, 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tmcpu(CLERK_MCPU), proc.Tmcpu(KVD_MCPU))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -395,7 +399,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep MR job
 	mrjobs, mrapps := makeNMRJobs(ts1, p1, 1, MR_APP)
 	// Prep Hotel job
-	hotelJobs, ji := makeHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := makeHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -438,7 +442,6 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	<-done
 	<-done
 	db.DPrintf(db.TEST, "MR and Hotel done.")
-	_ = rs1
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
 	evictMemBlockers(rootts, blockers)
@@ -518,7 +521,7 @@ func TestKVMRRRB(t *testing.T) {
 	mrjobs, mrapps := makeNMRJobs(ts1, p1, 1, MR_APP)
 	// Prep KV job
 	nclerks := []int{N_CLERK}
-	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tcore(KVD_NCORE), proc.Tcore(CLERK_NCORE), KV_AUTO, REDIS_ADDR)
+	kvjobs, ji := makeNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
 	monitorCPUUtil(ts1, p1)
 	monitorCPUUtil(ts2, p2)
 	// Run KV job
@@ -554,7 +557,7 @@ func testWww(t *testing.T, sigmaos bool) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := makeWwwJobs(ts1, sigmaos, 1, proc.Tcore(WWWD_NCORE), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
+	jobs, ji := makeWwwJobs(ts1, sigmaos, 1, proc.Tmcpu(WWWD_MCPU), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -585,7 +588,7 @@ func TestWwwK8s(t *testing.T) {
 
 func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn rpcbenchFn) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
-	jobs, ji := makeRPCBenchJobs(ts1, p, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
+	jobs, ji := makeRPCBenchJobs(ts1, p, proc.Tmcpu(RPCBENCH_MCPU), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -620,7 +623,7 @@ func TestRPCBenchSigmaosJustCliSleep(t *testing.T) {
 	ts1 := test.MakeRealmTstateClnt(rootts, REALM1)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	clientReady(rootts)
-	jobs, ji := makeRPCBenchJobsCli(ts1, nil, proc.Tcore(RPCBENCH_NCORE), RPCBENCH_DURS, RPCBENCH_MAX_RPS, func(c *rpcbench.Clnt) {
+	jobs, ji := makeRPCBenchJobsCli(ts1, nil, proc.Tmcpu(RPCBENCH_MCPU), RPCBENCH_DURS, RPCBENCH_MAX_RPS, func(c *rpcbench.Clnt) {
 		err := c.Sleep(int64(SLEEP / time.Millisecond))
 		assert.Nil(t, err, "Error sleep req: %v", err)
 	})
@@ -648,7 +651,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
 		}
 	}()
-	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), fn)
+	jobs, ji := makeHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -715,7 +718,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	} else {
 		db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
 	}
-	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := makeHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -739,7 +742,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(rootts)
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tcore(HOTEL_CACHE_NCORE), func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := makeHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -896,7 +899,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS)
+	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, proc.Tmcpu(IMG_RESIZE_MCPU))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -908,5 +911,36 @@ func TestImgResize(t *testing.T) {
 	monitorCPUUtil(ts1, p)
 	runOps(ts1, apps, runImgResize, rs)
 	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
+func TestK8sImgResize(t *testing.T) {
+	rootts := test.MakeTstateWithRealms(t)
+	ts1 := test.MakeRealmTstateClnt(rootts, sp.ROOTREALM)
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	nSchedd, err := sdc.Nschedd()
+	assert.Nil(ts1.T, err, "Error nschedd %v", err)
+	rs := benchmarks.MakeResults(1, benchmarks.E2E)
+	p := makeRealmPerf(ts1)
+	defer p.Done()
+	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(ts1.T, err, "Error mkdir %v", err)
+	// Start up the stat scraper procs.
+	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	spawnBurstProcs(ts1, ps)
+	waitStartProcs(ts1, ps)
+	// NOte start time
+	start := time.Now()
+	// Monitor CPU utilization via the stat scraper procs.
+	monitorK8sCPUUtilScraper(rootts, p)
+	for !k8sJobHasCompleted(K8S_JOB_NAME) {
+		time.Sleep(500 * time.Millisecond)
+	}
+	rs.Append(time.Since(start), 1)
+	printResultSummary(rs)
+	evictProcs(ts1, ps)
 	rootts.Shutdown()
 }

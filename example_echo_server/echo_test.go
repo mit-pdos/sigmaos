@@ -1,17 +1,17 @@
 package example_echo_server_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/rand"
-	dbg "sigmaos/debug"
-	echo "sigmaos/example_echo_server"
-	"sigmaos/protdevclnt"
-	"sigmaos/fslib"
-	"sigmaos/proc"
 	"github.com/stretchr/testify/assert"
 	"path"
+	dbg "sigmaos/debug"
+	echo "sigmaos/example_echo_server"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	"sigmaos/protdevclnt"
+	"sigmaos/rand"
+	"sigmaos/test"
 	"strconv"
+	"testing"
 )
 
 type TstateEcho struct {
@@ -33,7 +33,7 @@ func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
 	}
 	// Start proc
 	p := proc.MakeProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
-	p.SetNcore(proc.Tcore(1))
+	p.SetMcpu(proc.Tmcpu(1000))
 	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 		dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 		return nil, err
@@ -42,7 +42,7 @@ func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
 		dbg.DFatalf("Error spawn proc %v: %v", p, err)
 		return nil, err
 	}
-	tse.pid = p.GetPid() 
+	tse.pid = p.GetPid()
 	return tse, nil
 }
 

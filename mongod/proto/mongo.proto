@@ -15,6 +15,7 @@ service Mongo {
   rpc Upsert(MongoRequest) returns (MongoResponse);
   rpc Find(MongoRequest) returns (MongoResponse);
   rpc Drop(MongoConfigRequest) returns (MongoResponse);
+  rpc Remove(MongoConfigRequest) returns (MongoResponse);
   rpc Index(MongoConfigRequest) returns (MongoResponse);
 }
 

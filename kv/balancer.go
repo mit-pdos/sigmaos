@@ -44,7 +44,7 @@ type Balancer struct {
 	lc          *leaderclnt.LeaderClnt
 	mo          *Monitor
 	job         string
-	kvdncore    proc.Tcore
+	kvdmcpu     proc.Tmcpu
 	ch          chan bool
 	crash       int64
 	crashhelper string
@@ -65,7 +65,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashhelper, kvdncore string, auto string) {
+func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -78,11 +78,11 @@ func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 	bl.crashhelper = crashhelper
 	var kvdnc int
 	var error error
-	kvdnc, error = strconv.Atoi(kvdncore)
+	kvdnc, error = strconv.Atoi(kvdmcpu)
 	if error != nil {
-		db.DFatalf("Bad kvdncore: %v", error)
+		db.DFatalf("Bad kvdmcpu: %v", error)
 	}
-	bl.kvdncore = proc.Tcore(kvdnc)
+	bl.kvdmcpu = proc.Tmcpu(kvdnc)
 
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
 
@@ -133,7 +133,7 @@ func RunBalancer(job, crashhelper, kvdncore string, auto string) {
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.SigmaClnt, bl.job, bl.kvdncore)
+			bl.mo = MakeMonitor(bl.SigmaClnt, bl.job, bl.kvdmcpu)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}

@@ -1,7 +1,6 @@
 package imgresized
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -24,18 +23,18 @@ const (
 	IMG    = "name/img"
 	STOP   = "_STOP"
 	NCOORD = 1
-	NCORE  = 1
 )
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
-	job       string
-	done      string
-	wip       string
-	todo      string
-	isDone    bool
-	crash     int
-	electclnt *electclnt.ElectClnt
+	job        string
+	done       string
+	wip        string
+	todo       string
+	workerMcpu proc.Tmcpu
+	isDone     bool
+	crash      int
+	electclnt  *electclnt.ElectClnt
 }
 
 func MkDirs(fsl *fslib.FsLib, job string) error {
@@ -87,8 +86,8 @@ func Cleanup(fsl *fslib.FsLib, dir string) error {
 }
 
 func MakeImgd(args []string) (*ImgSrv, error) {
-	if len(args) != 2 {
-		return nil, errors.New("MakeImgSrv: wrong number of arguments")
+	if len(args) != 3 {
+		return nil, fmt.Errorf("MakeImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
 	imgd.job = args[0]
@@ -101,12 +100,17 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	imgd.job = args[0]
 	crashing, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeImgSrv: crash %v isn't int", args[5])
+		return nil, fmt.Errorf("MakeImgSrv: error parse crash %v", err)
 	}
 	imgd.crash = crashing
 	imgd.done = path.Join(IMG, imgd.job, "done")
 	imgd.todo = path.Join(IMG, imgd.job, "todo")
 	imgd.wip = path.Join(IMG, imgd.job, "wip")
+	mcpu, err := strconv.Atoi(args[2])
+	if err != nil {
+		return nil, fmt.Errorf("MakeImgSrv: Error parse MCPU %v", err)
+	}
+	imgd.workerMcpu = proc.Tmcpu(mcpu)
 
 	imgd.Started()
 
@@ -177,7 +181,7 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 		if imgd.crash > 0 {
 			procs[i].AppendEnv("SIGMACRASH", strconv.Itoa(imgd.crash))
 		}
-		procs[i].SetNcore(NCORE)
+		procs[i].SetMcpu(imgd.workerMcpu)
 		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
 	}
 	start := time.Now()

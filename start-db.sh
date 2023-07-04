@@ -17,6 +17,7 @@ usage() {
 }
 
 PORT=4406  # use non-default port number on host
+MONGO_PORT=4407
 
 docker pull mariadb:10.4
 if ! docker ps | grep -q sigmadb; then
@@ -48,6 +49,8 @@ CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
 CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'192.168.%.%';
+CREATE USER 'sigma1'@'10.10.%.%' IDENTIFIED BY 'sigmaos1';
+GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'10.10.%.%';
 FLUSH PRIVILEGES;
 SET GLOBAL max_connections = 100000;
 ENDOFSQL
@@ -56,7 +59,7 @@ fi
 docker pull mongo:4.4.6
 if ! docker ps | grep -q sigmamongo; then
     echo "start mongodb"
-    docker run --name sigmamongo -d mongo:4.4.6
+    docker run --name sigmamongo -p $MONGO_PORT:27017 -d mongo:4.4.6
 fi
 
 until [ "`docker inspect -f {{.State.Running}} sigmamongo`"=="true" ]; do

@@ -19,6 +19,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	IMG_RESIZE_MCPU proc.Tmcpu = 100
+)
+
 func TestResizeImg(t *testing.T) {
 	fn := "/tmp/thumb.jpeg"
 
@@ -93,7 +97,7 @@ func TestImgdOne(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU)
 
 	ts.WaitDone(1)
 
@@ -111,7 +115,7 @@ func TestImgdMany(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
 	assert.Nil(t, err)

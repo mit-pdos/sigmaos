@@ -63,12 +63,22 @@ id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
 key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
 
 for vm in $vms; do
+  # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
-    sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
-#    sudo kubeadm init --config ~/kubelet.yaml 2>&1 | tee /tmp/start.out
+    if [[ "${SWAP}" == "true" ]]; then
+      echo "Swap is on, copying config"
+      cp ~/ulambda/aws/yaml/k8s-cluster-config-swap.yaml /tmp/kubelet.yaml
+      sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
+      sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
+    else
+#      cp ~/ulambda/cloudlab/yaml/k8s-cluster-config-epleg.yaml /tmp/kubelet.yaml
+#      sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
+#      sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
+      sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
+    fi
     mkdir -p ~/.kube
     yes | sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
     sudo chown 1000:1000 ~/.kube/config

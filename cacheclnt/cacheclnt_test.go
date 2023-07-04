@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CACHE_NCORE = 2
+	CACHE_MCPU = 2000
 )
 
 type Tstate struct {
@@ -36,7 +36,7 @@ func mkTstate(t *testing.T, n int) *Tstate {
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
 	ts.Remove(cacheclnt.CACHE)
-	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tcore(CACHE_NCORE), true, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
@@ -56,8 +56,8 @@ func (ts *Tstate) stop() {
 	ts.cm.Stop()
 }
 
-func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, ncore proc.Tcore) {
-	pid, err := cacheclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, ncore)
+func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, mcpu proc.Tmcpu) {
+	pid, err := cacheclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, mcpu)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 	ts.clrks = append(ts.clrks, pid)
 }

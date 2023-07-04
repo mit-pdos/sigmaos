@@ -17,12 +17,12 @@ type ClerkMgr struct {
 	job     string
 	sempath string
 	sem     *semclnt.SemClnt
-	ckncore proc.Tcore // Number of exclusive cores allocated to each clerk.
+	ckmcpu  proc.Tmcpu // Number of exclusive cores allocated to each clerk.
 	clrks   []proc.Tpid
 }
 
-func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, ncore proc.Tcore) (*ClerkMgr, error) {
-	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckncore: ncore}
+func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu) (*ClerkMgr, error) {
+	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu}
 	clrk := MakeClerkFslOnly(cm.SigmaClnt.FsLib, cm.job)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")
@@ -70,7 +70,7 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 		}
 	} else {
 		for ; nclerk > 0; nclerk-- {
-			ck, err := cm.startClerk(dur, cm.ckncore)
+			ck, err := cm.startClerk(dur, cm.ckmcpu)
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func (cm *ClerkMgr) WaitForClerks() error {
 	return nil
 }
 
-func (cm *ClerkMgr) startClerk(dur string, ncore proc.Tcore) (proc.Tpid, error) {
+func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (proc.Tpid, error) {
 	idx := len(cm.clrks)
 	var args []string
 	if dur != "" {
@@ -114,7 +114,7 @@ func (cm *ClerkMgr) startClerk(dur string, ncore proc.Tcore) (proc.Tpid, error) 
 	}
 	args = append([]string{cm.job}, args...)
 	p := proc.MakeProc("kv-clerk", args)
-	p.SetNcore(ncore)
+	p.SetMcpu(mcpu)
 	// SpawnBurst to spread clerks across procds.
 	_, errs := cm.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	cacheNcore     = 2
+	cacheMcpu      = 2000
 	HTTP_ADDRS     = "http-addr"
 	N_RPC_SESSIONS = 10
 )
@@ -21,7 +21,7 @@ const (
 type Srv struct {
 	Name   string
 	Public bool
-	Ncore  proc.Tcore
+	Mcpu   proc.Tmcpu
 }
 
 func JobHTTPAddrsPath(job string) string {
@@ -81,7 +81,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	var cm *cacheclnt.CacheMgr
 	if nshard > 0 {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
-		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tcore(cacheNcore), gc, public)
+		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tmcpu(cacheMcpu), gc, public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err
@@ -97,7 +97,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	pids := make([]proc.Tpid, 0, len(srvs))
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
-		p.SetNcore(srv.Ncore)
+		p.SetMcpu(srv.Mcpu)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err

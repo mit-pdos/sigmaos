@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"image/jpeg"
 	"math/rand"
 	"os"
@@ -28,8 +27,7 @@ const N_ITER = 1
 func main() {
 	t, err := MakeTrans(os.Args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
-		os.Exit(1)
+		db.DFatalf("Error %v", err)
 	}
 
 	p, err := perf.MakePerf(perf.THUMBNAIL)

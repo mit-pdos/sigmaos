@@ -14,6 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/socialnetwork/proto"
 	"sync"
+	"time"
 )
 
 // YH:
@@ -31,6 +32,9 @@ type UserSrv struct {
 	cachec *cacheclnt.CacheClnt
 	sid    int32 // sid is a random number between 0 and 2^30
 	ucount int32 //This server may overflow with over 2^31 users
+	dbCounter    *Counter
+	cacheCounter *Counter
+	loginCounter *Counter
 }
 
 func RunUserSrv(public bool, jobname string) error {
@@ -45,7 +49,7 @@ func RunUserSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"userid"})
+	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
 	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
@@ -58,6 +62,9 @@ func RunUserSrv(public bool, jobname string) error {
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}
+	usrv.dbCounter = MakeCounter("DB")
+	usrv.cacheCounter = MakeCounter("Cache")
+	usrv.loginCounter = MakeCounter("Login")
 	defer perf.Done()
 	return pds.RunServer()
 }
@@ -126,6 +133,7 @@ func (usrv *UserSrv) getNextUserId() int64 {
 }
 
 func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserResponse) error {
+	t0 := time.Now()
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v: %v\n", usrv.sid, req)
 	res.Ok = "Login Failure."
 	user, err := usrv.getUserbyUname(req.Username)
@@ -136,6 +144,7 @@ func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserR
 		res.Ok = USER_QUERY_OK
 		res.Userid = user.Userid
 	}
+	usrv.loginCounter.AddTimeSince(t0)
 	return nil
 }
 
@@ -151,12 +160,17 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	key := USER_CACHE_PREFIX + username
 	user := &User{}
 	cacheItem := &proto.CacheItem{}
-	if err := usrv.cachec.Get(key, cacheItem); err != nil {
+	t0 := time.Now()
+	err := usrv.cachec.Get(key, cacheItem) 
+	usrv.cacheCounter.AddTimeSince(t0)
+	if err != nil {
 		if !usrv.cachec.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User %v cache miss\n", key)
+		t1 := time.Now()
 		found, err := usrv.mongoc.FindOne(SN_DB, USER_COL, bson.M{"username": username}, user)
+		usrv.dbCounter.AddTimeSince(t1)
 		if err != nil {
 			return nil, err
 		} 

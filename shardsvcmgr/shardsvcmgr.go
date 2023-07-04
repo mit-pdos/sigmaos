@@ -22,7 +22,7 @@ type ShardMgr struct {
 	bin    string
 	shards []proc.Tpid
 	nshard int
-	ncore  proc.Tcore
+	mcpu   proc.Tmcpu
 	pn     string
 	gc     bool
 	public bool
@@ -35,7 +35,7 @@ func (sm *ShardMgr) addShard(i int) error {
 	if !sm.gc {
 		p.AppendEnv("GOGC", "off")
 	}
-	p.SetNcore(sm.ncore)
+	p.SetMcpu(sm.mcpu)
 	_, errs := sm.SpawnBurst([]*proc.Proc{p}, 2)
 	if len(errs) > 0 {
 		return errs[0]
@@ -47,7 +47,7 @@ func (sm *ShardMgr) addShard(i int) error {
 	return nil
 }
 
-func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, ncore proc.Tcore, job, bin, pn string, gc, public bool) (*ShardMgr, error) {
+func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*ShardMgr, error) {
 	sc.MkDir(pn, 0777)
 	if _, err := sc.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
@@ -59,7 +59,7 @@ func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, ncore proc.Tcore, job, bin, pn s
 		bin:       bin,
 		shards:    make([]proc.Tpid, 0),
 		nshard:    n,
-		ncore:     ncore,
+		mcpu:      mcpu,
 		pn:        pn,
 		gc:        gc,
 		public:    public,

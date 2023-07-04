@@ -17,9 +17,9 @@ type CacheMgr struct {
 	job string
 }
 
-func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, n int, ncore proc.Tcore, gc, public bool) (*CacheMgr, error) {
+func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, n int, mcpu proc.Tmcpu, gc, public bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := shardsvcmgr.MkShardMgr(sc, n, ncore, job, "cached", CACHE, gc, public)
+	sm, err := shardsvcmgr.MkShardMgr(sc, n, mcpu, job, "cached", CACHE, gc, public)
 	if err != nil {
 		return nil, err
 	}

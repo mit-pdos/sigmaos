@@ -29,7 +29,7 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 	switch p.GetType() {
 	case proc.T_LC:
 		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
-		updm.setShare(pdc, pdc.share+coresToShare(p.GetNcore()))
+		updm.setShare(pdc, pdc.share+mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		updm.balanceBEShares()
 	default:
@@ -45,7 +45,7 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 	switch p.GetType() {
 	case proc.T_LC:
 		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
-		updm.setShare(pdc, pdc.share-coresToShare(p.GetNcore()))
+		updm.setShare(pdc, pdc.share-mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		// No need to readjust share.
 	default:
@@ -93,6 +93,6 @@ func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
 	db.DPrintf(db.UPROCDMGR, "Set CPU share %v to %v", pdc, share)
 }
 
-func coresToShare(cores proc.Tcore) Tshare {
-	return Tshare(cores) * SHARE_PER_CORE
+func mcpuToShare(mcpu proc.Tmcpu) Tshare {
+	return (SHARE_PER_CORE * Tshare(mcpu)) / 1000
 }

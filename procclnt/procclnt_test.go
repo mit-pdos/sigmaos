@@ -34,13 +34,13 @@ func schedd(ts *test.Tstate) string {
 }
 
 func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
-	return spawnSpinnerNcore(ts, 0)
+	return spawnSpinnerMcpu(ts, 0)
 }
 
-func spawnSpinnerNcore(ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
+func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "spinner", []string{"name/"})
-	a.SetNcore(ncore)
+	a.SetMcpu(mcpu)
 	err := ts.Spawn(a)
 	assert.Nil(ts.T, err, "Spawn")
 	return pid
@@ -50,7 +50,7 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
 		p := proc.MakeProc("spinner", []string{"name/"})
-		p.SetNcore(1)
+		p.SetMcpu(1000)
 		ps = append(ps, p)
 	}
 	failed, errs := ts.SpawnBurst(ps, 1)
@@ -59,7 +59,7 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
-	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
+	spawnSleeperMcpu(t, ts, pid, 0, SLEEP_MSECS)
 }
 
 func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
@@ -68,9 +68,9 @@ func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 	return pid
 }
 
-func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
+func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid proc.Tpid, mcpu proc.Tmcpu, msecs int) {
 	a := proc.MakeProcPid(pid, "sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
-	a.SetNcore(ncore)
+	a.SetMcpu(mcpu)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }
@@ -541,12 +541,12 @@ func TestReserveCores(t *testing.T) {
 
 	start := time.Now()
 	pid := proc.Tpid("sleeper-aaaaaaa")
-	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(1000*linuxsched.NCores), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
 	pid1 := proc.Tpid("sleeper-bbbbbb")
-	spawnSleeperNcore(t, ts, pid1, 1, SLEEP_MSECS)
+	spawnSleeperMcpu(t, ts, pid1, 1000, SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
@@ -576,8 +576,8 @@ func TestWorkStealing(t *testing.T) {
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node %v", err)
 
-	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
-	pid1 := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores))
+	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
+	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
 
 	err = ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart")
@@ -680,7 +680,7 @@ func TestSpawnCrashSchedd(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Spawn a proc which can't possibly be run by any procd.
-	pid := spawnSpinnerNcore(ts, proc.Tcore(linuxsched.NCores*2))
+	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores*2))
 
 	err := ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "KillOne: %v", err)

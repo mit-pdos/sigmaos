@@ -154,6 +154,7 @@ const (
 	GROUP                   = "GROUP"
 	GROUP_ERR               = GROUP + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
+	K8S_UTIL                = "K8S_UTIL"
 )
 
 // Server Libraries

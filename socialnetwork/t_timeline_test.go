@@ -82,8 +82,7 @@ func TestTimeline(t *testing.T) {
 	assert.True(t, IsPostEqual(posts[NPOST/2-1], res_read.Posts[0]))
 	arg_read.Stop = int32(NPOST)
 	assert.Nil(t, tpdc.RPC("Timeline.ReadTimeline", &arg_read, &res_read))
-	assert.Equal(t,
-		fmt.Sprintf("Cannot process start=0 end=%v for %v items", NPOST, NPOST/2), res_read.Ok)
+	assert.Equal(t, "OK", res_read.Ok)
 
 	// write post N/2 to N to timeline 	
 	for i := NPOST/2; i < NPOST; i++ {

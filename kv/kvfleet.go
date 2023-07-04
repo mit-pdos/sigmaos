@@ -51,7 +51,7 @@ type KVFleet struct {
 	*sigmaclnt.SigmaClnt
 	nkvd        int        // Number of kvd groups to run the test with.
 	kvdrepl     int        // kvd replication level
-	kvdncore    proc.Tcore // Number of exclusive cores allocated to each kvd.
+	kvdmcpu     proc.Tmcpu // Number of exclusive cores allocated to each kvd.
 	ck          *KvClerk   // A clerk which can be used for initialization.
 	crashhelper string     // Crash balancer helper/mover?
 	auto        string     // Balancer auto-balancing setting.
@@ -62,12 +62,12 @@ type KVFleet struct {
 	cpids       []proc.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdncore proc.Tcore, crashhelper, auto string) (*KVFleet, error) {
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{}
 	kvf.SigmaClnt = sc
 	kvf.nkvd = nkvd
 	kvf.kvdrepl = kvdrepl
-	kvf.kvdncore = kvdncore
+	kvf.kvdmcpu = kvdmcpu
 	kvf.job = job
 	kvf.crashhelper = crashhelper
 	kvf.auto = auto
@@ -93,7 +93,7 @@ func (kvf *KVFleet) Nkvd() int {
 }
 
 func (kvf *KVFleet) Start() error {
-	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdncore, kvf.crashhelper, kvf.auto)
+	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdmcpu, kvf.crashhelper, kvf.auto)
 	for i := 0; i < kvf.nkvd; i++ {
 		if err := kvf.AddKVDGroup(); err != nil {
 			return err
@@ -106,7 +106,7 @@ func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
 	grp := GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdncore, kvf.kvdrepl, 0)
+	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdmcpu, kvf.kvdrepl, 0)
 	if err != nil {
 		return err
 	}
@@ -151,14 +151,14 @@ func (kvf *KVFleet) Stop() error {
 	return nil
 }
 
-func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdncore proc.Tcore, crashhelper, auto string) *groupmgr.GroupMgr {
-	kvdnc := strconv.Itoa(int(kvdncore))
+func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto string) *groupmgr.GroupMgr {
+	kvdnc := strconv.Itoa(int(kvdmcpu))
 	gm := groupmgr.Start(sc, nbal, "balancer", []string{crashhelper, kvdnc, auto}, job, 0, nbal, crashbal, 0, 0)
 	return gm
 }
 
-func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, ncore proc.Tcore, repl, ncrash int) (*groupmgr.GroupMgr, error) {
-	gm := groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(job), ncore, ncrash, CRASHKVD, 0, 0)
+func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, ncrash int) (*groupmgr.GroupMgr, error) {
+	gm := groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(job), mcpu, ncrash, CRASHKVD, 0, 0)
 	_, err := group.WaitStarted(sc.FsLib, JobDir(job), grp)
 	if err != nil {
 		return nil, err

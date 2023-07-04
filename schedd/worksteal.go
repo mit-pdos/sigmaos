@@ -72,7 +72,7 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 		db.DPrintf(db.SCHEDD, "Waking %v worker procs to steal from %v", len(stealable), qtype)
 		for r, q := range stealable {
 			if _, ok := sd.qs[r]; !ok {
-				sd.qs[r] = makeQueue()
+				sd.addRealmQueueL(r)
 			}
 			switch qtype {
 			case proc.T_LC:

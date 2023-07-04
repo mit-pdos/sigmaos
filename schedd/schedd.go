@@ -55,8 +55,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	p.KernelId = sd.kernelId
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
-		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
-		sd.realms = append(sd.realms, sp.Trealm(req.Realm))
+		sd.addRealmQueueL(sp.Trealm(req.REealm))
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
@@ -173,6 +172,11 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 			return false
 		}
 	}
+}
+
+func (sd *Schedd) addRealmQueueL(realm sp.Trealm) {
+	sd.qs[realm] = makeQueue()
+	sd.realms = append(sd.realms, realm)
 }
 
 func RunSchedd(kernelId string) error {

@@ -4,7 +4,6 @@ import (
 	"path"
 	"strconv"
 
-	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
@@ -160,11 +159,10 @@ func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvd
 
 func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, ncore proc.Tcore, repl, ncrash int) (*groupmgr.GroupMgr, error) {
 	gm := groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(job), ncore, ncrash, CRASHKVD, 0, 0)
-	cfg, err := group.WaitStarted(sc.FsLib, JobDir(job), grp)
+	_, err := group.WaitStarted(sc.FsLib, JobDir(job), grp)
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "spawnGrp %v cfg %v\n", grp, cfg)
 	return gm, nil
 }
 

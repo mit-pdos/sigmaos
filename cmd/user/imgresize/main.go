@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"image/jpeg"
 	"math/rand"
 	"os"
@@ -61,7 +61,7 @@ type Trans struct {
 
 func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
-		return nil, errors.New("MakeReader: too few arguments")
+		return nil, fmt.Errorf("MakeTrans: too few arguments: %v", args)
 	}
 	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", proc.GetPid(), args)
 	t := &Trans{}

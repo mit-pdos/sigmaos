@@ -39,6 +39,7 @@ MAIN="${vma[0]}"
 MAIN_PRIVADDR="${vma_privaddr[0]}"
 
 for vm in $vms; do
+  echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
     sudo systemctl start docker

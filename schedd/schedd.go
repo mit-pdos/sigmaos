@@ -127,11 +127,15 @@ func (sd *Schedd) schedule() {
 	for {
 		var ok bool
 		// Iterate through the realms round-robin.
-
 		for _, ptype := range priority {
 			for r, q := range sd.qs {
 				// Try to schedule a proc from realm r.
 				ok = ok || sd.tryScheduleRealmL(r, q, ptype)
+			}
+			// If a proc was successfully scheduled, don't try to schedule a proc
+			// from a lower priority class. Instead, rerun the whole scheduling loop.
+			if ok {
+				break
 			}
 		}
 		// If unable to schedule a proc from any realm, wait.

@@ -55,7 +55,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	p.KernelId = sd.kernelId
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
-		sd.addRealmQueueL(sp.Trealm(req.REealm))
+		sd.addRealmQueueL(sp.Trealm(req.Realm))
 	}
 	// Enqueue the proc according to its realm
 	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)

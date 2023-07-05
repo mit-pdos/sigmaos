@@ -152,6 +152,8 @@ type Tresult struct {
 }
 
 func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, t task) {
+	imgd.WaitStart(p.GetPid())
+	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := imgd.WaitExit(p.GetPid())
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {

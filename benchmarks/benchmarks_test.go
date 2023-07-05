@@ -199,7 +199,7 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
-	ps, _ := makeNProcs(1, "spinner", []string{OUT_DIR}, nil, proc.Tmcpu(MCPU))
+	ps, _ := makeNProcs(N_TRIALS, "spinner", []string{OUT_DIR}, nil, proc.Tmcpu(MCPU))
 	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
 	printResultSummary(rs)
 	rmOutDir(ts1)

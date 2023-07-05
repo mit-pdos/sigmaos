@@ -54,12 +54,12 @@ func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (s
 	return sessp.Tsize(len(b)), nil
 }
 
-func (nd *Named) CreateElectionInfo(pn string) error {
+func (nd *Named) CreateElectionFile(pn string) error {
 	db.DPrintf(db.NAMED, "CreateElectionInfo %v\n", pn)
 	if err := nd.MkDir(path.Join(sp.NAME, path.Dir(pn)), 0777); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo MkDir %v err %v\n", path.Dir(pn), err)
 	}
-	fd, err := nd.Create(path.Join(sp.NAME, pn), 0777|sp.DMDEVICE, sp.OWRITE)
+	fd, err := nd.Create(path.Join(sp.NAME, pn), 0777|sp.DMDEVICE|sp.DMTMP, sp.OWRITE)
 	if err != nil {
 		return err
 	}

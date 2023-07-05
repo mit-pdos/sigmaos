@@ -79,6 +79,10 @@ func Run(args []string) error {
 
 	nd.getRoot(pn)
 
+	if err := nd.CreateElectionFile(nd.elect.Key()); err != nil {
+		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
+	}
+
 	if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}

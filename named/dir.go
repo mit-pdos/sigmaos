@@ -33,6 +33,8 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {
 			o = makeDir(obj)
+		} else if obj.di.Perm.IsDevice() {
+			o = makeDev(obj)
 		} else {
 			o = makeFile(obj)
 		}
@@ -60,6 +62,8 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	obj := makeObjDi(d.fs, pn, di, d.Obj.di.Path)
 	if obj.di.Perm.IsDir() {
 		return makeDir(obj), nil
+	} else if obj.di.Perm.IsDevice() {
+		return makeDev(obj), nil
 	} else {
 		return makeFile(obj), nil
 	}

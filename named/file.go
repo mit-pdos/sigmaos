@@ -36,7 +36,7 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 
 // XXX maybe do get
 func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
-	db.DPrintf(db.NAMED, "%v: Read: %v off %v cnt %v\n", ctx, f, offset, n)
+	db.DPrintf(db.NAMED, "%v: FileRead: %v off %v cnt %v\n", ctx, f, offset, n)
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {

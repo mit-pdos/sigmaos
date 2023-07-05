@@ -41,6 +41,6 @@ func (nd *Named) startLeader() error {
 	}
 	nd.SessSrv = srv
 
-	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, srv.MyAddr())
+	db.DPrintf(db.NAMED, "leader %v %v %v\n", nd.realm, srv.MyAddr(), nd.elect.Key())
 	return nil
 }

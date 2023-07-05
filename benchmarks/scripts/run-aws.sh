@@ -833,9 +833,9 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=200
+  n_imgresize=400
   n_vm=2
-  mcpu=1000
+  mcpu=250
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -1144,9 +1144,10 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 img_resize
 k8s_img_resize
+realm_balance_multi
+
 #hotel_tail_multi
 #realm_balance_be
-realm_balance_multi
 #k8s_balance_multi
 #k8s_balance_be
 # XXX Try above next
@@ -1166,9 +1167,10 @@ realm_balance_multi
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 graph_img_resize
+graph_realm_balance_multi
+
 #graph_realm_balance_be
 #graph_k8s_balance_be
-graph_realm_balance_multi
 #graph_k8s_balance_multi
 #graph_k8s_hotel_tail_tpt_over_time
 

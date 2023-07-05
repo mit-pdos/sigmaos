@@ -52,6 +52,7 @@ func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	for i := 0; i < ji.ntasks; i++ {
 		err := imgresized.SubmitTask(ji.SigmaClnt.FsLib, ji.job, fn)
 		assert.Nil(ji.T, err, "Error SubmitTask: %v", err)
+		time.Sleep(SLEEP)
 	}
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }

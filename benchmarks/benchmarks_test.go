@@ -104,7 +104,7 @@ func init() {
 	flag.IntVar(&WWWD_MCPU, "wwwd_mcpu", 2000, "WWWD mCPU")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
-	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
+	flag.DurationVar(&SLEEP, "sleep", 0*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_MCPU, "hotel_cache_mcpu", 2000, "Hotel cache mcpu")
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")

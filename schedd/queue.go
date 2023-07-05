@@ -3,9 +3,11 @@ package schedd
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -95,6 +97,33 @@ func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
 		return p, true
 	}
 	return nil, false
+}
+
+func (q *Queue) SetWSQueue(qtype proc.Ttype, newQ []*proc.Proc) {
+	q.Lock()
+	defer q.Unlock()
+	switch qtype {
+	case proc.T_LC:
+		q.lcws = newQ
+	case proc.T_BE:
+		q.bews = newQ
+	default:
+		db.DFatalf("Unrecognized queue type: %v", qtype)
+	}
+}
+
+func (q *Queue) GetStealableProcs(stealable map[proc.Tpid]*proc.Proc) {
+	q.Lock()
+	defer q.Unlock()
+
+	// Iterate the procs in each realm's queue.
+	for _, p := range q.pmap {
+		// If this proc has not been spawned for a long time, prepare to offer
+		// it as stealable.
+		if time.Since(p.GetSpawnTime()) >= sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT {
+			stealable[p.GetPid()] = p
+		}
+	}
 }
 
 // Remove the first proc that fits the maxmcpu & maxmem resource constraints,

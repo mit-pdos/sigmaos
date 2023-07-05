@@ -70,18 +70,13 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 		// Store the queue of stealable procs for worker threads to read.
 		sd.mu.Lock()
 		db.DPrintf(db.SCHEDD, "Waking %v worker procs to steal from %v", len(stealable), qtype)
-		for r, q := range stealable {
-			if _, ok := sd.qs[r]; !ok {
-				sd.addRealmQueueL(r)
+		for r, newQ := range stealable {
+			q, ok := sd.getQueue(r)
+			if !ok {
+				q = sd.addRealmQueueL(r)
 			}
-			switch qtype {
-			case proc.T_LC:
-				sd.qs[r].lcws = q
-			case proc.T_BE:
-				sd.qs[r].bews = q
-			default:
-				db.DFatalf("Unrecognized queue type: %v", qtype)
-			}
+			// Set the WS queue to the newly found stealable procs.
+			q.SetWSQueue(qtype, newQ)
 		}
 		// TODO: don't wake up if stealable procs aren't new?
 		// Wake up scheduler thread.
@@ -100,16 +95,11 @@ func (sd *Schedd) offerStealableProcs() {
 		// Wait for a bit.
 		time.Sleep(sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT)
 		sd.mu.Lock()
+		sd.qsmu.RLock()
 		for _, q := range sd.qs {
-			// Iterate the procs in each realm's queue.
-			for _, p := range q.pmap {
-				// If this proc has not been spawned for a long time, prepare to offer
-				// it as stealable.
-				if time.Since(p.GetSpawnTime()) >= sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT {
-					toOffer[p.GetPid()] = p
-				}
-			}
+			q.GetStealableProcs(toOffer)
 		}
+		sd.qsmu.RUnlock()
 		sd.mu.Unlock()
 		for pid, _ := range alreadyOffered {
 			// If this proc is no longer in the queue (it is not offerable), then

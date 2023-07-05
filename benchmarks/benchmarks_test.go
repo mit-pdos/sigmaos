@@ -25,7 +25,7 @@ import (
 
 const (
 	REALM_BASENAME sp.Trealm = "benchrealm"
-	REALM1                   = REALM_BASENAME + "1"
+	REALM1                   = 
 	REALM2                   = REALM_BASENAME + "2"
 
 	MR_K8S_INIT_PORT int = 32585
@@ -87,6 +87,8 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
+	flag.StringVar(&REALM1, "realm1", REALM_BASENAME + "1", "Realm 1 ID")
+	flag.StringVar(&REALM2, "realm2", REALM_BASENAME + "2", "Realm 2 ID")
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
@@ -199,8 +201,8 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
-	ps, _ := makeNProcs(N_TRIALS, "spinner", []string{OUT_DIR}, nil, proc.Tmcpu(MCPU))
-	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
+	_, ps := makeNProcs(N_TRIALS, "sleeper", []string{"10000us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
+	runOps(ts1, ps, spawnWaitStartProcs, rs)
 	printResultSummary(rs)
 	rmOutDir(ts1)
 	rootts.Shutdown()

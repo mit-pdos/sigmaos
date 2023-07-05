@@ -25,13 +25,14 @@ import (
 
 const (
 	REALM_BASENAME sp.Trealm = "benchrealm"
-	REALM1                   = 
-	REALM2                   = REALM_BASENAME + "2"
 
 	MR_K8S_INIT_PORT int = 32585
 
 	HOSTTMP string = "/tmp/"
 )
+
+var REALM1 string
+var REALM2 string
 
 // Parameters
 var N_TRIALS int
@@ -87,8 +88,8 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
-	flag.StringVar(&REALM1, "realm1", REALM_BASENAME + "1", "Realm 1 ID")
-	flag.StringVar(&REALM2, "realm2", REALM_BASENAME + "2", "Realm 2 ID")
+	flag.StringVar(&REALM1, "realm1", REALM_BASENAME+"1", "Realm 1 ID")
+	flag.StringVar(&REALM2, "realm2", REALM_BASENAME+"2", "Realm 2 ID")
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")

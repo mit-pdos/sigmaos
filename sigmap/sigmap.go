@@ -22,6 +22,8 @@ type Tgid uint32
 type Trealm string
 type Tuname string
 type TclntId uint64
+type TleaseId uint64
+type Tttl uint64
 
 const ROOTREALM Trealm = "rootrealm"
 
@@ -40,8 +42,10 @@ func (fid Tfid) String() string {
 // field, that indicates that the client does not wish to authenticate
 // this session.
 const NoFid Tfid = ^Tfid(0)
+
 const NoOffset Toffset = ^Toffset(0)
 const NoClntId TclntId = ^TclntId(0)
+const NoLeaseId TleaseId = ^TleaseId(0)
 
 // If need more than MaxGetSet, use Open/Read/Close interface
 const MAXGETSET sessp.Tsize = 1_000_000

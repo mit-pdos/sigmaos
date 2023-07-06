@@ -45,7 +45,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	sid := ctx.SessionId()
 	n := sessdev.SidName(sid.String(), c.fn)
 	db.DPrintf(db.CLONEDEV, "%v: Clone create %v\n", proc.GetName(), n)
-	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR)
+	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
 		db.DPrintf(db.CLONEDEV, "%v: MkDir %v err %v\n", proc.GetName(), n, err)
 		return nil, err

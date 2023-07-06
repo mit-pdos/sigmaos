@@ -144,7 +144,7 @@ func RunFrontendSrv(public bool, job string) error {
 		}
 		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v jaegerip %v", a, proc.GetSigmaJaegerIP())
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
-		if err = frontend.MountService(JobHTTPAddrsPath(job), mnt); err != nil {
+		if err = frontend.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			dbg.DFatalf("MountService %v", err)
 		}
 	}

@@ -18,7 +18,13 @@ func (nd *Named) startLeader() error {
 	nd.fs = fs
 	fn := fmt.Sprintf("named-election-%s", nd.realm)
 
-	nd.elect, err = leaderetcd.MkElection(nd.fs.Client, fn)
+	sess, err := fs.NewSession()
+	if err != nil {
+		return err
+	}
+	nd.sess = sess
+
+	nd.elect, err = leaderetcd.MkElection(nd.sess, fn)
 	if err != nil {
 		return err
 	}

@@ -249,15 +249,15 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, 
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
+func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	name := fn.Base()
 	if name == "." {
 		return nil, nil, serr.MkErr(serr.TErrInval, name)
 	}
 	for {
 		flk := ps.plt.Acquire(ctx, fn)
-		o1, err := d.Create(ctx, name, perm, mode)
-		db.DPrintf(db.PROTSRV, "%v: Create %v %v %v ephemeral %v %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid)
+		o1, err := d.Create(ctx, name, perm, mode, lid)
+		db.DPrintf(db.PROTSRV, "%v: Create %v %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
 		if err == nil {
 			ps.wt.WakeupWatch(dlk)
 			return o1, flk, nil
@@ -292,7 +292,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	dlk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
 	defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
-	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode())
+	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -636,7 +636,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		db.DPrintf(db.PROTSRV, "%v: PutFile try to create %v", f.Pobj().Ctx().Uname(), fn)
 		// try to create file, which will fail it exists
 		dir := lo.(fs.Dir)
-		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode())
+		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId())
 		if err != nil {
 			if err.Code() != serr.TErrExists {
 				return sp.MkRerror(err)

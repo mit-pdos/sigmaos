@@ -203,7 +203,7 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 	}
 	mnt := sp.MkMountService(srvAddrs)
 	db.DPrintf(db.GROUP, "Advertise %v/%v at %v", mnt, srvAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt); err != nil {
+	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }

@@ -17,7 +17,7 @@ import (
 
 // Post a proc file in the local queue.
 func (mgr *ProcMgr) postProcInQueue(p *proc.Proc) {
-	if _, err := mgr.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE); err != nil {
+	if _, err := mgr.mfs.Create(path.Join(sp.QUEUE, p.GetPid().String()), 0777, sp.OWRITE, sp.NoLeaseId); err != nil {
 		db.DFatalf("Error create %v: %v", p.GetPid(), err)
 	}
 }

@@ -26,6 +26,7 @@ type Named struct {
 	job   string
 	realm sp.Trealm
 	crash int
+	sess  *fsetcd.Session
 }
 
 func Run(args []string) error {
@@ -58,7 +59,6 @@ func Run(args []string) error {
 		return err
 	}
 	defer nd.fs.Close()
-
 	mnt := sp.MkMountServer(nd.MyAddr())
 
 	pn := sp.NAMED
@@ -70,8 +70,8 @@ func Run(args []string) error {
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "mount %v at %v\n", nd.realm, pn)
-		if err := nd.MkMountSymlink(pn, mnt); err != nil {
+		db.DPrintf(db.ALWAYS, "MkMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		if err := nd.MkMountSymlink(pn, mnt, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "mount %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}

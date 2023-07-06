@@ -35,7 +35,7 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		if err := sc.MkMountSymlink(path, mnt); err != nil {
+		if err := sc.MkMountSymlink(path, mnt, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
 	}

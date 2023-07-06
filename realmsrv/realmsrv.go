@@ -46,7 +46,7 @@ func RunRealmSrv() error {
 	if err != nil {
 		return err
 	}
-	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD)
+	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
 	if serr != nil {
 		return serr
 	}
@@ -108,7 +108,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.Tmount{Addr: rm.sc.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MountService(pn, mnt); err != nil {
+		if err := sc.MountService(pn, mnt, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
 			return err
 		}

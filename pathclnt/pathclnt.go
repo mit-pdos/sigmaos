@@ -169,8 +169,8 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, error) {
-	db.DPrintf(db.PATHCLNT, "Create %v perm %v\n", p, perm)
+func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, error) {
+	db.DPrintf(db.PATHCLNT, "Create %v perm %v lid %v\n", p, perm, lid)
 	path := path.Split(p)
 	dir := path.Dir()
 	base := path.Base()
@@ -179,7 +179,7 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
 		return sp.NoFid, err
 	}
-	fid, err = pathc.FidClnt.Create(fid, base, perm, mode)
+	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
 		return sp.NoFid, err
@@ -387,8 +387,8 @@ func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset) (sessp.Tsize, error) {
-	db.DPrintf(db.PATHCLNT, "PutFile %v %v\n", pn, mode)
+func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sessp.Tsize, error) {
+	db.DPrintf(db.PATHCLNT, "PutFile %v %v %v\n", pn, mode, lid)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
@@ -397,7 +397,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink or if server is unreachable.
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn))
+	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid)
 	if err != nil {
 		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
 			dir := p.Dir()
@@ -413,7 +413,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 				return 0, err
 			}
 			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false)
+			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
 			if err != nil {
 				return 0, err
 			}

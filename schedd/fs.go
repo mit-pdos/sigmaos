@@ -19,7 +19,7 @@ func setupFs(mfs *memfssrv.MemFs, sd *Schedd) {
 		sp.PIDS,
 	}
 	for _, d := range dirs {
-		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE); err != nil {
+		if _, err := mfs.Create(d, sp.DMDIR|0777, sp.OWRITE, sp.NoLeaseId); err != nil {
 			db.DFatalf("Error create %v: %v", d, err)
 		}
 	}

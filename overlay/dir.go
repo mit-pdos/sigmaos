@@ -101,11 +101,11 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, serr.MkErr(serr.TErrExists, name)
 	}
-	return dir.underlay.Create(ctx, name, perm, m)
+	return dir.underlay.Create(ctx, name, perm, m, lid)
 }
 
 // XXX account for extra entries in cursor, and sort

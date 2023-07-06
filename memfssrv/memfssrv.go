@@ -76,14 +76,14 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), i)
 }
 
-func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
+func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return nil, err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	return d.Create(mfs.ctx, path.Base(), p, m)
+	return d.Create(mfs.ctx, path.Base(), p, m, lid)
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {

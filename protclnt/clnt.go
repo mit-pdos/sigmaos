@@ -119,8 +119,8 @@ func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Path) (*sp.Rwal
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode) (*sp.Rcreate, *serr.Err) {
-	args := sp.MkTcreate(fid, name, perm, mode)
+func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (*sp.Rcreate, *serr.Err) {
+	args := sp.MkTcreate(fid, name, perm, mode, lid)
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
 		return nil, err
@@ -314,8 +314,8 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve)
+func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve, lid)
 	reply, err := pclnt.CallData(args, data, f)
 	if err != nil {
 		return nil, err

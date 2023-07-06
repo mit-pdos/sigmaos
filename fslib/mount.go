@@ -3,21 +3,26 @@ package fslib
 import (
 	"fmt"
 
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/union"
 )
 
-func (fsl *FsLib) MountService(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) MountService(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err
 	}
-	return fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b)
+	if err := fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b, lid); err != nil {
+		db.DPrintf(db.ALWAYS, "PutFileEphemeral %v err %v\n", pn, err)
+		return err
+	}
+	return nil
 }
 
-func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error {
+func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid sp.TleaseId) error {
 	p := pn + "/" + name
 	dir, err := fsl.IsDir(pn)
 	if err != nil {
@@ -26,14 +31,14 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string) error
 	if !dir {
 		return fmt.Errorf("Not a directory")
 	}
-	return fsl.MountService(p, mnt)
+	return fsl.MountService(p, mnt, lid)
 }
 
-func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr)
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr, lid)
 	} else {
-		return fsl.MountService(pn, mnt)
+		return fsl.MountService(pn, mnt, lid)
 	}
 }
 

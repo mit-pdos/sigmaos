@@ -3,7 +3,7 @@ package leaderetcd
 import (
 	"context"
 
-	"go.etcd.io/etcd/client/v3"
+	// "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 
 	"sigmaos/fsetcd"
@@ -13,26 +13,21 @@ import (
 )
 
 type Election struct {
-	*clientv3.Client
-	sess *concurrency.Session
+	// *clientv3.Client
+	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election
 }
 
-func MkElection(ec *clientv3.Client, pn string) (*Election, error) {
-	el := &Election{Client: ec, pn: pn}
-	s, err := concurrency.NewSession(ec, concurrency.WithTTL(fsetcd.SessionTTL))
-	if err != nil {
-		return nil, err
-	}
-	el.sess = s
+func MkElection(s *fsetcd.Session, pn string) (*Election, error) {
+	el := &Election{sess: s, pn: pn}
 	return el, nil
 }
 
 func (el *Election) Candidate() error {
 	db.DPrintf(db.LEADER, "candidate %v %v\n", proc.GetPid().String(), el.pn)
 
-	el.Election = concurrency.NewElection(el.sess, el.pn)
+	el.Election = concurrency.NewElection(el.sess.Session, el.pn)
 
 	if err := el.Campaign(context.TODO(), proc.GetPid().String()); err != nil {
 		return err

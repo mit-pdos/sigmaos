@@ -99,6 +99,7 @@ message Tcreate {
         string name = 2;
         uint32 perm = 3;
         uint32 mode = 4;
+        uint64 lease = 5;
 }
 
 message Rcreate {
@@ -186,6 +187,7 @@ message Tputfile {
         uint64 offset = 4;
         repeated string Wnames = 5;
         bool resolve = 6;
+        uint64 lease = 7;
 }
 
 message Tdetach {

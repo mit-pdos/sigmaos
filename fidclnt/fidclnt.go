@@ -150,8 +150,8 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	return nfid, err
 }
 
-func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode) (sp.Tfid, *serr.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode)
+func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, *serr.Err) {
+	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid)
 	if err != nil {
 		return sp.NoFid, err
 	}
@@ -260,13 +260,13 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool) (sessp.Tsize, *serr.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool, lid sp.TleaseId) (sessp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, serr.MkErr(serr.TErrUnreachable, "PutFile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data)
+	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data, lid)
 	if err != nil {
 		return 0, err
 	}

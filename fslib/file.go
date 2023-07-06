@@ -29,11 +29,15 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sessp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, 0777, m, data, off)
+	return fl.FdClient.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
 }
 
 func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sessp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, perm, mode, data, 0)
+	return fl.FdClient.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
+}
+
+func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, lid sp.TleaseId) (sessp.Tsize, error) {
+	return fl.FdClient.PutFile(fname, perm, mode, data, 0, lid)
 }
 
 //

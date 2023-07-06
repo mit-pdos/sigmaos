@@ -80,7 +80,16 @@ func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
 }
 
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode)
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, sp.NoLeaseId)
+	if err != nil {
+		return -1, err
+	}
+	fd := fdc.fds.allocFd(fid, mode)
+	return fd, nil
+}
+
+func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (int, error) {
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, lid)
 	if err != nil {
 		return -1, err
 	}
@@ -133,8 +142,8 @@ func (fdc *FdClient) GetFile(fname string) ([]byte, error) {
 	return fdc.PathClnt.GetFile(fname, fdc.uname, sp.OREAD, 0, sp.MAXGETSET)
 }
 
-func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset) (sessp.Tsize, error) {
-	return fdc.PathClnt.PutFile(fname, fdc.uname, mode|sp.OWRITE, perm, data, off)
+func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sessp.Tsize, error) {
+	return fdc.PathClnt.PutFile(fname, fdc.uname, mode|sp.OWRITE, perm, data, off, lid)
 }
 
 func (fdc *FdClient) MakeReader(fd int, path string, chunksz sessp.Tsize) *reader.Reader {

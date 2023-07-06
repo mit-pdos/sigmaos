@@ -55,11 +55,11 @@ func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (s
 }
 
 func (nd *Named) CreateElectionFile(pn string) error {
-	db.DPrintf(db.NAMED, "CreateElectionInfo %v\n", pn)
+	db.DPrintf(db.NAMED, "CreateElectionInfo %v lid %v\n", pn, nd.sess.Lease())
 	if err := nd.MkDir(path.Join(sp.NAME, path.Dir(pn)), 0777); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo MkDir %v err %v\n", path.Dir(pn), err)
 	}
-	fd, err := nd.Create(path.Join(sp.NAME, pn), 0777|sp.DMDEVICE|sp.DMTMP, sp.OWRITE)
+	fd, err := nd.CreateEphemeral(path.Join(sp.NAME, pn), 0777|sp.DMDEVICE|sp.DMTMP, sp.OWRITE, nd.sess.Lease())
 	if err != nil {
 		return err
 	}

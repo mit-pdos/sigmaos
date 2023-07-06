@@ -305,8 +305,8 @@ func (o *Topen) Tmode() Tmode {
 	return Tmode(o.Mode)
 }
 
-func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode) *Tcreate {
-	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode)}
+func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId) *Tcreate {
+	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode), Lease: uint64(lid)}
 }
 
 func (c *Tcreate) Tfid() Tfid {
@@ -319,6 +319,10 @@ func (c *Tcreate) Tperm() Tperm {
 
 func (c *Tcreate) Tmode() Tmode {
 	return Tmode(c.Mode)
+}
+
+func (c *Tcreate) TleaseId() TleaseId {
+	return TleaseId(c.Lease)
 }
 
 func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion) *TreadV {
@@ -472,8 +476,8 @@ func (g *Tgetfile) Tcount() sessp.Tsize {
 	return sessp.Tsize(g.Count)
 }
 
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve, Lease: uint64(lid)}
 }
 
 func (p *Tputfile) Tfid() Tfid {
@@ -490,6 +494,10 @@ func (p *Tputfile) Tperm() Tperm {
 
 func (p *Tputfile) Toffset() Toffset {
 	return Toffset(p.Offset)
+}
+
+func (p *Tputfile) TleaseId() TleaseId {
+	return TleaseId(p.Lease)
 }
 
 func MkTremovefile(fid Tfid, path path.Path, r bool) *Tremovefile {

@@ -39,7 +39,7 @@ type ProtDevSrv struct {
 func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	mfs, error := memfssrv.MakeMemFs(fn, "protdevsrv")
 	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+		db.DFatalf("MakeProtDevSrv %v err %v\n", fn, error)
 	}
 	return MakeProtDevSrvMemFs(mfs, svci)
 }
@@ -59,7 +59,7 @@ func MakeProtDevSrvPublic(fn string, svci any, public bool) (*ProtDevSrv, error)
 func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, "protdevsrv")
 	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+		db.DFatalf("MakeProtDevSrvPort %v err %v\n", fn, error)
 	}
 	return MakeProtDevSrvMemFs(mfs, svci)
 }
@@ -67,7 +67,7 @@ func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
 func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if error != nil {
-		db.DFatalf("protdevsrv.Run: %v\n", error)
+		db.DFatalf("MakeProtDevSrvClnt %v err %v\n", fn, error)
 	}
 	return MakeProtDevSrvMemFs(mfs, svci)
 }

@@ -183,6 +183,7 @@ const (
 	PATHCLNT_ERR                  = PATHCLNT + ERR
 	WALK                          = "WALK"
 	SVCMOUNT                      = "SVCMOUNT"
+	LEASEMGRCLNT                  = "LEASEMGRCLNT"
 )
 
 // Server-side Infrastructure
@@ -202,6 +203,7 @@ const (
 	FENCE_SRV                    = "FENCE_SRV"
 	FENCEFS                      = "FENCEFS"
 	FENCEFS_ERR                  = FENCEFS + ERR
+	LEASEFS                      = "LEASEFS"
 	THREADMGR                    = "THREADMGR"
 	PROTSRV                      = "PROTSRV"
 	REFMAP_SUFFIX                = "_REFMAP"

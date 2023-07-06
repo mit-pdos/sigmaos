@@ -55,6 +55,10 @@ func (pathc *PathClnt) Realm() sp.Trealm {
 	return pathc.realm
 }
 
+func (pathc *PathClnt) ClntID() sp.TclntId {
+	return pathc.cid
+}
+
 func (pathc *PathClnt) GetLocalIP() string {
 	return pathc.lip
 }
@@ -86,7 +90,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 	if _, err := pathc.Stat(pn+"/", uname); err != nil {
 		return nil, nil, err
 	}
-	return pathc.lastMount(pn, uname)
+	return pathc.LastMount(pn, uname)
 }
 
 // Exit the path client, closing all sessions
@@ -429,7 +433,7 @@ func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.T
 	return pathc.mnt.resolve(p, resolve)
 }
 
-func (pathc *PathClnt) lastMount(pn string, uname sp.Tuname) (path.Path, path.Path, error) {
+func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Path, error) {
 	p := path.Split(pn)
 	_, left, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {

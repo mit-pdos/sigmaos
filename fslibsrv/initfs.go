@@ -3,6 +3,7 @@ package fslibsrv
 import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fsetcd"
 	"sigmaos/protsrv"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
@@ -35,7 +36,11 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		if err := sc.MkMountSymlink(path, mnt, sp.NoLeaseId); err != nil {
+		lid, err := sc.LeaseMgrClnt.AskLease(path, fsetcd.LeaseTTL)
+		if err != nil {
+			return nil, err
+		}
+		if err := sc.MkMountSymlink(path, mnt, lid); err != nil {
 			return nil, err
 		}
 	}

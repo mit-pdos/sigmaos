@@ -3,6 +3,7 @@ package sigmaclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/leasemgrclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
@@ -11,6 +12,15 @@ import (
 type SigmaClnt struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	*leasemgrclnt.LeaseMgrClnt
+}
+
+func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
+	lmc, err := leasemgrclnt.NewLeaseMgrClnt(fsl)
+	if err != nil {
+		return nil, err
+	}
+	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
 // Create only an FsLib, as a proc.
@@ -19,7 +29,7 @@ func MkSigmaClntFsLib(uname sp.Tuname) (*SigmaClnt, error) {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
 	}
-	return &SigmaClnt{fsl, nil}, nil
+	return MkSigmaLeaseClnt(fsl)
 }
 
 // Only to be called by procs (uses SIGMAREALM env variable, and expects realm
@@ -41,7 +51,7 @@ func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, uname sp.Tuname, rid sp.Treal
 		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", nil, err)
 		return nil, err
 	}
-	return &SigmaClnt{realm, nil}, nil
+	return MkSigmaLeaseClnt(realm)
 }
 
 // Create a full sigmaclnt relative to a realm (fslib and procclnt)
@@ -62,6 +72,10 @@ func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Sigm
 	if err != nil {
 		return nil, err
 	}
-	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, string(uname))
-	return &SigmaClnt{fsl, pclnt}, nil
+	sc, err := MkSigmaLeaseClnt(fsl)
+	if err != nil {
+		return nil, err
+	}
+	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), fsl, string(uname))
+	return sc, nil
 }

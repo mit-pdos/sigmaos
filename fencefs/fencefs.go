@@ -14,8 +14,8 @@ import (
 )
 
 //
-// An in-memory fs for fences, which is used by fssrv to keep track of
-// the most recent fence seen. A fence is named by pathname of its
+// An in-memory fs for fences, which is used by sesssrv to keep track
+// of the most recent fence seen. A fence is named by pathname of its
 // epoch file.
 //
 

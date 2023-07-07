@@ -4,6 +4,10 @@ import (
 	"sync"
 )
 
+//
+// Thread-safe map
+//
+
 type SyncMap[K comparable, T any] struct {
 	sync.Mutex
 	tbl map[K]T

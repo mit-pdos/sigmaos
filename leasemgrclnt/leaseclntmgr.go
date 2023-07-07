@@ -4,14 +4,16 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/syncmap"
 )
 
 type LeaseMgrClnt struct {
 	*fslib.FsLib
+	lm *syncmap.SyncMap[string, sp.TleaseId]
 }
 
 func NewLeaseMgrClnt(fsl *fslib.FsLib) (*LeaseMgrClnt, error) {
-	return &LeaseMgrClnt{FsLib: fsl}, nil
+	return &LeaseMgrClnt{FsLib: fsl, lm: syncmap.NewSyncMap[string, sp.TleaseId]()}, nil
 }
 
 // Ask for lease; if caller already has a lease at that server, return
@@ -20,6 +22,9 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (sp.TleaseId, error) {
 	db.DPrintf(db.LEASEMGRCLNT, "AskLease %v\n", pn)
 	srv, rest, err := lmc.LastMount(pn, lmc.Uname())
 	db.DPrintf(db.LEASEMGRCLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
+	if lid, ok := lmc.lm.Lookup(srv.String()); ok {
+		return lid, nil
+	}
 	return sp.NoLeaseId, nil
 }
 

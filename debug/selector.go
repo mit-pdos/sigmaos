@@ -151,6 +151,7 @@ const (
 	PROCCLNT_ERR            = PROCCLNT + ERR
 	FENCECLNT               = "FENCECLNT"
 	FENCECLNT_ERR           = FENCECLNT + ERR
+	LEASECLNT               = "LEASECLNT"
 	GROUP                   = "GROUP"
 	GROUP_ERR               = GROUP + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
@@ -200,10 +201,10 @@ const (
 	LOCKMAP                      = "LOCKMAP"
 	SNAP                         = "SNAP"
 	NAMEI                        = "NAMEI"
-	FENCE_SRV                    = "FENCE_SRV"
+	FENCESRV                     = "FENCESRV"
 	FENCEFS                      = "FENCEFS"
 	FENCEFS_ERR                  = FENCEFS + ERR
-	LEASEFS                      = "LEASEFS"
+	LEASESRV                     = "LEASESRV"
 	THREADMGR                    = "THREADMGR"
 	PROTSRV                      = "PROTSRV"
 	REFMAP_SUFFIX                = "_REFMAP"

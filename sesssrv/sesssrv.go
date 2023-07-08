@@ -13,7 +13,7 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
-	"sigmaos/overlay"
+	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/repl"
@@ -381,7 +381,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
-	db.DPrintf(db.FENCE_SRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
+	db.DPrintf(db.FENCESRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
 		msg := sp.MkRerror(err)
 		reply := sessp.MakeFcallMsgReply(fc, msg)

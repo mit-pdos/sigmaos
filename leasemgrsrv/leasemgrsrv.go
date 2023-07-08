@@ -3,10 +3,13 @@ package leasemgrsrv
 import (
 	"sigmaos/ctx"
 	"sigmaos/dir"
+	"sigmaos/fs"
+	leaseproto "sigmaos/lease/proto"
 	"sigmaos/memfssrv"
 	"sigmaos/protdevsrv"
 	"sigmaos/sesssrv"
 	// "sigmaos/serr"
+	db "sigmaos/debug"
 	"sigmaos/memfs"
 	sp "sigmaos/sigmap"
 )
@@ -33,4 +36,9 @@ func NewLeaseMgrSrv(uname sp.Tuname, srv *sesssrv.SessSrv) (*LeaseMgrSrv, error)
 		return nil, err
 	}
 	return &LeaseMgrSrv{pds: pds}, nil
+}
+
+func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
+	db.DPrintf(db.LEASESRV, "%v: AskLease %v req\n", ctx, req)
+	return nil
 }

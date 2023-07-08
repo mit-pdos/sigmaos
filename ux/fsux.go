@@ -6,6 +6,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslibsrv"
+	"sigmaos/fssrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
@@ -46,6 +47,10 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	srv, error := fslibsrv.MakeReplServer(root, addr, sp.UX, "ux", config)
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
+	}
+	_, error = fssrv.NewFsSrv(sp.Tuname(addr), srv)
+	if error != nil {
+		db.DFatalf("%v: NewFsSrv %v\n", proc.GetName(), error)
 	}
 	fsux.SessSrv = srv
 	fsux.SigmaClnt = srv.SigmaClnt()

@@ -27,10 +27,6 @@ func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.Atta
 	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf)
 }
 
-func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
-	return MakeReplServerFsl(root, port, path, sc, nil)
-}
-
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil)
 	if len(path) > 0 {
@@ -45,6 +41,9 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 		}
 	}
 	return srv, nil
+}
+func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
+	return MakeReplServerFsl(root, port, path, sc, nil)
 }
 
 func MakeReplServer(root fs.Dir, addr string, path string, name sp.Tuname, config repl.Config) (*sesssrv.SessSrv, error) {

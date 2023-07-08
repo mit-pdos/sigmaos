@@ -1,8 +1,13 @@
 package leasemgrclnt
 
 import (
+	"path"
+
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
+	leaseproto "sigmaos/lease/proto"
+	"sigmaos/protdevclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
@@ -24,6 +29,14 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (sp.TleaseId, error) {
 	db.DPrintf(db.LEASEMGRCLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
 	if lid, ok := lmc.lm.Lookup(srv.String()); ok {
 		return lid, nil
+	}
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{lmc.FsLib}, path.Join(srv.String(), sp.LEASESRV))
+	if err != nil {
+		return sp.NoLeaseId, err
+	}
+	var res leaseproto.AskResult
+	if err := pdc.RPC("LeaseSrv.AskLease", &leaseproto.AskRequest{TTL: fsetcd.LeaseTTL}, &res); err != nil {
+		return sp.NoLeaseId, err
 	}
 	return sp.NoLeaseId, nil
 }

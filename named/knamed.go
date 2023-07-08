@@ -6,6 +6,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
+	"sigmaos/fssrv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -37,11 +38,18 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
+	uname := sp.Tuname(proc.GetPid().String())
+	_, err := fssrv.NewFsSrv(uname, nd.SessSrv)
+	if err != nil {
+		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
+		return err
+	}
+
 	mnt := sp.MkMountServer(nd.MyAddr())
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
-	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname(proc.GetPid().String()))
+	sc, err := sigmaclnt.MkSigmaClntFsLib(uname)
 	if err != nil {
 		db.DFatalf("MkSigmaClntFsLib: err %v", err)
 	}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/lease/proto";
+
+message AskRequest {
+  uint64 tTL = 1;
+  SpanContextConfig spanContextConfig = 2;
+}
+
+message AskResult {
+  uint64 Lease = 1;
+}

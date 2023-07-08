@@ -110,7 +110,7 @@ func (s *Snapshot) RestoreFsTree(inum sessp.Tpath) fs.Inode {
 	case Toverlay:
 		// Make an overlay dir with a nil underlay so we don't recurse infinitely when trying
 		// to set parent pointers.
-		d := overlay.MkDirOverlay(nil)
+		d := overlay.NewDirOverlay(nil)
 		s.restoreCache[inum] = d
 		i = overlay.Restore(d, s.RestoreFsTree, snap.Data)
 	case Tdir:

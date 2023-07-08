@@ -21,21 +21,22 @@ type Clone struct {
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
 	detach    sps.DetachSessF
-	fn        string
+	pn        string
 	wctl      WriteCtlF
 }
 
-func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
+// Make a Clone dev inode at pn in memfs
+func makeClone(mfs *memfssrv.MemFs, pn string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
 	cl := &Clone{}
 	cl.Inode = mfs.MakeDevInode()
-	err := mfs.MkDev(sessdev.CloneName(fn), cl) // put clone file into root dir
+	err := mfs.MkDev(sessdev.CloneName(pn), cl) // put clone file into root dir
 	if err != nil {
 		return err
 	}
 	cl.mfs = mfs
 	cl.mksession = mks
 	cl.detach = d
-	cl.fn = fn
+	cl.pn = pn
 	cl.wctl = w
 	return nil
 }
@@ -43,7 +44,7 @@ func makeClone(mfs *memfssrv.MemFs, fn string, mks MkSessionF, d sps.DetachSessF
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	sid := ctx.SessionId()
-	n := sessdev.SidName(sid.String(), c.fn)
+	n := sessdev.SidName(sid.String(), c.pn)
 	db.DPrintf(db.CLONEDEV, "%v: Clone create %v\n", proc.GetName(), n)
 	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
@@ -77,14 +78,14 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	sid := sessdev.SidName(ctx.SessionId().String(), c.fn)
+	sid := sessdev.SidName(ctx.SessionId().String(), c.pn)
 	db.DPrintf(db.CLONEDEV, "%v: Close %v\n", proc.GetName(), sid)
 	return nil
 }
 
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
-	dir := sessdev.SidName(session.String(), c.fn)
+	dir := sessdev.SidName(session.String(), c.pn)
 	n := dir + "/" + sessdev.CTL
 	if err := c.mfs.Remove(n); err != nil {
 		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", n, err)
@@ -97,8 +98,8 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, fn string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
-	if err := makeClone(mfs, fn, f, d, w); err != nil {
+func MkCloneDev(mfs *memfssrv.MemFs, pn string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
+	if err := makeClone(mfs, pn, f, d, w); err != nil {
 		return err
 	}
 	return nil

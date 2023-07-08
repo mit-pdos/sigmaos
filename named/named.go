@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/leasemgrsrv"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
@@ -27,6 +28,7 @@ type Named struct {
 	realm sp.Trealm
 	crash int
 	sess  *fsetcd.Session
+	lms   *leasemgrsrv.LeaseMgrSrv
 }
 
 func Run(args []string) error {
@@ -42,7 +44,8 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(proc.GetPid().String()))
+	uname := sp.Tuname(proc.GetPid().String())
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
 	if err != nil {
 		return err
 	}
@@ -59,8 +62,15 @@ func Run(args []string) error {
 		return err
 	}
 	defer nd.fs.Close()
-	mnt := sp.MkMountServer(nd.MyAddr())
 
+	lms, err := leasemgrsrv.NewLeaseMgrSrv(uname, nd.SessSrv)
+	if err != nil {
+		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
+		return err
+	}
+	nd.lms = lms
+
+	mnt := sp.MkMountServer(nd.MyAddr())
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)

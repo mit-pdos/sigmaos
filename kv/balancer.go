@@ -30,6 +30,7 @@ import (
 	"sigmaos/inode"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfssrv"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -91,7 +92,8 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, sp.NoClntId, nil)
-	err1 := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
+	root, _ := mfs.Root(path.Path{})
+	err1 := dir.MkNod(ctx, root, "ctl", makeCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}

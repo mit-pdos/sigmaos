@@ -1,6 +1,7 @@
 package memfssrv
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -14,10 +15,6 @@ import (
 )
 
 var rootP = path.Path{""}
-
-func (mfs *MemFs) Root() fs.Dir {
-	return mfs.root
-}
 
 func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
@@ -33,7 +30,7 @@ func (mfs *MemFs) MakeDevInode() *inode.Inode {
 }
 
 func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
-	d := mfs.root
+	d, path := mfs.Root(path)
 	lk := mfs.plt.Acquire(mfs.ctx, rootP)
 	if len(path) == 0 {
 		return d, lk, nil
@@ -63,6 +60,7 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
 	dev.SetParent(d)
+	db.DPrintf(db.ALWAYS, "MkDev: %v %v %T\n", pn, d, d)
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 

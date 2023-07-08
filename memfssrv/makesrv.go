@@ -25,12 +25,11 @@ import (
 
 type MemFs struct {
 	*sesssrv.SessSrv
-	root fs.Dir
-	ctx  fs.CtxI // server context
-	plt  *lockmap.PathLockTable
-	sc   *sigmaclnt.SigmaClnt
-	pc   *portclnt.PortClnt
-	pi   portclnt.PortInfo
+	ctx fs.CtxI // server context
+	plt *lockmap.PathLockTable
+	sc  *sigmaclnt.SigmaClnt
+	pc  *portclnt.PortClnt
+	pi  portclnt.PortInfo
 }
 
 //
@@ -53,6 +52,16 @@ func MakeMemFsPort(pn, port string, uname sp.Tuname) (*MemFs, error) {
 	return fs, err
 }
 
+func MakeMemFsSrv(uname sp.Tuname, srv *sesssrv.SessSrv) *MemFs {
+	mfs := &MemFs{
+		SessSrv: srv,
+		ctx:     ctx.MkCtx(uname, 0, sp.NoClntId, nil),
+		plt:     srv.GetPathLockTable(),
+		sc:      srv.SigmaClnt(),
+	}
+	return mfs
+}
+
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
 func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
@@ -61,8 +70,7 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 	if err != nil {
 		return nil, err
 	}
-	mfs := &MemFs{SessSrv: srv, root: root, ctx: ctx.MkCtx(sp.Tuname(pn), 0, sp.NoClntId, nil),
-		plt: srv.GetPathLockTable(), sc: sc}
+	mfs := MakeMemFsSrv(sp.Tuname(pn), srv)
 	return mfs, nil
 }
 
@@ -103,7 +111,7 @@ func MakeMemFsReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt
 	if err != nil {
 		return nil, err
 	}
-	return &MemFs{SessSrv: srv, root: root, sc: sc}, nil
+	return &MemFs{SessSrv: srv, sc: sc}, nil
 }
 
 func MakeMemFsReplServer(root fs.Dir, addr, path string, uname sp.Tuname, config repl.Config) (*MemFs, error) {
@@ -111,7 +119,7 @@ func MakeMemFsReplServer(root fs.Dir, addr, path string, uname sp.Tuname, config
 	if err != nil {
 		return nil, err
 	}
-	return &MemFs{SessSrv: srv, root: root, sc: srv.SigmaClnt()}, nil
+	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt()}, nil
 }
 
 // This version is for a replicated named, including handling if this
@@ -182,7 +190,7 @@ func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt,
 			return nil, serr.MkErrError(err)
 		}
 	}
-	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt(), root: root, pc: pc, pi: pi}, nil
+	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt(), pc: pc, pi: pi}, nil
 }
 
 // Make MemFs with a public port but don't advertise the port (yet)

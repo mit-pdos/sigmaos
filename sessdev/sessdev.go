@@ -1,19 +1,23 @@
 package sessdev
 
+import (
+	"path"
+)
+
 const (
-	DATA  = "data-"
-	CTL   = "ctl"
-	CLONE = "clone-"
+	DATA  = "-data"
+	CTL   = "-ctl"
+	CLONE = "-clone"
 )
 
 func CloneName(fn string) string {
-	return CLONE + fn
+	return fn + CLONE
 }
 
-func SidName(sid string, fn string) string {
-	return sid + "-" + fn
+func SidName(sid string, pn string) string {
+	return pn + "-" + sid
 }
 
-func DataName(fn string) string {
-	return DATA + fn
+func DataName(pn string) string {
+	return path.Base(pn) + DATA
 }

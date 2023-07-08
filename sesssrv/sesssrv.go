@@ -14,6 +14,7 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
 	"sigmaos/overlay"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/serr"
@@ -43,7 +44,8 @@ import (
 
 type SessSrv struct {
 	addr       string
-	root       fs.Dir
+	dirunder   fs.Dir
+	dirover    *overlay.DirOverlay
 	mkps       sps.MkProtServer
 	rps        sps.RestoreProtServer
 	stats      *stats.StatInfo
@@ -71,30 +73,30 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	attachf sps.AttachClntF, detachf sps.DetachClntF) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
-	dirover := overlay.MkDirOverlay(root)
-	ssrv.root = dirover
+	ssrv.dirover = overlay.NewDirOverlay(root)
+	ssrv.dirunder = root
 	ssrv.addr = addr
 	ssrv.mkps = mkps
 	ssrv.rps = rps
-	ssrv.stats = stats.MkStatsDev(ssrv.root)
+	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
 	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
-	ssrv.vt.Insert(ssrv.root.Path())
+	ssrv.vt.Insert(ssrv.dirover.Path())
 
-	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtxNull(), ssrv.root)
+	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtxNull(), ssrv.dirover)
 
-	dirover.Mount(sp.STATSD, ssrv.stats)
-	dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
+	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
+	ssrv.dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
 
 	if !ssrv.replicated {
 		ssrv.replSrv = nil
 	} else {
-		snapDev := snapshot.MakeDev(ssrv, nil, ssrv.root)
-		dirover.Mount(sp.SNAPDEV, snapDev)
+		snapDev := snapshot.MakeDev(ssrv, nil, ssrv.dirover)
+		ssrv.dirover.Mount(sp.SNAPDEV, snapDev)
 
 		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
 		ssrv.replSrv.Start()
@@ -124,8 +126,19 @@ func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
 	return ssrv.plt
 }
 
-func (ssrv *SessSrv) Root() fs.Dir {
-	return ssrv.root
+func (ssrv *SessSrv) Root(path path.Path) (fs.Dir, path.Path) {
+	d := ssrv.dirunder
+	if len(path) > 0 {
+		o, err := ssrv.dirover.Lookup(ctx.MkCtxNull(), path[0])
+		if err == nil {
+			return o.(fs.Dir), path[1:]
+		}
+	}
+	return d, path
+}
+
+func (ssrv *SessSrv) Mount(name string, dir *dir.DirImpl) {
+	ssrv.dirover.Mount(name, dir)
 }
 
 func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) *serr.Err {
@@ -147,7 +160,7 @@ func (ssrv *SessSrv) Snapshot() []byte {
 		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	return ssrv.snap.Snapshot(ssrv.root.(*overlay.DirOverlay), ssrv.st, ssrv.tmt)
+	return ssrv.snap.Snapshot(ssrv.dirover, ssrv.st, ssrv.tmt)
 }
 
 func (ssrv *SessSrv) Restore(b []byte) {
@@ -159,9 +172,11 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	if ssrv.cpumon != nil {
 		ssrv.cpumon.Done()
 	}
-	// XXX How do we install the sct and wt? How do we sunset old state when
-	// installing a snapshot on a running server?
-	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
+	// XXX How do we install the sct and wt? How do we sunset old
+	// state when installing a snapshot on a running server?  XXX
+	// dirunder should be dirover, but of type fs.Dir, but plan to
+	// delete this code anyway.
+	ssrv.dirunder, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
@@ -251,7 +266,7 @@ func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
 }
 
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return ssrv.root, ctx.MkCtx(uname, sessid, clntid, ssrv.sct)
+	return ssrv.dirover, ctx.MkCtx(uname, sessid, clntid, ssrv.sct)
 }
 
 // New session or new connection for existing session

@@ -2,6 +2,7 @@ package named_test
 
 import (
 	"log"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,10 @@ func TestBootNamed(t *testing.T) {
 	log.Printf("named %v\n", sp.Names(sts))
 
 	ts.Shutdown()
+}
+
+func TestXXX(t *testing.T) {
+	log.Printf("%v\n", path.Join("", "xxx"))
 }
 
 // type Tstate struct {

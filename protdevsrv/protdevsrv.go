@@ -2,6 +2,7 @@ package protdevsrv
 
 import (
 	"log"
+	"path"
 	"reflect"
 
 	db "sigmaos/debug"
@@ -41,7 +42,7 @@ func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
 	if error != nil {
 		db.DFatalf("MakeProtDevSrv %v err %v\n", fn, error)
 	}
-	return MakeProtDevSrvMemFs(mfs, svci)
+	return MakeProtDevSrvMemFs(mfs, "", svci)
 }
 
 func MakeProtDevSrvPublic(fn string, svci any, public bool) (*ProtDevSrv, error) {
@@ -50,7 +51,7 @@ func MakeProtDevSrvPublic(fn string, svci any, public bool) (*ProtDevSrv, error)
 		if error != nil {
 			return nil, error
 		}
-		return MakeProtDevSrvMemFs(mfs, svci)
+		return MakeProtDevSrvMemFs(mfs, "", svci)
 	} else {
 		return MakeProtDevSrv(fn, svci)
 	}
@@ -61,7 +62,7 @@ func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
 	if error != nil {
 		db.DFatalf("MakeProtDevSrvPort %v err %v\n", fn, error)
 	}
-	return MakeProtDevSrvMemFs(mfs, svci)
+	return MakeProtDevSrvMemFs(mfs, "", svci)
 }
 
 func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
@@ -69,18 +70,19 @@ func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevS
 	if error != nil {
 		db.DFatalf("MakeProtDevSrvClnt %v err %v\n", fn, error)
 	}
-	return MakeProtDevSrvMemFs(mfs, svci)
+	return MakeProtDevSrvMemFs(mfs, "", svci)
 }
 
-func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, svci any) (*ProtDevSrv, error) {
+// Make a ProtDevSrv at pn in mfs
+func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
 	psd := &ProtDevSrv{}
 	psd.MemFs = mfs
 	psd.mkService(svci)
 	rd := mkRpcDev(psd)
-	if err := sessdevsrv.MkSessDev(psd.MemFs, protdev.RPC, rd.mkRpcSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(psd.MemFs, path.Join(pn, protdev.RPC), rd.mkRpcSession, nil); err != nil {
 		return nil, err
 	}
-	if si, err := makeStatsDev(mfs); err != nil {
+	if si, err := makeStatsDev(mfs, pn); err != nil {
 		return nil, err
 	} else {
 		psd.sti = si

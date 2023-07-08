@@ -3,7 +3,7 @@ package leasemgrsrv
 import (
 	"sigmaos/ctx"
 	"sigmaos/dir"
-	// "sigmaos/memfssrv"
+	"sigmaos/memfssrv"
 	"sigmaos/protdevsrv"
 	"sigmaos/sesssrv"
 	// "sigmaos/serr"
@@ -26,11 +26,11 @@ type LeaseSrv struct {
 func NewLeaseMgrSrv(uname sp.Tuname, srv *sesssrv.SessSrv) (*LeaseMgrSrv, error) {
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
-	//mfs := memfssrv.MakeMemFsSrv(uname, srv)
-	//lsrv := &LeaseSrv{}
-	//pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, sp.LEASESRV, lsrv)
-	//if err != nil {
-	//	return nil, err
-	//}
-	return &LeaseMgrSrv{pds: nil}, nil
+	mfs := memfssrv.MakeMemFsSrv(uname, srv)
+	lsrv := &LeaseSrv{}
+	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, sp.LEASESRV, lsrv)
+	if err != nil {
+		return nil, err
+	}
+	return &LeaseMgrSrv{pds: pds}, nil
 }

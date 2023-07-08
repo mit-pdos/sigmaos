@@ -185,7 +185,7 @@ func RunSchedd(kernelId string) error {
 		db.DFatalf("Error MakePerf: %v", err)
 	}
 	defer p.Done()
-	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, sd)
+	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, "", sd)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}

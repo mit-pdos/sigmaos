@@ -66,6 +66,7 @@ const (
 	// special devs/dirs exported by fssrv
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
+	LEASESRV = ".leasesrv"
 	SNAPDEV  = "snapdev"
 )
 

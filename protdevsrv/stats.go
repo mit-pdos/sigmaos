@@ -2,6 +2,7 @@ package protdevsrv
 
 import (
 	"encoding/json"
+	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -19,9 +20,10 @@ type statsDev struct {
 	si *protdev.StatInfo
 }
 
-func makeStatsDev(mfs *memfssrv.MemFs) (*protdev.StatInfo, *serr.Err) {
+// Create a StatsDev in mfs at pn
+func makeStatsDev(mfs *memfssrv.MemFs, pn string) (*protdev.StatInfo, *serr.Err) {
 	std := &statsDev{mfs: mfs, Inode: mfs.MakeDevInode()}
-	if err := mfs.MkDev(protdev.STATS, std); err != nil {
+	if err := mfs.MkDev(path.Join(pn, protdev.STATS), std); err != nil {
 		return nil, err
 	}
 	std.si = protdev.MakeStatInfo()

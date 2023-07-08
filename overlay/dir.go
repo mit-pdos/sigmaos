@@ -26,7 +26,7 @@ type DirOverlay struct {
 	entries  map[string]fs.Inode // XXX use sortedmap?
 }
 
-func MkDirOverlay(dir fs.Dir) *DirOverlay {
+func NewDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
 	d.Inode = inode.MakeInode(nil, sp.DMDIR, nil)
 	d.underlay = dir

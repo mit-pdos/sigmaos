@@ -160,12 +160,15 @@ def add_data_to_graph(ax, x, y, label, color, linestyle, marker):
   x = x / 1000.0
   return ax.plot(x, y, label=label, color=color, linestyle=linestyle, marker=marker, markevery=25, markerfacecolor=colo.to_rgba(color, 0.0), markeredgecolor=color)
 
-def finalize_graph(fig, ax, plots, title, out, maxval):
+def finalize_graph(fig, ax, plots, title, out, maxval, legend_on_right):
   lns = plots[0]
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
+  if legend_on_right:
+    ax[0].legend(lns, labels, bbox_to_anchor=(1.02, .5), loc="center left", ncol=1)
+  else:
+    ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
@@ -213,7 +216,7 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax):
+def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
   if hotel_realm is None and mr_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
@@ -255,15 +258,15 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel " + str(percentile) + "% Latency", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel (LC) " + str(percentile) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel Average Latency", "purple", "-", "")
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel (LC) avg lat", "purple", "-", "")
     plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel Throughput", "blue", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC) tpt", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range, xmin, xmax, step_size=1000)
@@ -271,7 +274,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     x, y = buckets_to_lists(mr_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR Throughput", "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR (BE) tpt", "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
@@ -279,10 +282,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel Realm CPU", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR Realm CPU", "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "MR (BE) CPU", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
@@ -294,7 +297,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
       tptax = ta
-  finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0)
+  finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0, legend_on_right)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -309,6 +312,7 @@ if __name__ == "__main__":
   parser.add_argument("--out", type=str, required=True)
   parser.add_argument("--xmin", type=int, default=-1)
   parser.add_argument("--xmax", type=int, default=-1)
+  parser.add_argument("--legend_on_right", action="store_true", default=False)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)

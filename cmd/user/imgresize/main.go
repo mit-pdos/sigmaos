@@ -70,15 +70,18 @@ func MakeTrans(args []string) (*Trans, error) {
 	}
 	t.SigmaClnt = sc
 	t.inputs = strings.Split(args[1], ",")
-	t.output = args[2]
+	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v}", args[1], t.inputs)
+	t.output = t.inputs[0] + "-thumbnail"
 	t.Started()
 	return t, nil
 }
 
 func (t *Trans) Work(i int, output string) *proc.Status {
 	do := time.Now()
+	db.DPrintf(db.ALWAYS, "Resize %v", t.inputs[i])
 	rdr, err := t.OpenReader(t.inputs[i])
 	if err != nil {
+		db.DFatalf("Error open file %v", err)
 		return proc.MakeStatusErr("File not found", err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
@@ -101,7 +104,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	dcw := time.Now()
 	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
+		db.DFatalf("Open output %v error: %v", t.output, err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
 	dw := time.Now()

@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ArielSzekely/corral/export/pkg/corfs"
@@ -48,7 +47,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	}
 	t.inputs = make([]string, 0, ninput)
 	for i := 0; i < ninput; i++ {
-		inputs = append(inputs, args[1])
+		t.inputs = append(t.inputs, args[1])
 	}
 	rand.Seed(time.Now().UnixNano())
 	t.outputbase = args[1] + "-thumbnail-"

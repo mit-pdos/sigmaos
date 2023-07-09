@@ -42,9 +42,7 @@ func main() {
 		start := time.Now()
 		output := t.output
 		// Create a new file name for iterations > 0
-		if i > 0 {
-			output += strconv.Itoa(rand.Int())
-		}
+		output += strconv.Itoa(rand.Int())
 		s = t.Work(i, output)
 		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
@@ -71,6 +69,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	t.SigmaClnt = sc
 	t.inputs = strings.Split(args[1], ",")
 	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v}", args[1], t.inputs)
+	// XXX Should be fixed properly
 	t.output = t.inputs[0] + "-thumbnail"
 	t.Started()
 	return t, nil
@@ -104,7 +103,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	dcw := time.Now()
 	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("Open output %v error: %v", t.output, err)
+		db.DFatalf("Open output %v error: %v", output, err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
 	dw := time.Now()

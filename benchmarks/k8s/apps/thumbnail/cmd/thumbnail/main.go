@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) != 3 {
 		log.Fatalf("Usage: %v FILE_PATH\nArgs passed: %v", os.Args[0], os.Args)
 	}
 	t, err := MakeTrans(os.Args)

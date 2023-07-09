@@ -10,7 +10,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: thumbnail-compute
-        image: arielszekely/thumbnail@sha256:b1020fbadde54a335dbb866a35e8ed7b524abbc25f2f508daf34808e0a48ef80
+        image: arielszekely/thumbnail@sha256:510e1cb2d29f1f71464d34ccdeca3af46f96325a8b35136df93b5b62f5744f16
         imagePullPolicy: IfNotPresent
         resources:
           limits:

@@ -36,14 +36,6 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addr, err
 }
 
-func MakeMoLSrvs(public bool) []Srv {
-	return []Srv{
-		Srv{"socialnetwork-mol", public, 1},
-		Srv{"socialnetwork-user", public, 2},
-		Srv{"socialnetwork-graph", public, 2},
-	}
-}
-
 func MakeFsLibs(uname string) []*fslib.FsLib {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {

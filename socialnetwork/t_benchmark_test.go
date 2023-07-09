@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 	"math/rand"
+	"sigmaos/loadgen"
+	"sigmaos/perf"
 )
 
 const (
@@ -26,6 +28,8 @@ const (
 	COMPOSE_RATIO      = 0.1
 	HOME_RATIO         = 0.6
 	TIMELINE_RATIO     = 0.3
+	LOAD_DUR           = 10
+	LOAD_MAX_RPS       = 1000
 )
 
 var K8S_ADDR string
@@ -34,7 +38,7 @@ var BENCH_TEST bool
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
-	flag.StringVar(&MONGO_URL, "mongourl", "172.17.0.4:27017", "Addr of mongo server.")
+	flag.StringVar(&MONGO_URL, "mongourl", "172.17.0.3:27017", "Addr of mongo server.")
 	flag.BoolVar(&BENCH_TEST, "benchtest", false, "Is this a benchmark test?")
 }
 
@@ -43,6 +47,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	assert.Nil(t, err, "Cannot connect to Mongo: %v", err)
 	// insert users
 	session.DB(sn.SN_DB).C(sn.USER_COL).EnsureIndexKey("username")
+	dbg.DPrintf(dbg.TEST, "Inserting users")
 	for i := 0; i < N_BENCH_USER; i++ {
 		suffix := strconv.Itoa(i)
 		newUser := sn.User{
@@ -58,6 +63,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	// insert graphs
 	b, err := os.ReadFile("data/socfb-Reed98/socfb-Reed98.edges")
 	assert.Nil(t, err, "Cannot open edge file: %v", err)
+	dbg.DPrintf(dbg.TEST, "Inserting graphs")
 	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool {return c =='\n'}) {
 		ids := strings.Split(line, " ")
 		followerId, _ := strconv.ParseInt(ids[0], 10, 64)
@@ -68,6 +74,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 			bson.M{"userid": followerId}, bson.M{"$addToSet": bson.M{"edges": followeeId}})
 		assert.True(t, err1 == nil && err2 == nil, "cannot insert graph: %v; %v", err1, err2)
 	}
+	dbg.DPrintf(dbg.TEST, "Complete mongo inserts!")
 	var results []sn.EdgeInfo
 	session.DB(sn.SN_DB).C(sn.GRAPH_FLWER_COL).Find(bson.M{"userid": int64(0)}).All(&results)
 	assert.Equal(t, 73, len(results[0].Edges))
@@ -75,15 +82,15 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 
 func setupSigmaState(t *testing.T) *TstateSN {
 	tssn := makeTstateSN(t, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1},
-		sn.Srv{"socialnetwork-url", test.Overlays, 1},
-		sn.Srv{"socialnetwork-text", test.Overlays, 1},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 1},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 1}}, NSHARD)
+		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NSHARD)
 	initUserAndGraph(t, MONGO_URL)
 	return tssn
 }
@@ -135,6 +142,10 @@ func TestBenchmarkSeqMix(t *testing.T) {
 
 func TestFrontend(t *testing.T) {
 	testTemplate(t, false, testFrontendInner)
+}
+
+func TestLoadgen(t *testing.T) {
+	testTemplate(t, true, testLoadgenInner)
 }
 
 // Definition of benchmark functions
@@ -279,5 +290,18 @@ func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 		randReadHome(t, wc, r)
 	} else {
 		randReadTimeline(t, wc, r)
+	}
+}
+
+func testLoadgenInner(t *testing.T, wc *sn.WebClnt) {
+	p, err := perf.MakePerf(perf.TEST)
+	assert.Nil(t, err, "Cannot make perf %v", err)
+	defer p.Done()
+	lg := loadgen.MakeLoadGenerator(
+		LOAD_DUR * time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
+	lg.Calibrate()
+	lg.Run()
+	if lg != nil {
+		lg.Stats()
 	}
 }

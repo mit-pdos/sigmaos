@@ -4,7 +4,7 @@ metadata:
   name: thumbnail-benchrealm1
 spec:
   completions: 20
-  parallelism: 1000
+  parallelism: 20
   template:
     spec:
       restartPolicy: OnFailure

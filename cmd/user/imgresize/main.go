@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nfnt/resize"
@@ -44,7 +45,7 @@ func main() {
 		if i > 0 {
 			output += strconv.Itoa(rand.Int())
 		}
-		s = t.Work(output)
+		s = t.Work(i, output)
 		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
 	t.Exited(s)
@@ -102,7 +103,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	if err != nil {
 		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
 	}
-	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.input[i], time.Since(dcw))
+	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
 	dw := time.Now()
 	defer func() {
 		wrt.Close()

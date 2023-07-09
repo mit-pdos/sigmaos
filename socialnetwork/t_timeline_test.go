@@ -56,8 +56,8 @@ func writeHomeTimeline(t *testing.T, pdc *protdevclnt.ProtDevClnt, post *proto.P
 func TestTimeline(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
-		sn.Srv{"socialnetwork-post", test.Overlays, 2},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000}}, NSHARD)
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
@@ -104,10 +104,10 @@ func TestTimeline(t *testing.T) {
 func TestHome(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 2},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 2},
-		sn.Srv{"socialnetwork-post", test.Overlays, 2},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 1000}}, NSHARD)
 	snCfg := tssn.snCfg
 	tssn.dbu.InitGraph()
 

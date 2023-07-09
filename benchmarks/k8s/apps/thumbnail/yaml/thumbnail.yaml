@@ -38,5 +38,6 @@ spec:
             value: "us-east-1"
         args:
         - "s3://9ps3/img/6.jpg"
+        - "10"
       imagePullSecrets:
       - name: regcred

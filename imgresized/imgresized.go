@@ -58,8 +58,12 @@ func MkDirs(fsl *fslib.FsLib, job string) error {
 }
 
 func SubmitTask(fsl *fslib.FsLib, job string, fn string) error {
+	return SubmitTaskMulti(fsl, job, []string{fn})
+}
+
+func SubmitTaskMulti(fsl *fslib.FsLib, job string, fns []string) error {
 	t := path.Join(sp.IMG, job, "todo", rd.String(4))
-	_, err := fsl.PutFile(t, 0777, sp.OREAD, []byte(fn))
+	_, err := fsl.PutFile(t, 0777, sp.OREAD, []byte(strings.Join(fns, ",")))
 	return err
 }
 

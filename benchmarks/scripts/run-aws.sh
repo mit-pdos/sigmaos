@@ -833,9 +833,10 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=400
+  n_imgresize=20
+  n_imgresize_per=20
   n_vm=2
-  mcpu=250
+  mcpu=1000
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -851,7 +852,7 @@ img_resize() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }

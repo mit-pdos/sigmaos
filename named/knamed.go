@@ -6,7 +6,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/fssrv"
+	"sigmaos/leasemgrsrv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -39,7 +39,7 @@ func RunKNamed(args []string) error {
 	defer nd.fs.Close()
 
 	uname := sp.Tuname(proc.GetPid().String())
-	_, err := fssrv.NewFsSrv(uname, nd.SessSrv)
+	_, err := leasemgrsrv.NewLeaseMgrSrv(uname, nd.SessSrv, newLeaseSrv(nd.fs))
 	if err != nil {
 		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
 		return err

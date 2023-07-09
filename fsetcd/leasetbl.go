@@ -14,7 +14,7 @@ type leaseTable struct {
 	leases map[sp.TclntId]clientv3.LeaseID
 }
 
-func mkLeaseTable() *leaseTable {
+func newLeaseTable() *leaseTable {
 	lt := &leaseTable{}
 	lt.leases = make(map[sp.TclntId]clientv3.LeaseID)
 	return lt

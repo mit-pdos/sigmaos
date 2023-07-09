@@ -10,8 +10,8 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/fssrv"
 	"sigmaos/leaderetcd"
+	"sigmaos/leasemgrsrv"
 	"sigmaos/proc"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
@@ -62,7 +62,7 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	_, err = fssrv.NewFsSrv(uname, nd.SessSrv)
+	_, err = leasemgrsrv.NewLeaseMgrSrv(uname, nd.SessSrv, newLeaseSrv(nd.fs))
 	if err != nil {
 		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
 		return err

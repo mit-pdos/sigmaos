@@ -35,8 +35,11 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (sp.TleaseId, error) {
 		return sp.NoLeaseId, err
 	}
 	var res leaseproto.AskResult
-	if err := pdc.RPC("LeaseSrv.AskLease", &leaseproto.AskRequest{TTL: fsetcd.LeaseTTL}, &res); err != nil {
-		return sp.NoLeaseId, err
+	if err := pdc.RPC("LeaseSrv.AskLease",
+		&leaseproto.AskRequest{
+			ClntId: uint64(lmc.ClntID()),
+			TTL:    fsetcd.LeaseTTL}, &res); err != nil {
+		return sp.TleaseId(res.LeaseId), err
 	}
 	return sp.NoLeaseId, nil
 }

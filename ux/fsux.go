@@ -6,7 +6,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslibsrv"
-	"sigmaos/fssrv"
+	"sigmaos/leasemgrsrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/sesssrv"
@@ -48,7 +48,7 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
-	_, error = fssrv.NewFsSrv(sp.Tuname(addr), srv)
+	_, error = leasemgrsrv.NewLeaseMgrSrv(sp.Tuname(addr), srv, leasemgrsrv.NewLeaseSrv())
 	if error != nil {
 		db.DFatalf("%v: NewFsSrv %v\n", proc.GetName(), error)
 	}

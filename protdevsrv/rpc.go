@@ -72,7 +72,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 			return r
 		}
 
-		db.DPrintf(db.PROTDEVSRV, "dispatchproto %v %v\n", name, reqmsg)
+		db.DPrintf(db.PROTDEVSRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 
 		// allocate space for the reply.
 		replyType := method.replyType

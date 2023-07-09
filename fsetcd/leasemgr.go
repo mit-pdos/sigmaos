@@ -19,7 +19,10 @@ type leaseMgr struct {
 }
 
 func mkLeaseMgr(fs *FsEtcd) *leaseMgr {
-	return &leaseMgr{fs: fs, lc: clientv3.NewLease(fs.Client), lt: mkLeaseTable()}
+	return &leaseMgr{fs: fs,
+		lc: clientv3.NewLease(fs.Client),
+		lt: newLeaseTable(),
+	}
 }
 
 func (lmgr *leaseMgr) getLeaseID(cid sp.TclntId) (clientv3.LeaseID, error) {

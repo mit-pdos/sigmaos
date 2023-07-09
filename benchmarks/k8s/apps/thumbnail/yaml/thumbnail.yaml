@@ -37,7 +37,6 @@ spec:
           - name: AWS_DEFAULT_REGION
             value: "us-east-1"
         args:
-        - "s3://9ps3/img/6.jpg"
-        - "20"
+        - "s3://9ps3/img/6.jpg 20"
       imagePullSecrets:
       - name: regcred

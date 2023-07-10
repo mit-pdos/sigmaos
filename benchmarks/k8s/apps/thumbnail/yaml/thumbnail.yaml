@@ -3,8 +3,8 @@ kind: Job
 metadata:
   name: thumbnail-benchrealm1
 spec:
-  completions: 100
-  parallelism: 100
+  completions: XXX
+  parallelism: XXX
   template:
     spec:
       restartPolicy: OnFailure
@@ -14,10 +14,10 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 800m
+            cpu: 400m
             memory: 256Mi
           requests:
-            cpu: 800m
+            cpu: 400m
             memory: 256Mi
         env:
           - name: HOST_IP

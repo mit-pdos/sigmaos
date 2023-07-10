@@ -834,28 +834,30 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=20
-  n_imgresize_per=20
+  n_imgresize_per=1
   n_vm=2
-  mcpu=1000
+  mcpu=500
   driver_vm=0
-  run=${FUNCNAME[0]}
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run/SigmaOS
-  # Avoid doing duplicate work.
-  if ! should_skip $perf_dir false ; then
-    return
-  fi
-  stop_k8s_cluster $KVPC
-  # Clear out s3 dir
-  aws s3 --profile me-mit rm --recursive s3://9ps3/img/ > /dev/null
-  aws s3 --profile me-mit cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
-  cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
-    go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
-  "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  for i in 10 20 40 80 160 320 ; do
+    n_imgresize=$i
+    run=${FUNCNAME[0]}/$n_imgresize
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run/SigmaOS
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return
+    fi
+    stop_k8s_cluster $KVPC
+    # Clear out s3 dir
+    aws s3 --profile me-mit rm --recursive s3://9ps3/img/ > /dev/null
+    aws s3 --profile me-mit cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;\"; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --rootNamedIP $LEADER_IP --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
+    "
+    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  done
 }
 
 k8s_img_resize() {
@@ -863,27 +865,32 @@ k8s_img_resize() {
   ncore=4
   swap="swapoff"
   fname=${FUNCNAME[0]}
-  run="${fname##k8s_}"
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run/K8s
-  driver_vm=0
-  # Avoid doing duplicate work.
-  if ! should_skip $perf_dir false ; then
-    return
-  fi
-  # Start the K8s cluster.
-  start_k8s_cluster $KVPC $n_vm $swap
-  # Stop any previous run.
-  cd $SCRIPT_DIR
-  ./stop-k8s-app.sh --vpc $KVPC --path "ulambda/benchmarks/k8s/apps/thumbnail/yaml/"
-  cd $ROOT_DIR
-  cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
-    go clean -testcache; \
-    kubectl apply -Rf benchmarks/k8s/apps/thumbnail/yaml; \
-    go test -v sigmaos/benchmarks -timeout 0 --run TestK8sImgResize > /tmp/bench.out 2>&1
-  "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  for i in 10 20 40 80 160 320 ; do
+    n_imgresize=$i
+    run="${fname##k8s_}"/$n_imgresize
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run/K8s
+    driver_vm=0
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return
+    fi
+    # Start the K8s cluster.
+    start_k8s_cluster $KVPC $n_vm $swap
+    # Stop any previous run.
+    cd $SCRIPT_DIR
+    ./stop-k8s-app.sh --vpc $KVPC --path "ulambda/benchmarks/k8s/apps/thumbnail/yaml/"
+    cd $ROOT_DIR
+    cmd="
+      cp ulambda/benchmarks/k8s/apps/thumbnail/yaml/thumbnail.yaml /tmp/thumbnail.yaml; \
+      sed -i \"s/XXX/$n_imgresize/g\" /tmp/thumbnail.yaml; \
+      export SIGMADEBUG=\"TEST;BENCH;\"; \
+      go clean -testcache; \
+      kubectl apply -Rf /tmp/thumbnail.yaml; \
+      go test -v sigmaos/benchmarks -timeout 0 --run TestK8sImgResize > /tmp/bench.out 2>&1
+    "
+    run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  done
 }
 
 #mr_overlap() {
@@ -1148,8 +1155,8 @@ img_resize
 k8s_img_resize
 realm_balance_multi
 
-realm_balance_be
-k8s_balance_be
+#realm_balance_be
+#k8s_balance_be
 
 #hotel_tail_multi
 #k8s_balance_multi
@@ -1172,8 +1179,8 @@ source ~/env/3.10/bin/activate
 graph_img_resize
 graph_realm_balance_multi
 
-graph_realm_balance_be
-graph_k8s_balance_be
+#graph_realm_balance_be
+#graph_k8s_balance_be
 #graph_k8s_balance_multi
 #graph_k8s_hotel_tail_tpt_over_time
 

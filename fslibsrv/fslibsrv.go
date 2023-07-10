@@ -32,12 +32,12 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		lid, err := sc.LeaseMgrClnt.AskLease(path, fsetcd.LeaseTTL)
+		li, err := sc.LeaseMgrClnt.AskLease(path, fsetcd.LeaseTTL)
 		if err != nil {
 			return nil, err
 		}
-		sc.LeaseMgrClnt.KeepExtending(lid)
-		if err := sc.MkMountSymlink(path, mnt, lid); err != nil {
+		li.KeepExtending()
+		if err := sc.MkMountSymlink(path, mnt, li.Lease()); err != nil {
 			return nil, err
 		}
 	}

@@ -13,3 +13,12 @@ message AskRequest {
 message AskResult {
   uint64 LeaseId = 1;
 }
+
+message ExtendRequest {
+  uint64 LeaseId = 1;
+}
+
+message ExtendResult {
+}
+
+

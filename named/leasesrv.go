@@ -29,7 +29,6 @@ func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {
 
 func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
 	db.DPrintf(db.LEASESRV, "%v: AskLease %v\n", ctx.ClntId(), req)
-	db.DPrintf(db.LEASESRV, "%v: AskLease %v\n", ctx.ClntId(), ls)
 	if lid, ok := ls.lt.Lookup(ctx.ClntId()); ok {
 		db.DPrintf(db.LEASESRV, "%v: AskLease %v %v\n", ctx.ClntId(), lid, rep)
 		rep.LeaseId = uint64(lid)
@@ -40,5 +39,10 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leasep
 		return err
 	}
 	rep.LeaseId = uint64(resp.ID)
+	return nil
+}
+
+func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
+	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), req.LeaseId)
 	return nil
 }

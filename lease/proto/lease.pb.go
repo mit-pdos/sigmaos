@@ -131,6 +131,91 @@ func (x *AskResult) GetLeaseId() uint64 {
 	return 0
 }
 
+type ExtendRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	LeaseId uint64 `protobuf:"varint,1,opt,name=LeaseId,proto3" json:"LeaseId,omitempty"`
+}
+
+func (x *ExtendRequest) Reset() {
+	*x = ExtendRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_lease_proto_lease_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExtendRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtendRequest) ProtoMessage() {}
+
+func (x *ExtendRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_lease_proto_lease_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtendRequest.ProtoReflect.Descriptor instead.
+func (*ExtendRequest) Descriptor() ([]byte, []int) {
+	return file_lease_proto_lease_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ExtendRequest) GetLeaseId() uint64 {
+	if x != nil {
+		return x.LeaseId
+	}
+	return 0
+}
+
+type ExtendResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *ExtendResult) Reset() {
+	*x = ExtendResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_lease_proto_lease_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExtendResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtendResult) ProtoMessage() {}
+
+func (x *ExtendResult) ProtoReflect() protoreflect.Message {
+	mi := &file_lease_proto_lease_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtendResult.ProtoReflect.Descriptor instead.
+func (*ExtendResult) Descriptor() ([]byte, []int) {
+	return file_lease_proto_lease_proto_rawDescGZIP(), []int{3}
+}
+
 var File_lease_proto_lease_proto protoreflect.FileDescriptor
 
 var file_lease_proto_lease_proto_rawDesc = []byte{
@@ -147,9 +232,13 @@ var file_lease_proto_lease_proto_rawDesc = []byte{
 	0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
 	0x22, 0x25, 0x0a, 0x09, 0x41, 0x73, 0x6b, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x18, 0x0a,
 	0x07, 0x4c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07,
-	0x4c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64, 0x42, 0x15, 0x5a, 0x13, 0x73, 0x69, 0x67, 0x6d, 0x61,
-	0x6f, 0x73, 0x2f, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x4c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64, 0x22, 0x29, 0x0a, 0x0d, 0x45, 0x78, 0x74, 0x65, 0x6e,
+	0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x4c, 0x65, 0x61, 0x73,
+	0x65, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x4c, 0x65, 0x61, 0x73, 0x65,
+	0x49, 0x64, 0x22, 0x0e, 0x0a, 0x0c, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x52, 0x65, 0x73, 0x75,
+	0x6c, 0x74, 0x42, 0x15, 0x5a, 0x13, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x6c, 0x65,
+	0x61, 0x73, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -164,14 +253,16 @@ func file_lease_proto_lease_proto_rawDescGZIP() []byte {
 	return file_lease_proto_lease_proto_rawDescData
 }
 
-var file_lease_proto_lease_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_lease_proto_lease_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_lease_proto_lease_proto_goTypes = []interface{}{
 	(*AskRequest)(nil),              // 0: AskRequest
 	(*AskResult)(nil),               // 1: AskResult
-	(*proto.SpanContextConfig)(nil), // 2: SpanContextConfig
+	(*ExtendRequest)(nil),           // 2: ExtendRequest
+	(*ExtendResult)(nil),            // 3: ExtendResult
+	(*proto.SpanContextConfig)(nil), // 4: SpanContextConfig
 }
 var file_lease_proto_lease_proto_depIdxs = []int32{
-	2, // 0: AskRequest.spanContextConfig:type_name -> SpanContextConfig
+	4, // 0: AskRequest.spanContextConfig:type_name -> SpanContextConfig
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -209,6 +300,30 @@ func file_lease_proto_lease_proto_init() {
 				return nil
 			}
 		}
+		file_lease_proto_lease_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExtendRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_lease_proto_lease_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExtendResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -216,7 +331,7 @@ func file_lease_proto_lease_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_lease_proto_lease_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -21,4 +21,11 @@ message ExtendRequest {
 message ExtendResult {
 }
 
+message EndRequest {
+  uint64 LeaseId = 1;
+}
+
+message EndResult {
+}
+
 

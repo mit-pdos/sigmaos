@@ -835,7 +835,8 @@ func TestK8sMRMulti(t *testing.T) {
 		// Start the next k8s job.
 		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
 		// Monitor cores assigned to this realm.
-		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		//		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		monitorK8sCPUUtilScraper(rootts, ps[i])
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)
 	}

@@ -537,7 +537,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
-  n_realm=4
+  n_realm=1
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -556,7 +556,7 @@ k8s_balance_be() {
   sl="40s"
   n_vm=8
   # Config
-  n_realm=4
+  n_realm=1
   driver_vm=8
   s3dir="corralperf/k8s"
   k8sleaderip=$LEADER_IP_K8S
@@ -580,7 +580,8 @@ k8s_balance_be() {
     # Remove old results
     aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir-$i > /dev/null; \
     cd $SCRIPT_DIR
-    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
+#    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
+    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20GqosG" --nrunning $np
     cd $ROOT_DIR
     sleep 5s
   done
@@ -1147,10 +1148,11 @@ img_resize
 k8s_img_resize
 realm_balance_multi
 
+realm_balance_be
+k8s_balance_be
+
 #hotel_tail_multi
-#realm_balance_be
 #k8s_balance_multi
-#k8s_balance_be
 # XXX Try above next
 #k8s_balance
 # XXX
@@ -1170,8 +1172,8 @@ source ~/env/3.10/bin/activate
 graph_img_resize
 graph_realm_balance_multi
 
-#graph_realm_balance_be
-#graph_k8s_balance_be
+graph_realm_balance_be
+graph_k8s_balance_be
 #graph_k8s_balance_multi
 #graph_k8s_hotel_tail_tpt_over_time
 

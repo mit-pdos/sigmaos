@@ -828,6 +828,15 @@ func TestK8sMRMulti(t *testing.T) {
 		defer ps[i].Done()
 	}
 	db.DPrintf(db.TEST, "Done creating realm srtructs")
+	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(rootts.T, err, "Error mkdir %v", err)
+	// Start up the stat scraper procs.
+	sdc := scheddclnt.MakeScheddClnt(ts[0].SigmaClnt, ts[0].GetRealm())
+	nSchedd, err := sdc.Nschedd()
+	ps2, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	spawnBurstProcs(ts[0], ps2)
+	waitStartProcs(ts[0], ps2)
+
 	cs := make([]*rpc.Client, 0, N_REALM)
 	for i := 0; i < N_REALM; i++ {
 		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
@@ -836,7 +845,7 @@ func TestK8sMRMulti(t *testing.T) {
 		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
 		// Monitor cores assigned to this realm.
 		//		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
-		monitorK8sCPUUtilScraper(rootts, ps[i])
+		monitorK8sCPUUtilScraperTS(ts[0], ps[i])
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)
 	}

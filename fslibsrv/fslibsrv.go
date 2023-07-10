@@ -36,6 +36,7 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 		if err != nil {
 			return nil, err
 		}
+		sc.LeaseMgrClnt.KeepExtending(lid)
 		if err := sc.MkMountSymlink(path, mnt, lid); err != nil {
 			return nil, err
 		}

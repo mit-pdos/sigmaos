@@ -39,19 +39,24 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (sp.TleaseId, error) {
 		&leaseproto.AskRequest{
 			ClntId: uint64(lmc.ClntID()),
 			TTL:    fsetcd.LeaseTTL}, &res); err != nil {
-		return sp.TleaseId(res.LeaseId), err
+		lid := sp.TleaseId(res.LeaseId)
+		lmc.lm.Insert(srv.String(), lid)
+		return lid, err
 	}
 	return sp.NoLeaseId, nil
 }
 
-// Write KeepAlieve to lease ctl file
-func (lmc *LeaseMgrClnt) keepAliveOnce(lid sp.TleaseId) {
+func (lmc *LeaseMgrClnt) extendLease(lid sp.TleaseId) {
 }
 
 func (lmc *LeaseMgrClnt) Revoke(lid sp.TleaseId) {
 }
 
-// Refreshes lid continously
-func (lmc *LeaseMgrClnt) Refresher(lid sp.TleaseId) error {
+func (lmc *LeaseMgrClnt) extender(lid sp.TleaseId) {
+}
+
+// Extend lease indefinitely
+func (lmc *LeaseMgrClnt) KeepExtending(lid sp.TleaseId) error {
+	go lmc.extender(lid)
 	return nil
 }

@@ -13,7 +13,6 @@ import (
 )
 
 type Election struct {
-	// *clientv3.Client
 	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election

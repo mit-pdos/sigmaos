@@ -227,7 +227,10 @@ func RunMember(jobdir, grp string, public bool) {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
 	g.SigmaClnt = sc
-	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
+	g.ec, err = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
+	if err != nil {
+		db.DFatalf("MakeElectClnt %v\n", err)
+	}
 	ip, err := container.LocalIP()
 	if err != nil {
 		db.DFatalf("group ip %v\n", err)

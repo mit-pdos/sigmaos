@@ -21,13 +21,17 @@ type LeaderClnt struct {
 	e       *electclnt.ElectClnt
 }
 
-func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm sp.Tperm) *LeaderClnt {
+func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm sp.Tperm) (*LeaderClnt, error) {
 	l := &LeaderClnt{}
 	l.FsLib = fsl
-	l.e = electclnt.MakeElectClnt(fsl, leaderfn, perm)
+	e, err := electclnt.MakeElectClnt(fsl, leaderfn, perm)
+	if err != nil {
+		return nil, err
+	}
+	l.e = e
 	l.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
 	l.FenceClnt = fenceclnt.MakeFenceClnt(fsl, l.EpochClnt)
-	return l
+	return l, nil
 }
 
 func (l *LeaderClnt) EpochPath() string {

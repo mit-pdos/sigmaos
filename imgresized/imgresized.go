@@ -114,7 +114,10 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	imgd.electclnt = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.electclnt, err = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	if err != nil {
+		return nil, fmt.Errorf("MakeElectClnt err %v", err)
+	}
 
 	crash.Crasher(imgd.FsLib)
 

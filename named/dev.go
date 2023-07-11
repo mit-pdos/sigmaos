@@ -1,8 +1,6 @@
 package named
 
 import (
-	"path"
-
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/serr"
@@ -52,19 +50,4 @@ func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (s
 	}
 
 	return sessp.Tsize(len(b)), nil
-}
-
-func (nd *Named) CreateElectionFile(pn string) error {
-	db.DPrintf(db.NAMED, "CreateElectionInfo %v lid %v\n", pn, nd.sess.Lease())
-	if err := nd.MkDir(path.Join(sp.NAME, path.Dir(pn)), 0777); err != nil {
-		db.DPrintf(db.NAMED, "CreateElectionInfo MkDir %v err %v\n", path.Dir(pn), err)
-	}
-	fd, err := nd.CreateEphemeral(path.Join(sp.NAME, pn), 0777|sp.DMDEVICE|sp.DMTMP, sp.OWRITE, nd.sess.Lease())
-	if err != nil {
-		return err
-	}
-	if _, err := nd.Write(fd, []byte(pn)); err != nil {
-		return err
-	}
-	return nd.Close(fd)
 }

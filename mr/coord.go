@@ -110,7 +110,10 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	c.Started()
 
-	c.electclnt = electclnt.MakeElectClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	c.electclnt, err = electclnt.MakeElectClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	if err != nil {
+		return nil, fmt.Errorf("MakeCoord: MakeElectClnt err %v", err)
+	}
 
 	crash.Crasher(c.FsLib)
 

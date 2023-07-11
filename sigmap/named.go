@@ -67,6 +67,7 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	LEASESRV = ".leasesrv"
+	ELECTSRV = ".electsrv"
 	SNAPDEV  = "snapdev"
 )
 

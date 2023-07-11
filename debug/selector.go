@@ -152,6 +152,7 @@ const (
 	FENCECLNT               = "FENCECLNT"
 	FENCECLNT_ERR           = FENCECLNT + ERR
 	LEASECLNT               = "LEASECLNT"
+	ELECTCLNT               = "ELECTCLNT"
 	GROUP                   = "GROUP"
 	GROUP_ERR               = GROUP + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"

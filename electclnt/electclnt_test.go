@@ -23,8 +23,10 @@ func TestAcquireRelease(t *testing.T) {
 
 	N := 20
 
-	leader1 := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
-	leader2 := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+	leader1, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+	assert.Nil(t, err)
+	leader2, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+	assert.Nil(t, err)
 
 	for i := 0; i < N; i++ {
 		err := leader1.AcquireLeadership([]byte{})
@@ -48,16 +50,16 @@ func TestLeaderConcur(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	leader := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
-
 	var done sync.WaitGroup
 	done.Add(n_threads)
 
 	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, leader *electclnt.ElectClnt, N *int, cnt *int) {
+		go func(done *sync.WaitGroup, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				err := leader.AcquireLeadership([]byte{})
+				leader, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+				assert.Nil(t, err)
+				err = leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeader")
 				if *cnt < *N {
 					*cnt += 1
@@ -69,7 +71,7 @@ func TestLeaderConcur(t *testing.T) {
 				err = leader.ReleaseLeadership()
 				assert.Nil(ts.T, err, "ReleaseLeadership")
 			}
-		}(&done, leader, &N, &cnt)
+		}(&done, &N, &cnt)
 	}
 
 	done.Wait()
@@ -87,10 +89,10 @@ func TestLeaderInTurn(t *testing.T) {
 	current := uint64(0)
 	done := make(chan uint64)
 
-	leader := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
-
 	for i := uint64(0); i < N; i++ {
 		go func(i uint64) {
+			leader, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+			assert.Nil(t, err)
 			me := false
 			for !me {
 				err := leader.AcquireLeadership([]byte{})
@@ -114,33 +116,5 @@ func TestLeaderInTurn(t *testing.T) {
 		assert.Equal(ts.T, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
-	ts.Shutdown()
-}
-
-// Test if an exit of another session doesn't remove an ephemeral
-// leader of another session.
-func TestEphemeralLeader(t *testing.T) {
-	ts := test.MakeTstate(t)
-
-	fsl1, err := fslib.MakeFsLibAddr("fslib-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
-	assert.Nil(ts.T, err, "fsl1")
-	fsl2, err := fslib.MakeFsLibAddr("fslib-2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
-	assert.Nil(ts.T, err, "fsl1")
-	leader1 := electclnt.MakeElectClnt(fsl1, LEADERNAME, 0)
-
-	err = leader1.AcquireLeadership([]byte{})
-	assert.Nil(ts.T, err, "AcquireLeadership")
-
-	// Establish a connection
-	_, err = fsl2.GetFile(LEADERNAME)
-	assert.Nil(ts.T, err, "GetFile")
-
-	// Terminate connection
-	fsl2.Exit()
-
-	time.Sleep(2 * time.Second)
-
-	err = leader1.ReleaseLeadership()
-	assert.Nil(ts.T, err, "ReleaseLeadership")
 	ts.Shutdown()
 }

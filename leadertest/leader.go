@@ -31,7 +31,10 @@ func RunLeader(dir, last, child string) {
 	sc.Started()
 
 	fn := dir + "/out"
-	l := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
+	l, err := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
+	if err != nil {
+		db.DFatalf("%v MakeLeaderClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
+	}
 
 	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
 	if err != nil {

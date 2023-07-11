@@ -85,7 +85,10 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	}
 	bl.kvdmcpu = proc.Tmcpu(kvdnc)
 
-	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
+	bl.lc, err = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
+	if err != nil {
+		db.DFatalf("MakeLeaderClnt %v\n", err)
+	}
 
 	mfs, err := memfssrv.MakeMemFsPortClnt("", ":0", bl.SigmaClnt)
 	if err != nil {

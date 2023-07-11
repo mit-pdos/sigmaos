@@ -36,7 +36,7 @@ func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte
 	return fl.FdClient.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, lid sp.TleaseId) (sessp.Tsize, error) {
+func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sessp.Tsize, error) {
 	return fl.FdClient.PutFile(fname, perm, mode, data, 0, lid)
 }
 

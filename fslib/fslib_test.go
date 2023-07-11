@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
@@ -610,7 +611,7 @@ func TestCounter(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 	cnt := gopath.Join(pathname, "cnt")
 	b := []byte(strconv.Itoa(0))
-	_, err := ts.PutFile(cnt, 0777|sp.DMTMP, sp.OWRITE, b)
+	_, err := ts.PutFile(cnt, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
@@ -723,109 +724,6 @@ func TestWatchDir(t *testing.T) {
 
 	err = ts.RmDir(fn)
 	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
-
-func TestCreateExcl1(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-	ch := make(chan int)
-
-	fn := gopath.Join(pathname, "exclusive")
-	_, err := ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OCEXEC, []byte{})
-	assert.Nil(t, err)
-	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest0"), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
-	assert.Nil(t, err)
-	go func() {
-		_, err := fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
-		assert.Nil(t, err, "Putfile")
-		ch <- 0
-	}()
-	time.Sleep(time.Second * 2)
-	err = ts.Remove(fn)
-	assert.Nil(t, err, "Remove")
-	go func() {
-		time.Sleep(2 * time.Second)
-		ch <- 1
-	}()
-	i := <-ch
-	assert.Equal(t, 0, i)
-
-	ts.Remove(fn)
-
-	ts.Shutdown()
-}
-
-func TestCreateExclN(t *testing.T) {
-	const N = 20
-
-	ts := test.MakeTstatePath(t, pathname)
-	ch := make(chan int)
-	fn := gopath.Join(pathname, "exclusive")
-	acquired := false
-	for i := 0; i < N; i++ {
-		go func(i int) {
-			fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
-			assert.Nil(t, err)
-			//log.Printf("PutFile %d\n", i)
-			_, err = fsl.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
-			assert.Equal(t, nil, err)
-			assert.Equal(t, false, acquired)
-			//log.Printf("PutFile %d done\n", i)
-			acquired = true
-			ch <- i
-		}(i)
-	}
-	for i := 0; i < N; i++ {
-		<-ch
-		//log.Printf("Remove %d\n", i)
-		acquired = false
-		err := ts.Remove(fn)
-		assert.Equal(t, nil, err)
-	}
-	ts.Shutdown()
-}
-
-func TestCreateExclAfterDisconnect(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
-
-	fn := gopath.Join(pathname, "create-conn-close-test")
-
-	fsl1, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
-	assert.Nil(t, err)
-	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
-	assert.Nil(t, err, "Create 1")
-
-	ch := make(chan struct{})
-	go func() {
-		// Should wait
-		_, err := fsl1.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
-		assert.NotNil(t, err, "Create 2")
-		ch <- struct{}{}
-	}()
-
-	time.Sleep(500 * time.Millisecond)
-
-	// Kill fsl1's connection
-	srv, _, err := ts.PathLastSymlink(pathname)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Disconnect fsl")
-	err = fsl1.Disconnect(srv.String())
-	assert.Nil(t, err, "Disconnect")
-
-	// Remove the ephemeral file
-	ts.Remove(fn)
-	assert.Equal(t, nil, err)
-
-	// Try to create again (should succeed)
-	_, err = ts.PutFile(fn, 0777|sp.DMTMP, sp.OWRITE|sp.OWATCH, []byte{})
-	assert.Nil(t, err, "Create 3")
-
-	ts.Remove(fn)
-	assert.Equal(t, nil, err)
-
-	<-ch
 
 	ts.Shutdown()
 }

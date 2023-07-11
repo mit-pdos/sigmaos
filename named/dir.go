@@ -51,7 +51,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 	pn := d.pn.Copy().Append(name)
 	path := mkTpath(pn)
-	nf, r := fsetcd.MkEtcdFileDir(perm, path, cid)
+	nf, r := fsetcd.MkEtcdFileDir(perm, path, cid, lid)
 	if r != nil {
 		return nil, serr.MkErrError(r)
 	}

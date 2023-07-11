@@ -47,7 +47,7 @@ func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *lease
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.LEASESRV, "%v: Extend KeepAliveOnce %v\n", ctx.ClntId(), resp)
+	db.DPrintf(db.LEASESRV, "%v: Extend KeepAliveOnce [%v,%v]\n", ctx.ClntId(), resp.ID, resp.TTL)
 	return nil
 }
 

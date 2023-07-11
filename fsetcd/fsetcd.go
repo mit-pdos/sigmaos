@@ -29,7 +29,6 @@ type FsEtcd struct {
 	realm    sp.Trealm
 	fencekey string
 	fencerev int64
-	lmgr     *leaseMgr
 }
 
 func MkFsEtcd(r sp.Trealm) (*FsEtcd, error) {
@@ -41,17 +40,11 @@ func MkFsEtcd(r sp.Trealm) (*FsEtcd, error) {
 		return nil, err
 	}
 	fs := &FsEtcd{realm: r, Client: cli}
-	fs.lmgr = mkLeaseMgr(fs)
 	return fs, nil
 }
 
 func (fs *FsEtcd) Close() error {
-	fs.lmgr.lc.Close()
 	return fs.Client.Close()
-}
-
-func (fs *FsEtcd) Recover(cid sp.TclntId) error {
-	return fs.lmgr.recoverLeases(cid)
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {
@@ -61,7 +54,6 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 }
 
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
-	fs.lmgr.detach(cid)
 }
 
 func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
@@ -69,7 +61,7 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	if err != nil {
 		return serr.MkErrError(err)
 	}
-	nf := MkEtcdFile(sp.DMSYMLINK, sp.NoClntId, d)
+	nf := MkEtcdFile(sp.DMSYMLINK, sp.NoClntId, sp.NoLeaseId, d)
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {

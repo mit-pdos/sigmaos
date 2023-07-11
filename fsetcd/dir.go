@@ -24,7 +24,7 @@ type DirEntInfo struct {
 
 func (di DirEntInfo) String() string {
 	if di.Nf != nil {
-		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.Nf.TclntId(), di.Nf.TLeaseID(), len(di.Nf.Data))
+		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.Nf.TclntId(), di.Nf.TleaseId(), len(di.Nf.Data))
 	} else {
 		return fmt.Sprintf("{p %v perm %v}", di.Path, di.Perm)
 	}
@@ -60,7 +60,7 @@ func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 }
 
 func (fs *FsEtcd) MkRootDir() *serr.Err {
-	nf, r := MkEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId)
+	nf, r := MkEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId, sp.NoLeaseId)
 	if r != nil {
 		return serr.MkErrError(r)
 	}
@@ -98,7 +98,7 @@ func (fs *FsEtcd) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdF
 		return DirEntInfo{}, serr.MkErr(serr.TErrExists, name)
 	}
 	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
-	db.DPrintf(db.FSETCD, "Create %v dir %v nf %v\n", name, dir, nf)
+	db.DPrintf(db.FSETCD, "Create %q dir %v nf %v\n", name, dir, nf)
 	if err := fs.create(d, dir, v, path, nf); err == nil {
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
 		return di, nil

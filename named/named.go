@@ -110,12 +110,12 @@ func Run(args []string) error {
 
 func (nd *Named) attach(cid sp.TclntId) {
 	db.DPrintf(db.NAMED, "named: attach %v\n", cid)
-	nd.fs.Recover(cid)
+	// nd.fs.Recover(cid)
 }
 
 func (nd *Named) detach(cid sp.TclntId) {
 	db.DPrintf(db.NAMED, "named: detach %v\n", cid)
-	nd.fs.Detach(cid)
+	// nd.fs.Detach(cid)
 }
 
 func (nd *Named) resign() error {

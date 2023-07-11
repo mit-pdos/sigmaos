@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
+	"sigmaos/leasemgrsrv"
 	"sigmaos/memfssrv"
 	"sigmaos/path"
 	"sigmaos/perf"
@@ -28,6 +29,7 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
+	_, err = leasemgrsrv.NewLeaseMgrSrv(sp.S3, mfs.SessSrv, leasemgrsrv.NewLeaseSrv())
 	p, err := perf.MakePerf(perf.S3)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)

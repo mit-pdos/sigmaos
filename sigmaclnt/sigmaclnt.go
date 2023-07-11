@@ -79,3 +79,10 @@ func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Sigm
 	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), fsl, string(uname))
 	return sc, nil
 }
+
+func (sc *SigmaClnt) Exit() error {
+	if sc.LeaseMgrClnt != nil {
+		sc.LeaseMgrClnt.Exit()
+	}
+	return sc.FsLib.Exit()
+}

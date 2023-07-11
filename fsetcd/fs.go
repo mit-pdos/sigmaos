@@ -44,10 +44,7 @@ func (fs *FsEtcd) GetFile(p sessp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
 }
 
 func (fs *FsEtcd) PutFile(p sessp.Tpath, nf *EtcdFile) *serr.Err {
-	opts, sr := fs.lmgr.LeaseOpts(nf)
-	if sr != nil {
-		return sr
-	}
+	opts := nf.LeaseOpts()
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {
@@ -102,10 +99,7 @@ func (fs *FsEtcd) readDir(p sessp.Tpath, stat bool) (*DirInfo, sp.TQversion, *se
 }
 
 func (fs *FsEtcd) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.Tpath, nf *EtcdFile) *serr.Err {
-	opts, sr := fs.lmgr.LeaseOpts(nf)
-	if sr != nil {
-		return sr
-	}
+	opts := nf.LeaseOpts()
 	b, err := proto.Marshal(nf)
 	if err != nil {
 		return serr.MkErrError(err)

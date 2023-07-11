@@ -6,6 +6,7 @@ package sigmap
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"sigmaos/path"
@@ -46,6 +47,14 @@ const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
 const NoClntId TclntId = ^TclntId(0)
 const NoLeaseId TleaseId = ^TleaseId(0)
+
+func (lid TleaseId) String() string {
+	return strconv.FormatUint(uint64(lid), 16)
+}
+
+func (cid TclntId) String() string {
+	return strconv.FormatUint(uint64(cid), 16)
+}
 
 // If need more than MaxGetSet, use Open/Read/Close interface
 const MAXGETSET sessp.Tsize = 1_000_000

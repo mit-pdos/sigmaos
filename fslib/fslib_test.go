@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
@@ -960,7 +959,7 @@ func TestSymlinkPath(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink([]byte(pathname), gopath.Join(pathname, "namedself"), 0777|sp.DMTMP)
+	err = ts.Symlink([]byte(pathname), gopath.Join(pathname, "namedself"), 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "namedself") + "/")

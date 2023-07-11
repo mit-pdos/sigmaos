@@ -15,7 +15,7 @@ func (fsl *FsLib) MountService(pn string, mnt sp.Tmount, lid sp.TleaseId) error 
 	if err != nil {
 		return err
 	}
-	if err := fsl.PutFileAtomic(pn, 0777|sp.DMTMP|sp.DMSYMLINK, b, lid); err != nil {
+	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b, lid); err != nil {
 		db.DPrintf(db.ALWAYS, "PutFileEphemeral %v err %v\n", pn, err)
 		return err
 	}

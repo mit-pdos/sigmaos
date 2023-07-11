@@ -4,13 +4,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/electclnt"
-	"sigmaos/fslib"
-	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

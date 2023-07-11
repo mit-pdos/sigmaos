@@ -89,7 +89,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 }
 
 func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, lid)
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm|sp.DMTMP, mode, lid)
 	if err != nil {
 		return -1, err
 	}

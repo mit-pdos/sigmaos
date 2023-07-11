@@ -88,6 +88,7 @@ func (fs *FsEtcd) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
 }
 
 // XXX retry on version mismatch
+// OEXCL: should only succeed if file doesn't exist
 func (fs *FsEtcd) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {

@@ -31,9 +31,11 @@ func RunFsUx(rootux string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
+	// XXX make mfs?
 	fsux = MakeReplicatedFsUx(rootux, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
 	fsux.Done()
+	fsux.Exited(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.Config) *FsUx {

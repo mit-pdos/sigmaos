@@ -65,7 +65,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
-	db.DPrintf(db.ALWAYS, "Attach %v sid %v", args, ps.sid)
+	db.DPrintf(db.PROTSRV, "Attach %v sid %v", args, ps.sid)
 	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.GetRootCtx(args.Tuname(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
@@ -96,7 +96,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	db.DPrintf(db.ALWAYS, "Detach cid %v sess %v eph %v", args.TclntId(), ps.sid, ps.et.Get())
+	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v eph %v", args.TclntId(), ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.

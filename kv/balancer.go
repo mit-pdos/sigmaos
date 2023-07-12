@@ -153,8 +153,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		bl.ch <- true
 		<-bl.ch
 	}
-
-	mfs.Done()
+	mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {

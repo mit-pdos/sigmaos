@@ -195,9 +195,6 @@ func RunSchedd(kernelId string) error {
 	go sd.monitorWSQueue(proc.T_LC)
 	go sd.monitorWSQueue(proc.T_BE)
 	go sd.offerStealableProcs()
-	if err := pds.RunServer(); err != nil {
-		return err
-	}
-	sd.mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
+	pds.RunServer()
 	return nil
 }

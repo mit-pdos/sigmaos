@@ -12,6 +12,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/path"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -56,5 +57,5 @@ func RunFss3(buckets []string) {
 		o.UsePathStyle = true
 	})
 	mfs.Serve()
-	mfs.Done()
+	mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 }

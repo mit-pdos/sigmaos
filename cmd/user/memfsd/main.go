@@ -26,7 +26,7 @@ func main() {
 				db.DFatalf("Error makreplmemfs: %v", err)
 			}
 			mfs.Serve()
-			mfs.Done()
+			mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 		}
 	} else {
 		mfs, err := memfssrv.MakeMemFs(name, sp.Tuname(name))
@@ -35,6 +35,6 @@ func main() {
 		}
 		mfs.Serve()
 		db.DPrintf(db.TEST, "evicted\n")
-		mfs.Done()
+		mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 	}
 }

@@ -39,8 +39,9 @@ func TestOldLeaderFail(t *testing.T) {
 	assert.Nil(t, err, "MakeFsLib")
 	ch := make(chan bool)
 	go func() {
-		l := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777)
-		_, err := l.AcquireFencedEpoch(nil, []string{dirux})
+		l, err := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777)
+		assert.Nil(t, err)
+		_, err = l.AcquireFencedEpoch(nil, []string{dirux})
 		assert.Nil(t, err, "BecomeLeaderEpoch")
 
 		fd, err := fsl.Create(dirux+"/f", 0777, sp.OWRITE)
@@ -67,7 +68,8 @@ func TestOldLeaderFail(t *testing.T) {
 	// Wait until other thread is primary
 	<-ch
 
-	l := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777)
+	l, err := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777)
+	assert.Nil(t, err)
 	// When other thread partitions, we become leader and start new epoch
 	_, err = l.AcquireFencedEpoch(nil, []string{dirux})
 	assert.Nil(t, err, "BecomeLeaderEpoch")

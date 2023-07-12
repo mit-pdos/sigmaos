@@ -125,6 +125,6 @@ func (psd *ProtDevSrv) mkService(svci any) {
 func (psd *ProtDevSrv) RunServer() error {
 	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
 	psd.MemFs.Serve()
-	psd.MemFs.Done()
+	psd.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

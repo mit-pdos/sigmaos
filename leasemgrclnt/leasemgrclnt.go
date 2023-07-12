@@ -7,6 +7,7 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	leaseproto "sigmaos/lease/proto"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
@@ -52,9 +53,9 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 }
 
 func (lmgr *LeaseMgrClnt) EndLeases() error {
-	db.DPrintf(db.LEASECLNT, "EndLeases %v\n", lmgr)
+	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", proc.GetPid())
 	for _, li := range lmgr.lm.Values() {
-		db.DPrintf(db.LEASECLNT, "EndLeases %v\n", li)
+		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", proc.GetPid(), li)
 		li.End()
 	}
 	return nil

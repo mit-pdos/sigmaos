@@ -55,12 +55,12 @@ func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Obj, &m); err != nil {
-		dbg.DFatalf("Cannot decode insert request: %v", err) 
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot decode insert request: %v", err)
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Received insert request: %v, %v, %v", req.Db, req.Collection, m)
 	if err := s.session.DB(req.Db).C(req.Collection).Insert(&m); err != nil {
-		dbg.DFatalf("Cannot insert: %v", err)
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot insert: %v", err)
 		return err
 	}
 	res.Ok = MONGO_OK
@@ -84,11 +84,11 @@ func (s *Server) update(
 	}
 	var q, u bson.M
 	if err := bson.Unmarshal(req.Query, &q); err != nil {
-		dbg.DFatalf("Cannot decode query in %v request: %v", rpcName, err) 
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot decode query in %v request: %v", rpcName, err)
 		return err
 	}
 	if err := bson.Unmarshal(req.Obj, &u); err != nil {
-		dbg.DFatalf("Cannot decode object in %v request: %v", rpcName, err) 
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot decode object in %v request: %v", rpcName, err)
 		return err
 	}
 	dbg.DPrintf(
@@ -98,9 +98,9 @@ func (s *Server) update(
 		_, err = s.session.DB(req.Db).C(req.Collection).Upsert(&q, &u)
 	} else {
 		err = s.session.DB(req.Db).C(req.Collection).Update(&q, &u)
-	} 
+	}
 	if err != nil {
-		dbg.DFatalf("Cannot %v: %v", rpcName, err)
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot %v: %v", rpcName, err)
 		return err
 	}
 	res.Ok = MONGO_OK
@@ -111,13 +111,13 @@ func (s *Server) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRespo
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Query, &m); err != nil {
-		dbg.DFatalf("Cannot decode find query request: %v", err) 
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot decode find query request: %v", err)
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Received Find request. %v, %v, %v", req.Db, req.Collection, m)
 	var objs []bson.M
 	if err := s.session.DB(req.Db).C(req.Collection).Find(&m).All(&objs); err != nil {
-		dbg.DFatalf("Cannot find objects: %v", m)
+		dbg.DPrintf(dbg.MONGO_ERR, "Cannot find objects: %v. Err: %v", m, err)
 		return err
 	}
 	res.Objs = make([][]byte, len(objs))

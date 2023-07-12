@@ -27,12 +27,13 @@ const (
 )
 
 type Param struct {
-	KernelId string
-	Services []string
-	Dbip     string
-	Mongoip  string
-	Jaegerip string
-	Overlays bool
+	KernelId    string
+	Services    []string
+	Dbip        string
+	Mongoip     string
+	Jaegerip    string
+	Overlays    bool
+	ReserveMcpu string
 }
 
 type Kernel struct {

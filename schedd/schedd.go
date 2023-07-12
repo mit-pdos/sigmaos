@@ -32,13 +32,13 @@ type Schedd struct {
 	kernelId string
 }
 
-func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
+func MakeSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
 		mfs:      mfs,
 		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
 		qs:       make(map[sp.Trealm]*Queue),
 		schedds:  make(map[string]*protdevclnt.ProtDevClnt),
-		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores),
+		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
 		kernelId: kernelId,
 	}
@@ -191,13 +191,13 @@ func (sd *Schedd) addRealmQueueL(realm sp.Trealm) *Queue {
 	return q
 }
 
-func RunSchedd(kernelId string) error {
+func RunSchedd(kernelId string, reserveMcpu uint) error {
 	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
 	setupMemFsSrv(mfs)
-	sd := MakeSchedd(mfs, kernelId)
+	sd := MakeSchedd(mfs, kernelId, reserveMcpu)
 	setupFs(mfs, sd)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)

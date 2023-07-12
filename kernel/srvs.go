@@ -133,7 +133,7 @@ func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelId}, procclnt.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelId, k.Param.ReserveMcpu}, procclnt.HLINUX)
 }
 
 // Start uprocd in a sigmauser container and post the mount for

@@ -64,7 +64,7 @@ func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid s
 	return msg, nil
 }
 
-func (clnt *Clnt) Exit(cid sp.TclntId) *serr.Err {
+func (clnt *Clnt) DetachAll(cid sp.TclntId) *serr.Err {
 	scs := clnt.sm.SessClnts()
 	for _, sc := range scs {
 		sc.Detach(cid)

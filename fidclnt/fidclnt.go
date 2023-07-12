@@ -47,8 +47,8 @@ func (fidc *FidClnt) ReadSeqNo() sessp.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }
 
-func (fidc *FidClnt) Exit(cid sp.TclntId) *serr.Err {
-	return fidc.pc.Exit(cid)
+func (fidc *FidClnt) DetachAll(cid sp.TclntId) *serr.Err {
+	return fidc.pc.DetachAll(cid)
 }
 
 func (fidc *FidClnt) allocFid() sp.Tfid {

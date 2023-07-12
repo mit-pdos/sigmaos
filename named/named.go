@@ -103,7 +103,7 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", proc.GetPid(), err)
 	}
 
-	nd.Exited(proc.MakeStatus(proc.StatusEvicted))
+	nd.Exit(proc.MakeStatus(proc.StatusEvicted))
 
 	return nil
 }

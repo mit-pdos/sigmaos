@@ -26,5 +26,5 @@ func main() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	sc.ExitedOK()
+	sc.ExitOK()
 }

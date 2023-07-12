@@ -64,7 +64,7 @@ func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	crash.Crasher(mv.FsLib)
 
 	if err := JoinEpoch(mv.FsLib, mv.job, "KVMV", epochstr, []string{JobDir(mv.job), path.Dir(src), path.Dir(dst)}); err != nil {
-		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
+		mv.Exit(proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}
 	return mv, nil
@@ -117,15 +117,15 @@ func (mv *Mover) delShard(sharddir string) {
 	// we are done.
 	if _, err := mv.Stat(sharddir); serr.IsErrCode(err, serr.TErrNotfound) {
 		db.DPrintf(db.KVMV_ERR, "Delete conf %v not found %v\n", mv.epochstr, sharddir)
-		mv.ExitedOK()
+		mv.ExitOK()
 		return
 	}
 
 	if err := mv.RmDir(sharddir); err != nil {
 		db.DPrintf(db.KVMV_ERR, "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
-		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
+		mv.Exit(proc.MakeStatusErr(err.Error(), nil))
 	} else {
-		mv.ExitedOK()
+		mv.ExitOK()
 	}
 }
 
@@ -137,7 +137,7 @@ func (mv *Mover) Move(src, dst string) {
 	}
 	db.DPrintf(db.KVMV, "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
 	if err != nil {
-		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
+		mv.Exit(proc.MakeStatusErr(err.Error(), nil))
 	} else {
 		mv.delShard(src)
 	}

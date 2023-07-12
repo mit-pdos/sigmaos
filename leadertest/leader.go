@@ -60,11 +60,11 @@ func RunLeader(dir, last, child string) {
 		// Create a proc running in the same epoch as leader
 		p := proc.MakeProc("leadertest-proc", []string{epoch.String(), dir})
 		if err := sc.Spawn(p); err != nil {
-			sc.Exited(proc.MakeStatusErr(err.Error(), nil))
+			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 		if err := sc.WaitStart(p.GetPid()); err != nil {
-			sc.Exited(proc.MakeStatusErr(err.Error(), nil))
+			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 	}
@@ -89,5 +89,5 @@ func RunLeader(dir, last, child string) {
 		}
 	}
 
-	sc.ExitedOK()
+	sc.ExitOK()
 }

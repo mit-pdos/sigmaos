@@ -1,7 +1,7 @@
 package memfssrv
 
 import (
-	db "sigmaos/debug"
+	"sigmaos/ctx"
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -9,12 +9,42 @@ import (
 	"sigmaos/namei"
 	"sigmaos/path"
 	"sigmaos/port"
+	"sigmaos/portclnt"
+	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 var rootP = path.Path{""}
+
+//
+// Servers use memfsssrv to create an in-memory file server.
+// memfsssrv uses sesssrv and protsrv to handle client sigmaP
+// requests.
+//
+
+type MemFs struct {
+	*sesssrv.SessSrv
+	ctx fs.CtxI // server context
+	plt *lockmap.PathLockTable
+	sc  *sigmaclnt.SigmaClnt
+	pc  *portclnt.PortClnt
+	pi  portclnt.PortInfo
+	pn  string
+}
+
+func MakeMemFsSrv(uname sp.Tuname, pn string, srv *sesssrv.SessSrv) *MemFs {
+	mfs := &MemFs{
+		SessSrv: srv,
+		ctx:     ctx.MkCtx(uname, 0, sp.NoClntId, nil),
+		plt:     srv.GetPathLockTable(),
+		sc:      srv.SigmaClnt(),
+		pn:      pn,
+	}
+	return mfs
+}
 
 func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
@@ -60,7 +90,6 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
 	dev.SetParent(d)
-	db.DPrintf(db.ALWAYS, "MkDev: %v %v %T\n", pn, d, d)
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
@@ -102,4 +131,13 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	}
 	mfs.plt.Release(mfs.ctx, lk)
 	return lo, nil
+}
+
+// proc.MakeStatus(proc.StatusOK)
+
+func (mfs *MemFs) Exit(status *proc.Status) error {
+	if mfs.pn != "" {
+		// remove mount
+	}
+	return mfs.sc.Exit(status)
 }

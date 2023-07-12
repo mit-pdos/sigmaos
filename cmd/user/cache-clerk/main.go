@@ -75,7 +75,7 @@ func main() {
 	defer p.Done()
 
 	sc.Started()
-	run(sc.ProcClnt, cc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
+	run(sc, cc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
 }
 
 func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
@@ -87,11 +87,11 @@ func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(pclnt *procclnt.ProcClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
+func run(sc *sigmaclnt.SigmaClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
-	sclnt := semclnt.MakeSemClnt(pclnt.FsLib, sempath)
+	sclnt := semclnt.MakeSemClnt(sc.FsLib, sempath)
 	sclnt.Down()
 	// Run for duration dur, then mark as done.
 	go func() {
@@ -116,7 +116,7 @@ func run(pclnt *procclnt.ProcClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, 
 		d := time.Since(start)
 		status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 	}
-	pclnt.Exited(status)
+	sc.Exit(status)
 }
 
 func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {

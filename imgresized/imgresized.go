@@ -123,7 +123,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 
 	go func() {
 		imgd.WaitEvict(proc.GetPid())
-		imgd.ExitedOK()
+		imgd.ExitOK()
 		os.Exit(0)
 	}()
 
@@ -265,5 +265,5 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "imgresized exit\n")
 
-	imgd.ExitedOK()
+	imgd.ExitOK()
 }

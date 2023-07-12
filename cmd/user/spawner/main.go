@@ -68,5 +68,5 @@ func (s *Spawner) Work() {
 	if s.shouldWaitExit {
 		s.WaitExit(s.childPid)
 	}
-	s.ExitedOK()
+	s.ExitOK()
 }

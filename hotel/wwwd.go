@@ -168,7 +168,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
 	s.tracer.Flush()
 	s.p.Done()
-	s.Exited(proc.MakeStatus(proc.StatusEvicted))
+	s.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 

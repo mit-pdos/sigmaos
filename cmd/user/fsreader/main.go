@@ -81,5 +81,5 @@ func (r *Reader) Work() *proc.Status {
 }
 
 func (r *Reader) Exit(status *proc.Status) {
-	r.Exited(status)
+	r.Exit(status)
 }

@@ -34,3 +34,15 @@ func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	sm.tbl[k] = t
 	return true
 }
+
+func (sm *SyncMap[K, T]) Values() []T {
+	sm.Lock()
+	defer sm.Unlock()
+
+	vals := make([]T, len(sm.tbl))
+	i := 0
+	for _, v := range sm.tbl {
+		vals[i] = v
+	}
+	return vals
+}

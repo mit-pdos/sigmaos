@@ -34,5 +34,5 @@ func main() {
 	n := seqgrep.Grep(rdr)
 	log.Printf("n = %d\n", n)
 	p.Done()
-	sc.Exited(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
+	sc.Exit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

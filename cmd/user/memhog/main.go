@@ -75,7 +75,7 @@ func main() {
 	if id == "BE" {
 		time.Sleep(d)
 	}
-	sc.ExitedOK()
+	sc.ExitOK()
 }
 
 func worker(ch chan uint64, m uint64, t time.Time, dur time.Duration) {

@@ -1232,7 +1232,7 @@ func TestOpenRemoveRead(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFslibExit(t *testing.T) {
+func TestFslibDetach(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
 	dot := pathname + "/."
@@ -1247,7 +1247,7 @@ func TestFslibExit(t *testing.T) {
 	assert.Nil(t, err)
 
 	// close
-	err = fsl.Exit()
+	err = fsl.DetachAll()
 	assert.Nil(t, err)
 
 	_, err = fsl.Stat(dot)

@@ -93,9 +93,9 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 	return pathc.LastMount(pn, uname)
 }
 
-// Exit the path client, closing all sessions
-func (pathc *PathClnt) Exit() error {
-	return pathc.FidClnt.Exit(pathc.cid)
+// Close all sessions
+func (pathc *PathClnt) DetachAll() error {
+	return pathc.FidClnt.DetachAll(pathc.cid)
 }
 
 // Detach from server. XXX Mixes up umount a file system at server and

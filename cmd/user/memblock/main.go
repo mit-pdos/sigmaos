@@ -53,7 +53,7 @@ func main() {
 	if err := sc.WaitEvict(proc.GetPid()); err != nil {
 		db.DFatalf("Err waitevict: %v", err)
 	}
-	sc.Exited(proc.MakeStatus(proc.StatusEvicted))
+	sc.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func worker(ch chan []byte, m uint64) {

@@ -44,7 +44,7 @@ func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	return fl.FdClient.MountTree(fl.Uname(), addrs, tree, mount)
 }
 
-func (fl *FsLib) Exit() error {
-	db.DPrintf(db.ALWAYS, "%v: exit fslib\n", proc.GetPid())
-	return fl.PathClnt.Exit()
+func (fl *FsLib) DetachAll() error {
+	db.DPrintf(db.ALWAYS, "%v: Fslib.DetachAll\n", proc.GetPid())
+	return fl.PathClnt.DetachAll()
 }

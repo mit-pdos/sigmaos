@@ -73,6 +73,6 @@ func (m *MatrixMult) Work() {
 	db.DPrintf(db.MATMUL, "doMM %v", proc.GetPid())
 	m.doMM()
 	db.DPrintf(db.MATMUL, "doMM done %v: %v", proc.GetPid(), time.Since(start))
-	m.Exited(proc.MakeStatusInfo(proc.StatusOK, "Latency (us)", time.Since(start).Microseconds()))
+	m.Exit(proc.MakeStatusInfo(proc.StatusOK, "Latency (us)", time.Since(start).Microseconds()))
 	db.DPrintf(db.MATMUL, "Exited %v", proc.GetPid())
 }

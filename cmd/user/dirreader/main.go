@@ -23,10 +23,10 @@ func main() {
 	}
 	sts, err := sc.GetDir(os.Args[1] + "/")
 	if err != nil {
-		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
+		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	} else {
 		log.Printf("%v sts %v\n", os.Args[1], sp.Names(sts))
-		sc.Exited(proc.MakeStatusInfo(proc.StatusOK, "GetDir", sp.Names(sts)))
+		sc.Exit(proc.MakeStatusInfo(proc.StatusOK, "GetDir", sp.Names(sts)))
 	}
 	os.Exit(0)
 }

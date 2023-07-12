@@ -105,7 +105,7 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 	ps.ft.ClunkOpen()
 	ephemeral := ps.et.Get()
 	for _, po := range ephemeral {
-		db.DPrintf(db.PROTSRV, "Detach %v", po.Path())
+		db.DPrintf(db.ALWAYS, "Detach %v", po.Path())
 		// ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	if detach != nil {

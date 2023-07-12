@@ -28,11 +28,11 @@ func main() {
 	a := proc.MakeProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
 	err = sc.Spawn(a)
 	if err != nil {
-		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
+		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	}
 	err = sc.WaitStart(pid1)
 	if err != nil {
-		sc.Exited(proc.MakeStatusErr(err.Error(), nil))
+		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	}
-	sc.ExitedOK()
+	sc.ExitOK()
 }

@@ -16,7 +16,6 @@ import (
 	"sigmaos/kv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -75,11 +74,11 @@ func main() {
 	defer p.Done()
 
 	sc.Started()
-	run(sc.ProcClnt, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
+	run(sc, clk, rcli, p, timed, dur, uint64(keyOffset), sempath)
 }
 
-func waitEvict(pclnt *procclnt.ProcClnt, kc *kv.KvClerk) {
-	err := pclnt.WaitEvict(proc.GetPid())
+func waitEvict(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk) {
+	err := sc.WaitEvict(proc.GetPid())
 	if err != nil {
 		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
@@ -87,12 +86,12 @@ func waitEvict(pclnt *procclnt.ProcClnt, kc *kv.KvClerk) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
+func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Perf, timed bool, dur time.Duration, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
 	if timed {
-		sclnt := semclnt.MakeSemClnt(pclnt.FsLib, sempath)
+		sclnt := semclnt.MakeSemClnt(sc.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
 		go func() {
@@ -100,7 +99,7 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 			atomic.StoreInt32(&done, 1)
 		}()
 	} else {
-		go waitEvict(pclnt, kc)
+		go waitEvict(sc, kc)
 	}
 	start := time.Now()
 	for atomic.LoadInt32(&done) == 0 {
@@ -124,7 +123,7 @@ func run(pclnt *procclnt.ProcClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.P
 			status = proc.MakeStatus(proc.StatusEvicted)
 		}
 	}
-	pclnt.Exited(status)
+	sc.Exit(status)
 }
 
 func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {

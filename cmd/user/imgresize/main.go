@@ -49,7 +49,7 @@ func main() {
 		s = t.Work(output)
 		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
-	t.Exited(s)
+	t.Exit(s)
 }
 
 type Trans struct {

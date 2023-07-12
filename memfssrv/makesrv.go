@@ -6,31 +6,14 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
-	"sigmaos/lockmap"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/serr"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Servers use memfsssrv to create an in-memory file server.
-// memfsssrv uses sesssrv and protsrv to handle client sigmaP
-// requests.
-//
-
-type MemFs struct {
-	*sesssrv.SessSrv
-	ctx fs.CtxI // server context
-	plt *lockmap.PathLockTable
-	sc  *sigmaclnt.SigmaClnt
-	pc  *portclnt.PortClnt
-	pi  portclnt.PortInfo
-}
 
 //
 // Making single (unreplicated MemFs)
@@ -52,16 +35,6 @@ func MakeMemFsPort(pn, port string, uname sp.Tuname) (*MemFs, error) {
 	return fs, err
 }
 
-func MakeMemFsSrv(uname sp.Tuname, srv *sesssrv.SessSrv) *MemFs {
-	mfs := &MemFs{
-		SessSrv: srv,
-		ctx:     ctx.MkCtx(uname, 0, sp.NoClntId, nil),
-		plt:     srv.GetPathLockTable(),
-		sc:      srv.SigmaClnt(),
-	}
-	return mfs
-}
-
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
 func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
@@ -70,7 +43,7 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 	if err != nil {
 		return nil, err
 	}
-	mfs := MakeMemFsSrv(sp.Tuname(pn), srv)
+	mfs := MakeMemFsSrv(sp.Tuname(pn), pn, srv)
 	return mfs, nil
 }
 

@@ -1,10 +1,7 @@
 package leasemgrclnt
 
 import (
-	"fmt"
 	"path"
-	"sync"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
@@ -18,23 +15,6 @@ type LeaseMgrClnt struct {
 	*fslib.FsLib
 	lm *syncmap.SyncMap[string, *LeaseInfo]
 	cc *ClntCache
-}
-
-type LeaseInfo struct {
-	sync.Mutex
-	ch      chan struct{}
-	srv     string
-	lid     sp.TleaseId
-	lmc     *LeaseMgrClnt
-	expired bool
-}
-
-func (li *LeaseInfo) Lease() sp.TleaseId {
-	return li.lid
-}
-
-func (li *LeaseInfo) String() string {
-	return fmt.Sprintf("{%q %v}", li.srv, li.lid)
 }
 
 func NewLeaseMgrClnt(fsl *fslib.FsLib) (*LeaseMgrClnt, error) {
@@ -71,42 +51,11 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 	}
 }
 
-func (lmgr *LeaseMgrClnt) Exit() error {
-	db.DPrintf(db.LEASECLNT, "Exit %v\n", lmgr.lm)
-	return nil
-}
-
-func (li *LeaseInfo) extendLease() error {
-	var res leaseproto.ExtendResult
-	return li.lmc.cc.RPC(path.Join(li.srv, sp.LEASESRV), "LeaseSrv.Extend", &leaseproto.ExtendRequest{LeaseId: uint64(li.lid)}, &res)
-}
-
-func (li *LeaseInfo) extender() {
-	for {
-		select {
-		case <-li.ch:
-			db.DPrintf(db.LEASECLNT, "extender: end lid %v\n", li)
-			return
-		case <-time.After(fsetcd.LeaseTTL / 3 * time.Second):
-			db.DPrintf(db.LEASECLNT, "extender: extend lid %v\n", li)
-			if err := li.extendLease(); err != nil {
-				db.DPrintf(db.LEASECLNT, "extender: expire lid %v err %v\n", li, err)
-				li.expired = true
-				return
-			}
-		}
+func (lmgr *LeaseMgrClnt) EndLeases() error {
+	db.DPrintf(db.LEASECLNT, "EndLeases %v\n", lmgr)
+	for _, li := range lmgr.lm.Values() {
+		db.DPrintf(db.LEASECLNT, "EndLeases %v\n", li)
+		li.End()
 	}
-}
-
-// Extend lease indefinitely
-func (li *LeaseInfo) KeepExtending() error {
-	go li.extender()
 	return nil
-}
-
-func (li *LeaseInfo) End() error {
-	li.ch <- struct{}{}
-	var res leaseproto.EndResult
-	return li.lmc.cc.RPC(path.Join(li.srv, sp.LEASESRV), "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(li.lid)}, &res)
-
 }

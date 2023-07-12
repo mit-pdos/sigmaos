@@ -108,7 +108,7 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false
 	}
-	defer sc.Exit()
+	defer sc.Exit(proc.MakeStatus(proc.StatusErr))
 
 	sym := r.input + "/" + file + "/"
 	db.DPrintf(db.MR, "readFile %v\n", sym)
@@ -231,5 +231,5 @@ func RunReducer(reducef ReduceT, args []string) {
 		os.Exit(1)
 	}
 	status := r.doReduce()
-	r.Exited(status)
+	r.Exit(status)
 }

@@ -219,7 +219,7 @@ func (ssrv *SessSrv) Serve() {
 // The server using ssrv is done; exit.
 func (ssrv *SessSrv) Done() {
 	if ssrv.sc.ProcClnt != nil {
-		ssrv.sc.Exited(proc.MakeStatus(proc.StatusEvicted))
+		ssrv.sc.Exit(proc.MakeStatus(proc.StatusEvicted))
 	} else {
 		if !ssrv.done {
 			ssrv.done = true

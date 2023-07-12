@@ -169,7 +169,7 @@ func (s *FrontEnd) done() error {
 	dbg.DPrintf(dbg.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
 	s.tracer.Flush()
 	s.p.Done()
-	s.Exited(proc.MakeStatus(proc.StatusEvicted))
+	s.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 

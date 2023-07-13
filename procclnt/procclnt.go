@@ -2,6 +2,7 @@ package procclnt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -221,7 +222,8 @@ func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
 	})
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-		if serr.IsErrorUnavailable(err) {
+		var sr *serr.Err
+		if errors.As(err, &sr) && (sr.IsErrUnreachable() || sr.IsMaybeSpecialElem()) {
 			return err
 		}
 	} else {

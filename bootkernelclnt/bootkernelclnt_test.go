@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -163,16 +164,18 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 8, len(sts)) // .statsd, .fences and ctl and running and runqs
+
+	// 9: .statsd, .fences, .leasesrv and ctl and running and runqs
+	assert.Equal(t, 9, len(sts))
 
 	ts.KillOne(sp.SCHEDDREL)
 
 	start := time.Now()
 	for {
-		if time.Since(start) > 3*sp.Conf.Session.TIMEOUT {
+		if time.Since(start) > 2*fsetcd.LeaseTTL {
 			break
 		}
-		time.Sleep(sp.Conf.Session.TIMEOUT / 10)
+		time.Sleep(fsetcd.LeaseTTL / 3 * time.Second)
 		_, err = ts.GetFile(name)
 		if err == nil {
 			db.DPrintf(db.TEST, "retry")

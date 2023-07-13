@@ -30,33 +30,25 @@ func (di DirEntInfo) String() string {
 	}
 }
 
-func (di *DirEntInfo) isEmpty() bool {
-	if di.Perm.IsDir() {
-		if dir, err := UnmarshalDir(di.Nf.Data); err != nil {
-			db.DFatalf("isEmptyDir: unmarshalDir %v err %v\n", di.Path, err)
-		} else if len(dir.Ents) <= 1 { // don't count "."
-			return true
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
 type DirInfo struct {
 	Ents *sorteddir.SortedDir
 	Perm sp.Tperm
 }
 
 func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
-	if di.Nf == nil {
-		nf, _, err := fs.GetFile(di.Path)
+	if di.Perm.IsDir() {
+		dir, _, err := fs.readDir(di.Path, false)
 		if err != nil {
 			return false, err
 		}
-		di.Nf = nf
+		if dir.Ents.Len() <= 1 { // don't count "."
+			return true, nil
+		} else {
+			return false, nil
+		}
+	} else {
+		return true, nil
 	}
-	return di.isEmpty(), nil
 }
 
 func (fs *FsEtcd) MkRootDir() *serr.Err {

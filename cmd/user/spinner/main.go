@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -42,7 +43,13 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 	db.DPrintf(db.SPINNER, "MakeSpinner: %v\n", args)
 
-	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|sp.DMTMP, sp.OWRITE, []byte{}); err != nil {
+	li, err := sc.LeaseMgrClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
+	if err != nil {
+		return nil, err
+	}
+	li.KeepExtending()
+
+	if _, err := s.PutFileEphemeral(path.Join(s.outdir, proc.GetPid().String()), 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
 		db.DFatalf("MakeFile error: %v", err)
 	}
 

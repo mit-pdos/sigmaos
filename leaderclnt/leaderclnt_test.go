@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/crash"
-	"sigmaos/fsetcd"
+	// "sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/serr"
@@ -50,7 +50,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 		l.ReleaseLeadership()
 
-		time.Sleep(2 * fsetcd.SessionTTL * time.Second)
+		time.Sleep(1 * time.Second)
 
 		// Fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail

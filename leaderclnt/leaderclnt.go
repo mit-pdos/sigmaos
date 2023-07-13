@@ -1,8 +1,9 @@
 package leaderclnt
 
 import (
+	"hash/fnv"
+
 	"sigmaos/electclnt"
-	"sigmaos/epochclnt"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/sessp"
@@ -15,49 +16,47 @@ import (
 
 type LeaderClnt struct {
 	*fslib.FsLib
-	*epochclnt.EpochClnt
 	*fenceclnt.FenceClnt
-	epochfn string
-	e       *electclnt.ElectClnt
+	e     *electclnt.ElectClnt
+	fence *sessp.Tfence
+	pn    string
 }
 
-func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm sp.Tperm) (*LeaderClnt, error) {
-	l := &LeaderClnt{}
-	l.FsLib = fsl
-	e, err := electclnt.MakeElectClnt(fsl, leaderfn, perm)
+func MakeLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, error) {
+	l := &LeaderClnt{FsLib: fsl, pn: pn, FenceClnt: fenceclnt.MakeFenceClnt(fsl)}
+	e, err := electclnt.MakeElectClnt(fsl, pn, perm)
 	if err != nil {
 		return nil, err
 	}
 	l.e = e
-	l.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
-	l.FenceClnt = fenceclnt.MakeFenceClnt(fsl, l.EpochClnt)
 	return l, nil
 }
 
-func (l *LeaderClnt) EpochPath() string {
-	return l.epochfn
-}
-
-// Become leader for an epoch and fence ops for that epoch.  Another
-// proc may steal our leadership (e.g., after we are partioned) and
-// start a higher epoch.  Note epoch doesn't take effect until we
-// perform a fenced operation (e.g., a read/write).
-func (l *LeaderClnt) AcquireFencedEpoch(b []byte, dirs []string) (sessp.Tepoch, error) {
+// Become leader and fence ops at that epoch.  Another proc may steal
+// our leadership (e.g., after we are partioned) and start a higher
+// epoch.  Note epoch doesn't take effect until we perform a fenced
+// operation (e.g., a read/write).
+func (l *LeaderClnt) LeadAndFence(b []byte, dirs []string) error {
 	if err := l.e.AcquireLeadership(b); err != nil {
-		return sessp.NoEpoch, err
+		return err
 	}
-	return l.EnterNextEpoch(dirs)
+	l.fence = sessp.MakeFenceNull()
+	l.fence.Epoch = uint64(l.e.Epoch())
+	h := fnv.New64a()
+	h.Write([]byte(l.pn))
+	l.fence.Fenceid.Path = h.Sum64()
+	return l.fenceDirs(dirs)
 }
 
 // Enter next epoch.  If the leader is partitioned and another leader
-// has taken over, this fails.
-func (l *LeaderClnt) EnterNextEpoch(dirs []string) (sessp.Tepoch, error) {
-	epoch, err := l.AdvanceEpoch()
-	if err != nil {
-		return sessp.NoEpoch, err
+// has taken over already, this fails.
+func (l *LeaderClnt) fenceDirs(dirs []string) error {
+	if err := l.FenceAtEpoch(l.fence, dirs); err != nil {
+		return err
 	}
-	if err := l.FenceAtEpoch(epoch, dirs); err != nil {
-		return sessp.NoEpoch, err
-	}
-	return epoch, nil
+	return nil
+}
+
+func (l *LeaderClnt) ReleaseLeadership() error {
+	return l.e.ReleaseLeadership()
 }

@@ -12,13 +12,13 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
 	leadername = "name/leader"
-	epochname  = leadername + "-epoch"
 	dirux      = sp.UX + "/~local/outdir"
 )
 
@@ -30,18 +30,13 @@ func TestOldLeaderFail(t *testing.T) {
 	ts.Remove(dirux + "/f")
 	ts.Remove(dirux + "/g")
 
-	ts.Remove(epochname)
-
-	_, err := ts.PutFile(epochname, 0777, sp.OWRITE, []byte{})
-	assert.Nil(t, err, "PutFile")
-
 	fsl, err := fslib.MakeFsLibAddr("leader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err, "MakeFsLib")
 	ch := make(chan bool)
 	go func() {
 		l, err := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777)
 		assert.Nil(t, err)
-		_, err = l.AcquireFencedEpoch(nil, []string{dirux})
+		err = l.LeadAndFence(nil, []string{dirux})
 		assert.Nil(t, err, "BecomeLeaderEpoch")
 
 		fd, err := fsl.Create(dirux+"/f", 0777, sp.OWRITE)
@@ -49,16 +44,19 @@ func TestOldLeaderFail(t *testing.T) {
 
 		ch <- true
 
-		log.Printf("partition from named..\n")
+		log.Printf("sign off as leader..\n")
 
-		crash.Partition(fsl)
+		crash.PartitionNamed(fsl)
 
-		time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
+		l.ReleaseLeadership()
+
+		time.Sleep(2 * fsetcd.SessionTTL * time.Second)
 
 		// Fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(t, err, "Write")
+		assert.True(t, serr.IsErrCode(err, serr.TErrStale))
 
 		fsl.Close(fd)
 
@@ -71,7 +69,7 @@ func TestOldLeaderFail(t *testing.T) {
 	l, err := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777)
 	assert.Nil(t, err)
 	// When other thread partitions, we become leader and start new epoch
-	_, err = l.AcquireFencedEpoch(nil, []string{dirux})
+	err = l.LeadAndFence(nil, []string{dirux})
 	assert.Nil(t, err, "BecomeLeaderEpoch")
 
 	// Do some op so that server becomes aware of new epoch

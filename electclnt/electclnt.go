@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/leaderetcd"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -54,4 +55,8 @@ func (ec *ElectClnt) AcquireLeadership(b []byte) error {
 func (ec *ElectClnt) ReleaseLeadership() error {
 	ec.Remove(ec.elect.Key())
 	return ec.elect.Resign()
+}
+
+func (ec *ElectClnt) Epoch() sessp.Tepoch {
+	return sessp.Tepoch(ec.elect.Rev())
 }

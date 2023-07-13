@@ -102,7 +102,7 @@ func (pathc *PathClnt) DetachAll() error {
 // closing session; if two mounts point to the same server; the first
 // detach will close the session regardless of the second mount point.
 func (pathc *PathClnt) Detach(pn string) error {
-	fid, err := pathc.mnt.umount(path.Split(pn))
+	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (pathc *PathClnt) Detach(pn string) error {
 
 // Simulate network partition to server that exports path
 func (pathc *PathClnt) Disconnect(pn string) error {
-	fid, err := pathc.mnt.umount(path.Split(pn))
+	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
 	if err != nil {
 		return err
 	}
@@ -246,15 +246,6 @@ func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname) *serr.Err {
 	return pathc.FidClnt.Renameat(fid, o, fid1, n)
 }
 
-func (pathc *PathClnt) umountFree(path []string) *serr.Err {
-	if fid, err := pathc.mnt.umount(path); err != nil {
-		return err
-	} else {
-		pathc.FidClnt.Free(fid)
-		return nil
-	}
-}
-
 func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
 	db.DPrintf(db.PATHCLNT, "Remove %v\n", name)
 	pn := path.Split(name)
@@ -343,6 +334,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), nil)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "SetRemoveWatch: Walk %v err %v", pn, err)
 		return err
 	}
 	if w == nil {

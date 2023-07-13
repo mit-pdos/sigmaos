@@ -45,8 +45,8 @@ func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Wat
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && err.IsErrUnreachable() {
 			done := len(path1) - len(left)
-			db.DPrintf(db.WALK, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
-			if e := pathc.umountFree(path1[0:done]); e != nil {
+			db.DPrintf(db.ALWAYS, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			if e := pathc.umountPrefix(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
 			// try again
@@ -242,4 +242,13 @@ func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Path, r path.Path, w Watch) 
 		w(p.String(), err)
 	}()
 	return sp.NoFid, nil
+}
+
+func (pathc *PathClnt) umountPrefix(path []string) *serr.Err {
+	if fid, _, err := pathc.mnt.umount(path, false); err != nil {
+		return err
+	} else {
+		pathc.FidClnt.Free(fid)
+		return nil
+	}
 }

@@ -221,7 +221,7 @@ func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
 	})
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrorUnavailable(err) {
 			return err
 		}
 	} else {

@@ -67,18 +67,6 @@ func match(mp path.Path, path path.Path) (bool, path.Path) {
 	return true, path[len(mp):]
 }
 
-func matchexact(mp path.Path, path path.Path) bool {
-	if len(mp) != len(path) {
-		return false
-	}
-	for i, s := range mp {
-		if s != path[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.Path, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
@@ -100,20 +88,27 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 	return sp.NoFid, path, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
-// XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(path path.Path) (sp.Tfid, *serr.Err) {
+// Umount mnt point that is the longest prefix of path, if exact is
+// false, or matches path exact, if exact if true.
+func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	for i, p := range mnt.mounts {
-		ok := matchexact(p.path, path)
-		if ok {
+		ok, left := match(p.path, path)
+		if ok && len(left) == 0 {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			db.DPrintf(db.MOUNT, "umount %v %v\n", path, p.fid)
-			return p.fid, nil
+			db.DPrintf(db.MOUNT, "umount exact %v %v\n", path, p.fid)
+			return p.fid, nil, nil
+		}
+		if ok && !exact {
+			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+			db.DPrintf(db.MOUNT, "umount prefetch %v left %v %v\n", path, left, p.fid)
+			return p.fid, left, nil
 		}
 	}
-	return sp.NoFid, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	db.DPrintf(db.ALWAYS, "umount: %v %v\n", path, mnt.mounts)
+	return sp.NoFid, nil, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

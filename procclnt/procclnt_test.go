@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
@@ -679,7 +680,7 @@ func TestBurstSpawn(t *testing.T) {
 func TestSpawnCrashSchedd(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	// Spawn a proc which can't possibly be run by any procd.
+	// Spawn a proc which can't possibly be run by any schedd.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores*2))
 
 	err := ts.KillOne(sp.SCHEDDREL)
@@ -730,7 +731,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Nil(t, err, "kill schedd")
 
 	// Wait for them to respawn.
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
@@ -741,7 +742,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Nil(t, err, "kill schedd")
 
 	// Wait for them to respawn.
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)

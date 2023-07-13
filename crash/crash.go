@@ -45,7 +45,7 @@ func Crasher(fsl *fslib.FsLib) {
 			if r < 330 {
 				Crash()
 			} else if r < 660 {
-				Partition(fsl)
+				PartitionNamed(fsl)
 			}
 		}
 	}()
@@ -86,7 +86,7 @@ func Crash() {
 	os.Exit(1)
 }
 
-func Partition(fsl *fslib.FsLib) {
+func PartitionNamed(fsl *fslib.FsLib) {
 	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", GetEnv(proc.SIGMAPARTITION))
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
@@ -96,7 +96,7 @@ func Partition(fsl *fslib.FsLib) {
 func MaybePartition(fsl *fslib.FsLib) bool {
 	r := rand.Int64(1000)
 	if r < 330 {
-		Partition(fsl)
+		PartitionNamed(fsl)
 		return true
 	}
 	return false

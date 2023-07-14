@@ -72,7 +72,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 			db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", d, err)
 			return err
 		}
-		fn := srv.String() + "/" + sp.FENCEDIR + "/" + fc.fence.Fenceid.Tpath().String()
+		fn := srv.String() + "/" + sp.FENCEDIR + "/" + fc.fence.Path.String()
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf(db.FENCECLNT_ERR, "Remove %v err %v", fn, err)
 			return err

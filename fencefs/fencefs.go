@@ -88,14 +88,14 @@ func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
 func CheckFence(root fs.Dir, new sessp.Tfence) (*Fence, *serr.Err) {
-	if new.Fenceid.Path == 0 {
+	if new.Path == 0 {
 		return nil, nil
 	}
-	f, err := allocFence(root, new.Fenceid.Tpath().String())
+	f, err := allocFence(root, new.Path.String())
 	if f == nil {
 		return nil, err
 	}
-	e := new.Tepoch()
+	e := new.Epoch
 	if e < f.epoch {
 		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
 		f.RUnlock()

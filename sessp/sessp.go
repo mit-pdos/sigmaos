@@ -100,21 +100,39 @@ func (fcm *FcallMsg) Tag() Ttag {
 	return Ttag(fcm.Fc.Tag)
 }
 
-func MakeFenceNull() *Tfence {
-	return &Tfence{Fenceid: &Tfenceid{}}
+type Tfence struct {
+	Path     Tpath
+	ServerId uint64 // XXX maybe pub key
+	Epoch    Tepoch
+}
+
+func NewFence() *Tfence {
+	return &Tfence{}
+}
+
+func (f *Tfence) FenceProto() *TfenceProto {
+	fp := NewFenceProto()
+	fp.Serverid = f.ServerId
+	fp.Path = uint64(f.Path)
+	fp.Epoch = uint64(f.Epoch)
+	return fp
+}
+
+func NewFenceProto() *TfenceProto {
+	return &TfenceProto{}
 }
 
 func MakeFcallMsgNull() *FcallMsg {
-	fc := &Fcall{Received: &Tinterval{}, Fence: MakeFenceNull()}
+	fc := &Fcall{Received: &Tinterval{}, Fence: NewFenceProto()}
 	return &FcallMsg{fc, nil, nil}
 }
 
-func (fi *Tfenceid) Tpath() Tpath {
-	return Tpath(fi.Path)
+func (fp *TfenceProto) Tpath() Tpath {
+	return Tpath(fp.Path)
 }
 
-func (f *Tfence) Tepoch() Tepoch {
-	return Tepoch(f.Epoch)
+func (fp *TfenceProto) Tepoch() Tepoch {
+	return Tepoch(fp.Epoch)
 }
 
 func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval, f *Tfence) *FcallMsg {
@@ -124,7 +142,7 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 		Client:   uint64(cli),
 		Session:  uint64(sess),
 		Received: &rcv,
-		Fence:    f,
+		Fence:    f.FenceProto(),
 	}
 	if seqno != nil {
 		fcall.Seqno = uint64(seqno.Next())
@@ -133,7 +151,7 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, MakeFenceNull())
+	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, NewFence())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -150,6 +168,13 @@ func (fm *FcallMsg) GetType() Tfcall {
 
 func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
+}
+
+func (fm *FcallMsg) Tfence() *Tfence {
+	f := NewFence()
+	f.Epoch = fm.Fc.Fence.Tepoch()
+	f.Path = fm.Fc.Fence.Tpath()
+	return f
 }
 
 func MkInterval(start, end uint64) *Tinterval {

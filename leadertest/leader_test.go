@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/epochclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -29,8 +29,6 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 	err := ts.MkDir(dir, 0777)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "putfile")
-
-	epochclnt.Remove(ts.FsLib, LEADERFN)
 
 	for i := 0; i < N; i++ {
 		last := ""
@@ -61,7 +59,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
-	e := uint64(0)
+	e := sessp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v %T\n", conf, conf.Leader)

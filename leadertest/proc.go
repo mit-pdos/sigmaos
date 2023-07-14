@@ -5,8 +5,6 @@ import (
 	"log"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	db "sigmaos/debug"
 	"sigmaos/delay"
 	"sigmaos/fenceclnt"
@@ -25,8 +23,8 @@ func RunProc(fencestr, dir string) {
 	}
 	sc.Started()
 
-	fence := sessp.MakeFenceNull()
-	err = proto.Unmarshal([]byte(fencestr), fence)
+	fence := sessp.NewFence()
+	err = json.Unmarshal([]byte(fencestr), fence)
 	if err != nil {
 		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	}

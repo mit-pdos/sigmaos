@@ -383,7 +383,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 // ops.
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.FENCESRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
-	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Fc.Fence); err != nil {
+	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Tfence()); err != nil {
 		msg := sp.MkRerror(err)
 		reply := sessp.MakeFcallMsgReply(fc, msg)
 		ssrv.sendReply(fc, reply, sess)

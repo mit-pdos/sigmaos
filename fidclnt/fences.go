@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 //
@@ -48,5 +48,5 @@ func (ft *FenceTable) Lookup(p path.Path) *sessp.Tfence {
 		}
 	}
 	db.DPrintf(db.FIDCLNT, "Lookup fence %v: no fence\n", p)
-	return sessp.MakeFenceNull()
+	return sessp.NewFence()
 }

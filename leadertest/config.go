@@ -2,10 +2,11 @@ package leadertest
 
 import (
 	"sigmaos/proc"
+	"sigmaos/sessp"
 )
 
 type Config struct {
-	Epoch  uint64
+	Epoch  sessp.Tepoch
 	Leader proc.Tpid
 	Pid    proc.Tpid
 }

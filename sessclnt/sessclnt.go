@@ -73,7 +73,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, sessp.MakeFenceNull())
+	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, sessp.NewFence())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -114,7 +114,7 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.ALWAYS, "%v: Send detach %v\n", proc.GetPid(), c.sid)
-	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil, sessp.MakeFenceNull())
+	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil, sessp.NewFence())
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err

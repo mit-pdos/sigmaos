@@ -5,8 +5,6 @@ import (
 	"log"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	db "sigmaos/debug"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
@@ -59,7 +57,7 @@ func RunLeader(dir, last, child string) {
 	if child == "child" {
 		// Create a proc running in the same fence as leader
 		f := l.Fence()
-		b, err := proto.Marshal(&f)
+		b, err := json.Marshal(*f)
 		if err != nil {
 			db.DFatalf("%v marshal err %v\n", proc.GetName(), err)
 		}

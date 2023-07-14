@@ -18,7 +18,7 @@ type LeaderClnt struct {
 	*fslib.FsLib
 	*fenceclnt.FenceClnt
 	e     *electclnt.ElectClnt
-	fence sessp.Tfence
+	fence *sessp.Tfence
 	pn    string
 }
 
@@ -29,7 +29,7 @@ func MakeLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, er
 		return nil, err
 	}
 	l.e = e
-	l.fence = *sessp.MakeFenceNull()
+	l.fence = sessp.NewFence()
 	return l, nil
 }
 
@@ -41,21 +41,21 @@ func (l *LeaderClnt) LeadAndFence(b []byte, dirs []string) error {
 	if err := l.e.AcquireLeadership(b); err != nil {
 		return err
 	}
-	l.fence.Epoch = uint64(l.e.Epoch())
+	l.fence.Epoch = l.e.Epoch()
 	h := fnv.New64a()
 	h.Write([]byte(l.pn))
-	l.fence.Fenceid.Path = h.Sum64()
+	l.fence.Path = sessp.Tpath(h.Sum64())
 	return l.fenceDirs(dirs)
 }
 
-func (l *LeaderClnt) Fence() sessp.Tfence {
+func (l *LeaderClnt) Fence() *sessp.Tfence {
 	return l.fence
 }
 
 // Enter next epoch.  If the leader is partitioned and another leader
 // has taken over already, this fails.
 func (l *LeaderClnt) fenceDirs(dirs []string) error {
-	if err := l.FenceAtEpoch(l.fence, dirs); err != nil {
+	if err := l.FenceAtEpoch(*l.fence, dirs); err != nil {
 		return err
 	}
 	return nil

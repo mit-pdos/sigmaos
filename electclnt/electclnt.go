@@ -60,3 +60,7 @@ func (ec *ElectClnt) ReleaseLeadership() error {
 func (ec *ElectClnt) Epoch() sessp.Tepoch {
 	return sessp.Tepoch(ec.elect.Rev())
 }
+
+func (ec *ElectClnt) Lease() sp.TleaseId {
+	return ec.sess.Lease()
+}

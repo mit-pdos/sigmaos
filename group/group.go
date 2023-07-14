@@ -61,8 +61,14 @@ type Group struct {
 	grp    string
 	ip     string
 	*sigmaclnt.SigmaClnt
-	srv    *sesssrv.SessSrv
-	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
+	srv *sesssrv.SessSrv
+
+	// We use an electclnt instead of a leaderclnt, since we don't
+	// need epochs because the config is stored in etcd. If we lose
+	// our connection to etcd & our leadership, we won't be able to
+	// write the config file anyway.
+	ec *electclnt.ElectClnt
+
 	isBusy bool
 }
 
@@ -203,7 +209,7 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 	}
 	mnt := sp.MkMountService(srvAddrs)
 	db.DPrintf(db.GROUP, "Advertise %v/%v at %v", mnt, srvAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, sp.NoLeaseId); err != nil {
+	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.ec.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -237,8 +243,6 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	g.ip = ip
 	g.jobdir = jobdir
-
-	crash.Crasher(g.FsLib)
 
 	var nReplicas int
 	nReplicas, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
@@ -299,9 +303,6 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	g.srv = srv
 
-	crash.Partitioner(g.srv)
-	crash.NetFailer(g.srv)
-
 	clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{srv.MyAddr()})
 
 	db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v at %v", grp, id, clusterCfg,
@@ -315,6 +316,10 @@ func RunMember(jobdir, grp string, public bool) {
 
 	// Release leadership.
 	g.ReleaseLeadership()
+
+	crash.Crasher(g.FsLib)
+	crash.Partitioner(g.srv)
+	crash.NetFailer(g.srv)
 
 	// Record performance.
 	p, err := perf.MakePerf(perf.GROUP)

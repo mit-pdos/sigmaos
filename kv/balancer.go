@@ -85,7 +85,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	}
 	bl.kvdmcpu = proc.Tmcpu(kvdnc)
 
-	bl.lc, err = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancer(bl.job), sp.DMSYMLINK|077)
+	bl.lc, err = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancerElect(bl.job), sp.DMSYMLINK|077)
 	if err != nil {
 		db.DFatalf("MakeLeaderClnt %v\n", err)
 	}
@@ -120,9 +120,13 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", proc.GetName(), bl.lc.Fence())
 
+	if err := bl.MkMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
+		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
+	}
+
 	// first epoch is used to create a functional system (e.g.,
 	// creating shards), so don't allow a crash then.
-	if bl.lc.Fence().Epoch > 1 {
+	if _, err := bl.Stat(KVConfig(bl.job)); err == nil {
 		crash.Crasher(bl.FsLib)
 	}
 
@@ -157,6 +161,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {
 	s := opcode + " " + mfs
+	db.DPrintf(db.KVBAL, "Balancer %v op %v\n", KVBalancerCtl(job), opcode)
 	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), sp.OWRITE, 0)
 	return err
 }
@@ -245,9 +250,10 @@ func (bl *Balancer) PostConfig() {
 
 // Post new epoch, and finish moving sharddirs.
 func (bl *Balancer) restore(conf *Config, fence sessp.Tfence) {
+	// Increase N, even if the config is the same as before, so that
+	// helpers and clerks realize there is new balancer.  XXX they can
+	// know based on Fence.
 	bl.conf = conf
-	// Increase epoch, even if the config is the same as before,
-	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Fence = fence
 	db.DPrintf(db.KVBAL, "restore to %v with fence %v\n", bl.conf, fence)
 	bl.PostConfig()
@@ -379,6 +385,8 @@ func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
 	}
 	defer bl.clearIsBusy()
 
+	db.DPrintf(db.KVBAL, "%v: opcode %v mfs %v conf %v\n", proc.GetName(), opcode, mfs, bl.conf)
+
 	var nextShards []string
 	switch opcode {
 	case "add":
@@ -396,7 +404,7 @@ func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
 
 	var moves Moves
 	docrash := false
-	if bl.conf.Fence.Epoch == 1 { // XXX
+	if bl.conf.N == 0 { // first conf
 		bl.initShards(nextShards)
 		docrash = true
 	} else {
@@ -404,6 +412,7 @@ func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
 	}
 
 	bl.conf.Fence = *bl.lc.Fence()
+	bl.conf.N += 1
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 

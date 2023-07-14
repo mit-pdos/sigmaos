@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"log"
 	"path"
 	"strconv"
 
@@ -13,14 +14,15 @@ import (
 )
 
 const (
-	GRP           = "grp-"
-	NKV           = 10
-	NSHARD        = 10 * NKV
-	NBALANCER     = 3
-	KVDIR         = "name/kv/"
-	KVCONF        = "config"
-	KVBALANCER    = "balancer"
-	KVBALANCERCTL = "ctl"
+	GRP             = "grp-"
+	NKV             = 10
+	NSHARD          = 10 * NKV
+	NBALANCER       = 3
+	KVDIR           = "name/kv/"
+	KVCONF          = "config"
+	KVBALANCER      = "balancer"
+	KVBALANCERELECT = "balancer-elect"
+	KVBALANCERCTL   = "ctl"
 )
 
 func JobDir(job string) string {
@@ -33,6 +35,10 @@ func KVConfig(job string) string {
 
 func KVBalancer(job string) string {
 	return path.Join(JobDir(job), KVBALANCER)
+}
+
+func KVBalancerElect(job string) string {
+	return path.Join(JobDir(job), KVBALANCERELECT)
 }
 
 func KVBalancerCtl(job string) string {
@@ -95,6 +101,7 @@ func (kvf *KVFleet) Nkvd() int {
 func (kvf *KVFleet) Start() error {
 	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdmcpu, kvf.crashhelper, kvf.auto)
 	for i := 0; i < kvf.nkvd; i++ {
+		log.Printf("add group %d\n", i)
 		if err := kvf.AddKVDGroup(); err != nil {
 			return err
 		}
@@ -110,11 +117,13 @@ func (kvf *KVFleet) AddKVDGroup() error {
 	if err != nil {
 		return err
 	}
+	log.Printf("spawn group %v\n", kvf.job)
 	kvf.kvdgms = append(kvf.kvdgms, gm)
 	// Get balancer to add the group
 	if err := BalancerOpRetry(kvf.FsLib, kvf.job, "add", grp); err != nil {
 		return err
 	}
+	log.Printf("balancer add done %v\n", kvf.job)
 	return nil
 }
 

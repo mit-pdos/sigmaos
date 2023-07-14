@@ -64,3 +64,7 @@ func (l *LeaderClnt) fenceDirs(dirs []string) error {
 func (l *LeaderClnt) ReleaseLeadership() error {
 	return l.e.ReleaseLeadership()
 }
+
+func (l *LeaderClnt) Lease() sp.TleaseId {
+	return l.e.Lease()
+}

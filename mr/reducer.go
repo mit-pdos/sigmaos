@@ -108,7 +108,7 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false
 	}
-	defer sc.Exit(proc.MakeStatus(proc.StatusErr))
+	defer sc.DetachAll()
 
 	sym := r.input + "/" + file + "/"
 	db.DPrintf(db.MR, "readFile %v\n", sym)

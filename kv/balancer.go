@@ -114,16 +114,15 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("Marshal failed %v\n", error)
 	}
 
-	epoch, err := bl.lc.AcquireFencedEpoch(b, []string{})
-	if err != nil {
-		db.DFatalf("%v: AcquireFenceEpoch %v\n", proc.GetName(), err)
+	if err := bl.lc.LeadAndFence(b, []string{}); err != nil {
+		db.DFatalf("%v: LeadAndFence %v\n", proc.GetName(), err)
 	}
 
-	db.DPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
+	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", proc.GetName(), bl.lc.Fence())
 
 	// first epoch is used to create a functional system (e.g.,
 	// creating shards), so don't allow a crash then.
-	if epoch > 1 {
+	if bl.lc.Fence().Epoch > 1 {
 		crash.Crasher(bl.FsLib)
 	}
 
@@ -133,7 +132,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	case <-ch:
 		// done
 	default:
-		bl.recover(epoch)
+		bl.recover(*bl.lc.Fence())
 
 		bl.clearIsBusy()
 
@@ -245,25 +244,25 @@ func (bl *Balancer) PostConfig() {
 }
 
 // Post new epoch, and finish moving sharddirs.
-func (bl *Balancer) restore(conf *Config, epoch sessp.Tepoch) {
+func (bl *Balancer) restore(conf *Config, fence sessp.Tfence) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
-	bl.conf.Epoch = epoch
-	db.DPrintf(db.KVBAL, "restore to %v with epoch %v\n", bl.conf, epoch)
+	bl.conf.Fence = fence
+	db.DPrintf(db.KVBAL, "restore to %v with fence %v\n", bl.conf, fence)
 	bl.PostConfig()
 	bl.doMoves(bl.conf.Moves)
 }
 
-func (bl *Balancer) recover(epoch sessp.Tepoch) {
+func (bl *Balancer) recover(fence sessp.Tfence) {
 	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
-		bl.restore(conf, epoch)
+		bl.restore(conf, fence)
 	} else {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		bl.conf = MakeConfig(epoch)
+		bl.conf = MakeConfig(fence)
 		bl.PostConfig()
 	}
 }
@@ -345,9 +344,9 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"kv-mover", bl.job, bl.conf.Epoch.String(), m.Src, m.Dst},
+		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
-				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
+				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Fence.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()
 			})
 	}
@@ -397,24 +396,14 @@ func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
 
 	var moves Moves
 	docrash := false
-	if bl.conf.Epoch == 1 {
+	if bl.conf.Fence.Epoch == 1 { // XXX
 		bl.initShards(nextShards)
 		docrash = true
 	} else {
 		moves = bl.computeMoves(nextShards)
 	}
 
-	epoch, err := bl.lc.EnterNextEpoch([]string{})
-	if err != nil {
-		db.DPrintf(db.KVBAL_ERR, "EnterNextEpoch fail %v\n", err)
-		var sr *serr.Err
-		if errors.As(err, &sr) {
-			return sr
-		}
-		return serr.MkErr(serr.TErrError, err)
-	}
-
-	bl.conf.Epoch = epoch
+	bl.conf.Fence = *bl.lc.Fence()
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 

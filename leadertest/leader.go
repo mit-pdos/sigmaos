@@ -56,11 +56,7 @@ func RunLeader(dir, last, child string) {
 
 	if child == "child" {
 		// Create a proc running in the same fence as leader
-		f := l.Fence()
-		b, err := json.Marshal(*f)
-		if err != nil {
-			db.DFatalf("%v marshal err %v\n", proc.GetName(), err)
-		}
+		b := l.Fence().Json()
 		p := proc.MakeProc("leadertest-proc", []string{string(b), dir})
 		if err := sc.Spawn(p); err != nil {
 			sc.Exit(proc.MakeStatusErr(err.Error(), nil))

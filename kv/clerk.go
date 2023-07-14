@@ -94,7 +94,7 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 	kc.FsLib = fsl
 	kc.conf = &Config{}
 	kc.job = job
-	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	kc.fclnt = fenceclnt.MakeFenceClnt(kc.FsLib)
 	return kc
 }
 
@@ -103,7 +103,7 @@ func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
 	kc.FsLib = fsl
 	kc.conf = &Config{}
 	kc.job = job
-	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBalancer(kc.job))
+	kc.fclnt = fenceclnt.MakeFenceClnt(kc.FsLib)
 	return kc, kc.StartClerk()
 }
 
@@ -154,7 +154,7 @@ func (kc *KvClerk) switchConfig() error {
 		db.DPrintf(db.KVCLERK, "Conf %v", kc.conf)
 		kvset := MakeKvs(kc.conf.Shards)
 		dirs := paths(kc.job, kvset)
-		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
+		if err := kc.fclnt.FenceAtEpoch(kc.conf.Fence, dirs); err != nil {
 			var serr *serr.Err
 			if errors.As(err, &serr) && (serr.IsErrVersion() || serr.IsErrStale()) {
 				db.DPrintf(db.KVCLERK_ERR, "version mismatch; retry")

@@ -41,7 +41,7 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	if rerror != nil {
 		msg = rerror
 	}
-	reply := sessp.MakeFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil, sessp.Tinterval{}, sessp.MakeFenceNull())
+	reply := sessp.MakeFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil, sessp.Tinterval{}, sessp.NewFence())
 	reply.Data = data
 	reply.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(reply)

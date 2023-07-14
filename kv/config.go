@@ -3,8 +3,8 @@ package kv
 import (
 	"fmt"
 
-	"sigmaos/sessp"
 	"sigmaos/fslib"
+	"sigmaos/sessp"
 )
 
 type Move struct {
@@ -28,17 +28,17 @@ func (mvs Moves) String() string {
 }
 
 type Config struct {
-	Epoch  sessp.Tepoch
+	Fence  sessp.Tfence
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
 }
 
 func (cf *Config) String() string {
-	return fmt.Sprintf("{Epoch %v, Shards %v, Moves %v}", cf.Epoch, cf.Shards, cf.Moves)
+	return fmt.Sprintf("{Fence %v, Shards %v, Moves %v}", cf.Fence, cf.Shards, cf.Moves)
 }
 
-func MakeConfig(e sessp.Tepoch) *Config {
-	cf := &Config{e, make([]string, NSHARD), Moves{}}
+func MakeConfig(f sessp.Tfence) *Config {
+	cf := &Config{f, make([]string, NSHARD), Moves{}}
 	return cf
 }
 

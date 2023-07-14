@@ -29,12 +29,12 @@ type Mover struct {
 }
 
 func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
-	epoch, err := sessp.String2Epoch(epochstr)
+	fence, err := sessp.NewFenceJson([]byte(epochstr))
 	if err != nil {
 		return err
 	}
-	fclnt := fenceclnt.MakeLeaderFenceClnt(fsl, KVBalancer(job))
-	if err := fclnt.FenceAtEpoch(epoch, dirs); err != nil {
+	fclnt := fenceclnt.MakeFenceClnt(fsl)
+	if err := fclnt.FenceAtEpoch(*fence, dirs); err != nil {
 		return fmt.Errorf("FenceAtEpoch %v err %v", KVConfig(job), err)
 	}
 	// reads are fenced
@@ -42,8 +42,8 @@ func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) err
 	if err := fsl.GetFileJson(KVConfig(job), &config); err != nil {
 		return fmt.Errorf("GetFileJson %v err %v", KVConfig(job), err)
 	}
-	if config.Epoch != epoch {
-		return fmt.Errorf("Newer config %v", config.Epoch)
+	if config.Fence.Epoch != fence.Epoch {
+		return fmt.Errorf("Newer config %v", config.Fence)
 	}
 	return nil
 }

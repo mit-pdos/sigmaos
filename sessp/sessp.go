@@ -1,6 +1,7 @@
 package sessp
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -108,6 +109,23 @@ type Tfence struct {
 
 func NewFence() *Tfence {
 	return &Tfence{}
+}
+
+func NewFenceJson(b []byte) (*Tfence, error) {
+	f := NewFence()
+	if err := json.Unmarshal(b, f); err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (f *Tfence) Json() []byte {
+	b, err := json.Marshal(*f)
+	if err != nil {
+		log.Printf("%v fence json marshal err %v\n", err)
+		return nil
+	}
+	return b
 }
 
 func (f *Tfence) FenceProto() *TfenceProto {

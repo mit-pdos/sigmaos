@@ -23,8 +23,7 @@ func RunProc(fencestr, dir string) {
 	}
 	sc.Started()
 
-	fence := sessp.NewFence()
-	err = json.Unmarshal([]byte(fencestr), fence)
+	fence, err := sessp.NewFenceJson([]byte(fencestr))
 	if err != nil {
 		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	}

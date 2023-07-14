@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	"sigmaos/delay"
 	"sigmaos/fenceclnt"
@@ -14,7 +16,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func RunProc(epochstr, dir string) {
+func RunProc(fencestr, dir string) {
 	pid := proc.GetPid()
 
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("proc-" + pid.String()))
@@ -23,23 +25,23 @@ func RunProc(epochstr, dir string) {
 	}
 	sc.Started()
 
-	epoch, err := sessp.String2Epoch(epochstr)
+	fence := sessp.MakeFenceNull()
+	err = proto.Unmarshal([]byte(fencestr), fence)
 	if err != nil {
 		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 	}
 
-	fc := fenceclnt.MakeLeaderFenceClnt(sc.FsLib, LEADERFN)
+	log.Printf("%v: fence %v dir %v\n", proc.GetName(), fence, dir)
 
-	log.Printf("%v: epoch %v dir %v\n", proc.GetName(), epoch, dir)
-
-	if err := fc.FenceAtEpoch(epoch, []string{dir}); err != nil {
+	fc := fenceclnt.MakeFenceClnt(sc.FsLib)
+	if err := fc.FenceAtEpoch(*fence, []string{dir}); err != nil {
 		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
 	fn := dir + "/out"
 
-	conf := &Config{epochstr, "", pid}
+	conf := &Config{fence.Epoch, "", pid}
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)

@@ -9,7 +9,6 @@ import (
 	"sigmaos/epochclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -62,20 +61,20 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
-	e := sessp.Tepoch(0)
+	e := uint64(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
-		log.Printf("conf: %v\n", conf)
-		if conf.Leader == "" {
-			assert.Equal(t, conf.Epoch, e.String())
+		log.Printf("conf: %v %T\n", conf, conf.Leader)
+		if conf.Leader == proc.Tpid("") && e != 0 {
+			assert.Equal(t, conf.Epoch, e)
 		} else if last != conf.Leader { // new leader
 			assert.Equal(t, conf.Pid, conf.Leader, "new leader")
 			_, ok := m[conf.Leader]
 			assert.False(t, ok, "pid")
 			m[conf.Leader] = true
 			last = conf.Leader
-			e += 1
-			assert.Equal(t, conf.Epoch, e.String())
+			assert.True(t, conf.Epoch > e)
+			e = conf.Epoch
 		}
 		return nil
 	})

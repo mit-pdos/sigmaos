@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	Epoch  string
+	Epoch  uint64
 	Leader proc.Tpid
 	Pid    proc.Tpid
 }

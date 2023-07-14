@@ -9,7 +9,7 @@ import (
 
 type FenceClnt struct {
 	*fslib.FsLib
-	fence *sessp.Tfence
+	fence sessp.Tfence
 }
 
 func MakeFenceClnt(fsl *fslib.FsLib) *FenceClnt {
@@ -20,11 +20,11 @@ func MakeFenceClnt(fsl *fslib.FsLib) *FenceClnt {
 
 // Future operations on files in a tree rooted at a path in paths will
 // be fenced by <fence>
-func (fc *FenceClnt) FenceAtEpoch(fence *sessp.Tfence, paths []string) error {
+func (fc *FenceClnt) FenceAtEpoch(fence sessp.Tfence, paths []string) error {
 	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	fc.fence = fence
 	for _, p := range paths {
-		err := fc.registerFence(p, *fence)
+		err := fc.registerFence(p, fence)
 		if err != nil {
 			db.DPrintf(db.FENCECLNT_ERR, "fencePath %v err %v", p, err)
 			return err

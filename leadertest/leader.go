@@ -5,8 +5,9 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -36,17 +37,16 @@ func RunLeader(dir, last, child string) {
 		db.DFatalf("%v MakeLeaderClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
 
-	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
-	if err != nil {
+	if err := l.LeadAndFence(nil, []string{dir}); err != nil {
 		db.DFatalf("%v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
 
-	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
+	log.Printf("%v: leader at %v\n", proc.GetName(), l.Fence())
 
 	//
 	// Write dir in new epoch
 	//
-	conf := &Config{epoch.String(), pid, pid}
+	conf := &Config{l.Fence().Epoch, pid, pid}
 	b, err := json.Marshal(*conf)
 	if err != nil {
 		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
@@ -57,8 +57,13 @@ func RunLeader(dir, last, child string) {
 	}
 
 	if child == "child" {
-		// Create a proc running in the same epoch as leader
-		p := proc.MakeProc("leadertest-proc", []string{epoch.String(), dir})
+		// Create a proc running in the same fence as leader
+		f := l.Fence()
+		b, err := proto.Marshal(&f)
+		if err != nil {
+			db.DFatalf("%v marshal err %v\n", proc.GetName(), err)
+		}
+		p := proc.MakeProc("leadertest-proc", []string{string(b), dir})
 		if err := sc.Spawn(p); err != nil {
 			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
 			return
@@ -73,12 +78,11 @@ func RunLeader(dir, last, child string) {
 		// allow others to write for a while
 		time.Sleep(500 * time.Millisecond)
 	} else {
-		if err := sc.Disconnect(sp.NAMED); err != nil {
-			db.DFatalf("disconnect failed %v\n", err)
-		}
+
+		l.ReleaseLeadership()
 
 		// wait a little before starting to write
-		time.Sleep((fsetcd.SessionTTL + 1) * time.Second)
+		time.Sleep(1 * time.Second)
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {

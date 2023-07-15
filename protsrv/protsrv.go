@@ -448,6 +448,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 			return sp.MkRerror(err)
 		}
 		ps.vt.IncVersion(f.Pobj().Obj().Path())
+		ps.vt.IncVersion(f.Pobj().Obj().Parent().Path())
 		ps.wt.WakeupWatch(tlk) // trigger create watch
 		ps.wt.WakeupWatch(slk) // trigger remove watch
 		ps.wt.WakeupWatch(dlk) // trigger dir watch
@@ -479,7 +480,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
+	db.DPrintf(db.PROTSRV, "%v: Renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
 	oo := oldf.Pobj().Obj()
 	no := newf.Pobj().Obj()
 	switch d1 := oo.(type) {
@@ -509,6 +510,9 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		}
 		ps.vt.IncVersion(newf.Pobj().Obj().Path())
 		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
+
+		ps.vt.IncVersion(oldf.Pobj().Obj().Parent().Path())
+		ps.vt.IncVersion(newf.Pobj().Obj().Parent().Path())
 
 		ps.et.Rename(oldf.Pobj().Path(), newf.Pobj().Path(), newf.Pobj())
 

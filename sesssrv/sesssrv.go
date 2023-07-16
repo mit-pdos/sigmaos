@@ -138,6 +138,7 @@ func (ssrv *SessSrv) Root(path path.Path) (fs.Dir, path.Path) {
 }
 
 func (ssrv *SessSrv) Mount(name string, dir *dir.DirImpl) {
+	dir.SetParent(ssrv.dirover)
 	ssrv.dirover.Mount(name, dir)
 }
 

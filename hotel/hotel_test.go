@@ -367,7 +367,7 @@ func setupK8sState(ts *Tstate) {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
-	if err := ts.MountService(p, mnt); err != nil {
+	if err := ts.MountService(p, mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MountService %v", err)
 	}
 }

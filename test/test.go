@@ -179,7 +179,7 @@ func (ts *Tstate) Shutdown() error {
 		// Shut down other kernel; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
-				return err
+				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId, err)
 			}
 		}
 	}

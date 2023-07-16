@@ -11,6 +11,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
+	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -97,7 +98,14 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 
+	// wait until realm's named is ready to serve
+	sem := semclnt.MakeSemClnt(rm.sc.FsLib, path.Join(sp.REALMS, req.Realm)+".sem")
+	if err := sem.Down(); err != nil {
+		return err
+	}
+
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
+
 	sc, err := sigmaclnt.MkSigmaClntRealmFsLib(rm.sc.FsLib, "realmd", rid)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)

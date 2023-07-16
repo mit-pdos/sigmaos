@@ -13,6 +13,7 @@ import (
 	"sigmaos/leaderetcd"
 	"sigmaos/leasemgrsrv"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -50,6 +51,21 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
+	pn := path.Join(sp.REALMS, nd.realm.String()) + ".sem"
+	sem := semclnt.MakeSemClnt(nd.FsLib, pn)
+	if nd.realm != sp.ROOTREALM {
+		// create semaphore to signal realmd when we are the leader
+		// and ready to serve requests.  realmd downs this semaphore.
+		li, err := sc.LeaseMgrClnt.AskLease(pn, fsetcd.LeaseTTL)
+		if err != nil {
+			return err
+		}
+		li.KeepExtending()
+		if err := sem.InitLease(0777, li.Lease()); err != nil {
+			return err
+		}
+	}
+
 	nd.Started()
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
@@ -69,7 +85,7 @@ func Run(args []string) error {
 	}
 
 	mnt := sp.MkMountServer(nd.MyAddr())
-	pn := sp.NAMED
+	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
 		if err := nd.fs.SetRootNamed(mnt); err != nil {
@@ -81,6 +97,12 @@ func Run(args []string) error {
 		db.DPrintf(db.ALWAYS, "MkMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkMountSymlink(pn, mnt, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "mount %v at %v err %v\n", nd.realm, pn, err)
+			return err
+		}
+
+		// Signal realmd we are ready
+		if err := sem.Up(); err != nil {
+			db.DPrintf(db.NAMED, "%v sem up %v err %v\n", nd.realm, sem.String(), err)
 			return err
 		}
 	}

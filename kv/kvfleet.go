@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"log"
 	"path"
 	"strconv"
 

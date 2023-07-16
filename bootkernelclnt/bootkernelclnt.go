@@ -107,3 +107,7 @@ func (k *Kernel) Boot(s string) error {
 func (k *Kernel) Kill(s string) error {
 	return k.kclnt.Kill(s)
 }
+
+func (k *Kernel) KernelId() string {
+	return k.kernelId
+}

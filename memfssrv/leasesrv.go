@@ -44,15 +44,15 @@ func NewLeaseSrv(mfs *MemFs) *LeaseSrv {
 }
 
 func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
-	db.DPrintf(db.LEASESRV, "%v: AskLease req %v %v\n", ctx, req.ClntId, req.TTL)
 	lid := ls.allocLid()
 	ls.lt.Insert(lid, &leaseInfo{ttl: req.TTL, time: req.TTL, lid: lid})
 	rep.LeaseId = uint64(lid)
+	db.DPrintf(db.LEASESRV, "%v: AskLease req %v %v: lid %v\n", ctx, req.ClntId, req.TTL, lid)
 	return nil
 }
 
 func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
-	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), req.LeaseId)
+	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	li, ok := ls.lt.Lookup(sp.TleaseId(req.LeaseId))
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, req.LeaseId)
@@ -62,8 +62,8 @@ func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *lease
 }
 
 func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
-	db.DPrintf(db.LEASESRV, "%v: End %v\n", ctx.ClntId(), req.LeaseId)
 	lid := sp.TleaseId(req.LeaseId)
+	db.DPrintf(db.LEASESRV, "%v: End %v\n", ctx.ClntId(), lid)
 	_, ok := ls.lt.Lookup(lid)
 	if !ok {
 		return serr.MkErr(serr.TErrNotfound, req.LeaseId)
@@ -92,16 +92,21 @@ func (ls *LeaseSrv) expire(lid sp.TleaseId) {
 }
 
 func (ls *LeaseSrv) expirer() {
-	select {
-	case <-ls.ch:
-		return
-	case <-time.After(1 * time.Second):
-		for _, li := range ls.lt.Values() {
-			if li.decTime() {
-				ls.expire(li.lid)
+	db.DPrintf(db.LEASESRV, "%v: expirer running\n", proc.GetName())
+	for {
+		select {
+		case <-ls.ch:
+			return
+		case <-time.After(1 * time.Second):
+			for _, li := range ls.lt.Values() {
+				db.DPrintf(db.LEASESRV, "%v: expirer dec %v\n", proc.GetName(), li)
+				if li.decTime() {
+					ls.expire(li.lid)
+				}
 			}
 		}
 	}
+	db.DPrintf(db.LEASESRV, "%v: expirer done\n", proc.GetName())
 }
 
 func (li *leaseInfo) resetTTL() {
@@ -114,8 +119,8 @@ func (li *leaseInfo) decTime() bool {
 	li.Lock()
 	defer li.Unlock()
 
-	li.ttl -= 1
-	if li.ttl <= 0 {
+	li.time -= 1
+	if li.time <= 0 {
 		return true
 	}
 	return false

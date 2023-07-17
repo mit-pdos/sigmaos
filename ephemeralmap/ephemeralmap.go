@@ -27,9 +27,9 @@ func (et *EphemeralMap) Insert(pn string, lid sp.TleaseId) {
 	et.Lock()
 	defer et.Unlock()
 
-	lid, ok := et.pns[pn]
+	_, ok := et.pns[pn]
 	if ok {
-		db.DFatalf("Insert %v exists %v\n", pn, et.pns)
+		db.DFatalf("Insert %v exists %q\n", pn, et.pns)
 	}
 	et.pns[pn] = lid
 	v, ok := et.lids[lid]
@@ -38,6 +38,7 @@ func (et *EphemeralMap) Insert(pn string, lid sp.TleaseId) {
 	} else {
 		et.lids[lid] = append(v, pn)
 	}
+	db.DPrintf(db.LEASESRV, "Insert %q %v %v\n", pn, lid, et.lids)
 }
 
 func (et *EphemeralMap) Delete(pn string) {
@@ -55,6 +56,7 @@ func (et *EphemeralMap) Delete(pn string) {
 			break
 		}
 	}
+	db.DPrintf(db.LEASESRV, "Delete %q %v\n", pn, et.lids)
 }
 
 func (et *EphemeralMap) Rename(src, dst string) {
@@ -73,6 +75,7 @@ func (et *EphemeralMap) Rename(src, dst string) {
 			break
 		}
 	}
+	db.DPrintf(db.LEASESRV, "Rename %q %q %v\n", src, dst, et.lids)
 }
 
 func (et *EphemeralMap) Expire(lid sp.TleaseId) []string {

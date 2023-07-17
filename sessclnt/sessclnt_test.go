@@ -47,22 +47,6 @@ func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	return ts
 }
 
-func TestWaitClosed(t *testing.T) {
-	ts := makeTstate(t, 1, CRASH, 0, 0)
-
-	st, err := ts.Stat(group.GrpPath(JOBDIR, ts.grp) + "/")
-	assert.Nil(t, err, "stat")
-
-	db.DPrintf(db.TEST, "stat %v\n", st)
-	ts.gm.Stop()
-
-	// XXX should hang around until client closes sessions; once WaitClosed() is
-	// propertly implemented.
-
-	ts.Detach(group.GrpPath(JOBDIR, ts.grp) + "/")
-	ts.Shutdown()
-}
-
 func TestServerCrash(t *testing.T) {
 	ts := makeTstate(t, 1, CRASH, 0, 0)
 

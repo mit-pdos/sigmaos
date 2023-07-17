@@ -2,6 +2,7 @@ package protsrv
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/ephemeralmap"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
@@ -25,12 +26,12 @@ import (
 
 type ProtSrv struct {
 	ssrv  *sesssrv.SessSrv
-	plt   *lockmap.PathLockTable // shared across sessions
-	wt    *watch.WatchTable      // shared across sessions
-	vt    *version.VersionTable  // shared across sessions
-	stats *stats.StatInfo        // shared across sessions
+	plt   *lockmap.PathLockTable     // shared across sessions
+	wt    *watch.WatchTable          // shared across sessions
+	vt    *version.VersionTable      // shared across sessions
+	stats *stats.StatInfo            // shared across sessions
+	et    *ephemeralmap.EphemeralMap // shared across sessions
 	ft    *fidTable
-	et    *ephemeralTable
 	sid   sessp.Tsession
 }
 
@@ -40,7 +41,7 @@ func MakeProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.ssrv = srv
 
 	ps.ft = makeFidTable()
-	ps.et = makeEphemeralTable()
+	ps.et = srv.GetEphemeralMap()
 	ps.plt = srv.GetPathLockTable()
 	ps.wt = srv.GetWatchTable()
 	ps.vt = srv.GetVersionTable()
@@ -96,18 +97,13 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v eph %v", args.TclntId(), ps.sid, ps.et.Get())
+	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
 	ps.ssrv.GetSessCondTable().DeleteSess(ps.sid)
 
 	ps.ft.ClunkOpen()
-	ephemeral := ps.et.Get()
-	for _, po := range ephemeral {
-		db.DPrintf(db.ALWAYS, "Detach %v", po.Path())
-		// ps.removeObj(po.Ctx(), po.Obj(), po.Path())
-	}
 	if detach != nil {
 		detach(args.TclntId())
 	}
@@ -237,12 +233,12 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, eph bool, qid *sp.Tqid) *fid.Fid {
+func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
 	pn := dir.Copy().Append(name)
 	po := fid.MkPobj(pn, o, ctx)
 	nf := fid.MakeFidPath(po, 0, qid)
-	if eph {
-		ps.et.Add(pn, po)
+	if lid != sp.NoLeaseId && ps.et != nil {
+		ps.et.Insert(pn.String(), lid)
 	}
 	return nf
 }
@@ -301,7 +297,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
-	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.Tperm().IsEphemeral(), qid)
+	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.TleaseId(), qid)
 	ps.ft.Add(args.Tfid(), nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Tmode())
@@ -389,8 +385,8 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path) *sp.Rerror
 	ps.wt.WakeupWatch(flk)
 	ps.wt.WakeupWatch(dlk)
 
-	if ephemeral {
-		ps.et.Del(path)
+	if ephemeral && ps.et != nil {
+		ps.et.Delete(path.String())
 	}
 	return nil
 }
@@ -452,7 +448,9 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		ps.wt.WakeupWatch(tlk) // trigger create watch
 		ps.wt.WakeupWatch(slk) // trigger remove watch
 		ps.wt.WakeupWatch(dlk) // trigger dir watch
-		ps.et.Rename(f.Pobj().Path(), dst, f.Pobj())
+		if ps.et != nil {
+			ps.et.Rename(f.Pobj().Path().String(), dst.String())
+		}
 		f.Pobj().SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -514,7 +512,9 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		ps.vt.IncVersion(oldf.Pobj().Obj().Parent().Path())
 		ps.vt.IncVersion(newf.Pobj().Obj().Parent().Path())
 
-		ps.et.Rename(oldf.Pobj().Path(), newf.Pobj().Path(), newf.Pobj())
+		if ps.et != nil {
+			ps.et.Rename(oldf.Pobj().Path().String(), newf.Pobj().Path().String())
+		}
 
 		ps.wt.WakeupWatch(dstlk) // trigger create watch
 		ps.wt.WakeupWatch(srclk) // trigger remove watch
@@ -677,7 +677,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 
 	// make an fid for the file (in case we created it)
 	qid := ps.mkQid(lo.Perm(), lo.Path())
-	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.Tperm().IsEphemeral(), qid)
+	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, fn)
 	if err != nil {
 		return sp.MkRerror(err)

@@ -30,10 +30,11 @@ func (fos *ProtSrv) snapshot() []byte {
 	for fid, f := range fos.ft.fids {
 		foss.Fid[fid] = f.Snapshot()
 	}
-	for _, po := range fos.et.ephemeral {
-		ptr := po.Obj().Path()
-		foss.Ephemeral[ptr] = po.Snapshot()
-	}
+	// XXX TODO: snapshot ephemeral table
+	//for _, po := range fos.et.Values() {
+	//	ptr := po.Obj().Path()
+	//	foss.Ephemeral[ptr] = po.Snapshot()
+	//}
 	foss.Sid = fos.sid
 	b, err := json.Marshal(foss)
 	if err != nil {
@@ -53,9 +54,10 @@ func Restore(srv sps.SessServer, b []byte) sps.Protsrv {
 	for f, b := range foss.Fid {
 		fos.ft.fids[f] = fid.Restore(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
 	}
-	for ptr, b := range foss.Ephemeral {
-		f := fid.RestorePobj(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
-		fos.et.ephemeral[ptr.String()] = f
-	}
+	// XXX TODO: restore ephemeral table
+	//for ptr, b := range foss.Ephemeral {
+	//	f := fid.RestorePobj(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
+	//	fos.et.Insert(ptr.String(), f)
+	//}
 	return fos
 }

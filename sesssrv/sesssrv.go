@@ -8,6 +8,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/ephemeralmap"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/kernel"
@@ -56,6 +57,7 @@ type SessSrv struct {
 	plt        *lockmap.PathLockTable
 	wt         *watch.WatchTable
 	vt         *version.VersionTable
+	et         *ephemeralmap.EphemeralMap
 	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
@@ -70,7 +72,8 @@ type SessSrv struct {
 
 func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config,
-	attachf sps.AttachClntF, detachf sps.DetachClntF) *SessSrv {
+	attachf sps.AttachClntF, detachf sps.DetachClntF,
+	et *ephemeralmap.EphemeralMap) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	ssrv.dirover = overlay.NewDirOverlay(root)
@@ -78,6 +81,7 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	ssrv.addr = addr
 	ssrv.mkps = mkps
 	ssrv.rps = rps
+	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
 	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
@@ -124,6 +128,10 @@ func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
 
 func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
 	return ssrv.plt
+}
+
+func (ssrv *SessSrv) GetEphemeralMap() *ephemeralmap.EphemeralMap {
+	return ssrv.et
 }
 
 func (ssrv *SessSrv) Root(path path.Path) (fs.Dir, path.Path) {

@@ -35,6 +35,25 @@ func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	return true
 }
 
+func (sm *SyncMap[K, T]) Delete(k K) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if _, ok := sm.tbl[k]; ok {
+		delete(sm.tbl, k)
+	}
+}
+
+func (sm *SyncMap[K, T]) Rename(src, dst K) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if val, ok := sm.tbl[src]; ok {
+		delete(sm.tbl, src)
+		sm.tbl[dst] = val
+	}
+}
+
 func (sm *SyncMap[K, T]) Values() []T {
 	sm.Lock()
 	defer sm.Unlock()

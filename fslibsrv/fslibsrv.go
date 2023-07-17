@@ -2,6 +2,7 @@ package fslibsrv
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
 	"sigmaos/protsrv"
@@ -24,11 +25,12 @@ import (
 //
 
 func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf)
+	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, nil)
 }
 
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
-	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil)
+	et := ephemeralmap.NewEphemeralMap()
+	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(srv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)

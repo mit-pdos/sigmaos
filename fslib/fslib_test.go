@@ -26,7 +26,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/"
+var pathname string // e.g., --path "name/ux/~local/" or  "name/schedd/~local/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
@@ -1276,13 +1276,16 @@ func TestEphemeralFileOK(t *testing.T) {
 	_, err = ts.Stat(fn)
 	assert.Nil(t, err)
 
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 
 func TestEphemeralFileExpire(t *testing.T) {
 	ts := test.MakeTstatePath(t, pathname)
 
-	fn := gopath.Join(pathname, "fff")
+	fn := gopath.Join(pathname, "foobar")
 
 	li, err := ts.LeaseMgrClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err)

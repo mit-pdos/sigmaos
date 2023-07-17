@@ -30,11 +30,13 @@ func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
 func (c *SemClnt) Init(perm sp.Tperm) error {
-	return c.InitLease(perm, sp.NoLeaseId)
+	db.DPrintf(db.SEMCLNT, "Semaphore init %v\n", c.path)
+	_, err := c.PutFile(c.path, 0777|perm, sp.OWRITE, []byte{})
+	return err
 }
 
 func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
-	db.DPrintf(db.SEMCLNT, "Semaphore init %v %v\n", c.path, lid)
+	db.DPrintf(db.SEMCLNT, "Semaphore init %v lease %v\n", c.path, lid)
 	_, err := c.PutFileEphemeral(c.path, 0777|perm, sp.OWRITE, lid, []byte{})
 	return err
 }

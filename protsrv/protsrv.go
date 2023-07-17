@@ -253,7 +253,7 @@ func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn pa
 	for {
 		flk := ps.plt.Acquire(ctx, fn)
 		o1, err := d.Create(ctx, name, perm, mode, lid)
-		db.DPrintf(db.PROTSRV, "%v: Create %v %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
+		db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
 		if err == nil {
 			ps.wt.WakeupWatch(dlk)
 			return o1, flk, nil

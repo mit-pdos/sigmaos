@@ -8,6 +8,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/leasemgrsrv"
+	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
@@ -47,6 +49,9 @@ func RunRealmSrv() error {
 	if err != nil {
 		return err
 	}
+	lsrv := memfssrv.NewLeaseSrv(pds.MemFs)
+	_, err = leasemgrsrv.NewLeaseMgrSrv(sp.REALMDREL, pds.MemFs.SessSrv, lsrv)
+
 	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
 	if serr != nil {
 		return serr

@@ -1,4 +1,4 @@
-package leasemgrsrv
+package memfssrv
 
 import (
 	"sync"
@@ -15,9 +15,10 @@ import (
 )
 
 type LeaseSrv struct {
-	lt *syncmap.SyncMap[sp.TleaseId, *leaseInfo]
-	et *ephemeralmap.EphemeralMap
-	sync.Mutex
+	mfs     *MemFs
+	lt      *syncmap.SyncMap[sp.TleaseId, *leaseInfo]
+	et      *ephemeralmap.EphemeralMap
+	mu      sync.Mutex
 	nextLid sp.TleaseId
 	ch      chan struct{}
 }
@@ -26,12 +27,14 @@ type leaseInfo struct {
 	sync.Mutex
 	ttl  uint64
 	time uint64
+	lid  sp.TleaseId
 }
 
-func NewLeaseSrv(et *ephemeralmap.EphemeralMap) *LeaseSrv {
+func NewLeaseSrv(mfs *MemFs) *LeaseSrv {
 	ls := &LeaseSrv{
+		mfs:     mfs,
 		lt:      syncmap.NewSyncMap[sp.TleaseId, *leaseInfo](),
-		et:      et,
+		et:      mfs.GetEphemeralMap(),
 		nextLid: 1,
 		ch:      make(chan struct{}),
 	}
@@ -40,9 +43,9 @@ func NewLeaseSrv(et *ephemeralmap.EphemeralMap) *LeaseSrv {
 }
 
 func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
-	db.DPrintf(db.LEASESRV, "%v: AskLease req %v %v %v\n", ctx, req.ClntId, req.TTL)
+	db.DPrintf(db.LEASESRV, "%v: AskLease req %v %v\n", ctx, req.ClntId, req.TTL)
 	lid := ls.allocLid()
-	ls.lt.Insert(lid, &leaseInfo{ttl: req.TTL, time: req.TTL})
+	ls.lt.Insert(lid, &leaseInfo{ttl: req.TTL, time: req.TTL, lid: lid})
 	rep.LeaseId = uint64(lid)
 	return nil
 }
@@ -65,17 +68,26 @@ func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leasepro
 		return serr.MkErr(serr.TErrNotfound, req.LeaseId)
 	}
 	ls.lt.Delete(lid)
-	// XXX delete files that are associated with this lid
+	ls.expire(lid)
 	return nil
 }
 
 func (ls *LeaseSrv) allocLid() sp.TleaseId {
-	ls.Lock()
-	defer ls.Unlock()
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
 
 	lid := ls.nextLid
 	ls.nextLid += 1
 	return lid
+}
+
+// Delete files that are associated with lid
+func (ls *LeaseSrv) expire(lid sp.TleaseId) {
+	pns := ls.et.Expire(lid)
+	db.DPrintf(db.LEASESRV, "%v: expire %v %v\n", lid, pns)
+	for _, pn := range pns {
+		ls.mfs.Remove(pn)
+	}
 }
 
 func (ls *LeaseSrv) expirer() {
@@ -84,7 +96,9 @@ func (ls *LeaseSrv) expirer() {
 		return
 	case <-time.After(1 * time.Second):
 		for _, li := range ls.lt.Values() {
-			li.decTime()
+			if li.decTime() {
+				ls.expire(li.lid)
+			}
 		}
 	}
 }
@@ -95,21 +109,13 @@ func (li *leaseInfo) resetTTL() {
 	li.time = li.ttl
 }
 
-func (li *leaseInfo) decTime() {
+func (li *leaseInfo) decTime() bool {
 	li.Lock()
 	defer li.Unlock()
 
 	li.ttl -= 1
 	if li.ttl <= 0 {
-		db.DPrintf(db.LEASESRV, "%v: Expire %v\n", li)
-		// call memfs rm?
-		// XXX delete files that are associated with this lid
-
-		// ephemeral := ps.et.Values()
-		// for _, po := range ephemeral {
-		// 	db.DPrintf(db.ALWAYS, "Detach %v", po.Path())
-		// 	// ps.removeObj(po.Ctx(), po.Obj(), po.Path())
-		// }
-
+		return true
 	}
+	return false
 }

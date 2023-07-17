@@ -5,12 +5,10 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslibsrv"
 	"sigmaos/leasemgrsrv"
+	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/repl"
-	"sigmaos/sesssrv"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 )
@@ -18,8 +16,7 @@ import (
 var fsux *FsUx
 
 type FsUx struct {
-	*sesssrv.SessSrv
-	*sigmaclnt.SigmaClnt
+	*memfssrv.MemFs
 	mount string
 
 	sync.Mutex
@@ -34,8 +31,7 @@ func RunFsUx(rootux string) {
 	// XXX make mfs?
 	fsux = MakeReplicatedFsUx(rootux, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
-	fsux.Done()
-	fsux.Exited(proc.MakeStatus(proc.StatusEvicted))
+	fsux.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
@@ -46,16 +42,15 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
 	}
-	srv, error := fslibsrv.MakeReplServer(root, addr, sp.UX, "ux", config)
+	mfs, error := memfssrv.MakeMemFsReplServer(root, addr, sp.UX, "ux", config)
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
-	lsrv := leasemgrsrv.NewLeaseSrv(srv.GetEphemeralMap())
-	_, error = leasemgrsrv.NewLeaseMgrSrv(sp.Tuname(addr), srv, lsrv)
+	lsrv := memfssrv.NewLeaseSrv(mfs)
+	_, error = leasemgrsrv.NewLeaseMgrSrv(sp.Tuname(addr), mfs.SessSrv, lsrv)
 	if error != nil {
-		db.DFatalf("%v: NewFsSrv %v\n", proc.GetName(), error)
+		db.DFatalf("%v: NewLeaseMgrSrv %v\n", proc.GetName(), error)
 	}
-	fsux.SessSrv = srv
-	fsux.SigmaClnt = srv.SigmaClnt()
+	fsux.MemFs = mfs
 	return fsux
 }

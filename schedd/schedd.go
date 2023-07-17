@@ -177,7 +177,7 @@ func RunSchedd(kernelId string) error {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	lsrv := leasemgrsrv.NewLeaseSrv(mfs.GetEphemeralMap())
+	lsrv := memfssrv.NewLeaseSrv(mfs)
 	_, err = leasemgrsrv.NewLeaseMgrSrv(sp.S3, mfs.SessSrv, lsrv)
 	setupMemFsSrv(mfs)
 	sd := MakeSchedd(mfs, kernelId)

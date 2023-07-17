@@ -237,7 +237,7 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, 
 	pn := dir.Copy().Append(name)
 	po := fid.MkPobj(pn, o, ctx)
 	nf := fid.MakeFidPath(po, 0, qid)
-	if lid != sp.NoLeaseId && ps.et != nil {
+	if o.Perm().IsEphemeral() && ps.et != nil {
 		ps.et.Insert(pn.String(), lid)
 	}
 	return nf
@@ -448,7 +448,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		ps.wt.WakeupWatch(tlk) // trigger create watch
 		ps.wt.WakeupWatch(slk) // trigger remove watch
 		ps.wt.WakeupWatch(dlk) // trigger dir watch
-		if ps.et != nil {
+		if f.Pobj().Obj().Perm().IsEphemeral() && ps.et != nil {
 			ps.et.Rename(f.Pobj().Path().String(), dst.String())
 		}
 		f.Pobj().SetPath(dst)
@@ -512,7 +512,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		ps.vt.IncVersion(oldf.Pobj().Obj().Parent().Path())
 		ps.vt.IncVersion(newf.Pobj().Obj().Parent().Path())
 
-		if ps.et != nil {
+		if oldf.Pobj().Obj().Perm().IsEphemeral() && ps.et != nil {
 			ps.et.Rename(oldf.Pobj().Path().String(), newf.Pobj().Path().String())
 		}
 

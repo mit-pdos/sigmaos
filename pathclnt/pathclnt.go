@@ -86,9 +86,10 @@ func (pathc *PathClnt) MountTree(uname sp.Tuname, addrs sp.Taddrs, tree, mnt str
 // Return path to the symlink for the last server on this path and the
 // the rest of the path on the server.
 func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, path.Path, error) {
-	// Make sure the server is automounted:
+	// Automount the longest prefix of pn; if pn exist, then the
+	// server holding the directory/file correspending to pn.
 	if _, err := pathc.Stat(pn+"/", uname); err != nil {
-		return nil, nil, err
+		db.DPrintf(db.PATHCLNT_ERR, "Stat %v err %v\n", pn, err)
 	}
 	return pathc.LastMount(pn, uname)
 }

@@ -39,7 +39,7 @@ func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
-		if path.Eq(p.path) {
+		if path.Equal(p.path) {
 			return serr.MkErr(serr.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {

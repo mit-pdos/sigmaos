@@ -46,7 +46,7 @@ func EndSlash(p string) bool {
 	return p[len(p)-1] == '/'
 }
 
-func (path1 Path) Eq(path2 Path) bool {
+func (path1 Path) Equal(path2 Path) bool {
 	if len(path1) != len(path2) {
 		return false
 	}

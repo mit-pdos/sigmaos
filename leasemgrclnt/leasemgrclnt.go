@@ -29,7 +29,7 @@ func NewLeaseMgrClnt(fsl *fslib.FsLib) (*LeaseMgrClnt, error) {
 // Ask for lease; if caller already has a lease at that server, return
 // it.
 func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
-	srv, rest, err := lmc.LastMount(pn, lmc.Uname())
+	srv, rest, err := lmc.PathLastSymlink(pn)
 	db.DPrintf(db.LEASECLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
 	if li, ok := lmc.lm.Lookup(srv.String()); ok {
 		return li, nil

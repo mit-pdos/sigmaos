@@ -27,7 +27,6 @@ const (
 	DBD         = DB + "~any/"
 	MONGOREL    = "mongo"
 	MONGO       = NAMED + MONGOREL + "/"
-	MONGOD      = MONGO + "~any/"
 
 	UXBIN = UX + "~local/bin/"
 

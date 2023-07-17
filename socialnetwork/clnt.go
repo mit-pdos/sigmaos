@@ -32,7 +32,7 @@ func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 
 func MakeWebClntWithAddr(fsl *fslib.FsLib, job string, feAddrs sp.Taddrs) *WebClnt {
 	clnt := &http.Client{
-		Timeout:   2 * time.Minute,
+		Timeout:   1 * time.Minute,
 		Transport: http.DefaultTransport,
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
@@ -55,6 +55,7 @@ func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_CLNT, "about to query: %v\n", u.String())
 	resp, err := wc.clnt.Get(u.String())
 	if err != nil {
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_CLNT, "query error: %v", err.Error())
 		return nil, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)

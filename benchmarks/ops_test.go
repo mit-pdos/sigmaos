@@ -217,6 +217,22 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func runSocialNetwork(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*SocialNetworkJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		pdc.MonitorSchedds()
+		defer pdc.Done()
+	}
+	start := time.Now()
+	ji.StartSocialNetworkJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
 func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*ImgResizeJobInstance)
 	ji.ready <- true

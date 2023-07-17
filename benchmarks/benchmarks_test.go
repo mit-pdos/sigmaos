@@ -67,6 +67,8 @@ var DURATION time.Duration
 var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var SOCIAL_NETWORK_DURS string
+var SOCIAL_NETWORK_MAX_RPS string
 var RPCBENCH_MCPU int
 var RPCBENCH_DURS string
 var RPCBENCH_MAX_RPS string
@@ -120,6 +122,8 @@ func init() {
 	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
+	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
 	flag.IntVar(&RPCBENCH_MCPU, "rpcbench_mcpu", 3000, "RPCbench mCPU")
@@ -955,5 +959,61 @@ func TestK8sImgResize(t *testing.T) {
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
+	rootts.Shutdown()
+}
+
+func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
+	// Structures for image resize
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for social network
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Prep image resize job
+	imgJobs, imgApps := makeImgResizeJob(
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+	// Prep social network job
+	snJobs, snApps := makeSocialNetworkJobs(ts1, p2, true, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 4)
+	// Monitor cores assigned to image resize.
+	monitorCPUUtil(ts1, p1)
+	// Monitor cores assigned to social network.
+	monitorCPUUtil(ts2, p2)
+	// Run social network job
+	go func() {
+		runOps(ts2, snApps, runSocialNetwork, rs2)
+		done <- true
+	}()
+	// Wait for social network jobs to set up.
+	<-snJobs[0].ready
+	db.DPrintf(db.TEST, "Social Network setup done.")
+	// Run image resize job
+	go func() {
+		runOps(ts1, imgApps, runImgResize, rs1)
+		done <- true
+	}()
+	// Wait for image resize jobs to set up.
+	<-imgJobs[0].ready
+	db.DPrintf(db.TEST, "Image Resize setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Kick off image resize jobs.
+	imgJobs[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(5 * time.Second)
+	// Kick off social network jobs
+	snJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	db.DPrintf(db.TEST, "Image Resize and Social Network Done.")
+	printResultSummary(rs1)
+	time.Sleep(5 * time.Second)
+	evictMemBlockers(rootts, blockers)
 	rootts.Shutdown()
 }

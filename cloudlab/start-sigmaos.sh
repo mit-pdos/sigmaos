@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 N_VM=""
@@ -10,6 +10,7 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
+RMCPU="0"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -35,6 +36,11 @@ while [[ $# -gt 0 ]]; do
   --overlays)
     shift
     OVERLAYS="--overlays"
+    ;;
+  --reserveMcpu)
+    shift
+    RMCPU="$1"
+	shift
     ;;
   -help)
     usage
@@ -82,7 +88,7 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
-  $DIR/setup-for-benchmarking.sh $LOGIN@$vm
+  $DIR/setup-for-benchmarking.sh $vm
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
@@ -108,7 +114,7 @@ for vm in $vms; do
     ./start-network.sh --addr $MAIN_PRIVADDR
     ./start-db.sh
     ./start-jaeger.sh
-    ./start-kernel.sh --boot realm --pull ${TAG} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null

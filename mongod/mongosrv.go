@@ -14,7 +14,10 @@ import (
 const (
 	MONGO_NO = "No"
 	MONGO_OK = "OK"
-	DIAL_TIMEOUT = 1
+	DIAL_TIMEOUT_SEC = 1
+	SOCKET_TIMEOUT_MIN = 5
+	SYNC_TIMEOUT_SEC = 10
+
 )
 
 type Server struct {
@@ -23,13 +26,13 @@ type Server struct {
 
 func makeServer(mongodUrl string) (*Server, error) {
 	s := &Server{}
-	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT * time.Second)
+	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT_SEC * time.Second)
 	if err != nil {
 		dbg.DFatalf("mongo dial err %v\n", err)
 		return nil, err
 	}
-	session.SetSocketTimeout(1 * time.Minute)
-	session.SetSyncTimeout(10 * time.Second)
+	session.SetSocketTimeout(SOCKET_TIMEOUT_MIN * time.Minute)
+	session.SetSyncTimeout(SYNC_TIMEOUT_SEC * time.Second)
 	s.session = session
 	if err = s.session.Ping(); err != nil {
 		dbg.DFatalf("mongo ping err %v\n", err)

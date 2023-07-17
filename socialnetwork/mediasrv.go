@@ -60,7 +60,7 @@ func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *
 	mId := msrv.getNextMediaId()
 	newMedia := Media{mId, req.Mediatype, req.Mediadata}
 	if err := msrv.mongoc.Insert(SN_DB, MEDIA_COL, newMedia); err != nil {
-		dbg.DFatalf("Mongo Error: %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = POST_QUERY_OK

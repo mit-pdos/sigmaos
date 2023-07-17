@@ -61,7 +61,7 @@ func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *pro
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
 	if err := psrv.mongoc.Insert(SN_DB, POST_COL, postBson); err != nil {
-		dbg.DFatalf("Error storing post %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Error storing post %v", err)
 		return err
 	}
 	res.Ok = POST_QUERY_OK

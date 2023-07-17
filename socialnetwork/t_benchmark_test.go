@@ -19,7 +19,6 @@ import (
 	"time"
 	"math/rand"
 	"sigmaos/loadgen"
-	"sigmaos/perf"
 )
 
 const (
@@ -29,7 +28,7 @@ const (
 	HOME_RATIO         = 0.6
 	TIMELINE_RATIO     = 0.3
 	LOAD_DUR           = 10
-	LOAD_MAX_RPS       = 1000
+	LOAD_MAX_RPS       = 5000
 )
 
 var K8S_ADDR string
@@ -84,13 +83,13 @@ func setupSigmaState(t *testing.T) *TstateSN {
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 3000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NSHARD)
+		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}, NSHARD)
 	initUserAndGraph(t, MONGO_URL)
 	return tssn
 }
@@ -294,12 +293,12 @@ func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 }
 
 func testLoadgenInner(t *testing.T, wc *sn.WebClnt) {
-	p, err := perf.MakePerf(perf.TEST)
-	assert.Nil(t, err, "Cannot make perf %v", err)
-	defer p.Done()
 	lg := loadgen.MakeLoadGenerator(
 		LOAD_DUR * time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
 	lg.Calibrate()
+	rmsg, err := wc.StartRecording()
+	assert.Nil(t, err)
+	assert.Equal(t, "Started recording!", rmsg)
 	lg.Run()
 	if lg != nil {
 		lg.Stats()

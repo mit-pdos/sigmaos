@@ -113,7 +113,7 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 		Firstname: req.Firstname,
 		Password: pswd_hashed}
 	if err := usrv.mongoc.Insert(SN_DB, USER_COL, newUser); err != nil {
-		dbg.DFatalf("Mongo Error: %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = USER_QUERY_OK

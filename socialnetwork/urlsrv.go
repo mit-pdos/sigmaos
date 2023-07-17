@@ -69,7 +69,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 		shorturl := RandString(URL_LENGTH, urlsrv.random)
 		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
 		if err := urlsrv.mongoc.Insert(SN_DB, URL_COL, url); err != nil {
-			dbg.DFatalf("Mongo error: %v", err)
+			dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Mongo error: %v", err)
 			return err
 		}
 		res.Shorturls[idx] = URL_HOSTNAME + shorturl

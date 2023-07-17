@@ -278,6 +278,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		Mediaids: mediaids,
 	}, &res)
 	if err != nil {
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Compose error for: %v. Err %v", text, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -287,6 +288,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	reply := map[string]interface{}{"message": str}
 	json.NewEncoder(w).Encode(reply)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Completed: %v", text)
 }
 
 func (s *FrontEnd) timelineHandler(w http.ResponseWriter, r *http.Request) {

@@ -14,14 +14,18 @@ type MongoClnt struct {
 	pdc *protdevclnt.ProtDevClnt
 }
 
-func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
+func MkMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, name)
 	if err != nil {
 		return nil, err
 	}
 	mongoc.pdc = pdc
 	return mongoc, nil
+}
+
+func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
+	return MkMongoClntWithName(fsl, sp.MONGO + "~any/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

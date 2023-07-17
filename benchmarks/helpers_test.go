@@ -322,6 +322,21 @@ func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 	return ws, is
 }
 
+// ========== Social Network Helpers ==========
+
+func makeSocialNetworkJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*SocialNetworkJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeSocialNetworkJob(ts, p, sigmaos, dur, maxrps, ncache)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Client Helpers ==========
 
 var clidir string = path.Join("name/", "clnts")

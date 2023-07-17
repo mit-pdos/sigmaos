@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
@@ -1253,6 +1254,46 @@ func TestFslibDetach(t *testing.T) {
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	ts.Shutdown()
+}
+
+func TestEphemeralFileOK(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	fn := gopath.Join(pathname, "f")
+
+	li, err := ts.LeaseMgrClnt.AskLease(fn, fsetcd.LeaseTTL)
+	assert.Nil(t, err)
+
+	li.KeepExtending()
+
+	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	assert.Nil(t, err)
+
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+
+	_, err = ts.Stat(fn)
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}
+
+func TestEphemeralFileExpire(t *testing.T) {
+	ts := test.MakeTstatePath(t, pathname)
+
+	fn := gopath.Join(pathname, "fff")
+
+	li, err := ts.LeaseMgrClnt.AskLease(fn, fsetcd.LeaseTTL)
+	assert.Nil(t, err)
+
+	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	assert.Nil(t, err)
+
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+
+	_, err = ts.Stat(fn)
+	assert.NotNil(t, err)
 
 	ts.Shutdown()
 }

@@ -2,6 +2,7 @@ package memfssrv
 
 import (
 	"sigmaos/ctx"
+	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -27,12 +28,13 @@ var rootP = path.Path{""}
 
 type MemFs struct {
 	*sesssrv.SessSrv
-	ctx fs.CtxI // server context
-	plt *lockmap.PathLockTable
-	sc  *sigmaclnt.SigmaClnt
-	pc  *portclnt.PortClnt
-	pi  portclnt.PortInfo
-	pn  string
+	ctx  fs.CtxI // server context
+	plt  *lockmap.PathLockTable
+	sc   *sigmaclnt.SigmaClnt
+	pc   *portclnt.PortClnt
+	pi   portclnt.PortInfo
+	pn   string
+	lsrv *LeaseSrv
 }
 
 func MakeMemFsSrv(uname sp.Tuname, pn string, srv *sesssrv.SessSrv) *MemFs {
@@ -48,6 +50,10 @@ func MakeMemFsSrv(uname sp.Tuname, pn string, srv *sesssrv.SessSrv) *MemFs {
 
 func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
+}
+
+func (mfs *MemFs) SetLeaseSrv(lsrv *LeaseSrv) {
+	mfs.lsrv = lsrv
 }
 
 func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
@@ -134,9 +140,22 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (mfs *MemFs) Exit(status *proc.Status) error {
+	if mfs.lsrv != nil {
+		mfs.lsrv.Stop()
+	}
 	mfs.Done()
 	if mfs.pn != "" {
 		// remove mount
 	}
 	return mfs.sc.Exit(status)
+}
+
+func (mfs *MemFs) Dump() error {
+	d, path := mfs.Root(rootP)
+	s, err := d.(*dir.DirImpl).Dump()
+	if err != nil {
+		return err
+	}
+	db.DPrintf("MEMFSSRV", "%v: Dump: %v %v", proc.GetName(), path, s)
+	return nil
 }

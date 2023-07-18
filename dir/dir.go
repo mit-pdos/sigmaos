@@ -47,6 +47,36 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
+func (dir *DirImpl) Dump() (string, error) {
+	sts, err := dir.lsL(0)
+	if err != nil {
+		return "", err
+	}
+	s := "{"
+	for _, st := range sts {
+		if st.Qid.Ttype()&sp.QTDIR == sp.QTDIR {
+			i, err := dir.lookup(st.Name)
+			if err != nil {
+				s += fmt.Sprintf("[%v err %v]", st, err)
+				continue
+			}
+			switch d := i.(type) {
+			case *DirImpl:
+				s1, err := d.Dump()
+				if err != nil {
+					s += fmt.Sprintf("[%v err %v]", st, err)
+					continue
+				}
+				s += "[" + st.Name + ": " + s1 + "]"
+			}
+		} else {
+			s += fmt.Sprintf("[%v]", st)
+		}
+	}
+	s += "}"
+	return s, nil
+}
+
 func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF, parent fs.Dir) fs.Dir {
 	i, _ := mi(ctx, sp.DMDIR, 0, parent, MakeDirF)
 	return i.(fs.Dir)

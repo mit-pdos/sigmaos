@@ -30,8 +30,9 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	lsrv := memfssrv.NewLeaseSrv(mfs)
-	_, err = leasemgrsrv.NewLeaseMgrSrv(sp.S3, mfs.SessSrv, lsrv)
+	if err := leasemgrsrv.NewLeaseSrv(mfs); err != nil {
+		db.DFatalf("Error NewLeaseSrv: %v", err)
+	}
 	p, err := perf.MakePerf(perf.S3)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)

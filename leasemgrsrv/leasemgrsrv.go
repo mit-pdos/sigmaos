@@ -23,7 +23,7 @@ func NewLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv
 	return pds, nil
 }
 
-func NewLeaseMgrSrv(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv.ProtDevSrv, error) {
+func NewLeaseMgrSrv1(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv.ProtDevSrv, error) {
 	db.DPrintf(db.LEASESRV, "NewLeaseMgrSrv: %v\n", svc)
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
@@ -33,4 +33,17 @@ func NewLeaseMgrSrv(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv
 		return nil, err
 	}
 	return pds, nil
+}
+
+func NewLeaseSrv(mfs *memfssrv.MemFs) error {
+	db.DPrintf(db.LEASESRV, "NewLeaseSrv\n")
+	lsrv := memfssrv.NewLeaseSrv(mfs)
+	if _, err := mfs.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return err
+	}
+	_, err := protdevsrv.MakeProtDevSrvMemFs(mfs, sp.LEASESRV, lsrv)
+	if err != nil {
+		return err
+	}
+	return nil
 }

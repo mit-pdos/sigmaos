@@ -46,8 +46,9 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 		}
 		db.DPrintf(db.LEASECLNT, "AskLease %q %v\n", srv, li)
 		lmc.lm.Insert(srv.String(), li)
-		return li, err
+		return li, nil
 	} else {
+		db.DPrintf(db.LEASECLNT, "AskLease %v err %v\n", pn, err)
 		return nil, err
 	}
 }

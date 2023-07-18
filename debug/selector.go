@@ -205,6 +205,7 @@ const (
 	FENCEFS                      = "FENCEFS"
 	FENCEFS_ERR                  = FENCEFS + ERR
 	LEASESRV                     = "LEASESRV"
+	MEMFSSRV                     = "MEMFSSRV"
 	THREADMGR                    = "THREADMGR"
 	PROTSRV                      = "PROTSRV"
 	REFMAP_SUFFIX                = "_REFMAP"

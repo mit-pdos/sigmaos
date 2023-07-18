@@ -1,4 +1,4 @@
-package leasemgrsrv
+package leasesrv
 
 import (
 	"sigmaos/ctx"
@@ -12,7 +12,7 @@ import (
 )
 
 func NewLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv.ProtDevSrv, error) {
-	db.DPrintf(db.LEASESRV, "NewLeaseMgrSrv: %v\n", svc)
+	db.DPrintf(db.LEASESRV, "NewLeaseSrv: %v\n", svc)
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
 	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)
@@ -24,7 +24,7 @@ func NewLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv
 }
 
 func NewLeaseMgrSrv1(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv.ProtDevSrv, error) {
-	db.DPrintf(db.LEASESRV, "NewLeaseMgrSrv: %v\n", svc)
+	db.DPrintf(db.LEASESRV, "NewLeaseSrv: %v\n", svc)
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
 	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)

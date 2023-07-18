@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/leasemgrsrv"
+	"sigmaos/leasesrv"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
@@ -48,7 +48,7 @@ func RunRealmSrv() error {
 	if err != nil {
 		return err
 	}
-	if err := leasemgrsrv.NewLeaseSrv(pds.MemFs); err != nil {
+	if err := leasesrv.NewLeaseSrv(pds.MemFs); err != nil {
 		return err
 	}
 	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)

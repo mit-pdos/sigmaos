@@ -43,7 +43,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 	db.DPrintf(db.SPINNER, "MakeSpinner: %v\n", args)
 
-	li, err := sc.LeaseMgrClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
+	li, err := sc.LeaseClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
 	if err != nil {
 		return nil, err
 	}

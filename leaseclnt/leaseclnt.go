@@ -1,4 +1,4 @@
-package leasemgrclnt
+package leaseclnt
 
 import (
 	"path"
@@ -12,14 +12,14 @@ import (
 	"sigmaos/syncmap"
 )
 
-type LeaseMgrClnt struct {
+type LeaseClnt struct {
 	*fslib.FsLib
 	lm *syncmap.SyncMap[string, *LeaseInfo]
 	cc *ClntCache
 }
 
-func NewLeaseMgrClnt(fsl *fslib.FsLib) (*LeaseMgrClnt, error) {
-	return &LeaseMgrClnt{
+func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
+	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *LeaseInfo](),
 		cc:    NewClntCache(fsl),
@@ -28,7 +28,7 @@ func NewLeaseMgrClnt(fsl *fslib.FsLib) (*LeaseMgrClnt, error) {
 
 // Ask for lease; if caller already has a lease at that server, return
 // it.
-func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
+func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 	srv, rest, err := lmc.PathLastSymlink(pn)
 	db.DPrintf(db.LEASECLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
 	if li, ok := lmc.lm.Lookup(srv.String()); ok {
@@ -53,7 +53,7 @@ func (lmc *LeaseMgrClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 	}
 }
 
-func (lmgr *LeaseMgrClnt) EndLeases() error {
+func (lmgr *LeaseClnt) EndLeases() error {
 	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", proc.GetPid())
 	for _, li := range lmgr.lm.Values() {
 		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", proc.GetPid(), li)

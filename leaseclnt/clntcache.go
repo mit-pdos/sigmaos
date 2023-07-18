@@ -1,4 +1,4 @@
-package leasemgrclnt
+package leaseclnt
 
 import (
 	"sync"

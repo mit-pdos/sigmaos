@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
-	"sigmaos/leasemgrsrv"
+	"sigmaos/leasesrv"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sesssrv"
@@ -56,7 +56,7 @@ func Run(args []string) error {
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
 		// and ready to serve requests.  realmd downs this semaphore.
-		li, err := sc.LeaseMgrClnt.AskLease(pn, fsetcd.LeaseTTL)
+		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	_, err = leasemgrsrv.NewLeaseSrvSvc(uname, nd.SessSrv, newLeaseSrv(nd.fs))
+	_, err = leasesrv.NewLeaseSrvSvc(uname, nd.SessSrv, newLeaseSrv(nd.fs))
 	if err != nil {
 		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
 		return err

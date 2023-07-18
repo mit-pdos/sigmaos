@@ -1263,7 +1263,7 @@ func TestEphemeralFileOK(t *testing.T) {
 
 	fn := gopath.Join(pathname, "f")
 
-	li, err := ts.LeaseMgrClnt.AskLease(fn, fsetcd.LeaseTTL)
+	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err)
 
 	li.KeepExtending()
@@ -1287,7 +1287,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 
 	fn := gopath.Join(pathname, "foobar")
 
-	li, err := ts.LeaseMgrClnt.AskLease(fn, fsetcd.LeaseTTL)
+	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err)
 
 	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)

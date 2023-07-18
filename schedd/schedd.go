@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/leasemgrsrv"
+	"sigmaos/leasesrv"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -177,7 +177,7 @@ func RunSchedd(kernelId string) error {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	if err := leasemgrsrv.NewLeaseSrv(mfs); err != nil {
+	if err := leasesrv.NewLeaseSrv(mfs); err != nil {
 		db.DFatalf("Error NeweLeaseSrv: %v", err)
 	}
 	setupMemFsSrv(mfs)

@@ -1,4 +1,4 @@
-package leasemgrclnt
+package leaseclnt
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type LeaseInfo struct {
 	ch      chan struct{}
 	srv     string
 	lid     sp.TleaseId
-	lmc     *LeaseMgrClnt
+	lmc     *LeaseClnt
 	expired bool
 }
 

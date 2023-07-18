@@ -3,7 +3,7 @@ package sigmaclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/leasemgrclnt"
+	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
@@ -12,11 +12,11 @@ import (
 type SigmaClnt struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*leasemgrclnt.LeaseMgrClnt
+	*leaseclnt.LeaseClnt
 }
 
 func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
-	lmc, err := leasemgrclnt.NewLeaseMgrClnt(fsl)
+	lmc, err := leaseclnt.NewLeaseClnt(fsl)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +82,8 @@ func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Sigm
 
 func (sc *SigmaClnt) Exit(status *proc.Status) error {
 	sc.ProcClnt.Exited(status)
-	if sc.LeaseMgrClnt != nil {
-		sc.LeaseMgrClnt.EndLeases()
+	if sc.LeaseClnt != nil {
+		sc.LeaseClnt.EndLeases()
 	}
 	return sc.FsLib.DetachAll()
 }

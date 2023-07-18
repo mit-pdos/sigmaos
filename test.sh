@@ -15,6 +15,12 @@ for T in path intervals serr linuxsched perf sigmap; do
 done
 
 #
+# test proxy with just named
+#
+
+go test $@ sigmaos/proxy -start
+
+#
 # test with a kernel with just named
 #
 
@@ -27,12 +33,6 @@ done
 
 # test memfs using schedd's memfs
 go test $@ sigmaos/fslib -start -path "name/schedd/~local/" 
-
-#
-# test proxy
-#
-
-go test $@ sigmaos/proxy -start
 
 #
 # tests a full kernel using root realm

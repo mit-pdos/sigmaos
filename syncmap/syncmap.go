@@ -62,6 +62,7 @@ func (sm *SyncMap[K, T]) Values() []T {
 	i := 0
 	for _, v := range sm.tbl {
 		vals[i] = v
+		i += 1
 	}
 	return vals
 }

@@ -73,6 +73,10 @@ func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leasepro
 	return nil
 }
 
+func (ls *LeaseSrv) Stop() {
+	ls.ch <- struct{}{}
+}
+
 func (ls *LeaseSrv) allocLid() sp.TleaseId {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -85,7 +89,7 @@ func (ls *LeaseSrv) allocLid() sp.TleaseId {
 // Delete files that are associated with lid
 func (ls *LeaseSrv) expire(lid sp.TleaseId) {
 	pns := ls.et.Expire(lid)
-	db.DPrintf(db.LEASESRV, "%v: expire %v %v\n", proc.GetName(), lid, pns)
+	db.DPrintf(db.ALWAYS, "%v: expire %v %v\n", proc.GetName(), lid, pns)
 	for _, pn := range pns {
 		ls.mfs.Remove(pn)
 	}

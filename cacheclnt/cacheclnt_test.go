@@ -219,7 +219,7 @@ func TestElasticCache(t *testing.T) {
 	ts := mkTstate(t, NSHARD)
 
 	for i := 0; i < N; i++ {
-		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2)
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)
 	}
 
 	ts.sem.Up()

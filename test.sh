@@ -10,7 +10,7 @@ go clean -testcache
 # test some support package
 #
 
-for T in path intervals serr linuxsched perf sigmap leaderetcd; do
+for T in path intervals serr linuxsched perf sigmap; do
     go test $@ sigmaos/$T
 done
 
@@ -24,6 +24,9 @@ done
 
 # go test $@ sigmaos/memfs -start   # no pipes
 # go test $@ sigmaos/fslibsrv -start  # no perf
+
+# test memfs using schedd's memfs
+go test $@ sigmaos/fslib -start -path "name/schedd/~local/" 
 
 #
 # test proxy

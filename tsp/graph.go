@@ -38,15 +38,15 @@ func (g *Graph) getEdge(n1 int, n2 int) int {
 }
 
 func (g *Graph) Print() {
-	fmt.Print("\t\t")
+	fmt.Printf("%3v", "")
 	for i := range *g {
-		fmt.Printf("%v    \t", i)
+		fmt.Printf("%10v", i)
 	}
 	fmt.Print("\n")
 	for i1, _ := range *g {
-		fmt.Printf("%v   \t", i1)
+		fmt.Printf("%3v", i1)
 		for _, w2 := range (*g)[i1] {
-			fmt.Printf("%v   \t", w2)
+			fmt.Printf("%10v", w2)
 		}
 		fmt.Print("\n")
 	}

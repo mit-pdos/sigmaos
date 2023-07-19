@@ -11,13 +11,18 @@ func (s *Set) Add(n int) {
 }
 
 // Del removes the supplied value, or returns the same
-// set if the value is not in the set
+// set if the value is not in the set. Del will copy
+// the slice.
 func (s Set) Del(n int) Set {
 	index := s.has(n)
 	if index == -1 {
-		return s
+		cp := make(Set, len(s))
+		_ = copy(cp, s)
+		return cp
 	}
-	return append(s[:index], s[index+1:]...)
+	cp := make(Set, len(s))
+	_ = copy(cp, s)
+	return append(cp[:index], cp[index+1:]...)
 }
 
 // has is an internal function which returns the index

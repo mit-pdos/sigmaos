@@ -32,8 +32,26 @@ func TestSet(t *testing.T) {
 	fmt.Printf("%v", s)
 }
 
+func TestTSPFixed(t *testing.T) {
+	g1 := tsp.Graph{{0, 20, 42, 25},
+		{20, 0, 30, 34},
+		{42, 30, 0, 10},
+		{25, 34, 10, 0}}
+	//g1.Print()
+	length, _, err := g1.TSPSingle(0)
+	assert.Nil(t, err, "TSPSingle Failed")
+	assert.Equal(t, 85, length)
+	g2 := tsp.Graph{{0, 3, 2},
+		{3, 0, 1},
+		{2, 1, 0}}
+	//g2.Print()
+	length, _, err = g2.TSPSingle(0)
+	assert.Nil(t, err, "TSPSingle Failed")
+	assert.Equal(t, 6, length)
+}
+
 func TestTSP(t *testing.T) {
-	g, err := tsp.GenGraph(11, 10000)
+	g, err := tsp.GenGraph(12, 1000000)
 	assert.Nil(t, err, "GenGraph Failed")
 	g.Print()
 	length, path, err := g.TSPSingle(0)

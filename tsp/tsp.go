@@ -7,7 +7,7 @@ package tsp
 // of the shortest path, and any error.
 func (g *Graph) TSPSingle(homeNode int) (int, []int, error) {
 	// Init parent set with every node
-	nodeSet := Set{}
+	nodeSet := make(Set, 0)
 	for i := range *g {
 		if i != homeNode {
 			nodeSet.Add(i)
@@ -17,6 +17,8 @@ func (g *Graph) TSPSingle(homeNode int) (int, []int, error) {
 }
 
 func tspSingleRecursive(g *Graph, homeNode int, choices Set, currentNode int) (int, []int, error) {
+	//fmt.Printf("%v: %v\n", currentNode, choices)
+
 	if len(choices) == 0 {
 		return -1, nil, mkErr("tspSingleRecursive Failed: Invalid choices length")
 	}
@@ -33,10 +35,10 @@ func tspSingleRecursive(g *Graph, homeNode int, choices Set, currentNode int) (i
 		// Call a recursion for every possible choice
 		for _, choice := range choices {
 			length, path, err := tspSingleRecursive(g, homeNode, choices.Del(choice), choice)
-
 			if err != nil {
 				return -1, nil, err
 			}
+
 			if length < minLen {
 				minLen = length
 				minPath = path
@@ -44,7 +46,7 @@ func tspSingleRecursive(g *Graph, homeNode int, choices Set, currentNode int) (i
 		}
 	}
 	if currentNode == minPath[len(minPath)-1] {
-		panic("what")
+		return -1, nil, mkErr("Impossible condition in tspSingleRecursive: node traversed to itself")
 	}
 	// Append this node to the search
 	minLen += g.getEdge(minPath[len(minPath)-1], currentNode)

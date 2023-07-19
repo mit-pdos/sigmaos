@@ -62,7 +62,7 @@ func run(cmd string) ([]byte, error) {
 	return out, err
 }
 
-func TestBasic(t *testing.T) {
+func TestProxyBasic(t *testing.T) {
 	ts := initTest(t)
 
 	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
@@ -104,7 +104,7 @@ func TestBasic(t *testing.T) {
 	ts.cleanup()
 }
 
-func TestSymlinkPath(t *testing.T) {
+func TestProxySymlinkPath(t *testing.T) {
 	ts := initTest(t)
 
 	dn := "name/d"

@@ -51,5 +51,6 @@ func tspSingleRecursive(g *Graph, homeNode int, choices Set, currentNode int) (i
 	// Append this node to the search
 	minLen += g.getEdge(minPath[len(minPath)-1], currentNode)
 	minPath = append(minPath, currentNode)
+	//fmt.Printf("%v%v Passing back %v at len %v\n", strings.Repeat("\t", len(*g)-1-len(choices)), currentNode, minPath, minLen)
 	return minLen, minPath, nil
 }

@@ -13,11 +13,11 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/memfssrv"
 	"sigmaos/microbenchmarks"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/protdevsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -62,19 +62,19 @@ func RunWwwd(job, tree string) {
 
 	// Write a file for clients to discover the server's address.
 	mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
-	if err = www.mfs.SigmaClnt().MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+	if err = www.pds.SigmaClnt().MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MountService %v", err)
 	}
 
 	go func() {
-		www.mfs.Serve()
+		www.pds.Serve()
 	}()
 
 	db.DFatalf("%v", http.Serve(l, nil))
 }
 
 type Wwwd struct {
-	mfs           *memfssrv.MemFs
+	pds           *protdevsrv.ProtDevSrv
 	localSrvpath  string
 	globalSrvpath string
 }
@@ -83,26 +83,26 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.mfs, err = memfssrv.MakeMemFs(MemFsPath(job), WWWD)
+	www.pds, err = protdevsrv.MakeProtDevSrv(MemFsPath(job), nil, WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 	// In order to automount children, we need to at least mount /pids.
-	if err := procclnt.MountPids(www.mfs.SigmaClnt().FsLib, www.mfs.SigmaClnt().NamedAddr()); err != nil {
+	if err := procclnt.MountPids(www.pds.SigmaClnt().FsLib, www.pds.SigmaClnt().NamedAddr()); err != nil {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
 	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	if _, err := www.mfs.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if _, err := www.pds.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
 	www.globalSrvpath = path.Join(proc.GetProcDir(), WWWD)
 
-	err = www.mfs.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
+	err = www.pds.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {
 		db.DFatalf("Error symlink memfs wwwd: %v", err)
 	}
@@ -136,7 +136,7 @@ func (www *Wwwd) makePipe() string {
 	// Make the pipe in the server.
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
-	if err := www.mfs.SigmaClnt().MakePipe(pipePath, 0777); err != nil {
+	if err := www.pds.SigmaClnt().MakePipe(pipePath, 0777); err != nil {
 		db.DFatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
 	}
 	return pipeName
@@ -144,7 +144,7 @@ func (www *Wwwd) makePipe() string {
 
 func (www *Wwwd) removePipe(pipeName string) {
 	pipePath := path.Join(www.localSrvpath, pipeName)
-	if err := www.mfs.SigmaClnt().Remove(pipePath); err != nil {
+	if err := www.pds.SigmaClnt().Remove(pipePath); err != nil {
 		db.DFatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
 	}
 }
@@ -153,14 +153,14 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	pipePath := path.Join(www.globalSrvpath, pipeName)
 	db.DPrintf(db.WWW, "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
-	fd, err := www.mfs.SigmaClnt().Open(pipePath, sp.OREAD)
+	fd, err := www.pds.SigmaClnt().Open(pipePath, sp.OREAD)
 	if err != nil {
 		db.DPrintf(db.WWW_ERR, "pipe open %v failed %v", pipePath, err)
 		return
 	}
-	defer www.mfs.SigmaClnt().Close(fd)
+	defer www.pds.SigmaClnt().Close(fd)
 	for {
-		b, err := www.mfs.SigmaClnt().Read(fd, pipe.PIPESZ)
+		b, err := www.pds.SigmaClnt().Read(fd, pipe.PIPESZ)
 		if err != nil || len(b) == 0 {
 			break
 		}
@@ -187,13 +187,13 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	}
 	db.DPrintf(db.WWW, "About to spawn %v", a)
-	_, errs := www.mfs.SigmaClnt().SpawnBurst([]*proc.Proc{a}, 1)
+	_, errs := www.pds.SigmaClnt().SpawnBurst([]*proc.Proc{a}, 1)
 	if len(errs) != 0 {
 		db.DFatalf("Error SpawnBurst %v", errs)
 		return nil, errs[0]
 	}
 	db.DPrintf(db.WWW, "About to WaitStart %v", a)
-	err := www.mfs.SigmaClnt().WaitStart(pid)
+	err := www.pds.SigmaClnt().WaitStart(pid)
 	if err != nil {
 		db.DFatalf("Error WaitStart %v", err)
 		return nil, err
@@ -208,7 +208,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		}()
 	}
 	db.DPrintf(db.WWW, "About to WaitExit %v", a)
-	status, err := www.mfs.SigmaClnt().WaitExit(pid)
+	status, err := www.pds.SigmaClnt().WaitExit(pid)
 	db.DPrintf(db.WWW, "WaitExit done %v status %v err %v", pid, status, err)
 	if pipe {
 		www.removePipe(pipeName)
@@ -231,7 +231,7 @@ func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*p
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	www.mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
+	www.pds.Exit(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 	return nil, nil
 }

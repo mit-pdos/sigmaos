@@ -11,6 +11,7 @@ import (
 	"sigmaos/protdev"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -37,57 +38,85 @@ type ProtDevSrv struct {
 	svc *service
 }
 
-func MakeProtDevSrv(fn string, svci any) (*ProtDevSrv, error) {
-	mfs, error := memfssrv.MakeMemFs(fn, "protdevsrv")
+// Make a protdevsrv and memfs and publish srv at fn
+func MakeProtDevSrv(fn string, svci any, uname sp.Tuname) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFs(fn, uname)
 	if error != nil {
 		db.DFatalf("MakeProtDevSrv %v err %v\n", fn, error)
 	}
+	// XXX pull "rpc" upto here
 	return MakeProtDevSrvMemFs(mfs, "", svci)
 }
 
-func MakeProtDevSrvPublic(fn string, svci any, public bool) (*ProtDevSrv, error) {
+func MakeProtDevSrvPublic(fn string, svci any, uname sp.Tuname, public bool) (*ProtDevSrv, error) {
 	if public {
-		mfs, error := memfssrv.MakeMemFsPublic(fn, "protdevsrv")
+		mfs, error := memfssrv.MakeMemFsPublic(fn, uname)
 		if error != nil {
 			return nil, error
 		}
 		return MakeProtDevSrvMemFs(mfs, "", svci)
 	} else {
-		return MakeProtDevSrv(fn, svci)
+		return MakeProtDevSrv(fn, svci, uname)
 	}
 }
 
-func MakeProtDevSrvPort(fn, port string, svci any) (*ProtDevSrv, error) {
-	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, "protdevsrv")
+func MakeProtDevSrvPort(fn, port string, uname sp.Tuname, svci any) (*ProtDevSrv, error) {
+	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, uname)
 	if error != nil {
 		db.DFatalf("MakeProtDevSrvPort %v err %v\n", fn, error)
 	}
 	return MakeProtDevSrvMemFs(mfs, "", svci)
 }
 
-func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*ProtDevSrv, error) {
+func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci any) (*ProtDevSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if error != nil {
 		db.DFatalf("MakeProtDevSrvClnt %v err %v\n", fn, error)
 	}
-	return MakeProtDevSrvMemFs(mfs, "", svci)
+	return MakeRPCSrv(mfs, "", svci)
 }
 
-// Make a ProtDevSrv at pn in mfs
+// Make a ProtDevSrv with protdev at pn in mfs
 func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
-	psd := &ProtDevSrv{}
-	psd.MemFs = mfs
-	psd.mkService(svci)
-	rd := mkRpcDev(psd)
-	if err := sessdevsrv.MkSessDev(psd.MemFs, path.Join(pn, protdev.RPC), rd.mkRpcSession, nil); err != nil {
+	psd, err := MakeRPCSrv(mfs, pn, svci)
+	if err != nil {
 		return nil, err
 	}
-	if si, err := makeStatsDev(mfs, pn); err != nil {
+	if err := psd.NewLeaseSrv(); err != nil {
 		return nil, err
-	} else {
-		psd.sti = si
 	}
 	return psd, nil
+}
+
+// Make a ProtDevSrv with protdev at pn in mfs (without a lease server)
+func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
+	psd := &ProtDevSrv{MemFs: mfs}
+	if svci != nil {
+		psd.mkService(svci)
+		rd := mkRpcDev(psd)
+		if err := sessdevsrv.MkSessDev(psd.MemFs, path.Join(pn, protdev.RPC), rd.mkRpcSession, nil); err != nil {
+			return nil, err
+		}
+		if si, err := makeStatsDev(mfs, pn); err != nil {
+			return nil, err
+		} else {
+			psd.sti = si
+		}
+	}
+	return psd, nil
+}
+
+func (psd *ProtDevSrv) NewLeaseSrv() error {
+	db.DPrintf(db.PROTDEVSRV, "NewLeaseSrv\n")
+	lsrv := memfssrv.NewLeaseSrv(psd.MemFs)
+	if _, err := psd.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return err
+	}
+	_, err := MakeRPCSrv(psd.MemFs, sp.LEASESRV, lsrv)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (psd *ProtDevSrv) QueueLen() int64 {

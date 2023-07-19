@@ -8,7 +8,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/leasesrv"
 	"sigmaos/proc"
 	"sigmaos/protdevsrv"
 	"sigmaos/realmsrv/proto"
@@ -44,11 +43,8 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
-	pds, err := protdevsrv.MakeProtDevSrv(sp.REALMD, rs)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.REALMD, rs, sp.REALMDREL)
 	if err != nil {
-		return err
-	}
-	if err := leasesrv.NewLeaseSrv(pds.MemFs); err != nil {
 		return err
 	}
 	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)

@@ -8,30 +8,26 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
-	"sigmaos/leasesrv"
-	"sigmaos/memfssrv"
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
 )
 
 var fss3 *Fss3
 
 type Fss3 struct {
-	*memfssrv.MemFs
+	*protdevsrv.ProtDevSrv
 	mu     sync.Mutex
 	client *s3.Client
 }
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	mfs, err := memfssrv.MakeMemFs(sp.S3, sp.S3REL)
+	psd, err := protdevsrv.MakeProtDevSrv(sp.S3, nil, sp.S3REL)
 	if err != nil {
-		db.DFatalf("Error MakeMemFs: %v", err)
-	}
-	if err := leasesrv.NewLeaseSrv(mfs); err != nil {
-		db.DFatalf("Error NewLeaseSrv: %v", err)
+		db.DFatalf("Error MakeProtDevSrv: %v", err)
 	}
 	p, err := perf.MakePerf(perf.S3)
 	if err != nil {
@@ -44,11 +40,11 @@ func RunFss3(buckets []string) {
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, path.Path{}, sp.DMDIR)
-		if err := mfs.MkNod(bucket, d); err != nil {
+		if err := psd.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}
 	}
-	fss3.MemFs = mfs
+	fss3.ProtDevSrv = psd
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -58,6 +54,6 @@ func RunFss3(buckets []string) {
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	mfs.Serve()
-	mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
+	psd.Serve()
+	psd.Exit(proc.MakeStatus(proc.StatusEvicted))
 }

@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/leasesrv"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -27,7 +26,6 @@ type Schedd struct {
 	scheddclnt *scheddclnt.ScheddClnt
 	mcpufree   proc.Tmcpu
 	memfree    proc.Tmem
-	mfs        *memfssrv.MemFs
 	qs         map[sp.Trealm]*Queue
 	kernelId   string
 	realms     []sp.Trealm
@@ -35,7 +33,6 @@ type Schedd struct {
 
 func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
 	sd := &Schedd{
-		mfs:      mfs,
 		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
 		qs:       make(map[sp.Trealm]*Queue),
 		realms:   make([]sp.Trealm, 0),
@@ -177,22 +174,19 @@ func RunSchedd(kernelId string) error {
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	if err := leasesrv.NewLeaseSrv(mfs); err != nil {
-		db.DFatalf("Error NeweLeaseSrv: %v", err)
-	}
-	setupMemFsSrv(mfs)
 	sd := MakeSchedd(mfs, kernelId)
-	setupFs(mfs, sd)
+	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, "", sd)
+	if err != nil {
+		db.DFatalf("Error PDS: %v", err)
+	}
+	setupMemFsSrv(pds.MemFs)
+	setupFs(pds.MemFs, sd)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}
 	defer p.Done()
-	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, "", sd)
-	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
-	}
 	go sd.schedule()
 	go sd.monitorWSQueue(proc.T_LC)
 	go sd.monitorWSQueue(proc.T_BE)

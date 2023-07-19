@@ -95,46 +95,18 @@ func MakeMemFsReplServer(root fs.Dir, addr, path string, uname sp.Tuname, config
 	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt()}, nil
 }
 
-// This version is for a replicated named, including handling if this
-// is the initial named for the root realm.
 func MakeReplMemFs(addr, path string, uname sp.Tuname, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
 	root := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	isInitNamed := false
-	// Check if we are one of the initial named replicas
-	as, e := proc.Named()
-	if e != nil {
-		return nil, e
-	}
-	for _, a := range as {
-		if a.Addr == addr {
-			isInitNamed = true
-			break
-		}
-	}
 	var mfs *MemFs
 	var err error
-	if isInitNamed {
-		mfs, err = MakeMemFsReplServerFsl(root, addr, path, nil, conf)
+	db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, uname, conf)
+	if proc.GetNet() == sp.ROOTREALM.String() {
+		mfs, err = MakeMemFsReplServer(root, addr, path, uname, conf)
 	} else {
-		db.DPrintf(db.PORT, "MakeReplMemFs: not initial one addr %v %v %v %v", addr, path, uname, conf)
-		// If this is not the init named, initialize sigma clnt
-		if proc.GetNet() == sp.ROOTREALM.String() {
-			mfs, err = MakeMemFsReplServer(root, addr, path, uname, conf)
-		} else {
-			mfs, err = MakeReplServerPublic(root, path, uname, conf, realm)
-		}
+		mfs, err = MakeReplServerPublic(root, path, uname, conf, realm)
 	}
 	if err != nil {
 		return nil, serr.MkErrError(err)
-	}
-	// If this *was* the init named, we now can make sigma clnt
-	if isInitNamed {
-		sc, err := sigmaclnt.MkSigmaClntFsLib(uname)
-		if err != nil {
-			return nil, serr.MkErrError(err)
-		}
-		mfs.sc = sc
-		mfs.SetSigmaClnt(sc)
 	}
 	return mfs, nil
 }

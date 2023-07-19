@@ -34,8 +34,9 @@ type service struct {
 
 type ProtDevSrv struct {
 	*memfssrv.MemFs
-	sti *protdev.StatInfo
-	svc *service
+	sti  *protdev.StatInfo
+	svc  *service
+	lsrv *LeaseSrv
 }
 
 // Make a protdevsrv and memfs and publish srv at fn
@@ -108,7 +109,7 @@ func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
 
 func (psd *ProtDevSrv) NewLeaseSrv() error {
 	db.DPrintf(db.PROTDEVSRV, "NewLeaseSrv\n")
-	lsrv := memfssrv.NewLeaseSrv(psd.MemFs)
+	lsrv := newLeaseSrv(psd.MemFs)
 	if _, err := psd.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
@@ -154,6 +155,9 @@ func (psd *ProtDevSrv) mkService(svci any) {
 func (psd *ProtDevSrv) RunServer() error {
 	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
 	psd.MemFs.Serve()
+	if psd.lsrv != nil {
+		psd.lsrv.Stop()
+	}
 	psd.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

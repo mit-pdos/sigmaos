@@ -1,4 +1,4 @@
-package memfssrv
+package protdevsrv
 
 import (
 	"sync"
@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
+	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -16,7 +17,7 @@ import (
 )
 
 type LeaseSrv struct {
-	mfs     *MemFs
+	mfs     *memfssrv.MemFs
 	lt      *syncmap.SyncMap[sp.TleaseId, *leaseInfo]
 	et      *ephemeralmap.EphemeralMap
 	mu      sync.Mutex
@@ -31,7 +32,7 @@ type leaseInfo struct {
 	lid  sp.TleaseId
 }
 
-func NewLeaseSrv(mfs *MemFs) *LeaseSrv {
+func newLeaseSrv(mfs *memfssrv.MemFs) *LeaseSrv {
 	ls := &LeaseSrv{
 		mfs:     mfs,
 		lt:      syncmap.NewSyncMap[sp.TleaseId, *leaseInfo](),

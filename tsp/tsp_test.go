@@ -110,7 +110,7 @@ func measureTSPMulti(t *testing.T, g *tsp.Graph, depthToFork int) {
 func TestTSPRandom(t *testing.T) {
 	g, err := tsp.GenGraph(12, 1000000)
 	assert.Nil(t, err, "GenGraph Failed")
-	g.Print()
+	//g.Print()
 	measureTSPSingle(t, &g)
 	measureTSPMulti(t, &g, 1)
 }

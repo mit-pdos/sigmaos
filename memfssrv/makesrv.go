@@ -43,7 +43,7 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 	if err != nil {
 		return nil, err
 	}
-	mfs := MakeMemFsSrv(sp.Tuname(pn), pn, srv)
+	mfs := MakeMemFsSrv(sc.Uname(), pn, srv)
 	return mfs, nil
 }
 

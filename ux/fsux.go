@@ -40,6 +40,7 @@ func RunFsUx(rootux string) {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
 	fsux.SessSrv = srv
+	fsux.SigmaClnt = srv.SigmaClnt()
 	fsux.Serve()
 	fsux.Done()
 	fsux.Exited(proc.MakeStatus(proc.StatusEvicted))

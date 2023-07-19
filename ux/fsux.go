@@ -46,11 +46,6 @@ func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.C
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
-	// lsrv := memfssrv.NewLeaseSrv(mfs)
-	// _, error = leasesrv.NewLeaseMgrSrv1(sp.Tuname(addr), mfs.SessSrv, lsrv)
-	// if error != nil {
-	// 	db.DFatalf("%v: NewLeaseSrv %v\n", proc.GetName(), error)
-	// }
 	fsux.MemFs = mfs
 	return fsux
 }

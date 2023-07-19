@@ -120,6 +120,7 @@ func TestProxySymlinkPath(t *testing.T) {
 
 	log.Printf("Out: %v\n", string(out))
 
+	ts.Remove("name/namedself")
 	ts.RmDir(dn)
 
 	ts.cleanup()

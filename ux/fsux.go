@@ -5,10 +5,10 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	// "sigmaos/leasesrv"
-	"sigmaos/memfssrv"
+	"sigmaos/fslibsrv"
 	"sigmaos/proc"
-	"sigmaos/repl"
+	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/seccomp"
 )
@@ -16,7 +16,8 @@ import (
 var fsux *FsUx
 
 type FsUx struct {
-	*memfssrv.MemFs
+	*sigmaclnt.SigmaClnt
+	*sesssrv.SessSrv
 	mount string
 
 	sync.Mutex
@@ -28,24 +29,24 @@ func RunFsUx(rootux string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
-	// XXX make mfs?
-	fsux = MakeReplicatedFsUx(rootux, ip+":0", proc.GetPid(), nil)
-	fsux.Serve()
-	fsux.Exit(proc.MakeStatus(proc.StatusEvicted))
-}
-
-func MakeReplicatedFsUx(rootux string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
-	fsux = &FsUx{}
-	fsux.ot = MkObjTable()
-	root, err := makeDir([]string{rootux})
-	if err != nil {
-		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
+	fsux := newUx(rootux)
+	root, sr := makeDir([]string{rootux})
+	if sr != nil {
+		db.DFatalf("%v: makeDir %v\n", proc.GetName(), sr)
 	}
-	mfs, error := memfssrv.MakeMemFsReplServer(root, addr, sp.UX, "ux", config)
+	srv, error := fslibsrv.BootSrvAndPost(root, ip+":0", sp.UX, sp.UXREL)
 	if error != nil {
 		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
-	fsux.MemFs = mfs
+	fsux.SessSrv = srv
+	fsux.Serve()
+	fsux.Done()
+	fsux.Exited(proc.MakeStatus(proc.StatusEvicted))
+}
+
+func newUx(rootux string) *FsUx {
+	fsux = &FsUx{}
+	fsux.ot = MkObjTable()
 	return fsux
 }

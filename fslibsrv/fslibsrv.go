@@ -28,6 +28,28 @@ func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.Atta
 	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, nil)
 }
 
+func BootSrvAndPost(root fs.Dir, addr, path string, uname sp.Tuname) (*sesssrv.SessSrv, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
+	if err != nil {
+		return nil, err
+	}
+	et := ephemeralmap.NewEphemeralMap()
+	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil, nil, nil, et)
+	if len(path) > 0 {
+		mnt := sp.MkMountServer(srv.MyAddr())
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
+		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
+		if err != nil {
+			return nil, err
+		}
+		li.KeepExtending()
+		if err := sc.MkMountSymlink(path, mnt, li.Lease()); err != nil {
+			return nil, err
+		}
+	}
+	return srv, nil
+}
+
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
 	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
@@ -45,6 +67,7 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 	}
 	return srv, nil
 }
+
 func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
 	return MakeReplServerFsl(root, port, path, sc, nil)
 }

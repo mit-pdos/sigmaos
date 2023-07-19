@@ -1,40 +1,42 @@
 package tsp_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
-	db "sigmaos/debug"
 	"sigmaos/tsp"
 	"testing"
-	"time"
 )
 
+func TestGraph(t *testing.T) {
+	g, err := tsp.GenGraph(4, 10)
+	assert.Nil(t, err, "GenGraph Failed")
+	g.Print()
+}
+
+func TestSet(t *testing.T) {
+	s := tsp.Set{}
+	s.Add(5)
+	s.Add(2)
+	s.Add(7)
+	s.Add(8)
+	s.Add(1)
+	assert.Equal(t, true, s.Has(7))
+	s = s.Del(7)
+	assert.Equal(t, false, s.Has(7))
+	assert.Equal(t, true, s.Has(5))
+	s = s.Del(5)
+	assert.Equal(t, false, s.Has(5))
+	s = s.Del(7)
+	s = s.Del(7)
+	assert.Equal(t, false, s.Has(7))
+	fmt.Printf("%v", s)
+}
+
 func TestTSP(t *testing.T) {
-	tspSolve, err := tsp.InitTSP(11, 10000, 10000)
-	assert.Nil(t, err, "InitTSP Failed")
-	err = tspSolve.GenTours()
-	assert.Nil(t, err, "GenTours Failed")
-
-	start := time.Now().UnixMilli()
-	tspSolve.RunToursSingle()
-	end := time.Now().UnixMilli()
-	min, path := tspSolve.GetMinDist()
-	db.DPrintf(tsp.DEBUG_TSP, "Minimum Distance by Single in %v ms: %v along path: %v", end-start, min, path)
-
-	start = time.Now().UnixMilli()
-	tspSolve.RunToursMulti()
-	end = time.Now().UnixMilli()
-	min, path = tspSolve.GetMinDist()
-	db.DPrintf(tsp.DEBUG_TSP, "Minimum Distance by Multi in %v ms: %v along path: %v", end-start, min, path)
+	g, err := tsp.GenGraph(11, 10000)
+	assert.Nil(t, err, "GenGraph Failed")
+	g.Print()
+	length, path, err := g.TSPSingle(0)
+	assert.Nil(t, err, "TSPSingle Failed")
+	fmt.Printf("TSP Solved in %v by path: %v", length, path)
 }
-
-/*
-func TestTSPMulti(t *testing.T) {
-	tspSolve, err := tsp.InitTSP(11, 10000, 10000)
-	assert.Nil(t, err, "InitTSP Failed")
-	err = tspSolve.GenTours()
-	assert.Nil(t, err, "GenTours Failed")
-	tspSolve.RunToursMulti()
-	min, path := tspSolve.GetMinDist()
-	db.DPrintf(tsp.DEBUG_TSP, "Minimum Distance by Multi: %v along path: %v", min, path)
-}
-*/

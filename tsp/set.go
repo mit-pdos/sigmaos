@@ -10,18 +10,25 @@ func (s *Set) Add(n int) {
 	*s = append(*s, n)
 }
 
-// Del naively trusts that the number is already in the set.
-// Del will copy the slice.
-func (s Set) Del(n int) Set {
-	out := make(Set, len(s)-1)
+// DelCopy naively trusts that the number is already in the set.
+// DelCopy will copy the slice.
+func (s *Set) DelCopy(n int) *Set {
+	out := make(Set, len(*s)-1)
 	i := 0
-	for _, item := range s {
+	for _, item := range *s {
 		if item != n {
 			out[i] = item
 			i++
 		}
 	}
-	return out
+	return &out
+}
+
+// DelInPlace naively trusts that the number is already in the set.
+func (s *Set) DelInPlace(n int) {
+	// XXX Use Tombstones?
+	index := s.has(n)
+	*s = append((*s)[:index], (*s)[index+1:]...)
 }
 
 // has is an internal function which returns the index
@@ -32,14 +39,5 @@ func (s *Set) has(n int) int {
 			return i
 		}
 	}
-	return -1
-}
-
-func (s *Set) Has(n int) bool {
-	for _, v := range *s {
-		if v == n {
-			return true
-		}
-	}
-	return false
+	panic("Set.has called on set missing n")
 }

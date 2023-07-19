@@ -13,28 +13,31 @@ func (g *Graph) TSPSingle(homeNode int) (int, []int, error) {
 			nodeSet.Add(i)
 		}
 	}
-	return tspSingleRecursive(g, homeNode, nodeSet, homeNode)
+	return tspSingleRecursive(g, homeNode, &nodeSet, homeNode)
 }
 
-func tspSingleRecursive(g *Graph, homeNode int, choices Set, currentNode int) (int, []int, error) {
+func tspSingleRecursive(g *Graph, homeNode int, choices *Set, currentNode int) (int, []int, error) {
 	//fmt.Printf("%v: %v\n", currentNode, choices)
 
-	if len(choices) == 0 {
+	if len(*choices) == 0 {
 		return -1, nil, mkErr("tspSingleRecursive Failed: Invalid choices length")
 	}
 
 	minLen := INFINITY
 	var minPath []int
 
-	if len(choices) == 1 {
-		minPath = make([]int, 2)
+	if len(*choices) == 1 {
+		minPath = make([]int, 2, len(*g))
 		minPath[0] = homeNode
-		minPath[1] = choices[0]
-		minLen = g.getEdge(homeNode, choices[0])
+		minPath[1] = (*choices)[0]
+		minLen = g.getEdge(homeNode, (*choices)[0])
 	} else {
 		// Call a recursion for every possible choice
-		for _, choice := range choices {
-			length, path, err := tspSingleRecursive(g, homeNode, choices.Del(choice), choice)
+		for _, choice := range *choices {
+			// Don't copy - just edit
+			choices.DelInPlace(choice)
+			length, path, err := tspSingleRecursive(g, homeNode, choices, choice)
+			choices.Add(choice)
 			if err != nil {
 				return -1, nil, err
 			}

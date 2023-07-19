@@ -61,7 +61,7 @@ func tspMultiRecursive(g *Graph, homeNode int, choices Set, currentNode int, dep
 			for index, choice := range choices {
 				wg.Add(1)
 				go func(minLengths *[]int, minPaths *[][]int, errors *[]error, index int, choice int, wg *sync.WaitGroup) {
-					(*minLengths)[index], (*minPaths)[index], (*errors)[index] = tspSingleRecursive(g, homeNode, choices.Del(choice), choice)
+					(*minLengths)[index], (*minPaths)[index], (*errors)[index] = tspSingleRecursive(g, homeNode, choices.DelCopy(choice), choice)
 					// error checking is handled outside
 					wg.Done()
 				}(&minLengths, &minPaths, &errors, index, choice, &wg)
@@ -84,7 +84,7 @@ func tspMultiRecursive(g *Graph, homeNode int, choices Set, currentNode int, dep
 			// Call a recursion for every possible choice
 			depthToFork--
 			for _, choice := range choices {
-				length, path, err := tspMultiRecursive(g, homeNode, choices.Del(choice), choice, depthToFork)
+				length, path, err := tspMultiRecursive(g, homeNode, *choices.DelCopy(choice), choice, depthToFork)
 				if err != nil {
 					return -1, nil, err
 				}

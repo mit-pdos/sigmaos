@@ -3,15 +3,15 @@ package socialnetwork
 import (
 	"crypto/sha256"
 	"fmt"
+	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/cacheclnt"
-	"sigmaos/mongoclnt"
 	dbg "sigmaos/debug"
-	"sigmaos/perf"
 	"sigmaos/fs"
+	"sigmaos/mongoclnt"
+	"sigmaos/perf"
 	"sigmaos/protdevsrv"
 	sp "sigmaos/sigmap"
-	"gopkg.in/mgo.v2/bson"
 	"sigmaos/socialnetwork/proto"
 	"sync"
 	"time"
@@ -22,16 +22,16 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	USER_QUERY_OK = "OK"
+	USER_QUERY_OK     = "OK"
 	USER_CACHE_PREFIX = "user_"
 )
 
 type UserSrv struct {
-	mu     sync.Mutex
-	mongoc *mongoclnt.MongoClnt
-	cachec *cacheclnt.CacheClnt
-	sid    int32 // sid is a random number between 0 and 2^30
-	ucount int32 //This server may overflow with over 2^31 users
+	mu           sync.Mutex
+	mongoc       *mongoclnt.MongoClnt
+	cachec       *cacheclnt.CacheClnt
+	sid          int32 // sid is a random number between 0 and 2^30
+	ucount       int32 //This server may overflow with over 2^31 users
 	dbCounter    *Counter
 	cacheCounter *Counter
 	loginCounter *Counter
@@ -41,7 +41,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, sp.SOCIAL_NETWORK_USER, public)
 	if err != nil {
 		return err
 	}
@@ -107,11 +107,11 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 	pswd_hashed := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
 	userid := usrv.getNextUserId()
 	newUser := User{
-		Userid: userid,
-		Username: req.Username,
-		Lastname: req.Lastname,
+		Userid:    userid,
+		Username:  req.Username,
+		Lastname:  req.Lastname,
 		Firstname: req.Firstname,
-		Password: pswd_hashed}
+		Password:  pswd_hashed}
 	if err := usrv.mongoc.Insert(SN_DB, USER_COL, newUser); err != nil {
 		dbg.DFatalf("Mongo Error: %v", err)
 		return err
@@ -161,7 +161,7 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	user := &User{}
 	cacheItem := &proto.CacheItem{}
 	t0 := time.Now()
-	err := usrv.cachec.Get(key, cacheItem) 
+	err := usrv.cachec.Get(key, cacheItem)
 	usrv.cacheCounter.AddTimeSince(t0)
 	if err != nil {
 		if !usrv.cachec.IsMiss(err) {
@@ -173,7 +173,7 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 		usrv.dbCounter.AddTimeSince(t1)
 		if err != nil {
 			return nil, err
-		} 
+		}
 		if !found {
 			return nil, nil
 		}

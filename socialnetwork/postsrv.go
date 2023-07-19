@@ -1,17 +1,17 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
+	"fmt"
+	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cacheclnt"
 	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/protdevsrv"
-	"sigmaos/mongoclnt"
-	"sigmaos/cacheclnt"
-	"sigmaos/fs"
+	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
-	"gopkg.in/mgo.v2/bson"
-	"fmt"
 )
 
 // YH:
@@ -19,7 +19,7 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	POST_QUERY_OK = "OK"
+	POST_QUERY_OK     = "OK"
 	POST_CACHE_PREFIX = "post_"
 )
 
@@ -31,7 +31,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, sp.SOCIAL_NETWORK_POST, public)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *pro
 		postBson, err := psrv.getPost(postid)
 		if err != nil {
 			return err
-		} 
+		}
 		if postBson == nil {
 			missing = true
 			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", postid)
@@ -92,7 +92,7 @@ func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *pro
 }
 
 func (psrv *PostSrv) getPost(postid int64) (*PostBson, error) {
-	key := POST_CACHE_PREFIX + strconv.FormatInt(postid, 10) 
+	key := POST_CACHE_PREFIX + strconv.FormatInt(postid, 10)
 	postBson := &PostBson{}
 	cacheItem := &proto.CacheItem{}
 	if err := psrv.cachec.Get(key, cacheItem); err != nil {
@@ -103,7 +103,7 @@ func (psrv *PostSrv) getPost(postid int64) (*PostBson, error) {
 		found, err := psrv.mongoc.FindOne(SN_DB, POST_COL, bson.M{"postid": postid}, postBson)
 		if err != nil {
 			return nil, err
-		} 
+		}
 		if !found {
 			return nil, nil
 		}
@@ -119,40 +119,40 @@ func (psrv *PostSrv) getPost(postid int64) (*PostBson, error) {
 
 func postToBson(post *proto.Post) *PostBson {
 	return &PostBson{
-		Postid: post.Postid,
-		Posttype: int32(post.Posttype),
-		Timestamp: post.Timestamp,
-		Creator: post.Creator,
+		Postid:       post.Postid,
+		Posttype:     int32(post.Posttype),
+		Timestamp:    post.Timestamp,
+		Creator:      post.Creator,
 		CreatorUname: post.Creatoruname,
-		Text: post.Text,
+		Text:         post.Text,
 		Usermentions: post.Usermentions,
-		Medias: post.Medias,
-		Urls: post.Urls,
+		Medias:       post.Medias,
+		Urls:         post.Urls,
 	}
 }
 
 func bsonToPost(bson *PostBson) *proto.Post {
 	return &proto.Post{
-		Postid: bson.Postid,
-		Posttype: proto.POST_TYPE(bson.Posttype),
-		Timestamp: bson.Timestamp,
-		Creator: bson.Creator,
+		Postid:       bson.Postid,
+		Posttype:     proto.POST_TYPE(bson.Posttype),
+		Timestamp:    bson.Timestamp,
+		Creator:      bson.Creator,
 		Creatoruname: bson.CreatorUname,
-		Text: bson.Text,
+		Text:         bson.Text,
 		Usermentions: bson.Usermentions,
-		Medias: bson.Medias,
-		Urls: bson.Urls,
+		Medias:       bson.Medias,
+		Urls:         bson.Urls,
 	}
 }
 
 type PostBson struct {
-	Postid int64         `bson:postid`
-	Posttype int32       `bson:posttype`
-	Timestamp int64      `bson:timestamp`
-	Creator int64        `bson:creator`
-	CreatorUname string  `bson:creatoruname`
-	Text string          `bson:text`
-	Usermentions []int64 `bson:usermentions`
-	Medias []int64       `bson:medias`
-	Urls []string        `bson:urls`
+	Postid       int64    `bson:postid`
+	Posttype     int32    `bson:posttype`
+	Timestamp    int64    `bson:timestamp`
+	Creator      int64    `bson:creator`
+	CreatorUname string   `bson:creatoruname`
+	Text         string   `bson:text`
+	Usermentions []int64  `bson:usermentions`
+	Medias       []int64  `bson:medias`
+	Urls         []string `bson:urls`
 }

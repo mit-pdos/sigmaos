@@ -16,7 +16,7 @@ func NewLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
 	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)
-	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, sp.LEASESRV, svc)
+	pds, err := protdevsrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
 	if err != nil {
 		return nil, err
 	}

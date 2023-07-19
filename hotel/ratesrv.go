@@ -52,7 +52,7 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRATE, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRATE, r, HOTELRATE, public)
 	if err != nil {
 		return err
 	}

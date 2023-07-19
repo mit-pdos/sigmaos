@@ -24,7 +24,7 @@ type scraper struct {
 
 func RunK8sStatScraper() error {
 	s := newScraper()
-	pds, err := protdevsrv.MakeProtDevSrv(sp.K8S_SCRAPER, s)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
 	if err != nil {
 		db.DFatalf("Error MakeProtDevSrv: %v", err)
 	}

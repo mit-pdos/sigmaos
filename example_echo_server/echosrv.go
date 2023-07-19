@@ -1,16 +1,15 @@
 package example_echo_server
 
 import (
+	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/protdevsrv"
 	"sigmaos/rand"
-	dbg "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
 // YH:
 // Toy server echoing request message
-
 
 type EchoSrv struct {
 	sid string
@@ -21,9 +20,9 @@ const DIR_ECHO_SERVER = sp.NAMED + "example/"
 const NAMED_ECHO_SERVER = DIR_ECHO_SERVER + "echo-server"
 
 func RunEchoSrv(public bool) error {
-	echosrv := &EchoSrv{rand.String(8)}	
+	echosrv := &EchoSrv{rand.String(8)}
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Creating echo server \n", echosrv.sid)
-	pds, err := protdevsrv.MakeProtDevSrvPublic(NAMED_ECHO_SERVER, echosrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(NAMED_ECHO_SERVER, echosrv, DEBUG_ECHO_SERVER, public)
 	if err != nil {
 		return err
 	}
@@ -37,4 +36,3 @@ func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req EchoRequest, rep *EchoResult) erro
 	rep.Text = req.Text
 	return nil
 }
-

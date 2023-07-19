@@ -1,17 +1,17 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/perf"
-	"sigmaos/protdevsrv"
-	"sigmaos/protdevclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
+	"fmt"
 	"math/rand"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/perf"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
 	"sync"
 	"time"
-	"fmt"
 )
 
 // YH:
@@ -36,7 +36,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Creating compose service\n")
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, sp.SOCIAL_NETWORK_COMPOSE, public)
 	if err != nil {
 		return err
 	}
@@ -45,22 +45,22 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	csrv.textc = pdc	
+	csrv.textc = pdc
 	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	csrv.postc = pdc	
+	csrv.postc = pdc
 	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
-	csrv.tlc = pdc	
+	csrv.tlc = pdc
 	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
-	csrv.homec = pdc	
+	csrv.homec = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
@@ -71,7 +71,7 @@ func RunComposeSrv(public bool, jobname string) error {
 }
 
 func (csrv *ComposeSrv) ComposePost(
-		ctx fs.CtxI, req proto.ComposePostRequest, res *proto.ComposePostResponse) error {
+	ctx fs.CtxI, req proto.ComposePostRequest, res *proto.ComposePostResponse) error {
 	res.Ok = "No"
 	timestamp := time.Now().UnixNano()
 	if req.Text == "" {
@@ -100,7 +100,7 @@ func (csrv *ComposeSrv) ComposePost(
 	post.Urls = textRes.Urls
 	post.Medias = req.Mediaids
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "composing post: %v\n", post)
-	
+
 	// concurrently add post to storage and timelines
 
 	var wg sync.WaitGroup
@@ -157,4 +157,3 @@ func (csrv *ComposeSrv) incCountSafe() int32 {
 func (csrv *ComposeSrv) getNextPostId() int64 {
 	return int64(csrv.sid)*1e10 + int64(csrv.incCountSafe())
 }
-

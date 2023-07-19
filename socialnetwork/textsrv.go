@@ -1,15 +1,15 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/protdevsrv"
-	"sigmaos/protdevclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
-	"regexp"
-	"sync"
 	"fmt"
+	"regexp"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"sync"
 )
 
 // YH:
@@ -20,19 +20,18 @@ const (
 	TEXT_QUERY_OK = "OK"
 )
 
-
 var mentionRegex = regexp.MustCompile("@[a-zA-Z0-9-_]+")
 var urlRegex = regexp.MustCompile("(http://|https://)([a-zA-Z0-9_!~*'().&=+$%-/]+)")
 
 type TextSrv struct {
-	userc  *protdevclnt.ProtDevClnt
-	urlc   *protdevclnt.ProtDevClnt
+	userc *protdevclnt.ProtDevClnt
+	urlc  *protdevclnt.ProtDevClnt
 }
 
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, sp.SOCIAL_NETWORK_TEXT, public)
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,7 @@ func RunTextSrv(public bool, jobname string) error {
 }
 
 func (tsrv *TextSrv) ProcessText(
-		ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
+	ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
 	res.Ok = "No. "
 	if req.Text == "" {
 		res.Ok = "Cannot process empty text."
@@ -120,7 +119,7 @@ func (tsrv *TextSrv) ProcessText(
 			res.Text = ""
 			prevLoc := 0
 			for idx, loc := range urlIndices {
-				res.Text += req.Text[prevLoc : loc[0]] + urlRes.Shorturls[idx]
+				res.Text += req.Text[prevLoc:loc[0]] + urlRes.Shorturls[idx]
 				prevLoc = loc[1]
 			}
 			res.Text += req.Text[urlIndices[urlIndicesL-1][1]:]

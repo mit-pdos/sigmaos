@@ -1,18 +1,18 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/protdevsrv"
-	"sigmaos/cacheclnt"
-	"sigmaos/mongoclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
 	"fmt"
-	"strings"
-	"math/rand"
-	"time"
 	"gopkg.in/mgo.v2/bson"
+	"math/rand"
+	"sigmaos/cacheclnt"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/mongoclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"strings"
+	"time"
 )
 
 // YH:
@@ -20,9 +20,9 @@ import (
 
 const (
 	URL_CACHE_PREFIX = "url_"
-	URL_QUERY_OK = "OK"
-	URL_HOSTNAME = "http://short-url/"
-	URL_LENGTH = 10
+	URL_QUERY_OK     = "OK"
+	URL_HOSTNAME     = "http://short-url/"
+	URL_LENGTH       = 10
 )
 
 var urlPrefixL = len(URL_HOSTNAME)
@@ -36,7 +36,7 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func RunUrlSrv(public bool, jobname string) error {
 }
 
 func (urlsrv *UrlSrv) ComposeUrls(
-		ctx fs.CtxI, req proto.ComposeUrlsRequest, res *proto.ComposeUrlsResponse) error {
+	ctx fs.CtxI, req proto.ComposeUrlsRequest, res *proto.ComposeUrlsResponse) error {
 	nUrls := len(req.Extendedurls)
 	if nUrls == 0 {
 		res.Ok = "Empty input"
@@ -79,7 +79,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 }
 
 func (urlsrv *UrlSrv) GetUrls(
-		ctx fs.CtxI, req proto.GetUrlsRequest, res *proto.GetUrlsResponse) error {
+	ctx fs.CtxI, req proto.GetUrlsRequest, res *proto.GetUrlsResponse) error {
 	res.Ok = "No."
 	extendedurls := make([]string, len(req.Shorturls))
 	missing := false
@@ -92,7 +92,7 @@ func (urlsrv *UrlSrv) GetUrls(
 			missing = true
 			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", shorturl)
 		} else {
-			extendedurls[idx] = extendedurl	
+			extendedurls[idx] = extendedurl
 		}
 	}
 	res.Extendedurls = extendedurls
@@ -135,6 +135,6 @@ func (urlsrv *UrlSrv) getExtendedUrl(shortUrl string) (string, error) {
 }
 
 type Url struct {
-	Shorturl string    `bson:shorturl`
+	Shorturl    string `bson:shorturl`
 	Extendedurl string `bson:extendedurl`
 }

@@ -29,7 +29,7 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELPROF, ps, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELPROF, ps, HOTELPROF, public)
 	if err != nil {
 		return err
 	}

@@ -1,17 +1,17 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/perf"
-	"sigmaos/protdevsrv"
-	"sigmaos/cacheclnt"
-	"sigmaos/protdevclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
 	"fmt"
-	"strconv"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cacheclnt"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/perf"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"strconv"
 )
 
 // YH:
@@ -20,7 +20,7 @@ import (
 
 const (
 	HOME_CACHE_PREFIX = "home_"
-	HOME_QUERY_OK = "OK"
+	HOME_QUERY_OK     = "OK"
 )
 
 type HomeSrv struct {
@@ -32,7 +32,7 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func RunHomeSrv(public bool, jobname string) error {
 }
 
 func (hsrv *HomeSrv) WriteHomeTimeline(
-		ctx fs.CtxI, req proto.WriteHomeTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteHomeTimelineRequest, res *proto.WriteTimelineResponse) error {
 	res.Ok = "No."
 	otherUserIds := make(map[int64]bool, 0)
 	argFollower := proto.GetFollowersRequest{Followeeid: req.Userid}
@@ -83,14 +83,14 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 	for userid := range otherUserIds {
 		hometl, err := hsrv.getHomeTimeline(userid)
 		if err != nil {
-			res.Ok = res.Ok + fmt.Sprintf(" Error getting home timeline for %v.", userid)	
+			res.Ok = res.Ok + fmt.Sprintf(" Error getting home timeline for %v.", userid)
 			missing = true
 			continue
 		}
-		hometl.Postids = append(hometl.Postids, req.Postid)	
-		hometl.Timestamps = append(hometl.Timestamps, req.Timestamp)	
+		hometl.Postids = append(hometl.Postids, req.Postid)
+		hometl.Timestamps = append(hometl.Timestamps, req.Timestamp)
 		key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10)
-		encoded, _ := bson.Marshal(hometl)	
+		encoded, _ := bson.Marshal(hometl)
 		hsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 	}
 	if !missing {
@@ -100,7 +100,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 }
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
-		ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
 	res.Ok = "No"
 	timeline, err := hsrv.getHomeTimeline(req.Userid)
 	if err != nil {
@@ -110,7 +110,7 @@ func (hsrv *HomeSrv) ReadHomeTimeline(
 	if start >= int32(nItems) || start >= stop {
 		res.Ok = fmt.Sprintf("Cannot process start=%v end=%v for %v items", start, stop, nItems)
 		return nil
-	}	
+	}
 	if stop > nItems {
 		stop = nItems
 	}

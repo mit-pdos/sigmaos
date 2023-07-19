@@ -88,7 +88,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRESERVE, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRESERVE, r, HOTELRESERVE, public)
 	if err != nil {
 		return err
 	}

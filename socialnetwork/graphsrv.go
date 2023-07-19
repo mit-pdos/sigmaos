@@ -1,18 +1,18 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/perf"
-	"sigmaos/protdevsrv"
-	"sigmaos/protdevclnt"
-	"sigmaos/mongoclnt"
-	"sigmaos/cacheclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
-	"strconv"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cacheclnt"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/mongoclnt"
+	"sigmaos/perf"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"strconv"
 )
 
 // YH:
@@ -20,7 +20,7 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	GRAPH_QUERY_OK = "OK"
+	GRAPH_QUERY_OK        = "OK"
 	FOLLOWER_CACHE_PREFIX = "followers_"
 	FOLLOWEE_CACHE_PREFIX = "followees_"
 )
@@ -34,7 +34,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, sp.SOCIAL_NETWORK_GRAPH, public)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func RunGraphSrv(public bool, jobname string) error {
 }
 
 func (gsrv *GraphSrv) GetFollowers(
-		ctx fs.CtxI, req proto.GetFollowersRequest, res *proto.GraphGetResponse) error {
+	ctx fs.CtxI, req proto.GetFollowersRequest, res *proto.GraphGetResponse) error {
 	res.Ok = "No"
 	res.Userids = make([]int64, 0)
 	followers, err := gsrv.getFollowers(req.Followeeid)
@@ -80,7 +80,7 @@ func (gsrv *GraphSrv) GetFollowers(
 }
 
 func (gsrv *GraphSrv) GetFollowees(
-		ctx fs.CtxI, req proto.GetFolloweesRequest, res *proto.GraphGetResponse) error {
+	ctx fs.CtxI, req proto.GetFolloweesRequest, res *proto.GraphGetResponse) error {
 	res.Ok = "No"
 	res.Userids = make([]int64, 0)
 	followees, err := gsrv.getFollowees(req.Followerid)
@@ -93,22 +93,22 @@ func (gsrv *GraphSrv) GetFollowees(
 }
 
 func (gsrv *GraphSrv) Follow(
-		ctx fs.CtxI, req proto.FollowRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.FollowRequest, res *proto.GraphUpdateResponse) error {
 	return gsrv.updateGraph(req.Followerid, req.Followeeid, true, res)
 }
 
 func (gsrv *GraphSrv) Unfollow(
-		ctx fs.CtxI, req proto.UnfollowRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.UnfollowRequest, res *proto.GraphUpdateResponse) error {
 	return gsrv.updateGraph(req.Followerid, req.Followeeid, false, res)
 }
 
 func (gsrv *GraphSrv) FollowWithUname(
-		ctx fs.CtxI, req proto.FollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.FollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
 	return gsrv.updateGraphWithUname(req.Followeruname, req.Followeeuname, true, res)
 }
 
 func (gsrv *GraphSrv) UnfollowWithUname(
-		ctx fs.CtxI, req proto.UnfollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.UnfollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
 	return gsrv.updateGraphWithUname(req.Followeruname, req.Followeeuname, false, res)
 }
 
@@ -147,7 +147,7 @@ func (gsrv *GraphSrv) updateGraph(
 }
 
 func (gsrv *GraphSrv) updateGraphWithUname(
-		follwer_uname, followee_uname string, isFollow bool, res *proto.GraphUpdateResponse) error {
+	follwer_uname, followee_uname string, isFollow bool, res *proto.GraphUpdateResponse) error {
 	res.Ok = "No"
 	// get follower
 	follower_arg := &proto.CheckUserRequest{Usernames: []string{follwer_uname}}
@@ -164,7 +164,7 @@ func (gsrv *GraphSrv) updateGraphWithUname(
 	followee_res := &proto.CheckUserResponse{}
 	if err := gsrv.userc.RPC("User.CheckUser", followee_arg, followee_res); err != nil {
 		return err
-	} else 	if followee_res.Ok != USER_QUERY_OK {
+	} else if followee_res.Ok != USER_QUERY_OK {
 		res.Ok = "Followee does not exist"
 		return nil
 	}
@@ -179,7 +179,7 @@ func (gsrv *GraphSrv) clearCache(followerid, followeeid int64) error {
 		if !gsrv.cachec.IsMiss(err) {
 			return err
 		}
-	}	
+	}
 	if err := gsrv.cachec.Delete(followee_key); err != nil {
 		if !gsrv.cachec.IsMiss(err) {
 			return err
@@ -211,7 +211,7 @@ func (gsrv *GraphSrv) getFollowers(userid int64) ([]int64, error) {
 	} else {
 		bson.Unmarshal(cacheItem.Val, flwERInfo)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followERs for %v in cache!\n", userid)
-	}	
+	}
 	return flwERInfo.Edges, nil
 }
 
@@ -237,7 +237,7 @@ func (gsrv *GraphSrv) getFollowees(userid int64) ([]int64, error) {
 	} else {
 		bson.Unmarshal(cacheItem.Val, flwEEInfo)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Found followEEs for %v in cache!\n", userid)
-	}	
+	}
 	return flwEEInfo.Edges, nil
 }
 

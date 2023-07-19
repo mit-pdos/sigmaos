@@ -1,25 +1,25 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/protdevsrv"
-	"sigmaos/mongoclnt"
+	"fmt"
+	"gopkg.in/mgo.v2/bson"
+	"math/rand"
 	"sigmaos/cacheclnt"
+	dbg "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/mongoclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
-	"fmt"
 	"sync"
-	"math/rand"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // YH:
 // Media Storage service for social network
 
 const (
-	MEDIA_QUERY_OK = "OK"
+	MEDIA_QUERY_OK     = "OK"
 	MEDIA_CACHE_PREFIX = "media_"
 )
 
@@ -35,7 +35,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
 	if err != nil {
 		return err
 	}

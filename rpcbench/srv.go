@@ -20,7 +20,7 @@ type Srv struct {
 // Run starts the server
 func RunRPCBenchSrv(path string, public bool) error {
 	s := &Srv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(path, s, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(path, s, "RPCBench", public)
 	if err != nil {
 		return err
 	}

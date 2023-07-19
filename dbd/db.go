@@ -23,7 +23,7 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	pds, err := protdevsrv.MakeProtDevSrv(sp.DB, s)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.DB, s, sp.DB)
 	if err != nil {
 		return err
 	}

@@ -35,10 +35,10 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	var err error
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		pds, err = protdevsrv.MakeProtDevSrv(pn, ups)
+		pds, err = protdevsrv.MakeProtDevSrv(pn, ups, sp.UPROCDREL)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		pds, err = protdevsrv.MakeProtDevSrvPort("", up, ups)
+		pds, err = protdevsrv.MakeProtDevSrvPort("", up, sp.UPROCDREL, ups)
 	}
 	if err != nil {
 		return err

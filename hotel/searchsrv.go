@@ -26,7 +26,7 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELSEARCH, s, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
 	if err != nil {
 		return err
 	}

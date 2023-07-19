@@ -46,7 +46,7 @@ type Rec struct {
 func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELREC, r, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELREC, r, HOTELREC, public)
 	if err != nil {
 		return err
 	}

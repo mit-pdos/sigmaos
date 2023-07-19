@@ -1,18 +1,18 @@
 package socialnetwork
 
 import (
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	"sigmaos/perf"
-	"sigmaos/protdevsrv"
-	"sigmaos/mongoclnt"
-	"sigmaos/cacheclnt"
-	"sigmaos/protdevclnt"
-	"sigmaos/fs"
-	"sigmaos/socialnetwork/proto"
-	"strconv"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cacheclnt"
+	dbg "sigmaos/debug"
+	"sigmaos/fs"
+	"sigmaos/mongoclnt"
+	"sigmaos/perf"
+	"sigmaos/protdevclnt"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
+	"sigmaos/socialnetwork/proto"
+	"strconv"
 )
 
 // YH:
@@ -20,7 +20,7 @@ import (
 // for now we use sql instead of MongoDB
 
 const (
-	TIMELINE_QUERY_OK = "OK"
+	TIMELINE_QUERY_OK     = "OK"
 	TIMELINE_CACHE_PREFIX = "timeline_"
 )
 
@@ -33,7 +33,7 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 }
 
 func (tlsrv *TimelineSrv) WriteTimeline(
-		ctx fs.CtxI, req proto.WriteTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteTimelineRequest, res *proto.WriteTimelineResponse) error {
 	res.Ok = "No"
 	err := tlsrv.mongoc.Upsert(
 		SN_DB, TIMELINE_COL, bson.M{"userid": req.Userid},
@@ -84,7 +84,7 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 }
 
 func (tlsrv *TimelineSrv) ReadTimeline(
-		ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
 	res.Ok = "No"
 	timeline, err := tlsrv.getUserTimeline(req.Userid)
 	if err != nil {
@@ -98,7 +98,7 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 	if start >= int32(nItems) || start >= stop {
 		res.Ok = fmt.Sprintf("Cannot process start=%v end=%v for %v items", start, stop, nItems)
 		return nil
-	}	
+	}
 	if stop > nItems {
 		stop = nItems
 	}
@@ -132,7 +132,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(userid int64) (*Timeline, error) {
 		if !found {
 			return nil, nil
 		}
-		encoded, _ := bson.Marshal(timeline)	
+		encoded, _ := bson.Marshal(timeline)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Found timeline %v in DB: %v", userid, timeline)
 		tlsrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
 	} else {

@@ -42,7 +42,7 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELUSER, u, public)
+	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELUSER, u, HOTELUSER, public)
 	if err != nil {
 		return err
 	}

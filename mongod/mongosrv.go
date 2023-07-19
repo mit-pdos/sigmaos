@@ -3,17 +3,17 @@ package mongod
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/protdevsrv"
 	"sigmaos/mongod/proto"
+	"sigmaos/protdevsrv"
+	sp "sigmaos/sigmap"
 	"time"
 )
 
 const (
-	MONGO_NO = "No"
-	MONGO_OK = "OK"
+	MONGO_NO     = "No"
+	MONGO_OK     = "OK"
 	DIAL_TIMEOUT = 1
 )
 
@@ -23,7 +23,7 @@ type Server struct {
 
 func makeServer(mongodUrl string) (*Server, error) {
 	s := &Server{}
-	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT * time.Second)
+	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT*time.Second)
 	if err != nil {
 		dbg.DFatalf("mongo dial err %v\n", err)
 		return nil, err
@@ -44,7 +44,7 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	pds, err := protdevsrv.MakeProtDevSrv(sp.MONGO, s)
+	pds, err := protdevsrv.MakeProtDevSrv(sp.MONGO, s, sp.MONGO)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Obj, &m); err != nil {
-		dbg.DFatalf("Cannot decode insert request: %v", err) 
+		dbg.DFatalf("Cannot decode insert request: %v", err)
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Received insert request: %v, %v, %v", req.Db, req.Collection, m)
@@ -76,7 +76,7 @@ func (s *Server) Upsert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 }
 
 func (s *Server) update(
-		ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse, upsert bool) error {
+	ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse, upsert bool) error {
 	res.Ok = MONGO_NO
 	rpcName := "update"
 	if upsert {
@@ -84,11 +84,11 @@ func (s *Server) update(
 	}
 	var q, u bson.M
 	if err := bson.Unmarshal(req.Query, &q); err != nil {
-		dbg.DFatalf("Cannot decode query in %v request: %v", rpcName, err) 
+		dbg.DFatalf("Cannot decode query in %v request: %v", rpcName, err)
 		return err
 	}
 	if err := bson.Unmarshal(req.Obj, &u); err != nil {
-		dbg.DFatalf("Cannot decode object in %v request: %v", rpcName, err) 
+		dbg.DFatalf("Cannot decode object in %v request: %v", rpcName, err)
 		return err
 	}
 	dbg.DPrintf(
@@ -98,7 +98,7 @@ func (s *Server) update(
 		_, err = s.session.DB(req.Db).C(req.Collection).Upsert(&q, &u)
 	} else {
 		err = s.session.DB(req.Db).C(req.Collection).Update(&q, &u)
-	} 
+	}
 	if err != nil {
 		dbg.DFatalf("Cannot %v: %v", rpcName, err)
 		return err
@@ -111,7 +111,7 @@ func (s *Server) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRespo
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Query, &m); err != nil {
-		dbg.DFatalf("Cannot decode find query request: %v", err) 
+		dbg.DFatalf("Cannot decode find query request: %v", err)
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Received Find request. %v, %v, %v", req.Db, req.Collection, m)

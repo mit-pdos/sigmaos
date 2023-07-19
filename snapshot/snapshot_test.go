@@ -66,7 +66,7 @@ func symlinkReplicas(ts *test.Tstate, pids []proc.Tpid) {
 	}
 	db.DPrintf(db.TEST, "Replica addrs: %v", addrs)
 	mnt := sp.MkMountService(addrs)
-	err := ts.MkMountSymlink(REPLICA_SYMLINK, mnt)
+	err := ts.MkMountSymlink(REPLICA_SYMLINK, mnt, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "Symlink")
 }
 
@@ -91,8 +91,9 @@ func checkFiles(ts *test.Tstate, n int) {
 }
 
 func fenceMemfs(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) {
-	lc := leaderclnt.MakeLeaderClnt(fsl, path.Join(sp.MEMFS, pid.String(), "leader"), 0777)
-	_, err := lc.AcquireFencedEpoch(nil, []string{path.Join(sp.MEMFS, pid.String())})
+	lc, err := leaderclnt.MakeLeaderClnt(fsl, path.Join(sp.MEMFS, pid.String(), "leader"), 0777)
+	assert.Nil(ts.T, err, "MakeLeaderClnt")
+	err = lc.LeadAndFence(nil, []string{path.Join(sp.MEMFS, pid.String())})
 	assert.Nil(ts.T, err, "acquire")
 }
 

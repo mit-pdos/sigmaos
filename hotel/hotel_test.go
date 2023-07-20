@@ -94,14 +94,14 @@ func (ts *Tstate) stop() {
 
 func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
 	res := proto.GeoResult{}
-	err = pdc.RPC("Geo.Nearby", &arg, &res)
+	err = rpcc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 5, len(res.HotelIds))
@@ -111,7 +111,7 @@ func TestGeoSingle(t *testing.T) {
 
 func TestRateSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
@@ -119,10 +119,10 @@ func TestRateSingle(t *testing.T) {
 		OutDate:  "2015-04-10",
 	}
 	var res proto.RateResult
-	err = pdc.RPC("Rate.GetRates", arg, &res)
+	err = rpcc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	err = pdc.RPC("Rate.GetRates", arg, &res)
+	err = rpcc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
 	ts.stop()
@@ -131,7 +131,7 @@ func TestRateSingle(t *testing.T) {
 
 func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
 		Require: "dis",
@@ -139,7 +139,7 @@ func TestRecSingle(t *testing.T) {
 		Lon:     -122.095,
 	}
 	var res proto.RecResult
-	err = pdc.RPC("Rec.GetRecs", arg, &res)
+	err = rpcc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
@@ -149,14 +149,14 @@ func TestRecSingle(t *testing.T) {
 
 func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
 		Password: hotel.MkPassword("0"),
 	}
 	var res proto.UserResult
-	err = pdc.RPC("User.CheckUser", arg, &res)
+	err = rpcc.RPC("User.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res)
 	ts.stop()
@@ -165,18 +165,18 @@ func TestUserSingle(t *testing.T) {
 
 func TestProfile(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
 	}
 	var res proto.ProfResult
-	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
+	err = rpcc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 	db.DPrintf(db.TEST, "res %v\n", res.Hotels[0])
 
-	err = pdc.RPC("ProfSrv.GetProfiles", arg, &res)
+	err = rpcc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
 
@@ -186,7 +186,7 @@ func TestProfile(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -196,10 +196,10 @@ func TestCheck(t *testing.T) {
 		Number:       1,
 	}
 	var res proto.ReserveResult
-	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	err = rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
-	err = pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	err = rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 	ts.stop()
@@ -208,7 +208,7 @@ func TestCheck(t *testing.T) {
 
 func TestReserve(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -219,11 +219,11 @@ func TestReserve(t *testing.T) {
 	}
 	var res proto.ReserveResult
 
-	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
+	err = rpcc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 
-	err = pdc.RPC("Reserve.MakeReservation", arg, &res)
+	err = rpcc.RPC("Reserve.MakeReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
 
@@ -247,7 +247,7 @@ func TestQueryDev(t *testing.T) {
 
 func TestSingleSearch(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,
@@ -256,10 +256,10 @@ func TestSingleSearch(t *testing.T) {
 		OutDate: "2015-04-10",
 	}
 	var res proto.SearchResult
-	err = pdc.RPC("Search.Nearby", arg, &res)
+	err = rpcc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
-	err = pdc.RPC("Search.Nearby", arg, &res)
+	err = rpcc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
 	ts.stop()

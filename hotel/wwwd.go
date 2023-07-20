@@ -48,36 +48,36 @@ func RunWww(job string, public bool) error {
 	www.SigmaClnt = sc
 
 	fsls := MakeFsLibs("hotel-wwwd")
-	pdc, err := rpcclnt.MkRPCClnt(fsls, HOTELUSER)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELUSER)
 	if err != nil {
 		return err
 	}
-	www.userc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELSEARCH)
+	www.userc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
-	www.searchc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELPROF)
+	www.searchc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELPROF)
 	if err != nil {
 		return err
 	}
-	www.profc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELRESERVE)
+	www.profc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
-	www.reservec = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELREC)
+	www.reservec = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELREC)
 	if err != nil {
 		return err
 	}
-	www.recc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
+	www.recc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}
-	www.geoc = pdc
+	www.geoc = rpcc
 
 	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux

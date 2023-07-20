@@ -9,23 +9,23 @@ import (
 )
 
 type DbClnt struct {
-	pdc *rpcclnt.RPCClnt
+	rpcc *rpcclnt.RPCClnt
 }
 
 func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, fn)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, fn)
 	if err != nil {
 		return nil, err
 	}
-	dc.pdc = pdc
+	dc.rpcc = rpcc
 	return dc, nil
 }
 
 func (dc *DbClnt) Query(q string, res any) error {
 	req := &proto.DBRequest{Cmd: q}
 	rep := proto.DBResult{}
-	err := dc.pdc.RPC("Server.Query", req, &rep)
+	err := dc.rpcc.RPC("Server.Query", req, &rep)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (dc *DbClnt) Query(q string, res any) error {
 func (dc *DbClnt) Exec(q string) error {
 	req := &proto.DBRequest{Cmd: q}
 	rep := proto.DBResult{}
-	err := dc.pdc.RPC("Server.Exec", req, &rep)
+	err := dc.rpcc.RPC("Server.Exec", req, &rep)
 	if err != nil {
 		return err
 	}

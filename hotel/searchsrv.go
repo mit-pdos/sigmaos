@@ -31,16 +31,16 @@ func RunSearchSrv(n string, public bool) error {
 		return err
 	}
 	fsls := MakeFsLibs(HOTELSEARCH)
-	pdc, err := rpcclnt.MkRPCClnt(fsls, HOTELRATE)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err
 	}
-	s.ratec = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
+	s.ratec = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}
-	s.geoc = pdc
+	s.geoc = rpcc
 
 	p, err := perf.MakePerf(perf.HOTEL_SEARCH)
 	if err != nil {

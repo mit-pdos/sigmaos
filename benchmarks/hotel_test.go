@@ -125,7 +125,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
-			pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, sp.HOTELRESERVE)
+			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, sp.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
 			}

@@ -134,8 +134,8 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
 	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
-	pdc.MonitorSchedds(ts.GetRealm())
-	defer pdc.Done()
+	rpcc.MonitorSchedds(ts.GetRealm())
+	defer rpcc.Done()
 	// Start some balancers
 	start := time.Now()
 	ji.StartKVJob()
@@ -177,8 +177,8 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
-	pdc.MonitorSchedds(ts.GetRealm())
-	defer pdc.Done()
+	rpcc.MonitorSchedds(ts.GetRealm())
+	defer rpcc.Done()
 	start := time.Now()
 	ji.StartWwwJob()
 	ji.Wait()
@@ -192,8 +192,8 @@ func runRPCBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
-		pdc.MonitorSchedds(ts.GetRealm())
-		defer pdc.Done()
+		rpcc.MonitorSchedds(ts.GetRealm())
+		defer rpcc.Done()
 	}
 	start := time.Now()
 	ji.StartRPCBenchJob()
@@ -208,8 +208,8 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
-		pdc.MonitorSchedds(ts.GetRealm())
-		defer pdc.Done()
+		rpcc.MonitorSchedds(ts.GetRealm())
+		defer rpcc.Done()
 	}
 	start := time.Now()
 	ji.StartHotelJob()
@@ -224,8 +224,8 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
-		pdc.MonitorSchedds(ts.GetRealm())
-		defer pdc.Done()
+		rpcc.MonitorSchedds(ts.GetRealm())
+		defer rpcc.Done()
 	}
 	//	ji.Cleanup()
 	start := time.Now()

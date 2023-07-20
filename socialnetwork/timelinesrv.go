@@ -9,8 +9,8 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 )
@@ -49,11 +49,11 @@ func RunTimelineSrv(public bool, jobname string) error {
 		return err
 	}
 	tlsrv.cachec = cachec
-	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	tlsrv.postc = pdc
+	tlsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 )
@@ -52,11 +52,11 @@ func RunGraphSrv(public bool, jobname string) error {
 		return err
 	}
 	gsrv.cachec = cachec
-	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
-	gsrv.userc = pdc
+	gsrv.userc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_GRAPH)
 	if err != nil {

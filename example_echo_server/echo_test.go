@@ -62,11 +62,11 @@ func TestEcho(t *testing.T) {
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
-	err = pdc.RPC("Echo.Echo", &arg, &res)
+	err = rpcc.RPC("Echo.Echo", &arg, &res)
 	assert.Nil(t, err, "RPC call should succeed")
 	assert.Equal(t, "Hello World!", res.Text)
 

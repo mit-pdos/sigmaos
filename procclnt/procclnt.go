@@ -169,7 +169,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 	s := time.Now()
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		pdc, err := clnt.getScheddClnt(kernelId)
+		rpcc, err := clnt.getScheddClnt(kernelId)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
 			return err
@@ -179,7 +179,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 			ProcProto: p.GetProto(),
 		}
 		res := &schedd.SpawnResponse{}
-		if err := pdc.RPC("Schedd.Spawn", req, res); err != nil {
+		if err := rpcc.RPC("Schedd.Spawn", req, res); err != nil {
 			db.DPrintf(db.ALWAYS, "Schedd.Spawn %v err %v\n", kernelId, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
@@ -195,19 +195,19 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
-	pdc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
+	rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
 	if err != nil {
 		return nil, err
 	}
 	// Local schedd is special: it has two entries, one under its
 	// kernelId and the other one under ~local.
 	if kernelId == "~local" {
-		if err := clnt.scheddclnt.RegisterLocalClnt(pdc); err != nil {
+		if err := clnt.scheddclnt.RegisterLocalClnt(rpcc); err != nil {
 			db.DFatalf("RegisterLocalClnt err %v\n", err)
-			return pdc, err
+			return rpcc, err
 		}
 	}
-	return pdc, nil
+	return rpcc, nil
 }
 
 // ========== WAIT ==========

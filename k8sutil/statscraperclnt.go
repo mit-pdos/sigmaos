@@ -13,13 +13,13 @@ import (
 
 type StatScraperClnt struct {
 	*sigmaclnt.SigmaClnt
-	pdcs map[string]*rpcclnt.RPCClnt
+	rpccs map[string]*rpcclnt.RPCClnt
 }
 
 func NewStatScraperClnt(sc *sigmaclnt.SigmaClnt) *StatScraperClnt {
 	return &StatScraperClnt{
 		SigmaClnt: sc,
-		pdcs:      make(map[string]*rpcclnt.RPCClnt),
+		rpccs:     make(map[string]*rpcclnt.RPCClnt),
 	}
 }
 
@@ -30,12 +30,12 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	}
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
-		if _, ok := clnt.pdcs[s]; !ok {
-			pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
+		if _, ok := clnt.rpccs[s]; !ok {
+			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
 				db.DFatalf("Error MakeRPCClnt: %v", err)
 			}
-			clnt.pdcs[s] = pdc
+			clnt.rpccs[s] = rpcc
 		}
 	}
 	return scrapers
@@ -46,7 +46,7 @@ func (clnt *StatScraperClnt) GetGuaranteedPodCPUUtil(s string) (float64, error) 
 		QoSClass: "Guaranteed",
 	}
 	var res proto.CPUUtilResult
-	err := clnt.pdcs[s].RPC("StatScraper.GetCPUUtil", req, &res)
+	err := clnt.rpccs[s].RPC("StatScraper.GetCPUUtil", req, &res)
 	if err != nil {
 		return 0.0, err
 	}

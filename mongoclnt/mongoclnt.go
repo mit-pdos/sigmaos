@@ -3,24 +3,24 @@ package mongoclnt
 import (
 	//"reflect"
 	"gopkg.in/mgo.v2/bson"
-	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
-	"sigmaos/mongod/proto"
 	"sigmaos/fslib"
+	"sigmaos/mongod/proto"
 	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
 )
 
 type MongoClnt struct {
-	pdc *rpcclnt.RPCClnt
+	rpcc *rpcclnt.RPCClnt
 }
 
 func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
 	if err != nil {
 		return nil, err
 	}
-	mongoc.pdc = pdc
+	mongoc.rpcc = rpcc
 	return mongoc, nil
 }
 
@@ -29,11 +29,11 @@ func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {
 	if err != nil {
 		dbg.DFatalf("cannot encode insert object %v\n", obj)
 		return err
-	} 
+	}
 	req := &proto.MongoRequest{Db: db, Collection: collection, Obj: objEncoded}
 	res := &proto.MongoResponse{}
-	return mongoc.pdc.RPC("Mongo.Insert", req, res);
-} 
+	return mongoc.rpcc.RPC("Mongo.Insert", req, res)
+}
 
 func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any) (bool, error) {
 	allBytes, err := mongoc.FindAllEncoded(db, collection, query)
@@ -48,14 +48,14 @@ func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any
 		return true, nil
 	}
 	return false, nil
-} 
+}
 
-//TODO use reflection to handle find all
+// TODO use reflection to handle find all
 func (mongoc *MongoClnt) FindAllEncoded(db, collection string, query bson.M) ([][]byte, error) {
 	queryEncoded, _ := bson.Marshal(query)
 	req := &proto.MongoRequest{Db: db, Collection: collection, Query: queryEncoded}
 	res := &proto.MongoResponse{}
-	if err := mongoc.pdc.RPC("Mongo.Find", req, res); err != nil {
+	if err := mongoc.rpcc.RPC("Mongo.Find", req, res); err != nil {
 		return nil, err
 	}
 	return res.Objs, nil
@@ -74,7 +74,7 @@ func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, ups
 	if err != nil {
 		dbg.DFatalf("cannot encode query bson %v\n", query)
 		return err
-	} 
+	}
 	uEncoded, err := bson.Marshal(update)
 	if err != nil {
 		dbg.DFatalf("cannot encode update bson %v\n", update)
@@ -83,27 +83,26 @@ func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, ups
 	req := &proto.MongoRequest{Db: db, Collection: collection, Query: qEncoded, Obj: uEncoded}
 	res := &proto.MongoResponse{}
 	if upsert {
-		return mongoc.pdc.RPC("Mongo.Upsert", req, res);
+		return mongoc.rpcc.RPC("Mongo.Upsert", req, res)
 	} else {
-		return mongoc.pdc.RPC("Mongo.Update", req, res);
+		return mongoc.rpcc.RPC("Mongo.Update", req, res)
 	}
 }
 
 func (mongoc *MongoClnt) DropCollection(db, collection string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
 	res := &proto.MongoResponse{}
-	return mongoc.pdc.RPC("Mongo.Drop", req, res)
+	return mongoc.rpcc.RPC("Mongo.Drop", req, res)
 }
 
 func (mongoc *MongoClnt) RemoveAll(db, collection string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
 	res := &proto.MongoResponse{}
-	return mongoc.pdc.RPC("Mongo.Remove", req, res)
+	return mongoc.rpcc.RPC("Mongo.Remove", req, res)
 }
 
 func (mongoc *MongoClnt) EnsureIndex(db, collection string, indexkeys []string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection, Indexkeys: indexkeys}
 	res := &proto.MongoResponse{}
-	return mongoc.pdc.RPC("Mongo.Index", req, res)
+	return mongoc.rpcc.RPC("Mongo.Index", req, res)
 }
-

@@ -6,8 +6,8 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/rpcclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
 )
@@ -36,16 +36,16 @@ func RunTextSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT)
-	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
-	tsrv.userc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_URL)
+	tsrv.userc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}
-	tsrv.urlc = pdc
+	tsrv.urlc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Starting text service\n")
 	return ssrv.RunServer()
 }

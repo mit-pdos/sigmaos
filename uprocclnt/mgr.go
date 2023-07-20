@@ -22,7 +22,7 @@ type UprocdMgr struct {
 	fsl           *fslib.FsLib
 	kernelId      string
 	kclnt         *kernelclnt.KernelClnt
-	pdcms         map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
+	upcs          map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
 	beUprocds     []*UprocdClnt
 	sharesAlloced Tshare
 }
@@ -31,7 +31,7 @@ func MakeUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 	updm := &UprocdMgr{
 		fsl:           fsl,
 		kernelId:      kernelId,
-		pdcms:         make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt),
+		upcs:          make(map[sp.Trealm]map[proc.Ttype]*UprocdClnt),
 		beUprocds:     make([]*UprocdClnt, 0),
 		sharesAlloced: 0,
 	}
@@ -80,12 +80,12 @@ func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
 func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdClnt, error) {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
-	pdcm, ok1 := updm.pdcms[realm]
+	pdcm, ok1 := updm.upcs[realm]
 	if !ok1 {
 		pdcm = make(map[proc.Ttype]*UprocdClnt)
-		updm.pdcms[realm] = pdcm
+		updm.upcs[realm] = pdcm
 	}
-	pdc, ok2 := pdcm[ptype]
+	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
 		var pid proc.Tpid
 		var err error
@@ -100,19 +100,19 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 			return nil, err
 		}
 		c := MakeUprocdClnt(pid, rc, realm, ptype)
-		updm.pdcms[realm][ptype] = c
-		pdc = c
+		updm.upcs[realm][ptype] = c
+		rpcc = c
 		if ptype == proc.T_BE {
-			updm.beUprocds = append(updm.beUprocds, pdc)
+			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
 	}
-	return pdc, nil
+	return rpcc, nil
 }
 
 func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
 	s := time.Now()
-	pdc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
+	rpcc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
@@ -127,7 +127,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	if err := pdc.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := rpcc.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		log.Printf("uprocsrv run err %v\n", err)
 		return err, nil
 	} else {
@@ -140,11 +140,11 @@ func (updm *UprocdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
-	smap := make(map[sp.Trealm]Tshare, len(updm.pdcms))
-	for r, pdcm := range updm.pdcms {
+	smap := make(map[sp.Trealm]Tshare, len(updm.upcs))
+	for r, pdcm := range updm.upcs {
 		smap[r] = 0
-		for _, pdc := range pdcm {
-			smap[r] += pdc.share
+		for _, rpcc := range pdcm {
+			smap[r] += rpcc.share
 		}
 	}
 	return smap
@@ -155,7 +155,7 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	// Get the rpcclnts relevant to this realm
 	updm.mu.Lock()
 	var pdcs []*UprocdClnt
-	if m, ok := updm.pdcms[realm]; ok {
+	if m, ok := updm.upcs[realm]; ok {
 		pdcs = make([]*UprocdClnt, 0, len(m))
 		for _, pdc := range m {
 			pdcs = append(pdcs, pdc)
@@ -168,20 +168,20 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	var total float64 = 0.0
 
 	// Get CPU util for BE & LC uprocds, if there are any.
-	for _, pdc := range pdcs {
-		util, err := updm.kclnt.GetCPUUtil(pdc.pid)
+	for _, rpcc := range pdcs {
+		util, err := updm.kclnt.GetCPUUtil(rpcc.pid)
 		if err != nil {
 			db.DFatalf("Error GetCPUUtil: %v", err)
 		}
 		total += util
-		db.DPrintf(db.UPROCDMGR, "[%v] CPU util pid:%v util:%v", realm, pdc.pid, util)
+		db.DPrintf(db.UPROCDMGR, "[%v] CPU util pid:%v util:%v", realm, rpcc.pid, util)
 	}
 	return total
 }
 
 func (updm *UprocdMgr) String() string {
 	clnts := make([]*UprocdClnt, 0)
-	for _, m := range updm.pdcms {
+	for _, m := range updm.upcs {
 		for _, c := range m {
 			clnts = append(clnts, c)
 		}

@@ -9,8 +9,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/protdev"
-	"sigmaos/rpcclnt"
 	"sigmaos/reader"
+	"sigmaos/rpcclnt"
 	"sigmaos/shardsvcmgr"
 )
 
@@ -70,11 +70,11 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 	defer ssc.Unlock()
 
 	sn := ssc.pn + shardsvcmgr.Shard(i)
-	pdc, err := rpcclnt.MkRPCClnt(ssc.fsls, sn)
+	rpcc, err := rpcclnt.MkRPCClnt(ssc.fsls, sn)
 	if err != nil {
 		return err
 	}
-	ssc.clnts = append(ssc.clnts, pdc)
+	ssc.clnts = append(ssc.clnts, rpcc)
 	return nil
 }
 

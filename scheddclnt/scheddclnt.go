@@ -210,18 +210,18 @@ func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) 
 	sdc.Lock()
 	defer sdc.Unlock()
 
-	var pdc *rpcclnt.RPCClnt
+	var rpcc *rpcclnt.RPCClnt
 	var ok bool
-	if pdc, ok = sdc.schedds[kernelId]; !ok {
+	if rpcc, ok = sdc.schedds[kernelId]; !ok {
 		var err error
-		pdc, err = rpcclnt.MkRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
+		rpcc, err = rpcclnt.MkRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkRPCClnt[schedd:%v]: %v", kernelId, err)
 			return nil, err
 		}
-		sdc.schedds[kernelId] = pdc
+		sdc.schedds[kernelId] = rpcc
 	}
-	return pdc, nil
+	return rpcc, nil
 }
 
 func (sdc *ScheddClnt) RegisterLocalClnt(pdc *rpcclnt.RPCClnt) error {

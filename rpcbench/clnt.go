@@ -15,12 +15,12 @@ type Clnt struct {
 }
 
 func MakeClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
 	if err != nil {
 		db.DFatalf("Error MakeClnt: %v", err)
 	}
 	return &Clnt{
-		c: pdc,
+		c: rpcc,
 		t: t,
 	}
 }

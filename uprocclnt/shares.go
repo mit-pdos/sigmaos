@@ -28,8 +28,8 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 
 	switch p.GetType() {
 	case proc.T_LC:
-		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
-		updm.setShare(pdc, pdc.share+mcpuToShare(p.GetMcpu()))
+		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
+		updm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		updm.balanceBEShares()
 	default:
@@ -44,8 +44,8 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 
 	switch p.GetType() {
 	case proc.T_LC:
-		pdc := updm.pdcms[p.GetRealm()][p.GetType()]
-		updm.setShare(pdc, pdc.share-mcpuToShare(p.GetMcpu()))
+		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
+		updm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		// No need to readjust share.
 	default:
@@ -56,22 +56,22 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 func (updm *UprocdMgr) balanceBEShares() {
 	// Equal share for each BE uprocd.
 	cpuShare := BE_SHARES / Tshare(len(updm.beUprocds))
-	for _, pdc := range updm.beUprocds {
+	for _, rpcc := range updm.beUprocds {
 		// If the number of BE Uprocds has not changed, no rebalancing needs to
 		// happen.
-		if pdc.share == cpuShare {
+		if rpcc.share == cpuShare {
 			continue
 		}
-		updm.setShare(pdc, cpuShare)
+		updm.setShare(rpcc, cpuShare)
 	}
 	db.DPrintf(db.UPROCDMGR, "Rebalanced BE shares: %v", updm.beUprocds)
 }
 
 // Set a uprocd's CPU share, and RPC to the kernelsrv to adjust the shares.
-func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
+func (updm *UprocdMgr) setShare(rpcc *UprocdClnt, share Tshare) {
 	if share < MIN_SHARE {
 		// BE realms should not get <.1 cores.
-		if pdc.ptype == proc.T_BE {
+		if rpcc.ptype == proc.T_BE {
 			db.DFatalf("Assign %v share to BE uprocd", share)
 		}
 		// If the uprocd is an LC uprocd, and it isn't running and procs which
@@ -79,18 +79,18 @@ func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
 		share = MIN_SHARE
 	}
 	// If the share isn't changing, return.
-	if pdc.share == share {
-		db.DPrintf(db.UPROCDMGR, "Skip setting CPU share for %v: no change", pdc, share)
+	if rpcc.share == share {
+		db.DPrintf(db.UPROCDMGR, "Skip setting CPU share for %v: no change", rpcc, share)
 		return
 	}
-	pdc.share = share
-	if pdc.share > 10000 {
-		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", pdc.share)
+	rpcc.share = share
+	if rpcc.share > 10000 {
+		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", rpcc.share)
 	}
-	if err := updm.kclnt.SetCPUShares(pdc.pid, int64(share)); err != nil {
-		db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
+	if err := updm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
+		db.DFatalf("Error SetCPUShares[%v] %v", rpcc.pid, err)
 	}
-	db.DPrintf(db.UPROCDMGR, "Set CPU share %v to %v", pdc, share)
+	db.DPrintf(db.UPROCDMGR, "Set CPU share %v to %v", rpcc, share)
 }
 
 func mcpuToShare(mcpu proc.Tmcpu) Tshare {

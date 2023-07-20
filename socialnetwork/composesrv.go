@@ -7,8 +7,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
 	"time"
@@ -41,26 +41,26 @@ func RunComposeSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
-	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
-	csrv.textc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	csrv.textc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	csrv.postc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
+	csrv.postc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
-	csrv.tlc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
+	csrv.tlc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
-	csrv.homec = pdc
+	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {

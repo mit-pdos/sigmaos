@@ -16,13 +16,13 @@ type UprocdClnt struct {
 	share Tshare
 }
 
-func MakeUprocdClnt(pid proc.Tpid, pdc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
+func MakeUprocdClnt(pid proc.Tpid, rpcc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
 	return &UprocdClnt{
-		pid:         pid,
-		RPCClnt: pdc,
-		realm:       realm,
-		ptype:       ptype,
-		share:       0,
+		pid:     pid,
+		RPCClnt: rpcc,
+		realm:   realm,
+		ptype:   ptype,
+		share:   0,
 	}
 }
 

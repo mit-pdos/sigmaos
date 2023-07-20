@@ -8,8 +8,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 )
@@ -42,16 +42,16 @@ func RunHomeSrv(public bool, jobname string) error {
 		return err
 	}
 	hsrv.cachec = cachec
-	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
-	hsrv.graphc = pdc
-	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	hsrv.graphc = rpcc
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	hsrv.postc = pdc
+	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_HOME)
 	if err != nil {

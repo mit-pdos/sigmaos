@@ -19,13 +19,13 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"test_user"}}
 	res_check := proto.CheckUserResponse{}
-	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
+	err = rpcc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "No", res_check.Ok)
 	assert.Equal(t, int64(-1), res_check.Userids[0])
@@ -34,19 +34,19 @@ func TestUser(t *testing.T) {
 	arg_reg := proto.RegisterUserRequest{
 		Firstname: "Alice", Lastname: "Test", Username: "user_0", Password: "xxyyzz"}
 	res_reg := proto.UserResponse{}
-	err = pdc.RPC("User.RegisterUser", &arg_reg, &res_reg)
+	err = rpcc.RPC("User.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "Username user_0 already exist", res_reg.Ok)
 
 	arg_reg.Username = "test_user"
-	err = pdc.RPC("User.RegisterUser", &arg_reg, &res_reg)
+	err = rpcc.RPC("User.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
 	created_userid := res_reg.Userid
 
 	// check user
 	arg_check.Usernames = []string{"test_user", "user_1", "user_2"}
-	err = pdc.RPC("User.CheckUser", &arg_check, &res_check)
+	err = rpcc.RPC("User.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_check.Ok)
 	assert.Equal(t, created_userid, res_check.Userids[0])
@@ -56,12 +56,12 @@ func TestUser(t *testing.T) {
     // new user login
 	arg_login := proto.LoginRequest{Username: "test_user", Password: "xxyy"}
 	res_login := proto.UserResponse{}
-	err = pdc.RPC("User.Login", &arg_login, &res_login)
+	err = rpcc.RPC("User.Login", &arg_login, &res_login)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login Failure.", res_login.Ok)
 
 	arg_login.Password = "xxyyzz"
-	err = pdc.RPC("User.Login", &arg_login, &res_login)
+	err = rpcc.RPC("User.Login", &arg_login, &res_login)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_login.Ok)
 
@@ -88,21 +88,21 @@ func TestGraph(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// get follower and followee list
 	arg_get_fler := proto.GetFollowersRequest{}
 	arg_get_fler.Followeeid = 0
 	res_get := proto.GraphGetResponse{}
-	err = pdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
+	err = rpcc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids)) // user 0 has no follower
 	
 	arg_get_flee := proto.GetFolloweesRequest{}
 	arg_get_flee.Followerid = 1
-	err = pdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
+	err = rpcc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
@@ -113,17 +113,17 @@ func TestGraph(t *testing.T) {
 	arg_follow.Followerid = 1
 	arg_follow.Followeeid = 0
 	res_update := proto.GraphUpdateResponse{}
-	err = pdc.RPC("Graph.Follow", &arg_follow, &res_update)// user 1 is now following user 0
+	err = rpcc.RPC("Graph.Follow", &arg_follow, &res_update)// user 1 is now following user 0
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_update.Ok)
 
-	err = pdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
+	err = rpcc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
 	assert.Equal(t, int64(1), res_get.Userids[0]) // user 0 has one follower user 1
 
-	err = pdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
+	err = rpcc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 2, len(res_get.Userids))
@@ -134,16 +134,16 @@ func TestGraph(t *testing.T) {
 	arg_unfollow := proto.UnfollowRequest{}
 	arg_unfollow.Followerid = 1
 	arg_unfollow.Followeeid = 0
-	err = pdc.RPC("Graph.Unfollow", &arg_unfollow, &res_update)// user 1 is now unfollowing user 0
+	err = rpcc.RPC("Graph.Unfollow", &arg_unfollow, &res_update)// user 1 is now unfollowing user 0
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_update.Ok)
 
-	err = pdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
+	err = rpcc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids)) // user 0 now again has no follower
 
-	err = pdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
+	err = rpcc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
@@ -161,8 +161,8 @@ func TestUserAndGraph(t *testing.T) {
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
-	updc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
-	gpdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
+	urpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
+	grpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// Create two users Alice and Bob
@@ -171,11 +171,11 @@ func TestUserAndGraph(t *testing.T) {
 	arg_reg2 := proto.RegisterUserRequest{
 		Firstname: "Bob", Lastname: "Test", Username: "btest", Password: "zyx"}
 	res_reg := proto.UserResponse{}
-	err = updc.RPC("User.RegisterUser", &arg_reg1, &res_reg)
+	err = urpcc.RPC("User.RegisterUser", &arg_reg1, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
 	auserid := res_reg.Userid
-	err = updc.RPC("User.RegisterUser", &arg_reg2, &res_reg)
+	err = urpcc.RPC("User.RegisterUser", &arg_reg2, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
 	buserid := res_reg.Userid
@@ -185,14 +185,14 @@ func TestUserAndGraph(t *testing.T) {
 	arg_follow.Followeruname = "atest"
 	arg_follow.Followeeuname = "btest"
 	res_update := proto.GraphUpdateResponse{}
-	err = gpdc.RPC("Graph.FollowWithUname", &arg_follow, &res_update)	
+	err = grpcc.RPC("Graph.FollowWithUname", &arg_follow, &res_update)	
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_update.Ok)
 
 	arg_get_fler := proto.GetFollowersRequest{}
 	arg_get_fler.Followeeid = buserid
 	res_get := proto.GraphGetResponse{}
-	err = gpdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
+	err = grpcc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
@@ -200,7 +200,7 @@ func TestUserAndGraph(t *testing.T) {
 	
 	arg_get_flee := proto.GetFolloweesRequest{}
 	arg_get_flee.Followerid = auserid
-	err = gpdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
+	err = grpcc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
@@ -210,16 +210,16 @@ func TestUserAndGraph(t *testing.T) {
 	arg_unfollow := proto.UnfollowWithUnameRequest{}
 	arg_unfollow.Followeruname = "atest"
 	arg_unfollow.Followeeuname = "btest"
-	err = gpdc.RPC("Graph.UnfollowWithUname", &arg_unfollow, &res_update)
+	err = grpcc.RPC("Graph.UnfollowWithUname", &arg_unfollow, &res_update)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_update.Ok)
 
-	err = gpdc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
+	err = grpcc.RPC("Graph.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids))
 
-	err = gpdc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
+	err = grpcc.RPC("Graph.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids))

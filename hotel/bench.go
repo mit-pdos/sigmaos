@@ -74,7 +74,7 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	return wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
 }
 
-func RandCheckAvailabilityReq(pdc *rpcclnt.RPCClnt, r *rand.Rand) error {
+func RandCheckAvailabilityReq(rpcc *rpcclnt.RPCClnt, r *rand.Rand) error {
 	in_date := r.Intn(14) + 9
 	out_date := in_date + r.Intn(5) + 1
 	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
@@ -98,7 +98,7 @@ func RandCheckAvailabilityReq(pdc *rpcclnt.RPCClnt, r *rand.Rand) error {
 		Number:       1,
 	}
 	var res proto.ReserveResult
-	return pdc.RPC("Reserve.CheckAvailability", arg, &res)
+	return rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 }
 
 func GeoReq(wc *WebClnt) (string, error) {

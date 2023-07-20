@@ -42,7 +42,7 @@ func TestMedia(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MEDIA)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_MEDIA)
 	assert.Nil(t, err, "RPC client should be created properly")
 	
 	// store two media
@@ -50,18 +50,18 @@ func TestMedia(t *testing.T) {
 	mdata2 := []byte{2, 3, 5, 7, 11, 13, 17, 19}
 	arg_store := proto.StoreMediaRequest{Mediatype: "File", Mediadata: mdata1}
 	res_store := proto.StoreMediaResponse{}
-	assert.Nil(t, pdc.RPC("Media.StoreMedia", &arg_store, &res_store))
+	assert.Nil(t, rpcc.RPC("Media.StoreMedia", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 	mId1 := res_store.Mediaid
 	arg_store = proto.StoreMediaRequest{Mediatype: "Video", Mediadata: mdata2}
-	assert.Nil(t, pdc.RPC("Media.StoreMedia", &arg_store, &res_store))
+	assert.Nil(t, rpcc.RPC("Media.StoreMedia", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 	mId2 := res_store.Mediaid
 
 	// read the medias
 	arg_read := proto.ReadMediaRequest{Mediaids: []int64{mId1, mId2}}
 	res_read := proto.ReadMediaResponse{}
-	assert.Nil(t, pdc.RPC("Media.ReadMedia", &arg_read, &res_read))
+	assert.Nil(t, rpcc.RPC("Media.ReadMedia", &arg_read, &res_read))
 	assert.Equal(t, "OK", res_read.Ok)
 	assert.Equal(t, 2, len(res_read.Mediatypes))
 	assert.Equal(t, 2, len(res_read.Mediadatas))
@@ -80,7 +80,7 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// create two posts
@@ -107,20 +107,20 @@ func TestPost(t *testing.T) {
 	// store first post
 	arg_store := proto.StorePostRequest{Post: &post1}
 	res_store := proto.StorePostResponse{}
-	assert.Nil(t, pdc.RPC("Post.StorePost", &arg_store, &res_store))
+	assert.Nil(t, rpcc.RPC("Post.StorePost", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 	
 	// check for two posts. one missing
 	arg_read := proto.ReadPostsRequest{Postids: []int64{int64(1), int64(2)}}
 	res_read := proto.ReadPostsResponse{}
-	assert.Nil(t, pdc.RPC("Post.ReadPosts", &arg_read, &res_read))
+	assert.Nil(t, rpcc.RPC("Post.ReadPosts", &arg_read, &res_read))
 	assert.Equal(t, "No. Missing 2.", res_read.Ok)
 	
 	// store second post and check for both.
 	arg_store.Post = &post2
-	assert.Nil(t, pdc.RPC("Post.StorePost", &arg_store, &res_store))
+	assert.Nil(t, rpcc.RPC("Post.StorePost", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
-	assert.Nil(t, pdc.RPC("Post.ReadPosts", &arg_read, &res_read))
+	assert.Nil(t, rpcc.RPC("Post.ReadPosts", &arg_read, &res_read))
 	assert.Equal(t, "OK", res_read.Ok)
 	assert.True(t, IsPostEqual(&post1, res_read.Posts[0]))
 	assert.True(t, IsPostEqual(&post2, res_read.Posts[1]))

@@ -28,18 +28,18 @@ func NewClntCache(fsl *fslib.FsLib) *ClntCache {
 func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
 	cc.Lock()
 	defer cc.Unlock()
-	pdc, ok := cc.cc[pn]
+	rpcc, ok := cc.cc[pn]
 	if ok {
-		return pdc, nil
+		return rpcc, nil
 	}
 	cc.Unlock()
-	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
-	cc.cc[pn] = pdc
-	return pdc, nil
+	cc.cc[pn] = rpcc
+	return rpcc, nil
 }
 
 func (cc *ClntCache) Delete(pn string) {
@@ -50,11 +50,11 @@ func (cc *ClntCache) Delete(pn string) {
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		pdc, err := cc.Lookup(pn)
+		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			return err
 		}
-		if err := pdc.RPC(method, arg, res); err == nil {
+		if err := rpcc.RPC(method, arg, res); err == nil {
 			return nil
 		} else {
 			cc.Delete(pn)

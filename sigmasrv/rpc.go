@@ -17,21 +17,21 @@ import (
 )
 
 type rpcDev struct {
-	pds *SigmaSrv
+	ssrv *SigmaSrv
 }
 
-func mkRpcDev(pds *SigmaSrv) *rpcDev {
-	return &rpcDev{pds}
+func mkRpcDev(ssrv *SigmaSrv) *rpcDev {
+	return &rpcDev{ssrv}
 }
 
 type rpcSession struct {
 	*inode.Inode
-	pds *SigmaSrv
+	ssrv *SigmaSrv
 }
 
 func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
 	rpc := &rpcSession{}
-	rpc.pds = rd.pds
+	rpc.ssrv = rd.ssrv
 	rpc.Inode = mfs.MakeDevInode()
 	return rpc, nil
 }
@@ -47,9 +47,9 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
 
 	start := time.Now()
-	rep = rpc.pds.svc.dispatch(ctx, req.Method, &req)
+	rep = rpc.ssrv.svc.dispatch(ctx, req.Method, &req)
 	t := time.Since(start).Microseconds()
-	rpc.pds.sti.Stat(req.Method, t)
+	rpc.ssrv.sti.Stat(req.Method, t)
 
 	b, err := proto.Marshal(rep)
 	if err != nil {

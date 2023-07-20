@@ -27,7 +27,7 @@ type RPCClnt struct {
 }
 
 func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
-	pdc := &RPCClnt{
+	rpcc := &RPCClnt{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
 		si:   protdev.MakeStatInfo(),
@@ -38,17 +38,17 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 		return nil, err
 	}
 	for _, fsl := range fsls {
-		pdc.fsls = append(pdc.fsls, fsl)
+		rpcc.fsls = append(rpcc.fsls, fsl)
 		n, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
 		if err != nil {
 			return nil, err
 		}
-		pdc.fds = append(pdc.fds, n)
+		rpcc.fds = append(rpcc.fds, n)
 	}
-	return pdc, nil
+	return rpcc, nil
 }
 
-func (pdc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
+func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{}
 	req.Method = method
 	req.Args = a
@@ -59,13 +59,13 @@ func (pdc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	}
 
 	start := time.Now()
-	idx := int(atomic.AddInt32(&pdc.idx, 1))
-	b, err = pdc.fsls[idx%len(pdc.fsls)].WriteRead(pdc.fds[idx%len(pdc.fds)], b)
+	idx := int(atomic.AddInt32(&rpcc.idx, 1))
+	b, err = rpcc.fsls[idx%len(rpcc.fsls)].WriteRead(rpcc.fds[idx%len(rpcc.fds)], b)
 	if err != nil {
 		return nil, err
 	}
 	// Record stats
-	pdc.si.Stat(method, time.Since(start).Microseconds())
+	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
@@ -75,12 +75,12 @@ func (pdc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	return rep, nil
 }
 
-func (pdc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
 	b, err := proto.Marshal(arg)
 	if err != nil {
 		return err
 	}
-	rep, err := pdc.rpc(method, b)
+	rep, err := rpcc.rpc(method, b)
 	if err != nil {
 		return err
 	}
@@ -93,13 +93,13 @@ func (pdc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) err
 	return nil
 }
 
-func (pdc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {
-	return pdc.si.Stats()
+func (rpcc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {
+	return rpcc.si.Stats()
 }
 
-func (pdc *RPCClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
+func (rpcc *RPCClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
 	stats := &protdev.SigmaRPCStats{}
-	if err := pdc.fsls[0].GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
+	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

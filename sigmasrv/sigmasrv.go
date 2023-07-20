@@ -79,52 +79,52 @@ func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci 
 
 // Make a SigmaSrv with protdev at pn in mfs
 func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*SigmaSrv, error) {
-	psd, err := MakeRPCSrv(mfs, pn, svci)
+	ssrv, err := MakeRPCSrv(mfs, pn, svci)
 	if err != nil {
 		return nil, err
 	}
-	if err := psd.NewLeaseSrv(); err != nil {
+	if err := ssrv.NewLeaseSrv(); err != nil {
 		return nil, err
 	}
-	return psd, nil
+	return ssrv, nil
 }
 
 // Make a SigmaSrv with protdev at pn in mfs (without a lease server)
 func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*SigmaSrv, error) {
-	psd := &SigmaSrv{MemFs: mfs}
+	ssrv := &SigmaSrv{MemFs: mfs}
 	if svci != nil {
-		psd.mkService(svci)
-		rd := mkRpcDev(psd)
-		if err := sessdevsrv.MkSessDev(psd.MemFs, path.Join(pn, protdev.RPC), rd.mkRpcSession, nil); err != nil {
+		ssrv.mkService(svci)
+		rd := mkRpcDev(ssrv)
+		if err := sessdevsrv.MkSessDev(ssrv.MemFs, path.Join(pn, protdev.RPC), rd.mkRpcSession, nil); err != nil {
 			return nil, err
 		}
 		if si, err := makeStatsDev(mfs, pn); err != nil {
 			return nil, err
 		} else {
-			psd.sti = si
+			ssrv.sti = si
 		}
 	}
-	return psd, nil
+	return ssrv, nil
 }
 
-func (psd *SigmaSrv) NewLeaseSrv() error {
+func (ssrv *SigmaSrv) NewLeaseSrv() error {
 	db.DPrintf(db.PROTDEVSRV, "NewLeaseSrv\n")
-	lsrv := newLeaseSrv(psd.MemFs)
-	if _, err := psd.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+	lsrv := newLeaseSrv(ssrv.MemFs)
+	if _, err := ssrv.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	_, err := MakeRPCSrv(psd.MemFs, sp.LEASESRV, lsrv)
+	_, err := MakeRPCSrv(ssrv.MemFs, sp.LEASESRV, lsrv)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (psd *SigmaSrv) QueueLen() int64 {
-	return psd.MemFs.QueueLen()
+func (ssrv *SigmaSrv) QueueLen() int64 {
+	return ssrv.MemFs.QueueLen()
 }
 
-func (psd *SigmaSrv) mkService(svci any) {
+func (ssrv *SigmaSrv) mkService(svci any) {
 	svc := &service{}
 	svc.typ = reflect.TypeOf(svci)
 	svc.svc = reflect.ValueOf(svci)
@@ -149,15 +149,15 @@ func (psd *SigmaSrv) mkService(svci any) {
 			svc.methods[mname] = &method{methodt, mtype.In(2), mtype.In(3)}
 		}
 	}
-	psd.svc = svc
+	ssrv.svc = svc
 }
 
-func (psd *SigmaSrv) RunServer() error {
+func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
-	psd.MemFs.Serve()
-	if psd.lsrv != nil {
-		psd.lsrv.Stop()
+	ssrv.MemFs.Serve()
+	if ssrv.lsrv != nil {
+		ssrv.lsrv.Stop()
 	}
-	psd.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
+	ssrv.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }

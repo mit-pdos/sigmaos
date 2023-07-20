@@ -35,11 +35,11 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	}
 	msrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Starting media service\n")
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *proto.StoreMediaResponse) error {

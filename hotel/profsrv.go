@@ -16,8 +16,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -29,11 +29,11 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, HOTELPROF, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, HOTELPROF, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func RunProfSrv(job string, public bool, cache string) error {
 	ps.initDB(profs)
 	ps.tracer = tracing.Init("prof", proc.GetSigmaJaegerIP())
 	defer ps.tracer.Flush()
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // Inserts a flatten profile into db

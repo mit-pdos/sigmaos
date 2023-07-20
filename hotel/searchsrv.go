@@ -26,7 +26,7 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func RunSearchSrv(n string, public bool) error {
 	//	defer s.tracer.Flush()
 	defer p.Done()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv

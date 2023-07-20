@@ -46,13 +46,13 @@ type Rec struct {
 func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELREC, r, HOTELREC, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELREC, r, HOTELREC, public)
 	if err != nil {
 		return err
 	}
 	r.tracer = tracing.Init("rec", proc.GetSigmaJaegerIP())
 	defer r.tracer.Flush()
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // GiveRecommendation returns recommendations within a given requirement.

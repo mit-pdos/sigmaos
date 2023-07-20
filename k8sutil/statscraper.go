@@ -24,12 +24,12 @@ type scraper struct {
 
 func RunK8sStatScraper() error {
 	s := newScraper()
-	pds, err := sigmasrv.MakeSigmaSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func newScraper() *scraper {

@@ -81,7 +81,7 @@ func RunGeoSrv(job string, public bool) error {
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
 	}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, HOTELGEO, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, HOTELGEO, public)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func RunGeoSrv(job string, public bool) error {
 	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	defer geo.tracer.Flush()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // Nearby returns all hotels within a given distance.

@@ -33,11 +33,11 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	defer perf.Done()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (tlsrv *TimelineSrv) WriteTimeline(

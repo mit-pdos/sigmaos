@@ -88,11 +88,11 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, HOTELRESERVE, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, HOTELRESERVE, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 	//		r.tracer = tracing.Init("reserve", proc.GetSigmaJaegerIP())
 	//		defer r.tracer.Flush()
 	//	}
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // checkAvailability checks if given information is available

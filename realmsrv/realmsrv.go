@@ -43,17 +43,17 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
-	pds, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, sp.REALMDREL)
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, sp.REALMDREL)
 	if err != nil {
 		return err
 	}
-	_, serr := pds.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
+	_, serr := ssrv.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
 	if serr != nil {
 		return serr
 	}
 	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
-	rs.sc = pds.MemFs.SigmaClnt()
-	err = pds.RunServer()
+	rs.sc = ssrv.MemFs.SigmaClnt()
+	err = ssrv.RunServer()
 	return nil
 }
 

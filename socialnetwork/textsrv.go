@@ -31,7 +31,7 @@ type TextSrv struct {
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, sp.SOCIAL_NETWORK_TEXT, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, sp.SOCIAL_NETWORK_TEXT, public)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func RunTextSrv(public bool, jobname string) error {
 	}
 	tsrv.urlc = pdc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Starting text service\n")
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (tsrv *TextSrv) ProcessText(

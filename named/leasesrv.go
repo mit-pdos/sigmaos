@@ -30,11 +30,11 @@ func newLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*sigmasrv.S
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
 	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)
-	pds, err := sigmasrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
+	ssrv, err := sigmasrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
 	if err != nil {
 		return nil, err
 	}
-	return pds, nil
+	return ssrv, nil
 }
 
 func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {

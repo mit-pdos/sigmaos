@@ -34,11 +34,11 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, sp.SOCIAL_NETWORK_GRAPH, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, sp.SOCIAL_NETWORK_GRAPH, public)
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func RunGraphSrv(public bool, jobname string) error {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}
 	defer perf.Done()
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (gsrv *GraphSrv) GetFollowers(

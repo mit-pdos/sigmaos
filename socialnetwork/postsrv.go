@@ -31,11 +31,11 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, sp.SOCIAL_NETWORK_POST, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, sp.SOCIAL_NETWORK_POST, public)
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	defer perf.Done()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *proto.StorePostResponse) error {

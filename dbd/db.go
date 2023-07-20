@@ -23,13 +23,13 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	pds, err := sigmasrv.MakeSigmaSrv(sp.DB, s, sp.DB)
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, sp.DB)
 	if err != nil {
 		return err
 	}
 	qd := &queryDev{dbdaddr}
-	if err := sessdevsrv.MkSessDev(pds.MemFs, QDEV, qd.mkSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, QDEV, qd.mkSession, nil); err != nil {
 		return err
 	}
-	return pds.RunServer()
+	return ssrv.RunServer()
 }

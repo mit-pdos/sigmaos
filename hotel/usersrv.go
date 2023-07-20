@@ -42,11 +42,11 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, HOTELUSER, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, HOTELUSER, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func RunUserSrv(n string, public bool) error {
 	}
 	//	u.tracer = tracing.Init("user", proc.GetSigmaJaegerIP())
 	//	defer u.tracer.Flush()
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func MkPassword(u string) string {

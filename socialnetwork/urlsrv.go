@@ -36,11 +36,11 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(pds.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func RunUrlSrv(public bool, jobname string) error {
 	urlsrv.cachec = cachec
 	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (urlsrv *UrlSrv) ComposeUrls(

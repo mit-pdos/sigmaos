@@ -11,15 +11,15 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/uprocsrv/proto"
 )
 
 type UprocSrv struct {
 	mu       sync.Mutex
 	ch       chan struct{}
-	pds      *sigmasrv.SigmaSrv
+	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
 	net      string
@@ -31,14 +31,14 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	ip, _ := container.LocalIP()
 	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, up, os.Environ(), ip)
 
-	var pds *sigmasrv.SigmaSrv
+	var ssrv *sigmasrv.SigmaSrv
 	var err error
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		pds, err = sigmasrv.MakeSigmaSrv(pn, ups, sp.UPROCDREL)
+		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, sp.UPROCDREL)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		pds, err = sigmasrv.MakeSigmaSrvPort("", up, sp.UPROCDREL, ups)
+		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, sp.UPROCDREL, ups)
 	}
 	if err != nil {
 		return err
@@ -46,9 +46,9 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	if err := container.SetupIsolationEnv(); err != nil {
 		db.DFatalf("Error setting up isolation env: %v", err)
 	}
-	ups.pds = pds
+	ups.ssrv = ssrv
 	ups.net = proc.GetNet()
-	err = pds.RunServer()
+	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil
 }

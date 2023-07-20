@@ -30,12 +30,12 @@ func main() {
 			mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 		}
 	} else {
-		pds, err := sigmasrv.MakeSigmaSrv(name, nil, sp.Tuname(name))
+		ssrv, err := sigmasrv.MakeSigmaSrv(name, nil, sp.Tuname(name))
 		if err != nil {
 			db.DFatalf("MakeSigmaSrv %v\n", err)
 		}
-		pds.Serve()
+		ssrv.Serve()
 		db.DPrintf(db.TEST, "evicted\n")
-		pds.Exit(proc.MakeStatus(proc.StatusEvicted))
+		ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 	}
 }

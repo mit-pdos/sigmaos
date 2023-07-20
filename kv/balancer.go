@@ -31,11 +31,11 @@ import (
 	"sigmaos/leaderclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 type Balancer struct {
@@ -90,12 +90,12 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("MakeLeaderClnt %v\n", err)
 	}
 
-	pds, err := sigmasrv.MakeSigmaSrvClnt("", bl.SigmaClnt, KVBALANCER, nil)
+	ssrv, err := sigmasrv.MakeSigmaSrvClnt("", bl.SigmaClnt, KVBALANCER, nil)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, sp.NoClntId, nil)
-	root, _ := pds.Root(path.Path{})
+	root, _ := ssrv.Root(path.Path{})
 	err1 := dir.MkNod(ctx, root, "ctl", makeCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
@@ -104,11 +104,11 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	// start server and write ch when server is done
 	ch := make(chan bool)
 	go func() {
-		pds.Serve()
+		ssrv.Serve()
 		ch <- true
 	}()
 
-	mnt := sp.MkMountServer(pds.MyAddr())
+	mnt := sp.MkMountServer(ssrv.MyAddr())
 	b, error := mnt.Marshal()
 	if error != nil {
 		db.DFatalf("Marshal failed %v\n", error)
@@ -156,7 +156,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		bl.ch <- true
 		<-bl.ch
 	}
-	pds.Exit(proc.MakeStatus(proc.StatusEvicted))
+	ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {

@@ -32,7 +32,7 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func RunHomeSrv(public bool, jobname string) error {
 	}
 	defer perf.Done()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (hsrv *HomeSrv) WriteHomeTimeline(

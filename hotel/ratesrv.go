@@ -52,11 +52,11 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELRATE, r, HOTELRATE, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRATE, r, HOTELRATE, public)
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(pds.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	defer p.Done()
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // GetRates gets rates for hotels

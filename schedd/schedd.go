@@ -175,12 +175,12 @@ func RunSchedd(kernelId string) error {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
 	sd := MakeSchedd(mfs, kernelId)
-	pds, err := sigmasrv.MakeSigmaSrvMemFs(mfs, "", sd)
+	ssrv, err := sigmasrv.MakeSigmaSrvMemFs(mfs, "", sd)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
-	setupMemFsSrv(pds.MemFs)
-	setupFs(pds.MemFs, sd)
+	setupMemFsSrv(ssrv.MemFs)
+	setupFs(ssrv.MemFs, sd)
 	// Perf monitoring
 	p, err := perf.MakePerf(perf.SCHEDD)
 	if err != nil {
@@ -191,6 +191,6 @@ func RunSchedd(kernelId string) error {
 	go sd.monitorWSQueue(proc.T_LC)
 	go sd.monitorWSQueue(proc.T_BE)
 	go sd.offerStealableProcs()
-	pds.RunServer()
+	ssrv.RunServer()
 	return nil
 }

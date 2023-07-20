@@ -20,7 +20,7 @@ type Srv struct {
 // Run starts the server
 func RunRPCBenchSrv(path string, public bool) error {
 	s := &Srv{}
-	pds, err := sigmasrv.MakeSigmaSrvPublic(path, s, "RPCBench", public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(path, s, "RPCBench", public)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func RunRPCBenchSrv(path string, public bool) error {
 
 	defer s.tracer.Flush()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv

@@ -44,11 +44,11 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	pds, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, sp.MONGO)
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, sp.MONGO)
 	if err != nil {
 		return err
 	}
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {

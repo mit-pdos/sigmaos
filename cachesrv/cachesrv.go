@@ -16,11 +16,11 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	"sigmaos/serr"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -65,11 +65,11 @@ func RunCacheSrv(args []string) error {
 		s.bins[i].cache = make(map[string][]byte)
 	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	pds, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
 	if err != nil {
 		return err
 	}
-	if err := sessdevsrv.MkSessDev(pds.MemFs, DUMP, s.mkSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func RunCacheSrv(args []string) error {
 	}
 	defer p.Done()
 
-	return pds.RunServer()
+	return ssrv.RunServer()
 }
 
 // XXX support timeout

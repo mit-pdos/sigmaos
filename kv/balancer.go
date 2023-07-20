@@ -31,7 +31,7 @@ import (
 	"sigmaos/leaderclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
@@ -90,7 +90,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("MakeLeaderClnt %v\n", err)
 	}
 
-	pds, err := protdevsrv.MakeProtDevSrvClnt("", bl.SigmaClnt, KVBALANCER, nil)
+	pds, err := sigmasrv.MakeSigmaSrvClnt("", bl.SigmaClnt, KVBALANCER, nil)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}

@@ -17,7 +17,7 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -81,7 +81,7 @@ func RunGeoSrv(job string, public bool) error {
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
 	}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELGEO, geo, HOTELGEO, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, HOTELGEO, public)
 	if err != nil {
 		return err
 	}

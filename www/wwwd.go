@@ -17,7 +17,7 @@ import (
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -74,7 +74,7 @@ func RunWwwd(job, tree string) {
 }
 
 type Wwwd struct {
-	pds           *protdevsrv.ProtDevSrv
+	pds           *sigmasrv.SigmaSrv
 	localSrvpath  string
 	globalSrvpath string
 }
@@ -83,7 +83,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.pds, err = protdevsrv.MakeProtDevSrv(MemFsPath(job), nil, WWWD)
+	www.pds, err = sigmasrv.MakeSigmaSrv(MemFsPath(job), nil, WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}

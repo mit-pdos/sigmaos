@@ -13,7 +13,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procmgr"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
@@ -175,7 +175,7 @@ func RunSchedd(kernelId string) error {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
 	sd := MakeSchedd(mfs, kernelId)
-	pds, err := protdevsrv.MakeProtDevSrvMemFs(mfs, "", sd)
+	pds, err := sigmasrv.MakeSigmaSrvMemFs(mfs, "", sd)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}

@@ -1,4 +1,4 @@
-package protdevsrv
+package sigmasrv
 
 import (
 	"sync"

@@ -6,7 +6,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongod/proto"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"time"
 )
@@ -44,7 +44,7 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	pds, err := protdevsrv.MakeProtDevSrv(sp.MONGO, s, sp.MONGO)
+	pds, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, sp.MONGO)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/serr"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sessp"
@@ -65,7 +65,7 @@ func RunCacheSrv(args []string) error {
 		s.bins[i].cache = make(map[string][]byte)
 	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	pds, err := protdevsrv.MakeProtDevSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
 	if err != nil {
 		return err
 	}

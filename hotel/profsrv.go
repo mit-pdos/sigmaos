@@ -16,7 +16,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
@@ -29,7 +29,7 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELPROF, ps, HOTELPROF, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, HOTELPROF, public)
 	if err != nil {
 		return err
 	}

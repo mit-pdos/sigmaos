@@ -8,7 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -32,7 +32,7 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
 	if err != nil {
 		return err
 	}

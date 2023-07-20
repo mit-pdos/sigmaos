@@ -7,20 +7,20 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/rpcbench/proto"
 	"sigmaos/tracing"
 )
 
 type Srv struct {
-	pds    *protdevsrv.ProtDevSrv
+	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
 
 // Run starts the server
 func RunRPCBenchSrv(path string, public bool) error {
 	s := &Srv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(path, s, "RPCBench", public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(path, s, "RPCBench", public)
 	if err != nil {
 		return err
 	}

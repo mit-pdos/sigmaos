@@ -10,7 +10,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -41,7 +41,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, sp.SOCIAL_NETWORK_USER, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, sp.SOCIAL_NETWORK_USER, public)
 	if err != nil {
 		return err
 	}

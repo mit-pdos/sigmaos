@@ -12,21 +12,21 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
 type Search struct {
 	ratec  *protdevclnt.ProtDevClnt
 	geoc   *protdevclnt.ProtDevClnt
-	pds    *protdevsrv.ProtDevSrv
+	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
 
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
 	if err != nil {
 		return err
 	}

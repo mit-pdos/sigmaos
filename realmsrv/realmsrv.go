@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/realmsrv/proto"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -43,7 +43,7 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
-	pds, err := protdevsrv.MakeProtDevSrv(sp.REALMD, rs, sp.REALMDREL)
+	pds, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, sp.REALMDREL)
 	if err != nil {
 		return err
 	}

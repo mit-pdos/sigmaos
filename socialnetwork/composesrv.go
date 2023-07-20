@@ -7,7 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -36,7 +36,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Creating compose service\n")
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, sp.SOCIAL_NETWORK_COMPOSE, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, sp.SOCIAL_NETWORK_COMPOSE, public)
 	if err != nil {
 		return err
 	}

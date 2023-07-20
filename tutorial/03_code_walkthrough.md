@@ -150,7 +150,7 @@ for it to exit. You will need to complete the following steps:
 
 ### Exercise 5: Set up a RPC server. 
 In this exercise, you will familiarize with the application layer APIs of SigmOS, 
-specifically `protdevclnt` and `protdevsrv`. In order to do so, you will learn 
+specifically `protdevclnt` and `sigmasrv`. In order to do so, you will learn 
 how to set up a basic RPC server, and explore existing utilities that provide 
 database and cache proxies. 
   - [ ] Navigate to the `example_echo_server` directory. Check the files and 
@@ -165,7 +165,7 @@ database and cache proxies.
   - [ ] Try to figure out how custome RPCs work. You may start with the `RPC` method
 	in `protdevclnt.ProtDevClnt` and will eventually end up in `protclnt` and
 	`netclnt` as in the previous exercises. On the server side, check how 
-	`protdevsrv.ProtDevSrv` is implemented and eventually you will reach `sesssrv`
+	`sigmasrv.SigmaSrv` is implemented and eventually you will reach `sesssrv`
 	and `netsrv` 
   - [ ] Try to figure out how the test case initializes the SigmaOS kernel and 
 	a proc for the Echo server. You may check utilities in the `test` directory, 

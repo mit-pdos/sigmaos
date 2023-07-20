@@ -12,7 +12,7 @@ import (
 	"sigmaos/dbclnt"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
@@ -42,7 +42,7 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELUSER, u, HOTELUSER, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, HOTELUSER, public)
 	if err != nil {
 		return err
 	}

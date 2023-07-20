@@ -3,7 +3,7 @@ package example_echo_server
 import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 )
@@ -22,7 +22,7 @@ const NAMED_ECHO_SERVER = DIR_ECHO_SERVER + "echo-server"
 func RunEchoSrv(public bool) error {
 	echosrv := &EchoSrv{rand.String(8)}
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Creating echo server \n", echosrv.sid)
-	pds, err := protdevsrv.MakeProtDevSrvPublic(NAMED_ECHO_SERVER, echosrv, DEBUG_ECHO_SERVER, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(NAMED_ECHO_SERVER, echosrv, DEBUG_ECHO_SERVER, public)
 	if err != nil {
 		return err
 	}

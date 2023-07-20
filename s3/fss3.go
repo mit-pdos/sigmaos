@@ -11,23 +11,23 @@ import (
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 )
 
 var fss3 *Fss3
 
 type Fss3 struct {
-	*protdevsrv.ProtDevSrv
+	*sigmasrv.SigmaSrv
 	mu     sync.Mutex
 	client *s3.Client
 }
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	psd, err := protdevsrv.MakeProtDevSrv(sp.S3, nil, sp.S3REL)
+	psd, err := sigmasrv.MakeSigmaSrv(sp.S3, nil, sp.S3REL)
 	if err != nil {
-		db.DFatalf("Error MakeProtDevSrv: %v", err)
+		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
 	p, err := perf.MakePerf(perf.S3)
 	if err != nil {
@@ -44,7 +44,7 @@ func RunFss3(buckets []string) {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}
 	}
-	fss3.ProtDevSrv = psd
+	fss3.SigmaSrv = psd
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {

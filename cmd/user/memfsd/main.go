@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/repldummy"
 	sp "sigmaos/sigmap"
 )
@@ -30,9 +30,9 @@ func main() {
 			mfs.Exit(proc.MakeStatus(proc.StatusEvicted))
 		}
 	} else {
-		pds, err := protdevsrv.MakeProtDevSrv(name, nil, sp.Tuname(name))
+		pds, err := sigmasrv.MakeSigmaSrv(name, nil, sp.Tuname(name))
 		if err != nil {
-			db.DFatalf("MakeProtDevSrv %v\n", err)
+			db.DFatalf("MakeSigmaSrv %v\n", err)
 		}
 		pds.Serve()
 		db.DPrintf(db.TEST, "evicted\n")

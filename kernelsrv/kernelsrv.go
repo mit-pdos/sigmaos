@@ -10,7 +10,7 @@ import (
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -23,7 +23,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "%v: Run KernelSrv %v", proc.GetName(), k.Param.KernelId)
-	_, err := protdevsrv.MakeProtDevSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, sp.BOOT, ks)
+	_, err := sigmasrv.MakeSigmaSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, sp.BOOT, ks)
 	if err != nil {
 		return err
 	}

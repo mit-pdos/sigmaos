@@ -11,7 +11,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
 )
@@ -19,7 +19,7 @@ import (
 type UprocSrv struct {
 	mu       sync.Mutex
 	ch       chan struct{}
-	pds      *protdevsrv.ProtDevSrv
+	pds      *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
 	net      string
@@ -31,14 +31,14 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	ip, _ := container.LocalIP()
 	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, up, os.Environ(), ip)
 
-	var pds *protdevsrv.ProtDevSrv
+	var pds *sigmasrv.SigmaSrv
 	var err error
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		pds, err = protdevsrv.MakeProtDevSrv(pn, ups, sp.UPROCDREL)
+		pds, err = sigmasrv.MakeSigmaSrv(pn, ups, sp.UPROCDREL)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		pds, err = protdevsrv.MakeProtDevSrvPort("", up, sp.UPROCDREL, ups)
+		pds, err = sigmasrv.MakeSigmaSrvPort("", up, sp.UPROCDREL, ups)
 	}
 	if err != nil {
 		return err

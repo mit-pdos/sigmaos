@@ -9,7 +9,7 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -34,7 +34,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, sp.SOCIAL_NETWORK_GRAPH, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, sp.SOCIAL_NETWORK_GRAPH, public)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strings"
@@ -36,7 +36,7 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
 	if err != nil {
 		return err
 	}

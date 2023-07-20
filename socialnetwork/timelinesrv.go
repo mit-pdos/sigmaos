@@ -9,7 +9,7 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -33,7 +33,7 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
 	if err != nil {
 		return err
 	}

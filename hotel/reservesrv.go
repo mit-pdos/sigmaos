@@ -16,7 +16,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
 )
@@ -88,7 +88,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(HOTELRESERVE, r, HOTELRESERVE, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, HOTELRESERVE, public)
 	if err != nil {
 		return err
 	}

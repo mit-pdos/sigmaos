@@ -1,4 +1,4 @@
-package protdevsrv
+package sigmasrv
 
 import (
 	"reflect"
@@ -17,16 +17,16 @@ import (
 )
 
 type rpcDev struct {
-	pds *ProtDevSrv
+	pds *SigmaSrv
 }
 
-func mkRpcDev(pds *ProtDevSrv) *rpcDev {
+func mkRpcDev(pds *SigmaSrv) *rpcDev {
 	return &rpcDev{pds}
 }
 
 type rpcSession struct {
 	*inode.Inode
-	pds *ProtDevSrv
+	pds *SigmaSrv
 }
 
 func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {

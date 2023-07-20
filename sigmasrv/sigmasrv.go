@@ -1,4 +1,4 @@
-package protdevsrv
+package sigmasrv
 
 import (
 	"log"
@@ -32,53 +32,53 @@ type service struct {
 	methods map[string]*method
 }
 
-type ProtDevSrv struct {
+type SigmaSrv struct {
 	*memfssrv.MemFs
 	sti  *protdev.StatInfo
 	svc  *service
 	lsrv *LeaseSrv
 }
 
-// Make a protdevsrv and memfs and publish srv at fn
-func MakeProtDevSrv(fn string, svci any, uname sp.Tuname) (*ProtDevSrv, error) {
+// Make a sigmasrv and memfs and publish srv at fn
+func MakeSigmaSrv(fn string, svci any, uname sp.Tuname) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFs(fn, uname)
 	if error != nil {
-		db.DFatalf("MakeProtDevSrv %v err %v\n", fn, error)
+		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, error)
 	}
 	// XXX pull "rpc" upto here
-	return MakeProtDevSrvMemFs(mfs, "", svci)
+	return MakeSigmaSrvMemFs(mfs, "", svci)
 }
 
-func MakeProtDevSrvPublic(fn string, svci any, uname sp.Tuname, public bool) (*ProtDevSrv, error) {
+func MakeSigmaSrvPublic(fn string, svci any, uname sp.Tuname, public bool) (*SigmaSrv, error) {
 	if public {
 		mfs, error := memfssrv.MakeMemFsPublic(fn, uname)
 		if error != nil {
 			return nil, error
 		}
-		return MakeProtDevSrvMemFs(mfs, "", svci)
+		return MakeSigmaSrvMemFs(mfs, "", svci)
 	} else {
-		return MakeProtDevSrv(fn, svci, uname)
+		return MakeSigmaSrv(fn, svci, uname)
 	}
 }
 
-func MakeProtDevSrvPort(fn, port string, uname sp.Tuname, svci any) (*ProtDevSrv, error) {
+func MakeSigmaSrvPort(fn, port string, uname sp.Tuname, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, uname)
 	if error != nil {
-		db.DFatalf("MakeProtDevSrvPort %v err %v\n", fn, error)
+		db.DFatalf("MakeSigmaSrvPort %v err %v\n", fn, error)
 	}
-	return MakeProtDevSrvMemFs(mfs, "", svci)
+	return MakeSigmaSrvMemFs(mfs, "", svci)
 }
 
-func MakeProtDevSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci any) (*ProtDevSrv, error) {
+func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if error != nil {
-		db.DFatalf("MakeProtDevSrvClnt %v err %v\n", fn, error)
+		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
 	}
 	return MakeRPCSrv(mfs, "", svci)
 }
 
-// Make a ProtDevSrv with protdev at pn in mfs
-func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
+// Make a SigmaSrv with protdev at pn in mfs
+func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*SigmaSrv, error) {
 	psd, err := MakeRPCSrv(mfs, pn, svci)
 	if err != nil {
 		return nil, err
@@ -89,9 +89,9 @@ func MakeProtDevSrvMemFs(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv,
 	return psd, nil
 }
 
-// Make a ProtDevSrv with protdev at pn in mfs (without a lease server)
-func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
-	psd := &ProtDevSrv{MemFs: mfs}
+// Make a SigmaSrv with protdev at pn in mfs (without a lease server)
+func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*SigmaSrv, error) {
+	psd := &SigmaSrv{MemFs: mfs}
 	if svci != nil {
 		psd.mkService(svci)
 		rd := mkRpcDev(psd)
@@ -107,7 +107,7 @@ func MakeRPCSrv(mfs *memfssrv.MemFs, pn string, svci any) (*ProtDevSrv, error) {
 	return psd, nil
 }
 
-func (psd *ProtDevSrv) NewLeaseSrv() error {
+func (psd *SigmaSrv) NewLeaseSrv() error {
 	db.DPrintf(db.PROTDEVSRV, "NewLeaseSrv\n")
 	lsrv := newLeaseSrv(psd.MemFs)
 	if _, err := psd.Create(sp.LEASESRV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
@@ -120,11 +120,11 @@ func (psd *ProtDevSrv) NewLeaseSrv() error {
 	return nil
 }
 
-func (psd *ProtDevSrv) QueueLen() int64 {
+func (psd *SigmaSrv) QueueLen() int64 {
 	return psd.MemFs.QueueLen()
 }
 
-func (psd *ProtDevSrv) mkService(svci any) {
+func (psd *SigmaSrv) mkService(svci any) {
 	svc := &service{}
 	svc.typ = reflect.TypeOf(svci)
 	svc.svc = reflect.ValueOf(svci)
@@ -152,7 +152,7 @@ func (psd *ProtDevSrv) mkService(svci any) {
 	psd.svc = svc
 }
 
-func (psd *ProtDevSrv) RunServer() error {
+func (psd *SigmaSrv) RunServer() error {
 	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
 	psd.MemFs.Serve()
 	if psd.lsrv != nil {

@@ -6,7 +6,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/protdevclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -31,7 +31,7 @@ type TextSrv struct {
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, sp.SOCIAL_NETWORK_TEXT, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, sp.SOCIAL_NETWORK_TEXT, public)
 	if err != nil {
 		return err
 	}

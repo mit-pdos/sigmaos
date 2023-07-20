@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/k8sutil/proto"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,9 +24,9 @@ type scraper struct {
 
 func RunK8sStatScraper() error {
 	s := newScraper()
-	pds, err := protdevsrv.MakeProtDevSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
+	pds, err := sigmasrv.MakeSigmaSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
 	if err != nil {
-		db.DFatalf("Error MakeProtDevSrv: %v", err)
+		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
 
 	return pds.RunServer()

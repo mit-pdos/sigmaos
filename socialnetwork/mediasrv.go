@@ -8,7 +8,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -35,7 +35,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
 	if err != nil {
 		return err
 	}

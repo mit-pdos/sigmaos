@@ -13,7 +13,7 @@ import (
 	leaseproto "sigmaos/lease/proto"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -25,12 +25,12 @@ type LeaseSrv struct {
 	lc clientv3.Lease
 }
 
-func newLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*protdevsrv.ProtDevSrv, error) {
+func newLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*sigmasrv.SigmaSrv, error) {
 	db.DPrintf(db.LEASESRV, "NewLeaseSrv: %v\n", svc)
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
 	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)
-	pds, err := protdevsrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
+	pds, err := sigmasrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
 	if err != nil {
 		return nil, err
 	}

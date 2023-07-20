@@ -8,7 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	"sigmaos/protdevsrv"
+	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -31,7 +31,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	pds, err := protdevsrv.MakeProtDevSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, sp.SOCIAL_NETWORK_POST, public)
+	pds, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, sp.SOCIAL_NETWORK_POST, public)
 	if err != nil {
 		return err
 	}

@@ -5,16 +5,16 @@ import (
 
 	"sigmaos/dbd/proto"
 	"sigmaos/fslib"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 )
 
 type DbClnt struct {
-	pdc *protdevclnt.ProtDevClnt
+	pdc *rpcclnt.RPCClnt
 }
 
 func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, fn)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, fn)
 	if err != nil {
 		return nil, err
 	}

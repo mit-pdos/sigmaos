@@ -4,22 +4,22 @@ import (
 	"fmt"
 
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
 
 type UprocdClnt struct {
 	pid proc.Tpid
-	*protdevclnt.ProtDevClnt
+	*rpcclnt.RPCClnt
 	realm sp.Trealm
 	ptype proc.Ttype
 	share Tshare
 }
 
-func MakeUprocdClnt(pid proc.Tpid, pdc *protdevclnt.ProtDevClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
+func MakeUprocdClnt(pid proc.Tpid, pdc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
 	return &UprocdClnt{
 		pid:         pid,
-		ProtDevClnt: pdc,
+		RPCClnt: pdc,
 		realm:       realm,
 		ptype:       ptype,
 		share:       0,

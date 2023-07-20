@@ -7,7 +7,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -25,8 +25,8 @@ const (
 
 type HomeSrv struct {
 	cachec *cacheclnt.CacheClnt
-	postc  *protdevclnt.ProtDevClnt
-	graphc *protdevclnt.ProtDevClnt
+	postc  *rpcclnt.RPCClnt
+	graphc *rpcclnt.RPCClnt
 }
 
 func RunHomeSrv(public bool, jobname string) error {
@@ -42,12 +42,12 @@ func RunHomeSrv(public bool, jobname string) error {
 		return err
 	}
 	hsrv.cachec = cachec
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	hsrv.graphc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}

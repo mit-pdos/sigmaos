@@ -7,16 +7,16 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/mongod/proto"
 	"sigmaos/fslib"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 )
 
 type MongoClnt struct {
-	pdc *protdevclnt.ProtDevClnt
+	pdc *rpcclnt.RPCClnt
 }
 
 func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
 	if err != nil {
 		return nil, err
 	}

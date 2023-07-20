@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/protdev"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/reader"
 	"sigmaos/shardsvcmgr"
 )
@@ -19,7 +19,7 @@ type ShardWatch func(string, int, error)
 type ShardSvcClnt struct {
 	sync.Mutex
 	fsls  []*fslib.FsLib
-	clnts []*protdevclnt.ProtDevClnt
+	clnts []*rpcclnt.RPCClnt
 	pn    string
 	sw    ShardWatch
 	rdr   *reader.Reader
@@ -36,7 +36,7 @@ func MkShardSvcClnt(fsls []*fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcCln
 		return nil, err
 	}
 	n := len(sts)
-	ssc.clnts = make([]*protdevclnt.ProtDevClnt, 0)
+	ssc.clnts = make([]*rpcclnt.RPCClnt, 0)
 	for i := 0; i < n; i++ {
 		if err := ssc.addClnt(i); err != nil {
 			return nil, err
@@ -70,7 +70,7 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 	defer ssc.Unlock()
 
 	sn := ssc.pn + shardsvcmgr.Shard(i)
-	pdc, err := protdevclnt.MkProtDevClnt(ssc.fsls, sn)
+	pdc, err := rpcclnt.MkRPCClnt(ssc.fsls, sn)
 	if err != nil {
 		return err
 	}

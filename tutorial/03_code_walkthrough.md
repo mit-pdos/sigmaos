@@ -31,7 +31,7 @@ a subset of these libraries:
   - `leaderclnt`: This library uses `electclnt` and `epochclnt` to implement
     leader election, and fence directories and services with the leader's
     epoch.
-  - `protdevclnt`: This library implements general-purpose RPCs on top of
+  - `rpcclnt`: This library implements general-purpose RPCs on top of
     SigmaOS. RPCs have fewer guarantees (e.g., no in-order delivery guarantees)
     but are more expressive and more performant than general SigmaOS
     operations.
@@ -150,7 +150,7 @@ for it to exit. You will need to complete the following steps:
 
 ### Exercise 5: Set up a RPC server. 
 In this exercise, you will familiarize with the application layer APIs of SigmOS, 
-specifically `protdevclnt` and `sigmasrv`. In order to do so, you will learn 
+specifically `rpcclnt` and `sigmasrv`. In order to do so, you will learn 
 how to set up a basic RPC server, and explore existing utilities that provide 
 database and cache proxies. 
   - [ ] Navigate to the `example_echo_server` directory. Check the files and 
@@ -163,7 +163,7 @@ database and cache proxies.
 	of the environment variable file to turn on/off logging for different modules. 
 	After finishing test and logging, you may run `stop.sh` to clear up.
   - [ ] Try to figure out how custome RPCs work. You may start with the `RPC` method
-	in `protdevclnt.ProtDevClnt` and will eventually end up in `protclnt` and
+	in `rpcclnt.RPCClnt` and will eventually end up in `protclnt` and
 	`netclnt` as in the previous exercises. On the server side, check how 
 	`sigmasrv.SigmaSrv` is implemented and eventually you will reach `sesssrv`
 	and `netsrv` 

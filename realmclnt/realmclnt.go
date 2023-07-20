@@ -2,19 +2,19 @@ package realmclnt
 
 import (
 	"sigmaos/fslib"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/realmsrv/proto"
 	sp "sigmaos/sigmap"
 )
 
 type RealmClnt struct {
 	*fslib.FsLib
-	pdc *protdevclnt.ProtDevClnt
+	pdc *rpcclnt.RPCClnt
 }
 
 func MakeRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	rc := &RealmClnt{FsLib: fsl}
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
 	if err != nil {
 		return nil, err
 	}

@@ -11,14 +11,14 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
 type Search struct {
-	ratec  *protdevclnt.ProtDevClnt
-	geoc   *protdevclnt.ProtDevClnt
+	ratec  *rpcclnt.RPCClnt
+	geoc   *rpcclnt.RPCClnt
 	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
@@ -31,12 +31,12 @@ func RunSearchSrv(n string, public bool) error {
 		return err
 	}
 	fsls := MakeFsLibs(HOTELSEARCH)
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, HOTELRATE)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELGEO)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}

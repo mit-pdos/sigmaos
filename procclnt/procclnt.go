@@ -15,7 +15,7 @@ import (
 	"sigmaos/kproc"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	schedd "sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
@@ -194,7 +194,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 	return serr.MkErr(serr.TErrUnreachable, kernelId)
 }
 
-func (clnt *ProcClnt) getScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
+func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
 	pdc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
 	if err != nil {
 		return nil, err

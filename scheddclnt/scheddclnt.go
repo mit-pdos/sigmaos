@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -21,7 +21,7 @@ type ScheddClnt struct {
 	done int32
 	*fslib.FsLib
 	sync.Mutex
-	schedds         map[string]*protdevclnt.ProtDevClnt
+	schedds         map[string]*rpcclnt.RPCClnt
 	scheddKernelIds []string
 	lastUpdate      time.Time
 	burstOffset     int
@@ -36,7 +36,7 @@ func (t Tload) String() string {
 func MakeScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 	return &ScheddClnt{
 		FsLib:           fsl,
-		schedds:         make(map[string]*protdevclnt.ProtDevClnt),
+		schedds:         make(map[string]*rpcclnt.RPCClnt),
 		scheddKernelIds: make([]string, 0),
 	}
 }
@@ -206,17 +206,17 @@ func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt, error) {
+func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
 	sdc.Lock()
 	defer sdc.Unlock()
 
-	var pdc *protdevclnt.ProtDevClnt
+	var pdc *rpcclnt.RPCClnt
 	var ok bool
 	if pdc, ok = sdc.schedds[kernelId]; !ok {
 		var err error
-		pdc, err = protdevclnt.MkProtDevClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
+		pdc, err = rpcclnt.MkRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkProtDevClnt[schedd:%v]: %v", kernelId, err)
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkRPCClnt[schedd:%v]: %v", kernelId, err)
 			return nil, err
 		}
 		sdc.schedds[kernelId] = pdc
@@ -224,7 +224,7 @@ func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*protdevclnt.ProtDevClnt,
 	return pdc, nil
 }
 
-func (sdc *ScheddClnt) RegisterLocalClnt(pdc *protdevclnt.ProtDevClnt) error {
+func (sdc *ScheddClnt) RegisterLocalClnt(pdc *rpcclnt.RPCClnt) error {
 	sdc.Lock()
 	defer sdc.Unlock()
 

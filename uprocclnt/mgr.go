@@ -11,7 +11,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
@@ -95,7 +95,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 			return nil, err
 		}
 		pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, realm.String(), ptype.String())
-		rc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{updm.fsl}, pn)
+		rc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{updm.fsl}, pn)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func (updm *UprocdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 
 // Return the CPU utilization of a realm.
 func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
-	// Get the protdevclnts relevant to this realm
+	// Get the rpcclnts relevant to this realm
 	updm.mu.Lock()
 	var pdcs []*UprocdClnt
 	if m, ok := updm.pdcms[realm]; ok {

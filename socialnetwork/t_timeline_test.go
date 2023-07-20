@@ -7,12 +7,12 @@ import (
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"github.com/stretchr/testify/assert"
 	"fmt"
 )
 
-func createNPosts(t *testing.T, pdc *protdevclnt.ProtDevClnt, N int, userid int64) []*proto.Post {
+func createNPosts(t *testing.T, pdc *rpcclnt.RPCClnt, N int, userid int64) []*proto.Post {
 	posts := make([]*proto.Post, N)
 	for i := 0; i < N; i++ {
 		posts[i] = &proto.Post{
@@ -32,7 +32,7 @@ func createNPosts(t *testing.T, pdc *protdevclnt.ProtDevClnt, N int, userid int6
 	return posts
 }
 
-func writeTimeline(t *testing.T, pdc *protdevclnt.ProtDevClnt, post *proto.Post, userid int64) {
+func writeTimeline(t *testing.T, pdc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
 	arg_write := proto.WriteTimelineRequest{
 		Userid: userid, Postid: post.Postid, Timestamp: post.Timestamp}
 	res_write := proto.WriteTimelineResponse{}
@@ -40,7 +40,7 @@ func writeTimeline(t *testing.T, pdc *protdevclnt.ProtDevClnt, post *proto.Post,
 	assert.Equal(t, "OK", res_write.Ok)
 }
 
-func writeHomeTimeline(t *testing.T, pdc *protdevclnt.ProtDevClnt, post *proto.Post, userid int64) {
+func writeHomeTimeline(t *testing.T, pdc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
 	mentionids := make([]int64, 0)
 	for _, mention := range post.Usermentions {
 		mentionids = append(mentionids, mention)
@@ -61,9 +61,9 @@ func TestTimeline(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
-	tpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_TIMELINE)
+	tpdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_TIMELINE)
 	assert.Nil(t, err)
-	ppdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
+	ppdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err)
 
 	// create and store N posts
@@ -112,9 +112,9 @@ func TestHome(t *testing.T) {
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
-	hpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_HOME)
+	hpdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_HOME)
 	assert.Nil(t, err)
-	ppdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
+	ppdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err)
 
 	// create and store N posts

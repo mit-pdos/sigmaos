@@ -8,7 +8,7 @@ import (
 	sn "sigmaos/socialnetwork"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user
@@ -88,7 +88,7 @@ func TestGraph(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// get follower and followee list
@@ -161,8 +161,8 @@ func TestUserAndGraph(t *testing.T) {
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
-	updc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
-	gpdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
+	updc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
+	gpdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// Create two users Alice and Bob

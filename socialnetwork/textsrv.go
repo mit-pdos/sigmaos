@@ -5,7 +5,7 @@ import (
 	"regexp"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -24,8 +24,8 @@ var mentionRegex = regexp.MustCompile("@[a-zA-Z0-9-_]+")
 var urlRegex = regexp.MustCompile("(http://|https://)([a-zA-Z0-9_!~*'().&=+$%-/]+)")
 
 type TextSrv struct {
-	userc *protdevclnt.ProtDevClnt
-	urlc  *protdevclnt.ProtDevClnt
+	userc *rpcclnt.RPCClnt
+	urlc  *rpcclnt.RPCClnt
 }
 
 func RunTextSrv(public bool, jobname string) error {
@@ -36,12 +36,12 @@ func RunTextSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT)
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_URL)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}

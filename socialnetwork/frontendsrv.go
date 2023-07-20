@@ -10,7 +10,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -26,11 +26,11 @@ type FrontEnd struct {
 	record   bool
 	job      string
 	tracer   *tracing.Tracer
-	userc    *protdevclnt.ProtDevClnt
-	graphc   *protdevclnt.ProtDevClnt
-	tlc      *protdevclnt.ProtDevClnt
-	homec    *protdevclnt.ProtDevClnt
-	composec *protdevclnt.ProtDevClnt
+	userc    *rpcclnt.RPCClnt
+	graphc   *rpcclnt.RPCClnt
+	tlc      *rpcclnt.RPCClnt
+	homec    *rpcclnt.RPCClnt
+	composec *rpcclnt.RPCClnt
 	pc       *portclnt.PortClnt
 	uCounter *Counter
 	iCounter *Counter
@@ -58,27 +58,27 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	frontend.SigmaClnt = sc
 	fsls := MakeFsLibs(SERVER_NAME)
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	frontend.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	frontend.graphc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	frontend.tlc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_HOME)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	frontend.homec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_COMPOSE)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}

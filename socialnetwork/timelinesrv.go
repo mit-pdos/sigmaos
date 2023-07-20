@@ -8,7 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -27,7 +27,7 @@ const (
 type TimelineSrv struct {
 	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
-	postc  *protdevclnt.ProtDevClnt
+	postc  *rpcclnt.RPCClnt
 }
 
 func RunTimelineSrv(public bool, jobname string) error {
@@ -49,7 +49,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 		return err
 	}
 	tlsrv.cachec = cachec
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}

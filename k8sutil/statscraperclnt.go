@@ -6,20 +6,20 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/k8sutil/proto"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 type StatScraperClnt struct {
 	*sigmaclnt.SigmaClnt
-	pdcs map[string]*protdevclnt.ProtDevClnt
+	pdcs map[string]*rpcclnt.RPCClnt
 }
 
 func NewStatScraperClnt(sc *sigmaclnt.SigmaClnt) *StatScraperClnt {
 	return &StatScraperClnt{
 		SigmaClnt: sc,
-		pdcs:      make(map[string]*protdevclnt.ProtDevClnt),
+		pdcs:      make(map[string]*rpcclnt.RPCClnt),
 	}
 }
 
@@ -31,9 +31,9 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
 		if _, ok := clnt.pdcs[s]; !ok {
-			pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
+			pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
-				db.DFatalf("Error MakeProtDevClnt: %v", err)
+				db.DFatalf("Error MakeRPCClnt: %v", err)
 			}
 			clnt.pdcs[s] = pdc
 		}

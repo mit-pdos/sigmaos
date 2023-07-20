@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/hotel/proto"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 )
 
 func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
@@ -74,7 +74,7 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	return wc.Reserve(in_date_str, out_date_str, lat, lon, hotelid, user, cust_name, pw, num)
 }
 
-func RandCheckAvailabilityReq(pdc *protdevclnt.ProtDevClnt, r *rand.Rand) error {
+func RandCheckAvailabilityReq(pdc *rpcclnt.RPCClnt, r *rand.Rand) error {
 	in_date := r.Intn(14) + 9
 	out_date := in_date + r.Intn(5) + 1
 	in_date_str := fmt.Sprintf("2015-04-%d", in_date)

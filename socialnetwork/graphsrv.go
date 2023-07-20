@@ -8,7 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -28,7 +28,7 @@ const (
 type GraphSrv struct {
 	mongoc *mongoclnt.MongoClnt
 	cachec *cacheclnt.CacheClnt
-	userc  *protdevclnt.ProtDevClnt
+	userc  *rpcclnt.RPCClnt
 }
 
 func RunGraphSrv(public bool, jobname string) error {
@@ -52,7 +52,7 @@ func RunGraphSrv(public bool, jobname string) error {
 		return err
 	}
 	gsrv.cachec = cachec
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}

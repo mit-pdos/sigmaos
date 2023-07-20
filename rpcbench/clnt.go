@@ -3,19 +3,19 @@ package rpcbench
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/rpcbench/proto"
 	"sigmaos/sigmaclnt"
 	"sigmaos/tracing"
 )
 
 type Clnt struct {
-	c *protdevclnt.ProtDevClnt
+	c *rpcclnt.RPCClnt
 	t *tracing.Tracer
 }
 
 func MakeClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{sc.FsLib}, path)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
 	if err != nil {
 		db.DFatalf("Error MakeClnt: %v", err)
 	}

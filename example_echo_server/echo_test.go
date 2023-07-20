@@ -7,7 +7,7 @@ import (
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/rand"
 	"sigmaos/test"
 	"strconv"
@@ -62,7 +62,7 @@ func TestEcho(t *testing.T) {
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}

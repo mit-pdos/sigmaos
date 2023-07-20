@@ -1,4 +1,4 @@
-package protdevclnt
+package rpcclnt
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type ProtDevClnt struct {
+type RPCClnt struct {
 	fsls []*fslib.FsLib
 	fds  []int
 	si   *protdev.StatInfo
@@ -26,8 +26,8 @@ type ProtDevClnt struct {
 	idx  int32
 }
 
-func MkProtDevClnt(fsls []*fslib.FsLib, pn string) (*ProtDevClnt, error) {
-	pdc := &ProtDevClnt{
+func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
+	pdc := &RPCClnt{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
 		si:   protdev.MakeStatInfo(),
@@ -48,7 +48,7 @@ func MkProtDevClnt(fsls []*fslib.FsLib, pn string) (*ProtDevClnt, error) {
 	return pdc, nil
 }
 
-func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
+func (pdc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{}
 	req.Method = method
 	req.Args = a
@@ -75,7 +75,7 @@ func (pdc *ProtDevClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	return rep, nil
 }
 
-func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+func (pdc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
 	b, err := proto.Marshal(arg)
 	if err != nil {
 		return err
@@ -93,11 +93,11 @@ func (pdc *ProtDevClnt) RPC(method string, arg proto.Message, res proto.Message)
 	return nil
 }
 
-func (pdc *ProtDevClnt) StatsClnt() map[string]*protdev.MethodStat {
+func (pdc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {
 	return pdc.si.Stats()
 }
 
-func (pdc *ProtDevClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
+func (pdc *RPCClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
 	stats := &protdev.SigmaRPCStats{}
 	if err := pdc.fsls[0].GetFileJson(path.Join(pdc.pn, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")

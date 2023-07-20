@@ -5,16 +5,16 @@ import (
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 )
 
 type KernelClnt struct {
 	fsl *fslib.FsLib
-	pdc *protdevclnt.ProtDevClnt
+	pdc *rpcclnt.RPCClnt
 }
 
 func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{fsl}, pn)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}

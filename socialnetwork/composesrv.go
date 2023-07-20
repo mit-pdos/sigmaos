@@ -6,7 +6,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
@@ -23,10 +23,10 @@ const (
 )
 
 type ComposeSrv struct {
-	textc  *protdevclnt.ProtDevClnt
-	postc  *protdevclnt.ProtDevClnt
-	tlc    *protdevclnt.ProtDevClnt
-	homec  *protdevclnt.ProtDevClnt
+	textc  *rpcclnt.RPCClnt
+	postc  *rpcclnt.RPCClnt
+	tlc    *rpcclnt.RPCClnt
+	homec  *rpcclnt.RPCClnt
 	sid    int32
 	pcount int32
 	mu     sync.Mutex
@@ -41,22 +41,22 @@ func RunComposeSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
 	csrv.textc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	csrv.postc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	csrv.tlc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, sp.SOCIAL_NETWORK_HOME)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
@@ -28,12 +28,12 @@ type Www struct {
 	record   bool
 	job      string
 	tracer   *tracing.Tracer
-	userc    *protdevclnt.ProtDevClnt
-	searchc  *protdevclnt.ProtDevClnt
-	reservec *protdevclnt.ProtDevClnt
-	profc    *protdevclnt.ProtDevClnt
-	recc     *protdevclnt.ProtDevClnt
-	geoc     *protdevclnt.ProtDevClnt
+	userc    *rpcclnt.RPCClnt
+	searchc  *rpcclnt.RPCClnt
+	reservec *rpcclnt.RPCClnt
+	profc    *rpcclnt.RPCClnt
+	recc     *rpcclnt.RPCClnt
+	geoc     *rpcclnt.RPCClnt
 	pc       *portclnt.PortClnt
 }
 
@@ -48,32 +48,32 @@ func RunWww(job string, public bool) error {
 	www.SigmaClnt = sc
 
 	fsls := MakeFsLibs("hotel-wwwd")
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, HOTELUSER)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELSEARCH)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELPROF)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELRESERVE)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELREC)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = pdc
-	pdc, err = protdevclnt.MkProtDevClnt(fsls, HOTELGEO)
+	pdc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}

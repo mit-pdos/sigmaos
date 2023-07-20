@@ -16,7 +16,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/rpcbench"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
@@ -685,7 +685,7 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 }
 
 // XXX Messy, get rid of this.
-var reservec *protdevclnt.ProtDevClnt
+var reservec *rpcclnt.RPCClnt
 
 func TestHotelSigmaosReserve(t *testing.T) {
 	rootts := test.MakeTstateWithRealms(t)

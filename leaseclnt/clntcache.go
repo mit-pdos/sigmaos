@@ -9,23 +9,23 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/pathclnt"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/serr"
 )
 
 type ClntCache struct {
 	sync.Mutex
 	fsl *fslib.FsLib
-	cc  map[string]*protdevclnt.ProtDevClnt
+	cc  map[string]*rpcclnt.RPCClnt
 }
 
 func NewClntCache(fsl *fslib.FsLib) *ClntCache {
-	return &ClntCache{fsl: fsl, cc: make(map[string]*protdevclnt.ProtDevClnt)}
+	return &ClntCache{fsl: fsl, cc: make(map[string]*rpcclnt.RPCClnt)}
 }
 
-// Note: several threads may call MkProtDevClnt for same pn,
+// Note: several threads may call MkRPCClnt for same pn,
 // overwriting the pdc of the last thread that called NewClnt.
-func (cc *ClntCache) Lookup(pn string) (*protdevclnt.ProtDevClnt, error) {
+func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
 	cc.Lock()
 	defer cc.Unlock()
 	pdc, ok := cc.cc[pn]
@@ -33,7 +33,7 @@ func (cc *ClntCache) Lookup(pn string) (*protdevclnt.ProtDevClnt, error) {
 		return pdc, nil
 	}
 	cc.Unlock()
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{cc.fsl}, pn)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err

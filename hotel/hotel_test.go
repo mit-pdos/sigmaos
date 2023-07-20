@@ -19,7 +19,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdev"
-	"sigmaos/protdevclnt"
+	"sigmaos/rpcclnt"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -94,7 +94,7 @@ func (ts *Tstate) stop() {
 
 func TestGeoSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
@@ -111,7 +111,7 @@ func TestGeoSingle(t *testing.T) {
 
 func TestRateSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
@@ -131,7 +131,7 @@ func TestRateSingle(t *testing.T) {
 
 func TestRecSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
 		Require: "dis",
@@ -149,7 +149,7 @@ func TestRecSingle(t *testing.T) {
 
 func TestUserSingle(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
@@ -165,7 +165,7 @@ func TestUserSingle(t *testing.T) {
 
 func TestProfile(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
@@ -186,7 +186,7 @@ func TestProfile(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -208,7 +208,7 @@ func TestCheck(t *testing.T) {
 
 func TestReserve(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -247,7 +247,7 @@ func TestQueryDev(t *testing.T) {
 
 func TestSingleSearch(t *testing.T) {
 	ts := makeTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,

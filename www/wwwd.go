@@ -83,7 +83,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.ssrv, err = sigmasrv.MakeSigmaSrv(MemFsPath(job), nil, WWWD)
+	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), WWWD)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}

@@ -66,6 +66,16 @@ func MakeSigmaSrvPublic(fn string, svci any, uname sp.Tuname, public bool) (*Sig
 	}
 }
 
+// Make a sigmasrv and memfs and publish srv at fn
+func MakeSigmaSrvNoRPC(fn string, uname sp.Tuname) (*SigmaSrv, error) {
+	mfs, error := memfssrv.MakeMemFs(fn, uname)
+	if error != nil {
+		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, error)
+	}
+	// XXX pull "rpc" upto here
+	return MakeSigmaSrvMemFs(mfs, "", nil)
+}
+
 func MakeSigmaSrvPort(fn, port string, uname sp.Tuname, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, uname)
 	if error != nil {
@@ -80,6 +90,14 @@ func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci 
 		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
 	}
 	return MakeRPCSrv(mfs, "", svci)
+}
+
+func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname) (*SigmaSrv, error) {
+	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
+	if error != nil {
+		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
+	}
+	return MakeRPCSrv(mfs, "", nil)
 }
 
 // Make a SigmaSrv with protdev at pn in mfs

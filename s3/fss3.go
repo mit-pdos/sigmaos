@@ -11,8 +11,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 var fss3 *Fss3
@@ -25,7 +25,7 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	psd, err := sigmasrv.MakeSigmaSrv(sp.S3, nil, sp.S3REL)
+	psd, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, sp.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}

@@ -15,7 +15,12 @@ import (
 )
 
 //
-// RPC server, which borrows from go's RPC dispatch
+// Many SigmaOS servers use SigmaSrv to create and run servers.  A server
+// typically consists of a MemFS (an in-memory file system accessed
+// through sigmap), one or more RPC end points, including an end point
+// for leasesrv (to manage leases).  Sigmasrv creates the end-points
+// in the memfs. Some servers don't use SigmaSrv and directly interact
+// with SessSrv (e.g., ux and knamed/named).
 //
 
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()

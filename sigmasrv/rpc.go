@@ -16,6 +16,10 @@ import (
 	"sigmaos/sessp"
 )
 
+//
+// RPC server, which borrows from go's RPC dispatch
+//
+
 type rpcDev struct {
 	ssrv *SigmaSrv
 }

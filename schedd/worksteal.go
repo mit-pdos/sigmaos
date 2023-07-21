@@ -24,7 +24,7 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 		// XXX FK: just return false?
 		db.DFatalf("Error make getScheddClnt: %v", err)
 	}
-	if err := rpcc.RPC("Procd.StealProc", sreq, sres); err != nil {
+	if err := rpcc.RPC("Schedd.StealProc", sreq, sres); err != nil {
 		// XXX FK: just return false?
 		db.DFatalf("Error StealProc schedd: %v", err)
 	}

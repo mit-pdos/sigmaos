@@ -53,7 +53,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	dot := strings.LastIndex(name, ".")
 	method := name[dot+1:]
 	tname := name[:dot]
-	db.DPrintf(db.PROTDEVSRV, "WriteRead svc %v name %v\n", tname, method)
+	db.DPrintf(db.SIGMASRV, "WriteRead svc %v name %v\n", tname, method)
 
 	rep = rpc.ssrv.svc.Lookup(tname).dispatch(ctx, name, &req)
 	t := time.Since(start).Microseconds()
@@ -80,7 +80,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 			return r
 		}
 
-		db.DPrintf(db.PROTDEVSRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
+		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 
 		// allocate space for the reply.
 		replyType := method.replyType

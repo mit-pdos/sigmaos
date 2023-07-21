@@ -119,7 +119,7 @@ func makeSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 // Create the rpc server directory in memfs and register the RPC
 // service svci to the RPC server.
 func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
-	db.DPrintf(db.PROTDEVSRV, "makeRPCSrv: %v\n", svci)
+	db.DPrintf(db.SIGMASRV, "makeRPCSrv: %v\n", svci)
 	if _, err := ssrv.Create(protdev.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func structName(svci any) string {
 }
 
 func (ssrv *SigmaSrv) RunServer() error {
-	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
 	ssrv.MemFs.Serve()
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
@@ -191,7 +191,7 @@ func (ssrv *SigmaSrv) RunServer() error {
 }
 
 func (ssrv *SigmaSrv) Exit(status *proc.Status) error {
-	db.DPrintf(db.PROTDEVSRV, "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}

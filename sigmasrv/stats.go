@@ -35,7 +35,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQv
 		return nil, nil
 	}
 
-	db.DPrintf(db.PROTDEVSRV, "Read stats: %v\n", std.si)
+	db.DPrintf(db.SIGMASRV, "Read stats: %v\n", std.si)
 	st := &protdev.SigmaRPCStats{}
 	st.SigmapStat = std.mfs.GetStats().StatsCopy()
 	st.RpcStat = std.si.Stats()
@@ -51,6 +51,6 @@ func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion
 }
 
 func (std *statsDev) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	db.DPrintf(db.PROTDEVSRV, "Close stats\n")
+	db.DPrintf(db.SIGMASRV, "Close stats\n")
 	return nil
 }

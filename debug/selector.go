@@ -166,7 +166,7 @@ const (
 	OVERLAYDIR           = "OVERLAYDIR"
 	CLONEDEV             = "CLONEDEV"
 	SESSDEV              = "SESSDEV"
-	PROTDEVSRV           = "PROTDEVSRV"
+	SIGMASRV             = "SIGMASRV"
 )
 
 // Client-side Infrastructure

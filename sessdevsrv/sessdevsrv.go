@@ -22,6 +22,7 @@ type SessDev struct {
 
 // Make a SessDev in mfs at pn
 func MkSessDev(mfs *memfssrv.MemFs, pn string, mks MkSessionF, wctl clonedev.WriteCtlF) error {
+	db.DPrintf(db.SESSDEV, "MkSessDev: %v\n", pn)
 	fd := &SessDev{mfs, pn, mks}
 	if err := clonedev.MkCloneDev(mfs, pn, fd.mkSession, fd.detachSession, wctl); err != nil {
 		return err

@@ -3,10 +3,8 @@ package named
 import (
 	"fmt"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
 )
 
@@ -33,20 +31,9 @@ func (nd *Named) startLeader() error {
 		return err
 	}
 
-	ip, err := container.LocalIP()
-	if err != nil {
-		return err
-	}
-
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 
-	root := rootDir(fs, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", nd.SigmaClnt, nd.attach, nd.detach, nil)
-	if srv == nil {
-		return fmt.Errorf("BootSrv err %v\n", err)
-	}
-	nd.SessSrv = srv
+	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, nd.elect.Key())
 
-	db.DPrintf(db.NAMED, "leader %v %v %v\n", nd.realm, srv.MyAddr(), nd.elect.Key())
 	return nil
 }

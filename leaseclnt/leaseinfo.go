@@ -2,7 +2,6 @@ package leaseclnt
 
 import (
 	"fmt"
-	"path"
 	"sync"
 	"time"
 
@@ -32,7 +31,8 @@ func (li *LeaseInfo) String() string {
 
 func (li *LeaseInfo) extendLease() error {
 	var res leaseproto.ExtendResult
-	return li.lmc.cc.RPC(path.Join(li.srv, sp.LEASESRV), "LeaseSrv.Extend", &leaseproto.ExtendRequest{LeaseId: uint64(li.lid)}, &res)
+	db.DPrintf(db.LEASECLNT, "extend lease %v %v\n", li.srv, li.lid)
+	return li.lmc.cc.RPC(li.srv, "LeaseSrv.Extend", &leaseproto.ExtendRequest{LeaseId: uint64(li.lid)}, &res)
 }
 
 func (li *LeaseInfo) extender() {
@@ -62,6 +62,6 @@ func (li *LeaseInfo) End() error {
 	li.ch <- struct{}{}
 	db.DPrintf(db.LEASECLNT, "%v: End lid %v\n", proc.GetPid(), li)
 	var res leaseproto.EndResult
-	return li.lmc.cc.RPC(path.Join(li.srv, sp.LEASESRV), "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(li.lid)}, &res)
+	return li.lmc.cc.RPC(li.srv, "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(li.lid)}, &res)
 
 }

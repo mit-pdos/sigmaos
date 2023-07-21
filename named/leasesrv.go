@@ -5,16 +5,10 @@ import (
 
 	"go.etcd.io/etcd/client/v3"
 
-	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
 	leaseproto "sigmaos/lease/proto"
-	"sigmaos/memfs"
-	"sigmaos/memfssrv"
-	"sigmaos/sigmasrv"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
@@ -23,18 +17,6 @@ type LeaseSrv struct {
 	lt *syncmap.SyncMap[sp.TclntId, clientv3.LeaseID]
 	fs *fsetcd.FsEtcd
 	lc clientv3.Lease
-}
-
-func newLeaseSrvSvc(uname sp.Tuname, srv *sesssrv.SessSrv, svc any) (*sigmasrv.SigmaSrv, error) {
-	db.DPrintf(db.LEASESRV, "NewLeaseSrv: %v\n", svc)
-	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	srv.Mount(sp.LEASESRV, d.(*dir.DirImpl))
-	mfs := memfssrv.MakeMemFsSrv(uname, "", srv)
-	ssrv, err := sigmasrv.MakeRPCSrv(mfs, sp.LEASESRV, svc)
-	if err != nil {
-		return nil, err
-	}
-	return ssrv, nil
 }
 
 func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {

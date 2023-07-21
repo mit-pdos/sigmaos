@@ -48,10 +48,14 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 		return nil, serr.MkErrError(err)
 	}
 
-	db.DPrintf(db.PROTDEVSRV, "WriteRead req %v\n", req)
-
 	start := time.Now()
-	rep = rpc.ssrv.svc.dispatch(ctx, req.Method, &req)
+	name := req.Method
+	dot := strings.LastIndex(name, ".")
+	method := name[dot+1:]
+	tname := name[:dot]
+	db.DPrintf(db.PROTDEVSRV, "WriteRead svc %v name %v\n", tname, method)
+
+	rep = rpc.ssrv.svc[tname].dispatch(ctx, name, &req)
 	t := time.Since(start).Microseconds()
 	rpc.ssrv.sti.Stat(req.Method, t)
 

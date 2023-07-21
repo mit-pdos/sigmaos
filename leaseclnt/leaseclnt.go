@@ -1,8 +1,6 @@
 package leaseclnt
 
 import (
-	"path"
-
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
@@ -35,7 +33,7 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 		return li, nil
 	}
 	var res leaseproto.AskResult
-	if err := lmc.cc.RPC(path.Join(srv.String(), sp.LEASESRV), "LeaseSrv.AskLease", &leaseproto.AskRequest{
+	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease", &leaseproto.AskRequest{
 		ClntId: uint64(lmc.ClntID()),
 		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
 		li := &LeaseInfo{

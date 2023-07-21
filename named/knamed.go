@@ -37,18 +37,16 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	uname := sp.Tuname(proc.GetPid().String())
-	_, err := newLeaseSrvSvc(uname, nd.SessSrv, newLeaseSrv(nd.fs))
-	if err != nil {
-		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
-		return err
+	if err := nd.mkSrv(); err != nil {
+		db.DFatalf("Error mkSrv %v\n", err)
 	}
 
 	mnt := sp.MkMountServer(nd.MyAddr())
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
-	sc, err := sigmaclnt.MkSigmaClntFsLib(uname)
+
+	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname(proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClntFsLib: err %v", err)
 	}
@@ -83,7 +81,7 @@ func (nd *Named) initfs() error {
 		db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", sp.WS, err)
 	}
 	for _, n := range InitRootDir {
-		if _, err := nd.Create(n, 0777|sp.DMDIR, sp.OREAD); err != nil {
+		if _, err := nd.SigmaClnt.Create(n, 0777|sp.DMDIR, sp.OREAD); err != nil {
 			db.DPrintf(db.ALWAYS, "Error create [%v]: %v", n, err)
 			return err
 		}

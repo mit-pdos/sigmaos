@@ -33,7 +33,7 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 		si:   protdev.MakeStatInfo(),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], pn, protdev.RPC)
+	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, protdev.RPC), protdev.RPC)
 	if err != nil {
 		return nil, err
 	}

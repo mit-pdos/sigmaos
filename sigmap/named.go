@@ -63,11 +63,9 @@ const (
 	WS_RUNQ_LC     = WS + WS_RUNQ_LC_REL + "/"
 	WS_RUNQ_BE     = WS + WS_RUNQ_BE_REL + "/"
 
-	// special devs/dirs exported by fssrv
+	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
-	LEASESRV = ".leasesrv"
-	ELECTSRV = ".electsrv"
 	SNAPDEV  = "snapdev"
 )
 

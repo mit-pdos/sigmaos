@@ -7,20 +7,22 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
+	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 type Named struct {
 	*sigmaclnt.SigmaClnt
-	*sesssrv.SessSrv
+	*sigmasrv.SigmaSrv
 	mu    sync.Mutex
 	fs    *fsetcd.FsEtcd
 	elect *leaderetcd.Election
@@ -77,10 +79,8 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	_, err = newLeaseSrvSvc(uname, nd.SessSrv, newLeaseSrv(nd.fs))
-	if err != nil {
-		db.DPrintf(db.NAMED, "%v: leasemgrsrv %v err %v\n", proc.GetPid(), nd.realm, err)
-		return err
+	if err := nd.mkSrv(); err != nil {
+		db.DFatalf("Error mkSrv %v\n", err)
 	}
 
 	mnt := sp.MkMountServer(nd.MyAddr())
@@ -124,8 +124,31 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", proc.GetPid(), err)
 	}
 
-	nd.Exit(proc.MakeStatus(proc.StatusEvicted))
+	nd.SigmaSrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 
+	return nil
+}
+
+func (nd *Named) mkSrv() error {
+	ip, err := container.LocalIP()
+	if err != nil {
+		return err
+	}
+
+	root := rootDir(nd.fs, nd.realm)
+	srv := fslibsrv.BootSrv(root, ip+":0", nd.SigmaClnt, nd.attach, nd.detach, nil)
+	if srv == nil {
+		return fmt.Errorf("BootSrv err %v\n", err)
+	}
+
+	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(proc.GetPid().String()))
+	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
+		return err
+	}
+
+	db.DPrintf(db.NAMED, "mkSrv %v %v %v\n", nd.realm, srv.MyAddr(), nd.elect.Key())
+
+	nd.SigmaSrv = ssrv
 	return nil
 }
 

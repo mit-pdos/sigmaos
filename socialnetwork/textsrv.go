@@ -83,7 +83,7 @@ func (tsrv *TextSrv) ProcessText(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			userErr = tsrv.userc.RPC("User.CheckUser", &userArg, &userRes)
+			userErr = tsrv.userc.RPC("UserSrv.CheckUser", &userArg, &userRes)
 		}()
 	}
 	if urlIndicesL > 0 {

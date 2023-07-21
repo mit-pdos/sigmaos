@@ -76,7 +76,7 @@ func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val pr
 
 	req.Value = b
 	var res cacheproto.CacheResult
-	if err := c.RPC("Cache.Put", req, &res); err != nil {
+	if err := c.RPC("CacheSrv.Put", req, &res); err != nil {
 		return err
 	}
 	return nil
@@ -93,7 +93,7 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val pr
 	req.Key = key
 	s := time.Now()
 	var res cacheproto.CacheResult
-	if err := c.RPC("Cache.Get", req, &res); err != nil {
+	if err := c.RPC("CacheSrv.Get", req, &res); err != nil {
 		return err
 	}
 	if time.Since(s) > 150*time.Microsecond {
@@ -115,7 +115,7 @@ func (c *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) err
 	}
 	req.Key = key
 	var res cacheproto.CacheResult
-	if err := c.RPC("Cache.Delete", req, &res); err != nil {
+	if err := c.RPC("CacheSrv.Delete", req, &res); err != nil {
 		return err
 	}
 	return nil

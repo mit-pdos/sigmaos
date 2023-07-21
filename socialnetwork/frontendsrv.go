@@ -199,7 +199,7 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 	var res proto.UserResponse
 	// Check username and password
 	t1 := time.Now()
-	err := s.userc.RPC("User.Login", &proto.LoginRequest{
+	err := s.userc.RPC("UserSrv.Login", &proto.LoginRequest{
 		Username: username,
 		Password: password,
 	}, &res)
@@ -236,7 +236,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		var res proto.CheckUserResponse
 		// retrieve userid
-		err := s.userc.RPC("User.CheckUser",
+		err := s.userc.RPC("UserSrv.CheckUser",
 			&proto.CheckUserRequest{Usernames: []string{username}}, &res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

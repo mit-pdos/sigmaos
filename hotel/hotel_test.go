@@ -19,8 +19,8 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/protdev"
-	"sigmaos/rpcclnt"
 	rd "sigmaos/rand"
+	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -156,7 +156,7 @@ func TestUserSingle(t *testing.T) {
 		Password: hotel.MkPassword("0"),
 	}
 	var res proto.UserResult
-	err = rpcc.RPC("User.CheckUser", arg, &res)
+	err = rpcc.RPC("Users.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res)
 	ts.stop()

@@ -198,7 +198,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,
@@ -469,7 +469,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	var res proto.UserResult
 
 	// Check username and password
-	err := s.userc.RPC("User.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,

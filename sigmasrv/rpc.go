@@ -55,7 +55,7 @@ func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	tname := name[:dot]
 	db.DPrintf(db.PROTDEVSRV, "WriteRead svc %v name %v\n", tname, method)
 
-	rep = rpc.ssrv.svc[tname].dispatch(ctx, name, &req)
+	rep = rpc.ssrv.svc.Lookup(tname).dispatch(ctx, name, &req)
 	t := time.Since(start).Microseconds()
 	rpc.ssrv.sti.Stat(req.Method, t)
 

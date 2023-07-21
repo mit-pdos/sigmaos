@@ -1,7 +1,6 @@
 package sigmasrv
 
 import (
-	"log"
 	"path"
 	"reflect"
 	"strings"
@@ -28,29 +27,14 @@ import (
 // with SessSrv (e.g., ux and knamed/named).
 //
 
-var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
-
-type method struct {
-	method    reflect.Method
-	argType   reflect.Type
-	replyType reflect.Type
-}
-
-type service struct {
-	svc     reflect.Value
-	typ     reflect.Type
-	methods map[string]*method
-}
-
 type SigmaSrv struct {
 	*memfssrv.MemFs
 	sti  *protdev.StatInfo
-	svc  map[string]*service
+	svc  *svcMap
 	lsrv *LeaseSrv
 }
 
-// Make a sigmasrv, memfs, and RPC endpoint, and publish server at
-// fn. The RPC end point is the directory fn/rpcdir.
+// Make a sigmasrv with an memfs, and publish server at fn.
 func MakeSigmaSrv(fn string, svci any, uname sp.Tuname) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFs(fn, uname)
 	if error != nil {
@@ -108,6 +92,8 @@ func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname) 
 	return ssrv, nil
 }
 
+// Makes a sigmasrv with an memfs, rpc server, and LeaseSrv RPC
+// service.
 func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv, err := makeSigmaSrvRPC(mfs, svci)
 	if err != nil {
@@ -120,22 +106,24 @@ func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
-	ssrv := &SigmaSrv{MemFs: mfs, svc: make(map[string]*service)}
+	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap()}
 	return ssrv
 }
 
+// Make a sigmasrv with an RPC server
 func makeSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv := newSigmaSrv(mfs)
 	return ssrv, ssrv.makeRPCSrv(svci)
 }
 
-// Create the rpc directory in memfs and create the RPC service in it.
+// Create the rpc server directory in memfs and register the RPC
+// service svci to the RPC server.
 func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 	db.DPrintf(db.PROTDEVSRV, "makeRPCSrv: %v\n", svci)
 	if _, err := ssrv.Create(protdev.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := ssrv.createRPCSrv(svci); err != nil {
+	if err := ssrv.registerRPCSrv(svci); err != nil {
 		return err
 	}
 	return nil
@@ -152,15 +140,15 @@ func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname) *SigmaSrv {
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	ssrv.MemFs.SessSrv.Mount(protdev.RPC, d.(*dir.DirImpl))
-	if err := ssrv.createRPCSrv(svci); err != nil {
+	if err := ssrv.registerRPCSrv(svci); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Make the rpc server
-func (ssrv *SigmaSrv) createRPCSrv(svci any) error {
-	ssrv.NewRPCService(svci)
+func (ssrv *SigmaSrv) registerRPCSrv(svci any) error {
+	ssrv.svc.NewRPCService(svci)
 	rd := mkRpcDev(ssrv)
 
 	if err := sessdevsrv.MkSessDev(ssrv.MemFs, path.Join(protdev.RPC, protdev.RPC), rd.mkRpcSession, nil); err != nil {
@@ -174,13 +162,10 @@ func (ssrv *SigmaSrv) createRPCSrv(svci any) error {
 	return nil
 }
 
-// Assumes RPCSrv has been created
+// Assumes RPCSrv has been created and create a LeaseSrv service.
 func (ssrv *SigmaSrv) NewLeaseSrv() error {
 	lsrv := newLeaseSrv(ssrv.MemFs)
-	ssrv.NewRPCService(lsrv)
-	//	if err := ssrv.makeRPCSrv(lsrv); err != nil {
-	//	return err
-	//}
+	ssrv.svc.NewRPCService(lsrv)
 	return nil
 }
 
@@ -193,37 +178,6 @@ func structName(svci any) string {
 	name := typ.String()
 	dot := strings.LastIndex(name, ".")
 	return name[dot+1:]
-}
-
-func (ssrv *SigmaSrv) NewRPCService(svci any) {
-	svc := &service{}
-	svc.typ = reflect.TypeOf(svci)
-	svc.svc = reflect.ValueOf(svci)
-	svc.methods = map[string]*method{}
-
-	tname := structName(svci)
-	db.DPrintf(db.PROTDEVSRV, "makeRPCSrv %T %q\n", svci, tname)
-
-	for m := 0; m < svc.typ.NumMethod(); m++ {
-		methodt := svc.typ.Method(m)
-		mtype := methodt.Type
-		mname := methodt.Name
-
-		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
-		if methodt.PkgPath != "" || // capitalized?
-			mtype.NumIn() != 4 ||
-			//mtype.In(1).Kind() != reflect.Ptr ||
-			mtype.In(3).Kind() != reflect.Ptr ||
-			mtype.NumOut() != 1 ||
-			mtype.Out(0) != typeOfError {
-			// the method is not suitable for a handler
-			log.Printf("%v: bad method: %v\n", tname, mname)
-		} else {
-			// the method looks like a handler
-			svc.methods[mname] = &method{methodt, mtype.In(2), mtype.In(3)}
-		}
-	}
-	ssrv.svc[tname] = svc
 }
 
 func (ssrv *SigmaSrv) RunServer() error {

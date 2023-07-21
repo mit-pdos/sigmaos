@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	"runtime/debug"
+	// "runtime/debug"
 	"strings"
 
 	"sigmaos/proc"
@@ -46,7 +46,7 @@ func DFatalf(format string, v ...interface{}) {
 	pc, _, _, ok := runtime.Caller(1)
 	fnDetails := runtime.FuncForPC(pc)
 	fnName := strings.TrimPrefix(fnDetails.Name(), "sigmaos/")
-	debug.PrintStack()
+	// debug.PrintStack()
 	if ok && fnDetails != nil {
 		log.Fatalf("FATAL %v %v Err: %v", proc.GetName(), fnName, fmt.Sprintf(format, v...))
 	} else {

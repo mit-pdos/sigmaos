@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"path"
 	"testing"
 	"time"
 
@@ -79,9 +80,10 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 
 func (ts *Tstate) statsSrv(fn string) {
 	stats := &protdev.StatInfo{}
-	err := ts.GetFileJson(fn+"/"+protdev.STATS, stats)
+	pn := path.Join(fn, protdev.RPC, protdev.STATS)
+	err := ts.GetFileJson(pn, stats)
 	assert.Nil(ts.T, err, "error get stats %v", err)
-	fmt.Printf("= %s: %v\n", fn, stats)
+	fmt.Printf("= %s: %v\n", pn, stats)
 }
 
 func (ts *Tstate) stop() {

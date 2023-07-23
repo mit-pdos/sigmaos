@@ -84,9 +84,9 @@ func (updm *UprocdMgr) setShare(pdc *UprocdClnt, share Tshare) {
 		return
 	}
 	pdc.share = share
-	if pdc.share > 10000 {
-		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", pdc.share)
-	}
+	//	if pdc.share > 10000 {
+	//		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", pdc.share)
+	//	}
 	if err := updm.kclnt.SetCPUShares(pdc.pid, int64(share)); err != nil {
 		db.DFatalf("Error SetCPUShares[%v] %v", pdc.pid, err)
 	}

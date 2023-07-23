@@ -53,8 +53,10 @@ RUN go mod download
 # Copy source
 COPY . .
 # Build all binaries.
-RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
-  ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel user && \
+#RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
+#  ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel user && \
+RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath go --target $target $parallel kernel && \
+  ./make.sh --norace --gopath go --target $target $parallel user && \
   mkdir bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \

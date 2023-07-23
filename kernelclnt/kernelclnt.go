@@ -32,9 +32,10 @@ func (kc *KernelClnt) Boot(s string, args []string) (proc.Tpid, error) {
 }
 
 func (kc *KernelClnt) SetCPUShares(pid proc.Tpid, shares int64) error {
-	var res proto.SetCPUSharesResponse
-	req := &proto.SetCPUSharesRequest{PidStr: pid.String(), Shares: shares}
-	return kc.pdc.RPC("KernelSrv.SetCPUShares", req, &res)
+	//	var res proto.SetCPUSharesResponse
+	//	req := &proto.SetCPUSharesRequest{PidStr: pid.String(), Shares: shares}
+	// return kc.pdc.RPC("KernelSrv.SetCPUShares", req, &res)
+	return nil
 }
 
 func (kc *KernelClnt) GetCPUUtil(pid proc.Tpid) (float64, error) {

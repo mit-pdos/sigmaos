@@ -45,7 +45,7 @@ func tspMultiRecursive(g *Graph, homeNode int, choices Set, currentNode int, dep
 	var minPath []int
 
 	if len(choices) == 1 {
-		minPath = make([]int, 2)
+		minPath = make([]int, 2, len(*g))
 		minPath[0] = homeNode
 		minPath[1] = choices[0]
 		minLen = g.getEdge(homeNode, choices[0])

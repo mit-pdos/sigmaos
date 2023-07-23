@@ -1,7 +1,6 @@
 package sigmasrv
 
 import (
-	"path"
 	"reflect"
 	"strings"
 
@@ -19,12 +18,12 @@ import (
 )
 
 //
-// Many SigmaOS servers use SigmaSrv to create and run servers.  A server
-// typically consists of a MemFS (an in-memory file system accessed
-// through sigmap), one or more RPC end points, including an end point
-// for leasesrv (to manage leases).  Sigmasrv creates the end-points
-// in the memfs. Some servers don't use SigmaSrv and directly interact
-// with SessSrv (e.g., ux and knamed/named).
+// Many SigmaOS servers use SigmaSrv to create and run servers.  A
+// server typically consists of a MemFS (an in-memory file system
+// accessed through sigmap), one or more RPC services, including one
+// for leases. Sigmasrv creates the RPC device in the memfs. Some
+// servers don't use SigmaSrv and directly interact with SessSrv
+// (e.g., ux).
 //
 
 type SigmaSrv struct {
@@ -92,8 +91,7 @@ func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname) 
 	return ssrv, nil
 }
 
-// Makes a sigmasrv with an memfs, rpc server, and LeaseSrv RPC
-// service.
+// Makes a sigmasrv with an memfs, rpc server, and LeaseSrv service.
 func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv, err := makeSigmaSrvRPC(mfs, svci)
 	if err != nil {
@@ -116,14 +114,14 @@ func makeSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	return ssrv, ssrv.makeRPCSrv(svci)
 }
 
-// Create the rpc server directory in memfs and register the RPC
-// service svci to the RPC server.
+// Create the rpc server directory in memfs and make the RPC dev and
+// register svci.
 func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 	db.DPrintf(db.SIGMASRV, "makeRPCSrv: %v\n", svci)
 	if _, err := ssrv.Create(protdev.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := ssrv.registerRPCSrv(svci); err != nil {
+	if err := ssrv.makeRPCDev(svci); err != nil {
 		return err
 	}
 	return nil
@@ -140,18 +138,17 @@ func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname) *SigmaSrv {
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
 	ssrv.MemFs.SessSrv.Mount(protdev.RPC, d.(*dir.DirImpl))
-	if err := ssrv.registerRPCSrv(svci); err != nil {
+	if err := ssrv.makeRPCDev(svci); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Make the rpc server
-func (ssrv *SigmaSrv) registerRPCSrv(svci any) error {
-	ssrv.svc.NewRPCService(svci)
+// Make the rpc device and register the svci service
+func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
+	ssrv.svc.RegisterService(svci)
 	rd := mkRpcDev(ssrv)
-
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, path.Join(protdev.RPC, protdev.RPC), rd.mkRpcSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, protdev.RPC, rd.mkRpcSession, nil); err != nil {
 		return err
 	}
 	if si, err := makeStatsDev(ssrv.MemFs, protdev.RPC); err != nil {
@@ -162,10 +159,10 @@ func (ssrv *SigmaSrv) registerRPCSrv(svci any) error {
 	return nil
 }
 
-// Assumes RPCSrv has been created and create a LeaseSrv service.
+// Assumes RPCSrv has been created and register the LeaseSrv service.
 func (ssrv *SigmaSrv) NewLeaseSrv() error {
 	lsrv := newLeaseSrv(ssrv.MemFs)
-	ssrv.svc.NewRPCService(lsrv)
+	ssrv.svc.RegisterService(lsrv)
 	return nil
 }
 

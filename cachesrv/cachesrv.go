@@ -69,6 +69,10 @@ func RunCacheSrv(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if _, err := ssrv.Create(DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return err
+	}
 	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}

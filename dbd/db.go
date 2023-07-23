@@ -2,9 +2,9 @@ package dbd
 
 import (
 	// db "sigmaos/debug"
-	"sigmaos/sigmasrv"
 	"sigmaos/sessdevsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 //
@@ -28,6 +28,9 @@ func RunDbd(dbdaddr string) error {
 		return err
 	}
 	qd := &queryDev{dbdaddr}
+	if _, err := ssrv.Create(QDEV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return err
+	}
 	if err := sessdevsrv.MkSessDev(ssrv.MemFs, QDEV, qd.mkSession, nil); err != nil {
 		return err
 	}

@@ -1,6 +1,8 @@
 package clonedev
 
 import (
+	"path"
+
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
@@ -21,43 +23,46 @@ type Clone struct {
 	mfs       *memfssrv.MemFs
 	mksession MkSessionF
 	detach    sps.DetachSessF
-	pn        string
+	dir       string
 	wctl      WriteCtlF
 }
 
-// Make a Clone dev inode at pn in memfs
-func makeClone(mfs *memfssrv.MemFs, pn string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
-	cl := &Clone{}
-	cl.Inode = mfs.MakeDevInode()
-	err := mfs.MkDev(sessdev.CloneName(pn), cl) // put clone file into root dir
+// Make a Clone dev inode in directory <dir> in memfs
+func makeClone(mfs *memfssrv.MemFs, dir string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
+	cl := &Clone{
+		Inode:     mfs.MakeDevInode(),
+		mfs:       mfs,
+		mksession: mks,
+		detach:    d,
+		dir:       dir,
+		wctl:      w,
+	}
+	pn := dir + "/" + sessdev.CLONE
+	db.DPrintf(db.CLONEDEV, "makeClone %q\n", dir)
+	err := mfs.MkDev(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err
 	}
-	cl.mfs = mfs
-	cl.mksession = mks
-	cl.detach = d
-	cl.pn = pn
-	cl.wctl = w
 	return nil
 }
 
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	sid := ctx.SessionId()
-	n := sessdev.SidName(sid.String(), c.pn)
-	db.DPrintf(db.CLONEDEV, "%v: Clone create %v\n", proc.GetName(), n)
-	_, err := c.mfs.Create(n, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
+	pn := path.Join(c.dir, sid.String())
+	db.DPrintf(db.CLONEDEV, "%v: Clone create %q\n", proc.GetName(), pn)
+	_, err := c.mfs.Create(pn, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
-		db.DPrintf(db.CLONEDEV, "%v: MkDir %v err %v\n", proc.GetName(), n, err)
+		db.DPrintf(db.CLONEDEV, "%v: MkDir %q err %v\n", proc.GetName(), pn, err)
 		return nil, err
 	}
 	var s *session
-	ctl := n + "/" + sessdev.CTL
+	ctl := pn + "/" + sessdev.CTL
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.MakeDevInode()
 		if err := c.mfs.MkDev(ctl, s); err != nil {
-			db.DPrintf(db.CLONEDEV, "%v: MkDev %v err %v\n", proc.GetName(), ctl, err)
+			db.DPrintf(db.CLONEDEV, "%v: MkDev %q err %v\n", proc.GetName(), ctl, err)
 			return nil, err
 		}
 		if err := c.mfs.RegisterDetachSess(c.Detach, sid); err != nil {
@@ -70,7 +75,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		lo, err := c.mfs.Open(ctl, sp.OREAD)
 		s = lo.(*session)
 		if err != nil {
-			db.DPrintf(db.CLONEDEV, "%v: open %v err %v\n", proc.GetName(), ctl, err)
+			db.DPrintf(db.CLONEDEV, "%v: open %q err %v\n", proc.GetName(), ctl, err)
 			return nil, err
 		}
 	}
@@ -78,17 +83,17 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	sid := sessdev.SidName(ctx.SessionId().String(), c.pn)
-	db.DPrintf(db.CLONEDEV, "%v: Close %v\n", proc.GetName(), sid)
+	sid := ctx.SessionId().String()
+	db.DPrintf(db.CLONEDEV, "%v: Close %q\n", proc.GetName(), sid)
 	return nil
 }
 
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
-	dir := sessdev.SidName(session.String(), c.pn)
-	n := dir + "/" + sessdev.CTL
-	if err := c.mfs.Remove(n); err != nil {
-		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", n, err)
+	dir := path.Join(c.dir, session.String())
+	ctl := path.Join(dir, sessdev.CTL)
+	if err := c.mfs.Remove(ctl); err != nil {
+		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", ctl, err)
 	}
 	if c.detach != nil {
 		c.detach(session)
@@ -98,8 +103,8 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, pn string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
-	if err := makeClone(mfs, pn, f, d, w); err != nil {
+func MkCloneDev(mfs *memfssrv.MemFs, dir string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
+	if err := makeClone(mfs, dir, f, d, w); err != nil {
 		return err
 	}
 	return nil

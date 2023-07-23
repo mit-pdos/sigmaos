@@ -2,6 +2,7 @@ package sessdevclnt
 
 import (
 	"fmt"
+	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -12,23 +13,22 @@ type SessDevClnt struct {
 	*fslib.FsLib
 	sid  string
 	pn   string
-	fn   string
 	ctl  string
 	data string
 }
 
-func MkSessDevClnt(fsl *fslib.FsLib, pn string, fn string) (*SessDevClnt, error) {
-	sdc := &SessDevClnt{FsLib: fsl, pn: pn, fn: fn}
+func MkSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
+	sdc := &SessDevClnt{FsLib: fsl, pn: pn}
 
-	db.DPrintf(db.SESSDEVCLNT, "MkSessDevClnt: %s\n", sdc.pn+"/"+sessdev.CloneName(sdc.fn))
-	b, err := sdc.GetFile(sdc.pn + "/" + sessdev.CloneName(sdc.fn))
+	clone := sdc.pn + "/" + sessdev.CLONE
+	db.DPrintf(db.SESSDEVCLNT, "MkSessDevClnt: %q\n", clone)
+	b, err := sdc.GetFile(clone)
 	if err != nil {
-		return nil, fmt.Errorf("Clone err %v\n", err)
+		return nil, fmt.Errorf("Clone %q err %v\n", clone, err)
 	}
-	sid := string(b)
-	sdc.sid = "/" + sessdev.SidName(sid, sdc.fn)
-	sdc.ctl = sdc.pn + sdc.sid + "/" + sessdev.CTL
-	sdc.data = sdc.pn + sdc.sid + "/" + sessdev.DataName(sdc.fn)
+	sdc.sid = string(b)
+	sdc.ctl = path.Join(sdc.pn, sdc.sid, sessdev.CTL)
+	sdc.data = path.Join(sdc.pn, sdc.sid, sessdev.DATA)
 	return sdc, nil
 }
 

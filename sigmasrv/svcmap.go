@@ -32,7 +32,7 @@ func newSvcMap() *svcMap {
 }
 
 // Add a new RPC service to the svc map
-func (svcmap *svcMap) NewRPCService(svci any) {
+func (svcmap *svcMap) RegisterService(svci any) {
 	svcmap.Lock()
 	defer svcmap.Unlock()
 

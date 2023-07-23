@@ -33,7 +33,7 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 		si:   protdev.MakeStatInfo(),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, protdev.RPC), protdev.RPC)
+	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, protdev.RPC))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (rpcc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {
 
 func (rpcc *RPCClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
 	stats := &protdev.SigmaRPCStats{}
-	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, protdev.STATS), stats); err != nil {
+	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, protdev.RPC, protdev.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

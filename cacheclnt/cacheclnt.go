@@ -2,6 +2,7 @@ package cacheclnt
 
 import (
 	"hash/fnv"
+	"path"
 	"strconv"
 
 	"time"
@@ -127,13 +128,13 @@ func (c *CacheClnt) Delete(key string) error {
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	srv := cc.Server(g)
-	b, err := cc.fsls[0].GetFile(srv + "/" + sessdev.CloneName(cachesrv.DUMP))
+	dir := path.Join(srv, cachesrv.DUMP)
+	b, err := cc.fsls[0].GetFile(dir + "/" + sessdev.CLONE)
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
-	sidn := sessdev.SidName(sid, cachesrv.DUMP)
-	fn := srv + "/" + sidn + "/" + sessdev.DataName(cachesrv.DUMP)
+	fn := dir + "/" + sid + "/" + sessdev.DATA
 	b, err = cc.fsls[0].GetFile(fn)
 	if err != nil {
 		return nil, err

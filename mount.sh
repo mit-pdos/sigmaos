@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # Start proxy and mount root named at /mnt/9p. Optionally boot a

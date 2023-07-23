@@ -106,16 +106,16 @@ if ! [ -z "$TAG" ]; then
   docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
 fi
 
-if ! docker ps | grep -q etcd; then
-    ./start-etcd.sh
+if [ "$BOOT" != "node" ] && ! docker ps | grep -q etcd ; then
+  ./start-etcd.sh
 fi
 
 if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q sigmadb; then
-    DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb):3306
+  DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb):3306
 fi
 
 if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
-    MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
+  MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
 # Mounting docker.sock is bad idea in general because it requires to

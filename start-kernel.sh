@@ -106,7 +106,7 @@ if ! [ -z "$TAG" ]; then
   docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
 fi
 
-if [ "$BOOT" != "node" ] && ! docker ps | grep -q etcd ; then
+if [ "$NAMED" == ":1111" ] && ! docker ps | grep -q etcd ; then
   ./start-etcd.sh
 fi
 

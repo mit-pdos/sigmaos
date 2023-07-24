@@ -44,9 +44,9 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 	return nil
 }
 
-func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
+func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
+	srv := sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, protsrv.Restore, nil, nil, nil, et)
 	if err := Post(srv, sc, path); err != nil {
 		return nil, err
 	}
@@ -54,13 +54,5 @@ func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.Sigm
 }
 
 func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
-	return MakeReplServerFsl(root, port, path, sc, nil)
-}
-
-func MakeReplServer(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, name sp.Tuname, config repl.Config) (*sesssrv.SessSrv, error) {
-	srv, err := MakeReplServerFsl(root, addr, path, sc, config)
-	if err != nil {
-		return nil, err
-	}
-	return srv, nil
+	return MakeReplServerFsl(root, port, path, sc)
 }

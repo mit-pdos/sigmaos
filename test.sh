@@ -43,8 +43,8 @@ for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sesscln
 done
 
 
-go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/fslibtest/" -run ReadPerf
-go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/fslibtest/" -run ReadPerf
+go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
+go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
 
 #
 # applications

@@ -167,8 +167,8 @@ func TestEphemeral(t *testing.T) {
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 
-	// 9: .statsd, .fences, .leasesrv and ctl and running and runqs
-	assert.Equal(t, 9, len(sts))
+	// 6: .statsd, .fences, pids, queue, rpc, and running
+	assert.Equal(t, 6, len(sts))
 
 	ts.KillOne(sp.SCHEDDREL)
 

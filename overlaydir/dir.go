@@ -147,13 +147,3 @@ func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *serr.Err {
 	}
 	return dir.underlay.Remove(ctx, n)
 }
-
-// XXX only relevant if dir.underlay is *DirImpl. And, it already has been
-// snapshotted.
-func (dir *DirOverlay) Snapshot(fn fs.SnapshotF) []byte {
-	return makeDirOverlaySnapshot(fn, dir)
-}
-
-func Restore(d *DirOverlay, fn fs.RestoreF, b []byte) fs.Inode {
-	return restoreDirOverlay(d, fn, b)
-}

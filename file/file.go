@@ -5,9 +5,9 @@ import (
 	//"time"
 
 	"sigmaos/fs"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
-    "sigmaos/serr"
 )
 
 type File struct {
@@ -76,14 +76,4 @@ func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversio
 		b := f.data[offset:end]
 		return b, nil
 	}
-}
-
-func (f *File) Snapshot() []byte {
-	return f.data
-}
-
-func RestoreFile(d []byte) *File {
-	f := MakeFile()
-	f.data = d
-	return f
 }

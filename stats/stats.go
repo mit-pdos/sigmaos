@@ -277,7 +277,3 @@ func (sti *StatInfo) stats() []byte {
 func (st *Stats) String() string {
 	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Ntotal, st.Nattach, st.Ndetach, st.Nwalk, st.Nclunk, st.Nopen, st.Nwatch, st.Ncreate, st.Nflush, st.Nread, st.Nwrite, st.Nremove, st.Nstat, st.Nwstat, st.Nrenameat, st.Nget, st.Nput, st.Nrpc, st.Qlen, st.AvgQlen, st.Paths, st.Load, st.Util)
 }
-
-func (sti *StatInfo) Snapshot(fn fs.SnapshotF) []byte {
-	return sti.snapshot()
-}

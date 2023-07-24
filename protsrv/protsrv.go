@@ -703,7 +703,3 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	rets.Count = uint32(n)
 	return nil
 }
-
-func (ps *ProtSrv) Snapshot() []byte {
-	return ps.snapshot()
-}

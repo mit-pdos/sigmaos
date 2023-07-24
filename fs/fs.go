@@ -20,7 +20,6 @@ type CtxI interface {
 	SessionId() sessp.Tsession
 	SessCondTable() *sesscond.SessCondTable
 	ClntId() sp.TclntId
-	Snapshot() []byte
 }
 
 type Dir interface {

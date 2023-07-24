@@ -360,11 +360,3 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *serr.Err {
 	inode.Unlink()
 	return nil
 }
-
-func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {
-	return makeDirSnapshot(fn, dir)
-}
-
-func Restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
-	return restore(d, fn, b)
-}

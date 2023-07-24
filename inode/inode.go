@@ -105,11 +105,3 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 		inode.Mode(), uint32(inode.mtime), "", string(inode.owner))
 	return st, nil
 }
-
-func (inode *Inode) Snapshot(fn fs.SnapshotF) []byte {
-	return makeSnapshot(inode)
-}
-
-func RestoreInode(f fs.RestoreF, b []byte) fs.Inode {
-	return restoreInode(f, b)
-}

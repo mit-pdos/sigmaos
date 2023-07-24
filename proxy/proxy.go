@@ -67,13 +67,6 @@ func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
 	go npd.serve(fc)
 }
 
-func (npd *Npd) Snapshot() []byte {
-	return nil
-}
-
-func (npd *Npd) Restore(b []byte) {
-}
-
 // The connection from the kernel/client
 type NpConn struct {
 	mu    sync.Mutex
@@ -301,8 +294,4 @@ func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rer
 
 func (npc *NpConn) WriteRead(args *sp.Twriteread, d []byte, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return nil, nil
-}
-
-func (npc *NpConn) Snapshot() []byte {
-	return nil
 }

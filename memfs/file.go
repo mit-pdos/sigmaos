@@ -34,11 +34,3 @@ func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	st.Length = uint64(l)
 	return st, nil
 }
-
-func (f *File) Snapshot(fn fs.SnapshotF) []byte {
-	return makeFileSnapshot(f)
-}
-
-func RestoreFile(fn fs.RestoreF, b []byte) fs.Inode {
-	return restoreFile(fn, b)
-}

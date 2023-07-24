@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/pipe"
 	"sigmaos/serr"
@@ -34,11 +33,6 @@ func (p *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 
 func (p *Pipe) Unlink() {
 	p.Pipe.Unlink()
-}
-
-func (p *Pipe) Snapshot(fn fs.SnapshotF) []byte {
-	db.DFatalf("tried to snapshot pipe")
-	return nil
 }
 
 func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {

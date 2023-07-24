@@ -23,8 +23,6 @@ type SessServer interface {
 	Register(sessp.Tclient, sessp.Tsession, Conn) *serr.Err
 	Unregister(sessp.Tclient, sessp.Tsession, Conn)
 	SrvFcall(*sessp.FcallMsg)
-	Snapshot() []byte
-	Restore([]byte)
 }
 
 type Protsrv interface {
@@ -47,11 +45,9 @@ type Protsrv interface {
 	PutFile(*sp.Tputfile, []byte, *sp.Rwrite) *sp.Rerror
 	WriteRead(*sp.Twriteread, []byte, *sp.Rread) ([]byte, *sp.Rerror)
 	Detach(*sp.Tdetach, *sp.Rdetach, DetachClntF) *sp.Rerror
-	Snapshot() []byte
 }
 
 type MkProtServer func(SessServer, sessp.Tsession) Protsrv
-type RestoreProtServer func(SessServer, []byte) Protsrv
 
 type DetachSessF func(sessp.Tsession)
 

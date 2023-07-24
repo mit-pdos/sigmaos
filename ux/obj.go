@@ -161,7 +161,3 @@ func (o *Obj) Size() (sp.Tlength, *serr.Err) {
 	}
 	return st.Tlength(), nil
 }
-
-func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {
-	return nil
-}

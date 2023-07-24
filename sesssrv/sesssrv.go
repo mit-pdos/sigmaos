@@ -12,14 +12,12 @@ import (
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/repl"
 	"sigmaos/serr"
 	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/snapshot"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
 	"sigmaos/threadmgr"
@@ -42,7 +40,6 @@ type SessSrv struct {
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	mkps     sps.MkProtServer
-	rps      sps.RestoreProtServer
 	stats    *stats.StatInfo
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
@@ -54,18 +51,15 @@ type SessSrv struct {
 	et       *ephemeralmap.EphemeralMap
 	ffs      fs.Dir
 	srv      *netsrv.NetServer
-	replSrv  repl.Server
-	snap     *snapshot.Snapshot
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.RestoreProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
 	ssrv.mkps = mkps
-	ssrv.rps = rps
 	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall)
@@ -124,25 +118,6 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	return nil
 }
 
-func (ssrv *SessSrv) Snapshot() []byte {
-	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
-	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	return ssrv.snap.Snapshot(ssrv.dirover, ssrv.st, ssrv.tmt)
-}
-
-func (ssrv *SessSrv) Restore(b []byte) {
-	// Store snapshot for later use during restore.
-	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	// XXX How do we install the sct and wt? How do we sunset old
-	// state when installing a snapshot on a running server?  XXX
-	// dirunder should be dirover, but of type fs.Dir, but plan to
-	// delete this code anyway.
-	ssrv.dirunder, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
-	ssrv.sct.St = ssrv.st
-	ssrv.sm.Stop()
-	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
-}
-
 func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
@@ -180,10 +155,6 @@ func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
 
 func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
 	return ssrv.vt
-}
-
-func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
-	return ssrv.snap
 }
 
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {

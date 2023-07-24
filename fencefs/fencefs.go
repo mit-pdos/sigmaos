@@ -39,14 +39,6 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sessp.Tsize, v sp.TQversion
 	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 
-func (f *Fence) Snapshot(fn fs.SnapshotF) []byte {
-	return makeFenceSnapshot(fn, f)
-}
-
-func RestoreFence(fn fs.RestoreF, b []byte) fs.Inode {
-	return restoreFence(fn, b)
-}
-
 func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "makeInode %v dir %v\n", p, parent)
 	i := inode.MakeInode(ctx, p, parent)

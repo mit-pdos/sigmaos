@@ -306,11 +306,6 @@ func (d *Dir) SetParent(di fs.Dir) {
 	db.DFatalf("Unimplemented")
 }
 
-func (d *Dir) Snapshot(fs.SnapshotF) []byte {
-	db.DFatalf("Unimplemented")
-	return nil
-}
-
 func (d *Dir) Unlink() {
 	db.DFatalf("Unimplemented")
 }

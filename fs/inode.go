@@ -1,13 +1,9 @@
 package fs
 
 import (
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
-    "sigmaos/serr"
 )
-
-type SnapshotF func(Inode) sessp.Tpath
-type RestoreF func(sessp.Tpath) Inode
 
 // Inode interface for directories
 
@@ -18,5 +14,4 @@ type Inode interface {
 	Size() (sp.Tlength, *serr.Err)
 	SetParent(Dir)
 	Unlink()
-	Snapshot(SnapshotF) []byte
 }

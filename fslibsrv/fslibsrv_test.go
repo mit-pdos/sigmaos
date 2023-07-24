@@ -147,7 +147,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr(sp.Tuname("test"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -279,7 +279,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		fsl, err := fslib.MakeFsLibAddr("test"+strconv.Itoa(i), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.MakeFsLibAddr(sp.Tuname("test"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -396,7 +396,7 @@ func lookuper(t *testing.T, nclerk int, n int, dir string, nfile int, lip string
 	for c := 0; c < nclerk; c++ {
 		go func() {
 			cn := strconv.Itoa(c)
-			fsl, err := fslib.MakeFsLibAddr("fslibtest-"+cn, sp.ROOTREALM, lip, nds)
+			fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest-"+cn), sp.ROOTREALM, lip, nds)
 			assert.Nil(t, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {

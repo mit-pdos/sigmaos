@@ -3,6 +3,7 @@ package sigmasrv
 import (
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 
 	db "sigmaos/debug"
@@ -75,4 +76,11 @@ func (svcmap *svcMap) Lookup(tname string) *service {
 		db.DFatalf("Unknown tname %q %v\n", tname, svcmap)
 	}
 	return svc
+}
+
+func structName(svci any) string {
+	typ := reflect.TypeOf(svci)
+	name := typ.String()
+	dot := strings.LastIndex(name, ".")
+	return name[dot+1:]
 }

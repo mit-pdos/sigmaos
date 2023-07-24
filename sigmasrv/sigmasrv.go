@@ -1,9 +1,6 @@
 package sigmasrv
 
 import (
-	"reflect"
-	"strings"
-
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -170,16 +167,9 @@ func (ssrv *SigmaSrv) QueueLen() int64 {
 	return ssrv.MemFs.QueueLen()
 }
 
-func structName(svci any) string {
-	typ := reflect.TypeOf(svci)
-	name := typ.String()
-	dot := strings.LastIndex(name, ".")
-	return name[dot+1:]
-}
-
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
-	ssrv.MemFs.Serve()
+	ssrv.MemFs.Servex()
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}

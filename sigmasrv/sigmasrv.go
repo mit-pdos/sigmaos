@@ -33,7 +33,6 @@ type SigmaSrv struct {
 	sti    *protdev.StatInfo
 	svc    *svcMap
 	lsrv   *LeaseSrv
-	ch     chan struct{}
 	cpumon *cpumon.CpuMon
 }
 
@@ -108,7 +107,7 @@ func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
-	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap(), ch: make(chan struct{})}
+	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap()}
 	return ssrv
 }
 
@@ -177,8 +176,8 @@ func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
 
 // Assumes RPCSrv has been created and register the LeaseSrv service.
 func (ssrv *SigmaSrv) NewLeaseSrv() error {
-	lsrv := newLeaseSrv(ssrv.MemFs)
-	ssrv.svc.RegisterService(lsrv)
+	ssrv.lsrv = newLeaseSrv(ssrv.MemFs)
+	ssrv.svc.RegisterService(ssrv.lsrv)
 	return nil
 }
 
@@ -193,9 +192,6 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
 	ssrv.Serve()
-	if ssrv.lsrv != nil {
-		ssrv.lsrv.Stop()
-	}
 	ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
@@ -205,41 +201,24 @@ func (ssrv *SigmaSrv) Exit(status *proc.Status) error {
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}
-	ssrv.done()
+	if ssrv.cpumon != nil {
+		ssrv.cpumon.Done()
+	}
+	ssrv.MemFs.StopServing()
 	return ssrv.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func (ssrv *SigmaSrv) Serve() {
-	// Non-intial-named services wait on the pclnt
-	// infrastructure. Initial named waits on the channel. XXX maybe
-	// also kernelsrv?
-	if ssrv.MemFs.SigmaClnt().ProcClnt != nil {
-		// If this is a kernel proc, register the subsystem info for the realmmgr
-		if proc.GetIsPrivilegedProc() {
-			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
-			kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
-		}
-		if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
-			debug.PrintStack()
-			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
-		}
-		if err := ssrv.MemFs.SigmaClnt().WaitEvict(proc.GetPid()); err != nil {
-			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
-		}
-	} else {
-		<-ssrv.ch
+	// If this is a kernel proc, register the subsystem info for the realmmgr
+	if proc.GetIsPrivilegedProc() {
+		si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
+		kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
 	}
-}
-
-// The server using ssrv is done; exit.
-// XXX call StopServing?
-func (ssrv *SigmaSrv) done() {
-	if ssrv.MemFs.SigmaClnt().ProcClnt != nil {
-		// The caller will call sc.Exit()
-	} else {
-		ssrv.ch <- struct{}{}
+	if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
+		debug.PrintStack()
+		db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 	}
-	if ssrv.cpumon != nil {
-		ssrv.cpumon.Done()
+	if err := ssrv.MemFs.SigmaClnt().WaitEvict(proc.GetPid()); err != nil {
+		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
 }

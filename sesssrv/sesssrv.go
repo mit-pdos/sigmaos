@@ -19,7 +19,6 @@ import (
 	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/snapshot"
@@ -61,10 +60,9 @@ type SessSrv struct {
 	snap       *snapshot.Snapshot
 	replicated bool
 	qlen       stats.Tcounter
-	sc         *sigmaclnt.SigmaClnt
 }
 
-func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	ssrv.dirover = overlay.NewDirOverlay(root)
@@ -100,16 +98,7 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, mkps sps.MkP
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
-	ssrv.sc = sc
 	return ssrv
-}
-
-func (ssrv *SessSrv) SetSigmaClnt(sc *sigmaclnt.SigmaClnt) {
-	ssrv.sc = sc
-}
-
-func (ssrv *SessSrv) SigmaClnt() *sigmaclnt.SigmaClnt {
-	return ssrv.sc
 }
 
 func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {

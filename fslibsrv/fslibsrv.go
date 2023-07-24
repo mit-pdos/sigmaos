@@ -24,15 +24,14 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, et)
+func BootSrv(root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, et)
 }
 
-func Post(sesssrv *sesssrv.SessSrv, path string) error {
+func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(sesssrv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		sc := sesssrv.SigmaClnt()
 		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
 		if err != nil {
 			return err
@@ -47,8 +46,8 @@ func Post(sesssrv *sesssrv.SessSrv, path string) error {
 
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
-	if err := Post(srv, path); err != nil {
+	srv := sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
+	if err := Post(srv, sc, path); err != nil {
 		return nil, err
 	}
 	return srv, nil
@@ -58,11 +57,7 @@ func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.
 	return MakeReplServerFsl(root, port, path, sc, nil)
 }
 
-func MakeReplServer(root fs.Dir, addr string, path string, name sp.Tuname, config repl.Config) (*sesssrv.SessSrv, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(name)
-	if err != nil {
-		return nil, err
-	}
+func MakeReplServer(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, name sp.Tuname, config repl.Config) (*sesssrv.SessSrv, error) {
 	srv, err := MakeReplServerFsl(root, addr, path, sc, config)
 	if err != nil {
 		return nil, err

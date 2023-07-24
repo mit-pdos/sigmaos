@@ -36,12 +36,12 @@ type MemFs struct {
 	pn  string
 }
 
-func MakeMemFsSrv(uname sp.Tuname, pn string, srv *sesssrv.SessSrv) *MemFs {
+func MakeMemFsSrv(uname sp.Tuname, pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt) *MemFs {
 	mfs := &MemFs{
 		SessSrv: srv,
 		ctx:     ctx.MkCtx(uname, 0, sp.NoClntId, nil),
 		plt:     srv.GetPathLockTable(),
-		sc:      srv.SigmaClnt(),
+		sc:      sc,
 		pn:      pn,
 	}
 	return mfs

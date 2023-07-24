@@ -43,7 +43,7 @@ func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error)
 	if err != nil {
 		return nil, err
 	}
-	mfs := MakeMemFsSrv(sc.Uname(), pn, srv)
+	mfs := MakeMemFsSrv(sc.Uname(), pn, srv, sc)
 	return mfs, nil
 }
 
@@ -88,11 +88,15 @@ func MakeMemFsReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt
 }
 
 func MakeMemFsReplServer(root fs.Dir, addr, path string, uname sp.Tuname, config repl.Config) (*MemFs, error) {
-	srv, err := fslibsrv.MakeReplServer(root, addr, path, uname, config)
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
 	if err != nil {
 		return nil, err
 	}
-	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt()}, nil
+	srv, err := fslibsrv.MakeReplServer(root, addr, path, sc, uname, config)
+	if err != nil {
+		return nil, err
+	}
+	return &MemFs{SessSrv: srv, sc: sc}, nil
 }
 
 func MakeReplMemFs(addr, path string, uname sp.Tuname, conf repl.Config, realm sp.Trealm) (*MemFs, error) {
@@ -135,7 +139,7 @@ func MakeReplServerClntPublic(root fs.Dir, path string, sc *sigmaclnt.SigmaClnt,
 			return nil, serr.MkErrError(err)
 		}
 	}
-	return &MemFs{SessSrv: srv, sc: srv.SigmaClnt(), pc: pc, pi: pi}, nil
+	return &MemFs{SessSrv: srv, sc: sc, pc: pc, pi: pi}, nil
 }
 
 // Make MemFs with a public port but don't advertise the port (yet)

@@ -136,12 +136,12 @@ func (nd *Named) mkSrv() error {
 	}
 
 	root := rootDir(nd.fs, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", nd.SigmaClnt, nd.attach, nd.detach, nil, nil)
+	srv := fslibsrv.BootSrv(root, ip+":0", nd.attach, nd.detach, nil, nil)
 	if srv == nil {
 		return fmt.Errorf("BootSrv err %v\n", err)
 	}
 
-	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(proc.GetPid().String()))
+	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(proc.GetPid().String()), nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return err
 	}

@@ -28,8 +28,6 @@ const (
 
 	UXBIN = UX + "~local/bin/"
 
-	MEMFS = NAMED + "memfsd/"
-
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 

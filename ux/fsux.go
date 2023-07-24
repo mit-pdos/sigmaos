@@ -5,11 +5,10 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslibsrv"
 	"sigmaos/proc"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	// "sigmaos/seccomp"
 )
 
@@ -17,7 +16,7 @@ var fsux *FsUx
 
 type FsUx struct {
 	*sigmaclnt.SigmaClnt
-	*sesssrv.SessSrv
+	*sigmasrv.SigmaSrv
 	mount string
 
 	sync.Mutex
@@ -35,15 +34,12 @@ func RunFsUx(rootux string) {
 	if sr != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), sr)
 	}
-	srv, error := fslibsrv.BootSrvAndPost(root, ip+":0", sp.UX, sp.UXREL)
-	if error != nil {
-		db.DFatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
+	srv, err := sigmasrv.MakeSigmaSrvRoot(root, ip+":0", sp.UX, sp.UXREL)
+	if err != nil {
+		db.DFatalf("%v: BootSrvAndPost %v\n", proc.GetName(), err)
 	}
-	fsux.SessSrv = srv
-	fsux.SigmaClnt = srv.SigmaClnt()
-	fsux.Serve()
-	fsux.Done()
-	fsux.Exited(proc.MakeStatus(proc.StatusEvicted))
+	fsux.SigmaSrv = srv
+	fsux.RunServer()
 }
 
 func newUx(rootux string) *FsUx {

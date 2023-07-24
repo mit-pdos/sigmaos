@@ -24,46 +24,32 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, nil)
+func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.AttachClntF, detachf sps.DetachClntF, config repl.Config, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, attachf, detachf, et)
 }
 
-func BootSrvAndPost(root fs.Dir, addr, path string, uname sp.Tuname) (*sesssrv.SessSrv, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(uname)
-	if err != nil {
-		return nil, err
-	}
-	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, nil, nil, nil, et)
+func Post(sesssrv *sesssrv.SessSrv, path string) error {
 	if len(path) > 0 {
-		mnt := sp.MkMountServer(srv.MyAddr())
+		mnt := sp.MkMountServer(sesssrv.MyAddr())
+		sc := sesssrv.SigmaClnt()
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
 		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		li.KeepExtending()
 		if err := sc.MkMountSymlink(path, mnt, li.Lease()); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return srv, nil
+	return nil
 }
 
 func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
 	srv := sesssrv.MakeSessSrv(root, addr, sc, protsrv.MakeProtServer, protsrv.Restore, config, nil, nil, et)
-	if len(path) > 0 {
-		mnt := sp.MkMountServer(srv.MyAddr())
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
-		if err != nil {
-			return nil, err
-		}
-		li.KeepExtending()
-		if err := sc.MkMountSymlink(path, mnt, li.Lease()); err != nil {
-			return nil, err
-		}
+	if err := Post(srv, path); err != nil {
+		return nil, err
 	}
 	return srv, nil
 }

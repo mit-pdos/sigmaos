@@ -10,7 +10,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/perf"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -25,7 +24,7 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	psd, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, sp.S3REL)
+	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, sp.S3REL)
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
@@ -40,11 +39,11 @@ func RunFss3(buckets []string) {
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, path.Path{}, sp.DMDIR)
-		if err := psd.MkNod(bucket, d); err != nil {
+		if err := ssrv.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}
 	}
-	fss3.SigmaSrv = psd
+	fss3.SigmaSrv = ssrv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -54,6 +53,5 @@ func RunFss3(buckets []string) {
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	psd.Serve()
-	psd.Exit(proc.MakeStatus(proc.StatusEvicted))
+	ssrv.RunServer()
 }

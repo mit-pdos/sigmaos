@@ -4,6 +4,9 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/ephemeralmap"
+	"sigmaos/fs"
+	"sigmaos/fslibsrv"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -18,9 +21,7 @@ import (
 // Many SigmaOS servers use SigmaSrv to create and run servers.  A
 // server typically consists of a MemFS (an in-memory file system
 // accessed through sigmap), one or more RPC services, including one
-// for leases. Sigmasrv creates the RPC device in the memfs. Some
-// servers don't use SigmaSrv and directly interact with SessSrv
-// (e.g., ux).
+// for leases. Sigmasrv creates the RPC device in the memfs.
 //
 
 type SigmaSrv struct {
@@ -129,6 +130,18 @@ func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname) *SigmaSrv {
 	return newSigmaSrv(mfs)
 }
 
+func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.MkSigmaClnt(uname)
+	if err != nil {
+		return nil, err
+	}
+	et := ephemeralmap.NewEphemeralMap()
+	sesssrv := fslibsrv.BootSrv(root, addr, sc, nil, nil, nil, et)
+	ssrv := newSigmaSrv(memfssrv.MakeMemFsSrv(uname, "", sesssrv))
+	fslibsrv.Post(sesssrv, path)
+	return ssrv, nil
+}
+
 // Mount the rpc directory in sessrv and create the RPC service in
 // it. This function is useful for SigmaSrv that don't have an MemFs
 // (e.g., knamed/named).
@@ -169,7 +182,7 @@ func (ssrv *SigmaSrv) QueueLen() int64 {
 
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
-	ssrv.MemFs.Servex()
+	ssrv.MemFs.Serve()
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}

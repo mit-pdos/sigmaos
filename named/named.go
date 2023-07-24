@@ -136,7 +136,7 @@ func (nd *Named) mkSrv() error {
 	}
 
 	root := rootDir(nd.fs, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", nd.SigmaClnt, nd.attach, nd.detach, nil)
+	srv := fslibsrv.BootSrv(root, ip+":0", nd.SigmaClnt, nd.attach, nd.detach, nil, nil)
 	if srv == nil {
 		return fmt.Errorf("BootSrv err %v\n", err)
 	}

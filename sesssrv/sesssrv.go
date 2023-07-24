@@ -1,8 +1,6 @@
 package sesssrv
 
 import (
-	"reflect"
-
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -40,31 +38,29 @@ import (
 //
 
 type SessSrv struct {
-	addr       string
-	dirunder   fs.Dir
-	dirover    *overlay.DirOverlay
-	mkps       sps.MkProtServer
-	rps        sps.RestoreProtServer
-	stats      *stats.StatInfo
-	st         *sessstatesrv.SessionTable
-	sm         *sessstatesrv.SessionMgr
-	sct        *sesscond.SessCondTable
-	tmt        *threadmgr.ThreadMgrTable
-	plt        *lockmap.PathLockTable
-	wt         *watch.WatchTable
-	vt         *version.VersionTable
-	et         *ephemeralmap.EphemeralMap
-	ffs        fs.Dir
-	srv        *netsrv.NetServer
-	replSrv    repl.Server
-	snap       *snapshot.Snapshot
-	replicated bool
-	qlen       stats.Tcounter
+	addr     string
+	dirunder fs.Dir
+	dirover  *overlay.DirOverlay
+	mkps     sps.MkProtServer
+	rps      sps.RestoreProtServer
+	stats    *stats.StatInfo
+	st       *sessstatesrv.SessionTable
+	sm       *sessstatesrv.SessionMgr
+	sct      *sesscond.SessCondTable
+	tmt      *threadmgr.ThreadMgrTable
+	plt      *lockmap.PathLockTable
+	wt       *watch.WatchTable
+	vt       *version.VersionTable
+	et       *ephemeralmap.EphemeralMap
+	ffs      fs.Dir
+	srv      *netsrv.NetServer
+	replSrv  repl.Server
+	snap     *snapshot.Snapshot
+	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.RestoreProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
 	ssrv := &SessSrv{}
-	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
@@ -72,7 +68,7 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.Restor
 	ssrv.rps = rps
 	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
-	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
+	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall)
 	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
@@ -85,16 +81,6 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, rps sps.Restor
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 	ssrv.dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
 
-	if !ssrv.replicated {
-		ssrv.replSrv = nil
-	} else {
-		snapDev := snapshot.MakeDev(ssrv, nil, ssrv.dirover)
-		ssrv.dirover.Mount(sp.SNAPDEV, snapDev)
-
-		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
-		ssrv.replSrv.Start()
-		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
-	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
@@ -140,17 +126,11 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 
 func (ssrv *SessSrv) Snapshot() []byte {
 	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
-	if !ssrv.replicated {
-		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
-	}
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
 	return ssrv.snap.Snapshot(ssrv.dirover, ssrv.st, ssrv.tmt)
 }
 
 func (ssrv *SessSrv) Restore(b []byte) {
-	if !ssrv.replicated {
-		db.DFatalf("Tried to restore an unreplicated server %v", proc.GetName())
-	}
 	// Store snapshot for later use during restore.
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
 	// XXX How do we install the sct and wt? How do we sunset old
@@ -235,20 +215,16 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 	if !ok && s != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
 	}
-	if !ssrv.replicated {
-		// If the fcall is a server-generated heartbeat, don't worry about
-		// processing it sequentially on the session's thread.
-		if s == 0 {
+	// If the fcall is a server-generated heartbeat, don't worry about
+	// processing it sequentially on the session's thread.
+	if s == 0 {
+		ssrv.srvfcall(fc)
+	} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
+		go func() {
 			ssrv.srvfcall(fc)
-		} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
-			go func() {
-				ssrv.srvfcall(fc)
-			}()
-		} else {
-			sess.GetThread().Process(fc)
-		}
+		}()
 	} else {
-		ssrv.replSrv.Process(fc)
+		sess.GetThread().Process(fc)
 	}
 }
 

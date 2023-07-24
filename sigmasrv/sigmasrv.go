@@ -141,7 +141,7 @@ func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSr
 		return nil, err
 	}
 	et := ephemeralmap.NewEphemeralMap()
-	sesssrv := fslibsrv.BootSrv(root, addr, nil, nil, nil, et)
+	sesssrv := fslibsrv.BootSrv(root, addr, nil, nil, et)
 	ssrv := newSigmaSrv(memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil

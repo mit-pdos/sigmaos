@@ -49,7 +49,7 @@ func (tmt *ThreadMgrTable) snapshot() []byte {
 }
 
 func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
-	tmt := MakeThreadMgrTable(pfn, true)
+	tmt := MakeThreadMgrTable(pfn)
 	// Add the existing thread manager for the restoring thread.
 	tmt.threadmgrs[tm] = true
 	// Make a thread (there will only ever be one since we're running replicated)

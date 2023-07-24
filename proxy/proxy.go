@@ -25,7 +25,7 @@ type Npd struct {
 
 func MakeNpd(lip string) *Npd {
 	npd := &Npd{lip, nil}
-	tm := threadmgr.MakeThreadMgrTable(nil, false)
+	tm := threadmgr.MakeThreadMgrTable(nil)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
 	return npd
 }

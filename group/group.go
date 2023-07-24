@@ -297,7 +297,7 @@ func RunMember(jobdir, grp string, public bool) {
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	root := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	srv := fslibsrv.BootSrv(root, g.ip+":0", nil, nil, raftCfg, nil)
+	srv := fslibsrv.BootSrv(root, g.ip+":0", nil, nil, nil)
 	if srv == nil {
 		db.DFatalf("Bootsrv\n")
 	}

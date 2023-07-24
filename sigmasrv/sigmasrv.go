@@ -1,12 +1,16 @@
 package sigmasrv
 
 import (
+	"runtime/debug"
+
+	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
+	"sigmaos/kernel"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -26,9 +30,11 @@ import (
 
 type SigmaSrv struct {
 	*memfssrv.MemFs
-	sti  *protdev.StatInfo
-	svc  *svcMap
-	lsrv *LeaseSrv
+	sti    *protdev.StatInfo
+	svc    *svcMap
+	lsrv   *LeaseSrv
+	ch     chan struct{}
+	cpumon *cpumon.CpuMon
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
@@ -102,7 +108,7 @@ func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
-	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap()}
+	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap(), ch: make(chan struct{})}
 	return ssrv
 }
 
@@ -180,9 +186,13 @@ func (ssrv *SigmaSrv) QueueLen() int64 {
 	return ssrv.MemFs.QueueLen()
 }
 
+func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
+	ssrv.cpumon = cpumon.MkCpuMon(ssrv.GetStats(), ufn)
+}
+
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
-	ssrv.MemFs.Serve()
+	ssrv.Serve()
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}
@@ -191,9 +201,45 @@ func (ssrv *SigmaSrv) RunServer() error {
 }
 
 func (ssrv *SigmaSrv) Exit(status *proc.Status) error {
-	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "Exit %v\n", proc.GetProgram())
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}
+	ssrv.done()
 	return ssrv.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
+}
+
+func (ssrv *SigmaSrv) Serve() {
+	// Non-intial-named services wait on the pclnt
+	// infrastructure. Initial named waits on the channel. XXX maybe
+	// also kernelsrv?
+	if ssrv.MemFs.SigmaClnt().ProcClnt != nil {
+		// If this is a kernel proc, register the subsystem info for the realmmgr
+		if proc.GetIsPrivilegedProc() {
+			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
+			kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
+		}
+		if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
+			debug.PrintStack()
+			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
+		}
+		if err := ssrv.MemFs.SigmaClnt().WaitEvict(proc.GetPid()); err != nil {
+			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
+		}
+	} else {
+		<-ssrv.ch
+	}
+}
+
+// The server using ssrv is done; exit.
+// XXX call StopServing?
+func (ssrv *SigmaSrv) done() {
+	if ssrv.MemFs.SigmaClnt().ProcClnt != nil {
+		// The caller will call sc.Exit()
+	} else {
+		ssrv.ch <- struct{}{}
+	}
+	if ssrv.cpumon != nil {
+		ssrv.cpumon.Done()
+	}
 }

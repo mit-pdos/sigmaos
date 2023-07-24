@@ -2,16 +2,13 @@ package sesssrv
 
 import (
 	"reflect"
-	"runtime/debug"
 
-	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
-	"sigmaos/kernel"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
 	"sigmaos/overlaydir"
@@ -62,18 +59,12 @@ type SessSrv struct {
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
 	snap       *snapshot.Snapshot
-	done       bool
 	replicated bool
-	ch         chan bool
-	sc         *sigmaclnt.SigmaClnt
 	qlen       stats.Tcounter
-	cpumon     *cpumon.CpuMon
+	sc         *sigmaclnt.SigmaClnt
 }
 
-func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
-	mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config,
-	attachf sps.AttachClntF, detachf sps.DetachClntF,
-	et *ephemeralmap.EphemeralMap) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, mkps sps.MkProtServer, rps sps.RestoreProtServer, config repl.Config, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	ssrv.dirover = overlay.NewDirOverlay(root)
@@ -109,7 +100,6 @@ func MakeSessSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt,
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
-	ssrv.ch = make(chan bool)
 	ssrv.sc = sc
 	return ssrv
 }
@@ -159,10 +149,6 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	return nil
 }
 
-func (ssrv *SessSrv) MonitorCPU(ufn cpumon.UtilFn) {
-	ssrv.cpumon = cpumon.MkCpuMon(ssrv.stats, ufn)
-}
-
 func (ssrv *SessSrv) Snapshot() []byte {
 	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
 	if !ssrv.replicated {
@@ -178,9 +164,6 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	}
 	// Store snapshot for later use during restore.
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	if ssrv.cpumon != nil {
-		ssrv.cpumon.Done()
-	}
 	// XXX How do we install the sct and wt? How do we sunset old
 	// state when installing a snapshot on a running server?  XXX
 	// dirunder should be dirover, but of type fs.Dir, but plan to
@@ -198,47 +181,6 @@ func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 		return nil
 	}
 	return sess
-}
-
-// The server using ssrv is ready to take requests. Keep serving
-// until ssrv is told to stop using Done().
-func (ssrv *SessSrv) Serve() {
-	// Non-intial-named services wait on the pclnt
-	// infrastructure. Initial named waits on the channel. XXX maybe
-	// also kernelsrv?
-	if ssrv.sc.ProcClnt != nil {
-		// If this is a kernel proc, register the subsystem info for the realmmgr
-		if proc.GetIsPrivilegedProc() {
-			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
-			kernel.RegisterSubsystemInfo(ssrv.sc.FsLib, si)
-		}
-		if err := ssrv.sc.Started(); err != nil {
-			debug.PrintStack()
-			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
-		}
-		if err := ssrv.sc.WaitEvict(proc.GetPid()); err != nil {
-			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
-		}
-	} else {
-		<-ssrv.ch
-	}
-	db.DPrintf(db.SESSSRV, "Done serving")
-}
-
-// The server using ssrv is done; exit.
-// XXX call StopServing?
-func (ssrv *SessSrv) Done() {
-	if ssrv.sc.ProcClnt != nil {
-		// The caller will call sc.Exit()
-	} else {
-		if !ssrv.done {
-			ssrv.done = true
-			ssrv.ch <- true
-		}
-	}
-	if ssrv.cpumon != nil {
-		ssrv.cpumon.Done()
-	}
 }
 
 func (ssrv *SessSrv) MyAddr() string {

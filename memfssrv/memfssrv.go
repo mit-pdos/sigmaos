@@ -135,7 +135,6 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (mfs *MemFs) Exit(status *proc.Status) error {
-	mfs.Done()
 	if mfs.pn != "" {
 		// remove mount
 	}

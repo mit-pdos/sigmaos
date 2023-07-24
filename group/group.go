@@ -328,7 +328,7 @@ func RunMember(jobdir, grp string, public bool) {
 	}
 	defer p.Done()
 
-	g.srv.MonitorCPU(nil)
+	// g.srv.MonitorCPU(nil)
 
 	<-ch
 

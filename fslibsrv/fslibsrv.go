@@ -31,8 +31,8 @@ func BootSrv(root fs.Dir, addr string, sc *sigmaclnt.SigmaClnt, attachf sps.Atta
 func Post(sesssrv *sesssrv.SessSrv, path string) error {
 	if len(path) > 0 {
 		mnt := sp.MkMountServer(sesssrv.MyAddr())
-		sc := sesssrv.SigmaClnt()
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
+		sc := sesssrv.SigmaClnt()
 		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
 		if err != nil {
 			return err

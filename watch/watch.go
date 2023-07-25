@@ -6,15 +6,15 @@ import (
 	// "github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/lockmap"
+	"sigmaos/serr"
 	"sigmaos/sesscond"
+	"sigmaos/sessp"
 )
 
 //
 // A table of watches so that client can wait until a file is created
-// or removed, or a directory changes (see OWATCH).
+// or removed, or a directory changes (see protsrv.Watch()).
 //
 // Servers also use them to locks a pathname before
 // manipulating/creating a file or directory.  When a server starts an

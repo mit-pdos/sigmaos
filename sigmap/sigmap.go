@@ -143,16 +143,6 @@ const (
 	OCEXEC  Tmode = 0x20 // or close on exec
 	ORCLOSE Tmode = 0x40 // remove on close
 	OAPPEND Tmode = 0x80 // append
-
-	// sigmaP extension: a client uses OWATCH to block at the
-	// server until a file/directiory is create or removed, or a
-	// directory changes.  OWATCH with Tcreate will block if the
-	// file exists and a remove() will unblock that create.
-	// OWATCH with Open() and a closure will invoke the closure
-	// when a client creates or removes the file.  OWATCH on open
-	// for a directory and a closure will invoke the closure if
-	// the directory changes.
-	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
 )
 
 func (m Tmode) String() string {

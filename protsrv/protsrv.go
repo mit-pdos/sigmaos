@@ -243,33 +243,21 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, 
 	return nf
 }
 
-// Create name in dir. If OWATCH is set and name already exits, wait
-// until another thread deletes it, and retry.
+// Create name in dir and returns lock for it.
 func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	name := fn.Base()
 	if name == "." {
 		return nil, nil, serr.MkErr(serr.TErrInval, name)
 	}
-	for {
-		flk := ps.plt.Acquire(ctx, fn)
-		o1, err := d.Create(ctx, name, perm, mode, lid)
-		db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
-		if err == nil {
-			ps.wt.WakeupWatch(dlk)
-			return o1, flk, nil
-		} else {
-			ps.plt.Release(ctx, flk)
-			if mode&sp.OWATCH == sp.OWATCH && err.Code() == serr.TErrExists {
-				err := ps.wt.WaitWatch(dlk, ps.sid)
-				db.DPrintf(db.PROTSRV, "%v: Create: Wait %v %v sid %v err %v", ctx.Uname(), name, o1, ps.sid, err)
-				if err != nil {
-					return nil, nil, err
-				}
-				// try again; we will hold lock on watchers
-			} else {
-				return nil, nil, err
-			}
-		}
+	flk := ps.plt.Acquire(ctx, fn)
+	o1, err := d.Create(ctx, name, perm, mode, lid)
+	db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
+	if err == nil {
+		ps.wt.WakeupWatch(dlk)
+		return o1, flk, nil
+	} else {
+		ps.plt.Release(ctx, flk)
+		return nil, nil, err
 	}
 }
 

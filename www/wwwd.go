@@ -238,7 +238,7 @@ func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 
 func doMatMul(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "matmul: %v\n", args)
-	return www.spawnApp("matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1)
+	return www.spawnApp("matmul", w, r, false, []string{args}, map[string]string{"GOMAXPROCS": "1"}, 1000)
 }
 
 // Consume some CPU with a simple CPU-bound task

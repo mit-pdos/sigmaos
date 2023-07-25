@@ -39,7 +39,7 @@ func (mgr *ProcMgr) runUserProc(p *proc.Proc) error {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.
-		db.DFatalf("Error setting up uprocd: %v", uprocErr)
+		db.DPrintf(db.PROCMGR, "runUserProc uproc err %v", uprocErr)
 		return uprocErr
 	}
 	return nil

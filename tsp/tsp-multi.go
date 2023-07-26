@@ -44,58 +44,41 @@ func tspMultiRecursive(g *Graph, homeNode int, choices Set, currentNode int, dep
 	minLen := INFINITY
 	var minPath []int
 
-	if len(choices) == 1 {
-		minPath = make([]int, 2, len(*g))
-		minPath[0] = homeNode
-		minPath[1] = choices[0]
-		minLen = g.getEdge(homeNode, choices[0])
-	} else {
-		// Fork out to single-threaded processes running in parallel
-		if depthToFork == 0 {
-			// These do not need concurrency handling because all threads
-			// will write to different indecies in the array
-			minLengths := make([]int, len(choices))
-			minPaths := make([][]int, len(choices))
-			errors := make([]error, len(choices))
-			wg := sync.WaitGroup{}
-			for index, choice := range choices {
-				wg.Add(1)
-				go func(minLengths *[]int, minPaths *[][]int, errors *[]error, index int, choice int, wg *sync.WaitGroup) {
-					(*minLengths)[index], (*minPaths)[index], (*errors)[index] = tspSingleRecursive(g, homeNode, choices.DelCopy(choice), choice)
-					// error checking is handled outside
-					wg.Done()
-				}(&minLengths, &minPaths, &errors, index, choice, &wg)
+	// These do not need concurrency handling because all threads
+	// will write to different indecies in the array
+	minLengths := make([]int, len(choices))
+	minPaths := make([][]int, len(choices))
+	errors := make([]error, len(choices))
+	wg := sync.WaitGroup{}
+	for index, choice := range choices {
+		wg.Add(1)
+		go func(minLengths *[]int, minPaths *[][]int, errors *[]error, index int, choice int, wg *sync.WaitGroup) {
+			if depthToFork == 0 {
+				(*minLengths)[index], (*minPaths)[index], (*errors)[index] = tspSingleRecursive(g, homeNode, choices.DelCopy(choice), choice)
+			} else {
+				// This directly accesses the variable in tspMultiRecursive without needing to pass a pointer
+				depthToFork--
+				(*minLengths)[index], (*minPaths)[index], (*errors)[index] = tspMultiRecursive(g, homeNode, *choices.DelCopy(choice), choice, depthToFork)
 			}
-			wg.Wait()
-			for _, err := range errors {
-				// Arbitrarily returns the first error
-				// XXX return all errors?
-				if err != nil {
-					return -1, nil, err
-				}
-			}
-			for choice, length := range minLengths {
-				if length < minLen {
-					minLen = length
-					minPath = minPaths[choice]
-				}
-			}
-		} else {
-			// Call a recursion for every possible choice
-			depthToFork--
-			for _, choice := range choices {
-				length, path, err := tspMultiRecursive(g, homeNode, *choices.DelCopy(choice), choice, depthToFork)
-				if err != nil {
-					return -1, nil, err
-				}
-
-				if length < minLen {
-					minLen = length
-					minPath = path
-				}
-			}
+			// error checking is handled outside
+			wg.Done()
+		}(&minLengths, &minPaths, &errors, index, choice, &wg)
+	}
+	wg.Wait()
+	for _, err := range errors {
+		// Arbitrarily returns the first error
+		// XXX return all errors?
+		if err != nil {
+			return -1, nil, err
 		}
 	}
+	for choice, length := range minLengths {
+		if length < minLen {
+			minLen = length
+			minPath = minPaths[choice]
+		}
+	}
+
 	if currentNode == minPath[len(minPath)-1] {
 		return -1, nil, mkErr("Impossible condition in tspMultiRecursive: node traversed to itself")
 	}

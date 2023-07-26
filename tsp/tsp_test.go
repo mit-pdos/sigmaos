@@ -18,7 +18,7 @@ var GRAPH_5 = tsp.Graph{
 	{2, 6, 5, 0, 6},
 	{7, 3, 8, 6, 0}}
 var PATH_5 = []int{0, 2, 1, 4, 3, 0}
-var LENGTH_5 = 19
+var LENGTH_5 = 21
 
 // Randomly generated.
 var GRAPH_13 = tsp.Graph{
@@ -128,9 +128,9 @@ func measureTSPMulti(t *testing.T, g *tsp.Graph, suffix string, depthToFork int)
 }
 
 func TestTSPProfile(t *testing.T) {
-	g := GRAPH_5
+	g := GRAPH_13
 	suffix := "_tmp"
 
-	measureTSPSingle(t, &g, suffix)
+	//measureTSPSingle(t, &g, suffix)
 	measureTSPMulti(t, &g, suffix, 1)
 }

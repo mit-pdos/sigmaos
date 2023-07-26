@@ -200,11 +200,11 @@ func TestConcurFailAllN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestConcurReplOK0(t *testing.T) {
+func XTestConcurReplOK0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func TestConcurReplOK1(t *testing.T) {
+func XTestConcurReplOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 

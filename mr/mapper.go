@@ -285,16 +285,16 @@ func RunMapper(mapf MapT, args []string) {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 	if err = m.initMapper(); err != nil {
-		m.Exit(proc.MakeStatusErr(err.Error(), nil))
+		m.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
-		m.Exit(proc.MakeStatusInfo(proc.StatusOK, m.input,
+		m.ClntExit(proc.MakeStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))
 	} else {
-		m.Exit(proc.MakeStatusErr(err.Error(), nil))
+		m.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 	}
 }

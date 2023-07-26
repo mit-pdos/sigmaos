@@ -80,7 +80,7 @@ func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Sigm
 	return sc, nil
 }
 
-func (sc *SigmaClnt) Exit(status *proc.Status) error {
+func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	sc.ProcClnt.Exited(status)
 	if sc.LeaseClnt != nil {
 		sc.LeaseClnt.EndLeases()
@@ -88,6 +88,6 @@ func (sc *SigmaClnt) Exit(status *proc.Status) error {
 	return sc.FsLib.DetachAll()
 }
 
-func (sc *SigmaClnt) ExitOK() {
-	sc.Exit(proc.MakeStatus(proc.StatusOK))
+func (sc *SigmaClnt) ClntExitOK() {
+	sc.ClntExit(proc.MakeStatus(proc.StatusOK))
 }

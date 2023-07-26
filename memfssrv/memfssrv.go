@@ -138,7 +138,7 @@ func (mfs *MemFs) Exit(status *proc.Status) error {
 	if mfs.pn != "" {
 		// remove mount
 	}
-	return mfs.sc.Exit(status)
+	return mfs.sc.ClntExit(status)
 }
 
 func (mfs *MemFs) Dump() error {

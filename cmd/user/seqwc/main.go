@@ -30,5 +30,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Wc: error %v\n", err)
 	}
-	sc.Exit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
+	sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

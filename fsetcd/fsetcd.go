@@ -25,6 +25,7 @@ var (
 )
 
 func init() {
+	db.DPrintf(db.ALWAYS, "Etcd addr %v", proc.NamedAddrs())
 	for i := range endpoints {
 		endpoints[i] = proc.NamedAddrs() + endpoints[i]
 	}

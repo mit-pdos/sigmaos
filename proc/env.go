@@ -59,9 +59,9 @@ func SetProgram(program string) {
 }
 
 func NamedAddrs() string {
-	return "127.0.0.1"
 	addrs := GetSigmaNamed()
 	if addrs == "" {
+		return "127.0.0.1"
 		debug.PrintStack()
 		log.Fatalf("Getenv error: missing SIGMANAMED")
 	}
@@ -73,6 +73,7 @@ func Named() (sp.Taddrs, error) {
 }
 
 func SetSigmaNamed(nds sp.Taddrs) error {
+	return nil
 	s, err := nds.Taddrs2String()
 	if err != nil {
 		return err

@@ -102,11 +102,12 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
 	p.AppendEnv(proc.SIGMAREALM, clnt.Realm().String())
-	s, err := clnt.NamedAddr().Taddrs2String()
-	if err != nil {
-		return err
-	}
-	p.AppendEnv(proc.SIGMANAMED, s)
+	//	s, err := clnt.NamedAddr().Taddrs2String()
+	//	if err != nil {
+	//		return err
+	//	}
+	p.AppendEnv(proc.SIGMANAMED, proc.NamedAddrs())
+	db.DPrintf(db.ALWAYS, "Appended named %v", proc.NamedAddrs())
 	return nil
 }
 

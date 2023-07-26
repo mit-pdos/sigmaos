@@ -196,8 +196,8 @@ func (ssrv *SigmaSrv) RunServer() error {
 	return nil
 }
 
-func (ssrv *SigmaSrv) Exit(status *proc.Status) error {
-	db.DPrintf(db.SIGMASRV, "Exit %v\n", proc.GetProgram())
+func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
+	db.DPrintf(db.SIGMASRV, "SrvExit %v\n", proc.GetProgram())
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}

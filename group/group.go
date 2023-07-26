@@ -324,7 +324,7 @@ func RunMember(jobdir, grp string, public bool) {
 
 	db.DPrintf(db.GROUP, "%v: group done\n", proc.GetPid())
 
-	g.Exit(proc.MakeStatus(proc.StatusEvicted))
+	g.ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 // XXX move to procclnt?

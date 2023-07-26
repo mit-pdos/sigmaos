@@ -100,7 +100,7 @@ func (s *Sleeper) Work() {
 	status := <-ch
 	if !s.native {
 		start := time.Now()
-		s.Exit(status)
+		s.ClntExit(status)
 		db.DPrintf(db.SLEEPER_TIMING, "Elapsed %v us", time.Since(start).Microseconds())
 	}
 }

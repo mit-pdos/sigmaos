@@ -59,11 +59,11 @@ func RunLeader(dir, last, child string) {
 		b := l.Fence().Json()
 		p := proc.MakeProc("leadertest-proc", []string{string(b), dir})
 		if err := sc.Spawn(p); err != nil {
-			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 		if err := sc.WaitStart(p.GetPid()); err != nil {
-			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 	}
@@ -87,5 +87,5 @@ func RunLeader(dir, last, child string) {
 		}
 	}
 
-	sc.ExitOK()
+	sc.ClntExitOK()
 }

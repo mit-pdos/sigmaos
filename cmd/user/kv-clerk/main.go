@@ -123,7 +123,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 			status = proc.MakeStatus(proc.StatusEvicted)
 		}
 	}
-	sc.Exit(status)
+	sc.ClntExit(status)
 }
 
 func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {

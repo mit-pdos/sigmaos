@@ -44,7 +44,7 @@ func main() {
 	spinPerf(nthread, niter)
 	db.DPrintf(db.ALWAYS, "%v:  %v", id, time.Since(start))
 	if isSigmaProc {
-		sc.Exit(proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(start)))
+		sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(start)))
 	}
 }
 

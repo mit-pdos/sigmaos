@@ -25,14 +25,14 @@ func RunProc(fencestr, dir string) {
 
 	fence, err := sessp.NewFenceJson([]byte(fencestr))
 	if err != nil {
-		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 	}
 
 	log.Printf("%v: fence %v dir %v\n", proc.GetName(), fence, dir)
 
 	fc := fenceclnt.MakeFenceClnt(sc.FsLib)
 	if err := fc.FenceAtEpoch(*fence, []string{dir}); err != nil {
-		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
@@ -48,7 +48,7 @@ func RunProc(fencestr, dir string) {
 
 	b, err := json.Marshal(*conf)
 	if err != nil {
-		sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
@@ -60,5 +60,5 @@ func RunProc(fencestr, dir string) {
 		}
 	}
 
-	sc.ExitOK()
+	sc.ClntExitOK()
 }

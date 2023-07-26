@@ -231,5 +231,5 @@ func RunReducer(reducef ReduceT, args []string) {
 		os.Exit(1)
 	}
 	status := r.doReduce()
-	r.Exit(status)
+	r.ClntExit(status)
 }

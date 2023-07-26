@@ -65,7 +65,7 @@ func (s *Spinner) waitEvict() {
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
-	s.Exit(proc.MakeStatus(proc.StatusEvicted))
+	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 }
 

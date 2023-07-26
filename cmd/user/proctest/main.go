@@ -85,10 +85,9 @@ func main() {
 		})
 
 		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error exit status 2") {
-
-			sc.Exit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 			os.Exit(1)
 		}
 	}
-	sc.ExitOK()
+	sc.ClntExitOK()
 }

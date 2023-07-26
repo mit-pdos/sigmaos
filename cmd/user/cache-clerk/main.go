@@ -116,7 +116,7 @@ func run(sc *sigmaclnt.SigmaClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p
 		d := time.Since(start)
 		status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 	}
-	sc.Exit(status)
+	sc.ClntExit(status)
 }
 
 func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {

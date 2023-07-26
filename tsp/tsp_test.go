@@ -1,9 +1,13 @@
 package tsp_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"runtime/pprof"
 	"sigmaos/tsp"
 	"testing"
+	"time"
 )
 
 // Source: https://people.sc.fsu.edu/~jburkardt/datasets/tsp/tsp.html
@@ -34,6 +38,23 @@ var GRAPH_13 = tsp.Graph{
 var PATH_13 = []int{0, 8, 1, 7, 6, 12, 10, 2, 5, 4, 9, 3, 11, 0}
 var LENGTH_13 = 2598402
 
+// Randomly generated.
+var GRAPH_14 = tsp.Graph{
+	{77, 58, 28, 44, 19, 33, 39, 76, 37, 55, 79, 89, 18, 20},
+	{58, 68, 3, 89, 66, 86, 5, 1, 73, 83, 89, 40, 57, 96},
+	{28, 3, 13, 83, 63, 65, 21, 48, 56, 24, 13, 1, 22, 78},
+	{44, 89, 83, 18, 2, 42, 63, 7, 14, 4, 83, 67, 32, 52},
+	{19, 66, 63, 2, 33, 68, 87, 62, 90, 33, 20, 4, 42, 25},
+	{33, 86, 65, 42, 68, 58, 93, 53, 69, 75, 14, 44, 47, 31},
+	{39, 5, 21, 63, 87, 93, 65, 96, 39, 78, 1, 35, 28, 8},
+	{76, 1, 48, 7, 62, 53, 96, 50, 44, 53, 30, 55, 71, 22},
+	{37, 73, 56, 14, 90, 69, 39, 44, 61, 28, 60, 80, 92, 79},
+	{55, 83, 24, 4, 33, 75, 78, 53, 28, 17, 15, 46, 66, 68},
+	{79, 89, 13, 83, 20, 14, 1, 30, 60, 15, 10, 4, 17, 94},
+	{89, 40, 1, 67, 4, 44, 35, 55, 80, 46, 4, 37, 69, 85},
+	{18, 57, 22, 32, 42, 47, 28, 71, 92, 66, 17, 69, 67, 88},
+	{20, 96, 78, 52, 25, 31, 8, 22, 79, 68, 94, 85, 88, 38}}
+
 // Source: https://people.sc.fsu.edu/~jburkardt/datasets/tsp/tsp.html
 var GRAPH_15 = tsp.Graph{
 	{0, 29, 82, 46, 68, 52, 72, 42, 51, 55, 29, 74, 23, 72, 46},
@@ -55,82 +76,61 @@ var PATH_15 = []int{0, 12, 1, 14, 8, 4, 6, 2, 11, 13, 9, 7, 5, 3, 10, 0}
 var LENGTH_15 = 291
 
 func TestGraph(t *testing.T) {
-	g, err := tsp.GenGraph(14, 100)
+	g, err := tsp.GenGraph(13, 100)
 	assert.Nil(t, err, "GenGraph Failed")
 	g.PrintExport()
 }
 
-/*
-func TestTSPSingle1(t *testing.T) {
-	GRAPH_1.Print()
-	length, path, err := GRAPH_1.TSPSingle(0)
+func TestTSPSingle(t *testing.T) {
+	length, path, err := GRAPH_13.TSPSingle(0)
 	assert.Nil(t, err, "TSPSingle Failed")
-	assert.Equal(t, LENGTH_1, length)
-	assert.Equal(t, PATH_1, path)
+	assert.Equal(t, LENGTH_13, length)
+	assert.Equal(t, PATH_13, path)
 }
 
-func TestTSPSingle2(t *testing.T) {
-	length, path, err := GRAPH_2.TSPSingle(0)
-	assert.Nil(t, err, "TSPSingle Failed")
-	assert.Equal(t, LENGTH_2, length)
-	assert.Equal(t, PATH_2, path)
-}
-
-func TestTSPMulti1(t *testing.T) {
-	length, path, err := GRAPH_1.TSPMulti(0, 1)
+func TestTSPMulti(t *testing.T) {
+	length, path, err := GRAPH_13.TSPMulti(0, 1)
 	assert.Nil(t, err, "TSPMulti Failed")
-	assert.Equal(t, LENGTH_1, length)
-	assert.Equal(t, PATH_1, path)
+	assert.Equal(t, LENGTH_13, length)
+	assert.Equal(t, PATH_13, path)
 }
 
-func TestTSPMulti2(t *testing.T) {
-	length, path, err := GRAPH_2.TSPMulti(0, 1)
-	assert.Nil(t, err, "TSPMulti Failed")
-	assert.Equal(t, LENGTH_2, length)
-	assert.Equal(t, PATH_2, path)
-}
+func measureTSPSingle(t *testing.T, g *tsp.Graph, suffix string) {
+	f, err := os.Create("cpu_s" + suffix + ".pprof")
+	assert.Nil(t, err, "File creation failed")
+	err = pprof.StartCPUProfile(f)
+	assert.Nil(t, err, "CPU pprof start failed")
 
-func measureTSPSingle(t *testing.T, g *tsp.Graph) {
 	start := time.Now().UnixMilli()
 	length, path, err := g.TSPSingle(0)
 	stop := time.Now().UnixMilli()
 	assert.Nil(t, err, "TSPSingle Failed")
+
+	pprof.StopCPUProfile()
+	f.Close()
 	fmt.Printf("TSPSingle found %v in %v ms via %v\n", length, stop-start, path)
 }
 
-func measureTSPMulti(t *testing.T, g *tsp.Graph, depthToFork int) {
+func measureTSPMulti(t *testing.T, g *tsp.Graph, suffix string, depthToFork int) {
+	f, err := os.Create("cpu_m" + suffix + ".pprof")
+	assert.Nil(t, err, "File creation failed")
+	err = pprof.StartCPUProfile(f)
+	assert.Nil(t, err, "CPU pprof start failed")
+
 	start := time.Now().UnixMilli()
 	length, path, err := g.TSPMulti(0, depthToFork)
 	stop := time.Now().UnixMilli()
-	assert.Nil(t, err, "TSPSingle Failed")
+	assert.Nil(t, err, "TSPMulti Failed")
+
+	pprof.StopCPUProfile()
+	f.Close()
 	fmt.Printf("TSPMulti found %v in %v ms via %v\n", length, stop-start, path)
 }
 
 func TestTSPProfile(t *testing.T) {
-	//g, err := tsp.GenGraph(13, 1000000)
-	//assert.Nil(t, err, "GenGraph Failed")
-	//g.Print()
-	g := GRAPH_2
+	g := GRAPH_5
 	suffix := "_tmp"
-	fc, err := os.Create("cpu" + suffix + ".pprof")
-	assert.Nil(t, err, "File creation failed")
-	err = pprof.StartCPUProfile(fc)
-	assert.Nil(t, err, "CPU pprof start failed")
 
-	measureTSPSingle(t, &g)
-	//measureTSPMulti(t, &g, 1)
-
-	//fm, err := os.Create("memory" + suffix + ".pprof")
-	//assert.Nil(t, err, "File creation failed")
-	//err = pprof.WriteHeapProfile(fm)
-	//assert.Nil(t, err, "Memory pprof failed")
-	//fm.Close()
-
-	pprof.StopCPUProfile()
-	fc.Close()
-
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Alloc = %v MiB\n", m.Alloc/1024/1024)
+	measureTSPSingle(t, &g, suffix)
+	measureTSPMulti(t, &g, suffix, 1)
 }
-*/

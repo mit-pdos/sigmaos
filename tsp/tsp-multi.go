@@ -50,7 +50,7 @@ func tspMultiRecursive(g *Graph, homeNode int, choices Set, currentNode int, dep
 		minPath[1] = choices[0]
 		minLen = g.getEdge(homeNode, choices[0])
 	} else {
-
+		// Fork out to single-threaded processes running in parallel
 		if depthToFork == 0 {
 			// These do not need concurrency handling because all threads
 			// will write to different indecies in the array

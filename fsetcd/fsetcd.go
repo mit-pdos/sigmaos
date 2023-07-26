@@ -21,8 +21,14 @@ const (
 )
 
 var (
-	endpoints = []string{"127.0.0.1:2379", "localhost:22379", "localhost:32379"}
+	endpoints = []string{":2379", ":22379", ":32379"}
 )
+
+func init() {
+	for i := range endpoints {
+		endpoints[i] = proc.NamedAddrs() + endpoints[i]
+	}
+}
 
 type FsEtcd struct {
 	*clientv3.Client

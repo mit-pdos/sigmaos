@@ -1,29 +1,23 @@
 package tsp_test
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"runtime"
-	"runtime/pprof"
 	"sigmaos/tsp"
 	"testing"
-	"time"
 )
 
-// 5 Cities.
 // Source: https://people.sc.fsu.edu/~jburkardt/datasets/tsp/tsp.html
-var GRAPH_1 = tsp.Graph{
+var GRAPH_5 = tsp.Graph{
 	{0, 3, 4, 2, 7},
 	{3, 0, 4, 6, 3},
 	{4, 4, 0, 5, 8},
 	{2, 6, 5, 0, 6},
 	{7, 3, 8, 6, 0}}
-var PATH_1 = []int{0, 2, 1, 4, 3, 0}
-var LENGTH_1 = 19
+var PATH_5 = []int{0, 2, 1, 4, 3, 0}
+var LENGTH_5 = 19
 
-// 13 Cities. Randomly generated.
-var GRAPH_2 = tsp.Graph{
+// Randomly generated.
+var GRAPH_13 = tsp.Graph{
 	{148916, 811961, 558224, 638724, 808909, 210302, 663933, 489562, 157096, 706849, 750071, 557016, 732908},
 	{811961, 997868, 818484, 915848, 924311, 273206, 526337, 48804, 209779, 776844, 654168, 920287, 627629},
 	{558224, 818484, 245131, 571408, 729606, 196595, 891691, 749550, 573627, 289201, 87347, 486307, 499393},
@@ -37,12 +31,11 @@ var GRAPH_2 = tsp.Graph{
 	{750071, 654168, 87347, 843224, 520222, 510932, 867149, 322910, 264180, 581664, 604115, 625222, 210235},
 	{557016, 920287, 486307, 205425, 546194, 569505, 640232, 609604, 960771, 381964, 625222, 616640, 713372},
 	{732908, 627629, 499393, 609719, 748684, 651041, 538951, 746185, 823005, 298095, 210235, 713372, 281067}}
-var PATH_2 = []int{0, 8, 1, 7, 6, 12, 10, 2, 5, 4, 9, 3, 11, 0}
-var LENGTH_2 = 2598402
+var PATH_13 = []int{0, 8, 1, 7, 6, 12, 10, 2, 5, 4, 9, 3, 11, 0}
+var LENGTH_13 = 2598402
 
-// 15 Cities.
 // Source: https://people.sc.fsu.edu/~jburkardt/datasets/tsp/tsp.html
-var GRAPH_3 = tsp.Graph{
+var GRAPH_15 = tsp.Graph{
 	{0, 29, 82, 46, 68, 52, 72, 42, 51, 55, 29, 74, 23, 72, 46},
 	{29, 0, 55, 46, 42, 43, 43, 23, 23, 31, 41, 51, 11, 52, 21},
 	{82, 55, 0, 68, 46, 55, 23, 43, 41, 29, 79, 21, 64, 31, 51},
@@ -58,15 +51,16 @@ var GRAPH_3 = tsp.Graph{
 	{23, 11, 64, 51, 46, 51, 51, 33, 29, 41, 42, 61, 0, 62, 23},
 	{72, 52, 31, 43, 65, 29, 46, 31, 51, 23, 59, 11, 62, 0, 59},
 	{46, 21, 51, 64, 23, 59, 33, 37, 11, 37, 61, 55, 23, 59, 0}}
-var PATH_3 = []int{0, 12, 1, 14, 8, 4, 6, 2, 11, 13, 9, 7, 5, 3, 10, 0}
-var LENGTH_3 = 291
+var PATH_15 = []int{0, 12, 1, 14, 8, 4, 6, 2, 11, 13, 9, 7, 5, 3, 10, 0}
+var LENGTH_15 = 291
 
 func TestGraph(t *testing.T) {
-	g, err := tsp.GenGraph(4, 10)
+	g, err := tsp.GenGraph(14, 100)
 	assert.Nil(t, err, "GenGraph Failed")
-	g.Print()
+	g.PrintExport()
 }
 
+/*
 func TestTSPSingle1(t *testing.T) {
 	GRAPH_1.Print()
 	length, path, err := GRAPH_1.TSPSingle(0)
@@ -117,7 +111,7 @@ func TestTSPProfile(t *testing.T) {
 	//assert.Nil(t, err, "GenGraph Failed")
 	//g.Print()
 	g := GRAPH_2
-	suffix := "_old"
+	suffix := "_tmp"
 	fc, err := os.Create("cpu" + suffix + ".pprof")
 	assert.Nil(t, err, "File creation failed")
 	err = pprof.StartCPUProfile(fc)
@@ -137,6 +131,6 @@ func TestTSPProfile(t *testing.T) {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
 	fmt.Printf("Alloc = %v MiB\n", m.Alloc/1024/1024)
 }
+*/

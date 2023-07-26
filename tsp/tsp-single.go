@@ -112,15 +112,15 @@ func tspSingleRecursiveBase(g *Graph, homeNode int, choices *Set) (int, []int, e
 	copy(ephemeralChoices, *choices)
 	ephemeralChoices = append(ephemeralChoices, 0)
 
-	for i1 := range ephemeralChoices {
-		ephemeralChoices[i1], ephemeralChoices[len(ephemeralChoices)-1] = ephemeralChoices[len(ephemeralChoices)-1], ephemeralChoices[i1]
-		for i2 := range ephemeralChoices {
+	for _, c1 := range *choices {
+		choices.DelInPlace(c1)
+		for _, c2 := range *choices {
 			choices.DelInPlace(c2)
-			for _, c3 := range ephemeralChoices {
+			for _, c3 := range *choices {
 				choices.DelInPlace(c3)
-				for _, c4 := range ephemeralChoices {
+				for _, c4 := range *choices {
 					choices.DelInPlace(c4)
-					for _, c5 := range ephemeralChoices {
+					for _, c5 := range *choices {
 						tmpLen = g.getEdge(homeNode, c5)
 						tmpLen += g.getEdge(c5, c4)
 						tmpLen += g.getEdge(c4, c3)
@@ -142,7 +142,7 @@ func tspSingleRecursiveBase(g *Graph, homeNode int, choices *Set) (int, []int, e
 			}
 			choices.Add(c2)
 		}
-		ephemeralChoices[i1], ephemeralChoices[len(ephemeralChoices)-1] = ephemeralChoices[len(ephemeralChoices)-1], ephemeralChoices[i1]
+		choices.Add(c1)
 	}
 	return minLen, minPath, nil
 }

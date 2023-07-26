@@ -51,3 +51,15 @@ func (g *Graph) Print() {
 		fmt.Print("\n")
 	}
 }
+
+func (g *Graph) PrintExport() {
+	fmt.Print("{")
+	for i1, _ := range *g {
+		for _, w2 := range (*g)[i1] {
+			fmt.Printf("v, ", w2)
+		}
+		fmt.Print("}\n{")
+	}
+	fmt.Print("}")
+
+}

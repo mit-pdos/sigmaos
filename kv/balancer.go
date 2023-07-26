@@ -90,7 +90,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("MakeLeaderClnt %v\n", err)
 	}
 
-	ssrv, err := sigmasrv.MakeSigmaSrvClntNoRPC("", bl.SigmaClnt, KVBALANCER)
+	ssrv, err := sigmasrv.MakeSigmaSrvClntNoRPC("", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}

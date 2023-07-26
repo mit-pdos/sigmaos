@@ -77,7 +77,7 @@ func MakeSigmaSrvPort(fn, port string, uname sp.Tuname, svci any) (*SigmaSrv, er
 	return MakeSigmaSrvMemFs(mfs, svci)
 }
 
-func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci any) (*SigmaSrv, error) {
+func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
@@ -85,7 +85,7 @@ func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname, svci 
 	return makeSigmaSrvRPC(mfs, svci)
 }
 
-func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt, uname sp.Tuname) (*SigmaSrv, error) {
+func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	mfs, err := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
 	if err != nil {
 		db.DFatalf("MakeMemFsPortClnt %v err %v\n", fn, err)

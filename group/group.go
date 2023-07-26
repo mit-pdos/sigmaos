@@ -12,23 +12,18 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/container"
 	"sigmaos/crash"
-	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
-	"sigmaos/fslibsrv"
-	"sigmaos/memfs"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 const (
@@ -61,7 +56,7 @@ type Group struct {
 	grp    string
 	ip     string
 	*sigmaclnt.SigmaClnt
-	srv *sesssrv.SessSrv
+	ssrv *sigmasrv.SigmaSrv
 
 	// We use an electclnt instead of a leaderclnt, since we don't
 	// need epochs because the config is stored in etcd. If we lose
@@ -237,11 +232,6 @@ func RunMember(jobdir, grp string, public bool) {
 	if err != nil {
 		db.DFatalf("MakeElectClnt %v\n", err)
 	}
-	ip, err := container.LocalIP()
-	if err != nil {
-		db.DFatalf("group ip %v\n", err)
-	}
-	g.ip = ip
 	g.jobdir = jobdir
 
 	var nReplicas int
@@ -296,14 +286,14 @@ func RunMember(jobdir, grp string, public bool) {
 
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
-	root := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	srv := fslibsrv.BootSrv(root, g.ip+":0", nil, nil, nil)
-	if srv == nil {
-		db.DFatalf("Bootsrv\n")
+	// XXX used to pass raftCfg to sesssrv for transparent replication
+	ssrv, err := sigmasrv.MakeSigmaSrvClntNoRPC("", sc)
+	if err != nil {
+		db.DFatalf("MakeSigmaSrvClnt %v\n", err)
 	}
-	g.srv = srv
+	g.ssrv = ssrv
 
-	clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{srv.MyAddr()})
+	clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{ssrv.MyAddr()})
 
 	db.DPrintf(db.GROUP, "%v:%v Writing cluster config: %v at %v", grp, id, clusterCfg,
 		grpConfPath(g.jobdir, grp))
@@ -318,8 +308,8 @@ func RunMember(jobdir, grp string, public bool) {
 	g.ReleaseLeadership()
 
 	crash.Crasher(g.FsLib)
-	crash.Partitioner(g.srv)
-	crash.NetFailer(g.srv)
+	crash.Partitioner(g.ssrv.SessSrv)
+	crash.NetFailer(g.ssrv.SessSrv)
 
 	// Record performance.
 	p, err := perf.MakePerf(perf.GROUP)

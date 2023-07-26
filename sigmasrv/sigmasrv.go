@@ -192,7 +192,7 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
 	ssrv.Serve()
-	ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
+	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 
@@ -205,7 +205,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 		ssrv.cpumon.Done()
 	}
 	ssrv.MemFs.StopServing()
-	return ssrv.MemFs.Exit(proc.MakeStatus(proc.StatusEvicted))
+	return ssrv.MemFs.MemFsExit(proc.MakeStatus(proc.StatusEvicted))
 }
 
 func (ssrv *SigmaSrv) Serve() {

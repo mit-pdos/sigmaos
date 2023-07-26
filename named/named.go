@@ -124,7 +124,7 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", proc.GetPid(), err)
 	}
 
-	nd.SigmaSrv.Exit(proc.MakeStatus(proc.StatusEvicted))
+	nd.SigmaSrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 
 	return nil
 }

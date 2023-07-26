@@ -138,6 +138,7 @@ CID=$(docker run -dit\
              -e jaegerip=${JAEGERIP}\
              -e overlays=${OVERLAYS}\
              -e SIGMADEBUG=${SIGMADEBUG}\
+             -e SIGMANAMED=${SIGMANAMED}\
              sigmaos)
 
 if [ -z ${CID} ]; then

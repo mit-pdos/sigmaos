@@ -67,12 +67,14 @@ func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Tadd
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.MkSigmaClntRootInit(uname, ip, namedAddr)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error make sigma clnt root init")
 		return nil, err
 	}
 	pn := sp.BOOT + kernelId
 	if kernelId == "" {
 		pn1, _, err := sc.ResolveUnion(sp.BOOT + "~local")
 		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error resolve local")
 			return nil, err
 		}
 		pn = pn1
@@ -82,6 +84,7 @@ func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Tadd
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s %s\n", pn, kernelId)
 	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, pn)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error Mkcernelclnt")
 		return nil, err
 	}
 

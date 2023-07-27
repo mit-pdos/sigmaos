@@ -111,6 +111,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		kernelid = bootkernelclnt.GenKernelId()
 		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
 		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
 		}
 		containerIP = ip
@@ -118,10 +119,12 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
 	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
 	k, err = bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
 	}
 	return &Tstate{

@@ -47,17 +47,17 @@ func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Du
 
 func (ji *CachedJobInstance) RunCachedJob() {
 	cm, err := cacheclnt.MkCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC, test.Overlays)
-	assert.Nil(ji.T, err, "Error MkCacheMgr: %v", err)
+	assert.Nil(ji.Ts.T, err, "Error MkCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"
 	ji.sem = semclnt.MakeSemClnt(ji.FsLib, ji.sempn)
 	err = ji.sem.Init(0)
-	assert.Nil(ji.T, err, "Err sem init %v", err)
+	assert.Nil(ji.Ts.T, err, "Err sem init %v", err)
 
 	// Start clerks
 	for i := 0; i < ji.nclerks; i++ {
 		ck, err := cacheclnt.StartClerk(ji.SigmaClnt, ji.job, ji.nkeys, ji.dur, i*ji.nkeys, ji.sempn, ji.ckmcpu)
-		assert.Nil(ji.T, err, "Err StartClerk: %v", err)
+		assert.Nil(ji.Ts.T, err, "Err StartClerk: %v", err)
 		ji.clerks = append(ji.clerks, ck)
 	}
 	ji.sem.Up()
@@ -66,7 +66,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 	for _, ck := range ji.clerks {
 		tpt, err := cacheclnt.WaitClerk(ji.SigmaClnt, ck)
 		db.DPrintf(db.ALWAYS, "Clerk throughput: %v ops/sec", tpt)
-		assert.Nil(ji.T, err, "Err waitclerk %v", err)
+		assert.Nil(ji.Ts.T, err, "Err waitclerk %v", err)
 		aggTpt += tpt
 	}
 	db.DPrintf(db.ALWAYS, "Aggregate throughput: %v (ops/sec)", aggTpt)

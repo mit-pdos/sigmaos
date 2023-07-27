@@ -56,7 +56,7 @@ func printResultSummary(rs *benchmarks.Results) {
 
 func makeRealmPerf(ts *test.RealmTstate) *perf.Perf {
 	p, err := perf.MakePerfMulti(perf.BENCH, ts.GetRealm().String())
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.Ts.T, err)
 	return p
 }
 

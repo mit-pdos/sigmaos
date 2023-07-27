@@ -51,16 +51,16 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs s
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
-	assert.Equal(ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
+	assert.Equal(ts.Ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
 
 	ji.dur = make([]time.Duration, 0, len(durslice))
 	ji.maxrps = make([]int, 0, len(durslice))
 
 	for i := range durslice {
 		d, err := time.ParseDuration(durslice[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		n, err := strconv.Atoi(maxrpsslice[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		ji.dur = append(ji.dur, d)
 		ji.maxrps = append(ji.maxrps, n)
 	}
@@ -68,7 +68,7 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs s
 	if !ji.justCli {
 		var err error
 		ji.rj, err = rpcbench.MakeRPCBenchJob(ts.SigmaClnt, ji.jobpath, mcpu, test.Overlays)
-		assert.Nil(ts.T, err, "Error MakeRPCBenchJob: %v", err)
+		assert.Nil(ts.Ts.T, err, "Error MakeRPCBenchJob: %v", err)
 		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
@@ -118,7 +118,7 @@ func (ji *RPCBenchJobInstance) printStats() {
 		stats := &protdev.SigmaRPCStats{}
 		s := ji.jobpath
 		err := ji.GetFileJson(s+"/"+protdev.STATS, stats)
-		assert.Nil(ji.T, err, "error get stats %v", err)
+		assert.Nil(ji.Ts.T, err, "error get stats %v", err)
 		fmt.Printf("= %s: %v\n", s, stats)
 	}
 }
@@ -133,7 +133,7 @@ func (ji *RPCBenchJobInstance) Wait() {
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()
 		err := ji.rj.Stop()
-		assert.Nil(ji.T, err, "stop %v", err)
+		assert.Nil(ji.Ts.T, err, "stop %v", err)
 	}
 	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {

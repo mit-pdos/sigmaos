@@ -19,7 +19,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	if err != nil {
 		return sp.NoFid, err
 	}
-	db.DPrintf(db.WALK, "unionScan: target: %v\n", target)
+	db.DPrintf(db.WALK, "unionScan: target: %v\n", string(target))
 	mnt, err := sp.MkMount(target)
 	if err != nil {
 		return sp.NoFid, nil

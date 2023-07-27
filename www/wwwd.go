@@ -231,7 +231,7 @@ func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*p
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	www.ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
+	//	www.ssrv.Exit(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 	return nil, nil
 }

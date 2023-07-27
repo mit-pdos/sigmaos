@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	leaseproto "sigmaos/lease/proto"
 	"sigmaos/proc"
+	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
@@ -13,14 +14,14 @@ import (
 type LeaseClnt struct {
 	*fslib.FsLib
 	lm *syncmap.SyncMap[string, *LeaseInfo]
-	cc *ClntCache
+	cc *rpcclnt.ClntCache
 }
 
 func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *LeaseInfo](),
-		cc:    NewClntCache(fsl),
+		cc:    rpcclnt.NewRPCClntCache(fsl),
 	}, nil
 }
 

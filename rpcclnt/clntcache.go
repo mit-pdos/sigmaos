@@ -1,4 +1,4 @@
-package leaseclnt
+package rpcclnt
 
 import (
 	"sync"
@@ -9,43 +9,43 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/pathclnt"
-	"sigmaos/rpcclnt"
+	"sigmaos/protdev"
 	"sigmaos/serr"
 )
 
 type ClntCache struct {
 	sync.Mutex
-	fsl *fslib.FsLib
-	cc  map[string]*rpcclnt.RPCClnt
+	fsl   *fslib.FsLib
+	rpccs map[string]*RPCClnt
 }
 
-func NewClntCache(fsl *fslib.FsLib) *ClntCache {
-	return &ClntCache{fsl: fsl, cc: make(map[string]*rpcclnt.RPCClnt)}
+func NewRPCClntCache(fsl *fslib.FsLib) *ClntCache {
+	return &ClntCache{fsl: fsl, rpccs: make(map[string]*RPCClnt)}
 }
 
 // Note: several threads may call MkRPCClnt for same pn,
-// overwriting the pdc of the last thread that called NewClnt.
-func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
+// overwriting the rpcc of the last thread that called NewClnt.
+func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 	cc.Lock()
 	defer cc.Unlock()
-	rpcc, ok := cc.cc[pn]
+	rpcc, ok := cc.rpccs[pn]
 	if ok {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
+	rpcc, err := MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
-	cc.cc[pn] = rpcc
+	cc.rpccs[pn] = rpcc
 	return rpcc, nil
 }
 
 func (cc *ClntCache) Delete(pn string) {
 	cc.Lock()
 	defer cc.Unlock()
-	delete(cc.cc, pn)
+	delete(cc.rpccs, pn)
 }
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
@@ -67,4 +67,24 @@ func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.
 		}
 	}
 	return serr.MkErr(serr.TErrUnreachable, pn)
+}
+
+func (cc *ClntCache) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
+	stats := make([]*protdev.SigmaRPCStats, 0, len(cc.rpccs))
+	for _, rpcc := range cc.rpccs {
+		st, err := rpcc.StatsSrv()
+		if err != nil {
+			return nil, err
+		}
+		stats = append(stats, st)
+	}
+	return stats, nil
+}
+
+func (cc *ClntCache) StatsClnt() []map[string]*protdev.MethodStat {
+	stats := make([]map[string]*protdev.MethodStat, 0, len(cc.rpccs))
+	for _, rpcc := range cc.rpccs {
+		stats = append(stats, rpcc.StatsClnt())
+	}
+	return stats
 }

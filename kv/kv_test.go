@@ -8,6 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	proto "sigmaos/cache/proto"
+
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	"sigmaos/rand"
@@ -97,27 +100,27 @@ func (ts *Tstate) done() {
 
 func TestMiss(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
-	_, err := ts.cm.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
-	assert.True(t, ts.cm.IsMiss(err))
+	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &proto.CacheString{})
+	assert.Equal(t, cachesrv.ErrMiss, err)
 	ts.done()
 }
 
 func TestGetPut(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	_, err := ts.cm.GetRaw(kv.MkKey(kv.NKEYS+1), 0)
+	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &proto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
 
-	err = ts.cm.PutRaw(kv.MkKey(kv.NKEYS+1), []byte(kv.MkKey(kv.NKEYS+1)), 0)
+	err = ts.cm.Put(kv.MkKey(kv.NKEYS+1), &proto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
-	err = ts.cm.PutRaw(kv.MkKey(0), []byte(kv.MkKey(0)), 0)
+	err = ts.cm.Put(kv.MkKey(0), &proto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)
-		_, err := ts.cm.GetRaw(key, 0)
-		assert.Nil(ts.T, err, "Get "+key.String())
+		err := ts.cm.Get(key, &proto.CacheString{})
+		assert.Nil(ts.T, err, "Get "+key)
 	}
 
 	ts.cm.StopClerks()

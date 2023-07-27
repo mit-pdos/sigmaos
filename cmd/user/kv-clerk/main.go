@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	cproto "sigmaos/cache/proto"
+
 	"github.com/go-redis/redis/v8"
 
 	db "sigmaos/debug"
@@ -169,13 +171,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 		if setget {
 			// If running against redis.
 			if rcli != nil {
-				if err := rcli.Set(ctx, key.String(), proc.GetPid().String(), 0).Err(); err != nil {
+				if err := rcli.Set(ctx, key, proc.GetPid().String(), 0).Err(); err != nil {
 					db.DFatalf("Error redis cli set: %v", err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
-				if _, err := rcli.Get(ctx, key.String()).Result(); err != nil {
+				if _, err := rcli.Get(ctx, key).Result(); err != nil {
 					db.DFatalf("Error redis cli get: %v", err)
 				}
 				// Record op for throughput calculation.
@@ -183,13 +185,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.PutRaw(key, []byte(proc.GetPid().String()), 0); err != nil {
+				if err := kc.Put(key, &cproto.CacheString{Val: proc.GetPid().String()}); err != nil {
 					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
-				if _, err := kc.GetRaw(key, 0); err != nil {
+				if err := kc.Get(key, &cproto.CacheString{}); err != nil {
 					return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.
@@ -204,7 +206,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
 			*nops++
-			if err := check(kc, key, ntest, p); err != nil {
+			if err := check(kc, kv.Tkey(key), ntest, p); err != nil {
 				db.DPrintf(db.ALWAYS, "check failed %v\n", err)
 				return err
 			}

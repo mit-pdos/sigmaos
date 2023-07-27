@@ -49,6 +49,7 @@ type CacheSrv struct {
 	bins   []cache
 	shrd   string
 	tracer *tracing.Tracer
+	perf   *perf.Perf
 }
 
 func RunCacheSrv(args []string) error {
@@ -84,9 +85,29 @@ func RunCacheSrv(args []string) error {
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
-	defer p.Done()
+	s.perf = p
+	defer s.perf.Done()
 
 	return ssrv.RunServer()
+}
+
+func NewCacheSrv() *CacheSrv {
+	s := &CacheSrv{bins: make([]cache, NBIN)}
+	for i := 0; i < NBIN; i++ {
+		s.bins[i].cache = make(map[string][]byte)
+	}
+	s.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
+	p, err := perf.MakePerf(perf.CACHESRV)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	s.perf = p
+	return s
+}
+
+func (s *CacheSrv) ExitCacheSrv() {
+	s.tracer.Flush()
+	s.perf.Done()
 }
 
 // XXX support timeout

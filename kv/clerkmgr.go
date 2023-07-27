@@ -5,6 +5,8 @@ import (
 	"path"
 	"strconv"
 
+	proto "sigmaos/cache/proto"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -43,7 +45,7 @@ func (cm *ClerkMgr) StartCmClerk() error {
 
 func (cm *ClerkMgr) InitKeys(nkeys int) error {
 	for i := uint64(0); i < uint64(nkeys); i++ {
-		if err := cm.PutRaw(MkKey(i), []byte{}, 0); err != nil {
+		if err := cm.Put(MkKey(i), &proto.CacheString{Val: ""}); err != nil {
 			return err
 		}
 	}
@@ -134,7 +136,7 @@ func (cm *ClerkMgr) stopClerk(pid proc.Tpid) (*proc.Status, error) {
 }
 
 func (cm *ClerkMgr) GetKeyCountsPerGroup(nkeys int) map[string]int {
-	keys := make([]Tkey, 0, nkeys)
+	keys := make([]string, 0, nkeys)
 	for i := uint64(0); i < uint64(nkeys); i++ {
 		keys = append(keys, MkKey(i))
 	}

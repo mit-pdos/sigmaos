@@ -219,7 +219,7 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	return nil
 }
 
-func RunMember(jobdir, grp string, public bool) {
+func RunMember(jobdir, grp string, public bool, svci any) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
@@ -287,7 +287,7 @@ func RunMember(jobdir, grp string, public bool) {
 	db.DPrintf(db.GROUP, "Starting replica with cluster config %v", clusterCfg)
 
 	// XXX used to pass raftCfg to sesssrv for transparent replication
-	ssrv, err := sigmasrv.MakeSigmaSrvClntNoRPC("", sc)
+	ssrv, err := sigmasrv.MakeSigmaSrvClnt("", sc, svci)
 	if err != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v\n", err)
 	}

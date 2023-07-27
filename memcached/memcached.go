@@ -75,11 +75,11 @@ func (mc *MemcachedClnt) IsMiss(e error) bool {
 	return e.Error() == memcache.ErrCacheMiss.Error()
 }
 
-func key2shard(key string, nshard int) int {
+func key2server(key string, nserver int) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := int(h.Sum32()) % nshard
-	return shard
+	server := int(h.Sum32()) % nserver
+	return server
 }
 
 type serverSelector struct {
@@ -100,7 +100,7 @@ func makeServerSelector(addrs []string) *serverSelector {
 }
 
 func (ss *serverSelector) PickServer(key string) (net.Addr, error) {
-	return ss.addrs[key2shard(key, len(ss.addrs))], nil
+	return ss.addrs[key2server(key, len(ss.addrs))], nil
 }
 
 func (ss *serverSelector) Each(f func(net.Addr) error) error {

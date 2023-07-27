@@ -37,8 +37,8 @@ func (k Tkey) String() string {
 	return string(k)
 }
 
-func MkKey(k uint64) Tkey {
-	return Tkey(strconv.FormatUint(k, 16))
+func MkKey(k uint64) string {
+	return strconv.FormatUint(k, 16)
 }
 
 type Tshard int
@@ -71,6 +71,7 @@ type KvClerk struct {
 	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 	job   string
+	cclnt *CacheClnt
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
@@ -90,11 +91,13 @@ func MakeClerk(uname sp.Tuname, job string) (*KvClerk, error) {
 }
 
 func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
-	kc := &KvClerk{}
-	kc.FsLib = fsl
-	kc.conf = &Config{}
-	kc.job = job
-	kc.fclnt = fenceclnt.MakeFenceClnt(kc.FsLib)
+	kc := &KvClerk{
+		FsLib: fsl,
+		conf:  &Config{},
+		job:   job,
+		fclnt: fenceclnt.MakeFenceClnt(fsl),
+		cclnt: NewCacheClnt(fsl),
+	}
 	return kc
 }
 
@@ -197,7 +200,7 @@ func (kc *KvClerk) doop(o *op) {
 	for {
 		db.DPrintf(db.KVCLERK, "o %v conf %v", o.kind, kc.conf)
 		fn := keyPath(kc.job, kc.conf.Shards[s], s, o.k)
-		o.do(kc.FsLib, fn)
+		kc.do(o, fn, kvGrpPath(kc.job, kc.conf.Shards[s]), s)
 		if o.err == nil { // success?
 			return
 		}
@@ -208,17 +211,17 @@ func (kc *KvClerk) doop(o *op) {
 	}
 }
 
-type opT int
+type opT string
 
 const (
-	GETVAL opT = iota + 1
-	PUT
-	GETRD
+	GETVAL = "Get"
+	PUT    = "Put"
+	GETRD  = "Read"
 )
 
 type op struct {
 	kind opT
-	b    []byte
+	val  proto.Message
 	k    Tkey
 	off  sp.Toffset
 	m    sp.Tmode
@@ -226,51 +229,43 @@ type op struct {
 	err  error
 }
 
-func (o *op) do(fsl *fslib.FsLib, fn string) {
+func (kc *KvClerk) do(o *op, fn string, srv string, s Tshard) {
 	switch o.kind {
 	case GETVAL:
-		o.b, o.err = fsl.GetFile(fn)
+		o.err = kc.cclnt.Get(srv, string(o.k), o.val)
+		// o.b, o.err = fsl.GetFile(fn)
 	case GETRD:
-		o.rdr, o.err = fsl.OpenReader(fn)
+		db.DFatalf("do not supported\n")
+		// o.rdr, o.err = fsl.OpenReader(fn)
 	case PUT:
-		if o.off == 0 {
-			_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
-		} else {
-			_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
-		}
+		o.err = kc.cclnt.Put(srv, string(o.k), o.val)
+		// if o.off == 0 {
+		// 	_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
+		// } else {
+		// 	_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
+		// }
 	}
-	db.DPrintf(db.KVCLERK, "op %v fn %v err %v", o.kind, fn, o.err)
+	db.DPrintf(db.KVCLERK, "op %v fn %v srv %v s %v err %v", o.kind, fn, srv, s, o.err)
+}
+
+func (kc *KvClerk) Get(key string, val proto.Message) error {
+	op := &op{GETVAL, val, Tkey(key), 0, sp.OREAD, nil, nil}
+	kc.doop(op)
+	return op.err
 }
 
 func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	return kc.Get(key, val)
 }
 
-func (kc *KvClerk) Get(key string, val proto.Message) error {
-	b, err := kc.GetRaw(Tkey(key), 0)
-	if err != nil {
-		return err
-	}
-	if err := proto.Unmarshal(b, val); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (kc *KvClerk) GetRaw(k Tkey, off sp.Toffset) ([]byte, error) {
-	op := &op{GETVAL, []byte{}, k, off, sp.OREAD, nil, nil}
-	kc.doop(op)
-	return op.b, op.err
-}
-
 func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
-	op := &op{GETRD, []byte{}, k, 0, sp.OREAD, nil, nil}
+	op := &op{GETRD, nil, k, 0, sp.OREAD, nil, nil}
 	kc.doop(op)
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Append(k Tkey, b []byte) error {
-	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+func (kc *KvClerk) Append(k Tkey, val proto.Message) error {
+	op := &op{PUT, val, k, sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -280,15 +275,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	b, err := proto.Marshal(val)
-	if err != nil {
-		return nil
-	}
-	return kc.PutRaw(Tkey(k), b, 0)
-}
-
-func (kc *KvClerk) PutRaw(k Tkey, b []byte, off sp.Toffset) error {
-	op := &op{PUT, b, k, off, sp.OWRITE, nil, nil}
+	op := &op{PUT, val, Tkey(k), 0, sp.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -302,24 +289,20 @@ func (kc *KvClerk) Delete(k string) error {
 	return nil
 }
 
-func (kc *KvClerk) AppendJson(k Tkey, v proto.Message) error {
-	b, err := proto.Marshal(v)
-	if err != nil {
-		return err
-	}
-	op := &op{PUT, b, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+func (kc *KvClerk) AppendJson(k string, v proto.Message) error {
+	op := &op{PUT, v, Tkey(k), sp.NoOffset, sp.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 // Count the number of keys stored at each group.
-func (kc *KvClerk) GetKeyCountsPerGroup(keys []Tkey) map[string]int {
+func (kc *KvClerk) GetKeyCountsPerGroup(keys []string) map[string]int {
 	if err := kc.switchConfig(); err != nil {
 		db.DFatalf("Error switching KV config: %v", err)
 	}
 	cnts := make(map[string]int)
 	for _, k := range keys {
-		s := key2shard(k)
+		s := key2shard(Tkey(k))
 		grp := kc.conf.Shards[s]
 		if _, ok := cnts[grp]; !ok {
 			cnts[grp] = 0

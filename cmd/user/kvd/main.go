@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/group"
 )
@@ -18,5 +19,6 @@ func main() {
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	group.RunMember(os.Args[1], os.Args[2], public)
+	cs := cachesrv.NewCacheSrv()
+	group.RunMember(os.Args[1], os.Args[2], public, cs)
 }

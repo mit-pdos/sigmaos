@@ -101,7 +101,7 @@ func (ssc *ShardSvcClnt) Server(i int) string {
 	return ssc.pn + shardsvcmgr.Shard(i)
 }
 
-func (ssc *ShardSvcClnt) Nshard() int {
+func (ssc *ShardSvcClnt) NServer() int {
 	ssc.Lock()
 	defer ssc.Unlock()
 	return len(ssc.clnts)

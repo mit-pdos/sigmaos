@@ -28,11 +28,11 @@ func MkKey(k uint64) string {
 	return strconv.FormatUint(k, 16)
 }
 
-func key2shard(key string, nshard int) int {
+func key2server(key string, nserver int) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := int(h.Sum32()) % nshard
-	return shard
+	server := int(h.Sum32()) % nserver
+	return server
 }
 
 type CacheClnt struct {
@@ -60,7 +60,7 @@ func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 }
 
 func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
-	n := key2shard(arg.Key, cc.Nshard())
+	n := key2server(arg.Key, cc.NServer())
 	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 
@@ -151,7 +151,7 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 }
 
 func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
-	n := cc.Nshard()
+	n := cc.NServer()
 	stats := make([]*protdev.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
@@ -164,7 +164,7 @@ func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 }
 
 func (cc *CacheClnt) StatsClnt() []map[string]*protdev.MethodStat {
-	n := cc.Nshard()
+	n := cc.NServer()
 	stats := make([]map[string]*protdev.MethodStat, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))

@@ -25,18 +25,18 @@ import (
 )
 
 const (
-	DUMP = "dump"
-	NBIN = 1009
+	DUMP   = "dump"
+	NSHARD = 1009
 )
 
 var (
 	ErrMiss = errors.New("cache miss")
 )
 
-func key2bin(key string) uint32 {
+func key2shard(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	bin := h.Sum32() % NBIN
+	bin := h.Sum32() % NSHARD
 	return bin
 }
 
@@ -46,7 +46,7 @@ type cache struct {
 }
 
 type CacheSrv struct {
-	bins   []cache
+	shards []cache
 	shrd   string
 	tracer *tracing.Tracer
 	perf   *perf.Perf
@@ -61,9 +61,9 @@ func RunCacheSrv(args []string) error {
 	if err != nil {
 		return err
 	}
-	s.bins = make([]cache, NBIN)
-	for i := 0; i < NBIN; i++ {
-		s.bins[i].cache = make(map[string][]byte)
+	s.shards = make([]cache, NSHARD)
+	for i := 0; i < NSHARD; i++ {
+		s.shards[i].cache = make(map[string][]byte)
 	}
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
 	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
@@ -92,9 +92,9 @@ func RunCacheSrv(args []string) error {
 }
 
 func NewCacheSrv() *CacheSrv {
-	s := &CacheSrv{bins: make([]cache, NBIN)}
-	for i := 0; i < NBIN; i++ {
-		s.bins[i].cache = make(map[string][]byte)
+	s := &CacheSrv{shards: make([]cache, NSHARD)}
+	for i := 0; i < NSHARD; i++ {
+		s.shards[i].cache = make(map[string][]byte)
 	}
 	s.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(perf.CACHESRV)
@@ -119,16 +119,16 @@ func (s *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 
 	db.DPrintf(db.CACHESRV, "Put %v\n", req)
 
-	b := key2bin(req.Key)
+	b := key2shard(req.Key)
 
 	start := time.Now()
-	s.bins[b].Lock()
-	defer s.bins[b].Unlock()
+	s.shards[b].Lock()
+	defer s.shards[b].Unlock()
 	if time.Since(start) > 300*time.Microsecond {
 		db.DPrintf(db.CACHE_LAT, "Long cache lock put: %v", time.Since(start))
 	}
 
-	s.bins[b].cache[req.Key] = req.Value
+	s.shards[b].cache[req.Key] = req.Value
 	return nil
 }
 
@@ -140,16 +140,16 @@ func (s *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto
 	}
 
 	db.DPrintf(db.CACHESRV, "Get %v", req)
-	b := key2bin(req.Key)
+	b := key2shard(req.Key)
 
 	start := time.Now()
-	s.bins[b].Lock()
-	defer s.bins[b].Unlock()
+	s.shards[b].Lock()
+	defer s.shards[b].Unlock()
 	if time.Since(start) > 300*time.Microsecond {
 		db.DPrintf(db.CACHE_LAT, "Long cache lock get: %v", time.Since(start))
 	}
 
-	v, ok := s.bins[b].cache[req.Key]
+	v, ok := s.shards[b].cache[req.Key]
 	if ok {
 		rep.Value = v
 		return nil
@@ -167,18 +167,18 @@ func (s *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachepr
 	}
 
 	db.DPrintf(db.CACHESRV, "Delete %v", req)
-	b := key2bin(req.Key)
+	b := key2shard(req.Key)
 
 	start := time.Now()
-	s.bins[b].Lock()
-	defer s.bins[b].Unlock()
+	s.shards[b].Lock()
+	defer s.shards[b].Unlock()
 	if time.Since(start) > 20*time.Millisecond {
 		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))
 	}
 
-	_, ok := s.bins[b].cache[req.Key]
+	_, ok := s.shards[b].cache[req.Key]
 	if ok {
-		delete(s.bins[b].cache, req.Key)
+		delete(s.shards[b].cache, req.Key)
 		return nil
 	}
 	return ErrMiss
@@ -186,13 +186,13 @@ func (s *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachepr
 
 type cacheSession struct {
 	*inode.Inode
-	bins []cache
-	sid  sessp.Tsession
+	shards []cache
+	sid    sessp.Tsession
 }
 
 func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
-	cs := &cacheSession{mfs.MakeDevInode(), s.bins, sid}
-	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.bins, cs)
+	cs := &cacheSession{mfs.MakeDevInode(), s.shards, sid}
+	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.shards, cs)
 	return cs, nil
 }
 
@@ -201,14 +201,14 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 	if off > 0 {
 		return nil, nil
 	}
-	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.bins)
+	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.shards)
 	m := make(map[string][]byte)
-	for i, _ := range cs.bins {
-		cs.bins[i].Lock()
-		for k, v := range cs.bins[i].cache {
+	for i, _ := range cs.shards {
+		cs.shards[i].Lock()
+		for k, v := range cs.shards[i].cache {
 			m[k] = v
 		}
-		cs.bins[i].Unlock()
+		cs.shards[i].Unlock()
 	}
 
 	b, err := proto.Marshal(&cacheproto.CacheDump{Vals: m})

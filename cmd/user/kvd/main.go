@@ -19,6 +19,6 @@ func main() {
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	cs := cachesrv.NewCacheSrv()
+	cs := cachesrv.NewCacheSrv("")
 	group.RunMember(os.Args[1], os.Args[2], public, cs)
 }

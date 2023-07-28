@@ -15,7 +15,7 @@ import (
 
 type cacheSession struct {
 	*inode.Inode
-	shards []shard
+	shards shardMap
 	sid    sessp.Tsession
 }
 
@@ -33,11 +33,11 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.shards)
 	m := make(map[string][]byte)
 	for i, _ := range cs.shards {
-		cs.shards[i].Lock()
-		for k, v := range cs.shards[i].cache {
+		cs.shards[i].s.Lock()
+		for k, v := range cs.shards[i].s.cache {
 			m[k] = v
 		}
-		cs.shards[i].Unlock()
+		cs.shards[i].s.Unlock()
 	}
 
 	b, err := proto.Marshal(&cacheproto.CacheDump{Vals: m})

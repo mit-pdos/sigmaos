@@ -16,6 +16,8 @@ message CacheRequest {
   SpanContextConfig spanContextConfig = 3;
 }
 
+message CacheOK {}
+
 message CacheResult {
   bytes value = 1;
 }
@@ -31,3 +33,14 @@ message CacheString {
 message CacheInt {
   int64 val = 1;
 }
+
+message ShardArg {
+  uint32 shard = 1;
+}
+
+message ShardFill {
+  uint32 shard = 1;
+  map<string, bytes> vals = 2;
+}
+
+

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"strconv"
+	"sync"
 	"time"
 
 	cacheproto "sigmaos/cache/proto"
@@ -12,6 +13,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sessdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -34,8 +36,16 @@ func key2shard(key string) uint32 {
 	return bin
 }
 
+type shardInfo struct {
+	ready bool
+	s     *shard
+}
+
+type shardMap map[uint32]*shardInfo
+
 type CacheSrv struct {
-	shards []shard
+	mu     sync.Mutex
+	shards shardMap
 	shrd   string
 	tracer *tracing.Tracer
 	perf   *perf.Perf
@@ -65,14 +75,16 @@ func RunCacheSrv(args []string) error {
 		return err
 	}
 	ssrv.RunServer()
-	s.ExitCacheSrv()
+	s.exitCacheSrv()
 	return nil
 }
 
 func NewCacheSrv(pn string) *CacheSrv {
-	cs := &CacheSrv{shards: make([]shard, NSHARD)}
-	for i := 0; i < NSHARD; i++ {
-		cs.shards[i].cache = make(map[string][]byte)
+	cs := &CacheSrv{shards: make(map[uint32]*shardInfo)}
+	for i := uint32(0); i < NSHARD; i++ {
+		if err := cs.createShard(i, true); err != nil {
+			db.DFatalf("CreateShard %v\n", err)
+		}
 	}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(perf.CACHESRV)
@@ -84,11 +96,71 @@ func NewCacheSrv(pn string) *CacheSrv {
 	return cs
 }
 
-func (cs *CacheSrv) ExitCacheSrv() {
+func (cs *CacheSrv) exitCacheSrv() {
 	cs.tracer.Flush()
 	cs.perf.Done()
 }
 
+// XXX locking
+func (cs *CacheSrv) lookupShard(s uint32) (*shard, bool) {
+	sh, ok := cs.shards[s]
+	if !sh.ready {
+		return nil, false
+	}
+	return sh.s, ok
+}
+
+func (cs *CacheSrv) createShard(s uint32, b bool) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	if _, ok := cs.shards[s]; ok {
+		return serr.MkErr(serr.TErrExists, s)
+	}
+	cs.shards[s] = &shardInfo{ready: b, s: newShard()}
+	return nil
+}
+
+func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+	return cs.createShard(req.Shard, false)
+}
+
+func (cs *CacheSrv) FillShard(ctx fs.CtxI, req cacheproto.ShardFill, rep *cacheproto.CacheOK) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	if _, ok := cs.shards[req.Shard]; !ok {
+		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	}
+	cs.shards[req.Shard] = &shardInfo{s: newShard()}
+	cs.shards[req.Shard].ready = true
+	cs.shards[req.Shard].s.fill(req.Vals)
+	return nil
+}
+
+func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheDump) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	if _, ok := cs.shards[req.Shard]; !ok {
+		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	}
+	rep.Vals = cs.shards[req.Shard].s.dump()
+	return nil
+}
+
+func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	if _, ok := cs.shards[req.Shard]; ok {
+		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	}
+	delete(cs.shards, req.Shard)
+	return nil
+}
+
+// XXX support timeout
 func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
 	if false {
 		_, span := cs.tracer.StartRPCSpan(&req, "Put")
@@ -99,8 +171,10 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 
 	start := time.Now()
 
-	b := key2shard(req.Key)
-	s := cs.shards[b]
+	s, ok := cs.lookupShard(key2shard(req.Key))
+	if !ok {
+		return ErrMiss
+	}
 	err := s.put(req.Key, req.Value)
 
 	if time.Since(start) > 300*time.Microsecond {
@@ -119,8 +193,10 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	start := time.Now()
 
-	b := key2shard(req.Key)
-	s := cs.shards[b]
+	s, ok := cs.lookupShard(key2shard(req.Key))
+	if !ok {
+		return ErrMiss
+	}
 	v, ok := s.get(req.Key)
 
 	if time.Since(start) > 300*time.Microsecond {
@@ -147,9 +223,11 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 
 	start := time.Now()
 
-	b := key2shard(req.Key)
-	s := cs.shards[b]
-	ok := s.delete(req.Key)
+	s, ok := cs.lookupShard(key2shard(req.Key))
+	if !ok {
+		return ErrMiss
+	}
+	ok = s.delete(req.Key)
 
 	if time.Since(start) > 20*time.Millisecond {
 		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))

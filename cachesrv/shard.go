@@ -10,7 +10,10 @@ type shard struct {
 	cache map[string][]byte
 }
 
-// XXX support timeout
+func newShard() *shard {
+	return &shard{cache: make(map[string][]byte)}
+}
+
 func (s *shard) put(key string, val []byte) error {
 	s.Lock()
 	defer s.Unlock()
@@ -36,4 +39,25 @@ func (s *shard) delete(key string) bool {
 		return true
 	}
 	return false
+}
+
+func (s *shard) fill(vals map[string][]byte) bool {
+	s.Lock()
+	defer s.Unlock()
+
+	for k, v := range vals {
+		s.cache[k] = v
+	}
+	return true
+}
+
+func (s *shard) dump() map[string][]byte {
+	s.Lock()
+	defer s.Unlock()
+
+	m := make(map[string][]byte)
+	for k, v := range s.cache {
+		m[k] = v
+	}
+	return m
 }

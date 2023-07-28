@@ -40,59 +40,48 @@ func key2shard(key string) uint32 {
 	return bin
 }
 
-type cache struct {
+type shard struct {
 	sync.Mutex
 	cache map[string][]byte
 }
 
 type CacheSrv struct {
-	shards []cache
+	shards []shard
 	shrd   string
 	tracer *tracing.Tracer
 	perf   *perf.Perf
 }
 
 func RunCacheSrv(args []string) error {
-	s := &CacheSrv{}
+	pn := ""
 	if len(args) > 3 {
-		s.shrd = args[3]
+		pn = args[3]
 	}
 	public, err := strconv.ParseBool(args[2])
 	if err != nil {
 		return err
 	}
-	s.shards = make([]cache, NSHARD)
-	for i := 0; i < NSHARD; i++ {
-		s.shards[i].cache = make(map[string][]byte)
-	}
+
+	s := NewCacheSrv(pn)
+
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
 	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
 	if err != nil {
 		return err
 	}
-
 	if _, err := ssrv.Create(DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
 	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.mkSession, nil); err != nil {
 		return err
 	}
-
-	s.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
-	defer s.tracer.Flush()
-
-	p, err := perf.MakePerf(perf.CACHESRV)
-	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
-	}
-	s.perf = p
-	defer s.perf.Done()
-
-	return ssrv.RunServer()
+	ssrv.RunServer()
+	s.ExitCacheSrv()
+	return nil
 }
 
-func NewCacheSrv() *CacheSrv {
-	s := &CacheSrv{shards: make([]cache, NSHARD)}
+func NewCacheSrv(pn string) *CacheSrv {
+	s := &CacheSrv{shards: make([]shard, NSHARD)}
 	for i := 0; i < NSHARD; i++ {
 		s.shards[i].cache = make(map[string][]byte)
 	}
@@ -102,6 +91,7 @@ func NewCacheSrv() *CacheSrv {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	s.perf = p
+	s.shrd = pn
 	return s
 }
 
@@ -186,7 +176,7 @@ func (s *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachepr
 
 type cacheSession struct {
 	*inode.Inode
-	shards []cache
+	shards []shard
 	sid    sessp.Tsession
 }
 

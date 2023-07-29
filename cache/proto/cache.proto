@@ -14,7 +14,8 @@ message CacheRequest {
   string key = 1;
   bytes value = 2;
   uint32 shard = 3;
-  SpanContextConfig spanContextConfig = 4;
+  uint32 mode = 4;
+  SpanContextConfig spanContextConfig = 5;
 }
 
 message CacheOK {}

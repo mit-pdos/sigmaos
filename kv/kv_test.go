@@ -1,6 +1,12 @@
 package kv_test
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/binary"
+	"io"
+	"log"
+	"reflect"
 	"regexp"
 	"strconv"
 	"testing"
@@ -8,11 +14,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	proto "sigmaos/cache/proto"
+	"google.golang.org/protobuf/proto"
+
+	// "google.golang.org/protobuf/reflect/protoreflect"
+
+	cproto "sigmaos/cache/proto"
 
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/kv"
+	kproto "sigmaos/kv/proto"
 	"sigmaos/rand"
 	"sigmaos/test"
 )
@@ -30,6 +41,51 @@ func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {
 			assert.Equal(t, v, n+1, "checkKvs")
 		}
 	}
+}
+
+func decode(t *testing.T, b []byte, m proto.Message) {
+	typ := reflect.TypeOf(m)
+	rdr := bytes.NewReader(b)
+	log.Printf("b = %d\n", len(b))
+	for {
+		var l uint32
+		if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
+			if err == io.EOF {
+				break
+			}
+			assert.Nil(t, err)
+		}
+		log.Printf("len %d\n", l)
+		b := make([]byte, int(l))
+		if _, err := io.ReadFull(rdr, b); err != nil && !(err == io.EOF && l == 0) {
+			assert.Nil(t, err)
+		}
+		val := reflect.New(typ.Elem()).Interface().(proto.Message)
+		log.Printf("type %T %v\n", val, typ)
+		if err := proto.Unmarshal(b, val); err != nil {
+			assert.Nil(t, err)
+		}
+		log.Printf("val %v\n", val)
+		// vals = append(vals, val)
+	}
+}
+
+func TestProtoArray(t *testing.T) {
+	b, err := proto.Marshal(&kproto.KVTestVal{Key: "xxx"})
+	assert.Nil(t, err)
+	var buf bytes.Buffer
+	l := uint32(len(b))
+	wr := bufio.NewWriter(&buf)
+	for i := 0; i < 2; i++ {
+		if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
+			assert.Nil(t, err)
+		}
+		if err := binary.Write(wr, binary.LittleEndian, b); err != nil {
+			assert.Nil(t, err)
+		}
+	}
+	wr.Flush()
+	decode(t, buf.Bytes(), &kproto.KVTestVal{})
 }
 
 func TestBalance(t *testing.T) {
@@ -100,7 +156,7 @@ func (ts *Tstate) done() {
 
 func TestMiss(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
-	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &proto.CacheString{})
+	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.Equal(t, cachesrv.ErrMiss, err)
 	ts.done()
 }
@@ -108,18 +164,18 @@ func TestMiss(t *testing.T) {
 func TestGetPut(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &proto.CacheString{})
+	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
 
-	err = ts.cm.Put(kv.MkKey(kv.NKEYS+1), &proto.CacheString{Val: ""})
+	err = ts.cm.Put(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
-	err = ts.cm.Put(kv.MkKey(0), &proto.CacheString{Val: ""})
+	err = ts.cm.Put(kv.MkKey(0), &cproto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := kv.MkKey(i)
-		err := ts.cm.Get(key, &proto.CacheString{})
+		err := ts.cm.Get(key, &cproto.CacheString{})
 		assert.Nil(ts.T, err, "Get "+key)
 	}
 

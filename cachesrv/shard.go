@@ -21,6 +21,16 @@ func (s *shard) put(key string, val []byte) error {
 	return nil
 }
 
+func (s *shard) append(key string, val []byte) error {
+	s.Lock()
+	defer s.Unlock()
+	if _, ok := s.cache[key]; !ok {
+		s.cache[key] = make([]byte, 0)
+	}
+	s.cache[key] = append(s.cache[key], val...)
+	return nil
+}
+
 func (s *shard) get(key string) ([]byte, bool) {
 	s.Lock()
 	defer s.Unlock()

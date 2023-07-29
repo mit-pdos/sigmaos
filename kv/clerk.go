@@ -1,11 +1,9 @@
 package kv
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"hash/fnv"
-	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +14,6 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
-	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
@@ -52,18 +49,6 @@ func key2shard(key Tkey) Tshard {
 
 func (s Tshard) String() string {
 	return fmt.Sprintf("%03d", s)
-}
-
-func keyPath(job, kvd string, shard Tshard, k Tkey) string {
-	d := kvShardPath(job, kvd, shard)
-	return d + "/" + k.String()
-}
-
-func nrand() uint64 {
-	max := big.NewInt(int64(1) << 62)
-	bigx, _ := rand.Int(rand.Reader, max)
-	x := bigx.Uint64()
-	return x
 }
 
 type KvClerk struct {
@@ -152,18 +137,6 @@ func (kc *KvClerk) switchConfig() error {
 		}
 		db.DPrintf(db.KVCLERK, "Conf %v", kc.conf)
 		kvset := MakeKvs(kc.conf.Shards)
-		dirs := paths(kc.job, kvset)
-		if err := kc.fclnt.FenceAtEpoch(kc.conf.Fence, dirs); err != nil {
-			var serr *serr.Err
-			if errors.As(err, &serr) && (serr.IsErrVersion() || serr.IsErrStale()) {
-				db.DPrintf(db.KVCLERK_ERR, "version mismatch; retry")
-				time.Sleep(WAITMS * time.Millisecond)
-				continue
-			}
-			db.DPrintf(db.KVCLERK_ERR, "FenceAtEpoch %v failed %v", dirs, err)
-			return err
-		}
-
 		// detach groups not in use; diff between new and mount table?
 		kc.DetachKVs(kvset)
 		break
@@ -174,8 +147,8 @@ func (kc *KvClerk) switchConfig() error {
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
 	var sr *serr.Err
-	if errors.As(err, &sr) && sr.IsErrNotfound() && strings.HasPrefix(sr.ErrPath(), "shard") {
-		// Shard dir hasn't been created yet (config 0) or hasn't moved
+	if errors.As(err, &sr) && sr.IsErrNotfound() {
+		// Shard hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
 		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", sr.ErrPath())
@@ -195,8 +168,7 @@ func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
 		db.DPrintf(db.KVCLERK, "o %v conf %v", o.kind, kc.conf)
-		fn := keyPath(kc.job, kc.conf.Shards[s], s, o.k)
-		kc.do(o, fn, kvGrpPath(kc.job, kc.conf.Shards[s]), s)
+		kc.do(o, kvGrpPath(kc.job, kc.conf.Shards[s]), s)
 		if o.err == nil { // success?
 			return
 		}
@@ -210,42 +182,42 @@ func (kc *KvClerk) doop(o *op) {
 type opT string
 
 const (
-	GETVAL = "Get"
-	PUT    = "Put"
-	GETRD  = "Read"
+	GETVAL  = "Get"
+	PUT     = "Put"
+	GETVALS = "GetVals"
 )
 
 type op struct {
 	kind opT
 	val  proto.Message
 	k    Tkey
-	off  sp.Toffset
 	m    sp.Tmode
-	rdr  *reader.Reader
 	err  error
+	vals []proto.Message
 }
 
-func (kc *KvClerk) do(o *op, fn string, srv string, s Tshard) {
+func newOp(o opT, val proto.Message, k Tkey, m sp.Tmode) *op {
+	return &op{kind: o, val: val, k: k, m: m}
+}
+
+func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 	switch o.kind {
 	case GETVAL:
 		o.err = kc.cclnt.Get(srv, string(o.k), o.val)
-		// o.b, o.err = fsl.GetFile(fn)
-	case GETRD:
-		db.DFatalf("do not supported\n")
-		// o.rdr, o.err = fsl.OpenReader(fn)
+	case GETVALS:
+		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val)
 	case PUT:
-		o.err = kc.cclnt.Put(srv, string(o.k), o.val)
-		// if o.off == 0 {
-		// 	_, o.err = fsl.PutFile(fn, 0777, sp.OWRITE, o.b)
-		// } else {
-		// 	_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
-		// }
+		if o.m == sp.OAPPEND {
+			o.err = kc.cclnt.Append(srv, string(o.k), o.val)
+		} else {
+			o.err = kc.cclnt.Put(srv, string(o.k), o.val)
+		}
 	}
-	db.DPrintf(db.KVCLERK, "op %v fn %v srv %v s %v err %v", o.kind, fn, srv, s, o.err)
+	db.DPrintf(db.KVCLERK, "op %v(%v) srv %v s %v err %v", o.kind, o.m == sp.OAPPEND, srv, s, o.err)
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := &op{GETVAL, val, Tkey(key), 0, sp.OREAD, nil, nil}
+	op := newOp(GETVAL, val, Tkey(key), sp.OREAD)
 	kc.doop(op)
 	return op.err
 }
@@ -254,14 +226,14 @@ func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val pro
 	return kc.Get(key, val)
 }
 
-func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
-	op := &op{GETRD, nil, k, 0, sp.OREAD, nil, nil}
+func (kc *KvClerk) GetVals(k Tkey, val proto.Message) ([]proto.Message, error) {
+	op := newOp(GETVALS, val, k, sp.OREAD)
 	kc.doop(op)
-	return op.rdr, op.err
+	return op.vals, op.err
 }
 
 func (kc *KvClerk) Append(k Tkey, val proto.Message) error {
-	op := &op{PUT, val, k, sp.NoOffset, sp.OAPPEND, nil, nil}
+	op := newOp(PUT, val, k, sp.OAPPEND)
 	kc.doop(op)
 	return op.err
 }
@@ -271,7 +243,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	op := &op{PUT, val, Tkey(k), 0, sp.OWRITE, nil, nil}
+	op := newOp(PUT, val, Tkey(k), sp.OWRITE)
 	kc.doop(op)
 	return op.err
 }
@@ -283,12 +255,6 @@ func (kc *KvClerk) DeleteTraced(sctx *tproto.SpanContextConfig, key string) erro
 func (kc *KvClerk) Delete(k string) error {
 	db.DFatalf("Unimplemented")
 	return nil
-}
-
-func (kc *KvClerk) AppendJson(k string, v proto.Message) error {
-	op := &op{PUT, v, Tkey(k), sp.NoOffset, sp.OAPPEND, nil, nil}
-	kc.doop(op)
-	return op.err
 }
 
 // Count the number of keys stored at each group.

@@ -13,7 +13,6 @@ import (
 	"github.com/go-redis/redis/v8"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/kv"
 	"sigmaos/kv/proto"
 	"sigmaos/perf"
@@ -130,33 +129,28 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 
 func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 	n := uint64(0)
-	rdr, err := kc.GetReader(key)
+	vals, err := kc.GetVals(key, &proto.KVTestVal{})
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "GetVals err %v\n", err)
 		return err
 	}
-	rdr.Unfence()
-	defer rdr.Close()
-	err = fslib.JsonReader(rdr, func() interface{} { return new(proto.KVTestVal) }, func(a interface{}) error {
-		// Record op for throughput calculation.
+	for _, v := range vals {
+		val := v.(*proto.KVTestVal)
 		p.TptTick(1.0)
-		val := a.(*proto.KVTestVal)
 		if val.Pid != proc.GetPid().String() {
 			return nil
 		}
 		if val.Key != string(key) {
-			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), key, val.Key)
+			return fmt.Errorf("%v: wrong key expected %v observed %v", proc.GetName(), key, val.Key)
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N for %v: expected %v observed %v", proc.GetName(), rdr.Path(), n, val.N)
+			return fmt.Errorf("%v: wrong N expected %v observed %v", proc.GetName(), n, val.N)
 		}
 		n += 1
 		return nil
-	})
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "JsonReader: err %v\n", err)
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, n)
+		return fmt.Errorf("%v: wrong ntest expected %v observed %v", proc.GetName(), ntest, n)
 	}
 	return nil
 }
@@ -200,7 +194,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 			}
 		} else {
 			// If doing appends (unbounded clerk)
-			if err := kc.AppendJson(key, &v); err != nil {
+			if err := kc.Append(kv.Tkey(key), &v); err != nil {
 				return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

@@ -1,7 +1,6 @@
 package mongoclnt
 
 import (
-	//"reflect"
 	"gopkg.in/mgo.v2/bson"
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
@@ -25,7 +24,7 @@ func MkMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 }
 
 func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return MkMongoClntWithName(fsl, sp.MONGO + "~any/")
+	return MkMongoClntWithName(fsl, sp.MONGO + "~local/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

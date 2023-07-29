@@ -39,9 +39,6 @@ func newScraper() *scraper {
 }
 
 func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.CPUUtilResult) error {
-	if req.QoSClass != "Guaranteed" {
-		return fmt.Errorf("Error: QoS class \"%v\" unsupported", req.QoSClass)
-	}
 	var total *cgroup.CPUStat
 	var be *cgroup.CPUStat
 	var burst *cgroup.CPUStat
@@ -58,6 +55,15 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	db.DPrintf(db.K8S_UTIL, "Total %v BE %v Burst %v", total.Util, be.Util, burst.Util)
 	// Guaranteed QoS class is total CPU utillzation, minus BE & Burstable
 	// classes' utilization.
-	res.Util = total.Util - be.Util - burst.Util
+	switch req.QoSClass {
+	case "BestEffort":
+		res.Util = be.Util
+	case "Burstable":
+		res.Util = burst.Util
+	case "Guaranteed":
+		res.Util = total.Util - be.Util - burst.Util
+	default: 
+		return fmt.Errorf("Error: QoS class \"%v\" unsupported", req.QoSClass)
+	}
 	return nil
 }

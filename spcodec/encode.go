@@ -5,8 +5,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/sessp"
 	"sigmaos/frame"
+	"sigmaos/sessp"
 )
 
 func encode(wr io.Writer, fcm *sessp.FcallMsg) error {

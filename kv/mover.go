@@ -2,13 +2,11 @@ package kv
 
 import (
 	"fmt"
-	"path"
 	"strconv"
 	"sync"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -23,23 +21,13 @@ import (
 type Mover struct {
 	mu sync.Mutex
 	*sigmaclnt.SigmaClnt
-	fclnt    *fenceclnt.FenceClnt
-	job      string
-	epochstr string
-	shard    uint32
-	cc       *CacheClnt
+	job   string
+	fence *sessp.Tfence
+	shard uint32
+	cc    *CacheClnt
 }
 
-func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
-	fence, err := sessp.NewFenceJson([]byte(epochstr))
-	if err != nil {
-		return err
-	}
-	fclnt := fenceclnt.MakeFenceClnt(fsl)
-	if err := fclnt.FenceAtEpoch(*fence, dirs); err != nil {
-		return fmt.Errorf("FenceAtEpoch %v err %v", KVConfig(job), err)
-	}
-	// reads are fenced
+func JoinEpoch(fsl *fslib.FsLib, job string, fence *sessp.Tfence) error {
 	config := Config{}
 	if err := fsl.GetFileJson(KVConfig(job), &config); err != nil {
 		return fmt.Errorf("GetFileJson %v err %v", KVConfig(job), err)
@@ -55,7 +43,11 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if err != nil {
 		return nil, err
 	}
-	mv := &Mover{epochstr: epochstr, SigmaClnt: sc, job: job, cc: NewCacheClnt(sc.FsLib, NSHARD)}
+	fence, err := sessp.NewFenceJson([]byte(epochstr))
+	if err != nil {
+		return nil, err
+	}
+	mv := &Mover{fence: fence, SigmaClnt: sc, job: job, cc: NewCacheClnt(sc.FsLib, NSHARD)}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
 		return nil, err
 	} else {
@@ -66,7 +58,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	}
 	crash.Crasher(mv.FsLib)
 
-	if err := JoinEpoch(mv.FsLib, mv.job, "KVMV", epochstr, []string{JobDir(mv.job), path.Dir(src), path.Dir(dst)}); err != nil {
+	if err := JoinEpoch(mv.FsLib, mv.job, mv.fence); err != nil {
 		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}
@@ -75,7 +67,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
-	if err := mv.cc.CreateShard(d, mv.shard); err != nil {
+	if err := mv.cc.CreateShard(d, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV, "CreateShard err %v\n", err)
 		return err
 	}
@@ -96,12 +88,12 @@ func (mv *Mover) moveShard(s, d string) error {
 }
 
 func (mv *Mover) Move(src, dst string) {
-	db.DPrintf(db.KVMV, "conf %v: mv %d from %v to %v\n", mv.epochstr, mv.shard, src, dst)
+	db.DPrintf(db.KVMV, "conf %v: mv %d from %v to %v\n", mv.fence, mv.shard, src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "conf %v: mv %d from %v to %v err %v\n", mv.epochstr, mv.shard, src, dst, err)
+		db.DPrintf(db.KVMV_ERR, "conf %v: mv %d from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	}
-	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v err %v\n", mv.epochstr, mv.shard, src, dst, err)
+	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	if err != nil {
 		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 	} else {

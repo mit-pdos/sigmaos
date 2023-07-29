@@ -18,12 +18,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessdev"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
-)
-
-var (
-	ErrMiss = cachesrv.ErrMiss
 )
 
 type CacheClnt struct {
@@ -41,7 +38,7 @@ func NewCacheClnt(fsl *fslib.FsLib, nshard uint32) *CacheClnt {
 }
 
 func (cc *CacheClnt) IsMiss(err error) bool {
-	return err.Error() == ErrMiss.Error()
+	return err.Error() == cachesrv.ErrMiss.Error()
 }
 
 func (cc *CacheClnt) key2shard(key string) uint32 {
@@ -79,7 +76,7 @@ func (c *CacheClnt) Put(srv, key string, val proto.Message) error {
 	return c.PutTraced(nil, srv, key, val)
 }
 
-func (c *CacheClnt) Append(srv, key string, val proto.Message) error {
+func (c *CacheClnt) AppendFence(srv, key string, val proto.Message, f *sessp.Tfence) error {
 	req := &cacheproto.CacheRequest{}
 	b, err := proto.Marshal(val)
 	if err != nil {
@@ -100,7 +97,7 @@ func (c *CacheClnt) Append(srv, key string, val proto.Message) error {
 	req.Mode = uint32(sp.OAPPEND)
 	req.Value = buf.Bytes()
 	var res cacheproto.CacheResult
-	if err := c.RPC(srv, "CacheSrv.Put", req, &res); err != nil {
+	if err := c.rpcc.RPCFence(srv, "CacheSrv.Put", req, &res, f); err != nil {
 		return err
 	}
 	return nil
@@ -183,12 +180,12 @@ func (c *CacheClnt) Delete(srv, key string) error {
 	return c.DeleteTraced(nil, srv, key)
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard uint32) error {
+func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sessp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: shard,
 	}
 	var res cacheproto.CacheOK
-	if err := c.rpcc.RPC(srv, "CacheSrv.CreateShard", req, &res); err != nil {
+	if err := c.rpcc.RPCFence(srv, "CacheSrv.CreateShard", req, &res, fence); err != nil {
 		return err
 	}
 	return nil

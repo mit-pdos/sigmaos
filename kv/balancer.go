@@ -280,7 +280,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.cc.CreateShard(srv, uint32(s)); err != nil {
+		if err := bl.cc.CreateShard(srv, uint32(s), &bl.conf.Fence); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
 		if err := bl.cc.FillShard(srv, uint32(s), make(map[string][]byte)); err != nil {

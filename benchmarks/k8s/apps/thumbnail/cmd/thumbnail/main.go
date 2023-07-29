@@ -78,6 +78,9 @@ func (t *Trans) Work(i int, output string) {
 	}
 	log.Printf("Time %v read/decode: %v", t.inputs[i], time.Since(ds))
 	dr := time.Now()
+	for i := 0; i < 20; i++ {
+		resize.Resize(160, 0, img, resize.Lanczos3)
+	}
 	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
 	log.Printf("Time %v resize: %v", t.inputs[i], time.Since(dr))
 

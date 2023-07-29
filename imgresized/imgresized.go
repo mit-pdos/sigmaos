@@ -159,19 +159,19 @@ func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, 
 	imgd.WaitStart(p.GetPid())
 	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := imgd.WaitExit(p.GetPid())
-	ms := time.Since(start).Milliseconds()
+	//ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
 		// mark task as done
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v done err %v\n", t, err)
 		}
-		ch <- Tresult{t.name, true, ms, status.Msg()}
+		//ch <- Tresult{t.name, true, ms, status.Msg()}
 	} else { // task failed; make it runnable again
 		db.DPrintf(db.IMGD, "task %v failed %v err %v\n", t, status, err)
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v todo err %v\n", t, err)
 		}
-		ch <- Tresult{t.name, false, ms, ""}
+		//ch <- Tresult{t.name, false, ms, ""}
 	}
 }
 
@@ -223,6 +223,7 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 		tasks = append(tasks, task{t, string(s3fn)})
 	}
 	go imgd.runTasks(ch, tasks)
+	/*
 	for i := len(tasks); i > 0; i-- {
 		res := <-ch
 		if res.ok {
@@ -232,6 +233,7 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 			//}
 		}
 	}
+	*/
 	return true
 }
 

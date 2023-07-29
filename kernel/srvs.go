@@ -129,7 +129,7 @@ func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("mongod", []string{hostip}, procclnt.HSCHEDD)
+	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, procclnt.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

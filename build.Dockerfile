@@ -21,7 +21,7 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git config pull.rebase false && \
   git pull && \
   cd src && \
-  ./all.bash
+  ./make.bash
 
 # Set env after downlaoding and installing the custom Go version, so we don't
 # rebuild Go evey time we change tags.

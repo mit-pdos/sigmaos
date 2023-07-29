@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
 N_VM=""
@@ -11,6 +11,7 @@ TAG=""
 OVERLAYS=""
 TOKEN=""
 RMCPU="0"
+BRANCH="master"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -21,6 +22,11 @@ while [[ $# -gt 0 ]]; do
   --n)
     shift
     N_VM=$1
+    shift
+    ;;
+  --branch)
+    shift
+    BRANCH=$1
     shift
     ;;
   --ncores)
@@ -72,7 +78,8 @@ vms=`cat servers.txt | cut -d " " -f2`
 vma=($vms)
 MAIN="${vma[0]}"
 MAIN_PRIVADDR=$(./leader-ip.sh)
-SIGMANAMED="${vma[0]}:1111"
+SIGMASTART="${vma[1]}"
+SIGMANAMED="${SIGMASTART}:1111"
 IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
 
@@ -81,7 +88,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --parallel
+  ./update-repo.sh --parallel --branch $BRANCH
 fi
 
 vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
@@ -109,16 +116,21 @@ for vm in $vms; do
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 
-    echo "START ${SIGMANAMED} ${KERNELID}"
+    echo "START DB: ${MAIN_PRIVADDR}"
     ./make.sh --norace linux
     ./start-network.sh --addr $MAIN_PRIVADDR
     ./start-db.sh
     ./start-jaeger.sh
-    ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+  elif [ "${vm}" = "${SIGMASTART}" ]; then
+    echo "START ${SIGMANAMED} ${KERNELID}"
+    ./make.sh --norace linux
+    ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+    docker cp imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
+    docker cp imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

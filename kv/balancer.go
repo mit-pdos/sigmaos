@@ -50,6 +50,7 @@ type Balancer struct {
 	crash       int64
 	crashhelper string
 	isBusy      bool // in config change?
+	cc          *CacheClnt
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -77,6 +78,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
+	bl.cc = NewCacheClnt(sc.FsLib, NSHARD)
 	var kvdnc int
 	var error error
 	kvdnc, error = strconv.Atoi(kvdmcpu)
@@ -277,11 +279,12 @@ func (bl *Balancer) recover(fence sessp.Tfence) {
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
-		dst := kvShardPath(bl.job, kvd, Tshard(s))
-		// Mkdir may fail because balancer crashed during config 0
-		// so ignore error
-		if err := bl.MkDir(dst, 0777); err != nil {
-			db.DPrintf(db.KVBAL_ERR, "warning mkdir %v err %v\n", dst, err)
+		srv := kvGrpPath(bl.job, kvd)
+		if err := bl.cc.CreateShard(srv, uint32(s)); err != nil {
+			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
+		}
+		if err := bl.cc.FillShard(srv, uint32(s), make(map[string][]byte)); err != nil {
+			db.DFatalf("FillShard %v %d err %v\n", kvd, s, err)
 		}
 	}
 }
@@ -339,10 +342,9 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	moves := Moves{}
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
-			shard := Tshard(i)
-			s := kvShardPath(bl.job, kvd, shard)
-			d := kvShardPath(bl.job, nextShards[i], shard)
-			moves = append(moves, &Move{s, d})
+			s := kvGrpPath(bl.job, kvd)
+			d := kvGrpPath(bl.job, nextShards[i])
+			moves = append(moves, &Move{uint32(i), s, d})
 		}
 	}
 	return moves
@@ -350,7 +352,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), m.Src, m.Dst},
+		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), strconv.Itoa(int(m.Shard)), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
 				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Fence.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()

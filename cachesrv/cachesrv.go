@@ -2,7 +2,6 @@ package cachesrv
 
 import (
 	"errors"
-	"hash/fnv"
 	"strconv"
 	"sync"
 	"time"
@@ -22,19 +21,12 @@ import (
 
 const (
 	DUMP   = "dump"
-	NSHARD = 1009
+	NSHARD = 1009 // for cached
 )
 
 var (
 	ErrMiss = errors.New("cache miss")
 )
-
-func key2shard(key string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(key))
-	bin := h.Sum32() % NSHARD
-	return bin
-}
 
 type shardInfo struct {
 	ready bool
@@ -51,7 +43,7 @@ type CacheSrv struct {
 	perf   *perf.Perf
 }
 
-func RunCacheSrv(args []string) error {
+func RunCacheSrv(args []string, nshard uint32) error {
 	pn := ""
 	if len(args) > 3 {
 		pn = args[3]
@@ -62,6 +54,12 @@ func RunCacheSrv(args []string) error {
 	}
 
 	s := NewCacheSrv(pn)
+
+	for i := uint32(0); i < nshard; i++ {
+		if err := s.createShard(i, true); err != nil {
+			db.DFatalf("CreateShard %v\n", err)
+		}
+	}
 
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
 	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
@@ -81,11 +79,6 @@ func RunCacheSrv(args []string) error {
 
 func NewCacheSrv(pn string) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[uint32]*shardInfo)}
-	for i := uint32(0); i < NSHARD; i++ {
-		if err := cs.createShard(i, true); err != nil {
-			db.DFatalf("CreateShard %v\n", err)
-		}
-	}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(perf.CACHESRV)
 	if err != nil {
@@ -122,12 +115,16 @@ func (cs *CacheSrv) createShard(s uint32, b bool) error {
 }
 
 func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+	db.DPrintf(db.CACHESRV, "CreateShard %v\n", req)
+
 	return cs.createShard(req.Shard, false)
 }
 
 func (cs *CacheSrv) FillShard(ctx fs.CtxI, req cacheproto.ShardFill, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
+
+	db.DPrintf(db.CACHESRV, "FillShard %v\n", req)
 
 	if _, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
@@ -142,6 +139,8 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cachepr
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
+	db.DPrintf(db.CACHESRV, "DumpShard %v\n", req)
+
 	if _, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
 	}
@@ -152,6 +151,8 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cachepr
 func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
+
+	db.DPrintf(db.CACHESRV, "DeleteShard %v\n", req)
 
 	if _, ok := cs.shards[req.Shard]; ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
@@ -171,7 +172,7 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 
 	start := time.Now()
 
-	s, ok := cs.lookupShard(key2shard(req.Key))
+	s, ok := cs.lookupShard(req.Shard)
 	if !ok {
 		return ErrMiss
 	}
@@ -193,7 +194,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	start := time.Now()
 
-	s, ok := cs.lookupShard(key2shard(req.Key))
+	s, ok := cs.lookupShard(req.Shard)
 	if !ok {
 		return ErrMiss
 	}
@@ -223,7 +224,7 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 
 	start := time.Now()
 
-	s, ok := cs.lookupShard(key2shard(req.Key))
+	s, ok := cs.lookupShard(req.Shard)
 	if !ok {
 		return ErrMiss
 	}

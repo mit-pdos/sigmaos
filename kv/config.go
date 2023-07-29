@@ -8,8 +8,9 @@ import (
 )
 
 type Move struct {
-	Src string
-	Dst string
+	Shard uint32
+	Src   string
+	Dst   string
 }
 
 type Moves []*Move

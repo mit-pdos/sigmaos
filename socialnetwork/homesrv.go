@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -37,7 +38,7 @@ func RunHomeSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_HOME)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
 	if err != nil {
 		return err
 	}

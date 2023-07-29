@@ -6,12 +6,13 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
 	"time"
@@ -52,7 +53,7 @@ func RunUserSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
 	if err != nil {
 		return err
 	}

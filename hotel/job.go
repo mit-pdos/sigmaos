@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
@@ -163,7 +164,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, job)
+			cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, job, cachesrv.NSHARD)
 			if err != nil {
 				db.DFatalf("Error cacheclnt %v", err)
 				return nil, err

@@ -37,11 +37,12 @@ func key2server(key string, nserver int) int {
 
 type CacheClnt struct {
 	*shardsvcclnt.ShardSvcClnt
-	fsls []*fslib.FsLib
+	fsls   []*fslib.FsLib
+	nshard uint32
 }
 
-func MkCacheClnt(fsls []*fslib.FsLib, job string) (*CacheClnt, error) {
-	cc := &CacheClnt{}
+func MkCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) (*CacheClnt, error) {
+	cc := &CacheClnt{fsls: fsls, nshard: nshard}
 	cc.fsls = fsls
 	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, CACHE, cc.Watch)
 	if err != nil {
@@ -49,6 +50,13 @@ func MkCacheClnt(fsls []*fslib.FsLib, job string) (*CacheClnt, error) {
 	}
 	cc.ShardSvcClnt = cg
 	return cc, nil
+}
+
+func (cc *CacheClnt) key2shard(key string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	shard := h.Sum32() % cc.nshard
+	return shard
 }
 
 func (cc *CacheClnt) IsMiss(err error) bool {
@@ -69,6 +77,7 @@ func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val pr
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
+	req.Shard = c.key2shard(key)
 
 	b, err := proto.Marshal(val)
 	if err != nil {
@@ -92,6 +101,7 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val pr
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
+	req.Shard = c.key2shard(key)
 	s := time.Now()
 	var res cacheproto.CacheResult
 	if err := c.RPC("CacheSrv.Get", req, &res); err != nil {
@@ -115,6 +125,7 @@ func (c *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) err
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
+	req.Shard = c.key2shard(key)
 	var res cacheproto.CacheResult
 	if err := c.RPC("CacheSrv.Delete", req, &res); err != nil {
 		return err

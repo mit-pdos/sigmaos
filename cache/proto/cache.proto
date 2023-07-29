@@ -13,7 +13,8 @@ service Cache {
 message CacheRequest {
   string key = 1;
   bytes value = 2;
-  SpanContextConfig spanContextConfig = 3;
+  uint32 shard = 3;
+  SpanContextConfig spanContextConfig = 4;
 }
 
 message CacheOK {}

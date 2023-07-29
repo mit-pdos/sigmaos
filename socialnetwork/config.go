@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -86,7 +87,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, jobname)
+		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, jobname, cachesrv.NSHARD)
 		if err != nil {
 			dbg.DFatalf("Error cacheclnt %v", err)
 			return nil, err

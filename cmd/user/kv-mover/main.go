@@ -15,5 +15,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error MakeMover: %v", err)
 	}
-	mv.Move(os.Args[3], os.Args[4])
+	mv.Move(os.Args[4], os.Args[5])
 }

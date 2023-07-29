@@ -95,12 +95,15 @@ func (cs *CacheSrv) exitCacheSrv() {
 }
 
 // XXX locking
-func (cs *CacheSrv) lookupShard(s uint32) (*shard, bool) {
+func (cs *CacheSrv) lookupShard(s uint32) (*shard, error) {
 	sh, ok := cs.shards[s]
-	if !sh.ready {
-		return nil, false
+	if !ok {
+		return nil, serr.MkErr(serr.TErrNotfound, s)
 	}
-	return sh.s, ok
+	if !sh.ready {
+		return nil, ErrMiss
+	}
+	return sh.s, nil
 }
 
 func (cs *CacheSrv) createShard(s uint32, b bool) error {
@@ -171,11 +174,15 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 
 	start := time.Now()
 
-	s, ok := cs.lookupShard(req.Shard)
-	if !ok {
-		return ErrMiss
+	s, err := cs.lookupShard(req.Shard)
+	if err != nil {
+		return err
 	}
-	err := s.put(req.Key, req.Value)
+	if sp.Tmode(req.Mode) == sp.OAPPEND {
+		err = s.append(req.Key, req.Value)
+	} else {
+		err = s.put(req.Key, req.Value)
+	}
 
 	if time.Since(start) > 300*time.Microsecond {
 		db.DPrintf(db.CACHE_LAT, "Long cache lock put: %v", time.Since(start))
@@ -193,9 +200,9 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	db.DPrintf(db.CACHESRV, "Get %v", req)
 	start := time.Now()
 
-	s, ok := cs.lookupShard(req.Shard)
-	if !ok {
-		return ErrMiss
+	s, err := cs.lookupShard(req.Shard)
+	if err != nil {
+		return err
 	}
 	v, ok := s.get(req.Key)
 
@@ -223,11 +230,11 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 
 	start := time.Now()
 
-	s, ok := cs.lookupShard(req.Shard)
-	if !ok {
-		return ErrMiss
+	s, err := cs.lookupShard(req.Shard)
+	if err != nil {
+		return err
 	}
-	ok = s.delete(req.Key)
+	ok := s.delete(req.Key)
 
 	if time.Since(start) > 20*time.Millisecond {
 		db.DPrintf(db.ALWAYS, "Time spent witing for cache lock: %v", time.Since(start))

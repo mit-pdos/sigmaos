@@ -1,8 +1,13 @@
 package kv
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/binary"
 	"hash/fnv"
+	"io"
 	"path"
+	"reflect"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -13,6 +18,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessdev"
+	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
 
@@ -73,6 +79,33 @@ func (c *CacheClnt) Put(srv, key string, val proto.Message) error {
 	return c.PutTraced(nil, srv, key, val)
 }
 
+func (c *CacheClnt) Append(srv, key string, val proto.Message) error {
+	req := &cacheproto.CacheRequest{}
+	b, err := proto.Marshal(val)
+	if err != nil {
+		return err
+	}
+	l := uint32(len(b))
+	var buf bytes.Buffer
+	wr := bufio.NewWriter(&buf)
+	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
+		return err
+	}
+	if err := binary.Write(wr, binary.LittleEndian, b); err != nil {
+		return err
+	}
+	wr.Flush()
+	req.Key = key
+	req.Shard = c.key2shard(key)
+	req.Mode = uint32(sp.OAPPEND)
+	req.Value = buf.Bytes()
+	var res cacheproto.CacheResult
+	if err := c.RPC(srv, "CacheSrv.Put", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
@@ -95,6 +128,42 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, srv, key string, v
 
 func (c *CacheClnt) Get(srv, key string, val proto.Message) error {
 	return c.GetTraced(nil, srv, key, val)
+}
+
+func (c *CacheClnt) GetVals(srv, key string, m proto.Message) ([]proto.Message, error) {
+	req := &cacheproto.CacheRequest{}
+	req.Key = key
+	req.Shard = c.key2shard(key)
+
+	s := time.Now()
+	var res cacheproto.CacheResult
+	if err := c.rpcc.RPC(srv, "CacheSrv.Get", req, &res); err != nil {
+		return nil, err
+	}
+	if time.Since(s) > 150*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache getvals: %v", time.Since(s))
+	}
+	typ := reflect.TypeOf(m)
+	vals := make([]proto.Message, 0)
+	rdr := bytes.NewReader(res.Value)
+	for {
+		var l uint32
+		if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		b := make([]byte, int(l))
+		if _, err := io.ReadFull(rdr, b); err != nil {
+			return nil, err
+		}
+		val := reflect.New(typ.Elem()).Interface().(proto.Message)
+		if err := proto.Unmarshal(b, val); err != nil {
+		}
+		vals = append(vals, val)
+	}
+	return vals, nil
 }
 
 func (c *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, srv, key string) error {

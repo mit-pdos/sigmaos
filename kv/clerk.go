@@ -102,11 +102,7 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 }
 
 func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
-	kc := &KvClerk{}
-	kc.FsLib = fsl
-	kc.conf = &Config{}
-	kc.job = job
-	kc.fclnt = fenceclnt.MakeFenceClnt(kc.FsLib)
+	kc := makeClerk(fsl, job)
 	return kc, kc.StartClerk()
 }
 

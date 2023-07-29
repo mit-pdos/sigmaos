@@ -12,6 +12,7 @@ import (
 
 	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/perf"
@@ -61,7 +62,7 @@ func main() {
 		})
 	} else {
 		var err error
-		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
+		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1], cachesrv.NSHARD)
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}

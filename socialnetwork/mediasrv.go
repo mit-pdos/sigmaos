@@ -5,11 +5,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
 	"sync"
@@ -46,7 +47,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_MEDIA)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
 	if err != nil {
 		return err
 	}

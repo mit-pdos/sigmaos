@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -44,7 +45,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname)
+	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package kv
 import (
 	"fmt"
 	"path"
+	"strconv"
 	"sync"
 
 	"sigmaos/crash"
@@ -10,7 +11,6 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -26,6 +26,8 @@ type Mover struct {
 	fclnt    *fenceclnt.FenceClnt
 	job      string
 	epochstr string
+	shard    uint32
+	cc       *CacheClnt
 }
 
 func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) error {
@@ -48,16 +50,17 @@ func JoinEpoch(fsl *fslib.FsLib, job, label, epochstr string, dirs []string) err
 	return nil
 }
 
-func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
-	mv := &Mover{}
-	mv.epochstr = epochstr
+func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
 	}
-	mv.SigmaClnt = sc
-	mv.job = job
-
+	mv := &Mover{epochstr: epochstr, SigmaClnt: sc, job: job, cc: NewCacheClnt(sc.FsLib, NSHARD)}
+	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
+		return nil, err
+	} else {
+		mv.shard = uint32(sh)
+	}
 	if err := mv.Started(); err != nil {
 		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)
 	}
@@ -70,75 +73,32 @@ func MakeMover(job, epochstr, src, dst string) (*Mover, error) {
 	return mv, nil
 }
 
-func shardTmp(shardp string) string {
-	return shardp + "#"
-}
-
 // Copy shard from src to dst
-func (mv *Mover) copyShard(s, d string) error {
-	d1 := shardTmp(d)
-
-	// The previous mover might have crashed right after rename
-	// below. If so, we are done.
-	_, err := mv.Stat(d)
-	if err == nil {
-		db.DPrintf(db.KVMV_ERR, "moveShard conf %v exists %v\n", mv.epochstr, d)
-		return nil
-	}
-
-	// An aborted view change may have created the directory and
-	// partially copied files into it; remove it and start over.
-	mv.RmDir(d1)
-
-	err = mv.MkDir(d1, 0777)
-	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "Mkdir %v err %v\n", d1, err)
+func (mv *Mover) moveShard(s, d string) error {
+	if err := mv.cc.CreateShard(d, mv.shard); err != nil {
 		return err
 	}
-	// log.Printf("%v: Copy shard from %v to %v\n", proc.GetName(), s, d1)
-	err = mv.CopyDir(s, d1)
+	vals, err := mv.cc.DumpShard(s, mv.shard)
 	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "CopyDir shard%v to %v err %v\n", s, d1, err)
 		return err
 	}
-	// log.Printf("%v: Copy shard%v to %v done\n", proc.GetName(), s, d1)
-	err = mv.Rename(d1, d)
-	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "Rename %v to %v err %v\n", d1, d, err)
+	if err := mv.cc.FillShard(s, mv.shard, vals); err != nil {
+		return err
+	}
+	if err := mv.cc.DeleteShard(s, mv.shard); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (mv *Mover) delShard(sharddir string) {
-	db.DPrintf(db.KVMV, "conf %v delete %v\n", mv.epochstr, sharddir)
-
-	// If sharddir isn't found, then an earlier delete succeeded;
-	// we are done.
-	if _, err := mv.Stat(sharddir); serr.IsErrCode(err, serr.TErrNotfound) {
-		db.DPrintf(db.KVMV_ERR, "Delete conf %v not found %v\n", mv.epochstr, sharddir)
-		mv.ClntExitOK()
-		return
-	}
-
-	if err := mv.RmDir(sharddir); err != nil {
-		db.DPrintf(db.KVMV_ERR, "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
-		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
-	} else {
-		mv.ClntExitOK()
-	}
-}
-
 func (mv *Mover) Move(src, dst string) {
-	db.DPrintf(db.KVMV, "conf %v: mv from %v to %v\n", mv.epochstr, src, dst)
-	err := mv.copyShard(src, dst)
+	db.DPrintf(db.KVMV, "conf %v: mv %d from %v to %v\n", mv.epochstr, mv.shard, src, dst)
+	err := mv.moveShard(src, dst)
 	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
+		db.DPrintf(db.KVMV_ERR, "conf %v: mv %d from %v to %v err %v\n", mv.epochstr, mv.shard, src, dst, err)
 	}
-	db.DPrintf(db.KVMV, "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
+	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v\n", mv.epochstr, mv.shard, src, dst)
 	if err != nil {
 		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
-	} else {
-		mv.delShard(src)
 	}
 }

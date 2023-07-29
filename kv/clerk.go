@@ -43,15 +43,15 @@ func MkKey(k uint64) string {
 
 type Tshard int
 
-func (s Tshard) String() string {
-	return fmt.Sprintf("%03d", s)
-}
-
 func key2shard(key Tkey) Tshard {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	shard := Tshard(h.Sum32() % NSHARD)
 	return shard
+}
+
+func (s Tshard) String() string {
+	return fmt.Sprintf("%03d", s)
 }
 
 func keyPath(job, kvd string, shard Tshard, k Tkey) string {
@@ -96,7 +96,7 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 		conf:  &Config{},
 		job:   job,
 		fclnt: fenceclnt.MakeFenceClnt(fsl),
-		cclnt: NewCacheClnt(fsl),
+		cclnt: NewCacheClnt(fsl, NSHARD),
 	}
 	return kc
 }

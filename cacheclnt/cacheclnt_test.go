@@ -10,6 +10,7 @@ import (
 
 	"sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -69,7 +70,7 @@ func TestCacheSingle(t *testing.T) {
 	)
 
 	ts := mkTstate(t, NSHARD)
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -112,7 +113,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		N = 10
 	)
 	ts := mkTstate(t, nshard)
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -165,7 +166,7 @@ func TestCacheConcur(t *testing.T) {
 	)
 	ts := mkTstate(t, NSHARD)
 	v := "hello"
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 	err = cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
@@ -224,7 +225,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
 	for i := 0; i < 5; i++ {

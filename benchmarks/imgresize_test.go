@@ -80,7 +80,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 }
 
 func (ji *ImgResizeJobInstance) Cleanup() {
-	dir := path.Join(sp.S3, "~local", path.Dir(ji.input))
+	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
 	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
 	imgresized.Cleanup(ji.FsLib, dir)
 }

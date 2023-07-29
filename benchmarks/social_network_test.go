@@ -13,7 +13,7 @@ import (
 	"sigmaos/perf"
 	rd "sigmaos/rand"
 	"sigmaos/scheddclnt"
-	//sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/test"
 	"testing"
@@ -22,14 +22,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"crypto/sha256"
 	"os"
+	"os/exec"
 )
 
 const (
-	K8S_MONGO_FWD_PORT = "9090"
+	K8_FWD_PORT = "9090"
 	N_BENCH_USER       = 962 // from "data/socfb-Reed98/socfb-Reed98.nodes"
-	COMPOSE_RATIO      = 0.1
 	HOME_RATIO         = 0.6
 	TIMELINE_RATIO     = 0.3
+	SN_RAND_SEED       = 54321
 )
 
 var MONGO_URL string
@@ -38,13 +39,13 @@ func getDefaultSrvs() []sn.Srv {
 	return []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 3000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}
+		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}
 }
 
 func init() {
@@ -55,6 +56,7 @@ type snFn func(wc *sn.WebClnt, r *rand.Rand)
 
 type SocialNetworkJobInstance struct {
 	sigmaos    bool
+	readonly   bool
 	k8ssrvaddr string
 	job        string
 	dur        []time.Duration
@@ -69,8 +71,8 @@ type SocialNetworkJobInstance struct {
 }
 
 func MakeSocialNetworkJob(
-		ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durStr string, 
-		maxrpsStr string, ncache int) *SocialNetworkJobInstance {
+		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
+		durStr, maxrpsStr string, ncache int) *SocialNetworkJobInstance {
 	ji := &SocialNetworkJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -78,6 +80,7 @@ func MakeSocialNetworkJob(
 	ji.RealmTstate = ts
 	ji.p = p
 	ji.ncache = ncache
+	ji.readonly = readonly
 	// parse duration and rpss
 	durs := strings.Split(durStr, ",")
 	maxrpss := strings.Split(maxrpsStr, ",")
@@ -93,10 +96,10 @@ func MakeSocialNetworkJob(
 		ji.maxrps = append(ji.maxrps, n)
 	}
 	// populate DB
-	initUserAndGraph(ts.T, MONGO_URL)
 	// start social network
 	var err error
 	if sigmaos {
+		initUserAndGraph(ts.T, MONGO_URL)
 		ji.snCfg, err = sn.MakeConfig(
 			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true, test.Overlays)
 		assert.Nil(ts.T, err, "Error Make social network job: %v", err)
@@ -110,6 +113,16 @@ func MakeSocialNetworkJob(
 			}
 		}
 		dbg.DPrintf(dbg.TEST, "Running procs:%v", progs)
+	} else {
+		ji.snCfg, err = sn.MakeConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
+		p := sn.JobHTTPAddrsPath(ji.job)
+		mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
+		assert.Nil(ts.T, ts.MountService(p, mnt))
+		// forward mongo port and init users and graphs.
+		cmd := exec.Command("kubectl","port-forward","svc/mongodb-sn", K8_FWD_PORT+":27017")
+		assert.Nil(ts.T, cmd.Start())
+		defer cmd.Process.Kill()
+		initUserAndGraph(ts.T, "localhost:"+K8_FWD_PORT)
 	}
 	ji.wc = sn.MakeWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
@@ -117,7 +130,23 @@ func MakeSocialNetworkJob(
 	for i := range ji.dur {
 		ji.lgs = append(
 			ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], 
-			func(r *rand.Rand) { randOps(ts.T, ji.wc, r)}))
+			func(r *rand.Rand) { randOps(ts.T, ji.wc, r, ji.readonly)}))
+	}
+	// warmup with writes for read-only runs
+	if ji.readonly {
+		dbg.DPrintf(dbg.TEST, "Warming up with writes for read-only test")
+		var wg sync.WaitGroup
+		for i := 0; i < N_BENCH_USER; i++ {
+			wg.Add(1)
+			go func(wg *sync.WaitGroup, t *testing.T, wc *sn.WebClnt, i int) {
+				defer wg.Done()
+				r := rand.New(rand.NewSource(SN_RAND_SEED + int64(i + 1)))
+				randCompose(t, wc, r)
+				randCompose(t, wc, r)
+			}(&wg, ts.T, ji.wc, i)
+		}
+		wg.Wait()
+		dbg.DPrintf(dbg.TEST, "Done warming up")
 	}
 	return ji
 }
@@ -137,6 +166,7 @@ func (ji *SocialNetworkJobInstance) StartSocialNetworkJob() {
 	if err != nil {
 		dbg.DFatalf("Can't start recording: %v", err)
 	}
+	randReadTimeline(ji.RealmTstate.T, ji.wc, rand.New(rand.NewSource(999)))
 	for i, lg := range ji.lgs {
 		dbg.DPrintf(dbg.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
@@ -156,14 +186,18 @@ func (ji *SocialNetworkJobInstance) Wait() {
 		assert.Nil(ji.T, err, "stop %v", err)
 	}
 	dbg.DPrintf(dbg.TEST, "Done evicting social network procs")
-	/*
 	for _, lg := range ji.lgs {
 		dbg.DPrintf(dbg.TEST, "Data:\n%v", lg.StatsDataString())
 	}
-	*/
 	for _, lg := range ji.lgs {
 		lg.Stats()
 	}
+}
+
+func (ji *SocialNetworkJobInstance) requestK8sStats() {
+	rep, err := ji.wc.SaveResults()
+	assert.Nil(ji.T, err, "Save results: %v", err)
+	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
 }
 
 func initUserAndGraph(t *testing.T, mongoUrl string) {
@@ -245,14 +279,14 @@ func randReadTimeline(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 	assert.Nil(t, err, "Cannot read user timeline: %v", err)
 }
 
-func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
+func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand, readonly bool) {
 	ratio := float64(r.Intn(10000))/10000
-	if ratio < COMPOSE_RATIO {
-		randCompose(t, wc, r)
-	} else if ratio < COMPOSE_RATIO + HOME_RATIO {
+	if ratio < TIMELINE_RATIO {
+		randReadTimeline(t, wc, r)
+	} else if ratio < TIMELINE_RATIO + HOME_RATIO || readonly {
 		randReadHome(t, wc, r)
 	} else {
-		randReadTimeline(t, wc, r)
+		randCompose(t, wc, r)
 	}
 }
 

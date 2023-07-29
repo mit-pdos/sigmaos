@@ -324,13 +324,15 @@ func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 
 // ========== Social Network Helpers ==========
 
-func makeSocialNetworkJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
+func makeSocialNetworkJobs(
+		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
+		dur, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*SocialNetworkJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeSocialNetworkJob(ts, p, sigmaos, dur, maxrps, ncache)
+		i := MakeSocialNetworkJob(ts, p, sigmaos, readonly, dur, maxrps, ncache)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

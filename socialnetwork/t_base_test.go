@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	NSHARD = 4
+	NSHARD = 3
 )
 
 type TstateSN struct {

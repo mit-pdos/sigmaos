@@ -76,16 +76,20 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
 	if err := mv.cc.CreateShard(d, mv.shard); err != nil {
+		db.DPrintf(db.KVMV, "CreateShard err %v\n", err)
 		return err
 	}
 	vals, err := mv.cc.DumpShard(s, mv.shard)
 	if err != nil {
+		db.DPrintf(db.KVMV, "DumpShard err %v\n", err)
 		return err
 	}
-	if err := mv.cc.FillShard(s, mv.shard, vals); err != nil {
+	if err := mv.cc.FillShard(d, mv.shard, vals); err != nil {
+		db.DPrintf(db.KVMV, "FillShard err %v\n", err)
 		return err
 	}
 	if err := mv.cc.DeleteShard(s, mv.shard); err != nil {
+		db.DPrintf(db.KVMV, "DeleteShard err %v\n", err)
 		return err
 	}
 	return nil
@@ -97,8 +101,10 @@ func (mv *Mover) Move(src, dst string) {
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "conf %v: mv %d from %v to %v err %v\n", mv.epochstr, mv.shard, src, dst, err)
 	}
-	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v\n", mv.epochstr, mv.shard, src, dst)
+	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v err %v\n", mv.epochstr, mv.shard, src, dst, err)
 	if err != nil {
 		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+	} else {
+		mv.ClntExitOK()
 	}
 }

@@ -116,7 +116,6 @@ func (cs *CacheSrv) createShard(s uint32, b bool) error {
 
 func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
 	db.DPrintf(db.CACHESRV, "CreateShard %v\n", req)
-
 	return cs.createShard(req.Shard, false)
 }
 
@@ -154,7 +153,7 @@ func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cache
 
 	db.DPrintf(db.CACHESRV, "DeleteShard %v\n", req)
 
-	if _, ok := cs.shards[req.Shard]; ok {
+	if _, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
 	}
 	delete(cs.shards, req.Shard)

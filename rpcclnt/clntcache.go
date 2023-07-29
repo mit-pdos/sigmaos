@@ -11,6 +11,7 @@ import (
 	"sigmaos/pathclnt"
 	"sigmaos/protdev"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type ClntCache struct {
@@ -48,13 +49,13 @@ func (cc *ClntCache) Delete(pn string) {
 	delete(cc.rpccs, pn)
 }
 
-func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
+func (cc *ClntCache) RPCFence(pn string, method string, arg proto.Message, res proto.Message, fence *sessp.Tfence) error {
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			return err
 		}
-		if err := rpcc.RPC(method, arg, res); err == nil {
+		if err := rpcc.RPCFence(method, arg, res, fence); err == nil {
 			return nil
 		} else {
 			cc.Delete(pn)
@@ -67,6 +68,10 @@ func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.
 		}
 	}
 	return serr.MkErr(serr.TErrUnreachable, pn)
+}
+
+func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
+	return cc.RPCFence(pn, method, arg, res, sessp.NewFence())
 }
 
 func (cc *ClntCache) StatsSrv() ([]*protdev.SigmaRPCStats, error) {

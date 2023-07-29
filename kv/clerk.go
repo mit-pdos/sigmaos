@@ -11,7 +11,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/serr"
@@ -53,7 +52,6 @@ func (s Tshard) String() string {
 
 type KvClerk struct {
 	*fslib.FsLib
-	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 	job   string
 	cclnt *CacheClnt
@@ -80,7 +78,6 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		fclnt: fenceclnt.MakeFenceClnt(fsl),
 		cclnt: NewCacheClnt(fsl, NSHARD),
 	}
 	return kc
@@ -208,7 +205,7 @@ func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val)
 	case PUT:
 		if o.m == sp.OAPPEND {
-			o.err = kc.cclnt.Append(srv, string(o.k), o.val)
+			o.err = kc.cclnt.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
 		} else {
 			o.err = kc.cclnt.Put(srv, string(o.k), o.val)
 		}

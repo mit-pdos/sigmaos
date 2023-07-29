@@ -14,6 +14,7 @@ import (
 	rpcproto "sigmaos/protdev/proto"
 	"sigmaos/serr"
 	"sigmaos/sessdevclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -48,7 +49,7 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	return rpcc, nil
 }
 
-func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
+func (rpcc *RPCClnt) rpc(method string, a []byte, f *sessp.Tfence) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{}
 	req.Method = method
 	req.Args = a
@@ -60,7 +61,7 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	start := time.Now()
 	idx := int(atomic.AddInt32(&rpcc.idx, 1))
-	b, err = rpcc.fsls[idx%len(rpcc.fsls)].WriteRead(rpcc.fds[idx%len(rpcc.fds)], b)
+	b, err = rpcc.fsls[idx%len(rpcc.fsls)].WriteRead(rpcc.fds[idx%len(rpcc.fds)], b, f)
 	if err != nil {
 		return nil, err
 	}
@@ -75,12 +76,12 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	return rep, nil
 }
 
-func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+func (rpcc *RPCClnt) RPCFence(method string, arg proto.Message, res proto.Message, f *sessp.Tfence) error {
 	b, err := proto.Marshal(arg)
 	if err != nil {
 		return err
 	}
-	rep, err := rpcc.rpc(method, b)
+	rep, err := rpcc.rpc(method, b, f)
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,10 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 		return err
 	}
 	return nil
+}
+
+func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+	return rpcc.RPCFence(method, arg, res, sessp.NewFence())
 }
 
 func (rpcc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {

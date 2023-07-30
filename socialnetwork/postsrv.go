@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -97,7 +98,7 @@ func (psrv *PostSrv) getPost(postid int64) (*PostBson, error) {
 	postBson := &PostBson{}
 	cacheItem := &proto.CacheItem{}
 	if err := psrv.cachec.Get(key, cacheItem); err != nil {
-		if !psrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Post %v cache miss\n", key)

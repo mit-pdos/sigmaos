@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -114,7 +115,7 @@ func (urlsrv *UrlSrv) getExtendedUrl(shortUrl string) (string, error) {
 	cacheItem := &proto.CacheItem{}
 	url := &Url{}
 	if err := urlsrv.cachec.Get(key, cacheItem); err != nil {
-		if !urlsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return "", err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Url %v cache miss\n", key)

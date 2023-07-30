@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -134,7 +135,7 @@ func (hsrv *HomeSrv) getHomeTimeline(userid int64) (*Timeline, error) {
 	timeline := &Timeline{}
 	cacheItem := &proto.CacheItem{}
 	if err := hsrv.cachec.Get(key, cacheItem); err != nil {
-		if !hsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		timeline.Userid = userid

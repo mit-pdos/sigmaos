@@ -145,7 +145,7 @@ func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.Pr
 		//			span2.End()
 		//		}
 		if err != nil {
-			if !ps.cachec.IsMiss(err) {
+			if !cache.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_PROF, "Cache miss: key %v\n", id)

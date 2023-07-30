@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -77,7 +78,7 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 	res.Ok = TIMELINE_QUERY_OK
 	key := TIMELINE_CACHE_PREFIX + strconv.FormatInt(req.Userid, 10)
 	if err := tlsrv.cachec.Delete(key); err != nil {
-		if !tlsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return err
 		}
 	}
@@ -122,7 +123,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(userid int64) (*Timeline, error) {
 	timeline := &Timeline{}
 	cacheItem := &proto.CacheItem{}
 	if err := tlsrv.cachec.Get(key, cacheItem); err != nil {
-		if !tlsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Timeline %v cache miss\n", key)

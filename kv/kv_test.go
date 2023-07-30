@@ -20,7 +20,7 @@ import (
 
 	cproto "sigmaos/cache/proto"
 
-	"sigmaos/cachesrv"
+	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	kproto "sigmaos/kv/proto"
@@ -157,7 +157,7 @@ func (ts *Tstate) done() {
 func TestMiss(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{})
-	assert.Equal(t, cachesrv.ErrMiss, err)
+	assert.True(t, cache.IsMiss(err))
 	ts.done()
 }
 

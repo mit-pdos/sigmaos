@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -95,11 +95,6 @@ func (kc *KvClerk) StartClerk() error {
 	return nil
 }
 
-func (kc *KvClerk) IsMiss(err error) bool {
-	db.DPrintf(db.KVCLERK, "IsMiss err %v", err)
-	return serr.IsErrCode(err, serr.TErrNotfound)
-}
-
 // Detach servers not in kvs
 func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	mnts := kc.Mounts()
@@ -143,16 +138,15 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	var sr *serr.Err
-	if errors.As(err, &sr) && sr.IsErrNotfound() {
-		// Shard hasn't been created yet (config 0) or hasn't moved
+	if cache.IsMissShard(err) {
+		// Shard hasn't been created yet (config 0) or isn't ready
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", sr.ErrPath())
+		db.DPrintf(db.KVCLERK_ERR, "Wait for shard %v", err)
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if serr.IsErrCode(err, serr.TErrStale) || strings.HasPrefix(err.Error(), serr.TErrStale.String()) {
+	if serr.IsErrCode(err, serr.TErrStale) {
 		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}

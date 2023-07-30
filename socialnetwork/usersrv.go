@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -165,7 +166,7 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 	err := usrv.cachec.Get(key, cacheItem)
 	usrv.cacheCounter.AddTimeSince(t0)
 	if err != nil {
-		if !usrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User %v cache miss\n", key)

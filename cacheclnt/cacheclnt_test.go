@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/cache"
 	"sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
@@ -102,7 +103,7 @@ func TestCacheSingle(t *testing.T) {
 		err = cc.Delete(key)
 		assert.Nil(t, err)
 		err = cc.Get(key, res)
-		assert.True(t, cc.IsMiss(err))
+		assert.True(t, cache.IsMiss(err))
 	}
 
 	ts.Shutdown()
@@ -144,7 +145,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		err = cc.Delete(key)
 		assert.Nil(t, err)
 		err = cc.Get(key, res)
-		assert.True(t, cc.IsMiss(err))
+		assert.True(t, cache.IsMiss(err))
 	}
 
 	ts.stop()

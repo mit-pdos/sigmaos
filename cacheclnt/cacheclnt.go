@@ -20,10 +20,6 @@ import (
 	tproto "sigmaos/tracing/proto"
 )
 
-var (
-	ErrMiss = cachesrv.ErrMiss
-)
-
 func MkKey(k uint64) string {
 	return strconv.FormatUint(k, 16)
 }
@@ -57,10 +53,6 @@ func (cc *CacheClnt) key2shard(key string) uint32 {
 	h.Write([]byte(key))
 	shard := h.Sum32() % cc.nshard
 	return shard
-}
-
-func (cc *CacheClnt) IsMiss(err error) bool {
-	return err.Error() == ErrMiss.Error()
 }
 
 func (cc *CacheClnt) Watch(path string, nshard int, err error) {

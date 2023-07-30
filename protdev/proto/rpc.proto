@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "sigmap/sigmap.proto";
+
 option go_package = "sigmaos/protdev/proto";
 
 message Request {
@@ -9,5 +11,5 @@ message Request {
 
 message Reply {
         bytes res = 1;
-        string error = 2;
+        Rerror err = 2;
 }

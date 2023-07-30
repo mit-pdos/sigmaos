@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -100,7 +101,7 @@ func (msrv *MediaSrv) getMedia(mediaid int64) (*Media, error) {
 	media := &Media{}
 	cacheItem := &proto.CacheItem{}
 	if err := msrv.cachec.Get(key, cacheItem); err != nil {
-		if !msrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Media %v cache miss\n", key)

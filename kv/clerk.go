@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"strconv"
@@ -146,9 +147,12 @@ func (kc *KvClerk) fixRetry(err error) error {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if serr.IsErrCode(err, serr.TErrStale) {
-		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
-		return kc.switchConfig()
+	var sr *serr.Err
+	if errors.As(err, &sr) {
+		if sr.IsErrStale() || strings.HasPrefix(sr.ErrPath(), "grp-") {
+			db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
+			return kc.switchConfig()
+		}
 	}
 	return err
 }

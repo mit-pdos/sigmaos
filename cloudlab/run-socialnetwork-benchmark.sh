@@ -116,7 +116,7 @@ bench_k8s_sn() {
 	./stop-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes
 	./stop-sigmaos.sh --parallel
 	./stop-k8s.sh --parallel
-	./start-sigmaos.sh --pull $PULL --n 5
+	./start-sigmaos.sh --pull $PULL --n 5 --branch social-network-benchmark
 	./start-k8s.sh --taint 5:11
 	sleep 1
 	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/db-caches --nrunning 4 

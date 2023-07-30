@@ -126,7 +126,7 @@ func (err Terror) String() string {
 	case TErrVersion:
 		return "version mismatch"
 	case TErrStale:
-		return "stale fence"
+		return "stale"
 	case TErrExists:
 		return "file exists"
 	case TErrClosed:

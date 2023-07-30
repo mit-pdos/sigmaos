@@ -225,6 +225,17 @@ func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte) err
 	return nil
 }
 
+func (c *CacheClnt) FreezeShard(srv string, shard uint32, fence *sessp.Tfence) error {
+	req := &cacheproto.ShardArg{
+		Shard: shard,
+	}
+	var res cacheproto.CacheOK
+	if err := c.rpcc.RPCFence(srv, "CacheSrv.FreezeShard", req, &res, fence); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (cc *CacheClnt) Dump(srv string) (map[string]string, error) {
 	dir := path.Join(srv, cachesrv.DUMP)
 	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)

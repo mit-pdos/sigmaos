@@ -16,8 +16,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -151,7 +151,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		//		}
 		count = int(cnt.Val)
 		if err != nil {
-			if !s.cachec.IsMiss(err) {
+			if !cache.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss res: key %v\n", key)
@@ -201,7 +201,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 		//			span2.End()
 		//		}
 		if err != nil {
-			if !s.cachec.IsMiss(err) {
+			if !cache.IsMiss(err) {
 				return false, nil, err
 			}
 			db.DPrintf(db.HOTEL_RESERVE, "Check: cache miss id: key %v\n", key)

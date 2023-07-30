@@ -1,7 +1,7 @@
 package cachesrv
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -22,10 +22,6 @@ import (
 const (
 	DUMP   = "dump"
 	NSHARD = 1009 // for cached
-)
-
-var (
-	ErrMiss = errors.New("cache miss")
 )
 
 type Tstatus string
@@ -106,18 +102,18 @@ func (cs *CacheSrv) exitCacheSrv() {
 func (cs *CacheSrv) lookupShard(s uint32) (*shard, error) {
 	sh, ok := cs.shards[s]
 	if !ok {
-		return nil, serr.MkErr(serr.TErrNotfound, s)
+		return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("shard %d", s))
 	}
 	switch sh.status {
 	case READY:
 		return sh.s, nil
 	case EMBRYO:
-		return nil, serr.MkErr(serr.TErrNotfound, s)
+		return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("shard %d", s))
 	case FROZEN:
-		return nil, serr.MkErr(serr.TErrStale, s)
+		return nil, serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %d", s))
 	default:
 		db.DFatalf("lookupShard err status %v\n", sh.status)
-		return nil, ErrMiss
+		return nil, nil
 	}
 }
 
@@ -247,7 +243,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	if time.Since(e2e) > 1*time.Millisecond {
 		db.DPrintf(db.CACHE_LAT, "Long e2e get: %v", time.Since(e2e))
 	}
-	return ErrMiss
+	return serr.MkErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }
 
 func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
@@ -273,5 +269,5 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 	if ok {
 		return nil
 	}
-	return ErrMiss
+	return serr.MkErr(serr.TErrNotfound, req.Key)
 }

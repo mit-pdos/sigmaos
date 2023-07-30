@@ -20,8 +20,8 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -114,7 +114,7 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 		//			span2.End()
 		//		}
 		if err != nil {
-			if !s.cachec.IsMiss(err) {
+			if !cache.IsMiss(err) {
 				return err
 			}
 			db.DPrintf(db.HOTEL_RATE, "Cache miss: key %v\n", hotelId)

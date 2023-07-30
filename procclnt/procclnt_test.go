@@ -388,7 +388,7 @@ func TestCrashProcOne(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusErr(), "Status not err")
-	assert.Equal(t, "exit status 2", status.Msg(), "WaitExit")
+	assert.Equal(t, "Non-sigma error exit status 2 ", status.Msg(), "WaitExit")
 
 	ts.Shutdown()
 }

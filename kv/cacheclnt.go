@@ -37,10 +37,6 @@ func NewCacheClnt(fsl *fslib.FsLib, nshard uint32) *CacheClnt {
 	}
 }
 
-func (cc *CacheClnt) IsMiss(err error) bool {
-	return err.Error() == cachesrv.ErrMiss.Error()
-}
-
 func (cc *CacheClnt) key2shard(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))

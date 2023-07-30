@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/cache"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	dbg "sigmaos/debug"
@@ -177,12 +178,12 @@ func (gsrv *GraphSrv) clearCache(followerid, followeeid int64) error {
 	follower_key := FOLLOWER_CACHE_PREFIX + strconv.FormatInt(followeeid, 10)
 	followee_key := FOLLOWEE_CACHE_PREFIX + strconv.FormatInt(followerid, 10)
 	if err := gsrv.cachec.Delete(follower_key); err != nil {
-		if !gsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return err
 		}
 	}
 	if err := gsrv.cachec.Delete(followee_key); err != nil {
-		if !gsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return err
 		}
 	}
@@ -195,7 +196,7 @@ func (gsrv *GraphSrv) getFollowers(userid int64) ([]int64, error) {
 	flwERInfo := &EdgeInfo{}
 	cacheItem := &proto.CacheItem{}
 	if err := gsrv.cachec.Get(key, cacheItem); err != nil {
-		if !gsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "FollowER %v cache miss\n", key)
@@ -221,7 +222,7 @@ func (gsrv *GraphSrv) getFollowees(userid int64) ([]int64, error) {
 	flwEEInfo := &EdgeInfo{}
 	cacheItem := &proto.CacheItem{}
 	if err := gsrv.cachec.Get(key, cacheItem); err != nil {
-		if !gsrv.cachec.IsMiss(err) {
+		if !cache.IsMiss(err) {
 			return nil, err
 		}
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "FollowEE %v cache miss\n", key)

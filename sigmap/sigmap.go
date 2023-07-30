@@ -264,6 +264,14 @@ func MkRerror(err *serr.Err) *Rerror {
 	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
 }
 
+func MkRerrorErr(err error) *Rerror {
+	return &Rerror{ErrCode: uint32(serr.TErrError), Obj: err.Error()}
+}
+
+func NewRerror() *Rerror {
+	return &Rerror{ErrCode: 0}
+}
+
 func MkRerrorCode(ec serr.Terror) *Rerror {
 	return &Rerror{ErrCode: uint32(ec)}
 }

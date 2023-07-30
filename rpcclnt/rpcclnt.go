@@ -1,7 +1,6 @@
 package rpcclnt
 
 import (
-	"fmt"
 	"path"
 	"sync/atomic"
 	"time"
@@ -85,8 +84,8 @@ func (rpcc *RPCClnt) RPCFence(method string, arg proto.Message, res proto.Messag
 	if err != nil {
 		return err
 	}
-	if rep.Error != "" {
-		return fmt.Errorf("%s", rep.Error)
+	if rep.Err.ErrCode != 0 {
+		return sp.MkErr(rep.Err)
 	}
 	if err := proto.Unmarshal(rep.Res, res); err != nil {
 		return err

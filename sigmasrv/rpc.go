@@ -1,6 +1,7 @@
 package sigmasrv
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	rpcproto "sigmaos/protdev/proto"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -76,7 +78,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 		reqmsg := args.Interface().(proto.Message)
 		if err := proto.Unmarshal(req.Args, reqmsg); err != nil {
 			r := &rpcproto.Reply{}
-			r.Error = err.Error()
+			r.Err = sp.MkRerrorErr(err)
 			return r
 		}
 
@@ -92,20 +94,27 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 		function := method.method.Func
 		rv := function.Call([]reflect.Value{svc.svc, reflect.ValueOf(ctx), args.Elem(), replyv})
 
-		// The return value for the method is an error.
 		errI := rv[0].Interface()
-		errmsg := ""
-		if errI != nil {
-			errmsg = errI.(error).Error()
+		var rerr *sp.Rerror
+		if errI != nil { // The return value for the method is an error.
+			err := errI.(error)
+			var sr *serr.Err
+			if errors.As(err, &sr) {
+				rerr = sp.MkRerror(sr)
+			} else {
+				rerr = sp.MkRerrorErr(err)
+			}
+		} else {
+			rerr = sp.NewRerror()
 		}
 
 		b, err := proto.Marshal(repmsg)
 		if err != nil {
-			errmsg = err.Error()
+			rerr = sp.MkRerrorErr(err)
 		}
 		r := &rpcproto.Reply{}
 		r.Res = b
-		r.Error = errmsg
+		r.Err = rerr
 		return r
 	} else {
 		choices := []string{}
@@ -115,7 +124,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, req.Method, choices)
 		r := &rpcproto.Reply{}
-		r.Error = "unknown method"
+		r.Err = sp.MkRerror(serr.MkErr(serr.TErrNotfound, methname))
 		return r
 	}
 }

@@ -116,7 +116,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 		db.DFatalf("Marshal failed %v\n", error)
 	}
 
-	if err := bl.lc.LeadAndFence(b, []string{}); err != nil {
+	if err := bl.lc.LeadAndFence(b, []string{JobDir(bl.job)}); err != nil {
 		db.DFatalf("%v: LeadAndFence %v\n", proc.GetName(), err)
 	}
 
@@ -161,17 +161,17 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 }
 
-func BalancerOp(fsl *fslib.FsLib, job string, opcode, mfs string) error {
-	s := opcode + " " + mfs
+func BalancerOp(fsl *fslib.FsLib, job string, opcode, kvd string) error {
+	s := opcode + " " + kvd
 	db.DPrintf(db.KVBAL, "Balancer %v op %v\n", KVBalancerCtl(job), opcode)
 	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), sp.OWRITE, 0)
 	return err
 }
 
 // Retry a balancer op until success, or an unexpected error is returned.
-func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, mfs string) error {
+func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, kvd string) error {
 	for true {
-		err := BalancerOp(fsl, job, opcode, mfs)
+		err := BalancerOp(fsl, job, opcode, kvd)
 		if err == nil {
 			return nil
 		}
@@ -381,26 +381,26 @@ func (bl *Balancer) doMoves(moves Moves) {
 	db.DPrintf(db.ALWAYS, "%v: all moves done\n", bl.conf)
 }
 
-func (bl *Balancer) balance(opcode, mfs string) *serr.Err {
+func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	if bl.testAndSetIsBusy() {
 		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
 	}
 	defer bl.clearIsBusy()
 
-	db.DPrintf(db.KVBAL, "%v: opcode %v mfs %v conf %v\n", proc.GetName(), opcode, mfs, bl.conf)
+	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", proc.GetName(), opcode, kvd, bl.conf)
 
 	var nextShards []string
 	switch opcode {
 	case "add":
-		if bl.conf.Present(mfs) {
+		if bl.conf.Present(kvd) {
 			return nil
 		}
-		nextShards = AddKv(bl.conf, mfs)
+		nextShards = AddKv(bl.conf, kvd)
 	case "del":
-		if !bl.conf.Present(mfs) {
+		if !bl.conf.Present(kvd) {
 			return nil
 		}
-		nextShards = DelKv(bl.conf, mfs)
+		nextShards = DelKv(bl.conf, kvd)
 	default:
 	}
 

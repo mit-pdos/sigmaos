@@ -41,7 +41,7 @@ func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
 	}
 	// Start proc
 	p := proc.MakeProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
-	p.SetMcpu(proc.Tmcpu(4000))
+	p.SetMcpu(proc.Tmcpu(1000))
 	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 		dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 		return nil, err

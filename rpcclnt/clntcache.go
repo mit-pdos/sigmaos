@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/pathclnt"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -74,8 +74,8 @@ func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.
 	return cc.RPCFence(pn, method, arg, res, sessp.NewFence())
 }
 
-func (cc *ClntCache) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
-	stats := make([]*protdev.SigmaRPCStats, 0, len(cc.rpccs))
+func (cc *ClntCache) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
+	stats := make([]*rpc.SigmaRPCStats, 0, len(cc.rpccs))
 	for _, rpcc := range cc.rpccs {
 		st, err := rpcc.StatsSrv()
 		if err != nil {
@@ -86,8 +86,8 @@ func (cc *ClntCache) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	return stats, nil
 }
 
-func (cc *ClntCache) StatsClnt() []map[string]*protdev.MethodStat {
-	stats := make([]map[string]*protdev.MethodStat, 0, len(cc.rpccs))
+func (cc *ClntCache) StatsClnt() []map[string]*rpc.MethodStat {
+	stats := make([]map[string]*rpc.MethodStat, 0, len(cc.rpccs))
 	for _, rpcc := range cc.rpccs {
 		stats = append(stats, rpcc.StatsClnt())
 	}

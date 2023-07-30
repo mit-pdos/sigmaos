@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 )
 
@@ -50,6 +50,6 @@ func (rj *RPCBenchJob) Stop() error {
 	return nil
 }
 
-func (rj *RPCBenchJob) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
+func (rj *RPCBenchJob) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 	return nil, nil
 }

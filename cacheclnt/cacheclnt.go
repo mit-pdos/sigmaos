@@ -13,7 +13,7 @@ import (
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/reader"
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
@@ -153,9 +153,9 @@ func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
 	return m, nil
 }
 
-func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
+func (cc *CacheClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 	n := cc.NServer()
-	stats := make([]*protdev.SigmaRPCStats, 0, n)
+	stats := make([]*rpc.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := cc.ShardSvcClnt.StatsSrv(i)
 		if err != nil {
@@ -166,9 +166,9 @@ func (cc *CacheClnt) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
 	return stats, nil
 }
 
-func (cc *CacheClnt) StatsClnt() []map[string]*protdev.MethodStat {
+func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStat {
 	n := cc.NServer()
-	stats := make([]map[string]*protdev.MethodStat, 0, n)
+	stats := make([]map[string]*rpc.MethodStat, 0, n)
 	for i := 0; i < n; i++ {
 		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
 	}

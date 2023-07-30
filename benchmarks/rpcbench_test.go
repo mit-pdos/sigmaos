@@ -14,7 +14,7 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/rpcbench"
 	"sigmaos/scheddclnt"
 	"sigmaos/test"
@@ -115,9 +115,9 @@ func (ji *RPCBenchJobInstance) StartRPCBenchJob() {
 
 func (ji *RPCBenchJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		stats := &protdev.SigmaRPCStats{}
+		stats := &rpc.SigmaRPCStats{}
 		s := ji.jobpath
-		err := ji.GetFileJson(s+"/"+protdev.STATS, stats)
+		err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
 		assert.Nil(ji.T, err, "error get stats %v", err)
 		fmt.Printf("= %s: %v\n", s, stats)
 	}

@@ -14,7 +14,7 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
@@ -30,7 +30,7 @@ import (
 
 type SigmaSrv struct {
 	*memfssrv.MemFs
-	sti    *protdev.StatInfo
+	sti    *rpc.StatInfo
 	svc    *svcMap
 	lsrv   *LeaseSrv
 	cpumon *cpumon.CpuMon
@@ -121,7 +121,7 @@ func makeSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 // register svci.
 func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 	db.DPrintf(db.SIGMASRV, "makeRPCSrv: %v\n", svci)
-	if _, err := ssrv.Create(protdev.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+	if _, err := ssrv.Create(rpc.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
 	if err := ssrv.makeRPCDev(svci); err != nil {
@@ -152,7 +152,7 @@ func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSr
 // (e.g., knamed/named).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	ssrv.MemFs.SessSrv.Mount(protdev.RPC, d.(*dir.DirImpl))
+	ssrv.MemFs.SessSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.makeRPCDev(svci); err != nil {
 		return err
 	}
@@ -163,10 +163,10 @@ func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
 	ssrv.svc.RegisterService(svci)
 	rd := mkRpcDev(ssrv)
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, protdev.RPC, rd.mkRpcSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, rpc.RPC, rd.mkRpcSession, nil); err != nil {
 		return err
 	}
-	if si, err := makeStatsDev(ssrv.MemFs, protdev.RPC); err != nil {
+	if si, err := makeStatsDev(ssrv.MemFs, rpc.RPC); err != nil {
 		return err
 	} else {
 		ssrv.sti = si

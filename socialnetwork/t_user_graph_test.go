@@ -227,3 +227,25 @@ func TestUserAndGraph(t *testing.T) {
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
 }
+
+func TestRPCTime(t *testing.T) {
+	// start server
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, 1)
+	snCfg := tssn.snCfg
+
+	// create a RPC client and query
+	tssn.dbu.InitUser()
+	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{snCfg.FsLib}, sp.SOCIAL_NETWORK_USER)
+	assert.Nil(t, err, "RPC client should be created properly")
+
+	// check user
+	arg_check := proto.CheckUserRequest{Usernames: []string{"user_1"}}
+	res_check := proto.CheckUserResponse{}
+	for i := 1; i < 5001; i++ {
+		assert.Nil(t, pdc.RPC("User.CheckUser", &arg_check, &res_check))
+		assert.Equal(t, "OK", res_check.Ok)
+		assert.Equal(t, int64(1), res_check.Userids[0])
+	}
+	//stop server
+	assert.Nil(t, tssn.Shutdown())
+}

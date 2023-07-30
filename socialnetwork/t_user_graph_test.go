@@ -2,6 +2,7 @@ package socialnetwork_test
 
 import (
 	"testing"
+	"sigmaos/proc"
 	"sigmaos/test"
 	"sigmaos/fslib"
 	"gopkg.in/mgo.v2/bson"
@@ -228,9 +229,9 @@ func TestUserAndGraph(t *testing.T) {
 	assert.Nil(t, tssn.Shutdown())
 }
 
-func TestRPCTime(t *testing.T) {
+func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, 1)
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -248,4 +249,12 @@ func TestRPCTime(t *testing.T) {
 	}
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
+}
+
+func TestRPCTimeOneMachine(t *testing.T) {
+	testRPCTime(t, 1000)
+}
+
+func TestRPCTimeTwoMachines(t *testing.T) {
+	testRPCTime(t, 2500)
 }

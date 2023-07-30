@@ -1,7 +1,6 @@
 package sessdevclnt
 
 import (
-	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -24,7 +23,7 @@ func MkSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 	db.DPrintf(db.SESSDEVCLNT, "MkSessDevClnt: %q\n", clone)
 	b, err := sdc.GetFile(clone)
 	if err != nil {
-		return nil, fmt.Errorf("Clone %q err %v\n", clone, err)
+		return nil, err
 	}
 	sdc.sid = string(b)
 	sdc.ctl = path.Join(sdc.pn, sdc.sid, sessdev.CTL)

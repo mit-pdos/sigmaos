@@ -152,7 +152,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if serr.IsErrCode(err, serr.TErrStale) {
+	if serr.IsErrCode(err, serr.TErrStale) || strings.HasPrefix(err.Error(), serr.TErrStale.String()) {
 		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
 		return kc.switchConfig()
 	}
@@ -176,16 +176,16 @@ func (kc *KvClerk) doop(o *op) {
 	}
 }
 
-type opT string
+type Top string
 
 const (
-	GETVAL  = "Get"
-	PUT     = "Put"
-	GETVALS = "GetVals"
+	GET     Top = "Get"
+	PUT     Top = "Put"
+	GETVALS Top = "GetVals"
 )
 
 type op struct {
-	kind opT
+	kind Top
 	val  proto.Message
 	k    Tkey
 	m    sp.Tmode
@@ -193,13 +193,13 @@ type op struct {
 	vals []proto.Message
 }
 
-func newOp(o opT, val proto.Message, k Tkey, m sp.Tmode) *op {
+func newOp(o Top, val proto.Message, k Tkey, m sp.Tmode) *op {
 	return &op{kind: o, val: val, k: k, m: m}
 }
 
 func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 	switch o.kind {
-	case GETVAL:
+	case GET:
 		o.err = kc.cclnt.Get(srv, string(o.k), o.val)
 	case GETVALS:
 		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val)
@@ -214,7 +214,7 @@ func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := newOp(GETVAL, val, Tkey(key), sp.OREAD)
+	op := newOp(GET, val, Tkey(key), sp.OREAD)
 	kc.doop(op)
 	return op.err
 }

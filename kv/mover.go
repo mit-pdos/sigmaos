@@ -67,6 +67,11 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
+	// XXX delete destination shard
+	if err := mv.cc.FreezeShard(s, mv.shard, mv.fence); err != nil {
+		db.DPrintf(db.KVMV, "FreezeShard err %v\n", err)
+		return err
+	}
 	if err := mv.cc.CreateShard(d, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV, "CreateShard err %v\n", err)
 		return err

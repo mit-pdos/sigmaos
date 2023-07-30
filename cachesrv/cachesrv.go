@@ -28,9 +28,17 @@ var (
 	ErrMiss = errors.New("cache miss")
 )
 
+type Tstatus string
+
+const (
+	EMBRYO Tstatus = "Embryo"
+	READY  Tstatus = "Ready"
+	FROZEN Tstatus = "Frozen"
+)
+
 type shardInfo struct {
-	ready bool
-	s     *shard
+	status Tstatus
+	s      *shard
 }
 
 type shardMap map[uint32]*shardInfo
@@ -56,7 +64,7 @@ func RunCacheSrv(args []string, nshard uint32) error {
 	s := NewCacheSrv(pn)
 
 	for i := uint32(0); i < nshard; i++ {
-		if err := s.createShard(i, true); err != nil {
+		if err := s.createShard(i, READY); err != nil {
 			db.DFatalf("CreateShard %v\n", err)
 		}
 	}
@@ -100,26 +108,47 @@ func (cs *CacheSrv) lookupShard(s uint32) (*shard, error) {
 	if !ok {
 		return nil, serr.MkErr(serr.TErrNotfound, s)
 	}
-	if !sh.ready {
+	switch sh.status {
+	case READY:
+		return sh.s, nil
+	case EMBRYO:
+		return nil, serr.MkErr(serr.TErrNotfound, s)
+	case FROZEN:
+		return nil, serr.MkErr(serr.TErrStale, s)
+	default:
+		db.DFatalf("lookupShard err status %v\n", sh.status)
 		return nil, ErrMiss
 	}
-	return sh.s, nil
 }
 
-func (cs *CacheSrv) createShard(s uint32, b bool) error {
+func (cs *CacheSrv) createShard(s uint32, status Tstatus) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
 	if _, ok := cs.shards[s]; ok {
 		return serr.MkErr(serr.TErrExists, s)
 	}
-	cs.shards[s] = &shardInfo{ready: b, s: newShard()}
+	cs.shards[s] = &shardInfo{status: status, s: newShard()}
 	return nil
 }
 
 func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
 	db.DPrintf(db.CACHESRV, "CreateShard %v\n", req)
-	return cs.createShard(req.Shard, false)
+	return cs.createShard(req.Shard, EMBRYO)
+}
+
+func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	db.DPrintf(db.CACHESRV, "FreezeShard %v\n", req)
+
+	if si, ok := cs.shards[req.Shard]; !ok {
+		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	} else {
+		si.status = FROZEN
+		return nil
+	}
 }
 
 func (cs *CacheSrv) FillShard(ctx fs.CtxI, req cacheproto.ShardFill, rep *cacheproto.CacheOK) error {
@@ -128,13 +157,13 @@ func (cs *CacheSrv) FillShard(ctx fs.CtxI, req cacheproto.ShardFill, rep *cachep
 
 	db.DPrintf(db.CACHESRV, "FillShard %v\n", req)
 
-	if _, ok := cs.shards[req.Shard]; !ok {
+	if si, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	} else {
+		si.s.fill(req.Vals)
+		si.status = READY
+		return nil
 	}
-	cs.shards[req.Shard] = &shardInfo{s: newShard()}
-	cs.shards[req.Shard].ready = true
-	cs.shards[req.Shard].s.fill(req.Vals)
-	return nil
 }
 
 func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheDump) error {
@@ -143,11 +172,12 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cachepr
 
 	db.DPrintf(db.CACHESRV, "DumpShard %v\n", req)
 
-	if _, ok := cs.shards[req.Shard]; !ok {
+	if si, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
+	} else {
+		rep.Vals = si.s.dump()
+		return nil
 	}
-	rep.Vals = cs.shards[req.Shard].s.dump()
-	return nil
 }
 
 func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {

@@ -46,8 +46,8 @@ func TestResizeImg(t *testing.T) {
 
 func TestResizeProc(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	in := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
-	out := path.Join(sp.S3, "~local/9ps3/img/1-thumb.jpg")
+	in := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
+	out := path.Join(sp.S3, "~local/9ps3/img-save/1-thumb.jpg")
 	ts.Remove(out)
 	p := proc.MakeProc("imgresize", []string{in, out})
 	err := ts.Spawn(p)
@@ -91,7 +91,7 @@ func TestImgdOne(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	fn := path.Join(sp.S3, "~local/9ps3/img/1.jpg")
+	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 	ts.Remove(imgresized.ThumbName(fn))
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
@@ -117,20 +117,20 @@ func TestImgdMany(t *testing.T) {
 
 	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU)
 
-	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
+	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
 
 	for _, st := range sts {
-		fn := path.Join(sp.S3, "~local/9ps3/img/", st.Name)
+		fn := path.Join(sp.S3, "~local/9ps3/img-save/", st.Name)
 		ts.Remove(imgresized.ThumbName(fn))
 	}
 
-	sts, err = ts.GetDir(path.Join(sp.S3, "~local/9ps3/img"))
+	sts, err = ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
 
 	for _, st := range sts {
 		fmt.Printf("submit %v\n", st.Name)
-		fn := path.Join(sp.S3, "~local/9ps3/img/", st.Name)
+		fn := path.Join(sp.S3, "~local/9ps3/img-save/", st.Name)
 		err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 		assert.Nil(t, err)
 	}

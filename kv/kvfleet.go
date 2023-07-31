@@ -58,6 +58,7 @@ type KVFleet struct {
 	kvdrepl     int        // kvd replication level
 	kvdmcpu     proc.Tmcpu // Number of exclusive cores allocated to each kvd.
 	ck          *KvClerk   // A clerk which can be used for initialization.
+	crashbal    int        // Crash balancer
 	crashhelper string     // Crash balancer helper/mover?
 	auto        string     // Balancer auto-balancing setting.
 	job         string
@@ -67,12 +68,13 @@ type KVFleet struct {
 	cpids       []proc.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd int, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{}
 	kvf.SigmaClnt = sc
 	kvf.nkvd = nkvd
 	kvf.kvdrepl = kvdrepl
 	kvf.kvdmcpu = kvdmcpu
+	kvf.crashbal = crashbal
 	kvf.job = job
 	kvf.crashhelper = crashhelper
 	kvf.auto = auto
@@ -98,7 +100,7 @@ func (kvf *KVFleet) Nkvd() int {
 }
 
 func (kvf *KVFleet) Start() error {
-	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, 0, kvf.kvdmcpu, kvf.crashhelper, kvf.auto)
+	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, kvf.crashbal, kvf.kvdmcpu, kvf.crashhelper, kvf.auto)
 	for i := 0; i < kvf.nkvd; i++ {
 		if err := kvf.AddKVDGroup(); err != nil {
 			return err

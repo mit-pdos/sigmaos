@@ -187,12 +187,12 @@ func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sessp.Tfence) e
 	return nil
 }
 
-func (c *CacheClnt) DeleteShard(srv string, shard uint32) error {
+func (c *CacheClnt) DeleteShard(srv string, shard uint32, fence *sessp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: shard,
 	}
 	var res cacheproto.CacheOK
-	if err := c.rpcc.RPC(srv, "CacheSrv.DeleteShard", req, &res); err != nil {
+	if err := c.rpcc.RPCFence(srv, "CacheSrv.DeleteShard", req, &res, fence); err != nil {
 		return err
 	}
 	return nil
@@ -209,13 +209,13 @@ func (c *CacheClnt) DumpShard(srv string, shard uint32) (map[string][]byte, erro
 	return res.Vals, nil
 }
 
-func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte) error {
+func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fence *sessp.Tfence) error {
 	req := &cacheproto.ShardFill{
 		Shard: shard,
 		Vals:  m,
 	}
 	var res cacheproto.CacheOK
-	if err := c.rpcc.RPC(srv, "CacheSrv.FillShard", req, &res); err != nil {
+	if err := c.rpcc.RPCFence(srv, "CacheSrv.FillShard", req, &res, fence); err != nil {
 		return err
 	}
 	return nil

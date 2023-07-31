@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -58,35 +59,50 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	}
 	crash.Crasher(mv.FsLib)
 
-	if err := JoinEpoch(mv.FsLib, mv.job, mv.fence); err != nil {
-		mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
-		return nil, err
-	}
+	// if err := JoinEpoch(mv.FsLib, mv.job, mv.fence); err != nil {
+	// 	mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+	// 	return nil, err
+	// }
 	return mv, nil
 }
 
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
-	// XXX delete destination shard
 	if err := mv.cc.FreezeShard(s, mv.shard, mv.fence); err != nil {
-		db.DPrintf(db.KVMV, "FreezeShard err %v\n", err)
+		db.DPrintf(db.KVMV, "FreezeShard %v err %v\n", s, err)
+		// did previous mover finish the job?
+		if serr.IsErrCode(err, serr.TErrNotfound) {
+			return nil
+		}
 		return err
 	}
+
+	// A crashed mover may have created the shard and partially filled
+	// it; remove it and start over.
+	if err := mv.cc.DeleteShard(d, mv.shard, mv.fence); err != nil {
+		db.DPrintf(db.KVMV, "DeleteShard %v err %v\n", mv.shard, err)
+		if !serr.IsErrCode(err, serr.TErrNotfound) {
+			return err
+		}
+	}
+
 	if err := mv.cc.CreateShard(d, mv.shard, mv.fence); err != nil {
-		db.DPrintf(db.KVMV, "CreateShard err %v\n", err)
+		db.DPrintf(db.KVMV, "CreateShard %v err %v\n", mv.shard, err)
 		return err
 	}
 	vals, err := mv.cc.DumpShard(s, mv.shard)
 	if err != nil {
-		db.DPrintf(db.KVMV, "DumpShard err %v\n", err)
+		db.DPrintf(db.KVMV, "DumpShard %v err %v\n", mv.shard, err)
 		return err
 	}
-	if err := mv.cc.FillShard(d, mv.shard, vals); err != nil {
-		db.DPrintf(db.KVMV, "FillShard err %v\n", err)
+	if err := mv.cc.FillShard(d, mv.shard, vals, mv.fence); err != nil {
+		db.DPrintf(db.KVMV, "FillShard %v err %v\n", mv.shard, err)
 		return err
 	}
-	if err := mv.cc.DeleteShard(s, mv.shard); err != nil {
-		db.DPrintf(db.KVMV, "DeleteShard err %v\n", err)
+
+	// Mark that move is done by deleting s
+	if err := mv.cc.DeleteShard(s, mv.shard, mv.fence); err != nil {
+		db.DPrintf(db.KVMV, "DeleteShard %v err %v\n", mv.shard, err)
 		return err
 	}
 	return nil

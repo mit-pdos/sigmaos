@@ -22,8 +22,8 @@ import (
 const (
 	NCLERK = 4
 
-	CRASHBALANCER = 1000
-	CRASHMOVER    = "200"
+	CRASHBALANCER = 10000
+	CRASHMOVER    = "1000"
 )
 
 func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {

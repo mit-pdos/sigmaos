@@ -8,7 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -17,16 +17,16 @@ import (
 type statsDev struct {
 	mfs *memfssrv.MemFs
 	*inode.Inode
-	si *protdev.StatInfo
+	si *rpc.StatInfo
 }
 
 // Create a StatsDev in mfs at pn
-func makeStatsDev(mfs *memfssrv.MemFs, pn string) (*protdev.StatInfo, *serr.Err) {
+func makeStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 	std := &statsDev{mfs: mfs, Inode: mfs.MakeDevInode()}
-	if err := mfs.MkDev(path.Join(pn, protdev.STATS), std); err != nil {
+	if err := mfs.MkDev(path.Join(pn, rpc.STATS), std); err != nil {
 		return nil, err
 	}
-	std.si = protdev.MakeStatInfo()
+	std.si = rpc.MakeStatInfo()
 	return std.si, nil
 }
 
@@ -36,7 +36,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQv
 	}
 
 	db.DPrintf(db.SIGMASRV, "Read stats: %v\n", std.si)
-	st := &protdev.SigmaRPCStats{}
+	st := &rpc.SigmaRPCStats{}
 	st.SigmapStat = std.mfs.GetStats().StatsCopy()
 	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)

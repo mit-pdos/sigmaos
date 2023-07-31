@@ -9,8 +9,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/protdev"
-	rpcproto "sigmaos/protdev/proto"
+	"sigmaos/rpc"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	"sigmaos/sessdevclnt"
 	"sigmaos/sessp"
@@ -20,7 +20,7 @@ import (
 type RPCClnt struct {
 	fsls []*fslib.FsLib
 	fds  []int
-	si   *protdev.StatInfo
+	si   *rpc.StatInfo
 	sdc  *sessdevclnt.SessDevClnt
 	pn   string
 	idx  int32
@@ -30,10 +30,10 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	rpcc := &RPCClnt{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
-		si:   protdev.MakeStatInfo(),
+		si:   rpc.MakeStatInfo(),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, protdev.RPC))
+	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +97,13 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	return rpcc.RPCFence(method, arg, res, sessp.NewFence())
 }
 
-func (rpcc *RPCClnt) StatsClnt() map[string]*protdev.MethodStat {
+func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStat {
 	return rpcc.si.Stats()
 }
 
-func (rpcc *RPCClnt) StatsSrv() (*protdev.SigmaRPCStats, error) {
-	stats := &protdev.SigmaRPCStats{}
-	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, protdev.RPC, protdev.STATS), stats); err != nil {
+func (rpcc *RPCClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
+	stats := &rpc.SigmaRPCStats{}
+	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, rpc.RPC, rpc.STATS), stats); err != nil {
 		db.DFatalf("Error getting stats")
 		return nil, err
 	}

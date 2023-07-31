@@ -11,7 +11,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kv"
 	"sigmaos/proc"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -230,7 +230,7 @@ func (hj *HotelJob) Stop() error {
 	return nil
 }
 
-func (hj *HotelJob) StatsSrv() ([]*protdev.SigmaRPCStats, error) {
+func (hj *HotelJob) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 	if hj.cacheClnt != nil {
 		return hj.cacheClnt.StatsSrv()
 	}

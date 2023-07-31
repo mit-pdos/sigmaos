@@ -5,7 +5,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/protdev"
+	"sigmaos/rpc"
 )
 
 const (
@@ -58,7 +58,7 @@ func (a *Autoscaler) isDone() bool {
 	return a.done
 }
 
-func globalAvgQlen(sts []*protdev.SigmaRPCStats) float64 {
+func globalAvgQlen(sts []*rpc.SigmaRPCStats) float64 {
 	avg := float64(0.0)
 	for i, st := range sts {
 		db.DPrintf(db.ALWAYS, "Cache %v qlen: %v", i, st.SigmapStat.AvgQlen)

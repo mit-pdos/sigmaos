@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.28.1
 // 	protoc        v4.23.4
-// source: protdev/proto/rpc.proto
+// source: rpc/proto/rpc.proto
 
 package proto
 
@@ -33,7 +33,7 @@ type Request struct {
 func (x *Request) Reset() {
 	*x = Request{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protdev_proto_rpc_proto_msgTypes[0]
+		mi := &file_rpc_proto_rpc_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -46,7 +46,7 @@ func (x *Request) String() string {
 func (*Request) ProtoMessage() {}
 
 func (x *Request) ProtoReflect() protoreflect.Message {
-	mi := &file_protdev_proto_rpc_proto_msgTypes[0]
+	mi := &file_rpc_proto_rpc_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +59,7 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request.ProtoReflect.Descriptor instead.
 func (*Request) Descriptor() ([]byte, []int) {
-	return file_protdev_proto_rpc_proto_rawDescGZIP(), []int{0}
+	return file_rpc_proto_rpc_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Request) GetMethod() string {
@@ -82,13 +82,13 @@ type Reply struct {
 	unknownFields protoimpl.UnknownFields
 
 	Res []byte         `protobuf:"bytes,1,opt,name=res,proto3" json:"res,omitempty"`
-	Err *sigmap.Rerror `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"` // string error = 2;
+	Err *sigmap.Rerror `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *Reply) Reset() {
 	*x = Reply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protdev_proto_rpc_proto_msgTypes[1]
+		mi := &file_rpc_proto_rpc_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -101,7 +101,7 @@ func (x *Reply) String() string {
 func (*Reply) ProtoMessage() {}
 
 func (x *Reply) ProtoReflect() protoreflect.Message {
-	mi := &file_protdev_proto_rpc_proto_msgTypes[1]
+	mi := &file_rpc_proto_rpc_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -114,7 +114,7 @@ func (x *Reply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Reply.ProtoReflect.Descriptor instead.
 func (*Reply) Descriptor() ([]byte, []int) {
-	return file_protdev_proto_rpc_proto_rawDescGZIP(), []int{1}
+	return file_rpc_proto_rpc_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Reply) GetRes() []byte {
@@ -131,42 +131,42 @@ func (x *Reply) GetErr() *sigmap.Rerror {
 	return nil
 }
 
-var File_protdev_proto_rpc_proto protoreflect.FileDescriptor
+var File_rpc_proto_rpc_proto protoreflect.FileDescriptor
 
-var file_protdev_proto_rpc_proto_rawDesc = []byte{
-	0x0a, 0x17, 0x70, 0x72, 0x6f, 0x74, 0x64, 0x65, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f,
-	0x72, 0x70, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x13, 0x73, 0x69, 0x67, 0x6d, 0x61,
-	0x70, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x35,
-	0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6d, 0x65, 0x74,
-	0x68, 0x6f, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6d, 0x65, 0x74, 0x68, 0x6f,
-	0x64, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x72, 0x67, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x04, 0x61, 0x72, 0x67, 0x73, 0x22, 0x34, 0x0a, 0x05, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x10,
-	0x0a, 0x03, 0x72, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x03, 0x72, 0x65, 0x73,
-	0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e,
-	0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x17, 0x5a, 0x15, 0x73,
-	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x64, 0x65, 0x76, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+var file_rpc_proto_rpc_proto_rawDesc = []byte{
+	0x0a, 0x13, 0x72, 0x70, 0x63, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x72, 0x70, 0x63, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x13, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x2f, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x35, 0x0a, 0x07, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x12, 0x0a,
+	0x04, 0x61, 0x72, 0x67, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x61, 0x72, 0x67,
+	0x73, 0x22, 0x34, 0x0a, 0x05, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x72, 0x65,
+	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x03, 0x72, 0x65, 0x73, 0x12, 0x19, 0x0a, 0x03,
+	0x65, 0x72, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52, 0x65, 0x72, 0x72,
+	0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x13, 0x5a, 0x11, 0x73, 0x69, 0x67, 0x6d, 0x61,
+	0x6f, 0x73, 0x2f, 0x72, 0x70, 0x63, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
-	file_protdev_proto_rpc_proto_rawDescOnce sync.Once
-	file_protdev_proto_rpc_proto_rawDescData = file_protdev_proto_rpc_proto_rawDesc
+	file_rpc_proto_rpc_proto_rawDescOnce sync.Once
+	file_rpc_proto_rpc_proto_rawDescData = file_rpc_proto_rpc_proto_rawDesc
 )
 
-func file_protdev_proto_rpc_proto_rawDescGZIP() []byte {
-	file_protdev_proto_rpc_proto_rawDescOnce.Do(func() {
-		file_protdev_proto_rpc_proto_rawDescData = protoimpl.X.CompressGZIP(file_protdev_proto_rpc_proto_rawDescData)
+func file_rpc_proto_rpc_proto_rawDescGZIP() []byte {
+	file_rpc_proto_rpc_proto_rawDescOnce.Do(func() {
+		file_rpc_proto_rpc_proto_rawDescData = protoimpl.X.CompressGZIP(file_rpc_proto_rpc_proto_rawDescData)
 	})
-	return file_protdev_proto_rpc_proto_rawDescData
+	return file_rpc_proto_rpc_proto_rawDescData
 }
 
-var file_protdev_proto_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_protdev_proto_rpc_proto_goTypes = []interface{}{
+var file_rpc_proto_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rpc_proto_rpc_proto_goTypes = []interface{}{
 	(*Request)(nil),       // 0: Request
 	(*Reply)(nil),         // 1: Reply
 	(*sigmap.Rerror)(nil), // 2: Rerror
 }
-var file_protdev_proto_rpc_proto_depIdxs = []int32{
+var file_rpc_proto_rpc_proto_depIdxs = []int32{
 	2, // 0: Reply.err:type_name -> Rerror
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -175,13 +175,13 @@ var file_protdev_proto_rpc_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_protdev_proto_rpc_proto_init() }
-func file_protdev_proto_rpc_proto_init() {
-	if File_protdev_proto_rpc_proto != nil {
+func init() { file_rpc_proto_rpc_proto_init() }
+func file_rpc_proto_rpc_proto_init() {
+	if File_rpc_proto_rpc_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_protdev_proto_rpc_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_rpc_proto_rpc_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Request); i {
 			case 0:
 				return &v.state
@@ -193,7 +193,7 @@ func file_protdev_proto_rpc_proto_init() {
 				return nil
 			}
 		}
-		file_protdev_proto_rpc_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_rpc_proto_rpc_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Reply); i {
 			case 0:
 				return &v.state
@@ -210,18 +210,18 @@ func file_protdev_proto_rpc_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_protdev_proto_rpc_proto_rawDesc,
+			RawDescriptor: file_rpc_proto_rpc_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protdev_proto_rpc_proto_goTypes,
-		DependencyIndexes: file_protdev_proto_rpc_proto_depIdxs,
-		MessageInfos:      file_protdev_proto_rpc_proto_msgTypes,
+		GoTypes:           file_rpc_proto_rpc_proto_goTypes,
+		DependencyIndexes: file_rpc_proto_rpc_proto_depIdxs,
+		MessageInfos:      file_rpc_proto_rpc_proto_msgTypes,
 	}.Build()
-	File_protdev_proto_rpc_proto = out.File
-	file_protdev_proto_rpc_proto_rawDesc = nil
-	file_protdev_proto_rpc_proto_goTypes = nil
-	file_protdev_proto_rpc_proto_depIdxs = nil
+	File_rpc_proto_rpc_proto = out.File
+	file_rpc_proto_rpc_proto_rawDesc = nil
+	file_rpc_proto_rpc_proto_goTypes = nil
+	file_rpc_proto_rpc_proto_depIdxs = nil
 }

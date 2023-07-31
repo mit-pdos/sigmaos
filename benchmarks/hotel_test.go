@@ -18,8 +18,8 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/protdev"
 	rd "sigmaos/rand"
+	"sigmaos/rpc"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -188,10 +188,10 @@ func (ji *HotelJobInstance) StartHotelJob() {
 
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		for _, s := range hotel.HOTELSVC {
-			stats := &protdev.SigmaRPCStats{}
-			err := ji.GetFileJson(s+"/"+protdev.STATS, stats)
-			assert.Nil(ji.Ts.T, err, "error get stats %v", err)
+		for _, s := range sp.HOTELSVC {
+			stats := &rpc.SigmaRPCStats{}
+			err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
+			assert.Nil(ji.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
 		cs, err := ji.hj.StatsSrv()

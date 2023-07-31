@@ -1,4 +1,4 @@
-package protdev
+package rpc
 
 import (
 	"fmt"

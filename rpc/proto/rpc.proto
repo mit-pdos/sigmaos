@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "sigmap/sigmap.proto";
 
-option go_package = "sigmaos/protdev/proto";
+option go_package = "sigmaos/rpc/proto";
 
 message Request {
         string method = 1;

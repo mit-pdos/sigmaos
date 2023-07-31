@@ -14,6 +14,7 @@ import (
 
 	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
@@ -301,13 +302,13 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job)
+	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job, cachesrv.NSHARD)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))
@@ -349,13 +350,13 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job)
+	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job, cachesrv.NSHARD)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))

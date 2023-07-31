@@ -1,20 +1,12 @@
 package kv_test
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/binary"
-	"io"
-	"log"
-	"reflect"
 	"regexp"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"google.golang.org/protobuf/proto"
 
 	// "google.golang.org/protobuf/reflect/protoreflect"
 
@@ -23,7 +15,6 @@ import (
 	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/kv"
-	kproto "sigmaos/kv/proto"
 	"sigmaos/rand"
 	"sigmaos/test"
 )

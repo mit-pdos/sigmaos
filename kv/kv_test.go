@@ -43,51 +43,6 @@ func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {
 	}
 }
 
-func decode(t *testing.T, b []byte, m proto.Message) {
-	typ := reflect.TypeOf(m)
-	rdr := bytes.NewReader(b)
-	log.Printf("b = %d\n", len(b))
-	for {
-		var l uint32
-		if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
-			if err == io.EOF {
-				break
-			}
-			assert.Nil(t, err)
-		}
-		log.Printf("len %d\n", l)
-		b := make([]byte, int(l))
-		if _, err := io.ReadFull(rdr, b); err != nil && !(err == io.EOF && l == 0) {
-			assert.Nil(t, err)
-		}
-		val := reflect.New(typ.Elem()).Interface().(proto.Message)
-		log.Printf("type %T %v\n", val, typ)
-		if err := proto.Unmarshal(b, val); err != nil {
-			assert.Nil(t, err)
-		}
-		log.Printf("val %v\n", val)
-		// vals = append(vals, val)
-	}
-}
-
-func TestProtoArray(t *testing.T) {
-	b, err := proto.Marshal(&kproto.KVTestVal{Key: "xxx"})
-	assert.Nil(t, err)
-	var buf bytes.Buffer
-	l := uint32(len(b))
-	wr := bufio.NewWriter(&buf)
-	for i := 0; i < 2; i++ {
-		if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
-			assert.Nil(t, err)
-		}
-		if err := binary.Write(wr, binary.LittleEndian, b); err != nil {
-			assert.Nil(t, err)
-		}
-	}
-	wr.Flush()
-	decode(t, buf.Bytes(), &kproto.KVTestVal{})
-}
-
 func TestBalance(t *testing.T) {
 	conf := &kv.Config{}
 	for i := 0; i < kv.NSHARD; i++ {

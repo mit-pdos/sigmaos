@@ -30,7 +30,6 @@ func (mvs Moves) String() string {
 
 type Config struct {
 	Fence  sessp.Tfence
-	N      uint64   // Configuration
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
 }
@@ -40,7 +39,7 @@ func (cf *Config) String() string {
 }
 
 func MakeConfig(f sessp.Tfence) *Config {
-	cf := &Config{Fence: f, N: 0, Shards: make([]string, NSHARD), Moves: Moves{}}
+	cf := &Config{Fence: f, Shards: make([]string, NSHARD), Moves: Moves{}}
 	return cf
 }
 

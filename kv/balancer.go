@@ -252,9 +252,6 @@ func (bl *Balancer) PostConfig() {
 
 // Post new epoch, and finish moving sharddirs.
 func (bl *Balancer) restore(conf *Config, fence sessp.Tfence) {
-	// Increase N, even if the config is the same as before, so that
-	// helpers and clerks realize there is new balancer.  XXX they can
-	// know based on Fence.
 	bl.conf = conf
 	bl.conf.Fence = fence
 	db.DPrintf(db.KVBAL, "restore to %v with fence %v\n", bl.conf, fence)
@@ -283,7 +280,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		if err := bl.cc.CreateShard(srv, uint32(s), &bl.conf.Fence); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
-		if err := bl.cc.FillShard(srv, uint32(s), make(map[string][]byte)); err != nil {
+		if err := bl.cc.FillShard(srv, uint32(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
 			db.DFatalf("FillShard %v %d err %v\n", kvd, s, err)
 		}
 	}
@@ -406,15 +403,14 @@ func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 
 	var moves Moves
 	docrash := false
-	if bl.conf.N == 0 { // first conf
+	if bl.conf.Shards[0] == "" { // first conf
 		bl.initShards(nextShards)
 		docrash = true
 	} else {
 		moves = bl.computeMoves(nextShards)
 	}
 
-	bl.conf.Fence = *bl.lc.Fence()
-	bl.conf.N += 1
+	bl.conf.Fence.Seqno += 1
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 

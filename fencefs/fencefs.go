@@ -22,7 +22,7 @@ import (
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
-	epoch sessp.Tepoch
+	fence sessp.Tfence
 }
 
 func makeFence(i fs.Inode) *Fence {
@@ -87,13 +87,12 @@ func CheckFence(root fs.Dir, new sessp.Tfence) (*Fence, *serr.Err) {
 	if f == nil {
 		return nil, err
 	}
-	e := new.Epoch
-	if e < f.epoch {
+	if new.LessThan(&f.fence) {
 		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
 		f.RUnlock()
 		return nil, serr.MkErr(serr.TErrStale, new)
 	}
-	if e == f.epoch {
+	if new.Eq(&f.fence) {
 		return f, nil
 	}
 
@@ -101,17 +100,15 @@ func CheckFence(root fs.Dir, new sessp.Tfence) (*Fence, *serr.Err) {
 	f.RUnlock()
 	f.Lock()
 
-	if e > f.epoch {
-		db.DPrintf(db.FENCEFS, "New epoch %v\n", new)
-		f.epoch = e
-	}
+	db.DPrintf(db.FENCEFS, "New epoch %v\n", new)
+	f.fence.Upgrade(&new)
 
-	// Now f.epoch == to new.Epoch. If after down grading this is
-	// still true, then we are good to go. Otherwise, f.epoch must
-	// have increased, and we return TErrStale.
+	// Now f == new. If after down grading this is still true, then we
+	// are good to go. Otherwise, f must have increased, and we return
+	// TErrStale.
 	f.Unlock()
 	f.RLock()
-	if e == f.epoch {
+	if f.fence.Eq(&new) {
 		return f, nil
 	}
 	db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)

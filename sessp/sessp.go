@@ -19,6 +19,7 @@ type Tsession uint64
 type Tseqno uint64
 type Tclient uint64
 type Tepoch uint64
+type Tserverid uint64
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
@@ -103,8 +104,9 @@ func (fcm *FcallMsg) Tag() Ttag {
 
 type Tfence struct {
 	Path     Tpath
-	ServerId uint64 // XXX maybe pub key
+	ServerId Tserverid // XXX maybe pub key
 	Epoch    Tepoch
+	Seqno    Tseqno
 }
 
 func NewFence() *Tfence {
@@ -119,6 +121,20 @@ func NewFenceJson(b []byte) (*Tfence, error) {
 	return f, nil
 }
 
+func (f1 *Tfence) LessThan(f2 *Tfence) bool {
+	return f1.Epoch < f2.Epoch ||
+		(f1.Epoch == f2.Epoch && f1.Seqno < f2.Seqno)
+}
+
+func (f1 *Tfence) Eq(f2 *Tfence) bool {
+	return f1.Epoch == f2.Epoch && f1.Seqno == f2.Seqno
+}
+
+func (f1 *Tfence) Upgrade(f2 *Tfence) {
+	f1.Epoch = f2.Epoch
+	f1.Seqno = f2.Seqno
+}
+
 func (f *Tfence) Json() []byte {
 	b, err := json.Marshal(*f)
 	if err != nil {
@@ -130,9 +146,10 @@ func (f *Tfence) Json() []byte {
 
 func (f *Tfence) FenceProto() *TfenceProto {
 	fp := NewFenceProto()
-	fp.Serverid = f.ServerId
+	fp.Serverid = uint64(f.ServerId)
 	fp.Path = uint64(f.Path)
 	fp.Epoch = uint64(f.Epoch)
+	fp.Seqno = uint64(f.Seqno)
 	return fp
 }
 
@@ -151,6 +168,14 @@ func (fp *TfenceProto) Tpath() Tpath {
 
 func (fp *TfenceProto) Tepoch() Tepoch {
 	return Tepoch(fp.Epoch)
+}
+
+func (fp *TfenceProto) Tseqno() Tseqno {
+	return Tseqno(fp.Seqno)
+}
+
+func (fp *TfenceProto) Tserverid() Tserverid {
+	return Tserverid(fp.Serverid)
 }
 
 func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval, f *Tfence) *FcallMsg {
@@ -191,7 +216,9 @@ func (fm *FcallMsg) GetMsg() Tmsg {
 func (fm *FcallMsg) Tfence() *Tfence {
 	f := NewFence()
 	f.Epoch = fm.Fc.Fence.Tepoch()
+	f.Seqno = fm.Fc.Fence.Tseqno()
 	f.Path = fm.Fc.Fence.Tpath()
+	f.ServerId = fm.Fc.Fence.Tserverid()
 	return f
 }
 

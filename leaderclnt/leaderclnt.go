@@ -1,11 +1,11 @@
 package leaderclnt
 
 import (
-	"hash/fnv"
-
+	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
+	"sigmaos/proc"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -15,21 +15,18 @@ import (
 //
 
 type LeaderClnt struct {
-	*fslib.FsLib
-	*fenceclnt.FenceClnt
-	e     *electclnt.ElectClnt
-	fence *sessp.Tfence
-	pn    string
+	fc *fenceclnt.FenceClnt
+	ec *electclnt.ElectClnt
+	pn string
 }
 
 func MakeLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, error) {
-	l := &LeaderClnt{FsLib: fsl, pn: pn, FenceClnt: fenceclnt.MakeFenceClnt(fsl)}
-	e, err := electclnt.MakeElectClnt(fsl, pn, perm)
+	l := &LeaderClnt{pn: pn, fc: fenceclnt.MakeFenceClnt(fsl)}
+	ec, err := electclnt.MakeElectClnt(fsl, pn, perm)
 	if err != nil {
 		return nil, err
 	}
-	l.e = e
-	l.fence = sessp.NewFence()
+	l.ec = ec
 	return l, nil
 }
 
@@ -38,33 +35,38 @@ func MakeLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, er
 // epoch.  Note epoch doesn't take effect until we perform a fenced
 // operation (e.g., a read/write).
 func (l *LeaderClnt) LeadAndFence(b []byte, dirs []string) error {
-	if err := l.e.AcquireLeadership(b); err != nil {
+	if err := l.ec.AcquireLeadership(b); err != nil {
 		return err
 	}
-	l.fence.Epoch = l.e.Epoch()
-	h := fnv.New64a()
-	h.Write([]byte(l.pn))
-	l.fence.Path = sessp.Tpath(h.Sum64())
+	db.DPrintf(db.LEADER, "%v: LeadAndFence: %v\n", proc.GetName(), l.Fence())
 	return l.fenceDirs(dirs)
 }
 
-func (l *LeaderClnt) Fence() *sessp.Tfence {
-	return l.fence
+func (l *LeaderClnt) Fence() sessp.Tfence {
+	return l.ec.Fence()
 }
 
 // Enter next epoch.  If the leader is partitioned and another leader
 // has taken over already, this fails.
 func (l *LeaderClnt) fenceDirs(dirs []string) error {
-	if err := l.FenceAtEpoch(*l.fence, dirs); err != nil {
+	if err := l.fc.FenceAtEpoch(l.Fence(), dirs); err != nil {
 		return err
 	}
 	return nil
 }
 
+func (l *LeaderClnt) GetFences(pn string) ([]*sp.Stat, error) {
+	return l.fc.GetFences(pn)
+}
+
+func (l *LeaderClnt) RemoveFence(dirs []string) error {
+	return l.fc.RemoveFence(dirs)
+}
+
 func (l *LeaderClnt) ReleaseLeadership() error {
-	return l.e.ReleaseLeadership()
+	return l.ec.ReleaseLeadership()
 }
 
 func (l *LeaderClnt) Lease() sp.TleaseId {
-	return l.e.Lease()
+	return l.ec.Lease()
 }

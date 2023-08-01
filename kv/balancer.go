@@ -138,7 +138,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	case <-ch:
 		// done
 	default:
-		bl.recover(*bl.lc.Fence())
+		bl.recover(bl.lc.Fence())
 
 		bl.clearIsBusy()
 

@@ -71,7 +71,7 @@ func (cc *ClntCache) RPCFence(pn string, method string, arg proto.Message, res p
 }
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
-	return cc.RPCFence(pn, method, arg, res, sessp.NewFence())
+	return cc.RPCFence(pn, method, arg, res, sessp.NullFence())
 }
 
 func (cc *ClntCache) StatsSrv() ([]*rpc.SigmaRPCStats, error) {

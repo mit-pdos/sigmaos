@@ -53,7 +53,7 @@ func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fenc
 
 func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.MkTattach(fid, sp.NoFid, uname, cid, path)
-	reply, err := clnt.CallServer(addrs, args, nil, sessp.NewFence())
+	reply, err := clnt.CallServer(addrs, args, nil, sessp.NullFence())
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +99,11 @@ func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte, f *sessp.Tfence) (
 }
 
 func (pclnt *ProtClnt) CallNoFence(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, sessp.NewFence())
+	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, sessp.NullFence())
 }
 
 func (pclnt *ProtClnt) CallNoFenceData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, data, sessp.NewFence())
+	return pclnt.clnt.CallServer(pclnt.addrs, args, data, sessp.NullFence())
 }
 
 func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Path) (*sp.Rwalk, *serr.Err) {

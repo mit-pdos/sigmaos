@@ -3,10 +3,9 @@ syntax = "proto3";
 option go_package = "sigmaos/sessp";
 
 message TfenceProto {
-        uint64 path = 1;
-        uint64 serverid = 2;
-        uint64 epoch = 3;    // leader's epoch number
-        uint64 seqno = 4;    // sequence within a leader's epoch
+        string pathName = 1;
+        uint64 epoch = 2;    // leader's epoch number
+        uint64 seqno = 3;    // sequence within a leader's epoch
 }
 
 message Tinterval {

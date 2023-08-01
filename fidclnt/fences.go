@@ -48,5 +48,5 @@ func (ft *FenceTable) Lookup(p path.Path) *sessp.Tfence {
 		}
 	}
 	db.DPrintf(db.FIDCLNT, "Lookup fence %v: no fence\n", p)
-	return sessp.NewFence()
+	return sessp.NullFence()
 }

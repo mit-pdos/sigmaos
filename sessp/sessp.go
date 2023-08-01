@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -103,22 +104,29 @@ func (fcm *FcallMsg) Tag() Ttag {
 }
 
 type Tfence struct {
-	Path     Tpath
-	ServerId Tserverid // XXX maybe pub key
+	PathName string
 	Epoch    Tepoch
 	Seqno    Tseqno
 }
 
-func NewFence() *Tfence {
+func NullFence() *Tfence {
 	return &Tfence{}
 }
 
+func NewFence(pn string, epoch Tepoch) Tfence {
+	return Tfence{PathName: pn, Epoch: epoch}
+}
+
 func NewFenceJson(b []byte) (*Tfence, error) {
-	f := NewFence()
+	f := NullFence()
 	if err := json.Unmarshal(b, f); err != nil {
 		return nil, err
 	}
 	return f, nil
+}
+
+func (f *Tfence) Name() string {
+	return strings.Replace(path.Dir(f.PathName), "/", "-", -1)
 }
 
 func (f1 *Tfence) LessThan(f2 *Tfence) bool {
@@ -135,22 +143,21 @@ func (f1 *Tfence) Upgrade(f2 *Tfence) {
 	f1.Seqno = f2.Seqno
 }
 
-func (f *Tfence) Json() []byte {
-	b, err := json.Marshal(*f)
+func (f *Tfence) FenceProto() *TfenceProto {
+	fp := NewFenceProto()
+	fp.PathName = f.PathName
+	fp.Epoch = uint64(f.Epoch)
+	fp.Seqno = uint64(f.Seqno)
+	return fp
+}
+
+func (f Tfence) Json() []byte {
+	b, err := json.Marshal(f)
 	if err != nil {
 		log.Printf("%v fence json marshal err %v\n", err)
 		return nil
 	}
 	return b
-}
-
-func (f *Tfence) FenceProto() *TfenceProto {
-	fp := NewFenceProto()
-	fp.Serverid = uint64(f.ServerId)
-	fp.Path = uint64(f.Path)
-	fp.Epoch = uint64(f.Epoch)
-	fp.Seqno = uint64(f.Seqno)
-	return fp
 }
 
 func NewFenceProto() *TfenceProto {
@@ -162,8 +169,8 @@ func MakeFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil, nil}
 }
 
-func (fp *TfenceProto) Tpath() Tpath {
-	return Tpath(fp.Path)
+func (fp *TfenceProto) Tpathname() string {
+	return fp.PathName
 }
 
 func (fp *TfenceProto) Tepoch() Tepoch {
@@ -194,7 +201,7 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, NewFence())
+	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, NullFence())
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -214,11 +221,10 @@ func (fm *FcallMsg) GetMsg() Tmsg {
 }
 
 func (fm *FcallMsg) Tfence() *Tfence {
-	f := NewFence()
+	f := NullFence()
 	f.Epoch = fm.Fc.Fence.Tepoch()
 	f.Seqno = fm.Fc.Fence.Tseqno()
-	f.Path = fm.Fc.Fence.Tpath()
-	f.ServerId = fm.Fc.Fence.Tserverid()
+	f.PathName = fm.Fc.Fence.Tpathname()
 	return f
 }
 

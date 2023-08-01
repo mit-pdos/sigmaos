@@ -1,6 +1,7 @@
 package leaderclnt_test
 
 import (
+	"log"
 	"strconv"
 	"testing"
 	"time"
@@ -92,10 +93,16 @@ func oldleader(ts *test.Tstate, pn string, crash bool) {
 	b, err := ts.Read(fd, 100)
 	assert.Equal(ts.T, 0, len(b))
 
+	sts, err := l.GetFences(pn)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 1, len(sts), "Fences")
+
+	log.Printf("fences %v\n", sp.Names(sts))
+
 	err = l.RemoveFence([]string{pn})
 	assert.Nil(ts.T, err, "RemoveFences")
 
-	sts, err := l.GetFences(pn)
+	sts, err = l.GetFences(pn)
 	assert.Nil(ts.T, err, "GetFences")
 	assert.Equal(ts.T, 0, len(sts), "Fences")
 

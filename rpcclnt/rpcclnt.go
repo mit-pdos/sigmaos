@@ -94,7 +94,7 @@ func (rpcc *RPCClnt) RPCFence(method string, arg proto.Message, res proto.Messag
 }
 
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	return rpcc.RPCFence(method, arg, res, sessp.NewFence())
+	return rpcc.RPCFence(method, arg, res, sessp.NullFence())
 }
 
 func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStat {

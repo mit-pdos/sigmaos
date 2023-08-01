@@ -28,6 +28,7 @@ func (el *Election) Candidate() error {
 
 	el.Election = concurrency.NewElection(el.sess.Session, el.pn)
 
+	// XXX stick fence's sequence number in val?
 	if err := el.Campaign(context.TODO(), proc.GetPid().String()); err != nil {
 		return err
 	}

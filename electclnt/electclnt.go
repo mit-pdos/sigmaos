@@ -16,7 +16,7 @@ import (
 
 type ElectClnt struct {
 	*fslib.FsLib
-	pn    string // pathname for the leader-election file
+	pn    string // pathname for the leader-election file (and prefix of key)
 	perm  sp.Tperm
 	mode  sp.Tmode
 	elect *leaderetcd.Election
@@ -57,8 +57,8 @@ func (ec *ElectClnt) ReleaseLeadership() error {
 	return ec.elect.Resign()
 }
 
-func (ec *ElectClnt) Epoch() sessp.Tepoch {
-	return sessp.Tepoch(ec.elect.Rev())
+func (ec *ElectClnt) Fence() sessp.Tfence {
+	return sessp.NewFence(ec.elect.Key(), sessp.Tepoch(ec.elect.Rev()))
 }
 
 func (ec *ElectClnt) Lease() sp.TleaseId {

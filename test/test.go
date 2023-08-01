@@ -151,10 +151,6 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) StopKNamed() error {
-	return ts.kclnts[0].Kill(sp.NAMEDREL)
-}
-
 func (ts *Tstate) KillOne(s string) error {
 	idx := ts.killidx
 	ts.killidx++

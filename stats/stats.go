@@ -166,7 +166,7 @@ func (sti *StatInfo) Stats() *Stats {
 	return sti.st
 }
 
-func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
 	return 0, nil
 }
 

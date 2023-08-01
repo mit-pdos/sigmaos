@@ -24,7 +24,7 @@ const (
 	dirnamed   = sp.NAMED + "outdir"
 )
 
-func oldleader(ts *test.Tstate, pn string, crash bool) {
+func oldleader(ts *test.Tstate, pn string, crash bool) *leaderclnt.LeaderClnt {
 	ts.MkDir(pn, 0777)
 	ts.Remove(pn + "/f")
 	ts.Remove(pn + "/g")
@@ -56,6 +56,7 @@ func oldleader(ts *test.Tstate, pn string, crash bool) {
 		// now so this write to ux server should fail
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(ts.T, err, "Write")
+		db.DPrintf(db.TEST, "write err %v\n", err)
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale))
 
 		fsl.Close(fd)
@@ -93,27 +94,29 @@ func oldleader(ts *test.Tstate, pn string, crash bool) {
 	b, err := ts.Read(fd, 100)
 	assert.Equal(ts.T, 0, len(b))
 
-	sts, err := l.GetFences(pn)
-	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 1, len(sts), "Fences")
-
-	log.Printf("fences %v\n", sp.Names(sts))
-
-	err = l.RemoveFence([]string{pn})
-	assert.Nil(ts.T, err, "RemoveFences")
-
-	sts, err = l.GetFences(pn)
-	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 0, len(sts), "Fences")
-
-	l.ReleaseLeadership()
+	return l
 }
 
 // Test if a leader cannot write to a fenced server after leader fails
 func TestOldLeaderFailUx(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	oldleader(ts, dirux, false)
+	l := oldleader(ts, dirux, false)
+
+	sts, err := l.GetFences(dirux)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 1, len(sts), "Fences")
+
+	log.Printf("fences %v\n", sp.Names(sts))
+
+	err = l.RemoveFence([]string{dirux})
+	assert.Nil(ts.T, err, "RemoveFences")
+
+	sts, err = l.GetFences(dirux)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 0, len(sts), "Fences")
+
+	l.ReleaseLeadership()
 
 	ts.Shutdown()
 }
@@ -121,7 +124,9 @@ func TestOldLeaderFailUx(t *testing.T) {
 func TestOldLeaderFailNamedOK(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	oldleader(ts, dirnamed, false)
+	l := oldleader(ts, dirnamed, false)
+
+	l.ReleaseLeadership()
 
 	ts.Shutdown()
 }
@@ -132,7 +137,9 @@ func TestOldLeaderFailNamedCrash(t *testing.T) {
 	err := ts.Boot(sp.NAMEDREL)
 	assert.Nil(t, err)
 
-	oldleader(ts, dirnamed, true)
+	l := oldleader(ts, dirnamed, true)
+
+	l.ReleaseLeadership()
 
 	ts.Shutdown()
 }

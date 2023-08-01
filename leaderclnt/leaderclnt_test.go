@@ -23,7 +23,7 @@ const (
 	dirnamed   = sp.NAMED + "outdir"
 )
 
-func oldleader(ts *test.Tstate, pn string, kill bool) {
+func oldleader(ts *test.Tstate, pn string, crash bool) {
 	ts.MkDir(pn, 0777)
 	ts.Remove(pn + "/f")
 	ts.Remove(pn + "/g")
@@ -77,6 +77,12 @@ func oldleader(ts *test.Tstate, pn string, kill bool) {
 	_, err = ts.PutFile(pn+"/g", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(ts.T, err, "PutFile")
 
+	if crash {
+		db.DPrintf(db.TEST, "kill named..\n")
+		err := ts.KillOne(sp.NAMEDREL)
+		assert.Nil(ts.T, err)
+	}
+
 	db.DPrintf(db.TEST, "Let old leader run..\n")
 
 	<-ch
@@ -109,6 +115,17 @@ func TestOldLeaderFailNamed(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	oldleader(ts, dirnamed, false)
+
+	ts.Shutdown()
+}
+
+func TestOldLeaderFailNamedCrash(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	err := ts.Boot(sp.NAMEDREL)
+	assert.Nil(t, err)
+
+	oldleader(ts, dirnamed, true)
 
 	ts.Shutdown()
 }

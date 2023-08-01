@@ -52,7 +52,11 @@ func NewFenceJson(b []byte) (*Tfence, error) {
 }
 
 func (f *Tfence) Name() string {
-	return strings.Replace(path.Dir(f.PathName), "/", "-", -1)
+	return strings.Replace(f.Prefix(), "/", "-", -1)
+}
+
+func (f *Tfence) Prefix() string {
+	return path.Dir(f.PathName)
 }
 
 func (f1 *Tfence) LessThan(f2 *Tfence) bool {
@@ -80,7 +84,7 @@ func (f *Tfence) FenceProto() *TfenceProto {
 func (f Tfence) Json() []byte {
 	b, err := json.Marshal(f)
 	if err != nil {
-		log.Printf("%v fence json marshal err %v\n", err)
+		log.Printf("fence %v json marshal err %v\n", f, err)
 		return nil
 	}
 	return b

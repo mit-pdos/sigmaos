@@ -22,11 +22,11 @@ func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQvers
 	return []byte(s.id.String()), nil
 }
 
-func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
 	if s.wctl == nil {
 		return 0, serr.MkErr(serr.TErrNotSupported, nil)
 	}
-	return s.wctl(s.id, ctx, off, b, v)
+	return s.wctl(s.id, ctx, off, b, v, f)
 }
 
 func (s *session) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {

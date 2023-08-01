@@ -6,7 +6,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/leaderetcd"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -57,8 +56,8 @@ func (ec *ElectClnt) ReleaseLeadership() error {
 	return ec.elect.Resign()
 }
 
-func (ec *ElectClnt) Fence() sessp.Tfence {
-	return sessp.NewFence(ec.elect.Key(), sessp.Tepoch(ec.elect.Rev()))
+func (ec *ElectClnt) Fence() sp.Tfence {
+	return sp.NewFence(ec.elect.Key(), sp.Tepoch(ec.elect.Rev()))
 }
 
 func (ec *ElectClnt) Lease() sp.TleaseId {

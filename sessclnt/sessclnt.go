@@ -55,8 +55,8 @@ func makeSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt
 	return c, nil
 }
 
-func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
-	rpc, err := c.send(req, data, f)
+func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
+	rpc, err := c.send(req, data)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
 		return nil, err
@@ -73,7 +73,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.Fca
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, sessp.NullFence())
+	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -114,7 +114,7 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.ALWAYS, "%v: Send detach %v\n", proc.GetPid(), c.sid)
-	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil, sessp.NullFence())
+	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err
@@ -142,7 +142,7 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 	return false
 }
 
-func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.Rpc, *serr.Err) {
+func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	s := time.Now()
 
 	// If the request is not an RPC, we need to ensure strict ordering by seqno.
@@ -159,7 +159,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte, f *sessp.Tfence) (*netclnt.
 	// allocates a sequence number), the marshaling step (which often takes a
 	// long time), and the request enqueue step (which ordinarily expects fcalls
 	// to be enqueued in order).
-	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next(), f)
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next())
 	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
 
 	// If the request is an RPC, then we don't have strict ordering requirements.

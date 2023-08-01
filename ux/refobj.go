@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	"sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/fs"
 	"sigmaos/refmap"
+	sp "sigmaos/sigmap"
 )
 
 // Objects for which a client has an fid. Several clients may have an
@@ -14,16 +14,16 @@ import (
 // references.
 type ObjTable struct {
 	sync.Mutex
-	*refmap.RefTable[sessp.Tpath, fs.FsObj]
+	*refmap.RefTable[sp.Tpath, fs.FsObj]
 }
 
 func MkObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable[sessp.Tpath, fs.FsObj](debug.UX)
+	ot.RefTable = refmap.MkRefTable[sp.Tpath, fs.FsObj](debug.UX)
 	return ot
 }
 
-func (ot *ObjTable) GetRef(path sessp.Tpath) fs.FsObj {
+func (ot *ObjTable) GetRef(path sp.Tpath) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
 
@@ -33,14 +33,14 @@ func (ot *ObjTable) GetRef(path sessp.Tpath) fs.FsObj {
 	return nil
 }
 
-func (ot *ObjTable) AllocRef(path sessp.Tpath, o fs.FsObj) fs.FsObj {
+func (ot *ObjTable) AllocRef(path sp.Tpath, o fs.FsObj) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
 	e, _ := ot.RefTable.Insert(path, func() fs.FsObj { return o })
 	return e.(fs.FsObj)
 }
 
-func (ot *ObjTable) Clunk(p sessp.Tpath) {
+func (ot *ObjTable) Clunk(p sp.Tpath) {
 	ot.Lock()
 	defer ot.Unlock()
 

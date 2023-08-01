@@ -45,7 +45,7 @@ func (s *Symlink) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		}
 		db.DPrintf(db.UX, "Readlink target='%s'\n", target)
 		d := []byte(target)
-		_, err := s.File.Write(ctx, 0, d, sp.NoV)
+		_, err := s.File.Write(ctx, 0, d, sp.NoV, sp.NoFence())
 		if err != nil {
 			db.DPrintf(db.UX, "Write %v err %v\n", s, err)
 			return nil, err

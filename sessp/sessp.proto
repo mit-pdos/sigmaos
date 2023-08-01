@@ -2,12 +2,6 @@ syntax = "proto3";
 
 option go_package = "sigmaos/sessp";
 
-message TfenceProto {
-        string pathName = 1;
-        uint64 epoch = 2;    // leader's epoch number
-        uint64 seqno = 3;    // sequence within a leader's epoch
-}
-
 message Tinterval {
         uint64 start = 1;
         uint64 end = 2;
@@ -20,5 +14,4 @@ message Fcall {
         uint64 session = 4;
         uint64 seqno = 5;
         Tinterval received = 6;
-        TfenceProto fence = 7;       
 }

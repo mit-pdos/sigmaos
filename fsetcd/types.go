@@ -9,17 +9,16 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func key2path(key string) sessp.Tpath {
+func key2path(key string) sp.Tpath {
 	parts := strings.Split(key, ":")
 	p, err := strconv.ParseUint(parts[1], 16, 64)
 	if err != nil {
 		db.DFatalf("ParseUint %v err %v\n", key, err)
 	}
-	return sessp.Tpath(p)
+	return sp.Tpath(p)
 }
 
 func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
@@ -74,7 +73,7 @@ func MkEtcdFile(perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId, data []byte) *Et
 }
 
 // Make empty file or directory
-func MkEtcdFileDir(perm sp.Tperm, path sessp.Tpath, cid sp.TclntId, lid sp.TleaseId) (*EtcdFile, error) {
+func MkEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseId) (*EtcdFile, error) {
 	var fdata []byte
 	perm = perm | 0777
 	if perm.IsDir() {
@@ -114,8 +113,8 @@ func (nf *EtcdFile) TleaseId() sp.TleaseId {
 	return sp.TleaseId(nf.LeaseId)
 }
 
-func (e *EtcdDirEnt) Tpath() sessp.Tpath {
-	return sessp.Tpath(e.Path)
+func (e *EtcdDirEnt) Tpath() sp.Tpath {
+	return sp.Tpath(e.Path)
 }
 
 func (e *EtcdDirEnt) Tperm() sp.Tperm {

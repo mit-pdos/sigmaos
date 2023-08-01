@@ -31,7 +31,7 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

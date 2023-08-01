@@ -6,7 +6,6 @@ import (
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -42,7 +41,7 @@ func (l *LeaderClnt) LeadAndFence(b []byte, dirs []string) error {
 	return l.fenceDirs(dirs)
 }
 
-func (l *LeaderClnt) Fence() sessp.Tfence {
+func (l *LeaderClnt) Fence() sp.Tfence {
 	return l.ec.Fence()
 }
 

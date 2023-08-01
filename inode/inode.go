@@ -8,13 +8,12 @@ import (
 
 	"sigmaos/fs"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type Inode struct {
 	mu     sync.Mutex
-	inum   sessp.Tpath
+	inum   sp.Tpath
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
@@ -25,7 +24,7 @@ var NextInum = uint64(0)
 
 func MakeInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
-	i.inum = sessp.Tpath(atomic.AddUint64(&NextInum, 1))
+	i.inum = sp.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -42,7 +41,7 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Path() sessp.Tpath {
+func (inode *Inode) Path() sp.Tpath {
 	return inode.inum
 }
 

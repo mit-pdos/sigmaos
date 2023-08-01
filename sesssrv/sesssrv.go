@@ -269,20 +269,20 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
 func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
-	db.DPrintf(db.FENCESRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
-	if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Tfence()); err != nil {
-		msg := sp.MkRerror(err)
-		reply := sessp.MakeFcallMsgReply(fc, msg)
-		ssrv.sendReply(fc, reply, sess)
-		return
-	} else {
-		if f == nil {
-			ssrv.serve(sess, fc)
-		} else {
-			defer f.RUnlock()
-			ssrv.serve(sess, fc)
-		}
-	}
+	// db.DPrintf(db.FENCESRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
+	// if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Tfence()); err != nil {
+	// 	msg := sp.MkRerror(err)
+	// 	reply := sessp.MakeFcallMsgReply(fc, msg)
+	// 	ssrv.sendReply(fc, reply, sess)
+	// 	return
+	// } else {
+	// 	if f == nil {
+	// 		ssrv.serve(sess, fc)
+	// 	} else {
+	// 		defer f.RUnlock()
+	ssrv.serve(sess, fc)
+	//		}
+	//}
 }
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {

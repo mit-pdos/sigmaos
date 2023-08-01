@@ -3,13 +3,12 @@ package fenceclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type FenceClnt struct {
 	*fslib.FsLib
-	fence sessp.Tfence
+	fence sp.Tfence
 }
 
 func MakeFenceClnt(fsl *fslib.FsLib) *FenceClnt {
@@ -20,7 +19,7 @@ func MakeFenceClnt(fsl *fslib.FsLib) *FenceClnt {
 
 // Future operations on files in a tree rooted at a path in paths will
 // be fenced by <fence>
-func (fc *FenceClnt) FenceAtEpoch(fence sessp.Tfence, paths []string) error {
+func (fc *FenceClnt) FenceAtEpoch(fence sp.Tfence, paths []string) error {
 	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	fc.fence = fence
 	for _, p := range paths {
@@ -35,7 +34,7 @@ func (fc *FenceClnt) FenceAtEpoch(fence sessp.Tfence, paths []string) error {
 
 // Register fence with fidclnt so that ops on files in the tree rooted
 // at path will include fence.
-func (fc *FenceClnt) registerFence(path string, fence sessp.Tfence) error {
+func (fc *FenceClnt) registerFence(path string, fence sp.Tfence) error {
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}

@@ -9,16 +9,15 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 )
 
 const (
-	BOOT sessp.Tpath = 0
+	BOOT sp.Tpath = 0
 )
 
-func (fs *FsEtcd) path2key(path sessp.Tpath) string {
+func (fs *FsEtcd) path2key(path sp.Tpath) string {
 	return string(fs.realm) + ":" + strconv.FormatUint(uint64(path), 16)
 }
 
@@ -39,32 +38,46 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
-func (fs *FsEtcd) GetFile(p sessp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) GetFile(p sp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
 	return fs.getFile(fs.path2key(p))
 }
 
-func (fs *FsEtcd) PutFile(p sessp.Tpath, nf *EtcdFile) *serr.Err {
+func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	opts := nf.LeaseOpts()
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.MkErrError(err)
 	} else {
-		cmp := []clientv3.Cmp{
-			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+		var cmp []clientv3.Cmp
+		if f.PathName == "" {
+			cmp = []clientv3.Cmp{
+				clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+			}
+		} else {
+			db.DPrintf(db.FSETCD, "PutFile Fence %v %v %v\n", p, nf, f)
+			cmp = []clientv3.Cmp{
+				clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)),
+			}
 		}
-		ops := []clientv3.Op{
+		opst := []clientv3.Op{
 			clientv3.OpPut(fs.path2key(p), string(b), opts...),
 		}
-		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+		//opsf := []clientv3.Op{
+		//	clientv3.OpGet(f.PathName, opts...),
+		//}
+		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(opst...).Commit()
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-
 		db.DPrintf(db.FSETCD, "PutFile %v %v %v\n", p, nf, resp)
+		if !resp.Succeeded {
+			db.DPrintf(db.FSETCD, "PutFile failed %v\n", p, nf)
+		}
+
 		return nil
 	}
 }
 
-func (fs *FsEtcd) readDir(p sessp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDir %v\n", p)
 	nf, v, err := fs.GetFile(p)
 	if err != nil {
@@ -98,7 +111,7 @@ func (fs *FsEtcd) readDir(p sessp.Tpath, stat bool) (*DirInfo, sp.TQversion, *se
 	return &DirInfo{dents, nf.Tperm()}, v, nil
 }
 
-func (fs *FsEtcd) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.Tpath, nf *EtcdFile) *serr.Err {
+func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, nf *EtcdFile) *serr.Err {
 	opts := nf.LeaseOpts()
 	b, err := proto.Marshal(nf)
 	if err != nil {
@@ -128,7 +141,7 @@ func (fs *FsEtcd) create(dp sessp.Tpath, dir *DirInfo, v sp.TQversion, p sessp.T
 	return nil
 }
 
-func (fs *FsEtcd) remove(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.Tpath) *serr.Err {
+func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -153,7 +166,7 @@ func (fs *FsEtcd) remove(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.Tpath) *serr.Err {
+func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -186,7 +199,7 @@ func (fs *FsEtcd) rename(d sessp.Tpath, dir *DirInfo, v sp.TQversion, del sessp.
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(df sessp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sessp.Tpath, dirt *DirInfo, vt sp.TQversion, del sessp.Tpath) *serr.Err {
+func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tpath, dirt *DirInfo, vt sp.TQversion, del sp.Tpath) *serr.Err {
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
 		return r

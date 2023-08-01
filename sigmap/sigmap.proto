@@ -36,6 +36,12 @@ message Tmount {
         bytes pubKey = 4;
 }
 
+message TfenceProto {
+        string pathName = 1; 
+        uint64 epoch = 2;
+        uint64 seqno = 3;
+}
+
 message Tversion {
         uint32 msize = 1;
         string version = 2;
@@ -112,6 +118,7 @@ message TreadV {
         uint64 offset = 2;
         uint32 count = 3;
         uint32 version = 4;
+        TfenceProto fence = 5;
 }
 
 message Rread {
@@ -121,6 +128,7 @@ message TwriteV {
         uint32 fid = 1;
         uint64 offset = 2;
         uint32 version = 3;
+        TfenceProto fence = 4;
 }
 
 message Rwrite {
@@ -136,6 +144,7 @@ message Rclunk {
 
 message Tremove {
         uint32 fid = 1;
+        TfenceProto fence = 2;
 }
 
 message Rremove {
@@ -151,7 +160,8 @@ message Rstat {
 
 message Twstat {
         uint32 fid = 1;
-        Stat stat = 3;
+        Stat stat = 2;
+        TfenceProto fence = 3;
 }
 
 message Rwstat {
@@ -166,6 +176,7 @@ message Trenameat {
         string oldName = 2;
         uint32 newFid = 3;
         string newName = 4;
+        TfenceProto fence = 5;
 }
 
 message Rrenameat {
@@ -178,6 +189,7 @@ message Tgetfile {
         uint32 count = 4;
         repeated string wnames = 5;
         bool resolve = 6;
+        TfenceProto fence = 7;
 }
 
 message Tputfile {
@@ -188,6 +200,7 @@ message Tputfile {
         repeated string Wnames = 5;
         bool resolve = 6;
         uint64 lease = 7;
+        TfenceProto fence = 8;
 }
 
 message Tdetach {
@@ -212,8 +225,10 @@ message Tremovefile {
         uint32 fid = 1;
         repeated string Wnames = 2;
         bool resolve = 3;
+        TfenceProto fence = 4;
 }
 
 message Twriteread {
-        uint32 fid = 1; 
+        uint32 fid = 1;
+        TfenceProto fence = 2;
 }

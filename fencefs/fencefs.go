@@ -22,7 +22,7 @@ import (
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
-	fence sessp.Tfence
+	fence sp.Tfence
 }
 
 func makeFence(i fs.Inode) *Fence {
@@ -31,7 +31,7 @@ func makeFence(i fs.Inode) *Fence {
 	return e
 }
 
-func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
 	return 0, serr.MkErr(serr.TErrNotSupported, "Write")
 }
 
@@ -79,7 +79,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
 // id exists, return the locked fence in read mode so that no one can
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
-func CheckFence(root fs.Dir, new sessp.Tfence) (*Fence, *serr.Err) {
+func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	if new.PathName == "" {
 		return nil, nil
 	}

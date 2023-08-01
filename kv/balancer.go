@@ -199,7 +199,7 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
 		return 0, serr.MkErr(serr.TErrInval, words)
@@ -251,7 +251,7 @@ func (bl *Balancer) PostConfig() {
 }
 
 // Post new epoch, and finish moving sharddirs.
-func (bl *Balancer) restore(conf *Config, fence sessp.Tfence) {
+func (bl *Balancer) restore(conf *Config, fence sp.Tfence) {
 	bl.conf = conf
 	bl.conf.Fence = fence
 	db.DPrintf(db.KVBAL, "restore to %v with fence %v\n", bl.conf, fence)
@@ -259,7 +259,7 @@ func (bl *Balancer) restore(conf *Config, fence sessp.Tfence) {
 	bl.doMoves(bl.conf.Moves)
 }
 
-func (bl *Balancer) recover(fence sessp.Tfence) {
+func (bl *Balancer) recover(fence sp.Tfence) {
 	conf, err := readConfig(bl.FsLib, KVConfig(bl.job))
 	if err == nil {
 		bl.restore(conf, fence)

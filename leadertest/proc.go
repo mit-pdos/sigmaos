@@ -9,7 +9,6 @@ import (
 	"sigmaos/delay"
 	"sigmaos/fenceclnt"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -23,7 +22,7 @@ func RunProc(fencestr, dir string) {
 	}
 	sc.Started()
 
-	fence, err := sessp.NewFenceJson([]byte(fencestr))
+	fence, err := sp.NewFenceJson([]byte(fencestr))
 	if err != nil {
 		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 	}

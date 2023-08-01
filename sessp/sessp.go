@@ -1,10 +1,8 @@
 package sessp
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"path"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -14,30 +12,13 @@ import (
 type Tfcall uint8
 type Ttag uint16
 type Tsize uint32
-type Tpath uint64
 
 type Tsession uint64
 type Tseqno uint64
 type Tclient uint64
-type Tepoch uint64
-type Tserverid uint64
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
-
-func (p Tpath) String() string {
-	return strconv.FormatUint(uint64(p), 16)
-}
-
-func String2Path(path string) (Tpath, error) {
-	p, err := strconv.ParseUint(path, 16, 64)
-	if err != nil {
-		return Tpath(p), err
-	}
-	return Tpath(p), nil
-}
-
-const NoPath Tpath = ^Tpath(0)
 
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
@@ -53,20 +34,6 @@ const NoSession Tsession = ^Tsession(0)
 
 func (s Tsession) String() string {
 	return strconv.FormatUint(uint64(s), 16)
-}
-
-const NoEpoch Tepoch = ^Tepoch(0)
-
-func (e Tepoch) String() string {
-	return strconv.FormatUint(uint64(e), 16)
-}
-
-func String2Epoch(epoch string) (Tepoch, error) {
-	e, err := strconv.ParseUint(epoch, 16, 64)
-	if err != nil {
-		return Tepoch(0), err
-	}
-	return Tepoch(e), nil
 }
 
 type Tmsg interface {
@@ -103,96 +70,18 @@ func (fcm *FcallMsg) Tag() Ttag {
 	return Ttag(fcm.Fc.Tag)
 }
 
-type Tfence struct {
-	PathName string
-	Epoch    Tepoch
-	Seqno    Tseqno
-}
-
-func NullFence() *Tfence {
-	return &Tfence{}
-}
-
-func NewFence(pn string, epoch Tepoch) Tfence {
-	return Tfence{PathName: pn, Epoch: epoch}
-}
-
-func NewFenceJson(b []byte) (*Tfence, error) {
-	f := NullFence()
-	if err := json.Unmarshal(b, f); err != nil {
-		return nil, err
-	}
-	return f, nil
-}
-
-func (f *Tfence) Name() string {
-	return strings.Replace(path.Dir(f.PathName), "/", "-", -1)
-}
-
-func (f1 *Tfence) LessThan(f2 *Tfence) bool {
-	return f1.Epoch < f2.Epoch ||
-		(f1.Epoch == f2.Epoch && f1.Seqno < f2.Seqno)
-}
-
-func (f1 *Tfence) Eq(f2 *Tfence) bool {
-	return f1.Epoch == f2.Epoch && f1.Seqno == f2.Seqno
-}
-
-func (f1 *Tfence) Upgrade(f2 *Tfence) {
-	f1.Epoch = f2.Epoch
-	f1.Seqno = f2.Seqno
-}
-
-func (f *Tfence) FenceProto() *TfenceProto {
-	fp := NewFenceProto()
-	fp.PathName = f.PathName
-	fp.Epoch = uint64(f.Epoch)
-	fp.Seqno = uint64(f.Seqno)
-	return fp
-}
-
-func (f Tfence) Json() []byte {
-	b, err := json.Marshal(f)
-	if err != nil {
-		log.Printf("%v fence json marshal err %v\n", err)
-		return nil
-	}
-	return b
-}
-
-func NewFenceProto() *TfenceProto {
-	return &TfenceProto{}
-}
-
 func MakeFcallMsgNull() *FcallMsg {
-	fc := &Fcall{Received: &Tinterval{}, Fence: NewFenceProto()}
+	fc := &Fcall{Received: &Tinterval{}}
 	return &FcallMsg{fc, nil, nil}
 }
 
-func (fp *TfenceProto) Tpathname() string {
-	return fp.PathName
-}
-
-func (fp *TfenceProto) Tepoch() Tepoch {
-	return Tepoch(fp.Epoch)
-}
-
-func (fp *TfenceProto) Tseqno() Tseqno {
-	return Tseqno(fp.Seqno)
-}
-
-func (fp *TfenceProto) Tserverid() Tserverid {
-	return Tserverid(fp.Serverid)
-}
-
-func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval, f *Tfence) *FcallMsg {
+func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval) *FcallMsg {
 	fcall := &Fcall{
 		Type:     uint32(msg.Type()),
 		Tag:      0,
 		Client:   uint64(cli),
 		Session:  uint64(sess),
 		Received: &rcv,
-		Fence:    f.FenceProto(),
 	}
 	if seqno != nil {
 		fcall.Seqno = uint64(seqno.Next())
@@ -201,7 +90,7 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{}, NullFence())
+	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{})
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
@@ -209,7 +98,7 @@ func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg, fm.Fc.Fence)
+	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg)
 }
 
 func (fm *FcallMsg) GetType() Tfcall {
@@ -218,14 +107,6 @@ func (fm *FcallMsg) GetType() Tfcall {
 
 func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
-}
-
-func (fm *FcallMsg) Tfence() *Tfence {
-	f := NullFence()
-	f.Epoch = fm.Fc.Fence.Tepoch()
-	f.Seqno = fm.Fc.Fence.Tseqno()
-	f.PathName = fm.Fc.Fence.Tpathname()
-	return f
 }
 
 func MkInterval(start, end uint64) *Tinterval {

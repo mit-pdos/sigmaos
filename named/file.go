@@ -54,8 +54,8 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.Obj.di.Nf.Data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	db.DPrintf(db.NAMED, "%v: Write: off %v cnt %v\n", f, offset, len(b))
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+	db.DPrintf(db.NAMED, "%v: Write: off %v cnt %v fence %v\n", f, offset, len(b), fence)
 	cnt := sessp.Tsize(len(b))
 	sz := sp.Toffset(len(b))
 
@@ -69,7 +69,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (
 		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, make([]byte, n)...)
 		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
 
-		if err := f.Obj.putObj(); err != nil {
+		if err := f.Obj.putObj(fence); err != nil {
 			return 0, err
 		}
 
@@ -84,7 +84,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (
 	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
 	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, d...)
 
-	if err := f.Obj.putObj(); err != nil {
+	if err := f.Obj.putObj(fence); err != nil {
 		return 0, err
 	}
 	return sessp.Tsize(len(b)), nil

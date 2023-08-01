@@ -70,7 +70,7 @@ func oldleader(ts *test.Tstate, pn string, crash bool) {
 
 	l, err := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777)
 	assert.Nil(ts.T, err)
-	// When other thread partitions, we become leader and start new epoch
+	// When other thread resigns, we become leader and start new epoch
 	err = l.LeadAndFence(nil, []string{pn})
 	assert.Nil(ts.T, err, "BecomeLeaderEpoch")
 
@@ -118,7 +118,7 @@ func TestOldLeaderFailUx(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestOldLeaderFailNamed(t *testing.T) {
+func TestOldLeaderFailNamedOK(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	oldleader(ts, dirnamed, false)

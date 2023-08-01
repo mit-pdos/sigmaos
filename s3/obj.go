@@ -11,17 +11,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func mkTpath(key path.Path) sessp.Tpath {
+func mkTpath(key path.Path) sp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
-	return sessp.Tpath(h.Sum64())
+	return sp.Tpath(h.Sum64())
 }
 
 type Obj struct {
@@ -109,7 +109,7 @@ func (o *Obj) stat() *sp.Stat {
 	return sp.MkStat(sp.MakeQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
-func (o *Obj) Path() sessp.Tpath {
+func (o *Obj) Path() sp.Tpath {
 	return mkTpath(o.key)
 }
 
@@ -226,8 +226,8 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	db.DPrintf(db.S3, "Write %v %v sz %v\n", off, len(b), o.sz)
+func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
+	db.DPrintf(db.S3, "Write %v %v sz %v f %v\n", off, len(b), o.sz, f)
 	if off != o.off {
 		db.DPrintf(db.S3, "Write %v err\n", o.off)
 		return 0, serr.MkErr(serr.TErrInval, off)

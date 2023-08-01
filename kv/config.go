@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/fslib"
-	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 type Move struct {
@@ -29,7 +29,7 @@ func (mvs Moves) String() string {
 }
 
 type Config struct {
-	Fence  sessp.Tfence
+	Fence  sp.Tfence
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
 }
@@ -38,7 +38,7 @@ func (cf *Config) String() string {
 	return fmt.Sprintf("{Fence %v, Shards %v, Moves %v}", cf.Fence, cf.Shards, cf.Moves)
 }
 
-func MakeConfig(f sessp.Tfence) *Config {
+func MakeConfig(f sp.Tfence) *Config {
 	cf := &Config{Fence: f, Shards: make([]string, NSHARD), Moves: Moves{}}
 	return cf
 }

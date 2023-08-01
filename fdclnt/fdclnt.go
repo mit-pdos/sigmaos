@@ -214,7 +214,7 @@ func (fdc *FdClient) Write(fd int, data []byte) (sessp.Tsize, error) {
 	return fdc.writeFid(fd, fid, off, data, sp.NoV)
 }
 
-func (fdc *FdClient) WriteRead(fd int, data []byte, f *sessp.Tfence) ([]byte, error) {
+func (fdc *FdClient) WriteRead(fd int, data []byte, f *sp.Tfence) ([]byte, error) {
 	fid, _, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return nil, error

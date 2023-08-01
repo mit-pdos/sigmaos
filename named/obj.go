@@ -10,15 +10,14 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func mkTpath(pn path.Path) sessp.Tpath {
+func mkTpath(pn path.Path) sp.Tpath {
 	h := fnv.New64a()
 	t := time.Now() // maybe use revision
 	h.Write([]byte(pn.String() + t.String()))
-	return sessp.Tpath(h.Sum64())
+	return sp.Tpath(h.Sum64())
 }
 
 // An obj is either a directory or file
@@ -26,11 +25,11 @@ type Obj struct {
 	fs     *fsetcd.FsEtcd
 	pn     path.Path
 	di     fsetcd.DirEntInfo
-	parent sessp.Tpath
+	parent sp.Tpath
 	mtime  int64
 }
 
-func makeObjDi(fs *fsetcd.FsEtcd, pn path.Path, di fsetcd.DirEntInfo, parent sessp.Tpath) *Obj {
+func makeObjDi(fs *fsetcd.FsEtcd, pn path.Path, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
 	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
 	return o
 }
@@ -47,7 +46,7 @@ func (o *Obj) SetSize(sz sp.Tlength) {
 	db.DFatalf("Unimplemented")
 }
 
-func (o *Obj) Path() sessp.Tpath {
+func (o *Obj) Path() sp.Tpath {
 	return o.di.Path
 }
 
@@ -82,7 +81,7 @@ func (o *Obj) stat() *sp.Stat {
 	return st
 }
 
-func getObj(fs *fsetcd.FsEtcd, pn path.Path, path sessp.Tpath, parent sessp.Tpath) (*Obj, *serr.Err) {
+func getObj(fs *fsetcd.FsEtcd, pn path.Path, path sp.Tpath, parent sp.Tpath) (*Obj, *serr.Err) {
 	nf, _, err := fs.GetFile(path)
 	if err != nil {
 		return nil, err
@@ -91,7 +90,7 @@ func getObj(fs *fsetcd.FsEtcd, pn path.Path, path sessp.Tpath, parent sessp.Tpat
 	return o, nil
 }
 
-func (o *Obj) putObj() *serr.Err {
+func (o *Obj) putObj(f sp.Tfence) *serr.Err {
 	nf := fsetcd.MkEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), o.di.Nf.Data)
-	return o.fs.PutFile(o.di.Path, nf)
+	return o.fs.PutFile(o.di.Path, nf, f)
 }

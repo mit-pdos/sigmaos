@@ -86,14 +86,14 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
 	o := f.Pobj().Obj()
 	var err *serr.Err
 	sz := sessp.Tsize(0)
 
 	switch i := o.(type) {
 	case fs.File:
-		sz, err = i.Write(f.Pobj().Ctx(), off, b, v)
+		sz, err = i.Write(f.Pobj().Ctx(), off, b, v, fence)
 	case fs.Dir:
 		sz, err = i.WriteDir(f.Pobj().Ctx(), off, b, v)
 	default:

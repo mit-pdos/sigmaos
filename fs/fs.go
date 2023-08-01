@@ -35,7 +35,7 @@ type Dir interface {
 
 type File interface {
 	Read(CtxI, sp.Toffset, sessp.Tsize, sp.TQversion) ([]byte, *serr.Err)
-	Write(CtxI, sp.Toffset, []byte, sp.TQversion) (sessp.Tsize, *serr.Err)
+	Write(CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sessp.Tsize, *serr.Err)
 }
 
 type RPC interface {
@@ -43,7 +43,7 @@ type RPC interface {
 }
 
 type FsObj interface {
-	Path() sessp.Tpath
+	Path() sp.Tpath
 	Perm() sp.Tperm
 	Parent() Dir
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)

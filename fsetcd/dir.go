@@ -7,18 +7,17 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 )
 
 const (
-	ROOT sessp.Tpath = 1
+	ROOT sp.Tpath = 1
 )
 
 type DirEntInfo struct {
 	Nf   *EtcdFile
-	Path sessp.Tpath
+	Path sp.Tpath
 	Perm sp.Tperm
 }
 
@@ -56,7 +55,7 @@ func (fs *FsEtcd) MkRootDir() *serr.Err {
 	if r != nil {
 		return serr.MkErrError(r)
 	}
-	if err := fs.PutFile(ROOT, nf); err != nil {
+	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
 		return err
 	}
 	db.DPrintf(db.FSETCD, "mkRoot: PutFile %v\n", nf)
@@ -67,7 +66,7 @@ func (fs *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
 	return fs.ReadDir(ROOT)
 }
 
-func (fs *FsEtcd) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
+func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 	dir, _, err := fs.readDir(d, false)
 	if err != nil {
 		return DirEntInfo{}, err
@@ -81,7 +80,7 @@ func (fs *FsEtcd) Lookup(d sessp.Tpath, name string) (DirEntInfo, *serr.Err) {
 
 // XXX retry on version mismatch
 // OEXCL: should only succeed if file doesn't exist
-func (fs *FsEtcd) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
+func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return DirEntInfo{}, err
@@ -100,7 +99,7 @@ func (fs *FsEtcd) Create(d sessp.Tpath, name string, path sessp.Tpath, nf *EtcdF
 	}
 }
 
-func (fs *FsEtcd) ReadDir(d sessp.Tpath) (*DirInfo, *serr.Err) {
+func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
 	dir, _, err := fs.readDir(d, true)
 	if err != nil {
 		return nil, err
@@ -109,7 +108,7 @@ func (fs *FsEtcd) ReadDir(d sessp.Tpath) (*DirInfo, *serr.Err) {
 	return dir, nil
 }
 
-func (fs *FsEtcd) Remove(d sessp.Tpath, name string) *serr.Err {
+func (fs *FsEtcd) Remove(d sp.Tpath, name string) *serr.Err {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
@@ -138,7 +137,7 @@ func (fs *FsEtcd) Remove(d sessp.Tpath, name string) *serr.Err {
 	return nil
 }
 
-func (fs *FsEtcd) Rename(d sessp.Tpath, from, to string) *serr.Err {
+func (fs *FsEtcd) Rename(d sp.Tpath, from, to string) *serr.Err {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
@@ -149,7 +148,7 @@ func (fs *FsEtcd) Rename(d sessp.Tpath, from, to string) *serr.Err {
 		return serr.MkErr(serr.TErrNotfound, from)
 	}
 	difrom := fromi.(DirEntInfo)
-	topath := sessp.Tpath(0)
+	topath := sp.Tpath(0)
 	toi, ok := dir.Ents.Lookup(to)
 	if ok {
 		di := toi.(DirEntInfo)
@@ -170,7 +169,7 @@ func (fs *FsEtcd) Rename(d sessp.Tpath, from, to string) *serr.Err {
 	return fs.rename(d, dir, v, topath)
 }
 
-func (fs *FsEtcd) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to string) *serr.Err {
+func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string) *serr.Err {
 	dirf, vf, err := fs.readDir(df, false)
 	if err != nil {
 		return err
@@ -185,7 +184,7 @@ func (fs *FsEtcd) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to strin
 		return serr.MkErr(serr.TErrNotfound, from)
 	}
 	difrom := fi.(DirEntInfo)
-	topath := sessp.Tpath(0)
+	topath := sp.Tpath(0)
 	ti, ok := dirt.Ents.Lookup(to)
 	if ok {
 		di := ti.(DirEntInfo)
@@ -206,7 +205,7 @@ func (fs *FsEtcd) Renameat(df sessp.Tpath, from string, dt sessp.Tpath, to strin
 	return fs.renameAt(df, dirf, vf, dt, dirt, vt, topath)
 }
 
-func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sessp.Tpath) error {
+func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sp.Tpath) error {
 	s := ""
 	for i := 0; i < l*4; i++ {
 		s += " "

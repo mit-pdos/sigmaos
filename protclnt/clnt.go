@@ -39,8 +39,8 @@ func (clnt *Clnt) ReadSeqNo() sessp.Tseqno {
 	return sessp.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
-func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fence *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := clnt.sm.RPC(addrs, args, data, fence)
+func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := clnt.sm.RPC(addrs, args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte, fenc
 
 func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.MkTattach(fid, sp.NoFid, uname, cid, path)
-	reply, err := clnt.CallServer(addrs, args, nil, sessp.NullFence())
+	reply, err := clnt.CallServer(addrs, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -90,25 +90,17 @@ func (pclnt *ProtClnt) Disconnect() *serr.Err {
 	return pclnt.clnt.sm.Disconnect(pclnt.addrs)
 }
 
-func (pclnt *ProtClnt) Call(args sessp.Tmsg, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, f)
+func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.clnt.CallServer(pclnt.addrs, args, nil)
 }
 
-func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte, f *sessp.Tfence) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, data, f)
-}
-
-func (pclnt *ProtClnt) CallNoFence(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, nil, sessp.NullFence())
-}
-
-func (pclnt *ProtClnt) CallNoFenceData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, data, sessp.NullFence())
+func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.clnt.CallServer(pclnt.addrs, args, data)
 }
 
 func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Path) (*sp.Rwalk, *serr.Err) {
 	args := sp.MkTwalk(fid, nfid, path)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +113,7 @@ func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Path) (*sp.Rwal
 
 func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (*sp.Rcreate, *serr.Err) {
 	args := sp.MkTcreate(fid, name, perm, mode, lid)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +125,8 @@ func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.T
 }
 
 func (pclnt *ProtClnt) Remove(fid sp.Tfid) *serr.Err {
-	args := sp.MkTremove(fid)
-	reply, err := pclnt.CallNoFence(args)
+	args := sp.MkTremove(fid, sp.NullFence())
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}
@@ -145,9 +137,9 @@ func (pclnt *ProtClnt) Remove(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RemoveF(fid sp.Tfid, f *sessp.Tfence) *serr.Err {
-	args := sp.MkTremove(fid)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) RemoveF(fid sp.Tfid, f *sp.Tfence) *serr.Err {
+	args := sp.MkTremove(fid, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}
@@ -158,9 +150,9 @@ func (pclnt *ProtClnt) RemoveF(fid sp.Tfid, f *sessp.Tfence) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RemoveFile(fid sp.Tfid, wnames path.Path, resolve bool, f *sessp.Tfence) *serr.Err {
-	args := sp.MkTremovefile(fid, wnames, resolve)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) RemoveFile(fid sp.Tfid, wnames path.Path, resolve bool, f *sp.Tfence) *serr.Err {
+	args := sp.MkTremovefile(fid, wnames, resolve, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}
@@ -173,7 +165,7 @@ func (pclnt *ProtClnt) RemoveFile(fid sp.Tfid, wnames path.Path, resolve bool, f
 
 func (pclnt *ProtClnt) Clunk(fid sp.Tfid) *serr.Err {
 	args := sp.MkTclunk(fid)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}
@@ -186,7 +178,7 @@ func (pclnt *ProtClnt) Clunk(fid sp.Tfid) *serr.Err {
 
 func (pclnt *ProtClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err) {
 	args := sp.MkTopen(fid, mode)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +191,7 @@ func (pclnt *ProtClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err) {
 
 func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	args := sp.MkTwatch(fid)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}
@@ -210,9 +202,9 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sessp.Tsize, f *sessp.Tfence, v sp.TQversion) ([]byte, *serr.Err) {
-	args := sp.MkReadV(fid, offset, cnt, v)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sessp.Tsize, f *sp.Tfence, v sp.TQversion) ([]byte, *serr.Err) {
+	args := sp.MkReadV(fid, offset, cnt, v, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +215,9 @@ func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sessp.Tsize, f
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sessp.Tfence, v sp.TQversion, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTwriteV(fid, offset, v)
-	reply, err := pclnt.CallData(args, data, f)
+func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, v sp.TQversion, data []byte) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTwriteV(fid, offset, v, f)
+	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -236,9 +228,9 @@ func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sessp.Tfence, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte, f *sessp.Tfence) ([]byte, *serr.Err) {
-	args := sp.MkTwriteread(fid)
-	reply, err := pclnt.CallData(args, data, f)
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte, f *sp.Tfence) ([]byte, *serr.Err) {
+	args := sp.MkTwriteread(fid, f)
+	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +243,7 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte, f *sessp.Tfence) ([]b
 
 func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {
 	args := sp.MkTstat(fid)
-	reply, err := pclnt.CallNoFence(args)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -263,8 +255,8 @@ func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {
 }
 
 func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Stat) (*sp.Rwstat, *serr.Err) {
-	args := sp.MkTwstat(fid, st)
-	reply, err := pclnt.CallNoFence(args)
+	args := sp.MkTwstat(fid, st, sp.NullFence())
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -275,9 +267,9 @@ func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Stat) (*sp.Rwstat, *serr.Err) {
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Stat, f *sessp.Tfence) (*sp.Rwstat, *serr.Err) {
-	args := sp.MkTwstat(fid, st)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Stat, f *sp.Tfence) (*sp.Rwstat, *serr.Err) {
+	args := sp.MkTwstat(fid, st, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -288,9 +280,9 @@ func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Stat, f *sessp.Tfence) (*sp.Rw
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, newname string, f *sessp.Tfence) (*sp.Rrenameat, *serr.Err) {
-	args := sp.MkTrenameat(oldfid, oldname, newfid, newname)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, newname string, f *sp.Tfence) (*sp.Rrenameat, *serr.Err) {
+	args := sp.MkTrenameat(oldfid, oldname, newfid, newname, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -301,9 +293,9 @@ func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offset sp.Toffset, cnt sessp.Tsize, resolve bool, f *sessp.Tfence) ([]byte, *serr.Err) {
-	args := sp.MkTgetfile(fid, mode, offset, cnt, path, resolve)
-	reply, err := pclnt.Call(args, f)
+func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offset sp.Toffset, cnt sessp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
+	args := sp.MkTgetfile(fid, mode, offset, cnt, path, resolve, f)
+	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -314,9 +306,9 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sessp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve, lid)
-	reply, err := pclnt.CallData(args, data, f)
+func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTputfile(fid, mode, perm, offset, path, resolve, lid, f)
+	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +321,7 @@ func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm 
 
 func (pclnt *ProtClnt) Detach(cid sp.TclntId) *serr.Err {
 	args := sp.MkTdetach(0, 0, cid)
-	_, err := pclnt.CallNoFence(args)
+	_, err := pclnt.Call(args)
 	if err != nil {
 		return err
 	}

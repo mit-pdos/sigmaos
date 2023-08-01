@@ -88,11 +88,11 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 		fcm.Msg = r
 	case sessp.TTread:
 		m := fcm.Msg.(*np.Tread)
-		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sessp.Tsize(m.Count), 0)
+		r := sp.MkReadV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sessp.Tsize(m.Count), 0, sp.NullFence())
 		fcm.Msg = r
 	case sessp.TTwrite:
 		m := fcm.Msg.(*np.Twrite)
-		r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0)
+		r := sp.MkTwriteV(sp.Tfid(m.Fid), sp.Toffset(m.Offset), 0, sp.NullFence())
 		fcm.Msg = r
 		fcm.Data = m.Data
 	case sessp.TTopen9P:
@@ -105,7 +105,7 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 		fcm.Msg = r
 	case sessp.TTwstat9P:
 		m := fcm.Msg.(*np.Twstat9P)
-		r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat))
+		r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat), sp.NullFence())
 		fcm.Msg = r
 	}
 }

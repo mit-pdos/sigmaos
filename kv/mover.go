@@ -10,7 +10,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -23,12 +22,12 @@ type Mover struct {
 	mu sync.Mutex
 	*sigmaclnt.SigmaClnt
 	job   string
-	fence *sessp.Tfence
+	fence *sp.Tfence
 	shard uint32
 	cc    *CacheClnt
 }
 
-func JoinEpoch(fsl *fslib.FsLib, job string, fence *sessp.Tfence) error {
+func JoinEpoch(fsl *fslib.FsLib, job string, fence *sp.Tfence) error {
 	config := Config{}
 	if err := fsl.GetFileJson(KVConfig(job), &config); err != nil {
 		return fmt.Errorf("GetFileJson %v err %v", KVConfig(job), err)
@@ -44,7 +43,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if err != nil {
 		return nil, err
 	}
-	fence, err := sessp.NewFenceJson([]byte(epochstr))
+	fence, err := sp.NewFenceJson([]byte(epochstr))
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,7 @@ import (
 )
 
 type Tfid uint32
+type Tpath uint64
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64
@@ -44,6 +45,19 @@ func (fid Tfid) String() string {
 // this session.
 const NoFid Tfid = ^Tfid(0)
 
+func (p Tpath) String() string {
+	return strconv.FormatUint(uint64(p), 16)
+}
+
+func String2Path(path string) (Tpath, error) {
+	p, err := strconv.ParseUint(path, 16, 64)
+	if err != nil {
+		return Tpath(p), err
+	}
+	return Tpath(p), nil
+}
+
+const NoPath Tpath = ^Tpath(0)
 const NoOffset Toffset = ^Toffset(0)
 const NoClntId TclntId = ^TclntId(0)
 const NoLeaseId TleaseId = ^TleaseId(0)
@@ -110,11 +124,11 @@ func (qt Qtype) String() string {
 	return s
 }
 
-func MakeQid(t Qtype, v TQversion, p sessp.Tpath) *Tqid {
+func MakeQid(t Qtype, v TQversion, p Tpath) *Tqid {
 	return &Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p sessp.Tpath) *Tqid {
+func MakeQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
 	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
@@ -122,8 +136,8 @@ func (qid *Tqid) Tversion() TQversion {
 	return TQversion(qid.Version)
 }
 
-func (qid *Tqid) Tpath() sessp.Tpath {
-	return sessp.Tpath(qid.Path)
+func (qid *Tqid) Tpath() Tpath {
+	return Tpath(qid.Path)
 }
 
 func (qid *Tqid) Ttype() Qtype {
@@ -256,6 +270,14 @@ func String2Taddrs(as string) (Taddrs, error) {
 	return addrs, nil
 }
 
+// func (fm *FcallMsg) Tfence() *Tfence {
+// 	f := NullFence()
+// 	f.Epoch = fm.Fc.Fence.Tepoch()
+// 	f.Seqno = fm.Fc.Fence.Tseqno()
+// 	f.PathName = fm.Fc.Fence.Tpathname()
+// 	return f
+// }
+
 func MkErr(msg *Rerror) *serr.Err {
 	return &serr.Err{serr.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }
@@ -336,8 +358,8 @@ func (c *Tcreate) TleaseId() TleaseId {
 	return TleaseId(c.Lease)
 }
 
-func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion) *TreadV {
-	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v)}
+func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion, f *Tfence) *TreadV {
+	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v), Fence: f.FenceProto()}
 }
 
 func (r *TreadV) Tfid() Tfid {
@@ -356,8 +378,8 @@ func (r *TreadV) Tcount() sessp.Tsize {
 	return sessp.Tsize(r.Count)
 }
 
-func MkTwriteV(fid Tfid, o Toffset, v TQversion) *TwriteV {
-	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v)}
+func MkTwriteV(fid Tfid, o Toffset, v TQversion, f *Tfence) *TwriteV {
+	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Fence: f.FenceProto()}
 }
 
 func (w *TwriteV) Tfid() Tfid {
@@ -370,6 +392,10 @@ func (w *TwriteV) Toffset() Toffset {
 
 func (w *TwriteV) Tversion() TQversion {
 	return TQversion(w.Version)
+}
+
+func (w *TwriteV) Tfence() Tfence {
+	return w.Fence.Tfence()
 }
 
 func (wr *Rwrite) Tcount() sessp.Tsize {
@@ -392,8 +418,8 @@ func (c *Tclunk) Tfid() Tfid {
 	return Tfid(c.Fid)
 }
 
-func MkTremove(fid Tfid) *Tremove {
-	return &Tremove{Fid: uint32(fid)}
+func MkTremove(fid Tfid, f *Tfence) *Tremove {
+	return &Tremove{Fid: uint32(fid), Fence: f.FenceProto()}
 }
 
 func (r *Tremove) Tfid() Tfid {
@@ -447,16 +473,16 @@ func Names(sts []*Stat) []string {
 	return r
 }
 
-func MkTwstat(fid Tfid, st *Stat) *Twstat {
-	return &Twstat{Fid: uint32(fid), Stat: st}
+func MkTwstat(fid Tfid, st *Stat, f *Tfence) *Twstat {
+	return &Twstat{Fid: uint32(fid), Stat: st, Fence: f.FenceProto()}
 }
 
 func (w *Twstat) Tfid() Tfid {
 	return Tfid(w.Fid)
 }
 
-func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string) *Trenameat {
-	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname}
+func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string, f *Tfence) *Trenameat {
+	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname, Fence: f.FenceProto()}
 }
 
 func (r *Trenameat) Tnewfid() Tfid {
@@ -467,8 +493,8 @@ func (r *Trenameat) Toldfid() Tfid {
 	return Tfid(r.OldFid)
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool) *Tgetfile {
-	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve}
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
+	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve, Fence: f.FenceProto()}
 }
 
 func (g *Tgetfile) Tfid() Tfid {
@@ -487,8 +513,8 @@ func (g *Tgetfile) Tcount() sessp.Tsize {
 	return sessp.Tsize(g.Count)
 }
 
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId) *Tputfile {
-	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve, Lease: uint64(lid)}
+func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
+	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve, Lease: uint64(lid), Fence: f.FenceProto()}
 }
 
 func (p *Tputfile) Tfid() Tfid {
@@ -511,8 +537,12 @@ func (p *Tputfile) TleaseId() TleaseId {
 	return TleaseId(p.Lease)
 }
 
-func MkTremovefile(fid Tfid, path path.Path, r bool) *Tremovefile {
-	return &Tremovefile{Fid: uint32(fid), Wnames: path, Resolve: r}
+func (p *Tputfile) Tfence() Tfence {
+	return p.Fence.Tfence()
+}
+
+func MkTremovefile(fid Tfid, path path.Path, r bool, f *Tfence) *Tremovefile {
+	return &Tremovefile{Fid: uint32(fid), Wnames: path, Resolve: r, Fence: f.FenceProto()}
 }
 
 func (r *Tremovefile) Tfid() Tfid {
@@ -531,8 +561,8 @@ func (d *Tdetach) TclntId() TclntId {
 	return TclntId(d.ClntId)
 }
 
-func MkTwriteread(fid Tfid) *Twriteread {
-	return &Twriteread{Fid: uint32(fid)}
+func MkTwriteread(fid Tfid, f *Tfence) *Twriteread {
+	return &Twriteread{Fid: uint32(fid), Fence: f.FenceProto()}
 }
 
 func (wr *Twriteread) Tfid() Tfid {

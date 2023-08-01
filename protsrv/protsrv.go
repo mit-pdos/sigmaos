@@ -51,7 +51,7 @@ func MakeProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	return ps
 }
 
-func (ps *ProtSrv) mkQid(perm sp.Tperm, path sessp.Tpath) *sp.Tqid {
+func (ps *ProtSrv) mkQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
 	return sp.MakeQidPerm(perm, ps.vt.GetVersion(path), path)
 }
 
@@ -335,7 +335,7 @@ func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	if !sp.VEq(args.Tversion(), v) {
 		return sp.MkRerror(serr.MkErr(serr.TErrVersion, v))
 	}
-	n, err := f.Write(args.Toffset(), data, args.Tversion())
+	n, err := f.Write(args.Toffset(), data, args.Tversion(), args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -680,7 +680,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV)
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV, args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}

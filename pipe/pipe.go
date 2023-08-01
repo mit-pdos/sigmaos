@@ -126,7 +126,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

@@ -18,7 +18,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessdev"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
@@ -72,7 +71,7 @@ func (c *CacheClnt) Put(srv, key string, val proto.Message) error {
 	return c.PutTraced(nil, srv, key, val)
 }
 
-func (c *CacheClnt) AppendFence(srv, key string, val proto.Message, f *sessp.Tfence) error {
+func (c *CacheClnt) AppendFence(srv, key string, val proto.Message, f *sp.Tfence) error {
 	req := &cacheproto.CacheRequest{}
 	b, err := proto.Marshal(val)
 	if err != nil {
@@ -176,7 +175,7 @@ func (c *CacheClnt) Delete(srv, key string) error {
 	return c.DeleteTraced(nil, srv, key)
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sessp.Tfence) error {
+func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: shard,
 	}
@@ -187,7 +186,7 @@ func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sessp.Tfence) e
 	return nil
 }
 
-func (c *CacheClnt) DeleteShard(srv string, shard uint32, fence *sessp.Tfence) error {
+func (c *CacheClnt) DeleteShard(srv string, shard uint32, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: shard,
 	}
@@ -209,7 +208,7 @@ func (c *CacheClnt) DumpShard(srv string, shard uint32) (map[string][]byte, erro
 	return res.Vals, nil
 }
 
-func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fence *sessp.Tfence) error {
+func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fence *sp.Tfence) error {
 	req := &cacheproto.ShardFill{
 		Shard: shard,
 		Vals:  m,
@@ -221,7 +220,7 @@ func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fen
 	return nil
 }
 
-func (c *CacheClnt) FreezeShard(srv string, shard uint32, fence *sessp.Tfence) error {
+func (c *CacheClnt) FreezeShard(srv string, shard uint32, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: shard,
 	}

@@ -39,7 +39,7 @@ func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
 }
 
-func (fidc *FidClnt) FenceDir(path string, f sessp.Tfence) *serr.Err {
+func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *serr.Err {
 	return fidc.ft.Insert(path, f)
 }
 
@@ -219,7 +219,7 @@ func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQ
 
 // Unfenced read
 func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
-	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, sessp.NullFence(), v)
+	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, sp.NullFence(), v)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQver
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte, f *sessp.Tfence) ([]byte, *serr.Err) {
+func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte, f *sp.Tfence) ([]byte, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return nil, serr.MkErr(serr.TErrUnreachable, "WriteRead")

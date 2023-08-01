@@ -6,7 +6,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/refmap"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -26,16 +25,16 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sessp.Tpath, *version]
+	*refmap.RefTable[sp.Tpath, *version]
 }
 
 func MkVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[sessp.Tpath, *version](db.VERSION)
+	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version](db.VERSION)
 	return vt
 }
 
-func (vt *VersionTable) GetVersion(path sessp.Tpath) sp.TQversion {
+func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 	vt.Lock()
 	defer vt.Unlock()
 
@@ -45,19 +44,19 @@ func (vt *VersionTable) GetVersion(path sessp.Tpath) sp.TQversion {
 	return 0
 }
 
-func (vt *VersionTable) Insert(path sessp.Tpath) {
+func (vt *VersionTable) Insert(path sp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 	vt.RefTable.Insert(path, mkVersion)
 }
 
-func (vt *VersionTable) Delete(p sessp.Tpath) {
+func (vt *VersionTable) Delete(p sp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 	vt.RefTable.Delete(p)
 }
 
-func (vt *VersionTable) IncVersion(path sessp.Tpath) {
+func (vt *VersionTable) IncVersion(path sp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
 

@@ -4,10 +4,10 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -56,8 +56,8 @@ func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion
 	return b[:n], nil
 }
 
-func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	db.DPrintf(db.UX, "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
+func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+	db.DPrintf(db.UX, "%v: Pwrite: off %v cnt %v fence %v\n", f, off, len(b), fence)
 	if off == sp.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
 		// doesn't fit in int64.

@@ -10,7 +10,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -94,7 +93,7 @@ func GetRootNamed() (sp.Tmount, *serr.Err) {
 		return sp.Tmount{}, serr.MkErrError(err)
 	}
 	defer fs.Close()
-	nf, _, sr := fs.GetFile(sessp.Tpath(BOOT))
+	nf, _, sr := fs.GetFile(sp.Tpath(BOOT))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v %v err %v\n", BOOT, nf, sr)
 		return sp.Tmount{}, sr

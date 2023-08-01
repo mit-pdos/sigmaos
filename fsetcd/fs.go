@@ -53,7 +53,6 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 				clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 			}
 		} else {
-			db.DPrintf(db.FSETCD, "PutFile Fence %v %v %v\n", p, nf, f)
 			cmp = []clientv3.Cmp{
 				clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)),
 			}
@@ -61,16 +60,19 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		opst := []clientv3.Op{
 			clientv3.OpPut(fs.path2key(p), string(b), opts...),
 		}
-		//opsf := []clientv3.Op{
-		//	clientv3.OpGet(f.PathName, opts...),
-		//}
-		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(opst...).Commit()
+		opsf := []clientv3.Op{
+			clientv3.OpGet(f.Prefix(), opts...),
+		}
+		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
 		if err != nil {
 			return serr.MkErrError(err)
 		}
-		db.DPrintf(db.FSETCD, "PutFile %v %v %v\n", p, nf, resp)
+		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v\n", p, nf, f, resp)
 		if !resp.Succeeded {
-			db.DPrintf(db.FSETCD, "PutFile failed %v\n", p, nf)
+			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
+				return serr.MkErr(serr.TErrStale, f)
+			}
+			db.DFatalf("PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
 		}
 
 		return nil

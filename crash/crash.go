@@ -10,6 +10,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -79,6 +80,20 @@ func NetFailer(ss *sesssrv.SessSrv) {
 			}
 		}
 	}()
+}
+
+func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
+	crash := GetEnv(proc.SIGMACRASH)
+	if crash == 0 {
+		return false
+	}
+	p := rand.Int64(100)
+	if p < prob {
+		db.DPrintf(db.ALWAYS, "%v: PartitionParentProb %v\n", proc.GetName(), prob)
+		sc.ProcClnt.Exited(proc.MakeStatusErr("partitioned", nil))
+		return true
+	}
+	return false
 }
 
 func Crash() {

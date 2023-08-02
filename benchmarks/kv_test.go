@@ -34,7 +34,7 @@ type KVJobInstance struct {
 func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) *KVJobInstance {
 	ji := &KVJobInstance{RealmTstate: ts, job: rand.String(16)}
 
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdmcpu, "0", auto)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, 0, nkvd, kvdrepl, kvdmcpu, "0", auto)
 	assert.Nil(ts.Ts.T, err)
 	ji.kvf = kvf
 

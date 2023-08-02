@@ -118,7 +118,7 @@ func (ji *RPCBenchJobInstance) printStats() {
 		stats := &rpc.SigmaRPCStats{}
 		s := ji.jobpath
 		err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
-		assert.Nil(ji.T, err, "error get stats %v", err)
+		assert.Nil(ji.Ts.T, err, "error get stats %v", err)
 		fmt.Printf("= %s: %v\n", s, stats)
 	}
 }

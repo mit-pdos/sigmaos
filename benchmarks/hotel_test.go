@@ -188,10 +188,10 @@ func (ji *HotelJobInstance) StartHotelJob() {
 
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		for _, s := range sp.HOTELSVC {
+		for _, s := range hotel.HOTELSVC {
 			stats := &rpc.SigmaRPCStats{}
 			err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
-			assert.Nil(ji.T, err, "error get stats %v", err)
+			assert.Nil(ji.Ts.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
 		cs, err := ji.hj.StatsSrv()

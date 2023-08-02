@@ -67,6 +67,9 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		if err != nil {
 			return serr.MkErrError(err)
 		}
+		if f.PathName != "" {
+			db.DPrintf(db.ALWAYS, "PutFile %v %v %v %v\n", p, nf, f, resp)
+		}
 		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v\n", p, nf, f, resp)
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {

@@ -52,11 +52,14 @@ func oldleader(ts *test.Tstate, pn string, crash bool) *leaderclnt.LeaderClnt {
 
 		db.DPrintf(db.TEST, "Try to write..\n")
 
-		// Fsl lost primary status, and ts should have it by
-		// now so this write to ux server should fail
-		_, err = fsl.Write(fd, []byte(strconv.Itoa(1)))
-		assert.NotNil(ts.T, err, "Write")
-		db.DPrintf(db.TEST, "write err %v\n", err)
+		// A thread shouldn't write after resigning, but this thread
+		// lost leader status, and the other thread should have it by
+		// now so this write to pn should fail, because it is fenced
+		// with the fsl's fence, which is the old leader's one.
+
+		_, err = fsl.PutFile(pn+"/f", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
+		assert.NotNil(ts.T, err, "Put")
+		db.DPrintf(db.TEST, "Put err %v\n", err)
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale))
 
 		fsl.Close(fd)
@@ -64,7 +67,7 @@ func oldleader(ts *test.Tstate, pn string, crash bool) *leaderclnt.LeaderClnt {
 		ch <- true
 	}()
 
-	// Wait until other thread is primary
+	// Wait until other thread is leader
 	<-ch
 
 	db.DPrintf(db.TEST, "Become leader..\n")

@@ -197,6 +197,14 @@ func TestFailMov0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
+func TestFailMov1(t *testing.T) {
+	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+}
+
+func TestFailMovN(t *testing.T) {
+	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+}
+
 func TestFailAll0(t *testing.T) {
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }

@@ -169,47 +169,51 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts.Shutdown()
 }
 
-func TestConcurOK0(t *testing.T) {
+func TestOK0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurOK1(t *testing.T) {
+func TestOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurOKN(t *testing.T) {
+func TestOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurFailBal0(t *testing.T) {
+func TestFailBal0(t *testing.T) {
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurFailBal1(t *testing.T) {
+func TestFailBal1(t *testing.T) {
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurFailBalN(t *testing.T) {
+func TestFailBalN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestConcurFailAll0(t *testing.T) {
+func TestFailMov0(t *testing.T) {
+	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+}
+
+func TestFailAll0(t *testing.T) {
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestConcurFailAll1(t *testing.T) {
+func TestFailAll1(t *testing.T) {
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestConcurFailAllN(t *testing.T) {
+func TestFailAllN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func XTestConcurReplOK0(t *testing.T) {
+func XTestReplOK0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func XTestConcurReplOK1(t *testing.T) {
+func XTestReplOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
@@ -217,19 +221,19 @@ func XTestConcurReplOK1(t *testing.T) {
 // Fix: Repl tests fail now because lack of shard replication.
 //
 
-func XTestConcurReplOKN(t *testing.T) {
+func XTestReplOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func XTestConcurReplFail0(t *testing.T) {
+func XTestReplFail0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 
-func XTestConcurReplFail1(t *testing.T) {
+func XTestReplFail1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 
-func XTestConcurReplFailN(t *testing.T) {
+func XTestReplFailN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 

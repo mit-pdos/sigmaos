@@ -211,7 +211,7 @@ func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.
 	return sessp.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 

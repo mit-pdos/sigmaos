@@ -378,6 +378,10 @@ func (r *TreadV) Tcount() sessp.Tsize {
 	return sessp.Tsize(r.Count)
 }
 
+func (r *TreadV) Tfence() Tfence {
+	return r.Fence.Tfence()
+}
+
 func MkTwriteV(fid Tfid, o Toffset, v TQversion, f *Tfence) *TwriteV {
 	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Fence: f.FenceProto()}
 }
@@ -481,6 +485,10 @@ func (w *Twstat) Tfid() Tfid {
 	return Tfid(w.Fid)
 }
 
+func (w *Twstat) Tfence() Tfence {
+	return w.Fence.Tfence()
+}
+
 func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string, f *Tfence) *Trenameat {
 	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname, Fence: f.FenceProto()}
 }
@@ -491,6 +499,10 @@ func (r *Trenameat) Tnewfid() Tfid {
 
 func (r *Trenameat) Toldfid() Tfid {
 	return Tfid(r.OldFid)
+}
+
+func (r *Trenameat) Tfence() Tfence {
+	return r.Fence.Tfence()
 }
 
 func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
@@ -511,6 +523,10 @@ func (g *Tgetfile) Toffset() Toffset {
 
 func (g *Tgetfile) Tcount() sessp.Tsize {
 	return sessp.Tsize(g.Count)
+}
+
+func (g *Tgetfile) Tfence() Tfence {
+	return g.Fence.Tfence()
 }
 
 func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
@@ -549,6 +565,10 @@ func (r *Tremovefile) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
+func (r *Tremovefile) Tfence() Tfence {
+	return r.Fence.Tfence()
+}
+
 func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
@@ -567,6 +587,10 @@ func MkTwriteread(fid Tfid, f *Tfence) *Twriteread {
 
 func (wr *Twriteread) Tfid() Tfid {
 	return Tfid(wr.Fid)
+}
+
+func (wr *Twriteread) Tfence() Tfence {
+	return wr.Fence.Tfence()
 }
 
 func (Tversion) Type() sessp.Tfcall { return sessp.TTversion }

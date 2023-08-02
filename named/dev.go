@@ -34,7 +34,7 @@ func (f *Dev) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (d *Dev) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (d *Dev) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: DevRead: %v off %v cnt %v key %v\n", ctx, d, offset, n, d.Obj.di.Nf.Data)
 	if offset > 0 {
 		return nil, nil

@@ -61,7 +61,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

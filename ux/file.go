@@ -45,7 +45,7 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b := make([]byte, cnt)
 	n, err := syscall.Pread(f.fd, b, int64(off))

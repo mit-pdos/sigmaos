@@ -170,7 +170,7 @@ func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversi
 	return 0, nil
 }
 
-func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}

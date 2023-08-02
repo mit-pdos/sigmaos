@@ -304,7 +304,7 @@ func (ps *ProtSrv) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		return nil, sp.MkRerror(serr.MkErr(serr.TErrVersion, v))
 	}
 
-	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tversion())
+	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tversion(), args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -317,7 +317,7 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) (
 		return nil, sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: WriteRead %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
-	retdata, err := f.WriteRead(data)
+	retdata, err := f.WriteRead(data, args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -569,7 +569,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	}
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
-	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), sp.NoV)
+	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), sp.NoV, args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}

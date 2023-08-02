@@ -43,7 +43,7 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inod
 }
 
 // XXX wait on close before processing data?
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte, f sp.Tfence) ([]byte, *serr.Err) {
 	req := rpcproto.Request{}
 	var rep *rpcproto.Reply
 	if err := proto.Unmarshal(b, &req); err != nil {

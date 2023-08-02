@@ -34,12 +34,12 @@ type Dir interface {
 }
 
 type File interface {
-	Read(CtxI, sp.Toffset, sessp.Tsize, sp.TQversion) ([]byte, *serr.Err)
+	Read(CtxI, sp.Toffset, sessp.Tsize, sp.TQversion, sp.Tfence) ([]byte, *serr.Err)
 	Write(CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sessp.Tsize, *serr.Err)
 }
 
 type RPC interface {
-	WriteRead(CtxI, []byte) ([]byte, *serr.Err)
+	WriteRead(CtxI, []byte, sp.Tfence) ([]byte, *serr.Err)
 }
 
 type FsObj interface {

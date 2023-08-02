@@ -152,7 +152,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f s
 	return sessp.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

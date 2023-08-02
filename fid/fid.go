@@ -102,13 +102,13 @@ func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (
 	return sz, err
 }
 
-func (f *Fid) WriteRead(req []byte) ([]byte, *serr.Err) {
+func (f *Fid) WriteRead(req []byte, fence sp.Tfence) ([]byte, *serr.Err) {
 	o := f.Pobj().Obj()
 	var err *serr.Err
 	var b []byte
 	switch i := o.(type) {
 	case fs.RPC:
-		b, err = i.WriteRead(f.Pobj().Ctx(), req)
+		b, err = i.WriteRead(f.Pobj().Ctx(), req, fence)
 	default:
 		db.DFatalf("Write: obj type %T isn't RPC\n", o)
 	}
@@ -129,13 +129,13 @@ func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sessp.Tsize, v sp.TQvers
 	return b, nil
 }
 
-func (f *Fid) Read(off sp.Toffset, count sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (f *Fid) Read(off sp.Toffset, count sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:
 		return f.readDir(po.Obj(), off, count, v)
 	case fs.File:
-		b, err := i.Read(po.Ctx(), off, count, v)
+		b, err := i.Read(po.Ctx(), off, count, v, fence)
 		if err != nil {
 			return nil, err
 		}

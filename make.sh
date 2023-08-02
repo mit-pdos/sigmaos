@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] kernel|user" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--bins BINS] kernel|user" 1>&2
 }
 
 RACE="-race"
@@ -10,6 +10,7 @@ TARGET="local"
 GO="go"
 PARALLEL=""
 WHAT=""
+BINS=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --norace)
@@ -34,6 +35,11 @@ while [[ "$#" -gt 0 ]]; do
     shift
     PARALLEL="--parallel"
     ;;
+  --bins)
+    shift
+    BINS="$1"
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -57,10 +63,10 @@ echo $WHAT
 
 if [[ $WHAT == "kernel" ]]; then
     mkdir -p bin/kernel
+    mkdir -p bin/linux
     WHAT="kernel linux"
 elif [[ $WHAT == "user" ]]; then
     mkdir -p bin/user
-    WHAT="user"
 else
     mkdir -p bin/linux
     WHAT="linux"
@@ -70,10 +76,12 @@ LDF="-X sigmaos/sigmap.Target=$TARGET"
 
 for k in $WHAT; do
     echo "Building $k components"
-    FILES=`ls cmd/$k`
-    # if [[ $k == "user" ]]; then
-    #   FILES="sleeper exec-uproc"
-    # fi
+    if [[ $WHAT == "user" ]] && [[ $BINS != "" ]]; then
+        FILES=$BINS
+    else
+        FILES=`ls cmd/$k`
+    fi
+    
     for f in $FILES;  do
         # XXX delete when removing obselete code
         if [[ $f == "sigmamgr" ]] || [[ $f == "memfs-raft-replica" ]] ; then

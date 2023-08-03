@@ -73,7 +73,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("balancer-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(KVBALANCER + "-" + proc.GetPid().String()))
 	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
@@ -96,7 +96,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
-	ctx := ctx.MkCtx("balancer", 0, sp.NoClntId, nil)
+	ctx := ctx.MkCtx(KVBALANCER, 0, sp.NoClntId, nil)
 	root, _ := ssrv.Root(path.Path{})
 	err1 := dir.MkNod(ctx, root, "ctl", makeCtl(ctx, root, bl))
 	if err1 != nil {

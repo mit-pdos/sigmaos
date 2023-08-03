@@ -19,8 +19,8 @@ const (
 	NBALANCER       = 3
 	KVDIR           = "name/kv/"
 	KVCONF          = "config"
-	KVBALANCER      = "balancer"
-	KVBALANCERELECT = "balancer-elect"
+	KVBALANCER      = "kv-balancer"
+	KVBALANCERELECT = "kv-balancer-elect"
 	KVBALANCERCTL   = "ctl"
 )
 
@@ -160,7 +160,7 @@ func (kvf *KVFleet) Stop() error {
 
 func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdmcpu))
-	gm := groupmgr.Start(sc, nbal, "balancer", []string{crashhelper, kvdnc, auto}, job, 0, nbal, crashbal, 0, 0)
+	gm := groupmgr.Start(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto}, job, 0, nbal, crashbal, 0, 0)
 	return gm
 }
 

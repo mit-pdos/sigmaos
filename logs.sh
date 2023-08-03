@@ -21,7 +21,7 @@ done
 for containerid in $(docker ps -a --format "{{.Names}}"); do
     if [[ $containerid == sigma-* ]] ; then
         echo "========== Logs for $containerid =========="
-        if [ $SORT == "sort" ]; then 
+        if [[ $SORT == "sort" ]]; then 
             docker logs $containerid | sort -k 1
         else 
             docker logs $containerid

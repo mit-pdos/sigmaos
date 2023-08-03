@@ -111,7 +111,7 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 		return nil, err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	return d.Create(mfs.ctx, path.Base(), p, m, lid)
+	return d.Create(mfs.ctx, path.Base(), p, m, lid, sp.NoFence())
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
@@ -121,7 +121,7 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	return d.Remove(mfs.ctx, path.Base())
+	return d.Remove(mfs.ctx, path.Base(), sp.NoFence())
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {

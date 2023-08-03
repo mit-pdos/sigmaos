@@ -106,6 +106,7 @@ message Tcreate {
         uint32 perm = 3;
         uint32 mode = 4;
         uint64 lease = 5;
+        TfenceProto fence = 6;
 }
 
 message Rcreate {

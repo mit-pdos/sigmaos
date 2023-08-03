@@ -80,7 +80,7 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 
 // XXX retry on version mismatch
 // OEXCL: should only succeed if file doesn't exist
-func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile) (DirEntInfo, *serr.Err) {
+func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (DirEntInfo, *serr.Err) {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return DirEntInfo{}, err
@@ -108,7 +108,7 @@ func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
 	return dir, nil
 }
 
-func (fs *FsEtcd) Remove(d sp.Tpath, name string) *serr.Err {
+func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string) *serr.Err {
 	return nil
 }
 
-func (fs *FsEtcd) Rename(d sp.Tpath, from, to string) *serr.Err {
+func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 	dir, v, err := fs.readDir(d, false)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string) *serr.Err {
 	return fs.rename(d, dir, v, topath)
 }
 
-func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string) *serr.Err {
+func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f sp.Tfence) *serr.Err {
 	dirf, vf, err := fs.readDir(df, false)
 	if err != nil {
 		return err

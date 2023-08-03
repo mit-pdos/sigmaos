@@ -43,7 +43,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 	return nil, nil, pn, err
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "Create %v name: %v perm %v lid %v\n", d, name, perm, lid)
 	cid := sp.NoClntId
 	if perm.IsEphemeral() {
@@ -55,7 +55,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.MkErrError(r)
 	}
-	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf)
+	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf, f)
 	if err != nil {
 		return nil, err
 	}
@@ -101,20 +101,20 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.fs.Remove(d.Obj.di.Path, name)
+	return d.fs.Remove(d.Obj.di.Path, name, f)
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Rename %v: %v %v\n", d, from, to)
-	return d.fs.Rename(d.Obj.di.Path, from, to)
+	return d.fs.Rename(d.Obj.di.Path, from, to, f)
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
 	dt := od.(*Dir)
-	return d.fs.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to)
+	return d.fs.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to, f)
 }
 
 // ===== The following functions are needed to make an named dir of type fs.Inode

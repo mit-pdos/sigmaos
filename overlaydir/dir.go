@@ -101,11 +101,11 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, serr.MkErr(serr.TErrExists, name)
 	}
-	return dir.underlay.Create(ctx, name, perm, m, lid)
+	return dir.underlay.Create(ctx, name, perm, m, lid, f)
 }
 
 // XXX account for extra entries in cursor, and sort
@@ -123,23 +123,23 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQve
 	return sts, nil
 }
 
-func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	if i := dir.lookupMount(from); i != nil {
 		return serr.MkErr(serr.TErrNotSupported, from)
 	}
-	return dir.underlay.Rename(ctx, from, to)
+	return dir.underlay.Rename(ctx, from, to, f)
 }
 
-func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *serr.Err {
+func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f sp.Tfence) *serr.Err {
 	if i := dir.lookupMount(old); i != nil {
 		return serr.MkErr(serr.TErrNotSupported, old)
 	}
-	return dir.underlay.Renameat(ctx, old, nd, new)
+	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *serr.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
 	if dir.removeMount(n) {
 		return nil
 	}
-	return dir.underlay.Remove(ctx, n)
+	return dir.underlay.Remove(ctx, n, f)
 }

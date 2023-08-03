@@ -131,7 +131,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsO
 }
 
 // XXX how to delete ephemeral files after crash
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
@@ -178,7 +178,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *serr.Err {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp.Tfence) *serr.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := dd.(*Dir).PathName() + "/" + to
 	db.DPrintf(db.UX, "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
@@ -189,7 +189,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *serr.Err
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.UX, "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
 	o, err := makeObj(p)
@@ -209,7 +209,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *serr.Err {
 	return nil
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := d.PathName() + "/" + to
 	db.DPrintf(db.UX, "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)

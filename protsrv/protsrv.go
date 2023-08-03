@@ -244,13 +244,13 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, 
 }
 
 // Create name in dir and returns lock for it.
-func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
+func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	name := fn.Base()
 	if name == "." {
 		return nil, nil, serr.MkErr(serr.TErrInval, name)
 	}
 	flk := ps.plt.Acquire(ctx, fn)
-	o1, err := d.Create(ctx, name, perm, mode, lid)
+	o1, err := d.Create(ctx, name, perm, mode, lid, f)
 	db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v %v lid %v", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
 	if err == nil {
 		ps.wt.WakeupWatch(dlk)
@@ -276,7 +276,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	dlk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
 	defer ps.plt.Release(f.Pobj().Ctx(), dlk)
 
-	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId())
+	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -344,7 +344,7 @@ func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	return nil
 }
 
-func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path) *sp.Rerror {
+func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *sp.Rerror {
 	name := path.Base()
 	if name == "." {
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, name))
@@ -362,7 +362,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path) *sp.Rerror
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
 	ephemeral := o.Perm().IsEphemeral()
-	err := o.Parent().Remove(ctx, name)
+	err := o.Parent().Remove(ctx, name, f)
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -387,7 +387,7 @@ func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 		return sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Remove %v", f.Pobj().Ctx().Uname(), f.Pobj().Path())
-	return ps.removeObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path())
+	return ps.removeObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Tfence())
 }
 
 func (ps *ProtSrv) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
@@ -427,7 +427,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		tlk := ps.plt.Acquire(f.Pobj().Ctx(), dst)
 		defer ps.plt.Release(f.Pobj().Ctx(), tlk)
 		ps.stats.IncPathString(f.Pobj().Path().String())
-		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Path().Base(), args.Stat.Name)
+		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Path().Base(), args.Stat.Name, args.Tfence())
 		if err != nil {
 			return sp.MkRerror(err)
 		}
@@ -490,7 +490,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		defer ps.plt.ReleaseLocks(oldf.Pobj().Ctx(), d1lk, srclk)
 		defer ps.plt.ReleaseLocks(newf.Pobj().Ctx(), d2lk, dstlk)
 
-		err := d1.Renameat(oldf.Pobj().Ctx(), args.OldName, d2, args.NewName)
+		err := d1.Renameat(oldf.Pobj().Ctx(), args.OldName, d2, args.NewName, args.Tfence())
 		if err != nil {
 			return sp.MkRerror(err)
 		}
@@ -556,7 +556,7 @@ func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 		return sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: RemoveFile %v %v %v", f.Pobj().Ctx().Uname(), f.Pobj().Path(), fname, args.Fid)
-	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
+	return ps.removeObj(f.Pobj().Ctx(), lo, fname, args.Tfence())
 }
 
 func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
@@ -628,7 +628,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		db.DPrintf(db.PROTSRV, "%v: PutFile try to create %v", f.Pobj().Ctx().Uname(), fn)
 		// try to create file, which will fail it exists
 		dir := lo.(fs.Dir)
-		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId())
+		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 		if err != nil {
 			if err.Code() != serr.TErrExists {
 				return sp.MkRerror(err)

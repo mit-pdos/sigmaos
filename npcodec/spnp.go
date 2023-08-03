@@ -101,7 +101,7 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 		fcm.Msg = r
 	case sessp.TTcreate9P:
 		m := fcm.Msg.(*np.Tcreate9P)
-		r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId)
+		r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId, sp.NoFence())
 		fcm.Msg = r
 	case sessp.TTwstat9P:
 		m := fcm.Msg.(*np.Twstat9P)

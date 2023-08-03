@@ -151,7 +151,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 }
 
 func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, *serr.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid)
+	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid, sp.NoFence())
 	if err != nil {
 		return sp.NoFid, err
 	}

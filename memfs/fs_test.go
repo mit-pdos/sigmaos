@@ -54,7 +54,7 @@ func (ts *TestState) testRename(t int) {
 		if err != nil {
 			continue
 		}
-		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
+		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name, sp.NoFence())
 		if err != nil {
 			assert.True(ts.t, serr.IsErrCode(err, serr.TErrNotfound)
 		}

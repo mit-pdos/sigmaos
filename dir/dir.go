@@ -217,7 +217,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversi
 	return dir.lsL(cursor)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -272,7 +272,7 @@ func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
 }
 
 // Rename inode within directory
-func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *serr.Err {
+func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -310,7 +310,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 
 }
 
-func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *serr.Err {
+func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f sp.Tfence) *serr.Err {
 	newdir := nd.(*DirImpl)
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)
@@ -337,7 +337,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *se
 	return nil
 }
 
-func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *serr.Err {
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.MEMFS, "Remove: %v %v\n", dir, n)
 
 	dir.mu.Lock()

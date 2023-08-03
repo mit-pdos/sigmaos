@@ -338,8 +338,8 @@ func (o *Topen) Tmode() Tmode {
 	return Tmode(o.Mode)
 }
 
-func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId) *Tcreate {
-	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode), Lease: uint64(lid)}
+func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId, f Tfence) *Tcreate {
+	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode), Lease: uint64(lid), Fence: f.FenceProto()}
 }
 
 func (c *Tcreate) Tfid() Tfid {
@@ -356,6 +356,10 @@ func (c *Tcreate) Tmode() Tmode {
 
 func (c *Tcreate) TleaseId() TleaseId {
 	return TleaseId(c.Lease)
+}
+
+func (c *Tcreate) Tfence() Tfence {
+	return c.Fence.Tfence()
 }
 
 func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion, f *Tfence) *TreadV {
@@ -428,6 +432,10 @@ func MkTremove(fid Tfid, f *Tfence) *Tremove {
 
 func (r *Tremove) Tfid() Tfid {
 	return Tfid(r.Fid)
+}
+
+func (r *Tremove) Tfence() Tfence {
+	return r.Fence.Tfence()
 }
 
 func MkTstat(fid Tfid) *Tstat {

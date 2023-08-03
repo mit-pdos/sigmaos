@@ -11,6 +11,7 @@ import (
 func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
 	if err != nil {
+		db.DPrintf(db.WALK, "unionScan: error walk: %v", err)
 		return sp.NoFid, err
 	}
 	defer pathc.FidClnt.Clunk(fid1)

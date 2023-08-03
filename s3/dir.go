@@ -207,10 +207,6 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) 
 	}
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrIsdir, d)
-}
-
 // Create a fake file in dir to materialize dir
 func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *serr.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()

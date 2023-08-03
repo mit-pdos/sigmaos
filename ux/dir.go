@@ -178,10 +178,6 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrNotSupported, nil)
-}
-
 func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *serr.Err {
 	oldPath := d.PathName() + "/" + from
 	newPath := dd.(*Dir).PathName() + "/" + to

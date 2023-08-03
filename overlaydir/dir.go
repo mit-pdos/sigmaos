@@ -123,10 +123,6 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQve
 	return sts, nil
 }
 
-func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	return dir.underlay.WriteDir(ctx, offset, b, v)
-}
-
 func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *serr.Err {
 	if i := dir.lookupMount(from); i != nil {
 		return serr.MkErr(serr.TErrNotSupported, from)

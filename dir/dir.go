@@ -217,13 +217,6 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversi
 	return dir.lsL(cursor)
 }
 
-// XXX ax WriteDir from fs.Dir
-func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	dir.mu.Lock()
-	defer dir.mu.Unlock()
-	return 0, serr.MkErr(serr.TErrIsdir, dir)
-}
-
 func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()

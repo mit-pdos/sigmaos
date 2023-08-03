@@ -27,7 +27,6 @@ type Dir interface {
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
 	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId) (FsObj, *serr.Err)
 	ReadDir(CtxI, int, sessp.Tsize, sp.TQversion) ([]*sp.Stat, *serr.Err)
-	WriteDir(CtxI, sp.Toffset, []byte, sp.TQversion) (sessp.Tsize, *serr.Err)
 	Remove(CtxI, string) *serr.Err
 	Rename(CtxI, string, string) *serr.Err
 	Renameat(CtxI, string, Dir, string) *serr.Err

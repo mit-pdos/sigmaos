@@ -117,10 +117,6 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *serr.Err
 	return d.fs.Renameat(d.Obj.di.Path, from, dt.Obj.di.Path, to)
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrIsdir, d)
-}
-
 // ===== The following functions are needed to make an named dir of type fs.Inode
 
 func (d *Dir) SetMtime(mtime int64) {

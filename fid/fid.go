@@ -94,8 +94,6 @@ func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (
 	switch i := o.(type) {
 	case fs.File:
 		sz, err = i.Write(f.Pobj().Ctx(), off, b, v, fence)
-	case fs.Dir:
-		sz, err = i.WriteDir(f.Pobj().Ctx(), off, b, v)
 	default:
 		db.DFatalf("Write: obj type %T isn't Dir or File\n", o)
 	}

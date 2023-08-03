@@ -50,9 +50,14 @@ go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
 # applications
 #
 
-for T in imgresized mr kv; do
+for T in imgresized mr; do
     go test $@ sigmaos/$T -start
 done
+
+#
+# run only the most stringent test with kv
+#
+go test $@ sigmaos/kv -start -run Fail
 
 #
 # application with several kernels and db

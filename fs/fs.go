@@ -20,6 +20,7 @@ type CtxI interface {
 	SessionId() sessp.Tsession
 	SessCondTable() *sesscond.SessCondTable
 	ClntId() sp.TclntId
+	FenceFs() Dir
 }
 
 type Dir interface {

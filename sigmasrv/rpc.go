@@ -44,8 +44,8 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inod
 }
 
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte, fence sp.Tfence) ([]byte, *serr.Err) {
-	db.DPrintf(db.SIGMASRV, "WriteRead fence %v %v\n", fence, rpc.ssrv.ffs)
-	if f, err := fencefs.CheckFence(rpc.ssrv.ffs, fence); err != nil {
+	db.DPrintf(db.FENCEFS, "WriteRead fence %v %p\n", fence, ctx.FenceFs())
+	if f, err := fencefs.CheckFence(ctx.FenceFs(), fence); err != nil {
 		return nil, err
 	} else {
 		if f == nil {

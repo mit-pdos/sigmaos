@@ -24,7 +24,7 @@ import (
 //
 
 func BootSrv(root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, attachf, detachf, et)
+	return sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, attachf, detachf, et, nil)
 }
 
 func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
@@ -43,15 +43,15 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 	return nil
 }
 
-func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
+func MakeReplServerFsl(root fs.Dir, addr string, path string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, nil, nil, et)
+	srv := sesssrv.MakeSessSrv(root, addr, protsrv.MakeProtServer, nil, nil, et, fencefs)
 	if err := Post(srv, sc, path); err != nil {
 		return nil, err
 	}
 	return srv, nil
 }
 
-func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt) (*sesssrv.SessSrv, error) {
-	return MakeReplServerFsl(root, port, path, sc)
+func MakeSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
+	return MakeReplServerFsl(root, port, path, sc, fencefs)
 }

@@ -4,6 +4,8 @@ import (
 	"sync"
 	//"time"
 
+	db "sigmaos/debug"
+	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -31,7 +33,7 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -59,6 +61,20 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	f.data = append(f.data, data...)
 	f.data = append(f.data, d...)
 	return cnt, nil
+}
+
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+	db.DPrintf(db.FENCEFS, "File.Write %v %p\n", fence, ctx.FenceFs())
+	if fi, err := fencefs.CheckFence(ctx.FenceFs(), fence); err != nil {
+		return 0, err
+	} else {
+		if fi == nil {
+			return f.write(ctx, offset, data, v)
+		} else {
+			defer fi.RUnlock()
+			return f.write(ctx, offset, data, v)
+		}
+	}
 }
 
 func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {

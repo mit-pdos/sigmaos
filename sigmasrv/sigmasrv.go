@@ -34,7 +34,6 @@ type SigmaSrv struct {
 	sti    *rpc.StatInfo
 	svc    *svcMap
 	lsrv   *LeaseSrv
-	ffs    fs.Dir
 	cpumon *cpumon.CpuMon
 }
 
@@ -67,7 +66,7 @@ func MakeSigmaSrvNoRPC(fn string, uname sp.Tuname) (*SigmaSrv, error) {
 	if err != nil {
 		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, err)
 	}
-	return newSigmaSrv(mfs, nil), nil
+	return newSigmaSrv(mfs), nil
 }
 
 func MakeSigmaSrvPort(fn, port string, uname sp.Tuname, svci any) (*SigmaSrv, error) {
@@ -83,17 +82,17 @@ func MakeSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, 
 	if error != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
 	}
-	return makeSigmaSrvRPC(mfs, nil, svci)
+	return makeSigmaSrvRPC(mfs, svci)
 }
 
 func MakeSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.MakeMemFsPortClnt(fn, ":0", sc)
+	ffs := fencefs.MakeRoot(ctx.MkCtxNull(), nil)
+	mfs, error := memfssrv.MakeMemFsPortClntFence(fn, ":0", sc, ffs)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v err %v\n", fn, error)
 	}
-	ffs := fencefs.MakeRoot(ctx.MkCtxNull(), nil)
 	mfs.Mount(sp.FENCEDIR, ffs.(*dir.DirImpl))
-	return makeSigmaSrvRPC(mfs, ffs, svci)
+	return makeSigmaSrvRPC(mfs, svci)
 }
 
 func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
@@ -101,13 +100,13 @@ func MakeSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error
 	if err != nil {
 		db.DFatalf("MakeMemFsPortClnt %v err %v\n", fn, err)
 	}
-	ssrv := newSigmaSrv(mfs, nil)
+	ssrv := newSigmaSrv(mfs)
 	return ssrv, nil
 }
 
 // Makes a sigmasrv with an memfs, rpc server, and LeaseSrv service.
 func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
-	ssrv, err := makeSigmaSrvRPC(mfs, nil, svci)
+	ssrv, err := makeSigmaSrvRPC(mfs, svci)
 	if err != nil {
 		return nil, err
 	}
@@ -117,14 +116,14 @@ func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	return ssrv, nil
 }
 
-func newSigmaSrv(mfs *memfssrv.MemFs, ffs fs.Dir) *SigmaSrv {
-	ssrv := &SigmaSrv{MemFs: mfs, ffs: ffs, svc: newSvcMap()}
+func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
+	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap()}
 	return ssrv
 }
 
 // Make a sigmasrv with an RPC server
-func makeSigmaSrvRPC(mfs *memfssrv.MemFs, ffs fs.Dir, svci any) (*SigmaSrv, error) {
-	ssrv := newSigmaSrv(mfs, ffs)
+func makeSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
+	ssrv := newSigmaSrv(mfs)
 	return ssrv, ssrv.makeRPCSrv(svci)
 }
 
@@ -142,8 +141,8 @@ func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 }
 
 func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
-	mfs := memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc)
-	return newSigmaSrv(mfs, nil)
+	mfs := memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc, nil)
+	return newSigmaSrv(mfs)
 }
 
 func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSrv, error) {
@@ -153,7 +152,7 @@ func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSr
 	}
 	et := ephemeralmap.NewEphemeralMap()
 	sesssrv := fslibsrv.BootSrv(root, addr, nil, nil, et)
-	ssrv := newSigmaSrv(memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc), nil)
+	ssrv := newSigmaSrv(memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc, nil))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil
 }

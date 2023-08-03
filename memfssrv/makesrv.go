@@ -4,6 +4,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
+	"sigmaos/fs"
 	"sigmaos/fslibsrv"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
@@ -31,12 +32,17 @@ func MakeMemFsPort(pn, port string, uname sp.Tuname) (*MemFs, error) {
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
 func MakeMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
-	root := dir.MkRootDir(ctx.MkCtxNull(), memfs.MakeInode, nil)
-	srv, err := fslibsrv.MakeSrv(root, pn, port, sc)
+	return MakeMemFsPortClntFence(pn, port, sc, nil)
+}
+
+func MakeMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
+	ctx := ctx.MkCtx("", 0, sp.NoClntId, nil, fencefs)
+	root := dir.MkRootDir(ctx, memfs.MakeInode, nil)
+	srv, err := fslibsrv.MakeSrv(root, pn, port, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
-	mfs := MakeMemFsSrv(sc.Uname(), pn, srv, sc)
+	mfs := MakeMemFsSrv(sc.Uname(), pn, srv, sc, nil)
 	return mfs, nil
 }
 

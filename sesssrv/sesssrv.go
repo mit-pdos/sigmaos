@@ -48,11 +48,12 @@ type SessSrv struct {
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
 	et       *ephemeralmap.EphemeralMap
+	fencefs  fs.Dir
 	srv      *netsrv.NetServer
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *SessSrv {
+func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
@@ -67,6 +68,7 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.At
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
 	ssrv.vt.Insert(ssrv.dirover.Path())
+	ssrv.fencefs = fencefs
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
@@ -153,7 +155,7 @@ func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
 }
 
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return ssrv.dirover, ctx.MkCtx(uname, sessid, clntid, ssrv.sct)
+	return ssrv.dirover, ctx.MkCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
 // New session or new connection for existing session

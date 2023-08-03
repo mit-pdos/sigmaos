@@ -14,8 +14,11 @@ import (
 
 	"sigmaos/cache"
 	db "sigmaos/debug"
+	"sigmaos/group"
 	"sigmaos/kv"
+	"sigmaos/leaderclnt"
 	"sigmaos/rand"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -73,17 +76,17 @@ type Tstate struct {
 	*test.Tstate
 	kvf *kv.KVFleet
 	cm  *kv.ClerkMgr
+	job string
 }
 
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
-	ts := &Tstate{}
+	ts := &Tstate{job: rand.String(4)}
 	ts.Tstate = test.MakeTstateAll(t)
-	job := rand.String(4)
 
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, job, crashbal, 1, repl, 0, crashhelper, auto)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
-	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, job, 0)
+	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, ts.job, 0)
 	assert.Nil(t, err)
 	err = ts.kvf.Start()
 	assert.Nil(t, err)
@@ -124,6 +127,32 @@ func TestGetPut(t *testing.T) {
 		err := ts.cm.Get(key, &cproto.CacheString{})
 		assert.Nil(ts.T, err, "Get "+key)
 	}
+
+	ts.cm.StopClerks()
+	ts.done()
+}
+
+func TestFencefs(t *testing.T) {
+	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+
+	dir := kv.KVDIR + group.GrpPath(ts.job, kv.GRP+"0")
+
+	l := leaderclnt.OldleaderTest(ts.Tstate, dir, false)
+
+	sts, err := l.GetFences(dir)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 1, len(sts), "Fences")
+
+	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
+
+	err = l.RemoveFence([]string{dir})
+	assert.Nil(ts.T, err, "RemoveFences")
+
+	sts, err = l.GetFences(dir)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 0, len(sts), "Fences")
+
+	l.ReleaseLeadership()
 
 	ts.cm.StopClerks()
 	ts.done()

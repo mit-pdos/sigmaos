@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
@@ -42,8 +43,21 @@ func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inod
 	return rpc, nil
 }
 
-// XXX wait on close before processing data?
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte, f sp.Tfence) ([]byte, *serr.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte, fence sp.Tfence) ([]byte, *serr.Err) {
+	db.DPrintf(db.SIGMASRV, "WriteRead fence %v %v\n", fence, rpc.ssrv.ffs)
+	if f, err := fencefs.CheckFence(rpc.ssrv.ffs, fence); err != nil {
+		return nil, err
+	} else {
+		if f == nil {
+			return rpc.serveRPC(ctx, b)
+		} else {
+			defer f.RUnlock()
+			return rpc.serveRPC(ctx, b)
+		}
+	}
+}
+
+func (rpc *rpcSession) serveRPC(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	req := rpcproto.Request{}
 	var rep *rpcproto.Reply
 	if err := proto.Unmarshal(b, &req); err != nil {

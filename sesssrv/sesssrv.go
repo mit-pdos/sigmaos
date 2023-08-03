@@ -5,7 +5,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
-	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
@@ -49,7 +48,6 @@ type SessSrv struct {
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
 	et       *ephemeralmap.EphemeralMap
-	ffs      fs.Dir
 	srv      *netsrv.NetServer
 	qlen     stats.Tcounter
 }
@@ -70,10 +68,7 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.At
 	ssrv.vt = version.MkVersionTable()
 	ssrv.vt.Insert(ssrv.dirover.Path())
 
-	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtxNull(), ssrv.dirover)
-
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
-	ssrv.dirover.Mount(sp.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
 
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
@@ -260,29 +255,10 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
 		qlen := ssrv.QueueLen()
 		ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
-		ssrv.fenceFcall(sess, fc)
+		ssrv.serve(sess, fc)
 	} else {
 		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)
 	}
-}
-
-// Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
-// ops.
-func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
-	// db.DPrintf(db.FENCESRV, "fenceFcall %v fence %v\n", fc.Fc.Type, fc.Fc.Fence)
-	// if f, err := fencefs.CheckFence(ssrv.ffs, *fc.Tfence()); err != nil {
-	// 	msg := sp.MkRerror(err)
-	// 	reply := sessp.MakeFcallMsgReply(fc, msg)
-	// 	ssrv.sendReply(fc, reply, sess)
-	// 	return
-	// } else {
-	// 	if f == nil {
-	// 		ssrv.serve(sess, fc)
-	// 	} else {
-	// 		defer f.RUnlock()
-	ssrv.serve(sess, fc)
-	//		}
-	//}
 }
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {

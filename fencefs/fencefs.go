@@ -80,7 +80,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
 // update the fence until this fenced operation has completed. Read
 // mode so that we can run operations in the same epoch in parallel.
 func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
-	if new.PathName == "" {
+	if root == nil || new.PathName == "" {
 		return nil, nil
 	}
 	f, err := allocFence(root, new.Name())

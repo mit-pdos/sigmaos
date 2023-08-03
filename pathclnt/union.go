@@ -18,7 +18,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 
 	target, err := pathc.readlink(fid1)
 	if err != nil {
-		db.DPrintf(db.WALK, "Err readlink %v\n", err)
+		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: target: %v\n", string(target))

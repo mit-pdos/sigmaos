@@ -1,6 +1,7 @@
 package kv_test
 
 import (
+	"path"
 	"regexp"
 	"strconv"
 	"testing"
@@ -136,21 +137,24 @@ func TestFencefs(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	dir := kv.KVDIR + group.GrpPath(ts.job, kv.GRP+"0")
+	fencedir := path.Join(dir, sp.FENCEDIR)
 
 	l := leaderclnt.OldleaderTest(ts.Tstate, dir, false)
 
-	sts, err := l.GetFences(dir)
+	sts, err := l.GetFences(fencedir)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 2, len(sts), "Fences")
+
+	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
+
+	err = l.RemoveFence([]string{fencedir})
+	assert.Nil(ts.T, err, "RemoveFences")
+
+	sts, err = l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")
 	assert.Equal(ts.T, 1, len(sts), "Fences")
 
 	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
-
-	err = l.RemoveFence([]string{dir})
-	assert.Nil(ts.T, err, "RemoveFences")
-
-	sts, err = l.GetFences(dir)
-	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 0, len(sts), "Fences")
 
 	l.ReleaseLeadership()
 

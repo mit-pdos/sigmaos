@@ -214,39 +214,39 @@ func TestOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestFailBal0(t *testing.T) {
+func TestCrashBal0(t *testing.T) {
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestFailBal1(t *testing.T) {
+func TestCrashBal1(t *testing.T) {
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestFailBalN(t *testing.T) {
+func TestCrashBalN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestFailMov0(t *testing.T) {
+func TestCrashMov0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestFailMov1(t *testing.T) {
+func TestCrashMov1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestFailMovN(t *testing.T) {
+func TestCrashMovN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestFailAll0(t *testing.T) {
+func TestCrashAll0(t *testing.T) {
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestFailAll1(t *testing.T) {
+func TestCrashAll1(t *testing.T) {
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestFailAllN(t *testing.T) {
+func TestCrashAllN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
@@ -266,15 +266,15 @@ func XTestReplOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func XTestReplFail0(t *testing.T) {
+func XTestReplCrash0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 
-func XTestReplFail1(t *testing.T) {
+func XTestReplCrash1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 
-func XTestReplFailN(t *testing.T) {
+func XTestReplCrashN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 1, "0")
 }
 

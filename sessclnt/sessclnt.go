@@ -113,7 +113,7 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
-	db.DPrintf(db.ALWAYS, "%v: Send detach %v\n", proc.GetPid(), c.sid)
+	db.DPrintf(db.SESS_STATE_CLNT, "%v: Send detach %v\n", proc.GetPid(), c.sid)
 	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)

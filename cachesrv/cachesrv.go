@@ -108,7 +108,7 @@ func (cs *CacheSrv) lookupShard(s uint32) (*shard, error) {
 	case READY:
 		return sh.s, nil
 	case EMBRYO:
-		return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("shard %d", s))
+		return nil, serr.MkErr(serr.TErrRetry, fmt.Sprintf("shard %d", s))
 	case FROZEN:
 		return nil, serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %d", s))
 	default:
@@ -155,10 +155,12 @@ func (cs *CacheSrv) FillShard(ctx fs.CtxI, req cacheproto.ShardFill, rep *cachep
 
 	if si, ok := cs.shards[req.Shard]; !ok {
 		return serr.MkErr(serr.TErrNotfound, req.Shard)
-	} else {
+	} else if si.status == EMBRYO {
 		si.s.fill(req.Vals)
 		si.status = READY
 		return nil
+	} else {
+		return serr.MkErr(serr.TErrStale, req.Shard)
 	}
 }
 

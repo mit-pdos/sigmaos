@@ -277,10 +277,10 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.cc.CreateShard(srv, uint32(s), &bl.conf.Fence); err != nil {
+		if err := bl.cc.CreateShard(srv, Tshard(s), &bl.conf.Fence); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
-		if err := bl.cc.FillShard(srv, uint32(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
+		if err := bl.cc.FillShard(srv, Tshard(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
 			db.DFatalf("FillShard %v %d err %v\n", kvd, s, err)
 		}
 	}
@@ -296,30 +296,31 @@ func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	return p.GetPid(), err
 }
 
-func (bl *Balancer) runProc(args []string) (*proc.Status, error) {
+func (bl *Balancer) runProc(args []string) (proc.Tpid, *proc.Status, error) {
 	pid, err := bl.spawnProc(args)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	status, err := bl.WaitExit(pid)
-	return status, err
+	return pid, status, err
 }
 
 func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status) bool) (error, *proc.Status) {
 	var status *proc.Status
 	var err error
+	var pid proc.Tpid
 	for true {
-		status, err = bl.runProc(args)
+		pid, status, err = bl.runProc(args)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "runProc %v err %v status %v\n", args, err, status)
+			db.DPrintf(db.ALWAYS, "runProc %v %v err %v status %v\n", pid, args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			serr.IsErrCode(err, serr.TErrUnreachable)) {
-			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
+			db.DFatalf("CRASH %v: runProc %v err %v\n", pid, proc.GetName(), err)
 		}
 		if retryf(err, status) {
-			db.DPrintf(db.KVBAL_ERR, "retry %v err %v status %v\n", args, err, status)
+			db.DPrintf(db.KVBAL_ERR, "retry pid %v %v err %v status %v\n", pid, args, err, status)
 		} else {
 			break
 		}
@@ -341,7 +342,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 		if kvd != nextShards[i] {
 			s := kvGrpPath(bl.job, kvd)
 			d := kvGrpPath(bl.job, nextShards[i])
-			moves = append(moves, &Move{uint32(i), s, d})
+			moves = append(moves, &Move{Tshard(i), s, d})
 		}
 	}
 	return moves

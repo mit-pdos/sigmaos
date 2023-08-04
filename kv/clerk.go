@@ -10,7 +10,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -48,7 +47,7 @@ func key2shard(key Tkey) Tshard {
 }
 
 func (s Tshard) String() string {
-	return fmt.Sprintf("%03d", s)
+	return fmt.Sprintf("s-%03d", s)
 }
 
 type KvClerk struct {
@@ -139,7 +138,11 @@ func (kc *KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	if cache.IsMissShard(err) {
+	var sr *serr.Err
+	if !errors.As(err, &sr) {
+		return err
+	}
+	if sr.IsErrRetry() {
 		// Shard hasn't been created yet (config 0) or isn't ready
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
@@ -147,12 +150,11 @@ func (kc *KvClerk) fixRetry(err error) error {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	var sr *serr.Err
-	if errors.As(err, &sr) {
-		if sr.IsErrStale() || strings.HasPrefix(sr.ErrPath(), "grp-") {
-			db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
-			return kc.switchConfig()
-		}
+	if sr.IsErrStale() ||
+		(sr.IsErrNotfound() && (strings.HasPrefix(sr.ErrPath(), "grp-") ||
+			strings.HasPrefix(sr.ErrPath(), "shard"))) {
+		db.DPrintf(db.KVCLERK_ERR, "fixRetry %v", err)
+		return kc.switchConfig()
 	}
 	return err
 }
@@ -208,7 +210,7 @@ func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 			o.err = kc.cclnt.Put(srv, string(o.k), o.val)
 		}
 	}
-	db.DPrintf(db.KVCLERK, "op %v(%v) srv %v s %v err %v", o.kind, o.m == sp.OAPPEND, srv, s, o.err)
+	db.DPrintf(db.KVCLERK, "op %v(%v) srv %v %v err %v", o.kind, o.m == sp.OAPPEND, srv, s, o.err)
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {

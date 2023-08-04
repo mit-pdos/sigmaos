@@ -175,9 +175,9 @@ func (c *CacheClnt) Delete(srv, key string) error {
 	return c.DeleteTraced(nil, srv, key)
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sp.Tfence) error {
+func (c *CacheClnt) CreateShard(srv string, shard Tshard, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
-		Shard: shard,
+		Shard: uint32(shard),
 	}
 	var res cacheproto.CacheOK
 	if err := c.rpcc.RPCFence(srv, "CacheSrv.CreateShard", req, &res, fence); err != nil {
@@ -186,9 +186,9 @@ func (c *CacheClnt) CreateShard(srv string, shard uint32, fence *sp.Tfence) erro
 	return nil
 }
 
-func (c *CacheClnt) DeleteShard(srv string, shard uint32, fence *sp.Tfence) error {
+func (c *CacheClnt) DeleteShard(srv string, shard Tshard, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
-		Shard: shard,
+		Shard: uint32(shard),
 	}
 	var res cacheproto.CacheOK
 	if err := c.rpcc.RPCFence(srv, "CacheSrv.DeleteShard", req, &res, fence); err != nil {
@@ -197,9 +197,9 @@ func (c *CacheClnt) DeleteShard(srv string, shard uint32, fence *sp.Tfence) erro
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard uint32) (map[string][]byte, error) {
+func (c *CacheClnt) DumpShard(srv string, shard Tshard) (map[string][]byte, error) {
 	req := &cacheproto.ShardArg{
-		Shard: shard,
+		Shard: uint32(shard),
 	}
 	var res cacheproto.CacheDump
 	if err := c.rpcc.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {
@@ -208,9 +208,9 @@ func (c *CacheClnt) DumpShard(srv string, shard uint32) (map[string][]byte, erro
 	return res.Vals, nil
 }
 
-func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fence *sp.Tfence) error {
+func (c *CacheClnt) FillShard(srv string, shard Tshard, m map[string][]byte, fence *sp.Tfence) error {
 	req := &cacheproto.ShardFill{
-		Shard: shard,
+		Shard: uint32(shard),
 		Vals:  m,
 	}
 	var res cacheproto.CacheOK
@@ -220,9 +220,9 @@ func (c *CacheClnt) FillShard(srv string, shard uint32, m map[string][]byte, fen
 	return nil
 }
 
-func (c *CacheClnt) FreezeShard(srv string, shard uint32, fence *sp.Tfence) error {
+func (c *CacheClnt) FreezeShard(srv string, shard Tshard, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
-		Shard: shard,
+		Shard: uint32(shard),
 	}
 	var res cacheproto.CacheOK
 	if err := c.rpcc.RPCFence(srv, "CacheSrv.FreezeShard", req, &res, fence); err != nil {

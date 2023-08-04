@@ -23,7 +23,7 @@ type Mover struct {
 	*sigmaclnt.SigmaClnt
 	job   string
 	fence *sp.Tfence
-	shard uint32
+	shard Tshard
 	cc    *CacheClnt
 	exit  bool
 }
@@ -34,7 +34,7 @@ func checkFence(fsl *fslib.FsLib, job string, fence *sp.Tfence) {
 		db.DPrintf(db.ALWAYS, "checkFence: GetFile err %v\n", err)
 	}
 	if fence.LessThan(&config.Fence) {
-		db.DPrintf(db.ALWAYS, "checkFence: Mover is behind %v %v\n", fence, config.Fence)
+		db.DPrintf(db.ALWAYS, "checkFence: Mover is stale %v %v\n", fence, config.Fence)
 	}
 }
 
@@ -56,7 +56,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
 		return nil, err
 	} else {
-		mv.shard = uint32(sh)
+		mv.shard = Tshard(sh)
 	}
 	if err := mv.Started(); err != nil {
 		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)
@@ -88,8 +88,8 @@ func (mv *Mover) moveShard(s, d string) error {
 	// A crashed mover may have created the shard and partially filled
 	// it; remove it and start over.
 	if err := mv.cc.DeleteShard(d, mv.shard, mv.fence); err != nil {
-		db.DPrintf(db.KVMV_ERR, "DeleteShard %v err %v\n", mv.shard, err)
 		if !serr.IsErrCode(err, serr.TErrNotfound) {
+			db.DPrintf(db.KVMV_ERR, "DeleteShard dst %v err %v\n", mv.shard, err)
 			return err
 		}
 	}
@@ -110,19 +110,19 @@ func (mv *Mover) moveShard(s, d string) error {
 
 	// Mark that move is done by deleting s
 	if err := mv.cc.DeleteShard(s, mv.shard, mv.fence); err != nil {
-		db.DPrintf(db.KVMV_ERR, "DeleteShard %v err %v\n", mv.shard, err)
+		db.DPrintf(db.KVMV_ERR, "DeleteShard src %v err %v\n", mv.shard, err)
 		return err
 	}
 	return nil
 }
 
 func (mv *Mover) Move(src, dst string) {
-	db.DPrintf(db.KVMV, "conf %v: mv %d from %v to %v\n", mv.fence, mv.shard, src, dst)
+	db.DPrintf(db.KVMV, "conf %v: mov %v from %v to %v\n", mv.fence, mv.shard, src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
-		db.DPrintf(db.KVMV_ERR, "conf %v: mv %d from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
+		db.DPrintf(db.KVMV_ERR, "conf %v: move %v from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	}
-	db.DPrintf(db.KVMV, "conf %v: mv %d  done from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
+	db.DPrintf(db.KVMV, "conf %v: move %v done from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	if mv.exit {
 		if err != nil {
 			mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))

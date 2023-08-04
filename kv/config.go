@@ -8,7 +8,7 @@ import (
 )
 
 type Move struct {
-	Shard uint32
+	Shard Tshard
 	Src   string
 	Dst   string
 }
@@ -17,11 +17,11 @@ type Moves []*Move
 
 func (mvs Moves) String() string {
 	s := "["
-	for _, m := range mvs {
+	for i, m := range mvs {
 		if m == nil {
 			s += fmt.Sprintf("nil,")
 		} else {
-			s += fmt.Sprintf("%v -> %v,", m.Src, m.Dst)
+			s += fmt.Sprintf("%v: %v -> %v,", Tshard(i), m.Src, m.Dst)
 		}
 	}
 	s += "]"

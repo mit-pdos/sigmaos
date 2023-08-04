@@ -8,7 +8,6 @@ import (
 
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -59,7 +58,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
-	e := sessp.Tepoch(0)
+	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v %T\n", conf, conf.Leader)

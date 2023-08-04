@@ -45,6 +45,5 @@ func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 }
 
 func (fl *FsLib) DetachAll() error {
-	db.DPrintf(db.ALWAYS, "%v: Fslib.DetachAll\n", proc.GetPid())
 	return fl.PathClnt.DetachAll()
 }

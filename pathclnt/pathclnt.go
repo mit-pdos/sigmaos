@@ -96,6 +96,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 
 // Close all sessions
 func (pathc *PathClnt) DetachAll() error {
+	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", proc.GetPid())
 	return pathc.FidClnt.DetachAll(pathc.cid)
 }
 

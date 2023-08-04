@@ -589,16 +589,12 @@ func (d *Tdetach) TclntId() TclntId {
 	return TclntId(d.ClntId)
 }
 
-func MkTwriteread(fid Tfid, f *Tfence) *Twriteread {
-	return &Twriteread{Fid: uint32(fid), Fence: f.FenceProto()}
+func MkTwriteread(fid Tfid) *Twriteread {
+	return &Twriteread{Fid: uint32(fid)}
 }
 
 func (wr *Twriteread) Tfid() Tfid {
 	return Tfid(wr.Fid)
-}
-
-func (wr *Twriteread) Tfence() Tfence {
-	return wr.Fence.Tfence()
 }
 
 func (Tversion) Type() sessp.Tfcall { return sessp.TTversion }

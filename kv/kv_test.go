@@ -143,7 +143,7 @@ func TestFencefs(t *testing.T) {
 
 	sts, err := l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 2, len(sts), "Fences")
+	assert.Equal(ts.T, 1, len(sts), "Fences")
 
 	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
 
@@ -152,7 +152,7 @@ func TestFencefs(t *testing.T) {
 
 	sts, err = l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 1, len(sts), "Fences")
+	assert.Equal(ts.T, 0, len(sts), "Fences")
 
 	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
 

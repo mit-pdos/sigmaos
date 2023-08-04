@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "tracing/proto/tracing.proto";
+import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/cache/proto";
 
@@ -16,6 +17,7 @@ message CacheRequest {
   uint32 shard = 3;
   uint32 mode = 4;
   SpanContextConfig spanContextConfig = 5;
+  TfenceProto fence = 6;
 }
 
 message CacheOK {}
@@ -38,11 +40,13 @@ message CacheInt {
 
 message ShardArg {
   uint32 shard = 1;
+  TfenceProto fence = 2;
 }
 
 message ShardFill {
   uint32 shard = 1;
   map<string, bytes> vals = 2;
+  TfenceProto fence = 3;
 }
 
 

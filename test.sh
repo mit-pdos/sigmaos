@@ -1,89 +1,117 @@
 #!/bin/bash
 
+#
+# Runs all tests by default.
+# --apps: run only app tests
+# --fast: run only the key tests
+#
+
 usage() {
-  echo "Usage: $0"
+  echo "Usage: $0 [--fast] [--apps]" 
 }
+
+FAST=""
+APPS=""
+VERB="-v"
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+  --fast)
+    shift
+    FAST="--fast"
+    ;;
+  --apps)
+    shift
+    APPS="--apps"
+    ;;
+   *)
+   echo "unexpected argument $1"
+   usage
+   exit 1
+ esac
+done
 
 go clean -testcache
 
-#
-# test some support package
-#
+if [[ $APPS == "" ]]; then
 
-for T in path intervals serr linuxsched perf sigmap; do
-    go test $@ sigmaos/$T
-done
+    #
+    # test some support package
+    #
 
-#
-# test proxy with just named
-#
+    for T in path intervals serr linuxsched perf sigmap; do
+        go test $VERB sigmaos/$T
+    done
 
-go test $@ sigmaos/proxy -start
+    #
+    # test proxy with just named
+    #
 
-#
-# test with a kernel with just named
-#
+    go test $VERB sigmaos/proxy -start
 
-for T in reader writer stats fslib semclnt electclnt; do
-    go test $@ sigmaos/$T -start
-done
+    #
+    # test with a kernel with just named
+    #
 
-# go test $@ sigmaos/memfs -start   # no pipes
-# go test $@ sigmaos/fslibsrv -start  # no perf
+    for T in reader writer stats fslib semclnt electclnt; do
+        go test $VERB sigmaos/$T -start
+    done
 
-# test memfs using schedd's memfs
-go test $@ sigmaos/fslib -start -path "name/schedd/~local/" 
+    # go test $VERB sigmaos/memfs -start   # no pipes
+    # go test $VERB sigmaos/fslibsrv -start  # no perf
 
-#
-# tests a full kernel using root realm
-#
+    # test memfs using schedd's memfs
+    go test $VERB sigmaos/fslib -start -path "name/schedd/~local/" 
 
-for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
-    go test $@ sigmaos/$T -start
-done
+    #
+    # tests a full kernel using root realm
+    #
+
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
+        go test $VERB sigmaos/$T -start
+    done
 
 
-go test $@ sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
-go test $@ sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
-
-#
-# applications
-#
-
-for T in imgresized mr; do
-    go test $@ sigmaos/$T -start
-done
+    go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
+    go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
+fi
 
 #
-# run only the most stringent test with kv
-#
-go test $@ sigmaos/kv -start -run Fail
-
-#
-# application with several kernels and db
+# apps tests
 #
 
-go test $@ sigmaos/hotel -start
+if [[ $FAST == "" ]]; then
+    for T in imgresized mr kv hotel; do
+        go test $VERB sigmaos/$T -start
+    done
+else
+    go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
+    go test $VERB sigmaos/imgresized -start -run ImgdMany
+    go test $VERB sigmaos/kv -start -run Fail
+    go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
+fi
 
-#
-# test with realms
-#
+if [[ $APPS == "" ]]; then
 
-go test $@ sigmaos/realmclnt -start
+    #
+    # test with realms
+    #
 
-#
-# Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
-#
-go test $@ sigmaos/container -start
+    go test $VERB sigmaos/realmclnt -start
 
-#
-# tests with overlays
-#
+    #
+    # Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
+    #
+    go test $VERB sigmaos/container -start
 
-go test $@ sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
-go test $@ sigmaos/cacheclnt -start --overlays --run TestCacheClerk
-go test $@ sigmaos/hotel -start --overlays --run GeoSingle
-go test $@ sigmaos/hotel -start --overlays --run Www
-go test $@ sigmaos/realmclnt -start --overlays --run Basic
-go test $@ sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
-go test $@ sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+    #
+    # tests with overlays
+    #
+
+    go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+    go test $VERB sigmaos/cacheclnt -start --overlays --run TestCacheClerk
+    go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
+    go test $VERB sigmaos/hotel -start --overlays --run Www
+    go test $VERB sigmaos/realmclnt -start --overlays --run Basic
+    go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+    go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+fi

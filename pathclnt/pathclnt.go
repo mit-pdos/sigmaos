@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"

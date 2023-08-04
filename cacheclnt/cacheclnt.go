@@ -13,10 +13,11 @@ import (
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/rpc"
 	"sigmaos/reader"
+	"sigmaos/rpc"
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
+	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
 
@@ -61,6 +62,7 @@ func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 
 func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
 	n := key2server(arg.Key, cc.NServer())
+	arg.Fence = sp.NullFence().FenceProto()
 	return cc.ShardSvcClnt.RPC(n, m, arg, res)
 }
 

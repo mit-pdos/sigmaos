@@ -317,7 +317,7 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) (
 		return nil, sp.MkRerror(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: WriteRead %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
-	retdata, err := f.WriteRead(data, args.Tfence())
+	retdata, err := f.WriteRead(data)
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}

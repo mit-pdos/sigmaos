@@ -228,8 +228,8 @@ func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, v s
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte, f *sp.Tfence) ([]byte, *serr.Err) {
-	args := sp.MkTwriteread(fid, f)
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
+	args := sp.MkTwriteread(fid)
 	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err

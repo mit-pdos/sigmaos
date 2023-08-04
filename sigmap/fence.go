@@ -94,6 +94,10 @@ func NewFenceProto() *TfenceProto {
 	return &TfenceProto{}
 }
 
+func (fp *TfenceProto) HasFence() bool {
+	return fp.PathName != ""
+}
+
 func (fp *TfenceProto) Tpathname() string {
 	return fp.PathName
 }

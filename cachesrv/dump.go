@@ -47,7 +47,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 	return b, nil
 }
 
-func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
 	return 0, serr.MkErr(serr.TErrNotSupported, nil)
 }
 

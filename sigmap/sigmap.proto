@@ -231,5 +231,4 @@ message Tremovefile {
 
 message Twriteread {
         uint32 fid = 1;
-        TfenceProto fence = 2;
 }

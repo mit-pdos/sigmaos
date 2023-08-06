@@ -98,7 +98,7 @@ func (mv *Mover) moveShard(s, d string) error {
 		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
 		return err
 	}
-	vals, err := mv.cc.DumpShard(s, mv.shard)
+	vals, err := mv.cc.DumpShard(s, mv.shard, mv.fence)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "DumpShard %v err %v\n", mv.shard, err)
 		return err

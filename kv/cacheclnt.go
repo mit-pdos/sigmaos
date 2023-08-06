@@ -204,9 +204,10 @@ func (c *CacheClnt) DeleteShard(srv string, shard Tshard, f *sp.Tfence) error {
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard Tshard) (map[string][]byte, error) {
+func (c *CacheClnt) DumpShard(srv string, shard Tshard, f *sp.Tfence) (map[string][]byte, error) {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
+		Fence: f.FenceProto(),
 	}
 	var res cacheproto.CacheDump
 	if err := c.rpcc.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {

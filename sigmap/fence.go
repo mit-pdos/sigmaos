@@ -55,8 +55,21 @@ func (f *Tfence) Name() string {
 	return strings.Replace(f.Prefix(), "/", "-", -1)
 }
 
+func (f *Tfence) HasFence() bool {
+	return f.PathName != ""
+}
+
+func (f *Tfence) IsInitialized() bool {
+	return f.Epoch > 0
+}
+
 func (f *Tfence) Prefix() string {
 	return path.Dir(f.PathName)
+}
+
+func (f1 *Tfence) Upgrade(f2 *Tfence) {
+	f1.Epoch = f2.Epoch
+	f1.Seqno = f2.Seqno
 }
 
 func (f1 *Tfence) LessThan(f2 *Tfence) bool {
@@ -68,9 +81,22 @@ func (f1 *Tfence) Eq(f2 *Tfence) bool {
 	return f1.Epoch == f2.Epoch && f1.Seqno == f2.Seqno
 }
 
-func (f1 *Tfence) Upgrade(f2 *Tfence) {
-	f1.Epoch = f2.Epoch
-	f1.Seqno = f2.Seqno
+type Tfencecmp = uint32
+
+const (
+	FENCE_EQ Tfencecmp = iota + 1
+	FENCE_LT
+	FENCE_GT
+)
+
+func (f1 *Tfence) Cmp(f2 *Tfence) Tfencecmp {
+	if f1.Eq(f2) {
+		return FENCE_EQ
+	} else if f1.LessThan(f2) {
+		return FENCE_LT
+	} else {
+		return FENCE_GT
+	}
 }
 
 func (f *Tfence) FenceProto() *TfenceProto {

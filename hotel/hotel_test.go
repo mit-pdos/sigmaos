@@ -19,8 +19,8 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpc"
 	rd "sigmaos/rand"
+	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -48,18 +48,18 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func makeTstate(t *testing.T, srvs []hotel.Srv, nshard int) *Tstate {
+func makeTstate(t *testing.T, srvs []hotel.Srv, nserver int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.Tstate = test.MakeTstateAll(t)
 	n := 0
-	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+nshard*2; i++ {
+	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+nserver*2; i++ {
 		n += 1
 	}
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nshard, true, 0)
+	ts.hotel, err = hotel.MakeHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0)
 	assert.Nil(ts.T, err)
 	return ts
 }

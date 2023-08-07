@@ -13,6 +13,10 @@ import (
 	"sigmaos/serr"
 )
 
+//
+//  Cache of RPC clnts to avoid repeated lookups
+//
+
 type ClntCache struct {
 	sync.Mutex
 	fsl   *fslib.FsLib

@@ -55,8 +55,8 @@ func (cc *CacheClnt) key2shard(key string) uint32 {
 	return shard
 }
 
-func (cc *CacheClnt) Watch(path string, nshard int, err error) {
-	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nshard, err)
+func (cc *CacheClnt) Watch(path string, nsrv int, err error) {
+	db.DPrintf(db.ALWAYS, "CacheClnt watch %v %d err %v\n", path, nsrv, err)
 }
 
 func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
@@ -65,12 +65,12 @@ func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto
 	return cc.CachedSvcClnt.RPC(n, m, arg, res)
 }
 
-func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+func (cc *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
-	req.Shard = c.key2shard(key)
+	req.Shard = cc.key2shard(key)
 
 	b, err := proto.Marshal(val)
 	if err != nil {
@@ -79,25 +79,25 @@ func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val pr
 
 	req.Value = b
 	var res cacheproto.CacheResult
-	if err := c.RPC("CacheSrv.Put", req, &res); err != nil {
+	if err := cc.RPC("CacheSrv.Put", req, &res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CacheClnt) Put(key string, val proto.Message) error {
-	return c.PutTraced(nil, key, val)
+func (cc *CacheClnt) Put(key string, val proto.Message) error {
+	return cc.PutTraced(nil, key, val)
 }
 
-func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+func (cc *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
-	req.Shard = c.key2shard(key)
+	req.Shard = cc.key2shard(key)
 	s := time.Now()
 	var res cacheproto.CacheResult
-	if err := c.RPC("CacheSrv.Get", req, &res); err != nil {
+	if err := cc.RPC("CacheSrv.Get", req, &res); err != nil {
 		return err
 	}
 	if time.Since(s) > 150*time.Microsecond {
@@ -109,25 +109,25 @@ func (c *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val pr
 	return nil
 }
 
-func (c *CacheClnt) Get(key string, val proto.Message) error {
-	return c.GetTraced(nil, key, val)
+func (cc *CacheClnt) Get(key string, val proto.Message) error {
+	return cc.GetTraced(nil, key, val)
 }
 
-func (c *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
+func (cc *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
 	}
 	req.Key = key
-	req.Shard = c.key2shard(key)
+	req.Shard = cc.key2shard(key)
 	var res cacheproto.CacheResult
-	if err := c.RPC("CacheSrv.Delete", req, &res); err != nil {
+	if err := cc.RPC("CacheSrv.Delete", req, &res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CacheClnt) Delete(key string) error {
-	return c.DeleteTraced(nil, key)
+func (cc *CacheClnt) Delete(key string) error {
+	return cc.DeleteTraced(nil, key)
 }
 
 func (cc *CacheClnt) Dump(g int) (map[string]string, error) {

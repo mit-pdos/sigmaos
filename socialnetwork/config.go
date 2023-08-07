@@ -69,7 +69,7 @@ func JobDir(job string) string {
 	return path.Join(sp.SOCIAL_NETWORK, job)
 }
 
-func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int, gc, public bool) (*SocialNetworkConfig, error) {
+func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
 	fsl.MkDir(sp.SOCIAL_NETWORK, 0777)
@@ -80,9 +80,9 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 	// Create a cache clnt.
 	var cc *cacheclnt.CacheClnt
 	var cm *cacheclnt.CacheMgr
-	if nshard > 0 {
+	if nsrv > 0 {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
-		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nshard, proc.Tmcpu(cacheMcpu), gc, public)
+		cm, err = cacheclnt.MkCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err

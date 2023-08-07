@@ -1,41 +1,41 @@
 package socialnetwork_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/rand"
-	sn "sigmaos/socialnetwork"
+	"github.com/stretchr/testify/assert"
 	dbg "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"github.com/stretchr/testify/assert"
+	"sigmaos/rand"
+	sn "sigmaos/socialnetwork"
+	"sigmaos/test"
+	"testing"
 )
 
 const (
-	NSHARD = 4
+	NCACHESRV = 4
 )
 
 type TstateSN struct {
 	*test.Tstate
 	jobname string
-	snCfg *sn.SocialNetworkConfig
-	dbu *sn.DBUtil
+	snCfg   *sn.SocialNetworkConfig
+	dbu     *sn.DBUtil
 }
 
-func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
+func makeTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
 	var err error
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
 	if test.Start {
-		nMoreKernel := ((len(srvs)*2 + NSHARD*2) - 1)  / int(linuxsched.NCores)
+		nMoreKernel := ((len(srvs)*2 + NCACHESRV*2) - 1) / int(linuxsched.NCores)
 		if nMoreKernel > 0 {
 			dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed",
-				len(srvs)*2 + NSHARD*2, linuxsched.NCores, nMoreKernel)
+				len(srvs)*2+NCACHESRV*2, linuxsched.NCores, nMoreKernel)
 			err = tssn.BootNode(nMoreKernel)
 			assert.Nil(tssn.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, true, test.Overlays)
+	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, true, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
 	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")

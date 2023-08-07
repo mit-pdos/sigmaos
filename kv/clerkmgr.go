@@ -87,10 +87,11 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 func (cm *ClerkMgr) StopClerks() error {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(cm.clrks))
 	for _, ck := range cm.clrks {
-		_, err := cm.stopClerk(ck)
+		status, err := cm.stopClerk(ck)
 		if err != nil {
 			return err
 		}
+		db.DPrintf(db.ALWAYS, "Clerk exit status %v\n", status)
 	}
 	return nil
 }

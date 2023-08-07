@@ -1,22 +1,22 @@
-package shardsvcclnt
+package cachedsvcclnt
 
 import (
 	"sync"
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/cachedsvc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/reader"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
-	"sigmaos/shardsvcmgr"
 )
 
 type ServerWatch func(string, int, error)
 
-type CacheSvcClnt struct {
+type CachedSvcClnt struct {
 	sync.Mutex
 	fsls  []*fslib.FsLib
 	clnts []*rpcclnt.RPCClnt
@@ -25,13 +25,13 @@ type CacheSvcClnt struct {
 	rdr   *reader.Reader
 }
 
-func MkCacheSvcClnt(fsls []*fslib.FsLib, pn string, sw ServerWatch) (*CacheSvcClnt, error) {
-	csc := &CacheSvcClnt{
+func MkCachedSvcClnt(fsls []*fslib.FsLib, pn string, sw ServerWatch) (*CachedSvcClnt, error) {
+	csc := &CachedSvcClnt{
 		fsls: fsls,
 		pn:   pn,
 		sw:   sw,
 	}
-	sts, err := csc.fsls[0].GetDir(csc.shardDir())
+	sts, err := csc.fsls[0].GetDir(csc.srvDir())
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +48,12 @@ func MkCacheSvcClnt(fsls []*fslib.FsLib, pn string, sw ServerWatch) (*CacheSvcCl
 	return csc, nil
 }
 
-func (csc *CacheSvcClnt) shardDir() string {
-	return csc.pn + shardsvcmgr.SVRDIR
+func (csc *CachedSvcClnt) srvDir() string {
+	return csc.pn + cachedsvc.SVRDIR
 }
 
-func (csc *CacheSvcClnt) setWatch() error {
-	dir := csc.shardDir()
+func (csc *CachedSvcClnt) setWatch() error {
+	dir := csc.srvDir()
 	_, rdr, err := csc.fsls[0].ReadDir(dir)
 	if err != nil {
 		return err
@@ -65,11 +65,11 @@ func (csc *CacheSvcClnt) setWatch() error {
 	return nil
 }
 
-func (csc *CacheSvcClnt) addClnt(i int) error {
+func (csc *CachedSvcClnt) addClnt(i int) error {
 	csc.Lock()
 	defer csc.Unlock()
 
-	sn := csc.pn + shardsvcmgr.Server(i)
+	sn := csc.pn + cachedsvc.Server(i)
 	rpcc, err := rpcclnt.MkRPCClnt(csc.fsls, sn)
 	if err != nil {
 		return err
@@ -78,43 +78,43 @@ func (csc *CacheSvcClnt) addClnt(i int) error {
 	return nil
 }
 
-func (csc *CacheSvcClnt) Watch(path string, err error) {
-	db.DPrintf(db.SHARDCLNT, "%v: shardsvcclnt watch %v err %v\n", proc.GetName(), path, err)
+func (csc *CachedSvcClnt) Watch(path string, err error) {
+	db.DPrintf(db.CACHEDSVCCLNT, "%v: cachedsvcclnt watch %v err %v\n", proc.GetName(), path, err)
 	if err != nil {
-		db.DPrintf(db.SHARDCLNT, "Watch err %v\n", err)
+		db.DPrintf(db.CACHEDSVCCLNT, "Watch err %v\n", err)
 		return
 	}
 	sts, err := csc.fsls[0].GetDir(path)
 	if len(sts) > len(csc.clnts) {
 		if err := csc.addClnt(len(sts) - 1); err != nil {
-			db.DPrintf(db.SHARDCLNT, "%v: addClnt err %v\n", proc.GetName(), err)
+			db.DPrintf(db.CACHEDSVCCLNT, "%v: addClnt err %v\n", proc.GetName(), err)
 		}
 		csc.sw(path, len(sts), err)
 	}
 	csc.rdr.Close()
 	if err := csc.setWatch(); err != nil {
-		db.DPrintf(db.SHARDCLNT, "setWatch err %v\n", err)
+		db.DPrintf(db.CACHEDSVCCLNT, "setWatch err %v\n", err)
 	}
 }
 
-func (csc *CacheSvcClnt) Server(i int) string {
-	return csc.pn + shardsvcmgr.Server(i)
+func (csc *CachedSvcClnt) Server(i int) string {
+	return csc.pn + cachedsvc.Server(i)
 }
 
-func (csc *CacheSvcClnt) NServer() int {
+func (csc *CachedSvcClnt) NServer() int {
 	csc.Lock()
 	defer csc.Unlock()
 	return len(csc.clnts)
 }
 
-func (csc *CacheSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Message) error {
+func (csc *CachedSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Message) error {
 	return csc.clnts[i].RPC(m, arg, res)
 }
 
-func (csc *CacheSvcClnt) StatsSrv(i int) (*rpc.SigmaRPCStats, error) {
+func (csc *CachedSvcClnt) StatsSrv(i int) (*rpc.SigmaRPCStats, error) {
 	return csc.clnts[i].StatsSrv()
 }
 
-func (csc *CacheSvcClnt) StatsClnt(i int) map[string]*rpc.MethodStat {
+func (csc *CachedSvcClnt) StatsClnt(i int) map[string]*rpc.MethodStat {
 	return csc.clnts[i].StatsClnt()
 }

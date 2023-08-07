@@ -61,7 +61,7 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cclnt: NewCacheClnt(fsl, NSHARD),
+		cclnt: NewCacheClnt([]*fslib.FsLib{fsl}, NSHARD),
 	}
 	return kc
 }

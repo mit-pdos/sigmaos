@@ -19,16 +19,16 @@ import (
 
 type ClntCache struct {
 	sync.Mutex
-	fsl   *fslib.FsLib
+	fsls  []*fslib.FsLib
 	rpccs map[string]*RPCClnt
 }
 
-func NewRPCClntCache(fsl *fslib.FsLib) *ClntCache {
-	return &ClntCache{fsl: fsl, rpccs: make(map[string]*RPCClnt)}
+func NewRPCClntCache(fsls []*fslib.FsLib) *ClntCache {
+	return &ClntCache{fsls: fsls, rpccs: make(map[string]*RPCClnt)}
 }
 
-// Note: several threads may call MkRPCClnt for same pn,
-// overwriting the rpcc of the last thread that called NewClnt.
+// Note: several threads may call Lookup for same pn, overwriting the
+// rpcc of the last thread that called Lookup.
 func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 	cc.Lock()
 	defer cc.Unlock()
@@ -37,7 +37,7 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	rpcc, err := MkRPCClnt([]*fslib.FsLib{cc.fsl}, pn)
+	rpcc, err := MkRPCClnt(cc.fsls, pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
@@ -77,16 +77,12 @@ func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.
 	return cc.RPCRetry(pn, method, arg, res)
 }
 
-func (cc *ClntCache) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
-	stats := make([]*rpc.SigmaRPCStats, 0, len(cc.rpccs))
-	for _, rpcc := range cc.rpccs {
-		st, err := rpcc.StatsSrv()
-		if err != nil {
-			return nil, err
-		}
-		stats = append(stats, st)
+func (cc *ClntCache) StatsSrv(pn string) (*rpc.SigmaRPCStats, error) {
+	rpcc, err := cc.Lookup(pn)
+	if err != nil {
+		return nil, err
 	}
-	return stats, nil
+	return rpcc.StatsSrv()
 }
 
 func (cc *ClntCache) StatsClnt() []map[string]*rpc.MethodStat {

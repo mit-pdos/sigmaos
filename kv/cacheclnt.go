@@ -24,15 +24,15 @@ import (
 )
 
 type CacheClnt struct {
-	fsl    *fslib.FsLib
+	fsls   []*fslib.FsLib
 	rpcc   *rpcclnt.ClntCache
 	nshard uint32
 }
 
-func NewCacheClnt(fsl *fslib.FsLib, nshard uint32) *CacheClnt {
+func NewCacheClnt(fsls []*fslib.FsLib, nshard uint32) *CacheClnt {
 	return &CacheClnt{
-		fsl:    fsl,
-		rpcc:   rpcclnt.NewRPCClntCache(fsl),
+		fsls:   fsls,
+		rpcc:   rpcclnt.NewRPCClntCache(fsls),
 		nshard: nshard,
 	}
 }
@@ -232,13 +232,13 @@ func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map
 
 func (cc *CacheClnt) Dump(srv string) (map[string]string, error) {
 	dir := path.Join(srv, cachesrv.DUMP)
-	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
+	b, err := cc.fsls[0].GetFile(dir + "/" + sessdev.CLONE)
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
 	fn := dir + "/" + sid + "/" + sessdev.DATA
-	b, err = cc.fsl.GetFile(fn)
+	b, err = cc.fsls[0].GetFile(fn)
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *LeaseInfo](),
-		cc:    rpcclnt.NewRPCClntCache(fsl),
+		cc:    rpcclnt.NewRPCClntCache([]*fslib.FsLib{fsl}),
 	}, nil
 }
 

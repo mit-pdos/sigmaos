@@ -1,9 +1,11 @@
 package cachedsvcclnt
 
 import (
+	"hash/fnv"
+	"strconv"
 	"sync"
 
-	"google.golang.org/protobuf/proto"
+	cacheproto "sigmaos/cache/proto"
 
 	"sigmaos/cachedsvc"
 	db "sigmaos/debug"
@@ -12,36 +14,37 @@ import (
 	"sigmaos/reader"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
 )
 
-type ServerWatch func(string, int, error)
+func key2server(key string, nserver int) int {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	server := int(h.Sum32()) % nserver
+	return server
+}
 
 type CachedSvcClnt struct {
 	sync.Mutex
-	fsls  []*fslib.FsLib
-	clnts []*rpcclnt.RPCClnt
-	pn    string
-	sw    ServerWatch
-	rdr   *reader.Reader
+	fsl  *fslib.FsLib
+	rpcc *rpcclnt.ClntCache
+	pn   string
+	srvs map[string]struct{}
+	rdr  *reader.Reader
 }
 
-func MkCachedSvcClnt(fsls []*fslib.FsLib, pn string, sw ServerWatch) (*CachedSvcClnt, error) {
+func MkCachedSvcClnt(fsls []*fslib.FsLib, pn string) (*CachedSvcClnt, error) {
 	csc := &CachedSvcClnt{
-		fsls: fsls,
+		fsl:  fsls[0],
 		pn:   pn,
-		sw:   sw,
+		rpcc: rpcclnt.NewRPCClntCache(fsls),
+		srvs: make(map[string]struct{}),
 	}
-	sts, err := csc.fsls[0].GetDir(csc.srvDir())
+	sts, err := csc.fsl.GetDir(csc.srvDir())
 	if err != nil {
 		return nil, err
 	}
-	n := len(sts)
-	csc.clnts = make([]*rpcclnt.RPCClnt, 0)
-	for i := 0; i < n; i++ {
-		if err := csc.addClnt(i); err != nil {
-			return nil, err
-		}
-	}
+	csc.addServer(sts)
 	if err := csc.setWatch(); err != nil {
 		return nil, err
 	}
@@ -54,28 +57,26 @@ func (csc *CachedSvcClnt) srvDir() string {
 
 func (csc *CachedSvcClnt) setWatch() error {
 	dir := csc.srvDir()
-	_, rdr, err := csc.fsls[0].ReadDir(dir)
+	_, rdr, err := csc.fsl.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	csc.rdr = rdr
-	if err := csc.fsls[0].SetDirWatch(csc.rdr.Fid(), dir, csc.Watch); err != nil {
+	if err := csc.fsl.SetDirWatch(csc.rdr.Fid(), dir, csc.Watch); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (csc *CachedSvcClnt) addClnt(i int) error {
+func (csc *CachedSvcClnt) addServer(sts []*sp.Stat) {
 	csc.Lock()
 	defer csc.Unlock()
 
-	sn := csc.pn + cachedsvc.Server(i)
-	rpcc, err := rpcclnt.MkRPCClnt(csc.fsls, sn)
-	if err != nil {
-		return err
+	for _, st := range sts {
+		if _, ok := csc.srvs[st.Name]; !ok {
+			csc.srvs[st.Name] = struct{}{}
+		}
 	}
-	csc.clnts = append(csc.clnts, rpcc)
-	return nil
 }
 
 func (csc *CachedSvcClnt) Watch(path string, err error) {
@@ -84,12 +85,9 @@ func (csc *CachedSvcClnt) Watch(path string, err error) {
 		db.DPrintf(db.CACHEDSVCCLNT, "Watch err %v\n", err)
 		return
 	}
-	sts, err := csc.fsls[0].GetDir(path)
-	if len(sts) > len(csc.clnts) {
-		if err := csc.addClnt(len(sts) - 1); err != nil {
-			db.DPrintf(db.CACHEDSVCCLNT, "%v: addClnt err %v\n", proc.GetName(), err)
-		}
-		csc.sw(path, len(sts), err)
+	sts, err := csc.fsl.GetDir(path)
+	if len(sts) > len(csc.srvs) {
+		csc.addServer(sts)
 	}
 	csc.rdr.Close()
 	if err := csc.setWatch(); err != nil {
@@ -98,23 +96,34 @@ func (csc *CachedSvcClnt) Watch(path string, err error) {
 }
 
 func (csc *CachedSvcClnt) Server(i int) string {
-	return csc.pn + cachedsvc.Server(i)
+	return csc.pn + cachedsvc.Server(strconv.Itoa(i))
 }
 
-func (csc *CachedSvcClnt) NServer() int {
+func (csc *CachedSvcClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
+	pn := csc.Server(key2server(arg.Key, csc.nServer()))
+	arg.Fence = sp.NullFence().FenceProto()
+	return csc.rpcc.RPC(pn, m, arg, res)
+}
+
+func (csc *CachedSvcClnt) nServer() int {
 	csc.Lock()
 	defer csc.Unlock()
-	return len(csc.clnts)
+	return len(csc.srvs)
 }
 
-func (csc *CachedSvcClnt) RPC(i int, m string, arg proto.Message, res proto.Message) error {
-	return csc.clnts[i].RPC(m, arg, res)
+func (csc *CachedSvcClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
+	n := csc.nServer()
+	stats := make([]*rpc.SigmaRPCStats, 0, n)
+	for i := 0; i < n; i++ {
+		st, err := csc.rpcc.StatsSrv(csc.Server(i))
+		if err != nil {
+			return nil, err
+		}
+		stats = append(stats, st)
+	}
+	return stats, nil
 }
 
-func (csc *CachedSvcClnt) StatsSrv(i int) (*rpc.SigmaRPCStats, error) {
-	return csc.clnts[i].StatsSrv()
-}
-
-func (csc *CachedSvcClnt) StatsClnt(i int) map[string]*rpc.MethodStat {
-	return csc.clnts[i].StatsClnt()
+func (csc *CachedSvcClnt) StatsClnt() []map[string]*rpc.MethodStat {
+	return csc.rpcc.StatsClnt()
 }

@@ -82,8 +82,8 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func Server(i int) string {
-	return SVRDIR + strconv.Itoa(i)
+func Server(n string) string {
+	return SVRDIR + n
 }
 
 func (cs *CachedSvc) Nserver() int {
@@ -94,8 +94,8 @@ func (cs *CachedSvc) SvcDir() string {
 	return cs.pn
 }
 
-func (cs *CachedSvc) Server(i int) string {
-	return cs.pn + Server(i)
+func (cs *CachedSvc) Server(n string) string {
+	return cs.pn + Server(n)
 }
 
 func (cs *CachedSvc) Stop() error {

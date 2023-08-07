@@ -51,7 +51,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	mv := &Mover{fence: fence,
 		SigmaClnt: sc,
 		job:       job,
-		cc:        NewCacheClnt(sc.FsLib, NSHARD),
+		cc:        NewCacheClnt([]*fslib.FsLib{sc.FsLib}, NSHARD),
 		exit:      true,
 	}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {

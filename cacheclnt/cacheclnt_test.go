@@ -33,12 +33,12 @@ type Tstate struct {
 	sem   *semclnt.SemClnt
 }
 
-func mkTstate(t *testing.T, n int) *Tstate {
+func mkTstate(t *testing.T, nsrv int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
 	ts.Remove(cacheclnt.CACHE)
-	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, n, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
+	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
@@ -66,11 +66,11 @@ func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, mcpu proc.
 
 func TestCacheSingle(t *testing.T) {
 	const (
-		N      = 1
-		NSHARD = 1
+		N    = 1
+		NSRV = 1
 	)
 
-	ts := mkTstate(t, NSHARD)
+	ts := mkTstate(t, NSRV)
 	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
@@ -109,11 +109,11 @@ func TestCacheSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-func testCacheSharded(t *testing.T, nshard int) {
+func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
-	ts := mkTstate(t, nshard)
+	ts := mkTstate(t, nsrv)
 	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
 
@@ -132,7 +132,7 @@ func testCacheSharded(t *testing.T, nshard int) {
 		assert.Equal(t, key, s)
 	}
 
-	for g := 0; g < nshard; g++ {
+	for g := 0; g < nsrv; g++ {
 		m, err := cc.Dump(g)
 		assert.Nil(t, err)
 		assert.True(t, len(m) >= 1)
@@ -162,10 +162,10 @@ func TestCacheShardedThree(t *testing.T) {
 
 func TestCacheConcur(t *testing.T) {
 	const (
-		N      = 3
-		NSHARD = 1
+		N    = 3
+		NSRV = 1
 	)
-	ts := mkTstate(t, NSHARD)
+	ts := mkTstate(t, NSRV)
 	v := "hello"
 	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts.FsLib}, ts.job, cachesrv.NSHARD)
 	assert.Nil(t, err)
@@ -192,13 +192,13 @@ func TestCacheConcur(t *testing.T) {
 
 func TestCacheClerk(t *testing.T) {
 	const (
-		N      = 2
-		NSHARD = 2
-		NKEYS  = 100
-		DUR    = 10 * time.Second
+		N     = 2
+		NSRV  = 2
+		NKEYS = 100
+		DUR   = 10 * time.Second
 	)
 
-	ts := mkTstate(t, NSHARD)
+	ts := mkTstate(t, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
@@ -212,13 +212,13 @@ func TestCacheClerk(t *testing.T) {
 
 func TestElasticCache(t *testing.T) {
 	const (
-		N      = 2
-		NSHARD = 1
-		NKEYS  = 100
-		DUR    = 30 * time.Second
+		N     = 2
+		NSRV  = 1
+		NKEYS = 100
+		DUR   = 30 * time.Second
 	)
 
-	ts := mkTstate(t, NSHARD)
+	ts := mkTstate(t, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)
@@ -236,7 +236,7 @@ func TestElasticCache(t *testing.T) {
 		qlen := sts[0].SigmapStat.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
 		if qlen > 1.1 && i < 1 {
-			ts.cm.AddShard()
+			ts.cm.AddServer()
 		}
 	}
 

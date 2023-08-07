@@ -79,7 +79,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
-	bl.cc = NewCacheClnt(sc.FsLib, NSHARD)
+	bl.cc = NewCacheClnt([]*fslib.FsLib{sc.FsLib}, NSHARD)
 	var kvdnc int
 	var error error
 	kvdnc, error = strconv.Atoi(kvdmcpu)

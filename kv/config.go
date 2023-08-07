@@ -3,12 +3,13 @@ package kv
 import (
 	"fmt"
 
+	"sigmaos/cache"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
 
 type Move struct {
-	Shard Tshard
+	Shard cache.Tshard
 	Src   string
 	Dst   string
 }
@@ -21,7 +22,7 @@ func (mvs Moves) String() string {
 		if m == nil {
 			s += fmt.Sprintf("nil,")
 		} else {
-			s += fmt.Sprintf("%v: %v -> %v,", Tshard(i), m.Src, m.Dst)
+			s += fmt.Sprintf("%v: %v -> %v,", cache.Tshard(i), m.Src, m.Dst)
 		}
 	}
 	s += "]"

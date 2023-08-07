@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/cache"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -23,7 +24,7 @@ type Mover struct {
 	*sigmaclnt.SigmaClnt
 	job   string
 	fence *sp.Tfence
-	shard Tshard
+	shard cache.Tshard
 	cc    *CacheClnt
 	exit  bool
 }
@@ -56,7 +57,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
 		return nil, err
 	} else {
-		mv.shard = Tshard(sh)
+		mv.shard = cache.Tshard(sh)
 	}
 	if err := mv.Started(); err != nil {
 		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)

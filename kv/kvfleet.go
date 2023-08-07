@@ -4,6 +4,7 @@ import (
 	"path"
 	"strconv"
 
+	"sigmaos/cache"
 	"sigmaos/fslib"
 	"sigmaos/group"
 	"sigmaos/groupmgr"
@@ -48,7 +49,7 @@ func kvGrpPath(job, kvd string) string {
 	return path.Join(JobDir(job), kvd)
 }
 
-func kvShardPath(job, kvd string, shard Tshard) string {
+func kvShardPath(job, kvd string, shard cache.Tshard) string {
 	return path.Join(kvGrpPath(job, kvd), "shard"+shard.String())
 }
 

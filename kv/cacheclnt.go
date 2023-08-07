@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
@@ -125,11 +126,11 @@ func (c *CacheClnt) Get(srv, key string, val proto.Message) error {
 	return c.GetTraced(nil, srv, key, val)
 }
 
-func (c *CacheClnt) GetVals(srv, key string, m proto.Message) ([]proto.Message, error) {
+func (c *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]proto.Message, error) {
 	req := &cacheproto.CacheRequest{
 		Key:   key,
 		Shard: c.key2shard(key),
-		Fence: sp.NullFence().FenceProto(),
+		Fence: f.FenceProto(),
 	}
 	s := time.Now()
 	var res cacheproto.CacheResult
@@ -180,7 +181,7 @@ func (c *CacheClnt) Delete(srv, key string) error {
 	return c.DeleteTraced(nil, srv, key)
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard Tshard, fence *sp.Tfence) error {
+func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: fence.FenceProto(),
@@ -192,7 +193,7 @@ func (c *CacheClnt) CreateShard(srv string, shard Tshard, fence *sp.Tfence) erro
 	return nil
 }
 
-func (c *CacheClnt) DeleteShard(srv string, shard Tshard, f *sp.Tfence) error {
+func (c *CacheClnt) DeleteShard(srv string, shard cache.Tshard, f *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
@@ -204,7 +205,7 @@ func (c *CacheClnt) DeleteShard(srv string, shard Tshard, f *sp.Tfence) error {
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard Tshard, f *sp.Tfence) (map[string][]byte, error) {
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map[string][]byte, error) {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
@@ -216,7 +217,7 @@ func (c *CacheClnt) DumpShard(srv string, shard Tshard, f *sp.Tfence) (map[strin
 	return res.Vals, nil
 }
 
-func (c *CacheClnt) FillShard(srv string, shard Tshard, m map[string][]byte, f *sp.Tfence) error {
+func (c *CacheClnt) FillShard(srv string, shard cache.Tshard, m map[string][]byte, f *sp.Tfence) error {
 	req := &cacheproto.ShardFill{
 		Shard: uint32(shard),
 		Vals:  m,
@@ -229,7 +230,7 @@ func (c *CacheClnt) FillShard(srv string, shard Tshard, m map[string][]byte, f *
 	return nil
 }
 
-func (c *CacheClnt) FreezeShard(srv string, shard Tshard, f *sp.Tfence) error {
+func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),

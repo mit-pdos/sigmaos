@@ -2,14 +2,13 @@ package kv
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
-	"strconv"
 	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -27,27 +26,11 @@ const (
 	WAITMS = 50
 )
 
-type Tkey string
-
-func (k Tkey) String() string {
-	return string(k)
-}
-
-func MkKey(k uint64) string {
-	return strconv.FormatUint(k, 16)
-}
-
-type Tshard int
-
-func key2shard(key Tkey) Tshard {
+func key2shard(key cache.Tkey) cache.Tshard {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := Tshard(h.Sum32() % NSHARD)
+	shard := cache.Tshard(h.Sum32() % NSHARD)
 	return shard
-}
-
-func (s Tshard) String() string {
-	return fmt.Sprintf("s-%03d", s)
 }
 
 type KvClerk struct {
@@ -187,22 +170,22 @@ const (
 type op struct {
 	kind Top
 	val  proto.Message
-	k    Tkey
+	k    cache.Tkey
 	m    sp.Tmode
 	err  error
 	vals []proto.Message
 }
 
-func newOp(o Top, val proto.Message, k Tkey, m sp.Tmode) *op {
+func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode) *op {
 	return &op{kind: o, val: val, k: k, m: m}
 }
 
-func (kc *KvClerk) do(o *op, srv string, s Tshard) {
+func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 	switch o.kind {
 	case GET:
 		o.err = kc.cclnt.Get(srv, string(o.k), o.val)
 	case GETVALS:
-		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val)
+		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val, &kc.conf.Fence)
 	case PUT:
 		if o.m == sp.OAPPEND {
 			o.err = kc.cclnt.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
@@ -214,7 +197,7 @@ func (kc *KvClerk) do(o *op, srv string, s Tshard) {
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := newOp(GET, val, Tkey(key), sp.OREAD)
+	op := newOp(GET, val, cache.Tkey(key), sp.OREAD)
 	kc.doop(op)
 	return op.err
 }
@@ -223,13 +206,13 @@ func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val pro
 	return kc.Get(key, val)
 }
 
-func (kc *KvClerk) GetVals(k Tkey, val proto.Message) ([]proto.Message, error) {
+func (kc *KvClerk) GetVals(k cache.Tkey, val proto.Message) ([]proto.Message, error) {
 	op := newOp(GETVALS, val, k, sp.OREAD)
 	kc.doop(op)
 	return op.vals, op.err
 }
 
-func (kc *KvClerk) Append(k Tkey, val proto.Message) error {
+func (kc *KvClerk) Append(k cache.Tkey, val proto.Message) error {
 	op := newOp(PUT, val, k, sp.OAPPEND)
 	kc.doop(op)
 	return op.err
@@ -240,7 +223,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	op := newOp(PUT, val, Tkey(k), sp.OWRITE)
+	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE)
 	kc.doop(op)
 	return op.err
 }
@@ -261,7 +244,7 @@ func (kc *KvClerk) GetKeyCountsPerGroup(keys []string) map[string]int {
 	}
 	cnts := make(map[string]int)
 	for _, k := range keys {
-		s := key2shard(Tkey(k))
+		s := key2shard(cache.Tkey(k))
 		grp := kc.conf.Shards[s]
 		if _, ok := cnts[grp]; !ok {
 			cnts[grp] = 0

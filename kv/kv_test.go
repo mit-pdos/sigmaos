@@ -106,7 +106,7 @@ func (ts *Tstate) done() {
 
 func TestMiss(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
-	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{})
+	err := ts.cm.Get(cache.MkKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.True(t, cache.IsMiss(err))
 	ts.done()
 }
@@ -114,17 +114,17 @@ func TestMiss(t *testing.T) {
 func TestGetPut(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	err := ts.cm.Get(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{})
+	err := ts.cm.Get(cache.MkKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
 
-	err = ts.cm.Put(kv.MkKey(kv.NKEYS+1), &cproto.CacheString{Val: ""})
+	err = ts.cm.Put(cache.MkKey(kv.NKEYS+1), &cproto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
-	err = ts.cm.Put(kv.MkKey(0), &cproto.CacheString{Val: ""})
+	err = ts.cm.Put(cache.MkKey(0), &cproto.CacheString{Val: ""})
 	assert.Nil(ts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
-		key := kv.MkKey(i)
+		key := cache.MkKey(i)
 		err := ts.cm.Get(key, &cproto.CacheString{})
 		assert.Nil(ts.T, err, "Get "+key)
 	}

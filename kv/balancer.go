@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/cache"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -277,10 +278,10 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.cc.CreateShard(srv, Tshard(s), &bl.conf.Fence); err != nil {
+		if err := bl.cc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
-		if err := bl.cc.FillShard(srv, Tshard(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
+		if err := bl.cc.FillShard(srv, cache.Tshard(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
 			db.DFatalf("FillShard %v %d err %v\n", kvd, s, err)
 		}
 	}
@@ -342,7 +343,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 		if kvd != nextShards[i] {
 			s := kvGrpPath(bl.job, kvd)
 			d := kvGrpPath(bl.job, nextShards[i])
-			moves = append(moves, &Move{Tshard(i), s, d})
+			moves = append(moves, &Move{cache.Tshard(i), s, d})
 		}
 	}
 	return moves

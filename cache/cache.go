@@ -2,6 +2,9 @@ package cache
 
 import (
 	"errors"
+	"fmt"
+
+	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -9,6 +12,22 @@ import (
 	"sigmaos/serr"
 	tproto "sigmaos/tracing/proto"
 )
+
+type Tkey string
+
+func (k Tkey) String() string {
+	return string(k)
+}
+
+func MkKey(k uint64) string {
+	return strconv.FormatUint(k, 16)
+}
+
+type Tshard int
+
+func (s Tshard) String() string {
+	return fmt.Sprintf("s-%03d", s)
+}
 
 type CacheClnt interface {
 	Get(string, proto.Message) error

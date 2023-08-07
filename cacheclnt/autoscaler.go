@@ -46,7 +46,7 @@ func (a *Autoscaler) run(freq time.Duration, max int) {
 		db.DPrintf(db.ALWAYS, "Global avg cache Qlen: %v", qlen)
 		if qlen > QLEN_SCALE_THRESHOLD && len(sts) < max {
 			db.DPrintf(db.ALWAYS, "Scale caches up")
-			a.cm.AddShard()
+			a.cm.AddServer()
 		}
 		time.Sleep(freq)
 	}

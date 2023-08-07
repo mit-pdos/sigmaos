@@ -13,16 +13,16 @@ const (
 )
 
 type CacheMgr struct {
-	*shardsvcmgr.ShardMgr
+	*shardsvcmgr.ServerMgr
 	job string
 }
 
-func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, n int, mcpu proc.Tmcpu, gc, public bool) (*CacheMgr, error) {
+func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, nsrv int, mcpu proc.Tmcpu, gc, public bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := shardsvcmgr.MkShardMgr(sc, n, mcpu, job, "cached", CACHE, gc, public)
+	sm, err := shardsvcmgr.MkServerMgr(sc, nsrv, mcpu, job, "cached", CACHE, gc, public)
 	if err != nil {
 		return nil, err
 	}
-	cm.ShardMgr = sm
+	cm.ServerMgr = sm
 	return cm, nil
 }

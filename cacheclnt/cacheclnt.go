@@ -13,7 +13,6 @@ import (
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/reader"
 	"sigmaos/rpc"
 	"sigmaos/sessdev"
 	"sigmaos/shardsvcclnt"
@@ -33,7 +32,7 @@ func key2server(key string, nserver int) int {
 }
 
 type CacheClnt struct {
-	*shardsvcclnt.ShardSvcClnt
+	*shardsvcclnt.CacheSvcClnt
 	fsls   []*fslib.FsLib
 	nshard uint32
 }
@@ -41,11 +40,11 @@ type CacheClnt struct {
 func MkCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) (*CacheClnt, error) {
 	cc := &CacheClnt{fsls: fsls, nshard: nshard}
 	cc.fsls = fsls
-	cg, err := shardsvcclnt.MkShardSvcClnt(fsls, CACHE, cc.Watch)
+	cg, err := shardsvcclnt.MkCacheSvcClnt(fsls, CACHE, cc.Watch)
 	if err != nil {
 		return nil, err
 	}
-	cc.ShardSvcClnt = cg
+	cc.CacheSvcClnt = cg
 	return cc, nil
 }
 
@@ -63,7 +62,7 @@ func (cc *CacheClnt) Watch(path string, nshard int, err error) {
 func (cc *CacheClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
 	n := key2server(arg.Key, cc.NServer())
 	arg.Fence = sp.NullFence().FenceProto()
-	return cc.ShardSvcClnt.RPC(n, m, arg, res)
+	return cc.CacheSvcClnt.RPC(n, m, arg, res)
 }
 
 func (c *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
@@ -159,7 +158,7 @@ func (cc *CacheClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 	n := cc.NServer()
 	stats := make([]*rpc.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
-		st, err := cc.ShardSvcClnt.StatsSrv(i)
+		st, err := cc.CacheSvcClnt.StatsSrv(i)
 		if err != nil {
 			return nil, err
 		}
@@ -172,19 +171,7 @@ func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStat {
 	n := cc.NServer()
 	stats := make([]map[string]*rpc.MethodStat, 0, n)
 	for i := 0; i < n; i++ {
-		stats = append(stats, cc.ShardSvcClnt.StatsClnt(i))
+		stats = append(stats, cc.CacheSvcClnt.StatsClnt(i))
 	}
 	return stats
-}
-
-//
-// stubs to make cache-clerk compile
-//
-
-func (cc *CacheClnt) GetReader(key string) (*reader.Reader, error) {
-	return nil, nil
-}
-
-func (c *CacheClnt) Append(key string, val any) error {
-	return nil
 }

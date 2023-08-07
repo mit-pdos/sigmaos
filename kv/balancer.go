@@ -179,7 +179,7 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, kvd string) error {
 		var serr *serr.Err
 		if errors.As(err, &serr) && (serr.IsErrUnavailable() || serr.IsErrRetry()) {
 			db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(WAITMS * time.Millisecond)
 		} else {
 			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
 			return err
@@ -278,11 +278,8 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.cc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence); err != nil {
+		if err := bl.cc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence, make(map[string][]byte)); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
-		}
-		if err := bl.cc.FillShard(srv, cache.Tshard(s), make(map[string][]byte), &bl.conf.Fence); err != nil {
-			db.DFatalf("FillShard %v %d err %v\n", kvd, s, err)
 		}
 	}
 }

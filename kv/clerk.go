@@ -23,7 +23,7 @@ import (
 
 const (
 	NKEYS  = 100
-	WAITMS = 50
+	WAITMS = 100
 )
 
 func key2shard(key cache.Tkey) cache.Tshard {
@@ -193,7 +193,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 			o.err = kc.cclnt.Put(srv, string(o.k), o.val)
 		}
 	}
-	db.DPrintf(db.KVCLERK, "op %v(%v) srv %v %v err %v", o.kind, o.m == sp.OAPPEND, srv, s, o.err)
+	db.DPrintf(db.KVCLERK, "op %v(%v) f %v srv %v %v err %v", o.kind, o.m == sp.OAPPEND, kc.conf.Fence, srv, s, o.err)
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {

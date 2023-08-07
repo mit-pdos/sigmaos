@@ -181,10 +181,11 @@ func (c *CacheClnt) Delete(srv, key string) error {
 	return c.DeleteTraced(nil, srv, key)
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
+func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals map[string][]byte) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: fence.FenceProto(),
+		Vals:  vals,
 	}
 	var res cacheproto.CacheOK
 	if err := c.rpcc.RPC(srv, "CacheSrv.CreateShard", req, &res); err != nil {
@@ -205,31 +206,6 @@ func (c *CacheClnt) DeleteShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map[string][]byte, error) {
-	req := &cacheproto.ShardArg{
-		Shard: uint32(shard),
-		Fence: f.FenceProto(),
-	}
-	var res cacheproto.CacheDump
-	if err := c.rpcc.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {
-		return nil, err
-	}
-	return res.Vals, nil
-}
-
-func (c *CacheClnt) FillShard(srv string, shard cache.Tshard, m map[string][]byte, f *sp.Tfence) error {
-	req := &cacheproto.ShardFill{
-		Shard: uint32(shard),
-		Vals:  m,
-		Fence: f.FenceProto(),
-	}
-	var res cacheproto.CacheOK
-	if err := c.rpcc.RPC(srv, "CacheSrv.FillShard", req, &res); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
@@ -240,6 +216,18 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 		return err
 	}
 	return nil
+}
+
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map[string][]byte, error) {
+	req := &cacheproto.ShardArg{
+		Shard: uint32(shard),
+		Fence: f.FenceProto(),
+	}
+	var res cacheproto.CacheDump
+	if err := c.rpcc.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {
+		return nil, err
+	}
+	return res.Vals, nil
 }
 
 func (cc *CacheClnt) Dump(srv string) (map[string]string, error) {

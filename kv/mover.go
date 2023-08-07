@@ -86,26 +86,14 @@ func (mv *Mover) moveShard(s, d string) error {
 		return err
 	}
 
-	// A crashed mover may have created the shard and partially filled
-	// it; remove it and start over.
-	if err := mv.cc.DeleteShard(d, mv.shard, mv.fence); err != nil {
-		if !serr.IsErrCode(err, serr.TErrNotfound) {
-			db.DPrintf(db.KVMV_ERR, "DeleteShard dst %v err %v\n", mv.shard, err)
-			return err
-		}
-	}
-
-	if err := mv.cc.CreateShard(d, mv.shard, mv.fence); err != nil {
-		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
-		return err
-	}
 	vals, err := mv.cc.DumpShard(s, mv.shard, mv.fence)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "DumpShard %v err %v\n", mv.shard, err)
 		return err
 	}
-	if err := mv.cc.FillShard(d, mv.shard, vals, mv.fence); err != nil {
-		db.DPrintf(db.KVMV_ERR, "FillShard %v err %v\n", mv.shard, err)
+
+	if err := mv.cc.CreateShard(d, mv.shard, mv.fence, vals); err != nil {
+		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
 		return err
 	}
 

@@ -104,8 +104,8 @@ func (cs *CacheSrv) exitCacheSrv() {
 
 func (cs *CacheSrv) cmpFence(f sp.Tfence) sp.Tfencecmp {
 	if !f.HasFence() {
+		// cached runs without fence
 		db.DPrintf(db.FENCEFS, "%v no fence %v\n", proc.GetName(), f)
-		return sp.FENCE_GT
 	}
 	if !cs.lastFence.IsInitialized() {
 		db.DPrintf(db.FENCEFS, "%v initialize fence %v\n", proc.GetName(), f)

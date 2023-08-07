@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	"sigmaos/kv/proto"
@@ -127,7 +128,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 	sc.ClntExit(status)
 }
 
-func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
+func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 	n := uint64(0)
 	vals, err := kc.GetVals(key, &proto.KVTestVal{})
 	if err != nil {
@@ -160,7 +161,7 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64, p *perf.Perf) error {
 // indicated by setget).
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		key := kv.MkKey(i + keyOffset)
+		key := cache.MkKey(i + keyOffset)
 		v := proto.KVTestVal{Pid: proc.GetPid().String(), Key: string(key), N: ntest}
 		if setget {
 			// If running against redis.
@@ -194,13 +195,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 			}
 		} else {
 			// If doing appends (unbounded clerk)
-			if err := kc.Append(kv.Tkey(key), &v); err != nil {
+			if err := kc.Append(cache.Tkey(key), &v); err != nil {
 				return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
 			*nops++
-			if err := check(kc, kv.Tkey(key), ntest, p); err != nil {
+			if err := check(kc, cache.Tkey(key), ntest, p); err != nil {
 				db.DPrintf(db.ALWAYS, "check failed %v\n", err)
 				return err
 			}

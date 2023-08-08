@@ -1,7 +1,6 @@
 package delay
 
 import (
-	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -13,9 +12,6 @@ import (
 //
 
 var maxmsDelay int64
-var totalDelay uint64
-var lastTotal uint64
-var mu sync.Mutex
 
 // If set RPCs maybe delayed by maxms
 func SetDelayRPC(maxms int64) {
@@ -33,12 +29,6 @@ func MaybeDelayRPC() {
 
 func Delay(maxms int64) {
 	ms := rand.Int64(maxms)
-	mu.Lock()
-	defer mu.Unlock()
-	totalDelay += ms
-	if totalDelay-lastTotal > 1000 {
-		lastTotal = totalDelay
-	}
-	db.DPrintf(db.DELAY, "DELAY to %vms\n", totalDelay)
+	db.DPrintf(db.DELAY, "Delay to %vms\n", ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 }

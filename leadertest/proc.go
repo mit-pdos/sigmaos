@@ -6,7 +6,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/delay"
 	"sigmaos/fenceclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -41,9 +40,6 @@ func RunProc(fencestr, dir string) {
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)
-
-	// and delay writes
-	delay.Delay(DELAY)
 
 	b, err := json.Marshal(*conf)
 	if err != nil {

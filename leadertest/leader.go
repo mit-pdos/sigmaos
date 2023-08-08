@@ -3,6 +3,7 @@ package leadertest
 import (
 	"encoding/json"
 	"log"
+	"path"
 	"time"
 
 	db "sigmaos/debug"
@@ -18,6 +19,7 @@ const (
 	LEADERFN = "name/leader"
 	CONFIG   = LEADERFN + "-config"
 	CONFIGBK = LEADERFN + "-config#"
+	OUT      = "out"
 )
 
 func RunLeader(dir, last, child string) {
@@ -29,7 +31,7 @@ func RunLeader(dir, last, child string) {
 
 	sc.Started()
 
-	fn := dir + "/out"
+	fn := path.Join(dir, OUT)
 	l, err := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
 	if err != nil {
 		db.DFatalf("%v MakeLeaderClnt %v failed %v\n", proc.GetName(), LEADERFN, err)

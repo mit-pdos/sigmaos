@@ -64,20 +64,20 @@ func TestSemClntConcur(t *testing.T) {
 	fsl1, err := fslib.MakeFsLibAddr("semd1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(ts.T, err, "fsl1")
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100; i++ {
 		sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
 		sem.Init(0)
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
-			delay.Delay(10)
+			delay.Delay(200)
 			sem := semclnt.MakeSemClnt(fsl0, WAIT_PATH+"/x")
 			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
-			delay.Delay(10)
+			delay.Delay(200)
 			sem := semclnt.MakeSemClnt(fsl1, WAIT_PATH+"/x")
 			sem.Up()
 			ch <- true

@@ -2,6 +2,7 @@ package leadertest
 
 import (
 	"log"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,20 +13,21 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	DIR = sp.NAMED + "outdir"
+)
+
 func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid) {
 	const (
 		N = 10
 	)
 	pids := []proc.Tpid{}
 
-	// XXX use the same dir independent of machine running proc
-	ts.RmDir(sp.UX + "/" + sp.FENCEDIR)
+	ts.RmDir(DIR)
+	fn := path.Join(DIR, OUT)
 
-	dir := sp.UX + "/~local/outdir/"
-	fn := dir + "out"
-	ts.RmDir(dir)
 	ts.Remove(LEADERFN)
-	err := ts.MkDir(dir, 0777)
+	err := ts.MkDir(DIR, 0777)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "putfile")
 
@@ -34,7 +36,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("leadertest-leader", []string{dir, last, sec})
+		p := proc.MakeProc("leadertest-leader", []string{DIR, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 
@@ -61,7 +63,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
-		log.Printf("conf: %v %T\n", conf, conf.Leader)
+		log.Printf("conf: %v\n", conf)
 		if conf.Leader == proc.Tpid("") && e != 0 {
 			assert.Equal(t, conf.Epoch, e)
 		} else if last != conf.Leader { // new leader

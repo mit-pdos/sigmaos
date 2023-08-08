@@ -5,13 +5,15 @@ import (
 	// sp "sigmaos/sigmap"
 )
 
+type Tcache map[string][]byte
+
 type shard struct {
 	sync.Mutex
-	cache map[string][]byte
+	cache Tcache
 }
 
 func newShard() *shard {
-	return &shard{cache: make(map[string][]byte)}
+	return &shard{cache: make(Tcache)}
 }
 
 func (s *shard) put(key string, val []byte) error {
@@ -51,7 +53,7 @@ func (s *shard) delete(key string) bool {
 	return false
 }
 
-func (s *shard) fill(vals map[string][]byte) bool {
+func (s *shard) fill(vals Tcache) bool {
 	s.Lock()
 	defer s.Unlock()
 
@@ -61,11 +63,11 @@ func (s *shard) fill(vals map[string][]byte) bool {
 	return true
 }
 
-func (s *shard) dump() map[string][]byte {
+func (s *shard) dump() Tcache {
 	s.Lock()
 	defer s.Unlock()
 
-	m := make(map[string][]byte)
+	m := make(Tcache)
 	for k, v := range s.cache {
 		m[k] = v
 	}

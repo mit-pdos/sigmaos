@@ -31,7 +31,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 		return nil, nil
 	}
 	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.shards)
-	m := make(map[string][]byte)
+	m := make(Tcache)
 	for i, _ := range cs.shards {
 		cs.shards[i].s.Lock()
 		for k, v := range cs.shards[i].s.cache {

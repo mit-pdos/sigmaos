@@ -33,10 +33,10 @@ func MkKey(k uint64) string {
 type CacheClnt struct {
 	rpcc   *rpcclnt.ClntCache
 	fsl    *fslib.FsLib
-	nshard uint32
+	nshard int
 }
 
-func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) *CacheClnt {
+func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard int) *CacheClnt {
 	cc := &CacheClnt{fsl: fsls[0], nshard: nshard, rpcc: rpcclnt.NewRPCClntCache(fsls)}
 	return cc
 }
@@ -44,7 +44,7 @@ func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) *CacheClnt {
 func (cc *CacheClnt) key2shard(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := h.Sum32() % cc.nshard
+	shard := h.Sum32() % uint32(cc.nshard)
 	return shard
 }
 
@@ -182,7 +182,7 @@ func (cc *CacheClnt) DeleteSrv(srv, key string) error {
 	return cc.DeleteTracedFenced(nil, srv, key, sp.NullFence())
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals map[string][]byte) error {
+func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: fence.FenceProto(),
@@ -219,7 +219,7 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map[string][]byte, error) {
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cachesrv.Tcache, error) {
 	req := &cacheproto.ShardArg{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),

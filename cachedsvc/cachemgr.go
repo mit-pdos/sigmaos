@@ -1,25 +1,19 @@
-package cacheclnt
+package cachedsvc
 
 import (
-	"sigmaos/cachedsvc"
+	"sigmaos/cache"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
-)
-
-const (
-	CACHEREL = "cache"
-	CACHE    = sp.NAMED + CACHEREL + "/"
 )
 
 type CacheMgr struct {
-	*cachedsvc.CachedSvc
+	*CachedSvc
 	job string
 }
 
 func MkCacheMgr(sc *sigmaclnt.SigmaClnt, job string, nsrv int, mcpu proc.Tmcpu, gc, public bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := cachedsvc.MkCachedSvc(sc, nsrv, mcpu, job, "cached", CACHE, gc, public)
+	sm, err := MkCachedSvc(sc, nsrv, mcpu, job, "cached", cache.CACHE, gc, public)
 	if err != nil {
 		return nil, err
 	}

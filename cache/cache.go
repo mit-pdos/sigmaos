@@ -10,7 +10,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
+)
+
+const (
+	CACHEREL = "cache"
+	CACHE    = sp.NAMED + CACHEREL + "/"
 )
 
 type Tkey string

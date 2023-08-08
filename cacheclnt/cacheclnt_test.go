@@ -11,6 +11,7 @@ import (
 	"sigmaos/cache"
 	"sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
+	"sigmaos/cachedsvc"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -26,7 +27,7 @@ const (
 
 type Tstate struct {
 	*test.Tstate
-	cm    *cacheclnt.CacheMgr
+	cm    *cachedsvc.CacheMgr
 	clrks []proc.Tpid
 	job   string
 	sempn string
@@ -37,8 +38,8 @@ func mkTstate(t *testing.T, nsrv int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.job = rd.String(16)
-	ts.Remove(cacheclnt.CACHE)
-	cm, err := cacheclnt.MkCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
+	ts.Remove(cache.CACHE)
+	cm, err := cachedsvc.MkCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/cachedsvc"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
 )
@@ -14,12 +15,12 @@ const (
 
 type Autoscaler struct {
 	sync.Mutex
-	cm   *CacheMgr
+	cm   *cachedsvc.CacheMgr
 	cc   *CacheClnt
 	done bool
 }
 
-func MakeAutoscaler(cm *CacheMgr, cc *CacheClnt) *Autoscaler {
+func MakeAutoscaler(cm *cachedsvc.CacheMgr, cc *CacheClnt) *Autoscaler {
 	return &Autoscaler{
 		cm: cm,
 		cc: cc,

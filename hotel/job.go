@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/cacheclnt"
+	"sigmaos/cachedsvc"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -134,7 +135,7 @@ func MkHotelSvc(public bool) []Srv {
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	cacheClnt       *cacheclnt.CacheClnt
-	cacheMgr        *cacheclnt.CacheMgr
+	cacheMgr        *cachedsvc.CacheMgr
 	CacheAutoscaler *cacheclnt.Autoscaler
 	pids            []proc.Tpid
 	cache           string
@@ -146,7 +147,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 	setNHotel(nhotel)
 
 	var cc *cacheclnt.CacheClnt
-	var cm *cacheclnt.CacheMgr
+	var cm *cachedsvc.CacheMgr
 	var ca *cacheclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
@@ -159,7 +160,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cacheclnt.MkCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
+			cm, err = cachedsvc.MkCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
 			if err != nil {
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err

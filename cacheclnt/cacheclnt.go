@@ -40,7 +40,7 @@ type CacheClnt struct {
 
 func MkCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) (*CacheClnt, error) {
 	cc := &CacheClnt{fsl: fsls[0], nshard: nshard}
-	cg, err := cachedsvcclnt.MkCachedSvcClnt(fsls, CACHE)
+	cg, err := cachedsvcclnt.MkCachedSvcClnt(fsls, cache.CACHE)
 	if err != nil {
 		return nil, err
 	}

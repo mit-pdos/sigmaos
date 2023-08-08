@@ -79,7 +79,7 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 }
 
 func (ts *Tstate) statsSrv(fn string) {
-	stats := &rpc.StatInfo{}
+	stats := &rpc.SigmaRPCStats{}
 	pn := path.Join(fn, rpc.RPC, rpc.STATS)
 	err := ts.GetFileJson(pn, stats)
 	assert.Nil(ts.T, err, "error get stats %v", err)

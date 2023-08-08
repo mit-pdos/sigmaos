@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -28,7 +27,7 @@ const (
 
 type TimelineSrv struct {
 	mongoc *mongoclnt.MongoClnt
-	cachec *cacheclnt.CacheClnt
+	cachec *cachedsvcclnt.CachedSvcClnt
 	postc  *rpcclnt.RPCClnt
 }
 
@@ -46,7 +45,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
+	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}

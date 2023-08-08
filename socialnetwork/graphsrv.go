@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -29,7 +28,7 @@ const (
 
 type GraphSrv struct {
 	mongoc *mongoclnt.MongoClnt
-	cachec *cacheclnt.CacheClnt
+	cachec *cachedsvcclnt.CachedSvcClnt
 	userc  *rpcclnt.RPCClnt
 }
 
@@ -49,7 +48,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	gsrv.mongoc = mongoc
 
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
+	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/cache"
+	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/group"
@@ -35,16 +36,16 @@ func key2shard(key cache.Tkey) cache.Tshard {
 
 type KvClerk struct {
 	*fslib.FsLib
-	conf  *Config
-	job   string
-	cclnt *CacheClnt
+	conf *Config
+	job  string
+	cc   *cacheclnt.CacheClnt
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
 	return makeClerkStart(fsl, job)
 }
 
-func MakeClerkFslOnly(fsl *fslib.FsLib, job string) (*KvClerk, error) {
+func MakeClerkFslOnly(fsl *fslib.FsLib, job string) *KvClerk {
 	return makeClerk(fsl, job)
 }
 
@@ -56,25 +57,18 @@ func MakeClerk(uname sp.Tuname, job string) (*KvClerk, error) {
 	return makeClerkStart(fsl, job)
 }
 
-func makeClerk(fsl *fslib.FsLib, job string) (*KvClerk, error) {
-	cc, err := NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD)
-	if err != nil {
-		return nil, err
-	}
+func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cclnt: cc,
+		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
 	}
-	return kc, nil
+	return kc
 }
 
 func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
-	kc, err := makeClerk(fsl, job)
-	if err != nil {
-		return nil, err
-	}
+	kc := makeClerk(fsl, job)
 	return kc, kc.StartClerk()
 }
 
@@ -190,14 +184,14 @@ func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode) *op {
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 	switch o.kind {
 	case GET:
-		o.err = kc.cclnt.GetSrv(srv, string(o.k), o.val)
+		o.err = kc.cc.GetSrv(srv, string(o.k), o.val)
 	case GETVALS:
-		o.vals, o.err = kc.cclnt.GetVals(srv, string(o.k), o.val, &kc.conf.Fence)
+		o.vals, o.err = kc.cc.GetVals(srv, string(o.k), o.val, &kc.conf.Fence)
 	case PUT:
 		if o.m == sp.OAPPEND {
-			o.err = kc.cclnt.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
+			o.err = kc.cc.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
 		} else {
-			o.err = kc.cclnt.PutSrv(srv, string(o.k), o.val)
+			o.err = kc.cc.PutSrv(srv, string(o.k), o.val)
 		}
 	}
 	db.DPrintf(db.KVCLERK, "op %v(%v) f %v srv %v %v err %v", o.kind, o.m == sp.OAPPEND, kc.conf.Fence, srv, s, o.err)
@@ -209,7 +203,7 @@ func (kc *KvClerk) Get(key string, val proto.Message) error {
 	return op.err
 }
 
-func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message) error {
+func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	return kc.Get(key, val)
 }
 
@@ -225,7 +219,7 @@ func (kc *KvClerk) Append(k cache.Tkey, val proto.Message) error {
 	return op.err
 }
 
-func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message) error {
+func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	return kc.Put(key, val)
 }
 
@@ -235,7 +229,7 @@ func (kc *KvClerk) Put(k string, val proto.Message) error {
 	return op.err
 }
 
-func (kc *KvClerk) DeleteTraced(sctx *tproto.SpanContextConfig, srv, key string) error {
+func (kc *KvClerk) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
 	return kc.Delete(key)
 }
 

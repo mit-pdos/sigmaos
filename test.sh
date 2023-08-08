@@ -66,7 +66,7 @@ if [[ $APPS == "" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cacheclnt www; do
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cachedsvcclnt www; do
         go test $VERB sigmaos/$T -start
     done
 
@@ -108,7 +108,7 @@ if [[ $APPS == "" ]]; then
     #
 
     go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
-    go test $VERB sigmaos/cacheclnt -start --overlays --run TestCacheClerk
+    go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
     go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
     go test $VERB sigmaos/hotel -start --overlays --run Www
     go test $VERB sigmaos/realmclnt -start --overlays --run Basic

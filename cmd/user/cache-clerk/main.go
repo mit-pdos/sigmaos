@@ -12,7 +12,7 @@ import (
 
 	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/perf"
@@ -53,7 +53,7 @@ func main() {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}
 	var rcli *redis.Client
-	var cc *cacheclnt.CacheClnt
+	var csc *cachedsvcclnt.CachedSvcClnt
 	if len(os.Args) > 6 {
 		rcli = redis.NewClient(&redis.Options{
 			Addr:     os.Args[6],
@@ -62,9 +62,9 @@ func main() {
 		})
 	} else {
 		var err error
-		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1], cachesrv.NSHARD)
+		csc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
 		if err != nil {
-			db.DFatalf("%v err %v", os.Args[0], err)
+			db.DFatalf("MkCachedSvcClnt err %v\n", err)
 		}
 	}
 
@@ -76,10 +76,10 @@ func main() {
 	defer p.Done()
 
 	sc.Started()
-	run(sc, cc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
+	run(sc, csc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
 }
 
-func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
+func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
 	err := pclnt.WaitEvict(proc.GetPid())
 	if err != nil {
 		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
@@ -88,7 +88,7 @@ func waitEvict(cc *cacheclnt.CacheClnt, pclnt *procclnt.ProcClnt) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(sc *sigmaclnt.SigmaClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
+func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
@@ -103,7 +103,7 @@ func run(sc *sigmaclnt.SigmaClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p
 	for atomic.LoadInt32(&done) == 0 {
 		// this does NKEYS puts & gets, or appends & checks, depending on whether
 		// this is a time-bound clerk or an unbounded clerk.
-		err = test(cc, rcli, ntest, nkeys, keyOffset, &nops, p)
+		err = test(csc, rcli, ntest, nkeys, keyOffset, &nops, p)
 		if err != nil {
 			break
 		}
@@ -120,7 +120,7 @@ func run(sc *sigmaclnt.SigmaClnt, cc *cacheclnt.CacheClnt, rcli *redis.Client, p
 	sc.ClntExit(status)
 }
 
-func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
+func test(csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
 	for i := uint64(0); i < uint64(nkeys) && atomic.LoadInt32(&done) == 0; i++ {
 		key := cacheclnt.MkKey(i + keyOffset)
 		// If running against redis.
@@ -138,13 +138,13 @@ func test(cc *cacheclnt.CacheClnt, rcli *redis.Client, ntest uint64, nkeys int, 
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := cc.Put(key, &proto.CacheString{Val: proc.GetPid().String()}); err != nil {
+			if err := csc.Put(key, &proto.CacheString{Val: proc.GetPid().String()}); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
 			*nops++
-			if err := cc.Get(key, &proto.CacheString{}); err != nil {
+			if err := csc.Get(key, &proto.CacheString{}); err != nil {
 				db.DPrintf(db.ALWAYS, "miss %v", key)
 				// return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
 			}

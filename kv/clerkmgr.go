@@ -26,10 +26,7 @@ type ClerkMgr struct {
 
 func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu) (*ClerkMgr, error) {
 	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu}
-	clrk, err := MakeClerkFslOnly(cm.SigmaClnt.FsLib, cm.job)
-	if err != nil {
-		return nil, err
-	}
+	clrk := MakeClerkFslOnly(cm.SigmaClnt.FsLib, cm.job)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")
 	cm.sem = semclnt.MakeSemClnt(sc.FsLib, cm.sempath)

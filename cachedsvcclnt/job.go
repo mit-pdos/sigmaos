@@ -1,4 +1,4 @@
-package cacheclnt
+package cachedsvcclnt
 
 import (
 	"fmt"

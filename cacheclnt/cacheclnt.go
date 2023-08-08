@@ -16,7 +16,6 @@ import (
 
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
-	"sigmaos/cachedsvcclnt"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -32,25 +31,14 @@ func MkKey(k uint64) string {
 }
 
 type CacheClnt struct {
-	csc    *cachedsvcclnt.CachedSvcClnt
 	rpcc   *rpcclnt.ClntCache
 	fsl    *fslib.FsLib
 	nshard uint32
 }
 
-func MkCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) (*CacheClnt, error) {
-	cc := &CacheClnt{fsl: fsls[0], nshard: nshard}
-	cg, err := cachedsvcclnt.MkCachedSvcClnt(fsls, cache.CACHE)
-	if err != nil {
-		return nil, err
-	}
-	cc.csc = cg
-	return cc, nil
-}
-
-func NewCacheClntRPC(fsls []*fslib.FsLib, job string, nshard uint32) (*CacheClnt, error) {
+func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard uint32) *CacheClnt {
 	cc := &CacheClnt{fsl: fsls[0], nshard: nshard, rpcc: rpcclnt.NewRPCClntCache(fsls)}
-	return cc, nil
+	return cc
 }
 
 func (cc *CacheClnt) key2shard(key string) uint32 {
@@ -60,10 +48,10 @@ func (cc *CacheClnt) key2shard(key string) uint32 {
 	return shard
 }
 
-func (cc *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message) error {
+func (cc *CacheClnt) PutTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
-		Fence:             sp.NullFence().FenceProto(),
+		Fence:             f.FenceProto(),
 		Key:               key,
 		Shard:             cc.key2shard(key),
 	}
@@ -75,18 +63,14 @@ func (cc *CacheClnt) PutTraced(sctx *tproto.SpanContextConfig, srv, key string, 
 
 	req.Value = b
 	var res cacheproto.CacheResult
-	if err := cc.csc.RPC("CacheSrv.Put", req, &res); err != nil {
+	if err := cc.rpcc.RPC(srv, "CacheSrv.Put", req, &res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cc *CacheClnt) Put(key string, val proto.Message) error {
-	return cc.PutTraced(nil, "", key, val)
-}
-
 func (cc *CacheClnt) PutSrv(srv, key string, val proto.Message) error {
-	return cc.PutTraced(nil, srv, key, val)
+	return cc.PutTracedFenced(nil, srv, key, val, sp.NullFence())
 }
 
 func (cc *CacheClnt) AppendFence(srv, key string, val proto.Message, f *sp.Tfence) error {
@@ -118,15 +102,16 @@ func (cc *CacheClnt) AppendFence(srv, key string, val proto.Message, f *sp.Tfenc
 	return nil
 }
 
-func (cc *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message) error {
+func (cc *CacheClnt) GetTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
+		Fence:             f.FenceProto(),
+		Key:               key,
+		Shard:             cc.key2shard(key),
 	}
-	req.Key = key
-	req.Shard = cc.key2shard(key)
 	s := time.Now()
 	var res cacheproto.CacheResult
-	if err := cc.csc.RPC("CacheSrv.Get", req, &res); err != nil {
+	if err := cc.rpcc.RPC(srv, "CacheSrv.Get", req, &res); err != nil {
 		return err
 	}
 	if time.Since(s) > 150*time.Microsecond {
@@ -138,12 +123,8 @@ func (cc *CacheClnt) GetTraced(sctx *tproto.SpanContextConfig, srv, key string, 
 	return nil
 }
 
-func (cc *CacheClnt) Get(key string, val proto.Message) error {
-	return cc.GetTraced(nil, "", key, val)
-}
-
 func (cc *CacheClnt) GetSrv(srv, key string, val proto.Message) error {
-	return cc.GetTraced(nil, "", key, val)
+	return cc.GetTracedFenced(nil, srv, key, val, sp.NullFence())
 }
 
 func (c *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]proto.Message, error) {
@@ -183,25 +164,22 @@ func (c *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]p
 	return vals, nil
 }
 
-func (cc *CacheClnt) DeleteTraced(sctx *tproto.SpanContextConfig, srv, key string) error {
+func (cc *CacheClnt) DeleteTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, f *sp.Tfence) error {
 	req := &cacheproto.CacheRequest{
 		SpanContextConfig: sctx,
+		Fence:             f.FenceProto(),
+		Key:               key,
+		Shard:             cc.key2shard(key),
 	}
-	req.Key = key
-	req.Shard = cc.key2shard(key)
 	var res cacheproto.CacheResult
-	if err := cc.csc.RPC("CacheSrv.Delete", req, &res); err != nil {
+	if err := cc.rpcc.RPC(srv, "CacheSrv.Delete", req, &res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cc *CacheClnt) Delete(key string) error {
-	return cc.DeleteTraced(nil, "", key)
-}
-
 func (cc *CacheClnt) DeleteSrv(srv, key string) error {
-	return cc.DeleteTraced(nil, "", key)
+	return cc.DeleteTracedFenced(nil, srv, key, sp.NullFence())
 }
 
 func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals map[string][]byte) error {
@@ -253,32 +231,12 @@ func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (map
 	return res.Vals, nil
 }
 
-func (cc *CacheClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
-	return cc.csc.StatsSrv()
+func (cc *CacheClnt) StatsSrv(srv string) (*rpc.SigmaRPCStats, error) {
+	return cc.rpcc.StatsSrv(srv)
 }
 
-func (cc *CacheClnt) Dump(g int) (map[string]string, error) {
-	srv := cc.csc.Server(g)
-	dir := path.Join(srv, cachesrv.DUMP)
-	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
-	if err != nil {
-		return nil, err
-	}
-	sid := string(b)
-	fn := dir + "/" + sid + "/" + sessdev.DATA
-	b, err = cc.fsl.GetFile(fn)
-	if err != nil {
-		return nil, err
-	}
-	dump := &cacheproto.CacheDump{}
-	if err := proto.Unmarshal(b, dump); err != nil {
-		return nil, err
-	}
-	m := map[string]string{}
-	for k, v := range dump.Vals {
-		m[k] = string(v)
-	}
-	return m, nil
+func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStat {
+	return cc.rpcc.StatsClnt()
 }
 
 func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {

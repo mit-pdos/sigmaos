@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
@@ -15,7 +14,7 @@ import (
 func MkCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
 	switch cache {
 	case "cached":
-		cc, err := cacheclnt.MkCacheClnt(fsls, job, cachesrv.NSHARD)
+		cc, err := cachedsvcclnt.MkCachedSvcClnt(fsls, job)
 		if err != nil {
 			return nil, err
 		}

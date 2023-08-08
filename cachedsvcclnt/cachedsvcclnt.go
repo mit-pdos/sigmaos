@@ -5,15 +5,15 @@ import (
 	"strconv"
 	"sync"
 
-	cacheproto "sigmaos/cache/proto"
-
+	"sigmaos/cache"
+	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvc"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/reader"
 	"sigmaos/rpc"
-	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -27,17 +27,17 @@ func key2server(key string, nserver int) int {
 type CachedSvcClnt struct {
 	sync.Mutex
 	fsl  *fslib.FsLib
-	rpcc *rpcclnt.ClntCache
+	cc   *cacheclnt.CacheClnt
 	pn   string
 	srvs map[string]struct{}
 	rdr  *reader.Reader
 }
 
-func MkCachedSvcClnt(fsls []*fslib.FsLib, pn string) (*CachedSvcClnt, error) {
+func MkCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 	csc := &CachedSvcClnt{
 		fsl:  fsls[0],
-		pn:   pn,
-		rpcc: rpcclnt.NewRPCClntCache(fsls),
+		pn:   cache.CACHE,
+		cc:   cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 		srvs: make(map[string]struct{}),
 	}
 	sts, err := csc.fsl.GetDir(csc.srvDir())
@@ -99,23 +99,17 @@ func (csc *CachedSvcClnt) Server(i int) string {
 	return csc.pn + cachedsvc.Server(strconv.Itoa(i))
 }
 
-func (csc *CachedSvcClnt) RPC(m string, arg *cacheproto.CacheRequest, res *cacheproto.CacheResult) error {
-	pn := csc.Server(key2server(arg.Key, csc.nServer()))
-	arg.Fence = sp.NullFence().FenceProto()
-	return csc.rpcc.RPC(pn, m, arg, res)
-}
-
 func (csc *CachedSvcClnt) nServer() int {
 	csc.Lock()
 	defer csc.Unlock()
 	return len(csc.srvs)
 }
 
-func (csc *CachedSvcClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
+func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.SigmaRPCStats, error) {
 	n := csc.nServer()
 	stats := make([]*rpc.SigmaRPCStats, 0, n)
 	for i := 0; i < n; i++ {
-		st, err := csc.rpcc.StatsSrv(csc.Server(i))
+		st, err := csc.cc.StatsSrv(csc.Server(i))
 		if err != nil {
 			return nil, err
 		}
@@ -125,5 +119,10 @@ func (csc *CachedSvcClnt) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 }
 
 func (csc *CachedSvcClnt) StatsClnt() []map[string]*rpc.MethodStat {
-	return csc.rpcc.StatsClnt()
+	return csc.StatsClnt()
+}
+
+func (csc *CachedSvcClnt) Dump(g int) (map[string]string, error) {
+	srv := csc.Server(g)
+	return csc.cc.DumpSrv(srv)
 }

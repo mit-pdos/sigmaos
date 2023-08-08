@@ -6,8 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -31,7 +30,7 @@ const (
 type UserSrv struct {
 	mu           sync.Mutex
 	mongoc       *mongoclnt.MongoClnt
-	cachec       *cacheclnt.CacheClnt
+	cachec       *cachedsvcclnt.CachedSvcClnt
 	sid          int32 // sid is a random number between 0 and 2^30
 	ucount       int32 //This server may overflow with over 2^31 users
 	dbCounter    *Counter
@@ -54,7 +53,7 @@ func RunUserSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
+	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sigmaos/cache"
+	"sigmaos/cacheclnt"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -25,7 +26,7 @@ type Mover struct {
 	job   string
 	fence *sp.Tfence
 	shard cache.Tshard
-	cc    *CacheClnt
+	cc    *cacheclnt.CacheClnt
 	exit  bool
 }
 
@@ -48,14 +49,10 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if err != nil {
 		return nil, err
 	}
-	cc, err := NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
-	if err != nil {
-		return nil, err
-	}
 	mv := &Mover{fence: fence,
 		SigmaClnt: sc,
 		job:       job,
-		cc:        cc,
+		cc:        cacheclnt.NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD),
 		exit:      true,
 	}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {

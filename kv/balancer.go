@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"sigmaos/cache"
+	"sigmaos/cacheclnt"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -51,7 +52,7 @@ type Balancer struct {
 	crash       int64
 	crashhelper string
 	isBusy      bool // in config change?
-	cc          *CacheClnt
+	cc          *cacheclnt.CacheClnt
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -82,10 +83,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
-	bl.cc, err = NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
-	if err != nil {
-		db.DFatalf("NewCacheClnt err %v", err)
-	}
+	bl.cc = cacheclnt.NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
 	var kvdnc int
 	var error error
 	kvdnc, error = strconv.Atoi(kvdmcpu)

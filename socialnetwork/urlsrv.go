@@ -5,8 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -30,7 +29,7 @@ const (
 var urlPrefixL = len(URL_HOSTNAME)
 
 type UrlSrv struct {
-	cachec *cacheclnt.CacheClnt
+	cachec *cachedsvcclnt.CachedSvcClnt
 	mongoc *mongoclnt.MongoClnt
 	random *rand.Rand
 }
@@ -49,7 +48,7 @@ func RunUrlSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
 	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL)
-	cachec, err := cacheclnt.MkCacheClnt(fsls, jobname, cachesrv.NSHARD)
+	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}

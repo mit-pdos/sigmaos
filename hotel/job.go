@@ -5,9 +5,8 @@ import (
 	"path"
 	"strconv"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvc"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
@@ -134,9 +133,9 @@ func MkHotelSvc(public bool) []Srv {
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
-	cacheClnt       *cacheclnt.CacheClnt
+	cacheClnt       *cachedsvcclnt.CachedSvcClnt
 	cacheMgr        *cachedsvc.CacheMgr
-	CacheAutoscaler *cacheclnt.Autoscaler
+	CacheAutoscaler *cachedsvcclnt.Autoscaler
 	pids            []proc.Tpid
 	cache           string
 	kvf             *kv.KVFleet
@@ -146,9 +145,9 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 
-	var cc *cacheclnt.CacheClnt
+	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr
-	var ca *cacheclnt.Autoscaler
+	var ca *cachedsvcclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
 
@@ -165,12 +164,12 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 				db.DFatalf("Error MkCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, job, cachesrv.NSHARD)
+			cc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
 			if err != nil {
-				db.DFatalf("Error cacheclnt %v", err)
+				db.DFatalf("Error MkCachedSvcClnt %v", err)
 				return nil, err
 			}
-			ca = cacheclnt.MakeAutoscaler(cm, cc)
+			ca = cachedsvcclnt.MakeAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.MakeKvdFleet(sc, job, 0, nsrv, 0, cacheMcpu, "0", "manual")
@@ -233,7 +232,7 @@ func (hj *HotelJob) Stop() error {
 
 func (hj *HotelJob) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
 	if hj.cacheClnt != nil {
-		return hj.cacheClnt.StatsSrv()
+		return hj.cacheClnt.StatsSrvs()
 	}
 	db.DPrintf(db.ALWAYS, "No cacheclnt")
 	return nil, nil

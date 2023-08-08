@@ -3,9 +3,8 @@ package socialnetwork
 import (
 	"fmt"
 	"path"
-	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvc"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -62,7 +61,7 @@ type SocialNetworkConfig struct {
 	*sigmaclnt.SigmaClnt
 	srvs      []Srv
 	pids      []proc.Tpid
-	CacheClnt *cacheclnt.CacheClnt
+	CacheClnt *cachedsvcclnt.CachedSvcClnt
 	cacheMgr  *cachedsvc.CacheMgr
 }
 
@@ -79,7 +78,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 		return nil, err
 	}
 	// Create a cache clnt.
-	var cc *cacheclnt.CacheClnt
+	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr
 	if nsrv > 0 {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
@@ -88,7 +87,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 			dbg.DFatalf("Error MkCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{sc.FsLib}, jobname, cachesrv.NSHARD)
+		cc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 		if err != nil {
 			dbg.DFatalf("Error cacheclnt %v", err)
 			return nil, err

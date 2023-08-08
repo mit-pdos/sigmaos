@@ -1,4 +1,4 @@
-package cacheclnt
+package cachedsvcclnt
 
 import (
 	"sync"
@@ -16,14 +16,14 @@ const (
 type Autoscaler struct {
 	sync.Mutex
 	cm   *cachedsvc.CacheMgr
-	cc   *CacheClnt
+	csc  *CachedSvcClnt
 	done bool
 }
 
-func MakeAutoscaler(cm *cachedsvc.CacheMgr, cc *CacheClnt) *Autoscaler {
+func MakeAutoscaler(cm *cachedsvc.CacheMgr, csc *CachedSvcClnt) *Autoscaler {
 	return &Autoscaler{
-		cm: cm,
-		cc: cc,
+		cm:  cm,
+		csc: csc,
 	}
 }
 
@@ -39,7 +39,7 @@ func (a *Autoscaler) Stop() {
 
 func (a *Autoscaler) run(freq time.Duration, max int) {
 	for !a.isDone() {
-		sts, err := a.cc.csc.StatsSrv()
+		sts, err := a.csc.StatsSrvs()
 		if err != nil {
 			db.DFatalf("Error stats srv: %v", err)
 		}

@@ -18,8 +18,8 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpc"
 	rd "sigmaos/rand"
+	"sigmaos/rpc"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -63,16 +63,16 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
-	assert.Equal(ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
+	assert.Equal(ts.Ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
 
 	ji.dur = make([]time.Duration, 0, len(durslice))
 	ji.maxrps = make([]int, 0, len(durslice))
 
 	for i := range durslice {
 		d, err := time.ParseDuration(durslice[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		n, err := strconv.Atoi(maxrpsslice[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		ji.dur = append(ji.dur, d)
 		ji.maxrps = append(ji.maxrps, n)
 	}
@@ -86,7 +86,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	if ji.justCli {
 		// Read job name
 		sts, err := ji.GetDir("name/hotel/")
-		assert.Nil(ji.T, err, "Err Get hotel dir %v", err)
+		assert.Nil(ji.Ts.T, err, "Err Get hotel dir %v", err)
 		var l int
 		for _, st := range sts {
 			// Dumb heuristic, but will always be the longest name....
@@ -113,8 +113,8 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			nc = 1
 		}
 		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
-		assert.Nil(ts.T, err, "Error MakeHotelJob: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib, ts.GetRealm())
+		assert.Nil(ts.Ts.T, err, "Error MakeHotelJob: %v", err)
+		sdc := scheddclnt.MakeScheddClnt(ts.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
@@ -125,11 +125,11 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
-			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, sp.HOTELRESERVE)
+			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
 			}
-			reservec = pdc
+			reservec = rpcc
 		}
 	}
 
@@ -139,7 +139,7 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
 			mnt := sp.MkMountService(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
-			if err = ts.MountService(p, mnt); err != nil {
+			if err = ts.MountService(p, mnt, sp.NoLeaseId); err != nil {
 				db.DFatalf("MountService %v", err)
 			}
 		}
@@ -188,14 +188,14 @@ func (ji *HotelJobInstance) StartHotelJob() {
 
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		for _, s := range sp.HOTELSVC {
+		for _, s := range hotel.HOTELSVC {
 			stats := &rpc.SigmaRPCStats{}
 			err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
-			assert.Nil(ji.T, err, "error get stats %v", err)
+			assert.Nil(ji.Ts.T, err, "error get stats %v", err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
 		cs, err := ji.hj.StatsSrv()
-		assert.Nil(ji.T, err)
+		assert.Nil(ji.Ts.T, err)
 		for i, cstat := range cs {
 			fmt.Printf("= cache-%v: %v\n", i, cstat)
 		}
@@ -212,7 +212,7 @@ func (ji *HotelJobInstance) Wait() {
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()
 		err := ji.hj.Stop()
-		assert.Nil(ji.T, err, "stop %v", err)
+		assert.Nil(ji.Ts.T, err, "stop %v", err)
 	}
 	db.DPrintf(db.TEST, "Done evicting hotel procs")
 	for _, lg := range ji.lgs {
@@ -225,6 +225,6 @@ func (ji *HotelJobInstance) Wait() {
 
 func (ji *HotelJobInstance) requestK8sStats() {
 	rep, err := ji.wc.SaveResults()
-	assert.Nil(ji.T, err, "Save results: %v", err)
-	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
+	assert.Nil(ji.Ts.T, err, "Save results: %v", err)
+	assert.Equal(ji.Ts.T, rep, "Done!", "Save results not ok: %v", rep)
 }

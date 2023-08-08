@@ -44,5 +44,3 @@ message ShardArg {
   map<string, bytes> vals = 3;
 }
 
-
-

@@ -29,7 +29,7 @@ func spawnLambda(ts *test.RealmTstate, semPath string) {
 	if err != nil {
 		db.DFatalf("Error invoking lambda: %v", err)
 	}
-	assert.Equal(ts.T, int(*result.StatusCode), 200, "Status code: %v", result.StatusCode)
+	assert.Equal(ts.Ts.T, int(*result.StatusCode), 200, "Status code: %v", result.StatusCode)
 	if *result.StatusCode != 200 {
 		db.DPrintf(db.ALWAYS, "Bad return status %v, msg %v", result.StatusCode, result.Payload)
 	}

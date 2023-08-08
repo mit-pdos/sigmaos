@@ -47,20 +47,20 @@ func makeNProcs(n int, prog string, args []string, env map[string]string, mcpu p
 func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
 	_, errs := ts.SpawnBurst(ps, 1)
-	assert.Equal(ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	assert.Equal(ts.Ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
 }
 
 func spawnProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.Spawn(p)
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
+		assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	}
 }
 
 func waitStartProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.WaitStart(p.GetPid())
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
+		assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	}
 	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
@@ -68,8 +68,8 @@ func waitStartProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 func waitExitProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		status, err := ts.WaitExit(p.GetPid())
-		assert.Nil(ts.T, err, "WaitStart: %v", err)
-		assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+		assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+		assert.True(ts.Ts.T, status.IsStatusOK(), "Bad status: %v", status)
 	}
 	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
@@ -77,9 +77,9 @@ func waitExitProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		err := ts.Evict(p.GetPid())
-		assert.Nil(ts.T, err, "Evict: %v", err)
+		assert.Nil(ts.Ts.T, err, "Evict: %v", err)
 		status, err := ts.WaitExit(p.GetPid())
-		assert.True(ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
+		assert.True(ts.Ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
 	}
 }
 
@@ -146,7 +146,7 @@ func warmupRealm(ts *test.RealmTstate) {
 	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
-	assert.Nil(ts.T, err, "Get NSchedd: %v", err)
+	assert.Nil(ts.Ts.T, err, "Get NSchedd: %v", err)
 	// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
 	for _, ncore := range []proc.Tmcpu{0, 1000} {
 		// Make N LC procs.
@@ -163,12 +163,12 @@ func warmupRealm(ts *test.RealmTstate) {
 
 func makeOutDir(ts *test.RealmTstate) {
 	err := ts.MkDir(OUT_DIR, 0777)
-	assert.Nil(ts.T, err, "Couldn't make out dir: %v", err)
+	assert.Nil(ts.Ts.T, err, "Couldn't make out dir: %v", err)
 }
 
 func rmOutDir(ts *test.RealmTstate) {
 	err := ts.RmDir(OUT_DIR)
-	assert.Nil(ts.T, err, "Couldn't rm out dir: %v", err)
+	assert.Nil(ts.Ts.T, err, "Couldn't rm out dir: %v", err)
 }
 
 // ========== Semaphore Helpers ==========
@@ -204,7 +204,7 @@ func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 	ds := make([]time.Duration, 0, len(ss))
 	for _, s := range ss {
 		d, err := time.ParseDuration(s)
-		assert.Nil(ts.T, err, "Error parse duration: %v", err)
+		assert.Nil(ts.Ts.T, err, "Error parse duration: %v", err)
 		ds = append(ds, d)
 	}
 	return ds
@@ -213,7 +213,7 @@ func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
 	// If we're running with unbounded clerks...
 	if len(phases) > 0 {
-		assert.Equal(ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
+		assert.Equal(ts.Ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
 	}
 	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
@@ -327,7 +327,6 @@ var clidir string = path.Join("name/", "clnts")
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
-	var serr *serr.Err
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil
@@ -341,7 +340,6 @@ func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
-	var serr *serr.Err
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Wait for n - 1 clnts to register themselves.
 	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
@@ -360,7 +358,6 @@ func waitForClnts(rootts *test.Tstate, n int) {
 func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
-	var serr *serr.Err
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)

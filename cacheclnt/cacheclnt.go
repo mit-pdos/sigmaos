@@ -55,7 +55,6 @@ func (cc *CacheClnt) PutTracedFenced(sctx *tproto.SpanContextConfig, srv, key st
 		Key:               key,
 		Shard:             cc.key2shard(key),
 	}
-
 	b, err := proto.Marshal(val)
 	if err != nil {
 		return err

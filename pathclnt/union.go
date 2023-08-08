@@ -11,14 +11,17 @@ import (
 func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
 	if err != nil {
+		db.DPrintf(db.WALK, "unionScan: error walk: %v", err)
 		return sp.NoFid, err
 	}
 	defer pathc.FidClnt.Clunk(fid1)
 
 	target, err := pathc.readlink(fid1)
 	if err != nil {
+		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
 	}
+	db.DPrintf(db.WALK, "unionScan: target: %v\n", string(target))
 	mnt, err := sp.MkMount(target)
 	if err != nil {
 		return sp.NoFid, nil

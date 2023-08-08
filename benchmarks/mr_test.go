@@ -38,8 +38,8 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
 	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
 	ji.nmap = nmap
-	assert.Nil(ji.T, err, "Error PrepareJob: %v", err)
-	assert.NotEqual(ji.T, 0, nmap, "Error PrepareJob nmap 0")
+	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
+	assert.NotEqual(ji.Ts.T, 0, nmap, "Error PrepareJob nmap 0")
 }
 
 func (ji *MRJobInstance) StartMRJob() {

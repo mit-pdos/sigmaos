@@ -52,7 +52,7 @@ func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype 
 	if !sigmaos {
 		db.DFatalf("Error: Get actual machine IP for k8s")
 		//		ip, err := fidclnt.LocalIP()
-		//		assert.Nil(ji.T, err, "Error LocalIP: %v", err)
+		//		assert.Nil(ji.Ts.T, err, "Error LocalIP: %v", err)
 		ip := ""
 		ji.k8ssrvaddr = ip + K8S_PORT
 	}
@@ -60,8 +60,8 @@ func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype 
 	ji.sempath = path.Join(www.JobDir(ji.job), "kvclerk-sem")
 	ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
-	assert.Nil(ji.T, err, "Sem init: %v", err)
-	assert.Equal(ji.T, reqtype, "compute")
+	assert.Nil(ji.Ts.T, err, "Sem init: %v", err)
+	assert.Equal(ji.Ts.T, reqtype, "compute")
 	return ji
 }
 
@@ -78,7 +78,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 		time.Sleep(slp)
 		start := time.Now()
 		err := clnt.MatMul(MAT_SIZE)
-		assert.Nil(ji.T, err, "Error matmul %v", err)
+		assert.Nil(ji.Ts.T, err, "Error matmul %v", err)
 		latency += time.Since(start)
 	}
 	ch <- latency
@@ -88,10 +88,10 @@ func (ji *WwwJobInstance) StartWwwJob() {
 	if ji.sigmaos {
 		a := proc.MakeProc("wwwd", []string{ji.job, ""})
 		err := ji.Spawn(a)
-		assert.Nil(ji.T, err, "Spawn")
+		assert.Nil(ji.Ts.T, err, "Spawn")
 		err = ji.WaitStart(a.GetPid())
 		ji.pid = a.GetPid()
-		assert.Equal(ji.T, nil, err)
+		assert.Equal(ji.Ts.T, nil, err)
 	}
 	db.DPrintf(db.ALWAYS, "StartWwwJob ntrial %v nclnt %v nreq/clnt %v avgdelay %v", ji.ntrials, ji.nclnt, ji.nreq, ji.delay)
 	for i := 1; i <= ji.nclnt; i++ {
@@ -124,6 +124,6 @@ func (ji *WwwJobInstance) Wait() {
 	if ji.sigmaos {
 		clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
 		err := clnt.StopServer(ji.ProcClnt, ji.pid)
-		assert.Nil(ji.T, err)
+		assert.Nil(ji.Ts.T, err)
 	}
 }

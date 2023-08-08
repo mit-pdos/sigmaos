@@ -16,8 +16,8 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
 	"sigmaos/rpcbench"
+	"sigmaos/rpcclnt"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -920,14 +920,14 @@ func TestK8sImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts1)
 	}
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt, ts1.GetRealm())
+	sdc := scheddclnt.MakeScheddClnt(ts1.FsLib)
 	nSchedd, err := sdc.Nschedd()
-	assert.Nil(ts1.T, err, "Error nschedd %v", err)
+	assert.Nil(ts1.Ts.T, err, "Error nschedd %v", err)
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
 	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts1.T, err, "Error mkdir %v", err)
+	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
 	spawnBurstProcs(ts1, ps)

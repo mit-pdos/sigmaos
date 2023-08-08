@@ -23,7 +23,7 @@ func initSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Init(0)
-	assert.Nil(ts.T, err, "Sem init: %v", err)
+	assert.Nil(ts.Ts.T, err, "Sem init: %v", err)
 	return time.Since(start), 1.0
 }
 
@@ -31,7 +31,7 @@ func upSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Up()
-	assert.Nil(ts.T, err, "Sem up: %v", err)
+	assert.Nil(ts.Ts.T, err, "Sem up: %v", err)
 	return time.Since(start), 1.0
 }
 
@@ -39,7 +39,7 @@ func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 	start := time.Now()
 	s := i.(*semclnt.SemClnt)
 	err := s.Down()
-	assert.Nil(ts.T, err, "Sem down: %v", err)
+	assert.Nil(ts.Ts.T, err, "Sem down: %v", err)
 	return time.Since(start), 1.0
 }
 
@@ -50,10 +50,10 @@ func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	err1 := ts.Spawn(p)
 	db.DPrintf(db.TEST1, "Spawned %v", p)
 	status, err2 := ts.WaitExit(p.GetPid())
-	assert.Nil(ts.T, err1, "Failed to Spawn %v", err1)
-	assert.Nil(ts.T, err2, "Failed to WaitExit %v", err2)
+	assert.Nil(ts.Ts.T, err1, "Failed to Spawn %v", err1)
+	assert.Nil(ts.Ts.T, err2, "Failed to WaitExit %v", err2)
 	// Correctness checks
-	assert.True(ts.T, status.IsStatusOK(), "Bad status: %v", status)
+	assert.True(ts.Ts.T, status.IsStatusOK(), "Bad status: %v", status)
 	return time.Since(start), 1.0
 }
 
@@ -124,7 +124,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.Wait()
 	dur := time.Since(start)
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
-	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
+	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.
 	time.Sleep(4 * time.Second)
 	ji.p.Done()
@@ -133,7 +133,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 	rpcc.MonitorSchedds(ts.GetRealm())
 	defer rpcc.Done()
 	// Start some balancers
@@ -176,7 +176,7 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
-	pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 	rpcc.MonitorSchedds(ts.GetRealm())
 	defer rpcc.Done()
 	start := time.Now()
@@ -191,7 +191,7 @@ func runRPCBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		rpcc.MonitorSchedds(ts.GetRealm())
 		defer rpcc.Done()
 	}
@@ -207,7 +207,7 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		rpcc.MonitorSchedds(ts.GetRealm())
 		defer rpcc.Done()
 	}
@@ -223,7 +223,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		rpcc.MonitorSchedds(ts.GetRealm())
 		defer rpcc.Done()
 	}

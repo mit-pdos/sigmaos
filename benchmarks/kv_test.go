@@ -34,12 +34,12 @@ type KVJobInstance struct {
 func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) *KVJobInstance {
 	ji := &KVJobInstance{RealmTstate: ts, job: rand.String(16)}
 
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, nkvd, kvdrepl, kvdmcpu, "0", auto)
-	assert.Nil(ts.T, err)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ji.job, 0, nkvd, kvdrepl, kvdmcpu, "0", auto)
+	assert.Nil(ts.Ts.T, err)
 	ji.kvf = kvf
 
 	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job, ckmcpu)
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.Ts.T, err)
 	ji.cm = cm
 
 	ji.nclerks = nclerks
@@ -59,7 +59,7 @@ func MakeKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []in
 	}
 	ji.nkeys = maxNclerks * KEYS_PER_CLERK
 
-	assert.False(ts.T, ji.redis && ji.kvf.Nkvd() > 0, "Tried to run a kv job with both redis and sigma")
+	assert.False(ts.Ts.T, ji.redis && ji.kvf.Nkvd() > 0, "Tried to run a kv job with both redis and sigma")
 	return ji
 }
 
@@ -70,9 +70,9 @@ func (ji *KVJobInstance) StartKVJob() {
 	}
 	db.DPrintf(db.TEST, "StartKVJob()")
 	err := ji.kvf.Start()
-	assert.Nil(ji.T, err)
+	assert.Nil(ji.Ts.T, err)
 	err = ji.cm.StartCmClerk()
-	assert.Nil(ji.T, err)
+	assert.Nil(ji.Ts.T, err)
 
 	ji.cm.InitKeys(ji.nkeys)
 }
@@ -84,7 +84,7 @@ func (ji *KVJobInstance) IsDone() bool {
 
 // Perform the next phase of the job.
 func (ji *KVJobInstance) NextPhase() {
-	assert.False(ji.T, ji.IsDone(), "Tried to advance to another phase when already done.")
+	assert.False(ji.Ts.T, ji.IsDone(), "Tried to advance to another phase when already done.")
 	// Find out how far off we are from the desired number of clerks in this
 	// phase.
 
@@ -96,7 +96,7 @@ func (ji *KVJobInstance) NextPhase() {
 
 	// Make sure we got the number of clerks right.
 
-	assert.Equal(ji.T, ji.cm.Nclerk(), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", ji.cm.Nclerk(), ji.nclerks[ji.phase])
+	assert.Equal(ji.Ts.T, ji.cm.Nclerk(), ji.nclerks[ji.phase], "Didn't get right num of clerks for this phase: %v != %v", ji.cm.Nclerk(), ji.nclerks[ji.phase])
 
 	// Sleep for the duration of this phase.
 	db.DPrintf(db.TEST, "Phase %v: sleep", ji.phase)

@@ -75,11 +75,17 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl.isBusy = true
 
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(KVBALANCER + "-" + proc.GetPid().String()))
+	if err != nil {
+		db.DFatalf("MkSigmaClnt err %v", err)
+	}
 	bl.SigmaClnt = sc
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
-	bl.cc = NewCacheClnt([]*fslib.FsLib{sc.FsLib}, NSHARD)
+	bl.cc, err = NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
+	if err != nil {
+		db.DFatalf("NewCacheClnt err %v", err)
+	}
 	var kvdnc int
 	var error error
 	kvdnc, error = strconv.Atoi(kvdmcpu)

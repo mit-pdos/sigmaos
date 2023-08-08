@@ -48,10 +48,14 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	if err != nil {
 		return nil, err
 	}
+	cc, err := NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
+	if err != nil {
+		return nil, err
+	}
 	mv := &Mover{fence: fence,
 		SigmaClnt: sc,
 		job:       job,
-		cc:        NewCacheClnt([]*fslib.FsLib{sc.FsLib}, NSHARD),
+		cc:        cc,
 		exit:      true,
 	}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {

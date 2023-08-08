@@ -38,7 +38,7 @@ func (a *Autoscaler) Stop() {
 
 func (a *Autoscaler) run(freq time.Duration, max int) {
 	for !a.isDone() {
-		sts, err := a.cc.StatsSrv()
+		sts, err := a.cc.csc.StatsSrv()
 		if err != nil {
 			db.DFatalf("Error stats srv: %v", err)
 		}

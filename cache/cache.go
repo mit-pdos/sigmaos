@@ -33,9 +33,9 @@ type CacheClnt interface {
 	Get(string, proto.Message) error
 	Put(string, proto.Message) error
 	Delete(string) error
-	GetTraced(*tproto.SpanContextConfig, string, proto.Message) error
-	PutTraced(*tproto.SpanContextConfig, string, proto.Message) error
-	DeleteTraced(*tproto.SpanContextConfig, string) error
+	GetTraced(*tproto.SpanContextConfig, string, string, proto.Message) error
+	PutTraced(*tproto.SpanContextConfig, string, string, proto.Message) error
+	DeleteTraced(*tproto.SpanContextConfig, string, string) error
 }
 
 func IsMiss(err error) bool {

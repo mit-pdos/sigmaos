@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	proto "sigmaos/cache/proto"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
+	"sigmaos/cachedsvc"
+	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
@@ -299,16 +299,16 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job, cachesrv.NSHARD)
+	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job, cachesrv.NSHARD)
+	_, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))
@@ -347,16 +347,16 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	ts1 := test.MakeRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cacheclnt.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cacheclnt.MkCacheClnt([]*fslib.FsLib{ts1.FsLib}, job, cachesrv.NSHARD)
+	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cacheclnt.MkCacheClnt([]*fslib.FsLib{rootts.FsLib}, job, cachesrv.NSHARD)
+	_, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))

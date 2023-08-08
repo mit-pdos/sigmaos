@@ -1,28 +1,29 @@
 package socialnetwork_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/fslib"
-	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
-	"sigmaos/socialnetwork/proto"
-	"sigmaos/rpcclnt"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"sigmaos/cachesrv"
+	"sigmaos/fslib"
+	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
+	sn "sigmaos/socialnetwork"
+	"sigmaos/socialnetwork/proto"
+	"sigmaos/test"
+	"testing"
 )
 
-func createNPosts(t *testing.T, pdc *rpcclnt.RPCClnt, N int, userid int64) []*proto.Post {
+func createNPosts(t *testing.T, rpcc *rpcclnt.RPCClnt, N int, userid int64) []*proto.Post {
 	posts := make([]*proto.Post, N)
 	for i := 0; i < N; i++ {
 		posts[i] = &proto.Post{
-			Postid: int64(i),
-			Posttype: proto.POST_TYPE_POST,
-			Timestamp: int64(10000+i),
-			Creator: userid,
-			Text: fmt.Sprintf("Post Number %v", i+1),
-			Urls: []string{"xxxxx"},
-			Usermentions: []int64{userid*10+int64(i+1)},
+			Postid:       int64(i),
+			Posttype:     proto.POST_TYPE_POST,
+			Timestamp:    int64(10000 + i),
+			Creator:      userid,
+			Text:         fmt.Sprintf("Post Number %v", i+1),
+			Urls:         []string{"xxxxx"},
+			Usermentions: []int64{userid*10 + int64(i+1)},
 		}
 		arg_store := proto.StorePostRequest{Post: posts[i]}
 		res_store := proto.StorePostResponse{}
@@ -32,7 +33,7 @@ func createNPosts(t *testing.T, pdc *rpcclnt.RPCClnt, N int, userid int64) []*pr
 	return posts
 }
 
-func writeTimeline(t *testing.T, pdc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
+func writeTimeline(t *testing.T, rpcc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
 	arg_write := proto.WriteTimelineRequest{
 		Userid: userid, Postid: post.Postid, Timestamp: post.Timestamp}
 	res_write := proto.WriteTimelineResponse{}
@@ -40,7 +41,7 @@ func writeTimeline(t *testing.T, pdc *rpcclnt.RPCClnt, post *proto.Post, userid 
 	assert.Equal(t, "OK", res_write.Ok)
 }
 
-func writeHomeTimeline(t *testing.T, pdc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
+func writeHomeTimeline(t *testing.T, rpcc *rpcclnt.RPCClnt, post *proto.Post, userid int64) {
 	mentionids := make([]int64, 0)
 	for _, mention := range post.Usermentions {
 		mentionids = append(mentionids, mention)
@@ -57,7 +58,7 @@ func TestTimeline(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-post", test.Overlays, 2},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
@@ -84,15 +85,15 @@ func TestTimeline(t *testing.T) {
 	assert.Nil(t, trpcc.RPC("Timeline.ReadTimeline", &arg_read, &res_read))
 	assert.Equal(t, "OK", res_read.Ok)
 
-	// write post N/2 to N to timeline 	
-	for i := NPOST/2; i < NPOST; i++ {
+	// write post N/2 to N to timeline
+	for i := NPOST / 2; i < NPOST; i++ {
 		writeTimeline(t, trpcc, posts[i], userid)
 	}
 	arg_read.Start = int32(1)
 	assert.Nil(t, trpcc.RPC("Timeline.ReadTimeline", &arg_read, &res_read))
 	assert.Equal(t, NPOST-1, len(res_read.Posts))
 	assert.Equal(t, "OK", res_read.Ok)
-	for i, tlpost := range(res_read.Posts) {
+	for i, tlpost := range res_read.Posts {
 		// posts should be in reverse order
 		assert.True(t, IsPostEqual(posts[NPOST-i-2], tlpost))
 	}
@@ -107,7 +108,7 @@ func TestHome(t *testing.T) {
 		sn.Srv{"socialnetwork-user", test.Overlays, 2},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 2},
 		sn.Srv{"socialnetwork-post", test.Overlays, 2},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-home", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 	tssn.dbu.InitGraph()
 
@@ -120,7 +121,7 @@ func TestHome(t *testing.T) {
 	// create and store N posts
 	NPOST, userid := 3, int64(1)
 	posts := createNPosts(t, prpcc, NPOST, userid)
-	
+
 	// write to home timelines and check
 	for i := 0; i < NPOST; i++ {
 		writeHomeTimeline(t, hrpcc, posts[i], userid)
@@ -131,13 +132,13 @@ func TestHome(t *testing.T) {
 	res_read := proto.ReadTimelineResponse{}
 	assert.Nil(t, hrpcc.RPC("Home.ReadHomeTimeline", &arg_read, &res_read))
 	assert.Equal(t, NPOST, len(res_read.Posts))
-	for i, post := range(res_read.Posts) {
+	for i, post := range res_read.Posts {
 		// posts should be in reverse order
 		assert.True(t, IsPostEqual(posts[NPOST-i-1], post))
 	}
 	arg_read.Stop = int32(1)
 	for i := 0; i < NPOST; i++ {
-		arg_read.Userid = userid*10+int64(i+1)
+		arg_read.Userid = userid*10 + int64(i+1)
 		assert.Nil(t, hrpcc.RPC("Home.ReadHomeTimeline", &arg_read, &res_read))
 		assert.Equal(t, 1, len(res_read.Posts))
 		assert.True(t, IsPostEqual(posts[i], res_read.Posts[0]))

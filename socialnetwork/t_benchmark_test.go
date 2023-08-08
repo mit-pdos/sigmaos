@@ -1,23 +1,24 @@
 package socialnetwork_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	dbg "sigmaos/debug"
-	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
-	"strconv"
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"os/exec"
-	"os"
-	"strings"
-	"time"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"os"
+	"os/exec"
+	"sigmaos/cachesrv"
+	dbg "sigmaos/debug"
+	sp "sigmaos/sigmap"
+	sn "sigmaos/socialnetwork"
+	"sigmaos/test"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 )
 
 const (
@@ -46,11 +47,11 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	for i := 0; i < N_BENCH_USER; i++ {
 		suffix := strconv.Itoa(i)
 		newUser := sn.User{
-			Userid: int64(i),
-			Username: "user_" + suffix,
-			Lastname: "Lastname" + suffix,
+			Userid:    int64(i),
+			Username:  "user_" + suffix,
+			Lastname:  "Lastname" + suffix,
 			Firstname: "Firstname" + suffix,
-			Password: fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_" + suffix)))}
+			Password:  fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_"+suffix)))}
 
 		err := session.DB(sn.SN_DB).C(sn.USER_COL).Insert(newUser)
 		assert.Nil(t, err, "cannot insert user: %v", err)
@@ -58,7 +59,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	// insert graphs
 	b, err := os.ReadFile("data/socfb-Reed98/socfb-Reed98.edges")
 	assert.Nil(t, err, "Cannot open edge file: %v", err)
-	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool {return c =='\n'}) {
+	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool { return c == '\n' }) {
 		ids := strings.Split(line, " ")
 		followerId, _ := strconv.ParseInt(ids[0], 10, 64)
 		followeeId, _ := strconv.ParseInt(ids[1], 10, 64)
@@ -83,18 +84,17 @@ func setupSigmaState(t *testing.T) *TstateSN {
 		sn.Srv{"socialnetwork-url", test.Overlays, 1},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1},
 		sn.Srv{"socialnetwork-compose", test.Overlays, 1},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 1}}, NSHARD)
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 1}}, cachesrv.NSHARD)
 	initUserAndGraph(t, MONGO_URL)
 	return tssn
 }
-
 
 func setupK8sState(t *testing.T) *TstateSN {
 	// Advertise server address
 	tssn := makeTstateSN(t, nil, 0)
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
-	assert.Nil(t, tssn.MountService(p, mnt))
+	assert.Nil(t, tssn.MountService(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.
 	cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8S_MONGO_FWD_PORT+":27017")
 	assert.Nil(t, cmd.Start())
@@ -149,7 +149,7 @@ func testSeqComposeInner(t *testing.T, wc *sn.WebClnt) {
 	users := make([]string, N_BENCH_USER)
 	for i := 0; i < N_BENCH_USER; i++ {
 		users[i] = strconv.Itoa(i)
-		s, err := wc.Login("user_" + users[i], "p_user_" + users[i])
+		s, err := wc.Login("user_"+users[i], "p_user_"+users[i])
 		assert.Nil(t, err)
 		assert.Equal(t, "Login successfully!", s)
 	}
@@ -157,7 +157,7 @@ func testSeqComposeInner(t *testing.T, wc *sn.WebClnt) {
 	// compose posts and check timelines. check 5 times for each compose
 	N_COMPOSE := 250
 	for i := 0; i < N_COMPOSE; i++ {
-		if i % (N_COMPOSE/10) == 0 {
+		if i%(N_COMPOSE/10) == 0 {
 			dbg.DPrintf(dbg.TEST, "Check point at %v: %v", i, time.Since(t0).Microseconds())
 		}
 		meStr := users[i%N_BENCH_USER]
@@ -229,7 +229,7 @@ func testSeqMixInner(t *testing.T, wc *sn.WebClnt) {
 	N := 1000
 	t0 := time.Now()
 	for i := 0; i < N; i++ {
-		if i % (N/10) == 0 {
+		if i%(N/10) == 0 {
 			dbg.DPrintf(dbg.TEST, "Check point at %v: %v", i, time.Since(t0).Microseconds())
 		}
 		randOps(t, wc, r)
@@ -272,10 +272,10 @@ func randReadTimeline(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 }
 
 func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
-	ratio := float64(r.Intn(10000))/10000
+	ratio := float64(r.Intn(10000)) / 10000
 	if ratio < COMPOSE_RATIO {
 		randCompose(t, wc, r)
-	} else if ratio < COMPOSE_RATIO + HOME_RATIO {
+	} else if ratio < COMPOSE_RATIO+HOME_RATIO {
 		randReadHome(t, wc, r)
 	} else {
 		randReadTimeline(t, wc, r)

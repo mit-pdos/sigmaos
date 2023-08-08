@@ -1,21 +1,22 @@
 package socialnetwork_test
 
 import (
-	"testing"
-	"sigmaos/test"
-	"sigmaos/fslib"
-	sn "sigmaos/socialnetwork"
-	sp "sigmaos/sigmap"
-	"sigmaos/socialnetwork/proto"
-	"sigmaos/rpcclnt"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"sigmaos/cachesrv"
+	"sigmaos/fslib"
+	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
+	sn "sigmaos/socialnetwork"
+	"sigmaos/socialnetwork/proto"
+	"sigmaos/test"
 	"strings"
+	"testing"
 )
 
 func TestUrl(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 2}}, NSHARD)
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -27,16 +28,16 @@ func TestUrl(t *testing.T) {
 	url2 := "https://www.bing.com"
 	arg_url := proto.ComposeUrlsRequest{Extendedurls: []string{url1, url2}}
 	res_url := proto.ComposeUrlsResponse{}
-	assert.Nil(t, rpcc.RPC("Url.ComposeUrls", &arg_url, &res_url))	
+	assert.Nil(t, rpcc.RPC("Url.ComposeUrls", &arg_url, &res_url))
 	assert.Equal(t, "OK", res_url.Ok)
 	assert.Equal(t, 2, len(res_url.Shorturls))
-	
+
 	// get urls
 	shortUrl1 := res_url.Shorturls[0]
 	shortUrl2 := res_url.Shorturls[1]
 	arg_get := proto.GetUrlsRequest{Shorturls: []string{shortUrl1, shortUrl2}}
 	res_get := proto.GetUrlsResponse{}
-	assert.Nil(t, rpcc.RPC("Url.GetUrls", &arg_get, &res_get))	
+	assert.Nil(t, rpcc.RPC("Url.GetUrls", &arg_get, &res_get))
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 2, len(res_get.Extendedurls))
 	assert.Equal(t, url1, res_get.Extendedurls[0])
@@ -51,7 +52,7 @@ func TestText(t *testing.T) {
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 2},
 		sn.Srv{"socialnetwork-url", test.Overlays, 2},
-		sn.Srv{"socialnetwork-text", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-text", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -62,11 +63,11 @@ func TestText(t *testing.T) {
 	// process text
 	arg_text := proto.ProcessTextRequest{}
 	res_text := proto.ProcessTextResponse{}
-	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))	
+	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))
 	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
-	
+
 	arg_text.Text = "Hello World!"
-	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))	
+	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))
 	assert.Equal(t, "OK", res_text.Ok)
 	assert.Equal(t, 0, len(res_text.Usermentions))
 	assert.Equal(t, 0, len(res_text.Urls))
@@ -74,7 +75,7 @@ func TestText(t *testing.T) {
 
 	arg_text.Text =
 		"First post! @user_1@user_2 http://www.google.com/q=apple @user_4 https://www.bing.com Over!"
-	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))	
+	assert.Nil(t, rpcc.RPC("Text.ProcessText", &arg_text, &res_text))
 	assert.Equal(t, "OK", res_text.Ok)
 	assert.Equal(t, 3, len(res_text.Usermentions))
 	assert.Equal(t, int64(1), res_text.Usermentions[0])
@@ -100,7 +101,7 @@ func TestCompose(t *testing.T) {
 		sn.Srv{"socialnetwork-home", test.Overlays, 2},
 		sn.Srv{"socialnetwork-url", test.Overlays, 2},
 		sn.Srv{"socialnetwork-text", test.Overlays, 2},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-compose", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -116,23 +117,23 @@ func TestCompose(t *testing.T) {
 	// compose empty post not allowed
 	arg_compose := proto.ComposePostRequest{}
 	res_compose := proto.ComposePostResponse{}
-	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))
 	assert.Equal(t, "Cannot compose empty post!", res_compose.Ok)
-	
+
 	// compose 2 posts
 	arg_compose.Posttype = proto.POST_TYPE_REPOST
 	arg_compose.Username = "user_1"
 	arg_compose.Userid = int64(1)
 	arg_compose.Text = "First post! @user_3 http://www.google.com/q=apple"
 	arg_compose.Mediaids = []int64{int64(77), int64(78)}
-	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))
 	assert.Equal(t, "OK", res_compose.Ok)
 
 	arg_compose.Posttype = proto.POST_TYPE_REPOST
 	arg_compose.Username = "user_1"
 	arg_compose.Userid = int64(1)
 	arg_compose.Text = "Second post! https://www.bing.com/ @user_2"
-	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))	
+	assert.Nil(t, rpcc.RPC("Compose.ComposePost", &arg_compose, &res_compose))
 	assert.Equal(t, "OK", res_compose.Ok)
 
 	// check timelines: user_1 has two items
@@ -169,4 +170,3 @@ func TestCompose(t *testing.T) {
 	//stop server
 	assert.Nil(t, tssn.Shutdown())
 }
-

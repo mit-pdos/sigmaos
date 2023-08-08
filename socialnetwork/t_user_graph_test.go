@@ -3,6 +3,8 @@ package socialnetwork_test
 import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
+
+	"sigmaos/cachesrv"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
@@ -14,7 +16,7 @@ import (
 
 func TestUser(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 2}}, NSHARD)
+	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -83,7 +85,7 @@ func TestGraph(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 2},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, cachesrv.NSHARD)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -157,7 +159,7 @@ func TestUserAndGraph(t *testing.T) {
 	// start server
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 2},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, NSHARD)
+		sn.Srv{"socialnetwork-graph", test.Overlays, 2}}, cachesrv.NSHARD)
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg

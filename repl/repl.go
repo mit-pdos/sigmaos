@@ -1,8 +1,7 @@
 package repl
 
 import (
-	"sigmaos/sessp"
-	"sigmaos/threadmgr"
+	proto "sigmaos/repl/proto"
 )
 
 const (
@@ -12,10 +11,10 @@ const (
 type Config interface {
 	ReplAddr() string
 	String() string
-	MakeServer(tm *threadmgr.ThreadMgr) Server
+	MakeServer(chan *proto.ReplRequest) Server
 }
 
 type Server interface {
 	Start()
-	Process(fc *sessp.FcallMsg)
+	Process(*proto.ReplRequest)
 }

@@ -43,6 +43,7 @@ const (
 	WWW_CLNT                          = WWW + "_CLNT"
 	MATMUL                            = "MATMUL"
 	CACHESRV                          = "CACHESRV"
+	CACHESRV_REPL                     = "CACHESRV_REPL"
 	CACHECLERK                        = "CACHECLERK"
 	CACHEDSVCCLNT                     = "CACHEDSVCCLNT"
 	RPC_BENCH_SRV                     = "RPC_BENCH_SRV"

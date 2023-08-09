@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"sigmaos/cachesrv"
+	"sigmaos/cachesrvrepl"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -279,9 +280,13 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
-	cs := cachesrv.NewCacheSrv("", raftCfg)
+	var cs any
+	if raftCfg == nil {
+		cs = cachesrv.NewCacheSrv("")
+	} else {
+		cs = cachesrvrepl.NewCacheSrv(raftCfg)
+	}
 
-	// XXX used to pass raftCfg to sesssrv for transparent replication
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)
 	if err != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v\n", err)

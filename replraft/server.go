@@ -5,8 +5,7 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	"sigmaos/sessp"
-	sp "sigmaos/sigmap"
+	replproto "sigmaos/repl/proto"
 )
 
 type RaftReplServer struct {
@@ -32,14 +31,6 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(fc *sessp.FcallMsg) {
-	if fc.GetType() == sessp.TTdetach {
-		msg := fc.Msg.(*sp.Tdetach)
-		msg.PropId = uint32(srv.node.id)
-		fc.Msg = msg
-	}
-	op := &Op{}
-	op.request = fc
-	op.reply = nil
-	srv.clerk.request(op)
+func (srv *RaftReplServer) Process(req *replproto.ReplRequest) {
+	srv.clerk.request(&Op{request: req})
 }

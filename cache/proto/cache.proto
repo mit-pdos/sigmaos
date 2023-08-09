@@ -18,6 +18,16 @@ message CacheRequest {
   uint32 mode = 4;
   SpanContextConfig spanContextConfig = 5;
   TfenceProto fence = 6;
+  uint32 clntId = 7;
+  uint64 seqno = 8;
+}
+
+message ShardArg {
+  uint32 shard = 1;
+  TfenceProto fence = 2;
+  map<string, bytes> vals = 3;
+  uint32 clntId = 4;
+  uint64 seqno = 5;
 }
 
 message CacheOK {}
@@ -38,9 +48,4 @@ message CacheInt {
   int64 val = 1;
 }
 
-message ShardArg {
-  uint32 shard = 1;
-  TfenceProto fence = 2;
-  map<string, bytes> vals = 3;
-}
 

@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
+	"sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
@@ -36,9 +37,11 @@ func key2shard(key cache.Tkey) cache.Tshard {
 
 type KvClerk struct {
 	*fslib.FsLib
-	conf *Config
-	job  string
-	cc   *cacheclnt.CacheClnt
+	conf  *Config
+	job   string
+	cc    *cacheclnt.CacheClnt
+	cid   sp.TclntId
+	seqno sp.Tseqno
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
@@ -63,6 +66,7 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 		conf:  &Config{},
 		job:   job,
 		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		cid:   sp.TclntId(rand.Uint64()),
 	}
 	return kc
 }
@@ -70,6 +74,11 @@ func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
 func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
 	kc := makeClerk(fsl, job)
 	return kc, kc.StartClerk()
+}
+
+func (kc *KvClerk) nextSeqno() sp.Tseqno {
+	seq := &kc.seqno
+	return seq.Next()
 }
 
 func (kc *KvClerk) StartClerk() error {
@@ -169,36 +178,38 @@ const (
 )
 
 type op struct {
-	kind Top
-	val  proto.Message
-	k    cache.Tkey
-	m    sp.Tmode
-	err  error
-	vals []proto.Message
+	kind  Top
+	val   proto.Message
+	k     cache.Tkey
+	m     sp.Tmode
+	cid   sp.TclntId
+	seqno sp.Tseqno
+	err   error
+	vals  []proto.Message
 }
 
-func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode) *op {
-	return &op{kind: o, val: val, k: k, m: m}
+func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, cid sp.TclntId, s sp.Tseqno) *op {
+	return &op{kind: o, val: val, k: k, m: m, cid: cid, seqno: s}
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 	switch o.kind {
 	case GET:
-		o.err = kc.cc.GetSrv(srv, string(o.k), o.val)
+		o.err = kc.cc.GetSrv(srv, string(o.k), o.val, o.cid, o.seqno)
 	case GETVALS:
-		o.vals, o.err = kc.cc.GetVals(srv, string(o.k), o.val, &kc.conf.Fence)
+		o.vals, o.err = kc.cc.GetVals(srv, string(o.k), o.val, o.cid, o.seqno, &kc.conf.Fence)
 	case PUT:
 		if o.m == sp.OAPPEND {
-			o.err = kc.cc.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
+			o.err = kc.cc.AppendFence(srv, string(o.k), o.val, o.cid, o.seqno, &kc.conf.Fence)
 		} else {
-			o.err = kc.cc.PutSrv(srv, string(o.k), o.val)
+			o.err = kc.cc.PutSrv(srv, string(o.k), o.val, o.cid, o.seqno)
 		}
 	}
 	db.DPrintf(db.KVCLERK, "op %v(%v) f %v srv %v %v err %v", o.kind, o.m == sp.OAPPEND, kc.conf.Fence, srv, s, o.err)
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := newOp(GET, val, cache.Tkey(key), sp.OREAD)
+	op := newOp(GET, val, cache.Tkey(key), sp.OREAD, kc.cid, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }
@@ -208,13 +219,13 @@ func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) GetVals(k cache.Tkey, val proto.Message) ([]proto.Message, error) {
-	op := newOp(GETVALS, val, k, sp.OREAD)
+	op := newOp(GETVALS, val, k, sp.OREAD, kc.cid, kc.nextSeqno())
 	kc.doop(op)
 	return op.vals, op.err
 }
 
 func (kc *KvClerk) Append(k cache.Tkey, val proto.Message) error {
-	op := newOp(PUT, val, k, sp.OAPPEND)
+	op := newOp(PUT, val, k, sp.OAPPEND, kc.cid, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }
@@ -224,7 +235,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE)
+	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE, kc.cid, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }

@@ -58,7 +58,7 @@ func (ts *Tstate) setupKeys(nkeys int) {
 	assert.Nil(ts.T, err, "CreateShard %v", err)
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.cc.PutSrv(srv, i_str, &proto.CacheString{Val: i_str})
+		err := ts.cc.PutSrv(srv, i_str, &proto.CacheString{Val: i_str}, 0, 0)
 		assert.Nil(ts.T, err, "Put %v", err)
 	}
 	db.DPrintf(db.TEST, "done setupKeys")
@@ -70,10 +70,10 @@ func (ts *Tstate) testGetPut(nkeys int) {
 		i_str := strconv.Itoa(i)
 		srv := path.Join(kvgrp.GrpPath(JOBDIR, ts.grp))
 		res := &proto.CacheString{}
-		err := ts.cc.GetSrv(srv, i_str, res)
+		err := ts.cc.GetSrv(srv, i_str, res, 0, 0)
 		assert.Nil(ts.T, err, "GetSrv %v", err)
 		assert.Equal(ts.T, i_str, res.Val, "Didn't read expected")
-		err = ts.cc.PutSrv(srv, i_str, &proto.CacheString{Val: i_str + i_str})
+		err = ts.cc.PutSrv(srv, i_str, &proto.CacheString{Val: i_str + i_str}, 0, 0)
 		assert.Nil(ts.T, err, "PutSrv")
 	}
 	db.DPrintf(db.TEST, "done testGetPutSet")

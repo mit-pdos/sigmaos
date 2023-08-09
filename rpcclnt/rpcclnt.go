@@ -48,9 +48,7 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 }
 
 func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
-	req := rpcproto.Request{}
-	req.Method = method
-	req.Args = a
+	req := rpcproto.Request{Method: method, Args: a}
 
 	b, err := proto.Marshal(&req)
 	if err != nil {

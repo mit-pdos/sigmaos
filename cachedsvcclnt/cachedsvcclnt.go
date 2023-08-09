@@ -135,12 +135,12 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	srv := csc.Server(key2server(key, csc.nServer()))
-	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
+	return csc.cc.GetTracedFenced(sctx, srv, key, val, 0, 0, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	srv := csc.Server(key2server(key, csc.nServer()))
-	return csc.cc.PutTracedFenced(sctx, srv, key, val, sp.NullFence())
+	return csc.cc.PutTracedFenced(sctx, srv, key, val, 0, 0, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {

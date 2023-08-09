@@ -270,14 +270,6 @@ func String2Taddrs(as string) (Taddrs, error) {
 	return addrs, nil
 }
 
-// func (fm *FcallMsg) Tfence() *Tfence {
-// 	f := NullFence()
-// 	f.Epoch = fm.Fc.Fence.Tepoch()
-// 	f.Seqno = fm.Fc.Fence.Tseqno()
-// 	f.PathName = fm.Fc.Fence.Tpathname()
-// 	return f
-// }
-
 func MkErr(msg *Rerror) *serr.Err {
 	return &serr.Err{serr.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }

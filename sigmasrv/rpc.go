@@ -4,6 +4,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
+	"sigmaos/rpcsrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -13,25 +14,23 @@ import (
 //
 
 type rpcDev struct {
-	ssrv *SigmaSrv
+	rpcs *rpcsrv.RPCSrv
 }
 
-func mkRpcDev(ssrv *SigmaSrv) *rpcDev {
-	return &rpcDev{ssrv}
+func mkRpcDev(rpcs *rpcsrv.RPCSrv) *rpcDev {
+	return &rpcDev{rpcs}
 }
 
 type rpcSession struct {
 	*inode.Inode
-	ssrv *SigmaSrv
+	rpcs *rpcsrv.RPCSrv
 }
 
 func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
-	rpc := &rpcSession{}
-	rpc.ssrv = rd.ssrv
-	rpc.Inode = mfs.MakeDevInode()
+	rpc := &rpcSession{rpcs: rd.rpcs, Inode: mfs.MakeDevInode()}
 	return rpc, nil
 }
 
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
-	return rpc.ssrv.rpcs.WriteRead(ctx, b)
+	return rpc.rpcs.WriteRead(ctx, b)
 }

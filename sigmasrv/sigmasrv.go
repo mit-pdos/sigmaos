@@ -171,17 +171,16 @@ func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 
 // Make the rpc device and register the svci service
 func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
-	rd := mkRpcDev(ssrv)
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, rpc.RPC, rd.mkRpcSession, nil); err != nil {
-		return err
-	}
 	if si, err := makeStatsDev(ssrv.MemFs, rpc.RPC); err != nil {
 		return err
 	} else {
-
 		ssrv.rpcs = rpcsrv.NewRPCSrv(svci, si)
+		rd := mkRpcDev(ssrv.rpcs)
+		if err := sessdevsrv.MkSessDev(ssrv.MemFs, rpc.RPC, rd.mkRpcSession, nil); err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
 // Assumes RPCSrv has been created and register the LeaseSrv service.

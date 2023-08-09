@@ -16,6 +16,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/rpc"
+	"sigmaos/rpcsrv"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
@@ -31,8 +32,7 @@ import (
 
 type SigmaSrv struct {
 	*memfssrv.MemFs
-	sti    *rpc.StatInfo
-	svc    *svcMap
+	rpcs   *rpcsrv.RPCSrv
 	lsrv   *LeaseSrv
 	cpumon *cpumon.CpuMon
 }
@@ -117,7 +117,7 @@ func MakeSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
-	ssrv := &SigmaSrv{MemFs: mfs, svc: newSvcMap()}
+	ssrv := &SigmaSrv{MemFs: mfs}
 	return ssrv
 }
 
@@ -171,7 +171,6 @@ func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 
 // Make the rpc device and register the svci service
 func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
-	ssrv.svc.RegisterService(svci)
 	rd := mkRpcDev(ssrv)
 	if err := sessdevsrv.MkSessDev(ssrv.MemFs, rpc.RPC, rd.mkRpcSession, nil); err != nil {
 		return err
@@ -179,7 +178,8 @@ func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
 	if si, err := makeStatsDev(ssrv.MemFs, rpc.RPC); err != nil {
 		return err
 	} else {
-		ssrv.sti = si
+
+		ssrv.rpcs = rpcsrv.NewRPCSrv(svci, si)
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func (ssrv *SigmaSrv) makeRPCDev(svci any) error {
 // Assumes RPCSrv has been created and register the LeaseSrv service.
 func (ssrv *SigmaSrv) NewLeaseSrv() error {
 	ssrv.lsrv = newLeaseSrv(ssrv.MemFs)
-	ssrv.svc.RegisterService(ssrv.lsrv)
+	ssrv.rpcs.RegisterService(ssrv.lsrv)
 	return nil
 }
 

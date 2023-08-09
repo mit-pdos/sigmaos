@@ -1,4 +1,4 @@
-package sigmasrv
+package rpcsrv
 
 import (
 	"log"

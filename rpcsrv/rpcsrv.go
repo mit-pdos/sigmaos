@@ -47,7 +47,7 @@ func (rpcs *RPCSrv) serveRPC(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
 	dot := strings.LastIndex(name, ".")
 	method := name[dot+1:]
 	tname := name[:dot]
-	db.DPrintf(db.SIGMASRV, "WriteRead svc %v name %v\n", tname, method)
+	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)
 
 	rep = rpcs.svc.Lookup(tname).dispatch(ctx, name, &req)
 	t := time.Since(start).Microseconds()

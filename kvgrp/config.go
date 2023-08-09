@@ -1,4 +1,4 @@
-package group
+package kvgrp
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package group_test
+package kvgrp_test
 
 import (
 	"path"
@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/group"
 	"sigmaos/groupmgr"
+	"sigmaos/kvgrp"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -34,7 +34,7 @@ func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts.RmDir(JOBDIR)
 	ts.MkDir(JOBDIR, 0777)
 	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
-	cfg, err := group.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
+	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
@@ -48,7 +48,7 @@ func (ts *Tstate) setupKeys(nkeys int) {
 	db.DPrintf(db.TEST, "setupKeys")
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
-		fname := path.Join(group.GrpPath(JOBDIR, ts.grp), i_str)
+		fname := path.Join(kvgrp.GrpPath(JOBDIR, ts.grp), i_str)
 		_, err := ts.PutFile(fname, 0777, sp.OWRITE|sp.OREAD, []byte(i_str))
 		assert.Nil(ts.T, err, "Put %v", err)
 	}
@@ -59,7 +59,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 	db.DPrintf(db.TEST, "testGetPutSet")
 	for i := 0; i < nkeys; i++ {
 		i_str := strconv.Itoa(i)
-		fname := path.Join(group.GrpPath(JOBDIR, ts.grp), i_str)
+		fname := path.Join(kvgrp.GrpPath(JOBDIR, ts.grp), i_str)
 		b, err := ts.GetFile(fname)
 		assert.Nil(ts.T, err, "Get %v", err)
 		assert.Equal(ts.T, i_str, string(b), "Didn't read expected")
@@ -74,7 +74,7 @@ func (ts *Tstate) testGetPutSet(nkeys int) {
 func TestStartStopRepl0(t *testing.T) {
 	ts := makeTstate(t, 0, 0)
 
-	sts, _, err := ts.ReadDir(group.GrpPath(JOBDIR, ts.grp) + "/")
+	sts, _, err := ts.ReadDir(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 
@@ -86,11 +86,11 @@ func TestStartStopRepl0(t *testing.T) {
 func TestStartStopRepl1(t *testing.T) {
 	ts := makeTstate(t, 1, 0)
 
-	st, err := ts.Stat(group.GrpPath(JOBDIR, ts.grp) + "/")
+	st, err := ts.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", st, err)
 	assert.Nil(t, err, "stat")
 
-	sts, _, err := ts.ReadDir(group.GrpPath(JOBDIR, ts.grp) + "/")
+	sts, _, err := ts.ReadDir(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 

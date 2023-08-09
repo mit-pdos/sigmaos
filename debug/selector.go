@@ -153,8 +153,8 @@ const (
 	FENCECLNT_ERR           = FENCECLNT + ERR
 	LEASECLNT               = "LEASECLNT"
 	ELECTCLNT               = "ELECTCLNT"
-	GROUP                   = "GROUP"
-	GROUP_ERR               = GROUP + ERR
+	KVGRP                   = "KVGRP"
+	KVGRP_ERR               = KVGRP + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
 )

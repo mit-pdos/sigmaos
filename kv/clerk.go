@@ -12,7 +12,7 @@ import (
 	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/group"
+	"sigmaos/kvgrp"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
@@ -98,7 +98,7 @@ func paths(job string, kvset *KvSet) []string {
 	kvs := kvset.mkKvs()
 	dirs := make([]string, 0, len(kvs)+1)
 	for _, kvd := range kvs {
-		dirs = append(dirs, group.GrpPath(JobDir(job), kvd))
+		dirs = append(dirs, kvgrp.GrpPath(JobDir(job), kvd))
 	}
 	return dirs
 }

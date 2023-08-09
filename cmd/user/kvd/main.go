@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
-	"sigmaos/group"
+	"sigmaos/kvgrp"
 )
 
 func main() {
@@ -19,6 +19,11 @@ func main() {
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	cs := cachesrv.NewCacheSrv("")
-	group.RunMember(os.Args[1], os.Args[2], public, cs)
+	nrepl := 0
+	nrepl, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
+	if err != nil {
+		db.DFatalf("invalid sigmarepl: %v", err)
+	}
+	cs := cachesrv.NewCacheSrv("", nrepl)
+	kvgrp.RunMember(os.Args[1], os.Args[2], public, nrepl, cs)
 }

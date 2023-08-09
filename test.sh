@@ -66,7 +66,7 @@ if [[ $APPS == "" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest group sessclnt cachedsvcclnt www; do
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www; do
         go test $VERB sigmaos/$T -start
     done
 

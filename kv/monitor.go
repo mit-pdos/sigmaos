@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/group"
 	"sigmaos/groupmgr"
+	"sigmaos/kvgrp"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -138,7 +138,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
-		kvgrp := path.Join(group.GrpPath(JobDir(mo.job), gn), sp.STATSD)
+		kvgrp := path.Join(kvgrp.GrpPath(JobDir(mo.job), gn), sp.STATSD)
 		st := stats.Stats{}
 		err := mo.GetFileJson(kvgrp, &st)
 		if err != nil {

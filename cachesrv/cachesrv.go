@@ -43,6 +43,7 @@ type CacheSrv struct {
 	mu        sync.Mutex
 	shards    shardMap
 	shrd      string
+	nrepl     int
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
 	perf      *perf.Perf
@@ -58,7 +59,7 @@ func RunCacheSrv(args []string, nshard int) error {
 		return err
 	}
 
-	s := NewCacheSrv(pn)
+	s := NewCacheSrv(pn, 0)
 
 	for i := 0; i < nshard; i++ {
 		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(Tcache)); err != nil {
@@ -82,7 +83,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	return nil
 }
 
-func NewCacheSrv(pn string) *CacheSrv {
+func NewCacheSrv(pn string, nrepl int) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(perf.CACHESRV)
@@ -91,6 +92,7 @@ func NewCacheSrv(pn string) *CacheSrv {
 	}
 	cs.perf = p
 	cs.shrd = pn
+	cs.nrepl = nrepl
 	return cs
 }
 

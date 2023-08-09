@@ -11,7 +11,6 @@ import (
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
-	"sigmaos/threadmgr"
 )
 
 type Op struct {
@@ -24,18 +23,16 @@ type Op struct {
 type Clerk struct {
 	mu       *sync.Mutex
 	id       int
-	tm       *threadmgr.ThreadMgr
 	opmap    map[sessp.Tsession]map[sessp.Tseqno]*Op
 	requests chan *Op
 	commit   <-chan *committedEntries
 	proposeC chan<- []byte
 }
 
-func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan *committedEntries, propose chan<- []byte) *Clerk {
+func makeClerk(id int, commit <-chan *committedEntries, propose chan<- []byte) *Clerk {
 	c := &Clerk{}
 	c.mu = &sync.Mutex{}
 	c.id = id
-	c.tm = tm
 	c.opmap = make(map[sessp.Tsession]map[sessp.Tseqno]*Op)
 	c.requests = make(chan *Op)
 	c.commit = commit
@@ -108,7 +105,7 @@ func (c *Clerk) apply(fc *sessp.FcallMsg, leader uint64) {
 		fc.Msg = msg
 	}
 	// Process the op on a single thread.
-	c.tm.Process(fc)
+	// XXX c.tm.Process(fc)
 }
 
 func (c *Clerk) registerOp(op *Op) {

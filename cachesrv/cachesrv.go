@@ -13,6 +13,8 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/repl"
+	"sigmaos/replraft"
 	"sigmaos/serr"
 	"sigmaos/sessdevsrv"
 	sp "sigmaos/sigmap"
@@ -43,7 +45,8 @@ type CacheSrv struct {
 	mu        sync.Mutex
 	shards    shardMap
 	shrd      string
-	nrepl     int
+	raftcfg   *replraft.RaftConfig
+	replSrv   repl.Server
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
 	perf      *perf.Perf
@@ -59,7 +62,7 @@ func RunCacheSrv(args []string, nshard int) error {
 		return err
 	}
 
-	s := NewCacheSrv(pn, 0)
+	s := NewCacheSrv(pn, nil)
 
 	for i := 0; i < nshard; i++ {
 		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(Tcache)); err != nil {
@@ -83,7 +86,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	return nil
 }
 
-func NewCacheSrv(pn string, nrepl int) *CacheSrv {
+func NewCacheSrv(pn string, raftcfg *replraft.RaftConfig) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(perf.CACHESRV)
@@ -92,7 +95,12 @@ func NewCacheSrv(pn string, nrepl int) *CacheSrv {
 	}
 	cs.perf = p
 	cs.shrd = pn
-	cs.nrepl = nrepl
+	cs.raftcfg = raftcfg
+	if raftcfg != nil {
+		cs.replSrv = raftcfg.MakeServer()
+		cs.replSrv.Start()
+		db.DPrintf(db.ALWAYS, "Starting repl server: %v", raftcfg)
+	}
 	return cs
 }
 

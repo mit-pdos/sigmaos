@@ -5,9 +5,8 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-    "sigmaos/sessp"
-	"sigmaos/threadmgr"
 )
 
 type RaftReplServer struct {
@@ -16,7 +15,7 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, tm *threadmgr.ThreadMgr) *RaftReplServer {
+func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool) *RaftReplServer {
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -24,7 +23,7 @@ func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, t
 	}
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
-	srv.clerk = makeClerk(id, tm, commitC, proposeC)
+	srv.clerk = makeClerk(id, commitC, proposeC)
 	srv.node = makeRaftNode(id, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
 	return srv
 }

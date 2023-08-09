@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/cachesrv"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -217,7 +218,7 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	return nil
 }
 
-func RunMember(jobdir, grp string, public bool, nrepl int, svci any) {
+func RunMember(jobdir, grp string, public bool, nrepl int) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
@@ -278,8 +279,10 @@ func RunMember(jobdir, grp string, public bool, nrepl int, svci any) {
 
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
+	cs := cachesrv.NewCacheSrv("", raftCfg)
+
 	// XXX used to pass raftCfg to sesssrv for transparent replication
-	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, svci)
+	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)
 	if err != nil {
 		db.DFatalf("MakeSigmaSrvClnt %v\n", err)
 	}

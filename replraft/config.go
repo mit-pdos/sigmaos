@@ -6,7 +6,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/repl"
-	"sigmaos/threadmgr"
 )
 
 type RaftConfig struct {
@@ -44,9 +43,9 @@ func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
 	}
 }
 
-func (rc *RaftConfig) MakeServer(tm *threadmgr.ThreadMgr) repl.Server {
+func (rc *RaftConfig) MakeServer() repl.Server {
 	rc.started = true
-	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, tm)
+	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

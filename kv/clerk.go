@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
+	"sigmaos/cachereplclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
@@ -39,7 +39,7 @@ type KvClerk struct {
 	*fslib.FsLib
 	conf  *Config
 	job   string
-	cc    *cacheclnt.CacheClnt
+	cc    *cachereplclnt.CacheReplClnt
 	cid   sp.TclntId
 	seqno sp.Tseqno
 	repl  bool
@@ -66,7 +66,7 @@ func makeClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		cc:    cachereplclnt.NewCacheReplClnt([]*fslib.FsLib{fsl}, job, NSHARD),
 		cid:   sp.TclntId(rand.Uint64()),
 		repl:  repl,
 	}
@@ -195,14 +195,19 @@ func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, cid sp.TclntId, s
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
+	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.repl)
 	if kc.repl {
 		var req proto.Message
+		var m string
 		switch o.kind {
 		case GET:
+			m = "CacheSrv.Get"
 			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
 		case GETVALS:
+			m = "CacheSrv.Get"
 			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
 		case PUT:
+			m = "CacheSrv.Put"
 			if o.m == sp.OAPPEND {
 				req, o.err = kc.cc.NewAppend(string(o.k), o.val, &kc.conf.Fence)
 			} else {
@@ -211,8 +216,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 		}
 		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 		if o.err == nil {
-			db.DPrintf(db.KVCLERK, "do %v err %v\n", req)
-			// XXX send
+			o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), o.cid, o.seqno, req)
 		}
 	} else {
 		switch o.kind {

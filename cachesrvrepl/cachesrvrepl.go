@@ -44,10 +44,10 @@ func NewCacheSrvRepl(raftcfg *replraft.RaftConfig) *CacheSrvRepl {
 // 	return &replproto.ReplRequest{Msg: b, ClntId: uint32(cid), Seqno: uint64(s)}, nil
 // }
 
-func (cs *CacheSrvRepl) RequestOp(ctx fs.CtxI, req replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+func (cs *CacheSrvRepl) SubmitOp(ctx fs.CtxI, req replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	db.DPrintf(db.CACHESRV_REPL, "RequestOp %v\n", req)
+	db.DPrintf(db.CACHESRV_REPL, "SubmitOp %v\n", req)
 
 	// replreq, err := newRequest(&req, req.TclntId(), req.Tseqno())
 	// if err != nil {

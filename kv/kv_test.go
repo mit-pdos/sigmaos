@@ -15,8 +15,8 @@ import (
 
 	"sigmaos/cache"
 	db "sigmaos/debug"
-	"sigmaos/group"
 	"sigmaos/kv"
+	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
 	"sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -87,9 +87,9 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
-	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, ts.job, 0)
+	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, ts.job, 0, repl > 0)
 	assert.Nil(t, err)
-	err = ts.kvf.nStart()
+	err = ts.kvf.Start()
 	assert.Nil(t, err)
 	err = ts.cm.StartCmClerk()
 	assert.Nil(t, err)
@@ -136,7 +136,7 @@ func TestGetPut(t *testing.T) {
 func TestFencefs(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
-	dir := kv.KVDIR + group.GrpPath(ts.job, kv.GRP+"0")
+	dir := kv.KVDIR + kvgrp.GrpPath(ts.job, kv.GRP+"0")
 	fencedir := path.Join(dir, sp.FENCEDIR)
 
 	l := leaderclnt.OldleaderTest(ts.Tstate, dir, false)
@@ -202,15 +202,15 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 	ts.Shutdown()
 }
 
-func TestOK0(t *testing.T) {
+func TestKVOK0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestOK1(t *testing.T) {
+func TestKVOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
-func TestOKN(t *testing.T) {
+func TestKVOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, "0")
 }
 
@@ -254,7 +254,7 @@ func TestCrashAllN(t *testing.T) {
 // Fix: Repl tests fail now because lack of shard replication.
 //
 
-func XTestReplOK0(t *testing.T) {
+func TestRepl0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 

@@ -78,7 +78,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
-	if err := mv.cc.FreezeShard(s, mv.shard, 0, 0, mv.fence); err != nil {
+	if err := mv.cc.FreezeShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "FreezeShard %v err %v\n", s, err)
 		// did previous mover finish the job?
 		if serr.IsErrCode(err, serr.TErrNotfound) {
@@ -87,19 +87,19 @@ func (mv *Mover) moveShard(s, d string) error {
 		return err
 	}
 
-	vals, err := mv.cc.DumpShard(s, mv.shard, 0, 0, mv.fence)
+	vals, err := mv.cc.DumpShard(s, mv.shard, mv.fence)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "DumpShard %v err %v\n", mv.shard, err)
 		return err
 	}
 
-	if err := mv.cc.CreateShard(d, mv.shard, 0, 0, mv.fence, vals); err != nil {
+	if err := mv.cc.CreateShard(d, mv.shard, mv.fence, vals); err != nil {
 		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
 		return err
 	}
 
 	// Mark that move is done by deleting s
-	if err := mv.cc.DeleteShard(s, mv.shard, 0, 0, mv.fence); err != nil {
+	if err := mv.cc.DeleteShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "DeleteShard src %v err %v\n", mv.shard, err)
 		return err
 	}

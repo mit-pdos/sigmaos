@@ -21,7 +21,7 @@ func MkCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt
 		return cc, nil
 	case "kvd":
 		db.DPrintf(db.ALWAYS, "cache %v\n", cache)
-		cc, err := kv.MakeClerkFsl(fsls[0], job)
+		cc, err := kv.MakeClerkFsl(fsls[0], job, false)
 		if err != nil {
 			return nil, err
 		}

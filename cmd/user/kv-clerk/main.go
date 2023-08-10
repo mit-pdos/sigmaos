@@ -28,7 +28,7 @@ var ctx = context.Background()
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v [duration] [keyOffset] [sempath] [redisaddr]", os.Args[0])
+		db.DFatalf("Usage: %v [duration] [keyOffset] [sempath] [redisaddr] [repl]", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
@@ -62,7 +62,11 @@ func main() {
 		})
 	} else {
 		var err error
-		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1])
+		var repl bool
+		if len(os.Args) > 6 {
+			repl = true
+		}
+		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1], repl)
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}

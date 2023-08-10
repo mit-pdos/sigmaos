@@ -42,37 +42,39 @@ type KvClerk struct {
 	cc    *cacheclnt.CacheClnt
 	cid   sp.TclntId
 	seqno sp.Tseqno
+	repl  bool
 }
 
-func MakeClerkFsl(fsl *fslib.FsLib, job string) (*KvClerk, error) {
-	return makeClerkStart(fsl, job)
+func MakeClerkFsl(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
+	return makeClerkStart(fsl, job, repl)
 }
 
-func MakeClerkFslOnly(fsl *fslib.FsLib, job string) *KvClerk {
-	return makeClerk(fsl, job)
+func MakeClerkFslOnly(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
+	return makeClerk(fsl, job, repl)
 }
 
-func MakeClerk(uname sp.Tuname, job string) (*KvClerk, error) {
+func MakeClerk(uname sp.Tuname, job string, repl bool) (*KvClerk, error) {
 	fsl, err := fslib.MakeFsLib(uname)
 	if err != nil {
 		return nil, err
 	}
-	return makeClerkStart(fsl, job)
+	return makeClerkStart(fsl, job, repl)
 }
 
-func makeClerk(fsl *fslib.FsLib, job string) *KvClerk {
+func makeClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
 		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
 		cid:   sp.TclntId(rand.Uint64()),
+		repl:  repl,
 	}
 	return kc
 }
 
-func makeClerkStart(fsl *fslib.FsLib, job string) (*KvClerk, error) {
-	kc := makeClerk(fsl, job)
+func makeClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
+	kc := makeClerk(fsl, job, repl)
 	return kc, kc.StartClerk()
 }
 
@@ -193,16 +195,37 @@ func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, cid sp.TclntId, s
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
-	switch o.kind {
-	case GET:
-		o.err = kc.cc.GetSrv(srv, string(o.k), o.val, o.cid, o.seqno)
-	case GETVALS:
-		o.vals, o.err = kc.cc.GetVals(srv, string(o.k), o.val, o.cid, o.seqno, &kc.conf.Fence)
-	case PUT:
-		if o.m == sp.OAPPEND {
-			o.err = kc.cc.AppendFence(srv, string(o.k), o.val, o.cid, o.seqno, &kc.conf.Fence)
-		} else {
-			o.err = kc.cc.PutSrv(srv, string(o.k), o.val, o.cid, o.seqno)
+	if kc.repl {
+		var req proto.Message
+		switch o.kind {
+		case GET:
+			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
+		case GETVALS:
+			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
+		case PUT:
+			if o.m == sp.OAPPEND {
+				req, o.err = kc.cc.NewAppend(string(o.k), o.val, &kc.conf.Fence)
+			} else {
+				req, o.err = kc.cc.NewPut(nil, string(o.k), o.val, &kc.conf.Fence)
+			}
+		}
+		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
+		if o.err == nil {
+			db.DPrintf(db.KVCLERK, "do %v err %v\n", req)
+			// XXX send
+		}
+	} else {
+		switch o.kind {
+		case GET:
+			o.err = kc.cc.GetSrv(srv, string(o.k), o.val, &kc.conf.Fence)
+		case GETVALS:
+			o.vals, o.err = kc.cc.GetVals(srv, string(o.k), o.val, &kc.conf.Fence)
+		case PUT:
+			if o.m == sp.OAPPEND {
+				o.err = kc.cc.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
+			} else {
+				o.err = kc.cc.PutSrv(srv, string(o.k), o.val)
+			}
 		}
 	}
 	db.DPrintf(db.KVCLERK, "op %v(%v) f %v srv %v %v err %v", o.kind, o.m == sp.OAPPEND, kc.conf.Fence, srv, s, o.err)

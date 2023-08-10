@@ -113,23 +113,3 @@ func TestStartStopReplN(t *testing.T) {
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }
-
-func TestGetPutSetReplOK(t *testing.T) {
-	ts := makeTstate(t, N_REPL, 0)
-	ts.setupKeys(N_KEYS)
-	ts.testGetPut(N_KEYS)
-	err := ts.gm.Stop()
-	assert.Nil(ts.T, err, "Stop")
-	ts.Shutdown()
-}
-
-func TestGetPutSetFail1(t *testing.T) {
-	ts := makeTstate(t, N_REPL, 1)
-	ts.setupKeys(N_KEYS)
-	ts.testGetPut(N_KEYS)
-	db.DPrintf(db.TEST, "Pre stop")
-	err := ts.gm.Stop()
-	assert.Nil(ts.T, err, "Stop")
-	db.DPrintf(db.TEST, "Post stop")
-	ts.Shutdown()
-}

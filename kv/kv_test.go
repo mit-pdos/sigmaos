@@ -89,7 +89,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts.kvf = kvf
 	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, ts.job, 0)
 	assert.Nil(t, err)
-	err = ts.kvf.Start()
+	err = ts.kvf.nStart()
 	assert.Nil(t, err)
 	err = ts.cm.StartCmClerk()
 	assert.Nil(t, err)
@@ -258,7 +258,7 @@ func XTestReplOK0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func XTestReplOK1(t *testing.T) {
+func TestReplOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 

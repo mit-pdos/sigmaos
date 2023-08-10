@@ -284,7 +284,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	if raftCfg == nil {
 		cs = cachesrv.NewCacheSrv("")
 	} else {
-		cs = cachesrvrepl.NewCacheSrv(raftCfg)
+		cs = cachesrvrepl.NewCacheSrvRepl(raftCfg)
 	}
 
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)

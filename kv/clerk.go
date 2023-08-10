@@ -10,6 +10,7 @@ import (
 
 	"sigmaos/cache"
 	"sigmaos/cachereplclnt"
+	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
@@ -49,8 +50,8 @@ func MakeClerkFsl(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
 	return makeClerkStart(fsl, job, repl)
 }
 
-func MakeClerkFslOnly(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
-	return makeClerk(fsl, job, repl)
+func NewClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
+	return newClerk(fsl, job, repl)
 }
 
 func MakeClerk(uname sp.Tuname, job string, repl bool) (*KvClerk, error) {
@@ -61,7 +62,7 @@ func MakeClerk(uname sp.Tuname, job string, repl bool) (*KvClerk, error) {
 	return makeClerkStart(fsl, job, repl)
 }
 
-func makeClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
+func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
@@ -74,7 +75,7 @@ func makeClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 }
 
 func makeClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
-	kc := makeClerk(fsl, job, repl)
+	kc := newClerk(fsl, job, repl)
 	return kc, kc.StartClerk()
 }
 
@@ -184,14 +185,13 @@ type op struct {
 	val   proto.Message
 	k     cache.Tkey
 	m     sp.Tmode
-	cid   sp.TclntId
 	seqno sp.Tseqno
 	err   error
 	vals  []proto.Message
 }
 
-func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, cid sp.TclntId, s sp.Tseqno) *op {
-	return &op{kind: o, val: val, k: k, m: m, cid: cid, seqno: s}
+func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, s sp.Tseqno) *op {
+	return &op{kind: o, val: val, k: k, m: m, seqno: s}
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
@@ -216,7 +216,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 		}
 		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 		if o.err == nil {
-			o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), o.cid, o.seqno, req)
+			o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
 		}
 	} else {
 		switch o.kind {
@@ -236,7 +236,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := newOp(GET, val, cache.Tkey(key), sp.OREAD, kc.cid, kc.nextSeqno())
+	op := newOp(GET, val, cache.Tkey(key), sp.OREAD, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }
@@ -246,13 +246,13 @@ func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) GetVals(k cache.Tkey, val proto.Message) ([]proto.Message, error) {
-	op := newOp(GETVALS, val, k, sp.OREAD, kc.cid, kc.nextSeqno())
+	op := newOp(GETVALS, val, k, sp.OREAD, kc.nextSeqno())
 	kc.doop(op)
 	return op.vals, op.err
 }
 
 func (kc *KvClerk) Append(k cache.Tkey, val proto.Message) error {
-	op := newOp(PUT, val, k, sp.OAPPEND, kc.cid, kc.nextSeqno())
+	op := newOp(PUT, val, k, sp.OAPPEND, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }
@@ -262,7 +262,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE, kc.cid, kc.nextSeqno())
+	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE, kc.nextSeqno())
 	kc.doop(op)
 	return op.err
 }
@@ -274,6 +274,16 @@ func (kc *KvClerk) DeleteTraced(sctx *tproto.SpanContextConfig, key string) erro
 func (kc *KvClerk) Delete(k string) error {
 	db.DFatalf("Unimplemented")
 	return nil
+}
+
+func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+	if kc.repl {
+		req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
+		db.DPrintf(db.KVCLERK, "do %v\n", req)
+		return kc.cc.ReplOpSrv(srv, "CacheSrv.CreateShard", "", kc.cid, kc.nextSeqno(), req)
+	} else {
+		return kc.cc.CreateShard(srv, shard, fence, vals)
+	}
 }
 
 // Count the number of keys stored at each group.

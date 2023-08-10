@@ -4,7 +4,7 @@ import (
 	"sigmaos/cache"
 )
 
-func (sa *ShardArg) Tshard() cache.Tshard {
+func (sa *ShardRequest) Tshard() cache.Tshard {
 	return cache.Tshard(sa.Shard)
 }
 

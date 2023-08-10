@@ -20,7 +20,7 @@ message CacheRequest {
   TfenceProto fence = 6;
 }
 
-message ShardArg {
+message ShardRequest {
   uint32 shard = 1;
   TfenceProto fence = 2;
   map<string, bytes> vals = 3;

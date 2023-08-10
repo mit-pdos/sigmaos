@@ -70,16 +70,17 @@ type KVFleet struct {
 }
 
 func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
-	kvf := &KVFleet{}
-	kvf.SigmaClnt = sc
-	kvf.nkvd = nkvd
-	kvf.kvdrepl = kvdrepl
-	kvf.kvdmcpu = kvdmcpu
-	kvf.crashbal = crashbal
-	kvf.job = job
-	kvf.crashhelper = crashhelper
-	kvf.auto = auto
-	kvf.ready = make(chan bool)
+	kvf := &KVFleet{
+		SigmaClnt:   sc,
+		nkvd:        nkvd,
+		kvdrepl:     kvdrepl,
+		kvdmcpu:     kvdmcpu,
+		crashbal:    crashbal,
+		job:         job,
+		crashhelper: crashhelper,
+		auto:        auto,
+		ready:       make(chan bool),
+	}
 
 	// May already exit
 	kvf.MkDir(KVDIR, 0777)
@@ -101,7 +102,11 @@ func (kvf *KVFleet) Nkvd() int {
 }
 
 func (kvf *KVFleet) Start() error {
-	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, kvf.crashbal, kvf.kvdmcpu, kvf.crashhelper, kvf.auto)
+	repl := ""
+	if kvf.kvdrepl > 0 {
+		repl = "repl"
+	}
+	kvf.balgm = startBalancers(kvf.SigmaClnt, kvf.job, NBALANCER, kvf.crashbal, kvf.kvdmcpu, kvf.crashhelper, kvf.auto, repl)
 	for i := 0; i < kvf.nkvd; i++ {
 		if err := kvf.AddKVDGroup(); err != nil {
 			return err
@@ -159,9 +164,9 @@ func (kvf *KVFleet) Stop() error {
 	return nil
 }
 
-func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto string) *groupmgr.GroupMgr {
+func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto, repl string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdmcpu))
-	gm := groupmgr.Start(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto}, job, 0, nbal, crashbal, 0, 0)
+	gm := groupmgr.Start(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto, repl}, job, 0, nbal, crashbal, 0, 0)
 	return gm
 }
 

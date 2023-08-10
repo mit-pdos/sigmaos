@@ -177,12 +177,12 @@ func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals Tcache) error 
 	return nil
 }
 
-func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
 	db.DPrintf(db.CACHESRV, "CreateShard %v\n", req)
 	return cs.createShard(req.Tshard(), req.Fence.Tfence(), req.Vals)
 }
 
-func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -195,7 +195,7 @@ func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cache
 	return nil
 }
 
-func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -217,7 +217,7 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cache
 	return nil
 }
 
-func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardArg, rep *cacheproto.CacheDump) error {
+func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheDump) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 

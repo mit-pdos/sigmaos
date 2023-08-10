@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	"sigmaos/crash"
 	"sigmaos/ctx"
@@ -53,7 +52,7 @@ type Balancer struct {
 	crash       int64
 	crashhelper string
 	isBusy      bool // in config change?
-	cc          *cacheclnt.CacheClnt
+	kc          *KvClerk
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -70,7 +69,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
+func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -84,7 +83,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string) {
 	bl.job = job
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
-	bl.cc = cacheclnt.NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD)
+	bl.kc = NewClerk(sc.FsLib, job, repl == "repl")
 
 	var kvdnc int
 	var error error
@@ -284,7 +283,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.cc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence, make(cachesrv.Tcache)); err != nil {
+		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence, make(cachesrv.Tcache)); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
 	}

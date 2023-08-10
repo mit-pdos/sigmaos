@@ -194,12 +194,16 @@ func (cc *CacheClnt) DeleteSrv(srv, key string) error {
 	return cc.DeleteTracedFenced(nil, srv, key, sp.NullFence())
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
-	req := &cacheproto.ShardArg{
+func (c *CacheClnt) NewShardRequest(shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) *cacheproto.ShardRequest {
+	return &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: fence.FenceProto(),
 		Vals:  vals,
 	}
+}
+
+func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+	req := c.NewShardRequest(shard, fence, vals)
 	var res cacheproto.CacheOK
 	if err := c.RPC(srv, "CacheSrv.CreateShard", req, &res); err != nil {
 		return err
@@ -208,7 +212,7 @@ func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence
 }
 
 func (c *CacheClnt) DeleteShard(srv string, shard cache.Tshard, f *sp.Tfence) error {
-	req := &cacheproto.ShardArg{
+	req := &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
 	}
@@ -220,7 +224,7 @@ func (c *CacheClnt) DeleteShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 }
 
 func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) error {
-	req := &cacheproto.ShardArg{
+	req := &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
 	}
@@ -232,7 +236,7 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 }
 
 func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cachesrv.Tcache, error) {
-	req := &cacheproto.ShardArg{
+	req := &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
 	}

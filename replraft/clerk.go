@@ -6,20 +6,19 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	replproto "sigmaos/cache/replproto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	replproto "sigmaos/repl/proto"
-	rpcproto "sigmaos/rpc/proto"
+	"sigmaos/repl"
 	sp "sigmaos/sigmap"
 )
 
 type Op struct {
-	request   *replproto.ReplRequest
-	clntId    sp.TclntId
-	seqno     sp.Tseqno
-	reply     *rpcproto.Reply
+	request   *replproto.ReplOpRequest
+	reply     *replproto.ReplOpReply
 	frame     []byte
 	startTime time.Time
+	ch        chan error
 }
 
 type Clerk struct {
@@ -29,17 +28,19 @@ type Clerk struct {
 	requests chan *Op
 	commit   <-chan *committedEntries
 	proposeC chan<- []byte
+	applyf   repl.Tapplyf
 }
 
-func makeClerk(id int, commit <-chan *committedEntries, propose chan<- []byte) *Clerk {
-	c := &Clerk{}
-	c.mu = &sync.Mutex{}
-	c.id = id
-	c.opmap = make(map[sp.TclntId]map[sp.Tseqno]*Op)
-	c.requests = make(chan *Op)
-	c.commit = commit
-	c.proposeC = propose
-	return c
+func newClerk(id int, commit <-chan *committedEntries, propose chan<- []byte, applyf repl.Tapplyf) *Clerk {
+	return &Clerk{
+		mu:       &sync.Mutex{},
+		id:       id,
+		opmap:    make(map[sp.TclntId]map[sp.Tseqno]*Op),
+		applyf:   applyf,
+		requests: make(chan *Op),
+		commit:   commit,
+		proposeC: propose,
+	}
 }
 
 func (c *Clerk) request(op *Op) {
@@ -54,11 +55,10 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				req := replproto.ReplRequest{}
+				req := replproto.ReplOpRequest{}
 				if err := proto.Unmarshal(frame, &req); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
-					db.DPrintf(db.REPLRAFT, "Serve request %v\n", req)
 					//				c.printOpTiming(req, frame)
 					c.apply(&req, committedReqs.leader)
 				}
@@ -75,7 +75,7 @@ func (c *Clerk) propose(op *Op) {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
 	op.frame = frame
-	c.registerOp(op)
+	c.registerOp(op.request, op)
 	c.proposeC <- frame
 }
 
@@ -94,36 +94,35 @@ func (c *Clerk) reproposeOps() {
 	}
 }
 
-func (c *Clerk) apply(req *replproto.ReplRequest, leader uint64) {
-	// Get the associated reply channel if this op was generated on this server.
+func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
 	op := c.getOp(req)
-	if op != nil {
-		db.DPrintf(db.RAFT_TIMING, "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), req)
+	if op == nil {
+		db.DFatalf("no op %v\n", req)
 	}
-	// Process the op on a single thread.
-	// Apply op to cache
-	// XXX c.tm.Process(fc)
+	db.DPrintf(db.REPLRAFT, "Serve request %v %v\n", req, op)
+	err := c.applyf(req, op.reply)
+	op.ch <- err
 }
 
-func (c *Clerk) registerOp(op *Op) {
+func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	cid := op.clntId
-	seq := op.seqno
+	cid := req.TclntId()
+	seq := req.Tseqno()
 	m, ok := c.opmap[cid]
 	if !ok {
 		m = make(map[sp.Tseqno]*Op)
 		c.opmap[cid] = m
 	}
 	if _, ok := m[seq]; ok {
-		db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[seq].request)
+		db.DFatalf("%v registerOp (%v vs %v)", proc.GetName(), op.request, m[seq].request)
 	}
 	m[seq] = op
 }
 
 // Get the full op struct associated with an sp.
-func (c *Clerk) getOp(req *replproto.ReplRequest) *Op {
+func (c *Clerk) getOp(req *replproto.ReplOpRequest) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

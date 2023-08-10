@@ -1,20 +1,22 @@
 package repl
 
 import (
-	proto "sigmaos/repl/proto"
+	proto "sigmaos/cache/replproto"
 )
 
 const (
 	PLACEHOLDER_ADDR = "PLACEHOLDER_ADDR"
 )
 
+type Tapplyf func(*proto.ReplOpRequest, *proto.ReplOpReply) error
+
 type Config interface {
 	ReplAddr() string
 	String() string
-	MakeServer(chan *proto.ReplRequest) Server
+	MakeServer(Tapplyf) Server
 }
 
 type Server interface {
 	Start()
-	Process(*proto.ReplRequest)
+	Process(*proto.ReplOpRequest, *proto.ReplOpReply) error
 }

@@ -281,10 +281,9 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
 	var cs any
-	if raftCfg == nil {
-		cs = cachesrv.NewCacheSrv("")
-	} else {
-		cs = cachesrvrepl.NewCacheSrvRepl(raftCfg)
+	cs = cachesrv.NewCacheSrv("")
+	if raftCfg != nil {
+		cs = cachesrvrepl.NewCacheSrvRepl(raftCfg, cs)
 	}
 
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)

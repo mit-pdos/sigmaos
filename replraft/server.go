@@ -5,7 +5,8 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	replproto "sigmaos/repl/proto"
+	replproto "sigmaos/cache/replproto"
+	"sigmaos/repl"
 )
 
 type RaftReplServer struct {
@@ -14,7 +15,7 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool) *RaftReplServer {
+func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) *RaftReplServer {
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -22,7 +23,7 @@ func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool) *
 	}
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
-	srv.clerk = makeClerk(id, commitC, proposeC)
+	srv.clerk = newClerk(id, commitC, proposeC, apply)
 	srv.node = makeRaftNode(id, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
 	return srv
 }
@@ -31,6 +32,9 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(req *replproto.ReplRequest) {
-	srv.clerk.request(&Op{request: req})
+func (srv *RaftReplServer) Process(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+	op := &Op{request: req, reply: rep, ch: make(chan error)}
+	srv.clerk.request(op)
+	err := <-op.ch
+	return err
 }

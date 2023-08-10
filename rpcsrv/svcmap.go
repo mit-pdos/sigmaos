@@ -67,7 +67,7 @@ func (svcmap *svcMap) RegisterService(svci any) {
 	svcmap.svc[tname] = svc
 }
 
-func (svcmap *svcMap) Lookup(tname string) *service {
+func (svcmap *svcMap) lookup(tname string) *service {
 	svcmap.Lock()
 	defer svcmap.Unlock()
 

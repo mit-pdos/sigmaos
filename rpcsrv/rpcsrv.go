@@ -32,35 +32,45 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 }
 
 func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
-	return rpcs.serveRPC(ctx, arg)
-}
-
-func (rpcs *RPCSrv) serveRPC(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
+	start := time.Now()
 	req := rpcproto.Request{}
-	var rep *rpcproto.Reply
-	if err := proto.Unmarshal(b, &req); err != nil {
+	if err := proto.Unmarshal(arg, &req); err != nil {
 		return nil, serr.MkErrError(err)
 	}
-
-	start := time.Now()
-	name := req.Method
-	dot := strings.LastIndex(name, ".")
-	method := name[dot+1:]
-	tname := name[:dot]
-	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)
-
-	rep = rpcs.svc.Lookup(tname).dispatch(ctx, name, &req)
-	t := time.Since(start).Microseconds()
-	rpcs.sti.Stat(req.Method, t)
-
+	var rerr *sp.Rerror
+	b, sr := rpcs.ServeRPC(ctx, req.Method, req.Args)
+	if sr != nil {
+		rerr = sp.MkRerror(sr)
+	} else {
+		rerr = sp.NewRerror()
+	}
+	rep := &rpcproto.Reply{Res: b, Err: rerr}
 	b, err := proto.Marshal(rep)
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
+	rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	return b, nil
 }
 
-func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request) *rpcproto.Reply {
+func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err) {
+	dot := strings.LastIndex(m, ".")
+	method := m[dot+1:]
+	tname := m[:dot]
+	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)
+	repmsg, err := rpcs.svc.lookup(tname).dispatch(ctx, m, b)
+	if err != nil {
+		return nil, err
+	}
+	b, r := proto.Marshal(repmsg)
+	if r != nil {
+		return nil, serr.MkErrError(r)
+	}
+	return b, nil
+
+}
+
+func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Message, *serr.Err) {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -68,10 +78,8 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 		// the Value's type will be a pointer to req.argsType.
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
-		if err := proto.Unmarshal(req.Args, reqmsg); err != nil {
-			r := &rpcproto.Reply{}
-			r.Err = sp.MkRerrorErr(err)
-			return r
+		if err := proto.Unmarshal(req, reqmsg); err != nil {
+			return nil, serr.MkErrError(err)
 		}
 
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
@@ -87,36 +95,22 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req *rpcproto.Request
 		rv := function.Call([]reflect.Value{svc.svc, reflect.ValueOf(ctx), args.Elem(), replyv})
 
 		errI := rv[0].Interface()
-		var rerr *sp.Rerror
 		if errI != nil { // The return value for the method is an error.
 			err := errI.(error)
 			var sr *serr.Err
 			if errors.As(err, &sr) {
-				rerr = sp.MkRerror(sr)
-			} else {
-				rerr = sp.MkRerrorErr(err)
+				return nil, sr
 			}
-		} else {
-			rerr = sp.NewRerror()
+			return nil, serr.MkErrError(err)
 		}
-
-		b, err := proto.Marshal(repmsg)
-		if err != nil {
-			rerr = sp.MkRerrorErr(err)
-		}
-		r := &rpcproto.Reply{}
-		r.Res = b
-		r.Err = rerr
-		return r
+		return repmsg, nil
 	} else {
 		choices := []string{}
 		for k, _ := range svc.methods {
 			choices = append(choices, k)
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
-			methname, req.Method, choices)
-		r := &rpcproto.Reply{}
-		r.Err = sp.MkRerror(serr.MkErr(serr.TErrNotfound, methname))
-		return r
+			methname, name, choices)
+		return nil, serr.MkErr(serr.TErrNotfound, methname)
 	}
 }

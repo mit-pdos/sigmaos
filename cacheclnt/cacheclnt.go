@@ -78,6 +78,10 @@ func (cc *CacheClnt) PutSrv(srv, key string, val proto.Message) error {
 	return cc.PutTracedFenced(nil, srv, key, val, sp.NullFence())
 }
 
+func (cc *CacheClnt) PutSrvFenced(srv, key string, val proto.Message, f *sp.Tfence) error {
+	return cc.PutTracedFenced(nil, srv, key, val, f)
+}
+
 func (cc *CacheClnt) NewAppend(key string, val proto.Message, f *sp.Tfence) (*cacheproto.CacheRequest, error) {
 	b, err := proto.Marshal(val)
 	if err != nil {

@@ -49,7 +49,9 @@ func (cs *CacheSrvRepl) applyOp(req *replproto.ReplOpRequest, rep *replproto.Rep
 	duplicate, err, b := cs.rt.IsDuplicate(req.TclntId(), req.Tseqno())
 	if duplicate {
 		db.DPrintf(db.CACHESRV_REPL, "ApplyOp duplicate %v\n", req)
-		rep.Msg = b
+		if rep != nil {
+			rep.Msg = b
+		}
 		return err
 	}
 	if b, err := cs.rpcs.ServeRPC(ctx.MkCtxNull(), req.Method, req.Msg); err != nil {
@@ -64,14 +66,14 @@ func (cs *CacheSrvRepl) applyOp(req *replproto.ReplOpRequest, rep *replproto.Rep
 	return nil
 }
 
-func (cs *CacheSrvRepl) SubmitOp(ctx fs.CtxI, req replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+func (cs *CacheSrvRepl) ProcessOp(ctx fs.CtxI, req replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	db.DPrintf(db.CACHESRV_REPL, "SubmitOp %v\n", req)
+	db.DPrintf(db.CACHESRV_REPL, "ProcessOp: submit %v\n", req)
 	if err := cs.replSrv.Process(&req, rep); err != nil {
-		db.DPrintf(db.CACHESRV_REPL, "Process req %v err %v\n", req, err)
+		db.DPrintf(db.CACHESRV_REPL, "ProcessOp: op done %v err %v\n", req, err)
 		return err
 	}
-	db.DPrintf(db.CACHESRV_REPL, "Process req %v done rep %v\n", req, rep)
+	db.DPrintf(db.CACHESRV_REPL, "ProcessOp: op done %v rep %v\n", req, rep)
 	return nil
 }

@@ -39,7 +39,7 @@ func (cc *CacheReplClnt) ReplOpSrv(srv, method, key string, cid sp.TclntId, seqn
 		return nil, err
 	}
 	var res replproto.ReplOpReply
-	if err := cc.RPC(srv, "CacheSrvRepl.SubmitOp", req, &res); err != nil {
+	if err := cc.RPC(srv, "CacheSrvRepl.ProcessOp", req, &res); err != nil {
 		return nil, err
 	}
 	return res.Msg, nil

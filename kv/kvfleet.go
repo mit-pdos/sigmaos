@@ -15,8 +15,8 @@ import (
 
 const (
 	GRP             = "grp-"
-	NKV             = 10
-	NSHARD          = 10 * NKV
+	NKVGRP          = 10
+	NSHARD          = 10 * NKVGRP
 	NBALANCER       = 3
 	KVDIR           = "name/kv/"
 	KVCONF          = "config"

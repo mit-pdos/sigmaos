@@ -43,14 +43,14 @@ func TestBalance(t *testing.T) {
 	for i := 0; i < kv.NSHARD; i++ {
 		conf.Shards = append(conf.Shards, "")
 	}
-	for k := 0; k < kv.NKV; k++ {
+	for k := 0; k < kv.NKVGRP; k++ {
 		shards := kv.AddKv(conf, strconv.Itoa(k))
 		conf.Shards = shards
 		kvs := kv.MakeKvs(conf.Shards)
 		//db.DPrintf(db.ALWAYS, "balance %v %v\n", shards, kvs)
 		checkKvs(t, kvs, kv.NSHARD/(k+1))
 	}
-	for k := kv.NKV - 1; k > 0; k-- {
+	for k := kv.NKVGRP - 1; k > 0; k-- {
 		shards := kv.DelKv(conf, strconv.Itoa(k))
 		conf.Shards = shards
 		kvs := kv.MakeKvs(conf.Shards)
@@ -172,7 +172,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	db.DPrintf(db.TEST, "Done StartClerks")
 
-	for i := 0; i < kv.NKV; i++ {
+	for i := 0; i < kv.NKVGRP; i++ {
 		err := ts.kvf.AddKVDGroup()
 		assert.Nil(ts.T, err, "AddKVDGroup")
 		// allow some puts/gets
@@ -181,7 +181,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 
 	db.DPrintf(db.TEST, "Done adds")
 
-	for i := 0; i < kv.NKV; i++ {
+	for i := 0; i < kv.NKVGRP; i++ {
 		err := ts.kvf.RemoveKVDGroup()
 		assert.Nil(ts.T, err, "RemoveKVDGroup")
 		// allow some puts/gets

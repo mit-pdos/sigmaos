@@ -170,6 +170,12 @@ func (kc *KvClerk) doop(o *op) {
 		if o.err != nil {
 			return
 		}
+		// the (replicated) server processed the op and returned an
+		// error (hasn't updated its state). now we stamp the op with
+		// a new sequence number so this new attempt isn't filtered as
+		// a duplicated.
+		o.seqno = kc.nextSeqno()
+
 	}
 }
 
@@ -186,58 +192,61 @@ type op struct {
 	val   proto.Message
 	k     cache.Tkey
 	m     sp.Tmode
-	seqno sp.Tseqno
 	err   error
 	vals  []proto.Message
+	seqno sp.Tseqno
 }
 
-func newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode, s sp.Tseqno) *op {
-	return &op{kind: o, val: val, k: k, m: m, seqno: s}
+func (kc *KvClerk) newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode) *op {
+	return &op{kind: o, val: val, k: k, m: m, seqno: kc.nextSeqno()}
+}
+
+func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
+	var req proto.Message
+	var m string
+	switch o.kind {
+	case GET, GETVALS:
+		m = "CacheSrv.Get"
+		req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
+	case PUT:
+		m = "CacheSrv.Put"
+		if o.m == sp.OAPPEND {
+			req, o.err = kc.cc.NewAppend(string(o.k), o.val, &kc.conf.Fence)
+		} else {
+			req, o.err = kc.cc.NewPut(nil, string(o.k), o.val, &kc.conf.Fence)
+		}
+	}
+	db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
+	if o.err == nil {
+		var b []byte
+		b, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
+		if o.err != nil {
+			return
+		}
+		switch o.kind {
+		case PUT:
+			res := &cacheproto.CacheOK{}
+			if err := proto.Unmarshal(b, res); err != nil {
+				o.err = err
+			}
+		case GET:
+			res := &cacheproto.CacheResult{}
+			o.err = proto.Unmarshal(b, res)
+			if o.err != nil {
+				return
+			}
+			o.err = proto.Unmarshal(res.Value, o.val)
+		case GETVALS:
+			db.DFatalf("clerk: getvals\n")
+		}
+		return
+	}
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.repl)
 	if kc.repl {
-		var req proto.Message
-		var m string
-		switch o.kind {
-		case GET, GETVALS:
-			m = "CacheSrv.Get"
-			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
-		case PUT:
-			m = "CacheSrv.Put"
-			if o.m == sp.OAPPEND {
-				req, o.err = kc.cc.NewAppend(string(o.k), o.val, &kc.conf.Fence)
-			} else {
-				req, o.err = kc.cc.NewPut(nil, string(o.k), o.val, &kc.conf.Fence)
-			}
-		}
-		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
-		if o.err == nil {
-			var b []byte
-			b, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
-			if o.err != nil {
-				return
-			}
-			switch o.kind {
-			case PUT:
-				res := &cacheproto.CacheOK{}
-				if err := proto.Unmarshal(b, res); err != nil {
-					o.err = err
-				}
-			case GET:
-				res := &cacheproto.CacheResult{}
-				o.err = proto.Unmarshal(b, res)
-				if o.err != nil {
-					return
-				}
-				o.err = proto.Unmarshal(res.Value, o.val)
-			case GETVALS:
-				db.DFatalf("clerk: getvals\n")
-			}
-			return
-
-		}
+		kc.dorepl(o, srv, s)
 	} else {
 		switch o.kind {
 		case GET:
@@ -248,7 +257,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 			if o.m == sp.OAPPEND {
 				o.err = kc.cc.AppendFence(srv, string(o.k), o.val, &kc.conf.Fence)
 			} else {
-				o.err = kc.cc.PutSrv(srv, string(o.k), o.val)
+				o.err = kc.cc.PutSrvFenced(srv, string(o.k), o.val, &kc.conf.Fence)
 			}
 		}
 	}
@@ -256,7 +265,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) Get(key string, val proto.Message) error {
-	op := newOp(GET, val, cache.Tkey(key), sp.OREAD, kc.nextSeqno())
+	op := kc.newOp(GET, val, cache.Tkey(key), sp.OREAD)
 	kc.doop(op)
 	return op.err
 }
@@ -266,13 +275,13 @@ func (kc *KvClerk) GetTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) GetVals(k cache.Tkey, val proto.Message) ([]proto.Message, error) {
-	op := newOp(GETVALS, val, k, sp.OREAD, kc.nextSeqno())
+	op := kc.newOp(GETVALS, val, k, sp.OREAD)
 	kc.doop(op)
 	return op.vals, op.err
 }
 
 func (kc *KvClerk) Append(k cache.Tkey, val proto.Message) error {
-	op := newOp(PUT, val, k, sp.OAPPEND, kc.nextSeqno())
+	op := kc.newOp(PUT, val, k, sp.OAPPEND)
 	kc.doop(op)
 	return op.err
 }
@@ -282,7 +291,7 @@ func (kc *KvClerk) PutTraced(sctx *tproto.SpanContextConfig, key string, val pro
 }
 
 func (kc *KvClerk) Put(k string, val proto.Message) error {
-	op := newOp(PUT, val, cache.Tkey(k), sp.OWRITE, kc.nextSeqno())
+	op := kc.newOp(PUT, val, cache.Tkey(k), sp.OWRITE)
 	kc.doop(op)
 	return op.err
 }
@@ -298,7 +307,7 @@ func (kc *KvClerk) Delete(k string) error {
 
 func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
 	s := kc.nextSeqno()
-	req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
+	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
 	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
 	if err != nil {
@@ -312,7 +321,7 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 }
 func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) (cachesrv.Tcache, error) {
 	s := kc.nextSeqno()
-	req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
+	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
 	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
 	if err != nil {

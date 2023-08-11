@@ -54,7 +54,6 @@ func (c *Clerk) serve() {
 		case req := <-c.requests:
 			go c.propose(req)
 		case committedReqs := <-c.commit:
-			db.DPrintf(db.REPLRAFT, "Ops commited %d %v\n", len(committedReqs.entries), committedReqs.leader)
 			for _, frame := range committedReqs.entries {
 				req := replproto.ReplOpRequest{}
 				if err := proto.Unmarshal(frame, &req); err != nil {
@@ -81,15 +80,11 @@ func (c *Clerk) propose(op *Op) {
 
 func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
 	op := c.getOp(req)
-	db.DPrintf(db.REPLRAFT, "apply request %v %v\n", req, op)
 	if op != nil { // let proposer know its message has been applied
 		op.err = c.applyf(req, op.reply)
-		db.DPrintf(db.REPLRAFT, "apply request %v done %v\n", req, op.err)
 		op.ch <- struct{}{}
 	} else {
-		err := c.applyf(req, nil)
-		db.DPrintf(db.REPLRAFT, "apply request %v done %v\n", req, err)
-
+		c.applyf(req, nil)
 	}
 }
 

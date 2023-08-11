@@ -16,9 +16,9 @@ import (
 type Op struct {
 	request   *replproto.ReplOpRequest
 	reply     *replproto.ReplOpReply
-	frame     []byte
+	err       error
 	startTime time.Time
-	ch        chan error
+	ch        chan struct{}
 }
 
 type Clerk struct {
@@ -54,12 +54,13 @@ func (c *Clerk) serve() {
 		case req := <-c.requests:
 			go c.propose(req)
 		case committedReqs := <-c.commit:
+			db.DPrintf(db.REPLRAFT, "Ops commited %d %v\n", len(committedReqs.entries), committedReqs.leader)
 			for _, frame := range committedReqs.entries {
 				req := replproto.ReplOpRequest{}
 				if err := proto.Unmarshal(frame, &req); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
-					//				c.printOpTiming(req, frame)
+					// c.printOpTiming(req, frame)
 					c.apply(&req, committedReqs.leader)
 				}
 			}
@@ -74,34 +75,22 @@ func (c *Clerk) propose(op *Op) {
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
-	op.frame = frame
 	c.registerOp(op.request, op)
 	c.proposeC <- frame
 }
 
-// Repropose pending ops, in the event that leadership may have changed.
-func (c *Clerk) reproposeOps() {
-	c.mu.Lock()
-	frames := [][]byte{}
-	for _, m := range c.opmap {
-		for _, op := range m {
-			frames = append(frames, op.frame)
-		}
-	}
-	c.mu.Unlock()
-	for _, f := range frames {
-		c.proposeC <- f
-	}
-}
-
 func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
 	op := c.getOp(req)
-	if op == nil {
-		db.DFatalf("no op %v\n", req)
+	db.DPrintf(db.REPLRAFT, "apply request %v %v\n", req, op)
+	if op != nil { // let proposer know its message has been applied
+		op.err = c.applyf(req, op.reply)
+		db.DPrintf(db.REPLRAFT, "apply request %v done %v\n", req, op.err)
+		op.ch <- struct{}{}
+	} else {
+		err := c.applyf(req, nil)
+		db.DPrintf(db.REPLRAFT, "apply request %v done %v\n", req, err)
+
 	}
-	db.DPrintf(db.REPLRAFT, "Serve request %v %v\n", req, op)
-	err := c.applyf(req, op.reply)
-	op.ch <- err
 }
 
 func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {

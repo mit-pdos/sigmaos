@@ -151,8 +151,8 @@ func (n *RaftNode) serveChannels() {
 			if read.SoftState != nil {
 				// If leadership changed, we may need to re-propose ops.
 				if n.currentLeader != read.SoftState.Lead {
+					db.DPrintf(db.REPLRAFT, "Leadership change %v %v\n", n.currentLeader, read.SoftState.Lead)
 					n.currentLeader = read.SoftState.Lead
-					n.clerk.reproposeOps()
 				}
 			}
 			n.handleEntries(read.Entries, n.currentLeader)

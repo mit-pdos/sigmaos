@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/cache"
+	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cachereplclnt"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
@@ -216,7 +217,8 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 		}
 		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 		if o.err == nil {
-			o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
+			// var b []byte
+			_, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
 		}
 	} else {
 		switch o.kind {
@@ -278,9 +280,18 @@ func (kc *KvClerk) Delete(k string) error {
 
 func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
 	if kc.repl {
+		s := kc.nextSeqno()
 		req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
-		db.DPrintf(db.KVCLERK, "do %v\n", req)
-		return kc.cc.ReplOpSrv(srv, "CacheSrv.CreateShard", "", kc.cid, kc.nextSeqno(), req)
+		db.DPrintf(db.KVCLERK, "CreateShard start %v %d %v\n", shard, s, req)
+		b, err := kc.cc.ReplOpSrv(srv, "CacheSrv.CreateShard", "", kc.cid, s, req)
+		if err != nil {
+			return err
+		}
+		res := &cacheproto.CacheOK{}
+		if err := proto.Unmarshal(b, res); err != nil {
+			return err
+		}
+		return nil
 	} else {
 		return kc.cc.CreateShard(srv, shard, fence, vals)
 	}

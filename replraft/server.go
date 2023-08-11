@@ -33,8 +33,8 @@ func (srv *RaftReplServer) Start() {
 }
 
 func (srv *RaftReplServer) Process(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
-	op := &Op{request: req, reply: rep, ch: make(chan error)}
+	op := &Op{request: req, reply: rep, ch: make(chan struct{})}
 	srv.clerk.request(op)
-	err := <-op.ch
-	return err
+	<-op.ch
+	return op.err
 }

@@ -33,14 +33,14 @@ func NewReplOp(method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Me
 	}, nil
 }
 
-func (cc *CacheReplClnt) ReplOpSrv(srv, method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Message) error {
+func (cc *CacheReplClnt) ReplOpSrv(srv, method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Message) ([]byte, error) {
 	req, err := NewReplOp(method, key, cid, seqno, val)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var res replproto.ReplOpReply
 	if err := cc.RPC(srv, "CacheSrvRepl.SubmitOp", req, &res); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return res.Msg, nil
 }

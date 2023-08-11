@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] kernel|user" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--userbin USERBIN] kernel|user" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
+USERBIN="all"
 GO="go"
 PARALLEL=""
 WHAT=""
@@ -28,6 +29,11 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
+    shift
+    ;;
+  --userbin)
+    shift
+    USERBIN="$1"
     shift
     ;;
   --parallel)
@@ -71,9 +77,10 @@ LDF="-X sigmaos/sigmap.Target=$TARGET"
 for k in $WHAT; do
     echo "Building $k components"
     FILES=`ls cmd/$k`
-    # if [[ $k == "user" ]]; then
-    #   FILES="sleeper exec-uproc"
-    # fi
+     if [[ "$k" == "user" ]] && ! [[ "$USERBIN" == "all" ]] ; then
+       FILES=$(echo "$USERBIN" | tr "," " ")
+       echo "Only building userbin $USERBIN files $FILES"
+     fi
     for f in $FILES;  do
         # XXX delete when removing obselete code
         if [[ $f == "sigmamgr" ]] || [[ $f == "memfs-raft-replica" ]] ; then

@@ -40,7 +40,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.
 		cs.shards[i].s.Unlock()
 	}
 
-	b, err := proto.Marshal(&cacheproto.CacheDump{Vals: m})
+	b, err := proto.Marshal(&cacheproto.ShardData{Vals: m})
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}

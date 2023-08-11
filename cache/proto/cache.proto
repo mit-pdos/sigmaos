@@ -32,7 +32,7 @@ message CacheResult {
   bytes value = 1;
 }
 
-message CacheDump {
+message ShardData {
   map<string, bytes> vals = 1;
 }
 

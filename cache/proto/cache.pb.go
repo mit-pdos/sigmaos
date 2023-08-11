@@ -257,7 +257,7 @@ func (x *CacheResult) GetValue() []byte {
 	return nil
 }
 
-type CacheDump struct {
+type ShardData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -265,8 +265,8 @@ type CacheDump struct {
 	Vals map[string][]byte `protobuf:"bytes,1,rep,name=vals,proto3" json:"vals,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (x *CacheDump) Reset() {
-	*x = CacheDump{}
+func (x *ShardData) Reset() {
+	*x = ShardData{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_cache_proto_cache_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -274,13 +274,13 @@ func (x *CacheDump) Reset() {
 	}
 }
 
-func (x *CacheDump) String() string {
+func (x *ShardData) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CacheDump) ProtoMessage() {}
+func (*ShardData) ProtoMessage() {}
 
-func (x *CacheDump) ProtoReflect() protoreflect.Message {
+func (x *ShardData) ProtoReflect() protoreflect.Message {
 	mi := &file_cache_proto_cache_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -292,12 +292,12 @@ func (x *CacheDump) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CacheDump.ProtoReflect.Descriptor instead.
-func (*CacheDump) Descriptor() ([]byte, []int) {
+// Deprecated: Use ShardData.ProtoReflect.Descriptor instead.
+func (*ShardData) Descriptor() ([]byte, []int) {
 	return file_cache_proto_cache_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *CacheDump) GetVals() map[string][]byte {
+func (x *ShardData) GetVals() map[string][]byte {
 	if x != nil {
 		return x.Vals
 	}
@@ -432,9 +432,9 @@ var file_cache_proto_cache_proto_rawDesc = []byte{
 	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x09, 0x0a, 0x07, 0x43, 0x61, 0x63, 0x68, 0x65, 0x4f, 0x4b,
 	0x22, 0x23, 0x0a, 0x0b, 0x43, 0x61, 0x63, 0x68, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12,
 	0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05,
-	0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x6e, 0x0a, 0x09, 0x43, 0x61, 0x63, 0x68, 0x65, 0x44, 0x75,
-	0x6d, 0x70, 0x12, 0x28, 0x0a, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
-	0x32, 0x14, 0x2e, 0x43, 0x61, 0x63, 0x68, 0x65, 0x44, 0x75, 0x6d, 0x70, 0x2e, 0x56, 0x61, 0x6c,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x6e, 0x0a, 0x09, 0x53, 0x68, 0x61, 0x72, 0x64, 0x44, 0x61,
+	0x74, 0x61, 0x12, 0x28, 0x0a, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x14, 0x2e, 0x53, 0x68, 0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x2e, 0x56, 0x61, 0x6c,
 	0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x1a, 0x37, 0x0a, 0x09,
 	0x56, 0x61, 0x6c, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76,
@@ -473,11 +473,11 @@ var file_cache_proto_cache_proto_goTypes = []interface{}{
 	(*ShardRequest)(nil),            // 1: ShardRequest
 	(*CacheOK)(nil),                 // 2: CacheOK
 	(*CacheResult)(nil),             // 3: CacheResult
-	(*CacheDump)(nil),               // 4: CacheDump
+	(*ShardData)(nil),               // 4: ShardData
 	(*CacheString)(nil),             // 5: CacheString
 	(*CacheInt)(nil),                // 6: CacheInt
 	nil,                             // 7: ShardRequest.ValsEntry
-	nil,                             // 8: CacheDump.ValsEntry
+	nil,                             // 8: ShardData.ValsEntry
 	(*proto.SpanContextConfig)(nil), // 9: SpanContextConfig
 	(*sigmap.TfenceProto)(nil),      // 10: TfenceProto
 }
@@ -486,7 +486,7 @@ var file_cache_proto_cache_proto_depIdxs = []int32{
 	10, // 1: CacheRequest.fence:type_name -> TfenceProto
 	10, // 2: ShardRequest.fence:type_name -> TfenceProto
 	7,  // 3: ShardRequest.vals:type_name -> ShardRequest.ValsEntry
-	8,  // 4: CacheDump.vals:type_name -> CacheDump.ValsEntry
+	8,  // 4: ShardData.vals:type_name -> ShardData.ValsEntry
 	0,  // 5: Cache.Get:input_type -> CacheRequest
 	0,  // 6: Cache.Set:input_type -> CacheRequest
 	0,  // 7: Cache.Delete:input_type -> CacheRequest
@@ -555,7 +555,7 @@ func file_cache_proto_cache_proto_init() {
 			}
 		}
 		file_cache_proto_cache_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CacheDump); i {
+			switch v := v.(*ShardData); i {
 			case 0:
 				return &v.state
 			case 1:

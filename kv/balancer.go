@@ -53,6 +53,7 @@ type Balancer struct {
 	crashhelper string
 	isBusy      bool // in config change?
 	kc          *KvClerk
+	repl        string
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -84,6 +85,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashhelper = crashhelper
 	bl.kc = NewClerk(sc.FsLib, job, repl == "repl")
+	bl.repl = repl
 
 	var kvdnc int
 	var error error
@@ -353,7 +355,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), strconv.Itoa(int(m.Shard)), m.Src, m.Dst},
+		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), strconv.Itoa(int(m.Shard)), m.Src, m.Dst, bl.repl},
 			func(err error, status *proc.Status) bool {
 				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Fence.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()

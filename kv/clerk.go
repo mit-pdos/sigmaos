@@ -201,10 +201,7 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 		var req proto.Message
 		var m string
 		switch o.kind {
-		case GET:
-			m = "CacheSrv.Get"
-			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
-		case GETVALS:
+		case GET, GETVALS:
 			m = "CacheSrv.Get"
 			req = kc.cc.NewGet(nil, string(o.k), &kc.conf.Fence)
 		case PUT:
@@ -217,8 +214,29 @@ func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
 		}
 		db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 		if o.err == nil {
-			// var b []byte
-			_, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
+			var b []byte
+			b, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
+			if o.err != nil {
+				return
+			}
+			switch o.kind {
+			case PUT:
+				res := &cacheproto.CacheOK{}
+				if err := proto.Unmarshal(b, res); err != nil {
+					o.err = err
+				}
+			case GET:
+				res := &cacheproto.CacheResult{}
+				o.err = proto.Unmarshal(b, res)
+				if o.err != nil {
+					return
+				}
+				o.err = proto.Unmarshal(res.Value, o.val)
+			case GETVALS:
+				db.DFatalf("clerk: getvals\n")
+			}
+			return
+
 		}
 	} else {
 		switch o.kind {
@@ -278,22 +296,64 @@ func (kc *KvClerk) Delete(k string) error {
 	return nil
 }
 
+func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+	s := kc.nextSeqno()
+	req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
+	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
+	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
+	if err != nil {
+		return err
+	}
+	res := &cacheproto.CacheOK{}
+	if err := proto.Unmarshal(b, res); err != nil {
+		return err
+	}
+	return nil
+}
+func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) (cachesrv.Tcache, error) {
+	s := kc.nextSeqno()
+	req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
+	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
+	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
+	if err != nil {
+		return nil, err
+	}
+	res := &cacheproto.ShardData{}
+	if err := proto.Unmarshal(b, res); err != nil {
+		return nil, err
+	}
+	return res.Vals, nil
+}
+
 func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
 	if kc.repl {
-		s := kc.nextSeqno()
-		req := kc.cc.NewShardRequest(shard, &kc.conf.Fence, vals)
-		db.DPrintf(db.KVCLERK, "CreateShard start %v %d %v\n", shard, s, req)
-		b, err := kc.cc.ReplOpSrv(srv, "CacheSrv.CreateShard", "", kc.cid, s, req)
-		if err != nil {
-			return err
-		}
-		res := &cacheproto.CacheOK{}
-		if err := proto.Unmarshal(b, res); err != nil {
-			return err
-		}
-		return nil
+		return kc.opShard("CacheSrv.CreateShard", srv, shard, fence, vals)
 	} else {
 		return kc.cc.CreateShard(srv, shard, fence, vals)
+	}
+}
+
+func (kc *KvClerk) FreezeShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
+	if kc.repl {
+		return kc.opShard("CacheSrv.FreezeShard", srv, shard, fence, make(cachesrv.Tcache))
+	} else {
+		return kc.cc.FreezeShard(srv, shard, fence)
+	}
+}
+
+func (kc *KvClerk) DeleteShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
+	if kc.repl {
+		return kc.opShard("CacheSrv.DeleteShard", srv, shard, fence, make(cachesrv.Tcache))
+	} else {
+		return kc.cc.DeleteShard(srv, shard, fence)
+	}
+}
+
+func (kc *KvClerk) DumpShard(srv string, shard cache.Tshard, fence *sp.Tfence) (cachesrv.Tcache, error) {
+	if kc.repl {
+		return kc.opShardData("CacheSrv.DumpShard", srv, shard, fence, make(cachesrv.Tcache))
+	} else {
+		return kc.cc.DumpShard(srv, shard, fence)
 	}
 }
 

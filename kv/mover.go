@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"sigmaos/cache"
-	"sigmaos/cacheclnt"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -26,7 +25,7 @@ type Mover struct {
 	job   string
 	fence *sp.Tfence
 	shard cache.Tshard
-	cc    *cacheclnt.CacheClnt
+	kc    *KvClerk
 	exit  bool
 }
 
@@ -40,7 +39,7 @@ func checkFence(fsl *fslib.FsLib, job string, fence *sp.Tfence) {
 	}
 }
 
-func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
+func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 	mv := &Mover{fence: fence,
 		SigmaClnt: sc,
 		job:       job,
-		cc:        cacheclnt.NewCacheClnt([]*fslib.FsLib{sc.FsLib}, job, NSHARD),
+		kc:        NewClerk(sc.FsLib, job, repl == "repl"),
 		exit:      true,
 	}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
@@ -78,7 +77,7 @@ func MakeMover(job, epochstr, shard, src, dst string) (*Mover, error) {
 
 // Copy shard from src to dst
 func (mv *Mover) moveShard(s, d string) error {
-	if err := mv.cc.FreezeShard(s, mv.shard, mv.fence); err != nil {
+	if err := mv.kc.FreezeShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "FreezeShard %v err %v\n", s, err)
 		// did previous mover finish the job?
 		if serr.IsErrCode(err, serr.TErrNotfound) {
@@ -87,19 +86,19 @@ func (mv *Mover) moveShard(s, d string) error {
 		return err
 	}
 
-	vals, err := mv.cc.DumpShard(s, mv.shard, mv.fence)
+	vals, err := mv.kc.DumpShard(s, mv.shard, mv.fence)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "DumpShard %v err %v\n", mv.shard, err)
 		return err
 	}
 
-	if err := mv.cc.CreateShard(d, mv.shard, mv.fence, vals); err != nil {
+	if err := mv.kc.CreateShard(d, mv.shard, mv.fence, vals); err != nil {
 		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
 		return err
 	}
 
 	// Mark that move is done by deleting s
-	if err := mv.cc.DeleteShard(s, mv.shard, mv.fence); err != nil {
+	if err := mv.kc.DeleteShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "DeleteShard src %v err %v\n", mv.shard, err)
 		return err
 	}

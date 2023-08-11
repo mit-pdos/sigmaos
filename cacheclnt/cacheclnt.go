@@ -240,7 +240,7 @@ func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cac
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
 	}
-	var res cacheproto.CacheDump
+	var res cacheproto.ShardData
 	if err := c.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {
 		return nil, err
 	}
@@ -267,12 +267,12 @@ func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	dump := &cacheproto.CacheDump{}
-	if err := proto.Unmarshal(b, dump); err != nil {
+	data := &cacheproto.ShardData{}
+	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
 	}
 	m := map[string]string{}
-	for k, v := range dump.Vals {
+	for k, v := range data.Vals {
 		m[k] = string(v)
 	}
 	return m, nil

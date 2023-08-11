@@ -217,7 +217,7 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	return nil
 }
 
-func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheDump) error {
+func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.ShardData) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 

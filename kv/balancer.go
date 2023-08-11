@@ -285,7 +285,14 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
-		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &bl.conf.Fence, make(cachesrv.Tcache)); err != nil {
+
+		// simulate that the creates happen after posting
+		// configuration so that initial kvds start in conf 1, as the
+		// clerks do.
+		f := bl.conf.Fence
+		f.Seqno = 1
+
+		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &f, make(cachesrv.Tcache)); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
 	}

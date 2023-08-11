@@ -28,25 +28,25 @@ var ctx = context.Background()
 
 func main() {
 	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v [duration] [keyOffset] [sempath] [redisaddr] [repl]", os.Args[0])
+		db.DFatalf("Usage: %v [repl] [duration] [keyOffset] [sempath] [redisaddr]", os.Args[0])
 	}
 	// Have this clerk do puts & gets instead of appends.
 	var timed bool
 	var dur time.Duration
 	var keyOffset int
 	var sempath string
-	if len(os.Args) > 2 {
+	if len(os.Args) > 3 {
 		timed = true
 		var err error
-		dur, err = time.ParseDuration(os.Args[2])
+		dur, err = time.ParseDuration(os.Args[3])
 		if err != nil {
 			db.DFatalf("Bad dur %v", err)
 		}
-		keyOffset, err = strconv.Atoi(os.Args[3])
+		keyOffset, err = strconv.Atoi(os.Args[4])
 		if err != nil {
 			db.DFatalf("Bad offset %v", err)
 		}
-		sempath = os.Args[4]
+		sempath = os.Args[5]
 	}
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("clerk-" + proc.GetPid().String()))
 	if err != nil {
@@ -54,16 +54,16 @@ func main() {
 	}
 	var rcli *redis.Client
 	var clk *kv.KvClerk
-	if len(os.Args) > 5 {
+	if len(os.Args) > 6 {
 		rcli = redis.NewClient(&redis.Options{
-			Addr:     os.Args[5],
+			Addr:     os.Args[6],
 			Password: "",
 			DB:       0,
 		})
 	} else {
 		var err error
 		var repl bool
-		if len(os.Args) > 6 {
+		if os.Args[2] != "" {
 			repl = true
 		}
 		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1], repl)

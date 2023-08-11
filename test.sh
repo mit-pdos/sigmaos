@@ -85,7 +85,7 @@ if [[ $FAST == "" ]]; then
     done
 else
     go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
-    go test $VERB sigmaos/imgresized -start -run ImgdMany
+    go test $VERB sigmaos/imgresized -start -run ImgdOne
     go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
     go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
 fi

@@ -147,19 +147,10 @@ func (cc *CacheClnt) GetSrv(srv, key string, val proto.Message, f *sp.Tfence) er
 	return cc.GetTracedFenced(nil, srv, key, val, f)
 }
 
-func (cc *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]proto.Message, error) {
-	req := cc.NewGet(nil, key, f)
-	s := time.Now()
-	var res cacheproto.CacheResult
-	if err := cc.RPC(srv, "CacheSrv.Get", req, &res); err != nil {
-		return nil, err
-	}
-	if time.Since(s) > 150*time.Microsecond {
-		db.DPrintf(db.CACHE_LAT, "Long cache getvals: %v", time.Since(s))
-	}
+func ReadVals(m proto.Message, b []byte) ([]proto.Message, error) {
 	typ := reflect.TypeOf(m)
 	vals := make([]proto.Message, 0)
-	rdr := bytes.NewReader(res.Value)
+	rdr := bytes.NewReader(b)
 	for {
 		var l uint32
 		if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
@@ -178,6 +169,19 @@ func (cc *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]
 		vals = append(vals, val)
 	}
 	return vals, nil
+}
+
+func (cc *CacheClnt) GetVals(srv, key string, m proto.Message, f *sp.Tfence) ([]proto.Message, error) {
+	req := cc.NewGet(nil, key, f)
+	s := time.Now()
+	var res cacheproto.CacheResult
+	if err := cc.RPC(srv, "CacheSrv.Get", req, &res); err != nil {
+		return nil, err
+	}
+	if time.Since(s) > 150*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache getvals: %v", time.Since(s))
+	}
+	return ReadVals(m, res.Value)
 }
 
 func (cc *CacheClnt) DeleteTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, f *sp.Tfence) error {

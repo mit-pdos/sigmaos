@@ -10,6 +10,7 @@ import (
 
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
+	"sigmaos/cacheclnt"
 	"sigmaos/cachereplclnt"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
@@ -237,7 +238,12 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 			}
 			o.err = proto.Unmarshal(res.Value, o.val)
 		case GETVALS:
-			db.DFatalf("clerk: getvals\n")
+			res := &cacheproto.CacheResult{}
+			o.err = proto.Unmarshal(b, res)
+			if o.err != nil {
+				return
+			}
+			o.vals, o.err = cacheclnt.ReadVals(o.val, res.Value)
 		}
 		return
 	}

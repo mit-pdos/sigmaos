@@ -250,10 +250,6 @@ func TestCrashAllN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-//
-// Fix: Repl tests fail now because lack of shard replication.
-//
-
 func TestRepl0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
@@ -262,9 +258,13 @@ func TestReplOK1(t *testing.T) {
 	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
 
-func XTestReplOKN(t *testing.T) {
+func TestReplOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 0, "0")
 }
+
+//
+// Fix: crashing tests
+//
 
 func XTestReplCrash0(t *testing.T) {
 	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 1, "0")

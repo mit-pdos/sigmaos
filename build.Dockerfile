@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1-experimental
 
 FROM archlinux
-ARG parallel
-ARG target=local
-ARG tag
 
+RUN yes | pacman -Syu
 RUN yes | pacman -Sy git libseccomp wget gcc pkg-config
 
 # Download an initial version of Go
@@ -22,10 +20,6 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git pull && \
   cd src && \
   ./all.bash
-
-# Set env after downlaoding and installing the custom Go version, so we don't
-# rebuild Go evey time we change tags.
-ENV SIGMATAG=$tag
 
 # Install some apt packages for debugging.
 #RUN \
@@ -50,11 +44,21 @@ COPY seccomp seccomp
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
+
+ARG parallel
+ARG target
+ARG userbin
+ARG tag
+
+# Set env after downlaoding and installing the custom Go version, so we don't
+# rebuild Go evey time we change tags.
+ENV SIGMATAG=$tag
+
 # Copy source
 COPY . .
 # Build all binaries.
 RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
-  ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel user && \
+  ./make.sh --norace --gopath /go-custom/bin/go --userbin $userbin --target $target $parallel user && \
   mkdir bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \

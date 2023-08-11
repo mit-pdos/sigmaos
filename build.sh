@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target target ] [--parallel]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--userbin USERBIN] [--parallel]" 1>&2
 }
 
 PARALLEL=""
 TAG=""
 TARGET="local"
+USERBIN="all"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
@@ -21,6 +22,11 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
+    shift
+    ;;
+  --userbin)
+    shift
+    USERBIN="$1"
     shift
     ;;
   -help)
@@ -64,6 +70,7 @@ fi
 # Build base image
 DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
+  --build-arg userbin=$USERBIN \
   --build-arg parallel=$PARALLEL \
   --build-arg tag=$TAG \
   -f build.Dockerfile \
@@ -87,6 +94,7 @@ fi
 # Build the user image
 DOCKER_BUILDKIT=1 docker build --progress=plain \
   --build-arg target=$TARGET \
+  --build-arg userbin=$USERBIN \
   --build-arg parallel=$PARALLEL \
   --target sigmauser \
   -t sigmauser .

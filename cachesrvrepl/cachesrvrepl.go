@@ -29,10 +29,15 @@ type CacheSrvRepl struct {
 	raftcfg *replraft.RaftConfig
 	replSrv repl.Server
 	rpcs    *rpcsrv.RPCSrv
+	rt      *ReplyTable
 }
 
 func NewCacheSrvRepl(raftcfg *replraft.RaftConfig, svci any) *CacheSrvRepl {
-	cs := &CacheSrvRepl{raftcfg: raftcfg, rpcs: rpcsrv.NewRPCSrv(svci, nil)}
+	cs := &CacheSrvRepl{
+		raftcfg: raftcfg,
+		rpcs:    rpcsrv.NewRPCSrv(svci, nil),
+		rt:      NewReplyTable(),
+	}
 	cs.replSrv = raftcfg.MakeServer(cs.applyOp)
 	cs.replSrv.Start()
 	db.DPrintf(db.ALWAYS, "%v: Starting repl server: %v %v", proc.GetName(), svci, raftcfg)
@@ -41,12 +46,20 @@ func NewCacheSrvRepl(raftcfg *replraft.RaftConfig, svci any) *CacheSrvRepl {
 
 func (cs *CacheSrvRepl) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
 	db.DPrintf(db.CACHESRV_REPL, "ApplyOp %v\n", req)
+	duplicate, err, b := cs.rt.IsDuplicate(req.TclntId(), req.Tseqno())
+	if duplicate {
+		db.DPrintf(db.CACHESRV_REPL, "ApplyOp duplicate %v\n", req)
+		rep.Msg = b
+		return err
+	}
 	if b, err := cs.rpcs.ServeRPC(ctx.MkCtxNull(), req.Method, req.Msg); err != nil {
+		cs.rt.PutReply(req.TclntId(), req.Tseqno(), err, nil)
 		return err
 	} else {
 		if rep != nil {
 			rep.Msg = b
 		}
+		cs.rt.PutReply(req.TclntId(), req.Tseqno(), nil, b)
 	}
 	return nil
 }

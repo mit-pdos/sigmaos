@@ -15,7 +15,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
-	"sigmaos/rand"
 	"sigmaos/replclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -40,12 +39,10 @@ func key2shard(key cache.Tkey) cache.Tshard {
 
 type KvClerk struct {
 	*fslib.FsLib
-	conf  *Config
-	job   string
-	cc    *cacheclnt.CacheClnt
-	rc    *replclnt.ReplClnt
-	cid   sp.TclntId
-	seqno sp.Tseqno
+	conf *Config
+	job  string
+	cc   *cacheclnt.CacheClnt
+	rc   *replclnt.ReplClnt
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
@@ -75,7 +72,6 @@ func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 		job:   job,
 		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
 		rc:    rc,
-		cid:   sp.TclntId(rand.Uint64()),
 	}
 	return kc
 }
@@ -83,11 +79,6 @@ func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 func makeClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
 	kc := newClerk(fsl, job, repl)
 	return kc, kc.StartClerk()
-}
-
-func (kc *KvClerk) nextSeqno() sp.Tseqno {
-	seq := &kc.seqno
-	return seq.Next()
 }
 
 func (kc *KvClerk) StartClerk() error {
@@ -175,12 +166,6 @@ func (kc *KvClerk) doop(o *op) {
 		if o.err != nil {
 			return
 		}
-		// the (replicated) server processed the op and returned an
-		// error (hasn't updated its state). now we stamp the op with
-		// a new sequence number so this new attempt isn't filtered as
-		// a duplicated.
-		o.seqno = kc.nextSeqno()
-
 	}
 }
 
@@ -193,17 +178,16 @@ const (
 )
 
 type op struct {
-	kind  Top
-	val   proto.Message
-	k     cache.Tkey
-	m     sp.Tmode
-	err   error
-	vals  []proto.Message
-	seqno sp.Tseqno
+	kind Top
+	val  proto.Message
+	k    cache.Tkey
+	m    sp.Tmode
+	err  error
+	vals []proto.Message
 }
 
 func (kc *KvClerk) newOp(o Top, val proto.Message, k cache.Tkey, m sp.Tmode) *op {
-	return &op{kind: o, val: val, k: k, m: m, seqno: kc.nextSeqno()}
+	return &op{kind: o, val: val, k: k, m: m}
 }
 
 func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
@@ -224,7 +208,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 	db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 	if o.err == nil {
 		var b []byte
-		b, o.err = kc.rc.ReplOp(srv, m, string(o.k), kc.cid, o.seqno, req)
+		b, o.err = kc.rc.ReplOp(srv, m, string(o.k), req)
 		if o.err != nil {
 			return
 		}
@@ -254,7 +238,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
-	db.DPrintf(db.KVCLERK, "do %v repl %p\n", o, kc.rc != nil)
+	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.rc != nil)
 	if kc.rc != nil {
 		kc.dorepl(o, srv, s)
 	} else {
@@ -316,10 +300,9 @@ func (kc *KvClerk) Delete(k string) error {
 }
 
 func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
-	s := kc.nextSeqno()
 	req := kc.cc.NewShardRequest(shard, fence, vals)
-	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
-	b, err := kc.rc.ReplOp(srv, op, "", kc.cid, s, req)
+	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
+	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {
 		return err
 	}
@@ -330,10 +313,9 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 	return nil
 }
 func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) (cachesrv.Tcache, error) {
-	s := kc.nextSeqno()
 	req := kc.cc.NewShardRequest(shard, fence, vals)
-	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
-	b, err := kc.rc.ReplOp(srv, op, "", kc.cid, s, req)
+	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
+	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {
 		return nil, err
 	}

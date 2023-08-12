@@ -3,12 +3,10 @@ package cachereplclnt
 import (
 	"google.golang.org/protobuf/proto"
 
-	replproto "sigmaos/cache/replproto"
 	"sigmaos/cacheclnt"
-	// db "sigmaos/debug"
 	"sigmaos/fslib"
+	replproto "sigmaos/repl/proto"
 	sp "sigmaos/sigmap"
-	// tproto "sigmaos/tracing/proto"
 )
 
 type CacheReplClnt struct {

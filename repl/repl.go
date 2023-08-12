@@ -1,7 +1,7 @@
 package repl
 
 import (
-	proto "sigmaos/cache/replproto"
+	proto "sigmaos/repl/proto"
 )
 
 const (

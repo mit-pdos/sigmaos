@@ -1,4 +1,4 @@
-package replproto
+package proto
 
 import (
 	sp "sigmaos/sigmap"

@@ -3,11 +3,7 @@ package cachesrvrepl
 import (
 	"sync"
 
-	// "google.golang.org/protobuf/proto"
-
-	//cacheproto "sigmaos/cache/proto"
-	replproto "sigmaos/cache/replproto"
-	// replproto "sigmaos/repl/proto"
+	replproto "sigmaos/repl/proto"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -16,8 +12,6 @@ import (
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/rpcsrv"
-	// "sigmaos/serr"
-	// sp "sigmaos/sigmap"
 )
 
 //

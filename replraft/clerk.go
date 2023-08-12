@@ -6,10 +6,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	replproto "sigmaos/cache/replproto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/repl"
+	replproto "sigmaos/repl/proto"
 	sp "sigmaos/sigmap"
 )
 

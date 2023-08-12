@@ -5,8 +5,8 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	replproto "sigmaos/cache/replproto"
 	"sigmaos/repl"
+	replproto "sigmaos/repl/proto"
 )
 
 type RaftReplServer struct {

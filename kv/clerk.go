@@ -11,12 +11,12 @@ import (
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
-	"sigmaos/cachereplclnt"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
 	"sigmaos/rand"
+	"sigmaos/replclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
@@ -42,10 +42,10 @@ type KvClerk struct {
 	*fslib.FsLib
 	conf  *Config
 	job   string
-	cc    *cachereplclnt.CacheReplClnt
+	cc    *cacheclnt.CacheClnt
+	rc    *replclnt.ReplClnt
 	cid   sp.TclntId
 	seqno sp.Tseqno
-	repl  bool
 }
 
 func MakeClerkFsl(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
@@ -65,13 +65,17 @@ func MakeClerk(uname sp.Tuname, job string, repl bool) (*KvClerk, error) {
 }
 
 func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
+	var rc *replclnt.ReplClnt
+	if repl {
+		rc = replclnt.NewReplClnt([]*fslib.FsLib{fsl})
+	}
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cc:    cachereplclnt.NewCacheReplClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		rc:    rc,
 		cid:   sp.TclntId(rand.Uint64()),
-		repl:  repl,
 	}
 	return kc
 }
@@ -220,7 +224,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 	db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
 	if o.err == nil {
 		var b []byte
-		b, o.err = kc.cc.ReplOpSrv(srv, m, string(o.k), kc.cid, o.seqno, req)
+		b, o.err = kc.rc.ReplOp(srv, m, string(o.k), kc.cid, o.seqno, req)
 		if o.err != nil {
 			return
 		}
@@ -250,8 +254,8 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
-	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.repl)
-	if kc.repl {
+	db.DPrintf(db.KVCLERK, "do %v repl %p\n", o, kc.rc != nil)
+	if kc.rc != nil {
 		kc.dorepl(o, srv, s)
 	} else {
 		switch o.kind {
@@ -315,7 +319,7 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 	s := kc.nextSeqno()
 	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
-	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
+	b, err := kc.rc.ReplOp(srv, op, "", kc.cid, s, req)
 	if err != nil {
 		return err
 	}
@@ -329,7 +333,7 @@ func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfe
 	s := kc.nextSeqno()
 	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %d %v\n", op, shard, s, req)
-	b, err := kc.cc.ReplOpSrv(srv, op, "", kc.cid, s, req)
+	b, err := kc.rc.ReplOp(srv, op, "", kc.cid, s, req)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +345,7 @@ func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfe
 }
 
 func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
-	if kc.repl {
+	if kc.rc != nil {
 		return kc.opShard("CacheSrv.CreateShard", srv, shard, fence, vals)
 	} else {
 		return kc.cc.CreateShard(srv, shard, fence, vals)
@@ -349,7 +353,7 @@ func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence,
 }
 
 func (kc *KvClerk) FreezeShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
-	if kc.repl {
+	if kc.rc != nil {
 		return kc.opShard("CacheSrv.FreezeShard", srv, shard, fence, make(cachesrv.Tcache))
 	} else {
 		return kc.cc.FreezeShard(srv, shard, fence)
@@ -357,7 +361,7 @@ func (kc *KvClerk) FreezeShard(srv string, shard cache.Tshard, fence *sp.Tfence)
 }
 
 func (kc *KvClerk) DeleteShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
-	if kc.repl {
+	if kc.rc != nil {
 		return kc.opShard("CacheSrv.DeleteShard", srv, shard, fence, make(cachesrv.Tcache))
 	} else {
 		return kc.cc.DeleteShard(srv, shard, fence)
@@ -365,7 +369,7 @@ func (kc *KvClerk) DeleteShard(srv string, shard cache.Tshard, fence *sp.Tfence)
 }
 
 func (kc *KvClerk) DumpShard(srv string, shard cache.Tshard, fence *sp.Tfence) (cachesrv.Tcache, error) {
-	if kc.repl {
+	if kc.rc != nil {
 		return kc.opShardData("CacheSrv.DumpShard", srv, shard, fence, make(cachesrv.Tcache))
 	} else {
 		return kc.cc.DumpShard(srv, shard, fence)

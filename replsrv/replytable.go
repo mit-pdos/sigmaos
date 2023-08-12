@@ -1,4 +1,4 @@
-package cachesrvrepl
+package replsrv
 
 import (
 	"sync"

@@ -1,21 +1,21 @@
-package cachereplclnt
+package replclnt
 
 import (
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/cacheclnt"
 	"sigmaos/fslib"
 	replproto "sigmaos/repl/proto"
+	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
 
-type CacheReplClnt struct {
-	*cacheclnt.CacheClnt
+type ReplClnt struct {
+	*rpcclnt.ClntCache
 }
 
-func NewCacheReplClnt(fsls []*fslib.FsLib, job string, nshard int) *CacheReplClnt {
-	cc := &CacheReplClnt{CacheClnt: cacheclnt.NewCacheClnt(fsls, job, nshard)}
-	return cc
+func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
+	rc := &ReplClnt{ClntCache: rpcclnt.NewRPCClntCache(fsls)}
+	return rc
 }
 
 func NewReplOp(method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Message) (*replproto.ReplOpRequest, error) {
@@ -31,13 +31,13 @@ func NewReplOp(method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Me
 	}, nil
 }
 
-func (cc *CacheReplClnt) ReplOpSrv(srv, method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Message) ([]byte, error) {
+func (rc *ReplClnt) ReplOp(srv, method, key string, cid sp.TclntId, seqno sp.Tseqno, val proto.Message) ([]byte, error) {
 	req, err := NewReplOp(method, key, cid, seqno, val)
 	if err != nil {
 		return nil, err
 	}
 	var res replproto.ReplOpReply
-	if err := cc.RPC(srv, "CacheSrvRepl.ProcessOp", req, &res); err != nil {
+	if err := rc.RPC(srv, "ReplSrv.ProcessOp", req, &res); err != nil {
 		return nil, err
 	}
 	return res.Msg, nil

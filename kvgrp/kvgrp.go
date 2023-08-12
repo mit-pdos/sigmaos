@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"sigmaos/cachesrv"
-	"sigmaos/cachesrvrepl"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/replraft"
+	"sigmaos/replsrv"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -283,7 +283,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	var cs any
 	cs = cachesrv.NewCacheSrv("")
 	if raftCfg != nil {
-		cs = cachesrvrepl.NewCacheSrvRepl(raftCfg, cs)
+		cs = replsrv.NewReplSrv(raftCfg, cs)
 	}
 
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)

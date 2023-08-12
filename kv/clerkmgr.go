@@ -22,10 +22,11 @@ type ClerkMgr struct {
 	sem     *semclnt.SemClnt
 	ckmcpu  proc.Tmcpu // Number of exclusive cores allocated to each clerk.
 	clrks   []proc.Tpid
+	repl    bool
 }
 
 func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool) (*ClerkMgr, error) {
-	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu}
+	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu, repl: repl}
 	clrk := NewClerk(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")

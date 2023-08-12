@@ -81,30 +81,31 @@ fi
 LDF="-X sigmaos/sigmap.Target=$TARGET"
 
 for k in $WHAT; do
-    echo "Building $k components"
-    FILES=`ls cmd/$k`
-     if [[ "$k" == "user" ]] && ! [[ "$USERBIN" == "all" ]] ; then
-       FILES=$(echo "$USERBIN" | tr "," " ")
-       echo "Only building userbin $USERBIN files $FILES"
-     fi
+  echo "Building $k components"
+  FILES=`ls cmd/$k`
+   if [[ "$k" == "user" ]] && ! [[ "$USERBIN" == "all" ]] ; then
+     FILES="exec-uproc $(echo "$USERBIN" | tr "," " ")"
+     echo "Only building userbin $USERBIN files $FILES"
+   fi
+  if [ -z "$PARALLEL" ]; then
     for f in $FILES;  do
-        # XXX delete when removing obselete code
-        if [[ $f == "sigmamgr" ]] || [[ $f == "memfs-raft-replica" ]] ; then
-            continue
-        fi
-        if [ $CMD == "vet" ]; then
-            echo "$GO vet cmd/$k/$f/main.go"
-            $GO vet cmd/$k/$f/main.go
-        else
-            build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
-            echo $build
-            if [ -z "$PARALLEL" ]; then
-                eval "$build"
-            else
-                eval "$build" &
-            fi
-        fi
+      if [ $CMD == "vet" ]; then
+        echo "$GO vet cmd/$k/$f/main.go"
+        $GO vet cmd/$k/$f/main.go
+      else
+        build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+        echo $build
+        eval "$build"
+      fi
     done
+  else
+    # If building in parallel, build with (n - 1) threads.
+    njobs=$(nproc)
+    njobs="$(($njobs-1))"
+    build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o bin/$k/{} cmd/$k/{}/main.go\" ::: $FILES"
+    echo $build
+    eval $build
+  fi
 done
 
 wait

@@ -61,6 +61,7 @@ if [[ $APPS == "" ]]; then
 
     # test memfs using schedd's memfs
     go test $VERB sigmaos/fslib -start -path "name/schedd/~local/" 
+    go test $VERB sigmaos/memfs -start -path "name/schedd/~local/"
 
     #
     # tests a full kernel using root realm

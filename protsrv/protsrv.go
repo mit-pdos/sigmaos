@@ -98,11 +98,6 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
-
-	// Several threads maybe waiting in a sesscond. DeleteSess
-	// will unblock them so that they can bail out.
-	ps.ssrv.GetSessCondTable().DeleteSess(ps.sid)
-
 	ps.ft.ClunkOpen()
 	if detach != nil {
 		detach(args.TclntId())

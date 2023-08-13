@@ -320,7 +320,7 @@ func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm 
 }
 
 func (pclnt *ProtClnt) Detach(cid sp.TclntId) *serr.Err {
-	args := sp.MkTdetach(0, 0, cid)
+	args := sp.MkTdetach(cid)
 	_, err := pclnt.Call(args)
 	if err != nil {
 		return err

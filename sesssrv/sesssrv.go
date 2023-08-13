@@ -74,10 +74,6 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.At
 	return ssrv
 }
 
-func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
-	return ssrv.sct
-}
-
 func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
 	return ssrv.plt
 }
@@ -231,7 +227,11 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	ssrv.sendReply(fc, reply, sess)
 
 	if close {
-		// Dispatch() signaled to close the sessstatesrv.
+		// Dispatch() signaled to close the sessstatesrv.  Several
+		// threads maybe waiting in a sesscond of this
+		// session. DeleteSess will unblock them so that they can bail
+		// out.
+		ssrv.sct.DeleteSess(sess.Sid)
 		sess.Close()
 	}
 }

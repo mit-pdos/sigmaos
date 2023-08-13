@@ -574,8 +574,8 @@ func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 
-func MkTdetach(pid, lid uint32, cid TclntId) *Tdetach {
-	return &Tdetach{PropId: pid, LeadId: lid, ClntId: uint64(cid)}
+func MkTdetach(cid TclntId) *Tdetach {
+	return &Tdetach{ClntId: uint64(cid)}
 }
 
 func (d *Tdetach) TclntId() TclntId {

@@ -89,13 +89,8 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		return reply, nil, false, err
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}
-		db.DPrintf(db.SESS_STATE_SRV_ERR, "Try to detach l %v p %v", req.LeadId, req.PropId)
-		// If the leader proposed this detach message, accept it.
-		if req.LeadId == req.PropId {
-			err := s.protsrv.Detach(req, reply, s.detachClnt)
-			return reply, nil, true, err
-		}
-		return reply, nil, false, nil
+		err := s.protsrv.Detach(req, reply, s.detachClnt)
+		return reply, nil, true, err
 	case *sp.Theartbeat:
 		reply := &sp.Rheartbeat{}
 		reply.Sids = req.Sids

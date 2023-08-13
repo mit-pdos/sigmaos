@@ -205,9 +205,7 @@ message Tputfile {
 }
 
 message Tdetach {
-        uint32 propId = 1;
-        uint32 leadId = 2;
-        uint64 clntId = 3;
+        uint64 clntId = 1;
 }
 
 message Rdetach {

@@ -91,7 +91,7 @@ func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Tadd
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
-func (k *Kernel) MkSigmaClnt(uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
+func (k *Kernel) NewSigmaClnt(uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
 	return sigmaclnt.MkSigmaClntRootInit(uname, k.GetLocalIP(), k.SigmaClnt.NamedAddr())
 }
 

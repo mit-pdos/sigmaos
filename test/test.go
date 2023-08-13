@@ -163,7 +163,7 @@ func (ts *Tstate) KillOne(s string) error {
 }
 
 func (ts *Tstate) MakeClnt(idx int, uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
-	return ts.kclnts[idx].MkSigmaClnt(uname)
+	return ts.kclnts[idx].NewSigmaClnt(uname)
 }
 
 func (ts *Tstate) Shutdown() error {

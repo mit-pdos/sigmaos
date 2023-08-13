@@ -65,7 +65,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	}
 	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", proc.GetPid(), args)
 	t := &Trans{}
-	sc, err := sigmaclnt.MkSigmaClnt("fsreader")
+	sc, err := sigmaclnt.NewSigmaClnt("fsreader")
 	if err != nil {
 		return nil, err
 	}

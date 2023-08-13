@@ -48,7 +48,7 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("reducer-" + r.input))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("reducer-" + r.input))
 	r.SigmaClnt = sc
 	r.perf = p
 

@@ -15,7 +15,7 @@ import (
 func RunProc(fencestr, dir string) {
 	pid := proc.GetPid()
 
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("proc-" + pid.String()))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("proc-" + pid.String()))
 	if err != nil {
 		db.DFatalf("%v MkSigmaClnt err %v\n", proc.GetName(), err)
 	}

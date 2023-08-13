@@ -43,7 +43,7 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
-	sc, err := sigmaclnt.MkSigmaClnt("fsreader")
+	sc, err := sigmaclnt.NewSigmaClnt("fsreader")
 	if err != nil {
 		return nil, err
 	}

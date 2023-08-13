@@ -34,7 +34,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
-	sc, err := sigmaclnt.MkSigmaClnt("spinner")
+	sc, err := sigmaclnt.NewSigmaClnt("spinner")
 	if err != nil {
 		return nil, err
 	}

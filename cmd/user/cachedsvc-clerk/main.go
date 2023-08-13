@@ -48,7 +48,7 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("cacheclerk-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("cacheclerk-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

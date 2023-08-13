@@ -40,7 +40,7 @@ func checkFence(fsl *fslib.FsLib, job string, fence *sp.Tfence) {
 }
 
 func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
 	if err != nil {
 		return nil, err
 	}

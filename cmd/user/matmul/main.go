@@ -34,7 +34,7 @@ type MatrixMult struct {
 func MakeMatrixMult(args []string) (*MatrixMult, error) {
 	db.DPrintf(db.MATMUL, "MakeMatrixMul: %v %v", proc.GetPid(), args)
 	m := &MatrixMult{}
-	sc, err := sigmaclnt.MkSigmaClnt("spinner")
+	sc, err := sigmaclnt.NewSigmaClnt("spinner")
 	if err != nil {
 		return nil, err
 	}

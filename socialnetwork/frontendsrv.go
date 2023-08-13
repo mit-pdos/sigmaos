@@ -52,7 +52,7 @@ var (
 func RunFrontendSrv(public bool, job string) error {
 	frontend := &FrontEnd{}
 	frontend.job = job
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname(SERVER_NAME + job))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(SERVER_NAME + job))
 	if err != nil {
 		return err
 	}

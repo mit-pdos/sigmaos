@@ -48,7 +48,7 @@ func main() {
 		}
 		sempath = os.Args[5]
 	}
-	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("clerk-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("clerk-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

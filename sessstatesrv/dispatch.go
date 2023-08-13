@@ -10,9 +10,6 @@ import (
 )
 
 func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, bool, *sp.Rerror) {
-	// If another replica detached a session, and the client sent their request
-	// to this replica (which proposed it through raft), raft may spit out some
-	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))

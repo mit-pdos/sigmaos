@@ -25,8 +25,7 @@ import (
 
 //
 // There is one SessSrv per server. The SessSrv has one protsrv per
-// session (i.e., TCP connection). Each session may multiplex several
-// users.
+// session (i.e., TCP connection).
 //
 // SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
@@ -180,9 +179,8 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 	if !ok && s != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
 	}
-	// If the fcall is a server-generated heartbeat, don't worry
-	// processing it sequentially on the session's thread, (and since
-	// it won't block don't start a new thread).
+	// If the fcall is a server-generated heartbeat, it won't block;
+	// don't start a new thread.
 	if s == 0 {
 		ssrv.srvfcall(fc)
 	} else {
@@ -212,11 +210,6 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
 	}
-	// If this is a replicated op received through raft (not
-	// directly from a client), the first time Alloc is called
-	// will be in this function, so the conn will be set to
-	// nil. If it came from the client, the conn will already be
-	// set.
 	sess := ssrv.st.Alloc(sessp.Tclient(fc.Fc.Client), s)
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)

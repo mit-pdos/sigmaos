@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/replies"
 	"sigmaos/serr"
 	"sigmaos/sessconn"
 	"sigmaos/sessp"
@@ -30,7 +29,6 @@ type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
 	conn          sps.Conn
-	rt            *replies.ReplyTable
 	protsrv       sps.Protsrv
 	lastHeartbeat time.Time
 	Sid           sessp.Tsession
@@ -44,7 +42,7 @@ type Session struct {
 }
 
 func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
-	sess := &Session{threadmgr: t, rt: replies.MakeReplyTable(sid), protsrv: protsrv,
+	sess := &Session{threadmgr: t, protsrv: protsrv,
 		lastHeartbeat: time.Now(), Sid: sid, ClientId: cid, attachClnt: attachf,
 		detachClnt: detachf}
 	return sess
@@ -52,10 +50,6 @@ func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *
 
 func (sess *Session) QueueLen() int64 {
 	return sess.threadmgr.QueueLen()
-}
-
-func (sess *Session) GetReplyTable() *replies.ReplyTable {
-	return sess.rt
 }
 
 func (sess *Session) GetConn() sps.Conn {
@@ -92,8 +86,6 @@ func (sess *Session) Close() {
 	if sess.conn != nil {
 		sess.unsetConnL(sess.conn)
 	}
-	// Empty & permanently close the replies table.
-	sess.rt.Close(sess.ClientId, sess.Sid)
 }
 
 // The conn may be nil if this is a replicated op which came through

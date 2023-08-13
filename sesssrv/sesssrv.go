@@ -197,14 +197,11 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 }
 
 func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *sessstatesrv.Session) {
-	// Store the reply in the reply cache.
-	ok := sess.GetReplyTable().Put(request, reply)
-
-	db.DPrintf(db.SESSSRV, "sendReply req %v rep %v ok %v", request, reply, ok)
+	db.DPrintf(db.SESSSRV, "sendReply req %v rep %v", request, reply)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.
-	if request.Fc.Seqno != 0 && ok {
+	if request.Fc.Seqno != 0 {
 		sess.SendConn(reply)
 	}
 }
@@ -225,42 +222,9 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 	// nil. If it came from the client, the conn will already be
 	// set.
 	sess := ssrv.st.Alloc(sessp.Tclient(fc.Fc.Client), s)
-	// Reply cache needs to live under the replication layer in order to
-	// handle duplicate requests. These may occur if, for example:
-	//
-	// 1. A client connects to replica A and issues a request.
-	// 2. Replica A pushes the request through raft.
-	// 3. Before responding to the client, replica A crashes.
-	// 4. The client connects to replica B, and retries the request *before*
-	//    replica B hears about the request through raft.
-	// 5. Replica B pushes the request through raft.
-	// 6. Replica B now receives the same request twice through raft's apply
-	//    channel, and will try to execute the request twice.
-	//
-	// In order to handle this, we can use the reply cache to deduplicate
-	// requests. Since requests execute sequentially, one of the requests will
-	// register itself first in the reply cache. The other request then just
-	// has to wait on the reply future in order to send the reply. This can
-	// happen asynchronously since it doesn't affect server state, and the
-	// asynchrony is necessary in order to allow other ops on the thread to
-	// make progress. We coulld optionally use sessconds, but they're kind of
-	// overkill since we don't care about ordering in this case.
-	if replyFuture, ok := sess.GetReplyTable().Get(fc.Fc); ok {
-		db.DPrintf(db.SESSSRV, "srvfcall %v reply in cache", fc)
-		go func() {
-			ssrv.sendReply(fc, replyFuture.Await(), sess)
-		}()
-		return
-	}
-	db.DPrintf(db.SESSSRV, "srvfcall %v reply not in cache", fc)
-	if ok := sess.GetReplyTable().Register(fc); ok {
-		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
-		qlen := ssrv.QueueLen()
-		ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
-		ssrv.serve(sess, fc)
-	} else {
-		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)
-	}
+	qlen := ssrv.QueueLen()
+	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
+	ssrv.serve(sess, fc)
 }
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {

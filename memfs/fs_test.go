@@ -23,16 +23,16 @@ type TestState struct {
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.ctx = ctx.MkCtx("", 0, nil)
-	ts.rooti = dir.MkRootDir(ts.ctx, MakeInode)
+	ts.ctx = ctx.MkCtxNull()
+	ts.rooti = dir.MkRootDir(ts.ctx, MakeInode, nil)
 	return ts
 }
 
 func (ts *TestState) initfs() {
 	const N = 1000
-	_, err := ts.rooti.Create(ts.ctx, "done", sp.DMDIR|07000, 0)
+	_, err := ts.rooti.Create(ts.ctx, "done", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence())
 	assert.Nil(ts.t, err, "Create done")
-	_, err = ts.rooti.Create(ts.ctx, "todo", sp.DMDIR|07000, 0)
+	_, err = ts.rooti.Create(ts.ctx, "todo", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence())
 	assert.Nil(ts.t, err, "Create todo")
 	_, _, _, err = ts.rooti.LookupPath(ts.ctx, path.Path{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
@@ -56,7 +56,7 @@ func (ts *TestState) testRename(t int) {
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name, sp.NoFence())
 		if err != nil {
-			assert.True(ts.t, serr.IsErrCode(err, serr.TErrNotfound)
+			assert.True(ts.t, serr.IsErrCode(err, serr.TErrNotfound))
 		}
 	}
 }

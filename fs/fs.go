@@ -27,15 +27,15 @@ type Dir interface {
 	FsObj
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
 	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence) (FsObj, *serr.Err)
-	ReadDir(CtxI, int, sessp.Tsize, sp.TQversion) ([]*sp.Stat, *serr.Err)
+	ReadDir(CtxI, int, sp.Tsize, sp.TQversion) ([]*sp.Stat, *serr.Err)
 	Remove(CtxI, string, sp.Tfence) *serr.Err
 	Rename(CtxI, string, string, sp.Tfence) *serr.Err
 	Renameat(CtxI, string, Dir, string, sp.Tfence) *serr.Err
 }
 
 type File interface {
-	Read(CtxI, sp.Toffset, sessp.Tsize, sp.TQversion, sp.Tfence) ([]byte, *serr.Err)
-	Write(CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sessp.Tsize, *serr.Err)
+	Read(CtxI, sp.Toffset, sp.Tsize, sp.TQversion, sp.Tfence) ([]byte, *serr.Err)
+	Write(CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sp.Tsize, *serr.Err)
 }
 
 type RPC interface {
@@ -64,7 +64,7 @@ func Obj2File(o FsObj, fname path.Path) (File, *serr.Err) {
 	return nil, nil
 }
 
-func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sessp.Tsize, dir []Dir) ([]byte, int, *serr.Err) {
+func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, *serr.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -90,7 +90,7 @@ func MarshalDir[Dir *sp.Stat | *np.Stat9P](cnt sessp.Tsize, dir []Dir) ([]byte, 
 		}
 
 		buf = append(buf, b...)
-		cnt -= sessp.Tsize(len(b))
+		cnt -= sp.Tsize(len(b))
 		n += 1
 	}
 	return buf, n, nil

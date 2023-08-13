@@ -10,7 +10,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/serr"
 	"sigmaos/sesscond"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -126,7 +125,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -149,10 +148,10 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f s
 		d = d[max:]
 		pipe.condr.Signal()
 	}
-	return sessp.Tsize(n), nil
+	return sp.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

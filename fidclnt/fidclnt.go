@@ -208,7 +208,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	return reply.Stat, nil
 }
 
-func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
 	if err != nil {
@@ -218,7 +218,7 @@ func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQ
 }
 
 // Unfenced read
-func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, sp.NullFence(), v)
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sessp.Tsize, v sp.T
 	return data, nil
 }
 
-func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *serr.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
 	if err != nil {
@@ -247,7 +247,7 @@ func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
 	return data, nil
 }
 
-func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize, resolve bool) ([]byte, *serr.Err) {
+func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, resolve bool) ([]byte, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return nil, serr.MkErr(serr.TErrUnreachable, "GetFile")
@@ -260,7 +260,7 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool, lid sp.TleaseId) (sessp.Tsize, *serr.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool, lid sp.TleaseId) (sp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, serr.MkErr(serr.TErrUnreachable, "PutFile")

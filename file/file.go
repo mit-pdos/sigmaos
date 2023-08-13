@@ -8,7 +8,6 @@ import (
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -33,13 +32,13 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sessp.Tsize, *serr.Err) {
+func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	// f.SetMtime(time.Now().Unix())
 
-	cnt := sessp.Tsize(len(data))
+	cnt := sp.Tsize(len(data))
 	sz := sp.Toffset(len(data))
 	if offset == sp.NoOffset { // OAPPEND
 		offset = f.LenOff()
@@ -63,7 +62,7 @@ func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sp.Tsize, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "File.Write %v %p\n", fence, ctx.FenceFs())
 	if fi, err := fencefs.CheckFence(ctx.FenceFs(), fence); err != nil {
 		return 0, err
@@ -77,7 +76,7 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	}
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

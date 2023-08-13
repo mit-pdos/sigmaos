@@ -8,7 +8,6 @@ import (
 	"sigmaos/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -110,7 +109,7 @@ func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmod
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignores size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err

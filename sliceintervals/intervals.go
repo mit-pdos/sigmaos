@@ -9,19 +9,19 @@ import (
 	"sort"
 
 	// db "sigmaos/debug"
-	"sigmaos/sessp"
+	"sigmaos/interval"
 )
 
 type IvSlice struct {
-	entries []*sessp.Tinterval
+	entries []*interval.Tinterval
 }
 
-func MkIInterval() sessp.IIntervals {
+func MkIInterval() interval.IIntervals {
 	return MkIvSlice()
 }
 
 func MkIvSlice() *IvSlice {
-	return &IvSlice{make([]*sessp.Tinterval, 0)}
+	return &IvSlice{make([]*interval.Tinterval, 0)}
 }
 
 func (ivs *IvSlice) String() string {
@@ -33,10 +33,10 @@ func (ivs *IvSlice) Length() int {
 }
 
 func (ivs *IvSlice) Contains(e uint64) bool {
-	return ivs.Find(sessp.MkInterval(e, e+1)) != nil
+	return ivs.Find(interval.MkInterval(e, e+1)) != nil
 }
 
-func (ivs *IvSlice) Present(t *sessp.Tinterval) bool {
+func (ivs *IvSlice) Present(t *interval.Tinterval) bool {
 	for _, iv := range ivs.entries {
 		if t.Start < iv.Start {
 			return false
@@ -50,7 +50,7 @@ func (ivs *IvSlice) Present(t *sessp.Tinterval) bool {
 	return false
 }
 
-func (ivs *IvSlice) Find(t *sessp.Tinterval) *sessp.Tinterval {
+func (ivs *IvSlice) Find(t *interval.Tinterval) *interval.Tinterval {
 	for _, iv := range ivs.entries {
 		if t.Start < iv.Start {
 			return nil
@@ -62,13 +62,13 @@ func (ivs *IvSlice) Find(t *sessp.Tinterval) *sessp.Tinterval {
 	return nil
 }
 
-func (ivs *IvSlice) Pop() sessp.Tinterval {
+func (ivs *IvSlice) Pop() interval.Tinterval {
 	iv := ivs.entries[0]
 	ivs.delidx(0)
 	return *iv
 }
 
-func (ivs *IvSlice) Delete(ivd *sessp.Tinterval) {
+func (ivs *IvSlice) Delete(ivd *interval.Tinterval) {
 	i := ivs.search(ivd.Start)
 	for i < len(ivs.entries) {
 		iv := ivs.entries[i]
@@ -88,7 +88,7 @@ func (ivs *IvSlice) Delete(ivd *sessp.Tinterval) {
 			iv.Start = ivd.End
 			i++
 		} else { // split iv
-			ivs.insertidx(i, sessp.MkInterval(iv.Start, ivd.Start))
+			ivs.insertidx(i, interval.MkInterval(iv.Start, ivd.Start))
 			ivs.entries[i+1].Start = ivd.End
 			i += 2
 		}
@@ -113,7 +113,7 @@ func (ivs *IvSlice) merge(i int) {
 	}
 }
 
-func (ivs *IvSlice) Insert(n *sessp.Tinterval) {
+func (ivs *IvSlice) Insert(n *interval.Tinterval) {
 	i := ivs.search(n.Start)
 	// If the new entry starts after all of the other entries, append and return.
 	if i == len(ivs.entries) {
@@ -144,7 +144,7 @@ func (ivs *IvSlice) delidx(i int) {
 }
 
 // Insert iv at the ith index of the entries slice.
-func (ivs *IvSlice) insertidx(i int, iv *sessp.Tinterval) {
+func (ivs *IvSlice) insertidx(i int, iv *interval.Tinterval) {
 	ivs.entries = append(ivs.entries, nil)
 	copy(ivs.entries[i+1:], ivs.entries[i:])
 	ivs.entries[i] = iv
@@ -157,10 +157,10 @@ func (ivs *IvSlice) search(start uint64) int {
 	})
 }
 
-func (dst *IvSlice) Deepcopy(s sessp.IIntervals) {
+func (dst *IvSlice) Deepcopy(s interval.IIntervals) {
 	src := s.(*IvSlice)
-	dst.entries = make([]*sessp.Tinterval, len(src.entries))
+	dst.entries = make([]*interval.Tinterval, len(src.entries))
 	for i, iv := range src.entries {
-		dst.entries[i] = sessp.MkInterval(iv.Start, iv.End)
+		dst.entries[i] = interval.MkInterval(iv.Start, iv.End)
 	}
 }

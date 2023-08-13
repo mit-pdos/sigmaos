@@ -600,7 +600,7 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 
 // Create file or open file, and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	if sessp.Tsize(len(data)) > sp.MAXGETSET {
+	if sp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
 	}
 	f, err := ps.ft.Lookup(args.Tfid())

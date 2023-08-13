@@ -4,9 +4,8 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/fidclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,7 +39,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	var b []byte
 	var err *serr.Err
-	sz := sessp.Tsize(len(p))
+	sz := sp.Tsize(len(p))
 	if rdr.fenced {
 		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, sp.NoV)
 	} else {
@@ -92,6 +91,6 @@ func (rdr *Reader) Unfence() {
 	rdr.fenced = false
 }
 
-func MakeReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz sessp.Tsize) *Reader {
+func MakeReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz sp.Tsize) *Reader {
 	return &Reader{fc, path, fid, 0, false, true}
 }

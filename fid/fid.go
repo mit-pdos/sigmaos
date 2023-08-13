@@ -8,7 +8,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -86,10 +85,10 @@ func (f *Fid) Close() {
 	f.isOpen = false
 }
 
-func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (f *Fid) Write(off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sp.Tsize, *serr.Err) {
 	o := f.Pobj().Obj()
 	var err *serr.Err
-	sz := sessp.Tsize(0)
+	sz := sp.Tsize(0)
 
 	switch i := o.(type) {
 	case fs.File:
@@ -113,7 +112,7 @@ func (f *Fid) WriteRead(req []byte) ([]byte, *serr.Err) {
 	return b, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	d := o.(fs.Dir)
 	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
@@ -127,7 +126,7 @@ func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sessp.Tsize, v sp.TQvers
 	return b, nil
 }
 
-func (f *Fid) Read(off sp.Toffset, count sessp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
+func (f *Fid) Read(off sp.Toffset, count sp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
 	po := f.Pobj()
 	switch i := po.Obj().(type) {
 	case fs.Dir:

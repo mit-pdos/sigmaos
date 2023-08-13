@@ -9,7 +9,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
@@ -209,7 +208,7 @@ func (dir *DirImpl) remove(name string) *serr.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

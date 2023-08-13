@@ -19,6 +19,7 @@ type Tpath uint64
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64
+type Tsize uint32
 type Tlength uint64
 type Tgid uint32
 type Trealm string
@@ -71,7 +72,7 @@ func (cid TclntId) String() string {
 }
 
 // If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET sessp.Tsize = 1_000_000
+const MAXGETSET Tsize = 1_000_000
 
 type Qtype uint32
 type TQversion uint32
@@ -354,7 +355,7 @@ func (c *Tcreate) Tfence() Tfence {
 	return c.Fence.Tfence()
 }
 
-func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion, f *Tfence) *TreadV {
+func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion, f *Tfence) *TreadV {
 	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v), Fence: f.FenceProto()}
 }
 
@@ -370,8 +371,8 @@ func (r *TreadV) Toffset() Toffset {
 	return Toffset(r.Offset)
 }
 
-func (r *TreadV) Tcount() sessp.Tsize {
-	return sessp.Tsize(r.Count)
+func (r *TreadV) Tcount() Tsize {
+	return Tsize(r.Count)
 }
 
 func (r *TreadV) Tfence() Tfence {
@@ -398,8 +399,8 @@ func (w *TwriteV) Tfence() Tfence {
 	return w.Fence.Tfence()
 }
 
-func (wr *Rwrite) Tcount() sessp.Tsize {
-	return sessp.Tsize(wr.Count)
+func (wr *Rwrite) Tcount() Tsize {
+	return Tsize(wr.Count)
 }
 
 func MkTwatch(fid Tfid) *Twatch {
@@ -505,7 +506,7 @@ func (r *Trenameat) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve, Fence: f.FenceProto()}
 }
 
@@ -521,8 +522,8 @@ func (g *Tgetfile) Toffset() Toffset {
 	return Toffset(g.Offset)
 }
 
-func (g *Tgetfile) Tcount() sessp.Tsize {
-	return sessp.Tsize(g.Count)
+func (g *Tgetfile) Tcount() Tsize {
+	return Tsize(g.Count)
 }
 
 func (g *Tgetfile) Tfence() Tfence {

@@ -4,7 +4,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -16,7 +15,7 @@ type FsLib struct {
 func MakeFsLibAddrNet(uname sp.Tuname, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
 	fl := &FsLib{
-		FdClient:  fdclnt.MakeFdClient(nil, uname, clntnet, realm, lip, sessp.Tsize(10_000_000)),
+		FdClient:  fdclnt.MakeFdClient(nil, uname, clntnet, realm, lip, sp.Tsize(10_000_000)),
 		namedAddr: addrs,
 	}
 	return fl, nil

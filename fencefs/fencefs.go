@@ -9,7 +9,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,11 +30,11 @@ func makeFence(i fs.Inode) *Fence {
 	return e
 }
 
-func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, serr.MkErr(serr.TErrNotSupported, "Write")
 }
 
-func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sessp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
 	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 

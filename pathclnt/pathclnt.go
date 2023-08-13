@@ -10,7 +10,6 @@ import (
 	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -28,13 +27,13 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	rootmt  *RootMountTable
-	chunkSz sessp.Tsize
+	chunkSz sp.Tsize
 	realm   sp.Trealm
 	lip     string
 	cid     sp.TclntId
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sp.Tsize) *PathClnt {
 	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, realm: realm, lip: lip}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
@@ -64,11 +63,11 @@ func (pathc *PathClnt) GetLocalIP() string {
 	return pathc.lip
 }
 
-func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
+func (pathc *PathClnt) SetChunkSz(sz sp.Tsize) {
 	pathc.chunkSz = sz
 }
 
-func (pathc *PathClnt) GetChunkSz() sessp.Tsize {
+func (pathc *PathClnt) GetChunkSz() sp.Tsize {
 	return pathc.chunkSz
 }
 
@@ -129,7 +128,7 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sessp.Tsize) *reader.Reader {
+func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
@@ -356,7 +355,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
@@ -386,7 +385,7 @@ func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sessp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v %v\n", pn, mode, lid)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))

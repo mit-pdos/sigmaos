@@ -16,7 +16,7 @@ import (
 )
 
 type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
-type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sessp.Tsize, *serr.Err)
+type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sp.Tsize, *serr.Err)
 
 type Clone struct {
 	*inode.Inode

@@ -2,7 +2,7 @@ package skipintervals
 
 import (
 	"fmt"
-	"sigmaos/sessp"
+	"sigmaos/interval"
 )
 
 type levels []*element
@@ -21,12 +21,12 @@ func (lv levels) String() string {
 
 type element struct {
 	levels  levels
-	iv      sessp.Tinterval
+	iv      interval.Tinterval
 	topPrev *element
 	prev    *element
 }
 
-func mkElement(l int, iv *sessp.Tinterval) *element {
+func mkElement(l int, iv *interval.Tinterval) *element {
 	e := &element{levels: make([]*element, l, MaxLevel)}
 	if iv != nil {
 		e.iv = *iv

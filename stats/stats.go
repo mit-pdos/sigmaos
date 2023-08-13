@@ -166,11 +166,11 @@ func (sti *StatInfo) Stats() *Stats {
 	return sti.st
 }
 
-func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}

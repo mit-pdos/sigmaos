@@ -7,6 +7,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/interval"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
 	"sigmaos/proc"
@@ -159,7 +160,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	// allocates a sequence number), the marshaling step (which often takes a
 	// long time), and the request enqueue step (which ordinarily expects fcalls
 	// to be enqueued in order).
-	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next())
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno)
 	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
 
 	// If the request is an RPC, then we don't have strict ordering requirements.
@@ -189,8 +190,7 @@ func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *serr.Err) {
 	// and outstanding RPCs were aborted.
 	if reply != nil {
 		o := uint64(reply.Seqno())
-		c.ivs.Insert(sessp.MkInterval(o, o+1))
-		c.ivs.Delete(reply.Fc.Received)
+		c.ivs.Insert(interval.MkInterval(o, o+1))
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		// If the server closed the session (this is a sessclosed error or an
 		// Rdetach), close the SessClnt.

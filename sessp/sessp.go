@@ -2,16 +2,12 @@ package sessp
 
 import (
 	"fmt"
-	"log"
-	"runtime/debug"
 	"strconv"
-	"strings"
 	"sync/atomic"
 )
 
 type Tfcall uint8
 type Ttag uint16
-type Tsize uint32
 
 type Tsession uint64
 type Tseqno uint64
@@ -71,17 +67,16 @@ func (fcm *FcallMsg) Tag() Ttag {
 }
 
 func MakeFcallMsgNull() *FcallMsg {
-	fc := &Fcall{Received: &Tinterval{}}
+	fc := &Fcall{}
 	return &FcallMsg{fc, nil, nil}
 }
 
-func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno, rcv Tinterval) *FcallMsg {
+func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno) *FcallMsg {
 	fcall := &Fcall{
-		Type:     uint32(msg.Type()),
-		Tag:      0,
-		Client:   uint64(cli),
-		Session:  uint64(sess),
-		Received: &rcv,
+		Type:    uint32(msg.Type()),
+		Tag:     0,
+		Client:  uint64(cli),
+		Session: uint64(sess),
 	}
 	if seqno != nil {
 		fcall.Seqno = uint64(seqno.Next())
@@ -90,15 +85,14 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 }
 
 func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil, Tinterval{})
+	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil)
 	fm.Fc.Seqno = req.Fc.Seqno
-	fm.Fc.Received = req.Fc.Received
 	fm.Fc.Tag = req.Fc.Tag
 	return fm
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Fc.Received, fm.Msg)
+	return fmt.Sprintf("%v t %v s %v seq %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Msg)
 }
 
 func (fm *FcallMsg) GetType() Tfcall {
@@ -107,54 +101,6 @@ func (fm *FcallMsg) GetType() Tfcall {
 
 func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
-}
-
-func MkInterval(start, end uint64) *Tinterval {
-	return &Tinterval{
-		Start: start,
-		End:   end,
-	}
-}
-
-func (iv0 Tinterval) Eq(iv1 *Tinterval) bool {
-	return iv0.Start == iv1.Start && iv0.End == iv1.End
-}
-
-func (iv *Tinterval) Size() Tsize {
-	return Tsize(iv.End - iv.Start)
-}
-
-// XXX should atoi be uint64?
-func (iv *Tinterval) Unmarshal(s string) {
-	idxs := strings.Split(s[1:len(s)-1], ", ")
-	start, err := strconv.Atoi(idxs[0])
-	if err != nil {
-		debug.PrintStack()
-		log.Fatalf("FATAL unmarshal interval: %v", err)
-	}
-	iv.Start = uint64(start)
-	end, err := strconv.Atoi(idxs[1])
-	if err != nil {
-		debug.PrintStack()
-		log.Fatalf("FATAL unmarshal interval: %v", err)
-	}
-	iv.End = uint64(end)
-}
-
-func (iv *Tinterval) Marshal() string {
-	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
-}
-
-type IIntervals interface {
-	String() string
-	Delete(*Tinterval)
-	Insert(*Tinterval)
-	Length() int
-	Contains(uint64) bool
-	Present(*Tinterval) bool
-	Find(*Tinterval) *Tinterval
-	Pop() Tinterval
-	Deepcopy(IIntervals)
 }
 
 const (

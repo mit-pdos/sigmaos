@@ -10,6 +10,7 @@ import (
 	"sigmaos/kvgrp"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -66,7 +67,7 @@ type KVFleet struct {
 	ready       chan bool
 	balgm       *groupmgr.GroupMgr
 	kvdgms      []*groupmgr.GroupMgr
-	cpids       []proc.Tpid
+	cpids       []sp.Tpid
 }
 
 func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
@@ -89,7 +90,7 @@ func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl i
 		return nil, err
 	}
 	kvf.kvdgms = []*groupmgr.GroupMgr{}
-	kvf.cpids = []proc.Tpid{}
+	kvf.cpids = []sp.Tpid{}
 	return kvf, nil
 }
 

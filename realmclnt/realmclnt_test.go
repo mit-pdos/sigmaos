@@ -48,7 +48,7 @@ func calibrateCTimeLinux(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 	return time.Since(start)
 }
 
-func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) proc.Tpid {
+func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) sp.Tpid {
 	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetMcpu(mcpu)
 	err := ts.Spawn(p)
@@ -56,7 +56,7 @@ func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter in
 	return p.GetPid()
 }
 
-func waitSpinPerf(ts *test.RealmTstate, pid proc.Tpid) time.Duration {
+func waitSpinPerf(ts *test.RealmTstate, pid sp.Tpid) time.Duration {
 	status, err := ts.WaitExit(pid)
 	assert.Nil(ts.Ts.T, err)
 	assert.True(ts.Ts.T, status.IsStatusOK(), "Exit status wrong: %v", status)

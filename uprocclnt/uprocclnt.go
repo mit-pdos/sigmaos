@@ -9,14 +9,14 @@ import (
 )
 
 type UprocdClnt struct {
-	pid proc.Tpid
+	pid sp.Tpid
 	*rpcclnt.RPCClnt
 	realm sp.Trealm
 	ptype proc.Ttype
 	share Tshare
 }
 
-func MakeUprocdClnt(pid proc.Tpid, rpcc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
+func MakeUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
 	return &UprocdClnt{
 		pid:     pid,
 		RPCClnt: rpcc,

@@ -29,7 +29,7 @@ func main() {
 type Spawner struct {
 	*sigmaclnt.SigmaClnt
 	shouldWaitExit bool
-	childPid       proc.Tpid
+	childPid       sp.Tpid
 	childProgram   string
 	childArgs      []string
 }
@@ -50,7 +50,7 @@ func MakeSpawner(args []string) (*Spawner, error) {
 		db.DFatalf("Error parseBool: %v %v", args[0], err)
 	}
 	s.shouldWaitExit = b
-	s.childPid = proc.Tpid(args[1])
+	s.childPid = sp.Tpid(args[1])
 	s.childProgram = args[2]
 	s.childArgs = args[3:]
 

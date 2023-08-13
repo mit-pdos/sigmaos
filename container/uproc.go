@@ -10,13 +10,14 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 //
 // Contain user procs using exec-uproc trampoline
 //
 
-func RunUProc(uproc *proc.Proc, kernelId string, uprocd proc.Tpid, net string) error {
+func RunUProc(uproc *proc.Proc, kernelId string, uprocd sp.Tpid, net string) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	//	cmd := exec.Command("strace", append([]string{"-f", "exec-uproc", uproc.Program}, uproc.Args...)...)
 	cmd := exec.Command("exec-uproc", append([]string{uproc.Program}, uproc.Args...)...)

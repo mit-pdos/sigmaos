@@ -27,7 +27,7 @@ const (
 type Tstate struct {
 	*test.Tstate
 	cm    *cachedsvc.CacheMgr
-	clrks []proc.Tpid
+	clrks []sp.Tpid
 	job   string
 	sempn string
 	sem   *semclnt.SemClnt

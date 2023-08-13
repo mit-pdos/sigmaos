@@ -29,7 +29,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // Fake an initial process for, for example, tests.
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
-func MakeProcClntInit(pid proc.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
+func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	proc.FakeProcEnv(pid, program, path.Join(sp.KPIDSREL, pid.String()), "")
 	MountPids(fsl, fsl.NamedAddr())
 

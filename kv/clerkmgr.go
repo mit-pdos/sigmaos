@@ -12,6 +12,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 type ClerkMgr struct {
@@ -21,7 +22,7 @@ type ClerkMgr struct {
 	sempath string
 	sem     *semclnt.SemClnt
 	ckmcpu  proc.Tmcpu // Number of exclusive cores allocated to each clerk.
-	clrks   []proc.Tpid
+	clrks   []sp.Tpid
 	repl    bool
 }
 
@@ -63,7 +64,7 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 	if nclerk == 0 {
 		return nil
 	}
-	var ck proc.Tpid
+	var ck sp.Tpid
 	if nclerk < 0 {
 		for ; nclerk < 0; nclerk++ {
 			ck, cm.clrks = cm.clrks[0], cm.clrks[1:]
@@ -111,7 +112,7 @@ func (cm *ClerkMgr) WaitForClerks() error {
 	return nil
 }
 
-func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (proc.Tpid, error) {
+func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (sp.Tpid, error) {
 	idx := len(cm.clrks)
 	var args []string
 	if dur != "" {
@@ -133,7 +134,7 @@ func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (proc.Tpid, error) {
 	return p.GetPid(), err
 }
 
-func (cm *ClerkMgr) stopClerk(pid proc.Tpid) (*proc.Status, error) {
+func (cm *ClerkMgr) stopClerk(pid sp.Tpid) (*proc.Status, error) {
 	err := cm.Evict(pid)
 	if err != nil {
 		return nil, err

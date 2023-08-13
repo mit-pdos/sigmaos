@@ -136,7 +136,7 @@ type HotelJob struct {
 	cacheClnt       *cachedsvcclnt.CachedSvcClnt
 	cacheMgr        *cachedsvc.CacheMgr
 	CacheAutoscaler *cachedsvcclnt.Autoscaler
-	pids            []proc.Tpid
+	pids            []sp.Tpid
 	cache           string
 	kvf             *kv.KVFleet
 }
@@ -188,7 +188,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 		}
 	}
 
-	pids := make([]proc.Tpid, 0, len(srvs))
+	pids := make([]sp.Tpid, 0, len(srvs))
 
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})

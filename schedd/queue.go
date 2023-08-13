@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -16,7 +17,7 @@ type Queue struct {
 	lcws []*proc.Proc
 	be   []*proc.Proc
 	bews []*proc.Proc
-	pmap map[proc.Tpid]*proc.Proc
+	pmap map[sp.Tpid]*proc.Proc
 }
 
 func makeQueue() *Queue {
@@ -25,7 +26,7 @@ func makeQueue() *Queue {
 		lcws: make([]*proc.Proc, 0, DEF_Q_SZ),
 		be:   make([]*proc.Proc, 0, DEF_Q_SZ),
 		bews: make([]*proc.Proc, 0, DEF_Q_SZ),
-		pmap: make(map[proc.Tpid]*proc.Proc, 0),
+		pmap: make(map[sp.Tpid]*proc.Proc, 0),
 	}
 }
 
@@ -60,7 +61,7 @@ func (q *Queue) Dequeue(ptype proc.Ttype, maxmcpu proc.Tmcpu, maxmem proc.Tmem) 
 }
 
 // Remove a stolen proc from the corresponding queue.
-func (q *Queue) Steal(pid proc.Tpid) (*proc.Proc, bool) {
+func (q *Queue) Steal(pid sp.Tpid) (*proc.Proc, bool) {
 	// If proc is still queued at this schedd
 	if p, ok := q.pmap[pid]; ok {
 		// Select queue

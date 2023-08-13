@@ -20,7 +20,7 @@ type ShardMgr struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	bin    string
-	shards []proc.Tpid
+	shards []sp.Tpid
 	nshard int
 	mcpu   proc.Tmcpu
 	pn     string
@@ -57,7 +57,7 @@ func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, mcpu proc.Tmcpu, job, bin, pn st
 	sm := &ShardMgr{
 		SigmaClnt: sc,
 		bin:       bin,
-		shards:    make([]proc.Tpid, 0),
+		shards:    make([]sp.Tpid, 0),
 		nshard:    n,
 		mcpu:      mcpu,
 		pn:        pn,

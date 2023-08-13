@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type ProcCacheEntry struct {
@@ -18,17 +19,17 @@ type ProcCacheEntry struct {
 type ProcCache struct {
 	sync.Mutex
 	maxSize int
-	ps      map[proc.Tpid]*ProcCacheEntry
+	ps      map[sp.Tpid]*ProcCacheEntry
 }
 
 func MakeProcCache(maxSize int) *ProcCache {
 	return &ProcCache{
 		maxSize: maxSize,
-		ps:      make(map[proc.Tpid]*ProcCacheEntry),
+		ps:      make(map[sp.Tpid]*ProcCacheEntry),
 	}
 }
 
-func (pc *ProcCache) Get(pid proc.Tpid) (*proc.Proc, bool) {
+func (pc *ProcCache) Get(pid sp.Tpid) (*proc.Proc, bool) {
 	pc.Lock()
 	defer pc.Unlock()
 
@@ -41,7 +42,7 @@ func (pc *ProcCache) Get(pid proc.Tpid) (*proc.Proc, bool) {
 	return nil, false
 }
 
-func (pc *ProcCache) Set(pid proc.Tpid, p *proc.Proc) {
+func (pc *ProcCache) Set(pid sp.Tpid, p *proc.Proc) {
 	pc.Lock()
 	defer pc.Unlock()
 
@@ -54,7 +55,7 @@ func (pc *ProcCache) Set(pid proc.Tpid, p *proc.Proc) {
 	pc.ps[pid] = &ProcCacheEntry{time.Now(), p}
 }
 
-func (pc *ProcCache) Remove(pid proc.Tpid) {
+func (pc *ProcCache) Remove(pid sp.Tpid) {
 	pc.Lock()
 	defer pc.Unlock()
 

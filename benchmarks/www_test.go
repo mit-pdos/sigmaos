@@ -31,8 +31,8 @@ type WwwJobInstance struct {
 	ready      chan bool
 	sem        *semclnt.SemClnt
 	sempath    string
-	cpids      []proc.Tpid
-	pid        proc.Tpid
+	cpids      []sp.Tpid
+	pid        sp.Tpid
 	*test.RealmTstate
 }
 

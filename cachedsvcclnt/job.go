@@ -7,9 +7,10 @@ import (
 
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
-func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duration, keyOffset int, sempn string, mcpu proc.Tmcpu) (proc.Tpid, error) {
+func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duration, keyOffset int, sempn string, mcpu proc.Tmcpu) (sp.Tpid, error) {
 	p := proc.MakeProc("cachedsvc-clerk", []string{job, strconv.Itoa(nkeys), dur.String(), strconv.Itoa(keyOffset), sempn})
 	p.SetMcpu(mcpu)
 	// SpawnBurst to spread clerks across procds.
@@ -24,7 +25,7 @@ func StartClerk(sc *sigmaclnt.SigmaClnt, job string, nkeys int, dur time.Duratio
 	return p.GetPid(), nil
 }
 
-func WaitClerk(sc *sigmaclnt.SigmaClnt, pid proc.Tpid) (float64, error) {
+func WaitClerk(sc *sigmaclnt.SigmaClnt, pid sp.Tpid) (float64, error) {
 	status, err := sc.WaitExit(pid)
 	if err != nil {
 		return 0.0, err

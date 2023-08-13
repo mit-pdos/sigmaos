@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/port"
-	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
@@ -15,13 +14,13 @@ import (
 type Services struct {
 	sync.Mutex
 	svcs   map[string][]*Subsystem
-	svcMap map[proc.Tpid]*Subsystem
+	svcMap map[sp.Tpid]*Subsystem
 }
 
 func mkServices() *Services {
 	ss := &Services{}
 	ss.svcs = make(map[string][]*Subsystem)
-	ss.svcMap = make(map[proc.Tpid]*Subsystem)
+	ss.svcMap = make(map[sp.Tpid]*Subsystem)
 	return ss
 }
 
@@ -32,7 +31,7 @@ func (ss *Services) addSvc(s string, sub *Subsystem) {
 	ss.svcMap[sub.p.GetPid()] = sub
 }
 
-func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpid, error) {
+func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid, error) {
 	var err error
 	var ss *Subsystem
 	switch s {
@@ -56,21 +55,21 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (proc.Tpi
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
 	if err != nil {
-		return proc.Tpid(""), err
+		return sp.Tpid(""), err
 	}
 	k.svcs.addSvc(s, ss)
 	return ss.p.GetPid(), err
 }
 
-func (k *Kernel) SetCPUShares(pid proc.Tpid, shares int64) error {
+func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 	return k.svcs.svcMap[pid].SetCPUShares(shares)
 }
 
-func (k *Kernel) GetCPUUtil(pid proc.Tpid) (float64, error) {
+func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) AllocPort(pid proc.Tpid, port port.Tport) (*port.PortBinding, error) {
+func (k *Kernel) AllocPort(pid sp.Tpid, port port.Tport) (*port.PortBinding, error) {
 	return k.svcs.svcMap[pid].AllocPort(port)
 }
 

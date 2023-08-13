@@ -118,7 +118,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	} else {
 		containerIP = proc.NamedAddrs()
 	}
-	proc.SetPid(proc.Tpid("test-" + proc.GenPid().String()))
+	proc.SetPid(sp.Tpid("test-" + sp.GenPid().String()))
 	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error set named ip")

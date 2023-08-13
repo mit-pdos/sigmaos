@@ -298,7 +298,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 	}
 }
 
-func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
+func (bl *Balancer) spawnProc(args []string) (sp.Tpid, error) {
 	p := proc.MakeProc(args[0], args[1:])
 	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
@@ -308,7 +308,7 @@ func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	return p.GetPid(), err
 }
 
-func (bl *Balancer) runProc(args []string) (proc.Tpid, *proc.Status, error) {
+func (bl *Balancer) runProc(args []string) (sp.Tpid, *proc.Status, error) {
 	pid, err := bl.spawnProc(args)
 	if err != nil {
 		return "", nil, err
@@ -320,7 +320,7 @@ func (bl *Balancer) runProc(args []string) (proc.Tpid, *proc.Status, error) {
 func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status) bool) (error, *proc.Status) {
 	var status *proc.Status
 	var err error
-	var pid proc.Tpid
+	var pid sp.Tpid
 	for true {
 		pid, status, err = bl.runProc(args)
 		if err != nil {

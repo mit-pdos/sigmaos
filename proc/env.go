@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 )
 
@@ -33,17 +32,13 @@ const (
 	SIGMAUPROCD         = "SIGMAUPROCD"
 )
 
-func GenPid() Tpid {
-	return Tpid(rand.String(8))
-}
-
-func SetPid(pid Tpid) {
+func SetPid(pid sp.Tpid) {
 	os.Setenv(SIGMAPID, pid.String())
 }
 
 // Can return "" for test programs that make a procclnt
-func GetPid() Tpid {
-	return Tpid(os.Getenv(SIGMAPID))
+func GetPid() sp.Tpid {
+	return sp.Tpid(os.Getenv(SIGMAPID))
 }
 
 func GetProgram() string {
@@ -146,8 +141,8 @@ func GetNet() string {
 	return os.Getenv(SIGMANET)
 }
 
-func GetUprocdPid() Tpid {
-	return Tpid(os.Getenv(SIGMAUPROCD))
+func GetUprocdPid() sp.Tpid {
+	return sp.Tpid(os.Getenv(SIGMAUPROCD))
 }
 
 func GetBuildTag() string {
@@ -167,7 +162,7 @@ func GetLabels(envvar string) map[string]bool {
 	return m
 }
 
-func FakeProcEnv(pid Tpid, program, procdir, parentdir string) {
+func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
 	SetPid(pid)
 	SetProgram(program)
 	SetProcDir(procdir)

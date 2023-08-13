@@ -15,7 +15,7 @@ import (
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
 
-func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
+func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
@@ -94,7 +94,7 @@ func removeProc(fsl *fslib.FsLib, procdir string) error {
 }
 
 // Attempt to cleanup procdir
-func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) error {
+func (clnt *ProcClnt) cleanupError(pid sp.Tpid, procdir string, err error) error {
 	clnt.RemoveChild(pid)
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
@@ -107,15 +107,15 @@ func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) err
 // ========== CHILDREN ==========
 
 // Return the pids of all children.
-func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
+func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
 	sts, err := clnt.GetDir(path.Join(clnt.procdir, proc.CHILDREN))
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "GetChildren %v error: %v", clnt.procdir, err)
 		return nil, err
 	}
-	cpids := []proc.Tpid{}
+	cpids := []sp.Tpid{}
 	for _, st := range sts {
-		cpids = append(cpids, proc.Tpid(st.Name))
+		cpids = append(cpids, sp.Tpid(st.Name))
 	}
 	return cpids, nil
 }
@@ -148,7 +148,7 @@ func (clnt *ProcClnt) addChild(kernelId string, p *proc.Proc, childProcdir strin
 }
 
 // Remove a child from the current proc
-func (clnt *ProcClnt) RemoveChild(pid proc.Tpid) error {
+func (clnt *ProcClnt) RemoveChild(pid sp.Tpid) error {
 	procdir := proc.GetChildProcDir(clnt.procdir, pid)
 	childdir := path.Dir(procdir)
 	// Remove link.

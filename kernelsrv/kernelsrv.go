@@ -39,7 +39,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 }
 
 func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootResult) error {
-	var pid proc.Tpid
+	var pid sp.Tpid
 	var err error
 	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
 		return err
@@ -49,11 +49,11 @@ func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootRes
 }
 
 func (ks *KernelSrv) SetCPUShares(ctx fs.CtxI, req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
-	return ks.k.SetCPUShares(proc.Tpid(req.PidStr), req.Shares)
+	return ks.k.SetCPUShares(sp.Tpid(req.PidStr), req.Shares)
 }
 
 func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
-	util, err := ks.k.GetCPUUtil(proc.Tpid(req.PidStr))
+	util, err := ks.k.GetCPUUtil(sp.Tpid(req.PidStr))
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillRes
 }
 
 func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
-	pb, err := ks.k.AllocPort(proc.Tpid(req.PidStr), port.Tport(req.Port))
+	pb, err := ks.k.AllocPort(sp.Tpid(req.PidStr), port.Tport(req.Port))
 	if err != nil {
 		return err
 	}

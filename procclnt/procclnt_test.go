@@ -34,12 +34,12 @@ func schedd(ts *test.Tstate) string {
 	return st[0].Name
 }
 
-func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
+func spawnSpinner(t *testing.T, ts *test.Tstate) sp.Tpid {
 	return spawnSpinnerMcpu(ts, 0)
 }
 
-func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) proc.Tpid {
-	pid := proc.GenPid()
+func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) sp.Tpid {
+	pid := sp.GenPid()
 	a := proc.MakeProcPid(pid, "spinner", []string{"name/"})
 	a.SetMcpu(mcpu)
 	err := ts.Spawn(a)
@@ -59,24 +59,24 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	return ps
 }
 
-func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
+func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	spawnSleeperMcpu(t, ts, pid, 0, SLEEP_MSECS)
 }
 
-func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
-	pid := proc.GenPid()
+func spawnSleeper(t *testing.T, ts *test.Tstate) sp.Tpid {
+	pid := sp.GenPid()
 	spawnSleeperWithPid(t, ts, pid)
 	return pid
 }
 
-func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid proc.Tpid, mcpu proc.Tmcpu, msecs int) {
+func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcpu, msecs int) {
 	a := proc.MakeProcPid(pid, "sleeper", []string{fmt.Sprintf("%dms", msecs), "name/"})
 	a.SetMcpu(mcpu)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid proc.Tpid, msecs, crash int) proc.Tpid {
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, crash int) sp.Tpid {
 	p := proc.MakeProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(crash))
 	err := ts.Spawn(p)
@@ -84,7 +84,7 @@ func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid proc.Tpid, 
 	return p.GetPid()
 }
 
-func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
+func checkSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) bool {
 	res := true
 	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	res = assert.Nil(t, err, "GetFile") && res
@@ -93,13 +93,13 @@ func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
 	return res
 }
 
-func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
+func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
+func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	ts.Remove("name/" + pid.String() + "_out")
 }
 
@@ -236,7 +236,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 
 	start := time.Now()
 
-	cPid := proc.GenPid()
+	cPid := sp.GenPid()
 	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, 0)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
@@ -262,7 +262,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	start := time.Now()
 
-	cPid := proc.GenPid()
+	cPid := sp.GenPid()
 	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, CRASH_MSECS)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
@@ -314,7 +314,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 
 	ch := make(chan bool)
 
-	pid := proc.GenPid()
+	pid := sp.GenPid()
 	go func() {
 		ts.WaitExit(pid)
 		ch <- true
@@ -345,7 +345,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 	for i := 0; i < N_CONCUR; i++ {
 		go func(i int) {
 			for j := 0; j < N_SPAWNS; j++ {
-				pid := proc.GenPid()
+				pid := sp.GenPid()
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.MakeProcPid(pid, "sleeper", []string{"0ms", "name/"})
 				_, errs := ts.SpawnBurst([]*proc.Proc{a}, 1)
@@ -396,7 +396,7 @@ func TestCrashProcOne(t *testing.T) {
 func TestEarlyExit1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	pid1 := proc.GenPid()
+	pid1 := sp.GenPid()
 	a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -433,7 +433,7 @@ func TestEarlyExitN(t *testing.T) {
 
 	for i := 0; i < nProcs; i++ {
 		go func(i int) {
-			pid1 := proc.GenPid()
+			pid1 := sp.GenPid()
 			a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
 			err := ts.Spawn(a)
 			assert.Nil(t, err, "Spawn")
@@ -470,7 +470,7 @@ func TestConcurrentProcs(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	nProcs := 8
-	pids := map[proc.Tpid]int{}
+	pids := map[sp.Tpid]int{}
 
 	var barrier sync.WaitGroup
 	barrier.Add(nProcs)
@@ -480,14 +480,14 @@ func TestConcurrentProcs(t *testing.T) {
 	done.Add(nProcs)
 
 	for i := 0; i < nProcs; i++ {
-		pid := proc.GenPid()
+		pid := sp.GenPid()
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
-			pid = proc.GenPid()
+			pid = sp.GenPid()
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		go func(pid proc.Tpid, started *sync.WaitGroup, i int) {
+		go func(pid sp.Tpid, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
 			spawnSleeperWithPid(t, ts, pid)
@@ -499,7 +499,7 @@ func TestConcurrentProcs(t *testing.T) {
 
 	for pid, i := range pids {
 		_ = i
-		go func(pid proc.Tpid, done *sync.WaitGroup, i int) {
+		go func(pid sp.Tpid, done *sync.WaitGroup, i int) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
@@ -515,7 +515,7 @@ func TestConcurrentProcs(t *testing.T) {
 	ts.Shutdown()
 }
 
-func evict(ts *test.Tstate, pid proc.Tpid) {
+func evict(ts *test.Tstate, pid sp.Tpid) {
 	err := ts.WaitStart(pid)
 	assert.Nil(ts.T, err, "Wait start err %v", err)
 	time.Sleep(SLEEP_MSECS * time.Millisecond)
@@ -541,12 +541,12 @@ func TestReserveCores(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
-	pid := proc.Tpid("sleeper-aaaaaaa")
+	pid := sp.Tpid("sleeper-aaaaaaa")
 	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(1000*linuxsched.NCores), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
-	pid1 := proc.Tpid("sleeper-bbbbbb")
+	pid1 := sp.Tpid("sleeper-bbbbbb")
 	spawnSleeperMcpu(t, ts, pid1, 1000, SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)
@@ -620,7 +620,7 @@ func TestEvictN(t *testing.T) {
 
 	N := int(linuxsched.NCores)
 
-	pids := []proc.Tpid{}
+	pids := []sp.Tpid{}
 	for i := 0; i < N; i++ {
 		pid := spawnSpinner(t, ts)
 		pids = append(pids, pid)

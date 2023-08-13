@@ -4,8 +4,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/port"
-	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
 )
 
 type KernelClnt struct {
@@ -21,23 +21,23 @@ func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 	return &KernelClnt{fsl, rpcc}, nil
 }
 
-func (kc *KernelClnt) Boot(s string, args []string) (proc.Tpid, error) {
+func (kc *KernelClnt) Boot(s string, args []string) (sp.Tpid, error) {
 	var res proto.BootResult
 	req := &proto.BootRequest{Name: s, Args: args}
 	err := kc.rpcc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {
-		return proc.Tpid(""), err
+		return sp.Tpid(""), err
 	}
-	return proc.Tpid(res.PidStr), nil
+	return sp.Tpid(res.PidStr), nil
 }
 
-func (kc *KernelClnt) SetCPUShares(pid proc.Tpid, shares int64) error {
+func (kc *KernelClnt) SetCPUShares(pid sp.Tpid, shares int64) error {
 	var res proto.SetCPUSharesResponse
 	req := &proto.SetCPUSharesRequest{PidStr: pid.String(), Shares: shares}
 	return kc.rpcc.RPC("KernelSrv.SetCPUShares", req, &res)
 }
 
-func (kc *KernelClnt) GetCPUUtil(pid proc.Tpid) (float64, error) {
+func (kc *KernelClnt) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	var res proto.GetKernelSrvCPUUtilResponse
 	req := &proto.GetKernelSrvCPUUtilRequest{PidStr: pid.String()}
 	err := kc.rpcc.RPC("KernelSrv.GetCPUUtil", req, &res)
@@ -59,7 +59,7 @@ func (kc *KernelClnt) Shutdown() error {
 	return kc.rpcc.RPC("KernelSrv.Shutdown", req, &res)
 }
 
-func (kc *KernelClnt) Port(pid proc.Tpid, p port.Tport) (string, port.PortBinding, error) {
+func (kc *KernelClnt) Port(pid sp.Tpid, p port.Tport) (string, port.PortBinding, error) {
 	var res proto.PortResult
 	req := &proto.PortRequest{PidStr: pid.String(), Port: int32(p)}
 	if err := kc.rpcc.RPC("KernelSrv.AllocPort", req, &res); err != nil {

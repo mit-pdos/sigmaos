@@ -54,7 +54,7 @@ func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
 func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	k := mkKernel(p, nameds)
 	proc.SetProgram(os.Args[0])
-	proc.SetPid(proc.GenPid())
+	proc.SetPid(sp.GenPid())
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 		i = "init"
 	}
 	args := []string{realmId.String(), i}
-	p := proc.MakePrivProcPid(proc.Tpid("pid-"+proc.GenPid().String()), "knamed", args, true)
+	p := proc.MakePrivProcPid(sp.Tpid("pid-"+sp.GenPid().String()), "knamed", args, true)
 	return p, nil
 }
 

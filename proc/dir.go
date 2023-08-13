@@ -2,6 +2,8 @@ package proc
 
 import (
 	"path"
+
+	sp "sigmaos/sigmap"
 )
 
 /*
@@ -60,6 +62,6 @@ const (
 	CHILDREN    = "children" // directory with children's pids and symlinks
 )
 
-func GetChildProcDir(procdir string, cpid Tpid) string {
+func GetChildProcDir(procdir string, cpid sp.Tpid) string {
 	return path.Join(procdir, CHILDREN, cpid.String(), PROCDIR)
 }

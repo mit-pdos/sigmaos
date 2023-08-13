@@ -71,7 +71,7 @@ func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	_, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(proc.Tpid(req.PidStr))
+	_, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(sp.Tpid(req.PidStr))
 
 	return nil
 }

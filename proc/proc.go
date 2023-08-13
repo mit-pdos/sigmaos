@@ -14,7 +14,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Tpid string
 type Ttype uint32 // If this type changes, make sure to change the typecasts below.
 type Tmcpu uint32 // If this type changes, make sure to change the typecasts below.
 type Tmem uint32  // If this type changes, make sure to change the typecasts below.
@@ -48,10 +47,6 @@ func ParseTtype(tstr string) Ttype {
 	return 0
 }
 
-func (pid Tpid) String() string {
-	return string(pid)
-}
-
 type Proc struct {
 	*ProcProto
 }
@@ -63,11 +58,11 @@ func MakeEmptyProc() *Proc {
 }
 
 func MakeProc(program string, args []string) *Proc {
-	pid := GenPid()
+	pid := sp.GenPid()
 	return MakeProcPid(pid, program, args)
 }
 
-func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
+func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	p.PidStr = pid.String()
@@ -85,7 +80,7 @@ func MakePrivProcPid(pid Tpid, program string, args []string, priv bool) *Proc {
 	return p
 }
 
-func MakeProcPid(pid Tpid, program string, args []string) *Proc {
+func MakeProcPid(pid sp.Tpid, program string, args []string) *Proc {
 	return MakePrivProcPid(pid, program, args, false)
 }
 
@@ -170,8 +165,8 @@ func (p *Proc) String() string {
 
 // ========== Getters and Setters ==========
 
-func (p *Proc) GetPid() Tpid {
-	return Tpid(p.ProcProto.PidStr)
+func (p *Proc) GetPid() sp.Tpid {
+	return sp.Tpid(p.ProcProto.PidStr)
 }
 
 func (p *Proc) GetType() Ttype {

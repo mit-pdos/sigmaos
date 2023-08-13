@@ -17,7 +17,7 @@ import (
 type TstateEcho struct {
 	*test.Tstate
 	jobname string
-	pid     proc.Tpid
+	pid     sp.Tpid
 }
 
 func makeTstateEcho(t *testing.T) (*TstateEcho, error) {

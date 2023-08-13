@@ -82,9 +82,9 @@ func (sd *Schedd) monitorWSQueue(qtype proc.Ttype) {
 // offer them as stealable.
 func (sd *Schedd) offerStealableProcs() {
 	// Store the procs this schedd has already offered to avoid re-offering them.
-	alreadyOffered := make(map[proc.Tpid]bool)
+	alreadyOffered := make(map[sp.Tpid]bool)
 	for {
-		toOffer := make(map[proc.Tpid]*proc.Proc)
+		toOffer := make(map[sp.Tpid]*proc.Proc)
 		// Wait for a bit.
 		time.Sleep(sp.Conf.Schedd.STEALABLE_PROC_TIMEOUT)
 		sd.mu.Lock()

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"sigmaos/path"
+	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -22,6 +23,7 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 type Trealm string
+type Tpid string
 type Tuname string
 type TclntId uint64
 type TleaseId uint64
@@ -29,8 +31,16 @@ type Tttl uint64
 
 const ROOTREALM Trealm = "rootrealm"
 
+func GenPid() Tpid {
+	return Tpid(rand.String(8))
+}
+
 func (r Trealm) String() string {
 	return string(r)
+}
+
+func (pid Tpid) String() string {
+	return string(pid)
 }
 
 func (fid Tfid) String() string {

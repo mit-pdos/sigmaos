@@ -23,7 +23,7 @@ type CachedJobInstance struct {
 	nclerks   int
 	nkeys     int
 	ready     chan bool
-	clerks    []proc.Tpid
+	clerks    []sp.Tpid
 	cm        *cachedsvc.CacheMgr
 	sempn     string
 	sem       *semclnt.SemClnt
@@ -41,7 +41,7 @@ func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Du
 	ji.cachemcpu = cachemcpu
 	ji.ready = make(chan bool)
 	ji.nclerks = nclerks
-	ji.clerks = make([]proc.Tpid, 0, nclerks)
+	ji.clerks = make([]sp.Tpid, 0, nclerks)
 	ji.RealmTstate = ts
 	return ji
 }

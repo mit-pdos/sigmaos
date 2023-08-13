@@ -28,12 +28,12 @@ func SetupIsolationEnv() error {
 	return nil
 }
 
-func jailPath(pid proc.Tpid) string {
+func jailPath(pid sp.Tpid) string {
 	return path.Join(sp.SIGMAHOME, "jail", pid.String())
 }
 
 // Clean up a proc's chroot jail.
-func cleanupJail(pid proc.Tpid) {
+func cleanupJail(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}

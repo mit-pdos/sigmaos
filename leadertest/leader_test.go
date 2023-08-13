@@ -17,11 +17,11 @@ const (
 	DIR = sp.NAMED + "outdir"
 )
 
-func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid) {
+func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []sp.Tpid) {
 	const (
 		N = 10
 	)
-	pids := []proc.Tpid{}
+	pids := []sp.Tpid{}
 
 	ts.RmDir(DIR)
 	fn := path.Join(DIR, OUT)
@@ -55,16 +55,16 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 	return fn, pids
 }
 
-func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
+func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
-	m := make(map[proc.Tpid]bool)
-	last := proc.Tpid("")
+	m := make(map[sp.Tpid]bool)
+	last := sp.Tpid("")
 	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)
-		if conf.Leader == proc.Tpid("") && e != 0 {
+		if conf.Leader == sp.Tpid("") && e != 0 {
 			assert.Equal(t, conf.Epoch, e)
 		} else if last != conf.Leader { // new leader
 			assert.Equal(t, conf.Pid, conf.Leader, "new leader")

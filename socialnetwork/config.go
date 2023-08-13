@@ -61,7 +61,7 @@ func MakeFsLibs(uname string) []*fslib.FsLib {
 type SocialNetworkConfig struct {
 	*sigmaclnt.SigmaClnt
 	srvs      []Srv
-	pids      []proc.Tpid
+	pids      []sp.Tpid
 	CacheClnt *cachedsvcclnt.CachedSvcClnt
 	cacheMgr  *cachedsvc.CacheMgr
 }
@@ -96,7 +96,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 	}
 
 	// Start procs
-	pids := make([]proc.Tpid, 0, len(srvs))
+	pids := make([]sp.Tpid, 0, len(srvs))
 	for _, srv := range srvs {
 		p := proc.MakeProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
 		p.SetMcpu(srv.Mcpu)

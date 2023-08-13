@@ -34,13 +34,13 @@ const (
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
-	pid        proc.Tpid
-	isExited   proc.Tpid
+	pid        sp.Tpid
+	isExited   sp.Tpid
 	procdir    string
 	scheddclnt *scheddclnt.ScheddClnt
 }
 
-func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
+func makeProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 	clnt := &ProcClnt{}
 	clnt.FsLib = fsl
 	clnt.pid = pid
@@ -215,7 +215,7 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
 
 // Wait until a proc file is removed. Return an error if SetRemoveWatch returns
 // an unreachable error.
-func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
+func (clnt *ProcClnt) waitProcFileRemove(pid sp.Tpid, pn string) error {
 	db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, pn)
 	done := make(chan bool)
 	err := clnt.SetRemoveWatch(pn, func(string, error) {
@@ -233,7 +233,7 @@ func (clnt *ProcClnt) waitProcFileRemove(pid proc.Tpid, pn string) error {
 	return nil
 }
 
-func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
+func (clnt *ProcClnt) waitStart(pid sp.Tpid) error {
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
 	if err != nil {
@@ -258,7 +258,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
-func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
+func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
 	err := clnt.waitStart(pid)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "WaitStart %v %v", pid, err)
@@ -270,7 +270,7 @@ func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
 // Parent calls WaitExit() to wait until child proc has exited. If
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
-func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
+func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 	// Must wait for child to fill in return status pipe.
 	if err := clnt.waitStart(pid); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
@@ -304,7 +304,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 }
 
 // Proc pid waits for eviction notice from procd.
-func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
+func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 	db.DPrintf(db.PROCCLNT, "WaitEvict %v", pid)
 	procdir := proc.PROCDIR
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
@@ -352,7 +352,7 @@ func (clnt *ProcClnt) Started() error {
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
-func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
+func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, status *proc.Status) error {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 
 	// will catch some unintended misuses: a proc calling exited
@@ -365,7 +365,7 @@ func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string,
 	return exited(fsl, procdir, parentdir, pid, status)
 }
 
-func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid proc.Tpid, status *proc.Status) error {
+func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, status *proc.Status) error {
 	b, err := json.Marshal(status)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
@@ -398,7 +398,7 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	}
 }
 
-func ExitedProcd(fsl *fslib.FsLib, pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {
+func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := exited(fsl, procdir, parentdir, pid, status)
 	if err != nil {
@@ -423,7 +423,7 @@ func (clnt *ProcClnt) evict(procdir string) error {
 }
 
 // Called by parent.
-func (clnt *ProcClnt) Evict(pid proc.Tpid) error {
+func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 	procdir := proc.GetChildProcDir(clnt.procdir, pid)
 	return clnt.evict(procdir)
 }
@@ -435,18 +435,18 @@ func (clnt *ProcClnt) EvictKernelProc(pid string) error {
 }
 
 // Called by procd.
-func (clnt *ProcClnt) EvictProcd(scheddIp string, pid proc.Tpid) error {
+func (clnt *ProcClnt) EvictProcd(scheddIp string, pid sp.Tpid) error {
 	procdir := path.Join(sp.SCHEDD, scheddIp, sp.PIDS, pid.String())
 	return clnt.evict(procdir)
 }
 
-func (clnt *ProcClnt) hasExited() proc.Tpid {
+func (clnt *ProcClnt) hasExited() sp.Tpid {
 	clnt.Lock()
 	defer clnt.Unlock()
 	return clnt.isExited
 }
 
-func (clnt *ProcClnt) setExited(pid proc.Tpid) proc.Tpid {
+func (clnt *ProcClnt) setExited(pid sp.Tpid) sp.Tpid {
 	clnt.Lock()
 	defer clnt.Unlock()
 	r := clnt.isExited

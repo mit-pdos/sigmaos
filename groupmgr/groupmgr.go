@@ -11,6 +11,7 @@ import (
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -29,7 +30,7 @@ type GroupMgr struct {
 
 type member struct {
 	*sigmaclnt.SigmaClnt
-	pid       proc.Tpid
+	pid       sp.Tpid
 	bin       string
 	args      []string
 	job       string

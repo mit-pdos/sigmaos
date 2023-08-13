@@ -38,15 +38,15 @@ func MakeUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 	return updm
 }
 
-func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (proc.Tpid, error) {
+func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (sp.Tpid, error) {
 	if err := updm.mkdirs(realm, ptype); err != nil {
-		return proc.Tpid(""), err
+		return sp.Tpid(""), err
 	}
 	if updm.kclnt == nil {
 		pn := path.Join(sp.BOOT, updm.kernelId) + "/"
 		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, pn)
 		if err != nil {
-			return proc.Tpid(""), err
+			return sp.Tpid(""), err
 		}
 		updm.kclnt = kclnt
 	}
@@ -87,7 +87,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	}
 	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
-		var pid proc.Tpid
+		var pid sp.Tpid
 		var err error
 
 		db.DPrintf(db.UPROCDMGR, "[realm:%v] start uprocd", realm)

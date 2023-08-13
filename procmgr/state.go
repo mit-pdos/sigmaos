@@ -132,7 +132,7 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 			var p *proc.Proc
 			var ok bool
 			// Try to tread the proc from the cache.
-			if p, ok = mgr.pcache.Get(proc.Tpid(st.Name)); !ok {
+			if p, ok = mgr.pcache.Get(sp.Tpid(st.Name)); !ok {
 				// Read and unmarshal proc.
 				b, err := mgr.rootsc.GetFile(path.Join(qpath, st.Name))
 				if err != nil {

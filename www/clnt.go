@@ -8,7 +8,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sp "sigmaos/sigmap"
 )
@@ -81,7 +80,7 @@ func (clnt *WWWClnt) ConsCPULocal(n int) error {
 }
 
 // XXX Remove eventually, repalce with Evict
-func (clnt *WWWClnt) StopServer(pclnt *procclnt.ProcClnt, pid proc.Tpid) error {
+func (clnt *WWWClnt) StopServer(pclnt *procclnt.ProcClnt, pid sp.Tpid) error {
 	ch := make(chan error)
 	go func() {
 		_, err := clnt.get(EXIT)

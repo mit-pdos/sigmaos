@@ -7,6 +7,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -15,13 +16,13 @@ const (
 
 type RPCBenchJob struct {
 	*sigmaclnt.SigmaClnt
-	pids []proc.Tpid
+	pids []sp.Tpid
 }
 
 func MakeRPCBenchJob(sc *sigmaclnt.SigmaClnt, jobpath string, mcpu proc.Tmcpu, public bool) (*RPCBenchJob, error) {
 	var err error
 
-	pids := make([]proc.Tpid, 0, 1)
+	pids := make([]sp.Tpid, 0, 1)
 
 	p := proc.MakeProc(SRVNAME, []string{jobpath, strconv.FormatBool(public)})
 	p.SetMcpu(mcpu)

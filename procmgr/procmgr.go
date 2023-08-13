@@ -25,7 +25,7 @@ type ProcMgr struct {
 	updm      *uprocclnt.UprocdMgr
 	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
 	cachedirs map[sp.Trealm]bool
-	running   map[proc.Tpid]*proc.Proc
+	running   map[sp.Tpid]*proc.Proc
 	pcache    *ProcCache
 	bintag    string
 }
@@ -39,7 +39,7 @@ func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
 		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		cachedirs: make(map[sp.Trealm]bool),
-		running:   make(map[proc.Tpid]*proc.Proc),
+		running:   make(map[sp.Tpid]*proc.Proc),
 		pcache:    MakeProcCache(PROC_CACHE_SZ),
 		bintag:    proc.GetBuildTag(),
 	}

@@ -24,7 +24,7 @@ func main() {
 		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}
 	sc.Started()
-	pid1 := proc.Tpid(os.Args[2])
+	pid1 := sp.Tpid(os.Args[2])
 	a := proc.MakeProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
 	err = sc.Spawn(a)
 	if err != nil {

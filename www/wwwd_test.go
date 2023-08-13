@@ -16,11 +16,11 @@ import (
 type Tstate struct {
 	*test.Tstate
 	*www.WWWClnt
-	pid proc.Tpid
+	pid sp.Tpid
 	job string
 }
 
-func spawn(t *testing.T, ts *Tstate) proc.Tpid {
+func spawn(t *testing.T, ts *Tstate) sp.Tpid {
 	a := proc.MakeProc("wwwd", []string{ts.job, ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")

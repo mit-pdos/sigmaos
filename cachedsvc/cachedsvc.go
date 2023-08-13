@@ -22,7 +22,7 @@ type CachedSvc struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	bin     string
-	servers []proc.Tpid
+	servers []sp.Tpid
 	nserver int
 	mcpu    proc.Tmcpu
 	pn      string
@@ -59,7 +59,7 @@ func MkCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, p
 	cs := &CachedSvc{
 		SigmaClnt: sc,
 		bin:       bin,
-		servers:   make([]proc.Tpid, 0),
+		servers:   make([]sp.Tpid, 0),
 		nserver:   nsrv,
 		mcpu:      mcpu,
 		pn:        pn,

@@ -48,8 +48,9 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		db.DPrintf(db.REPLY_TABLE, "table: %v", sess.GetReplyTable())
 		qlen := ssrv.QueueLen()
 		ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
-		ssrv.serve(sess, fc)
+		ssrv.serve(sess, fc)    // NOTE: must call sess.GetThread().Process(fc)
 	} else {
 		db.DPrintf(db.SESSSRV, "srvfcall %v duplicate request dropped", fc)
 	}
 }
+

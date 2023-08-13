@@ -178,7 +178,7 @@ func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.
 func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 	ssrv.qlen.Inc(1)
 	s := sessp.Tsession(fc.Fc.Session)
-	sess, ok := ssrv.st.Lookup(s)
+	_, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
@@ -192,7 +192,10 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 			ssrv.srvfcall(fc)
 		}()
 	} else {
-		sess.GetThread().Process(fc)
+		go func() {
+			ssrv.srvfcall(fc)
+		}()
+		// sess.GetThread().Process(fc)
 	}
 }
 

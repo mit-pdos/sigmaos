@@ -86,7 +86,8 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 			}
 		}
 	}
-	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf, st.detachf)
+	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, nil, st.attachf, st.detachf)
+	// sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf, st.detachf)
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess
@@ -116,10 +117,10 @@ func (st *SessionTable) SessThread(sid sessp.Tsession) *threadmgr.ThreadMgr {
 }
 
 func (st *SessionTable) KillSessThread(sid sessp.Tsession) {
-	t := st.SessThread(sid)
-	st.mu.RLock()
-	defer st.mu.RUnlock()
-	st.tm.RemoveThread(t)
+	//t := st.SessThread(sid)
+	//st.mu.RLock()
+	//defer st.mu.RUnlock()
+	// st.tm.RemoveThread(t)
 }
 
 func (st *SessionTable) LastSession() *Session {

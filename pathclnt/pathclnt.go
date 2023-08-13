@@ -55,7 +55,7 @@ func (pathc *PathClnt) Realm() sp.Trealm {
 	return pathc.realm
 }
 
-func (pathc *PathClnt) ClntID() sp.TclntId {
+func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid
 }
 

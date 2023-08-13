@@ -112,7 +112,7 @@ func (sess *Session) IsClosed() bool {
 }
 
 // Change conn associated with this session. This may occur if, for example, a
-// client starts talking to a new replica or a client reconnects quickly.
+// client starts client reconnects quickly.
 func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()

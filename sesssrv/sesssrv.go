@@ -19,7 +19,6 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
-	"sigmaos/threadmgr"
 	"sigmaos/version"
 	"sigmaos/watch"
 )
@@ -43,7 +42,6 @@ type SessSrv struct {
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
 	sct      *sesscond.SessCondTable
-	tmt      *threadmgr.ThreadMgrTable
 	plt      *lockmap.PathLockTable
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
@@ -61,8 +59,7 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.At
 	ssrv.mkps = mkps
 	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
-	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall)
-	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
+	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, attachf, detachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
@@ -183,19 +180,15 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 	if !ok && s != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
 	}
-	// If the fcall is a server-generated heartbeat, don't worry about
-	// processing it sequentially on the session's thread.
+	// If the fcall is a server-generated heartbeat, don't worry
+	// processing it sequentially on the session's thread, (and since
+	// it won't block don't start a new thread).
 	if s == 0 {
 		ssrv.srvfcall(fc)
-	} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
-		go func() {
-			ssrv.srvfcall(fc)
-		}()
 	} else {
 		go func() {
 			ssrv.srvfcall(fc)
 		}()
-		// sess.GetThread().Process(fc)
 	}
 }
 

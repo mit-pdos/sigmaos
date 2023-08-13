@@ -14,7 +14,6 @@ import (
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/threadmgr"
 )
 
 //
@@ -24,10 +23,10 @@ import (
 // The sess lock is to serialize requests on a session.  The calls in
 // this file assume the calling wg holds the sess lock.
 //
+//
 
 type Session struct {
 	sync.Mutex
-	threadmgr     *threadmgr.ThreadMgr
 	conn          sps.Conn
 	protsrv       sps.Protsrv
 	lastHeartbeat time.Time
@@ -41,25 +40,23 @@ type Session struct {
 	detachClnt    sps.DetachClntF
 }
 
-func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, t *threadmgr.ThreadMgr, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
-	sess := &Session{threadmgr: t, protsrv: protsrv,
+func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
+	sess := &Session{protsrv: protsrv,
 		lastHeartbeat: time.Now(), Sid: sid, ClientId: cid, attachClnt: attachf,
 		detachClnt: detachf}
 	return sess
 }
 
+// XXX reimplement
 func (sess *Session) QueueLen() int64 {
-	return sess.threadmgr.QueueLen()
+	return 0
+	// return sess.threadmgr.QueueLen()
 }
 
 func (sess *Session) GetConn() sps.Conn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
-}
-
-func (sess *Session) GetThread() *threadmgr.ThreadMgr {
-	return sess.threadmgr
 }
 
 // For testing. Invoking CloseConn() will eventually cause

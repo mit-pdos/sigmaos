@@ -45,7 +45,7 @@ func makeSessCond(sct *SessCondTable, lock sync.Locker) *SessCond {
 	return sc
 }
 
-func (sc *SessCond) allocx(sessid sessp.Tsession) *cond {
+func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 	if _, ok := sc.conds[sessid]; !ok {
 		sc.conds[sessid] = []*cond{}
 	}
@@ -58,7 +58,7 @@ func (sc *SessCond) allocx(sessid sessp.Tsession) *cond {
 // sess lock, so that other threads on the session can run. sc.lock ensures
 // atomicity of releasing sc lock and going to sleep.
 func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
-	c := sc.allocx(sessid)
+	c := sc.alloc(sessid)
 
 	if c.threadmgr != nil {
 		c.threadmgr.Sleep(c.c)

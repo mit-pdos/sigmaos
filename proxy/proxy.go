@@ -15,7 +15,6 @@ import (
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/threadmgr"
 )
 
 type Npd struct {
@@ -25,8 +24,7 @@ type Npd struct {
 
 func MakeNpd(lip string) *Npd {
 	npd := &Npd{lip, nil}
-	tm := threadmgr.MakeThreadMgrTable(nil)
-	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
+	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, nil, nil)
 	return npd
 }
 

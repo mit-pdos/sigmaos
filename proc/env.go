@@ -1,9 +1,7 @@
 package proc
 
 import (
-	"log"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	sp "sigmaos/sigmap"
@@ -21,15 +19,15 @@ const (
 	SIGMANETFAIL        = "SIGMANETFAIL"
 	SIGMAPERF           = "SIGMAPERF"
 	SIGMADEBUG          = "SIGMADEBUG"
-	SIGMANAMED          = "SIGMANAMED"
-	SIGMALOCAL          = "SIGMALOCAL"
-	SIGMATAG            = "SIGMATAG"
-	SIGMAROOTFS         = "SIGMAROOTFS"
-	SIGMAREALM          = "SIGMAREALM"
-	SIGMANET            = "SIGMANET"
-	SIGMAJAEGERIP       = "SIGMAJAEGERIP"
-	SIGMAKERNEL         = "SIGMAKERNEL"
-	SIGMAUPROCD         = "SIGMAUPROCD"
+	//	SIGMANAMED          = "SIGMANAMED"
+	SIGMALOCAL    = "SIGMALOCAL"
+	SIGMATAG      = "SIGMATAG"
+	SIGMAROOTFS   = "SIGMAROOTFS"
+	SIGMAREALM    = "SIGMAREALM"
+	SIGMANET      = "SIGMANET"
+	SIGMAJAEGERIP = "SIGMAJAEGERIP"
+	SIGMAKERNEL   = "SIGMAKERNEL"
+	SIGMAUPROCD   = "SIGMAUPROCD"
 )
 
 func SetPid(pid sp.Tpid) {
@@ -53,33 +51,33 @@ func SetProgram(program string) {
 	os.Setenv(SIGMAPROGRAM, program)
 }
 
-func NamedAddrs() string {
-	addrs := GetSigmaNamed()
-	if addrs == "" {
-		return "127.0.0.1"
-		debug.PrintStack()
-		log.Fatalf("Getenv error: missing SIGMANAMED")
-	}
-	return addrs
-}
-
-func Named() (sp.Taddrs, error) {
-	return sp.String2Taddrs(NamedAddrs())
-}
-
-func SetSigmaNamed(nds sp.Taddrs) error {
-	return nil
-	s, err := nds.Taddrs2String()
-	if err != nil {
-		return err
-	}
-	os.Setenv(SIGMANAMED, s)
-	return nil
-}
-
-func GetSigmaNamed() string {
-	return os.Getenv(SIGMANAMED)
-}
+//func NamedAddrs() string {
+//	addrs := GetSigmaNamed()
+//	if addrs == "" {
+//		return "127.0.0.1"
+//		debug.PrintStack()
+//		log.Fatalf("Getenv error: missing SIGMANAMED")
+//	}
+//	return addrs
+//}
+//
+//func Named() (sp.Taddrs, error) {
+//	return sp.String2Taddrs(NamedAddrs())
+//}
+//
+//func SetSigmaNamed(nds sp.Taddrs) error {
+//	return nil
+//	s, err := nds.Taddrs2String()
+//	if err != nil {
+//		return err
+//	}
+//	os.Setenv(SIGMANAMED, s)
+//	return nil
+//}
+//
+//func GetSigmaNamed() string {
+//	return os.Getenv(SIGMANAMED)
+//}
 
 func SetProcDir(procdir string) {
 	os.Setenv(SIGMAPROCDIR, procdir)

@@ -3,6 +3,7 @@ package fdclnt
 import (
 	"fmt"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -31,16 +32,15 @@ import (
 //
 
 type FdClient struct {
+	scfg *config.SigmaConfig
 	*pathclnt.PathClnt
-	fds   *FdTable
-	uname sp.Tuname // the principal associated with this FdClient
+	fds *FdTable
 }
 
-func MakeFdClient(fsc *fidclnt.FidClnt, uname sp.Tuname, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *FdClient {
-	fdc := &FdClient{}
-	fdc.PathClnt = pathclnt.MakePathClnt(fsc, clntnet, realm, lip, sz)
+func MakeFdClient(scfg *config.SigmaConfig, fsc *fidclnt.FidClnt, sz sessp.Tsize) *FdClient {
+	fdc := &FdClient{scfg: scfg}
+	fdc.PathClnt = pathclnt.MakePathClnt(scfg, fsc, sz)
 	fdc.fds = mkFdTable()
-	fdc.uname = uname
 	return fdc
 }
 
@@ -52,7 +52,7 @@ func (fdc *FdClient) String() string {
 }
 
 func (fdc *FdClient) Uname() sp.Tuname {
-	return fdc.uname
+	return fdc.scfg.Uname
 }
 
 func (fdc *FdClient) Close(fd int) error {
@@ -76,11 +76,11 @@ func (fdc *FdClient) Qid(fd int) (*sp.Tqid, error) {
 }
 
 func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
-	return fdc.PathClnt.Stat(name, fdc.uname)
+	return fdc.PathClnt.Stat(name, fdc.scfg.Uname)
 }
 
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, sp.NoLeaseId)
+	fid, err := fdc.PathClnt.Create(path, fdc.scfg.Uname, perm, mode, sp.NoLeaseId)
 	if err != nil {
 		return -1, err
 	}
@@ -89,7 +89,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 }
 
 func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm|sp.DMTMP, mode, lid)
+	fid, err := fdc.PathClnt.Create(path, fdc.scfg.Uname, perm|sp.DMTMP, mode, lid)
 	if err != nil {
 		return -1, err
 	}
@@ -98,7 +98,7 @@ func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, 
 }
 
 func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w pathclnt.Watch) (int, error) {
-	fid, err := fdc.PathClnt.OpenWatch(path, fdc.uname, mode, w)
+	fid, err := fdc.PathClnt.OpenWatch(path, fdc.scfg.Uname, mode, w)
 	if err != nil {
 		return -1, err
 	}
@@ -127,23 +127,23 @@ func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int,
 }
 
 func (fdc *FdClient) SetRemoveWatch(pn string, w pathclnt.Watch) error {
-	return fdc.PathClnt.SetRemoveWatch(pn, fdc.uname, w)
+	return fdc.PathClnt.SetRemoveWatch(pn, fdc.scfg.Uname, w)
 }
 
 func (fdc *FdClient) Rename(old, new string) error {
-	return fdc.PathClnt.Rename(old, new, fdc.uname)
+	return fdc.PathClnt.Rename(old, new, fdc.scfg.Uname)
 }
 
 func (fdc *FdClient) Remove(pn string) error {
-	return fdc.PathClnt.Remove(pn, fdc.uname)
+	return fdc.PathClnt.Remove(pn, fdc.scfg.Uname)
 }
 
 func (fdc *FdClient) GetFile(fname string) ([]byte, error) {
-	return fdc.PathClnt.GetFile(fname, fdc.uname, sp.OREAD, 0, sp.MAXGETSET)
+	return fdc.PathClnt.GetFile(fname, fdc.scfg.Uname, sp.OREAD, 0, sp.MAXGETSET)
 }
 
 func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sessp.Tsize, error) {
-	return fdc.PathClnt.PutFile(fname, fdc.uname, mode|sp.OWRITE, perm, data, off, lid)
+	return fdc.PathClnt.PutFile(fname, fdc.scfg.Uname, mode|sp.OWRITE, perm, data, off, lid)
 }
 
 func (fdc *FdClient) MakeReader(fd int, path string, chunksz sessp.Tsize) *reader.Reader {
@@ -235,5 +235,5 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 }
 
 func (fdc *FdClient) PathLastSymlink(pn string) (path.Path, path.Path, error) {
-	return fdc.PathClnt.PathLastSymlink(pn, fdc.uname)
+	return fdc.PathClnt.PathLastSymlink(pn, fdc.scfg.Uname)
 }

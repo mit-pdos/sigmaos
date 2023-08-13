@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	scfg "sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/perf"
@@ -24,7 +25,7 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, sp.S3REL)
+	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, scfg.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}

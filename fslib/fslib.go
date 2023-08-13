@@ -1,38 +1,30 @@
 package fslib
 
 import (
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
-	"sigmaos/proc"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type FsLib struct {
+	scfg *config.SigmaConfig
 	*fdclnt.FdClient
-	namedAddr sp.Taddrs
 }
 
-func MakeFsLibAddrNet(uname sp.Tuname, realm sp.Trealm, lip string, addrs sp.Taddrs, clntnet string) (*FsLib, error) {
-	db.DPrintf(db.PORT, "MakeFsLibAddrRealm: uname %s lip %s addrs %v\n", uname, lip, addrs)
+// Only to be called by procs.
+func MakeFsLib(scfg *config.SigmaConfig) (*FsLib, error) {
+	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", scfg.Uname, scfg.LocalIP, scfg.EtcdAddr)
 	fl := &FsLib{
-		FdClient:  fdclnt.MakeFdClient(nil, uname, clntnet, realm, lip, sessp.Tsize(10_000_000)),
-		namedAddr: addrs,
+		scfg:     scfg,
+		FdClient: fdclnt.MakeFdClient(scfg, nil, sessp.Tsize(10_000_000)),
 	}
 	return fl, nil
 }
 
-func MakeFsLibAddr(uname sp.Tuname, realm sp.Trealm, lip string, addrs sp.Taddrs) (*FsLib, error) {
-	return MakeFsLibAddrNet(uname, realm, lip, addrs, proc.GetNet())
-}
-
-// Only to be called by procs.
-func MakeFsLib(uname sp.Tuname) (*FsLib, error) {
-	as, err := proc.Named()
-	if err != nil {
-		return nil, err
-	}
-	return MakeFsLibAddr(uname, proc.GetRealm(), proc.GetSigmaLocal(), as)
+func (fl *FsLib) SigmaConfig() *config.SigmaConfig {
+	return fl.scfg
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {

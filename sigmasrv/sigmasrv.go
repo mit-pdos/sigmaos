@@ -3,6 +3,7 @@ package sigmasrv
 import (
 	"runtime/debug"
 
+	"sigmaos/config"
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -38,39 +39,39 @@ type SigmaSrv struct {
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
-func MakeSigmaSrv(fn string, svci any, uname sp.Tuname) (*SigmaSrv, error) {
-	mfs, error := memfssrv.MakeMemFs(fn, uname)
+func MakeSigmaSrv(fn string, svci any, scfg *config.SigmaConfig) (*SigmaSrv, error) {
+	mfs, error := memfssrv.MakeMemFs(fn, scfg)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, error)
 	}
 	return MakeSigmaSrvMemFs(mfs, svci)
 }
 
-func MakeSigmaSrvPublic(fn string, svci any, uname sp.Tuname, public bool) (*SigmaSrv, error) {
+func MakeSigmaSrvPublic(fn string, svci any, scfg *config.SigmaConfig, public bool) (*SigmaSrv, error) {
 	db.DPrintf(db.ALWAYS, "MakeSigmaSrvPublic %T\n", svci)
 	if public {
-		mfs, error := memfssrv.MakeMemFsPublic(fn, uname)
+		mfs, error := memfssrv.MakeMemFsPublic(fn, scfg)
 		if error != nil {
 			return nil, error
 		}
 		return MakeSigmaSrvMemFs(mfs, svci)
 	} else {
-		return MakeSigmaSrv(fn, svci, uname)
+		return MakeSigmaSrv(fn, svci, scfg)
 	}
 }
 
 // Make a sigmasrv and memfs and publish srv at fn. Note: no lease
 // server.
-func MakeSigmaSrvNoRPC(fn string, uname sp.Tuname) (*SigmaSrv, error) {
-	mfs, err := memfssrv.MakeMemFs(fn, uname)
+func MakeSigmaSrvNoRPC(fn string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
+	mfs, err := memfssrv.MakeMemFs(fn, scfg)
 	if err != nil {
 		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, err)
 	}
 	return newSigmaSrv(mfs), nil
 }
 
-func MakeSigmaSrvPort(fn, port string, uname sp.Tuname, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, uname)
+func MakeSigmaSrvPort(fn, port string, scfg *config.SigmaConfig, svci any) (*SigmaSrv, error) {
+	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, scfg)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrvPort %v err %v\n", fn, error)
 	}
@@ -141,18 +142,18 @@ func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 }
 
 func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
-	mfs := memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc, nil)
+	mfs := memfssrv.NewMemFsSrv("", sesssrv, sc, nil)
 	return newSigmaSrv(mfs)
 }
 
-func MakeSigmaSrvRoot(root fs.Dir, addr, path string, uname sp.Tuname) (*SigmaSrv, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(uname)
+func MakeSigmaSrvRoot(root fs.Dir, addr, path string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}
 	et := ephemeralmap.NewEphemeralMap()
 	sesssrv := fslibsrv.BootSrv(root, addr, nil, nil, et)
-	ssrv := newSigmaSrv(memfssrv.MakeMemFsSrv(uname, "", sesssrv, sc, nil))
+	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil
 }

@@ -3,6 +3,7 @@ package pathclnt
 import (
 	"fmt"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -25,19 +26,18 @@ import (
 type Watch func(string, error)
 
 type PathClnt struct {
+	scfg *config.SigmaConfig
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	rootmt  *RootMountTable
 	chunkSz sessp.Tsize
-	realm   sp.Trealm
-	lip     string
 	cid     sp.TclntId
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt, clntnet string, realm sp.Trealm, lip string, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{mnt: makeMntTable(), chunkSz: sz, realm: realm, lip: lip}
+func MakePathClnt(scfg *config.SigmaConfig, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{scfg: scfg, mnt: makeMntTable(), chunkSz: sz}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt(clntnet)
+		pathc.FidClnt = fidclnt.MakeFidClnt(scfg.Net)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -53,7 +53,7 @@ func (pathc *PathClnt) String() string {
 }
 
 func (pathc *PathClnt) Realm() sp.Trealm {
-	return pathc.realm
+	return pathc.scfg.Realm
 }
 
 func (pathc *PathClnt) ClntID() sp.TclntId {
@@ -61,7 +61,7 @@ func (pathc *PathClnt) ClntID() sp.TclntId {
 }
 
 func (pathc *PathClnt) GetLocalIP() string {
-	return pathc.lip
+	return pathc.scfg.LocalIP
 }
 
 func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {

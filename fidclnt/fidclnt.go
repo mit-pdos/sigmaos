@@ -16,10 +16,9 @@ import (
 //
 
 type FidClnt struct {
-	fids  *FidMap
-	pc    *protclnt.Clnt
-	ft    *FenceTable
-	realm sp.Trealm
+	fids *FidMap
+	pc   *protclnt.Clnt
+	ft   *FenceTable
 }
 
 func MakeFidClnt(clntnet string) *FidClnt {

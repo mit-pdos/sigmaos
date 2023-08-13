@@ -69,7 +69,6 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 		}
 		p.Services = p.Services[1:]
 	}
-	proc.SetSigmaNamed(k.namedAddr)
 	proc.SetSigmaJaegerIP(p.Jaegerip)
 	sc, err := sigmaclnt.MkSigmaClntRootInit("kernel", ip, k.namedAddr)
 	if err != nil {

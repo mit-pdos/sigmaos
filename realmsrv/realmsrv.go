@@ -6,15 +6,16 @@ import (
 	"path"
 	"sync"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	"sigmaos/realmsrv/proto"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 const (
@@ -43,7 +44,8 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, sp.REALMDREL)
+	scfg := config.GetSigmaConfig()
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, scfg)
 	if err != nil {
 		return err
 	}

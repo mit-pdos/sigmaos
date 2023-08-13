@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/config"
 	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -45,8 +46,8 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	uname := sp.Tuname(proc.GetPid().String())
-	sc, err := sigmaclnt.MkSigmaClnt(uname)
+	scfg := config.GetSigmaConfig()
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return err
 	}

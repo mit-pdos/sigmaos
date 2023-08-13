@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -46,7 +47,8 @@ func RunKNamed(args []string) error {
 		db.DFatalf("SetNamed: %v", err)
 	}
 
-	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname(proc.GetPid().String()))
+	scfg := config.GetSigmaConfig()
+	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DFatalf("MkSigmaClntFsLib: err %v", err)
 	}

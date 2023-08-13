@@ -5,6 +5,7 @@ import (
 	"path"
 	"sync"
 
+	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -33,12 +34,13 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
+	scfg := config.GetSigmaConfig()
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, sp.UPROCDREL)
+		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, scfg)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, sp.UPROCDREL, ups)
+		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, scfg, ups)
 	}
 	if err != nil {
 		return err

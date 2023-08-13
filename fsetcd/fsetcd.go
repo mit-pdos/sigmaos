@@ -7,6 +7,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -20,24 +21,23 @@ const (
 )
 
 var (
-	endpoints = []string{":2379", ":22379", ":32379"}
+	endpointsBase = []string{":2379", ":22379", ":32379"}
 )
-
-func init() {
-	db.DPrintf(db.ALWAYS, "Etcd addr %v", proc.NamedAddrs())
-	for i := range endpoints {
-		endpoints[i] = proc.NamedAddrs() + endpoints[i]
-	}
-}
 
 type FsEtcd struct {
 	*clientv3.Client
-	realm    sp.Trealm
 	fencekey string
 	fencerev int64
+	scfg     *config.SigmaConfig
 }
 
-func MkFsEtcd(r sp.Trealm) (*FsEtcd, error) {
+func MkFsEtcd(scfg *config.SigmaConfig) (*FsEtcd, error) {
+	endpoints := []string{}
+	for i := range endpointsBase {
+		endpoints = append(endpoints, scfg.EtcdAddr+endpointsBase[i])
+	}
+	// XXX TODO remove
+	db.DPrintf(db.ALWAYS, "Etcd addrs %v", endpoints)
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,
@@ -45,7 +45,7 @@ func MkFsEtcd(r sp.Trealm) (*FsEtcd, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := &FsEtcd{realm: r, Client: cli}
+	fs := &FsEtcd{Client: cli, scfg: scfg}
 	return fs, nil
 }
 
@@ -87,8 +87,8 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	}
 }
 
-func GetRootNamed() (sp.Tmount, *serr.Err) {
-	fs, err := MkFsEtcd(sp.ROOTREALM)
+func GetRootNamed(scfg *config.SigmaConfig) (sp.Tmount, *serr.Err) {
+	fs, err := MkFsEtcd(scfg)
 	if err != nil {
 		return sp.Tmount{}, serr.MkErrError(err)
 	}

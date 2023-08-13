@@ -18,7 +18,7 @@ const (
 )
 
 func (fs *FsEtcd) path2key(path sp.Tpath) string {
-	return string(fs.realm) + ":" + strconv.FormatUint(uint64(path), 16)
+	return string(fs.scfg.Realm) + ":" + strconv.FormatUint(uint64(path), 16)
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {

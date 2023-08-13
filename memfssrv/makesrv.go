@@ -1,6 +1,7 @@
 package memfssrv
 
 import (
+	"sigmaos/config"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -14,13 +15,13 @@ import (
 )
 
 // Make an MemFs and advertise it at pn
-func MakeMemFs(pn string, uname sp.Tuname) (*MemFs, error) {
-	return MakeMemFsPort(pn, ":0", uname)
+func MakeMemFs(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
+	return MakeMemFsPort(pn, ":0", scfg)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func MakeMemFsPort(pn, port string, uname sp.Tuname) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(uname)
+func MakeMemFsPort(pn, port string, scfg *config.SigmaConfig) (*MemFs, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}
@@ -42,13 +43,13 @@ func MakeMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs
 	if err != nil {
 		return nil, err
 	}
-	mfs := MakeMemFsSrv(sc.Uname(), pn, srv, sc, nil)
+	mfs := NewMemFsSrv(pn, srv, sc, nil)
 	return mfs, nil
 }
 
 // Allocate server with public port and advertise it
-func MakeMemFsPublic(pn string, uname sp.Tuname) (*MemFs, error) {
-	sc, err := sigmaclnt.MkSigmaClnt(uname)
+func MakeMemFsPublic(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}

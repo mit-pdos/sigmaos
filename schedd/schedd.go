@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/linuxsched"
@@ -170,7 +171,8 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 }
 
 func RunSchedd(kernelId string) error {
-	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
+	scfg := config.GetSigmaConfig()
+	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), scfg)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

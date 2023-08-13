@@ -9,7 +9,7 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.MkFsEtcd(nd.realm)
+	fs, err := fsetcd.MkFsEtcd(nd.SigmaConfig())
 	if err != nil {
 		return err
 	}

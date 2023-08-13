@@ -3,11 +3,12 @@ package mongod
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/config"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongod/proto"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"time"
 )
 
@@ -44,7 +45,8 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, sp.MONGO)
+	scfg := config.GetSigmaConfig()
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, scfg)
 	if err != nil {
 		return err
 	}

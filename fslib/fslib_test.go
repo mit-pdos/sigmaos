@@ -604,7 +604,7 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	return false
 }
 
-func TestCounter(t *testing.T) {
+func TestCounterConcur(t *testing.T) {
 	const N = 10
 
 	ts := test.MakeTstatePath(t, pathname)

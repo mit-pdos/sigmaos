@@ -293,6 +293,10 @@ func (ps *ProtSrv) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
+	// get path lock on on f so that check and read are atomic
+	pl := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
+	defer ps.plt.Release(f.Pobj().Ctx(), pl)
+
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
 	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v} v %d", f.Pobj().Ctx().Uname(), f, args, v)
 	if !sp.VEq(args.Tversion(), v) {
@@ -325,6 +329,10 @@ func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	if err != nil {
 		return sp.MkRerror(err)
 	}
+	// get path lock on on f so that check, write, and IncVersion are atomic
+	pl := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
+	defer ps.plt.Release(f.Pobj().Ctx(), pl)
+
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
 	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d v %d", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
 	if !sp.VEq(args.Tversion(), v) {

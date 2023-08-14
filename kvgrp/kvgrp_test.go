@@ -30,12 +30,12 @@ type Tstate struct {
 	cc  *cacheclnt.CacheClnt
 }
 
-func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
+func makeTstate(t *testing.T, nrepl int) *Tstate {
 	ts := &Tstate{grp: GRP}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.RmDir(JOBDIR)
 	ts.MkDir(JOBDIR, 0777)
-	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, CRASH_KVD, 0, 0)
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
 	assert.Nil(t, err)
 	ts.cc = cacheclnt.NewCacheClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, JOBDIR, 1)
@@ -48,7 +48,7 @@ func (ts *Tstate) Shutdown() {
 }
 
 func TestStartStopRepl0(t *testing.T) {
-	ts := makeTstate(t, 0, 0)
+	ts := makeTstate(t, 0)
 
 	sts, _, err := ts.ReadDir(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
@@ -60,7 +60,7 @@ func TestStartStopRepl0(t *testing.T) {
 }
 
 func TestStartStopRepl1(t *testing.T) {
-	ts := makeTstate(t, 1, 0)
+	ts := makeTstate(t, 1)
 
 	st, err := ts.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", st, err)
@@ -76,7 +76,7 @@ func TestStartStopRepl1(t *testing.T) {
 }
 
 func TestStartStopReplN(t *testing.T) {
-	ts := makeTstate(t, N_REPL, 0)
+	ts := makeTstate(t, N_REPL)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()

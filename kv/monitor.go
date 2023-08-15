@@ -22,7 +22,7 @@ import (
 const (
 	MAXLOAD        float64 = 85.0
 	MINLOAD        float64 = 40.0
-	CRASHKVD               = 40000
+	CRASHKVD               = 5000
 	KVD_NO_REPL    int     = 0
 	KVD_REPL_LEVEL         = 3
 )

@@ -84,7 +84,7 @@ func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelp
 	ts := &Tstate{job: rand.String(4)}
 	ts.Tstate = test.MakeTstateAll(t)
 
-	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, 0, crashhelper, auto)
+	kvf, err := kv.MakeKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, ncrash, 0, crashhelper, auto)
 	assert.Nil(t, err)
 	ts.kvf = kvf
 	ts.cm, err = kv.MkClerkMgr(ts.SigmaClnt, ts.job, 0, repl > 0)
@@ -133,8 +133,27 @@ func TestGetPut(t *testing.T) {
 	ts.done()
 }
 
+func TestPutGetCrashKVD1(t *testing.T) {
+	const TIME = 100
+
+	ts := makeTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 1, "0")
+
+	err := ts.cm.StartClerks("", 1)
+	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+
+	start := time.Now()
+	end := start.Add(10 * time.Second)
+	for i := 0; start.Before(end); i++ {
+		time.Sleep(TIME * time.Millisecond)
+		start = time.Now()
+	}
+	db.DPrintf(db.TEST, "Done ")
+	ts.cm.StopClerks()
+	ts.done()
+}
+
 func TestFencefs(t *testing.T) {
-	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := makeTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
 
 	dir := kv.KVDIR + kvgrp.GrpPath(ts.job, kv.GRP+"0")
 	fencedir := path.Join(dir, sp.FENCEDIR)

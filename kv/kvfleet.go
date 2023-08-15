@@ -61,7 +61,8 @@ type KVFleet struct {
 	ck          *KvClerk   // A clerk which can be used for initialization.
 	crashbal    int        // Crash balancer
 	crashhelper string     // Crash balancer helper/mover?
-	auto        string     // Balancer auto-balancing setting.
+	crashkvd    int
+	auto        string // Balancer auto-balancing setting.
 	job         string
 	ready       chan bool
 	balgm       *groupmgr.GroupMgr
@@ -69,11 +70,12 @@ type KVFleet struct {
 	cpids       []proc.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
+func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl, crashkvd int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{
 		SigmaClnt:   sc,
 		nkvd:        nkvd,
 		kvdrepl:     kvdrepl,
+		crashkvd:    crashkvd,
 		kvdmcpu:     kvdmcpu,
 		crashbal:    crashbal,
 		job:         job,
@@ -119,7 +121,7 @@ func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
 	grp := GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdmcpu, kvf.kvdrepl, 0)
+	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdmcpu, kvf.kvdrepl, kvf.crashkvd)
 	if err != nil {
 		return err
 	}

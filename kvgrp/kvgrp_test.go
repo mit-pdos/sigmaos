@@ -16,11 +16,10 @@ import (
 )
 
 const (
-	GRP       = "grp-0"
-	CRASH_KVD = 5000
-	N_REPL    = 3
-	N_KEYS    = 10000
-	JOBDIR    = "name/group"
+	GRP    = "grp-0"
+	N_REPL = 3
+	N_KEYS = 10000
+	JOBDIR = "name/group"
 )
 
 type Tstate struct {
@@ -35,7 +34,7 @@ func makeTstate(t *testing.T, nrepl int) *Tstate {
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.RmDir(JOBDIR)
 	ts.MkDir(JOBDIR, 0777)
-	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, CRASH_KVD, 0, 0)
+	ts.gm = groupmgr.Start(ts.SigmaClnt, nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, 0, 0, 0, 0)
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
 	assert.Nil(t, err)
 	ts.cc = cacheclnt.NewCacheClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, JOBDIR, 1)

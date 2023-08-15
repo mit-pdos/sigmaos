@@ -1,6 +1,7 @@
 package rpcclnt
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -62,9 +63,10 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 			return nil
 		} else {
 			cc.Delete(pn)
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
+			var sr *serr.Err
+			if errors.As(err, &sr) && pathclnt.Retry(sr) {
 				time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
-				db.DPrintf(db.ALWAYS, "RPC: retry %v %v\n", pn, method)
+				db.DPrintf(db.ALWAYS, "RPC: retry %v %v err %v\n", pn, method, sr)
 				continue
 			}
 			return err

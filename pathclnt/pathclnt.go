@@ -255,22 +255,15 @@ func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
 	if err != nil {
 		return err
 	}
-
-	// Optimistcally remove obj without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			fid, err = pathc.walk(pn, uname, path.EndSlash(name), nil)
-			if err != nil {
-				return err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			err = pathc.FidClnt.Remove(fid)
+	if Retry(err) {
+		fid, err = pathc.walk(pn, uname, path.EndSlash(name), nil)
+		if err != nil {
+			return err
 		}
-	}
-	if err != nil {
+		defer pathc.FidClnt.Clunk(fid)
+		err = pathc.FidClnt.Remove(fid)
+	} else if err != nil {
 		return err
 	}
 	return nil
@@ -355,6 +348,16 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 	return nil
 }
 
+// Several calls optimistically connect to a recently-mounted server
+// without doing a pathname walk; this may fail, and the call should
+// walk. retry() says when to retry.
+func Retry(err *serr.Err) bool {
+	if err == nil {
+		return false
+	}
+	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
+}
+
 func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
@@ -362,24 +365,19 @@ func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp
 	if err != nil {
 		return nil, err
 	}
-	// Optimistcally GetFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink or if server is unreachable.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			fid, err = pathc.walk(p, uname, path.EndSlash(pn), nil)
-			if err != nil {
-				return nil, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false)
-			if err != nil {
-				return nil, err
-			}
-		} else {
+	if Retry(err) {
+		fid, err = pathc.walk(p, uname, path.EndSlash(pn), nil)
+		if err != nil {
 			return nil, err
 		}
+		defer pathc.FidClnt.Clunk(fid)
+		data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
 	}
 	return data, nil
 }
@@ -392,32 +390,27 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 	if err != nil {
 		return 0, err
 	}
-	// Optimistcally PutFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink or if server is unreachable.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid)
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			dir := p.Dir()
-			base := path.Path{p.Base()}
-			resolve := true
-			if p.Base() == err.Obj { // was the final pn component a symlink?
-				dir = p
-				base = path.Path{}
-				resolve = path.EndSlash(pn)
-			}
-			fid, err = pathc.walk(dir, uname, resolve, nil)
-			if err != nil {
-				return 0, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
-			if err != nil {
-				return 0, err
-			}
-		} else {
+	if Retry(err) {
+		dir := p.Dir()
+		base := path.Path{p.Base()}
+		resolve := true
+		if p.Base() == err.Obj { // was the final pn component a symlink?
+			dir = p
+			base = path.Path{}
+			resolve = path.EndSlash(pn)
+		}
+		fid, err = pathc.walk(dir, uname, resolve, nil)
+		if err != nil {
 			return 0, err
 		}
+		defer pathc.FidClnt.Clunk(fid)
+		cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
+		if err != nil {
+			return 0, err
+		}
+	} else if err != nil {
+		return 0, err
 	}
 	return cnt, nil
 }

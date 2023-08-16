@@ -13,6 +13,7 @@ import (
 	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvcclnt"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/perf"
@@ -20,7 +21,6 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
 var done = int32(0)
@@ -48,7 +48,7 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("cacheclerk-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

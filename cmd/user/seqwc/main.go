@@ -4,16 +4,16 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/seqwc"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
 func main() {
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(os.Args[0] + "-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}

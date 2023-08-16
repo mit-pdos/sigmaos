@@ -5,6 +5,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"sigmaos/config"
 	"sigmaos/container"
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
@@ -15,9 +20,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/tracing"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type FrontEnd struct {
@@ -52,7 +54,7 @@ var (
 func RunFrontendSrv(public bool, job string) error {
 	frontend := &FrontEnd{}
 	frontend.job = job
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(SERVER_NAME + job))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return err
 	}

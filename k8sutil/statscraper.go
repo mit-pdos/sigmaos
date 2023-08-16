@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"sigmaos/cgroup"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/k8sutil/proto"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 // Kubernetes cgroups paths.
@@ -24,7 +25,7 @@ type scraper struct {
 
 func RunK8sStatScraper() error {
 	s := newScraper()
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.K8S_SCRAPER, s, sp.K8S_SCRAPER)
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.K8S_SCRAPER, s, config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}

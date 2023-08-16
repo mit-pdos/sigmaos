@@ -46,8 +46,7 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	scfg := config.GetSigmaConfig()
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return err
 	}

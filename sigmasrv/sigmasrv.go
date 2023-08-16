@@ -147,7 +147,7 @@ func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname, sc *sigmaclnt.S
 }
 
 func MakeSigmaSrvRoot(root fs.Dir, addr, path string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

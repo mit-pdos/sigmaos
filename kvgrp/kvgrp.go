@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"sigmaos/cachesrv"
+	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -223,7 +224,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("kv-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}

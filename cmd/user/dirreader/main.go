@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -14,7 +15,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v dir\n", os.Args[0])
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(os.Args[0]))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}

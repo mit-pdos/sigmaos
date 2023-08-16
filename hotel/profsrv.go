@@ -11,6 +11,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
+	"sigmaos/config"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -29,7 +30,7 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, HOTELPROF, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

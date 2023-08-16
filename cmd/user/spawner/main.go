@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -40,7 +41,7 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	}
 	// 	log.Printf("MakeSpawner %v", args)
 	s := &Spawner{}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("spawner-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

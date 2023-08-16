@@ -7,6 +7,7 @@ import (
 	//	"sigmaos/proc"
 	//	tproto "sigmaos/tracing/proto"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
@@ -26,7 +27,7 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, HOTELSEARCH, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

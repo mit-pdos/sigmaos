@@ -9,11 +9,12 @@ import (
 	//	"sigmaos/proc"
 	//	"context"
 
+	"sigmaos/config"
 	"sigmaos/dbclnt"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
-	"sigmaos/sigmasrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
@@ -42,7 +43,7 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, HOTELUSER, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

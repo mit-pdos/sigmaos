@@ -21,7 +21,7 @@ func MakeMemFs(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
 
 // Make an MemFs for a specific port and advertise it at pn
 func MakeMemFsPort(pn, port string, scfg *config.SigmaConfig) (*MemFs, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func MakeMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs
 
 // Allocate server with public port and advertise it
 func MakeMemFsPublic(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

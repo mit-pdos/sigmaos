@@ -12,6 +12,7 @@ import (
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
@@ -53,8 +54,8 @@ func NewClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	return newClerk(fsl, job, repl)
 }
 
-func MakeClerk(uname sp.Tuname, job string, repl bool) (*KvClerk, error) {
-	fsl, err := fslib.MakeFsLib(uname)
+func MakeClerk(scfg *config.SigmaConfig, job string, repl bool) (*KvClerk, error) {
+	fsl, err := fslib.MakeFsLib(scfg)
 	if err != nil {
 		return nil, err
 	}

@@ -1,32 +1,38 @@
 package main
 
 import (
-	"log"
-	"path"
-	"time"
+	//	"log"
+	//	"path"
+	//	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-
-	"sigmaos/fslib"
-	"sigmaos/semclnt"
-	sp "sigmaos/sigmap"
+	//	"sigmaos/fslib"
+	//	"sigmaos/semclnt"
+	//	sp "sigmaos/sigmap"
+	db "sigmaos/debug"
 )
 
 func spin(args []string) error {
-	addr := args[0]
-	sempath := args[1]
-	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
-	if err != nil {
-		return err
-	}
-	sem := semclnt.MakeSemClnt(fsl, sempath)
-	err = sem.Up()
-	if err != nil {
-		return err
-	}
-	log.Printf("Addr %v sem %v", addr, path.Base(sempath))
-	time.Sleep(14 * time.Second)
-	log.Printf("Done sleep")
+	db.DFatalf("Error: env")
+	// addr := args[0]
+	// sempath := args[1]
+	// fsl, err := fslib.MakeFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
+	//
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	// sem := semclnt.MakeSemClnt(fsl, sempath)
+	// err = sem.Up()
+	//
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	// log.Printf("Addr %v sem %v", addr, path.Base(sempath))
+	// time.Sleep(14 * time.Second)
+	// log.Printf("Done sleep")
+	// return nil
 	return nil
 }
 

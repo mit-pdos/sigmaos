@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -19,7 +20,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage msec pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(os.Args[0] + "-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}

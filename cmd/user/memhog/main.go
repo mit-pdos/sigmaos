@@ -9,9 +9,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/shirou/gopsutil/process"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error strconv: %v", err)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("memhog-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}

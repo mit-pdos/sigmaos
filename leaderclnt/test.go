@@ -28,7 +28,10 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 	ch := make(chan bool)
 	go func() {
-		fsl2, err := fslib.MakeFsLibAddr("leader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		db.DFatalf("Error: set fslib addr")
+		var fsl2 *fslib.FsLib = nil
+		var err error = nil
+		//		fsl2, err := fslib.MakeFsLibAddr("leader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(ts.T, err, "MakeFsLib")
 
 		l, err := MakeLeaderClnt(fsl2, leadername, 0777)

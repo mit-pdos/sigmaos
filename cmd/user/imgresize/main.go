@@ -10,6 +10,7 @@ import (
 
 	"github.com/nfnt/resize"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -65,7 +66,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	}
 	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", proc.GetPid(), args)
 	t := &Trans{}
-	sc, err := sigmaclnt.NewSigmaClnt("fsreader")
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

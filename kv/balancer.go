@@ -23,6 +23,7 @@ import (
 
 	"sigmaos/cache"
 	"sigmaos/cachesrv"
+	"sigmaos/config"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -76,7 +77,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname(KVBALANCER + "-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

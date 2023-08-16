@@ -14,6 +14,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -67,7 +68,7 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("mapper-" + proc.GetPid().String() + " " + args[2]))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

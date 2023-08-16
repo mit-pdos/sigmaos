@@ -9,6 +9,7 @@ import (
 	cacheproto "sigmaos/cache/proto"
 
 	"sigmaos/cache"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -71,7 +72,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	}
 
 	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, db.CACHESRV, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

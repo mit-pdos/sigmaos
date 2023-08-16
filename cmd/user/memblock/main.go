@@ -6,6 +6,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -22,7 +23,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("memhog-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}

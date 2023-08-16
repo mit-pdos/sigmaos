@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/pipe"
@@ -43,7 +44,7 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
-	sc, err := sigmaclnt.NewSigmaClnt("fsreader")
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

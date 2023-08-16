@@ -12,6 +12,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	"sigmaos/config"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/proc"
@@ -46,7 +47,7 @@ type Rec struct {
 func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELREC, r, HOTELREC, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELREC, r, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

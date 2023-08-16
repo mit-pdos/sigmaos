@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sessp"
@@ -44,7 +45,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("sleeper-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClient: %v", err)
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -48,7 +49,7 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("reducer-" + r.input))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	r.SigmaClnt = sc
 	r.perf = p
 
@@ -103,7 +104,9 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 // XXX cut new fslib?
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname("r-" + file + r.input))
+	db.DFatalf("Error mk sigma clnt fslib")
+	//	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname("r-" + file + r.input))
+	sc, err := sigmaclnt.MkSigmaClntFsLib(nil)
 	if err != nil {
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false

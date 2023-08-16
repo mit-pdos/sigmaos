@@ -13,6 +13,7 @@ import (
 	"github.com/go-redis/redis/v8"
 
 	"sigmaos/cache"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	"sigmaos/kv/proto"
@@ -20,7 +21,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
 var done = int32(0)
@@ -48,7 +48,7 @@ func main() {
 		}
 		sempath = os.Args[5]
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("clerk-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

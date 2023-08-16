@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fenceclnt"
 	"sigmaos/proc"
@@ -15,7 +16,7 @@ import (
 func RunProc(fencestr, dir string) {
 	pid := proc.GetPid()
 
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("proc-" + pid.String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("%v MkSigmaClnt err %v\n", proc.GetName(), err)
 	}

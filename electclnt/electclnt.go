@@ -5,7 +5,6 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/leaderetcd"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,7 +23,7 @@ type ElectClnt struct {
 
 func MakeElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
-	fs, err := fsetcd.MkFsEtcd(proc.GetRealm())
+	fs, err := fsetcd.MkFsEtcd(fsl.SigmaConfig())
 	if err != nil {
 		return nil, err
 	}

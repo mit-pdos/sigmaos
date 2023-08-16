@@ -116,7 +116,8 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		}
 		containerIP = ip
 	} else {
-		containerIP = proc.NamedAddrs()
+		db.DFatalf("Error: need to set config")
+		//		containerIP = proc.NamedAddrs()
 	}
 	proc.SetPid(sp.Tpid("test-" + sp.GenPid().String()))
 	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
@@ -163,6 +164,7 @@ func (ts *Tstate) KillOne(s string) error {
 }
 
 func (ts *Tstate) MakeClnt(idx int, uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
+	db.DFatalf("Error: pass sigma config")
 	return ts.kclnts[idx].NewSigmaClnt(uname)
 }
 

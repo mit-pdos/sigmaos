@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sigmaos/cache"
+	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -40,7 +41,7 @@ func checkFence(fsl *fslib.FsLib, job string, fence *sp.Tfence) {
 }
 
 func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(sp.Tuname("mover-" + proc.GetPid().String()))
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
 		return nil, err
 	}

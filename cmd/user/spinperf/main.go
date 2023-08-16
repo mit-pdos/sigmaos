@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	id := os.Args[4]
 	var sc *sigmaclnt.SigmaClnt
 	if isSigmaProc {
-		sc, err = sigmaclnt.NewSigmaClnt(sp.Tuname("spinperf-" + proc.GetPid().String()))
+		sc, err = sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 		if err != nil {
 			db.DFatalf("Error mkSigmaClnt: %v", err)
 		}

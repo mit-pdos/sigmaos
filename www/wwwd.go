@@ -11,6 +11,7 @@ import (
 
 	"net/http/pprof"
 
+	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
@@ -83,7 +84,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	var err error
-	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), WWWD)
+	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), config.GetSigmaConfig())
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}

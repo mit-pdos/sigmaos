@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
+	"sigmaos/config"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -36,7 +37,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, sp.SOCIAL_NETWORK_MEDIA, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, config.GetSigmaConfig(), public)
 	if err != nil {
 		return err
 	}

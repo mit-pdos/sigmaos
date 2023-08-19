@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
@@ -500,8 +501,8 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, dn, name, lip string, nds sp.Taddrs, ch chan bool) {
-	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("fslibtest-"+name), sp.ROOTREALM, lip, nds)
+func dirwriter(t *testing.T, scfg *config.SigmaConfig, dn, name string, ch chan bool) {
+	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -536,7 +537,8 @@ func TestDirConcur(t *testing.T) {
 
 	ch := make(chan bool)
 	for i := 0; i < N; i++ {
-		go dirwriter(t, dn, strconv.Itoa(i), ts.GetLocalIP(), ts.NamedAddr(), ch)
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), i)
+		go dirwriter(t, scfg, dn, strconv.Itoa(i), ch)
 	}
 
 	for i := 0; i < NSCAN; i++ {
@@ -742,7 +744,8 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ch := make(chan error)
 	done := make(chan bool)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		for i := 1; i < N; {
 			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
@@ -792,7 +795,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 
 	ch := make(chan error)
 	done := make(chan bool)
-	fsl, err := fslib.MakeFsLibAddr("fsl1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -915,7 +919,8 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		fsl, err := fslib.MakeFsLibAddr(sp.Tuname("thread"+strconv.Itoa(i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), i)
+		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
@@ -1240,7 +1245,8 @@ func TestFslibDetach(t *testing.T) {
 
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
-	fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 
 	// connect

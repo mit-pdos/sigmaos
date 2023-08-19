@@ -44,10 +44,10 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 	pid := sp.Tpid(program + "-" + sp.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
 	ss := makeSubsystem(k.ProcClnt, k, p, how)
-	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
+	return ss, ss.Run(how, k.Param.KernelId)
 }
 
-func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
+func (s *Subsystem) Run(how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {

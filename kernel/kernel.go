@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 
+	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
@@ -24,6 +25,8 @@ const (
 
 	FPORT port.Tport = 1112
 	LPORT port.Tport = 1132
+
+	KNAMED_PORT = ":1111"
 )
 
 type Param struct {
@@ -37,22 +40,22 @@ type Param struct {
 
 type Kernel struct {
 	*sigmaclnt.SigmaClnt
-	Param     *Param
-	namedAddr sp.Taddrs
-	svcs      *Services
-	ip        string
+	Param *Param
+	scfg  *config.SigmaConfig
+	svcs  *Services
+	ip    string
 }
 
-func mkKernel(param *Param, namedAddr sp.Taddrs) *Kernel {
+func mkKernel(param *Param, scfg *config.SigmaConfig) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.namedAddr = namedAddr
+	k.scfg = scfg
 	k.svcs = mkServices()
 	return k
 }
 
-func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
-	k := mkKernel(p, nameds)
+func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
+	k := mkKernel(p, scfg)
 	proc.SetProgram(os.Args[0])
 	proc.SetPid(sp.GenPid())
 	ip, err := container.LocalIP()
@@ -63,16 +66,15 @@ func MakeKernel(p *Param, nameds sp.Taddrs) (*Kernel, error) {
 	k.ip = ip
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.KNAMED {
-		k.namedAddr = nameds
 		if err := k.bootKNamed(true); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
 	}
 	proc.SetSigmaJaegerIP(p.Jaegerip)
-	sc, err := sigmaclnt.MkSigmaClntRootInit("kernel", ip, k.namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntRootInit(scfg)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc (%v): %v", k.namedAddr, err)
+		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc: %v", err)
 		return nil, err
 	}
 	k.SigmaClnt = sc
@@ -184,7 +186,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 }
 
 // Run knamed (but not as a proc)
-func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
+func runKNamed(scfg *config.SigmaConfig, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -193,7 +195,7 @@ func runKNamed(p *proc.Proc, addr sp.Taddrs, realmId sp.Trealm, init bool) (*exe
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(p, addr, realmId, []*os.File{w1, r2, w2})
+	cmd, err := kproc.RunKernelProc(scfg, p, realmId, []*os.File{w1, r2, w2})
 	if err != nil {
 		r1.Close()
 		w1.Close()

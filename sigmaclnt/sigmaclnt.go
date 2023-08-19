@@ -71,23 +71,14 @@ func MkSigmaClntRealm(rootfsl *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*Si
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*SigmaClnt, error) {
-	db.DFatalf("Need new plan")
-	return nil, nil
-	// fsl, err := fslib.MakeFsLibAddrNet(uname, sp.ROOTREALM, ip, namedAddr, sp.ROOTREALM.String())
-	//
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	// sc, err := MkSigmaLeaseClnt(fsl)
-	//
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	// sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), fsl, string(uname))
-	// return sc, nil
+func MkSigmaClntRootInit(scfg *config.SigmaConfig) (*SigmaClnt, error) {
+	sc, err := MkSigmaClntFsLib(scfg)
+	if err != nil {
+		return nil, err
+	}
+
+	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(scfg.Uname))
+	return sc, nil
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {

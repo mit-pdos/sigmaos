@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"sigmaos/bootkernelclnt"
+	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/kernel"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
@@ -32,9 +32,11 @@ const (
 var Start bool
 var noShutdown bool
 var tag string
+var etcdIP string
 var Overlays bool
 
 func init() {
+	flag.StringVar(&etcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
 	flag.StringVar(&tag, "tag", "", "Docker image tag")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
@@ -102,30 +104,25 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	namedport := sp.MkTaddrs([]string{NAMEDPORT})
-	kernelid := ""
-	var containerIP string
+	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, tag)
+	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		ip, err := bootkernelclnt.Start(kernelid, tag, srvs, namedport, Overlays)
+		ip, err := bootkernelclnt.Start(kernelid, scfg, srvs, Overlays)
+		db.DPrintf(db.ALWAYS, "Got ip %v", ip)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
 		}
-		containerIP = ip
-	} else {
-		db.DFatalf("Error: need to set config")
-		//		containerIP = proc.NamedAddrs()
 	}
 	proc.SetPid(sp.Tpid("test-" + sp.GenPid().String()))
-	namedAddr, err := kernel.SetNamedIP(containerIP, namedport)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
-	k, err = bootkernelclnt.MkKernelClnt(kernelid, "test", containerIP, namedAddr)
+	k, err = bootkernelclnt.MkKernelClnt(kernelid, scfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -140,7 +137,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart(tag, "kclnt", BOOT_NODE, ts.NamedAddr(), Overlays)
+		kclnt, err := bootkernelclnt.MkKernelClntStart(ts.SigmaConfig(), BOOT_NODE, Overlays)
 		if err != nil {
 			return err
 		}
@@ -163,9 +160,9 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
+func (ts *Tstate) MakeClnt(idx int, scfg *config.SigmaConfig) (*sigmaclnt.SigmaClnt, error) {
 	db.DFatalf("Error: pass sigma config")
-	return ts.kclnts[idx].NewSigmaClnt(uname)
+	return ts.kclnts[idx].NewSigmaClnt(scfg)
 }
 
 func (ts *Tstate) Shutdown() error {

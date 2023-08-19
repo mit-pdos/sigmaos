@@ -15,14 +15,14 @@ func (pathc *PathClnt) GetMntNamed(uname sp.Tuname) sp.Tmount {
 	if pathc.scfg.Realm == sp.ROOTREALM {
 		mnt, err := fsetcd.GetRootNamed(pathc.scfg)
 		if err != nil {
-			db.DFatalf("GetMntNamed() %v err %v\n", pathc.scfg.Realm, err)
+			db.DFatalf("GetMntNamed() GetRootNamed %v err %v\n", pathc.scfg.Realm, err)
 		}
 		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.scfg.Realm, mnt)
 		return mnt
 	} else {
 		mnt, err := pathc.getRealmNamed(uname)
 		if err != nil {
-			db.DFatalf("GetMntNamed() %v err %v\n", pathc.scfg.Realm, err)
+			db.DFatalf("GetMntNamed() getRealmNamed %v err %v\n", pathc.scfg.Realm, err)
 		}
 		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.scfg.Realm, mnt)
 		return mnt

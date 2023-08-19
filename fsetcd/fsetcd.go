@@ -34,7 +34,7 @@ type FsEtcd struct {
 func MkFsEtcd(scfg *config.SigmaConfig) (*FsEtcd, error) {
 	endpoints := []string{}
 	for i := range endpointsBase {
-		endpoints = append(endpoints, scfg.EtcdAddr+endpointsBase[i])
+		endpoints = append(endpoints, scfg.EtcdIP+endpointsBase[i])
 	}
 	// XXX TODO remove
 	db.DPrintf(db.ALWAYS, "Etcd addrs %v", endpoints)

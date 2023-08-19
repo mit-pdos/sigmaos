@@ -104,7 +104,7 @@ func (k *Kernel) bootKNamed(init bool) error {
 	if err != nil {
 		return err
 	}
-	cmd, err := runKNamed(p, k.namedAddr, sp.ROOTREALM, init)
+	cmd, err := runKNamed(k.scfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}

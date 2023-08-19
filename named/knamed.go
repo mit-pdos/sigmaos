@@ -19,6 +19,13 @@ func RunKNamed(args []string) error {
 	}
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
+
+	sc, err := sigmaclnt.MkSigmaClntFsLib(config.GetSigmaConfig())
+	if err != nil {
+		db.DFatalf("MkSigmaClntFsLib: err %v", err)
+	}
+	nd.SigmaClnt = sc
+
 	init := args[2]
 
 	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
@@ -46,13 +53,6 @@ func RunKNamed(args []string) error {
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
-
-	scfg := config.GetSigmaConfig()
-	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
-	if err != nil {
-		db.DFatalf("MkSigmaClntFsLib: err %v", err)
-	}
-	nd.SigmaClnt = sc
 
 	if init == "init" {
 		nd.initfs()

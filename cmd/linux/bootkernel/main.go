@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"sigmaos/boot"
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	sp "sigmaos/sigmap"
@@ -27,11 +28,12 @@ func main() {
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	addrs, err := sp.String2Taddrs(os.Args[2])
-	if err != nil {
-		db.DFatalf("%v: String2Taddrs %v\n", os.Args[0], err)
-	}
-	if err := boot.BootUp(&param, addrs); err != nil {
+	//	addrs, err := sp.String2Taddrs(os.Args[2])
+	//	if err != nil {
+	//		db.DFatalf("%v: String2Taddrs %v\n", os.Args[0], err)
+	//	}
+	scfg := config.NewBootSigmaConfig(sp.Tuname(param.KernelId), os.Args[2])
+	if err := boot.BootUp(&param, scfg); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)

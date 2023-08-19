@@ -4,32 +4,35 @@ import (
 	"encoding/json"
 	"os"
 	"runtime/debug"
+	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 const (
 	SIGMACONFIG = "SIGMACONFIG"
+	SIGMADEBUG  = "SIGMADEBUG"
+	SIGMAPERF   = "SIGMAPERF"
 )
 
 type SigmaConfig struct {
-	PID        sp.Tpid        `json:pid,omitempty`
-	Realm      sp.Trealm      `json:realm,omitempty`
-	Uname      sp.Tuname      `json:uname,omitempty`
-	KernelID   string         `json:kernelid,omitempty`
-	UprocdPID  sp.Tpid        `json:uprocdpid,omitempty`
-	Net        string         `json:net,omitempty`
-	Privileged bool           `json:privileged,omitempty` // XXX phase out?
-	Program    string         `json:program,omitempty`
-	ProcDir    string         `json:procdir,omitempty`   // XXX phase out?
-	ParentDir  string         `json:parentdir,omitempty` // XXX phase out?
-	Perf       perf.Tselector `json:perf,omitempty`
-	Debug      db.Tselector   `json:debug,omitempty`
-	EtcdAddr   string         `json:etcdaddr,omitempty`
-	LocalIP    string         `json:localip,omitempty`
-	BuildTag   string         `json:buildtag,omitempty`
+	PID        sp.Tpid   `json:pid,omitempty`
+	Realm      sp.Trealm `json:realm,omitempty`
+	Uname      sp.Tuname `json:uname,omitempty`
+	KernelID   string    `json:kernelid,omitempty`
+	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
+	Net        string    `json:net,omitempty`
+	Privileged bool      `json:privileged,omitempty` // XXX phase out?
+	Program    string    `json:program,omitempty`
+	ProcDir    string    `json:procdir,omitempty`   // XXX phase out?
+	ParentDir  string    `json:parentdir,omitempty` // XXX phase out?
+	Perf       string    `json:perf,omitempty`
+	Debug      string    `json:debug,omitempty`
+	EtcdIP     string    `json:etcdip,omitempty`
+	LocalIP    string    `json:localip,omitempty`
+	BuildTag   string    `json:buildtag,omitempty`
 	// For testing purposes
 	Crash     bool `json:crash,omitempty`
 	Partition bool `json:partition,omitempty`
@@ -43,14 +46,52 @@ type SigmaConfig struct {
 //func MkSigmaClntRootInit(uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*SigmaClnt, error) {
 
 func NewSigmaConfig() *SigmaConfig {
-	return &SigmaConfig{}
+	// Load Perf & Debug from the environment for convenience.
+	return &SigmaConfig{
+		Perf:  os.Getenv(SIGMAPERF),
+		Debug: os.Getenv(SIGMADEBUG),
+	}
 }
 
-func NewTestSigmaConfig(realm sp.Trealm, etcdaddr string) *SigmaConfig {
+func NewBootSigmaConfig(uname sp.Tuname, etcdIP string) *SigmaConfig {
 	sc := NewSigmaConfig()
-	sc.Realm = realm
-	sc.EtcdAddr = etcdaddr
+	sc.EtcdIP = etcdIP
+	sc.Uname = uname
+	sc.Realm = sp.ROOTREALM
 	return sc
+}
+
+func NewTestSigmaConfig(realm sp.Trealm, etcdIP, buildTag string) *SigmaConfig {
+	sc := NewSigmaConfig()
+	sc.Uname = "test"
+	sc.Realm = realm
+	sc.EtcdIP = etcdIP
+	sc.BuildTag = buildTag
+	return sc
+}
+
+// Create a new sigma config which is a derivative of an existing sigma config.
+func NewAddedSigmaConfig(sc *SigmaConfig, idx int) *SigmaConfig {
+	sc2 := NewSigmaConfig()
+	*sc2 = *sc
+	sc2.Uname = sp.Tuname(string(sc2.Uname) + "-" + strconv.Itoa(idx))
+	return sc2
+}
+
+func NewChildSigmaConfig(pcfg *SigmaConfig, p *proc.Proc) *SigmaConfig {
+	sc2 := NewSigmaConfig()
+	*sc2 = *pcfg
+	sc2.Uname = sp.Tuname(proc.GetPid())
+	// TODO: anything else?
+	return sc2
+}
+
+func (sc *SigmaConfig) Marshal() string {
+	b, err := json.Marshal(sc)
+	if err != nil {
+		db.DFatalf("Error marshal sigmaconfig: %v")
+	}
+	return string(b)
 }
 
 // XXX When should I not get the config?

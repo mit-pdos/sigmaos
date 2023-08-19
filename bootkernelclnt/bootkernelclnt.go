@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"path"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/rand"
@@ -19,15 +20,11 @@ const (
 	START = "../start-kernel.sh"
 )
 
-func Start(kernelId, tag, srvs string, namedAddr sp.Taddrs, overlays bool) (string, error) {
-	s, e := namedAddr.Taddrs2String()
-	if e != nil {
-		return "", e
-	}
+func Start(kernelId string, scfg *config.SigmaConfig, srvs string, overlays bool) (string, error) {
 	args := []string{
-		"--pull", tag,
+		"--pull", scfg.BuildTag,
 		"--boot", srvs,
-		"--named", s,
+		"--named", scfg.EtcdIP,
 		"--host",
 	}
 	if overlays {
@@ -54,18 +51,19 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(tag string, uname sp.Tuname, conf string, namedAddr sp.Taddrs, overlays bool) (*Kernel, error) {
+func MkKernelClntStart(scfg *config.SigmaConfig, conf string, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	ip, err := Start(kernelId, tag, conf, namedAddr, overlays)
+	ip, err := Start(kernelId, scfg, conf, overlays)
 	if err != nil {
 		return nil, err
 	}
-	return MkKernelClnt(kernelId, uname, ip, namedAddr)
+	db.DPrintf(db.ALWAYS, "Got IP %v", ip)
+	return MkKernelClnt(kernelId, scfg)
 }
 
-func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Taddrs) (*Kernel, error) {
+func MkKernelClnt(kernelId string, scfg *config.SigmaConfig) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s\n", kernelId)
-	sc, err := sigmaclnt.MkSigmaClntRootInit(uname, ip, namedAddr)
+	sc, err := sigmaclnt.MkSigmaClntRootInit(scfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make sigma clnt root init")
 		return nil, err
@@ -91,8 +89,8 @@ func MkKernelClnt(kernelId string, uname sp.Tuname, ip string, namedAddr sp.Tadd
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
-func (k *Kernel) NewSigmaClnt(uname sp.Tuname) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.MkSigmaClntRootInit(uname, k.GetLocalIP(), k.SigmaClnt.NamedAddr())
+func (k *Kernel) NewSigmaClnt(scfg *config.SigmaConfig) (*sigmaclnt.SigmaClnt, error) {
+	return sigmaclnt.MkSigmaClntRootInit(scfg)
 }
 
 func (k *Kernel) Shutdown() error {

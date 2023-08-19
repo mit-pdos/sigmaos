@@ -67,7 +67,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (
 	if how == HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
-		return kproc.RunKernelProc(p, clnt.NamedAddr(), clnt.Realm(), nil)
+		return kproc.RunKernelProc(clnt.SigmaConfig(), p, clnt.Realm(), nil)
 	}
 	return nil, nil
 }

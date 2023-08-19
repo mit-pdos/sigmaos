@@ -5,14 +5,17 @@ import (
 	"os/exec"
 	"syscall"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
-func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
+func RunKernelProc(parentCfg *config.SigmaConfig, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	p.Finalize("")
+	childCfg := config.NewChildSigmaConfig(parentCfg, p)
+	p.AppendEnv(config.SIGMACONFIG, childCfg.Marshal())
 	env := p.GetEnv()
 	//	s, err := namedAddr.Taddrs2String()
 	//	if err != nil {
@@ -30,7 +33,7 @@ func RunKernelProc(p *proc.Proc, namedAddr sp.Taddrs, realm sp.Trealm, extra []*
 	cmd.ExtraFiles = extra
 	cmd.Env = env
 
-	db.DPrintf(db.KERNEL, "RunKernelProc %v %v env %v\n", p, namedAddr, env)
+	db.DPrintf(db.KERNEL, "RunKernelProc %v env %v", p, env)
 
 	if err := cmd.Start(); err != nil {
 		return nil, err

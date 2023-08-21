@@ -238,7 +238,8 @@ func (bl *Balancer) monitor() {
 }
 
 // Monitor if i am connected; if not, terminate myself.  Another
-// balancer will take over.
+// balancer will take over.  XXX replace by checking if leaderclnt's
+// session lease is still valid.
 func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)

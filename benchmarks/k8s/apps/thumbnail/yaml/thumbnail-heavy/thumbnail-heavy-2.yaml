@@ -1,12 +1,22 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: thumbnail-benchrealm1
+  name: thumbnail2-benchrealm1
+  labels:
+    foo: bar
 spec:
-  completions: 50
-  parallelism: 50
+  completions: XXX
+  parallelism: XXX
   template:
     spec:
+      nodeName: node2.yizhe-159693.ulambda-pg0.wisc.cloudlab.us
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            foo: bar
       restartPolicy: OnFailure
       containers:
       - name: thumbnail-compute

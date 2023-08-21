@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
 	"github.com/stretchr/testify/assert"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
@@ -956,6 +955,7 @@ func TestK8sImgResize(t *testing.T) {
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
 	monitorK8sCPUUtilScraper(rootts, p, "BestEffort")
+	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail.yaml").Start()
 	for !k8sJobHasCompleted(K8S_JOB_NAME) {
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -1128,7 +1128,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	monitorK8sCPUUtilScraper(rootts, p2, "Burstable")
 	monitorK8sCPUUtilScraper(rootts, p1, "BestEffort")
 	// Run image resize job
-	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail.yaml").Start()
+	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail-heavy/").Start()
 	// Wait for image resize jobs to set up.
 	db.DPrintf(db.TEST, "Setup phase done.")
 	// Kick off image resize jobs.
@@ -1140,7 +1140,8 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
 	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
-	for !k8sJobHasCompleted(K8S_JOB_NAME) {
+	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") && 
+			k8sJobHasCompleted("thumbnail3-benchrealm1")&&k8sJobHasCompleted("thumbnail4-benchrealm1")) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	rs0.Append(time.Since(start), 1)

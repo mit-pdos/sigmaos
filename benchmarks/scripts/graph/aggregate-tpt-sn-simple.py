@@ -148,9 +148,10 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
+  #ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
+    ax[idx].grid()
     if maxval > 0:
       ax[idx].set_xlim(right=maxval)
   # plt.legend(lns, labels)
@@ -160,15 +161,15 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
 def setup_graph(nplots, total_ncore):
   figsize=(6.4, 4.8)
   if nplots == 1:
-    figsize=(6.4, 2.4)
+    figsize=(6.4, 3.2)
   if nplots == 1:
-    np = 1
+    pcount = 1
   else:
     if total_ncore > 0:
-      np = nplots + 1
+      pcount = nplots + 1
     else:
-      np = nplots
-  fig, tptax = plt.subplots(np, figsize=figsize, sharex=True)
+      pcount = nplots
+  fig, tptax = plt.subplots(pcount, figsize=figsize, sharex=True)
   if nplots == 1:
     coresax = []
     tptax = [ tptax ]
@@ -184,8 +185,10 @@ def setup_graph(nplots, total_ncore):
     for ax in tptax:
       coresax.append(ax)
   for ax in coresax:
-    ax.set_ylim((0, total_ncore + 1))
+    ax.grid()
+    ax.set_ylim((0, total_ncore + total_ncore/4))
     ax.set_ylabel("Cores Utilized")
+    ax.yaxis.set_ticks(np.arange(0, total_ncore + total_ncore/4, total_ncore/4))
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, mr_realm, total_ncore, percentile, k8s, xmin, xmax):
@@ -194,7 +197,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, total_ncore, percen
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
-    if mr_realm != "":
+    if mr_realm != None:
       procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
       assert(len(procd_tpts) == 2)
   procd_range = get_time_range(procd_tpts)
@@ -210,9 +213,9 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, total_ncore, percen
   plots = []
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
+    line_style = "solid"
+    marker = "D"
     if len(procd_tpts) > 1:
-      line_style = "solid"
-      marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
       p = add_data_to_graph(coresax[0], x, y, "Image Resize LC CPU", "blue", line_style, marker)
       plots.append(p)
@@ -224,7 +227,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, total_ncore, percen
       tptax = ta
     else:
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Cores Utilized", "green", "--", False)
+      p = add_data_to_graph(coresax[0], x, y, "Cores Utilized", "orange", line_style, marker)
+      busy_idx = np.where(y >= 0.5)[0]
+      print("BE Busy time", np.sum(np.diff(x)[busy_idx])/1000)
+
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

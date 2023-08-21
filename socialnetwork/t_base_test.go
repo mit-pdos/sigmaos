@@ -35,7 +35,7 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nshard int) *TstateSN {
 			assert.Nil(tssn.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, true, test.Overlays)
+	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nshard, false, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
 	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")

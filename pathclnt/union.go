@@ -21,12 +21,12 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
 	}
-	db.DPrintf(db.WALK, "unionScan: target: %v\n", string(target))
+	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
 	mnt, err := sp.MkMount(target)
 	if err != nil {
 		return sp.NoFid, nil
 	}
-	db.DPrintf(db.WALK, "unionScan: mnt: %v\n", mnt)
+	db.DPrintf(db.WALK, "unionScan: %v mnt: %v\n", name, mnt)
 	if union.UnionMatch(pathc.scfg.LocalIP, q, mnt) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {

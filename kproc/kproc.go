@@ -14,8 +14,8 @@ import (
 // To run kernel procs
 func RunKernelProc(parentCfg *config.SigmaConfig, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	p.Finalize("")
-	childCfg := config.NewChildSigmaConfig(parentCfg, p)
-	p.AppendEnv(config.SIGMACONFIG, childCfg.Marshal())
+	childCfg := proc.NewChildSigmaConfig(parentCfg, p)
+	p.SetSigmaConfig(childCfg)
 	env := p.GetEnv()
 	//	s, err := namedAddr.Taddrs2String()
 	//	if err != nil {

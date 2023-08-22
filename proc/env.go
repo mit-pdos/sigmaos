@@ -39,10 +39,12 @@ func GetPid() sp.Tpid {
 	return sp.Tpid(os.Getenv(SIGMAPID))
 }
 
+// XXX Remove
 func GetProgram() string {
 	return os.Getenv(SIGMAPROGRAM)
 }
 
+// XXX Remove
 func GetName() string {
 	return GetProgram() + "-" + GetPid().String()
 }

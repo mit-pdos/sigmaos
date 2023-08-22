@@ -18,4 +18,5 @@ message ProcProto {
   string realmStr = 12;
   string sharedTarget = 13;
   string kernelId = 14;
+  string sigmaConfig = 15;
 }

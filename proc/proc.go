@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"sigmaos/config"
 	sp "sigmaos/sigmap"
 )
 
@@ -164,6 +165,15 @@ func (p *Proc) String() string {
 }
 
 // ========== Getters and Setters ==========
+
+func (p *Proc) SetSigmaConfig(scfg *config.SigmaConfig) {
+	p.SigmaConfig = scfg.Marshal()
+	p.AppendEnv(config.SIGMACONFIG, scfg.Marshal())
+}
+
+func (p *Proc) GetSigmaConfig() *config.SigmaConfig {
+	return config.Unmarshal(p.SigmaConfig)
+}
 
 func (p *Proc) GetPid() sp.Tpid {
 	return sp.Tpid(p.ProcProto.PidStr)

@@ -2,12 +2,11 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"runtime/debug"
 	"strconv"
 
-	db "sigmaos/debug"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -16,6 +15,8 @@ const (
 	SIGMADEBUG  = "SIGMADEBUG"
 	SIGMAPERF   = "SIGMAPERF"
 )
+
+// TODO: make into proto
 
 type SigmaConfig struct {
 	PID        sp.Tpid   `json:pid,omitempty`
@@ -78,30 +79,29 @@ func NewAddedSigmaConfig(sc *SigmaConfig, idx int) *SigmaConfig {
 	return sc2
 }
 
-func NewChildSigmaConfig(pcfg *SigmaConfig, p *proc.Proc) *SigmaConfig {
-	sc2 := NewSigmaConfig()
-	*sc2 = *pcfg
-	sc2.Uname = sp.Tuname(proc.GetPid())
-	// TODO: anything else?
-	return sc2
-}
-
 func (sc *SigmaConfig) Marshal() string {
 	b, err := json.Marshal(sc)
 	if err != nil {
-		db.DFatalf("Error marshal sigmaconfig: %v")
+		log.Fatalf("Error marshal sigmaconfig: %v")
 	}
 	return string(b)
 }
 
+func Unmarshal(scstr string) *SigmaConfig {
+	sc := &SigmaConfig{}
+	err := json.Unmarshal([]byte(scstr), sc)
+	if err != nil {
+		log.Fatalf("Error unmarshal SigmaConfig %v", err)
+	}
+	return sc
+}
+
 // XXX When should I not get the config?
 func GetSigmaConfig() *SigmaConfig {
-	sc := NewSigmaConfig()
 	scstr := os.Getenv(SIGMACONFIG)
 	if scstr == "" {
 		stack := debug.Stack()
-		db.DFatalf("%s\nError: No Sigma Config", stack)
+		log.Fatalf("%s\nError: No Sigma Config", stack)
 	}
-	json.Unmarshal([]byte(scstr), sc)
-	return sc
+	return Unmarshal(scstr)
 }

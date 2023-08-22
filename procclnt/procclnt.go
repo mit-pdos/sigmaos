@@ -111,6 +111,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 	// XXX set other fields? procdir etc?
 	childCfg := proc.NewChildSigmaConfig(clnt.SigmaConfig(), p)
 	p.SetSigmaConfig(childCfg)
+	p.Finalize(kernelId)
 
 	// Set the realm id.
 	if p.RealmStr == "" {

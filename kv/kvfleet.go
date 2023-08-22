@@ -168,12 +168,15 @@ func (kvf *KVFleet) Stop() error {
 
 func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto, repl string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdmcpu))
-	gm := groupmgr.Start(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto, repl}, job, 0, nbal, crashbal, 0, 0)
-	return gm
+	cfg := groupmgr.NewGroupConfig(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto, repl}, 0, job)
+	cfg.SetTest(crashbal, 0, 0)
+	return cfg.Start(nbal)
 }
 
 func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, ncrash int) (*groupmgr.GroupMgr, error) {
-	gm := groupmgr.Start(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, JobDir(job), mcpu, ncrash, CRASHKVD, 0, 0)
+	cfg := groupmgr.NewGroupConfig(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, mcpu, JobDir(job))
+	cfg.SetTest(CRASHKVD, 0, 0)
+	gm := cfg.Start(ncrash)
 	_, err := kvgrp.WaitStarted(sc.FsLib, JobDir(job), grp)
 	if err != nil {
 		return nil, err

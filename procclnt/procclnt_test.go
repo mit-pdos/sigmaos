@@ -715,7 +715,8 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Start a bunch of replicated spinner procs.
-	sm := groupmgr.Start(ts.SigmaClnt, N_REPL, "spinner", []string{}, OUTDIR, 0, N_REPL, 0, 0, 0)
+	cfg := groupmgr.NewGroupConfig(ts.SigmaClnt, N_REPL, "spinner", []string{}, 0, OUTDIR)
+	sm := cfg.Start(0)
 	nChildren += N_REPL
 
 	// Wait for them to spawn.

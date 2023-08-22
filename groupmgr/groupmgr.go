@@ -22,23 +22,76 @@ import (
 //
 
 type GroupMgr struct {
-	done    int32
 	members []*member
+	done    int32
 	ch      chan bool
 }
 
-type member struct {
+type GroupMgrConfig struct {
 	*sigmaclnt.SigmaClnt
-	pid       proc.Tpid
 	bin       string
 	args      []string
 	job       string
 	mcpu      proc.Tmcpu
-	crash     int
 	nReplicas int
+
+	// For testing purposes
+	crash     int
 	partition int
 	netfail   int
-	started   bool
+}
+
+// If n == 0, run only one member (i.e., no hot standby's or replication)
+func NewGroupConfig(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, mcpu proc.Tmcpu, job string) *GroupMgrConfig {
+	return &GroupMgrConfig{
+		SigmaClnt: sc,
+		nReplicas: n,
+		bin:       bin,
+		args:      append([]string{job}, args...),
+		mcpu:      mcpu,
+		job:       job,
+	}
+}
+
+func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
+	cfg.crash = crash
+	cfg.partition = partition
+	cfg.netfail = netfail
+}
+
+// ncrash = number of group members which may crash.
+func (cfg *GroupMgrConfig) Start(ncrash int) *GroupMgr {
+	N := cfg.nReplicas
+	if cfg.nReplicas == 0 {
+		N = 1
+	}
+	gm := &GroupMgr{}
+	gm.ch = make(chan bool)
+	gm.members = make([]*member, N)
+	for i := 0; i < N; i++ {
+		crashMember := cfg.crash
+		if i+1 > ncrash {
+			crashMember = 0
+		} else {
+			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.args, i, crashMember)
+		}
+		gm.members[i] = makeMember(cfg, crashMember)
+	}
+	done := make(chan *procret)
+	go gm.manager(done, N)
+
+	// make the manager start the members
+	for i := 0; i < N; i++ {
+		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
+	}
+	return gm
+}
+
+type member struct {
+	*GroupMgrConfig
+	pid     proc.Tpid
+	started bool
+	crash   int
 }
 
 type procret struct {
@@ -51,8 +104,8 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, mcpu proc.Tmcpu, crash, nReplicas, partition, netfail int) *member {
-	return &member{SigmaClnt: sc, bin: bin, args: append([]string{job}, args...), job: job, mcpu: mcpu, crash: crash, nReplicas: nReplicas, partition: partition, netfail: netfail}
+func makeMember(cfg *GroupMgrConfig, crash int) *member {
+	return &member{GroupMgrConfig: cfg, crash: crash}
 }
 
 func (m *member) spawn() error {
@@ -91,37 +144,6 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
 	done <- &procret{i, err, status}
-}
-
-// If n == 0, run only one member (i.e., no hot standby's or replication)
-// ncrash = number of group members which may crash.
-func Start(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, job string, mcpu proc.Tmcpu, ncrash, crash, partition, netfail int) *GroupMgr {
-	var N int
-	if n > 0 {
-		N = n
-	} else {
-		N = 1
-	}
-	gm := &GroupMgr{}
-	gm.ch = make(chan bool)
-	gm.members = make([]*member, N)
-	for i := 0; i < N; i++ {
-		crashMember := crash
-		if i+1 > ncrash {
-			crashMember = 0
-		} else {
-			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", args, i, crashMember)
-		}
-		gm.members[i] = makeMember(sc, bin, args, job, mcpu, crashMember, n, partition, netfail)
-	}
-	done := make(chan *procret)
-	go gm.manager(done, N)
-
-	// make the manager start the members
-	for i := 0; i < N; i++ {
-		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
-	}
-	return gm
 }
 
 func (gm *GroupMgr) start(i int, done chan *procret) {

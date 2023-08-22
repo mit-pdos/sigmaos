@@ -129,7 +129,9 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 }
 
 func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int) *groupmgr.GroupMgr {
-	return groupmgr.Start(sc, ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, jobname, 0, ncoord, crashcoord, 0, 0)
+	cfg := groupmgr.NewGroupConfig(sc, ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz)}, 0, jobname)
+	cfg.SetTest(crashcoord, 0, 0)
+	return cfg.Start(ncoord)
 }
 
 // XXX run as a proc?

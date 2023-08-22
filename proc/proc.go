@@ -168,6 +168,7 @@ func (p *Proc) String() string {
 
 func (p *Proc) SetSigmaConfig(scfg *config.SigmaConfig) {
 	p.SigmaConfig = scfg.Marshal()
+	// TODO: don't append every time.
 	p.AppendEnv(config.SIGMACONFIG, scfg.Marshal())
 }
 

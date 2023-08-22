@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/bootkernelclnt"
 	"sigmaos/config"
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
@@ -104,7 +105,12 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, tag)
+	// XXX What should we set localIP to?
+	localIP, err1 := container.LocalIP()
+	if err1 != nil {
+		db.DFatalf("Error local IP: %v", err1)
+	}
+	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, localIP, tag)
 	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel

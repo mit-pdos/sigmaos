@@ -54,19 +54,21 @@ func NewSigmaConfig() *SigmaConfig {
 	}
 }
 
-func NewBootSigmaConfig(uname sp.Tuname, etcdIP string) *SigmaConfig {
+func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.EtcdIP = etcdIP
+	sc.LocalIP = localIP
 	sc.Uname = uname
 	sc.Realm = sp.ROOTREALM
 	return sc
 }
 
-func NewTestSigmaConfig(realm sp.Trealm, etcdIP, buildTag string) *SigmaConfig {
+func NewTestSigmaConfig(realm sp.Trealm, etcdIP, localIP, buildTag string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.Uname = "test"
 	sc.Realm = realm
 	sc.EtcdIP = etcdIP
+	sc.LocalIP = localIP
 	sc.BuildTag = buildTag
 	return sc
 }

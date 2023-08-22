@@ -89,9 +89,9 @@ func (cfg *GroupMgrConfig) Start(ncrash int) *GroupMgr {
 
 type member struct {
 	*GroupMgrConfig
-	pid     proc.Tpid
-	started bool
-	crash   int
+	pid    proc.Tpid
+	crash  int
+	nstart int
 }
 
 type procret struct {
@@ -140,7 +140,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 	}
 	start <- nil
 	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.bin, i, m.pid)
-	m.started = true
+	m.nstart += 1
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
 	done <- &procret{i, err, status}
@@ -148,7 +148,7 @@ func (m *member) run(i int, start chan error, done chan *procret) {
 
 func (gm *GroupMgr) start(i int, done chan *procret) {
 	// XXX hack
-	if gm.members[i].bin == "kvd" && gm.members[i].started {
+	if gm.members[i].bin == "kvd" && gm.members[i].nstart > 0 {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		go func() {
@@ -188,18 +188,22 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 		}
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].bin)
+	for i := 0; i < len(gm.members); i++ {
+		db.DPrintf(db.ALWAYS, "%v nstart %d exit\n", gm.members[i].bin, gm.members[i].nstart)
+	}
 	gm.ch <- true
+
 }
 
 func (gm *GroupMgr) Wait() {
 	<-gm.ch
 }
 
+// members may not run in order of members, and blocked waiting for
+// becoming leader, while the primary keeps running, because it is
+// later in the list. So, start separate go routine to evict each
+// member.
 func (gm *GroupMgr) Stop() error {
-	// members may not run in order of members, and blocked
-	// waiting for becoming leader, while the primary keeps
-	// running, because it is later in the list. So, start
-	// separate go routine to evict each member.
 	atomic.StoreInt32(&gm.done, 1)
 	var err error
 	for _, c := range gm.members {

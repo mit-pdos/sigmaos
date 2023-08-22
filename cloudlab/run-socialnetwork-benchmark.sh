@@ -43,8 +43,8 @@ named_ip="10.10.1.2"
 mongo_url="10.10.1.1:4407"
 test_driver=11
 img_path="1.jpg"
-n_resize="1"
-n_resize_k8="0"
+n_resize="48"
+n_resize_k8="12"
 
 # directories
 ROOT_DIR=$(realpath $(dirname $0)/..)
@@ -188,10 +188,10 @@ graph_k8s_sn() {
 
 
 # ========== Run benchmarks ==========
-#bench_sigmaos_sn
-#bench_k8s_sn
+bench_sigmaos_sn
+bench_k8s_sn
 #bench_sigmaos_simple
 
 graph_sigmaos_sn
-#graph_k8s_sn
+graph_k8s_sn
 #graph_simaos_simple

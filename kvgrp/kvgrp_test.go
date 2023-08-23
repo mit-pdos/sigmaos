@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
 	"sigmaos/rand"
@@ -47,6 +48,7 @@ func makeTstate(t *testing.T, nrepl int, persist bool) *Tstate {
 
 func (ts *Tstate) Shutdown() {
 	ts.Tstate.Shutdown()
+	ts.DetachAll()
 }
 
 func TestStartStopRepl0(t *testing.T) {
@@ -84,18 +86,27 @@ func TestStartStopReplN(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRestart(t *testing.T) {
-	ts := makeTstate(t, 0, true)
+func (ts *Tstate) testRecover() {
 	ts.Shutdown()
-	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
-	ts.Tstate = test.MakeTstateAll(t)
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+	ts.Tstate = test.MakeTstateAll(ts.T)
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(t, err)
+	assert.Nil(ts.T, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	gms[0].Stop()
 	ts.RmDir(kvgrp.KVDIR)
 	ts.Shutdown()
+}
+
+func TestRestartRepl0(t *testing.T) {
+	ts := makeTstate(t, 0, true)
+	ts.testRecover()
+}
+
+func TestRestartReplN(t *testing.T) {
+	ts := makeTstate(t, N_REPL, true)
+	ts.testRecover()
 }

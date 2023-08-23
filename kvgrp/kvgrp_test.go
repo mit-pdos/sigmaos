@@ -99,7 +99,7 @@ func (ts *Tstate) testRecover() {
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].Stop()
-	ts.RmDir(kvgrp.KVDIR)
+	ts.RmDir(groupmgr.GRPMGRDIR)
 	ts.Shutdown()
 }
 

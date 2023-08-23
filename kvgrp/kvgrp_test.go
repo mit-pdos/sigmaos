@@ -3,6 +3,7 @@ package kvgrp_test
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -86,7 +87,7 @@ func TestStartStopReplN(t *testing.T) {
 func TestRestart(t *testing.T) {
 	ts := makeTstate(t, 0, true)
 	ts.Shutdown()
-	ts.RmDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 	ts.Tstate = test.MakeTstateAll(t)
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")

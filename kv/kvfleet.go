@@ -18,27 +18,22 @@ const (
 	NKVGRP          = 10
 	NSHARD          = 10 * NKVGRP
 	NBALANCER       = 3
-	KVDIR           = "name/kv/"
 	KVCONF          = "config"
 	KVBALANCER      = "kv-balancer"
 	KVBALANCERELECT = "kv-balancer-elect"
 	KVBALANCERCTL   = "ctl"
 )
 
-func JobDir(job string) string {
-	return path.Join(KVDIR, job)
-}
-
 func KVConfig(job string) string {
-	return path.Join(JobDir(job), KVCONF)
+	return path.Join(kvgrp.JobDir(job), KVCONF)
 }
 
 func KVBalancer(job string) string {
-	return path.Join(JobDir(job), KVBALANCER)
+	return path.Join(kvgrp.JobDir(job), KVBALANCER)
 }
 
 func KVBalancerElect(job string) string {
-	return path.Join(JobDir(job), KVBALANCERELECT)
+	return path.Join(kvgrp.JobDir(job), KVBALANCERELECT)
 }
 
 func KVBalancerCtl(job string) string {
@@ -46,7 +41,7 @@ func KVBalancerCtl(job string) string {
 }
 
 func kvGrpPath(job, kvd string) string {
-	return path.Join(JobDir(job), kvd)
+	return path.Join(kvgrp.JobDir(job), kvd)
 }
 
 func kvShardPath(job, kvd string, shard cache.Tshard) string {
@@ -85,9 +80,9 @@ func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl, 
 	}
 
 	// May already exit
-	kvf.MkDir(KVDIR, 0777)
+	kvf.MkDir(kvgrp.KVDIR, 0777)
 	// Should not exist.
-	if err := kvf.MkDir(JobDir(kvf.job), 0777); err != nil {
+	if err := kvf.MkDir(kvgrp.JobDir(kvf.job), 0777); err != nil {
 		return nil, err
 	}
 	kvf.kvdgms = []*groupmgr.GroupMgr{}
@@ -168,16 +163,16 @@ func (kvf *KVFleet) Stop() error {
 
 func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvdmcpu proc.Tmcpu, crashhelper, auto, repl string) *groupmgr.GroupMgr {
 	kvdnc := strconv.Itoa(int(kvdmcpu))
-	cfg := groupmgr.NewGroupConfig(sc, nbal, KVBALANCER, []string{crashhelper, kvdnc, auto, repl}, 0, job)
+	cfg := groupmgr.NewGroupConfig(nbal, KVBALANCER, []string{crashhelper, kvdnc, auto, repl}, 0, job)
 	cfg.SetTest(crashbal, 0, 0)
-	return cfg.Start(nbal)
+	return cfg.StartGrpMgr(sc, nbal)
 }
 
 func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, ncrash int) (*groupmgr.GroupMgr, error) {
-	cfg := groupmgr.NewGroupConfig(sc, repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, mcpu, JobDir(job))
+	cfg := groupmgr.NewGroupConfig(repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, mcpu, job)
 	cfg.SetTest(CRASHKVD, 0, 0)
-	gm := cfg.Start(ncrash)
-	_, err := kvgrp.WaitStarted(sc.FsLib, JobDir(job), grp)
+	gm := cfg.StartGrpMgr(sc, ncrash)
+	_, err := kvgrp.WaitStarted(sc.FsLib, kvgrp.JobDir(job), grp)
 	if err != nil {
 		return nil, err
 	}
@@ -185,5 +180,5 @@ func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, n
 }
 
 func RemoveJob(fsl *fslib.FsLib, job string) error {
-	return fsl.RmDir(JobDir(job))
+	return fsl.RmDir(kvgrp.JobDir(job))
 }

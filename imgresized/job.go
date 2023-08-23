@@ -9,6 +9,6 @@ import (
 )
 
 func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(sc, 1, "imgresized", []string{strconv.Itoa(0), strconv.Itoa(int(workerMcpu))}, 0, job)
-	return cfg.Start(0)
+	cfg := groupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(0), strconv.Itoa(int(workerMcpu))}, 0, job)
+	return cfg.StartGrpMgr(sc, 0)
 }

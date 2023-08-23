@@ -32,7 +32,12 @@ const (
 	GRPCONF     = "-conf"
 	GRPELECT    = "-elect"
 	CTL         = "ctl"
+	KVDIR       = sp.NAMED + "kv/"
 )
+
+func JobDir(job string) string {
+	return path.Join(KVDIR, job)
+}
 
 func GrpPath(jobdir string, grp string) string {
 	return path.Join(jobdir, grp)
@@ -219,7 +224,7 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	return nil
 }
 
-func RunMember(jobdir, grp string, public bool, nrepl int) {
+func RunMember(job, grp string, public bool, nrepl int) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
@@ -228,11 +233,11 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
 	g.SigmaClnt = sc
-	g.ec, err = electclnt.MakeElectClnt(g.FsLib, grpElectPath(jobdir, grp), 0777)
+	g.jobdir = JobDir(job)
+	g.ec, err = electclnt.MakeElectClnt(g.FsLib, grpElectPath(g.jobdir, grp), 0777)
 	if err != nil {
 		db.DFatalf("MakeElectClnt %v\n", err)
 	}
-	g.jobdir = jobdir
 
 	db.DPrintf(db.KVGRP, "Starting replica with replication level %v", nrepl)
 

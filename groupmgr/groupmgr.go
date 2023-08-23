@@ -2,15 +2,19 @@ package groupmgr
 
 import (
 	"fmt"
+	"log"
+	"path"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -21,19 +25,23 @@ import (
 // OK status).
 //
 
+const (
+	GRPMGRDIR = sp.NAMED + "grpmgr"
+)
+
 type GroupMgr struct {
+	*sigmaclnt.SigmaClnt
 	members []*member
 	done    int32
 	ch      chan bool
 }
 
 type GroupMgrConfig struct {
-	*sigmaclnt.SigmaClnt
-	bin       string
-	args      []string
-	job       string
-	mcpu      proc.Tmcpu
-	nReplicas int
+	Program   string
+	Args      []string
+	Job       string
+	Mcpu      proc.Tmcpu
+	NReplicas int
 
 	// For testing purposes
 	crash     int
@@ -42,14 +50,13 @@ type GroupMgrConfig struct {
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
-func NewGroupConfig(sc *sigmaclnt.SigmaClnt, n int, bin string, args []string, mcpu proc.Tmcpu, job string) *GroupMgrConfig {
+func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *GroupMgrConfig {
 	return &GroupMgrConfig{
-		SigmaClnt: sc,
-		nReplicas: n,
-		bin:       bin,
-		args:      append([]string{job}, args...),
-		mcpu:      mcpu,
-		job:       job,
+		NReplicas: n,
+		Program:   bin,
+		Args:      append([]string{job}, args...),
+		Mcpu:      mcpu,
+		Job:       job,
 	}
 }
 
@@ -59,13 +66,38 @@ func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
 	cfg.netfail = netfail
 }
 
+func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
+	fsl.MkDir(GRPMGRDIR, 0777)
+	pn := path.Join(GRPMGRDIR, cfg.Job)
+	if err := fsl.PutFileJsonAtomic(pn, 0777, cfg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
+	gms := make([]*GroupMgr, 0)
+	sc.ProcessDir(GRPMGRDIR, func(st *sp.Stat) (bool, error) {
+		pn := path.Join(GRPMGRDIR, st.Name)
+		cfg := &GroupMgrConfig{}
+		if err := sc.GetFileJson(pn, cfg); err != nil {
+			return true, err
+		}
+		log.Printf("cfg %v\n", cfg)
+		gms = append(gms, cfg.StartGrpMgr(sc, 0))
+		return false, nil
+
+	})
+	return gms, nil
+}
+
 // ncrash = number of group members which may crash.
-func (cfg *GroupMgrConfig) Start(ncrash int) *GroupMgr {
-	N := cfg.nReplicas
-	if cfg.nReplicas == 0 {
+func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *GroupMgr {
+	N := cfg.NReplicas
+	if cfg.NReplicas == 0 {
 		N = 1
 	}
-	gm := &GroupMgr{}
+	gm := &GroupMgr{SigmaClnt: sc}
 	gm.ch = make(chan bool)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
@@ -73,9 +105,9 @@ func (cfg *GroupMgrConfig) Start(ncrash int) *GroupMgr {
 		if i+1 > ncrash {
 			crashMember = 0
 		} else {
-			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.args, i, crashMember)
+			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.Args, i, crashMember)
 		}
-		gm.members[i] = makeMember(cfg, crashMember)
+		gm.members[i] = makeMember(sc, cfg, crashMember)
 	}
 	done := make(chan *procret)
 	go gm.manager(done, N)
@@ -88,6 +120,7 @@ func (cfg *GroupMgrConfig) Start(ncrash int) *GroupMgr {
 }
 
 type member struct {
+	*sigmaclnt.SigmaClnt
 	*GroupMgrConfig
 	pid    proc.Tpid
 	crash  int
@@ -104,20 +137,20 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(cfg *GroupMgrConfig, crash int) *member {
-	return &member{GroupMgrConfig: cfg, crash: crash}
+func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, crash int) *member {
+	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash}
 }
 
 func (m *member) spawn() error {
-	p := proc.MakeProc(m.bin, m.args)
-	p.SetMcpu(m.mcpu)
+	p := proc.MakeProc(m.Program, m.Args)
+	p.SetMcpu(m.Mcpu)
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
-	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
+	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).
-	if m.mcpu == 1000 && strings.Contains(m.bin, "kvd") {
+	if m.Mcpu == 1000 && strings.Contains(m.Program, "kvd") {
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
 	}
 	db.DPrintf(db.GROUPMGR, "SpawnBurst p %v", p)
@@ -133,22 +166,22 @@ func (m *member) spawn() error {
 }
 
 func (m *member) run(i int, start chan error, done chan *procret) {
-	db.DPrintf(db.GROUPMGR, "spawn %d member %v", i, m.bin)
+	db.DPrintf(db.GROUPMGR, "spawn %d member %v", i, m.Program)
 	if err := m.spawn(); err != nil {
 		start <- err
 		return
 	}
 	start <- nil
-	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.bin, i, m.pid)
+	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.Program, i, m.pid)
 	m.nstart += 1
 	status, err := m.WaitExit(m.pid)
-	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
+	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.Program, m.pid, status, err)
 	done <- &procret{i, err, status}
 }
 
 func (gm *GroupMgr) start(i int, done chan *procret) {
 	// XXX hack
-	if gm.members[i].bin == "kvd" && gm.members[i].nstart > 0 {
+	if gm.members[i].Program == "kvd" && gm.members[i].nstart > 0 {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		go func() {
@@ -176,20 +209,20 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 			break
 		}
 		if atomic.LoadInt32(&gm.done) == 1 {
-			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].bin, pr.member, n)
+			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, n)
 			n--
 		} else if pr.err == nil && pr.status.IsStatusOK() { // done?
-			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].bin, pr.member)
+			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr.member)
 			atomic.StoreInt32(&gm.done, 1)
 			n--
 		} else { // restart member i
-			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].bin, pr)
+			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].Program, pr)
 			gm.start(pr.member, done)
 		}
 	}
-	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].bin)
+	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
 	for i := 0; i < len(gm.members); i++ {
-		db.DPrintf(db.ALWAYS, "%v nstart %d exit\n", gm.members[i].bin, gm.members[i].nstart)
+		db.DPrintf(db.ALWAYS, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
 	}
 	gm.ch <- true
 

@@ -30,6 +30,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
+	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -123,7 +124,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 		db.DFatalf("Marshal failed %v\n", error)
 	}
 
-	if err := bl.lc.LeadAndFence(b, []string{JobDir(bl.job)}); err != nil {
+	if err := bl.lc.LeadAndFence(b, []string{kvgrp.JobDir(bl.job)}); err != nil {
 		db.DFatalf("%v: LeadAndFence %v\n", proc.GetName(), err)
 	}
 

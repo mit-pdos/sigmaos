@@ -228,13 +228,13 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
   procd_range = get_time_range(procd_tpts)
-  hotel_tpts = read_tpts(input_dir, "social")
+  hotel_tpts = read_tpts(input_dir, "hotel")
   hotel_range = get_time_range(hotel_tpts)
   hotel_lats = read_latencies(input_dir, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
   time_range = get_overall_time_range([mr_range, hotel_range, hotel_lat_range])
-  #time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
+#  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
@@ -250,7 +250,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     if len(hotel_lats) > 0 and len(hotel_tpts) > 0:
       fig, tptax, coresax = setup_graph(2, units, total_ncore)
     else:
-      fig, tptax, coresax = setup_graph(2, units, total_ncore)
+      fig, tptax, coresax = setup_graph(1, units, total_ncore)
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
@@ -258,15 +258,15 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Social Network (LC) " + str(percentile) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel (LC) " + str(percentile) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Social Network (LC) avg lat", "purple", "-", "")
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel (LC) avg lat", "purple", "-", "")
     plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Social Network (LC) tpt", "blue", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC) tpt", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range, xmin, xmax, step_size=1000)
@@ -274,7 +274,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     x, y = buckets_to_lists(mr_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Image Resize (BE) tpt", "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR (BE) tpt", "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
@@ -282,10 +282,10 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       line_style = "solid"
       marker = "D"
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Social Network (LC) CPU", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "Image Resize (BE) CPU", "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "MR (BE) CPU", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

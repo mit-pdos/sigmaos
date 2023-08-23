@@ -112,6 +112,10 @@ for vm in $vms; do
     nproc
   fi
 
+  cd ~/
+  aws s3 --profile me-mit cp s3://9ps3/img-save/1.jpg .
+  aws s3 --profile me-mit cp s3://9ps3/img-save/6.jpg .
+
   cd ulambda
 
   echo "$PWD $SIGMADEBUG"
@@ -125,12 +129,14 @@ for vm in $vms; do
     echo "START ${SIGMANAMED} ${KERNELID}"
     ./make.sh --norace linux
     ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
-    docker cp imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
-    docker cp imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

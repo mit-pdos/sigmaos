@@ -1,7 +1,8 @@
 package kvgrp
 
 //
-// A group of servers with a primary and one or more backups
+// A group of servers. If nrepl > 0, then the group forms a raft
+// group.
 //
 
 import (
@@ -10,16 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/cachesrv"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/repl"
-	"sigmaos/replraft"
-	"sigmaos/replsrv"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -27,12 +24,10 @@ import (
 )
 
 const (
-	GRPRAFTCONF = "-raft-conf"
-	TMP         = ".tmp"
-	GRPCONF     = "-conf"
-	GRPELECT    = "-elect"
-	CTL         = "ctl"
-	KVDIR       = sp.NAMED + "kv/"
+	GRPCONF  = "-conf"
+	GRPELECT = "-elect"
+	GRPSEM   = "-sem"
+	KVDIR    = sp.NAMED + "kv/"
 )
 
 func JobDir(job string) string {
@@ -47,12 +42,12 @@ func grpConfPath(jobdir, grp string) string {
 	return GrpPath(jobdir, grp) + GRPCONF
 }
 
-func grpTmpConfPath(jobdir, grp string) string {
-	return grpConfPath(jobdir, grp) + TMP
-}
-
 func grpElectPath(jobdir, grp string) string {
 	return GrpPath(jobdir, grp) + GRPELECT
+}
+
+func grpSemPath(jobdir, grp string) string {
+	return GrpPath(jobdir, grp) + GRPSEM
 }
 
 type Group struct {
@@ -60,13 +55,14 @@ type Group struct {
 	jobdir string
 	grp    string
 	ip     string
+	myid   int
 	*sigmaclnt.SigmaClnt
 	ssrv *sigmasrv.SigmaSrv
 
 	// We use an electclnt instead of a leaderclnt, since we don't
 	// need epochs because the config is stored in etcd. If we lose
 	// our connection to etcd & our leadership, we won't be able to
-	// write the config file anyway.
+	// write the config file anyway.  XXX still accurate?
 	ec *electclnt.ElectClnt
 
 	isBusy bool
@@ -87,27 +83,21 @@ func (g *Group) clearBusy() {
 }
 
 func (g *Group) AcquireLeadership() {
-	db.DPrintf(db.KVGRP, "%v Try acquire leadership", g.grp)
+	db.DPrintf(db.KVGRP, "%v/%v Try acquire leadership", g.grp, g.myid)
 	if err := g.ec.AcquireLeadership(nil); err != nil {
 		db.DFatalf("AcquireLeadership in group.RunMember: %v", err)
 	}
-	db.DPrintf(db.KVGRP, "%v Acquire leadership", g.grp)
+	db.DPrintf(db.KVGRP, "%v/%v Acquire leadership", g.grp, g.myid)
 }
 
 func (g *Group) ReleaseLeadership() {
 	if err := g.ec.ReleaseLeadership(); err != nil {
 		db.DFatalf("release leadership: %v", err)
 	}
-	db.DPrintf(db.KVGRP, "%v Release leadership", g.grp)
+	db.DPrintf(db.KVGRP, "%v/%v Release leadership", g.grp, g.myid)
 }
 
-func (g *Group) waitForClusterConfig() {
-	cfg := &GroupConfig{}
-	if err := g.GetFileJsonWatch(grpConfPath(g.jobdir, g.grp), cfg); err != nil {
-		db.DFatalf("Error wait for cluster config: %v", err)
-	}
-}
-
+// For clients to wait unil a group is ready to serve
 func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 	db.DPrintf(db.KVGRP, "WaitStarted: Wait for %v\n", GrpPath(jobdir, grp))
 	if _, err := fsl.GetFileWatch(GrpPath(jobdir, grp)); err != nil {
@@ -122,93 +112,19 @@ func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 	return cfg, nil
 }
 
-// Find out if the initial cluster has started by looking for the group config.
-func (g *Group) clusterStarted() bool {
-	// If the final config doesn't exist yet, the cluster hasn't started.
-	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); err != nil {
-		if serr.IsErrCode(err, serr.TErrNotfound) {
-			db.DPrintf(db.KVGRP, "didn't find conf path %v\n", grpConfPath(g.jobdir, g.grp))
-			return false
-		}
-		// We don't expect any other errors
-		if err != nil {
-			db.DFatalf("Unexpected cluster config error: %v", err)
-		}
-	} else {
-		db.DPrintf(db.KVGRP, "found conf path %v\n", grpConfPath(g.jobdir, g.grp))
-	}
-	// Config found.
-	return true
-}
-
-func (g *Group) registerInTmpConfig() (int, *GroupConfig, *replraft.RaftConfig) {
-	return g.registerInConfig(grpTmpConfPath(g.jobdir, g.grp), true)
-}
-
-func (g *Group) registerInClusterConfig() (int, *GroupConfig, *replraft.RaftConfig) {
-	return g.registerInConfig(grpConfPath(g.jobdir, g.grp), false)
-}
-
-// Register self as new replica in a config file.
-func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *replraft.RaftConfig) {
-	// Read the current cluster config.
-	clusterCfg, _ := g.readGroupConfig(path)
-	clusterCfg.SigmaAddrs = append(clusterCfg.SigmaAddrs, sp.MkTaddrs([]string{repl.PLACEHOLDER_ADDR}))
-	// Prepare peer addresses for raftlib.
-	clusterCfg.RaftAddrs = append(clusterCfg.RaftAddrs, g.ip+":0")
-	// Get the raft replica id.
-	id := len(clusterCfg.RaftAddrs)
-	// Create the raft config
-	raftCfg := replraft.MakeRaftConfig(id, clusterCfg.RaftAddrs, init)
-	// Get the listener address selected by the raft library.
-	clusterCfg.RaftAddrs[id-1] = raftCfg.ReplAddr()
-	if err := g.writeGroupConfig(path, clusterCfg); err != nil {
-		db.DFatalf("Error writing group config: %v", err)
-	}
-	return id, clusterCfg, raftCfg
-}
-
-func (g *Group) newConfig() (int, *GroupConfig, *replraft.RaftConfig) {
-	cfg := &GroupConfig{}
-	cfg.SigmaAddrs = append(cfg.SigmaAddrs, sp.MkTaddrs([]string{repl.PLACEHOLDER_ADDR}))
-	return 1, cfg, nil
-}
-
-func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
-	cfg := &GroupConfig{}
-	err := g.GetFileJson(path, cfg)
-	if err != nil {
-		db.DPrintf(db.KVGRP_ERR, "Error GetFileJson: %v", err)
-		return cfg, err
-	}
-	db.DPrintf(db.KVGRP, "readGroupConfig: %v\n", cfg)
-	return cfg, nil
-}
-
-func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
-	err := g.PutFileJsonAtomic(path, 0777, cfg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
-	// Clean sigma addrs, removing placeholders...
 	srvAddrs := make(sp.Taddrs, 0)
 	for _, as := range sigmaAddrs {
 		addrs := sp.Taddrs{}
 		for _, a := range as {
-			if a.Addr != repl.PLACEHOLDER_ADDR {
-				addrs = append(addrs, a)
-			}
+			addrs = append(addrs, a)
 		}
 		if len(addrs) > 0 {
 			srvAddrs = append(srvAddrs, addrs...)
 		}
 	}
 	mnt := sp.MkMountService(srvAddrs)
-	db.DPrintf(db.KVGRP, "Advertise %v/%v at %v", mnt, srvAddrs, GrpPath(g.jobdir, g.grp))
+	db.DPrintf(db.KVGRP, "Advertise %v/%v at %v", mnt, sigmaAddrs, GrpPath(g.jobdir, g.grp))
 	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.ec.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
@@ -224,10 +140,8 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	return nil
 }
 
-func RunMember(job, grp string, public bool, nrepl int) {
-	g := &Group{}
-	g.grp = grp
-	g.isBusy = true
+func RunMember(job, grp string, public bool, myid, nrepl int) {
+	g := &Group{myid: myid, grp: grp, isBusy: true}
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("kv-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
@@ -239,76 +153,25 @@ func RunMember(job, grp string, public bool, nrepl int) {
 		db.DFatalf("MakeElectClnt %v\n", err)
 	}
 
-	db.DPrintf(db.KVGRP, "Starting replica with replication level %v", nrepl)
+	db.DPrintf(db.KVGRP, "Starting replica %d with replication level %v", g.myid, nrepl)
 
 	g.Started()
+
 	ch := make(chan struct{})
 	go g.waitExit(ch)
 
 	g.AcquireLeadership()
 
-	var raftCfg *replraft.RaftConfig = nil
-	// ID of this replica (one-indexed counter)
-	var id int
-	var clusterCfg *GroupConfig
+	cfg, raftCfg := g.registerInConfig(g.myid, nrepl)
 
-	if nrepl > 0 && !g.clusterStarted() {
-		// If the final cluster config hasn't been publisherd yet, this replica is
-		// part of the initial cluster. Register self as part of the initial cluster
-		// in the temporary cluster config, and wait for nrepl to register
-		// themselves as well.
+	db.DPrintf(db.KVGRP, "Grp config: %v config: %v", g.myid, cfg)
 
-		db.DPrintf(db.KVGRP, "Cluster hasn't started, reading temp config")
-		id, clusterCfg, raftCfg = g.registerInTmpConfig()
-		// If we don't yet have enough replicas to start the cluster, wait for them
-		// to register themselves.
-		if id < nrepl {
-			db.DPrintf(db.KVGRP, "%v < %v: Wait for more replicas", id, nrepl)
-			g.ReleaseLeadership()
-			// Wait for enough memebers of the original cluster to register
-			// themselves, and get the updated config.
-			g.waitForClusterConfig()
-			g.AcquireLeadership()
-			// Get the updated cluster config.
-			var err error
-			if clusterCfg, err = g.readGroupConfig(grpConfPath(g.jobdir, grp)); err != nil {
-				db.DFatalf("Error read group config: %v", err)
-			}
-			raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
-			db.DPrintf(db.KVGRP, "%v done waiting for replicas, config: %v", id, clusterCfg)
-		}
-	} else {
-		// Register self in the cluster config, and create it, if nrepl == 0)
-		id, clusterCfg, raftCfg = g.newConfig()
-		db.DPrintf(db.KVGRP, "%v new cluster: %v", id, clusterCfg)
-	}
+	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", cfg)
 
-	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
+	g.startServer(cfg, raftCfg)
 
-	var cs any
-	cs = cachesrv.NewCacheSrv("")
-	if raftCfg != nil {
-		cs = replsrv.NewReplSrv(raftCfg, cs)
-	}
+	g.writeSymlink(cfg.SigmaAddrs)
 
-	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", sc, cs)
-	if err != nil {
-		db.DFatalf("MakeSigmaSrvClnt %v\n", err)
-	}
-	g.ssrv = ssrv
-
-	clusterCfg.SigmaAddrs[id-1] = sp.MkTaddrs([]string{ssrv.MyAddr()})
-
-	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", grp, id, clusterCfg,
-		grpConfPath(g.jobdir, grp))
-
-	if err := g.writeGroupConfig(grpConfPath(g.jobdir, grp), clusterCfg); err != nil {
-		db.DFatalf("Write final group config: %v", err)
-	}
-
-	g.writeSymlink(clusterCfg.SigmaAddrs)
-
-	// Release leadership.
 	g.ReleaseLeadership()
 
 	crash.Crasher(g.FsLib)

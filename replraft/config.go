@@ -9,42 +9,29 @@ import (
 )
 
 type RaftConfig struct {
-	started   bool // Indicates whether or not a server has already been started using this config.
 	id        int
 	peerAddrs []string
 	l         net.Listener
 	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
 }
 
-func MakeRaftConfig(id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(id int, addr string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init
-	rc.peerAddrs = []string{}
-	for _, addr := range peerAddrs {
-		rc.peerAddrs = append(rc.peerAddrs, addr)
-	}
-	l, err := net.Listen("tcp", rc.peerAddrs[rc.id-1])
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		db.DFatalf("Error listen: %v", err)
 	}
 	rc.l = l
-	rc.peerAddrs[rc.id-1] = l.Addr().String()
 	return rc
 }
 
-func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
-	if rc.started {
-		db.DFatalf("Update peers for started server")
-	}
-	rc.peerAddrs = []string{}
-	for _, addr := range new {
-		rc.peerAddrs = append(rc.peerAddrs, addr)
-	}
+func (rc *RaftConfig) SetPeerAddrs(new []string) {
+	rc.peerAddrs = new
 }
 
 func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) repl.Server {
-	rc.started = true
 	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 

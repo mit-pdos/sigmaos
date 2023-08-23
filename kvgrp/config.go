@@ -66,7 +66,7 @@ func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
 func (g *Group) registerInConfig(myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
 	pn := grpConfPath(g.jobdir, g.grp)
 	cfg, err := g.readGroupConfig(pn)
-	if err != nil {
+	if err != nil { // create the initial config?
 		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.KVGRP, "Make initial config %v\n", pn)
 			cfg = newConfig(nrepl)
@@ -82,11 +82,15 @@ func (g *Group) registerInConfig(myid, nrepl int) (*GroupConfig, *replraft.RaftC
 
 	var raftCfg *replraft.RaftConfig
 	initial := false
-	if nrepl > 0 && cfg.RaftAddrs[myid] == "" {
-		raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", true)
-		// Get the listener address selected by the raft library.
-		cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
-		initial = true
+	if nrepl > 0 {
+		if cfg.RaftAddrs[myid] == "" {
+			raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", true)
+			// Get the listener address selected by the raft library.
+			cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
+			initial = true
+		} else {
+			raftCfg = replraft.MakeRaftConfig(myid, cfg.RaftAddrs[myid], false)
+		}
 	}
 
 	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)

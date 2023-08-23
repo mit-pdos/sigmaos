@@ -166,8 +166,6 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	db.DPrintf(db.KVGRP, "Grp config: %v config: %v", g.myid, cfg)
 
-	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", cfg)
-
 	g.startServer(cfg, raftCfg)
 
 	g.writeSymlink(cfg.SigmaAddrs)

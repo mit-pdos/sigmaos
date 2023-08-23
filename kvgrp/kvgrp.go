@@ -127,16 +127,15 @@ func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
 	if _, err := g.Stat(grpConfPath(g.jobdir, g.grp)); err != nil {
 		if serr.IsErrCode(err, serr.TErrNotfound) {
-			db.DPrintf(db.KVGRP, "found conf path %v", grpConfPath(g.jobdir, g.grp))
+			db.DPrintf(db.KVGRP, "didn't find conf path %v\n", grpConfPath(g.jobdir, g.grp))
 			return false
 		}
-	} else {
-		db.DPrintf(db.KVGRP, "didn't find conf path %v: %v", grpConfPath(g.jobdir, g.grp), err)
 		// We don't expect any other errors
 		if err != nil {
 			db.DFatalf("Unexpected cluster config error: %v", err)
-
 		}
+	} else {
+		db.DPrintf(db.KVGRP, "found conf path %v\n", grpConfPath(g.jobdir, g.grp))
 	}
 	// Config found.
 	return true
@@ -341,7 +340,7 @@ func (g *Group) waitExit(ch chan struct{}) {
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, proc.GetPid().String())
+		db.DPrintf(db.KVGRP, "candidate %v evicted\n", proc.GetPid())
 		ch <- struct{}{}
 	}
 }

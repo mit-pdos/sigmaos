@@ -155,7 +155,7 @@ func TestPutGetCrashKVD1(t *testing.T) {
 func TestFencefs(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
 
-	dir := kv.KVDIR + kvgrp.GrpPath(ts.job, kv.GRP+"0")
+	dir := kvgrp.GrpPath(kvgrp.JobDir(ts.job), kv.GRP+"0")
 	fencedir := path.Join(dir, sp.FENCEDIR)
 
 	l := leaderclnt.OldleaderTest(ts.Tstate, dir, false)

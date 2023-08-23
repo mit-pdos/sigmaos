@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/serr"
@@ -28,10 +29,10 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 	ch := make(chan bool)
 	go func() {
-		db.DFatalf("Error: set fslib addr")
-		var fsl2 *fslib.FsLib = nil
-		var err error = nil
-		//		fsl2, err := fslib.MakeFsLibAddr("leader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		// Make a new fsl for this test, because we want to use ts.FsLib
+		// to shutdown the system.
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+		fsl2, err := fslib.MakeFsLib(scfg)
 		assert.Nil(ts.T, err, "MakeFsLib")
 
 		l, err := MakeLeaderClnt(fsl2, leadername, 0777)

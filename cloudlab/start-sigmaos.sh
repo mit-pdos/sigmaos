@@ -119,18 +119,21 @@ for vm in $vms; do
   cd ulambda
 
   echo "$PWD $SIGMADEBUG"
-  if [ "${vm}" = "${MAIN}" ]; then 
-    echo "START DB: ${MAIN_PRIVADDR}"
-    ./make.sh --norace linux
-    ./start-network.sh --addr $MAIN_PRIVADDR
-    ./start-db.sh
-    ./start-jaeger.sh
-  elif [ "${vm}" = "${SIGMASTART}" ]; then
-    echo "START ${SIGMANAMED} ${KERNELID}"
-    ./make.sh --norace linux
-    ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
-    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+  if [ "${vm}" = "${MAIN}" ] || [ "${vm}" = "${SIGMASTART}" ]; then
+    if [ "${vm}" = "${MAIN}" ]; then 
+      echo "START DB: ${MAIN_PRIVADDR}"
+      ./make.sh --norace linux
+      ./start-network.sh --addr $MAIN_PRIVADDR
+      ./start-db.sh
+      ./start-jaeger.sh
+    fi
+    if [ "${vm}" = "${SIGMASTART}" ]; then
+      echo "START ${SIGMANAMED} ${KERNELID}"
+      ./make.sh --norace linux
+      ./start-kernel.sh --boot realm --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+      docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+      docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+    fi
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
      ${TOKEN} 2>&1 > /dev/null

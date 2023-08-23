@@ -108,14 +108,15 @@ func (g *Group) waitForClusterConfig() {
 	}
 }
 
-func WaitStarted(fsl *fslib.FsLib, job, grp string) (*GroupConfig, error) {
-	_, err := fsl.GetFileWatch(GrpPath(job, grp))
-	if err != nil {
-		db.DPrintf(db.KVGRP, "WaitStarted: GetFileWatch %s err %v\n", GrpPath(job, grp), err)
+func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
+	db.DPrintf(db.KVGRP, "WaitStarted: Wait for %v\n", GrpPath(jobdir, grp))
+	if _, err := fsl.GetFileWatch(GrpPath(jobdir, grp)); err != nil {
+		db.DPrintf(db.KVGRP, "WaitStarted: GetFileWatch %s err %v\n", GrpPath(jobdir, grp), err)
 		return nil, err
 	}
 	cfg := &GroupConfig{}
-	if err := fsl.GetFileJson(grpConfPath(job, grp), cfg); err != nil {
+	if err := fsl.GetFileJson(grpConfPath(jobdir, grp), cfg); err != nil {
+		db.DPrintf(db.KVGRP, "WaitStarted: GetFileJson %s err %v\n", grpConfPath(jobdir, grp), err)
 		return nil, err
 	}
 	return cfg, nil

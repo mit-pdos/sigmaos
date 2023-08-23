@@ -183,6 +183,10 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 			}
 			if err := <-ch; err != nil {
 				rdr.Close()
+				if serr.IsErrCode(err, serr.TErrVersion) {
+					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
+					continue
+				}
 				return nil, err
 			}
 			rdr.Close()

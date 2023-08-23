@@ -107,7 +107,7 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 		} else {
 			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.Args, i, crashMember)
 		}
-		gm.members[i] = makeMember(sc, cfg, crashMember)
+		gm.members[i] = makeMember(sc, cfg, i, crashMember)
 	}
 	done := make(chan *procret)
 	go gm.manager(done, N)
@@ -123,6 +123,7 @@ type member struct {
 	*sigmaclnt.SigmaClnt
 	*GroupMgrConfig
 	pid    proc.Tpid
+	id     int
 	crash  int
 	nstart int
 }
@@ -137,8 +138,8 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, crash int) *member {
-	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash}
+func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id, crash int) *member {
+	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
 }
 
 func (m *member) spawn() error {
@@ -147,7 +148,7 @@ func (m *member) spawn() error {
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
-	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.NReplicas))
+	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).
 	if m.Mcpu == 1000 && strings.Contains(m.Program, "kvd") {
@@ -165,18 +166,18 @@ func (m *member) spawn() error {
 	return nil
 }
 
-func (m *member) run(i int, start chan error, done chan *procret) {
-	db.DPrintf(db.GROUPMGR, "spawn %d member %v", i, m.Program)
+func (m *member) run(start chan error, done chan *procret) {
+	db.DPrintf(db.GROUPMGR, "spawn %d member %v", m.id, m.Program)
 	if err := m.spawn(); err != nil {
 		start <- err
 		return
 	}
 	start <- nil
-	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.Program, i, m.pid)
+	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.Program, m.id, m.pid)
 	m.nstart += 1
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.Program, m.pid, status, err)
-	done <- &procret{i, err, status}
+	done <- &procret{m.id, err, status}
 }
 
 func (gm *GroupMgr) start(i int, done chan *procret) {
@@ -190,7 +191,7 @@ func (gm *GroupMgr) start(i int, done chan *procret) {
 		return
 	}
 	start := make(chan error)
-	go gm.members[i].run(i, start, done)
+	go gm.members[i].run(start, done)
 	err := <-start
 	if err != nil {
 		go func() {
@@ -252,4 +253,24 @@ func (gm *GroupMgr) Stop() error {
 	<-gm.ch
 	db.DPrintf(db.GROUPMGR, "done members %v\n", gm)
 	return err
+}
+
+func newREPL(id, n int) string {
+	return strconv.Itoa(id) + "," + strconv.Itoa(n)
+}
+
+func ParseREPL(s string) (int, int, error) {
+	n := strings.Split(s, ",")
+	if len(n) != 2 {
+		return 0, 0, fmt.Errorf("ParseREPL len %d", len(n))
+	}
+	id, err := strconv.Atoi(n[0])
+	if err != nil {
+		return 0, 0, err
+	}
+	repl, err := strconv.Atoi(n[1])
+	if err != nil {
+		return 0, 0, err
+	}
+	return id, repl, nil
 }

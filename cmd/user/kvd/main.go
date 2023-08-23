@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
+	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
 )
 
@@ -18,10 +19,9 @@ func main() {
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	nrepl := 0
-	nrepl, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
+	id, nrepl, err := groupmgr.ParseREPL(os.Getenv("SIGMAREPL"))
 	if err != nil {
-		db.DFatalf("invalid sigmarepl: %v", err)
+		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	kvgrp.RunMember(os.Args[1], os.Args[2], public, nrepl)
+	kvgrp.RunMember(os.Args[1], os.Args[2], public, id, nrepl)
 }

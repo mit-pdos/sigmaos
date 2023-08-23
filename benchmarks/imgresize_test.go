@@ -50,7 +50,7 @@ func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v", ji.input, ji.ntasks, ji.mcpu)
 	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu)
-	fn := path.Join(sp.S3, "~local", ji.input)
+	fn := path.Join(sp.UX, "~local", ji.input)
 	fns := make([]string, 0, ji.ninputs)
 	for i := 0; i < ji.ninputs; i++ {
 		fns = append(fns, fn)
@@ -80,7 +80,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 }
 
 func (ji *ImgResizeJobInstance) Cleanup() {
-	dir := path.Join(sp.S3, "~local", path.Dir(ji.input))
+	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
 	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
 	imgresized.Cleanup(ji.FsLib, dir)
 }

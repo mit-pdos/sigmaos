@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	cacheMcpu      = 2000
+	cacheMcpu      = 1000
 	HTTP_ADDRS     = "http-addr"
 	N_RPC_SESSIONS = 10
 )
@@ -93,6 +93,9 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nshard int,
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err
+		}
+		if !gc {
+			p.AppendEnv("GOGC", "off")
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
 			dbg.DFatalf("Error spawn proc %v: %v", p, err)

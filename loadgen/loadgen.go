@@ -103,7 +103,7 @@ func (lg *LoadGenerator) initiatorThread(tid int) {
 	t := time.NewTicker(lg.sleepdurs[tid])
 	var nreq int64
 	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r := rand.New(rand.NewSource(RAND_SEED))
+	r := rand.New(rand.NewSource(RAND_SEED + int64(tid + 1)))
 	start := time.Now()
 	for time.Since(start) < lg.totaldur {
 		<-t.C

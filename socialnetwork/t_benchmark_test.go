@@ -28,7 +28,7 @@ const (
 	HOME_RATIO         = 0.6
 	TIMELINE_RATIO     = 0.3
 	LOAD_DUR           = 10
-	LOAD_MAX_RPS       = 5000
+	LOAD_MAX_RPS       = 2000
 )
 
 var K8S_ADDR string
@@ -83,13 +83,13 @@ func setupSigmaState(t *testing.T) *TstateSN {
 	tssn := makeTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 3000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}, NSHARD)
+		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NSHARD)
 	initUserAndGraph(t, MONGO_URL)
 	return tssn
 }

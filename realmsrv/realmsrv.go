@@ -18,7 +18,7 @@ import (
 const (
 	MKNET      = "./bin/kernel/create-net.sh"
 	MIN_PORT   = 30000
-	NAMED_MCPU = 1000
+	NAMED_MCPU = 0
 )
 
 type RealmSrv struct {

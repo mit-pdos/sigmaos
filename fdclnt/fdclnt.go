@@ -79,7 +79,7 @@ func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
 }
 
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, sp.NoLeaseId)
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm, mode, sp.NoLeaseId, sp.NoFence())
 	if err != nil {
 		return -1, err
 	}
@@ -87,8 +87,8 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 	return fd, nil
 }
 
-func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (int, error) {
-	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm|sp.DMTMP, mode, lid)
+func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
+	fid, err := fdc.PathClnt.Create(path, fdc.uname, perm|sp.DMTMP, mode, lid, f)
 	if err != nil {
 		return -1, err
 	}
@@ -187,8 +187,8 @@ func (fdc *FdClient) Read(fd int, cnt sp.Tsize) ([]byte, error) {
 	return fdc.readFid(fd, fid, off, cnt, sp.NoV)
 }
 
-func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, error) {
-	sz, err := fdc.PathClnt.WriteV(fid, off, data, v)
+func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, error) {
+	sz, err := fdc.PathClnt.WriteV(fid, off, data, v, f)
 	if err != nil {
 		return 0, err
 	}
@@ -202,7 +202,7 @@ func (fdc *FdClient) WriteV(fd int, data []byte) (sp.Tsize, error) {
 		return 0, error
 	}
 	qid := fdc.PathClnt.Qid(fid)
-	return fdc.writeFid(fd, fid, off, data, qid.Tversion())
+	return fdc.writeFid(fd, fid, off, data, qid.Tversion(), sp.NoFence())
 }
 
 func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
@@ -210,7 +210,15 @@ func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
 	if error != nil {
 		return 0, error
 	}
-	return fdc.writeFid(fd, fid, off, data, sp.NoV)
+	return fdc.writeFid(fd, fid, off, data, sp.NoV, sp.NoFence())
+}
+
+func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, error) {
+	fid, off, error := fdc.fds.lookupOff(fd)
+	if error != nil {
+		return 0, error
+	}
+	return fdc.writeFid(fd, fid, off, data, sp.NoV, f)
 }
 
 func (fdc *FdClient) WriteRead(fd int, data []byte) ([]byte, error) {

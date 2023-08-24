@@ -165,7 +165,7 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId)
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Create args %v err: %v\n", args, err)
 		return sp.MkRerror(err)
@@ -272,7 +272,7 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV)
+	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Write: args %v err %v\n", args, err)
 		return sp.MkRerror(err)

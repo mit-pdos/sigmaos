@@ -175,7 +175,7 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, error) {
+func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "Create %v perm %v lid %v\n", p, perm, lid)
 	path := path.Split(p)
 	dir := path.Dir()
@@ -185,7 +185,7 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
 		return sp.NoFid, err
 	}
-	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid)
+	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid, f)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
 		return sp.NoFid, err

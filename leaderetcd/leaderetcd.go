@@ -10,6 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Election struct {
@@ -40,6 +41,10 @@ func (el *Election) Candidate() error {
 
 	db.DPrintf(db.LEADER, "leader %v %v\n", proc.GetPid().String(), resp)
 	return nil
+}
+
+func (el Election) Fence() sp.Tfence {
+	return sp.NewFence(el.Election.Key(), sp.Tepoch(el.Election.Rev()))
 }
 
 func (el *Election) Resign() error {

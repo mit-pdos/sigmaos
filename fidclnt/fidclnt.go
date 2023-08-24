@@ -150,8 +150,8 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	return nfid, err
 }
 
-func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, *serr.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid, sp.NoFence())
+func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, *serr.Err) {
+	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid, f)
 	if err != nil {
 		return sp.NoFid, err
 	}
@@ -226,8 +226,11 @@ func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQve
 	return data, nil
 }
 
-func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *serr.Err) {
-	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion, f0 sp.Tfence) (sp.Tsize, *serr.Err) {
+	f := &f0
+	if !f0.HasFence() {
+		f = fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	}
 	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
 	if err != nil {
 		return 0, err

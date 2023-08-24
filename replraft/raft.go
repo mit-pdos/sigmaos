@@ -53,6 +53,7 @@ type committedEntries struct {
 	leader  uint64
 }
 
+// etcd numbers nodes start from 1.  0 is not a valid id.
 func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{}
 	node.id = id
@@ -71,6 +72,7 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener,
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
+	db.DPrintf(db.REPLRAFT, "makeRaftNode %d peeraddrs %v\n", id, peerAddrs)
 	if err := node.start(peers, l, init); err != nil {
 		return nil, err
 	}
@@ -88,7 +90,6 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 				break
 			}
 			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
-
 		}
 		if err != nil {
 			return err
@@ -116,7 +117,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	}
 	n.transport.Start()
 	for i := range peers {
-		if i+1 != n.id {
+		if i != n.id-1 {
 			n.transport.AddPeer(types.ID(i+1), []string{"http://" + n.peerAddrs[i]})
 		}
 	}
@@ -241,7 +242,7 @@ func (n *RaftNode) postNodeId() error {
 	if len(n.peerAddrs) == 1 {
 		return nil
 	}
-	db.DPrintf(db.REPLRAFT, "postNodeId %v\n", n.peerAddrs)
+	db.DPrintf(db.REPLRAFT, "%v: postNodeId %v\n", n.id, n.peerAddrs)
 	for i, addr := range n.peerAddrs {
 		if i == n.id-1 {
 			continue
@@ -251,12 +252,16 @@ func (n *RaftNode) postNodeId() error {
 		if err != nil {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
+		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, addr)
 		if _, err := http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, addr)
 			// Only post the node ID to one node
 			return nil
+		} else {
+			db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v\n", i, addr, err)
 		}
-		db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v", i, addr, err)
 	}
+	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.peerAddrs)
 	return serr.MkErr(serr.TErrUnreachable, nil)
 }
 

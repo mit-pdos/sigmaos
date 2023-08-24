@@ -31,7 +31,7 @@ func (rc *RaftConfig) SetPeerAddrs(new []string) {
 	rc.peerAddrs = new
 }
 
-func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) repl.Server {
+func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) (repl.Server, error) {
 	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 

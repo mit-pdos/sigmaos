@@ -21,7 +21,9 @@ import (
 	"go.uber.org/zap"
 
 	db "sigmaos/debug"
+	"sigmaos/pathclnt"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -51,7 +53,7 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{}
 	node.id = id
 	node.peerAddrs = peerAddrs
@@ -69,15 +71,28 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener,
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
-	node.start(peers, l, init)
-	return node
+	if err := node.start(peers, l, init); err != nil {
+		return nil, err
+	}
+	return node, nil
 }
 
-func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
+func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	if init {
 		n.node = raft.StartNode(n.config, peers)
 	} else {
-		n.postNodeId()
+		var err error
+		for i := 0; i < pathclnt.MAXRETRY; i++ {
+			err = n.postNodeId()
+			if err == nil {
+				break
+			}
+			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
+
+		}
+		if err != nil {
+			return err
+		}
 		n.node = raft.RestartNode(n.config)
 	}
 	// Make sure the logging dir exists
@@ -88,7 +103,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 	logCfg.OutputPaths = []string{string(logPath)}
 	logger, err := logCfg.Build()
 	if err != nil {
-		db.DFatalf("Couldn't build logger: %v", err)
+		return err
 	}
 	n.transport = &rafthttp.Transport{
 		Logger:      logger,
@@ -108,6 +123,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 
 	go n.serveRaft(l)
 	go n.serveChannels()
+	return nil
 }
 
 func (n *RaftNode) serveRaft(l net.Listener) {
@@ -221,10 +237,11 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 }
 
 // Send a post request, indicating that the node will join the cluster.
-func (n *RaftNode) postNodeId() {
+func (n *RaftNode) postNodeId() error {
 	if len(n.peerAddrs) == 1 {
-		return
+		return nil
 	}
+	db.DPrintf(db.REPLRAFT, "postNodeId %v\n", n.peerAddrs)
 	for i, addr := range n.peerAddrs {
 		if i == n.id-1 {
 			continue
@@ -234,14 +251,13 @@ func (n *RaftNode) postNodeId() {
 		if err != nil {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
-		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
-		// Only post the node ID to one node
-		if err == nil {
-			return
+		if _, err := http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+			// Only post the node ID to one node
+			return nil
 		}
-		log.Printf("Error posting node ID: %v", err)
+		db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v", i, addr, err)
 	}
-	db.DFatalf("Failed to post node ID")
+	return serr.MkErr(serr.TErrUnreachable, nil)
 }
 
 func (n *RaftNode) IsIDRemoved(id uint64) bool {

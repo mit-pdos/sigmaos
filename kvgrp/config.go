@@ -63,7 +63,7 @@ func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
 	return nil
 }
 
-func (g *Group) registerInConfig(myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
+func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
 	pn := grpConfPath(g.jobdir, g.grp)
 	cfg, err := g.readGroupConfig(pn)
 	if err != nil { // create the initial config?
@@ -79,31 +79,41 @@ func (g *Group) registerInConfig(myid, nrepl int) (*GroupConfig, *replraft.RaftC
 			db.DFatalf("Unexpected config %v error %v", pn, err)
 		}
 	}
+	return cfg
+}
 
+func (g *Group) AcquireReadCfg() *GroupConfig {
+	g.AcquireLeadership()
+
+	pn := grpConfPath(g.jobdir, g.grp)
+	cfg, err := g.readGroupConfig(pn)
+	if err != nil {
+		db.DFatalf("readGroupConfig %v err %v", pn, err)
+	}
+	return cfg
+}
+
+func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
 	var raftCfg *replraft.RaftConfig
-	initial := false
-	if nrepl > 0 {
-		if cfg.RaftAddrs[myid] == "" {
-			raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", true)
-			// Get the listener address selected by the raft library.
-			cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
-			initial = true
-		} else {
-			raftCfg = replraft.MakeRaftConfig(myid, cfg.RaftAddrs[myid], false)
+
+	db.DPrintf(db.KVGRP, "%v/%v makeRaftConfig %v\n", g.grp, myid, cfg)
+
+	pn := grpConfPath(g.jobdir, g.grp)
+	if cfg.RaftAddrs[myid] == "" {
+		raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", true)
+		// Get the listener address selected by the raft library.
+		cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
+
+		db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
+
+		if err := g.writeGroupConfig(pn, cfg); err != nil {
+			db.DFatalf("registerInConfig err %v", err)
 		}
-	}
-
-	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
-
-	if err := g.writeGroupConfig(pn, cfg); err != nil {
-		db.DFatalf("registerInConfig err %v", err)
-	}
-
-	if initial {
 		cfg = g.waitRaftConfig(cfg)
-		raftCfg.SetPeerAddrs(cfg.RaftAddrs)
+	} else {
+		raftCfg = replraft.MakeRaftConfig(myid, cfg.RaftAddrs[myid], false)
 	}
-
+	raftCfg.SetPeerAddrs(cfg.RaftAddrs)
 	return cfg, raftCfg
 }
 
@@ -126,13 +136,7 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 			db.DFatalf("sem down %v err %v", sem, err)
 		}
 
-		g.AcquireLeadership()
-
-		pn := grpConfPath(g.jobdir, g.grp)
-		cfg, err = g.readGroupConfig(pn)
-		if err != nil {
-			db.DFatalf("readGroupConfig %v err %v", pn, err)
-		}
+		cfg = g.AcquireReadCfg()
 
 	} else {
 		// the last one to update raft config; alert others
@@ -142,18 +146,29 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 }
 
 // Must run after SetPeerAddrs()
-func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) {
+func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) error {
 	var cs any
+	var err error
+
+	// Release leadership so that another member can start and join an
+	// existing raft cfg
+	g.ReleaseLeadership()
+
 	cs = cachesrv.NewCacheSrv("")
 	if raftCfg != nil {
-		cs = replsrv.NewReplSrv(raftCfg, cs)
+		cs, err = replsrv.NewReplSrv(raftCfg, cs)
+		if err != nil {
+			return err
+		}
 	}
 
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", g.SigmaClnt, cs)
 	if err != nil {
-		db.DFatalf("MakeSigmaSrvClnt %v\n", err)
+		return err
 	}
 	g.ssrv = ssrv
+
+	cfg = g.AcquireReadCfg()
 
 	cfg.SigmaAddrs[g.myid] = sp.MkTaddrs([]string{ssrv.MyAddr()})
 
@@ -161,6 +176,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) {
 
 	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, g.myid, cfg, pn)
 	if err := g.writeGroupConfig(pn, cfg); err != nil {
-		db.DFatalf("registerInConfig err %v", err)
+		return err
 	}
+	return nil
 }

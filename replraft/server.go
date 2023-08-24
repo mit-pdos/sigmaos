@@ -15,7 +15,8 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) *RaftReplServer {
+func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
+	var err error
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -24,8 +25,11 @@ func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, a
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
 	srv.clerk = newClerk(id+1, commitC, proposeC, apply)
-	srv.node = makeRaftNode(id+1, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
-	return srv
+	srv.node, err = makeRaftNode(id+1, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
+	if err != nil {
+		return nil, err
+	}
+	return srv, nil
 }
 
 func (srv *RaftReplServer) Start() {

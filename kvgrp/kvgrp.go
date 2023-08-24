@@ -1,8 +1,9 @@
 package kvgrp
 
 //
-// A group of servers. If nrepl > 0, then the group forms a raft
-// group.
+// Starts a group of servers. If nrepl > 0, then the group forms a
+// raft group.  Clients can wait until the group has configured using
+// WaitStarted().
 //
 
 import (
@@ -17,6 +18,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/replraft"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -162,11 +164,18 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	g.AcquireLeadership()
 
-	cfg, raftCfg := g.registerInConfig(g.myid, nrepl)
+	cfg := g.readCreateCfg(g.myid, nrepl)
+
+	var raftCfg *replraft.RaftConfig
+	if nrepl > 0 {
+		cfg, raftCfg = g.makeRaftCfg(cfg, g.myid, nrepl)
+	}
 
 	db.DPrintf(db.KVGRP, "Grp config: %v config: %v", g.myid, cfg)
 
-	g.startServer(cfg, raftCfg)
+	if err := g.startServer(cfg, raftCfg); err != nil {
+		db.DFatalf("startServer %v\n", err)
+	}
 
 	g.writeSymlink(cfg.SigmaAddrs)
 

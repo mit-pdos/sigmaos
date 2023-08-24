@@ -8,7 +8,6 @@ package kvgrp
 //
 
 import (
-	"log"
 	"path"
 	"sync"
 	"time"
@@ -121,20 +120,10 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 		}
 	}
 	mnt := sp.MkMountService(srvAddrs)
-	db.DPrintf(db.KVGRP, "Advertise %v/%v at %v", mnt, sigmaAddrs, GrpPath(g.jobdir, g.grp))
+	db.DPrintf(db.KVGRP, "Advertise %v/%v/%v at %v", mnt, srvAddrs, sigmaAddrs, GrpPath(g.jobdir, g.grp))
 	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.lc.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
-}
-
-func (g *Group) op(opcode, kv string) *serr.Err {
-	if g.testAndSetBusy() {
-		return serr.MkErr(serr.TErrRetry, "busy")
-	}
-	defer g.clearBusy()
-
-	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
-	return nil
 }
 
 func RunMember(job, grp string, public bool, myid, nrepl int) {

@@ -36,6 +36,15 @@ type GroupMgr struct {
 	ch      chan bool
 }
 
+func (gm *GroupMgr) String() string {
+	s := "["
+	for _, m := range gm.members {
+		s += fmt.Sprintf(" %v ", m)
+	}
+	s += "]"
+	return s
+}
+
 type GroupMgrConfig struct {
 	Program   string
 	Args      []string
@@ -126,6 +135,10 @@ type member struct {
 	id     int
 	crash  int
 	nstart int
+}
+
+func (m *member) String() string {
+	return fmt.Sprintf("{pid %v, id %d, nstart %d}", m.pid, m.id, m.nstart)
 }
 
 type procret struct {

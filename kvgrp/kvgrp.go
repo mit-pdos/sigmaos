@@ -1,9 +1,10 @@
 package kvgrp
 
 //
-// Starts a group of servers. If nrepl > 0, then the group forms a
-// raft group.  Clients can wait until the group has configured using
-// WaitStarted().
+// Starts a group of servers. If nrepl > 0, then the servers form a
+// raft group.  If nrepl == 0, then group is either a single server or
+// a group with a primary and several hot-standby backups.  Clients
+// can wait until the group has configured using WaitStarted().
 //
 
 import (
@@ -14,8 +15,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/electclnt"
 	"sigmaos/fslib"
+	"sigmaos/leaderclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/replraft"
@@ -59,14 +60,8 @@ type Group struct {
 	ip     string
 	myid   int
 	*sigmaclnt.SigmaClnt
-	ssrv *sigmasrv.SigmaSrv
-
-	// We use an electclnt instead of a leaderclnt, since we don't
-	// need epochs because the config is stored in etcd. If we lose
-	// our connection to etcd & our leadership, we won't be able to
-	// write the config file anyway.  XXX still accurate?
-	ec *electclnt.ElectClnt
-
+	ssrv   *sigmasrv.SigmaSrv
+	lc     *leaderclnt.LeaderClnt
 	isBusy bool
 }
 
@@ -86,17 +81,17 @@ func (g *Group) clearBusy() {
 
 func (g *Group) AcquireLeadership() {
 	db.DPrintf(db.KVGRP, "%v/%v Try acquire leadership", g.grp, g.myid)
-	if err := g.ec.AcquireLeadership(nil); err != nil {
-		db.DFatalf("AcquireLeadership in group.RunMember: %v", err)
+	if err := g.lc.LeadAndFence(nil, []string{g.jobdir}); err != nil {
+		db.DFatalf("LeadAndFence in group.RunMember: %v", err)
 	}
-	db.DPrintf(db.KVGRP, "%v/%v Acquire leadership", g.grp, g.myid)
+	db.DPrintf(db.KVGRP, "%v/%v Acquired leadership", g.grp, g.myid)
 }
 
 func (g *Group) ReleaseLeadership() {
-	if err := g.ec.ReleaseLeadership(); err != nil {
+	if err := g.lc.ReleaseLeadership(); err != nil {
 		db.DFatalf("release leadership: %v", err)
 	}
-	db.DPrintf(db.KVGRP, "%v/%v Release leadership", g.grp, g.myid)
+	db.DPrintf(db.KVGRP, "%v/%v Released leadership", g.grp, g.myid)
 }
 
 // For clients to wait unil a group is ready to serve
@@ -127,7 +122,7 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 	}
 	mnt := sp.MkMountService(srvAddrs)
 	db.DPrintf(db.KVGRP, "Advertise %v/%v at %v", mnt, sigmaAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.ec.Lease()); err != nil {
+	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.lc.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -144,15 +139,17 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 
 func RunMember(job, grp string, public bool, myid, nrepl int) {
 	g := &Group{myid: myid, grp: grp, isBusy: true}
+
 	sc, err := sigmaclnt.MkSigmaClnt(sp.Tuname("kv-" + proc.GetPid().String()))
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
 	g.SigmaClnt = sc
 	g.jobdir = JobDir(job)
-	g.ec, err = electclnt.MakeElectClnt(g.FsLib, grpElectPath(g.jobdir, grp), 0777)
+
+	g.lc, err = leaderclnt.MakeLeaderClnt(sc.FsLib, grpElectPath(g.jobdir, grp), 0777)
 	if err != nil {
-		db.DFatalf("MakeElectClnt %v\n", err)
+		db.DFatalf("MakeLeaderClnt %v\n", err)
 	}
 
 	db.DPrintf(db.KVGRP, "Starting replica %d with replication level %v", g.myid, nrepl)

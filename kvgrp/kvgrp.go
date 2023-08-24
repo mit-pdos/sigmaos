@@ -19,7 +19,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/replraft"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -120,7 +119,7 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 		}
 	}
 	mnt := sp.MkMountService(srvAddrs)
-	db.DPrintf(db.KVGRP, "Advertise %v/%v/%v at %v", mnt, srvAddrs, sigmaAddrs, GrpPath(g.jobdir, g.grp))
+	db.DPrintf(db.KVGRP, "Advertise %v at %v", mnt, GrpPath(g.jobdir, g.grp))
 	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.lc.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
@@ -159,7 +158,8 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	db.DPrintf(db.KVGRP, "Grp config: %v config: %v", g.myid, cfg)
 
-	if err := g.startServer(cfg, raftCfg); err != nil {
+	cfg, err = g.startServer(cfg, raftCfg)
+	if err != nil {
 		db.DFatalf("startServer %v\n", err)
 	}
 
@@ -180,9 +180,11 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	// g.srv.MonitorCPU(nil)
 
+	db.DPrintf(db.KVGRP, "%v/%v: wait ch\n", g.grp, g.myid)
+
 	<-ch
 
-	db.DPrintf(db.KVGRP, "%v: group done\n", proc.GetPid())
+	db.DPrintf(db.KVGRP, "%v/%v: pid %v done\n", g.grp, g.myid, proc.GetPid())
 
 	g.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 }
@@ -192,11 +194,11 @@ func (g *Group) waitExit(ch chan struct{}) {
 	for {
 		err := g.WaitEvict(proc.GetPid())
 		if err != nil {
-			db.DPrintf(db.KVGRP, "Error WaitEvict: %v", err)
+			db.DPrintf(db.KVGRP, "WaitEvict err %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.KVGRP, "candidate %v evicted\n", proc.GetPid())
+		db.DPrintf(db.KVGRP, "waitExit: %v evicted\n", proc.GetPid())
 		ch <- struct{}{}
 	}
 }

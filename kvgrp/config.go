@@ -70,13 +70,16 @@ func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
 		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.KVGRP, "Make initial config %v\n", pn)
 			cfg = newConfig(nrepl)
+			if err := g.writeGroupConfig(pn, cfg); err != nil {
+				db.DFatalf("writeGroupConfig  %v err %v", pn, err)
+			}
 			if nrepl > 0 {
 				sem := grpSemPath(g.jobdir, g.grp)
 				sclnt := semclnt.MakeSemClnt(g.SigmaClnt.FsLib, sem)
 				sclnt.Init(0)
 			}
 		} else {
-			db.DFatalf("Unexpected config %v error %v", pn, err)
+			db.DFatalf("readGroupConfig %v err %v", pn, err)
 		}
 	}
 	return cfg
@@ -146,7 +149,7 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 }
 
 // Must run after SetPeerAddrs()
-func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) error {
+func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*GroupConfig, error) {
 	var cs any
 	var err error
 
@@ -158,13 +161,13 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) erro
 	if raftCfg != nil {
 		cs, err = replsrv.NewReplSrv(raftCfg, cs)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", g.SigmaClnt, cs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	g.ssrv = ssrv
 
@@ -174,9 +177,9 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) erro
 
 	pn := grpConfPath(g.jobdir, g.grp)
 
-	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, g.myid, cfg, pn)
+	db.DPrintf(db.KVGRP, "%v/%v Writing config: %v at %v", g.grp, g.myid, cfg, pn)
 	if err := g.writeGroupConfig(pn, cfg); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return cfg, nil
 }

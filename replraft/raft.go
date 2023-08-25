@@ -248,7 +248,7 @@ func (n *RaftNode) postNodeId() error {
 		}
 	}
 	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.id, n.peerAddrs)
-	return serr.MkErr(serr.TErrUnreachable, nil)
+	return serr.MkErr(serr.TErrUnreachable, "no peers")
 }
 
 func (n *RaftNode) IsIDRemoved(id uint64) bool {

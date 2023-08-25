@@ -1,6 +1,7 @@
 package test
 
 import (
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -35,7 +36,8 @@ func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTsta
 		}
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
-	if sc, err := sigmaclnt.MkSigmaClntRealm(ts.FsLib, "test", realm); err != nil {
+	scfg := config.NewDifferentRealmSigmaConfig(ts.SigmaConfig(), realm)
+	if sc, err := sigmaclnt.NewSigmaClnt(scfg); err != nil {
 		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
 	} else {
 		return &RealmTstate{

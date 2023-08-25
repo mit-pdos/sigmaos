@@ -7,7 +7,6 @@ import (
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	sp "sigmaos/sigmap"
 )
 
 type SigmaClnt struct {
@@ -42,32 +41,31 @@ func NewSigmaClnt(scfg *config.SigmaConfig) (*SigmaClnt, error) {
 	return sc, nil
 }
 
-// Create only an FsLib, relative to a realm, but with the client being in the root realm
-func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*SigmaClnt, error) {
-	db.DFatalf("Error: New plan needed")
-	//	db.DPrintf(db.SIGMACLNT, "Realm %v NamedAddr %v\n", rid, nil)
-	//
-	// realm, err := fslib.MakeFsLibAddrNet(uname, rid, rootrealm.GetLocalIP(), nil, sp.ROOTREALM.String())
-	//
-	//	if err != nil {
-	//		db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", nil, err)
-	//		return nil, err
-	//	}
-	//
-	// return MkSigmaLeaseClnt(realm)
-	return nil, nil
-}
+// // Create only an FsLib, relative to a realm, but with the client being in the root realm
+//
+//	func MkSigmaClntRealmFsLib(rootrealm *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*SigmaClnt, error) {
+//		db.DPrintf(db.SIGMACLNT, "Realm %v\n", rid)
+//		scfg := config.NewTestSigmaConfig(rid, rootrealm.SigmaConfig().EtcdIP, rootrealm.SigmaConfig().LocalIP, rootrealm.SigmaConfig().BuildTag)
+//		db.DPrintf(db.SIGMACLNT, "Realm %v config %v\n", rid, scfg)
+//
+//		fsl, err := fslib.MakeFsLib(scfg)
+//		if err != nil {
+//			db.DPrintf(db.SIGMACLNT, "Error mkFsLibAddr [%v]: %v", nil, err)
+//			return nil, err
+//		}
+//		return MkSigmaLeaseClnt(fsl)
+//	}
 
-// Create a full sigmaclnt relative to a realm (fslib and procclnt)
-func MkSigmaClntRealm(rootfsl *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*SigmaClnt, error) {
-	db.DPrintf(db.SIGMACLNT, "MkSigmaClntRealmProc %v\n", rid)
-	sc, err := MkSigmaClntRealmFsLib(rootfsl, uname, rid)
-	if err != nil {
-		return nil, err
-	}
-	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(uname))
-	return sc, nil
-}
+//// Create a full sigmaclnt relative to a realm (fslib and procclnt)
+//func MkSigmaClntRealm(rootfsl *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*SigmaClnt, error) {
+//	db.DPrintf(db.SIGMACLNT, "MkSigmaClntRealmProc %v\n", rid)
+//	sc, err := MkSigmaClntRealmFsLib(rootfsl, uname, rid)
+//	if err != nil {
+//		return nil, err
+//	}
+//	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(uname))
+//	return sc, nil
+//}
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.

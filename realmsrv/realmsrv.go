@@ -108,7 +108,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
-	sc, err := sigmaclnt.MkSigmaClntRealmFsLib(rm.sc.FsLib, "realmd", rid)
+	scfg := config.NewDifferentRealmSigmaConfig(rm.sc.SigmaConfig(), rid)
+	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)
 		return err

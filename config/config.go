@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"runtime/debug"
@@ -81,6 +82,13 @@ func NewAddedSigmaConfig(sc *SigmaConfig, idx int) *SigmaConfig {
 	return sc2
 }
 
+func NewDifferentRealmSigmaConfig(sc *SigmaConfig, realm sp.Trealm) *SigmaConfig {
+	sc2 := NewSigmaConfig()
+	*sc2 = *sc
+	sc2.Realm = realm
+	return sc2
+}
+
 func (sc *SigmaConfig) Marshal() string {
 	b, err := json.Marshal(sc)
 	if err != nil {
@@ -106,4 +114,8 @@ func GetSigmaConfig() *SigmaConfig {
 		log.Fatalf("%s\nError: No Sigma Config", stack)
 	}
 	return Unmarshal(scstr)
+}
+
+func (sc *SigmaConfig) String() string {
+	return fmt.Sprintf("&{ Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v Privileged:%v Program:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Crash:%v Partition:%v }", sc.PID, sc.Realm, sc.Uname, sc.KernelID, sc.UprocdPID, sc.Net, sc.Privileged, sc.Program, sc.ProcDir, sc.ParentDir, sc.Perf, sc.Debug, sc.EtcdIP, sc.LocalIP, sc.BuildTag, sc.Crash, sc.Partition)
 }

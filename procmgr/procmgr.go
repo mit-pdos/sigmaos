@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -121,7 +122,8 @@ func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 			}
 		} else {
 			var err error
-			if clnt, err = sigmaclnt.MkSigmaClntRealm(mgr.rootsc.FsLib, sp.SCHEDDREL, realm); err != nil {
+			scfg := config.NewDifferentRealmSigmaConfig(mgr.rootsc.SigmaConfig(), realm)
+			if clnt, err = sigmaclnt.NewSigmaClnt(scfg); err != nil {
 				db.DFatalf("Err MkSigmaClntRealm: %v", err)
 			}
 			// Mount KPIDS.

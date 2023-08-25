@@ -10,7 +10,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/electclnt"
+	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -71,7 +71,7 @@ type Coord struct {
 	linesz      string
 	mapperbin   string
 	reducerbin  string
-	electclnt   *electclnt.ElectClnt
+	leaderclnt  *leaderclnt.LeaderClnt
 	done        int32
 }
 
@@ -110,9 +110,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	c.Started()
 
-	c.electclnt, err = electclnt.MakeElectClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	c.leaderclnt, err = leaderclnt.MakeLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: MakeElectClnt err %v", err)
+		return nil, fmt.Errorf("MakeCoord: MakeLeaderclnt err %v", err)
 	}
 
 	crash.Crasher(c.FsLib)
@@ -360,10 +360,11 @@ func (c *Coord) Round(ttype string) {
 
 func (c *Coord) Work() {
 	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", proc.GetPid(), c.job)
-	// Try to become the leading coordinator.  If we get
-	// partitioned, we cannot write the todo directories either,
-	// so need to set a fence.
-	c.electclnt.AcquireLeadership(nil)
+
+	// Try to become the leading coordinator.
+	if err := c.leaderclnt.LeadAndFence(nil, []string{JobDir(c.job)}); err != nil {
+		db.DFatalf("LeadAndFence err %v", err)
+	}
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 

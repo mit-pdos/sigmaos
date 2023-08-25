@@ -10,8 +10,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/electclnt"
 	"sigmaos/fslib"
+	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/serr"
@@ -34,7 +34,7 @@ type ImgSrv struct {
 	workerMcpu proc.Tmcpu
 	isDone     bool
 	crash      int
-	electclnt  *electclnt.ElectClnt
+	leaderclnt *leaderclnt.LeaderClnt
 }
 
 func MkDirs(fsl *fslib.FsLib, job string) error {
@@ -114,9 +114,9 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	imgd.electclnt, err = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.leaderclnt, err = leaderclnt.MakeLeaderClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
 	if err != nil {
-		return nil, fmt.Errorf("MakeElectClnt err %v", err)
+		return nil, fmt.Errorf("MakeLeaderclnt err %v", err)
 	}
 
 	crash.Crasher(imgd.FsLib)
@@ -243,10 +243,10 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", proc.GetPid(), imgd.job)
 
-	// Try to become the leading coordinator.  If we get
-	// partitioned, we cannot write the todo directories either,
-	// so need to set a fence.
-	imgd.electclnt.AcquireLeadership(nil)
+	// Try to become the leading coordinator.
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{path.Join(IMG, imgd.job)}); err != nil {
+		db.DFatalf("LeadAndFence err %v", err)
+	}
 
 	db.DPrintf(db.ALWAYS, "leader %s\n", imgd.job)
 

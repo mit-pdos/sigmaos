@@ -80,7 +80,7 @@ func (g *Group) clearBusy() {
 func (g *Group) AcquireLeadership() {
 	db.DPrintf(db.KVGRP, "%v/%v Try acquire leadership", g.grp, g.myid)
 	if err := g.lc.LeadAndFence(nil, []string{g.jobdir}); err != nil {
-		db.DFatalf("LeadAndFence in group.RunMember: %v", err)
+		db.DFatalf("LeadAndFence err %v", err)
 	}
 	db.DPrintf(db.KVGRP, "%v/%v Acquired leadership", g.grp, g.myid)
 }

@@ -18,11 +18,15 @@ import (
 )
 
 //
-// Keeps n members running. If one member crashes, the manager starts
-// another one to keep the replication level up.  There are two ways
-// of stopping the group manager: the caller calls stop or the callers
-// calls wait (which returns when the primary member returns with an
-// OK status).
+// Keep n instances of the same program running. If one instance (a
+// member) of the group of n crashes, the manager starts another one.
+// Some programs use the n instances to form a Raft group (e.g.,
+// kvgrp); others use it in primary-backup configuration (e.g., kv
+// balancer, imageresized).
+//
+// There are two ways of stopping the group manager: the caller calls
+// stop or the callers calls wait (which returns when the primary
+// member returns with an OK status).
 //
 
 const (

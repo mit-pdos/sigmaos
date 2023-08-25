@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
 )
@@ -280,16 +281,16 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 }
 
 // Get the next procd to burst on.
-func (sdc *ScheddClnt) NextSchedd(spread int) string {
+func (sdc *ScheddClnt) NextSchedd(spread int) (string, error) {
 	sdc.Lock()
 	defer sdc.Unlock()
 
 	if len(sdc.scheddKernelIds) == 0 {
 		debug.PrintStack()
-		db.DFatalf("Error: no schedds to spawn on")
+		return "", serr.MkErr(serr.TErrNotfound, "no schedds to spawn on")
 	}
 
 	sdip := sdc.scheddKernelIds[(sdc.burstOffset/spread)%len(sdc.scheddKernelIds)]
 	sdc.burstOffset++
-	return sdip
+	return sdip, nil
 }

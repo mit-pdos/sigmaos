@@ -4,6 +4,7 @@ import (
 	"os/user"
 	"sync"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -82,7 +83,9 @@ func makeNpConn(lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
 	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
-	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), sp.ROOTREALM, lip, sessp.Tsize(1_000_000))
+	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, lip, lip, "")
+	scfg.Uname = "proxy"
+	npc.pc = pathclnt.MakePathClnt(scfg, npc.fidc, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc

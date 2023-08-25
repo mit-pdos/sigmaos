@@ -111,7 +111,7 @@ func TestMiss(t *testing.T) {
 	ts.done()
 }
 
-func TestGetPut(t *testing.T) {
+func TestGetPut0(t *testing.T) {
 	ts := makeTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	err := ts.cm.Get(cache.MkKey(kv.NKEYS+1), &cproto.CacheString{})
@@ -129,6 +129,25 @@ func TestGetPut(t *testing.T) {
 		assert.Nil(ts.T, err, "Get "+key)
 	}
 
+	ts.cm.StopClerks()
+	ts.done()
+}
+
+func TestPutGetRepl(t *testing.T) {
+	const TIME = 100
+
+	ts := makeTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
+
+	err := ts.cm.StartClerks("", 1)
+	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+
+	start := time.Now()
+	end := start.Add(10 * time.Second)
+	for i := 0; start.Before(end); i++ {
+		time.Sleep(TIME * time.Millisecond)
+		start = time.Now()
+	}
+	db.DPrintf(db.TEST, "Done ")
 	ts.cm.StopClerks()
 	ts.done()
 }

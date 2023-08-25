@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap"
 
 	db "sigmaos/debug"
-	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -55,14 +54,15 @@ type committedEntries struct {
 
 // etcd numbers nodes start from 1.  0 is not a valid id.
 func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
-	node := &RaftNode{}
-	node.id = id
-	node.peerAddrs = peerAddrs
-	node.done = make(chan bool)
-	node.clerk = clerk
-	node.commit = commit
-	node.propose = propose
-	node.storage = raft.NewMemoryStorage()
+	node := &RaftNode{
+		id:        id,
+		peerAddrs: peerAddrs,
+		done:      make(chan bool),
+		clerk:     clerk,
+		commit:    commit,
+		propose:   propose,
+		storage:   raft.NewMemoryStorage(),
+	}
 	node.config = &raft.Config{
 		ID:                        uint64(id),
 		ElectionTick:              sp.Conf.Raft.ELECT_NTICKS,
@@ -83,15 +83,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	if init {
 		n.node = raft.StartNode(n.config, peers)
 	} else {
-		var err error
-		for i := 0; i < pathclnt.MAXRETRY; i++ {
-			err = n.postNodeId()
-			if err == nil {
-				break
-			}
-			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
-		}
-		if err != nil {
+		if err := n.postNodeId(); err != nil {
 			return err
 		}
 		n.node = raft.RestartNode(n.config)
@@ -116,9 +108,9 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 		ErrorC:      make(chan error),
 	}
 	n.transport.Start()
-	for i := range peers {
-		if i != n.id-1 {
-			n.transport.AddPeer(types.ID(i+1), []string{"http://" + n.peerAddrs[i]})
+	for i, a := range n.peerAddrs {
+		if i != n.id-1 && a != "" {
+			n.transport.AddPeer(types.ID(i+1), []string{"http://" + a})
 		}
 	}
 
@@ -239,9 +231,6 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 
 // Send a post request, indicating that the node will join the cluster.
 func (n *RaftNode) postNodeId() error {
-	if len(n.peerAddrs) == 1 {
-		return nil
-	}
 	db.DPrintf(db.REPLRAFT, "%v: postNodeId %v\n", n.id, n.peerAddrs)
 	for i, addr := range n.peerAddrs {
 		if i == n.id-1 {
@@ -261,7 +250,7 @@ func (n *RaftNode) postNodeId() error {
 			db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v\n", i, addr, err)
 		}
 	}
-	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.peerAddrs)
+	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.id, n.peerAddrs)
 	return serr.MkErr(serr.TErrUnreachable, nil)
 }
 

@@ -2,13 +2,14 @@ package kvgrp
 
 import (
 	"fmt"
+	"time"
 
 	"sigmaos/cachesrv"
 
 	db "sigmaos/debug"
+	"sigmaos/pathclnt"
 	"sigmaos/replraft"
 	"sigmaos/replsrv"
-	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -73,11 +74,6 @@ func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
 			if err := g.writeGroupConfig(pn, cfg); err != nil {
 				db.DFatalf("writeGroupConfig  %v err %v", pn, err)
 			}
-			if nrepl > 0 {
-				sem := grpSemPath(g.jobdir, g.grp)
-				sclnt := semclnt.MakeSemClnt(g.SigmaClnt.FsLib, sem)
-				sclnt.Init(0)
-			}
 		} else {
 			db.DFatalf("readGroupConfig %v err %v", pn, err)
 		}
@@ -102,53 +98,40 @@ func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *r
 	db.DPrintf(db.KVGRP, "%v/%v makeRaftConfig %v\n", g.grp, myid, cfg)
 
 	pn := grpConfPath(g.jobdir, g.grp)
-	if cfg.RaftAddrs[myid] == "" {
-		raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", true)
-		// Get the listener address selected by the raft library.
-		cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
+	initial := cfg.RaftAddrs[myid] == ""
+	raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", initial)
 
-		db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
-
-		if err := g.writeGroupConfig(pn, cfg); err != nil {
-			db.DFatalf("registerInConfig err %v", err)
-		}
-		cfg = g.waitRaftConfig(cfg)
-	} else {
-		raftCfg = replraft.MakeRaftConfig(myid, cfg.RaftAddrs[myid], false)
+	// Get the listener address selected by raft and advertise it to group
+	cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
+	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
+	if err := g.writeGroupConfig(pn, cfg); err != nil {
+		db.DFatalf("registerInConfig err %v", err)
 	}
-	raftCfg.SetPeerAddrs(cfg.RaftAddrs)
 	return cfg, raftCfg
 }
 
-// Wait until initil raft cluster has configured itself
-func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
-
-	db.DPrintf(db.KVGRP, "waitRaftConfig %v\n", cfg)
-
-	sem := grpSemPath(g.jobdir, g.grp)
-	sclnt := semclnt.MakeSemClnt(g.SigmaClnt.FsLib, sem)
-
-	if !cfg.RaftInitialized() {
-
-		// Release leadership so that another member can write config
-		// file with its info
-		g.ReleaseLeadership()
-
-		err := sclnt.Down()
-		if err != nil {
-			db.DFatalf("sem down %v err %v", sem, err)
+func (g *Group) startReplServer(cs any, cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*replsrv.ReplSrv, *GroupConfig, error) {
+	for i := 0; i < pathclnt.MAXRETRY; i++ {
+		raftCfg.SetPeerAddrs(cfg.RaftAddrs)
+		n := replraft.NValidAddr(cfg.RaftAddrs)
+		db.DPrintf(db.KVGRP, "%v/%v peers: %d %v\n", g.grp, g.myid, n, cfg.RaftAddrs)
+		if n > 1 {
+			cs, err := replsrv.NewReplSrv(raftCfg, cs)
+			if err == nil {
+				return cs, cfg, nil
+			}
+			if !serr.IsErrCode(err, serr.TErrUnreachable) {
+				return nil, nil, err
+			}
 		}
-
+		time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
+		// reread config to discover hopefully more peers
 		cfg = g.AcquireReadCfg()
-
-	} else {
-		// the last one to update raft config; alert others
-		sclnt.Up()
+		g.ReleaseLeadership()
 	}
-	return cfg
+	return nil, nil, serr.MkErr(serr.TErrUnreachable, nil)
 }
 
-// Must run after SetPeerAddrs()
 func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*GroupConfig, error) {
 	var cs any
 	var err error
@@ -159,7 +142,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 
 	cs = cachesrv.NewCacheSrv("")
 	if raftCfg != nil {
-		cs, err = replsrv.NewReplSrv(raftCfg, cs)
+		cs, cfg, err = g.startReplServer(cs, cfg, raftCfg)
 		if err != nil {
 			return nil, err
 		}

@@ -27,6 +27,16 @@ func MakeRaftConfig(id int, addr string, init bool) *RaftConfig {
 	return rc
 }
 
+func NValidAddr(peerAddrs []string) int {
+	n := 0
+	for _, a := range peerAddrs {
+		if a != "" {
+			n += 1
+		}
+	}
+	return n
+}
+
 func (rc *RaftConfig) SetPeerAddrs(new []string) {
 	rc.peerAddrs = new
 }

@@ -83,9 +83,6 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	if init {
 		n.node = raft.StartNode(n.config, peers)
 	} else {
-		if err := n.postNodeId(); err != nil {
-			return err
-		}
 		n.node = raft.RestartNode(n.config)
 	}
 	// Make sure the logging dir exists
@@ -113,9 +110,13 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 			n.transport.AddPeer(types.ID(i+1), []string{"http://" + a})
 		}
 	}
-
 	go n.serveRaft(l)
 	go n.serveChannels()
+	//if !init {
+	//	if err := n.postNodeId(); err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 

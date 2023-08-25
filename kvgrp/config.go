@@ -98,10 +98,16 @@ func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *r
 	db.DPrintf(db.KVGRP, "%v/%v makeRaftConfig %v\n", g.grp, myid, cfg)
 
 	pn := grpConfPath(g.jobdir, g.grp)
-	initial := cfg.RaftAddrs[myid] == ""
-	raftCfg = replraft.MakeRaftConfig(myid, g.ip+":0", initial)
 
-	// Get the listener address selected by raft and advertise it to group
+	ip := cfg.RaftAddrs[myid]
+	initial := false
+	if ip == "" {
+		initial = true
+		ip = g.ip + ":0"
+	}
+	raftCfg = replraft.MakeRaftConfig(myid, ip, initial)
+
+	// Get the listener address selected by raft and advertise it to group (if initial)
 	cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
 	db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
 	if err := g.writeGroupConfig(pn, cfg); err != nil {

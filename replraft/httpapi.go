@@ -61,6 +61,8 @@ func (h membershipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.DPrintf(db.REPLRAFT, "MembershipChange %v\n", c)
+
 	cc := raftpb.ConfChange{Type: raftpb.ConfChangeAddNode, NodeID: c.ID, Context: []byte(c.IP)}
 	h.n.node.ProposeConfChange(context.TODO(), cc)
 	// XXX Should perhaps wait until the change is confirmed?

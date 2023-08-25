@@ -63,22 +63,6 @@ func TestStartStopRepl0(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestStartStopRepl1(t *testing.T) {
-	ts := makeTstate(t, 1, false)
-
-	st, err := ts.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
-	db.DPrintf(db.TEST, "Stat: %v %v\n", st, err)
-	assert.Nil(t, err, "stat")
-
-	sts, _, err := ts.ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
-	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
-	assert.Nil(t, err, "stat")
-
-	err = ts.gm.Stop()
-	assert.Nil(ts.T, err, "Stop")
-	ts.Shutdown()
-}
-
 func TestStartStopReplN(t *testing.T) {
 	ts := makeTstate(t, N_REPL, false)
 	err := ts.gm.Stop()

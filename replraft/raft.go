@@ -112,11 +112,6 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	}
 	go n.serveRaft(l)
 	go n.serveChannels()
-	//if !init {
-	//	if err := n.postNodeId(); err != nil {
-	//		return err
-	//	}
-	//}
 	return nil
 }
 
@@ -231,6 +226,7 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 }
 
 // Send a post request, indicating that the node will join the cluster.
+// Note: unused for now.
 func (n *RaftNode) postNodeId() error {
 	db.DPrintf(db.REPLRAFT, "%v: postNodeId %v\n", n.id, n.peerAddrs)
 	for i, addr := range n.peerAddrs {

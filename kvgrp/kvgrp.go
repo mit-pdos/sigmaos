@@ -27,6 +27,7 @@ import (
 const (
 	GRPCONF  = "-conf"
 	GRPELECT = "-elect"
+	GRPSEM   = "-sem"
 	KVDIR    = sp.NAMED + "kv/"
 )
 
@@ -44,6 +45,10 @@ func grpConfPath(jobdir, grp string) string {
 
 func grpElectPath(jobdir, grp string) string {
 	return GrpPath(jobdir, grp) + GRPELECT
+}
+
+func grpSemPath(jobdir, grp string) string {
+	return GrpPath(jobdir, grp) + GRPSEM
 }
 
 type Group struct {

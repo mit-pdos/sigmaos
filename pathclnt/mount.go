@@ -22,7 +22,6 @@ func (p *Point) String() string {
 type MntTable struct {
 	sync.Mutex
 	mounts []*Point
-	exited bool
 }
 
 func makeMntTable() *MntTable {
@@ -71,13 +70,9 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 	mnt.Lock()
 	defer mnt.Unlock()
 
-	if mnt.exited {
-		return sp.NoFid, path, serr.MkErr(serr.TErrUnreachable, path)
-	}
-
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
-		// db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
+		db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
 			if len(left) == 0 && !allowResolve {
 				continue

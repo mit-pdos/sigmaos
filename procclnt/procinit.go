@@ -16,7 +16,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ProcDir, proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
-	fsl.MakeRootMount(fsl.Uname(), proc.GetParentDir(), proc.PARENTDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ParentDir, proc.PARENTDIR)
 
 	if err := fsl.MakeRootMount(fsl.Uname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()

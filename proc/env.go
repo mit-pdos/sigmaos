@@ -13,7 +13,7 @@ const (
 	//	SIGMAPID            = "SIGMAPID"
 	SIGMAPROGRAM = "SIGMAPROGRAM"
 	//	SIGMAPROCDIR   = "SIGMAPROCDIR"
-	SIGMAPARENTDIR = "SIGMAPARENTDIR"
+	//	SIGMAPARENTDIR = "SIGMAPARENTDIR"
 	SIGMACRASH     = "SIGMACRASH"
 	SIGMAPARTITION = "SIGMAPARTITION"
 	SIGMANETFAIL   = "SIGMANETFAIL"
@@ -71,14 +71,6 @@ func SetProgram(program string) {
 //func GetSigmaNamed() string {
 //	return os.Getenv(SIGMANAMED)
 //}
-
-func SetParentDir(procdir string) {
-	os.Setenv(SIGMAPARENTDIR, procdir)
-}
-
-func GetParentDir() string {
-	return os.Getenv(SIGMAPARENTDIR)
-}
 
 func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
@@ -149,5 +141,5 @@ func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
 	//	SetPid(pid)
 	SetProgram(program)
 	//	SetProcDir(procdir)
-	SetParentDir(parentdir)
+	//	SetParentDir(parentdir)
 }

@@ -80,6 +80,7 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 			return p.fid, left, nil
 		}
 	}
+	db.DPrintf(db.MOUNT_ERR, "resolve failed: path %v allowResolve %v mnt %v\n", path, allowResolve, mnt.mounts)
 	return sp.NoFid, path, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 

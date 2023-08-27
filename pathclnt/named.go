@@ -60,6 +60,7 @@ func (pathc *PathClnt) mountRootNamed(name string, uname sp.Tuname) *serr.Err {
 func (pathc *PathClnt) getRealmNamed(uname sp.Tuname) (sp.Tmount, *serr.Err) {
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 		if err := pathc.mountRootNamed("root", uname); err != nil {
+			db.DPrintf(db.NAMED, "getRealmNamed %v err mounting root named %v\n", pathc.scfg.Realm, err)
 			return sp.Tmount{}, err
 		}
 	}

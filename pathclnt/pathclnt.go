@@ -391,6 +391,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "Error PutFile resolve %v %v %v: %v", pn, mode, lid, err)
 		return 0, err
 	}
 	// Optimistcally PutFile without doing a pathname
@@ -409,11 +410,13 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 			}
 			fid, err = pathc.walk(dir, uname, resolve, nil)
 			if err != nil {
+				db.DPrintf(db.PATHCLNT_ERR, "Error PutFile walk failed %v %v %v: %v", pn, mode, lid, err)
 				return 0, err
 			}
 			defer pathc.FidClnt.Clunk(fid)
 			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
 			if err != nil {
+				db.DPrintf(db.PATHCLNT_ERR, "Error PutFile retry failed %v %v %v: %v", pn, mode, lid, err)
 				return 0, err
 			}
 		} else {

@@ -96,13 +96,13 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), scfg.PID, proc.GetProcDir())
+	db.DPrintf(db.ALWAYS, "%v: pid %v ", proc.GetProgram(), scfg.PID)
 	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
-	www.globalSrvpath = path.Join(proc.GetProcDir(), WWWD)
+	www.globalSrvpath = path.Join(scfg.ProcDir, WWWD)
 
 	err = www.ssrv.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {

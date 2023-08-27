@@ -10,14 +10,15 @@ import (
 // Environment variables which every proc expects to have.
 const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
-	SIGMAPROGRAM        = "SIGMAPROGRAM"
-	SIGMAPROCDIR        = "SIGMAPROCDIR"
-	SIGMAPARENTDIR      = "SIGMAPARENTDIR"
-	SIGMACRASH          = "SIGMACRASH"
-	SIGMAPARTITION      = "SIGMAPARTITION"
-	SIGMANETFAIL        = "SIGMANETFAIL"
-	SIGMAPERF           = "SIGMAPERF"
-	SIGMADEBUG          = "SIGMADEBUG"
+	//	SIGMAPID            = "SIGMAPID"
+	SIGMAPROGRAM = "SIGMAPROGRAM"
+	//	SIGMAPROCDIR   = "SIGMAPROCDIR"
+	SIGMAPARENTDIR = "SIGMAPARENTDIR"
+	SIGMACRASH     = "SIGMACRASH"
+	SIGMAPARTITION = "SIGMAPARTITION"
+	SIGMANETFAIL   = "SIGMANETFAIL"
+	SIGMAPERF      = "SIGMAPERF"
+	SIGMADEBUG     = "SIGMADEBUG"
 	//	SIGMANAMED          = "SIGMANAMED"
 	SIGMALOCAL    = "SIGMALOCAL"
 	SIGMATAG      = "SIGMATAG"
@@ -70,14 +71,6 @@ func SetProgram(program string) {
 //func GetSigmaNamed() string {
 //	return os.Getenv(SIGMANAMED)
 //}
-
-func SetProcDir(procdir string) {
-	os.Setenv(SIGMAPROCDIR, procdir)
-}
-
-func GetProcDir() string {
-	return os.Getenv(SIGMAPROCDIR)
-}
 
 func SetParentDir(procdir string) {
 	os.Setenv(SIGMAPARENTDIR, procdir)
@@ -155,6 +148,6 @@ func GetLabels(envvar string) map[string]bool {
 func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
 	//	SetPid(pid)
 	SetProgram(program)
-	SetProcDir(procdir)
+	//	SetProcDir(procdir)
 	SetParentDir(parentdir)
 }

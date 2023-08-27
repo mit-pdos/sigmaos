@@ -41,21 +41,19 @@ type Param struct {
 type Kernel struct {
 	*sigmaclnt.SigmaClnt
 	Param *Param
-	scfg  *config.SigmaConfig
 	svcs  *Services
 	ip    string
 }
 
-func mkKernel(param *Param, scfg *config.SigmaConfig) *Kernel {
+func mkKernel(param *Param) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.scfg = scfg
 	k.svcs = mkServices()
 	return k
 }
 
 func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
-	k := mkKernel(p, scfg)
+	k := mkKernel(p)
 	proc.SetProgram(os.Args[0])
 	ip, err := container.LocalIP()
 	if err != nil {
@@ -130,7 +128,7 @@ func (k *Kernel) shutdown() {
 		}
 	}
 	if len(k.Param.Services) > 0 {
-		db.DPrintf(db.KERNEL, "Get children %v", k.scfg.PID)
+		db.DPrintf(db.KERNEL, "Get children %v", k.SigmaConfig().PID)
 		cpids, err := k.GetChildren()
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Error get children: %v", err)
@@ -145,7 +143,7 @@ func (k *Kernel) shutdown() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
-			db.DPrintf(db.KERNEL, "RemoveChild %v %v", pid, proc.GetProcDir())
+			db.DPrintf(db.KERNEL, "RemoveChild %v %v", pid, k.SigmaConfig().ProcDir)
 			if err := k.RemoveChild(pid); err != nil {
 				db.DPrintf(db.KERNEL, "Done evicting; rm %v err %v", pid, err)
 			} else {
@@ -162,8 +160,8 @@ func (k *Kernel) shutdown() {
 			}
 		}
 	}
-	if err := k.RmDir(proc.GetProcDir()); err != nil {
-		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", proc.GetProcDir(), err)
+	if err := k.RmDir(k.SigmaConfig().ProcDir); err != nil {
+		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.SigmaConfig().ProcDir, err)
 	}
 	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.KNAMED]))
 	for _, ss := range k.svcs.svcs[sp.KNAMED] {

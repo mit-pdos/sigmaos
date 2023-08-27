@@ -13,7 +13,7 @@ import (
 // Called by a sigmaOS process after being spawned
 func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount procdir
-	fsl.MakeRootMount(fsl.Uname(), proc.GetProcDir(), proc.PROCDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ProcDir, proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
 	fsl.MakeRootMount(fsl.Uname(), proc.GetParentDir(), proc.PARENTDIR)
@@ -38,10 +38,10 @@ func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 
-	clnt := makeProcClnt(fsl, pid, proc.GetProcDir())
-	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
+	clnt := makeProcClnt(fsl, pid, fsl.SigmaConfig().ProcDir)
+	clnt.MakeProcDir(pid, fsl.SigmaConfig().ProcDir, false)
 
-	fsl.MakeRootMount(fsl.Uname(), proc.GetProcDir(), proc.PROCDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ProcDir, proc.PROCDIR)
 	return clnt
 }
 

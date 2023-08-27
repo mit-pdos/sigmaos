@@ -3,6 +3,7 @@ package fslib
 import (
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
@@ -12,6 +13,7 @@ import (
 func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte, lid sp.TleaseId) error {
 	tmpName := fname + rand.String(16)
 	if _, err := fsl.PutFileEphemeral(tmpName, perm, sp.OWRITE|sp.OEXCL, lid, data); err != nil {
+		debug.PrintStack()
 		db.DFatalf("MakeFileAtomic %v %v: %v", fname, tmpName, err)
 		return err
 	}

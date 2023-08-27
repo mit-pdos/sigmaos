@@ -121,7 +121,7 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
-		db.DFatalf("%v: no sess %v\n", proc.GetName(), sid)
+		db.DFatalf("no sess %v\n", sid)
 		return nil
 	}
 	return sess

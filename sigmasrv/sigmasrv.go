@@ -200,14 +200,14 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 }
 
 func (ssrv *SigmaSrv) RunServer() error {
-	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
 	ssrv.Serve()
 	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
-	db.DPrintf(db.SIGMASRV, "SrvExit %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}

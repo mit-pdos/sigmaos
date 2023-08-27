@@ -10,8 +10,9 @@ import (
 // Environment variables which every proc expects to have.
 const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
+	SIGMADEBUGPID       = "SIGMADEBUGPID"
 	//	SIGMAPID            = "SIGMAPID"
-	SIGMAPROGRAM = "SIGMAPROGRAM"
+	//	SIGMAPROGRAM = "SIGMAPROGRAM"
 	//	SIGMAPROCDIR   = "SIGMAPROCDIR"
 	//	SIGMAPARENTDIR = "SIGMAPARENTDIR"
 	SIGMACRASH     = "SIGMACRASH"
@@ -30,47 +31,9 @@ const (
 	SIGMAUPROCD   = "SIGMAUPROCD"
 )
 
-// XXX Remove
-func GetProgram() string {
-	return os.Getenv(SIGMAPROGRAM)
+func GetSigmaDebugPid() string {
+	return os.Getenv(SIGMADEBUGPID)
 }
-
-// XXX Remove
-func GetName() string {
-	return GetProgram() + "-" + GetPid().String()
-}
-
-func SetProgram(program string) {
-	os.Setenv(SIGMAPROGRAM, program)
-}
-
-//func NamedAddrs() string {
-//	addrs := GetSigmaNamed()
-//	if addrs == "" {
-//		return "127.0.0.1"
-//		debug.PrintStack()
-//		log.Fatalf("Getenv error: missing SIGMANAMED")
-//	}
-//	return addrs
-//}
-//
-//func Named() (sp.Taddrs, error) {
-//	return sp.String2Taddrs(NamedAddrs())
-//}
-//
-//func SetSigmaNamed(nds sp.Taddrs) error {
-//	return nil
-//	s, err := nds.Taddrs2String()
-//	if err != nil {
-//		return err
-//	}
-//	os.Setenv(SIGMANAMED, s)
-//	return nil
-//}
-//
-//func GetSigmaNamed() string {
-//	return os.Getenv(SIGMANAMED)
-//}
 
 func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
@@ -139,7 +102,7 @@ func GetLabels(envvar string) map[string]bool {
 
 func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
 	//	SetPid(pid)
-	SetProgram(program)
+	//	SetProgram(program)
 	//	SetProcDir(procdir)
 	//	SetParentDir(parentdir)
 }

@@ -59,6 +59,7 @@ func NewSigmaConfig() *SigmaConfig {
 func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.Uname = uname
+	sc.Program = "kernel"
 	sc.PID = sp.Tpid(string(uname) + "-" + sp.GenPid().String())
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP

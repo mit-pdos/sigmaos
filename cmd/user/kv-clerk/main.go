@@ -115,7 +115,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 		}
 		ntest += 1
 	}
-	db.DPrintf(db.ALWAYS, "%v: done ntest %v elapsed %v err %v\n", proc.GetName(), ntest, time.Since(start), err)
+	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, time.Since(start), err)
 	var status *proc.Status
 	if err != nil {
 		status = proc.MakeStatusErr(err.Error(), nil)
@@ -146,16 +146,16 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 			return nil
 		}
 		if val.Key != string(key) {
-			return fmt.Errorf("%v: wrong key expected %v observed %v", proc.GetName(), key, val.Key)
+			return fmt.Errorf("%v: wrong key expected %v observed %v", kc.SigmaConfig().PID, key, val.Key)
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N expected %v observed %v", proc.GetName(), n, val.N)
+			return fmt.Errorf("%v: wrong N expected %v observed %v", kc.SigmaConfig().PID, n, val.N)
 		}
 		n += 1
 		return nil
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest expected %v observed %v", proc.GetName(), ntest, n)
+		return fmt.Errorf("%v: wrong ntest expected %v observed %v", kc.SigmaConfig().PID, ntest, n)
 	}
 	return nil
 }
@@ -185,13 +185,13 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 			} else {
 				// If doing sets & gets (bounded clerk)
 				if err := kc.Put(key, &cproto.CacheString{Val: kc.SigmaConfig().PID.String()}); err != nil {
-					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
+					return fmt.Errorf("%v: Put %v err %v", kc.SigmaConfig().PID, key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
 				if err := kc.Get(key, &cproto.CacheString{}); err != nil {
-					return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
+					return fmt.Errorf("%v: Get %v err %v", kc.SigmaConfig().PID, key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
@@ -200,7 +200,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 		} else {
 			// If doing appends (unbounded clerk)
 			if err := kc.Append(cache.Tkey(key), &v); err != nil {
-				return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
+				return fmt.Errorf("%v: Append %v err %v", kc.SigmaConfig().PID, key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

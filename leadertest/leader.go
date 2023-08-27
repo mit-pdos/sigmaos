@@ -2,7 +2,6 @@ package leadertest
 
 import (
 	"encoding/json"
-	"log"
 	"path"
 	"time"
 
@@ -26,7 +25,7 @@ const (
 func RunLeader(dir, last, child string) {
 	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
-		db.DFatalf("%v SigmaClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
+		db.DFatalf("SigmaClnt %v failed %v\n", LEADERFN, err)
 	}
 
 	sc.Started()
@@ -34,14 +33,14 @@ func RunLeader(dir, last, child string) {
 	fn := path.Join(dir, OUT)
 	l, err := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
 	if err != nil {
-		db.DFatalf("%v MakeLeaderClnt %v failed %v\n", proc.GetName(), LEADERFN, err)
+		db.DFatalf("MakeLeaderClnt %v failed %v\n", LEADERFN, err)
 	}
 
 	if err := l.LeadAndFence(nil, []string{dir}); err != nil {
-		db.DFatalf("%v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
+		db.DFatalf("AcquireEpoch %v failed %v\n", LEADERFN, err)
 	}
 
-	log.Printf("%v: leader at %v\n", proc.GetName(), l.Fence())
+	db.DPrintf(db.ALWAYS, "leader at %v\n", l.Fence())
 
 	//
 	// Write dir in new epoch
@@ -49,11 +48,11 @@ func RunLeader(dir, last, child string) {
 	conf := &Config{l.Fence().Epoch, sc.SigmaConfig().PID, sc.SigmaConfig().PID}
 	b, err := json.Marshal(*conf)
 	if err != nil {
-		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("marshal %v failed %v\n", fn, err)
 	}
 	_, err = sc.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 	if err != nil {
-		db.DFatalf("%v SetFile b %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("SetFile b %v failed %v\n", fn, err)
 	}
 
 	if child == "child" {
@@ -84,7 +83,7 @@ func RunLeader(dir, last, child string) {
 		for i := 0; i < NWRITE; i++ {
 			_, err := sc.SetFile(fn, b, sp.OAPPEND, sp.NoOffset)
 			if err != nil {
-				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
+				db.DPrintf(db.ALWAYS, "SetFile %v failed %v\n", fn, err)
 			}
 		}
 	}

@@ -5,7 +5,6 @@ package kvgrp
 //
 
 import (
-	"log"
 	"path"
 	"sync"
 	"time"
@@ -216,7 +215,7 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	}
 	defer g.clearBusy()
 
-	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
+	db.DPrintf(db.ALWAYS, "opcode %v kv %v\n", opcode, kv)
 	return nil
 }
 

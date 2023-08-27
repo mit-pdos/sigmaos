@@ -37,7 +37,7 @@ func WillBePrinted(label Tselector) bool {
 
 func DPrintf(label Tselector, format string, v ...interface{}) {
 	if _, ok := labels[label]; ok || label == ALWAYS {
-		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
+		log.Printf("%v %v %v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...))
 	}
 }
 
@@ -48,8 +48,8 @@ func DFatalf(format string, v ...interface{}) {
 	fnName := strings.TrimPrefix(fnDetails.Name(), "sigmaos/")
 	// debug.PrintStack()
 	if ok && fnDetails != nil {
-		log.Fatalf("FATAL %v %v Err: %v", proc.GetName(), fnName, fmt.Sprintf(format, v...))
+		log.Fatalf("FATAL %v %v Err: %v", proc.GetSigmaDebugPid(), fnName, fmt.Sprintf(format, v...))
 	} else {
-		log.Fatalf("FATAL %v (missing details) %v", proc.GetName(), fmt.Sprintf(format, v...))
+		log.Fatalf("FATAL %v (missing details) %v", proc.GetSigmaDebugPid(), fmt.Sprintf(format, v...))
 	}
 }

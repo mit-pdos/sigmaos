@@ -83,7 +83,7 @@ func (csc *CachedSvcClnt) addServer(sts []*sp.Stat) {
 }
 
 func (csc *CachedSvcClnt) Watch(path string, err error) {
-	db.DPrintf(db.CACHEDSVCCLNT, "%v: cachedsvcclnt watch %v err %v\n", proc.GetName(), path, err)
+	db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v err %v", path, err)
 	if err != nil {
 		db.DPrintf(db.CACHEDSVCCLNT, "Watch err %v\n", err)
 		return

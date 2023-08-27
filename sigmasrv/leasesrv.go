@@ -90,28 +90,28 @@ func (ls *LeaseSrv) allocLid() sp.TleaseId {
 // Delete files that are associated with lid
 func (ls *LeaseSrv) expire(lid sp.TleaseId) {
 	pns := ls.et.Expire(lid)
-	db.DPrintf(db.ALWAYS, "%v: expire %v %v\n", proc.GetName(), lid, pns)
+	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, pns)
 	for _, pn := range pns {
 		ls.mfs.Remove(pn)
 	}
 }
 
 func (ls *LeaseSrv) expirer() {
-	db.DPrintf(db.LEASESRV, "%v: expirer running\n", proc.GetName())
+	db.DPrintf(db.LEASESRV, "expirer running")
 	for {
 		select {
 		case <-ls.ch:
 			return
 		case <-time.After(1 * time.Second):
 			for _, li := range ls.lt.Values() {
-				db.DPrintf(db.LEASESRV, "%v: expirer dec %v\n", proc.GetName(), li)
+				db.DPrintf(db.LEASESRV, "expirer dec %v", li)
 				if li.decTime() {
 					ls.expire(li.lid)
 				}
 			}
 		}
 	}
-	db.DPrintf(db.LEASESRV, "%v: expirer done\n", proc.GetName())
+	db.DPrintf(db.LEASESRV, "expirer done")
 }
 
 func (li *leaseInfo) resetTTL() {

@@ -126,10 +126,10 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 	}
 
 	if err := bl.lc.LeadAndFence(b, []string{JobDir(bl.job)}); err != nil {
-		db.DFatalf("%v: LeadAndFence %v\n", proc.GetName(), err)
+		db.DFatalf("LeadAndFence %v\n", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", proc.GetName(), bl.lc.Fence())
+	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.SigmaConfig().PID, bl.lc.Fence())
 
 	if err := bl.MkMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
 		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
@@ -255,7 +255,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf)
 	if err != nil {
-		db.DFatalf("%v: MakeFile %v err %v\n", proc.GetName(), KVConfig(bl.job), err)
+		db.DFatalf("MakeFile %v err %v\n", KVConfig(bl.job), err)
 	}
 }
 
@@ -330,7 +330,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			serr.IsErrCode(err, serr.TErrUnreachable)) {
-			db.DFatalf("CRASH %v: runProc %v err %v\n", pid, proc.GetName(), err)
+			db.DFatalf("CRASH: runProc %v err %v\n", pid, err)
 		}
 		if retryf(err, status) {
 			db.DPrintf(db.KVBAL_ERR, "retry pid %v %v err %v status %v\n", pid, args, err, status)
@@ -394,11 +394,11 @@ func (bl *Balancer) doMoves(moves Moves) {
 
 func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	if bl.testAndSetIsBusy() {
-		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
+		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", bl.SigmaConfig().PID))
 	}
 	defer bl.clearIsBusy()
 
-	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", proc.GetName(), opcode, kvd, bl.conf)
+	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", bl.SigmaConfig().PID, opcode, kvd, bl.conf)
 
 	var nextShards []string
 	switch opcode {

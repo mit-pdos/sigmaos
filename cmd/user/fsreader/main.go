@@ -60,7 +60,7 @@ func (r *Reader) Work() *proc.Status {
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("%v: Open error: %v", proc.GetProgram(), err)
+		db.DFatalf("Open error: %v", err)
 	}
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, sp.OREAD)
@@ -75,7 +75,7 @@ func (r *Reader) Work() *proc.Status {
 		}
 		_, err = r.Write(pipefd, data)
 		if err != nil {
-			db.DFatalf("%v: Error pipe Write: %v", proc.GetProgram(), err)
+			db.DFatalf("Error pipe Write: %v", err)
 		}
 	}
 	return proc.MakeStatus(proc.StatusOK)

@@ -149,7 +149,7 @@ func (sess *Session) unsetConnL(conn sps.Conn) {
 func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 	db.DPrintf(db.SESS_STATE_SRV, "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
-		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
+		db.DFatalf("heartbeat %v on closed session %v", msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
 }

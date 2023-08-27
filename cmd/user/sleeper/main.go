@@ -65,7 +65,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	if !s.native {
 		err := s.Started()
 		if err != nil {
-			db.DFatalf("%v: Started: error %v\n", proc.GetName(), err)
+			db.DFatalf("Started: error %v", err)
 		}
 	}
 	return s, nil

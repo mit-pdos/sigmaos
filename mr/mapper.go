@@ -137,13 +137,13 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 func (m *Mapper) informReducer() error {
 	pn, err := m.ResolveUnions(MLOCALSRV)
 	if err != nil {
-		return fmt.Errorf("%v: ResolveUnion %v err %v\n", proc.GetName(), MLOCALSRV, err)
+		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.SigmaConfig().PID, MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(m.job, m.bin, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
+			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.SigmaConfig().PID, fn+m.rand, fn, err)
 		}
 
 		name := symname(m.job, strconv.Itoa(r), m.bin)
@@ -164,7 +164,7 @@ func (m *Mapper) informReducer() error {
 
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
-			db.DFatalf("%v: FATAL symlink %v err %v\n", proc.GetName(), name, err)
+			db.DFatalf("FATAL symlink %v err %v\n", name, err)
 		}
 	}
 	return nil
@@ -175,18 +175,6 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	n, err := encodeKV(m.wrts[r], kv.Key, kv.Value, r)
 	m.perf.TptTick(float64(n))
 	return err
-	//	b, err := json.Marshal(kv)
-	//	if err != nil {
-	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
-	//	}
-
-	//	if n, err := m.wrts[r].bwrt.Write(b); err != nil || n != len(b) {
-	//		return fmt.Errorf("%v: mapper %v write err %v", proc.GetName(), r, err)
-	//	}
-
-	//	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
-	//		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
-	//	}
 }
 
 func (m *Mapper) DoSplit(s *Split) (sp.Tlength, error) {
@@ -202,7 +190,7 @@ func (m *Mapper) DoSplit(s *Split) (sp.Tlength, error) {
 	}
 	rdr, err := m.OpenAsyncReader(s.File, off)
 	if err != nil {
-		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
+		db.DFatalf("read %v err %v", s.File, err)
 	}
 	defer rdr.Close()
 	scanner := bufio.NewScanner(rdr)

@@ -22,7 +22,7 @@ type KernelSrv struct {
 func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
-	db.DPrintf(db.KERNEL, "%v: Run KernelSrv %v", proc.GetName(), k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Run KernelSrv %v", k.Param.KernelId)
 	_, err := sigmasrv.MakeSigmaSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	}
 	f.Close()
 	<-ks.ch
-	db.DPrintf(db.KERNEL, "%v: Run KernelSrv done %v", proc.GetName(), k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Run KernelSrv done %v", k.Param.KernelId)
 	return nil
 }
 

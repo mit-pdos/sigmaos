@@ -54,7 +54,6 @@ func mkKernel(param *Param) *Kernel {
 
 func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
 	k := mkKernel(p)
-	proc.SetProgram(os.Args[0])
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err

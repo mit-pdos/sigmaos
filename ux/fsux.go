@@ -33,12 +33,12 @@ func RunFsUx(rootux string) {
 	fsux := newUx(rootux)
 	root, sr := makeDir([]string{rootux})
 	if sr != nil {
-		db.DFatalf("%v: makeDir %v\n", proc.GetName(), sr)
+		db.DFatalf("makeDir %v\n", sr)
 	}
 	scfg := config.GetSigmaConfig()
 	srv, err := sigmasrv.MakeSigmaSrvRoot(root, ip+":0", sp.UX, scfg)
 	if err != nil {
-		db.DFatalf("%v: BootSrvAndPost %v\n", proc.GetName(), err)
+		db.DFatalf("BootSrvAndPost %v\n", err)
 	}
 	fsux.SigmaSrv = srv
 	fsux.RunServer()

@@ -34,7 +34,7 @@ func NewReplSrv(raftcfg *replraft.RaftConfig, svci any) *ReplSrv {
 	}
 	rs.replSrv = raftcfg.MakeServer(rs.applyOp)
 	rs.replSrv.Start()
-	db.DPrintf(db.ALWAYS, "%v: Starting repl server: %v %v", proc.GetName(), svci, raftcfg)
+	db.DPrintf(db.ALWAYS, "Starting repl server: %v %v", svci, raftcfg)
 	return rs
 }
 

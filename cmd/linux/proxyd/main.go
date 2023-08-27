@@ -15,7 +15,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("%s: Usage <lip>\n", os.Args[0])
 	}
-	proc.SetProgram("proxy")
+	// XXX TODO set program in config
 	scfg := config.GetSigmaConfig()
 	netsrv.MakeNetServer(scfg, proxy.MakeNpd(scfg, os.Args[1]), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})

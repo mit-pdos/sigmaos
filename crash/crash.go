@@ -89,7 +89,7 @@ func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 	}
 	p := rand.Int64(100)
 	if p < prob {
-		db.DPrintf(db.ALWAYS, "%v: PartitionParentProb %v\n", proc.GetName(), prob)
+		db.DPrintf(db.ALWAYS, "PartitionParentProb %v\n", prob)
 		sc.ProcClnt.Exited(proc.MakeStatusErr("partitioned", nil))
 		return true
 	}

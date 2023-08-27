@@ -104,7 +104,7 @@ func (t *Trans) Work(output string) *proc.Status {
 	dcw := time.Now()
 	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
+		db.DFatalf("Open %v error: %v", t.output, err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.input, time.Since(dcw))
 	dw := time.Now()

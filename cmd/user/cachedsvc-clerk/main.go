@@ -109,7 +109,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 		}
 		ntest += 1
 	}
-	db.DPrintf(db.ALWAYS, "%v: done ntest %v elapsed %v err %v\n", proc.GetName(), ntest, time.Since(start), err)
+	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, time.Since(start), err)
 	var status *proc.Status
 	if err != nil {
 		status = proc.MakeStatusErr(err.Error(), nil)
@@ -139,14 +139,14 @@ func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis
 			*nops++
 		} else {
 			if err := csc.Put(key, &proto.CacheString{Val: sc.SigmaConfig().PID.String()}); err != nil {
-				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
+				return fmt.Errorf("%v: Put %v err %v", sc.SigmaConfig().PID, key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)
 			*nops++
 			if err := csc.Get(key, &proto.CacheString{}); err != nil {
 				db.DPrintf(db.ALWAYS, "miss %v", key)
-				// return fmt.Errorf("%v: Get %v err %v", proc.GetName(), key, err)
+				// return fmt.Errorf("%v: Get %v err %v", key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

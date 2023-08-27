@@ -122,7 +122,7 @@ func MakePerfMulti(scfg *config.SigmaConfig, s Tselector, s2 string) (*Perf, err
 		db.DPrintf(db.ALWAYS, "MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
-	basePath := path.Join(OUTPUT_PATH, path.Base(proc.GetName()))
+	basePath := path.Join(OUTPUT_PATH, path.Base(scfg.PID))
 	if s2 != "" {
 		basePath += "-" + s2
 	}

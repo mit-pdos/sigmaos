@@ -100,7 +100,7 @@ func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {
 		c.opmap[cid] = m
 	}
 	if _, ok := m[seq]; ok {
-		db.DFatalf("%v registerOp (%v vs %v)", proc.GetName(), op.request, m[seq].request)
+		db.DFatalf("registerOp (%v vs %v)", op.request, m[seq].request)
 	}
 	m[seq] = op
 }

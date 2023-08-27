@@ -32,7 +32,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), scfg: scfg}
 
 	ip, _ := container.LocalIP()
-	db.DPrintf(db.UPROCD, "%v: Run %v %v %v %s IP %s\n", proc.GetName(), realm, kernelId, up, os.Environ(), ip)
+	db.DPrintf(db.UPROCD, "Run %v %v %v %s IP %s", realm, kernelId, up, os.Environ(), ip)
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error

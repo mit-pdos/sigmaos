@@ -1,7 +1,6 @@
 package www
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -87,7 +86,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	var err error
 	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), scfg)
 	if err != nil {
-		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
+		db.DFatalf("MakeSrvFsLib %v %v\n", JobDir(job), err)
 	}
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
@@ -96,7 +95,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "%v: pid %v ", proc.GetProgram(), scfg.PID)
+	db.DPrintf(db.ALWAYS, "pid %v ", scfg.PID)
 	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
@@ -113,7 +112,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 
 func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (*proc.Status, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("path %v\n", r.URL.Path)
+		db.DPrintf(db.ALWAYS, "path %v\n", r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
@@ -139,7 +138,7 @@ func (www *Wwwd) makePipe() string {
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().MakePipe(pipePath, 0777); err != nil {
-		db.DFatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
+		db.DFatalf("Error MakePipe %v", err)
 	}
 	return pipeName
 }
@@ -147,7 +146,7 @@ func (www *Wwwd) makePipe() string {
 func (www *Wwwd) removePipe(pipeName string) {
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().Remove(pipePath); err != nil {
-		db.DFatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
+		db.DFatalf("Error Remove pipe %v", err)
 	}
 }
 
@@ -166,7 +165,6 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 		if err != nil || len(b) == 0 {
 			break
 		}
-		//		log.Printf("wwwd: write %v\n", string(b))
 		_, err = w.Write(b)
 		if err != nil {
 			break
@@ -219,7 +217,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	db.DPrintf(db.ALWAYS, "%v: getstatic: %v\n", proc.GetProgram(), args)
+	db.DPrintf(db.ALWAYS, "getstatic: %v\n", args)
 	file := path.Join(TMP, args)
 	return www.spawnApp("fsreader", w, r, true, []string{file}, nil, 0)
 }

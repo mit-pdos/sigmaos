@@ -73,7 +73,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(perf.KVCLERK)
+	p, err := perf.MakePerf(sc.SigmaConfig(), perf.KVCLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -84,7 +84,7 @@ func main() {
 }
 
 func waitEvict(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk) {
-	err := sc.WaitEvict(proc.GetPid())
+	err := sc.WaitEvict(sc.SigmaConfig().PID)
 	if err != nil {
 		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
@@ -142,7 +142,7 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 	for _, v := range vals {
 		val := v.(*proto.KVTestVal)
 		p.TptTick(1.0)
-		if val.Pid != proc.GetPid().String() {
+		if val.Pid != kc.SigmaConfig().PID.String() {
 			return nil
 		}
 		if val.Key != string(key) {
@@ -166,11 +166,11 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := cache.MkKey(i + keyOffset)
-		v := proto.KVTestVal{Pid: proc.GetPid().String(), Key: string(key), N: ntest}
+		v := proto.KVTestVal{Pid: kc.SigmaConfig().PID.String(), Key: string(key), N: ntest}
 		if setget {
 			// If running against redis.
 			if rcli != nil {
-				if err := rcli.Set(ctx, key, proc.GetPid().String(), 0).Err(); err != nil {
+				if err := rcli.Set(ctx, key, kc.SigmaConfig().PID.String(), 0).Err(); err != nil {
 					db.DFatalf("Error redis cli set: %v", err)
 				}
 				// Record op for throughput calculation.
@@ -184,7 +184,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.Put(key, &cproto.CacheString{Val: proc.GetPid().String()}); err != nil {
+				if err := kc.Put(key, &cproto.CacheString{Val: kc.SigmaConfig().PID.String()}); err != nil {
 					return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 				}
 				// Record op for throughput calculation.

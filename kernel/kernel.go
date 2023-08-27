@@ -57,7 +57,6 @@ func mkKernel(param *Param, scfg *config.SigmaConfig) *Kernel {
 func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
 	k := mkKernel(p, scfg)
 	proc.SetProgram(os.Args[0])
-	proc.SetPid(sp.GenPid())
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
@@ -131,7 +130,7 @@ func (k *Kernel) shutdown() {
 		}
 	}
 	if len(k.Param.Services) > 0 {
-		db.DPrintf(db.KERNEL, "Get children %v", proc.GetPid())
+		db.DPrintf(db.KERNEL, "Get children %v", k.scfg.PID)
 		cpids, err := k.GetChildren()
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Error get children: %v", err)

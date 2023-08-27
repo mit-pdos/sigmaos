@@ -108,7 +108,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	buf := test.MkBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
+	p1, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	measure(p1, "writer", func() sp.Tlength {
@@ -117,7 +117,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.BUFWRITER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	measure(p2, "bufwriter", func() sp.Tlength {
@@ -126,7 +126,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.ABUFWRITER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "abufwriter", func() sp.Tlength {
@@ -155,7 +155,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for _, fn := range fns {
 		ts.Remove(fn)
 	}
-	p1, err := perf.MakePerfMulti(perf.BENCH, perf.WRITER.String())
+	p1, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
@@ -176,7 +176,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.BUFWRITER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
@@ -197,7 +197,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.ABUFWRITER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()
@@ -228,7 +228,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	p1, r := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	p1, r := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	defer p1.Done()
 	measure(p1, "reader", func() sp.Tlength {
@@ -241,7 +241,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
-	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	p2, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
@@ -254,7 +254,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 		r.Close()
 		return n
 	})
-	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "readahead", func() sp.Tlength {
@@ -288,7 +288,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		ts.Remove(fn)
 		mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	}
-	p1, err := perf.MakePerfMulti(perf.BENCH, perf.READER)
+	p1, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.READER)
 	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
@@ -316,7 +316,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		assert.Nil(ts.T, err)
 		mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	}
-	p2, err := perf.MakePerfMulti(perf.BENCH, perf.BUFREADER)
+	p2, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
@@ -340,7 +340,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.MakePerfMulti(perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.MakePerfMulti(ts.SigmaClnt(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()

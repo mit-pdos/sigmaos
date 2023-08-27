@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"sigmaos/config"
 	"sigmaos/netsrv"
 	"sigmaos/npcodec"
 	"sigmaos/proc"
@@ -15,7 +16,8 @@ func main() {
 		log.Fatalf("%s: Usage <lip>\n", os.Args[0])
 	}
 	proc.SetProgram("proxy")
-	netsrv.MakeNetServer(proxy.MakeNpd(os.Args[1]), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
+	scfg := config.GetSigmaConfig()
+	netsrv.MakeNetServer(scfg, proxy.MakeNpd(scfg, os.Args[1]), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})
 	<-ch
 }

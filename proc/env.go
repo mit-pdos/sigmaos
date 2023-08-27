@@ -10,7 +10,6 @@ import (
 // Environment variables which every proc expects to have.
 const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
-	SIGMAPID            = "SIGMAPID"
 	SIGMAPROGRAM        = "SIGMAPROGRAM"
 	SIGMAPROCDIR        = "SIGMAPROCDIR"
 	SIGMAPARENTDIR      = "SIGMAPARENTDIR"
@@ -29,15 +28,6 @@ const (
 	SIGMAKERNEL   = "SIGMAKERNEL"
 	SIGMAUPROCD   = "SIGMAUPROCD"
 )
-
-func SetPid(pid sp.Tpid) {
-	os.Setenv(SIGMAPID, pid.String())
-}
-
-// Can return "" for test programs that make a procclnt
-func GetPid() sp.Tpid {
-	return sp.Tpid(os.Getenv(SIGMAPID))
-}
 
 // XXX Remove
 func GetProgram() string {
@@ -163,7 +153,7 @@ func GetLabels(envvar string) map[string]bool {
 }
 
 func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
-	SetPid(pid)
+	//	SetPid(pid)
 	SetProgram(program)
 	SetProcDir(procdir)
 	SetParentDir(parentdir)

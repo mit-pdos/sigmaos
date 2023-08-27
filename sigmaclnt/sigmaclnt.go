@@ -65,7 +65,7 @@ func MkSigmaClntRealm(rootfsl *fslib.FsLib, uname sp.Tuname, rid sp.Trealm) (*Si
 	if err != nil {
 		return nil, err
 	}
-	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(uname))
+	sc.ProcClnt = procclnt.MakeProcClntInit(rootfsl.SigmaConfig().PID, sc.FsLib, string(uname))
 	return sc, nil
 }
 
@@ -77,7 +77,7 @@ func MkSigmaClntRootInit(scfg *config.SigmaConfig) (*SigmaClnt, error) {
 		return nil, err
 	}
 
-	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(scfg.Uname))
+	sc.ProcClnt = procclnt.MakeProcClntInit(scfg.PID, sc.FsLib, string(scfg.Uname))
 	return sc, nil
 }
 

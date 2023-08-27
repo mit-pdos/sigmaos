@@ -37,7 +37,7 @@ type PathClnt struct {
 func MakePathClnt(scfg *config.SigmaConfig, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
 	pathc := &PathClnt{scfg: scfg, mnt: makeMntTable(), chunkSz: sz}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt(scfg.Net)
+		pathc.FidClnt = fidclnt.MakeFidClnt(scfg, scfg.Net)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -97,7 +97,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 
 // Close all sessions
 func (pathc *PathClnt) DetachAll() error {
-	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", proc.GetPid())
+	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", pathc.scfg.PID)
 	return pathc.FidClnt.DetachAll(pathc.cid)
 }
 

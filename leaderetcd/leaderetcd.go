@@ -8,6 +8,7 @@ import (
 
 	"sigmaos/fsetcd"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 )
@@ -16,20 +17,21 @@ type Election struct {
 	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election
+	scfg *config.SigmaConfig
 }
 
-func MkElection(s *fsetcd.Session, pn string) (*Election, error) {
-	el := &Election{sess: s, pn: pn}
+func MkElection(scfg *config.SigmaConfig, s *fsetcd.Session, pn string) (*Election, error) {
+	el := &Election{sess: s, pn: pn, scfg: scfg}
 	return el, nil
 }
 
 func (el *Election) Candidate() error {
-	db.DPrintf(db.LEADER, "candidate %v %v\n", proc.GetPid().String(), el.pn)
+	db.DPrintf(db.LEADER, "candidate %v %v\n", el.scfg.PID.String(), el.pn)
 
 	el.Election = concurrency.NewElection(el.sess.Session, el.pn)
 
 	// XXX stick fence's sequence number in val?
-	if err := el.Campaign(context.TODO(), proc.GetPid().String()); err != nil {
+	if err := el.Campaign(context.TODO(), el.scfg.PID.String()); err != nil {
 		return err
 	}
 
@@ -38,12 +40,12 @@ func (el *Election) Candidate() error {
 		return err
 	}
 
-	db.DPrintf(db.LEADER, "leader %v %v\n", proc.GetPid().String(), resp)
+	db.DPrintf(db.LEADER, "leader %v %v\n", el.scfg.PID.String(), resp)
 	return nil
 }
 
 func (el *Election) Resign() error {
-	db.DPrintf(db.LEADER, "leader %v resign %v\n", proc.GetPid().String(), el.pn)
+	db.DPrintf(db.LEADER, "leader %v resign %v\n", el.scfg.PID.String(), el.pn)
 	return el.Election.Resign(context.TODO())
 
 }

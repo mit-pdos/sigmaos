@@ -1,6 +1,7 @@
 package sesssrv
 
 import (
+	"sigmaos/config"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -35,6 +36,7 @@ import (
 //
 
 type SessSrv struct {
+	scfg     *config.SigmaConfig
 	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
@@ -53,8 +55,9 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func MakeSessSrv(scfg *config.SigmaConfig, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
+	ssrv.scfg = scfg
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
@@ -72,7 +75,7 @@ func MakeSessSrv(root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.At
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.MakeNetServer(ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
+	ssrv.srv = netsrv.MakeNetServer(scfg, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv

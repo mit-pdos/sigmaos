@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -42,9 +41,10 @@ func MakeReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
+	scfg := config.GetSigmaConfig()
+	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", scfg.PID, args)
 	r := &Reader{}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}

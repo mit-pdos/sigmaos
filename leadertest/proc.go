@@ -14,7 +14,6 @@ import (
 )
 
 func RunProc(fencestr, dir string) {
-	pid := proc.GetPid()
 
 	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
 	if err != nil {
@@ -37,7 +36,7 @@ func RunProc(fencestr, dir string) {
 
 	fn := dir + "/out"
 
-	conf := &Config{fence.Epoch, "", pid}
+	conf := &Config{fence.Epoch, "", sc.SigmaConfig().PID}
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)

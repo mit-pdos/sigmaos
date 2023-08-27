@@ -222,17 +222,17 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p, err := perf.MakePerf(perf.MRREDUCER)
-	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
-	}
-	defer p.Done()
-
 	r, err := makeReducer(reducef, args, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
+	p, err := perf.MakePerf(r.SigmaConfig(), perf.MRREDUCER)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
 	status := r.doReduce()
 	r.ClntExit(status)
 }

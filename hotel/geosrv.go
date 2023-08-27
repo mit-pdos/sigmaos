@@ -87,7 +87,7 @@ func RunGeoSrv(job string, public bool) error {
 		return err
 	}
 
-	p, err := perf.MakePerf(perf.HOTEL_GEO)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_GEO)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

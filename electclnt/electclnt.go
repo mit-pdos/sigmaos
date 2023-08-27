@@ -31,7 +31,7 @@ func MakeElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, erro
 	if err != nil {
 		return nil, err
 	}
-	e.elect, err = leaderetcd.MkElection(e.sess, pn)
+	e.elect, err = leaderetcd.MkElection(e.SigmaConfig(), e.sess, pn)
 	if err != nil {
 		return nil, err
 	}

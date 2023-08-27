@@ -83,8 +83,9 @@ type Wwwd struct {
 func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
+	scfg := config.GetSigmaConfig()
 	var err error
-	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), config.GetSigmaConfig())
+	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), scfg)
 	if err != nil {
 		db.DFatalf("%v: MakeSrvFsLib %v %v\n", proc.GetProgram(), JobDir(job), err)
 	}
@@ -95,7 +96,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
+	db.DPrintf(db.ALWAYS, "%v: pid %v procdir %v\n", proc.GetProgram(), scfg.PID, proc.GetProcDir())
 	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}

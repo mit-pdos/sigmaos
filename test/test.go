@@ -123,7 +123,6 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	proc.SetPid(sp.Tpid("test-" + sp.GenPid().String()))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err

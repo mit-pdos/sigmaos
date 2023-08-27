@@ -29,7 +29,7 @@ func RunFss3(buckets []string) {
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
-	p, err := perf.MakePerf(perf.S3)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.S3)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}

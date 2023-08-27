@@ -352,7 +352,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 func TestBenchSearchSigma(t *testing.T) {
 	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	p, err := perf.MakePerf(perf.TEST)
+	p, err := perf.MakePerf(ts.SigmaConfig(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -383,7 +383,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	pf, err := perf.MakePerf(perf.TEST)
+	pf, err := perf.MakePerf(ts.SigmaConfig(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -397,7 +397,7 @@ func TestBenchSearchK8s(t *testing.T) {
 func TestBenchGeoSigma(t *testing.T) {
 	ts := makeTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	p, err := perf.MakePerf(perf.TEST)
+	p, err := perf.MakePerf(ts.SigmaConfig(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
@@ -419,7 +419,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	ts := makeTstate(t, nil, 0)
 	setupK8sState(ts)
 	wc := hotel.MakeWebClnt(ts.FsLib, ts.job)
-	pf, err := perf.MakePerf(perf.TEST)
+	pf, err := perf.MakePerf(ts.SigmaConfig(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.MakeLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {

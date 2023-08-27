@@ -14,6 +14,7 @@ const (
 	SIGMACONFIG = "SIGMACONFIG"
 	SIGMADEBUG  = "SIGMADEBUG"
 	SIGMAPERF   = "SIGMAPERF"
+	NOT_SET     = "NOT_SET" // Catch cases where we fail to set a variable.
 )
 
 // TODO: make into proto
@@ -49,6 +50,7 @@ type SigmaConfig struct {
 func NewSigmaConfig() *SigmaConfig {
 	// Load Perf & Debug from the environment for convenience.
 	return &SigmaConfig{
+		PID:   NOT_SET,
 		Perf:  os.Getenv(SIGMAPERF),
 		Debug: os.Getenv(SIGMADEBUG),
 	}
@@ -56,9 +58,10 @@ func NewSigmaConfig() *SigmaConfig {
 
 func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 	sc := NewSigmaConfig()
+	sc.Uname = uname
+	sc.PID = sp.Tpid(string(uname) + "-" + sp.GenPid().String())
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP
-	sc.Uname = uname
 	sc.Realm = sp.ROOTREALM
 	return sc
 }
@@ -66,6 +69,7 @@ func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 func NewTestSigmaConfig(realm sp.Trealm, etcdIP, localIP, buildTag string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.Uname = "test"
+	sc.PID = sp.Tpid("test-" + sp.GenPid().String())
 	sc.Realm = realm
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP

@@ -63,7 +63,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	}
 	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
-	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_COMPOSE)
+	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

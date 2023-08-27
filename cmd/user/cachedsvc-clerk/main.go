@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(perf.CACHECLERK)
+	p, err := perf.MakePerf(sc.SigmaConfig(), perf.CACHECLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 }
 
 func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
-	err := pclnt.WaitEvict(proc.GetPid())
+	err := pclnt.WaitEvict(pclnt.SigmaConfig().PID)
 	if err != nil {
 		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
 	}
@@ -103,7 +103,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 	for atomic.LoadInt32(&done) == 0 {
 		// this does NKEYS puts & gets, or appends & checks, depending on whether
 		// this is a time-bound clerk or an unbounded clerk.
-		err = test(csc, rcli, ntest, nkeys, keyOffset, &nops, p)
+		err = test(sc, csc, rcli, ntest, nkeys, keyOffset, &nops, p)
 		if err != nil {
 			break
 		}
@@ -120,12 +120,12 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 	sc.ClntExit(status)
 }
 
-func test(csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
+func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
 	for i := uint64(0); i < uint64(nkeys) && atomic.LoadInt32(&done) == 0; i++ {
 		key := cacheclnt.MkKey(i + keyOffset)
 		// If running against redis.
 		if rcli != nil {
-			if err := rcli.Set(ctx, key, proc.GetPid().String(), 0).Err(); err != nil {
+			if err := rcli.Set(ctx, key, sc.SigmaConfig().PID.String(), 0).Err(); err != nil {
 				db.DFatalf("Error redis cli set: %v", err)
 			}
 			// Record op for throughput calculation.
@@ -138,7 +138,7 @@ func test(csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nk
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := csc.Put(key, &proto.CacheString{Val: proc.GetPid().String()}); err != nil {
+			if err := csc.Put(key, &proto.CacheString{Val: sc.SigmaConfig().PID.String()}); err != nil {
 				return fmt.Errorf("%v: Put %v err %v", proc.GetName(), key, err)
 			}
 			// Record op for throughput calculation.

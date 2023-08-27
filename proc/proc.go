@@ -122,7 +122,6 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
-	p.AppendEnv(SIGMAPID, p.GetPid().String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())

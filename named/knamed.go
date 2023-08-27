@@ -13,14 +13,15 @@ import (
 )
 
 func RunKNamed(args []string) error {
-	db.DPrintf(db.NAMED, "%v: knamed %v\n", proc.GetPid(), args)
+	scfg := config.GetSigmaConfig()
+	db.DPrintf(db.NAMED, "%v: knamed %v\n", scfg.PID, args)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
 
-	sc, err := sigmaclnt.MkSigmaClntFsLib(config.GetSigmaConfig())
+	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DFatalf("MkSigmaClntFsLib: err %v", err)
 	}
@@ -28,7 +29,7 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v %v\n", scfg.PID, nd.realm, proc.GetRealm())
 
 	w := os.NewFile(uintptr(3), "pipew")
 	r := os.NewFile(uintptr(4), "piper")
@@ -67,7 +68,7 @@ func RunKNamed(args []string) error {
 	}
 	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", proc.GetPid(), nd.realm, mnt, string(data))
+	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", scfg.PID, nd.realm, mnt, string(data))
 
 	nd.resign()
 

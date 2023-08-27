@@ -273,18 +273,19 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
-	p, err := perf.MakePerf(perf.MRMAPPER)
-	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
-	}
-	defer p.Done()
-
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	m, err := makeMapper(mapf, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
+
+	p, err := perf.MakePerf(m.SigmaConfig(), perf.MRMAPPER)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
 	if err = m.initMapper(); err != nil {
 		m.ClntExit(proc.MakeStatusErr(err.Error(), nil))
 		return

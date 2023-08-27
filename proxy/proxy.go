@@ -4,6 +4,7 @@ import (
 	"os/user"
 	"sync"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -19,19 +20,20 @@ import (
 )
 
 type Npd struct {
-	lip string
-	st  *sessstatesrv.SessionTable
+	lip  string
+	scfg *config.SigmaConfig
+	st   *sessstatesrv.SessionTable
 }
 
-func MakeNpd(lip string) *Npd {
-	npd := &Npd{lip, nil}
+func MakeNpd(scfg *config.SigmaConfig, lip string) *Npd {
+	npd := &Npd{lip, scfg, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
 	return npd
 }
 
 func (npd *Npd) mkProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return makeNpConn(npd.lip)
+	return makeNpConn(npd.scfg, npd.lip)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -78,10 +80,10 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func makeNpConn(lip string) *NpConn {
+func makeNpConn(scfg *config.SigmaConfig, lip string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt(sp.ROOTREALM.String())
-	npc.fidc = fidclnt.MakeFidClnt(sp.ROOTREALM.String())
+	npc.clnt = protclnt.MakeClnt(scfg, sp.ROOTREALM.String())
+	npc.fidc = fidclnt.MakeFidClnt(scfg, sp.ROOTREALM.String())
 	npc.pc = pathclnt.MakePathClnt(npc.fidc, sp.ROOTREALM.String(), sp.ROOTREALM, lip, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())

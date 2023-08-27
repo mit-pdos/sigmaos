@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
-	p, err := perf.MakePerf(perf.SEQGREP)
+	p, err := perf.MakePerf(sc.SigmaConfig(), perf.SEQGREP)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("OpenReader %v error %v\n", os.Args[1], err)
 	}
-	n := seqgrep.Grep(rdr)
+	n := seqgrep.Grep(sc.SigmaConfig(), rdr)
 	log.Printf("n = %d\n", n)
 	p.Done()
 	sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))

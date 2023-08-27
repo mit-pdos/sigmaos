@@ -60,7 +60,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	}
 	gsrv.userc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
-	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_GRAPH)
+	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

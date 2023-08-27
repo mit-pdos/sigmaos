@@ -6,7 +6,6 @@ import (
 	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcbench/proto"
 	"sigmaos/sigmasrv"
@@ -25,12 +24,6 @@ func RunRPCBenchSrv(path string, public bool) error {
 	if err != nil {
 		return err
 	}
-
-	p, err := perf.MakePerf(perf.RPC_BENCH_SRV)
-	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
-	}
-	defer p.Done()
 
 	s.tracer = tracing.Init("rpcsrv", proc.GetSigmaJaegerIP())
 

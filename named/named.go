@@ -34,7 +34,8 @@ type Named struct {
 }
 
 func Run(args []string) error {
-	db.DPrintf(db.NAMED, "%v: %v\n", proc.GetPid(), args)
+	scfg := config.GetSigmaConfig()
+	db.DPrintf(db.NAMED, "%v: %v\n", scfg.PID, args)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -46,7 +47,7 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return err
 	}
@@ -71,10 +72,10 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v %v\n", proc.GetPid(), nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v %v\n", scfg.PID, nd.realm, proc.GetRealm())
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", proc.GetPid(), nd.realm, err)
+		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", scfg.PID, nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
@@ -120,10 +121,10 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMED, "%v: named done %v %v\n", proc.GetPid(), nd.realm, mnt)
+	db.DPrintf(db.NAMED, "%v: named done %v %v\n", scfg.PID, nd.realm, mnt)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v\n", proc.GetPid(), err)
+		db.DPrintf(db.NAMED, "resign %v err %v\n", scfg.PID, err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
@@ -138,12 +139,12 @@ func (nd *Named) mkSrv() error {
 	}
 
 	root := rootDir(nd.fs, nd.realm)
-	srv := fslibsrv.BootSrv(root, ip+":0", nd.attach, nd.detach, nil)
+	srv := fslibsrv.BootSrv(nd.SigmaConfig(), root, ip+":0", nd.attach, nd.detach, nil)
 	if srv == nil {
 		return fmt.Errorf("BootSrv err %v\n", err)
 	}
 
-	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(proc.GetPid().String()), nd.SigmaClnt)
+	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(nd.SigmaConfig().PID.String()), nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return err
 	}
@@ -183,13 +184,13 @@ func (nd *Named) getRoot(pn string) error {
 
 func (nd *Named) waitExit(ch chan struct{}) {
 	for {
-		err := nd.WaitEvict(proc.GetPid())
+		err := nd.WaitEvict(nd.SigmaConfig().PID)
 		if err != nil {
 			db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, proc.GetPid().String())
+		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, nd.SigmaConfig().PID.String())
 		ch <- struct{}{}
 	}
 }

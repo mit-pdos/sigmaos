@@ -43,7 +43,7 @@ func RunRealmSrv() error {
 		realms:     make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
-	db.DPrintf(db.REALMD, "%v: Run %v %s\n", proc.GetName(), sp.REALMD, os.Environ())
+	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
 	scfg := config.GetSigmaConfig()
 	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, scfg)
 	if err != nil {
@@ -53,7 +53,7 @@ func RunRealmSrv() error {
 	if serr != nil {
 		return serr
 	}
-	db.DPrintf(db.REALMD, "%v: makesrv ok\n", proc.GetName())
+	db.DPrintf(db.REALMD, "makesrv ok")
 	rs.sc = ssrv.MemFs.SigmaClnt()
 	err = ssrv.RunServer()
 	return nil

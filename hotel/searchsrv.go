@@ -43,7 +43,7 @@ func RunSearchSrv(n string, public bool) error {
 	}
 	s.geoc = rpcc
 
-	p, err := perf.MakePerf(perf.HOTEL_SEARCH)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_SEARCH)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

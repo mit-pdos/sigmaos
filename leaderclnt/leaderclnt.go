@@ -37,7 +37,7 @@ func (l *LeaderClnt) LeadAndFence(b []byte, dirs []string) error {
 	if err := l.ec.AcquireLeadership(b); err != nil {
 		return err
 	}
-	db.DPrintf(db.LEADER, "%v: LeadAndFence: %v\n", proc.GetName(), l.Fence())
+	db.DPrintf(db.LEADER, "LeadAndFence: %v\n", l.Fence())
 	return l.fenceDirs(dirs)
 }
 

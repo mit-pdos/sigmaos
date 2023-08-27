@@ -56,6 +56,6 @@ func (sd *SessDev) detachSession(sid sessp.Tsession) {
 
 func (sd *SessDev) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 	fn := path.Join(sd.dir, ctx.SessionId().String(), sessdev.DATA)
-	db.DPrintf(db.SESSDEV, "%v: Close %v\n", proc.GetName(), fn)
+	db.DPrintf(db.SESSDEV, "Close %v\n", fn)
 	return nil
 }

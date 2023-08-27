@@ -147,6 +147,6 @@ func (mfs *MemFs) Dump() error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf("MEMFSSRV", "%v: Dump: %v %v", proc.GetName(), path, s)
+	db.DPrintf("MEMFSSRV", "Dump: %v %v", path, s)
 	return nil
 }

@@ -38,10 +38,11 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 		ClntId: uint64(lmc.ClntID()),
 		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
 		li := &LeaseInfo{
-			ch:  make(chan struct{}),
-			srv: srv.String(),
-			lid: sp.TleaseId(res.LeaseId),
-			lmc: lmc,
+			ch:   make(chan struct{}),
+			srv:  srv.String(),
+			lid:  sp.TleaseId(res.LeaseId),
+			lmc:  lmc,
+			scfg: lmc.SigmaConfig(),
 		}
 		db.DPrintf(db.LEASECLNT, "AskLease %q %v\n", srv, li)
 		lmc.lm.Insert(srv.String(), li)
@@ -53,9 +54,9 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 }
 
 func (lmgr *LeaseClnt) EndLeases() error {
-	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", proc.GetPid())
+	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", lmgr.SigmaConfig())
 	for _, li := range lmgr.lm.Values() {
-		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", proc.GetPid(), li)
+		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", lmgr.SigmaConfig(), li)
 		li.End()
 	}
 	return nil

@@ -61,7 +61,7 @@ func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 		mv.shard = cache.Tshard(sh)
 	}
 	if err := mv.Started(); err != nil {
-		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)
+		db.DFatalf("couldn't start %v", err)
 	}
 
 	// crash.Crasher(mv.FsLib)

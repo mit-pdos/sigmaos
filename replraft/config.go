@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/repl"
 )
@@ -14,12 +15,14 @@ type RaftConfig struct {
 	peerAddrs []string
 	l         net.Listener
 	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
+	scfg      *config.SigmaConfig
 }
 
-func MakeRaftConfig(id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(scfg *config.SigmaConfig, id int, peerAddrs []string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init
+	rc.scfg = scfg
 	rc.peerAddrs = []string{}
 	for _, addr := range peerAddrs {
 		rc.peerAddrs = append(rc.peerAddrs, addr)
@@ -45,7 +48,7 @@ func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
 
 func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) repl.Server {
 	rc.started = true
-	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
+	return MakeRaftReplServer(rc.scfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

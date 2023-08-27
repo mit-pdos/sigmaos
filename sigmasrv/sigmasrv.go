@@ -152,7 +152,7 @@ func MakeSigmaSrvRoot(root fs.Dir, addr, path string, scfg *config.SigmaConfig) 
 		return nil, err
 	}
 	et := ephemeralmap.NewEphemeralMap()
-	sesssrv := fslibsrv.BootSrv(root, addr, nil, nil, et)
+	sesssrv := fslibsrv.BootSrv(sc.SigmaConfig(), root, addr, nil, nil, et)
 	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil
@@ -200,14 +200,14 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 }
 
 func (ssrv *SigmaSrv) RunServer() error {
-	db.DPrintf(db.SIGMASRV, "Run %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
 	ssrv.Serve()
 	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
-	db.DPrintf(db.SIGMASRV, "SrvExit %v\n", proc.GetProgram())
+	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}
@@ -221,14 +221,14 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 func (ssrv *SigmaSrv) Serve() {
 	// If this is a kernel proc, register the subsystem info for the realmmgr
 	if proc.GetIsPrivilegedProc() {
-		si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr())
+		si := kernel.MakeSubsystemInfo(ssrv.SigmaClnt().SigmaConfig().PID, ssrv.MyAddr())
 		kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
 	}
 	if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
 		debug.PrintStack()
 		db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 	}
-	if err := ssrv.MemFs.SigmaClnt().WaitEvict(proc.GetPid()); err != nil {
+	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().SigmaConfig().PID); err != nil {
 		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
 }

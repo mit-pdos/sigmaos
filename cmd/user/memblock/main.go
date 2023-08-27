@@ -19,11 +19,12 @@ func main() {
 	if len(os.Args) != 2 {
 		db.DFatalf("Usage: %v mem\nArgs: %v", os.Args[0], os.Args)
 	}
+	scfg := config.GetSigmaConfig()
 	m, err := humanize.ParseBytes(os.Args[1])
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}
@@ -51,7 +52,7 @@ func main() {
 	if err := sc.Started(); err != nil {
 		db.DFatalf("Error started: %v", err)
 	}
-	if err := sc.WaitEvict(proc.GetPid()); err != nil {
+	if err := sc.WaitEvict(scfg.PID); err != nil {
 		db.DFatalf("Err waitevict: %v", err)
 	}
 	sc.ClntExit(proc.MakeStatus(proc.StatusEvicted))

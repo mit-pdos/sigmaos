@@ -184,7 +184,7 @@ func RunSchedd(kernelId string) error {
 	setupMemFsSrv(ssrv.MemFs)
 	setupFs(ssrv.MemFs, sd)
 	// Perf monitoring
-	p, err := perf.MakePerf(perf.SCHEDD)
+	p, err := perf.MakePerf(scfg, perf.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}

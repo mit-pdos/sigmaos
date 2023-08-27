@@ -55,7 +55,7 @@ func RunHomeSrv(public bool, jobname string) error {
 	}
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
-	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_HOME)
+	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

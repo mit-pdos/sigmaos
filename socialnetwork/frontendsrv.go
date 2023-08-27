@@ -151,7 +151,7 @@ func RunFrontendSrv(public bool, job string) error {
 		}
 	}
 
-	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_FRONTEND)
+	perf, err := perf.MakePerf(frontend.SigmaConfig(), perf.SOCIAL_NETWORK_FRONTEND)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}
@@ -165,7 +165,7 @@ func RunFrontendSrv(public bool, job string) error {
 }
 
 func (s *FrontEnd) done() error {
-	if err := s.WaitEvict(proc.GetPid()); err != nil {
+	if err := s.WaitEvict(s.SigmaConfig().PID); err != nil {
 		return err
 	}
 	dbg.DPrintf(dbg.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())

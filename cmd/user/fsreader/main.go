@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -42,9 +41,10 @@ func MakeReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
+	scfg := config.GetSigmaConfig()
+	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", scfg.PID, args)
 	r := &Reader{}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r *Reader) Work() *proc.Status {
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("%v: Open error: %v", proc.GetProgram(), err)
+		db.DFatalf("Open error: %v", err)
 	}
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, sp.OREAD)
@@ -75,7 +75,7 @@ func (r *Reader) Work() *proc.Status {
 		}
 		_, err = r.Write(pipefd, data)
 		if err != nil {
-			db.DFatalf("%v: Error pipe Write: %v", proc.GetProgram(), err)
+			db.DFatalf("Error pipe Write: %v", err)
 		}
 	}
 	return proc.MakeStatus(proc.StatusOK)

@@ -39,9 +39,9 @@ func cleanupJail(pid sp.Tpid) {
 	}
 }
 
-func isolateUserProc(program string) (string, error) {
+func isolateUserProc(pid proc.Tpid, program string) (string, error) {
 	// Setup and chroot to the process jail.
-	if err := jailProcess(); err != nil {
+	if err := jailProcess(pid); err != nil {
 		db.DPrintf(db.CONTAINER, "Error jail process %v", err)
 		return "", err
 	}
@@ -78,8 +78,8 @@ func finishIsolation() {
 	runtime.UnlockOSThread()
 }
 
-func jailProcess() error {
-	newRoot := jailPath(proc.GetPid())
+func jailProcess(pid proc.Tpid) error {
+	newRoot := jailPath(pid)
 	// Create directories to use as mount points, as well as the new root directory itself.
 	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH, "cgroup"} {
 		if err := os.Mkdir(path.Join(newRoot, d), 0700); err != nil {

@@ -189,7 +189,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.SigmaConfig().PID, r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
 		return proc.MakeStatusErr(RESTART, lostMaps)
@@ -206,33 +206,33 @@ func (r *Reducer) doReduce() *proc.Status {
 	}
 
 	if err := r.bwrt.Flush(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", proc.GetName(), r.tmp, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.SigmaConfig().PID, r.tmp, err), nil)
 	}
 	if err := r.wrt.Close(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", proc.GetName(), r.tmp, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.SigmaConfig().PID, r.tmp, err), nil)
 	}
 	// Include time spent writing output.
 	duration += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.SigmaConfig().PID, r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatusInfo(proc.StatusOK, r.input,
 		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	p, err := perf.MakePerf(perf.MRREDUCER)
-	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
-	}
-	defer p.Done()
-
 	r, err := makeReducer(reducef, args, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
+	p, err := perf.MakePerf(r.SigmaConfig(), perf.MRREDUCER)
+	if err != nil {
+		db.DFatalf("MakePerf err %v\n", err)
+	}
+	defer p.Done()
+
 	status := r.doReduce()
 	r.ClntExit(status)
 }

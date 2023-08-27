@@ -20,6 +20,7 @@ import (
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -44,6 +45,7 @@ type RaftNode struct {
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
+	scfg          *config.SigmaConfig
 }
 
 type committedEntries struct {
@@ -51,8 +53,9 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(scfg *config.SigmaConfig, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
+	node.scfg = scfg
 	node.id = id
 	node.peerAddrs = peerAddrs
 	node.done = make(chan bool)
@@ -82,7 +85,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 	}
 	// Make sure the logging dir exists
 	os.Mkdir("./raftlogs/", 0777)
-	logPath := "./raftlogs/" + proc.GetPid()
+	logPath := "./raftlogs/" + n.scfg
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.OutputPaths = []string{string(logPath)}

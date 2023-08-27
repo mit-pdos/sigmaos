@@ -82,7 +82,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 	}
 	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	defer r.tracer.Flush()
-	p, err := perf.MakePerf(perf.HOTEL_RATE)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_RATE)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

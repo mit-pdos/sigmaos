@@ -5,7 +5,6 @@ package kvgrp
 //
 
 import (
-	"log"
 	"path"
 	"sync"
 	"time"
@@ -155,7 +154,7 @@ func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *re
 	// Get the raft replica id.
 	id := len(clusterCfg.RaftAddrs)
 	// Create the raft config
-	raftCfg := replraft.MakeRaftConfig(id, clusterCfg.RaftAddrs, init)
+	raftCfg := replraft.MakeRaftConfig(g.SigmaConfig(), id, clusterCfg.RaftAddrs, init)
 	// Get the listener address selected by the raft library.
 	clusterCfg.RaftAddrs[id-1] = raftCfg.ReplAddr()
 	if err := g.writeGroupConfig(path, clusterCfg); err != nil {
@@ -216,7 +215,7 @@ func (g *Group) op(opcode, kv string) *serr.Err {
 	}
 	defer g.clearBusy()
 
-	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
+	db.DPrintf(db.ALWAYS, "opcode %v kv %v\n", opcode, kv)
 	return nil
 }
 
@@ -312,7 +311,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	crash.NetFailer(g.ssrv.SessSrv)
 
 	// Record performance.
-	p, err := perf.MakePerf(perf.GROUP)
+	p, err := perf.MakePerf(g.SigmaConfig(), perf.GROUP)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -322,7 +321,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 
 	<-ch
 
-	db.DPrintf(db.KVGRP, "%v: group done\n", proc.GetPid())
+	db.DPrintf(db.KVGRP, "%v: group done\n", g.SigmaConfig().PID)
 
 	g.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 }
@@ -330,13 +329,13 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 // XXX move to procclnt?
 func (g *Group) waitExit(ch chan struct{}) {
 	for {
-		err := g.WaitEvict(proc.GetPid())
+		err := g.WaitEvict(g.SigmaConfig().PID)
 		if err != nil {
 			db.DPrintf(db.KVGRP, "Error WaitEvict: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, proc.GetPid().String())
+		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, g.SigmaConfig().PID.String())
 		ch <- struct{}{}
 	}
 }

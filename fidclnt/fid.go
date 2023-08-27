@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type FidMap struct {
@@ -63,7 +63,7 @@ func (fm *FidMap) free(fid sp.Tfid) {
 	_, ok := fm.fids[fid]
 	if !ok {
 		debug.PrintStack()
-		db.DFatalf("%v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
+		db.DFatalf("freeFid: fid %v unknown %v\n", fid, fm.fids)
 	}
 	delete(fm.fids, fid)
 }

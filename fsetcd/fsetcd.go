@@ -54,7 +54,7 @@ func (fs *FsEtcd) Close() error {
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {
-	db.DPrintf(db.FSETCD, "%v: Fence key %v rev %d\n", proc.GetPid(), key, rev)
+	db.DPrintf(db.FSETCD, "%v: Fence key %v rev %d\n", scfg.PID, key, rev)
 	fs.fencekey = key
 	fs.fencerev = rev
 }

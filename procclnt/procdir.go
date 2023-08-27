@@ -51,7 +51,7 @@ func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 	// for the parent to mount the child directory.
 	var procdir string
 	if clnt.procdir == proc.PROCDIR {
-		procdir = proc.GetProcDir()
+		procdir = clnt.SigmaConfig().ProcDir
 	} else {
 		procdir = clnt.procdir
 	}

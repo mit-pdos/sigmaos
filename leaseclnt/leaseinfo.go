@@ -60,7 +60,7 @@ func (li *LeaseInfo) KeepExtending() error {
 
 func (li *LeaseInfo) End() error {
 	li.ch <- struct{}{}
-	db.DPrintf(db.LEASECLNT, "%v: End lid %v\n", proc.GetPid(), li)
+	db.DPrintf(db.LEASECLNT, "%v: End lid %v\n", li.lmc.SigmaConfig().PID, li)
 	var res leaseproto.EndResult
 	return li.lmc.cc.RPC(li.srv, "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(li.lid)}, &res)
 

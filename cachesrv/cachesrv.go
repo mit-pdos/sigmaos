@@ -63,7 +63,8 @@ func RunCacheSrv(args []string, nshard int) error {
 		return err
 	}
 
-	s := NewCacheSrv(pn)
+	config.GetSigmaConfig()
+	s := NewCacheSrv(scfg, pn)
 
 	for i := 0; i < nshard; i++ {
 		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(Tcache)); err != nil {
@@ -71,8 +72,8 @@ func RunCacheSrv(args []string, nshard int) error {
 		}
 	}
 
-	db.DPrintf(db.CACHESRV, "%v: Run %v\n", proc.GetName(), s.shrd)
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, config.GetSigmaConfig(), public)
+	db.DPrintf(db.CACHESRV, "Run %v\n", s.shrd)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, scfg, public)
 	if err != nil {
 		return err
 	}
@@ -87,10 +88,10 @@ func RunCacheSrv(args []string, nshard int) error {
 	return nil
 }
 
-func NewCacheSrv(pn string) *CacheSrv {
+func NewCacheSrv(scfg *config.SigmaConfig, pn string) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
-	p, err := perf.MakePerf(perf.CACHESRV)
+	p, err := perf.MakePerf(scfg, perf.CACHESRV)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -111,10 +112,10 @@ func (cs *CacheSrv) exitCacheSrv() {
 func (cs *CacheSrv) cmpFence(f sp.Tfence) sp.Tfencecmp {
 	if !f.HasFence() {
 		// cached runs without fence
-		db.DPrintf(db.FENCEFS, "%v no fence %v\n", proc.GetName(), f)
+		db.DPrintf(db.FENCEFS, "no fence %v\n", f)
 	}
 	if !cs.lastFence.IsInitialized() {
-		db.DPrintf(db.FENCEFS, "%v initialize fence %v\n", proc.GetName(), f)
+		db.DPrintf(db.FENCEFS, "initialize fence %v\n", f)
 		cs.lastFence.Upgrade(&f)
 		return sp.FENCE_EQ
 	}
@@ -124,7 +125,7 @@ func (cs *CacheSrv) cmpFence(f sp.Tfence) sp.Tfencecmp {
 func (cs *CacheSrv) cmpFenceUpgrade(f sp.Tfence) sp.Tfencecmp {
 	cmp := cs.cmpFence(f)
 	if cmp == sp.FENCE_LT {
-		db.DPrintf(db.FENCEFS, "%v: New fence %v\n", proc.GetName(), f)
+		db.DPrintf(db.FENCEFS, "New fence %v\n", f)
 		cs.lastFence.Upgrade(&f)
 	}
 	return cmp
@@ -135,7 +136,7 @@ func (cs *CacheSrv) lookupShardFence(s cache.Tshard, f sp.Tfence) (*shardInfo, e
 	cmp := cs.cmpFence(f)
 	if cmp == sp.FENCE_LT {
 		// cs is behind let the client retry until cs catches up
-		db.DPrintf(db.ALWAYS, "%v: f %v shard %v cs behind; retry\n", proc.GetName(), cs.lastFence, s)
+		db.DPrintf(db.ALWAYS, "f %v shard %v cs behind; retry\n", cs.lastFence, s)
 		return nil, serr.MkErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
 	}
 	sh, ok := cs.shards[s]
@@ -147,7 +148,7 @@ func (cs *CacheSrv) lookupShardFence(s cache.Tshard, f sp.Tfence) (*shardInfo, e
 		// cs and client are in same config but server hasn't received
 		// the shard yet.  let the client retry until the server
 		// catchup first.
-		db.DPrintf(db.ALWAYS, "%v: f %v shard %v cs waiting for shard; retry\n", proc.GetName(), cs.lastFence, s)
+		db.DPrintf(db.ALWAYS, "f %v shard %v cs waiting for shard; retry\n", cs.lastFence, s)
 		return nil, serr.MkErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
 	}
 	switch sh.status {
@@ -213,7 +214,7 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	case READY:
 		si.status = FROZEN
 	case FROZEN:
-		db.DPrintf(db.ALWAYS, "%v: f %v %v already frozen\n", proc.GetName(), cs.lastFence, req.Tshard())
+		db.DPrintf(db.ALWAYS, "f %v %v already frozen\n", cs.lastFence, req.Tshard())
 	}
 	return nil
 }

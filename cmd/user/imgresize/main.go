@@ -31,7 +31,7 @@ func main() {
 		db.DFatalf("Error %v", err)
 	}
 
-	p, err := perf.MakePerf(perf.THUMBNAIL)
+	p, err := perf.MakePerf(t.SigmaConfig(), perf.THUMBNAIL)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -64,9 +64,10 @@ func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", proc.GetPid(), args)
+	scfg := config.GetSigmaConfig()
+	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", scfg.PID, args)
 	t := &Trans{}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(scfg)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ func (t *Trans) Work(output string) *proc.Status {
 	dcw := time.Now()
 	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("%v: Open %v error: %v", proc.GetProgram(), t.output, err)
+		db.DFatalf("Open %v error: %v", t.output, err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.input, time.Since(dcw))
 	dw := time.Now()

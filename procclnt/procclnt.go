@@ -314,7 +314,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", proc.GetPid(), time.Now())
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", clnt.SigmaConfig().PID, time.Now())
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
@@ -385,9 +385,9 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 }
 
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
+	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, clnt.SigmaConfig().PID, status)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "exited %v err %v", proc.GetPid(), err)
+		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.SigmaConfig().PID, err)
 	}
 }
 

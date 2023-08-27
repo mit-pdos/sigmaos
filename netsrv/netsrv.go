@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 
+	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -18,6 +19,7 @@ type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
 type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
+	scfg       *config.SigmaConfig
 	addr       string
 	sesssrv    sps.SessServer
 	writefcall WriteF
@@ -25,8 +27,8 @@ type NetServer struct {
 	l          net.Listener
 }
 
-func MakeNetServer(ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
-	srv := &NetServer{sesssrv: ss, writefcall: m, readframe: u}
+func MakeNetServer(scfg *config.SigmaConfig, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
+	srv := &NetServer{scfg: scfg, sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener
 	var l net.Listener
@@ -58,7 +60,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "%v: Accept err %v", proc.GetPid(), err)
+			db.DPrintf(db.ALWAYS, "%v: Accept err %v", srv.scfg.PID, err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)

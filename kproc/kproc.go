@@ -21,7 +21,7 @@ func RunKernelProc(parentCfg *config.SigmaConfig, p *proc.Proc, realm sp.Trealm,
 	//	if err != nil {
 	//		return nil, err
 	//	}
-	env = append(env, "SIGMAPROGRAM="+p.Program)
+	//	env = append(env, "SIGMAPROGRAM="+p.Program)
 	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
 	env = append(env, "SIGMAREALM="+realm.String())
 	env = append(env, "SIGMATAG="+proc.GetBuildTag())

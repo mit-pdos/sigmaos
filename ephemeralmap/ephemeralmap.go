@@ -47,7 +47,7 @@ func (et *EphemeralMap) Delete(pn string) {
 
 	lid, ok := et.pns[pn]
 	if !ok {
-		db.DPrintf(db.ALWAYS, "%v: Delete %v doesn't exist %v\n", proc.GetName(), pn, et.pns)
+		db.DPrintf(db.ALWAYS, "Delete %v doesn't exist %v\n", pn, et.pns)
 	}
 	delete(et.pns, pn)
 	for i, v := range et.lids[lid] {

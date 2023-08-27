@@ -111,6 +111,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DFatalf("Error local IP: %v", err1)
 	}
 	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, localIP, tag)
+	proc.SetSigmaDebugPid(scfg.PID.String())
 	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel
@@ -123,7 +124,6 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	proc.SetPid(sp.Tpid("test-" + sp.GenPid().String()))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
@@ -179,8 +179,8 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
 		db.DPrintf(db.SYSTEM, "Shutdown")
-		if err := ts.RmDir(proc.GetProcDir()); err != nil {
-			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", proc.GetProcDir(), err)
+		if err := ts.RmDir(ts.SigmaConfig().ProcDir); err != nil {
+			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.SigmaConfig().ProcDir, err)
 		}
 		// Shut down other kernel; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {

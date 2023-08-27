@@ -144,7 +144,7 @@ func RunWww(job string, public bool) error {
 		}
 	}
 
-	perf, err := perf.MakePerf(perf.HOTEL_WWW)
+	perf, err := perf.MakePerf(sc.SigmaConfig(), perf.HOTEL_WWW)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -158,7 +158,7 @@ func RunWww(job string, public bool) error {
 }
 
 func (s *Www) done() error {
-	if err := s.WaitEvict(proc.GetPid()); err != nil {
+	if err := s.WaitEvict(s.SigmaConfig().PID); err != nil {
 		return err
 	}
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
@@ -166,7 +166,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nReservec %v", s.reservec.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", proc.GetPid())
+	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.SigmaConfig().PID)
 	s.tracer.Flush()
 	s.p.Done()
 	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))

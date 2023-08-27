@@ -22,7 +22,7 @@ func (nd *Named) startLeader() error {
 	}
 	nd.sess = sess
 
-	nd.elect, err = leaderetcd.MkElection(nd.sess, fn)
+	nd.elect, err = leaderetcd.MkElection(nd.SigmaConfig(), nd.sess, fn)
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,7 @@ func MkSigmaClntRootInit(scfg *config.SigmaConfig) (*SigmaClnt, error) {
 		return nil, err
 	}
 
-	sc.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), sc.FsLib, string(scfg.Uname))
+	sc.ProcClnt = procclnt.MakeProcClntInit(scfg.PID, sc.FsLib, string(scfg.Uname))
 	return sc, nil
 }
 

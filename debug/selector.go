@@ -182,6 +182,7 @@ const (
 	FIDCLNT                       = "FIDCLNT"
 	FIDCLNT_ERR                   = FIDCLNT + ERR
 	MOUNT                         = "MOUNT"
+	MOUNT_ERR                     = MOUNT + ERR
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR
 	WALK                          = "WALK"

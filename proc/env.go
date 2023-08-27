@@ -31,6 +31,10 @@ const (
 	SIGMAUPROCD   = "SIGMAUPROCD"
 )
 
+func SetSigmaDebugPid(pid string) string {
+	os.Setenv(SIGMADEBUGPID, pid)
+}
+
 func GetSigmaDebugPid() string {
 	return os.Getenv(SIGMADEBUGPID)
 }

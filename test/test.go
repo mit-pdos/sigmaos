@@ -111,6 +111,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DFatalf("Error local IP: %v", err1)
 	}
 	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, localIP, tag)
+	proc.SetSigmaDebugPid(scfg.PID.String())
 	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel

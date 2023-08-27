@@ -17,6 +17,7 @@ func main() {
 	}
 	// XXX TODO set program in config
 	scfg := config.GetSigmaConfig()
+	proc.SetSigmaDebugPid(scfg.String())
 	netsrv.MakeNetServer(scfg, proxy.MakeNpd(scfg, os.Args[1]), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})
 	<-ch

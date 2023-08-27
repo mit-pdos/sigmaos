@@ -62,7 +62,7 @@ func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
 	k.ip = ip
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.KNAMED {
-		if err := k.bootKNamed(true); err != nil {
+		if err := k.bootKNamed(scfg, true); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
@@ -122,7 +122,7 @@ func startSrvs(k *Kernel) error {
 func (k *Kernel) shutdown() {
 	// start knamed to shutdown kernel with named?
 	if len(k.svcs.svcs[sp.KNAMED]) == 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
-		if err := k.bootKNamed(false); err != nil {
+		if err := k.bootKNamed(k.SigmaConfig(), false); err != nil {
 			db.DFatalf("shutdown: bootKnamed err %v\n", err)
 		}
 	}

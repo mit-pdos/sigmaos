@@ -5,6 +5,7 @@ import (
 	"path"
 	"sync"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/procclnt"
@@ -99,12 +100,12 @@ func (k *Kernel) KillOne(srv string) error {
 	}
 }
 
-func (k *Kernel) bootKNamed(init bool) error {
+func (k *Kernel) bootKNamed(scfg *config.SigmaConfig, init bool) error {
 	p, err := makeKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
-	cmd, err := runKNamed(k.SigmaConfig(), p, sp.ROOTREALM, init)
+	cmd, err := runKNamed(scfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}

@@ -78,7 +78,7 @@ func NewTestSigmaConfig(realm sp.Trealm, etcdIP, localIP, buildTag string) *Sigm
 func NewAddedSigmaConfig(sc *SigmaConfig, idx int) *SigmaConfig {
 	sc2 := NewSigmaConfig()
 	*sc2 = *sc
-	sc2.Uname = sp.Tuname(string(sc2.Uname) + "-" + strconv.Itoa(idx))
+	sc2.Uname = sp.Tuname(string(sc2.Uname) + "-clnt-" + strconv.Itoa(idx))
 	return sc2
 }
 
@@ -86,6 +86,7 @@ func NewDifferentRealmSigmaConfig(sc *SigmaConfig, realm sp.Trealm) *SigmaConfig
 	sc2 := NewSigmaConfig()
 	*sc2 = *sc
 	sc2.Realm = realm
+	sc2.Uname = sp.Tuname(string(sc2.Uname) + "-realm-" + realm.String())
 	return sc2
 }
 

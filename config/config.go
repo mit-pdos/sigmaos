@@ -51,9 +51,12 @@ type SigmaConfig struct {
 func NewSigmaConfig() *SigmaConfig {
 	// Load Perf & Debug from the environment for convenience.
 	return &SigmaConfig{
-		PID:   NOT_SET,
-		Perf:  os.Getenv(SIGMAPERF),
-		Debug: os.Getenv(SIGMADEBUG),
+		PID:       NOT_SET,
+		ProcDir:   NOT_SET,
+		ParentDir: NOT_SET,
+		Program:   NOT_SET,
+		Perf:      os.Getenv(SIGMAPERF),
+		Debug:     os.Getenv(SIGMADEBUG),
 	}
 }
 

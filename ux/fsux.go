@@ -6,7 +6,6 @@ import (
 	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

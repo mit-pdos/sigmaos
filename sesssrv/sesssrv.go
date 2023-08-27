@@ -11,7 +11,6 @@ import (
 	"sigmaos/netsrv"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sesscond"
 	"sigmaos/sessp"

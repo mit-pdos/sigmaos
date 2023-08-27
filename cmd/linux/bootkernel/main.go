@@ -9,6 +9,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 

@@ -8,7 +8,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	leaseproto "sigmaos/lease/proto"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 

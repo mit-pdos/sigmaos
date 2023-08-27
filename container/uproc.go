@@ -80,7 +80,7 @@ func ExecUProc() error {
 	s := time.Now()
 	scfg := config.GetSigmaConfig()
 	// Isolate the user proc.
-	pn, err := isolateUserProc(program)
+	pn, err := isolateUserProc(scfg.PID, program)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc jail creation %v", scfg.PID, time.Since(s))
 	if err != nil {
 		return err

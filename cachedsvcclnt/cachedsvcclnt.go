@@ -13,7 +13,6 @@ import (
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	"sigmaos/reader"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"

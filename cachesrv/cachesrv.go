@@ -63,7 +63,7 @@ func RunCacheSrv(args []string, nshard int) error {
 		return err
 	}
 
-	config.GetSigmaConfig()
+	scfg := config.GetSigmaConfig()
 	s := NewCacheSrv(scfg, pn)
 
 	for i := 0; i < nshard; i++ {

@@ -5,7 +5,6 @@ import (
 	"sigmaos/electclnt"
 	"sigmaos/fenceclnt"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 

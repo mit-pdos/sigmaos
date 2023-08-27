@@ -22,7 +22,6 @@ import (
 
 	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -85,7 +84,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 	}
 	// Make sure the logging dir exists
 	os.Mkdir("./raftlogs/", 0777)
-	logPath := "./raftlogs/" + n.scfg
+	logPath := "./raftlogs/" + n.scfg.PID.String()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.OutputPaths = []string{string(logPath)}

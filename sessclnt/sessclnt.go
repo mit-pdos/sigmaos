@@ -10,7 +10,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
-	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessconn"

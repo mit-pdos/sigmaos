@@ -7,7 +7,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/inode"
 	"sigmaos/memfssrv"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
 	"sigmaos/sessp"

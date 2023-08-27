@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 

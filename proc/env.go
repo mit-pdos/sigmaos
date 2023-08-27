@@ -31,7 +31,7 @@ const (
 	SIGMAUPROCD   = "SIGMAUPROCD"
 )
 
-func SetSigmaDebugPid(pid string) string {
+func SetSigmaDebugPid(pid string) {
 	os.Setenv(SIGMADEBUGPID, pid)
 }
 

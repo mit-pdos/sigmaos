@@ -5,7 +5,6 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	leaseproto "sigmaos/lease/proto"
-	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -38,11 +37,10 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 		ClntId: uint64(lmc.ClntID()),
 		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
 		li := &LeaseInfo{
-			ch:   make(chan struct{}),
-			srv:  srv.String(),
-			lid:  sp.TleaseId(res.LeaseId),
-			lmc:  lmc,
-			scfg: lmc.SigmaConfig(),
+			ch:  make(chan struct{}),
+			srv: srv.String(),
+			lid: sp.TleaseId(res.LeaseId),
+			lmc: lmc,
 		}
 		db.DPrintf(db.LEASECLNT, "AskLease %q %v\n", srv, li)
 		lmc.lm.Insert(srv.String(), li)

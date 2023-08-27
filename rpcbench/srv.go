@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"sigmaos/config"
-	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/rpcbench/proto"

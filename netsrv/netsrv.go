@@ -9,7 +9,6 @@ import (
 	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sps "sigmaos/sigmaprotsrv"

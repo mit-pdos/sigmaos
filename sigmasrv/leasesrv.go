@@ -10,7 +10,6 @@ import (
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"

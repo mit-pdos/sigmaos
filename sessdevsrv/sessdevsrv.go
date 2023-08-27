@@ -7,7 +7,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
 	"sigmaos/sessp"

@@ -10,7 +10,6 @@ import (
 
 	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 )
 
 type Election struct {

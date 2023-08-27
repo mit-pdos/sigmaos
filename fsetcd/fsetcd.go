@@ -9,7 +9,6 @@ import (
 
 	"sigmaos/config"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -54,7 +53,7 @@ func (fs *FsEtcd) Close() error {
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {
-	db.DPrintf(db.FSETCD, "%v: Fence key %v rev %d\n", scfg.PID, key, rev)
+	db.DPrintf(db.FSETCD, "%v: Fence key %v rev %d\n", fs.scfg.PID, key, rev)
 	fs.fencekey = key
 	fs.fencerev = rev
 }

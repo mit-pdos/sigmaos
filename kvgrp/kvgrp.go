@@ -281,7 +281,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
 	var cs any
-	cs = cachesrv.NewCacheSrv("")
+	cs = cachesrv.NewCacheSrv(config.GetSigmaConfig(), "")
 	if raftCfg != nil {
 		cs = replsrv.NewReplSrv(raftCfg, cs)
 	}

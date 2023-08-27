@@ -95,11 +95,7 @@ func (p *Proc) GetProto() *ProcProto {
 
 // Called by procclnt to set the parent dir when spawning.
 func (p *Proc) SetParentDir(parentdir string) {
-	if parentdir == PROCDIR {
-		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.GetPid().String())
-	} else {
-		p.ParentDir = path.Join(parentdir, CHILDREN, p.GetPid().String())
-	}
+	p.ParentDir = path.Join(parentdir, CHILDREN, p.GetPid().String())
 }
 
 func (p *Proc) setProcDir(kernelId string) {
@@ -122,7 +118,6 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
-	p.AppendEnv(SIGMAPROGRAM, p.Program)
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())

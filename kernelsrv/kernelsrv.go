@@ -9,7 +9,6 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/port"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )

@@ -8,7 +8,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessconn"
 	"sigmaos/sessp"

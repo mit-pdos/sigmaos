@@ -63,6 +63,7 @@ func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
 func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
+	db.DPrintf(db.FSETCD, "SetRootNamed %v", mnt)
 	d, err := mnt.Marshal()
 	if err != nil {
 		return serr.MkErrError(err)
@@ -95,7 +96,7 @@ func GetRootNamed(scfg *config.SigmaConfig) (sp.Tmount, *serr.Err) {
 	defer fs.Close()
 	nf, _, sr := fs.GetFile(sp.Tpath(BOOT))
 	if sr != nil {
-		db.DPrintf(db.FSETCD, "GetFile %v %v err %v\n", BOOT, nf, sr)
+		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v conf %v", BOOT, nf, sr, scfg)
 		return sp.Tmount{}, sr
 	}
 	mnt, sr := sp.MkMount(nf.Data)

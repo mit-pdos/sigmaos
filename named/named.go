@@ -112,6 +112,8 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
 	}
 
+	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
+
 	if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}

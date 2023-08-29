@@ -79,14 +79,22 @@ we continue to develop it.
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 
 ```
-$ ./test.sh -v 2>&1 | tee /tmp/out
+$ ./test.sh 2>&1 | tee /tmp/out
 ```
 
 This will run the full array of tests, and save the output in `/tmp/out`.
-However, running the full set of tests takes a long time. Generally, we only
-run a few tests related to packages we are actively developing. In order to run
-an individual package's tests, begin by stopping any existing SigmaOS instances
-and clearing the `go` test cache with:
+However, running the full set of tests takes a long time.   For a
+quick check run (which runs a few key tests for the main apps):
+
+```
+$ ./test.sh --apps --fast 2>&1 | tee /tmp/out
+```
+
+
+Generally, we only run a few tests related to packages we are actively
+developing. In order to run an individual package's tests, begin by
+stopping any existing SigmaOS instances and clearing the `go` test
+cache with:
 
 ```
 $ ./stop.sh --parallel
@@ -105,8 +113,8 @@ In order to run a specific test from a package, run:
 $ go test -v sigmaos/<pkg_name> --start --run <test_name>
 ```
 
-The --start flag indicates to the test program that an instance of SigmaOS is
-not already running. When benchmarking and testing remotely, you will likely
+The --start flag indicates to the test program that an instance of
+SigmaOS must be started. When benchmarking and testing on a real cluster, you will likely
 omit the `--start` flag. [Lesson 2](./02_remote_dev.md) explains the remote development
 and benchmarking workflow in detail.
 
@@ -158,10 +166,15 @@ proxy. First find your machine's local IP by running:
 $ hostname -I
 ```
 
-Then, you can start the proxy by running:
+Then, if SigmaOS is running you can start the proxy by running:
 
 ```
 $ ./mount.sh LOCAL_IP
+```
+
+Or, to start SigmaOS and the proxy:
+```
+$ ./mount.sh --boot LOCAL_IP
 ```
 
 This mounts the realm file system at `/mnt/9p`. You can interact with it to

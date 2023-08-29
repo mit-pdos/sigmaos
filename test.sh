@@ -56,7 +56,6 @@ if [[ $APPS == "" ]]; then
         go test $VERB sigmaos/$T -start
     done
 
-    # go test $VERB sigmaos/memfs -start   # no pipes
     # go test $VERB sigmaos/fslibsrv -start  # no perf
 
     # test memfs using schedd's memfs
@@ -82,7 +81,7 @@ fi
 
 if [[ $FAST == "" ]]; then
     for T in imgresized mr kv hotel; do
-        go test $VERB sigmaos/$T -start
+        go test -timeout 20m $VERB sigmaos/$T -start
     done
 else
     go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"

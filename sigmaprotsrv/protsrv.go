@@ -34,8 +34,8 @@ type Protsrv interface {
 	Open(*sp.Topen, *sp.Ropen) *sp.Rerror
 	Watch(*sp.Twatch, *sp.Ropen) *sp.Rerror
 	Clunk(*sp.Tclunk, *sp.Rclunk) *sp.Rerror
-	ReadV(*sp.TreadV, *sp.Rread) ([]byte, *sp.Rerror)
-	WriteV(*sp.TwriteV, []byte, *sp.Rwrite) *sp.Rerror
+	ReadF(*sp.TreadF, *sp.Rread) ([]byte, *sp.Rerror)
+	WriteF(*sp.TwriteF, []byte, *sp.Rwrite) *sp.Rerror
 	Remove(*sp.Tremove, *sp.Rremove) *sp.Rerror
 	RemoveFile(*sp.Tremovefile, *sp.Rremove) *sp.Rerror
 	Stat(*sp.Tstat, *sp.Rstat) *sp.Rerror

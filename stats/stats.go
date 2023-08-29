@@ -106,9 +106,9 @@ func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 		si.Nopen.Inc(1)
 	case sessp.TTcreate:
 		si.Ncreate.Inc(1)
-	case sessp.TTread, sessp.TTreadV:
+	case sessp.TTread, sessp.TTreadF:
 		si.Nread.Inc(1)
-	case sessp.TTwrite, sessp.TTwriteV:
+	case sessp.TTwrite, sessp.TTwriteF:
 		si.Nwrite.Inc(1)
 	case sessp.TTclunk:
 		si.Nclunk.Inc(1)
@@ -166,11 +166,11 @@ func (sti *StatInfo) Stats() *Stats {
 	return sti.st
 }
 
-func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	if st == nil {
 		return nil, nil
 	}

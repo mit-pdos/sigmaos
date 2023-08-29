@@ -34,7 +34,7 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 }
 
 // XXX maybe do get
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: FileRead: %v off %v cnt %v\n", ctx, f, offset, n)
 	if offset >= f.LenOff() {
 		return nil, nil
@@ -53,7 +53,7 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.Obj.di.Nf.Data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, v sp.TQversion, fence sp.Tfence) (sp.Tsize, *serr.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: Write: off %v cnt %v fence %v\n", f, offset, len(b), fence)
 	cnt := sp.Tsize(len(b))
 	sz := sp.Toffset(len(b))

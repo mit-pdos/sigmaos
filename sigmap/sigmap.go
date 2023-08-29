@@ -355,47 +355,39 @@ func (c *Tcreate) Tfence() Tfence {
 	return c.Fence.Tfence()
 }
 
-func MkReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadV {
-	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Fence: f.FenceProto()}
+func MkReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadF {
+	return &TreadF{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Fence: f.FenceProto()}
 }
 
-func (r *TreadV) Tfid() Tfid {
+func (r *TreadF) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-func (r *TreadV) Tversion() TQversion {
-	return TQversion(r.Version)
-}
-
-func (r *TreadV) Toffset() Toffset {
+func (r *TreadF) Toffset() Toffset {
 	return Toffset(r.Offset)
 }
 
-func (r *TreadV) Tcount() Tsize {
+func (r *TreadF) Tcount() Tsize {
 	return Tsize(r.Count)
 }
 
-func (r *TreadV) Tfence() Tfence {
+func (r *TreadF) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteV {
-	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
+func MkTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteF {
+	return &TwriteF{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
 }
 
-func (w *TwriteV) Tfid() Tfid {
+func (w *TwriteF) Tfid() Tfid {
 	return Tfid(w.Fid)
 }
 
-func (w *TwriteV) Toffset() Toffset {
+func (w *TwriteF) Toffset() Toffset {
 	return Toffset(w.Offset)
 }
 
-func (w *TwriteV) Tversion() TQversion {
-	return TQversion(w.Version)
-}
-
-func (w *TwriteV) Tfence() Tfence {
+func (w *TwriteF) Tfence() Tfence {
 	return w.Fence.Tfence()
 }
 
@@ -616,8 +608,8 @@ func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
 // sigmaP
 func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
-func (TreadV) Type() sessp.Tfcall      { return sessp.TTreadV }
-func (TwriteV) Type() sessp.Tfcall     { return sessp.TTwriteV }
+func (TreadF) Type() sessp.Tfcall      { return sessp.TTreadF }
+func (TwriteF) Type() sessp.Tfcall     { return sessp.TTwriteF }
 func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
 func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
 func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }

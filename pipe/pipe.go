@@ -126,7 +126,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -155,7 +155,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, v sp.TQversion, f s
 	return sp.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

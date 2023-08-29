@@ -145,9 +145,9 @@ const (
 	TRerror
 	TTopen
 	TTcreate
-	TTreadV
+	TTreadF
 	TRread
-	TTwriteV
+	TTwriteF
 	TTwatch
 	TRstat
 	TTwstat
@@ -229,10 +229,10 @@ func (fct Tfcall) String() string {
 		return "Ropen"
 	case TTcreate:
 		return "Tcreate"
-	case TTreadV:
-		return "TreadV"
-	case TTwriteV:
-		return "TwriteV"
+	case TTreadF:
+		return "TreadF"
+	case TTwriteF:
+		return "TwriteF"
 	case TRstat:
 		return "Rstat"
 	case TTremove:

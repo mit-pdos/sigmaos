@@ -44,13 +44,13 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		reply := &sp.Rcreate{}
 		err := s.protsrv.Create(req, reply)
 		return reply, nil, false, err
-	case *sp.TreadV:
+	case *sp.TreadF:
 		reply := &sp.Rread{}
-		data, err := s.protsrv.ReadV(req, reply)
+		data, err := s.protsrv.ReadF(req, reply)
 		return reply, data, false, err
-	case *sp.TwriteV:
+	case *sp.TwriteF:
 		reply := &sp.Rwrite{}
-		err := s.protsrv.WriteV(req, data, reply)
+		err := s.protsrv.WriteF(req, data, reply)
 		return reply, nil, false, err
 	case *sp.Tclunk:
 		reply := &sp.Rclunk{}

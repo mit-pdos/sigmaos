@@ -52,7 +52,7 @@ func (d *Dir) uxReadDir() *serr.Err {
 	return nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dents := make([]*sp.Stat, 0, d.sd.Len())
 	d.sd.Iter(func(n string, e interface{}) bool {

@@ -29,7 +29,7 @@ func makeStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 	return std.si, nil
 }
 
-func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	if off > 0 {
 		return nil, nil
 	}
@@ -45,7 +45,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQvers
 	return b, nil
 }
 
-func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, serr.MkErr(serr.TErrNotSupported, nil)
 }
 

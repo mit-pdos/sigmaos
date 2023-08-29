@@ -181,7 +181,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *serr.Err) {
 	return result.Body, sp.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	db.DPrintf(db.S3, "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
 	if sp.Tlength(off) >= o.sz {
 		return nil, nil
@@ -225,7 +225,7 @@ func (o *Obj) writer(ch chan error) {
 	ch <- err
 }
 
-func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	db.DPrintf(db.S3, "Write %v %v sz %v f %v\n", off, len(b), o.sz, f)
 	if off != o.off {
 		db.DPrintf(db.S3, "Write %v err\n", o.off)

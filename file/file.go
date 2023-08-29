@@ -32,7 +32,7 @@ func (f *File) LenOff() sp.Toffset {
 	return sp.Toffset(len(f.data))
 }
 
-func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion) (sp.Tsize, *serr.Err) {
+func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte) (sp.Tsize, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -62,21 +62,21 @@ func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion
 	return cnt, nil
 }
 
-func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, v sp.TQversion, fence sp.Tfence) (sp.Tsize, *serr.Err) {
+func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "File.Write %v %p\n", fence, ctx.FenceFs())
 	if fi, err := fencefs.CheckFence(ctx.FenceFs(), fence); err != nil {
 		return 0, err
 	} else {
 		if fi == nil {
-			return f.write(ctx, offset, data, v)
+			return f.write(ctx, offset, data)
 		} else {
 			defer fi.RUnlock()
-			return f.write(ctx, offset, data, v)
+			return f.write(ctx, offset, data)
 		}
 	}
 }
 
-func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, v sp.TQversion, fence sp.Tfence) ([]byte, *serr.Err) {
+func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

@@ -24,7 +24,7 @@ type fileSession struct {
 }
 
 // XXX wait on close before processing data?
-func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	debug.DPrintf(debug.DB, "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
@@ -44,7 +44,7 @@ func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversi
 }
 
 // XXX incremental read
-func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	if off > 0 {
 		return nil, nil
 	}

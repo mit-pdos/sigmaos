@@ -27,15 +27,15 @@ type Dir interface {
 	FsObj
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
 	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence) (FsObj, *serr.Err)
-	ReadDir(CtxI, int, sp.Tsize, sp.TQversion) ([]*sp.Stat, *serr.Err)
+	ReadDir(CtxI, int, sp.Tsize) ([]*sp.Stat, *serr.Err)
 	Remove(CtxI, string, sp.Tfence) *serr.Err
 	Rename(CtxI, string, string, sp.Tfence) *serr.Err
 	Renameat(CtxI, string, Dir, string, sp.Tfence) *serr.Err
 }
 
 type File interface {
-	Read(CtxI, sp.Toffset, sp.Tsize, sp.TQversion, sp.Tfence) ([]byte, *serr.Err)
-	Write(CtxI, sp.Toffset, []byte, sp.TQversion, sp.Tfence) (sp.Tsize, *serr.Err)
+	Read(CtxI, sp.Toffset, sp.Tsize, sp.Tfence) ([]byte, *serr.Err)
+	Write(CtxI, sp.Toffset, []byte, sp.Tfence) (sp.Tsize, *serr.Err)
 }
 
 type RPC interface {

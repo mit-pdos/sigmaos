@@ -288,7 +288,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return nil, sp.MkRerror(err)
@@ -296,7 +296,7 @@ func (ps *ProtSrv) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 
 	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
 
-	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tversion(), args.Tfence())
+	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -317,7 +317,7 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) (
 	return retdata, nil
 }
 
-func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
+func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return sp.MkRerror(err)
@@ -325,7 +325,7 @@ func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 
 	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
 
-	n, err := f.Write(args.Toffset(), data, args.Tversion(), args.Tfence())
+	n, err := f.Write(args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -559,7 +559,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	}
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
-	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), sp.NoV, args.Tfence())
+	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -670,7 +670,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV, args.Tfence())
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}

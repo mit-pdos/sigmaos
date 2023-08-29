@@ -243,7 +243,7 @@ func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpConn) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return nil, sp.MkRerrorCode(serr.TErrNotfound)
@@ -267,7 +267,7 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return d, nil
 }
 
-func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpConn) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)

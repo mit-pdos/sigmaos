@@ -49,7 +49,7 @@ func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	return ts
 }
 
-// Server crashes store a semaphore, groupmgr starts a new server,
+// Server crashes storing a semaphore, groupmgr starts a new server,
 // which will return a not-found for the semaphore, which is
 // interpreted as a successful down by the semclnt.
 func TestServerCrash(t *testing.T) {

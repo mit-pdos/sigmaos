@@ -47,7 +47,7 @@ func (ts *TestState) testRename(t int) {
 	assert.Nil(ts.t, err, "Lookup done")
 	d2 := lo.(fs.Dir)
 
-	sts, err := d1.ReadDir(ts.ctx, 0, 100, sp.NoV)
+	sts, err := d1.ReadDir(ts.ctx, 0, 100)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
 		_, _, _, err := d1.LookupPath(ts.ctx, path.Path{st.Name})

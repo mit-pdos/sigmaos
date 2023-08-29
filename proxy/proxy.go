@@ -248,7 +248,7 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if !ok {
 		return nil, sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
+	d, err := npc.fidc.ReadF(fid, args.Toffset(), args.Tcount())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.MkRerror(err)
@@ -272,7 +272,7 @@ func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Re
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV, sp.NoFence())
+	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Write: args %v err %v\n", args, err)
 		return sp.MkRerror(err)

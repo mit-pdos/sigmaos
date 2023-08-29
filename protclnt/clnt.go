@@ -202,8 +202,8 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp.Tfence, v sp.TQversion) ([]byte, *serr.Err) {
-	args := sp.MkReadV(fid, offset, cnt, v, f)
+func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, *serr.Err) {
+	args := sp.MkReadF(fid, offset, cnt, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -215,8 +215,8 @@ func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *s
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, v sp.TQversion, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTwriteV(fid, offset, v, f)
+func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTwriteF(fid, offset, f)
 	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err

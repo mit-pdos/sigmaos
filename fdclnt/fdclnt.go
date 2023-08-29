@@ -161,8 +161,8 @@ func (fdc *FdClient) MakeWriter(fd int) *writer.Writer {
 	return fdc.PathClnt.MakeWriter(fid)
 }
 
-func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, error) {
-	data, err := fdc.PathClnt.ReadV(fid, off, cnt, v)
+func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
+	data, err := fdc.PathClnt.ReadF(fid, off, cnt)
 	if err != nil {
 		return nil, err
 	}
@@ -170,25 +170,16 @@ func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, 
 	return data, nil
 }
 
-func (fdc *FdClient) ReadV(fd int, cnt sp.Tsize) ([]byte, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return nil, error
-	}
-	qid := fdc.PathClnt.Qid(fid)
-	return fdc.readFid(fd, fid, off, cnt, qid.Tversion())
-}
-
 func (fdc *FdClient) Read(fd int, cnt sp.Tsize) ([]byte, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return nil, error
 	}
-	return fdc.readFid(fd, fid, off, cnt, sp.NoV)
+	return fdc.readFid(fd, fid, off, cnt)
 }
 
-func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion, f sp.Tfence) (sp.Tsize, error) {
-	sz, err := fdc.PathClnt.WriteV(fid, off, data, v, f)
+func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, error) {
+	sz, err := fdc.PathClnt.WriteF(fid, off, data, f)
 	if err != nil {
 		return 0, err
 	}
@@ -196,21 +187,12 @@ func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, 
 	return sz, nil
 }
 
-func (fdc *FdClient) WriteV(fd int, data []byte) (sp.Tsize, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
-	}
-	qid := fdc.PathClnt.Qid(fid)
-	return fdc.writeFid(fd, fid, off, data, qid.Tversion(), sp.NoFence())
-}
-
 func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return 0, error
 	}
-	return fdc.writeFid(fd, fid, off, data, sp.NoV, sp.NoFence())
+	return fdc.writeFid(fd, fid, off, data, sp.NoFence())
 }
 
 func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, error) {
@@ -218,7 +200,7 @@ func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, err
 	if error != nil {
 		return 0, error
 	}
-	return fdc.writeFid(fd, fid, off, data, sp.NoV, f)
+	return fdc.writeFid(fd, fid, off, data, f)
 }
 
 func (fdc *FdClient) WriteRead(fd int, data []byte) ([]byte, error) {

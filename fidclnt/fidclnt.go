@@ -208,30 +208,21 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	return reply.Stat, nil
 }
 
-func (fidc *FidClnt) ReadV(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
+func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, *serr.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
+	data, err := fidc.fids.lookup(fid).pc.ReadF(fid, off, cnt, f)
 	if err != nil {
 		return nil, err
 	}
 	return data, nil
 }
 
-// Unfenced read
-func (fidc *FidClnt) ReadVU(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, v sp.TQversion) ([]byte, *serr.Err) {
-	data, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, sp.NullFence(), v)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (fidc *FidClnt) WriteV(fid sp.Tfid, off sp.Toffset, data []byte, v sp.TQversion, f0 sp.Tfence) (sp.Tsize, *serr.Err) {
+func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, *serr.Err) {
 	f := &f0
 	if !f0.HasFence() {
 		f = fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	}
-	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
+	reply, err := fidc.fids.lookup(fid).pc.WriteF(fid, off, f, data)
 	if err != nil {
 		return 0, err
 	}

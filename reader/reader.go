@@ -41,9 +41,9 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	var err *serr.Err
 	sz := sp.Tsize(len(p))
 	if rdr.fenced {
-		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, sp.NoV)
+		b, err = rdr.fc.ReadF(rdr.fid, rdr.off, sz)
 	} else {
-		b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, sz, sp.NoV)
+		b, err = rdr.fc.ReadF(rdr.fid, rdr.off, sz)
 	}
 	if err != nil {
 		db.DPrintf(db.READER_ERR, "Read %v err %v\n", rdr.path, err)
@@ -71,7 +71,7 @@ func (rdr *Reader) GetData() ([]byte, error) {
 }
 
 func (rdr *Reader) GetDataErr() ([]byte, *serr.Err) {
-	return rdr.fc.ReadV(rdr.fid, 0, sp.MAXGETSET, sp.NoV)
+	return rdr.fc.ReadF(rdr.fid, 0, sp.MAXGETSET)
 }
 
 func (rdr *Reader) Lseek(o sp.Toffset) error {

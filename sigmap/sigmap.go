@@ -355,8 +355,8 @@ func (c *Tcreate) Tfence() Tfence {
 	return c.Fence.Tfence()
 }
 
-func MkReadV(fid Tfid, o Toffset, c Tsize, v TQversion, f *Tfence) *TreadV {
-	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v), Fence: f.FenceProto()}
+func MkReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadV {
+	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Fence: f.FenceProto()}
 }
 
 func (r *TreadV) Tfid() Tfid {
@@ -379,8 +379,8 @@ func (r *TreadV) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTwriteV(fid Tfid, o Toffset, v TQversion, f *Tfence) *TwriteV {
-	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Fence: f.FenceProto()}
+func MkTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteV {
+	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
 }
 
 func (w *TwriteV) Tfid() Tfid {

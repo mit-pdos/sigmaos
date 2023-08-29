@@ -14,6 +14,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -25,7 +26,6 @@ const (
 	PARTITION = 200
 	NETFAIL   = 200
 	NTRIALS   = "3001"
-	JOBDIR    = "name/group"
 	GRP       = "grp-0"
 )
 
@@ -33,17 +33,19 @@ type Tstate struct {
 	*test.Tstate
 	grp string
 	gm  *groupmgr.GroupMgr
+	job string
 }
 
 func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
-	ts := &Tstate{grp: GRP}
+	ts := &Tstate{job: rand.String(4), grp: GRP}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.RmDir(JOBDIR)
-	ts.MkDir(JOBDIR, 0777)
-	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, JOBDIR)
+	ts.MkDir(kvgrp.KVDIR, 0777)
+	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
+	assert.Nil(t, err)
+	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
 	mcfg.SetTest(crash, partition, netfail)
 	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
+	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
@@ -55,17 +57,17 @@ func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 func TestServerCrash(t *testing.T) {
 	ts := makeTstate(t, 1, CRASH, 0, 0)
 
-	sem := semclnt.MakeSemClnt(ts.FsLib, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+	sem := semclnt.MakeSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err := sem.Init(0)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 
 	ch := make(chan error)
 	go func() {
 		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
-		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
 		ch <- err
 	}()
@@ -143,7 +145,7 @@ func TestReconnectSimple(t *testing.T) {
 		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
-			_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
+			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 			if err != nil {
 				ch <- err
 				return
@@ -171,7 +173,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 			fsl, err := fslib.MakeFsLibAddr(sp.Tuname(fmt.Sprintf("test-fsl-%v", i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
 			for true {
-				_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
+				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 				if err != nil {
 					ch <- err
 					break
@@ -199,7 +201,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		go func() {
 			fsl, err := fslib.MakeFsLibAddr("fsl", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 			assert.Nil(t, err)
-			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err

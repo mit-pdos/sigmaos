@@ -50,6 +50,7 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 		sc.conds[sessid] = []*cond{}
 	}
 	c := &cond{c: sync.NewCond(sc.lock), threadmgr: sc.sct.St.SessThread(sessid)}
+	db.DPrintf(db.SESSCOND, "alloc sc %v %v c %v\n", sc, sessid, c)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
 }
@@ -59,6 +60,8 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 // atomicity of releasing sc lock and going to sleep.
 func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 	c := sc.alloc(sessid)
+
+	db.DPrintf(db.SESSCOND, "Wait %v c %v\n", sessid, c)
 
 	if c.threadmgr != nil {
 		c.threadmgr.Sleep(c.c)
@@ -70,6 +73,8 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 
 	closed := c.isClosed
 
+	db.DPrintf(db.SESSCOND, "Wait return %v\n", c)
+
 	if closed {
 		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
 		return serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", sessid))
@@ -77,13 +82,13 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 	return nil
 }
 
-// Caller should hold sc lock.
+// Caller should hold sc lock and the sleeper should have gone to
+// sleep while holding sc.lock and release it in inside of sleep, so
+// it shouldn't be running anymore.
 func (sc *SessCond) Signal() {
 	for sid, condlist := range sc.conds {
-		// acquire c.lock() to ensure signal doesn't happen
-		// between releasing sc or sess lock and going to
-		// sleep.
 		for _, c := range condlist {
+			db.DPrintf(db.SESSCOND, "Signal %v c %v\n", sid, c)
 			if c.threadmgr != nil {
 				c.threadmgr.Wake(c.c)
 			} else {

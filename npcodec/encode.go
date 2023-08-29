@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"reflect"
 
 	db "sigmaos/debug"
@@ -168,7 +167,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			log.Printf("npcodec encode: unknown type %T\n", v)
 			return errors.New(fmt.Sprintf("Encode unknown type: %T", v))
 		}
 	}
@@ -286,6 +284,8 @@ func (d *decoder) decode(vs ...interface{}) error {
 				msg = &np.Tcreate9P{}
 			} else if v.Type == sessp.TTwstat9P {
 				msg = &np.Twstat9P{}
+			} else if v.Type == sessp.TTremove9P {
+				msg = &np.Tremove9P{}
 			} else {
 				m, err := spcodec.NewMsg(v.Type)
 				if err != nil {
@@ -307,8 +307,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			log.Printf("Decode unknown type: %T\n", v)
-			errors.New("Decode unknown type")
+			return fmt.Errorf("Decode unknown type: %T", v)
 		}
 	}
 

@@ -115,7 +115,7 @@ to:
   - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the`
     
-Note that `MakeTstateAll` creates an instance of SigmaOS with `named`
+Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named`
 and other kernel services (such as `s3` servers).
 
 For this exercise you need an AWS credential file in your home
@@ -124,27 +124,62 @@ AWS, which we will post on Piazza.
     
 ### Exercise 3: Spawn a `proc`
 
-In this exercise, you will familiarize yourself with the `procclnt` API. In
-order to do so, you will learn how to write a basic `proc`, spawn it, and wait
-for it to exit. You will need to complete the following steps:
-  - [ ] Create the main function for your new `proc`, by adding a new directory
-    (with whatever name you choose for your `proc`) in the `cmd/` directory in
-    the root of the repo, and creating a `main.go` file.
-  - [ ] In the `proc`'s main file, create an `fslib.FsLib` object, and a
-    `procclnt.ProcClnt` object, and put them in a `sigmaclnt.SigmaClnt` object.
-  - [ ] Have the `proc` create a file, with a path of your choice, in `named`.
-  - [ ] Mark the `proc` as started, to indicate to its parent that it has begun
-    executing.
-  - [ ] Have the `proc` log something (like "Hello World").
-  - [ ] Have the `proc` mark itself  as exited, and return an exit status
-    "Goodbye World" to its parent.
-  - [ ] Write a test program which spawns your `proc`.
-  - [ ] Have the test program wait for your `proc` to start, and look for the
-    file your `proc` created in `named`. Ensure that the file is present.
-  - [ ] Wait for the child `proc` to exit, and ensure that the exit status says
-    "Goodbye World".
+In this exercise, you will familiarize yourself with the `procclnt`
+API.  The function `TestExerciseProc` spawns the example proc from
+`cmd/user/example`, which queues it for execution. The test function
+wait until it starts (if many procs are spawned, SigmaOS may not start
+the proc for a while), and then wait until exits.
 
-### Exercise 4: Set up a RPC server. 
+If you run ```go test -v sigmaos/example --start --run Proc```, you
+should see output like this:
+```
+=== RUN   TestExerciseProc
+08:30:58.202494 - BOOT Start: sigma-b7e137ea srvs all IP 192.168.0.10
+08:30:58.276848 test-test-5abbed8715d06e97 ALWAYS Appended named 127.0.0.1
+    example_test.go:53: 
+                Error Trace:    /home/kaashoek/hack/sigmaos/example/example_test.go:53
+                Error:          Not equal: 
+                                expected: "Hello world"
+                                actual  : ""
+                            
+                                Diff:
+                                --- Expected
+                                +++ Actual
+                                @@ -1 +1 @@
+                                -Hello world
+                                +
+                Test:           TestExerciseProc
+--- FAIL: TestExerciseProc (6.14s)
+```
+
+Test programs will direct logging output directly to your
+terminal. However, SigmaOS kernel components and user `procs` run in
+containers. These store their output elsewhere. In order to scrape all
+containers' logging output, run:
+
+If you run,
+```
+$ ./logs.sh
+```
+search for "Hello world" in the output and you will the print
+statement from the example proc.
+
+Modify the example program to return `hello world` its exit status and
+run it:
+  - [ ] Edit the `main` function in `cmd/user/example` and replace
+        `ClntExitOK` with `ClntExit`, passing in the appropriate
+        `proc.Status` using `MakeStatusInfo`.
+  - [ ] Recompile and build SigmaOS:  ```$./build.sh --parallel```
+    It is sometimes convenient to just the compile the SigmaOS programs to see
+    if they compile:  ```$./make.sh --norace user```, which compiles
+    the user programs.  Once they compile, run build.sh.
+  - [ ] Rerun the test
+
+### Exercise 4: Process data in parallel
+
+
+
+### Exercise 5: Set up a RPC server. 
 
 In this exercise, you will familiarize with SigmaOS RPC, specifically
 `rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set

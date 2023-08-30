@@ -31,8 +31,8 @@ type Tttl uint64
 
 const ROOTREALM Trealm = "rootrealm"
 
-func GenPid() Tpid {
-	return Tpid(rand.String(8))
+func GenPid(program string) Tpid {
+	return Tpid(program + "-" + rand.String(8))
 }
 
 func (r Trealm) String() string {

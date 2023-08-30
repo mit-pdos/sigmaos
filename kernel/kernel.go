@@ -177,7 +177,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 		i = "init"
 	}
 	args := []string{realmId.String(), i}
-	p := proc.MakePrivProcPid(sp.Tpid("pid-"+sp.GenPid().String()), "knamed", args, true)
+	p := proc.MakePrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }
 

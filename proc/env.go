@@ -103,10 +103,3 @@ func GetLabels(envvar string) map[string]bool {
 	}
 	return m
 }
-
-func FakeProcEnv(pid sp.Tpid, program, procdir, parentdir string) {
-	//	SetPid(pid)
-	//	SetProgram(program)
-	//	SetProcDir(procdir)
-	//	SetParentDir(parentdir)
-}

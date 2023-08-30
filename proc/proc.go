@@ -59,7 +59,7 @@ func MakeEmptyProc() *Proc {
 }
 
 func MakeProc(program string, args []string) *Proc {
-	pid := sp.GenPid()
+	pid := sp.GenPid(program)
 	return MakeProcPid(pid, program, args)
 }
 

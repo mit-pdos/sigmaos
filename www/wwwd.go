@@ -174,7 +174,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pipe bool, args []string, env map[string]string, mcpu proc.Tmcpu) (*proc.Status, error) {
 	var pipeName string
-	pid := sp.GenPid()
+	pid := sp.GenPid(app)
 	a := proc.MakeProcPid(pid, app, args)
 	a.SetMcpu(mcpu)
 	for k, v := range env {

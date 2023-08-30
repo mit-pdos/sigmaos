@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"path"
 	"runtime/debug"
 
 	db "sigmaos/debug"
@@ -30,7 +29,6 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
-	proc.FakeProcEnv(pid, program, path.Join(sp.KPIDSREL, pid.String()), "")
 	MountPids(fsl, fsl.NamedAddr())
 
 	if err := fsl.MakeRootMount(fsl.Uname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {

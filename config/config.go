@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"runtime/debug"
 	"strconv"
 
@@ -64,7 +65,7 @@ func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.Uname = uname
 	sc.Program = "kernel"
-	sc.PID = sp.Tpid(string(uname) + "-" + sp.GenPid().String())
+	sc.PID = sp.GenPid(string(uname))
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP
 	sc.Realm = sp.ROOTREALM
@@ -74,11 +75,13 @@ func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 func NewTestSigmaConfig(realm sp.Trealm, etcdIP, localIP, buildTag string) *SigmaConfig {
 	sc := NewSigmaConfig()
 	sc.Uname = "test"
-	sc.PID = sp.Tpid("test-" + sp.GenPid().String())
+	sc.PID = sp.GenPid("test")
 	sc.Realm = realm
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP
 	sc.BuildTag = buildTag
+	sc.Program = "test"
+	sc.ProcDir = path.Join(sp.KPIDSREL, sc.PID.String())
 	return sc
 }
 

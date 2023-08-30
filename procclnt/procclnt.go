@@ -119,7 +119,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 	}
 
 	// Set the parent dir
-	p.SetParentDir(clnt.procdir)
+	//	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
@@ -323,7 +323,7 @@ func (clnt *ProcClnt) Started() error {
 	}
 
 	// Mark self as started
-	semPath := path.Join(proc.PARENTDIR, proc.START_SEM)
+	semPath := path.Join( /*proc.PARENTDIR*/ clnt.SigmaConfig().ParentDir, proc.START_SEM)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, semPath)
 	err := semStart.Up()
 	if err != nil {
@@ -385,7 +385,7 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 }
 
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	err := clnt.exited(clnt.FsLib, clnt.procdir, proc.PARENTDIR, clnt.SigmaConfig().PID, status)
+	err := clnt.exited(clnt.FsLib, clnt.procdir /*proc.PARENTDIR*/, clnt.SigmaConfig().ParentDir, clnt.SigmaConfig().PID, status)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.SigmaConfig().PID, err)
 	}

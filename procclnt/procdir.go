@@ -45,7 +45,7 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 
 func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 	// Add symlink to child
-	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
+	link := path.Join(clnt.SigmaConfig().ParentDir /*proc.PARENTDIR*/, proc.PROCDIR)
 	// Find the procdir. For normally-spawned procs, this will be proc.PROCDIR,
 	// which is just a mount point. Rather, the Symlink will need the full path
 	// for the parent to mount the child directory.

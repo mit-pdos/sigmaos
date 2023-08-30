@@ -39,7 +39,7 @@ func spawnSpinner(t *testing.T, ts *test.Tstate) sp.Tpid {
 }
 
 func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) sp.Tpid {
-	pid := sp.GenPid()
+	pid := sp.GenPid("spinner")
 	a := proc.MakeProcPid(pid, "spinner", []string{"name/"})
 	a.SetMcpu(mcpu)
 	err := ts.Spawn(a)
@@ -64,7 +64,7 @@ func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 }
 
 func spawnSleeper(t *testing.T, ts *test.Tstate) sp.Tpid {
-	pid := sp.GenPid()
+	pid := sp.GenPid("sleeper")
 	spawnSleeperWithPid(t, ts, pid)
 	return pid
 }
@@ -236,7 +236,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 
 	start := time.Now()
 
-	cPid := sp.GenPid()
+	cPid := sp.GenPid("sleeper")
 	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, 0)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
@@ -262,7 +262,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	start := time.Now()
 
-	cPid := sp.GenPid()
+	cPid := sp.GenPid("spawner")
 	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, CRASH_MSECS)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
@@ -314,7 +314,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 
 	ch := make(chan bool)
 
-	pid := sp.GenPid()
+	pid := sp.GenPid("nonexistent")
 	go func() {
 		ts.WaitExit(pid)
 		ch <- true
@@ -345,7 +345,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 	for i := 0; i < N_CONCUR; i++ {
 		go func(i int) {
 			for j := 0; j < N_SPAWNS; j++ {
-				pid := sp.GenPid()
+				pid := sp.GenPid("sleeper")
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.MakeProcPid(pid, "sleeper", []string{"0ms", "name/"})
 				_, errs := ts.SpawnBurst([]*proc.Proc{a}, 1)
@@ -396,7 +396,7 @@ func TestCrashProcOne(t *testing.T) {
 func TestEarlyExit1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	pid1 := sp.GenPid()
+	pid1 := sp.GenPid("parentexit")
 	a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -433,7 +433,7 @@ func TestEarlyExitN(t *testing.T) {
 
 	for i := 0; i < nProcs; i++ {
 		go func(i int) {
-			pid1 := sp.GenPid()
+			pid1 := sp.GenPid("parentexit")
 			a := proc.MakeProc("parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
 			err := ts.Spawn(a)
 			assert.Nil(t, err, "Spawn")
@@ -480,10 +480,10 @@ func TestConcurrentProcs(t *testing.T) {
 	done.Add(nProcs)
 
 	for i := 0; i < nProcs; i++ {
-		pid := sp.GenPid()
+		pid := sp.GenPid("sleeper")
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
-			pid = sp.GenPid()
+			pid = sp.GenPid("sleeper")
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i

@@ -75,7 +75,7 @@ func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Pro
 	if p.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
-	p.setProcDir("NO_SCHEDD_IP")
+	p.setProcDir("NOT_SET")
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
 	return p
@@ -103,6 +103,11 @@ func (p *Proc) setProcDir(kernelId string) {
 		p.ProcDir = path.Join(sp.KPIDSREL, p.GetPid().String())
 	} else {
 		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+	}
+	if p.SigmaConfig != "" {
+		cfg := p.GetSigmaConfig()
+		cfg.ProcDir = p.ProcDir
+		p.SetSigmaConfig(cfg)
 	}
 }
 

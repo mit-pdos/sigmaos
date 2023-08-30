@@ -1,7 +1,11 @@
 # 03. SigmaOS APIs
 
 This tutorial help you writing applications with SigmaOS by making you
-familiar with the main APIs.
+familiar with the main APIs.  Applications using SigmaOS live in
+`cmd/user`.  The packages for the major applications are `mr` (a
+MapReduce Library), `hotel` and `socialnetwork` (two microservices
+based on DeathStarBench), `imgresized` (an image resizing service),
+and `kv` (a sharded key-value service).
 
 ## Client-side libraries
 
@@ -63,7 +67,7 @@ following steps:
     Ensure the file is present.
   - [ ] Open the file, and read the contents back. Make sure that the contents
     you read match the contents you wrote.
-
+    
 ### Exercise 2: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt` API. In
@@ -87,10 +91,11 @@ for it to exit. You will need to complete the following steps:
     "Goodbye World".
 
 ### Exercise 3: Set up a RPC server. 
-In this exercise, you will familiarize with the application layer APIs of SigmOS, 
-specifically `rpcclnt` and `sigmasrv`. In order to do so, you will learn 
-how to set up a basic RPC server, and explore existing utilities that provide 
-database and cache proxies. 
+
+In this exercise, you will familiarize with SigmaOS RPC, specifically
+`rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set
+up a basic RPC server, and explore existing utilities that provide
+database and cache proxies.
   - [ ] Navigate to the `example_echo_server` directory. Check the files and 
 	try running the test cases. If you have already built SigmaOS through `build.sh`, 
 	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test

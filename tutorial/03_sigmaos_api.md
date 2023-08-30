@@ -1,12 +1,7 @@
-# 03. Code walkthrough
+# 03. SigmaOS APIs
 
-The SigmaOS codebase is large. This tutorial is a short walkthrough of the code
-from both the client and server perspective. By the end of this tutorial you
-should be able to use the SigmaOS API to manipulate files and directories,
-create and manage `procs`, and understand the different layers of SigmaOS
-clients and servers, and how the pacakges that implement them fit together.
-
-XXX TODO: insert diagram.
+This tutorial help you writing applications with SigmaOS by making you
+familiar with the main APIs.
 
 ## Client-side libraries
 
@@ -16,53 +11,28 @@ call into other libraries), but most SigmaOS clients and `procs` will use only
 a subset of these libraries:
   - `fslib`: This is the main library that all clients use to interact in
     SigmaOS. It defines common file-system operations (like `Open`, `Write`,
-    `Read`, `Close`) as well as operations for fault tolerance (like
-    `Watch`es). All other libraries are built on `fslib`.
+    `Read`, `Close`).
   - `procclnt`: This library designs and implements the `proc` API. `proc`s,
     benchmarks, and tests use the `procclnt` API to `Spawn`, `Evict`, and
     `Wait` for `proc`s.
   - `sigmaclnt`: This library unifies the `fslib` and `procclnt` structures
     into a single interface. It is mostly for convenience.
   - `semclnt`: This library defines the SigmaOS equivalent of semaphores.
-  - `epochclnt`: This library lets users define epochs. It is useful to
-    implement leader election.
-  - `electclnt`: This library implements a simple leader election protocol on
-    top of `named`.
-  - `leaderclnt`: This library uses `electclnt` and `epochclnt` to implement
-    leader election, and fence directories and services with the leader's
+  - `leaderclnt`: This library uses `electclnt` to implement leader
+    election, and fence directories and services with the leader's
     epoch.
   - `rpcclnt`: This library implements general-purpose RPCs on top of
-    SigmaOS. RPCs have fewer guarantees (e.g., no in-order delivery guarantees)
-    but are more expressive and more performant than general SigmaOS
-    operations.
-
-The following libraries make up the "base" on which the SigmaOS client-side is
-built:
-  - `sessclnt`: This library implements SigmaOS's session layer which
-    guarantees, among other things, in-order message delivery, transparent
-    failover, and exactly-once RPCs under network partition.
-  - `netclnt`: This library abstracts TCP connections from the client
-    perspective, and is used to send messages from the client to the server,
-    and deliver responses.
+    SigmaOS.
 
 ## Server-side libraries
 
 This section describes the SigmaOS server-side libraries. It is not an
 exhaustive list, but it contains some of the more interesting design points,
 and libraries which may be useful for future projects based on SigmaOS.
-  - `replraft`: This layer wraps etcd's Raft library, and is used to replicate
-    SigmaOS servers.
-  - `netsrv`: This layer abstracts TCP connections from the server perspective,
-    and is used to receive messages from the client and send responses back.
-  - `sesssrv`: This library contains the server-side session protocol, which
-    collaborates with `sessclnt` to guarantee in-order message delivery,
-    exactly-once RPCs under network partition, and collaborates with `replraft`
-    to transparently replicate `sigmap` messages.
-  - `sessstatesrv`: This library contains server-side data structures needed to
-    represent, track, and manage the lifecycle of sessions.
+  - `sigmasrv`: This library provides the API to create SigmaOS servers
   - `protsrv`: This library implements a generic SigmaOS protocol server. It
     has handlers for each of teh `sigmap` messages, and deals with SigmaOS
-    features like versions, ephemeral files, and watches.
+    features like watches.
 
 ## Shared libraries (used by client and server)
 
@@ -94,39 +64,7 @@ following steps:
   - [ ] Open the file, and read the contents back. Make sure that the contents
     you read match the contents you wrote.
 
-### Exercise 2: Describe SigmaOS librarly layers
-
-In this exercise, you will draw a diagram of how the SigmaOS client and server
-libraries stack together, and explain what their purposes are. You should hit
-the following waypoints in your traversal:
-  - [ ] Start at a simple `fslib` function like `FsLib.Create`.
-  - [ ] You should eventually reach the `sessclnt` layer, and then the
-    `netclnt` layer. This is the bottom of the client stack, and marks the
-    transition point between client and server code.
-  - [ ] Start at the `netsrv`layer, and proceed into the `sesssrv` layer.
-  - [ ] You should end up in the `protsrv` layer which corresponds to the
-    `FsLib` function you started at.
-  - [ ] Now, draw a diagram of how all of the libraries stack and fit together.
-  - [ ] Finally, describe, at a high level, what each library does.
-
-### Exercise 3: Add a protocol message to SigmaP 
-
-In this exercise, you will add a new type of `sigmap` message to SigmaOS. It
-can be a no-op, or print something on the server-side. In order to do so,
-you'll need to complete the following major steps (with some details left out):
-  - [ ] Create a new type of `sigmap` message, and add it to the `sigmap`
-    package.
-  - [ ] Add an API call for the new RPC to the `fslib.FsLib` struct, and the
-    lower layers it calls into, in order to invoke your RPC. You should be able
-    to trace your way all the way down from the `fslib` layer to the `netclnt`
-    layer.
-  - [ ] Add a handler for your new `sigmap` message to `protsrv`. You should be
-    able to trace your RPC's flow all the way from the `netsrv` layer to the
-    `protsrv` layer.
-  - [ ] Invoke your new `sigmap` message on `named` in a test, and ensure that
-    it works.
-
-### Exercise 4: Spawn a `proc`
+### Exercise 2: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt` API. In
 order to do so, you will learn how to write a basic `proc`, spawn it, and wait
@@ -148,7 +86,7 @@ for it to exit. You will need to complete the following steps:
   - [ ] Wait for the child `proc` to exit, and ensure that the exit status says
     "Goodbye World".
 
-### Exercise 5: Set up a RPC server. 
+### Exercise 3: Set up a RPC server. 
 In this exercise, you will familiarize with the application layer APIs of SigmOS, 
 specifically `rpcclnt` and `sigmasrv`. In order to do so, you will learn 
 how to set up a basic RPC server, and explore existing utilities that provide 

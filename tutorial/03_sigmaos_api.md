@@ -1,11 +1,13 @@
 # 03. SigmaOS APIs
 
 This tutorial help you writing applications with SigmaOS by making you
-familiar with the main APIs.  Applications using SigmaOS live in
-`cmd/user`.  The packages for the major applications are `mr` (a
-MapReduce Library), `hotel` and `socialnetwork` (two microservices
-based on DeathStarBench), `imgresized` (an image resizing service),
-and `kv` (a sharded key-value service).
+familiar with its main APIs.  Applications using SigmaOS live in
+`cmd/user`.  The root directory contains the support packages for the
+major applications: `mr` (a MapReduce Library), `hotel` and
+`socialnetwork` (two microservices based on DeathStarBench),
+`imgresized` (an image resizing service), and `kv` (a sharded
+key-value service).  The exercises below will help you get familiar
+with the SigmaOS APIs.
 
 ## Client-side libraries
 
@@ -31,8 +33,9 @@ a subset of these libraries:
 ## Server-side libraries
 
 This section describes the SigmaOS server-side libraries. It is not an
-exhaustive list, but it contains some of the more interesting design points,
-and libraries which may be useful for future projects based on SigmaOS.
+exhaustive list, but it contains some of the more interesting design
+points, and libraries, which may be useful for future projects based
+on SigmaOS.
   - `sigmasrv`: This library provides the API to create SigmaOS servers
   - `protsrv`: This library implements a generic SigmaOS protocol server. It
     has handlers for each of teh `sigmap` messages, and deals with SigmaOS
@@ -40,19 +43,14 @@ and libraries which may be useful for future projects based on SigmaOS.
 
 ## Shared libraries (used by client and server)
 
-This section describes some libraries shared by the SigmaOS client-side
-libraries and the SigmaOS serer-side libraries, which may be useful when
-implementing additional clients and servers:
+This section describes some libraries shared by the SigmaOS
+client-side libraries and the SigmaOS server-side libraries, which may
+be useful when implementing additional clients and servers:
   - `sigmap`: This library defines the `sigmap` protocol, which all components
     and `procs` in SigmaOS use to communicate. It is loosely based on the 9P
     protocol, with some additions for fault-tolerance (such as `Watch`es) and
     performance (such as `Put`, `Get`, and `WriteRead`).
   - `sessp`: This library defines messages for the session layer of SigmaOS.
-
-## Exercises
-
-The following exercises will help you get familiar with the core of the SigmaOS
-codebase.
 
 ### Exercise 1: Create, write, and read files in named
 
@@ -60,7 +58,6 @@ In this exercise, you will learn how to use the SigmaOS client API to
 manipulate files and directories. In order to do so, you will create a file,
 write data to it, and read data from it. You will need to complete the
 following steps:
-  - [ ] Create an `fslib.FsLib` object.
   - [ ] Create a file in `named`. Write a string of your choice to it, and
     close the file.
   - [ ] List the contents of the directory in which you created the file.
@@ -69,11 +66,11 @@ following steps:
     you read match the contents you wrote.
     
 To get started, open `example_test.go` in the folder `example`, which
-contains the `TestExerciseNamed` function, a Go test function, to read
-the root directory of `named`.  The call to `test.MakeTstatePath`
+contains the `TestExerciseNamed` function, a Golang test function, to
+read the root directory of `named`.  The call to `test.MakeTstatePath`
 starts a test instance of SigmaOS with only named, and it embeds an
-`SigmaClnt` instance, which embeds an `FsLib` object.  You can run the
-test as follows:
+`SigmaClnt` instance, which in turn embeds an `FsLib` object.  You can
+run the test as follows:
 
 ```
 $ go test -v sigmaos/example --start --run Named
@@ -102,33 +99,31 @@ run it again, it will fail, because your file already exists.
 
 ### Exercise 2: Read a file from S3
     
-Named is a for storing small files (e.g., symbolic links that servers
-use to advertise their existence). SigmaOS has proxy server to access
-other storage systems such as S3.  Each machine in SigmaOS runs an
-`s3` server and you read/write files in S3 using the pathname
-`name/s3/~any/`, which tells SigmaOS to use any of the available S3
-proxies. 
+Named is good for storing small files (e.g., symbolic links that
+servers use to advertise their existence). SigmaOS has proxy servers
+to access other storage systems, including S3.  Each machine in
+SigmaOS runs an `s3` proxy and you can read/write files in S3 using
+the pathname `name/s3/~any/` (`any` tells SigmaOS to use any of the
+available S3 proxies in `name/s3`).
 
-In this exercise, you will read a file in S3 using the same FsLib
-interface as in the previous exercise.  Extend `TestExerciseS3`
-to:
+For this exercise you need an AWS credential file in your home
+directory `~/.aws/credentials` [local](01_local_dev.md).
+
+In this exercise, you will read an object from S3 using the same FsLib
+interface as in the previous exercise.  Extend `TestExerciseS3` to:
   - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
-  - [ ] Count the number of occurrences of the word `the`
+  - [ ] Count the number of occurrences of the word `the` in this file
     
 Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named`
 and other kernel services (such as `s3` servers).
 
-For this exercise you need an AWS credential file in your home
-directory `~/.aws/credentials`, which has the secret access key for
-AWS, which we will post on Piazza.
-    
 ### Exercise 3: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt`
 API.  The function `TestExerciseProc` spawns the example proc from
-`cmd/user/example`, which queues it for execution. The test function
+`cmd/user/example`. Spawn queues the proc for execution. The test function
 wait until it starts (if many procs are spawned, SigmaOS may not start
-the proc for a while), and then wait until exits.
+the proc for a while), and then wait until it exits.
 
 If you run ```go test -v sigmaos/example --start --run Proc```, you
 should see output like this:
@@ -164,7 +159,7 @@ $ ./logs.sh
 search for "Hello world" in the output and you will the print
 statement from the example proc.
 
-Modify the example program to return `hello world` its exit status and
+Modify the example proc to return `hello world` its exit status and
 run it:
   - [ ] Edit the `main` function in `cmd/user/example` and replace
         `ClntExitOK` with `ClntExit`, passing in the appropriate
@@ -173,12 +168,14 @@ run it:
     It is sometimes convenient to just the compile the SigmaOS programs to see
     if they compile:  ```$./make.sh --norace user```, which compiles
     the user programs.  Once they compile, run build.sh.
-  - [ ] Rerun the test
+  - [ ] Rerun the test to see if your implementation now passes the test.
 
 ### Exercise 4: Process data in parallel
 
-Implement `TestExerciseParallel` to process the input files
-in `name/s3/~any/9ps3/gutenberg/` in parallel:
+This exercise is more challenging; it puts the previous exercises
+together in simple application with several procs. Your job is to
+implement `TestExerciseParallel` to process the input files in
+`name/s3/~any/9ps3/gutenberg/` in parallel:
   - [ ] Make a proc that takes as argument a pathname for an input
     file, counts the occurrences of the world `the`, and returns it
     through `proc.Status`.  Make a new directory in `cmd/user` for the
@@ -186,7 +183,12 @@ in `name/s3/~any/9ps3/gutenberg/` in parallel:
   - [ ] Modify the test function to spawn a proc for each input file,
     wait until they exited, and add up the number of `the`'s.
     You can create a Go routine for each spawn.
-    
+
+The debugging support described below may be helpful in this exercise.
+
+If you would run this test in the remote-mode configuration
+[remote](02_remote_dev.md) of SigmaOS, SigmaOS would schedule them
+on different machines for you.
     
 ## Debugging SigmaOS
 
@@ -218,6 +220,33 @@ db.DPrintf(db.HAHA, "Hello world 4");
 
 Most SigmaOS packages and layers contain their own logging levels. For a full
 list, refer to the debbug package's [list of selectors](../debug/selector.go).
+
+### Exercise 5: Run an RPC server. 
+
+In this exercise, you will familiarize with SigmaOS RPC, specifically
+`rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set
+up a basic RPC server, and explore existing utilities that provide
+database and cache proxies.
+  - [ ] Navigate to the `example_echo_server` directory. Check the files and 
+	try running the test cases. If you have already built SigmaOS through `build.sh`, 
+	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test
+	case starts an instance of the Echo server, then starts a client sending request
+	to the server. By default, all operations are local. 
+  - [ ] To see the logs, source the environment variable file `example_echo_server/echo_env.sh`
+	before running test, and run `logs.sh` afterwards. You may modify the content
+	of the environment variable file to turn on/off logging for different modules. 
+	After finishing test and logging, you may run `stop.sh` to clear up.
+
+### Optional exercises for RPC server
+  - [ ] Try to modify the echo server so that it caches results by connecting to 
+	some caching client. Existing caching implementations can be found at `cacheclnt`,
+	 `memcached`, and `kv`. Example usage can be found at `hotel` and `socialnetwork`, 
+	which are two major example applications built on top of SigmaOS.
+  - [ ] Try to modify the echo server so that it reads and writes to a database by
+	connecting to a database proxy. Existing implementations can be found at `dbd`
+	and `dbclnt`.  
+  - [ ] Try to profile the echo server through `perf` package,
+        described below.
 
 ## Performance debugging
 
@@ -265,31 +294,4 @@ p.Done()
 The performance output will be available in
 `/tmp/sigmaos-perf/PID-selector.out`, where `PID` is the SigmaOS `PID` of the
 process, and `selector`is the lowercase version of the `perf` selector.
-
-### Exercise 5: Set up a RPC server. 
-
-In this exercise, you will familiarize with SigmaOS RPC, specifically
-`rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set
-up a basic RPC server, and explore existing utilities that provide
-database and cache proxies.
-  - [ ] Navigate to the `example_echo_server` directory. Check the files and 
-	try running the test cases. If you have already built SigmaOS through `build.sh`, 
-	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test
-	case starts an instance of the Echo server, then starts a client sending request
-	to the server. By default, all operations are local. 
-  - [ ] To see the logs, source the environment variable file `example_echo_server/echo_env.sh`
-	before running test, and run `logs.sh` afterwards. You may modify the content
-	of the environment variable file to turn on/off logging for different modules. 
-	After finishing test and logging, you may run `stop.sh` to clear up.
-
-### Optional exercises for RPC server
-  - [ ] Try to modify the echo server so that it caches results by connecting to 
-	some caching client. Existing caching implementations can be found at `cacheclnt`,
-	 `memcached`, and `kv`. Example usage can be found at `hotel` and `socialnetwork`, 
-	which are two major example applications built on top of SigmaOS.
-  - [ ] Try to modify the echo server so that it reads and writes to a database by
-	connecting to a database proxy. Existing implementations can be found at `dbd`
-	and `dbclnt`.  
-  - [ ] Try to profile the echo server through `perf` package. 
-
 

@@ -68,6 +68,37 @@ following steps:
   - [ ] Open the file, and read the contents back. Make sure that the contents
     you read match the contents you wrote.
     
+To get started, see the folder `example`, which contains a Go test to
+read the root directory of `named`.  The call to `test.MakeTstatePath`
+starts a test instance of SigmaOS, and it embeds an `SigmaClnt`
+instance, which embeds an `FsLib` object.  You can run the test as
+follows:
+
+```
+$ go test -v sigmaos/example --start
+```
+
+and it will produce output like this:
+```
+20:42:16.638701 - ALWAYS Etcd addr 127.0.0.1
+=== RUN   TestExample
+20:42:17.059591 - BOOT Start: sigma-c69e2af8 srvs named IP 192.168.0.10
+20:42:17.116655 name/: [.statsd rpc boot db kpids s3 schedd ux]
+--- PASS: TestExample (0.51s)
+PASS
+ok      sigmaos/example 0.515s
+```
+
+Now extend `TestExample1` to implement the exercise.
+`fslib/fslib_test` has many `fslib` tests, which may provide
+inspiration.
+
+Note that the state stored in the `named` root directory is
+persistent; `named` used an `etcd` has its backend, which is a
+widely-used key-value server implemented using Raft.  So, your test
+should clean up after itself, because, otherwise, if you run it again,
+it will fail, because your file already exists.
+    
 ### Exercise 2: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt` API. In

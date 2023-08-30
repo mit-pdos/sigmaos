@@ -177,8 +177,16 @@ run it:
 
 ### Exercise 4: Process data in parallel
 
-
-
+Implement `TestExerciseParallel` to process the input files
+in `name/s3/~any/9ps3/gutenberg/` in parallel:
+  - [ ] Make a proc that takes as argument a pathname for an input
+    file, counts the occurrences of the world `the`, and returns it
+    through `proc.Status`.  Make a new directory in `cmd/user` for the
+    proc. Your code from Exercise 2 may be helpful.
+  - [ ] Modify the test function to spawn a proc for each input file,
+    wait until they exited, and add up the number of `the`'s.
+    You can create a Go routine for each spawn.
+  
 ### Exercise 5: Set up a RPC server. 
 
 In this exercise, you will familiarize with SigmaOS RPC, specifically

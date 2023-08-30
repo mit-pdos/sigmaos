@@ -54,3 +54,11 @@ func TestExerciseProc(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestExerciseParallel(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	// Your code here
+
+	ts.Shutdown()
+}

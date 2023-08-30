@@ -13,7 +13,7 @@ import (
 	"sigmaos/test"
 )
 
-func TestExample1(t *testing.T) {
+func TestExerciseNamed(t *testing.T) {
 	dir := sp.NAMED
 	ts := test.MakeTstatePath(t, dir)
 
@@ -21,6 +21,16 @@ func TestExample1(t *testing.T) {
 	assert.Nil(t, err)
 
 	log.Printf("%v: %v\n", dir, sp.Names(sts))
+
+	// Your code here
+
+	ts.Shutdown()
+}
+
+func TestExerciseS3(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	// Your code here
 
 	ts.Shutdown()
 }

@@ -118,114 +118,34 @@ SigmaOS must be started. When benchmarking and testing on a real cluster, you wi
 omit the `--start` flag. [Lesson 2](./02_remote_dev.md) explains the remote development
 and benchmarking workflow in detail.
 
-## Debugging SigmaOS
+## Exercise: Start SigmaOS
 
-The SigmaOS [debug](../debug) package contains the SigmaOS logging
-infrastructure. When running SigmaOS, you can control the logging output by
-setting the `SIGMADEBUG` environment variable in the terminal you run SigmaOS
-or its tests and benchmarks in. For example, in order to get output from the
-test and benchmark packages, set:
-
-```
-$ export SIGMADEBUG="TEST;BENCH;"
-```
-
-This will make output from any logging statements with the `TEST` and `BENCH`
-selectors print to stdout. For example, the following logging statements
-will produce output, when `SIGMADEBUG` is set as above:
-
-```
-db.DPrintf(db.TEST, "Hello world 1");
-db.DPrintf(db.BENCH, "Hello world 2");
-```
-
-The following logging statements, however, will _not_ produce output:
-
-```
-db.DPrintf(db.HOHO, "Hello world 3");
-db.DPrintf(db.HAHA, "Hello world 4");
-```
-
-Most SigmaOS packages and layers contain their own logging levels. For a full
-list, refer to the debbug package's [list of selectors](../debug/selector.go).
-
-Test programs will direct logging output directly to your terminal. However,
-SigmaOS kernel components and user `procs` run in containers. These store their
-output elsewhere. In order to scrape all containers' logging output, run:
-
-```
-$ ./logs.sh
-```
-
-Additionally, you can debug SigmaOS by directly introspecting its realms.
-SigmaOS leverage's Linux's 9P VFS layer to allow interaction with SigmaOS
-realms via the command line. In order to do so, we implemented a 9P-to-SigmaP
-proxy. First find your machine's local IP by running:
+In this exercise, you will start SigmaOS and introspect it.  SigmaOS
+leverage's Linux's 9P VFS layer to allow interaction with SigmaOS via
+the command line. In order to do so, we implemented a 9P-to-SigmaP
+proxy `proxyd`. First find your machine's local IP by running:
 
 ```
 $ hostname -I
 ```
 
-Then, if SigmaOS is running you can start the proxy by running:
+Create the directory `/mnt/9p` and then, run:
 
-```
-$ ./mount.sh LOCAL_IP
-```
-
-Or, to start SigmaOS and the proxy:
 ```
 $ ./mount.sh --boot LOCAL_IP
 ```
 
-This mounts the realm file system at `/mnt/9p`. You can interact with it to
-read, write, and create files and directories.
+The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
+can mount an already-running SigmaOS.
 
-## Performance debugging
-
-We have developed a variety of performance measurement tools for SigmaOS, built
-on Golang's performance monitoring infrastructure. The performance measurement
-tools are defined and implemented in the [perf](../perf/util.go) package.
-Currently, the `perf.Perf` struct can be used to collect CPU, memory, mutex, or
-blocking profiles from the `go` runtime. The resulting traces are compatible
-with the go pprof tool. The Golang documentation has good writeups and docs
-which describe how to read and interpret these. The following docs are
-particularly useful:
-
-  - [Profiling Go Programs](https://go.dev/blog/pprof): overview of Golang
-    performance profiling.
-  - [runtime/pprof](https://pkg.go.dev/runtime/pprof): documentation `pprof`,
-    Golang's performance profiling infrastructure, on which much of our `perf`
-    package was built.
-  - [net/pprof](https://pkg.go.dev/net/http/pprof): documentation of the
-    `net/pprof` package, which includes instructions to collect and view
-    performance profiles over HTTP.
-
-Similarly to the `debug` package, output from the `perf` package is controlled
-through an environment variable `SIGMAPERF`. The full list of `perf` selectors
-is available [here](../perf/selector.go). For example, in order to collect
-a CPU pprof trace and a mutex trace for `named`, set:
+This mounts the realm file system at `/mnt/9p`. On your computer
+type `$ ls /mnt/9p/` and you should see output like this:
 
 ```
-$ export SIGMAPERF="NAMED_PPROF;NAMED_PPROF_MUTEX;"
+$ ls /mnt/9p/
+boot  db  kpids  named-election-rootrealm  rpc  s3  schedd  ux  ws
+$ 
 ```
-
-In order to profile a SigmaOS `proc` or test program with selector `SELECTOR`,
-create a new `perf.Perf` object like so:
-
-```
-p := perf.Perf(perf.SELECTOR)
-```
-
-In order to save the performance output, simply call (usually in a `defer`
-statement):
-
-```
-p.Done()
-```
-
-The performance output will be available in
-`/tmp/sigmaos-perf/PID-selector.out`, where `PID` is the SigmaOS `PID` of the
-process, and `selector`is the lowercase version of the `perf` selector.
 
 ## Stopping SigmaOS
 
@@ -239,3 +159,34 @@ Note: this will try to purge your machine of any traces of the running
 containers, including logs. We do this to avoid filling your disk up, but you
 may want to refrain from running `stop.sh` if you want to inspect the
 containers' logs.
+
+## Exercise: Access S3
+
+Through the proxy you can access other SigmaOS services, such as AWS
+S3.  For this exercise you need an AWS credential file in your home
+directory `~/.aws/credentials`, which has the secret access key for
+AWS, which we will post on Piazza.  Please don't share the key with
+others and don't use it for personal use.
+
+Once you have the key, do the following:
+- [ ] Install credentials.  The entry in `~/aws/credentials`,
+looks like this:
+```
+[me-mit]
+aws_access_key_id = KEYID
+aws_secret_access_key = SECRETKEY
+region=us-east-1
+```
+- [ ] Stop SigmaOS
+- [ ] Start SigmaOS
+
+Now you should be able to access files in S3 by running:
+
+```
+ls /mnt/9p/s3/IP:PORT/
+```
+
+where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
+
+
+

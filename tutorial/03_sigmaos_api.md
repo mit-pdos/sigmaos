@@ -54,7 +54,7 @@ implementing additional clients and servers:
 The following exercises will help you get familiar with the core of the SigmaOS
 codebase.
 
-### Exercise 1: Create, write, and read files.
+### Exercise 1: Create, write, and read files in named
 
 In this exercise, you will learn how to use the SigmaOS client API to
 manipulate files and directories. In order to do so, you will create a file,
@@ -68,14 +68,15 @@ following steps:
   - [ ] Open the file, and read the contents back. Make sure that the contents
     you read match the contents you wrote.
     
-To get started, see the folder `example`, which contains a Go test to
-read the root directory of `named`.  The call to `test.MakeTstatePath`
-starts a test instance of SigmaOS, and it embeds an `SigmaClnt`
-instance, which embeds an `FsLib` object.  You can run the test as
-follows:
+To get started, open `example_test.go` in the folder `example`, which
+contains the `TestExerciseNamed` function, a Go test function, to read
+the root directory of `named`.  The call to `test.MakeTstatePath`
+starts a test instance of SigmaOS with only named, and it embeds an
+`SigmaClnt` instance, which embeds an `FsLib` object.  You can run the
+test as follows:
 
 ```
-$ go test -v sigmaos/example --start
+$ go test -v sigmaos/example --start --run Named
 ```
 
 and it will produce output like this:
@@ -89,17 +90,39 @@ PASS
 ok      sigmaos/example 0.515s
 ```
 
-Now extend `TestExample1` to implement the exercise.
+Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test` has many `fslib` tests, which may provide
 inspiration.
 
 Note that the state stored in the `named` root directory is
-persistent; `named` used an `etcd` has its backend, which is a
-widely-used key-value server implemented using Raft.  So, your test
-should clean up after itself, because, otherwise, if you run it again,
-it will fail, because your file already exists.
+persistent; `named` uses an `etcd` for storage, which is a
+widely-used, fault-tolerant, key-value server implemented using Raft.
+So, your test should clean up after itself, because, otherwise, if you
+run it again, it will fail, because your file already exists.
+
+### Exercise 2: Read a file from S3
     
-### Exercise 2: Spawn a `proc`
+Named is a for storing small files (e.g., symbolic links that servers
+use to advertise their existence). SigmaOS has proxy server to access
+other storage systems such as S3.  Each machine in SigmaOS runs an
+`s3` server and you read/write files in S3 using the pathname
+`name/s3/~any/`, which tells SigmaOS to use any of the available S3
+proxies. 
+
+In this exercise, you will read a file in S3 using the same FsLib
+interface as in the previous exercise.  Extend `TestExerciseS3`
+to:
+  - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
+  - [ ] Count the number of occurrences of the word `the`
+    
+Note that `MakeTstateAll` creates an instance of SigmaOS with `named`
+and other kernel services (such as `s3` servers).
+
+For this exercise you need an AWS credential file in your home
+directory `~/.aws/credentials`, which has the secret access key for
+AWS, which we will post on Piazza.
+    
+### Exercise 3: Spawn a `proc`
 
 In this exercise, you will familiarize yourself with the `procclnt` API. In
 order to do so, you will learn how to write a basic `proc`, spawn it, and wait
@@ -121,7 +144,7 @@ for it to exit. You will need to complete the following steps:
   - [ ] Wait for the child `proc` to exit, and ensure that the exit status says
     "Goodbye World".
 
-### Exercise 3: Set up a RPC server. 
+### Exercise 4: Set up a RPC server. 
 
 In this exercise, you will familiarize with SigmaOS RPC, specifically
 `rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set

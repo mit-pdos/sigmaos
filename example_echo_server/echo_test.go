@@ -7,8 +7,8 @@ import (
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
 	"sigmaos/rand"
+	"sigmaos/rpcclnt"
 	"sigmaos/test"
 	"strconv"
 	"testing"
@@ -66,7 +66,7 @@ func TestEcho(t *testing.T) {
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
-	err = rpcc.RPC("Echo.Echo", &arg, &res)
+	err = rpcc.RPC("EchoSrv.Echo", &arg, &res)
 	assert.Nil(t, err, "RPC call should succeed")
 	assert.Equal(t, "Hello World!", res.Text)
 

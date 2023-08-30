@@ -326,11 +326,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	pn = pn + "/"
 
 	status := spawnDirreader(ts1, pn)
-	if test.Overlays {
-		assert.True(t, status.IsStatusOK())
-	} else {
-		assert.True(t, status.IsStatusOK())
-	}
+	assert.True(t, status.IsStatusOK())
 
 	cm.Stop()
 

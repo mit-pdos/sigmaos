@@ -111,7 +111,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 	// XXX set other fields? procdir etc?
 	childCfg := proc.NewChildSigmaConfig(clnt.SigmaConfig(), p)
 	p.SetSigmaConfig(childCfg)
-	p.Finalize(kernelId)
 
 	// Set the realm id.
 	if p.RealmStr == "" {
@@ -122,7 +121,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 	//	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir
 
-	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
+	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v\ncfg %v", kernelId, p, childCfg)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")

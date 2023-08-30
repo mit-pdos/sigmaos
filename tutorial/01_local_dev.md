@@ -1,8 +1,8 @@
 # 01. Local develpment
 
-This tutorial describes how to start up SigmaOS locally. By the end of this
-walkthrough, you should be able to build, run, and test SigmaOS. All commands
-are intended to be run from the root of the repo.
+This tutorial describes how to run SigmaOS locally. By the end of this
+walkthrough, you should be able to build, run, and test SigmaOS. All
+commands are intended to be run from the root of the repo.
 
 ## Dependencies
 
@@ -51,7 +51,7 @@ Warning: if the machine you are building on is small, this may cause your
 machine to run out of memory, as the `go` compiler is somewhat
 memory-intensive.
 
-In order to make sure the installation succeeded, run a simple test which
+In order to make sure the build succeeded, run a simple test which
 starts SigmaOS up and exits immediately:
 
 ```
@@ -69,12 +69,12 @@ The output should look something like:
 ## Testing SigmaOS
 
 SigmaOS leverages Golang's testing infrastructure for its benchmarks
-and correctness tests. We have an extensive slew of tests for many of
-the SigmaOS packages. We expect all of the tests to pass, but we are
-sure there must be bugs. If you find one, please add a minimal test
-that exposes it to the appropriate package before fixing it. This way,
-we can ensure that the software doesn't regress to incorporate old
-bugs as we continue to develop it.
+and correctness tests. We have tests for many of the SigmaOS
+packages. We expect all of the tests to pass, but we are sure there
+must be bugs. If you find one, please add a minimal test that exposes
+it to the appropriate package before fixing it. This way, we can
+ensure that the software doesn't regress to incorporate old bugs as we
+continue to develop it.
 
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 
@@ -82,16 +82,15 @@ Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 $ ./test.sh 2>&1 | tee /tmp/out
 ```
 
-This will run the full array of tests, and save the output in `/tmp/out`.
-However, running the full set of tests takes a long time.   For a
-quick check run (which runs a few key tests for the main apps):
+This will run the full array of tests, and save the output in
+`/tmp/out`.  However, running the full set of tests takes a long time.
+To run a few key tests for the main apps, run:
 
 ```
 $ ./test.sh --apps --fast 2>&1 | tee /tmp/out
 ```
 
-
-Generally, we only run a few tests related to packages we are actively
+Generally, we run only tests related to packages we are actively
 developing. In order to run an individual package's tests, begin by
 stopping any existing SigmaOS instances and clearing the `go` test
 cache with:
@@ -136,11 +135,11 @@ $ ./mount.sh --boot LOCAL_IP
 ```
 
 The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
-can mount an already-running SigmaOS.
-
-This mounts the realm file system at `/mnt/9p`. On your computer
-type `$ ls /mnt/9p/` and you should see output like this:
-
+can mount an already-running SigmaOS. This command mounts SigmaOS at `/mnt/9p`. Type:
+```
+$ ls /mnt/9p/
+```
+and you should see output like this:
 ```
 $ ls /mnt/9p/
 boot  db  kpids  named-election-rootrealm  rpc  s3  schedd  ux  ws
@@ -160,13 +159,13 @@ containers, including logs. We do this to avoid filling your disk up, but you
 may want to refrain from running `stop.sh` if you want to inspect the
 containers' logs.
 
-## Exercise: Access S3
+## Exercise: Access S3 through SigmaOS
 
-Through the proxy you can access other SigmaOS services, such as AWS
-S3.  For this exercise you need an AWS credential file in your home
-directory `~/.aws/credentials`, which has the secret access key for
-AWS, which we will post on Piazza.  Please don't share the key with
-others and don't use it for personal use.
+Through SigmaOS you can access other services, such as AWS S3.  For
+this exercise you need an AWS credential file in your home directory
+`~/.aws/credentials`, which has the secret access key for AWS, which
+we will post on Piazza.  Please don't share the key with others and
+don't use it for personal use.
 
 Once you have the key, do the following:
 - [ ] Install credentials.  The entry in `~/aws/credentials`,
@@ -185,7 +184,6 @@ Now you should be able to access files in S3 by running:
 ```
 ls /mnt/9p/s3/IP:PORT/
 ```
-
 where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
 
 

@@ -68,13 +68,13 @@ The output should look something like:
 
 ## Testing SigmaOS
 
-SigmaOS leverages Golang's testing infrastructure for its benchmarks and
-correctness tests. We have an extensive slew of tests for many of the SigmaOS
-packages. Although we are not aware of any major bugs, and expect all of the
-tests to pass, we are sure there must be bugs. If you find one, please add a
-minimal test that exposes it to the appropriate package before fixing it. This
-way, we can ensure that the software doesn't regress to incorporate old bugs as
-we continue to develop it.
+SigmaOS leverages Golang's testing infrastructure for its benchmarks
+and correctness tests. We have an extensive slew of tests for many of
+the SigmaOS packages. We expect all of the tests to pass, but we are
+sure there must be bugs. If you find one, please add a minimal test
+that exposes it to the appropriate package before fixing it. This way,
+we can ensure that the software doesn't regress to incorporate old
+bugs as we continue to develop it.
 
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 

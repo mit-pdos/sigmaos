@@ -221,12 +221,11 @@ db.DPrintf(db.HAHA, "Hello world 4");
 Most SigmaOS packages and layers contain their own logging levels. For a full
 list, refer to the debbug package's [list of selectors](../debug/selector.go).
 
-### Exercise 5: Run an RPC server. 
+### Exercise 5: Run and extend an RPC server. 
 
 In this exercise, you will familiarize with SigmaOS RPC, specifically
-`rpcclnt` and `sigmasrv`. In order to do so, you will learn how to set
-up a basic RPC server, and explore existing utilities that provide
-database and cache proxies.
+`rpcclnt` and `sigmasrv` by running a simple RPC server that echo its
+input:
   - [ ] Navigate to the `example_echo_server` directory. Check the files and 
 	try running the test cases. If you have already built SigmaOS through `build.sh`, 
 	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test
@@ -235,7 +234,17 @@ database and cache proxies.
   - [ ] To see the logs, source the environment variable file `example_echo_server/echo_env.sh`
 	before running test, and run `logs.sh` afterwards. You may modify the content
 	of the environment variable file to turn on/off logging for different modules. 
-	After finishing test and logging, you may run `stop.sh` to clear up.
+	After finishing test and logging, you may run `stop.sh` to clear
+	up.
+
+Extend the client and server to support addition: the client sends two
+numbers to the server and server responds with the sum:
+ - [ ] Add the request and response struct to echo.proto and
+ compile them using compile-proto.sh.
+ - [ ] Add the handler to echosrv.go and run `build.sh` to build server
+ - [ ] Write a new test function that tests the new RPC
+
+You can use `echo_env.sh` to set SIGMADEBUG.
 
 ### Optional exercises for RPC server
   - [ ] Try to modify the echo server so that it caches results by connecting to 

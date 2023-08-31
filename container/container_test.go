@@ -27,7 +27,7 @@ func TestExpose(t *testing.T) {
 	)
 	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
 	assert.Nil(t, err)
-	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8112-8113")
+	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8100-8200")
 	assert.Nil(t, err)
 	pmap := nat.PortMap{}
 	pmap[ports] = []nat.PortBinding{}

@@ -18,18 +18,17 @@ $ cd ../.docker
 $ gpg --recipient sigma-kaashoek --recipient arielck --recipient heyizheng2011 --recipient gideon.witchel@gmail.com --encrypt-files config.json
 ```
 
-  2. Add the member to the `git@g.csail.mit.edu:ulambda:` repo and the to the
+  2. Add the member to the `git@g.csail.mit.edu:sigmaos:` repo and the to the
   [GitHub repo](https://github.com/mit-pdos/sigmaos).
 
 ## Tasks for new team members
 
 The following tasks must be completed by new team members during onboarding.
 
-  1. Clone the `sigmaos` git repo from `g`, and rename the directory `sigmaos`
-  (the repo is still called `ulambda` on `g` for historical reasons.
+  1. Clone the `sigmaos` git repo from `g`
 
 ```
-git clone git@g.csail.mit.edu:ulambda sigmaos
+git clone git@g.csail.mit.edu:sigmaos
 ```
 
   2. Create a gpg key and send it to someone on the development team. GitHub

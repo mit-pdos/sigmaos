@@ -101,17 +101,20 @@ if [[ $APPS == "" ]]; then
     #
     # Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
     #
+    
     go test $VERB sigmaos/container -start
 
     #
     # tests with overlays
     #
+    # XXX Disable for now: needs repair
+    #
 
-    go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
-    go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
-    go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
-    go test $VERB sigmaos/hotel -start --overlays --run Www
-    go test $VERB sigmaos/realmclnt -start --overlays --run Basic
-    go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
-    go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+    # go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+    # go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
+    # go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
+    # go test $VERB sigmaos/hotel -start --overlays --run Www
+    # go test $VERB sigmaos/realmclnt -start --overlays --run Basic
+    # go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+    # go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
 fi

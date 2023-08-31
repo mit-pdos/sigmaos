@@ -201,11 +201,11 @@ func (gm *GroupMgr) start(i int, done chan *procret) {
 	// XXX hack
 	if gm.members[i].Program == "kvd" && gm.members[i].nstart > 0 {
 		// For now, we don't restart kvds
-		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
-		go func() {
-			done <- nil
-		}()
-		return
+		db.DPrintf(db.ALWAYS, "=== kvd failed %v; restart\n", gm.members[i].pid)
+		// go func() {
+		// 	done <- nil
+		// }()
+		// return
 	}
 	start := make(chan error)
 	go gm.members[i].run(start, done)

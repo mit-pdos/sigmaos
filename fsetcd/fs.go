@@ -22,6 +22,7 @@ func (fs *FsEtcd) path2key(path sp.Tpath) string {
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
+	db.DPrintf(db.FSETCD, "getFile %v\n", key)
 	resp, err := fs.Get(context.TODO(), key)
 	if err != nil {
 		return nil, 0, serr.MkErrError(err)

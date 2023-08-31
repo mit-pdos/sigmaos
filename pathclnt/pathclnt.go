@@ -272,8 +272,11 @@ func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
 func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	db.DPrintf(db.PATHCLNT, "Stat %v\n", name)
 	pn := path.Split(name)
-	// XXX ignore err?
-	target, rest, _ := pathc.resolve(pn, uname, true)
+	target, rest, err := pathc.resolve(pn, uname, true)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Stat resolve %v err %v\n", pn, err)
+	}
+	db.DPrintf(db.PATHCLNT, "Stat resolve %v target %v rest %v\n", pn, target, rest)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
 		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
@@ -416,7 +419,9 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 }
 
 func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	pathc.resolveRoot(p, uname)
+	if err, b := pathc.resolveRoot(p, uname); err != nil {
+		db.DPrintf(db.ALWAYS, "resolveRoot %v err %v b %v\n", p, err, b)
+	}
 	return pathc.mnt.resolve(p, resolve)
 }
 

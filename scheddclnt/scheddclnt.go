@@ -266,12 +266,13 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
 		return
 	}
-	sdc.lastUpdate = time.Now()
 	// Read the procd union dir.
 	schedds, _, err := sdc.ReadDir(sp.SCHEDD)
 	if err != nil {
-		db.DFatalf("Error ReadDir procd: %v", err)
+		db.DPrintf(db.ALWAYS, "Error ReadDir procd: %v", err)
+		return
 	}
+	sdc.lastUpdate = time.Now()
 	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
 	// Alloc enough space for the list of schedds.
 	sdc.scheddKernelIds = make([]string, 0, len(schedds))

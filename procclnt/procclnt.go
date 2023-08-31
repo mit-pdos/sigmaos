@@ -117,9 +117,10 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		p.SetRealm(clnt.Realm())
 	}
 
+	// XXX I'm not doing this correctly
 	// Set the parent dir
-	//	p.SetParentDir(clnt.procdir)
-	childProcdir := p.ProcDir
+	p.SetParentDir(childCfg.ParentDir)
+	childProcdir := childCfg.ParentDir
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v\ncfg %v", kernelId, p, childCfg)
 	if clnt.hasExited() != "" {

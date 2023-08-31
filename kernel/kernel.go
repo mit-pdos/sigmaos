@@ -3,7 +3,6 @@ package kernel
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -74,6 +73,7 @@ func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
 		return nil, err
 	}
 	k.SigmaClnt = sc
+	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
@@ -100,7 +100,7 @@ func (k *Kernel) Shutdown() error {
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
 	n := k.PathClnt.FidClnt.Len()
 	if n > N {
-		log.Printf("Too many FIDs open (%v): %v", n, k.PathClnt.FidClnt)
+		db.DPrintf(db.ALWAYS, "Too many FIDs open (%v): %v", n, k.PathClnt.FidClnt)
 	}
 	db.DPrintf(db.KERNEL, "Shutdown %s done\n", k.Param.KernelId)
 	return nil

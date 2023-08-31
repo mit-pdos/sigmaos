@@ -35,7 +35,7 @@ type Named struct {
 
 func Run(args []string) error {
 	scfg := config.GetSigmaConfig()
-	db.DPrintf(db.NAMED, "%v: %v\n", scfg.PID, args)
+	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, scfg)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}

@@ -29,7 +29,7 @@ const (
 	N_ITER      = 5_000_000_000
 
 	// Realms
-	REALM1 sp.Trealm = "testrealm"
+	REALM1 sp.Trealm = "testrealm1"
 	REALM2 sp.Trealm = "testrealm2"
 )
 

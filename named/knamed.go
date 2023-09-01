@@ -37,11 +37,11 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	if err := nd.mkSrv(); err != nil {
+	mnt, err := nd.mkSrv()
+	if err != nil {
 		db.DFatalf("Error mkSrv %v\n", err)
 	}
 
-	mnt := sp.MkMountServer(nd.MyAddr())
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}

@@ -109,7 +109,7 @@ func (k *Kernel) Shutdown() error {
 	return nil
 }
 
-// Start kernel services listed in p
+// Start kernel services
 func startSrvs(k *Kernel) error {
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {

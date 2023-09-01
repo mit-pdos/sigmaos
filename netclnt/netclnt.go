@@ -81,7 +81,8 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 	addrs = container.Rearrange(clntnet, addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.Dial("tcp", addr.Addr)
+		c, err := net.DialTimeout("tcp", addr.Addr, sp.Conf.Session.TIMEOUT/10)
+		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.Addr, err)
 		if err != nil {
 			continue
 		}
@@ -89,7 +90,7 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 		nc.addr = addr.Addr
 		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
 		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
-		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
+		db.DPrintf(db.PORT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
 		return nil
 	}
 	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", addrs)

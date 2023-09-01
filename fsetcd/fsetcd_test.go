@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	"sigmaos/fsetcd"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
@@ -18,7 +19,8 @@ func init() {
 }
 
 func TestDump(t *testing.T) {
-	fs, err := fsetcd.MkFsEtcd(sp.Trealm(realm))
+	scfg := config.NewTestSigmaConfig(sp.Trealm(realm), etcdIP, "", "")
+	fs, err := fsetcd.MkFsEtcd(scfg)
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)

@@ -185,10 +185,10 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, kvd string) error {
 		}
 		var serr *serr.Err
 		if errors.As(err, &serr) && (serr.IsErrUnavailable() || serr.IsErrRetry()) {
-			db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op wait err %v\n", err)
 			time.Sleep(WAITMS * time.Millisecond)
 		} else {
-			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op err %v\n", err)
 			return err
 		}
 	}

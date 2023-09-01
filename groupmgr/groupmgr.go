@@ -231,7 +231,7 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
 	for i := 0; i < len(gm.members); i++ {
-		db.DPrintf(db.ALWAYS, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
+		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
 	}
 	gm.ch <- true
 

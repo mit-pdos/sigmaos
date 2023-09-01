@@ -107,7 +107,7 @@ func (clnt *ProcClnt) extendBaseEnv(p *proc.Proc) error {
 	//		return err
 	//	}
 	p.AppendEnv(proc.SIGMANAMED, proc.NamedAddrs())
-	db.DPrintf(db.ALWAYS, "Appended named %v", proc.NamedAddrs())
+	//db.DPrintf(db.ALWAYS, "Appended named %v", proc.NamedAddrs())
 	return nil
 }
 

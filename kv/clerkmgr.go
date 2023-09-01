@@ -94,6 +94,9 @@ func (cm *ClerkMgr) StopClerks() error {
 			return err
 		}
 		db.DPrintf(db.ALWAYS, "Clerk exit status %v\n", status)
+		if !(status.IsStatusEvicted() || status.IsStatusOK()) {
+			return fmt.Errorf("wrong status %v", status)
+		}
 	}
 	return nil
 }

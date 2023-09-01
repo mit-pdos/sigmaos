@@ -69,7 +69,7 @@ func NewBootSigmaConfig(uname sp.Tuname, etcdIP, localIP string) *SigmaConfig {
 	sc.EtcdIP = etcdIP
 	sc.LocalIP = localIP
 	sc.Realm = sp.ROOTREALM
-	sc.ProcDir = path.Join(sp.KPIDSREL, sc.PID.String())
+	sc.ProcDir = path.Join(sp.KPIDS, sc.PID.String())
 	return sc
 }
 
@@ -82,7 +82,7 @@ func NewTestSigmaConfig(realm sp.Trealm, etcdIP, localIP, buildTag string) *Sigm
 	sc.LocalIP = localIP
 	sc.BuildTag = buildTag
 	sc.Program = "test"
-	sc.ProcDir = path.Join(sp.KPIDSREL, sc.PID.String())
+	sc.ProcDir = path.Join(sp.KPIDS, sc.PID.String())
 	return sc
 }
 

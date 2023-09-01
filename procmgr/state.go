@@ -27,7 +27,9 @@ func (mgr *ProcMgr) createStartedSem(p *proc.Proc) (*semclnt.SemClnt, error) {
 	semPath := path.Join(p.ParentDir, proc.START_SEM)
 	semStart := semclnt.MakeSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
 	var err error
-	if err = semStart.Init(sp.DMTMP); err == nil {
+	if err = semStart.Init(sp.DMTMP); err != nil {
+		db.DPrintf(db.PROCMGR_ERR, "Err sem init [%v]: %v", semPath, err)
+	} else {
 		db.DPrintf(db.PROCMGR, "Sem init done: %v", p)
 	}
 	return semStart, err

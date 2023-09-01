@@ -122,9 +122,11 @@ func startSrvs(k *Kernel) error {
 func (k *Kernel) shutdown() {
 	// start knamed to shutdown kernel with named?
 	if len(k.svcs.svcs[sp.KNAMED]) == 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
+		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.SigmaConfig().PID)
 		if err := k.bootKNamed(k.SigmaConfig(), false); err != nil {
 			db.DFatalf("shutdown: bootKnamed err %v\n", err)
 		}
+		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.SigmaConfig().PID)
 	}
 	if len(k.Param.Services) > 0 {
 		db.DPrintf(db.KERNEL, "Get children %v", k.SigmaConfig().PID)

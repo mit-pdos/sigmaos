@@ -95,12 +95,12 @@ func (p *Proc) GetProto() *ProcProto {
 
 // Called by procclnt to set the parent dir when spawning.
 func (p *Proc) SetParentDir(parentdir string) {
-	p.ParentDir = path.Join(parentdir, CHILDREN, p.GetPid().String())
+	p.ParentDir = parentdir
 }
 
 func (p *Proc) setProcDir(kernelId string) {
 	if p.IsPrivilegedProc() {
-		p.ProcDir = path.Join(sp.KPIDSREL, p.GetPid().String())
+		p.ProcDir = path.Join(sp.KPIDS, p.GetPid().String())
 	} else {
 		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}

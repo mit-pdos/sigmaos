@@ -108,7 +108,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
-	// XXX set other fields? procdir etc?
 	childCfg := proc.NewChildSigmaConfig(clnt.SigmaConfig(), p)
 	p.SetSigmaConfig(childCfg)
 
@@ -117,7 +116,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		p.SetRealm(clnt.Realm())
 	}
 
-	// XXX I'm not doing this correctly
 	// Set the parent dir
 	p.SetParentDir(childCfg.ParentDir)
 	childProcdir := childCfg.ParentDir
@@ -298,14 +296,15 @@ func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	db.DPrintf(db.PROCCLNT, "WaitEvict %v", pid)
-	procdir := proc.PROCDIR
+	procdir := clnt.SigmaConfig().ProcDir
+	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, procdir)
+	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Down()
 	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "WaitEvict error %v procdir %v", err, procdir)
 		return fmt.Errorf("WaitEvict error %v", err)
 	}
-	db.DPrintf(db.PROCCLNT, "WaitEvict evicted %v", pid)
 	return nil
 }
 
@@ -406,7 +405,7 @@ func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string
 
 // Notifies a proc that it will be evicted using Evict.
 func (clnt *ProcClnt) evict(procdir string) error {
-	db.DPrintf(db.PROCCLNT, "evict %v", procdir)
+	db.DPrintf(db.PROCCLNT, "Evict %v", procdir)
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Up()
 	if err != nil {

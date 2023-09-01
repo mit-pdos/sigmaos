@@ -124,12 +124,13 @@ fi
 #
 
 if [[ $OVERLAY == "--overlay" ]] ; then
+    ./start-db.sh
     ./start-network.sh
     
     go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
     go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
-    # go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
-    # go test $VERB sigmaos/hotel -start --overlays --run Www
+    go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
+    go test $VERB sigmaos/hotel -start --overlays --run Www
     go test $VERB sigmaos/realmclnt -start --overlays --run Basic
     go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
     go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation

@@ -45,6 +45,8 @@ ENV dbip x.x.x.x
 ENV mongoip x.x.x.x
 ENV jaegerip x.x.x.x
 ENV overlays "false"
+# Install docker-cli
+RUN apk add --update docker openrc
 # Copy kernel bins
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
 COPY --from=sigmabuilder /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh

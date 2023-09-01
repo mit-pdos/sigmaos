@@ -2,6 +2,7 @@ package fsetcd_test
 
 import (
 	"context"
+	"flag"
 	"log"
 	"testing"
 	"time"
@@ -10,12 +11,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	"sigmaos/fsetcd"
 	sp "sigmaos/sigmap"
 )
 
+var etcdIP string
+
+func init() {
+	flag.StringVar(&etcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
+}
+
 func TestLease(t *testing.T) {
-	ec, err := fsetcd.MkFsEtcd(sp.ROOTREALM)
+	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, "", "")
+	ec, err := fsetcd.MkFsEtcd(scfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)
 	respg, err := l.Grant(context.TODO(), 30)

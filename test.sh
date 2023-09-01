@@ -94,7 +94,7 @@ if [[ $BASIC == "--basic" ]]; then
 fi
 
 #
-# apps tests
+# app tests
 #
 
 if [[ $APPS == "--apps" ]]; then

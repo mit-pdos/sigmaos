@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 usage() {
   echo "Usage: $0 net" 1>&2

@@ -1,38 +1,50 @@
 #!/bin/bash
 
 #
-# Runs all tests by default.
-# --apps: run only app tests
-# --fast: run only the key tests
+# Runs basic tests by default
+# --apps: run app tests
+# --apps-fast: run the fast app tests
+# --overlay: run overlay tests
 #
 
 usage() {
-  echo "Usage: $0 [--fast] [--apps]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--overlay]" 
 }
 
+BASIC="--basic"
 FAST=""
 APPS=""
+OVERLAY=""
 VERB="-v"
+CONTAINER=""
 while [[ "$#" -gt 0 ]]; do
-  case "$1" in
-  --fast)
-    shift
-    FAST="--fast"
-    ;;
-  --apps)
-    shift
-    APPS="--apps"
-    ;;
-   *)
-   echo "unexpected argument $1"
-   usage
-   exit 1
- esac
+    case "$1" in
+        --apps-fast)
+            shift
+            BASIC="" 
+            APPS="--apps"
+            FAST="--fast"
+            ;;
+        --apps)
+            shift
+            BASIC="" 
+            APPS="--apps"
+            ;;
+        --overlay)
+            shift
+            BASIC="" 
+            OVERLAY="--overlay"
+            ;;
+        *)
+            echo "unexpected argument $1"
+            usage
+            exit 1
+    esac
 done
 
 go clean -testcache
 
-if [[ $APPS == "" ]]; then
+if [[ $BASIC == "--basic" ]]; then
 
     #
     # test some support package
@@ -70,27 +82,8 @@ if [[ $APPS == "" ]]; then
         go test $VERB sigmaos/$T -start
     done
 
-
     go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
     go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
-fi
-
-#
-# apps tests
-#
-
-if [[ $FAST == "" ]]; then
-    for T in imgresized mr kv hotel; do
-        go test -timeout 20m $VERB sigmaos/$T -start
-    done
-else
-    go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
-    go test $VERB sigmaos/imgresized -start -run ImgdOne
-    go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
-    go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
-fi
-
-if [[ $APPS == "" ]]; then
 
     #
     # test with realms
@@ -98,23 +91,46 @@ if [[ $APPS == "" ]]; then
 
     go test $VERB sigmaos/realmclnt -start
 
-    #
-    # Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
-    #
-    
+fi
+
+#
+# apps tests
+#
+
+if [[ $APPS == "--apps" ]]; then
+    ./start-db.sh
+    if [[ $FAST == "--fast" ]]; then
+        go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
+        go test $VERB sigmaos/imgresized -start -run ImgdOne
+        go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
+        go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
+    else
+        for T in imgresized mr kv hotel; do
+            go test -timeout 20m $VERB sigmaos/$T -start
+        done
+    fi
+fi
+
+#
+# Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio)
+#
+
+if [[ $CONTAINER == "--container" ]] ; then
     go test $VERB sigmaos/container -start
+fi
 
-    #
-    # tests with overlays
-    #
-    # XXX Disable for now: needs repair
-    #
+#
+# Overlay network tests
+#
 
-    # go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
-    # go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
+if [[ $OVERLAY == "--overlay" ]] ; then
+    ./start-network.sh
+    
+    go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+    go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
     # go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
     # go test $VERB sigmaos/hotel -start --overlays --run Www
-    # go test $VERB sigmaos/realmclnt -start --overlays --run Basic
-    # go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
-    # go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+    go test $VERB sigmaos/realmclnt -start --overlays --run Basic
+    go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+    go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
 fi

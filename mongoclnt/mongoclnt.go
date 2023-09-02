@@ -32,7 +32,7 @@ func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {
 	}
 	req := &proto.MongoRequest{Db: db, Collection: collection, Obj: objEncoded}
 	res := &proto.MongoResponse{}
-	return mongoc.rpcc.RPC("Mongo.Insert", req, res)
+	return mongoc.rpcc.RPC("MongoSrv.Insert", req, res)
 }
 
 func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any) (bool, error) {
@@ -55,7 +55,7 @@ func (mongoc *MongoClnt) FindAllEncoded(db, collection string, query bson.M) ([]
 	queryEncoded, _ := bson.Marshal(query)
 	req := &proto.MongoRequest{Db: db, Collection: collection, Query: queryEncoded}
 	res := &proto.MongoResponse{}
-	if err := mongoc.rpcc.RPC("Mongo.Find", req, res); err != nil {
+	if err := mongoc.rpcc.RPC("MongoSrv.Find", req, res); err != nil {
 		return nil, err
 	}
 	return res.Objs, nil
@@ -83,26 +83,26 @@ func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, ups
 	req := &proto.MongoRequest{Db: db, Collection: collection, Query: qEncoded, Obj: uEncoded}
 	res := &proto.MongoResponse{}
 	if upsert {
-		return mongoc.rpcc.RPC("Mongo.Upsert", req, res)
+		return mongoc.rpcc.RPC("MongoSrv.Upsert", req, res)
 	} else {
-		return mongoc.rpcc.RPC("Mongo.Update", req, res)
+		return mongoc.rpcc.RPC("MongoSrv.Update", req, res)
 	}
 }
 
 func (mongoc *MongoClnt) DropCollection(db, collection string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
 	res := &proto.MongoResponse{}
-	return mongoc.rpcc.RPC("Mongo.Drop", req, res)
+	return mongoc.rpcc.RPC("MongoSrv.Drop", req, res)
 }
 
 func (mongoc *MongoClnt) RemoveAll(db, collection string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
 	res := &proto.MongoResponse{}
-	return mongoc.rpcc.RPC("Mongo.Remove", req, res)
+	return mongoc.rpcc.RPC("MongoSrv.Remove", req, res)
 }
 
 func (mongoc *MongoClnt) EnsureIndex(db, collection string, indexkeys []string) error {
 	req := &proto.MongoConfigRequest{Db: db, Collection: collection, Indexkeys: indexkeys}
 	res := &proto.MongoResponse{}
-	return mongoc.rpcc.RPC("Mongo.Index", req, res)
+	return mongoc.rpcc.RPC("MongoSrv.Index", req, res)
 }

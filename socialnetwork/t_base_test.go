@@ -27,10 +27,10 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
 	tssn.jobname = rand.String(8)
 	tssn.Tstate = test.MakeTstateAll(t)
 	if test.Start {
-		nMoreKernel := ((len(srvs)*2 + NCACHESRV*2) - 1) / int(linuxsched.NCores)
+		nMoreKernel := ((len(srvs)*2 + NCACHESRV) - 1) / int(linuxsched.NCores)
 		if nMoreKernel > 0 {
 			dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed",
-				len(srvs)*2+NCACHESRV*2, linuxsched.NCores, nMoreKernel)
+				len(srvs)*2+NCACHESRV, linuxsched.NCores, nMoreKernel)
 			err = tssn.BootNode(nMoreKernel)
 			assert.Nil(tssn.T, err)
 		}

@@ -59,7 +59,7 @@ func (tse *TstateEcho) Stop() error {
 func TestEcho(t *testing.T) {
 	// start server
 	tse, err := makeTstateEcho(t)
-	assert.Nil(t, err, "Test server should start properly")
+	assert.Nil(t, err, "Test server should start properly %v", err)
 
 	// create a RPC client and query server
 	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)

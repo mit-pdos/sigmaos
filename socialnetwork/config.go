@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	cacheMcpu      = 2000
+	cacheMcpu      = 1000
 	HTTP_ADDRS     = "http-addr"
 	N_RPC_SESSIONS = 10
 )
@@ -82,7 +82,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr
 	if nsrv > 0 {
-		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached")
+		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
 		cm, err = cachedsvc.MkCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
 		if err != nil {
 			dbg.DFatalf("Error MkCacheMgr %v", err)

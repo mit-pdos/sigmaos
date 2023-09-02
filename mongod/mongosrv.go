@@ -17,12 +17,12 @@ const (
 	DIAL_TIMEOUT = 1
 )
 
-type Server struct {
+type MongoSrv struct {
 	session *mgo.Session
 }
 
-func makeServer(mongodUrl string) (*Server, error) {
-	s := &Server{}
+func makeServer(mongodUrl string) (*MongoSrv, error) {
+	s := &MongoSrv{}
 	session, err := mgo.DialWithTimeout(mongodUrl, DIAL_TIMEOUT*time.Second)
 	if err != nil {
 		dbg.DFatalf("mongo dial err %v\n", err)
@@ -51,7 +51,7 @@ func RunMongod(mongodUrl string) error {
 	return ssrv.RunServer()
 }
 
-func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Obj, &m); err != nil {
@@ -67,15 +67,15 @@ func (s *Server) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 	return nil
 }
 
-func (s *Server) Update(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Update(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
 	return s.update(ctx, req, res, false)
 }
 
-func (s *Server) Upsert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Upsert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
 	return s.update(ctx, req, res, true)
 }
 
-func (s *Server) update(
+func (s *MongoSrv) update(
 	ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse, upsert bool) error {
 	res.Ok = MONGO_NO
 	rpcName := "update"
@@ -107,7 +107,7 @@ func (s *Server) update(
 	return nil
 }
 
-func (s *Server) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Query, &m); err != nil {
@@ -128,7 +128,7 @@ func (s *Server) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRespo
 	return nil
 }
 
-func (s *Server) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
 	dbg.DPrintf(dbg.MONGO, "Received drop request: %v", req)
 	res.Ok = MONGO_NO
 	if err := s.session.DB(req.Db).C(req.Collection).DropCollection(); err != nil {
@@ -138,7 +138,7 @@ func (s *Server) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.Mong
 	return nil
 }
 
-func (s *Server) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
 	dbg.DPrintf(dbg.MONGO, "Received remove request: %v", req)
 	res.Ok = MONGO_NO
 	if _, err := s.session.DB(req.Db).C(req.Collection).RemoveAll(&bson.M{}); err != nil {
@@ -148,7 +148,7 @@ func (s *Server) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.Mo
 	return nil
 }
 
-func (s *Server) Index(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Index(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
 	dbg.DPrintf(dbg.MONGO, "Received index request: %v", req)
 	res.Ok = MONGO_NO
 	if err := s.session.DB(req.Db).C(req.Collection).EnsureIndexKey(req.Indexkeys...); err != nil {

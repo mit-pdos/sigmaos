@@ -14,12 +14,19 @@ can be installed by running:
 $ sudo apt install docker.io libseccomp-dev mysql-client
 ```
 
+Note: `/var/run/docker.sock` must be accessible to sigmaos so you may
+have to run:
+```
+sudo chmod 666 /var/run/docker.sock
+```
+
 ## Building SigmaOS Locally
 
-We have two build configurations for SigmaOS: `local` and `aws`. `local` is
-intended for development and correctness testing, whereas `aws` is intended for
-performance benchmarking and multi-machine deployments (including CloudLab).
-The primary differences are:
+We have two build configurations for SigmaOS: `local` and
+`aws`. `local` is intended for development and correctness testing,
+whereas `aws` is intended for performance benchmarking and
+multi-machine deployments (including CloudLab).  The primary
+differences are:
   - `local` builds the user `procs` directly into the `sigmaos` container,
     which enables offline development. `aws` builds the user `procs` in a
     dedicated build container and uploads them to an S3 bucket, omitting them
@@ -63,6 +70,16 @@ The output should look something like:
 === RUN   TestInitFs
 13:44:32.833121 boot [sigma-7cfbce5e]
 --- PASS: TestInitFs (3.42s)
+```
+
+SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
+```
+./start-etcd.sh
+```
+
+You can check if `etcd` is running as follows:
+```
+docker exec etcd-server etcdctl version
 ```
 
 ## Testing SigmaOS
@@ -133,8 +150,19 @@ Create the directory `/mnt/9p` and then, run:
 $ ./mount.sh --boot LOCAL_IP
 ```
 
+This mount the root realm's `named` at `/mnt/9p`. 
+You should see output like this:
+```
+$ ./mount.sh --boot 127.0.0.1
+..........................192.168.0.10 container 20a7be3eb7 dbIP x.x.x.x mongoIP x.x.x.x
+08:03:08.702140 - ALWAYS Etcd addr 127.0.0.1
+
+```
+
 The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
-can mount an already-running SigmaOS. This command mounts SigmaOS at `/mnt/9p`. Type:
+can mount an already-running SigmaOS. 
+
+You can `ls` the root directory of `named` as follows:
 ```
 $ ls /mnt/9p/
 ```
@@ -183,5 +211,10 @@ ls /mnt/9p/s3/IP:PORT/
 ```
 where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
 
+You can copy files into s3. For example,
+```
+cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/x
+```
+copies this tutorial file into the s3 object `x`.
 
 

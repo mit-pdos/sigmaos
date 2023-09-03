@@ -223,9 +223,9 @@ func runSocialNetwork(ts *test.RealmTstate, i interface{}) (time.Duration, float
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
-		pdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
-		pdc.MonitorSchedds()
-		defer pdc.Done()
+		rpcc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		rpcc.MonitorSchedds(ts.GetRealm())
+		defer rpcc.Done()
 	}
 	start := time.Now()
 	ji.StartSocialNetworkJob()

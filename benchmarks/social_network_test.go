@@ -84,14 +84,14 @@ func MakeSocialNetworkJob(
 	// parse duration and rpss
 	durs := strings.Split(durStr, ",")
 	maxrpss := strings.Split(maxrpsStr, ",")
-	assert.Equal(ts.T, len(durs), len(maxrpss), "Non-matching lengths: %v %v", durStr, maxrpsStr)
+	assert.Equal(ts.Ts.T, len(durs), len(maxrpss), "Non-matching lengths: %v %v", durStr, maxrpsStr)
 	ji.dur = make([]time.Duration, 0, len(durs))
 	ji.maxrps = make([]int, 0, len(durs))
 	for i := range durs {
 		d, err := time.ParseDuration(durs[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		n, err := strconv.Atoi(maxrpss[i])
-		assert.Nil(ts.T, err, "Bad duration %v", err)
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		ji.dur = append(ji.dur, d)
 		ji.maxrps = append(ji.maxrps, n)
 	}
@@ -99,11 +99,11 @@ func MakeSocialNetworkJob(
 	// start social network
 	var err error
 	if sigmaos {
-		initUserAndGraph(ts.T, MONGO_URL)
+		initUserAndGraph(ts.Ts.T, MONGO_URL)
 		ji.snCfg, err = sn.MakeConfig(
 			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true, test.Overlays)
-		assert.Nil(ts.T, err, "Error Make social network job: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt, ts.GetRealm())
+		assert.Nil(ts.Ts.T, err, "Error Make social network job: %v", err)
+		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
@@ -117,12 +117,12 @@ func MakeSocialNetworkJob(
 		ji.snCfg, err = sn.MakeConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
-		assert.Nil(ts.T, ts.MountService(p, mnt))
+		assert.Nil(ts.Ts.T, ts.MountService(p, mnt, sp.NoLeaseId))
 		// forward mongo port and init users and graphs.
 		cmd := exec.Command("kubectl","port-forward","svc/mongodb-sn", K8_FWD_PORT+":27017")
-		assert.Nil(ts.T, cmd.Start())
+		assert.Nil(ts.Ts.T, cmd.Start())
 		defer cmd.Process.Kill()
-		initUserAndGraph(ts.T, "localhost:"+K8_FWD_PORT)
+		initUserAndGraph(ts.Ts.T, "localhost:"+K8_FWD_PORT)
 	}
 	ji.wc = sn.MakeWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
@@ -130,7 +130,7 @@ func MakeSocialNetworkJob(
 	for i := range ji.dur {
 		ji.lgs = append(
 			ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], 
-			func(r *rand.Rand) { randOps(ts.T, ji.wc, r, ji.readonly)}))
+			func(r *rand.Rand) { randOps(ts.Ts.T, ji.wc, r, ji.readonly)}))
 	}
 	// warmup with writes for read-only runs
 	if ji.readonly {
@@ -143,7 +143,7 @@ func MakeSocialNetworkJob(
 				r := rand.New(rand.NewSource(SN_RAND_SEED + int64(i + 1)))
 				randCompose(t, wc, r)
 				randCompose(t, wc, r)
-			}(&wg, ts.T, ji.wc, i)
+			}(&wg, ts.Ts.T, ji.wc, i)
 		}
 		wg.Wait()
 		dbg.DPrintf(dbg.TEST, "Done warming up")
@@ -166,7 +166,7 @@ func (ji *SocialNetworkJobInstance) StartSocialNetworkJob() {
 	if err != nil {
 		dbg.DFatalf("Can't start recording: %v", err)
 	}
-	randReadTimeline(ji.RealmTstate.T, ji.wc, rand.New(rand.NewSource(999)))
+	randReadTimeline(ji.RealmTstate.Ts.T, ji.wc, rand.New(rand.NewSource(999)))
 	for i, lg := range ji.lgs {
 		dbg.DPrintf(dbg.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
@@ -183,7 +183,7 @@ func (ji *SocialNetworkJobInstance) Wait() {
 	dbg.DPrintf(dbg.TEST, "Evicting social network procs")
 	if ji.sigmaos {
 		err := ji.snCfg.Stop()
-		assert.Nil(ji.T, err, "stop %v", err)
+		assert.Nil(ji.Ts.T, err, "stop %v", err)
 	}
 	dbg.DPrintf(dbg.TEST, "Done evicting social network procs")
 	for _, lg := range ji.lgs {
@@ -196,8 +196,8 @@ func (ji *SocialNetworkJobInstance) Wait() {
 
 func (ji *SocialNetworkJobInstance) requestK8sStats() {
 	rep, err := ji.wc.SaveResults()
-	assert.Nil(ji.T, err, "Save results: %v", err)
-	assert.Equal(ji.T, rep, "Done!", "Save results not ok: %v", rep)
+	assert.Nil(ji.Ts.T, err, "Save results: %v", err)
+	assert.Equal(ji.Ts.T, rep, "Done!", "Save results not ok: %v", rep)
 }
 
 func initUserAndGraph(t *testing.T, mongoUrl string) {

@@ -42,14 +42,14 @@ func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 	ji.mcpu = mcpu
 
 	err := imgresized.MkDirs(ji.FsLib, ji.job)
-	assert.Nil(ts.T, err, "Error MkDirs: %v", err)
+	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 
 	return ji
 }
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v", ji.input, ji.ntasks, ji.mcpu)
-	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu)
+	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, false)
 	fn := path.Join(sp.UX, "~local", ji.input)
 	fns := make([]string, 0, ji.ninputs)
 	for i := 0; i < ji.ninputs; i++ {
@@ -57,7 +57,7 @@ func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	}
 	for i := 0; i < ji.ntasks; i++ {
 		err := imgresized.SubmitTaskMulti(ji.SigmaClnt.FsLib, ji.job, fns)
-		assert.Nil(ji.T, err, "Error SubmitTask: %v", err)
+		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
@@ -66,7 +66,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Waiting for ImgResizeJOb to finish")
 	for {
 		n, err := imgresized.NTaskDone(ji.SigmaClnt.FsLib, ji.job)
-		assert.Nil(ji.T, err, "Error NTaskDone: %v", err)
+		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
 		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
 		if n == ji.ntasks {
 			break

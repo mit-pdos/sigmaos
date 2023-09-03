@@ -40,11 +40,16 @@ func makeSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proccl
 	return makeSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
+func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how procclnt.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := proc.Tpid(program + "-" + proc.GenPid().String())
 	p := proc.MakePrivProcPid(pid, program, args, true)
+	p.SetMcpu(mcpu)
 	ss := makeSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(k.namedAddr, how, k.Param.KernelId)
+}
+
+func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
+	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
 func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {

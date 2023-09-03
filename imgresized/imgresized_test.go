@@ -57,7 +57,8 @@ func TestResizeProc(t *testing.T) {
 	err = ts.WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(p.GetPid())
-	assert.True(t, status.IsStatusOK(), "WaitExit status error")
+	assert.Nil(t, err, "WaitExit error %v", err)
+	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
 	ts.Shutdown()
 }
 

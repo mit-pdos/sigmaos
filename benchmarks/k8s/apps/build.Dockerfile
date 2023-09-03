@@ -19,7 +19,7 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git config pull.rebase false && \
   git pull && \
   cd src && \
-  ./all.bash
+  ./make.bash
 
 WORKDIR /app
 COPY ./make-app.sh ./make.sh

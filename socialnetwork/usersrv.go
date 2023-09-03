@@ -11,7 +11,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -42,7 +41,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, sp.SOCIAL_NETWORK_USER, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_USER, usrv, SOCIAL_NETWORK_USER, public)
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_USER)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -114,7 +113,7 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 		Firstname: req.Firstname,
 		Password:  pswd_hashed}
 	if err := usrv.mongoc.Insert(SN_DB, USER_COL, newUser); err != nil {
-		dbg.DFatalf("Mongo Error: %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = USER_QUERY_OK

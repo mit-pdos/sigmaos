@@ -41,9 +41,9 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	return scrapers
 }
 
-func (clnt *StatScraperClnt) GetGuaranteedPodCPUUtil(s string) (float64, error) {
+func (clnt *StatScraperClnt) GetGuaranteedPodCPUUtil(s, qosClass string) (float64, error) {
 	req := &proto.CPUUtilRequest{
-		QoSClass: "Guaranteed",
+		QoSClass: qosClass,
 	}
 	var res proto.CPUUtilResult
 	err := clnt.rpccs[s].RPC("StatScraper.GetCPUUtil", req, &res)

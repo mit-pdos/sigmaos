@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"encoding/json"
 	"net"
+	"time"
 	"net/http"
 	"net/url"
 	"sigmaos/container"
@@ -17,7 +18,6 @@ import (
 	"sigmaos/tracing"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type FrontEnd struct {
@@ -32,8 +32,6 @@ type FrontEnd struct {
 	homec    *rpcclnt.RPCClnt
 	composec *rpcclnt.RPCClnt
 	pc       *portclnt.PortClnt
-	uCounter *Counter
-	iCounter *Counter
 }
 
 const SERVER_NAME = "socialnetwork-frontend"
@@ -58,34 +56,32 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	frontend.SigmaClnt = sc
 	fsls := MakeFsLibs(SERVER_NAME)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	frontend.userc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	frontend.graphc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	frontend.tlc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	frontend.homec = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_COMPOSE)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
 	frontend.composec = rpcc
 	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
-	frontend.uCounter = MakeCounter("User")
-	frontend.iCounter = MakeCounter("User-Inner")
 
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
@@ -104,7 +100,7 @@ func RunFrontendSrv(public bool, job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-
+/*
 	if public {
 		pc, pi, err := portclnt.MkPortClntPort(frontend.FsLib)
 		if err != nil {
@@ -128,6 +124,7 @@ func RunFrontendSrv(public bool, job string) error {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
+    */
 		l, err := net.Listen("tcp", ":0")
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
@@ -146,7 +143,7 @@ func RunFrontendSrv(public bool, job string) error {
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = frontend.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			dbg.DFatalf("MountService %v", err)
-		}
+	//	}
 	}
 
 	perf, err := perf.MakePerf(perf.SOCIAL_NETWORK_FRONTEND)
@@ -174,7 +171,6 @@ func (s *FrontEnd) done() error {
 }
 
 func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
-	t0 := time.Now()
 	if s.record {
 		defer s.p.TptTick(1.0)
 	}
@@ -198,12 +194,10 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var res proto.UserResponse
 	// Check username and password
-	t1 := time.Now()
 	err := s.userc.RPC("UserSrv.Login", &proto.LoginRequest{
 		Username: username,
 		Password: password,
 	}, &res)
-	s.iCounter.AddTimeSince(t1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -216,7 +210,6 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		"message": str,
 	}
 	json.NewEncoder(w).Encode(reply)
-	s.uCounter.AddTimeSince(t0)
 }
 
 func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
@@ -269,7 +262,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var res proto.ComposePostResponse
-	err := s.composec.RPC("Compose.ComposePost", &proto.ComposePostRequest{
+	err := s.composec.RPC("ComposeSrv.ComposePost", &proto.ComposePostRequest{
 		Username: username,
 		Userid:   userid,
 		Text:     text,
@@ -277,6 +270,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 		Mediaids: mediaids,
 	}, &res)
 	if err != nil {
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Compose error for: %v. Err %v", text, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -286,6 +280,7 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	reply := map[string]interface{}{"message": str}
 	json.NewEncoder(w).Encode(reply)
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "Completed: %v", text)
 }
 
 func (s *FrontEnd) timelineHandler(w http.ResponseWriter, r *http.Request) {
@@ -329,10 +324,10 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 	}
 	var res proto.ReadTimelineResponse
 	if isHome {
-		err = s.homec.RPC("Home.ReadHomeTimeline", &proto.ReadTimelineRequest{
+		err = s.homec.RPC("HomeSrv.ReadHomeTimeline", &proto.ReadTimelineRequest{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	} else {
-		err = s.tlc.RPC("Timeline.ReadTimeline", &proto.ReadTimelineRequest{
+		err = s.tlc.RPC("TimelineSrv.ReadTimeline", &proto.ReadTimelineRequest{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	}
 	if err != nil {

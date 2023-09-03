@@ -67,7 +67,7 @@ id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
 key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
 
 for vm in $vms; do
-  $DIR/setup-for-benchmarking.sh $LOGIN@$vm
+  $DIR/setup-for-benchmarking.sh $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"

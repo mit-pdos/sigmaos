@@ -9,7 +9,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -33,22 +32,22 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, sp.SOCIAL_NETWORK_HOME, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_HOME, hsrv, SOCIAL_NETWORK_HOME, public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_HOME)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_HOME)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	hsrv.cachec = cachec
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_GRAPH)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	hsrv.graphc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
@@ -69,7 +68,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 	otherUserIds := make(map[int64]bool, 0)
 	argFollower := proto.GetFollowersRequest{Followeeid: req.Userid}
 	resFollower := proto.GraphGetResponse{}
-	err := hsrv.graphc.RPC("Graph.GetFollowers", &argFollower, &resFollower)
+	err := hsrv.graphc.RPC("GraphSrv.GetFollowers", &argFollower, &resFollower)
 	if err != nil {
 		return err
 	}
@@ -121,7 +120,7 @@ func (hsrv *HomeSrv) ReadHomeTimeline(
 	}
 	readPostReq := proto.ReadPostsRequest{Postids: postids}
 	readPostRes := proto.ReadPostsResponse{}
-	if err := hsrv.postc.RPC("Post.ReadPosts", &readPostReq, &readPostRes); err != nil {
+	if err := hsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}
 	res.Ok = readPostRes.Ok

@@ -15,6 +15,16 @@ import (
 )
 
 const (
+	SOCIAL_NETWORK          = sp.NAMED + "socialnetwork/"
+	SOCIAL_NETWORK_USER     = SOCIAL_NETWORK + "user"
+	SOCIAL_NETWORK_GRAPH    = SOCIAL_NETWORK + "graph"
+	SOCIAL_NETWORK_POST     = SOCIAL_NETWORK + "post"
+	SOCIAL_NETWORK_TIMELINE = SOCIAL_NETWORK + "timeline"
+	SOCIAL_NETWORK_HOME     = SOCIAL_NETWORK + "home"
+	SOCIAL_NETWORK_URL      = SOCIAL_NETWORK + "url"
+	SOCIAL_NETWORK_TEXT     = SOCIAL_NETWORK + "text"
+	SOCIAL_NETWORK_COMPOSE  = SOCIAL_NETWORK + "compose"
+	SOCIAL_NETWORK_MEDIA    = SOCIAL_NETWORK + "media"
 	cacheMcpu      = 1000
 	HTTP_ADDRS     = "http-addr"
 	N_RPC_SESSIONS = 10
@@ -38,14 +48,6 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addr, err
 }
 
-func MakeMoLSrvs(public bool) []Srv {
-	return []Srv{
-		Srv{"socialnetwork-mol", public, 1},
-		Srv{"socialnetwork-user", public, 2},
-		Srv{"socialnetwork-graph", public, 2},
-	}
-}
-
 func MakeFsLibs(uname string) []*fslib.FsLib {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
@@ -67,13 +69,13 @@ type SocialNetworkConfig struct {
 }
 
 func JobDir(job string) string {
-	return path.Join(sp.SOCIAL_NETWORK, job)
+	return path.Join(SOCIAL_NETWORK, job)
 }
 
 func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
-	fsl.MkDir(sp.SOCIAL_NETWORK, 0777)
+	fsl.MkDir(SOCIAL_NETWORK, 0777)
 	if err = fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		fmt.Printf("Mkdir %v err %v\n", JobDir(jobname), err)
 		return nil, err
@@ -103,6 +105,9 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
 			return nil, err
+		}
+		if !gc {
+			p.AppendEnv("GOGC", "off")
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
 			dbg.DFatalf("Error spawn proc %v: %v", p, err)

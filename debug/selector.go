@@ -114,6 +114,7 @@ const (
 	UX                       = "UX"
 	DB                       = "DB"
 	MONGO                    = "MONGO"
+	MONGO_ERR                = "MONGO_ERR"
 	PROXY                    = "PROXY"
 )
 

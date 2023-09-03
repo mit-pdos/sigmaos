@@ -371,5 +371,5 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 	if ok {
 		return nil
 	}
-	return serr.MkErr(serr.TErrNotfound, req.Key)
+	return serr.MkErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }

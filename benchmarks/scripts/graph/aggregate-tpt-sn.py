@@ -9,6 +9,7 @@ import argparse
 import os
 import sys
 import durationpy
+import math
 
 def read_tpt(fpath):
   with open(fpath, "r") as f:
@@ -30,6 +31,7 @@ def read_latency(fpath):
   times = [ l[2][:-2] for l in lines ] 
   latencies = [ durationpy.from_str(l[4]) for l in lines ]
   lat = [ (float(times[i]), float(latencies[i].total_seconds() * 1000.0)) for i in range(len(times)) ]
+  print("Mean Lat", np.mean(latencies), "99% Lat", np.percentile(latencies, 99))
   return lat
 
 def read_latencies(input_dir, substr):
@@ -56,7 +58,7 @@ def extend_tpts_to_range(tpts, r):
     return
   for i in range(len(tpts)):
     last_tick = tpts[i][len(tpts[i]) - 1]
-    if last_tick[i] <= r[1]:
+    if last_tick[0] <= r[1]:
       tpts[i].append((r[1], last_tick[1]))
 
 # For now, only truncates after not before.
@@ -137,7 +139,7 @@ def buckets_to_percentile(buckets, percentile):
   buckets_perc = {}
   for t in buckets.keys():
     if len(buckets[t]) > 0:
-      buckets_perc[t] = np.percentile(buckets[t], percentile)
+      buckets_perc[t] = math.log(np.percentile(buckets[t], percentile))
     else:
       buckets_perc[t] = 0.0
   return buckets_perc
@@ -145,14 +147,14 @@ def buckets_to_percentile(buckets, percentile):
 def buckets_to_avg(buckets):
   for t in buckets.keys():
     if len(buckets[t]) > 0:
-      buckets[t] = np.mean(buckets[t])
+      buckets[t] = math.log(np.mean(buckets[t]))
     else:
       buckets[t] = 0.0
   return buckets
 
-def buckets_to_lists(buckets):
+def buckets_to_lists(buckets, ymax=sys.maxsize):
   x = np.array(sorted(list(buckets.keys())))
-  y = np.array([ buckets[x1] for x1 in x ])
+  y = np.array([ min(buckets[x1], ymax) for x1 in x ])
   return (x, y)
 
 def add_data_to_graph(ax, x, y, label, color, linestyle, marker):
@@ -172,6 +174,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval, legend_on_right):
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
+    ax[idx].grid()
     if maxval > 0:
       ax[idx].set_xlim(right=maxval)
   # plt.legend(lns, labels)
@@ -179,17 +182,16 @@ def finalize_graph(fig, ax, plots, title, out, maxval, legend_on_right):
   fig.savefig(out, bbox_inches="tight")
 
 def setup_graph(nplots, units, total_ncore):
-  figsize=(6.4, 4.8)
+  figsize=(6.4, 9.6)
   if nplots == 1:
     figsize=(6.4, 2.4)
-  if nplots == 1:
-    np = 1
+    pcount = 1
   else:
     if total_ncore > 0:
-      np = nplots + 1
+      pcount = nplots + 1
     else:
-      np = nplots
-  fig, tptax = plt.subplots(np, figsize=figsize, sharex=True)
+      pcount = nplots
+  fig, tptax = plt.subplots(pcount, figsize=figsize, sharex=True)
   if nplots == 1:
     coresax = []
     tptax = [ tptax ]
@@ -206,14 +208,25 @@ def setup_graph(nplots, units, total_ncore):
   plt.xlabel("Time (sec)")
   for idx in range(len(tptax)):
     tptax[idx].set_ylabel(ylabels[idx])
+
+  #### hack latency limits
+  tptax[0].set_ylim(0, math.log(1200))
+  tptax[0].yaxis.set_ticks([math.log(10), math.log(25), math.log(100), math.log(250), math.log(1000)])
+  tptax[0].yaxis.set_ticklabels(["10", "25", "100", "250", "1000"])
+
+  tptax[1].set_ylim(0, 2100)
+  tptax[1].yaxis.set_ticks(np.arange(0, 2000, 500))
+
+
   if nplots == 1:
     # Only put cores on the same graph for mr aggr tpt graph.
     for ax in tptax:
       ax2 = ax.twinx()
       coresax.append(ax2)
   for ax in coresax:
-    ax.set_ylim((0, total_ncore + 5))
+    ax.set_ylim(0, total_ncore + 4)
     ax.set_ylabel("Cores Utilized")
+    ax.yaxis.set_ticks(np.arange(0, total_ncore+4, 4))
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
@@ -222,19 +235,19 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     assert(len(procd_tpts) <= 1)
   else:
     procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
-    if mr_realm != "":
+    if mr_realm != None:
       procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
       assert(len(procd_tpts) == 2)
   mr_tpts = read_tpts(input_dir, "mr")
   mr_range = get_time_range(mr_tpts)
   procd_range = get_time_range(procd_tpts)
-  hotel_tpts = read_tpts(input_dir, "hotel")
+  hotel_tpts = read_tpts(input_dir, "social")
   hotel_range = get_time_range(hotel_tpts)
   hotel_lats = read_latencies(input_dir, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
   time_range = get_overall_time_range([mr_range, hotel_range, hotel_lat_range])
-#  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
+  #time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   mr_tpts = fit_times_to_range(mr_tpts, time_range)
@@ -250,7 +263,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     if len(hotel_lats) > 0 and len(hotel_tpts) > 0:
       fig, tptax, coresax = setup_graph(2, units, total_ncore)
     else:
-      fig, tptax, coresax = setup_graph(1, units, total_ncore)
+      fig, tptax, coresax = setup_graph(2, units, total_ncore)
   tptax_idx = 0
   plots = []
   hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
@@ -258,45 +271,57 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
   hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel (LC) " + str(percentile) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Social Network (LC) " + str(percentile) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel (LC) avg lat", "purple", "-", "")
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Social Network (LC) avg lat", "purple", "-", "")
     plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC) tpt", "blue", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Social Network (LC) tpt", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   mr_buckets = bucketize(mr_tpts, time_range, xmin, xmax, step_size=1000)
-  if len(mr_tpts) > 0:
+  if len(mr_tpts) > 0 and mr_realm != None:
     x, y = buckets_to_lists(mr_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR (BE) tpt", "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Image Resize (BE) tpt", "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
+    line_style = "solid"
+    marker = "D"
+
+	# Plot LC app
+    x, y = buckets_to_lists(dict(procd_tpts[0]), ymax=total_ncore)
+    p = add_data_to_graph(coresax[0], x, y, "Social Network (LC) CPU", "blue", line_style, marker)
+    plots.append(p)
+
+    print("Max CPU", np.max(y))
+    hcpu_idx = np.where(y >= 7)[0]
+    print("High CPU time", np.sum(np.diff(x)[hcpu_idx])/1000)
+    dydx = np.diff(y)/np.diff(x) 
+    d2ydx = np.diff(dydx)/np.diff(x)[:-1]
+    print("LC smoothness", np.mean(np.absolute(d2ydx)))
+
+	# plot BE app
     if len(procd_tpts) > 1:
-      line_style = "solid"
-      marker = "D"
-      x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
+      x, y = buckets_to_lists(dict(procd_tpts[1]), ymax=total_ncore)
+      p = add_data_to_graph(coresax[0], x, y, "Image Resize (BE) CPU", "orange", line_style, marker)
+      busy_idx = np.where(y >= 0.5)[0]
+      print("BE Busy time", np.sum(np.diff(x)[busy_idx])/1000)
+
+      dydx = np.diff(y)/np.diff(x) 
+      d2ydx = np.diff(dydx)/np.diff(x)[:-1]
+      print("BE smoothness", np.mean(np.absolute(d2ydx)))
       plots.append(p)
-      x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR (BE) CPU", "orange", line_style, marker)
-      plots.append(p)
-      ta = [ ax for ax in tptax ]
-      ta.append(coresax[0])
-      tptax = ta
-    else:
-      x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Cores Utilized", "green", "--", False)
-      plots.append(p)
-      ta = [ ax for ax in tptax ]
-      ta.append(coresax[0])
-      tptax = ta
+
+    ta = [ ax for ax in tptax ]
+    ta.append(coresax[0])
+    tptax = ta
+
   finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0, legend_on_right)
 
 if __name__ == "__main__":

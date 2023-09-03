@@ -47,12 +47,13 @@ ENV jaegerip x.x.x.x
 ENV overlays "false"
 # Install docker-cli
 RUN apk add --update docker openrc
+ENV reserveMcpu "0"
 # Copy kernel bins
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
 COPY --from=sigmabuilder /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy linus bins
 COPY --from=sigmabuilder /home/sigmaos/bin/linux /home/sigmaos/bin/linux
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${jaegerip} ${overlays}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${jaegerip} ${overlays} ${reserveMcpu}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmakernelclean AS sigmakernel

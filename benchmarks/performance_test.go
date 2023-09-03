@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	CPU_MONITOR_INTERVAL = 1 * time.Second
+	CPU_MONITOR_INTERVAL = 100 * time.Millisecond
 )
 
 //
@@ -93,7 +93,7 @@ func monitorK8sCPUUtil(ts *test.RealmTstate, p *perf.Perf, app string, realm sp.
 	}()
 }
 
-func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
+func monitorK8sCPUUtilScraperTS(ts *test.RealmTstate, p *perf.Perf, qosClass string) {
 	clnt := k8sutil.NewStatScraperClnt(ts.SigmaClnt)
 	scrapers := clnt.GetStatScrapers()
 	db.DPrintf(db.BENCH, "Got %v scrapers: %v", len(scrapers), scrapers)
@@ -101,7 +101,7 @@ func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
 		for {
 			sumUtil := float64(0.0)
 			for _, s := range scrapers {
-				perc, err := clnt.GetGuaranteedPodCPUUtil(s)
+				perc, err := clnt.GetGuaranteedPodCPUUtil(s, qosClass)
 				if err != nil {
 					db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
 					return
@@ -115,7 +115,35 @@ func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf) {
 				sumUtil = 0.0
 			}
 			p.TptTick(sumUtil)
-			db.DPrintf(db.BENCH, "[%v] Cores utilized by guaranteed pods: %v", sp.ROOTREALM, sumUtil)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized by %v pods: %v", sp.ROOTREALM, qosClass, sumUtil)
+			time.Sleep(CPU_MONITOR_INTERVAL)
+		}
+	}()
+}
+
+func monitorK8sCPUUtilScraper(ts *test.Tstate, p *perf.Perf, qosClass string) {
+	clnt := k8sutil.NewStatScraperClnt(ts.SigmaClnt)
+	scrapers := clnt.GetStatScrapers()
+	db.DPrintf(db.BENCH, "Got %v scrapers: %v", len(scrapers), scrapers)
+	go func() {
+		for {
+			sumUtil := float64(0.0)
+			for _, s := range scrapers {
+				perc, err := clnt.GetGuaranteedPodCPUUtil(s, qosClass)
+				if err != nil {
+					db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
+					return
+				}
+				// Util is returned as a percentage (e.g. 100 = 1 core fully utilized,
+				// 200 = 2 cores, etc.). So, convert no # of cores by dividing by 100.
+				ncores := perc / 100.0
+				sumUtil += ncores
+			}
+			if sumUtil < 0.0 {
+				sumUtil = 0.0
+			}
+			p.TptTick(sumUtil)
+			db.DPrintf(db.BENCH, "[%v] Cores utilized by %v pods: %v", sp.ROOTREALM, qosClass, sumUtil)
 			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()

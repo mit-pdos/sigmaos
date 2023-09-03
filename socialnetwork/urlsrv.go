@@ -9,7 +9,6 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strings"
@@ -37,7 +36,7 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, sp.SOCIAL_NETWORK_URL, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_URL, urlsrv, SOCIAL_NETWORK_URL, public)
 	if err != nil {
 		return err
 	}
@@ -47,7 +46,7 @@ func RunUrlSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_URL)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_URL)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -70,7 +69,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 		shorturl := RandString(URL_LENGTH, urlsrv.random)
 		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
 		if err := urlsrv.mongoc.Insert(SN_DB, URL_COL, url); err != nil {
-			dbg.DFatalf("Mongo error: %v", err)
+			dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Mongo error: %v", err)
 			return err
 		}
 		res.Shorturls[idx] = URL_HOSTNAME + shorturl

@@ -7,7 +7,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -36,27 +35,27 @@ func RunComposeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Creating compose service\n")
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, sp.SOCIAL_NETWORK_COMPOSE, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_COMPOSE, csrv, SOCIAL_NETWORK_COMPOSE, public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TEXT)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
 	csrv.textc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	csrv.postc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	csrv.tlc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_HOME)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
@@ -81,7 +80,7 @@ func (csrv *ComposeSrv) ComposePost(
 	// process text
 	textReq := proto.ProcessTextRequest{Text: req.Text}
 	textRes := proto.ProcessTextResponse{}
-	if err := csrv.textc.RPC("Text.ProcessText", &textReq, &textRes); err != nil {
+	if err := csrv.textc.RPC("TextSrv.ProcessText", &textReq, &textRes); err != nil {
 		return err
 	}
 	if textRes.Ok != TEXT_QUERY_OK {
@@ -117,15 +116,15 @@ func (csrv *ComposeSrv) ComposePost(
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		postErr = csrv.postc.RPC("Post.StorePost", &postReq, &postRes)
+		postErr = csrv.postc.RPC("PostSrv.StorePost", &postReq, &postRes)
 	}()
 	go func() {
 		defer wg.Done()
-		tlErr = csrv.tlc.RPC("Timeline.WriteTimeline", &tlReq, &tlRes)
+		tlErr = csrv.tlc.RPC("TimelineSrv.WriteTimeline", &tlReq, &tlRes)
 	}()
 	go func() {
 		defer wg.Done()
-		homeErr = csrv.homec.RPC("Home.WriteHomeTimeline", &homeReq, &homeRes)
+		homeErr = csrv.homec.RPC("HomeSrv.WriteHomeTimeline", &homeReq, &homeRes)
 	}()
 	wg.Wait()
 	if postErr != nil || tlErr != nil || homeErr != nil {

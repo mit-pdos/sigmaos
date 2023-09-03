@@ -10,7 +10,6 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
 	"sigmaos/rpcclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -34,7 +33,7 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, sp.SOCIAL_NETWORK_TIMELINE, public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_TIMELINE, tlsrv, SOCIAL_NETWORK_TIMELINE, public)
 	if err != nil {
 		return err
 	}
@@ -44,13 +43,13 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TIMELINE)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_TIMELINE)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	tlsrv.cachec = cachec
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
@@ -109,7 +108,7 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 	}
 	readPostReq := proto.ReadPostsRequest{Postids: postids}
 	readPostRes := proto.ReadPostsResponse{}
-	if err := tlsrv.postc.RPC("Post.ReadPosts", &readPostReq, &readPostRes); err != nil {
+	if err := tlsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}
 	res.Ok = readPostRes.Ok

@@ -1,7 +1,6 @@
 package mongoclnt
 
 import (
-	//"reflect"
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
@@ -14,9 +13,9 @@ type MongoClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
+func MkMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, sp.MONGOD)
+	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, name)
 	if err != nil {
 		return nil, err
 	}
@@ -24,10 +23,14 @@ func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
 	return mongoc, nil
 }
 
+func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
+	return MkMongoClntWithName(fsl, sp.MONGO + "~local/")
+}
+
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {
 	objEncoded, err := bson.Marshal(obj)
 	if err != nil {
-		dbg.DFatalf("cannot encode insert object %v\n", obj)
+		dbg.DPrintf(dbg.MONGO_ERR, "cannot encode insert object: %v. Err: %v", obj, err)
 		return err
 	}
 	req := &proto.MongoRequest{Db: db, Collection: collection, Obj: objEncoded}
@@ -42,7 +45,7 @@ func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any
 	}
 	if len(allBytes) > 0 {
 		if err := bson.Unmarshal(allBytes[0], result); err != nil {
-			dbg.DFatalf("cannot decode result:%v", allBytes[0])
+			dbg.DPrintf(dbg.MONGO_ERR, "cannot decode result:%v", allBytes[0])
 			return false, err
 		}
 		return true, nil
@@ -72,12 +75,12 @@ func (mongoc *MongoClnt) Upsert(db, collection string, query, update bson.M) err
 func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, upsert bool) error {
 	qEncoded, err := bson.Marshal(query)
 	if err != nil {
-		dbg.DFatalf("cannot encode query bson %v\n", query)
+		dbg.DPrintf(dbg.MONGO_ERR, "cannot encode query bson %v\n", query)
 		return err
 	}
 	uEncoded, err := bson.Marshal(update)
 	if err != nil {
-		dbg.DFatalf("cannot encode update bson %v\n", update)
+		dbg.DPrintf(dbg.MONGO_ERR, "cannot encode update bson %v\n", update)
 		return err
 	}
 	req := &proto.MongoRequest{Db: db, Collection: collection, Query: qEncoded, Obj: uEncoded}

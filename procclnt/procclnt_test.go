@@ -542,12 +542,13 @@ func TestReserveCores(t *testing.T) {
 
 	start := time.Now()
 	pid := proc.Tpid("sleeper-aaaaaaa")
-	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(1000*linuxsched.NCores), SLEEP_MSECS)
+	majorityCpu := 1000 * (linuxsched.NCores/2+1)
+	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
 	pid1 := proc.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(t, ts, pid1, 1000, SLEEP_MSECS)
+	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
@@ -576,9 +577,9 @@ func TestWorkStealing(t *testing.T) {
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node %v", err)
-
-	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
-	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
+	majorityCpu := 1000 * (linuxsched.NCores/2+1)
+	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
+	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
 
 	err = ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart")

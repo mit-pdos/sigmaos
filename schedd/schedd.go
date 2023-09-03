@@ -21,6 +21,7 @@ import (
 
 type Schedd struct {
 	mu         sync.Mutex
+	qsmu       sync.RWMutex
 	cond       *sync.Cond
 	pmgr       *procmgr.ProcMgr
 	scheddclnt *scheddclnt.ScheddClnt
@@ -31,12 +32,12 @@ type Schedd struct {
 	realms     []sp.Trealm
 }
 
-func MakeSchedd(mfs *memfssrv.MemFs, kernelId string) *Schedd {
+func MakeSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
 		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
 		qs:       make(map[sp.Trealm]*Queue),
 		realms:   make([]sp.Trealm, 0),
-		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores),
+		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
 		kernelId: kernelId,
 	}
@@ -52,12 +53,13 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	p := proc.MakeProcFromProto(req.ProcProto)
 	p.KernelId = sd.kernelId
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
-	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
-		sd.qs[sp.Trealm(req.Realm)] = makeQueue()
-		sd.realms = append(sd.realms, sp.Trealm(req.Realm))
+	realm := sp.Trealm(req.Realm)
+	q, ok := sd.getQueue(realm)
+	if !ok {
+		q = sd.addRealmQueueL(realm)
 	}
 	// Enqueue the proc according to its realm
-	sd.qs[sp.Trealm(req.Realm)].Enqueue(p)
+	q.Enqueue(p)
 	s := time.Now()
 	sd.pmgr.Spawn(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] E2E Procmgr Spawn %v", p.GetPid(), time.Since(s))
@@ -68,10 +70,8 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 
 // Steal a proc from this schedd.
 func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	_, res.OK = sd.qs[sp.Trealm(req.Realm)].Steal(proc.Tpid(req.PidStr))
+	q, _ := sd.getQueue(sp.Trealm(req.Realm))
+	_, res.OK = q.Steal(proc.Tpid(req.PidStr))
 
 	return nil
 }
@@ -125,11 +125,15 @@ func (sd *Schedd) schedule() {
 	for {
 		var ok bool
 		// Iterate through the realms round-robin.
-
 		for _, ptype := range priority {
 			for r, q := range sd.qs {
 				// Try to schedule a proc from realm r.
 				ok = ok || sd.tryScheduleRealmL(r, q, ptype)
+			}
+			// If a proc was successfully scheduled, don't try to schedule a proc
+			// from a lower priority class. Instead, rerun the whole scheduling loop.
+			if ok {
+				break
 			}
 		}
 		// If unable to schedule a proc from any realm, wait.
@@ -169,12 +173,30 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	}
 }
 
-func RunSchedd(kernelId string) error {
+func (sd *Schedd) getQueue(realm sp.Trealm) (*Queue, bool) {
+	sd.qsmu.RLock()
+	defer sd.qsmu.RUnlock()
+
+	q, ok := sd.qs[realm]
+	return q, ok
+}
+
+// Caller must hold sd.mu to be held.
+func (sd *Schedd) addRealmQueueL(realm sp.Trealm) *Queue {
+	sd.qsmu.Lock()
+	defer sd.qsmu.Unlock()
+
+	q := makeQueue()
+	sd.qs[realm] = q
+	return q
+}
+
+func RunSchedd(kernelId string, reserveMcpu uint) error {
 	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
-	sd := MakeSchedd(mfs, kernelId)
+	sd := MakeSchedd(mfs, kernelId, reserveMcpu)
 	ssrv, err := sigmasrv.MakeSigmaSrvMemFs(mfs, sd)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)

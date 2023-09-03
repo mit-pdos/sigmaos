@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	NCACHESRV = 4
+	NCACHESRV = 3
 )
 
 type TstateSN struct {
@@ -35,7 +35,7 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
 			assert.Nil(tssn.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, true, test.Overlays)
+	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
 	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")

@@ -14,7 +14,7 @@ can be installed by running:
 $ sudo apt install docker.io libseccomp-dev mysql-client
 ```
 
-Note: `/var/run/docker.sock` must be accessible to sigmaos so you may
+Note: `/var/run/docker.sock` must be accessible to SigmaOS, so you may
 have to run:
 ```
 sudo chmod 666 /var/run/docker.sock

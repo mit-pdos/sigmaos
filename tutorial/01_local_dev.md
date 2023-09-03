@@ -14,12 +14,19 @@ can be installed by running:
 $ sudo apt install docker.io libseccomp-dev mysql-client
 ```
 
+Note: `/var/run/docker.sock` must be accessible to SigmaOS, so you may
+have to run:
+```
+sudo chmod 666 /var/run/docker.sock
+```
+
 ## Building SigmaOS Locally
 
-We have two build configurations for SigmaOS: `local` and `aws`. `local` is
-intended for development and correctness testing, whereas `aws` is intended for
-performance benchmarking and multi-machine deployments (including CloudLab).
-The primary differences are:
+We have two build configurations for SigmaOS: `local` and
+`aws`. `local` is intended for development and correctness testing,
+whereas `aws` is intended for performance benchmarking and
+multi-machine deployments (including CloudLab).  The primary
+differences are:
   - `local` builds the user `procs` directly into the `sigmaos` container,
     which enables offline development. `aws` builds the user `procs` in a
     dedicated build container and uploads them to an S3 bucket, omitting them
@@ -47,9 +54,8 @@ If you wish to speed up your build by building the binaries in parallel, run:
 $ ./build.sh --parallel
 ```
 
-Warning: if the machine you are building on is small, this may cause your
-machine to run out of memory, as the `go` compiler is somewhat
-memory-intensive.
+Warning: the parallel build uses much memory and all the cores on the
+machine you are building on.
 
 In order to make sure the build succeeded, run a simple test which
 starts SigmaOS up and exits immediately:
@@ -64,6 +70,16 @@ The output should look something like:
 === RUN   TestInitFs
 13:44:32.833121 boot [sigma-7cfbce5e]
 --- PASS: TestInitFs (3.42s)
+```
+
+SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
+```
+./start-etcd.sh
+```
+
+You can check if `etcd` is running as follows:
+```
+docker exec etcd-server etcdctl version
 ```
 
 ## Testing SigmaOS
@@ -134,8 +150,19 @@ Create the directory `/mnt/9p` and then, run:
 $ ./mount.sh --boot LOCAL_IP
 ```
 
+This mount the root realm's `named` at `/mnt/9p`. 
+You should see output like this:
+```
+$ ./mount.sh --boot 127.0.0.1
+..........................192.168.0.10 container 20a7be3eb7 dbIP x.x.x.x mongoIP x.x.x.x
+08:03:08.702140 - ALWAYS Etcd addr 127.0.0.1
+
+```
+
 The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
-can mount an already-running SigmaOS. This command mounts SigmaOS at `/mnt/9p`. Type:
+can mount an already-running SigmaOS. 
+
+You can `ls` the root directory of `named` as follows:
 ```
 $ ls /mnt/9p/
 ```
@@ -162,22 +189,20 @@ containers' logs.
 ## Exercise: Access S3 through SigmaOS
 
 Through SigmaOS you can access other services, such as AWS S3.  For
-this exercise you need an AWS credential file in your home directory
-`~/.aws/credentials`, which has the secret access key for AWS, which
-we will post on Piazza.  Please don't share the key with others and
-don't use it for personal use.
-
-Once you have the key, do the following:
-- [ ] Install credentials.  The entry in `~/aws/credentials`,
-looks like this:
+this exercise you must have an AWS credential file in your home
+directory `~/.aws/credentials`, which has the secret access key for
+AWS.  The entry in `~/aws/credentials` looks like this:
 ```
-[me-mit]
+[sigmaos]
 aws_access_key_id = KEYID
 aws_secret_access_key = SECRETKEY
 region=us-east-1
 ```
-- [ ] Stop SigmaOS
-- [ ] Start SigmaOS
+
+If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
+with your account's key.  If you don't have an account, you can create
+one (google create an AWS account) or use the account key provided by
+us (which we will post on Piazza).
 
 Now you should be able to access files in S3 by running:
 
@@ -186,5 +211,13 @@ ls /mnt/9p/s3/IP:PORT/
 ```
 where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
 
+You can copy files into s3. For example,
+```
+cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/x
+```
+copies this tutorial file into the s3 object `x`.
 
-
+Having access to s3 is convenient for building applications; see
+exercises in [API tutorial](03_sigmaos_api.md).  In addition to the s3
+proxy, SigmaOS also provides proxies for databases and the local file
+system in each SigmaOS container (through `ux`).

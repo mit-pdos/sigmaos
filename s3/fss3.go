@@ -45,7 +45,7 @@ func RunFss3(buckets []string) {
 	}
 	fss3.SigmaSrv = ssrv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile("me-mit"))
+		config.WithSharedConfigProfile("sigmaos"))
 	if err != nil {
 		db.DFatalf("Failed to load SDK configuration %v", err)
 	}

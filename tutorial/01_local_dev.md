@@ -217,4 +217,7 @@ cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/x
 ```
 copies this tutorial file into the s3 object `x`.
 
-
+Having access to s3 is convenient for building applications; see
+exercises in [API tutorial](03_sigmaos_api.md).  In addition to the s3
+proxy, SigmaOS also provides proxies for databases and the local file
+system in each SigmaOS container (through `ux`).

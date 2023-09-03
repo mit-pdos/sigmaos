@@ -47,9 +47,8 @@ If you wish to speed up your build by building the binaries in parallel, run:
 $ ./build.sh --parallel
 ```
 
-Warning: if the machine you are building on is small, this may cause your
-machine to run out of memory, as the `go` compiler is somewhat
-memory-intensive.
+Warning: the parallel build uses much memory and all the cores on the
+machine you are building on.
 
 In order to make sure the build succeeded, run a simple test which
 starts SigmaOS up and exits immediately:
@@ -162,22 +161,20 @@ containers' logs.
 ## Exercise: Access S3 through SigmaOS
 
 Through SigmaOS you can access other services, such as AWS S3.  For
-this exercise you need an AWS credential file in your home directory
-`~/.aws/credentials`, which has the secret access key for AWS, which
-we will post on Piazza.  Please don't share the key with others and
-don't use it for personal use.
-
-Once you have the key, do the following:
-- [ ] Install credentials.  The entry in `~/aws/credentials`,
-looks like this:
+this exercise you must have an AWS credential file in your home
+directory `~/.aws/credentials`, which has the secret access key for
+AWS.  The entry in `~/aws/credentials` looks like this:
 ```
-[me-mit]
+[sigmaos]
 aws_access_key_id = KEYID
 aws_secret_access_key = SECRETKEY
 region=us-east-1
 ```
-- [ ] Stop SigmaOS
-- [ ] Start SigmaOS
+
+If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
+with your account's key.  If you don't have an account, you can create
+one (google create an AWS account) or use the account key provided by
+us (which we will post on Piazza).
 
 Now you should be able to access files in S3 by running:
 

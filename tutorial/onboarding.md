@@ -18,6 +18,8 @@ $ cd ../.docker
 $ gpg --recipient sigma-kaashoek --recipient arielck --recipient heyizheng2011 --recipient gideon.witchel@gmail.com --encrypt-files config.json
 ```
 
+Note:  change me-mit to sigmaos in aws credentials next time we add a member
+
   2. Add the member to the `git@g.csail.mit.edu:sigmaos:` repo and the to the
   [GitHub repo](https://github.com/mit-pdos/sigmaos).
 

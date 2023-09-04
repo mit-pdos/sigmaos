@@ -123,18 +123,21 @@ Hint: The function `OpenReader` from `FsLib` along with Golang's
 
 In this exercise, you will familiarize yourself with the `procclnt`
 API.  The function `TestExerciseProc` spawns the example proc from
-`cmd/user/example`. Spawn queues the proc for execution. The test function
-wait until it starts (if many procs are spawned, SigmaOS may not start
-the proc for a while), and then wait until it exits.
+`cmd/user/example/`.  The test function runs this proc using `Spawn`,
+which queues the proc for execution. The test function wait until the
+proc starts (if many procs are spawned, SigmaOS may not start the proc
+for a while), and then wait until it exits. 
+
+The proc in `cmd/user/example/` makes an `SigmaClnt` object, tells
+SigmaOS it started using `Started`, prints "Hello World", and then
+exits using `ClntExitOK`.
 
 If you run ```go test -v sigmaos/example --start --run Proc```, you
 should see output like this:
 ```
 === RUN   TestExerciseProc
-08:30:58.202494 - BOOT Start: sigma-b7e137ea srvs all IP 192.168.0.10
-08:30:58.276848 test-test-5abbed8715d06e97 ALWAYS Appended named 127.0.0.1
-    example_test.go:53: 
-                Error Trace:    /home/kaashoek/hack/sigmaos/example/example_test.go:53
+    example_test.go:70: 
+                Error Trace:    /home/kaashoek/hack/sigmaos/example/example_test.go:70
                 Error:          Not equal: 
                                 expected: "Hello world"
                                 actual  : ""
@@ -146,7 +149,7 @@ should see output like this:
                                 -Hello world
                                 +
                 Test:           TestExerciseProc
---- FAIL: TestExerciseProc (6.14s)
+--- FAIL: TestExerciseProc (6.33s)
 ```
 
 Test programs will direct logging output directly to your
@@ -161,16 +164,20 @@ $ ./logs.sh
 search for "Hello world" in the output and you will the print
 statement from the example proc.
 
-Modify the example proc to return `hello world` its exit status and
-run it:
-  - [ ] Edit the `main` function in `cmd/user/example` and replace
+Modify the example proc to return `hello world` its exit status:
+  - [ ] Edit the `main` function in `cmd/user/example/main.go` and replace
         `ClntExitOK` with `ClntExit`, passing in the appropriate
         `proc.Status` using `MakeStatusInfo`.
-  - [ ] Recompile and build SigmaOS:  ```$./build.sh --parallel```
-    It is sometimes convenient to just the compile the SigmaOS programs to see
-    if they compile:  ```$./make.sh --norace user```, which compiles
-    the user programs.  Once they compile, run build.sh.
+  - [ ] Recompile and build SigmaOS: ```$./build.sh --parallel```. It
+    is sometimes convenient to just the compile the SigmaOS programs
+    to see if they compile correctly: ```$./make.sh --norace user``` compiles
+    the user programs.   Or compile an individual user program:
+```
+    go build -ldflags="-X sigmaos/sigmap.Target=local" -o bin/user/example cmd/user/example/main.go
+```
+    Once they compile correctly, run build.sh.
   - [ ] Rerun the test to see if your implementation now passes the test.
+
 
 ### Exercise 4: Process data in parallel
 

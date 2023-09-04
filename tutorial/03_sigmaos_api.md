@@ -87,7 +87,8 @@ and it will produce output like this:
 
 Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test` has many `fslib` tests, which may provide
-inspiration.
+inspiration.  (If you are unfamiliar with Golang, checkout [go
+tutorial](https://go.dev/doc/tutorial/getting-started).
 
 Note that the state stored in the `named` root directory is
 persistent; `named` uses an `etcd` for storage, which is a
@@ -107,13 +108,16 @@ available S3 proxies in `name/s3`).
 For this exercise you need an AWS credential file in your home
 directory `~/.aws/credentials` [local](01_local_dev.md).
 
-In this exercise, you will read an object from S3 using the same FsLib
-interface as in the previous exercise.  Extend `TestExerciseS3` to:
+Using the same FsLib interface as in the previous exercise, extend
+`TestExerciseS3` to
   - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the` in this file
     
-Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named`
-and other kernel services (such as `s3` servers).
+Note that `test.MakeTstateAll` creates an instance of SigmaOS with
+`named` and other kernel services (such as `s3` proxies).
+
+Hint: The function `OpenReader` from `FsLib` along with Golang's
+`NewScanner` and `scanner.Split(bufio.ScanWords)` may be helpful.
 
 ### Exercise 3: Spawn a `proc`
 

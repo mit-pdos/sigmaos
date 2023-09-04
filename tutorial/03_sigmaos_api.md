@@ -106,7 +106,9 @@ the pathname `name/s3/~any/` (`any` tells SigmaOS to use any of the
 available S3 proxies in `name/s3`).
 
 For this exercise you need an AWS credential file in your home
-directory `~/.aws/credentials` [local](01_local_dev.md).
+directory `~/.aws/credentials` [local](01_local_dev.md). You may also
+have to copy the files in `input` into an S3 bucket named
+`9ps3/gutenberg`.
 
 Using the same FsLib interface as in the previous exercise, extend
 `TestExerciseS3` to
@@ -182,22 +184,22 @@ Modify the example proc to return `hello world` its exit status:
 ### Exercise 4: Process data in parallel
 
 This exercise is more challenging; it puts the previous exercises
-together in simple application with several procs. Your job is to
+together into a simple application with several procs. Your job is to
 implement `TestExerciseParallel` to process the input files in
 `name/s3/~any/9ps3/gutenberg/` in parallel:
-  - [ ] Make a proc that takes as argument a pathname for an input
-    file, counts the occurrences of the world `the`, and returns it
-    through `proc.Status`.  Make a new directory in `cmd/user` for the
-    proc. Your code from Exercise 2 may be helpful.
-  - [ ] Modify the test function to spawn a proc for each input file,
-    wait until they exited, and add up the number of `the`'s.
-    You can create a Go routine for each spawn.
-
-The debugging support described below may be helpful in this exercise.
+  - [ ] Modify the example proc in `cmd/user/example` to take as
+    argument a pathname for an input file (using Golang's `os.Args`),
+    counts the occurrences of the world `the` in that file, and
+    returns the number of words through `proc.Status`.  Your code from
+    Exercise 2 may be helpful.
+  - [ ] Modify the `TestExerciseParallel` to spawn an example proc for
+    each input file, wait until they exited, and add up the number of
+    `the`'s.  To have the procs run in parallel, you may want to
+    create a go routine for each spawn (using Golang's `go`).
 
 If you would run this test in the remote-mode configuration
-[remote](02_remote_dev.md) of SigmaOS, SigmaOS would schedule them
-on different machines for you.
+[remote](02_remote_dev.md) of SigmaOS, SigmaOS would schedule the
+procs on different machines for you.
     
 ## Debugging SigmaOS
 

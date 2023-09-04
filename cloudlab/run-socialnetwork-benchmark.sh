@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--sn-only] [--version VERSION] [--pull IMAGE_LABEL]" 1>&2
+  echo "Usage: $0 [--sn-only] [--version VERSION] [--pull IMAGE_LABEL] [--branch BRANCH]" 1>&2
 }
 
 VERSION="XXXX"
 PULL="yizhengh"
 MR_ARG="--mr_realm benchrealm1"
+BRANCH="master"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -18,6 +19,11 @@ while [[ $# -gt 0 ]]; do
   --version)
     shift
     VERSION=$1
+    shift
+    ;;
+  --branch)
+    shift
+    BRANCH=$1
     shift
     ;;
   --sn-only)
@@ -65,16 +71,17 @@ bench_sigmaos_simple() {
 	cd $SCRIPT_DIR
 	./stop-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes
 	./stop-sigmaos.sh --parallel
-	./start-sigmaos.sh --pull $PULL --n 2
+	./start-sigmaos.sh --pull $PULL --branch $BRANCH --n 2
 	COMMAND="
+		export SIGMANAMED=$named_ip
 		go clean -testcache;
-		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestRealmBalanceSimpleImgResize --rootNamedIP $named_ip --imgresize_path $img_path --n_imgresize 5 --n_imgresize_per 1 --imgresize_mcpu 100 &> test_simple.out
+		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestRealmBalanceSimpleImgResize --imgresize_path $img_path --n_imgresize 5 --n_imgresize_per 1 --imgresize_mcpu 100 &> test_simple.out
 	"
 	echo "Run [$SSHVM]: $COMMAND"
 	ssh -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH
   		# Make sure swap is off on the benchmark machines.
   		sudo swapoff -a
-  		cd ulambda
+		cd sigmaos
 		export SIGMADEBUG="PPROC;BOOT;TEST;BENCH;IMGD"
 		export SIGMAPERF="TEST_TPT;BENCH_TPT;"
   		$COMMAND
@@ -90,16 +97,17 @@ bench_sigmaos_sn() {
 	cd $SCRIPT_DIR
 	./stop-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes
 	./stop-sigmaos.sh --parallel
-	./start-sigmaos.sh --pull $PULL --n 5
+	./start-sigmaos.sh --pull $PULL --branch $BRANCH --n 5
 	COMMAND="
+		export SIGMANAMED=$named_ip
 		go clean -testcache;
-		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestRealmBalanceSocialNetworkImgResize --mongourl $mongo_url --rootNamedIP $named_ip --imgresize_path $img_path --n_imgresize $n_resize --n_imgresize_per 1 --sn_dur $sn_dur --sn_max_rps $sn_max_rps >& test.out
+		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestRealmBalanceSocialNetworkImgResize --mongourl $mongo_url --imgresize_path $img_path --n_imgresize $n_resize --n_imgresize_per 1 --sn_dur $sn_dur --sn_max_rps $sn_max_rps >& test.out
 	"
 	echo "Run [$SSHVM]: $COMMAND"
 	ssh -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH
   		# Make sure swap is off on the benchmark machines.
   		sudo swapoff -a
-  		cd ulambda
+		cd sigmaos
 		export SIGMADEBUG="PPROC;BOOT;TEST;MONGO_ERR;BENCH;IMGD"
 		export SIGMAPERF="SOCIAL_NETWORK_FRONTEND_TPT;TEST_TPT;BENCH_TPT;NAMED_CPU"
   		$COMMAND
@@ -108,19 +116,19 @@ ENDSSH
 	echo "collecting results to $PERF_DIR"
 	rm -rf $PERF_DIR
 	./collect-results.sh --parallel --perfdir $PERF_DIR
-	scp -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM:~/ulambda/test.out $PERF_DIR/bench.out
+	scp -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM:~/sigmaos/test.out $PERF_DIR/bench.out
 }
 
 bench_k8s_sn() {
 	echo "Running k8s bench for social network and image resizing"
 	cd $SCRIPT_DIR
-	aws s3 --profile me-mit rm --recursive s3://9ps3/social-network-perf/ > /dev/null
-	aws s3 --profile me-mit rm --recursive s3://9ps3/img/ > /dev/null
-    aws s3 --profile me-mit cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
+	aws s3 --profile sigmaos rm --recursive s3://9ps3/social-network-perf/ > /dev/null
+	aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
+    aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
 	./stop-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes
 	./stop-sigmaos.sh --parallel
 	./stop-k8s.sh --parallel
-	./start-sigmaos.sh --pull $PULL --n 5
+	./start-sigmaos.sh --pull $PULL --branch $BRANCH --n 5
 	./start-k8s.sh --taint 5:11
 	sleep 1
 	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/db-caches --nrunning 4
@@ -140,17 +148,18 @@ bench_k8s_sn() {
 
 	frontend_ip=$(ssh -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM "kubectl get svc | grep front | tr -s ' ' | cut -d ' ' -f3")
 	COMMAND="
+		export SIGMANAMED=$named_ip
 		go clean -testcache;
 		cp -r benchmarks/k8s/apps/thumbnail/yaml/thumbnail-heavy/ /tmp/
 		sed -i 's/: XXX/: $n_resize_k8/g' /tmp/thumbnail-heavy/*
 		kubectl delete -Rf /tmp/thumbnail-heavy/
-		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestK8sSocialNetworkImgResize --rootNamedIP $named_ip --sn_dur $sn_dur --sn_max_rps $sn_max_rps --k8saddr $frontend_ip:5000 >& test_k8s.out
+		go test -v sigmaos/benchmarks --no-shutdown -timeout 0 --run TestK8sSocialNetworkImgResize --sn_dur $sn_dur --sn_max_rps $sn_max_rps --k8saddr $frontend_ip:5000 >& test_k8s.out
 	"
 	echo "Run [$SSHVM]: $COMMAND"
 	ssh -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH
   		# Make sure swap is off on the benchmark machines.
   		sudo swapoff -a
-  		cd ulambda
+		cd sigmaos
 		export SIGMADEBUG="PPROC;BOOT;TEST;MONGO_ERR;BENCH;IMGD"
 		export SIGMAPERF="SOCIAL_NETWORK_FRONTEND_TPT;TEST_TPT;BENCH_TPT;NAMED_CPU"
   		$COMMAND
@@ -159,8 +168,8 @@ ENDSSH
 	echo "collecting results to $PERF_DIR_K8S"
 	rm -rf $PERF_DIR_K8S
 	./collect-results.sh --parallel --perfdir $PERF_DIR_K8S
-	scp -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM:~/ulambda/test_k8s.out $PERF_DIR_K8S/bench.out
-	aws s3 --profile me-mit rm --recursive s3://9ps3/img/ > /dev/null
+	scp -i $SCRIPT_DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM:~/sigmaos/test_k8s.out $PERF_DIR_K8S/bench.out
+	aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
 }
 
 # ========== Plot functions ==========

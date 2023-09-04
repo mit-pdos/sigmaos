@@ -103,20 +103,20 @@ for vm in $vms; do
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
-    ./ulambda/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
+    ./sigmaos/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
     echo "ncores:"
     nproc
   else
-    ./ulambda/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
+    ./sigmaos/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
     echo "ncores:"
     nproc
   fi
 
   cd ~/
-  aws s3 --profile me-mit cp s3://9ps3/img-save/1.jpg .
-  aws s3 --profile me-mit cp s3://9ps3/img-save/6.jpg .
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg .
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg .
 
-  cd ulambda
+  cd sigmaos
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ] || [ "${vm}" = "${SIGMASTART}" ]; then
@@ -136,6 +136,7 @@ for vm in $vms; do
     fi
   else
     echo "JOIN ${SIGMANAMED} ${KERNELID}"
+    export SIGMANAMED=10.10.1.2
      ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMANAMED} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 --jaeger ${MAIN_PRIVADDR} ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
     docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg

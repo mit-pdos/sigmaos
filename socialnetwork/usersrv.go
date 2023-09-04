@@ -34,6 +34,7 @@ type UserSrv struct {
 	ucount       int32 //This server may overflow with over 2^31 users
 	dbCounter    *Counter
 	cacheCounter *Counter
+	wCounter     *Counter
 	loginCounter *Counter
 }
 
@@ -64,6 +65,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.dbCounter = MakeCounter("DB")
 	usrv.cacheCounter = MakeCounter("Cache")
+	usrv.wCounter = MakeCounter("Write-Cache")
 	usrv.loginCounter = MakeCounter("Login")
 	defer perf.Done()
 	return ssrv.RunServer()
@@ -178,7 +180,9 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 			return nil, nil
 		}
 		encoded, _ := bson.Marshal(user)
+		t2 := time.Now()
 		usrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		usrv.wCounter.AddTimeSince(t2)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in DB: %v\n", username, user)
 	} else {
 		bson.Unmarshal(cacheItem.Val, user)

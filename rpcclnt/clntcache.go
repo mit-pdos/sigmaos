@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/cache"
 	"sigmaos/fslib"
 	"sigmaos/pathclnt"
 	"sigmaos/rpc"
@@ -62,6 +63,9 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		if err := rpcc.RPC(method, arg, res); err == nil {
 			return nil
 		} else {
+			if cache.IsMiss(err) {
+				return err
+			}
 			cc.Delete(pn)
 			var sr *serr.Err
 			if errors.As(err, &sr) && pathclnt.Retry(sr) {

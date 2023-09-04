@@ -46,7 +46,7 @@ func (clnt *StatScraperClnt) GetGuaranteedPodCPUUtil(s, qosClass string) (float6
 		QoSClass: qosClass,
 	}
 	var res proto.CPUUtilResult
-	err := clnt.rpccs[s].RPC("StatScraper.GetCPUUtil", req, &res)
+	err := clnt.rpccs[s].RPC("scraper.GetCPUUtil", req, &res)
 	if err != nil {
 		return 0.0, err
 	}

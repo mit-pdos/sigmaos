@@ -23,7 +23,7 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 for vm in $vms; do
   echo $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
-  cd ulambda
+  cd sigmaos
   ./set-cores.sh --set 0 --start 4 --end $(($vm_ncores - 1))
 ENDSSH
 done

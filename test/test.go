@@ -167,7 +167,6 @@ func (ts *Tstate) KillOne(s string) error {
 }
 
 func (ts *Tstate) MakeClnt(idx int, scfg *config.SigmaConfig) (*sigmaclnt.SigmaClnt, error) {
-	db.DFatalf("Error: pass sigma config")
 	return ts.kclnts[idx].NewSigmaClnt(scfg)
 }
 

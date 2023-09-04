@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
@@ -61,7 +61,8 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
 		err = sem.Down()
@@ -138,7 +139,8 @@ func TestReconnectSimple(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("fslibtest-1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
@@ -166,7 +168,8 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			fsl, err := fslib.MakeFsLibAddr(sp.Tuname(fmt.Sprintf("test-fsl-%v", i)), sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+			scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), i)
+			fsl, err := fslib.MakeFsLib(scfg)
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
@@ -194,15 +197,16 @@ func TestServerPartitionBlocking(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
-		go func() {
-			fsl, err := fslib.MakeFsLibAddr("fsl", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		go func(i int) {
+			scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), i)
+			fsl, err := fslib.MakeFsLib(scfg)
 			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err
 			fsl.DetachAll()
-		}()
+		}(i)
 
 		err := <-ch
 		assert.NotNil(ts.T, err, "down")
@@ -216,10 +220,10 @@ const (
 	WRITESZ = 4096
 )
 
-func writer(t *testing.T, ch chan error, name, lip string, nds sp.Taddrs) {
-	fsl, err := fslib.MakeFsLibAddr(sp.Tuname("writer-"+name), sp.ROOTREALM, lip, nds)
+func writer(t *testing.T, ch chan error, scfg *config.SigmaConfig) {
+	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + name
+	fn := sp.UX + "~local/file-" + string(scfg.Uname)
 	stop := false
 	nfile := 0
 	for !stop {
@@ -261,7 +265,8 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		go writer(ts.T, ch, strconv.Itoa(i), ts.GetLocalIP(), ts.NamedAddr())
+		scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), i)
+		go writer(ts.T, ch, scfg)
 	}
 
 	crashchan := make(chan bool)

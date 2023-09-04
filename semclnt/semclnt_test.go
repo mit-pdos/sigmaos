@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	"sigmaos/delay"
 	"sigmaos/fslib"
 	"sigmaos/semclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -22,7 +22,8 @@ func TestSemClntSimple(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0, err := fslib.MakeFsLibAddr("sem0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	scfg := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+	fsl0, err := fslib.MakeFsLib(scfg)
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -59,9 +60,11 @@ func TestSemClntConcur(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	fsl0, err := fslib.MakeFsLibAddr("sem0", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	scfg1 := config.NewAddedSigmaConfig(ts.SigmaConfig(), 1)
+	fsl0, err := fslib.MakeFsLib(scfg1)
 	assert.Nil(ts.T, err, "fsl0")
-	fsl1, err := fslib.MakeFsLibAddr("semd1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	scfg2 := config.NewAddedSigmaConfig(ts.SigmaConfig(), 2)
+	fsl1, err := fslib.MakeFsLib(scfg2)
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

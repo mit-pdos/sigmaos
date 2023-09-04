@@ -1,7 +1,7 @@
 # 03. SigmaOS APIs
 
-This tutorial help you writing applications with SigmaOS by making you
-familiar with its main APIs.  Applications using SigmaOS live in
+This tutorial helps you writing applications with SigmaOS by making
+you familiar with its main APIs.  Applications using SigmaOS live in
 `cmd/user`.  The root directory contains the support packages for the
 major applications: `mr` (a MapReduce Library), `hotel` and
 `socialnetwork` (two microservices based on DeathStarBench),
@@ -58,8 +58,10 @@ In this exercise, you will learn how to use the SigmaOS client API to
 manipulate files and directories. In order to do so, you will create a file,
 write data to it, and read data from it. You will need to complete the
 following steps:
-  - [ ] Create a file in `named`. Write a string of your choice to it, and
-    close the file.
+  - [ ] Create a file `tfile` in `named`. The pathname `name/` names
+    the root directory of `named` and thus use the pathname
+    `name/tfile` for `Create`. Write a string of your choice to it,
+    and close the file.
   - [ ] List the contents of the directory in which you created the file.
     Ensure the file is present.
   - [ ] Open the file, and read the contents back. Make sure that the contents
@@ -68,9 +70,9 @@ following steps:
 To get started, open `example_test.go` in the folder `example`, which
 contains the `TestExerciseNamed` function, a Golang test function, to
 read the root directory of `named`.  The call to `test.MakeTstatePath`
-starts a test instance of SigmaOS with only named, and it embeds an
-`SigmaClnt` instance, which in turn embeds an `FsLib` object.  You can
-run the test as follows:
+starts a test instance of SigmaOS with only named. The `ts` instance
+embeds an `SigmaClnt` object, which in turn embeds an `FsLib` object.
+You can run the test as follows:
 
 ```
 $ go test -v sigmaos/example --start --run Named
@@ -78,18 +80,15 @@ $ go test -v sigmaos/example --start --run Named
 
 and it will produce output like this:
 ```
-20:42:16.638701 - ALWAYS Etcd addr 127.0.0.1
-=== RUN   TestExample
-20:42:17.059591 - BOOT Start: sigma-c69e2af8 srvs named IP 192.168.0.10
-20:42:17.116655 name/: [.statsd rpc boot db kpids s3 schedd ux]
---- PASS: TestExample (0.51s)
-PASS
-ok      sigmaos/example 0.515s
+=== RUN   TestExerciseNamed
+13:17:06.365645 name/: [.statsd rpc boot db kpids named-election-rootrealm s3 schedd ux]
+--- PASS: TestExerciseNamed (0.61s)
 ```
 
 Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test` has many `fslib` tests, which may provide
-inspiration.
+inspiration.  (If you are unfamiliar with Golang, checkout [go
+tutorial](https://go.dev/doc/tutorial/getting-started).
 
 Note that the state stored in the `named` root directory is
 persistent; `named` uses an `etcd` for storage, which is a
@@ -99,7 +98,7 @@ run it again, it will fail, because your file already exists.
 
 ### Exercise 2: Read a file from S3
     
-Named is good for storing small files (e.g., symbolic links that
+SigmaOS's `named` is good for storing small files (e.g., symbolic links that
 servers use to advertise their existence). SigmaOS has proxy servers
 to access other storage systems, including S3.  Each machine in
 SigmaOS runs an `s3` proxy and you can read/write files in S3 using
@@ -109,13 +108,16 @@ available S3 proxies in `name/s3`).
 For this exercise you need an AWS credential file in your home
 directory `~/.aws/credentials` [local](01_local_dev.md).
 
-In this exercise, you will read an object from S3 using the same FsLib
-interface as in the previous exercise.  Extend `TestExerciseS3` to:
+Using the same FsLib interface as in the previous exercise, extend
+`TestExerciseS3` to
   - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the` in this file
     
-Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named`
-and other kernel services (such as `s3` servers).
+Note that `test.MakeTstateAll` creates an instance of SigmaOS with
+`named` and other kernel services (such as `s3` proxies).
+
+Hint: The function `OpenReader` from `FsLib` along with Golang's
+`NewScanner` and `scanner.Split(bufio.ScanWords)` may be helpful.
 
 ### Exercise 3: Spawn a `proc`
 

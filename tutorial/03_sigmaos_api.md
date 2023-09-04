@@ -194,8 +194,9 @@ implement `TestExerciseParallel` to process the input files in
     Exercise 2 may be helpful.
   - [ ] Modify the `TestExerciseParallel` to spawn an example proc for
     each input file, wait until they exited, and add up the number of
-    `the`'s.  To have the procs run in parallel, you may want to
-    create a go routine for each spawn (using Golang's `go`).
+    `the`'s.  To make the procs run in parallel, you may want to
+    create a go routine for each spawn, using Golang's `go`, and
+    collect the results from go routine using a channel.
 
 If you would run this test in the remote-mode configuration
 [remote](02_remote_dev.md) of SigmaOS, SigmaOS would schedule the

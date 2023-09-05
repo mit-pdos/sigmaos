@@ -7,7 +7,8 @@ major applications: `mr` (a MapReduce Library), `hotel` and
 `socialnetwork` (two microservices based on DeathStarBench),
 `imgresized` (an image resizing service), and `kv` (a sharded
 key-value service).  The exercises below will help you get familiar
-with the SigmaOS APIs.
+with the SigmaOS APIs; the last one, exercise 4, puts the earlier
+exercises together into a simple application.
 
 ## Client-side libraries
 
@@ -86,8 +87,8 @@ and it will produce output like this:
 ```
 
 Now extend `TestExerciseNamed` to implement the exercise.
-`fslib/fslib_test` has many `fslib` tests, which may provide
-inspiration.  (If you are unfamiliar with Golang, checkout [go
+`fslib/fslib_test.go` and `fslib/file.go` may provide inspiration.
+(If you are unfamiliar with Golang, checkout [go
 tutorial](https://go.dev/doc/tutorial/getting-started).
 
 Note that the state stored in the `named` root directory is
@@ -100,7 +101,7 @@ run it again, it will fail, because your file already exists.
     
 SigmaOS's `named` is good for storing small files (e.g., symbolic links that
 servers use to advertise their existence). SigmaOS has proxy servers
-to access other storage systems, including S3.  Each machine in
+to access other storage systems, including AWS S3.  Each machine in
 SigmaOS runs an `s3` proxy and you can read/write files in S3 using
 the pathname `name/s3/~any/` (`any` tells SigmaOS to use any of the
 available S3 proxies in `name/s3`).
@@ -183,9 +184,9 @@ Modify the example proc to return `hello world` its exit status:
 
 ### Exercise 4: Process data in parallel
 
-This exercise is more challenging; it puts the previous exercises
-together into a simple application with several procs. Your job is to
-implement `TestExerciseParallel` to process the input files in
+This exercise puts the previous exercises together into a simple
+application with several procs. Your job is to implement
+`TestExerciseParallel` to process the input files in
 `name/s3/~any/9ps3/gutenberg/` in parallel:
   - [ ] Modify the example proc in `cmd/user/example` to take as
     argument a pathname for an input file (using Golang's `os.Args`),

@@ -29,7 +29,7 @@ multi-machine deployments (including CloudLab).  The primary
 differences are:
   - `local` builds the user `procs` directly into the `sigmaos` container,
     which enables offline development. `aws` builds the user `procs` in a
-    dedicated build container and uploads them to an S3 bucket, omitting them
+    dedicated build container and uploads them to an AWS S3 bucket, omitting them
     from the `sigmaos` container. This keeps the `sigmaos` container small,
     decreases its cold-start time, and mirrors a more realistic deployment
     scenario, in which the datacenter provider would download tenant's binaries

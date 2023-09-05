@@ -6,12 +6,12 @@ commands are intended to be run from the root of the repo.
 
 ## Dependencies
 
-You will need to have `docker`, `mysql`, and `libseccomp-dev` installed in
+You will need to have `golang`, `docker`, `mysql`, and `libseccomp-dev` installed in
 order to build and run SigmaOS and its benchmarks. On a Ubuntu system, these
 can be installed by running:
 
 ```
-$ sudo apt install docker.io libseccomp-dev mysql-client
+$ sudo apt install golang-go docker.io libseccomp-dev mysql-client
 ```
 
 Note: `/var/run/docker.sock` must be accessible to SigmaOS, so you may

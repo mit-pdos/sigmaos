@@ -63,14 +63,11 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		if err := rpcc.RPC(method, arg, res); err == nil {
 			return nil
 		} else {
-			if cache.IsMiss(err) {
-				return err
-			}
-			cc.Delete(pn)
 			var sr *serr.Err
 			if errors.As(err, &sr) && pathclnt.Retry(sr) {
 				time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
 				db.DPrintf(db.ALWAYS, "RPC: retry %v %v err %v\n", pn, method, sr)
+				cc.Delete(pn)
 				continue
 			}
 			return err

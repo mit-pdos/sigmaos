@@ -8,7 +8,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/cache"
 	"sigmaos/fslib"
 	"sigmaos/pathclnt"
 	"sigmaos/rpc"

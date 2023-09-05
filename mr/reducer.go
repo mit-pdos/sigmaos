@@ -101,12 +101,10 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 	return nil
 }
 
-// XXX cut new fslib?
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	db.DFatalf("Error mk sigma clnt fslib")
-	//	sc, err := sigmaclnt.MkSigmaClntFsLib(sp.Tuname("r-" + file + r.input))
-	sc, err := sigmaclnt.MkSigmaClntFsLib(nil)
+	scfg := config.NewAddedSigmaConfig(r.SigmaConfig(), int(rand.Uint64()))
+	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false

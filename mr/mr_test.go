@@ -15,6 +15,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -63,7 +64,6 @@ func TestMakeWordCount(t *testing.T) {
 		OUT     = HOSTTMP + F + ".out"
 	)
 
-	scfg := config.NewTestSigmaConfig("", "", "", "")
 	file, err := os.Open(INPUT)
 	assert.Nil(t, err)
 	defer file.Close()

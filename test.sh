@@ -104,7 +104,7 @@ if [[ $APPS == "--apps" ]]; then
         go test $VERB sigmaos/imgresized -start -run ImgdOne
         go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
         go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
-		go test $VERB sigmaos/socialnetwork -start -run TestCompose
+	go test $VERB sigmaos/socialnetwork -start -run TestCompose
     else
         for T in imgresized mr kv hotel socialnetwork; do
             go test -timeout 20m $VERB sigmaos/$T -start

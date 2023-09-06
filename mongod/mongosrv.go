@@ -37,7 +37,7 @@ func makeServer(mongodUrl string) (*MongoSrv, error) {
 		return nil, err
 	}
 	s.mclnt = client
-	if err = s.mclnt.Ping(context.TODO(), nil); err != nil {
+	if err = s.mclnt.Ping(ctx, nil); err != nil {
 		dbg.DFatalf("mongo ping err %v\n", err)
 	}
 	return s, nil

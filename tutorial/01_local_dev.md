@@ -64,6 +64,8 @@ starts SigmaOS up and exits immediately:
 go test -v sigmaos/fslib --run InitFs --start
 ```
 
+Make sure that a directory `.aws` exists in your home directory.
+
 The output should look something like:
 
 ```

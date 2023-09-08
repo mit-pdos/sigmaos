@@ -166,7 +166,7 @@ func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %v", f.Pobj().Ctx().Uname(), args.Fid, f, f.Pobj().Path())
+	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().Uname(), args.Fid, f, f.Pobj().Path())
 	if f.IsOpen() { // has the fid been opened?
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
@@ -294,7 +294,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		return nil, sp.MkRerror(err)
 	}
 
-	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
+	db.DPrintf(db.PROTSRV, "%v: ReadF f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
 
 	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {

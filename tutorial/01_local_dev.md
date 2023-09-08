@@ -76,11 +76,12 @@ You can check if `etcd` is running as follows:
 docker exec etcd-server etcdctl version
 ```
 
-Also, sigmaos expects the directory `~/.aws` to exist when it runs. To create
-it, run:
+Also, sigmaos expects the directories `~/.aws` and `/mnt/9p` to exist when it
+runs. To create them, run:
 
 ```
 mkdir ~/.aws
+mkdir /mnt/9p
 ```
 
 In order to make sure the build succeeded, run a simple test which

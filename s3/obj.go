@@ -52,7 +52,7 @@ func makeObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
+	return fmt.Sprintf("bucket %q key %q perm %v", o.bucket, o.key, o.perm)
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {
@@ -109,7 +109,8 @@ func (o *Obj) stat() *sp.Stat {
 }
 
 func (o *Obj) Path() sp.Tpath {
-	return mkTpath(o.key)
+	p := path.Path{o.bucket}
+	return mkTpath(p.AppendPath(o.key))
 }
 
 // convert ux perms into np perm; maybe symlink?

@@ -90,6 +90,7 @@ runs. To create them, run:
 ```
 mkdir ~/.aws
 mkdir /mnt/9p
+sudo chown $USER /mnt/9p
 ```
 
 In order to make sure the build succeeded, run a simple test which

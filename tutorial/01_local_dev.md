@@ -57,6 +57,23 @@ $ ./build.sh --parallel
 Warning: the parallel build uses much memory and all the cores on the
 machine you are building on.
 
+SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
+```
+./start-etcd.sh
+```
+
+You can check if `etcd` is running as follows:
+```
+docker exec etcd-server etcdctl version
+```
+
+Also, sigmaos expects the directory `~/.aws` to exist when it runs. To create
+it, run:
+
+```
+mkdir ~/.aws
+```
+
 In order to make sure the build succeeded, run a simple test which
 starts SigmaOS up and exits immediately:
 
@@ -70,16 +87,6 @@ The output should look something like:
 === RUN   TestInitFs
 13:44:32.833121 boot [sigma-7cfbce5e]
 --- PASS: TestInitFs (3.42s)
-```
-
-SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
-```
-./start-etcd.sh
-```
-
-You can check if `etcd` is running as follows:
-```
-docker exec etcd-server etcdctl version
 ```
 
 ## Testing SigmaOS

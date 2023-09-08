@@ -14,8 +14,17 @@ can be installed by running:
 $ sudo apt install golang-go docker.io libseccomp-dev mysql-client
 ```
 
-Note: `/var/run/docker.sock` must be accessible to SigmaOS, so you may
-have to run:
+Note: `/var/run/docker.sock` must be accessible to SigmaOS. You can add your
+user account to the docker group by running:
+
+```
+sudo usermod -aG docker $USER
+```
+
+In order for this to take effect, you will have to log out and back into your
+machine. If you want to skip this, you can temporarily change the permissions
+on the docker socket using:
+
 ```
 sudo chmod 666 /var/run/docker.sock
 ```
@@ -80,8 +89,6 @@ starts SigmaOS up and exits immediately:
 ```
 go test -v sigmaos/fslib --run InitFs --start
 ```
-
-Make sure that a directory `.aws` exists in your home directory.
 
 The output should look something like:
 

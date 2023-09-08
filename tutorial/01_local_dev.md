@@ -19,7 +19,7 @@ https://docs.docker.com/desktop/install/ubuntu/
 On a Ubuntu system, you can install the remaining packages by running:
 
 ```
-$ sudo apt install golang-go libseccomp-dev mysql-client
+$ sudo apt install golang-go libseccomp-dev mysql-client parallel
 ```
 
 Note: `/var/run/docker.sock` must be accessible to SigmaOS. You can add your

@@ -129,7 +129,7 @@ This will run the full array of tests, and save the output in
 To run a few key tests for the main apps, run:
 
 ```
-$ ./test.sh --apps --fast 2>&1 | tee /tmp/out
+$ ./test.sh --apps-fast 2>&1 | tee /tmp/out
 ```
 
 Generally, we run only tests related to packages we are actively

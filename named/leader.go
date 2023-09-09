@@ -3,13 +3,15 @@ package named
 import (
 	"fmt"
 
+	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.MkFsEtcd(nd.SigmaConfig())
+	scfg := config.NewDifferentRealmSigmaConfig(nd.SigmaConfig(), nd.realm)
+	fs, err := fsetcd.MkFsEtcd(scfg)
 	if err != nil {
 		return err
 	}

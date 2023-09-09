@@ -17,8 +17,8 @@ const (
 	BOOT sp.Tpath = 0
 )
 
-func (fs *FsEtcd) path2key(path sp.Tpath) string {
-	return string(fs.scfg.Realm) + ":" + strconv.FormatUint(uint64(path), 16)
+func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
+	return string(realm) + ":" + strconv.FormatUint(uint64(path), 16)
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
@@ -39,7 +39,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 }
 
 func (fs *FsEtcd) GetFile(p sp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
-	return fs.getFile(fs.path2key(p))
+	return fs.getFile(fs.path2key(fs.scfg.Realm, p))
 }
 
 func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
@@ -58,7 +58,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 			}
 		}
 		opst := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(p), string(b), opts...),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, p), string(b), opts...),
 		}
 		opsf := []clientv3.Op{
 			clientv3.OpGet(f.Prefix(), opts...),
@@ -130,11 +130,11 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(p)), "=", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, p)), "=", 0),
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, dp)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(p), string(b), opts...),
-		clientv3.OpPut(fs.path2key(dp), string(d1))}
+		clientv3.OpPut(fs.path2key(fs.scfg.Realm, p), string(b), opts...),
+		clientv3.OpPut(fs.path2key(fs.scfg.Realm, dp), string(d1))}
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.MkErrError(err)
@@ -153,11 +153,11 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	}
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(del)), ">", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(d)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, del)), ">", 0),
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, d)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpDelete(fs.path2key(del)),
-		clientv3.OpPut(fs.path2key(d), string(d1))}
+		clientv3.OpDelete(fs.path2key(fs.scfg.Realm, del)),
+		clientv3.OpPut(fs.path2key(fs.scfg.Realm, d), string(d1))}
 	resp, err := fs.Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
 	if err != nil {
@@ -181,19 +181,20 @@ func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	if del != 0 {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			clientv3.Compare(clientv3.Version(fs.path2key(del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, del)), ">", 0),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, d)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpDelete(fs.path2key(del)),
-			clientv3.OpPut(fs.path2key(d), string(d1))}
+			clientv3.OpDelete(fs.path2key(fs.scfg.Realm, del)),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, d), string(d1))}
 	} else {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(fs.path2key(d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, d)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(d), string(d1))}
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, d), string(d1))}
 	}
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
+		db.DPrintf(db.FSETCD, "Rename error %v %v e %v\n", d, resp, err)
 		return serr.MkErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "Rename %v %v\n", d, resp)
@@ -218,24 +219,24 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 	if del != 0 {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			clientv3.Compare(clientv3.Version(fs.path2key(del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, del)), ">", 0),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, df)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, dt)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpDelete(fs.path2key(del)),
-			clientv3.OpPut(fs.path2key(df), string(bf)),
-			clientv3.OpPut(fs.path2key(dt), string(bt)),
+			clientv3.OpDelete(fs.path2key(fs.scfg.Realm, del)),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, df), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, dt), string(bt)),
 		}
 	} else {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			clientv3.Compare(clientv3.Version(fs.path2key(df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, df)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.scfg.Realm, dt)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(df), string(bf)),
-			clientv3.OpPut(fs.path2key(dt), string(bt)),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, df), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.scfg.Realm, dt), string(bt)),
 		}
 	}
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()

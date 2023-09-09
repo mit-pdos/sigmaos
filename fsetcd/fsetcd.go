@@ -75,7 +75,7 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		}
 		ops := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(BOOT), string(b)),
+			clientv3.OpPut(fs.path2key(sp.ROOTREALM, BOOT), string(b)),
 		}
 		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
@@ -93,7 +93,8 @@ func GetRootNamed(scfg *config.SigmaConfig) (sp.Tmount, *serr.Err) {
 		return sp.Tmount{}, serr.MkErrError(err)
 	}
 	defer fs.Close()
-	nf, _, sr := fs.GetFile(sp.Tpath(BOOT))
+
+	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v conf %v", BOOT, nf, sr, scfg)
 		return sp.Tmount{}, sr

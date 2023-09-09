@@ -108,12 +108,13 @@ available S3 proxies in `name/s3`).
 
 For this exercise you need an AWS credential file in your home
 directory `~/.aws/credentials` [local](01_local_dev.md). You may also
-have to copy the files in `input` into an S3 bucket named
-`9ps3/gutenberg`.
+have to copy the files in `input` into an S3 bucket of your creation, at the
+path `<YOUR\_BUCKET\_NAME>/gutenberg`.
 
 Using the same FsLib interface as in the previous exercise, extend
 `TestExerciseS3` to
-  - [ ] Read the file `name/s3/~any/9ps3/gutenberg/pg-tom_sawyer.txt`
+  - [ ] Read the file
+  `name/s3/~any/<YOUR\_BUCKET\_NAME>/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the` in this file
     
 Note that `test.MakeTstateAll` creates an instance of SigmaOS with
@@ -187,7 +188,7 @@ Modify the example proc to return `hello world` its exit status:
 This exercise puts the previous exercises together into a simple
 application with several procs. Your job is to implement
 `TestExerciseParallel` to process the input files in
-`name/s3/~any/9ps3/gutenberg/` in parallel:
+`name/s3/~any/<YOUR\_BUCKET\_NAME>/gutenberg/` in parallel:
   - [ ] Modify the example proc in `cmd/user/example` to take as
     argument a pathname for an input file (using Golang's `os.Args`),
     counts the occurrences of the world `the` in that file, and

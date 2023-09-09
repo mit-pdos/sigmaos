@@ -13,7 +13,7 @@ import (
 
 func (pathc *PathClnt) GetMntNamed(uname sp.Tuname) sp.Tmount {
 	if pathc.scfg.Realm == sp.ROOTREALM {
-		mnt, err := fsetcd.GetRootNamed(pathc.scfg)
+		mnt, err := fsetcd.GetRootNamed(pathc.scfg.Realm, pathc.scfg.EtcdIP)
 		if err != nil {
 			db.DFatalf("GetMntNamed() GetRootNamed %v err %v\n", pathc.scfg.Realm, err)
 		}
@@ -41,7 +41,7 @@ func (pathc *PathClnt) mountNamed(p path.Path, uname sp.Tuname) *serr.Err {
 
 func (pathc *PathClnt) mountRootNamed(name string, uname sp.Tuname) *serr.Err {
 	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
-	mnt, err := fsetcd.GetRootNamed(pathc.scfg)
+	mnt, err := fsetcd.GetRootNamed(pathc.scfg.Realm, pathc.scfg.EtcdIP)
 	if err == nil {
 		pn := path.Path{name}
 		if err := pathc.autoMount(uname, mnt, pn); err == nil {

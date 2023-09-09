@@ -7,7 +7,6 @@ import (
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -27,16 +26,14 @@ type FsEtcd struct {
 	*clientv3.Client
 	fencekey string
 	fencerev int64
-	scfg     *config.SigmaConfig
+	realm    sp.Trealm
 }
 
-func MkFsEtcd(scfg *config.SigmaConfig) (*FsEtcd, error) {
+func MkFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 	endpoints := []string{}
 	for i := range endpointsBase {
-		endpoints = append(endpoints, scfg.EtcdIP+endpointsBase[i])
+		endpoints = append(endpoints, etcdIP+endpointsBase[i])
 	}
-	// XXX TODO remove
-	db.DPrintf(db.ALWAYS, "Etcd addrs %v", endpoints)
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,
@@ -44,7 +41,7 @@ func MkFsEtcd(scfg *config.SigmaConfig) (*FsEtcd, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := &FsEtcd{Client: cli, scfg: scfg}
+	fs := &FsEtcd{Client: cli, realm: realm}
 	return fs, nil
 }
 
@@ -53,7 +50,7 @@ func (fs *FsEtcd) Close() error {
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {
-	db.DPrintf(db.FSETCD, "%v: Fence key %v rev %d\n", fs.scfg.PID, key, rev)
+	db.DPrintf(db.FSETCD, "Fence key %v rev %d\n", key, rev)
 	fs.fencekey = key
 	fs.fencerev = rev
 }
@@ -87,8 +84,8 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	}
 }
 
-func GetRootNamed(scfg *config.SigmaConfig) (sp.Tmount, *serr.Err) {
-	fs, err := MkFsEtcd(scfg)
+func GetRootNamed(realm sp.Trealm, etcdIP string) (sp.Tmount, *serr.Err) {
+	fs, err := MkFsEtcd(realm, etcdIP)
 	if err != nil {
 		return sp.Tmount{}, serr.MkErrError(err)
 	}
@@ -96,7 +93,7 @@ func GetRootNamed(scfg *config.SigmaConfig) (sp.Tmount, *serr.Err) {
 
 	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
 	if sr != nil {
-		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v conf %v", BOOT, nf, sr, scfg)
+		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v realm %v etcdIP %v", BOOT, nf, sr, realm, etcdIP)
 		return sp.Tmount{}, sr
 	}
 	mnt, sr := sp.MkMount(nf.Data)

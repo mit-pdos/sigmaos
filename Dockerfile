@@ -39,7 +39,7 @@ COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/
 FROM base AS sigmakernelclean
 WORKDIR /home/sigmaos
 ENV kernelid kernel
-ENV named :1111
+ENV named ""
 ENV boot named
 ENV dbip x.x.x.x
 ENV mongoip x.x.x.x

@@ -68,7 +68,8 @@ vma=($vms)
 vma_privaddr=($vms_privaddr)
 MAIN="${vma[0]}"
 MAIN_PRIVADDR="${vma_privaddr[0]}"
-SIGMANAMED="${vma[0]}:1111"
+SIGMANAMED=$MAIN_PRIVADDR
+#SIGMANAMED="${vma[0]}:1111"
 IMGS="arielszekely/sigmauser arielszekely/sigmaos arielszekely/sigmaosbase"
 #export SIGMANAMED="${SIGMANAMED}"
 
@@ -77,7 +78,7 @@ if ! [ -z "$N_VM" ]; then
 fi
 
 if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel
+  ./update-repo.sh --vpc $VPC --parallel --branch etcd-sigmasrv
 fi
 
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
@@ -90,6 +91,7 @@ for vm in $vms; do
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
+  export SIGMANAMED=$MAIN_PRIVADDR
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
     ./ulambda/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null

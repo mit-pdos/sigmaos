@@ -850,7 +850,7 @@ img_resize() {
   aws s3 --profile me-mit cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
   cmd="
     export SIGMANAMED=10.0.20.156; \
-    export SIGMADEBUG=\"TEST;BENCH;BOOT;SYSTEM;PATHCLNT;WALK;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --run TestImgResize --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
   "
@@ -1143,8 +1143,8 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-img_resize
-#realm_balance_multi
+#img_resize
+realm_balance_multi
 
 #k8s_img_resize
 #hotel_tail_multi
@@ -1168,7 +1168,7 @@ img_resize
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_img_resize
-#graph_realm_balance_multi
+graph_realm_balance_multi
 
 #graph_realm_balance_be
 #graph_k8s_balance_be

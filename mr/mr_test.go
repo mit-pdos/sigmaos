@@ -15,7 +15,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"

@@ -14,12 +14,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/named"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
